@@ -28,6 +28,7 @@ _STATE_KEYS = (
     "modal_analysis_results",
     "dung_frameworks",
     "aspic_results",
+    "structured_arg_status",
     "narrative_synthesis",
     "formal_synthesis_reports",
     "stakes_and_stakeholders",

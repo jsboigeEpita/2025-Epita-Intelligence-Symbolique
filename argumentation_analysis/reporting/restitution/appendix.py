@@ -89,6 +89,27 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     counts["axe_dung"] = "disponible" if _g("dung_frameworks") else "indisponible"
     counts["axe_aspic"] = "disponible" if _g("aspic_results") else "indisponible"
 
+    # Structured-argumentation honesty (FP-17 #1236). ASPIC+/ABA/SETAF/weighted/
+    # bipolar have no text→structured translator wired (translation-gap FP-4
+    # #1201), so an empty extension list is NOT "evaluated, empty" — it is
+    # "never genuinely fed structured input". Surface that per-capability status
+    # explicitly so the bare ``axe_aspic = disponible`` above is not misread as
+    # a real structured-arg analysis of the source (#1019: no silent []).
+    sa_status = _g("structured_arg_status")
+    if isinstance(sa_status, Mapping) and sa_status:
+        parts = []
+        for cap, info in sa_status.items():
+            st = info.get("status", "?") if isinstance(info, Mapping) else "?"
+            label = (
+                "absent (aucun traducteur structuré)"
+                if st == "absent_no_translator"
+                else str(st)
+            )
+            parts.append(f"{cap}={label}")
+        counts["arg_structuree"] = "; ".join(parts)
+    else:
+        counts["arg_structuree"] = "indisponible"
+
     counts["synthese_narrative"] = (
         "présente" if _g("narrative_synthesis") else "absente"
     )

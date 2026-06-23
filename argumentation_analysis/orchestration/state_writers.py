@@ -8,9 +8,106 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
+
+
+# FP-17 (#1236): the structured-argumentation formalisms below have NO
+# text→structured translator wired (translation-gap, FP-4 #1201). On real
+# corpora the pipeline feeds them AUTO-SHAPED synthetic input (rules / attacks /
+# supports derived from the bare argument graph), so an empty extension list
+# means "never genuinely evaluated", NOT "evaluated, found nothing". A
+# capability is genuinely fed structured input only when the caller supplies the
+# formalism-specific artifact via context — the keys below (a future,
+# user/coord-gated translator would populate them). Until then the honest status
+# is "absent_no_translator", surfaced explicitly, never a silent [] (#1019).
+_STRUCTURED_ARG_INPUT_KEYS: Dict[str, Tuple[str, ...]] = {
+    "aspic_plus_reasoning": ("strict_rules", "defeasible_rules"),
+    "aba_reasoning": ("contraries",),
+    "setaf_reasoning": ("set_attacks",),
+    "weighted_argumentation": ("weighted_attacks",),
+    "bipolar_argumentation": ("supports",),
+}
+
+# Per-formalism reason string explaining what extraction is missing. Kept in the
+# state so a reader sees *why* the axis is absent, not just that it is.
+_STRUCTURED_ARG_ABSENT_REASON: Dict[str, str] = {
+    "aspic_plus_reasoning": (
+        "ASPIC+ not genuinely evaluated: no translator extracts defeasible/"
+        "strict rules + preferences from the source. Ran on auto-shaped "
+        "synthetic rules — not fabricated, but not a genuine ASPIC+ analysis "
+        "of the text."
+    ),
+    "aba_reasoning": (
+        "ABA not genuinely evaluated: no translator extracts assumptions + "
+        "their contraries from the source. Ran on auto-shaped synthetic rules "
+        "without genuine contraries."
+    ),
+    "setaf_reasoning": (
+        "SetAF not genuinely evaluated: no translator extracts collective "
+        "(joint) attacks from the source. Ran on auto-shaped synthetic "
+        "pairwise attacks lifted to singletons."
+    ),
+    "weighted_argumentation": (
+        "Weighted AF not genuinely evaluated: no translator extracts attack "
+        "weights from the source. Ran on auto-shaped synthetic attacks with "
+        "neutral placeholder weights."
+    ),
+    "bipolar_argumentation": (
+        "Bipolar AF not genuinely evaluated: no translator extracts support "
+        "relations from the source. Ran on auto-shaped synthetic attacks with "
+        "no genuine supports."
+    ),
+}
+
+
+def _record_structured_arg_status(
+    state: Any, capability: str, output: Any, ctx: dict[str, Any]
+) -> None:
+    """Surface the honest-absent status of a structured-arg capability (FP-17 #1236).
+
+    Records ``status="absent_no_translator"`` (+ ``degraded=True``) when the
+    context carried no genuine formalism-specific structured input — the
+    translation-gap reality (FP-4 #1201) — or ``status="evaluated"`` when it
+    did. Only labels what happened; never fabricates extensions (#1019).
+    No-op on states that predate ``add_structured_arg_status`` (defensive).
+    """
+    recorder = getattr(state, "add_structured_arg_status", None)
+    if not callable(recorder):
+        return
+    keys = _STRUCTURED_ARG_INPUT_KEYS.get(capability, ())
+    has_genuine_input = any(ctx.get(k) for k in keys)
+    # Extension/support count from the handler output, 0-safe.
+    ext_count = 0
+    if isinstance(output, dict):
+        exts = output.get("extensions")
+        if exts is None:
+            exts = output.get("supports")
+        if isinstance(exts, list):
+            ext_count = len(exts)
+    if has_genuine_input:
+        recorder(
+            capability,
+            "evaluated",
+            False,
+            "Genuine structured input supplied via context; framework "
+            "evaluated on real structured artifacts.",
+            ext_count,
+        )
+    else:
+        recorder(
+            capability,
+            "absent_no_translator",
+            True,
+            _STRUCTURED_ARG_ABSENT_REASON.get(
+                capability,
+                "No text→structured translator wired; ran on auto-shaped "
+                "synthetic input (translation-gap FP-4 #1201).",
+            ),
+            ext_count,
+        )
+
 
 __all__ = [
     "_write_quality_to_state",
@@ -460,9 +557,7 @@ def _write_hierarchical_fallacy_to_state(
             if _source_arg_id and _source_arg_id in state.identified_arguments:
                 target_arg_id = _source_arg_id
         if not target_arg_id:
-            target_arg_id = _resolve_target_arg_id(
-                state, f.get("target_argument", "")
-            )
+            target_arg_id = _resolve_target_arg_id(state, f.get("target_argument", ""))
         if not target_arg_id:
             target_arg_id = _resolve_target_arg_id(
                 state, f.get("problematic_quote", "")
@@ -550,6 +645,7 @@ def _write_ranking_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
 
 def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ASPIC+ analysis results to UnifiedAnalysisState."""
+    _record_structured_arg_status(state, "aspic_plus_reasoning", output, ctx)
     if not output or not isinstance(output, dict):
         return
     reasoner_type = str(output.get("reasoner_type", "simple"))
@@ -605,6 +701,7 @@ def _write_probabilistic_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
 
 def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write bipolar argumentation results to UnifiedAnalysisState."""
+    _record_structured_arg_status(state, "bipolar_argumentation", output, ctx)
     if not output or not isinstance(output, dict):
         return
     fw_type = str(output.get("framework_type", "necessity"))
@@ -619,6 +716,7 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
 
 def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write ABA reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
+    _record_structured_arg_status(state, "aba_reasoning", output, ctx)
     if not output or not isinstance(output, dict):
         return
     assumptions = output.get("assumptions", [])
@@ -737,7 +835,10 @@ def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     # Preserve None (unverified) vs True (consistent) vs False (inconsistent).
     # bool(None) == False would silently conflate "unknown" with "inconsistent" (#1019).
     state.add_fol_analysis_result(
-        formulas, consistent if consistent is not None else None, inferences, float(confidence)
+        formulas,
+        consistent if consistent is not None else None,
+        inferences,
+        float(confidence),
     )
     # Store FOL signature metadata (#348)
     fol_signature = output.get("fol_signature", [])
@@ -886,6 +987,7 @@ def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write SetAF results to UnifiedAnalysisState (#87)."""
+    _record_structured_arg_status(state, "setaf_reasoning", output, ctx)
     if not output or not isinstance(output, dict):
         return
     state.add_dung_framework(
@@ -898,6 +1000,7 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Weighted AF results to UnifiedAnalysisState (#87)."""
+    _record_structured_arg_status(state, "weighted_argumentation", output, ctx)
     if not output or not isinstance(output, dict):
         return
     state.add_dung_framework(
@@ -1055,9 +1158,7 @@ def _write_act2_narrative_to_state(
         state.act2_narrative = narrative
 
 
-def _write_act1_framing_to_state(
-    output: Any, state: Any, ctx: dict[str, Any]
-) -> None:
+def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write the Acte I framing narrative to UnifiedAnalysisState (#1136).
 
     Populates ``state.act1_framing`` — the key the R6 renderer consumes for

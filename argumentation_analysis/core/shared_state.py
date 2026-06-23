@@ -419,6 +419,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.dialogue_results: List[Dict[str, Any]] = []
         self.probabilistic_results: List[Dict[str, Any]] = []
         self.bipolar_results: List[Dict[str, Any]] = []
+        # Structured-argumentation honest-absent status (FP-17 #1236). The
+        # formalisms ASPIC+/ABA/SETAF/weighted/bipolar require a text→structured
+        # translator (defeasible rules, assumptions+contraries, collective
+        # attacks, weights, support-relations) that is NOT wired — the
+        # translation-gap diagnosed in FP-4 (#1201). On real corpora they run on
+        # auto-shaped synthetic input, so an empty extension list means "never
+        # genuinely fed structured input", NOT "evaluated, found nothing". This
+        # map records that distinction per capability so the snapshot/report can
+        # surface it instead of a silent [] (#1019). Keyed by capability name.
+        self.structured_arg_status: Dict[str, Dict[str, Any]] = {}
         # Logic agent analysis results (#71 formal verification)
         self.fol_analysis_results: List[Dict[str, Any]] = []
         self.fol_signature: List[str] = []  # Pre-declared sorts/types (#348)
@@ -781,6 +791,42 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")
         return bp_id
 
+    def add_structured_arg_status(
+        self,
+        capability: str,
+        status: str,
+        degraded: bool,
+        reason: str,
+        extension_count: int = 0,
+    ) -> None:
+        """Record the honest-absent status of a structured-arg capability (FP-17 #1236).
+
+        ``status`` is one of:
+
+        - ``"absent_no_translator"`` — the capability ran on auto-shaped
+          synthetic input because no text→structured translator is wired
+          (translation-gap FP-4 #1201). Its empty/degenerate extension list is
+          **not** a genuine evaluation of the source. ``degraded`` is ``True``.
+        - ``"evaluated"`` — genuine structured input (defeasible rules,
+          assumptions+contraries, collective attacks, weights, supports) was
+          supplied via context, so the framework reflects real structure.
+
+        This only *labels* what happened; it never fabricates extensions
+        (#1019). Keyed by ``capability`` (last write wins — one status per
+        capability per run).
+        """
+        self.structured_arg_status[capability] = {
+            "capability": capability,
+            "status": status,
+            "degraded": degraded,
+            "reason": reason,
+            "extension_count": extension_count,
+        }
+        state_logger.info(
+            f"Structured-arg status: {capability} = {status} "
+            f"(degraded={degraded}, extensions={extension_count})"
+        )
+
     def add_fol_analysis_result(
         self,
         formulas: List[str],
@@ -1110,6 +1156,11 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "dialogue_result_count": len(self.dialogue_results),
                     "probabilistic_result_count": len(self.probabilistic_results),
                     "bipolar_result_count": len(self.bipolar_results),
+                    # FP-17 (#1236): surface the FULL honest-absent map even in
+                    # the summarized snapshot — a count would re-hide the very
+                    # distinction (absent_no_translator vs evaluated) this field
+                    # exists to expose (#1019). The map is small (≤5 entries).
+                    "structured_arg_status": dict(self.structured_arg_status),
                     "fol_analysis_count": len(self.fol_analysis_results),
                     "propositional_analysis_count": len(
                         self.propositional_analysis_results
@@ -1155,6 +1206,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     "dialogue_results": self.dialogue_results,
                     "probabilistic_results": self.probabilistic_results,
                     "bipolar_results": self.bipolar_results,
+                    "structured_arg_status": self.structured_arg_status,
                     "fol_analysis_results": self.fol_analysis_results,
                     "propositional_analysis_results": self.propositional_analysis_results,
                     "modal_analysis_results": self.modal_analysis_results,
