@@ -46,14 +46,29 @@ def run_prover9(input_content: str) -> str:
         temp_input_path_quoted = f'"{temp_input_path}"'
         command_str = f"{executable_path_quoted} -f {temp_input_path_quoted}"
 
-        process = subprocess.run(
-            command_str,
-            capture_output=True,
-            text=True,
-            cwd=str(PROVER9_BIN_DIR),
-            encoding="cp1252",
-            shell=True,
-        )
+        # R467: a hard timeout is mandatory. ``subprocess.run`` with no timeout
+        # hangs the whole pipeline indefinitely if Prover9 deadlocks (the
+        # prover9.bat wrapper itself documents a no-args deadlock). An infinite
+        # hang is a *silent* failure — anti-théâtre #1019 demands it surface.
+        # A genuine consistency check on a small KB returns in well under 1s;
+        # 60s is a generous ceiling. A timeout is re-raised as RuntimeError so
+        # the caller falls back to the Tweety reasoner (honest, labelled) instead
+        # of blocking forever.
+        try:
+            process = subprocess.run(
+                command_str,
+                capture_output=True,
+                text=True,
+                cwd=str(PROVER9_BIN_DIR),
+                encoding="cp1252",
+                shell=True,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(
+                f"Prover9 timed out after {e.timeout}s (deadlock or runaway "
+                "search) — surfacing instead of hanging the pipeline."
+            ) from e
         # FP-8 verify-the-verification: Prover9's exit code is SEMANTIC, not a
         # success/failure signal. Exit 2 with "SEARCH FAILED" is the NORMAL
         # outcome for a consistency check on a CONSISTENT KB (no proof of $F
@@ -67,8 +82,7 @@ def run_prover9(input_content: str) -> str:
         stdout = process.stdout
         if "Fatal error" in stdout:
             raise RuntimeError(
-                "Prover9 reported a fatal error (likely malformed input):\n"
-                f"{stdout}"
+                "Prover9 reported a fatal error (likely malformed input):\n" f"{stdout}"
             )
         return stdout
     finally:
