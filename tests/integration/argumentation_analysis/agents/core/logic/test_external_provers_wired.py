@@ -247,11 +247,34 @@ def test_spass_no_silent_fallback_when_selected():
     if not EXTERNAL_TOOL_PATHS.get("spass"):
         pytest.skip("SPASS binary not registered — cannot test the SPASS modal path.")
 
+    # Is the registered SPASS actually launchable as a CLI? (A GUI/elevation
+    # build, or a missing binary beside the adapter, is registered-but-dead.)
+    # When it IS launchable, the production path MUST genuinely decide — a silent
+    # disconnect that quietly yields None would otherwise pass this guard, the
+    # exact "débranché sans que personne voie à redire" failure mode (R467).
+    spass_runnable = False
+    try:
+        import jpype
+
+        if jpype.isJVMStarted():
+            SPASSMlReasoner = jpype.JClass(
+                "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
+            )
+            JString = jpype.JClass("java.lang.String")
+            spass_runnable = bool(
+                SPASSMlReasoner(JString(EXTERNAL_TOOL_PATHS["spass"])).isInstalled()
+            )
+    except Exception:
+        spass_runnable = False
+
     prev = settings.modal_solver
     settings.modal_solver = ModalSolverChoice.SPASS
     try:
         bridge = TweetyBridge()
-        verdict, msg = bridge.check_consistency("p\nq", "K")
+        # Two independent synthetic atoms, both asserted — genuinely consistent.
+        # Propositions must be declared (``type(p)``) or MlParser raises
+        # "Missing '=' in sort declaration" (a parse error, NOT a decision).
+        verdict, msg = bridge.check_consistency("type(p)\ntype(q)\n\np\nq\n", "K")
     except Exception as e:  # SPASS can't launch -> must surface, not be masked
         verdict, msg = None, f"raised {type(e).__name__}: {e}"
     finally:
@@ -264,3 +287,16 @@ def test_spass_no_silent_fallback_when_selected():
     assert (
         "SimpleMlReasoner" not in msg
     ), f"SPASS was selected but a SimpleMlReasoner verdict leaked through: {msg!r}"
+
+    # The non-skip teeth: where the vendored SPASS CLI genuinely launches (this
+    # machine + CI-Windows, since the binary is tracked in git), a future silent
+    # disconnect becomes a RED build instead of a quiet None.
+    if spass_runnable:
+        assert verdict is True, (
+            f"SPASS is launchable but the consistent KB 'p, q' did not DECIDE "
+            f"consistent via SPASS — silent disconnect? got ({verdict!r}, {msg!r})."
+        )
+        assert "spass" in msg.lower(), (
+            f"SPASS is launchable but the verdict is not traceable to it — a "
+            f"quiet reasoner swap? got msg={msg!r}."
+        )
