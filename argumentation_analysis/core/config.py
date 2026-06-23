@@ -8,6 +8,13 @@ class SolverChoice(str, enum.Enum):
     TWEETY = "tweety"
     PROVER9 = "prover9"
     EPROVER = "eprover"
+    # FP-19 #1243: Mace4 (LADR model-finder) as a selectable, comparable FOL
+    # backend. Mace4 is a SEMI-decision procedure for satisfiability — it proves
+    # CONSISTENT by exhibiting a finite model; it is the sound complement to the
+    # refutation provers (EProver/Prover9, which prove INCONSISTENT). It must be
+    # run bounded + with a hard timeout (an unbounded model search hangs forever
+    # on an inconsistent KB — firsthand-verified, the #1240 trap in this dimension).
+    MACE4 = "mace4"
 
 
 class ModalSolverChoice(str, enum.Enum):

@@ -194,6 +194,125 @@ def test_prover9_selection_yields_correct_verdict_never_fabricated():
 
 
 # --------------------------------------------------------------------------- #
+# Mace4 / FOL (model-finder) — FP-19 #1243. The vendored Mace4 (sibling of
+# Prover9 under libs/prover9/bin/, sharing cygwin1.dll) is wired as the SOUND
+# CONSISTENT side of the multi-prover comparison: it proves consistent by
+# exhibiting a finite model. Two guards mirror the Prover9 pair: (1) the binary
+# still DECIDES standalone — model on a satisfiable KB, bounded exhaustion on a
+# ground contradiction (an archived/broken install ⇒ red build, the #1204 / R467
+# failure mode in the Mace4 dimension); (2) selecting MACE4 through the
+# production bridge must yield the CORRECT verdict on a consistent KB and must
+# NEVER fabricate consistent on a contradiction.
+# --------------------------------------------------------------------------- #
+def test_mace4_binary_genuinely_decides():
+    """Firsthand: the installed Mace4 binary must DECIDE — a finite MODEL on a
+    satisfiable KB ``{P(a)}`` (consistent), and bounded ``exhausted`` on the
+    ground contradiction ``{P(a),-P(a)}`` (no finite model). If the binary is
+    archived/broken later, this goes red instead of a silent month-late hand
+    discovery (the #1204 / R467 pattern). Bounded run + hard timeout guard the
+    firsthand UNBOUNDED-hang finding (an unbounded search never terminates on an
+    inconsistent KB — #1019/#1240 in the Mace4 dimension)."""
+    from argumentation_analysis.core import mace4_runner
+
+    if not mace4_runner.MACE4_EXECUTABLE.is_file():
+        pytest.skip("Mace4 binary not installed — cannot test the FOL model-finder.")
+
+    sat_out = mace4_runner.run_mace4("formulas(assumptions).\nP(a).\nend_of_list.\n")
+    sat_verdict, _ = mace4_runner.interpret_mace4_output(sat_out)
+    assert sat_verdict is True, (
+        "Mace4 is installed but found NO model for the satisfiable {P(a)} — it no "
+        f"longer decides (silent disconnect). Raw tail:\n{sat_out[-300:]!r}"
+    )
+
+    unsat_out = mace4_runner.run_mace4(
+        "formulas(assumptions).\nP(a).\n-P(a).\nend_of_list.\n"
+    )
+    unsat_verdict, _ = mace4_runner.interpret_mace4_output(unsat_out)
+    assert unsat_verdict is False, (
+        "Mace4 is installed but did NOT exhaust the ground contradiction "
+        f"{{P(a),-P(a)}} — it no longer decides. Raw tail:\n{unsat_out[-300:]!r}"
+    )
+
+
+def test_mace4_selection_yields_correct_verdict_never_fabricated():
+    """Selecting SolverChoice.MACE4 must produce the CORRECT verdict through the
+    production bridge: a clearly-consistent ground KB decides consistent
+    (``True``), and a ground contradiction is NEVER fabricated as consistent
+    (honest outcomes: inconsistent ``False`` via bounded exhaustion, or fail-loud
+    ``None``)."""
+    from argumentation_analysis.core import mace4_runner
+
+    if not mace4_runner.MACE4_EXECUTABLE.is_file():
+        pytest.skip("Mace4 binary not installed — cannot test MACE4 selection.")
+
+    from argumentation_analysis.core.config import settings, SolverChoice
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
+    prev = settings.solver
+    settings.solver = SolverChoice.MACE4
+    try:
+        bridge = TweetyBridge()
+        consistent_kb = "human = {socrate}\ntype(Mortal(human))\n\nMortal(socrate)\n"
+        con_verdict, con_msg = bridge.check_consistency(consistent_kb, "first_order")
+        inconsistent_kb = "human = {socrate}\ntype(Mortal(human))\n\nMortal(socrate)\n!Mortal(socrate)\n"
+        inc_verdict, inc_msg = bridge.check_consistency(inconsistent_kb, "first_order")
+    finally:
+        settings.solver = prev
+
+    assert con_verdict is True, (
+        f"MACE4-selected FOL did not decide the consistent KB consistent "
+        f"(verdict={con_verdict!r}, msg={con_msg!r}) — silent disconnect?"
+    )
+    assert inc_verdict in (False, None), (
+        f"MACE4-selected FOL reported a contradiction as CONSISTENT "
+        f"(verdict={inc_verdict!r}) — a fabricated verdict (anti-théâtre #1019). "
+        f"Honest outcomes are inconsistent (False) or fail-loud (None). msg={inc_msg!r}"
+    )
+
+
+# --------------------------------------------------------------------------- #
+# FOL multi-prover comparison — FP-19 #1243. compare_fol_backends must run every
+# backend on the same KB and surface verdict + timing + agreement; disagreement
+# is reported, never silently reconciled.
+# --------------------------------------------------------------------------- #
+def test_fol_backend_comparison_cross_validates():
+    """The comparison surface (mandate R468: "tous les solvers handy … pour
+    comparer les résultats") must run every FOL backend on one KB and return a
+    structured cross-validation: a verdict per backend, a ``decided`` map, and an
+    ``agreement`` flag. On a clearly-consistent KB the backends that decide must
+    AGREE consistent, and no spurious disagreement is surfaced."""
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
+    bridge = TweetyBridge()
+    consistent_kb = (
+        "human = {socrate}\ntype(Human(human))\ntype(Mortal(human))\n\n"
+        "Human(socrate)\nMortal(socrate)\n"
+    )
+    result = asyncio.new_event_loop().run_until_complete(
+        bridge.compare_fol_backends(consistent_kb)
+    )
+    assert set(result["backends"]) == {
+        "tweety",
+        "eprover",
+        "prover9",
+        "mace4",
+    }, f"comparison must cover every FOL backend; got {sorted(result['backends'])}."
+    decided = result["decided"]
+    assert decided, (
+        f"no FOL backend decided the consistent KB — fully degraded comparison: "
+        f"{result['backends']!r}."
+    )
+    assert all(
+        v is True for v in decided.values()
+    ), f"a backend reported the clearly-consistent KB inconsistent: {decided!r}."
+    if len(decided) >= 2:
+        assert result["agreement"] is True and result["disagreement"] == [], (
+            f"deciders agree consistent but agreement={result['agreement']!r} / "
+            f"disagreement={result['disagreement']!r}."
+        )
+
+
+# --------------------------------------------------------------------------- #
 # PySAT / PL — must decide via PySAT, not the Tweety fallback.
 # --------------------------------------------------------------------------- #
 def test_pysat_decides_pl_consistency():

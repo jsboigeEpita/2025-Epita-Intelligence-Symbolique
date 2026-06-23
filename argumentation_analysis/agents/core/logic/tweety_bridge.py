@@ -321,6 +321,15 @@ class TweetyBridge:
         is_consistent, msg = self.check_consistency(belief_set, logic_type)
         return is_consistent, None, msg
 
+    async def compare_fol_backends(self, belief_set: str) -> dict:
+        """Run every available FOL backend on the same KB and compare verdicts.
+
+        FP-19 #1243 thin wrapper over ``FOLHandler.compare_fol_backends`` so the
+        orchestration layer can request a multi-prover cross-validation without
+        reaching into the handler. DISAGREEMENT is surfaced, never reconciled.
+        """
+        return await self.fol_handler.compare_fol_backends(belief_set)
+
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""
         if TweetyInitializer.is_jvm_ready():
