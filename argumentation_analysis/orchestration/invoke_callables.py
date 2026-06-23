@@ -5551,6 +5551,27 @@ async def _invoke_fol_reasoning(
             bridge.check_consistency, belief_set_str, "first_order"
         )
         fol_metrics["post_tweety"] = len(formulas)
+        # FP-19 #1243: opt-in multi-prover cross-validation. ADDITIVE — only runs
+        # when the caller passes context["compare_backends"], leaving the default
+        # path (single configured solver) untouched. Surfaces every available FOL
+        # backend's verdict + timing + agreement flag so disagreement is visible,
+        # never silently reconciled (mandate R468, #1019). Failure here must not
+        # break the primary verdict, so it is best-effort.
+        fol_backend_comparison: Optional[Dict[str, Any]] = None
+        if context.get("compare_backends"):
+            try:
+                fol_backend_comparison = await bridge.compare_fol_backends(
+                    belief_set_str
+                )
+                logger.info(
+                    "FOL backend comparison: agreement=%s, decided=%s",
+                    fol_backend_comparison.get("agreement"),
+                    fol_backend_comparison.get("decided"),
+                )
+                for _dis in fol_backend_comparison.get("disagreement", []):
+                    logger.warning("FOL backend %s", _dis)
+            except Exception as _cmp_err:
+                logger.warning(f"FOL backend comparison skipped ({_cmp_err}).")
         # FP-6 #1197: pass the handler's tri-state through unchanged. The handler
         # (fol_handler.check_consistency, FP-3 #1192) returns None on reasoner OOM /
         # failure = "could not compute". `bool(None)` would fabricate that into a
@@ -5572,6 +5593,11 @@ async def _invoke_fol_reasoning(
             "logic_type": "first_order",
             "argument_count": len(args),
             "fol_metrics": fol_metrics,
+            **(
+                {"fol_backend_comparison": fol_backend_comparison}
+                if fol_backend_comparison is not None
+                else {}
+            ),
             **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
         }
     except Exception as tweety_err:

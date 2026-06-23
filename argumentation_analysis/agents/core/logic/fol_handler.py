@@ -1,11 +1,18 @@
 import jpype
 import logging
 import asyncio
+import re
+import time
 
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
 from argumentation_analysis.core.prover9_runner import run_prover9
+from argumentation_analysis.core.mace4_runner import (
+    MACE4_EXECUTABLE,
+    interpret_mace4_output,
+    run_mace4,
+)
 from argumentation_analysis.core.config import settings, SolverChoice
 
 setup_logging()
@@ -79,6 +86,106 @@ def _eprover_delivery_is_reliable(reasoner, eprover_path: str) -> bool:
             "was not reported inconsistent — the problem is not reaching the solver "
             "on this platform (Tweety<->E delivery contract broken, #1204). EProver "
             "verdicts cannot be trusted here; falling back to the in-JVM reasoner."
+        )
+    return reliable
+
+
+# --------------------------------------------------------------------------- #
+# Mace4 (LADR model-finder) — FP-19 #1243. The CONSISTENCY side of the FOL
+# multi-prover comparison: it proves consistent by exhibiting a finite model
+# (sound), complementing EProver/Prover9's refutation (which proves inconsistent).
+# --------------------------------------------------------------------------- #
+
+# Operator map Tweety-FOL formula-toString -> LADR (Prover9/Mace4 share LADR).
+# Longest tokens first so ``<=>`` is rewritten before ``=>``. Tweety already
+# renders negation as ``-`` (LADR's symbol) in its toString, but a parsed formula
+# may surface ``!`` — map both.
+_TWEETY_TO_LADR_OPS = [
+    ("<=>", "<->"),
+    ("=>", "->"),
+    ("&&", "&"),
+    ("||", "|"),
+    ("forall ", "all "),
+    ("!", "-"),
+]
+
+
+def _tweety_fol_to_ladr(formula_str: str) -> str:
+    """Translate ONE Tweety FOL formula ``toString()`` into LADR syntax.
+
+    Operates on an INDIVIDUAL formula (e.g. ``Mortal(socrate)`` or
+    ``forall X: (Human(X) => Mortal(X))``), never the whole belief set — the
+    belief set's ``toString()`` is set notation ``{ f1, f2 }`` which LADR cannot
+    parse ("Set parsing is not available"). Anything still un-parseable surfaces
+    as a Mace4 ``Fatal error`` (RuntimeError) → honest fallback, never a
+    fabricated verdict (#1019).
+    """
+    s = formula_str
+    for src, dst in _TWEETY_TO_LADR_OPS:
+        s = s.replace(src, dst)
+    # Tweety renders quantifiers as ``all X:`` / ``exists X:``; LADR wants no
+    # colon (``all X ...``). Drop the colon after the bound variable.
+    s = re.sub(r"\b(all|exists)\s+(\w+)\s*:", r"\1 \2", s)
+    return s
+
+
+def _belief_set_to_ladr_assumptions(belief_set) -> str:
+    """Build a LADR ``formulas(assumptions). … end_of_list.`` block from a Tweety
+    ``FolBeliefSet``.
+
+    Iterates the belief set's INDIVIDUAL formulas (a ``FolBeliefSet`` is a Java
+    ``Collection``) and translates each to a LADR clause terminated by ``.``.
+    This deliberately avoids ``belief_set.toString()`` — that renders the set as
+    ``{ f1, f2 }`` (brace + comma), which Mace4/Prover9 reject as "Set parsing is
+    not available" (the reason the legacy Prover9 path never genuinely decided
+    and always fell back). Mace4 searches for a model of these assumptions.
+    """
+    clauses = []
+    iterator = belief_set.iterator()
+    while iterator.hasNext():
+        formula = iterator.next()
+        ladr = _tweety_fol_to_ladr(str(formula.toString())).strip()
+        if ladr:
+            clauses.append(ladr.rstrip(".") + ".")
+    body = "\n".join(clauses)
+    return f"formulas(assumptions).\n{body}\nend_of_list.\n"
+
+
+# Cache: Mace4 binary path -> bool (delivery contract verified on this platform).
+_MACE4_DELIVERY_RELIABLE: "dict[str, bool]" = {}
+
+
+def _mace4_delivery_is_reliable() -> bool:
+    """Anti-théâtre sentinel for the Mace4 delivery contract (#1019, generalizes
+    ``_eprover_delivery_is_reliable``).
+
+    A model-finder cannot prove inconsistency, so its sentinel exercises its
+    SOUND capability instead: a known-consistent KB ``{ptest(a)}`` MUST yield a
+    finite model. If Mace4 fails to find a model for a trivially-satisfiable KB,
+    the input is not reaching the binary (or the binary is broken) — Mace4 must
+    not be trusted, and the caller falls back / contributes ``None`` rather than
+    serving a possibly-degraded verdict. Result cached per binary path.
+    """
+    key = str(MACE4_EXECUTABLE)
+    cached = _MACE4_DELIVERY_RELIABLE.get(key)
+    if cached is not None:
+        return cached
+    reliable = False
+    try:
+        out = run_mace4("formulas(assumptions).\nptest(a).\nend_of_list.\n")
+        verdict, _ = interpret_mace4_output(out)
+        reliable = verdict is True
+    except Exception as e:  # binary/timeout hiccup -> unreliable, fail loud
+        logger.error(
+            f"Mace4 sentinel self-check raised ({e}); treating Mace4 as unreliable."
+        )
+        reliable = False
+    _MACE4_DELIVERY_RELIABLE[key] = reliable
+    if not reliable:
+        logger.error(
+            "Mace4 sentinel self-check FAILED: known-consistent {ptest(a)} did not "
+            "yield a finite model — the problem is not reaching Mace4 (delivery "
+            "broken). Mace4 verdicts cannot be trusted here."
         )
     return reliable
 
@@ -358,6 +465,16 @@ class FOLHandler:
                 return await self._fol_check_consistency_with_tweety_fallback(
                     belief_set
                 )
+        elif settings.solver == SolverChoice.MACE4:
+            try:
+                return await self._fol_check_consistency_with_mace4(belief_set)
+            except RuntimeError as e:
+                self.logger.warning(
+                    f"Mace4 unavailable ({e}), falling back to Tweety FOL reasoner"
+                )
+                return await self._fol_check_consistency_with_tweety_fallback(
+                    belief_set
+                )
         else:
             return await self._fol_check_consistency_with_tweety(belief_set)
 
@@ -420,13 +537,19 @@ class FOLHandler:
                 "TweetyInitializer instance is required for the 'tweety' solver path."
             )
         try:
-            # This method requires a reasoner that can check for consistency.
-            # SimpleFolReasoner does not have a direct `isConsistent` method,
-            # but we can infer it. A knowledge base is inconsistent if it entails a contradiction (e.g., "$false").
-            FolFormula = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolFormula")
-            # Tweety's representation of contradiction might be different, let's use a common one.
-            # A more robust solution would be to use a specific Tweety constant for falsehood.
-            contradiction = self.parse_fol_formula("forall X (X = X & not(X=X))")
+            # A KB is inconsistent iff it entails the bottom symbol "-". Build the
+            # contradiction with a LOCAL parser carrying the belief set's own
+            # signature — NOT ``self.parse_fol_formula`` / ``self._fol_parser``,
+            # which is only initialized when ``settings.solver == TWEETY`` and is
+            # ``None`` otherwise (so under EPROVER/MACE4/PROVER9 init this method —
+            # the external-solver FALLBACK and a comparison backend, FP-19 #1243 —
+            # would spuriously fail). This mirrors the robust sync ``check_consistency``
+            # and ``_fol_check_consistency_with_eprover`` paths.
+            local_parser = jpype.JClass(
+                "org.tweetyproject.logics.fol.parser.FolParser"
+            )()
+            local_parser.setSignature(belief_set.getMinimalSignature())
+            contradiction = local_parser.parseFormula("-")
 
             SimpleFolReasoner = self._initializer_instance.get_reasoner(
                 "SimpleFolReasoner"
@@ -500,6 +623,57 @@ class FOLHandler:
                 f"Error during EProver FOL consistency check: {e}", exc_info=True
             )
             raise RuntimeError(f"EProver consistency check failed: {e}") from e
+
+    async def _fol_check_consistency_with_mace4(self, belief_set):
+        """Check FOL consistency using the Mace4 model-finder (FP-19 #1243).
+
+        Mace4 is the SOUND CONSISTENT side of the multi-prover comparison: a
+        finite model exhibits consistency. ``exhausted`` (no model up to the
+        domain bound) is reported inconsistent, but the epistemic status is
+        explicit (bounded model search, NOT a refutation proof). A timeout /
+        crash surfaces as ``RuntimeError`` so the caller falls back honestly
+        — never a fabricated verdict (#1019).
+
+        The per-backend delivery sentinel runs first: if Mace4 cannot even find
+        a model for a trivially-consistent KB, it is not reaching the binary and
+        must not be trusted (raises → Tweety fallback).
+        """
+        logger.debug(
+            f"Performing FOL consistency check via Mace4 for belief set of size "
+            f"{belief_set.size()}."
+        )
+        if not MACE4_EXECUTABLE.is_file():
+            raise RuntimeError(
+                f"Mace4 binary not present at {MACE4_EXECUTABLE}; "
+                "cannot run the 'mace4' solver path."
+            )
+        # Anti-théâtre delivery guard (#1019, #1204 generalized): verify Mace4
+        # genuinely decides its SOUND direction before trusting any verdict.
+        if not _mace4_delivery_is_reliable():
+            raise RuntimeError(
+                "Mace4 delivery contract broken (sentinel {ptest(a)} did not "
+                "yield a finite model) — refusing to serve a possibly-fabricated "
+                "FOL verdict."
+            )
+        try:
+            ladr_input = _belief_set_to_ladr_assumptions(belief_set)
+            logger.debug(f"Mace4 input for consistency check:\n{ladr_input}")
+            mace4_output = await asyncio.to_thread(run_mace4, ladr_input)
+            is_consistent, note = interpret_mace4_output(mace4_output)
+            if is_consistent is None:
+                # Degraded (resource limit, no verdict). Fail loud so the caller
+                # falls back instead of fabricating — #1019.
+                raise RuntimeError(f"Mace4 returned no verdict (degraded): {note}")
+            msg = f"Mace4-based consistency check result: {is_consistent}. {note}"
+            logger.info(msg)
+            return is_consistent, msg
+        except RuntimeError:
+            raise
+        except Exception as e:
+            logger.error(
+                f"Error during Mace4 FOL consistency check: {e}", exc_info=True
+            )
+            raise RuntimeError(f"Mace4 consistency check failed: {e}") from e
 
     def fol_query(self, belief_set, query_formula_str: str):
         """
@@ -656,6 +830,34 @@ class FOLHandler:
             if java_belief_set is None or java_belief_set.size() == 0:
                 return True, "Empty belief set is trivially consistent."
 
+            # MACE4 path (FP-19 #1243): the model-finder runs as a subprocess
+            # (no in-JVM reasoner), so it is dispatched before the EProver/Tweety
+            # reasoner selection. Same anti-théâtre discipline: degraded => None.
+            if settings.solver == SolverChoice.MACE4 and MACE4_EXECUTABLE.is_file():
+                if not _mace4_delivery_is_reliable():
+                    return (
+                        None,
+                        "Degraded: Mace4 delivery contract broken (sentinel "
+                        "{ptest(a)} found no model, #1204); no consistency verdict.",
+                    )
+                try:
+                    ladr_input = _belief_set_to_ladr_assumptions(java_belief_set)
+                    mace4_output = run_mace4(ladr_input)
+                    is_consistent, note = interpret_mace4_output(mace4_output)
+                    if is_consistent is None:
+                        return None, f"Degraded (Mace4): {note}"
+                    verdict = "consistent" if is_consistent else "inconsistent"
+                    return (
+                        is_consistent,
+                        f"FOL consistency check (Mace4): {verdict}. {note}",
+                    )
+                except Exception as e:
+                    self.logger.warning(
+                        f"Mace4 consistency check failed: {e}. Returning degraded "
+                        "(None) — no fabricated verdict (#1019)."
+                    )
+                    return None, f"Degraded: Mace4 unavailable ({e}); no verdict."
+
             # Select the reasoner: the configured external solver (EProver) when
             # its binary is wired, otherwise Tweety's SimpleFolReasoner (#1196).
             # Previously this hardcoded SimpleFolReasoner regardless of
@@ -693,9 +895,7 @@ class FOLHandler:
                         # on this platform — fall back to the in-JVM
                         # SimpleFolReasoner, which decides correctly, instead of
                         # serving a fabricated verdict.
-                        if not _eprover_delivery_is_reliable(
-                            reasoner, eprover_path
-                        ):
+                        if not _eprover_delivery_is_reliable(reasoner, eprover_path):
                             if self._initializer_instance is not None:
                                 reasoner = self._initializer_instance.get_reasoner(
                                     "SimpleFolReasoner"
@@ -747,6 +947,126 @@ class FOLHandler:
             error_msg = str(e)
             self.logger.error(f"FOL consistency check failed: {error_msg}")
             return False, f"FOL consistency check error: {error_msg}"
+
+    async def compare_fol_backends(self, belief_set_input) -> dict:
+        """Run ALL available FOL backends on the same belief set and compare.
+
+        FP-19 #1243, mandate R468 ("tous les solvers handy … pour comparer les
+        résultats"). Each backend (Tweety SimpleFolReasoner, EProver, Prover9,
+        Mace4) is run INDEPENDENTLY on the same KB; verdicts are cross-validated.
+        DISAGREEMENT is surfaced explicitly and NEVER silently reconciled — the
+        comparison is the point (#1019).
+
+        Soundness asymmetry (made explicit in the disagreement note):
+        * EProver / Prover9 are sound on the **INCONSISTENT** side (refutation).
+        * Mace4 is sound on the **CONSISTENT** side (a finite model is a witness);
+          its "inconsistent" is only "no finite model ≤ domain bound", a bounded
+          model search, NOT a refutation proof.
+        * Tweety SimpleFolReasoner is the in-JVM baseline.
+
+        Returns a JSON-serialisable dict::
+
+            {
+              "backends": {name: {"verdict": Optional[bool], "note": str,
+                                  "elapsed_ms": float, "available": bool}},
+              "decided":  {name: bool, …},     # only backends that returned a bool
+              "agreement": Optional[bool],     # all-agree / disagree / <2 decided
+              "disagreement": [str, …],        # explicit, never auto-reconciled
+            }
+        """
+        # Build the Java belief set ONCE — every backend reasons over the same KB.
+        if isinstance(belief_set_input, str):
+            java_belief_set = self.create_belief_set_from_string(
+                belief_set_input.strip()
+            )
+        else:
+            java_belief_set = belief_set_input
+
+        backends: "dict[str, dict]" = {}
+
+        if java_belief_set is None or java_belief_set.size() == 0:
+            trivial = {
+                "verdict": True,
+                "note": "Empty belief set is trivially consistent.",
+                "elapsed_ms": 0.0,
+                "available": True,
+            }
+            for name in ("tweety", "eprover", "prover9", "mace4"):
+                backends[name] = dict(trivial)
+            return {
+                "backends": backends,
+                "decided": {n: True for n in backends},
+                "agreement": True,
+                "disagreement": [],
+            }
+
+        async def _run(name, coro_factory) -> None:
+            start = time.perf_counter()
+            try:
+                is_consistent, msg = await coro_factory()
+                elapsed = (time.perf_counter() - start) * 1000.0
+                backends[name] = {
+                    "verdict": is_consistent,
+                    "note": str(msg),
+                    "elapsed_ms": round(elapsed, 1),
+                    "available": True,
+                }
+            except Exception as e:
+                elapsed = (time.perf_counter() - start) * 1000.0
+                backends[name] = {
+                    "verdict": None,
+                    "note": f"unavailable: {e}",
+                    "elapsed_ms": round(elapsed, 1),
+                    "available": False,
+                }
+
+        # Each per-backend method builds its own reasoner and applies its own
+        # delivery sentinel, so they can be invoked directly regardless of the
+        # globally-configured ``settings.solver``.
+        await _run(
+            "tweety", lambda: self._fol_check_consistency_with_tweety(java_belief_set)
+        )
+        await _run(
+            "eprover", lambda: self._fol_check_consistency_with_eprover(java_belief_set)
+        )
+        await _run(
+            "prover9", lambda: self._fol_check_consistency_with_prover9(java_belief_set)
+        )
+        await _run(
+            "mace4", lambda: self._fol_check_consistency_with_mace4(java_belief_set)
+        )
+
+        decided = {
+            name: b["verdict"]
+            for name, b in backends.items()
+            if isinstance(b["verdict"], bool)
+        }
+        verdict_values = set(decided.values())
+        if len(decided) < 2:
+            agreement: "bool | None" = None
+        else:
+            agreement = len(verdict_values) <= 1
+
+        disagreement: "list[str]" = []
+        if agreement is False:
+            consistent_backends = sorted(n for n, v in decided.items() if v is True)
+            inconsistent_backends = sorted(n for n, v in decided.items() if not v)
+            disagreement.append(
+                f"DISAGREEMENT (NOT reconciled): {consistent_backends} report "
+                f"CONSISTENT, {inconsistent_backends} report INCONSISTENT. "
+                "Soundness asymmetry — EProver/Prover9 are sound on the "
+                "inconsistent (refutation) side; Mace4 is sound on the consistent "
+                "(model-witness) side and its 'inconsistent' is only 'no finite "
+                "model up to the domain bound', not a refutation proof. Inspect "
+                "the per-backend notes before drawing a conclusion."
+            )
+
+        return {
+            "backends": backends,
+            "decided": decided,
+            "agreement": agreement,
+            "disagreement": disagreement,
+        }
 
     def execute_fol_query(self, belief_set_input, query_str: str) -> tuple:
         """
