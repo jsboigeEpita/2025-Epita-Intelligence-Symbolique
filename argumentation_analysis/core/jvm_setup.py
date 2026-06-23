@@ -320,39 +320,6 @@ def download_clingo(version: str = None, target_dir: Optional[Path] = None) -> b
         return False
 
 
-def download_native_sat_libs(target_dir: Optional[Path] = None) -> bool:
-    """
-    Download native SAT solver libraries (lingeling, minisat, picosat) for Tweety JNI.
-    These are typically already in libs/native/ but can be fetched from TweetyProject GitHub.
-    """
-    native_dir = target_dir or (PROJ_ROOT / settings.jvm.native_libs_dir)
-    native_dir.mkdir(parents=True, exist_ok=True)
-
-    base_url = "https://raw.githubusercontent.com/TweetyProjectTeam/TweetyProject/main/"
-    suffix = ".dll" if platform.system() == "Windows" else ".so"
-
-    libs = {
-        f"lingeling{suffix}": f"org.tweetyproject.logics.pl.sat/src/main/resources/native/{'windows' if platform.system() == 'Windows' else 'linux'}/lingeling{suffix}",
-        f"minisat{suffix}": f"org.tweetyproject.logics.pl.sat/src/main/resources/native/{'windows' if platform.system() == 'Windows' else 'linux'}/minisat{suffix}",
-        f"picosat{suffix}": f"org.tweetyproject.logics.pl.sat/src/main/resources/native/{'windows' if platform.system() == 'Windows' else 'linux'}/picosat{suffix}",
-    }
-
-    all_ok = True
-    for lib_name, github_path in libs.items():
-        dest = native_dir / lib_name
-        if dest.exists() and dest.stat().st_size > 0:
-            logger.info(f"Native SAT lib already present: {lib_name}")
-            continue
-        url = base_url + github_path
-        success, _ = download_file(url, dest, description=lib_name)
-        if not success:
-            logger.warning(
-                f"Failed to download {lib_name} — not critical if embedded in JAR"
-            )
-            all_ok = False
-    return all_ok
-
-
 def download_external_tools() -> Dict[str, bool]:
     """
     Download all external tools needed by Tweety reasoners.
@@ -368,10 +335,7 @@ def download_external_tools() -> Dict[str, bool]:
     # 2. Clingo (ASP solver)
     results["clingo"] = download_clingo()
 
-    # 3. Native SAT libs
-    results["native_sat"] = download_native_sat_libs()
-
-    # 4. EProver — check presence only (manual install, already committed)
+    # 3. EProver — check presence only (manual install, already committed)
     eprover_path = (
         EXT_TOOLS_DIR
         / "EProver"
@@ -385,7 +349,7 @@ def download_external_tools() -> Dict[str, bool]:
             f"EProver not found at {eprover_path} — install manually from https://eprover.org/"
         )
 
-    # 5. SPASS — check presence only (manual install on Windows)
+    # 4. SPASS — check presence only (manual install on Windows)
     spass_path = (
         EXT_TOOLS_DIR
         / "spass"
