@@ -327,6 +327,103 @@ def test_pysat_decides_pl_consistency():
 
 
 # --------------------------------------------------------------------------- #
+# PL multi-backend comparison — FP-20 #1244. compare_pl_backends must run every
+# SAT backend on the same KB and surface verdict + timing + agreement; the
+# per-backend sentinel confirms each backend genuinely decides BOTH directions
+# (a backend that returns a wrong verdict is fabrication — excluded, #1019).
+# --------------------------------------------------------------------------- #
+def test_pl_comparison_backends_each_decide_both_ways():
+    """Per-backend sentinel (DoD #1244): every backend in the PL comparison set
+    must genuinely DECIDE — correct verdict on a clearly-SAT KB AND a clearly-
+    UNSAT KB. This is what keeps a broken backend (e.g. cryptominisat5, which
+    returns UNSAT on a trivially-SAT formula) out of the comparison: it fails
+    the sentinel here rather than fabricating a comparison point downstream."""
+    from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+
+    sat_kb = "p\nq"          # clearly satisfiable
+    unsat_kb = "p\n!p"       # clearly unsatisfiable
+
+    for sname in PLHandler.PL_COMPARISON_PYSAT_BACKENDS:
+        from argumentation_analysis.agents.core.logic.sat_handler import SATHandler
+
+        handler = SATHandler(default_solver=sname)
+        sat_ok, _, _ = handler.solve_formulas(["p", "q"], sname)
+        unsat_ok, _, _ = handler.solve_formulas(["p", "!p"], sname)
+        assert sat_ok is True, (
+            f"PySAT {sname} did not decide the SAT KB (got {sat_ok}) — a backend "
+            "that cannot recognise a satisfiable KB must not be in the comparison set."
+        )
+        assert unsat_ok is False, (
+            f"PySAT {sname} did not decide the UNSAT KB (got {unsat_ok}) — a "
+            "backend that cannot recognise an unsatisfiable KB is fabrication."
+        )
+
+    # cryptominisat5 is deliberately EXCLUDED — documented firsthand as broken
+    # (returns UNSAT on {P}). Assert it stays out until a probe proves it decides.
+    assert "cryptominisat5" not in PLHandler.PL_COMPARISON_PYSAT_BACKENDS, (
+        "cryptominisat5 was re-added to the comparison set; re-prove firsthand "
+        "that it decides BOTH directions before promoting it (see PL_COMPARISON_"
+        "PYSAT_BACKENDS comment)."
+    )
+    # silence unused-var linters for the KB constants documented above
+    assert sat_kb and unsat_kb
+
+
+def test_pl_backend_comparison_cross_validates():
+    """The PL comparison surface (mandate R468) must run every SAT backend on one
+    KB and return a structured cross-validation: a verdict per backend, a
+    ``decided`` map, and an ``agreement`` flag. On a clearly-consistent KB the
+    deciders must AGREE SAT; on a clearly-inconsistent KB they must AGREE UNSAT;
+    no spurious disagreement is surfaced."""
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
+    bridge = TweetyBridge()
+
+    consistent_kb = "p\nq\np && q => q"   # satisfiable
+    inconsistent_kb = "p\n!p"             # unsatisfiable
+
+    con_result = asyncio.new_event_loop().run_until_complete(
+        bridge.compare_pl_backends(consistent_kb)
+    )
+    inc_result = asyncio.new_event_loop().run_until_complete(
+        bridge.compare_pl_backends(inconsistent_kb)
+    )
+
+    # The comparison must cover the PySAT backends + the Tweety Sat4j backend.
+    expected = {
+        *(f"pysat:{s}" for s in bridge.pl_handler.PL_COMPARISON_PYSAT_BACKENDS),
+        "tweety:sat4j",
+    }
+    assert set(con_result["backends"]) == expected, (
+        f"PL comparison must cover every SAT backend; got "
+        f"{sorted(con_result['backends'])}."
+    )
+
+    # DoD: >=3 backends must actually DECIDE (privacy: synthetic atoms).
+    assert len(con_result["decided"]) >= 3, (
+        f"fewer than 3 PL backends decided the consistent KB — degraded "
+        f"comparison: {con_result['backends']!r}."
+    )
+    assert all(v is True for v in con_result["decided"].values()), (
+        f"a backend reported the clearly-consistent KB inconsistent: "
+        f"{con_result['decided']!r}."
+    )
+    assert con_result["agreement"] is True and con_result["disagreement"] == [], (
+        f"deciders agree SAT but agreement={con_result['agreement']!r} / "
+        f"disagreement={con_result['disagreement']!r}."
+    )
+
+    # Inconsistent KB: the deciders that run must agree UNSAT. (Sat4j/PySAT are
+    # sound+complete; any backend that did not decide is recorded unavailable,
+    # never fabricated as consistent.)
+    inc_decided_true = [n for n, v in inc_result["decided"].items() if v is True]
+    assert not inc_decided_true, (
+        f"a backend reported the clearly-inconsistent KB consistent (SAT): "
+        f"{inc_decided_true!r} — fabrication of an inconsistent KB (#1019)."
+    )
+
+
+# --------------------------------------------------------------------------- #
 # SAT — _invoke_sat is PySAT-backed (NOT the dead ext_tools/*.py scripts).
 # Must genuinely decide SAT/UNSAT, never fabricate.
 # --------------------------------------------------------------------------- #
@@ -418,4 +515,100 @@ def test_spass_no_silent_fallback_when_selected():
         assert "spass" in msg.lower(), (
             f"SPASS is launchable but the verdict is not traceable to it — a "
             f"quiet reasoner swap? got msg={msg!r}."
+        )
+
+
+# --------------------------------------------------------------------------- #
+# SAT multi-backend comparison — FP-20 #1244. compare_pl_backends must run all
+# available PL/SAT backends on the same formula set and surface verdict + timing
+# + agreement; disagreement is reported, never silently reconciled (#1019).
+# --------------------------------------------------------------------------- #
+def test_sat_backend_comparison_cross_validates():
+    """The comparison surface (FP-20 #1244, mandate R468) must run every PL/SAT
+    backend on one formula set and return a structured cross-validation: verdict
+    per backend, a decided map, and an agreement flag.
+
+    On a clearly-consistent formula ('a') every backend that decides must
+    AGREE consistent — no spurious disagreement surfaced. PySAT ×6 must be
+    present; Sat4j/tweety_pl are present when JVM is running (this test file
+    starts the JVM via the autouse fixture). A backend that is unavailable
+    (verdict=None) is acceptable; a WRONG verdict (consistent formula reported
+    INCONSISTENT) is anti-théâtre fabrication (#1019)."""
+    try:
+        import pysat  # noqa: F401
+    except ImportError:
+        pytest.skip("PySAT not installed — SAT comparison cannot decide (fail-loud).")
+
+    from argumentation_analysis.agents.core.logic.sat_handler import compare_pl_backends
+
+    result = asyncio.new_event_loop().run_until_complete(
+        compare_pl_backends(["a"])
+    )
+
+    assert "backends" in result, f"missing 'backends' key: {result!r}"
+    assert "decided" in result, f"missing 'decided' key: {result!r}"
+    assert "agreement" in result, f"missing 'agreement' key: {result!r}"
+    assert "disagreement" in result, f"missing 'disagreement' key: {result!r}"
+
+    # All PySAT backends must be present (PySAT is available per the skip guard)
+    for solver in [
+        "cadical195", "cryptominisat5", "glucose42",
+        "maplechrono", "lingeling", "minisat22",
+    ]:
+        key = f"pysat/{solver}"
+        assert key in result["backends"], (
+            f"missing PySAT backend {key!r} in comparison: "
+            f"{sorted(result['backends'].keys())}"
+        )
+
+    # At least one backend must decide
+    decided = result["decided"]
+    assert decided, (
+        f"no backend decided the consistent formula 'a' — fully degraded comparison: "
+        f"{result['backends']!r}."
+    )
+
+    # Every decider must report CONSISTENT for 'a' — wrong verdict = fabrication
+    for name, v in decided.items():
+        assert v is True, (
+            f"backend {name!r} reported the clearly-consistent formula 'a' as "
+            f"INCONSISTENT (verdict={v!r}) — fabricated verdict (anti-théâtre #1019)."
+        )
+
+    # If ≥2 decided, agreement must be True (no spurious disagreement)
+    if len(decided) >= 2:
+        assert result["agreement"] is True, (
+            f"all deciders agree consistent but agreement={result['agreement']!r} — "
+            f"disagreement flag is wrong: {result['disagreement']!r}."
+        )
+        assert result["disagreement"] == [], (
+            f"spurious disagreement surfaced on unanimous consistent 'a': "
+            f"{result['disagreement']!r}."
+        )
+
+
+def test_sat_backend_comparison_detects_inconsistency():
+    """On a ground contradiction ('a & !a') every deciding backend must agree
+    INCONSISTENT. A backend that reports consistent on a contradiction is
+    fabricating a verdict (anti-théâtre #1019)."""
+    try:
+        import pysat  # noqa: F401
+    except ImportError:
+        pytest.skip("PySAT not installed.")
+
+    from argumentation_analysis.agents.core.logic.sat_handler import compare_pl_backends
+
+    result = asyncio.new_event_loop().run_until_complete(
+        compare_pl_backends(["a & !a"])
+    )
+
+    decided = result["decided"]
+    assert decided, (
+        f"no backend decided the contradiction 'a & !a' — "
+        f"fully degraded comparison: {result['backends']!r}."
+    )
+    for name, v in decided.items():
+        assert v is False, (
+            f"backend {name!r} reported the contradiction 'a & !a' as CONSISTENT "
+            f"(verdict={v!r}) — fabricated verdict (anti-théâtre #1019)."
         )

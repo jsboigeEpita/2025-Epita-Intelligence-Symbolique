@@ -509,3 +509,181 @@ class PLHandler:
         )
         handler = self._get_sat_handler()
         return handler.query(normalized_kb, normalized_query, settings.pysat_solver)
+
+    # ── Multi-backend comparison (FP-20 #1244, mandate R468) ──────────
+
+    # PySAT backends that DECIDE firsthand (probe 2026-06-23, synthetic atoms):
+    # each returns the correct verdict on BOTH {P}->SAT and {P,!P}->UNSAT.
+    # ``cryptominisat5`` is EXCLUDED: it returns UNSAT on a trivially-SAT formula
+    # (``AttributeError: 'CryptoMinisat' object has no attribute 'cryptosat'`` —
+    # its native binding is broken in this env). Promoting a backend that emits a
+    # wrong verdict would fabricate a comparison point — worse than absent (#1019).
+    # A future env where cryptominisat5 genuinely decides can re-add it; the
+    # per-backend sentinel test guards the decision both ways.
+    PL_COMPARISON_PYSAT_BACKENDS: List[str] = [
+        "cadical195",
+        "glucose42",
+        "maplechrono",
+        "lingeling",
+        "minisat22",
+    ]
+
+    async def compare_pl_backends(self, knowledge_base_str: str) -> dict:
+        """Run ALL available PL/SAT backends on the same KB and compare verdicts.
+
+        FP-20 #1244, mandate R468 ("tous les solvers handy … pour comparer les
+        résultats"). Each backend (5 PySAT + Tweety Sat4j) is run INDEPENDENTLY
+        on the same KB; verdicts are cross-validated. DISAGREEMENT is surfaced
+        explicitly and NEVER silently reconciled — the comparison is the point
+        (#1019).
+
+        Backend set (firsthand-confirmed to decide, synthetic atoms):
+        * 5 PySAT solvers (``PL_COMPARISON_PYSAT_BACKENDS``) — Tseitin→CNF→CDCL.
+        * Tweety ``Sat4jSolver`` via ``SatReasoner`` — pure-Java, linear.
+        * The 3 native DLLs (lingeling/minisat/picosat) are honest-absent
+          (removed #1247 — ``UnsatisfiedLinkError: Binding.init()``). PySAT's own
+          minisat/lingeling *Python* bindings are independent of those DLLs and DO
+          decide here.
+        * ``cryptominisat5`` excluded (broken native binding, see class constant).
+
+        Returns a JSON-serialisable dict mirroring ``compare_fol_backends``::
+
+            {
+              "backends": {name: {"verdict": Optional[bool], "note": str,
+                                  "elapsed_ms": float, "available": bool}},
+              "decided":  {name: bool, …},     # only backends that returned a bool
+              "agreement": Optional[bool],     # all-agree / disagree / <2 decided
+              "disagreement": [str, …],        # explicit, never auto-reconciled
+            }
+        """
+        import time as _time
+
+        formula_strings = [
+            f.strip().rstrip("%")
+            for f in knowledge_base_str.split("\n")
+            if f.strip() and f.strip() != "```"
+        ]
+
+        backend_names = [
+            *(f"pysat:{s}" for s in self.PL_COMPARISON_PYSAT_BACKENDS),
+            "tweety:sat4j",
+        ]
+
+        backends: "dict[str, dict]" = {}
+
+        if not formula_strings:
+            trivial = {
+                "verdict": True,
+                "note": "Empty knowledge base is trivially consistent.",
+                "elapsed_ms": 0.0,
+                "available": True,
+            }
+            for name in backend_names:
+                backends[name] = dict(trivial)
+            return {
+                "backends": backends,
+                "decided": {n: True for n in backends},
+                "agreement": True,
+                "disagreement": [],
+            }
+
+        normalized = [self._normalize_formula(f) for f in formula_strings]
+
+        def _run(name: str, fn) -> None:
+            start = _time.perf_counter()
+            try:
+                is_consistent, note = fn()
+                elapsed = (_time.perf_counter() - start) * 1000.0
+                backends[name] = {
+                    "verdict": is_consistent,
+                    "note": str(note),
+                    "elapsed_ms": round(elapsed, 1),
+                    "available": True,
+                }
+            except Exception as e:
+                elapsed = (_time.perf_counter() - start) * 1000.0
+                backends[name] = {
+                    "verdict": None,
+                    "note": f"unavailable: {e}",
+                    "elapsed_ms": round(elapsed, 1),
+                    "available": False,
+                }
+
+        for sname in self.PL_COMPARISON_PYSAT_BACKENDS:
+            _run(
+                f"pysat:{sname}",
+                lambda s=sname: self._pl_backend_pysat(normalized, s),
+            )
+        _run("tweety:sat4j", lambda: self._pl_backend_sat4j(normalized))
+
+        decided = {
+            name: b["verdict"]
+            for name, b in backends.items()
+            if isinstance(b["verdict"], bool)
+        }
+        verdict_values = set(decided.values())
+        if len(decided) < 2:
+            agreement: "Optional[bool]" = None
+        else:
+            agreement = len(verdict_values) <= 1
+
+        disagreement: "List[str]" = []
+        if agreement is False:
+            consistent_backends = sorted(n for n, v in decided.items() if v is True)
+            inconsistent_backends = sorted(n for n, v in decided.items() if not v)
+            disagreement.append(
+                f"DISAGREEMENT (NOT reconciled): {consistent_backends} report "
+                f"CONSISTENT (SAT), {inconsistent_backends} report INCONSISTENT "
+                "(UNSAT). All backends are sound+complete SAT solvers on PL, so a "
+                "disagreement here is a real backend defect — inspect per-backend "
+                "notes before drawing a conclusion."
+            )
+
+        return {
+            "backends": backends,
+            "decided": decided,
+            "agreement": agreement,
+            "disagreement": disagreement,
+        }
+
+    def _pl_backend_pysat(
+        self, normalized: List[str], solver_name: str
+    ) -> Tuple[bool, str]:
+        """Run ONE PySAT backend on the normalized KB. Raises on failure.
+
+        The handler is lazy-loaded per call so a broken PySAT install degrades
+        this backend independently of the Tweety Sat4j backend (and vice-versa).
+        """
+        handler = self._get_sat_handler()
+        is_sat, _model, stats = handler.solve_formulas(normalized, solver_name)
+        is_consistent = bool(is_sat)
+        return (
+            is_consistent,
+            f"{'SAT' if is_consistent else 'UNSAT'} via PySAT {solver_name}",
+        )
+
+    def _pl_backend_sat4j(self, normalized: List[str]) -> Tuple[bool, str]:
+        """Run Tweety Sat4j (``SatReasoner``) on the normalized KB. Raises on failure.
+
+        ``SatReasoner`` is SAT-based (Tseitin→CNF→Sat4j), linear — distinct from
+        ``SimplePlReasoner`` (model enumeration, 2^n, OOM-prone, kept only as the
+        no-PySAT fallback). The normalized formulas use Tweety double-form
+        (``&&``/``||``) which ``PlParser`` accepts.
+        """
+        SatReasoner = jpype.JClass("org.tweetyproject.logics.pl.reasoner.SatReasoner")
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        Contradiction = jpype.JClass(
+            "org.tweetyproject.logics.pl.syntax.Contradiction"
+        )
+        kb = PlBeliefSet()
+        for f in normalized:
+            parsed = self._pl_parser.parseFormula(jpype.JString(f))
+            if parsed is not None:
+                kb.add(parsed)
+        reasoner = SatReasoner()
+        entails_contradiction = reasoner.query(kb, Contradiction())
+        is_consistent = not bool(entails_contradiction)
+        return (
+            is_consistent,
+            f"{'SAT' if is_consistent else 'UNSAT'} via Tweety Sat4j",
+        )

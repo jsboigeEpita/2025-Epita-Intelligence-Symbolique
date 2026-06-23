@@ -3435,11 +3435,35 @@ async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             "statistics": {"handler": "SATHandler", "backend": "Z3-MARCO"},
         }
     is_sat, model, stats = await asyncio.to_thread(handler.solve_formulas, formulas)
-    return {
+    # FP-20 #1244: opt-in multi-backend comparison (PySAT ×6 + Sat4j + SimplePlReasoner).
+    # ADDITIVE — only runs when caller passes context["compare_backends"], leaving the
+    # default single-solver path untouched. Surfaces every backend's verdict + timing +
+    # agreement flag; disagreement is never silently reconciled (#1019, mandate R468).
+    sat_backend_comparison: Optional[Dict[str, Any]] = None
+    if context.get("compare_backends"):
+        try:
+            from argumentation_analysis.agents.core.logic.sat_handler import (
+                compare_pl_backends,
+            )
+
+            sat_backend_comparison = await compare_pl_backends(formulas)
+            logger.info(
+                "SAT backend comparison: agreement=%s, decided=%s",
+                sat_backend_comparison.get("agreement"),
+                list(sat_backend_comparison.get("decided", {}).keys()),
+            )
+            for _dis in sat_backend_comparison.get("disagreement", []):
+                logger.warning("SAT backend %s", _dis)
+        except Exception as _cmp_err:
+            logger.warning(f"SAT backend comparison skipped ({_cmp_err}).")
+    result: Dict[str, Any] = {
         "satisfiable": is_sat,
         "model": model,
         "statistics": stats,
     }
+    if sat_backend_comparison is not None:
+        result["sat_backend_comparison"] = sat_backend_comparison
+    return result
 
 
 # --- SetAF / Weighted AF / Social AF invoke functions (#87) ---
@@ -5154,6 +5178,27 @@ async def _invoke_propositional_logic(
         # Fallback model only when PySAT returned no structured witness (e.g.
         # Tweety-fallback path or UNSAT). Empty dict is honest for UNSAT.
         persisted_model = sat_model if isinstance(sat_model, dict) else {}
+        # FP-20 #1244: opt-in multi-backend cross-validation. ADDITIVE — only
+        # runs when the caller passes context["compare_backends"], leaving the
+        # default path (single configured PySAT solver) untouched. Surfaces every
+        # available PL/SAT backend's verdict + timing + agreement flag so
+        # disagreement is visible, never silently reconciled (mandate R468,
+        # #1019). Failure here must not break the primary verdict, so best-effort.
+        pl_backend_comparison: Optional[Dict[str, Any]] = None
+        if context.get("compare_backends") and bridge is not None:
+            try:
+                pl_backend_comparison = await bridge.compare_pl_backends(
+                    belief_set_str
+                )
+                logger.info(
+                    "PL backend comparison: agreement=%s, decided=%s",
+                    pl_backend_comparison.get("agreement"),
+                    pl_backend_comparison.get("decided"),
+                )
+                for _dis in pl_backend_comparison.get("disagreement", []):
+                    logger.warning("PL backend %s", _dis)
+            except Exception as _cmp_err:
+                logger.warning(f"PL backend comparison skipped ({_cmp_err}).")
         return {
             "formulas": formulas,
             "satisfiable": bool(is_consistent),
@@ -5165,6 +5210,11 @@ async def _invoke_propositional_logic(
             "argument_mapping": argument_mapping
             or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
             "pl_metrics": pl_metrics,
+            **(
+                {"pl_backend_comparison": pl_backend_comparison}
+                if pl_backend_comparison is not None
+                else {}
+            ),
         }
     except Exception as e:
         # Per-formula isolation retry: one bad formula should not kill the batch.
