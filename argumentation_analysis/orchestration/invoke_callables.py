@@ -3704,9 +3704,17 @@ async def _invoke_asp_reasoning(
 
     # Try JVM + Tweety ClingoSolver first
     try:
-        from argumentation_analysis.core.jvm_setup import is_jvm_started
+        from argumentation_analysis.core.jvm_setup import (
+            is_jvm_started,
+            EXTERNAL_TOOL_PATHS,
+        )
 
-        if is_jvm_started():
+        # ClingoSolver has NO no-arg constructor in Tweety 1.28+ — the clingo
+        # binary directory MUST be passed to the ctor. Without a registered
+        # path there is no honest JVM ASP path; fall through to the explicit
+        # Python fallback rather than throwing-and-masking (anti-théâtre #1019).
+        clingo_path = EXTERNAL_TOOL_PATHS.get("clingo")
+        if is_jvm_started() and clingo_path:
             import jpype
 
             JString = jpype.JClass("java.lang.String")
@@ -3717,43 +3725,62 @@ async def _invoke_asp_reasoning(
             ASPRule = jpype.JClass("org.tweetyproject.lp.asp.syntax.ASPRule")
             ASPAtom = jpype.JClass("org.tweetyproject.lp.asp.syntax.ASPAtom")
 
-            # Parse simple rules: "a :- b." format
+            # Parse simple rules: "a :- b." format. Build every rule via the
+            # no-arg ctor + getHead()/getBody().add() — the only construction
+            # the current Tweety build supports (ASPRule(list, list) does NOT
+            # exist; the old fact branch raised and was silently swallowed).
             rules = []
+            prog_vocab = set()  # atom names appearing in the program (Herbrand)
             for line in str(program).strip().splitlines():
                 line = line.strip().rstrip(".")
                 if not line or line.startswith("%"):
                     continue
+                rule = ASPRule()
                 if ":-" in line:
                     head, body = line.split(":-", 1)
-                    head_atoms = [
-                        ASPAtom(h.strip()) for h in head.split(",") if h.strip()
-                    ]
-                    body_atoms = [
-                        ASPAtom(b.strip()) for b in body.split(",") if b.strip()
-                    ]
-                    rule = ASPRule()
-                    for a in head_atoms:
-                        rule.getHead().add(a)
-                    for a in body_atoms:
-                        rule.getBody().add(a)
-                    rules.append(rule)
+                    for h in head.split(","):
+                        if h.strip():
+                            rule.getHead().add(ASPAtom(h.strip()))
+                            prog_vocab.add(h.strip())
+                    for b in body.split(","):
+                        if b.strip():
+                            rule.getBody().add(ASPAtom(b.strip()))
+                            prog_vocab.add(b.strip())
                 else:
-                    rules.append(ASPRule([ASPAtom(line)], []))
+                    rule.getHead().add(ASPAtom(line))
+                    prog_vocab.add(line)
+                rules.append(rule)
 
             prog = Program()
             for r in rules:
                 prog.add(r)
 
-            solver = ClingoSolver()
+            # Ctor injection of the binary directory (registry path from
+            # _configure_external_tools). The old ``ClingoSolver()`` raised
+            # "No matching overloads found for constructor ClingoSolver()" and
+            # was silently swallowed into the clingo_python fallback — the
+            # 029bdf7c rogue-disconnect (R467). Mirror the EProver fix (#1209).
+            solver = ClingoSolver(JString(clingo_path))
             answer_sets = solver.getModels(prog, max_models)
 
             models = []
             for i in range(answer_sets.size()):
-                aset = answer_sets.get(i)
-                atoms = []
-                for j in range(aset.size()):
-                    atoms.append(str(aset.get(j)))
-                models.append(atoms)
+                # AnswerSet is a java.util.Set — iterate, don't index (it has
+                # no .get(j); the old indexed loop raised and was swallowed).
+                models.append([str(atom) for atom in answer_sets.get(i)])
+
+            # Sanity guard: Tweety's ClingoSolver output parser is incompatible
+            # with clingo >= 5.x — it mis-parses the version banner into fake
+            # atoms (e.g. {"version", "clingo"}). Every atom of a genuine answer
+            # set must belong to the program's Herbrand base; if a model is
+            # disjoint from prog_vocab the parse is corrupt, so we DROP the JVM
+            # result and fall through to the genuine clingo Python binding
+            # rather than report fabricated answer sets (anti-théâtre #1019).
+            if prog_vocab and any(m and not (set(m) & prog_vocab) for m in models):
+                raise ValueError(
+                    "Tweety ClingoSolver returned atoms outside the program "
+                    f"vocabulary (banner mis-parse): {models!r} vs {sorted(prog_vocab)!r}"
+                )
 
             return {
                 "answer_sets": models,
@@ -3790,28 +3817,25 @@ async def _invoke_asp_reasoning(
     except Exception as e:
         logger.info(f"Clingo Python solve failed ({e})")
 
-    # Pure Python heuristic fallback
-    logger.warning("ASP reasoning: Clingo unavailable, using heuristic fallback")
-    lines = str(program).strip().splitlines()
-    rules = [
-        l.strip().rstrip(".")
-        for l in lines
-        if ":-" in l and not l.strip().startswith("%")
-    ]
-    facts = [
-        l.strip().rstrip(".")
-        for l in lines
-        if ":-" not in l and l.strip() and not l.strip().startswith("%")
-    ]
-
+    # No genuine ASP solver was available (neither the JVM Tweety ClingoSolver
+    # nor the official clingo Python package). The previous behaviour echoed the
+    # program's *facts* as a single fabricated answer set — but that ignores the
+    # rules entirely (e.g. "a.\nb :- a." would return {a}, silently dropping the
+    # derived "b"). That is exactly the silent-degradation theatre #1019 forbids.
+    # Fail loud: report an honest, empty, degraded result — no fabricated atoms.
+    logger.error(
+        "ASP reasoning: no genuine Clingo solver available "
+        "(JVM Tweety binding + clingo Python package both unavailable). "
+        "Returning a degraded result — install the 'clingo' package or a "
+        "Tweety-compatible clingo binary to decide answer sets."
+    )
     return {
-        "answer_sets": [facts] if facts else [],
-        "num_models": 1 if facts else 0,
-        "solver": "heuristic",
+        "answer_sets": [],
+        "num_models": 0,
+        "solver": "unavailable",
+        "degraded": True,
+        "error": "no genuine ASP solver available (clingo JVM + python both absent)",
         "program": str(program)[:500],
-        "rules_parsed": len(rules),
-        "facts_parsed": len(facts),
-        "fallback": "python_heuristic",
     }
 
 
