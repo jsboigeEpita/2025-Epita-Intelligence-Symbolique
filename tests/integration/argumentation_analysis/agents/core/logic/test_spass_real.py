@@ -17,6 +17,21 @@ original SPASS-forced draft:
    it and asserting a boolean would be re-theater (it would in fact return the
    honest ``None``).
 
+A third firsthand finding (po-2025 / WSL, 2026-06-23, #1234) added the
+``TestRealSpassConsistency`` multi-atom case and the EML→eml adapter:
+
+3. **A genuine SPASS CLI built from source DOES decide modal logic — once the
+   Tweety↔SPASS DFG delivery contract is repaired.** Tweety 1.29 emits the DFG
+   special-formulae logic token as ``EML`` (uppercase); SPASS 3.9's parser
+   requires ``eml`` (lowercase) → "got 'EML', expected special type (eml)",
+   SPASS aborts, ``query`` throws "SPASS returned no result which can be
+   interpreted" (modal analogue of the eprover #1204 regression). The
+   ``spass_eml_adapter.sh`` adapter (registered as
+   ``EXTERNAL_TOOL_PATHS['spass']``) rewrites only that keyword case and
+   forwards to the real SPASS, which then DECIDES — including the 12-atom KB
+   that OOMs ``SimpleMlReasoner`` (``MULTI_ATOM_MODAL_KB`` below). Build:
+   ``scripts/setup/build_spass_modal.sh``.
+
 So the **real anti-theater guard** is the DEFAULT modal reasoner
 (``SimpleMlReasoner``, pure-Java, query-based): it DECIDES consistency with NO
 external binary, hence it RUNS on CI everywhere — not "green by skipping". The
@@ -45,6 +60,23 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 INCONSISTENT_KB = "type(Rain)\n\nRain\n!Rain\n"
 # A consistent modal KB exercising the necessity operator: []( Rain => Wet ) and Rain.
 CONSISTENT_KB = "type(Rain)\ntype(Wet)\n\n[](Rain => Wet)\nRain\n"
+
+# A 12-atom genuinely-modal KB — a necessity chain []( a_i => a_{i+1} ) plus a
+# possibility <>( a1 ). This is the #1234 / FP-16 scaling case: ``SimpleMlReasoner``
+# enumerates Kripke models and OOMs (``java.lang.OutOfMemoryError``) at this atom
+# count, so it CANNOT decide it. SPASS decides it by saturation (no enumeration),
+# which is exactly why activating SPASS — not routing around the modal solver — is
+# the fix. Privacy HARD: synthetic atoms only.
+_MULTI_ATOMS = [f"a{i}" for i in range(1, 13)]
+MULTI_ATOM_MODAL_KB = (
+    "\n".join(f"type({a})" for a in _MULTI_ATOMS)
+    + "\n\n"
+    + "\n".join(
+        f"[]({_MULTI_ATOMS[i]} => {_MULTI_ATOMS[i + 1]})"
+        for i in range(len(_MULTI_ATOMS) - 1)
+    )
+    + f"\n<>({_MULTI_ATOMS[0]})\n"
+)
 
 
 def _spass_runnable() -> bool:
@@ -169,6 +201,29 @@ class TestRealSpassConsistency:
         assert is_consistent is True, (
             f"Consistent modal KB must report consistent via SPASS; "
             f"got ({is_consistent!r}, {msg!r})."
+        )
+        assert (
+            "spass" in msg.lower()
+        ), f"Verdict must be traceable to the SPASS reasoner; got msg={msg!r}."
+
+    def test_multi_atom_kb_decides_via_spass_without_oom(
+        self, modal_bridge, spass_solver
+    ):
+        """The #1234 / FP-16 win: a 12-atom genuinely-modal KB that OOMs
+        ``SimpleMlReasoner`` (naive Kripke enumeration) must DECIDE via SPASS
+        (saturation, no enumeration). Firsthand-verified (2026-06-23) via the
+        production ModalHandler under the WSL fol-linux stack: SPASS returns a
+        real boolean verdict here where the default reasoner cannot. The KB is
+        satisfiable (a reflexive single-world model satisfies the chain and the
+        diamond), so the genuine verdict is ``consistent``."""
+        is_consistent, msg = modal_bridge.check_consistency(MULTI_ATOM_MODAL_KB, "K")
+        assert is_consistent is not None, (
+            f"A 12-atom modal KB that OOMs SimpleMlReasoner must still DECIDE via "
+            f"SPASS (no enumeration); got ({is_consistent!r}, {msg!r})."
+        )
+        assert is_consistent is True, (
+            f"The necessity-chain + diamond KB is satisfiable; SPASS must report "
+            f"consistent. got ({is_consistent!r}, {msg!r})."
         )
         assert (
             "spass" in msg.lower()
