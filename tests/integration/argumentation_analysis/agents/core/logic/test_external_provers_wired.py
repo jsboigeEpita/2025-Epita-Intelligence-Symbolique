@@ -123,6 +123,77 @@ def test_eprover_decides_inconsistent_when_binary_present():
 
 
 # --------------------------------------------------------------------------- #
+# Prover9 / FOL (alt) — the binary is fully installed (prover9.exe + cygwin1.dll
+# + mace4.exe under libs/prover9/bin/). R467 sweep firsthand-confirmed it
+# genuinely DECIDES standalone ("THEOREM PROVED" on a contradiction in ~0.00s).
+# Two guards: (1) the binary still decides when fed real Prover9 syntax — so an
+# archived/broken install becomes a red build, the EProver #1204 failure mode in
+# the Prover9 dimension; (2) selecting PROVER9 through the production bridge must
+# yield the CORRECT verdict (the Tweety->Prover9 syntax gap routes it to an
+# honest SimpleFolReasoner fallback — that is fine; a FABRICATED verdict is not).
+# --------------------------------------------------------------------------- #
+def test_prover9_binary_genuinely_decides():
+    """Firsthand: the installed Prover9 binary must DECIDE an inconsistent KB
+    (fed in real Prover9 syntax). 'THEOREM PROVED' on {Human(socrate),
+    -Human(socrate)} |- $F means it genuinely refuted the KB. If the binary is
+    archived/broken later, this goes red instead of a silent month-late hand
+    discovery (the #1204 / R467 pattern)."""
+    from argumentation_analysis.core import prover9_runner
+
+    if not prover9_runner.PROVER9_EXECUTABLE.is_file():
+        pytest.skip("Prover9 binary not installed — cannot test the FOL alt solver.")
+
+    p9_input = (
+        "formulas(assumptions).\n"
+        "Human(socrate).\n"
+        "-Human(socrate).\n"
+        "end_of_list.\n\n"
+        "formulas(goals).\n"
+        "$F.\n"
+        "end_of_list."
+    )
+    out = prover9_runner.run_prover9(p9_input)
+    assert "THEOREM PROVED" in out, (
+        "Prover9 binary is installed but did NOT prove $F from a contradiction — "
+        f"it no longer decides (silent disconnect). Raw tail:\n{out[-400:]!r}"
+    )
+
+
+def test_prover9_selection_yields_correct_verdict_never_fabricated():
+    """Selecting SolverChoice.PROVER9 must produce the CORRECT verdict on an
+    inconsistent FOL KB. The Tweety->Prover9 syntax-translation gap means the
+    binary path raises 'Fatal error' and the bridge falls back to the Tweety
+    SimpleFolReasoner — an HONEST, labelled fallback. The invariant: the
+    contradiction is reported inconsistent (False), or fails loud (None); it is
+    NEVER fabricated as consistent (True). A timeout (added R467) turns a hang
+    into a fast honest fallback rather than blocking the pipeline."""
+    from argumentation_analysis.core import prover9_runner
+
+    if not EXTERNAL_TOOL_PATHS.get("eprover") and not (
+        prover9_runner.PROVER9_EXECUTABLE.is_file()
+    ):
+        pytest.skip("No FOL backend present — cannot test PROVER9 selection.")
+
+    from argumentation_analysis.core.config import settings, SolverChoice
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
+    prev = settings.solver
+    settings.solver = SolverChoice.PROVER9
+    try:
+        bridge = TweetyBridge()
+        kb = "Mortal = {socrate}\ntype(Human(Mortal))\nHuman(socrate)\n!Human(socrate)"
+        verdict, msg = bridge.check_consistency(kb, "first_order")
+    finally:
+        settings.solver = prev
+
+    assert verdict in (False, None), (
+        f"PROVER9-selected FOL reported a contradiction as CONSISTENT "
+        f"(verdict={verdict!r}) — a fabricated verdict (anti-théâtre #1019). "
+        f"Honest outcomes are inconsistent (False) or fail-loud (None). msg={msg!r}"
+    )
+
+
+# --------------------------------------------------------------------------- #
 # PySAT / PL — must decide via PySAT, not the Tweety fallback.
 # --------------------------------------------------------------------------- #
 def test_pysat_decides_pl_consistency():
@@ -134,6 +205,34 @@ def test_pysat_decides_pl_consistency():
     assert (
         inc is False and con is True
     ), f"PL consistency wrong: inconsistent->{inc}, consistent->{con}"
+
+
+# --------------------------------------------------------------------------- #
+# SAT — _invoke_sat is PySAT-backed (NOT the dead ext_tools/*.py scripts).
+# Must genuinely decide SAT/UNSAT, never fabricate.
+# --------------------------------------------------------------------------- #
+def test_sat_decided_by_pysat():
+    """_invoke_sat routes through SATHandler -> pysat.solvers.Solver (genuine).
+    'a & !a' is UNSAT; 'a' is SAT. If PySAT is uninstalled the handler raises
+    (fail-loud) rather than fabricating — so we surface that as a skip, never a
+    green pass on a dead solver."""
+    try:
+        import pysat  # noqa: F401
+    except ImportError:
+        pytest.skip("PySAT not installed — SAT handler cannot decide (fail-loud).")
+
+    from argumentation_analysis.orchestration.invoke_callables import _invoke_sat
+
+    loop = asyncio.new_event_loop()
+    unsat = loop.run_until_complete(_invoke_sat("a & !a", {}))
+    sat = loop.run_until_complete(_invoke_sat("a", {}))
+    assert unsat.get("satisfiable") is False, (
+        f"contradiction 'a & !a' reported satisfiable={unsat.get('satisfiable')!r} "
+        f"— PySAT disconnect or fabrication (#1019)."
+    )
+    assert (
+        sat.get("satisfiable") is True
+    ), f"'a' reported satisfiable={sat.get('satisfiable')!r} — expected True."
 
 
 # --------------------------------------------------------------------------- #
