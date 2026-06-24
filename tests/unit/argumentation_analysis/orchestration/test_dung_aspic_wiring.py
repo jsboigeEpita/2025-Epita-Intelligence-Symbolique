@@ -2,7 +2,7 @@
 
 Validates:
 - _invoke_dung_extensions uses extract_arguments and generate_attacks helpers
-- _python_dung_fallback computes grounded extension correctly
+- _python_dung_fallback raises RuntimeError (fail-loud stub, FP-22 #1249)
 - _write_dung_extensions_to_state stores actual attacks and arguments
 - _generate_attacks_from_args matches fallacies to arguments by text content
 - Standard and full workflows include dung_extensions and aspic_analysis phases
@@ -371,113 +371,57 @@ class TestInvokeDungExtensions:
 
 
 # ============================================================
-# Test: Python Dung fallback
+# Test: Python Dung fallback — fail-loud (FP-22 #1249)
 # ============================================================
 
 
 class TestPythonDungFallback:
-    """Test pure-Python Dung extension computation."""
+    """FP-22 #1249: _python_dung_fallback is a fail-loud stub — raises RuntimeError."""
 
-    def test_empty_arguments(self):
-        """Fallback returns empty result for no arguments."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
+    def test_raises_runtime_error(self):
+        """Fallback raises RuntimeError — no fabricated extensions (#1019, FP-22 #1249)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_dung_fallback(["a", "b"], [["a", "b"]])
 
-        result = _python_dung_fallback([], [])
-        assert result["statistics"]["arguments_count"] == 0
-
-    def test_simple_framework(self):
-        """Fallback computes grounded extension for simple AF."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
+    def test_raises_on_empty_args(self):
+        """Fallback raises even on empty args — consistent fail-loud behavior."""
+        from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_dung_fallback([], [])
 
-        args = ["a", "b", "c"]
-        attacks = [["a", "b"]]  # a attacks b
-        result = _python_dung_fallback(args, attacks)
 
-        assert result["semantics"] == "python"
-        assert len(result["arguments"]) == 3
-        assert len(result["attacks"]) == 1
-        # 'a' has no attacker, so it should be in grounded
-        # 'b' is attacked by 'a' (which is defended), so b not in grounded
-        # 'c' has no attacker, so it should be in grounded
-        # grounded is a list of extensions: [[args_in_ext1], ...]
-        grounded_exts = result.get("extensions", {}).get("grounded", [])
-        assert len(grounded_exts) >= 1
-        grounded = set(grounded_exts[0]) if grounded_exts else set()
-        assert "a" in grounded
-        assert "c" in grounded
-        assert "b" not in grounded
+class TestDungInvokeFallbackSentinel:
+    """FP-22 #1249 sentinel: _invoke_dung_extensions degraded when JVM unavailable."""
 
-    def test_self_attack(self):
-        """Fallback handles self-attacking arguments."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            _python_dung_fallback,
+    def test_returns_degraded_when_afhandler_unavailable(self):
+        """When AFHandler import fails, result is degraded=True, extensions={} (#1019)."""
+        import sys
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_dung_extensions,
         )
 
-        args = ["a", "b"]
-        attacks = [["a", "a"]]  # a attacks itself
-        result = _python_dung_fallback(args, attacks)
-
-        # a is self-attacking, should not be in grounded
-        grounded_exts = result.get("extensions", {}).get("grounded", [])
-        grounded = set(grounded_exts[0]) if grounded_exts else set()
-        assert "a" not in grounded
-
-    def test_no_attacks(self):
-        """All arguments in grounded when no attacks."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            _python_dung_fallback,
-        )
-
-        args = ["a", "b", "c"]
-        result = _python_dung_fallback(args, [])
-
-        grounded_exts = result.get("extensions", {}).get("grounded", [])
-        grounded = set(grounded_exts[0]) if grounded_exts else set()
-        assert grounded == {"a", "b", "c"}
-
-    def test_4_semantics_computed(self):
-        """Python fallback computes grounded+complete+preferred+stable (#1019)."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            _python_dung_fallback,
-        )
-
-        args = ["a", "b", "c"]
-        attacks = [["a", "b"], ["b", "c"]]
-        result = _python_dung_fallback(args, attacks)
-
-        assert result["semantics"] == "python"
-        exts = result.get("extensions", {})
-        # All 4 critical extensions must be present
-        assert "grounded" in exts
-        assert "complete" in exts
-        assert "preferred" in exts
-        assert "stable" in exts
-        # Grounded is always unique (list of 1 extension)
-        assert len(exts["grounded"]) == 1
-        # Statistics must report semantics_computed
-        stats = result.get("statistics", {})
-        assert stats.get("semantics_computed") == 4
-
-    def test_preferred_subsumes_grounded(self):
-        """Preferred extensions are supersets of grounded (#1019)."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            _python_dung_fallback,
-        )
-
-        args = ["a", "b", "c"]
-        attacks = [["a", "b"]]
-        result = _python_dung_fallback(args, attacks)
-
-        exts = result.get("extensions", {})
-        grounded_set = set(exts["grounded"][0]) if exts["grounded"] else set()
-        # Every preferred extension should contain the grounded extension
-        for pref in exts.get("preferred", []):
-            assert grounded_set.issubset(set(pref)), \
-                f"Grounded {grounded_set} not subset of preferred {set(pref)}"
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.af_handler": None},
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                _invoke_dung_extensions(
+                    "",
+                    {
+                        "arguments": ["arg_1", "arg_2"],
+                        "attacks": [["arg_1", "arg_2"]],
+                    },
+                )
+            )
+        assert result.get("degraded") is True, f"Expected degraded=True, got: {result}"
+        assert result.get("extensions") == {}, f"Expected empty extensions, got: {result}"
+        assert result.get("semantics") == "unavailable"
+        assert "note" in result
 
 
 # ============================================================

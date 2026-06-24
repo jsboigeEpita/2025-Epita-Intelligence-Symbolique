@@ -6146,23 +6146,23 @@ async def _invoke_dung_extensions(
             logger.warning(
                 f"Dung Tweety computation timed out after {_DUNG_TIMEOUT_S}s "
                 f"({len(arguments)} args, {len(attacks)} attacks) — "
-                f"using pure-Python 4-semantics computation (#1019)"
+                f"degraded: no extensions computed (#1019, FP-22 #1249)"
             )
-            _python_result = _python_dung_fallback(arguments, attacks)
-            # Trace entry for Python Dung compute
-            _state = context.get("_state_object")
-            if _state is not None and _python_result.get("arguments"):
-                _n_args = len(_python_result.get("arguments", []))
-                _sem_count = _python_result.get("statistics", {}).get(
-                    "semantics_computed", 0
-                )
-                _state.add_trace_entry(
-                    phase="dung",
-                    agent="DungAnalyzer",
-                    reacts_to=["extract", "counter"],
-                    summary=f"Cadre Dung (Python, Tweety timeout): {_n_args} arguments. {_sem_count} sémantiques calculées.",
-                )
-            return _python_result
+            return {
+                "degraded": True,
+                "semantics": "unavailable",
+                "extensions": {},
+                "arguments": arguments,
+                "attacks": attacks,
+                "note": (
+                    f"Tweety Dung computation timed out after {_DUNG_TIMEOUT_S}s. "
+                    "Dung extensions require a JVM reasoner — honest-absent (#1019)."
+                ),
+                "statistics": {
+                    "arguments_count": len(arguments),
+                    "attacks_count": len(attacks),
+                },
+            }
 
         raw_extensions = result.get("extensions", {})
 
@@ -6222,172 +6222,41 @@ async def _invoke_dung_extensions(
         return _dung_result
     except Exception as e:
         logger.info(
-            f"Dung AFHandler unavailable ({e}), using Python 4-semantics compute"
+            f"Dung AFHandler unavailable ({e}) — "
+            f"degraded: no extensions computed (#1019, FP-22 #1249)"
         )
-        _python_result = _python_dung_fallback(arguments, attacks)
-        # Trace entry for Python Dung compute
-        _state = context.get("_state_object")
-        if _state is not None and _python_result.get("arguments"):
-            _n_args = len(_python_result.get("arguments", []))
-            _sem_count = _python_result.get("statistics", {}).get(
-                "semantics_computed", 0
-            )
-            _state.add_trace_entry(
-                phase="dung",
-                agent="DungAnalyzer",
-                reacts_to=["extract", "counter"],
-                summary=f"Cadre Dung (Python, AFHandler unavailable): {_n_args} arguments. {_sem_count} sémantiques calculées.",
-            )
-        return _python_result
+        return {
+            "degraded": True,
+            "semantics": "unavailable",
+            "extensions": {},
+            "arguments": arguments,
+            "attacks": attacks,
+            "note": (
+                f"JVM/Tweety unavailable: {e}. "
+                "Dung extensions require a JVM reasoner — honest-absent (#1019)."
+            ),
+            "statistics": {
+                "arguments_count": len(arguments),
+                "attacks_count": len(attacks),
+            },
+        }
 
 
 def _python_dung_fallback(
     arguments: List[str], attacks: List[List[str]]
 ) -> Dict[str, Any]:
-    """Pure-Python Dung extension computation when JVM/Tweety is unavailable (#1019).
+    """Fail-loud stub — Dung extensions require JVM/Tweety (#1019, FP-22 #1249).
 
-    Computes grounded, complete, preferred, and stable extensions using
-    exact combinatorial enumeration. Suitable for argument graphs with ≤50
-    arguments (exponential in worst case, but practical for this project's
-    input sizes).
-
-    Each extension is a conflict-free set:
-    - Grounded:    the ⊆-minimal complete extension (iterative fixpoint)
-    - Complete:    all conflict-free sets that defend every member
-    - Preferred:   ⊆-maximal complete extensions
-    - Stable:      conflict-free sets that attack every non-member
+    Previous pure-Python combinatorial enumeration produced non-empty extension
+    sets without a genuine Tweety reasoner call — anti-theatre violation (#1019).
+    Call sites in _invoke_dung_extensions now return honest-absent degraded dicts
+    instead of invoking this function. This stub raises to prevent any accidental
+    call from entering fabricated results into state.
     """
-    if not arguments:
-        return {
-            "semantics": "python",
-            "extensions": {},
-            "arguments": [],
-            "attacks": [],
-            "statistics": {"arguments_count": 0, "attacks_count": 0},
-        }
-
-    arg_set = set(arguments)
-    # Build attack maps
-    attack_map: Dict[str, set[str]] = {a: set() for a in arg_set}
-    for attacker, target in attacks:
-        if attacker in arg_set and target in arg_set:
-            attack_map[attacker].add(target)
-
-    def _attacks(attacker: str, target: str) -> bool:
-        return target in attack_map.get(attacker, set())
-
-    def _is_conflict_free(s: frozenset[str]) -> bool:
-        for a in s:
-            for b in s:
-                if _attacks(a, b):
-                    return False
-        return True
-
-    def _defends(s: frozenset[str], arg: str) -> bool:
-        """s defends arg iff for every attacker b of arg, some c in s attacks b."""
-        for b in arg_set:
-            if _attacks(b, arg):
-                if not any(_attacks(c, b) for c in s):
-                    return False
-        return True
-
-    def _is_admissible(s: frozenset[str]) -> bool:
-        if not _is_conflict_free(s):
-            return False
-        return all(_defends(s, a) for a in s)
-
-    def _is_complete(s: frozenset[str]) -> bool:
-        """Complete = admissible + every defended argument is in s."""
-        if not _is_admissible(s):
-            return False
-        for arg in arg_set - s:
-            if _defends(s, arg):
-                return False
-        return True
-
-    def _is_stable(s: frozenset[str]) -> bool:
-        """Stable = conflict-free + attacks every argument outside s."""
-        if not _is_conflict_free(s):
-            return False
-        outside = arg_set - s
-        for b in outside:
-            if not any(_attacks(a, b) for a in s):
-                return False
-        return True
-
-    # ── Grounded extension: iterative fixpoint (polynomial) ──
-    grounded: set[str] = set()
-    changed = True
-    while changed:
-        changed = False
-        for arg in arg_set:
-            if arg in grounded:
-                continue
-            defended = all(
-                any(att in attack_map.get(g, set()) for g in grounded)
-                for att in arg_set
-                if _attacks(att, arg)
-            )
-            if defended and not any(_attacks(arg, ga) for ga in grounded):
-                grounded.add(arg)
-                changed = True
-
-    extensions: Dict[str, Any] = {}
-    extensions["grounded"] = [sorted(grounded)]
-
-    # ── Enumerate complete, preferred, stable via power set ──
-    # Cap at 25 arguments: power-set enumeration is O(2^n); at n=40 this is
-    # ~10^12 operations (infeasible).  Grounded is always computed (polynomial).
-    _DUNG_ENUM_CAP = 25
-    if len(arg_set) > _DUNG_ENUM_CAP:
-        logger.warning(
-            "Dung power-set enumeration skipped: %d arguments > cap %d. "
-            "Only grounded extension computed.",
-            len(arg_set),
-            _DUNG_ENUM_CAP,
-        )
-    if len(arg_set) <= _DUNG_ENUM_CAP:
-        complete_exts: List[List[str]] = []
-        preferred_exts: List[List[str]] = []
-        stable_exts: List[List[str]] = []
-
-        from itertools import combinations
-
-        for size in range(len(arg_set), -1, -1):
-            for subset in combinations(sorted(arg_set), size):
-                s = frozenset(subset)
-                if _is_complete(s):
-                    ext_sorted = sorted(s)
-                    if ext_sorted not in complete_exts:
-                        complete_exts.append(ext_sorted)
-
-        # Preferred = ⊆-maximal complete extensions
-        complete_sets = [frozenset(e) for e in complete_exts]
-        for e in complete_sets:
-            is_maximal = not any(e < other for other in complete_sets if other != e)
-            if is_maximal:
-                preferred_exts.append(sorted(e))
-
-        # Stable = conflict-free + attacks everything outside
-        for e in complete_sets:
-            if _is_stable(e):
-                stable_exts.append(sorted(e))
-
-        extensions["complete"] = complete_exts
-        extensions["preferred"] = preferred_exts
-        extensions["stable"] = stable_exts
-
-    return {
-        "semantics": "python",
-        "extensions": extensions,
-        "arguments": arguments,
-        "attacks": attacks,
-        "statistics": {
-            "arguments_count": len(arguments),
-            "attacks_count": len(attacks),
-            "semantics_computed": len(extensions),
-        },
-    }
+    raise RuntimeError(
+        "Dung extension computation unavailable: JVM/Tweety required. "
+        "Install JVM and ensure Tweety JARs are on the classpath."
+    )
 
 
 async def _invoke_formal_synthesis(
