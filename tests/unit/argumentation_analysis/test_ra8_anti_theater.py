@@ -209,21 +209,16 @@ class TestPLFailLoud:
 # Anti-regression: legitimate paths that must NOT raise
 # ---------------------------------------------------------------------------
 class TestDungNativeSurvives:
-    """Dung fallback is a legitimate exact solver (not synthetic theater)."""
+    """FP-22 #1249: _python_dung_fallback is now a fail-loud stub — raises RuntimeError."""
 
-    def test_dung_fallback_returns_result(self):
-        """_python_dung_fallback computes real extensions — must not raise."""
+    def test_dung_fallback_raises_runtime_error(self):
+        """_python_dung_fallback must raise RuntimeError — no fabricated extensions (#1019)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
 
-        result = _python_dung_fallback(["a", "b"], [["a", "b"]])
-        assert isinstance(result, dict)
-        assert "extensions" in result
-        # Must NOT contain "fallback": "python"
-        assert result.get("fallback") != "python"
-        # Contains real computation
-        assert result["statistics"]["arguments_count"] == 2
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_dung_fallback(["a", "b"], [["a", "b"]])
 
 
 class TestQBFNativeSurvives:
