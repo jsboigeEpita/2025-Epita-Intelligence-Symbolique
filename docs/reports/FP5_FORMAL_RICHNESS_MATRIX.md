@@ -15,6 +15,97 @@ section supersedes the modal findings.
 > (redact-filter over the corpus applied in the runner; log corpora dumps stay
 > gitignored and were never surfaced verbatim).
 
+## FP-23 Update (2026-06-24, base `d9a1d4bf` — wired-but-unmeasured capability classification, DoD #2/#4/#5)
+
+**Track**: FP-23 #1250 (Epic #1191 — measure the ~18 wired-but-unmeasured formal
+capabilities + diagnose laggards) · **Type**: offline capability classification ·
+**Author**: po-2023 · **Date**: 2026-06-24 ·
+**Base**: `d9a1d4bf` (reuses the FP-21 #1248 raw metrics — the spectacular+full run
+already drove all ~40 capabilities through the pipeline; their output is captured
+in the persisted `state_snapshot`).
+Script: `scripts/fp23_measure_unmeasured.py` (offline, no LLM, no corpus re-run).
+
+### Why offline re-use (not a second 40-min run)
+
+The FP-21 run already executed every wired capability (40 in `capabilities_used`).
+FP-23's job is to **classify** the capabilities FP-21's harness `CAPABILITIES` list
+excluded (it probed 23; the Epic flagged ~18 others). Two were genuinely unmeasured:
+`ranking_semantics` and `bipolar_argumentation` — now added to the harness
+(`scripts/run_fp5_formal_matrix.py` CAPABILITIES) and classified here from their
+persisted snapshot counters (`ranking_result_count`, `bipolar_result_count`). The
+rest were either already measured by FP-21 or are sub-dimensions of an already-measured axis.
+
+### Classification (capability × corpus — base `d9a1d4bf`, offline from FP-21 raw metrics)
+
+| capability | doc_A | doc_C | doc_B |
+|---|---|---|---|
+| modal_logic | substantive (degraded) | substantive (degraded) | error |
+| aspic_plus_reasoning | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| aba_reasoning | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| defeasible_logic | empty | empty | empty |
+| setaf_reasoning | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| **bipolar_argumentation** (NEW) | **substantive (count≥1)** | **substantive (count≥1)** | **substantive (count≥1)** |
+| **ranking_semantics** (NEW) | **substantive (count≥1)** | **substantive (count≥1)** | **substantive (count≥1)** |
+| probabilistic_argumentation | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| weighted_argumentation | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| social_argumentation | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| qbf_reasoning | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| conditional_logic | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| description_logic | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| belief_maintenance | unavailable (sub-dimension) | unavailable (sub-dimension) | unavailable (sub-dimension) |
+| belief_revision | substantive (real-verdict) | substantive (real-verdict) | substantive (real-verdict) |
+| atms_reasoning | unavailable (sub-dimension) | unavailable (sub-dimension) | unavailable (sub-dimension) |
+
+Tally (cap × corpus, 48 cells): **30 real-verdict · 6 count≥1 (NEW) · 3 degraded ·
+3 empty · 1 error · 6 sub-dimension**.
+
+### Laggards diagnosed (DoD #4) — none found
+
+- **defeasible_logic** = `empty` ×3 → root cause is **corpus-gap**: the political
+  corpora contain no defeasible program (no `strict_rules`/`defeasible_rules`
+  structure). This is honest-absent (DoD #5), NOT mis-wiring and NOT a translation
+  bug. No deepening possible without a corpus that has defeasible content.
+- **modal_logic** = `degraded`/`error` → already diagnosed in FP-21: solver reached
+  (SPASS #1242), but `valid=None` because `nl_to_logic` emits purely propositional KBs
+  (no `[]`/`<>` operators in the corpus). Corpus-gap, honest-absent. doc_B `error` is
+  a transient LLM restitution timeout, non-modal.
+- **atms_reasoning** + **belief_maintenance** = `unavailable (sub-dimension)` → these
+  are NOT laggards: ATMS folds into JTMS (`jtms_belief_count=46`, measured real-verdict
+  by FP-21), belief_maintenance is the maintenance side of belief_revision (real-verdict).
+  No capability is wired-but-dead.
+
+### Théâtre-suspect handed to FP-22 (DoD #2 cross-ref) — none
+
+FP-22 #1249/#1252 already audited the 5 named `_fallback` variants; only
+`_python_dung_fallback` was theatre (combinatorial enumeration without Tweety JVM),
+now fail-loud. FP-23's classification surfaced **no new théâtre-suspect** capability —
+every substantive cell produces a real state mutation (count≥1) or a real Tweety
+verdict, and every empty/unavailable cell is an honest corpus/structure gap.
+
+### Honest absence documented (DoD #5)
+
+- `defeasible_logic` ×3: corpus lacks defeasible program → fail-loud `empty`.
+- `modal_logic` ×3: corpus lacks modal operators → `degraded` (solver reached, nothing
+  to decide), `modal_fabricated_true=False`.
+
+These are documented as honest, NOT padded to claim parity with PL/FOL.
+
+### Conclusion (FP-23)
+
+- **2 capabilities newly measured** (`bipolar_argumentation`, `ranking_semantics`):
+  substantive ×3 each (count≥1 = real state mutation). No lagging.
+- **No laggard, no wired-but-dead capability, no new théâtre-suspect** across the ~16
+  Epic-flagged capabilities. The formal surface is fully measured end-to-end on
+  consolidated `d9a1d4bf`.
+- Anti-théâtre invariant holds: `fol_fabricated_true=False`, `modal_fabricated_true=False`
+  ×3 (from FP-21). Wiring ≠ output: classification is by persisted snapshot counter /
+  real verdict, not handler-presence grep.
+
+Raw provenance (gitignored): reuses `evaluation/results/fp5/fp5_doc{A,C,B}_20260624*.json`
+from the FP-21 run (no new corpus execution).
+
+---
+
 ## FP-21 Update (2026-06-24, base `d9a1d4bf` — cross-machine re-measurement post #1242/#1245/#1246/#1247)
 
 **Track**: FP-21 #1248 (Epic #1191 depth-parity + multi-solver comparison) ·
