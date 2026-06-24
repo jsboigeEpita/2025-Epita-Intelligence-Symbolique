@@ -178,6 +178,9 @@ class Act2Evidence:
     # as virtuous, the narrative leads with WHY THE ARGUMENTATION HOLDS (the
     # soutiens movement becomes the centrepiece; formal tenue is the proof).
     virtuous_mode: Optional[VirtuousModeAssessment] = None
+    # Epic #1258 / Track 1 #1259 — when True, build_act2_prompt DROPS the
+    # opaque-ID directive so the readable restitution names the real argument.
+    deanonymized: bool = True
 
 
 @dataclass
@@ -463,6 +466,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,
         debate_exchanges=debate_exchanges,
+        deanonymized=bool(getattr(state, "deanonymized", True)),
     )
 
 
@@ -800,11 +804,13 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "ne fabrique jamais de profil de vertus."
     )
 
+    opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
+
     return (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
         "par MOUVEMENT argumentatif, PAS par dimension analytique.\n\n"
-        f"{_OPAQUE_ID_DIRECTIVE}\n\n"
+        f"{opaque_block}"
         f"{_WEAVING_RULE}\n\n"
         f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"

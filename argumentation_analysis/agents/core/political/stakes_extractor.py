@@ -26,7 +26,7 @@ EXTRACTION_PROMPT = (
     '   - "evidence_indices": list of integers referencing argument positions '
     "(0-based) that support this stake identification\n\n"
     '2. "stakeholders": List of objects, each with:\n'
-    '   - "name": pseudonymised (Speaker_A, Authority_X, Group_Y, Public_Z, etc.)\n'
+    "   - \"name\": {name_instruction}\n"
     '   - "role": who they are in this discourse (speaker, opponent, audience, '
     "authority, institution, group)\n"
     '   - "stance": one of for, against, ambivalent, uncommitted\n'
@@ -54,6 +54,7 @@ class StakesExtractor:
         raw_text: str = "",
         llm_client: Optional[Any] = None,
         determinism_params: Optional[Dict[str, Any]] = None,
+        deanonymized: bool = True,
     ) -> Dict[str, Any]:
         """Extract stakes, stakeholders, register, and arena from discourse.
 
@@ -92,6 +93,16 @@ class StakesExtractor:
 
         excerpt = (raw_text or "")[:3000]
 
+        # Epic #1258 / Track 1 #1259 — when the working state is deanonymized,
+        # instruct the LLM to emit REAL stakeholder names (from source metadata);
+        # otherwise restore the pseudonymisation discipline verbatim.
+        name_instruction = (
+            "the real name/label (the actual speaker, party, institution or public "
+            "named in the source metadata above)"
+            if deanonymized
+            else "pseudonymised (Speaker_A, Authority_X, Group_Y, Public_Z, etc.)"
+        )
+
         prompt = EXTRACTION_PROMPT.format(
             arguments_block=arguments_block,
             speaker=source_metadata.get("speaker", "unknown"),
@@ -101,6 +112,7 @@ class StakesExtractor:
                 "era", source_metadata.get("date_or_year", "unknown")
             ),
             language=source_metadata.get("language", "unknown"),
+            name_instruction=name_instruction,
             excerpt=excerpt,
         )
 

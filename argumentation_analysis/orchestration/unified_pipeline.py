@@ -63,6 +63,8 @@ async def run_unified_analysis(
     checkpoint_callback: Optional[Any] = None,
     resume_from: Optional[set] = None,
     render_restitution: bool = False,
+    deanonymized: bool = True,
+    source_metadata: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
     Run a unified analysis pipeline on input text.
@@ -87,6 +89,16 @@ async def run_unified_analysis(
               it replaces the unreadable dimensional dump as the default report a
               reader meets first. Honest on non-spectacular states (missing acts
               are named, not fabricated — #1019/#369).
+        deanonymized: Epic #1258 / Track 1 #1259. If True (default for CLI/local),
+              the working state carries REAL source metadata and the restitution
+              prompt builders DROP the opaque-ID directives, so the readable report
+              names the real speaker/arena. If False, the opaque-ID discipline is
+              restored verbatim (git/dashboard/API paths). The export BOUNDARY
+              guard (sanitize_state) is Track 3, orthogonal to this flag.
+        source_metadata: Epic #1258 / Track 1 #1259. Optional dict of real
+              source-level metadata (speaker, arena, epoch...) threaded into
+              ``state.source_metadata``. Only short metadata fields — no
+              ``raw_text``/``full_text`` (privacy HARD).
 
     Returns:
         Dict with keys:
@@ -114,6 +126,23 @@ async def run_unified_analysis(
                 "Could not import UnifiedAnalysisState; state tracking disabled"
             )
             state = None
+
+    # Epic #1258 / Track 1 #1259 — thread the deanonymization switch + real
+    # source metadata onto the working state. Threaded via ``state`` because the
+    # ``build_actN_*`` / stakes / strategic prompt builders cannot see ``context``
+    # (#1259). Applied to both the freshly-created state and any externally
+    # provided state. ``getattr`` fallback keeps the defaults safe if a caller
+    # passes a minimal state object lacking the attribute.
+    if state is not None:
+        try:
+            state.deanonymized = bool(deanonymized)
+            if source_metadata is not None:
+                if hasattr(state, "set_source_metadata"):
+                    state.set_source_metadata(source_metadata)
+                else:
+                    state.source_metadata = dict(source_metadata)
+        except Exception as e:
+            logger.warning("Failed to thread deanonymized/source_metadata: %s", e)
 
     if custom_workflow is not None:
         workflow = custom_workflow

@@ -7350,7 +7350,11 @@ async def _invoke_deep_synthesis(
             # kernel (the de-castrated path was correct but never wired — last
             # structural castration site, same class as FB-30/FB-31). Anti-pendule:
             # activate the existing path, no counterweight.
-            agent = DeepSynthesisAgent(kernel=kernel, service_id="default")
+            agent = DeepSynthesisAgent(
+                kernel=kernel,
+                service_id="default",
+                deanonymized=bool(getattr(state, "deanonymized", True)),
+            )
             source_meta = context.get("source_metadata", {})
             report = await agent.synthesize(state, source_metadata=source_meta)
         except (ValueError, Exception) as agent_err:
@@ -7481,6 +7485,7 @@ async def _invoke_stakes_extractor(
         raw_text=raw_text,
         llm_client=llm_client,
         determinism_params=determinism_params,
+        deanonymized=bool(getattr(state, "deanonymized", True)),
     )
 
     # Write to state

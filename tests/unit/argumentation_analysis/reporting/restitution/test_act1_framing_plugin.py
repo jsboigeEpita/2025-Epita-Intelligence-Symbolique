@@ -245,12 +245,19 @@ class TestBuildEvidence:
 
 
 class TestPrivacy:
-    def test_prompt_carries_directives(self):
-        ev = build_act1_evidence(_political_state())
+    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
+        # Epic #1258 / Track 1 #1259 — the opaque-ID directive is present only
+        # when the working state is NOT deanonymized (False restores it
+        # verbatim; True drops it so the readable restitution names the real
+        # speaker). The weaving rule + fail-loud instruction are always present.
+        state = _political_state()
+        state.deanonymized = deanonymized
+        ev = build_act1_evidence(state)
         prompt = build_act1_prompt(ev)
-        assert "OPAQUES" in prompt  # FB-34 directive
-        assert "TISSAGE" in prompt  # §4 weaving rule
-        assert "HONNÊTETÉ" in prompt  # fail-loud instruction
+        assert ("OPAQUES" in prompt) == expect_opaque  # FB-34 directive
+        assert "TISSAGE" in prompt  # §4 weaving rule (always)
+        assert "HONNÊTETÉ" in prompt  # fail-loud instruction (always)
 
     def test_long_metadata_truncated_in_prompt(self):
         state = _state(source_metadata={"genre": "x" * 500})

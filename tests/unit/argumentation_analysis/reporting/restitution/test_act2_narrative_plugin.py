@@ -412,11 +412,16 @@ class TestPrivacy:
         assert long_desc not in prompt
         assert "[…]" in prompt
 
-    def test_prompt_carries_opaque_id_directive_and_weaving_rule(self):
-        ev = build_act2_evidence(_rich_state())
+    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
+        # Epic #1258 / Track 1 #1259 — opaque-ID directive present only when
+        # NOT deanonymized; weaving rule always present.
+        state = _rich_state()
+        state.deanonymized = deanonymized
+        ev = build_act2_evidence(state)
         prompt = build_act2_prompt(ev)
-        assert "OPAQUES" in prompt  # FB-34 directive heading
-        assert "TISSAGE" in prompt  # §4 weaving rule heading
+        assert ("OPAQUES" in prompt) == expect_opaque  # FB-34 directive heading
+        assert "TISSAGE" in prompt  # §4 weaving rule heading (always)
         assert "spec §4" in prompt
 
 
