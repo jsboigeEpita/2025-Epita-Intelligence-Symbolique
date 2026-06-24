@@ -252,8 +252,13 @@ class TestInvokeDungExtensions:
         assert "count" in result["all_extensions"]["grounded"]
 
     @pytest.mark.asyncio
-    async def test_fallback_to_python(self):
-        """Dung function falls back to Python when JVM unavailable."""
+    async def test_jvm_unavailable_is_honest_absent(self):
+        """Dung reports honest-absent (unavailable + degraded) when JVM unavailable.
+
+        FP-22 #1249 reversed the old pure-Python fallback (which fabricated
+        extensions without a real Tweety query). On JVM-absent the callable now
+        fails loud: semantics="unavailable", degraded=True, no extensions (#1019).
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
@@ -272,16 +277,20 @@ class TestInvokeDungExtensions:
             ):
                 result = await _invoke_dung_extensions("test text", context)
 
-        assert result["semantics"] == "python"
+        assert result["semantics"] == "unavailable"
+        assert result["degraded"] is True
+        assert result["extensions"] == {}
+        # Arguments are still echoed back for traceability
         assert len(result["arguments"]) == 2
 
     @pytest.mark.asyncio
-    async def test_timeout_triggers_python_4semantics(self):
-        """Dung function falls back to 4-semantics Python compute on timeout (#1019).
+    async def test_timeout_triggers_unavailable_degraded(self):
+        """Dung reports honest-absent (unavailable + degraded) on timeout (#1019).
 
         When analyze_multi_semantics hangs, asyncio.wait_for raises TimeoutError.
-        The callable should compute grounded+complete+preferred+stable extensions
-        via pure-Python, with no degraded flag.
+        FP-22 #1249 removed the old pure-Python 4-semantics fallback (it fabricated
+        extensions without a real Tweety query). The callable now fails loud:
+        semantics="unavailable", degraded=True, no extensions.
         """
         import time
 
@@ -301,8 +310,8 @@ class TestInvokeDungExtensions:
         }
 
         def _hanging_analyze(*args, **kwargs):
-            """Simulates a Tweety call that never returns."""
-            time.sleep(600)  # will be cut short by the timeout
+            """Simulates a Tweety call that outlives the (0.3s) timeout."""
+            time.sleep(5)  # >> the 0.3s timeout, but bounded to avoid teardown hang
 
         original_timeout = ic_mod._DUNG_TIMEOUT_S
         try:
@@ -322,32 +331,26 @@ class TestInvokeDungExtensions:
                     mock_init.return_value = MagicMock()
                     result = await _invoke_dung_extensions("test text", context)
 
-            # Must be Python 4-semantics compute (no degraded flag)
-            assert result["semantics"] == "python"
-            assert result.get("degraded") is not True
-            # All 4 critical extensions must be computed
-            exts = result.get("extensions", {})
-            assert "grounded" in exts
-            assert "complete" in exts
-            assert "preferred" in exts
-            assert "stable" in exts
-            # Grounded extension should be non-empty (at least un-attacked args)
-            grounded = exts.get("grounded", [])
-            assert len(grounded) >= 1, f"Expected ≥1 grounded args, got {grounded}"
+            # FP-22 #1249: timeout → honest-absent, no fabricated extensions (#1019)
+            assert result["semantics"] == "unavailable"
+            assert result.get("degraded") is True
+            assert result.get("extensions", {}) == {}
         finally:
             ic_mod._DUNG_TIMEOUT_S = original_timeout
 
     @pytest.mark.asyncio
-    async def test_exception_triggers_python_4semantics(self):
-        """Dung function uses Python 4-semantics compute when AFHandler fails (#1019)."""
+    async def test_exception_triggers_unavailable_degraded(self):
+        """Dung reports honest-absent when AFHandler raises (#1019, FP-22 #1249).
+
+        FP-22 removed the pure-Python 4-semantics fallback; an AFHandler failure
+        now yields semantics="unavailable", degraded=True, no extensions.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
 
         context = {
-            "phase_extract_output": {
-                "arguments": [{"text": "arg1"}, {"text": "arg2"}]
-            }
+            "phase_extract_output": {"arguments": [{"text": "arg1"}, {"text": "arg2"}]}
         }
 
         with patch(
@@ -360,14 +363,9 @@ class TestInvokeDungExtensions:
                 mock_init.return_value = MagicMock()
                 result = await _invoke_dung_extensions("test text", context)
 
-        assert result["semantics"] == "python"
-        assert result.get("degraded") is not True
-        # All 4 critical extensions must be present
-        exts = result.get("extensions", {})
-        assert "grounded" in exts
-        assert "complete" in exts
-        assert "preferred" in exts
-        assert "stable" in exts
+        assert result["semantics"] == "unavailable"
+        assert result.get("degraded") is True
+        assert result.get("extensions", {}) == {}
 
 
 # ============================================================
@@ -383,6 +381,7 @@ class TestPythonDungFallback:
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
+
         with pytest.raises(RuntimeError, match="JVM/Tweety required"):
             _python_dung_fallback(["a", "b"], [["a", "b"]])
 
@@ -391,6 +390,7 @@ class TestPythonDungFallback:
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
+
         with pytest.raises(RuntimeError, match="JVM/Tweety required"):
             _python_dung_fallback([], [])
 
@@ -419,7 +419,9 @@ class TestDungInvokeFallbackSentinel:
                 )
             )
         assert result.get("degraded") is True, f"Expected degraded=True, got: {result}"
-        assert result.get("extensions") == {}, f"Expected empty extensions, got: {result}"
+        assert (
+            result.get("extensions") == {}
+        ), f"Expected empty extensions, got: {result}"
         assert result.get("semantics") == "unavailable"
         assert "note" in result
 
