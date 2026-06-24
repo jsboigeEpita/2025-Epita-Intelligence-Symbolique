@@ -114,6 +114,8 @@ CAPABILITIES = [
     # ── Dung family ──
     ("dung_extensions", "dung_extensions", "dung_framework_count"),
     ("aspic_analysis", "aspic_analysis", "aspic_result_count"),
+    ("ranking_semantics", "ranking", "ranking_result_count"),  # FP-23 #1250: was unmeasured
+    ("bipolar_argumentation", "bipolar", "bipolar_result_count"),  # FP-23 #1250: was unmeasured
     ("setaf_reasoning", "setaf_reasoning", None),  # W1 — count may be absent
     ("aba_reasoning", "aba_reasoning", None),
     ("weighted_reasoning", "weighted_reasoning", None),
