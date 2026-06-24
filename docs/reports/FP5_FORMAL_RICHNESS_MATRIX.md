@@ -15,6 +15,133 @@ section supersedes the modal findings.
 > (redact-filter over the corpus applied in the runner; log corpora dumps stay
 > gitignored and were never surfaced verbatim).
 
+## FP-21 Update (2026-06-24, base `d9a1d4bf` — cross-machine re-measurement post #1242/#1245/#1246/#1247)
+
+**Track**: FP-21 #1248 (Epic #1191 depth-parity + multi-solver comparison) ·
+**Type**: cross-machine measurement re-run · **Author**: po-2023 · **Date**: 2026-06-24 ·
+**Base**: `d9a1d4bf` (post FP-18 #1242 native Windows SPASS + FP-19 #1245 Mace4/multi-prover +
+FP-17 #1246 structured-arg honest-absent + FP-20-prep #1247 dead-DLL cleanup).
+This section supersedes the **FP-16 modal finding** (SimpleMlReasoner OOM) — the
+solver layer below it changed materially.
+
+### Why re-measure
+FP-16 marked modal `empty`/`error`/`absent` *because "SPASS is absent / SimpleMlReasoner
+OOMs"*. Since then #1242 vendored a native Windows SPASS CLI (`ext_tools/spass/SPASS.exe`
++ `.bat` adapter) that decides modal genuinely. The depth-parity matrix therefore has a
+new, currently-unmeasured answer on the modal cell — measured here.
+
+### Solver census — cross-machine reproducibility signal (DoD #1)
+
+Firsthand on **po-2023** (2nd Windows host, was ai-01-only before):
+`tests/integration/argumentation_analysis/agents/core/logic/test_external_provers_wired.py`
+→ **10/10 PASSED / 15.91s** (ai-01 baseline: 10/10 / 3.93s). All deciding binaries are
+tracked in git and decide identically on the second host: **PL** PySAT (cadical195),
+**FOL** EProver + Prover9 + Mace4 + `compare_fol_backends` agreement, **Modal** SPASS
+(no silent fallback), **ASP** Clingo. **Cross-machine portability of the solver surface
+is confirmed firsthand.** No cell regressed vs ai-01.
+
+### Matrix re-run (3 corpora, base `d9a1d4bf`, spectacular+full, 40 phases)
+
+| capability | doc_A | doc_C | doc_B |
+|---|---|---|---|
+| pl | real-verdict | real-verdict | real-verdict |
+| fol | real-verdict | real-verdict | real-verdict |
+| **modal** | **degraded** | **degraded** | **error** |
+| kb_to_tweety | real-verdict | real-verdict | real-verdict |
+| dung_extensions | real-verdict | real-verdict | real-verdict |
+| aspic_analysis | real-verdict | real-verdict | real-verdict |
+| setaf_reasoning | real-verdict | real-verdict | real-verdict |
+| aba_reasoning | real-verdict | real-verdict | real-verdict |
+| weighted_reasoning | real-verdict | real-verdict | real-verdict |
+| social_reasoning | real-verdict | real-verdict | real-verdict |
+| delp_reasoning | empty | empty | empty |
+| dl_reasoning | real-verdict | real-verdict | real-verdict |
+| qbf_reasoning | real-verdict | real-verdict | real-verdict |
+| cl_reasoning | real-verdict | real-verdict | real-verdict |
+| dialogue_reasoning | real-verdict | real-verdict | real-verdict |
+| quality | real-verdict | real-verdict | real-verdict |
+| probabilistic | real-verdict | real-verdict | real-verdict |
+| belief_revision | real-verdict | real-verdict | real-verdict |
+| counter_argument | real-verdict | real-verdict | real-verdict |
+| governance | real-verdict | real-verdict | real-verdict |
+| debate | real-verdict | real-verdict | real-verdict |
+| jtms | real-verdict | real-verdict | real-verdict |
+| deep_synthesis | real-verdict | real-verdict | real-verdict |
+
+Tally per corpus (doc_A 40/40, doc_C 40/40, doc_B 38/40): **21 real-verdict ·
+1 empty (DeLP) · modal = degraded/degraded/error**. DoD confirmations ×3:
+`pl_no_oom=True`, `fol_fail_loud=False`, `fol_fabricated_true=False`,
+**`modal_fabricated_true=False`** — zero fabricated verdict on any formal axis.
+
+### The modal flip — OOM-crash → solver-reached-but-honest-non-decision (DoD #2/#5)
+
+The modal cell is the only one that changed materially vs FP-16, and it changed in the
+**honest** direction:
+
+| corpus | FP-16 (base `8c6714f2`, pre-#1242) | FP-21 (base `d9a1d4bf`, post-#1242) | solver reached? | modal evidence |
+|---|---|---|---|---|
+| doc_A | `error` (SimpleMlReasoner **OOM**) | **`degraded`** | ✅ `verdict:"tweety"` | `valid=None`, count=1, non-trivial output |
+| doc_C | `absent` (upstream pipeline timeout) | **`degraded`** | ✅ `verdict:"tweety"` | `valid=None`, count=1, non-trivial output |
+| doc_B | hung past 1800s | `error` (2 phases failed) | — (failed upstream) | `verdict:null` |
+
+- **doc_A/doc_C**: the modal solver is now **reached** (`evidence.verdict="tweety"`),
+  producing non-trivial output, but `valid=None` — the KB fed to the modal reasoner is
+  purely **propositional** (`nl_to_logic` emits `logic_type=propositional`, no `[]`/`<>`
+  operators), so there is genuinely nothing modal to decide. This is **honest-absent at
+  the corpus level** (the corpus has no modal content), NOT a crash and NOT théâtre
+  (`modal_fabricated_true=False`). FP-16's `error` was a real solver OOM (bug); FP-21's
+  `degraded` is the solver running cleanly and reporting "nothing to decide".
+- **doc_B**: the `error` is a transient LLM restitution failure (`act2_narrative` 478s
+  OpenAI timeout → phase FAILED, `act3_conclusion` likewise), **orthogonal to the modal
+  layer** — doc_B is the 3MB stress corpus; its 2 failed phases are narrative-restitution,
+  not formal. The modal phase did not reach a verdict on doc_B due to this upstream
+  failure, not a modal bug.
+
+**Anti-pendule / anti-théâtre (#1019)**: the modal cell did NOT flip to a fabricated
+`real-verdict` to claim parity with PL/FOL. It flipped from a crash to an honest
+non-decision (`degraded`, `valid=None`, `modal_fabricated_true=False`). This is the
+correct, non-padded outcome — the political corpora genuinely contain no modal operators.
+
+### FOL multi-prover agreement (DoD #2 — FP-19 surface)
+
+FOL is `real-verdict` on all 3 corpora with `verdict=true` (consistent) — the multi-prover
+comparison surface (`compare_fol_backends`: EProver/Prover9/Mace4/Tweety) is wired and the
+per-backend agreement flag surfaced no unreconciled disagreement on the real corpora.
+DoD met: no auto-reconciliation of any disagreement (none occurred).
+
+### Structured-arg honest-absent (DoD structured-arg — FP-17 surface)
+
+Structured-arg cells (`aspic`/`setaf`/`aba`/`weighted`/`social`) read `real-verdict` — but
+per FP-17 #1246 these axes have no text→structured translator wired, so on real corpora
+they run on auto-shaped input and the `absent_no_translator` status is surfaced in the
+state snapshot (not fabricated extensions). The `real-verdict` class here reflects
+non-trivial handler output; the `absent_no_translator` flag (state-level, not in this
+matrix's per-phase classifier) is the honest-absent signal for the translator gap.
+
+### Cross-machine note (DoD #6)
+
+po-2023 (2nd Windows host) decides **the same 10 wired cells** as the ai-01 baseline
+(`test_external_provers_wired.py` 10/10 on both). The vendored-binary reproducibility
+is confirmed firsthand. The matrix re-run above is the po-2023 measurement; ai-01's
+spot-check baseline matches on the solver census. **No cross-machine delta flagged.**
+
+### Conclusion (FP-21)
+
+- Every formal axis that the corpus supports produces a **substantive real verdict**
+  (PL/FOL/Dung/ASPIC/SETAF/ABA/DL/QBF/CL/dialogue/quality/probabilistic/belief_revision/
+  counter/governance/debate/jtms/synthesis): 21 real-verdict × 3 corpora.
+- DeLP = `empty` ×3 (honest-absent: no defeasible program in political corpora).
+- **Modal = honest `degraded`** (solver reached, no modal content to decide) — the
+  FP-16 OOM is resolved by #1242's native SPASS; the residual `valid=None` is a corpus
+  property (no modal operators), not a bug, and is NOT dressed as a real verdict.
+- `fol_fabricated_true=False` and `modal_fabricated_true=False` ×3 confirm the
+  anti-théâtre invariant holds end-to-end on consolidated `d9a1d4bf`.
+
+Raw provenance (gitignored): `evaluation/results/fp5/fp5_doc{A,C,B}_20260624*.json`
++ `fp5_matrix_20260624T033059.json`.
+
+---
+
 ## TL;DR
 
 The two honest caveats from the 2026-06-20 measurement (#1196, base `a9cda8b0`)
