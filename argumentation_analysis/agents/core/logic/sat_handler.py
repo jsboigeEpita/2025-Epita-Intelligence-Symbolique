@@ -6,7 +6,7 @@ backends (CaDiCaL, Glucose, MiniSat, etc.), MUS/MCS analysis, and MaxSAT.
 
 import logging
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -457,3 +457,147 @@ class SATHandler:
             except Exception as e:
                 results[solver_name] = {"status": "ERROR", "error": str(e)}
         return results
+
+
+async def compare_pl_backends(formulas: List[str]) -> Dict[str, Any]:
+    """Run ALL available PL/SAT backends on the same formula set and compare.
+
+    FP-20 #1244, Epic #1191, mandate R468 ("tous les solvers handy … pour
+    comparer les résultats"). Each backend runs INDEPENDENTLY on the same
+    formulas; verdicts are cross-validated. DISAGREEMENT is surfaced explicitly
+    and NEVER silently reconciled — the comparison is the point (#1019).
+
+    Backends:
+    - pysat/cadical195, pysat/cryptominisat5, pysat/glucose42, pysat/maplechrono,
+      pysat/lingeling, pysat/minisat22  — Python-side DPLL/CDCL solvers (PySAT)
+    - sat4j    — Pure-Java Tweety 1.29 Sat4jSolver (SAT4J library, DPLL)
+    - tweety_pl — Pure-Java Tweety 1.29 SimplePlReasoner (model enumeration, cross-check)
+
+    Returns a JSON-serialisable dict::
+
+        {
+          "backends": {name: {"verdict": Optional[bool], "note": str,
+                              "elapsed_ms": float, "available": bool}},
+          "decided":  {name: bool, ...},  # only backends that returned a bool
+          "agreement": Optional[bool],    # True=all agree, False=disagree, None<2 decided
+          "disagreement": [str, ...],     # explicit, never auto-reconciled
+        }
+    """
+    import time
+
+    backends: Dict[str, Any] = {}
+
+    def _record(name: str, fn: Any, *args: Any) -> None:
+        """Run fn(*args) synchronously, record verdict + timing into backends."""
+        start = time.perf_counter()
+        try:
+            verdict, note = fn(*args)
+            elapsed = (time.perf_counter() - start) * 1000.0
+            backends[name] = {
+                "verdict": verdict,
+                "note": note,
+                "elapsed_ms": round(elapsed, 1),
+                "available": True,
+            }
+        except Exception as exc:
+            elapsed = (time.perf_counter() - start) * 1000.0
+            backends[name] = {
+                "verdict": None,
+                "note": f"unavailable: {exc}",
+                "elapsed_ms": round(elapsed, 1),
+                "available": False,
+            }
+
+    def _pysat_check(solver_name: str) -> Tuple[bool, str]:
+        handler = SATHandler(solver_name)
+        clauses = handler.formulas_to_cnf(list(formulas))
+        is_sat, _, stats = handler.solve(clauses, solver_name)
+        if "error" in stats:
+            raise RuntimeError(stats["error"])
+        if is_sat:
+            return True, f"Consistent (SAT) via pysat/{solver_name}"
+        return False, f"Inconsistent (UNSAT) via pysat/{solver_name}"
+
+    def _sat4j_check() -> Tuple[bool, str]:
+        import jpype
+
+        if not jpype.isJVMStarted():
+            raise RuntimeError("JVM not started")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        Sat4jSolver = jpype.JClass("org.tweetyproject.logics.pl.sat.Sat4jSolver")
+        parser = PlParser()
+        kb = PlBeliefSet()
+        for f in formulas:
+            tweety_f = re.sub(r"&+", "&&", re.sub(r"\|+", "||", f.strip()))
+            if tweety_f:
+                kb.add(parser.parseFormula(tweety_f))
+        verdict = bool(Sat4jSolver().isConsistent(kb))
+        return verdict, f"Sat4jSolver (Tweety 1.29): {'consistent' if verdict else 'inconsistent'}"
+
+    def _tweety_pl_check() -> Tuple[bool, str]:
+        import jpype
+
+        if not jpype.isJVMStarted():
+            raise RuntimeError("JVM not started")
+        PlParser = jpype.JClass("org.tweetyproject.logics.pl.parser.PlParser")
+        PlBeliefSet = jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+        SimplePlReasoner = jpype.JClass(
+            "org.tweetyproject.logics.pl.reasoner.SimplePlReasoner"
+        )
+        Contradiction = jpype.JClass(
+            "org.tweetyproject.logics.pl.syntax.Contradiction"
+        )
+        parser = PlParser()
+        kb = PlBeliefSet()
+        for f in formulas:
+            tweety_f = re.sub(r"&+", "&&", re.sub(r"\|+", "||", f.strip()))
+            if tweety_f:
+                kb.add(parser.parseFormula(tweety_f))
+        entails_contradiction = bool(SimplePlReasoner().query(kb, Contradiction()))
+        verdict = not entails_contradiction
+        return verdict, f"SimplePlReasoner (model enumeration): {'consistent' if verdict else 'inconsistent'}"
+
+    # ── PySAT backends (Python-side, sequential) ──────────────────────
+    if not PYSAT_AVAILABLE:
+        for solver_name in RECOMMENDED_SOLVERS:
+            backends[f"pysat/{solver_name}"] = {
+                "verdict": None,
+                "note": "PySAT not installed",
+                "elapsed_ms": 0.0,
+                "available": False,
+            }
+    else:
+        for solver_name in RECOMMENDED_SOLVERS:
+            _record(f"pysat/{solver_name}", _pysat_check, solver_name)
+
+    # ── Java backends (Tweety 1.29, lazy jpype, sequential) ───────────
+    _record("sat4j", _sat4j_check)
+    _record("tweety_pl", _tweety_pl_check)
+
+    decided = {
+        name: b["verdict"]
+        for name, b in backends.items()
+        if isinstance(b["verdict"], bool)
+    }
+    verdict_values = set(decided.values())
+    agreement: Optional[bool] = None if len(decided) < 2 else (len(verdict_values) <= 1)
+
+    disagreement: List[str] = []
+    if agreement is False:
+        consistent = sorted(n for n, v in decided.items() if v is True)
+        inconsistent = sorted(n for n, v in decided.items() if not v)
+        disagreement.append(
+            f"DISAGREEMENT (NOT reconciled): {consistent} report CONSISTENT, "
+            f"{inconsistent} report INCONSISTENT. "
+            "All PySAT and Sat4j backends are sound and complete for propositional "
+            "logic; disagreement here indicates a formula parsing or solver invocation "
+            "discrepancy. Inspect the per-backend notes before drawing a conclusion."
+        )
+
+    return {
+        "backends": backends,
+        "decided": decided,
+        "agreement": agreement,
+        "disagreement": disagreement,
+    }

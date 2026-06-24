@@ -330,6 +330,15 @@ class TweetyBridge:
         """
         return await self.fol_handler.compare_fol_backends(belief_set)
 
+    async def compare_pl_backends(self, belief_set: str) -> dict:
+        """Run every available PL/SAT backend on the same KB and compare verdicts.
+
+        FP-20 #1244 thin wrapper over ``PLHandler.compare_pl_backends`` so the
+        orchestration layer can request a multi-prover cross-validation without
+        reaching into the handler. DISAGREEMENT is surfaced, never reconciled.
+        """
+        return await self.pl_handler.compare_pl_backends(belief_set)
+
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""
         if TweetyInitializer.is_jvm_ready():
