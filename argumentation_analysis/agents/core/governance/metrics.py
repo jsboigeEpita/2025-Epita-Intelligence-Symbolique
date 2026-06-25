@@ -10,13 +10,38 @@ import numpy as np
 
 
 def consensus_rate(results):
-    """Fraction of agents voting for the winner."""
+    """Fraction of agents voting for the winner.
+
+    Handles three ``votes`` shapes the governance plugin's LLM-generated
+    JSON can take (#1273): a sequential list (``["A", "A", "B"]``), a
+    per-option tally map (``{"A": 2, "B": 1}``), or a per-agent vote map
+    (``{"agent_1": "A", "agent_2": "B"}``). The plugin calls this without a
+    try/except wrapper, so a dict must not raise ``AttributeError`` on
+    ``.count()``. Dicts are disambiguated by whether ``winner`` is a key
+    (tally map) or a value (per-agent map). Returns 0.0 on missing/empty.
+    """
     if not results or "votes" not in results or "winner" not in results:
         return 0.0
     votes = results["votes"]
     winner = results["winner"]
     if not votes or winner is None:
         return 0.0
+
+    def _tally(value: Any) -> float:
+        # Normalize a tally entry to a scalar vote count: a number stays,
+        # a (pos, neg)/list sums its numeric items, anything else is 0.
+        if isinstance(value, (list, tuple)):
+            return float(sum(v for v in value if isinstance(v, (int, float))))
+        return float(value) if isinstance(value, (int, float)) else 0.0
+
+    if isinstance(votes, dict):
+        if winner in votes:
+            # Per-option tally map {option: count}: winner's share of total.
+            total = sum(_tally(v) for v in votes.values())
+            return _tally(votes.get(winner, 0)) / total if total else 0.0
+        # Per-agent vote map {agent: choice}: fraction of agents who picked
+        # the winner.
+        return sum(1 for v in votes.values() if v == winner) / len(votes)
     return votes.count(winner) / len(votes)
 
 
