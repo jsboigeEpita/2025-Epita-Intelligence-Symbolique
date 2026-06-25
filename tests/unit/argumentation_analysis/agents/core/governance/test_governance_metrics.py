@@ -40,6 +40,31 @@ class TestConsensusRate:
     def test_winner_not_in_votes(self):
         assert consensus_rate({"votes": ["A", "B"], "winner": "C"}) == 0.0
 
+    # ── dict-shaped votes (LLM-generated tally maps, #1273) ──
+
+    def test_dict_tally_unanimous(self):
+        # Per-option tally map {option: count}; all votes for the winner.
+        assert consensus_rate({"votes": {"A": 3, "B": 0}, "winner": "A"}) == 1.0
+
+    def test_dict_tally_majority(self):
+        r = consensus_rate({"votes": {"A": 2, "B": 1}, "winner": "A"})
+        assert r == pytest.approx(2 / 3)
+
+    def test_dict_tally_winner_not_present(self):
+        # Winner absent from the tally → 0 of total → 0.0, no crash.
+        assert consensus_rate({"votes": {"A": 2, "B": 1}, "winner": "C"}) == 0.0
+
+    def test_dict_per_agent_vote_map(self):
+        # Per-agent map {agent: choice}; winner is a value, not a key.
+        # 2 of 3 agents picked "A" → 2/3.
+        r = consensus_rate(
+            {"votes": {"agent_1": "A", "agent_2": "A", "agent_3": "B"}, "winner": "A"}
+        )
+        assert r == pytest.approx(2 / 3)
+
+    def test_dict_tally_empty(self):
+        assert consensus_rate({"votes": {}, "winner": "A"}) == 0.0
+
 
 # ── gini ──
 
