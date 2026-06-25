@@ -190,6 +190,13 @@ def _deanonymized_state() -> dict:
     return {
         # Opaque-replace (top-level identifier)
         "source_id": LEAK,
+        # Opaque-dict-values (structural keys kept, nominative values opacified)
+        "source_metadata": {
+            "genre": LEAK,
+            "speaker_role": LEAK,
+            "channel": LEAK,
+            "title": LEAK,
+        },
         # Narrative fields (strings -> {length, stripped})
         "narrative_synthesis": f"{LEAK} narrative synthesis text",
         "act1_framing": f"{LEAK} act one framing",
@@ -388,3 +395,46 @@ class TestSanitizeStakes:
         assert summary["has_discursive_arena"] is True
         assert summary["stripped"] is True
         assert LEAK not in json.dumps(summary)
+
+
+class TestSanitizeSourceMetadata:
+    """source_metadata (threaded real by Track 1 #1259) must be opacified.
+
+    Regression: cross-verify by po-2023 found source_metadata was not scrubbed
+    by #1263 — it passed through verbatim, leaking the real title/speaker_role
+    (nominative per CLAUDE.md privacy) into the exported JSON.
+    """
+
+    def test_values_opacified_keys_kept(self):
+        state = {
+            "source_metadata": {
+                "genre": "political speech",
+                "speaker_role": "head of state",
+                "channel": "public arena",
+                "title": "The Real Nominative Title",
+            }
+        }
+        result = sanitize_state(state)
+        meta = result["source_metadata"]
+        # Structural keys survive (which metadata was present).
+        assert set(meta.keys()) == {"genre", "speaker_role", "channel", "title"}
+        # Values are opaque (8-char hex), no real content survives.
+        for v in meta.values():
+            assert isinstance(v, str)
+            assert len(v) == 8
+        blob = json.dumps(meta)
+        assert "political" not in blob
+        assert "Nominative" not in blob
+        assert "head of state" not in blob
+
+    def test_empty_metadata_left_untouched(self):
+        state = {"source_metadata": {}}
+        result = sanitize_state(state)
+        assert result["source_metadata"] == {}
+
+    def test_non_string_values_preserved(self):
+        # Defensive: a non-string value (shouldn't happen per type, but guard
+        # against a drift) is left as-is rather than crashing.
+        state = {"source_metadata": {"count": 3, "genre": "x" * 20}}
+        result = sanitize_state(state)
+        assert result["source_metadata"]["count"] == 3

@@ -37,6 +37,14 @@ _STRIP_TOP_LEVEL = {
 # Fields to replace with opaque IDs (key -> opaque_id(value)).
 _OPAQUE_REPLACE = {"source_id"}
 
+# Dict-valued fields whose *values* are nominative strings keyed by generic
+# structural labels (key kept, value -> opaque_id). Track 1 (#1259) threads
+# real ``source_metadata`` = ``{genre, speaker_role, channel, title, ...}``
+# into the working state; the values are nominative (a ``title`` is a source
+# name per CLAUDE.md privacy) but the keys are structural. Opacifying the
+# values preserves "which metadata was present" without leaking content.
+_OPAQUE_DICT_VALUES = {"source_metadata"}
+
 # Dict-valued fields whose entries are nominative *strings*
 # (e.g. ``{arg_id: description}``). The string is replaced by a placeholder;
 # non-string (structured) values are preserved untouched.
@@ -161,6 +169,12 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
     for field in _OPAQUE_REPLACE:
         if field in data and isinstance(data[field], str):
             data[field] = opaque_id(data[field])
+
+    # 2b. Opacify the nominative values of dict-valued identifier fields
+    #     (source_metadata = {genre, speaker_role, channel, title, ...}).
+    for field in _OPAQUE_DICT_VALUES:
+        if field in data and isinstance(data[field], dict):
+            data[field] = _opacify_mapping(data[field])
 
     # 3. Strip text from dict-valued fields whose entries are strings
     #    (identified_arguments, arguments).
