@@ -122,6 +122,9 @@ class Act1Evidence:
     # as virtuous, the spectrum framing shifts from "what to watch for" to
     # "what could derail but doesn't" (anticipation that did not materialise).
     virtuous_mode: Optional[VirtuousModeAssessment] = None
+    # Epic #1258 / Track 1 #1259 — when True, build_act1_prompt DROPS the
+    # opaque-ID directive so the readable restitution names the real speaker/arena.
+    deanonymized: bool = True
 
 
 @dataclass
@@ -360,6 +363,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
         stakeholders=stakeholders,
         arg_count=arg_count,
         virtuous_mode=virtuous_mode,
+        deanonymized=bool(getattr(state, "deanonymized", True)),
     )
 
 
@@ -488,6 +492,8 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         f"Inventaire argumentatif : {evidence.arg_count} argument(s) extrait(s)."
     )
 
+    opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
+
     return (
         "Tu es l'auteur de l'ACTE I d'un rapport de restitution argumentative —\n"
         "la MISE EN SITUATION, tout le cadrage AVANT d'entrer dans le texte pour\n"
@@ -496,7 +502,7 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "se joue, pour qui, quelle asymétrie) ; 3. Le spectre des sophismes\n"
         "attendus pour ce genre (anticipation dérivée de la taxonomie) ;\n"
         "4. La lecture game-theoretic (joueurs, intérêts, coups attendus).\n\n"
-        f"{_OPAQUE_ID_DIRECTIVE}\n\n"
+        f"{opaque_block}"
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
         f"{virtuous_section}"

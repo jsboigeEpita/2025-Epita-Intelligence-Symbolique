@@ -498,6 +498,9 @@ def build_convergent_synthesis(state: Any) -> Dict[str, Any]:
         "convergent_verdicts": verdicts,
         "emergent_insights": insights,
         "conclusion": conclusion,
+        # Epic #1258 / Track 1 #1259 — thread the deanonymization flag so
+        # _build_prose_prompt can drop the opaque-ID rule when True.
+        "deanonymized": bool(getattr(state, "deanonymized", True)),
     }
 
 
@@ -515,6 +518,11 @@ _PROSE_INSTRUCTIONS = (
     "concordance (e.g. 'the argument combines X AND Y AND Z, making its weakness "
     "structural rather than circumstantial'). "
     "(6) Maximum 400 words. "
+)
+
+# Epic #1258 / Track 1 #1259 — item (7) split out so it can be dropped when the
+# working state is deanonymized (real names allowed in the prose).
+_PROSE_OPAQUE_RULE = (
     "(7) OPAQUE-ID DISCIPLINE (FB-34 #1118): refer to the source/speaker/states "
     "ONLY by opaque labels (Speaker_A, State_Q, arg_1, doc_A) — never emit a real "
     "name, leader, country, party, or date. Characterize the argumentation "
@@ -538,8 +546,14 @@ def _build_prose_prompt(synthesis_result: Dict[str, Any]) -> str:
     else:
         evidence_block = "(no convergent arguments detected)"
 
+    # Epic #1258 / Track 1 #1259 — drop the opaque-ID rule when deanonymized.
+    deanonymized = bool(synthesis_result.get("deanonymized", True))
+    instructions = _PROSE_INSTRUCTIONS + (
+        "" if deanonymized else _PROSE_OPAQUE_RULE
+    )
+
     return (
-        f"{_PROSE_INSTRUCTIONS}\n\n"
+        f"{instructions}\n\n"
         f"## Convergence Evidence\n{evidence_block}\n\n"
         f"## Structural Conclusion\n{conclusion}\n\n"
         f"Write the analytical prose report:"

@@ -335,12 +335,25 @@ class StrategicManager:
 
         text_preview = text[:2000]
 
+        # Epic #1258 / Track 1 #1259 — the opaque-ID discipline (lines below) is
+        # dropped when the working state is deanonymized, so strategic objectives
+        # may reference the real speaker/arena (the export boundary guard is
+        # Track 3 sanitize_state, not this prompt).
+        _deanonymized = bool(getattr(self.state, "deanonymized", True))
+        _opaque_rules = (
+            ""
+            if _deanonymized
+            else (
+                "- Décris la STRUCTURE argumentative, jamais le nom de l'auteur ou des citations directes\n"
+                "- Utilise des identifiants opaques (ex: 'Source_A', 'Argument_principal_1')\n"
+            )
+        )
+
         prompt = (
             "Tu es un analyste rhétorique stratégique. À partir du texte ci-dessous, "
             "génère 3 à 6 objectifs d'analyse stratégique.\n\n"
             "RÈGLES IMPÉRATIVES :\n"
-            "- Décris la STRUCTURE argumentative, jamais le nom de l'auteur ou des citations directes\n"
-            "- Utilise des identifiants opaques (ex: 'Source_A', 'Argument_principal_1')\n"
+            f"{_opaque_rules}"
             "- Chaque objectif doit être un JSON object avec clés: id, description, priority\n"
             "- id au format 'obj-N', priority parmi 'high', 'medium', 'low'\n"
             "- Retourne UNIQUEMENT un tableau JSON valide, sans markdown\n\n"

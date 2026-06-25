@@ -114,6 +114,35 @@ def load_corpus_text(label: str, idx: int) -> str:
     return text
 
 
+def load_corpus_metadata(label: str, idx: int) -> dict:
+    """Epic #1258 / Track 1 #1259 — extract the non-text source metadata already
+    loaded by ``load_extract_definitions``, threaded into ``state.source_metadata``
+    so the deanonymized restitution names the real speaker/arena/era. Only SHORT
+    scalar fields are kept — never ``full_text``/``raw_text``/``extracts``
+    (privacy HARD). The export boundary guard is Track 3 ``sanitize_state``.
+    """
+    from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
+    from argumentation_analysis.core.io_manager import load_extract_definitions
+
+    key = derive_encryption_key(os.environ["TEXT_CONFIG_PASSPHRASE"])
+    defs = load_extract_definitions(DATASET_PATH, key)
+    if idx >= len(defs):
+        return {}
+    src = defs[idx]
+    _NON_META = {
+        "full_text", "raw_text", "extract_text",
+        "full_text_segment", "raw_text_snippet",
+        "extracts", "segments",
+    }
+    meta: dict = {}
+    for k, v in src.items():
+        if k in _NON_META:
+            continue
+        if isinstance(v, (str, int, float)) and str(v).strip():
+            meta[k] = str(v)
+    return meta
+
+
 def _phase_status(result: dict, name: str) -> str:
     phases = result.get("phases", {})
     pr = phases.get(name)
@@ -190,6 +219,7 @@ async def run_one(label: str, idx: int, timeout: int, corpus_texts: dict) -> dic
     from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
 
     text = load_corpus_text(label, idx)
+    source_meta = load_corpus_metadata(label, idx)  # Epic #1258: real source meta
     corpus_texts[label] = text  # keep for per-corpus leak audit
     print(f"[FB-37] doc_{label}: {len(text)} chars | spectacular+full | ceiling {timeout}s")
 
@@ -202,6 +232,11 @@ async def run_one(label: str, idx: int, timeout: int, corpus_texts: dict) -> dic
                 text,
                 workflow_name="spectacular",
                 context={"fallacy_tier": "full"},
+                # Epic #1258 / Track 1 #1259 — thread the real source metadata so
+                # the readable restitution names the real speaker/arena. Default
+                # deanonymized=True drops the opaque-ID prompts. The readable
+                # artifact stays gitignored under evaluation/results/fb37/.
+                source_metadata=source_meta,
             ),
             timeout=float(timeout),
         )

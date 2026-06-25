@@ -115,6 +115,12 @@ async def run_one_corpus(label: str) -> dict:
         # leak grep needs. A per-corpus hard timeout below is the safety net.
         result = await run_unified_analysis(
             text=text, workflow_name="standard",
+            # Epic #1258 / Track 1 #1259 — explicitly opt into the OPAQUE path:
+            # this script verifies the opaque-ID discipline holds (0 leaks), so
+            # the working state must run deanonymized=False (the default is now
+            # True for CLI/local readability). The export boundary guard is
+            # Track 3; here we exercise the opaque prompts on purpose.
+            deanonymized=False,
         )
         if isinstance(result, dict):
             s = result.get("unified_state", result.get("state"))
@@ -145,7 +151,9 @@ async def run_one_corpus(label: str) -> dict:
         llm = create_llm_service(service_id="default")
         if llm:
             kernel.add_service(llm)
-        agent = DeepSynthesisAgent(kernel=kernel, service_id="default")
+        agent = DeepSynthesisAgent(
+            kernel=kernel, service_id="default", deanonymized=False
+        )
         # Build a fresh report to feed the grounded path
         fresh = DeepSynthesisReport()
         fresh.source_overview = DeepSynthesisAgent._build_source_overview(

@@ -199,6 +199,9 @@ class Act3Evidence:
     # state characterises the text as virtuous (zero fallacies + non-trivial
     # quality/formal axis). None until build_act3_evidence populates it.
     virtuous_mode: Optional[VirtuousModeAssessment] = None
+    # Epic #1258 / Track 1 #1259 — when True, build_act3_prompt DROPS the
+    # opaque-ID directive so the readable conclusion names the real stakes.
+    deanonymized: bool = True
 
 
 @dataclass
@@ -677,6 +680,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,
         debate_exchanges=debate_exchanges,
+        deanonymized=bool(getattr(state, "deanonymized", True)),
     )
 
 
@@ -880,6 +884,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         else "  (aucune délibération governance/débat non-triviale — ne la fabrique pas)"
     )
 
+    opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
+
     return (
         "Tu es l'auteur de l'ACTE III d'un rapport de restitution argumentative\n"
         "— la CONCLUSION ACTIONNABLE : ce que le lecteur FAIT de l'analyse.\n"
@@ -888,7 +894,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "2. Appréciations (forces ET faiblesses du discours, équilibré) ;\n"
         "3. Que faire : comment CONTRER, les POINTS FAIBLES À VISER, à quoi\n"
         "   S'ATTENDRE ENSUITE (retour au cadrage game-theoretic de l'Acte I).\n\n"
-        f"{_OPAQUE_ID_DIRECTIVE}\n\n"
+        f"{opaque_block}"
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
         f"{virtuous_section}"

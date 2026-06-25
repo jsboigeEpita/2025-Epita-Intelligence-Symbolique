@@ -465,6 +465,15 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         self.act3_conclusion: str = ""
         # PP #715: source-level metadata for qualitative synthesis
         self.source_metadata: Dict[str, str] = {}
+        # Epic #1258 / Track 1 #1259 — déanonymisation du pipeline de travail.
+        # True (default for CLI/local) = the working state carries REAL source
+        # metadata (speaker, arena, stakes); prompt builders DROP the opaque-ID
+        # directives so the readable restitution names the real speaker/arena.
+        # False restores the opaque-ID discipline verbatim (the git/dashboard/API
+        # export paths run opaque; the export BOUNDARY guard is Track 3
+        # sanitize_state, NOT this flag). Threaded via state because the build_*
+        # prompt builders cannot see ``context`` (#1259).
+        self.deanonymized: bool = True
         # PL 2-pass pipeline: shared atom inventory (#547)
         self.atomic_propositions: Dict[str, List[str]] = {}
         # FOL 2-pass pipeline: shared signature per source (#544)
@@ -485,6 +494,24 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # RA-4 #1049: Strategic NL journaling bridge
         self.strategic_objectives: List[Dict[str, Any]] = []
         self.strategic_decisions_log: List[Dict[str, Any]] = []
+
+    def set_source_metadata(self, metadata: Dict[str, str]) -> None:
+        """Populate source-level metadata (Epic #1258 / Track 1 #1259).
+
+        Replaces the in-memory ``source_metadata`` map with the supplied dict
+        (real speaker/arena/epoch for CLI/local runs). This is the working-state
+        metadata consumed by the qualitative synthesis + restitution prompts;
+        the export boundary (git/dashboard/API) is sanitized separately by
+        Track 3 ``sanitize_state``. No ``raw_text``/``full_text`` is stored —
+        only short metadata fields (privacy HARD).
+        """
+        if not isinstance(metadata, dict):
+            state_logger.warning("set_source_metadata ignored non-dict: %r", type(metadata))
+            return
+        # Defensive: never accept raw_text/full_text keys (privacy HARD).
+        _FORBIDDEN = {"raw_text", "full_text", "full_text_segment", "raw_text_snippet"}
+        cleaned = {k: v for k, v in metadata.items() if k not in _FORBIDDEN}
+        self.source_metadata = cleaned
 
     def add_trace_entry(
         self,

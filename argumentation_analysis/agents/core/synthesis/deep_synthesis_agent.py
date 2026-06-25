@@ -65,7 +65,6 @@ class DeepSynthesisAgent(BaseAgent):
     )
 
     SYSTEM_PROMPT: ClassVar[str] = (
-        f"{OPAQUE_ID_DIRECTIVE}"
         "You are an intelligence analyst producing a political-rhetorical "
         "briefing on a discourse. Your output is structured into exactly 6 "
         "numbered sections (8-12 paragraphs total). Each section heading must "
@@ -124,7 +123,6 @@ class DeepSynthesisAgent(BaseAgent):
     # receives an intelligence briefing of verified artifacts (never raw
     # text) and must anchor every insight in [artifact:...] citations.
     GROUNDED_SYNTHESIS_PROMPT: ClassVar[str] = (
-        f"{OPAQUE_ID_DIRECTIVE}"
         "You are an intelligence analyst writing the grounded transversal "
         "synthesis of a rhetorical-analysis run. You receive an ARTIFACT "
         "BRIEFING: a list of verified analysis artifacts, each prefixed by a "
@@ -194,16 +192,31 @@ class DeepSynthesisAgent(BaseAgent):
     )
 
     _llm_service_id: Optional[str] = PrivateAttr(default=None)
+    # Epic #1258 / Track 1 #1259 — when False, the opaque-ID discipline is
+    # restored (directive prepended to every synthesis prompt); when True (default
+    # for CLI/local), the directive is dropped so the briefing may name the real
+    # speaker/arena. The export BOUNDARY guard is Track 3 sanitize_state.
+    _deanonymized: bool = PrivateAttr(default=True)
 
     def __init__(
         self,
         kernel: Kernel,
         agent_name: str = "DeepSynthesisAgent",
         service_id: Optional[str] = None,
+        deanonymized: bool = True,
         **kwargs,
     ):
-        super().__init__(kernel, agent_name, self.SYSTEM_PROMPT, **kwargs)
+        # Epic #1258 / Track 1 #1259 — conditionally prepend the opaque-ID
+        # directive to the system prompt. The directive dominates the model's
+        # attention (FB-32 sharpening), so it is first when present.
+        system_prompt = (
+            self.SYSTEM_PROMPT
+            if deanonymized
+            else self.OPAQUE_ID_DIRECTIVE + self.SYSTEM_PROMPT
+        )
+        super().__init__(kernel, agent_name, system_prompt, **kwargs)
         self._llm_service_id = service_id
+        self._deanonymized = bool(deanonymized)
 
     # ------------------------------------------------------------------
     # BaseAgent abstract implementations
@@ -1268,8 +1281,15 @@ class DeepSynthesisAgent(BaseAgent):
         if briefing.count("\n") < 1:
             return ""
         try:
+            # Epic #1258 / Track 1 #1259 — prepend the opaque-ID directive only
+            # when the agent runs in opaque mode (deanonymized=False).
+            _opaque_guard = (
+                ""
+                if getattr(self, "_deanonymized", True)
+                else self.OPAQUE_ID_DIRECTIVE
+            )
             prompt = (
-                f"{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
+                f"{_opaque_guard}{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
                 "Write the 4-section grounded transversal synthesis now."
             )
             settings = self.kernel.get_prompt_execution_settings_from_service_id(
@@ -1525,8 +1545,15 @@ class DeepSynthesisAgent(BaseAgent):
             else:
                 convergence_section += "  No cross-method convergence.\n"
 
+            # Epic #1258 / Track 1 #1259 — prepend the opaque-ID directive only
+            # when the agent runs in opaque mode (deanonymized=False).
+            _opaque_guard = (
+                ""
+                if getattr(self, "_deanonymized", True)
+                else DeepSynthesisAgent.OPAQUE_ID_DIRECTIVE
+            )
             prompt = (
-                f"{DeepSynthesisAgent.OPAQUE_ID_DIRECTIVE}"
+                f"{_opaque_guard}"
                 "Produce the 6-section political-rhetorical briefing as specified "
                 "in your system prompt. Use the data blocks below. Each section "
                 "heading must be '## N. Title' on its own line. 8-12 paragraphs "
