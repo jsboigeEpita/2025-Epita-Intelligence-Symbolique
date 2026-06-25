@@ -136,25 +136,29 @@ def _raising_llm(exc: BaseException) -> object:
     return _call
 
 
-# A §4-compliant woven conclusion (all framework refs anchored on a beat, no
-# isolated score, no dump heading). Must PASS the readability gate.
+# A §4-compliant woven conclusion (reader-oriented per #1262: names the
+# speaker, cites what was said, plain-language verdict, formal as support).
+# All framework refs anchored on a beat, no isolated score, no dump heading.
+# Must PASS the readability gate.
 _WOVEN_CONCLUSION = (
-    "### Synthèse honnête\n\n"
-    "L'analyse atteint une profondeur multi-axes: elle localise un dérapage, "
-    "caractérise le discours par ses vertus, et le solveur Tweety confirme "
-    "l'inconsistance d'une inférence sous-jacente. La couverture est large, la "
-    "caractérisation peut donc être assurée sans sur-claim.\n\n"
-    "### Ce qui tient et ce qui dérape\n\n"
-    "Le second mouvement tient: la vertu de pertinence éclaire un argument lié "
-    "à sa conclusion. Le premier dérape vers un ad hominem circonstanciel "
-    "(famille ad hominem), qui détache la conclusion des motifs. Le cadre de "
-    "Dung traduit cela mécaniquement: arg_1 est rejeté par la sémantique "
-    "grounded, ne survivant pas à l'attaque.\n\n"
-    "### Comment contrer et à quoi s'attendre\n\n"
-    "Un contre-exemple montre qu'on peut attaquer la thèse sans attaquer la "
-    "personne, isolant le procès personnel comme superflu. À attendre ensuite: "
-    "l'orateur peut doubler la mise sur l'autorité ou glisser d'une attaque à "
-    "une autre pour esquiver la faiblesse signalée."
+    "### Ce que le discours dit\n\n"
+    "Le locuteur défend sa position en disqualifiant l'adversaire par une "
+    "attaque personnelle, puis appuie une revendication sur un raisonnement "
+    "causal étayé. Le premier mouvement vise à écarter l'opposant plutôt qu'à "
+    "prouver la thèse ; le second cherche, lui, à convaincre sur le fond.\n\n"
+    "### Ce qui tient et ce qui ne tient pas\n\n"
+    "Le second mouvement tient : la vertu de pertinence éclaire un argument "
+    "liée à sa conclusion, et le lecteur peut s'y fier. Le premier ne tient "
+    "pas : il dérape vers un ad hominem circonstanciel qui détache la "
+    "conclusion des motifs. Le cadre d'argumentation traduit cela "
+    "mécaniquement — la revendication attaquée est isolée comme rejetée, ne "
+    "survivant pas à la réfutation.\n\n"
+    "### Comment se faire son avis\n\n"
+    "Le lecteur doit recevoir le premier mouvement avec prudence : ce n'est "
+    "pas la thèse qui est défendue là, mais la personne qui est écartée. Le "
+    "second mouvement, en revanche, mérite d'être pris au sérieux sur le "
+    "fond. Un contre-exemple le confirme : on peut attaquer la thèse sans "
+    "attaquer la personne, ce qui isole le procès personnel comme superflu."
 )
 
 # An enumeration (bare refs + dump headings) — must NOT pass the gate.
@@ -186,6 +190,22 @@ class TestBuildEvidence:
         assert ev.fallacies_total == 1
         assert ev.counters_total == 1
         assert ev.quality_axis_available is True
+
+    def test_claim_excerpts_carry_real_text(self):
+        """#1262 — the reader-oriented conclusion must cite what was said:
+        Act3Evidence carries the real (truncated) claim text, not just arg_N
+        counts. _rich_state has 2 identified_arguments → 2 excerpts."""
+        ev = build_act3_evidence(_rich_state())
+        assert len(ev.claim_excerpts) == 2
+        # Real claim text present (not opaque IDs).
+        assert "disqualifie" in ev.claim_excerpts[0]
+        assert "causal" in ev.claim_excerpts[1]
+
+    def test_claim_excerpts_empty_when_no_arguments(self):
+        """#1262 — honest absence: no arguments extracted → empty excerpts
+        (G1 not passed), not fabricated."""
+        ev = build_act3_evidence(_state())
+        assert ev.claim_excerpts == []
 
     def test_weak_points_collect_fallacy_and_formal_and_dung(self):
         ev = build_act3_evidence(_rich_state())
@@ -459,6 +479,21 @@ class TestPrivacy:
         ev = build_act3_evidence(_rich_state())
         prompt = build_act3_prompt(ev)
         assert "EXCEEDED" in prompt
+
+    def test_prompt_carries_real_claim_excerpts(self):
+        """#1262 — the prompt feeds the LLM the real claim text so it can cite
+        what was actually said. The debate-prep framing is dropped (anti-pendule:
+        subtraction, not a counter-directive)."""
+        ev = build_act3_evidence(_rich_state())
+        prompt = build_act3_prompt(ev)
+        assert "CE QUI A ÉTÉ DIT" in prompt  # real-claims data block
+        assert "disqualifie" in prompt  # real claim text present
+        # Reader-oriented beats present (replaces the old debate-prep beats).
+        assert "orientée lecteur" in prompt.lower()
+        assert "se faire son avis" in prompt.lower()
+        # Anti-pendule: the debate-prep framing is SUBTRACTED (not re-labelled).
+        assert "comment CONTRER" not in prompt
+        assert "points faibles à viser" not in prompt.lower()
 
 
 # ============================================================================
