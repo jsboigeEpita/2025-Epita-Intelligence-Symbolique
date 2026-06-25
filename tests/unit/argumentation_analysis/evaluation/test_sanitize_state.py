@@ -245,6 +245,15 @@ def _deanonymized_state() -> dict:
                 "name": "fw_1",  # structural label survives
                 "arguments": [LEAK, f"{LEAK} second claim"],
                 "attacks": [[LEAK, f"{LEAK} second claim"]],
+                # #1271: extensions subtree holds the SAME claim texts (sets of
+                # the same arguments). Opacified recursively (list-of-lists +
+                # flat all_members); count/sizes are structural and survive.
+                "extensions": {
+                    "extensions": [[LEAK, f"{LEAK} second claim"], [LEAK]],
+                    "count": 2,
+                    "sizes": [2, 1],
+                    "all_members": [LEAK, f"{LEAK} second claim"],
+                },
             }
         },
         # Dict-of-dicts narrative sub-key (#1265: llm_assessment dropped, the
@@ -323,6 +332,14 @@ class TestSanitizeDeAnonymizedState:
         # topology survives: one attack = one [source, target] pair.
         assert isinstance(dung["attacks"], list) and len(dung["attacks"]) == 1
         assert len(dung["attacks"][0]) == 2
+        # #1271: extensions subtree — set arity/topology survive (count, sizes,
+        # number of extensions + their sizes), claim texts opacified.
+        ext = dung["extensions"]
+        assert ext["count"] == 2
+        assert ext["sizes"] == [2, 1]
+        assert len(ext["extensions"]) == 2  # two extension sets
+        assert [len(s) for s in ext["extensions"]] == [2, 1]
+        assert len(ext["all_members"]) == 2
         assert result["score"] == 0.9
         # strategy survived counter_arguments scrub.
         assert result["counter_arguments"][0]["strategy"] == "reductio"
@@ -577,4 +594,107 @@ class TestSanitizeLlmAssessment:
         assert entry["overall"] == 4.5
         assert entry["scores"] == {"clarity": 4, "coherence": 5, "relevance": 4}
         assert "nominative" not in json.dumps(entry)
-        assert "real" not in json.dumps(entry)
+
+
+class TestSanitizeDungExtensions:
+    """#1271: the dung_frameworks[*].extensions subtree holds the SAME claim
+    texts as ``arguments`` (Tweety returns extensions as sets of those claims).
+    Both ``extensions.extensions`` (list of lists) and ``extensions.all_members``
+    (flat list) are opacified recursively; set arity/topology + the structural
+    ``count``/``sizes`` survive. ``name`` is verified non-nominative firsthand
+    (all callers pass a structural label) and is left untouched.
+
+    Firsthand-surfaced by po-2023 (FB-39 cross-verify of #1268), out of #1265's
+    scope (which named only ``arguments``).
+    """
+
+    def _make_state(self):
+        return {
+            "dung_frameworks": {
+                "df_1": {
+                    "name": "verification_preferred",  # structural label
+                    "arguments": ["real claim alpha", "real claim beta"],
+                    "attacks": [["real claim alpha", "real claim beta"]],
+                    "extensions": {
+                        "extensions": [
+                            ["real claim alpha"],
+                            ["real claim alpha", "real claim beta"],
+                        ],
+                        "count": 2,
+                        "sizes": [1, 2],
+                        "all_members": ["real claim alpha", "real claim beta"],
+                    },
+                }
+            }
+        }
+
+    def test_extensions_list_of_lists_opacified(self):
+        result = sanitize_state(self._make_state())
+        ext = result["dung_frameworks"]["df_1"]["extensions"]
+        # arity + per-extension size preserved
+        assert len(ext["extensions"]) == 2
+        assert [len(s) for s in ext["extensions"]] == [1, 2]
+        # content opacified
+        for ext_set in ext["extensions"]:
+            for claim in ext_set:
+                assert isinstance(claim, str) and len(claim) == 8
+        assert "real claim" not in json.dumps(ext)
+        assert "alpha" not in json.dumps(ext) and "beta" not in json.dumps(ext)
+
+    def test_all_members_flat_list_opacified(self):
+        result = sanitize_state(self._make_state())
+        members = result["dung_frameworks"]["df_1"]["extensions"]["all_members"]
+        assert len(members) == 2
+        for claim in members:
+            assert isinstance(claim, str) and len(claim) == 8
+        assert "real claim" not in json.dumps(members)
+
+    def test_structural_count_sizes_preserved(self):
+        result = sanitize_state(self._make_state())
+        ext = result["dung_frameworks"]["df_1"]["extensions"]
+        assert ext["count"] == 2
+        assert ext["sizes"] == [1, 2]
+
+    def test_name_structural_label_left_untouched(self):
+        # DoD #2: name verified non-nominative firsthand — all callers pass a
+        # structural label (verification_<sem>, social_af, delp_analysis, ...).
+        # It must survive untouched (anti-pendule: no over-scrub).
+        result = sanitize_state(self._make_state())
+        assert result["dung_frameworks"]["df_1"]["name"] == "verification_preferred"
+
+    def test_topology_stable_shared_claim_same_opaque(self):
+        # The same claim text appears in arguments, an extension set, and
+        # all_members — each occurrence must map to the SAME opaque id (so the
+        # "which arguments are jointly accepted" topology is preserved).
+        state = {
+            "dung_frameworks": {
+                "df_1": {
+                    "name": "fw_1",
+                    "arguments": ["shared claim"],
+                    "attacks": [],
+                    "extensions": {
+                        "extensions": [["shared claim"]],
+                        "count": 1,
+                        "sizes": [1],
+                        "all_members": ["shared claim"],
+                    },
+                }
+            }
+        }
+        result = sanitize_state(state)
+        fw = result["dung_frameworks"]["df_1"]
+        opaque_arg = fw["arguments"][0]
+        assert fw["extensions"]["extensions"][0][0] == opaque_arg
+        assert fw["extensions"]["all_members"][0] == opaque_arg
+
+    def test_empty_extensions_handled(self):
+        # Degraded Dung result: extensions = {} (no JVM reasoner, #1019).
+        state = {"dung_frameworks": {"df_1": {"name": "fw", "extensions": {}}}}
+        result = sanitize_state(state)
+        assert result["dung_frameworks"]["df_1"]["extensions"] == {}
+
+    def test_extensions_missing_subtree_no_crash(self):
+        # Defensive: a dung entry without an extensions subtree is left intact.
+        state = {"dung_frameworks": {"df_1": {"name": "fw", "arguments": ["a"]}}}
+        result = sanitize_state(state)
+        assert "extensions" not in result["dung_frameworks"]["df_1"]

@@ -78,6 +78,26 @@ _OPAQUE_LIST_SUBKEYS = {
     "dung_frameworks": {"arguments", "attacks"},
 }
 
+# Dict-of-dicts whose entries carry a NESTED dict sub-key holding nominative
+# list-valued leaves (#1271, po-2023 FB-39 follow-up to #1265): top-level field
+# -> {nested_subkey -> {leaf_subkeys}}.
+#   dung_frameworks[df_id]["extensions"] = {
+#       "extensions":   [[claim_text, ...], ...],  # list of lists (the Dung
+#                                                  #   extensions, each a set)
+#       "count":        N,                         # structural — survives
+#       "sizes":        [...],                     # structural — survives
+#       "all_members":  [claim_text, ...],         # flat list (union of members)
+#   }
+# Tweety returns each extension as a set of the same ``arguments`` claim texts
+# (invoke_callables.py:6188-6194); the writer stores them under ``extensions``
+# (state_writers.py:903). Opacified recursively via ``_opacify_list_values``
+# (handles both the nested list-of-lists and the flat ``all_members``) so set
+# arity/topology survive — only the claim *content* is scrubbed. ``name`` is a
+# structural label (verified non-nominative firsthand) and is left untouched.
+_OPAQUE_NESTED_LIST_SUBKEYS = {
+    "dung_frameworks": {"extensions": {"extensions", "all_members"}},
+}
+
 # List-of-dicts fields: top-level field -> sub-keys whose values are
 # nominative text to drop (the rest of each item is preserved).
 _TEXT_STRIP_LISTS = {
@@ -252,6 +272,34 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 else:
                     new_entries[key] = val
             data[field] = new_entries
+
+    # 4c. Opacify nominative list-valued leaves inside a NESTED dict sub-key
+    #     of dict-of-dicts fields (dung_frameworks[*].extensions.extensions /
+    #     .all_members — the Dung extensions, which are sets of the same claim
+    #     texts that live in `arguments`). One level deeper than 4b; same
+    #     recursive opacifier, so the nested list-of-lists (extensions) and the
+    #     flat list (all_members) are both scrubbed while set arity/topology
+    #     survive (#1271, po-2023 FB-39 follow-up to #1265).
+    for field, nested_spec in _OPAQUE_NESTED_LIST_SUBKEYS.items():
+        if field in data and isinstance(data[field], dict):
+            nested_entries: dict[str, Any] = {}
+            for key, val in data[field].items():
+                if isinstance(val, dict):
+                    new_entry = dict(val)
+                    for subtree_key, leaf_subkeys in nested_spec.items():
+                        subtree = new_entry.get(subtree_key)
+                        if isinstance(subtree, dict):
+                            new_subtree = dict(subtree)
+                            for leaf in leaf_subkeys:
+                                if leaf in new_subtree:
+                                    new_subtree[leaf] = _opacify_list_values(
+                                        new_subtree[leaf]
+                                    )
+                            new_entry[subtree_key] = new_subtree
+                    nested_entries[key] = new_entry
+                else:
+                    nested_entries[key] = val
+            data[field] = nested_entries
 
     # 5. Strip nominative sub-keys from list-of-dicts fields.
     for field, text_keys in _TEXT_STRIP_LISTS.items():
