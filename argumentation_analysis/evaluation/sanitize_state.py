@@ -1,7 +1,17 @@
-"""State sanitizer — strips sensitive fields from analysis state snapshots.
+"""State sanitizer — the UNIQUE export guard for analysis state snapshots.
 
-Produces a privacy-safe dict suitable for commits, dashboards, and reports.
-All quantitative aggregates (counts, scores, structures) are preserved.
+Produces a privacy-safe dict suitable for commits, dashboards, PRs, and
+reports. All quantitative aggregates (counts, scores, structures) are
+preserved; only nominative natural-language content is removed or opacified.
+
+Epic #1258 Track 3 (#1261): the de-anonymized pipeline (Track 1/2) lets real
+names and readable logic symbols live in the working state and in the
+gitignored local artefacts (``evaluation/results/``). This function is the
+single chokepoint through which a state snapshot must pass before reaching
+git, a dashboard, a PR, or an API: it is where nominative content is scrubbed
+at the boundary. Anti-penduple: this is the *only* scrubber — the scattered
+ones (``generate_spectacular_bundle._scrub_state_for_export``,
+``appendix._strip_leak_keys``) are consolidation targets, not siblings.
 """
 
 from __future__ import annotations
@@ -27,18 +37,65 @@ _STRIP_TOP_LEVEL = {
 # Fields to replace with opaque IDs (key -> opaque_id(value)).
 _OPAQUE_REPLACE = {"source_id"}
 
-# Dict-valued fields where each entry's .text should be stripped but metadata kept.
+# Dict-valued fields whose *values* are nominative strings keyed by generic
+# structural labels (key kept, value -> opaque_id). Track 1 (#1259) threads
+# real ``source_metadata`` = ``{genre, speaker_role, channel, title, ...}``
+# into the working state; the values are nominative (a ``title`` is a source
+# name per CLAUDE.md privacy) but the keys are structural. Opacifying the
+# values preserves "which metadata was present" without leaking content.
+_OPAQUE_DICT_VALUES = {"source_metadata"}
+
+# Dict-valued fields whose entries are nominative *strings*
+# (e.g. ``{arg_id: description}``). The string is replaced by a placeholder;
+# non-string (structured) values are preserved untouched.
 _TEXT_STRIP_DICTS = {"identified_arguments", "arguments"}
 
-# List-valued fields where each item may have sensitive sub-keys.
-_TEXT_STRIP_LISTS = {
-    "counter_arguments": {"counter_content", "generated_text"},
-    "extracts": set(),  # no text key to strip, keep as-is
-    "debate_transcripts": {"proponent_move", "opponent_move"},
+# Dict-of-dicts fields: top-level field -> sub-keys whose string values are
+# nominative and must be dropped (the rest of each entry is preserved).
+#   e.g. identified_fallacies = {fid: {type, justification, family, ...}}
+#        belief_sets          = {bs_id: {logic_type, content}}
+_TEXT_STRIP_DICT_OF_DICTS = {
+    "identified_fallacies": {"justification"},
+    "belief_sets": {"content"},
 }
 
-# Fields that are purely narrative text — replace with length + cited_fields placeholder.
-_NARRATIVE_FIELDS = {"narrative_synthesis"}
+# List-of-dicts fields: top-level field -> sub-keys whose values are
+# nominative text to drop (the rest of each item is preserved).
+_TEXT_STRIP_LISTS = {
+    "counter_arguments": {"counter_content", "generated_text", "original_argument"},
+    "extracts": {"content"},
+    "debate_transcripts": {"proponent_move", "opponent_move", "topic"},
+    "transcription_segments": {"text", "speaker"},
+    "neural_fallacy_scores": {"text_segment"},
+    "analysis_trace": {"summary"},
+    "nl_to_logic_translations": {"original_text"},
+    "semantic_index_refs": {"query", "snippet"},
+    "formal_synthesis_reports": {"summary"},
+}
+
+# List-of-dicts fields carrying a symbol-mapping sub-key: a ``Dict[str, str]``
+# mapping an opaque atom (``p``, ``mp1``) to its NL meaning. Track 2 makes the
+# NL meaning readable/potentially-nominative; the values are opacified with
+# ``opaque_id`` so the mapping *structure* survives without leaking content.
+_SYMBOL_MAPPING_LIST_FIELDS = {
+    "nl_to_logic_translations": "variables",
+}
+
+# Fields that are purely narrative text -> replaced with length + marker.
+_NARRATIVE_FIELDS = {
+    "narrative_synthesis",
+    "act1_framing",
+    "act2_narrative",
+    "act3_conclusion",
+    "final_conclusion",
+}
+
+# A single struct-valued field whose list sub-keys carry nominative NL.
+# Reduced to a counts-only summary (aggregates preserved, all NL removed).
+# Each value is (list_subkey_to_count, ...).
+_STRUCT_LIST_SCRUB = {
+    "stakes_and_stakeholders": ("stakes", "stakeholders"),
+}
 
 
 def _strip_text_from_dict(data: dict[str, Any], text_keys: set[str]) -> dict[str, Any]:
@@ -53,8 +110,36 @@ def _strip_text_from_list(
     return [_strip_text_from_dict(item, text_keys) for item in items]
 
 
+def _opacify_mapping(mapping: Any) -> Any:
+    """Opacify the NL-meaning values of a ``Dict[str, str]`` symbol mapping.
+
+    Atom keys (``p``, ``mp1``) are kept; only the human-readable values are
+    passed through ``opaque_id``. Non-string/empty values are left as-is.
+    """
+    if not isinstance(mapping, dict):
+        return mapping
+    return {
+        k: (opaque_id(v) if isinstance(v, str) and v else v) for k, v in mapping.items()
+    }
+
+
+def _scrub_struct(value: Any, list_keys: tuple[str, ...]) -> dict[str, Any]:
+    """Reduce a stakes/stakeholders struct to a counts-only summary."""
+    if not isinstance(value, dict):
+        return {"stripped": True}
+    summary: dict[str, Any] = {"stripped": True}
+    for key in list_keys:
+        lst = value.get(key)
+        summary[f"{key}_count"] = len(lst) if isinstance(lst, list) else 0
+    # Short categorical labels are reduced to presence flags: they may carry
+    # discursive context, so we keep only the boolean, not the string.
+    for str_key in ("rhetorical_register", "discursive_arena"):
+        summary[f"has_{str_key}"] = bool(value.get(str_key))
+    return summary
+
+
 def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
-    """Strip sensitive fields, keep all quantitative aggregates.
+    """Strip nominative fields, keep all quantitative aggregates.
 
     Args:
         state: A state dict (typically from ``state_snapshot`` in a golden
@@ -64,7 +149,7 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
 
     Returns:
         A new dict with all sensitive text removed, opaque IDs substituted,
-        and all counts/scores/structures preserved.
+        symbol mappings opacified, and all counts/scores/structures preserved.
     """
     # Handle Pydantic models or objects with serialization.
     if hasattr(state, "model_dump"):
@@ -85,7 +170,14 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
         if field in data and isinstance(data[field], str):
             data[field] = opaque_id(data[field])
 
-    # 3. Strip text from dict-valued fields (identified_arguments, etc.).
+    # 2b. Opacify the nominative values of dict-valued identifier fields
+    #     (source_metadata = {genre, speaker_role, channel, title, ...}).
+    for field in _OPAQUE_DICT_VALUES:
+        if field in data and isinstance(data[field], dict):
+            data[field] = _opacify_mapping(data[field])
+
+    # 3. Strip text from dict-valued fields whose entries are strings
+    #    (identified_arguments, arguments).
     for field in _TEXT_STRIP_DICTS:
         if field in data and isinstance(data[field], dict):
             data[field] = {
@@ -93,12 +185,33 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 for k, v in data[field].items()
             }
 
-    # 4. Strip text from list-valued fields.
+    # 4. Strip nominative sub-keys from dict-of-dicts fields
+    #    (identified_fallacies.justification, belief_sets.content).
+    for field, text_keys in _TEXT_STRIP_DICT_OF_DICTS.items():
+        if field in data and isinstance(data[field], dict):
+            data[field] = {
+                key: (
+                    _strip_text_from_dict(val, text_keys)
+                    if isinstance(val, dict)
+                    else val
+                )
+                for key, val in data[field].items()
+            }
+
+    # 5. Strip nominative sub-keys from list-of-dicts fields.
     for field, text_keys in _TEXT_STRIP_LISTS.items():
         if field in data and isinstance(data[field], list) and text_keys:
             data[field] = _strip_text_from_list(data[field], text_keys)
 
-    # 5. Replace narrative text with length info.
+    # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
+    #    (nl_to_logic_translations[*].variables).
+    for field, subkey in _SYMBOL_MAPPING_LIST_FIELDS.items():
+        if field in data and isinstance(data[field], list):
+            for item in data[field]:
+                if isinstance(item, dict) and subkey in item:
+                    item[subkey] = _opacify_mapping(item[subkey])
+
+    # 7. Replace narrative text with length info.
     for field in _NARRATIVE_FIELDS:
         if field in data and isinstance(data[field], str):
             original = data[field]
@@ -106,5 +219,10 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 "length": len(original),
                 "stripped": True,
             }
+
+    # 8. Reduce struct-valued NL fields to counts (stakes_and_stakeholders).
+    for field, list_keys in _STRUCT_LIST_SCRUB.items():
+        if field in data:
+            data[field] = _scrub_struct(data[field], list_keys)
 
     return data
