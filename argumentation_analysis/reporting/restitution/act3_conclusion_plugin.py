@@ -67,6 +67,11 @@ _SYNTHESIS_CAP = 400
 # SV (#1182): caps for governance/debate evidence (privacy + prompt budget).
 _DEBATE_CAP = 200
 _DEBATE_MAX_EXCHANGES = 4
+# Epic #1258 / Track 4 #1262 — real claim excerpts for the reader-oriented
+# conclusion. A reader re-links the verdict to the discourse from a few claims,
+# not all; each is truncated (privacy HARD + prompt budget).
+_CLAIM_EXCERPT_CAP = 240
+_MAX_CLAIM_EXCERPTS = 5
 
 # Verdict bands (adapted from #1008 §2.1 to the restitution coverage model).
 _BAND_EXCEEDED = "EXCEEDED"
@@ -202,6 +207,12 @@ class Act3Evidence:
     # Epic #1258 / Track 1 #1259 — when True, build_act3_prompt DROPS the
     # opaque-ID directive so the readable conclusion names the real stakes.
     deanonymized: bool = True
+    # Epic #1258 / Track 4 #1262 — real (truncated) claim text from
+    # ``state.identified_arguments``. The prior evidence only carried ``arg_N``
+    # IDs + counts, so the conclusion could not cite what was actually said.
+    # Reader-oriented conclusion needs the real claim excerpts to let a reader
+    # re-link the verdict to the discourse. Privacy: truncated via _truncate.
+    claim_excerpts: List[str] = field(default_factory=list)
 
 
 @dataclass
@@ -666,6 +677,16 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     verdict = _compute_verdict_band(axes_nontrivial)
     virtuous_mode = detect_virtuous_mode(state)
 
+    # Epic #1258 / Track 4 #1262 — real claim excerpts (truncated) so the
+    # reader-oriented conclusion can cite what was actually said. ``args``
+    # values are the claim text strings ({"arg_1": "thèse", ...}). Cap the
+    # count (a reader re-links from a few, not all) and each length (privacy).
+    claim_excerpts: List[str] = [
+        _truncate(v, _CLAIM_EXCERPT_CAP)
+        for v in list(args.values())[:_MAX_CLAIM_EXCERPTS]
+        if _truncate(v, _CLAIM_EXCERPT_CAP)
+    ]
+
     return Act3Evidence(
         args_total=args_total,
         fallacies_total=fallacies_total,
@@ -681,6 +702,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         governance_verdict=governance_verdict,
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
+        claim_excerpts=claim_excerpts,
     )
 
 
@@ -846,16 +868,28 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             f"  - {wp.label} sur {wp.target_arg_id} (ancre : {wp.source})"
             for wp in evidence.weak_points if wp.source in ("fallacy", "pl", "fol", "dung")
         )
-        or "  (aucun point faible structurel à viser identifié)"
+        or "  (aucun point faible structurel localisé)"
     )
 
+    # Epic #1258 / Track 4 #1262 — real claim text so a reader can re-link the
+    # verdict to what was actually said. Truncated (privacy) + capped (a reader
+    # re-links from a few, not all). Empty when no arguments were extracted.
+    if evidence.claim_excerpts:
+        claims_block = "\n".join(
+            f"  - {_truncate(c, _CLAIM_EXCERPT_CAP)}"
+            for c in evidence.claim_excerpts[:_MAX_CLAIM_EXCERPTS]
+        )
+    else:
+        claims_block = "  (aucune revendication extraite — G1 non passé)"
+
     what_next_block = (
-        "  À quoi s'attendre ensuite : referme la boucle sur le cadrage "
-        "game-theoretic de l'Acte I — les coups probables que l'orateur peut "
-        "jouer ensuite pour esquiver les faiblesses signalées (doubler la mise "
-        "sur l'autorité, glisser d'une attaque à une autre, amplification "
-        "émotive). Ne fabrique pas de coups : déduis-les des faiblesses "
-        "localisées."
+        "  Comment se faire son avis : aide le lecteur à relier le verdict à ce "
+        "qu'il a entendu ou lu du discours. Le « que faire » n'est PAS une "
+        "préparation de débat (comment contrer, quels coups jouer) — c'est un "
+        "apprentissage critique : quels passages le lecteur doit recevoir avec "
+        "prudence, lesquels tiennent, et pourquoi, pour qu'il forme son propre "
+        "jugement. Les faiblesses localisées ci-dessus sont les points de "
+        "prudence, pas des cibles à abattre."
     )
 
     # --- SV (#1182): délibération collective (governance + debate) ---
@@ -888,34 +922,47 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
 
     return (
         "Tu es l'auteur de l'ACTE III d'un rapport de restitution argumentative\n"
-        "— la CONCLUSION ACTIONNABLE : ce que le lecteur FAIT de l'analyse.\n"
-        "Trois battements en prose :\n"
-        "1. Synthèse honnête (verdict gated sur la bande — pas de sur-claim) ;\n"
-        "2. Appréciations (forces ET faiblesses du discours, équilibré) ;\n"
-        "3. Que faire : comment CONTRER, les POINTS FAIBLES À VISER, à quoi\n"
-        "   S'ATTENDRE ENSUITE (retour au cadrage game-theoretic de l'Acte I).\n\n"
+        "— la CONCLUSION ORIENTÉE LECTEUR : un lecteur qui a vu ou lu le discours\n"
+        "doit pouvoir s'y retrouver, relier le verdict à ce qui a été dit, et se\n"
+        "faire son propre avis. Va chercher le lecteur dans sa connaissance du\n"
+        "contexte et des locuteurs. Trois battements en prose :\n"
+        "1. Ce que le discours dit vraiment : nomme le locuteur et l'arène (via\n"
+        "   les métadonnées), et CITE ce qui a réellement été dit (les\n"
+        "   revendications extraites ci-dessous) — le lecteur doit reconnaître\n"
+        "   le discours qu'il a entendu.\n"
+        "2. Ce qui tient et ce qui ne tient pas : un verdict en langage clair sur\n"
+        "   chaque revendication, pour un lecteur formant son jugement — pas un\n"
+        "   catalogue de labels techniques. Les sophismes/contre-arguments sont\n"
+        "   nommés par ce qu'ils signifient pour le lecteur.\n"
+        "3. Comment se faire son avis : ce que le lecteur doit recevoir avec\n"
+        "   prudence, ce qui est solide, et pourquoi. La machinerie formelle\n"
+        "   (solveur, cadre de Dung) est un APPUI lisible, jamais un titre.\n\n"
         f"{opaque_block}"
         f"{_WEAVING_RULE}\n\n"
         f"{_FAIL_LOUD_INSTRUCTION}\n\n"
         f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
-        f"[SYNTHÈSE HONNÊTE — verdict gated]\n{synthesis_block}\n\n"
-        f"[APPRÉCIATIONS — forces (qualité)]\n{strengths_lines}\n\n"
-        f"[APPRÉCIATIONS — faiblesses localisées]\n{weaknesses_lines}\n\n"
-        f"[QUE FAIRE — comment contrer]\n{counters_lines}\n\n"
-        f"[QUE FAIRE — points faibles à viser]\n{target_lines}\n\n"
+        f"[CE QUI A ÉTÉ DIT — revendications extraites]\n{claims_block}\n\n"
+        f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
+        f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
+        f"[CE QUI NE TIENT PAS — faiblesses localisées]\n{weaknesses_lines}\n\n"
+        f"[CONTRE-POINTS — ce qui affaiblit les revendications]\n{counters_lines}\n\n"
+        f"[POINTS DE PRUDENCE — ancrages structurels]\n{target_lines}\n\n"
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         f"{consigne_virtue}"
         "- Rédige 3 paragraphes thématiques (un par battement), en prose lisible,\n"
         "  pas une liste de champs. Titres thématiques en ###.\n"
-        "- Le verdict formel (Tweety/Dung) appuie un battement : formule-le comme\n"
-        "  « le solveur Tweety invalide cette inférence » (théorie inconsistante),\n"
-        "  « le solveur Tweety confirme la cohérence de cette inférence »\n"
-        "  (théorie consistante — un résultat formel aussi) ou « le cadre de Dung\n"
-        "  isole cet argument comme rejeté/défaillant » (argument absent de\n"
-        "  l'extension acceptée) — jamais une sous-section isolée.\n"
+        "- OUVRE en nommant le locuteur et en citant la (les) revendication(s)\n"
+        "  centrale(s) du discours — le lecteur doit raccrocher à ce qu'il a\n"
+        "  entendu. Reformule fidèlement, ne galvaude pas le propos.\n"
+        "- Le verdict formel (Tweety/Dung) est un APPUI, jamais un titre : formule-\n"
+        "  le comme « l'analyse formelle invalide ce raisonnement » (théorie\n"
+        "  inconsistante), « l'analyse formelle confirme la cohérence de ce\n"
+        "  raisonnement » (théorie consistante — un résultat aussi) ou « le cadre\n"
+        "  d'argumentation isole cette revendication comme rejetée » — toujours\n"
+        "  au service du jugement du lecteur, jamais en sous-section isolée.\n"
         "- Respecte STRICTEMENT le plafond de claim de la bande : ne formule rien\n"
         "  au-delà de ce qu'elle autorise.\n"
         "- La conclusion doit VARIER selon le contenu réel ci-dessus : pas de\n"
