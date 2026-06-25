@@ -82,17 +82,30 @@ class TestSanitizePreserved:
         result = sanitize_state(golden_state)
         if "argument_quality_scores" in golden_state:
             assert "argument_quality_scores" in result
-            assert (
-                result["argument_quality_scores"]
-                == golden_state["argument_quality_scores"]
-            )
+            for arg_id, scores in golden_state["argument_quality_scores"].items():
+                result_scores = result["argument_quality_scores"][arg_id]
+                # llm_assessment (narrative citing the real argument) is stripped;
+                # the quantitative aggregates (overall, per-virtue scores) survive.
+                assert "llm_assessment" not in result_scores
+                for k, v in scores.items():
+                    if k == "llm_assessment":
+                        continue
+                    assert result_scores[k] == v
 
     def test_structures_preserved(self, golden_state):
         result = sanitize_state(golden_state)
-        # Dung frameworks should be fully preserved (no text)
+        # Dung framework list structure + arity survive (so argument/attack
+        # counts and topology are preserved); the claim *texts* are opacified.
         if "dung_frameworks" in golden_state:
             assert "dung_frameworks" in result
-            assert result["dung_frameworks"] == golden_state["dung_frameworks"]
+            for df_id, fw in golden_state["dung_frameworks"].items():
+                result_fw = result["dung_frameworks"][df_id]
+                if "arguments" in fw:
+                    assert len(result_fw["arguments"]) == len(fw["arguments"])
+                if "attacks" in fw:
+                    assert len(result_fw["attacks"]) == len(fw["attacks"])
+                    for orig_pair, res_pair in zip(fw["attacks"], result_fw["attacks"]):
+                        assert len(res_pair) == len(orig_pair)
 
     def test_belief_data_preserved(self, golden_state):
         result = sanitize_state(golden_state)
@@ -142,9 +155,20 @@ class TestSanitizeIdempotence:
     def test_idempotent_on_golden(self, golden_state):
         first = sanitize_state(golden_state)
         second = sanitize_state(first)
-        # Scores and structures must survive both passes
+        # llm_assessment strip is idempotent (a dropped key stays dropped), so
+        # argument_quality_scores is stable across passes.
         assert first["argument_quality_scores"] == second["argument_quality_scores"]
-        assert first["dung_frameworks"] == second["dung_frameworks"]
+        # Dung opacification is idempotent at the structural level (argument/
+        # attack arity + topology stable across passes); the opaque values may
+        # themselves be re-hashed on a second pass — that is expected for a
+        # hash-based opacifier and does not re-introduce nominative content.
+        for df_id in first["dung_frameworks"]:
+            f_fw = first["dung_frameworks"][df_id]
+            s_fw = second["dung_frameworks"][df_id]
+            if "arguments" in f_fw:
+                assert len(s_fw["arguments"]) == len(f_fw["arguments"])
+            if "attacks" in f_fw:
+                assert len(s_fw["attacks"]) == len(f_fw["attacks"])
 
 
 class TestSanitizeIdentifiedArguments:
@@ -214,6 +238,24 @@ def _deanonymized_state() -> dict:
         "belief_sets": {
             "pl_bs_1": {"logic_type": "PL", "content": f"{LEAK} belief set content"}
         },
+        # Dict-of-dicts nominative list sub-keys (#1265: opacified, not dropped,
+        # so Dung argument/attack counts + topology survive).
+        "dung_frameworks": {
+            "dung_1": {
+                "name": "fw_1",  # structural label survives
+                "arguments": [LEAK, f"{LEAK} second claim"],
+                "attacks": [[LEAK, f"{LEAK} second claim"]],
+            }
+        },
+        # Dict-of-dicts narrative sub-key (#1265: llm_assessment dropped, the
+        # quantitative ``overall``/``scores`` aggregates survive).
+        "argument_quality_scores": {
+            "arg_1": {
+                "overall": 5.0,  # quantitative — must survive
+                "scores": {"clarity": 4, "coherence": 5},  # quantitative — survives
+                "llm_assessment": f"{LEAK} narrative citing the real argument",
+            }
+        },
         # List-of-dicts (nominative sub-keys dropped)
         "counter_arguments": [
             {
@@ -253,9 +295,7 @@ def _deanonymized_state() -> dict:
             "rhetorical_register": LEAK,
             "discursive_arena": LEAK,
         },
-        # Preserved aggregates (must survive untouched, no token anyway)
-        "argument_quality_scores": {"arg_1": {"overall": 5.0}},
-        "dung_frameworks": {"dung_1": {"arguments": ["x"], "attacks": []}},
+        # Preserved aggregate (must survive untouched, no token anyway)
         "score": 0.9,
     }
 
@@ -271,10 +311,18 @@ class TestSanitizeDeAnonymizedState:
     def test_aggregates_survive(self):
         result = sanitize_state(_deanonymized_state())
         # Quantitative aggregates must survive the scrub.
-        assert result["argument_quality_scores"]["arg_1"]["overall"] == 5.0
-        assert result["dung_frameworks"] == {
-            "dung_1": {"arguments": ["x"], "attacks": []}
-        }
+        scores = result["argument_quality_scores"]["arg_1"]
+        assert scores["overall"] == 5.0
+        assert scores["scores"] == {"clarity": 4, "coherence": 5}
+        # llm_assessment (narrative citing the real argument) is dropped.
+        assert "llm_assessment" not in scores
+        # Dung: list structure + arity survive, but claim texts are opacified.
+        dung = result["dung_frameworks"]["dung_1"]
+        assert dung["name"] == "fw_1"  # structural label survives
+        assert isinstance(dung["arguments"], list) and len(dung["arguments"]) == 2
+        # topology survives: one attack = one [source, target] pair.
+        assert isinstance(dung["attacks"], list) and len(dung["attacks"]) == 1
+        assert len(dung["attacks"][0]) == 2
         assert result["score"] == 0.9
         # strategy survived counter_arguments scrub.
         assert result["counter_arguments"][0]["strategy"] == "reductio"
@@ -438,3 +486,95 @@ class TestSanitizeSourceMetadata:
         state = {"source_metadata": {"count": 3, "genre": "x" * 20}}
         result = sanitize_state(state)
         assert result["source_metadata"]["count"] == 3
+
+
+class TestSanitizeDungListSubkeys:
+    """#1265 (Track 3 follow-up): dung_frameworks.arguments/attacks carry the
+    real claim text (via _extract_arguments_from_context) and must be opacified.
+
+    The list structure + topology survive (so argument/attack counts and Dung
+    extension membership are preserved downstream); only the claim *content*
+    is replaced by opaque_id. Cross-verified nominative firsthand by po-2023.
+    """
+
+    def test_arguments_opacified_topology_preserved(self):
+        state = {
+            "dung_frameworks": {
+                "df_1": {
+                    "name": "fw_1",
+                    "arguments": ["real claim alpha", "real claim beta"],
+                    "attacks": [["real claim alpha", "real claim beta"]],
+                }
+            }
+        }
+        result = sanitize_state(state)
+        fw = result["dung_frameworks"]["df_1"]
+        # arity preserved
+        assert len(fw["arguments"]) == 2
+        assert len(fw["attacks"]) == 1
+        assert len(fw["attacks"][0]) == 2
+        # structural label untouched
+        assert fw["name"] == "fw_1"
+        # content opacified: 8-char hex, no real text survives
+        for arg in fw["arguments"]:
+            assert isinstance(arg, str) and len(arg) == 8
+        blob = json.dumps(fw)
+        assert "real claim" not in blob
+        assert "alpha" not in blob and "beta" not in blob
+
+    def test_topology_stable_same_text_same_opaque(self):
+        # The same claim text appears as both an argument and an attack source,
+        # so the attack must reference the SAME opaque id (topology preserved).
+        state = {
+            "dung_frameworks": {
+                "df_1": {
+                    "arguments": ["shared claim"],
+                    "attacks": [["shared claim", "shared claim"]],
+                }
+            }
+        }
+        result = sanitize_state(state)
+        fw = result["dung_frameworks"]["df_1"]
+        opaque_arg = fw["arguments"][0]
+        # The attack source and target both map to the same opaque id as the arg.
+        assert fw["attacks"][0][0] == opaque_arg
+        assert fw["attacks"][0][1] == opaque_arg
+
+    def test_attacks_nested_list_opacified(self):
+        state = {
+            "dung_frameworks": {
+                "df_1": {
+                    "arguments": [],
+                    "attacks": [["attacker text", "target text"]],
+                }
+            }
+        }
+        result = sanitize_state(state)
+        pair = result["dung_frameworks"]["df_1"]["attacks"][0]
+        assert all(isinstance(t, str) and len(t) == 8 for t in pair)
+        assert "attacker" not in json.dumps(pair)
+
+
+class TestSanitizeLlmAssessment:
+    """#1265: argument_quality_scores[*].llm_assessment is an LLM narrative
+    citing/paraphrasing the real argument (verify-the-verification). Pure
+    narrative, 0 quantitative value — dropped. The aggregates survive.
+    """
+
+    def test_llm_assessment_dropped_aggregates_survive(self):
+        state = {
+            "argument_quality_scores": {
+                "arg_1": {
+                    "overall": 4.5,
+                    "scores": {"clarity": 4, "coherence": 5, "relevance": 4},
+                    "llm_assessment": "The argument about the real nominative claim is clear.",
+                }
+            }
+        }
+        result = sanitize_state(state)
+        entry = result["argument_quality_scores"]["arg_1"]
+        assert "llm_assessment" not in entry
+        assert entry["overall"] == 4.5
+        assert entry["scores"] == {"clarity": 4, "coherence": 5, "relevance": 4}
+        assert "nominative" not in json.dumps(entry)
+        assert "real" not in json.dumps(entry)

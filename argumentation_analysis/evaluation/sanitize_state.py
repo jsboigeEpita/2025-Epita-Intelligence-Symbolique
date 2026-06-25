@@ -54,9 +54,28 @@ _TEXT_STRIP_DICTS = {"identified_arguments", "arguments"}
 # nominative and must be dropped (the rest of each entry is preserved).
 #   e.g. identified_fallacies = {fid: {type, justification, family, ...}}
 #        belief_sets          = {bs_id: {logic_type, content}}
+#        argument_quality_scores = {arg_id: {scores, overall, llm_assessment}}
+# #1265 (Track 3 follow-up): ``llm_assessment`` is an LLM-written narrative
+# that cites/paraphrases the real argument text (verify-the-verification,
+# po-2023 finding) — pure narrative, 0 quantitative value, dropped.
 _TEXT_STRIP_DICT_OF_DICTS = {
     "identified_fallacies": {"justification"},
     "belief_sets": {"content"},
+    "argument_quality_scores": {"llm_assessment"},
+}
+
+# Dict-of-dicts fields whose *list sub-keys* carry nominative text entries
+# (verified nominative firsthand, #1265): top-level field -> {sub_key}.
+# Each list is reduced by opacifying every string entry via ``opaque_id``
+# (non-strings left as-is). The list *structure* survives (length, topology)
+# so downstream quantitative aggregates (argument/attack counts, Dung extension
+# membership) are preserved — only the content is opacified.
+#   e.g. dung_frameworks = {df_id: {name, arguments: [claim_text, ...],
+#                                   attacks: [[text_a, text_b], ...]}}
+# _extract_arguments_from_context (invoke_callables.py:2617) puts the real
+# claim text into ``arguments``; ``attacks`` are pairs of those same texts.
+_OPAQUE_LIST_SUBKEYS = {
+    "dung_frameworks": {"arguments", "attacks"},
 }
 
 # List-of-dicts fields: top-level field -> sub-keys whose values are
@@ -123,6 +142,21 @@ def _opacify_mapping(mapping: Any) -> Any:
     }
 
 
+def _opacify_list_values(value: Any) -> Any:
+    """Recursively opacify the strings inside a (possibly nested) list.
+
+    Used for Dung ``arguments`` (flat list of claim texts) and ``attacks``
+    (list of [attacker, target] pairs = nested list). The list topology and
+    arity survive; only the nominative strings are replaced by ``opaque_id``.
+    Non-strings are left as-is.
+    """
+    if isinstance(value, str):
+        return opaque_id(value) if value else value
+    if isinstance(value, list):
+        return [_opacify_list_values(item) for item in value]
+    return value
+
+
 def _scrub_struct(value: Any, list_keys: tuple[str, ...]) -> dict[str, Any]:
     """Reduce a stakes/stakeholders struct to a counts-only summary."""
     if not isinstance(value, dict):
@@ -186,7 +220,8 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
             }
 
     # 4. Strip nominative sub-keys from dict-of-dicts fields
-    #    (identified_fallacies.justification, belief_sets.content).
+    #    (identified_fallacies.justification, belief_sets.content,
+    #    argument_quality_scores.llm_assessment).
     for field, text_keys in _TEXT_STRIP_DICT_OF_DICTS.items():
         if field in data and isinstance(data[field], dict):
             data[field] = {
@@ -197,6 +232,26 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 )
                 for key, val in data[field].items()
             }
+
+    # 4b. Opacify the nominative list-valued sub-keys of dict-of-dicts fields
+    #     (dung_frameworks.arguments = [claim_text, ...],
+    #      dung_frameworks.attacks = [[text_a, text_b], ...]).
+    #     The list structure survives (length + attack topology preserved) so
+    #     downstream Dung aggregates are unaffected; only the claim texts are
+    #     opacified (#1265, po-2023 firsthand verdict).
+    for field, subkeys in _OPAQUE_LIST_SUBKEYS.items():
+        if field in data and isinstance(data[field], dict):
+            new_entries: dict[str, Any] = {}
+            for key, val in data[field].items():
+                if isinstance(val, dict):
+                    new_entry = dict(val)
+                    for sk in subkeys:
+                        if sk in new_entry:
+                            new_entry[sk] = _opacify_list_values(new_entry[sk])
+                    new_entries[key] = new_entry
+                else:
+                    new_entries[key] = val
+            data[field] = new_entries
 
     # 5. Strip nominative sub-keys from list-of-dicts fields.
     for field, text_keys in _TEXT_STRIP_LISTS.items():
