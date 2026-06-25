@@ -5117,11 +5117,13 @@ async def _invoke_propositional_logic(
                     logger.debug(f"NL-to-logic PL translation unavailable: {e}")
 
         if not formulas:
-            # Final fallback: template-based variables
-            prop_vars = [f"p{i+1}" for i in range(len(args))]
+            # Final fallback: meaning-preserving readable atoms (#1260).
+            # Previously opaque p1,p2 — now derive a readable slug per argument
+            # via the existing _pl_atom() so the belief set stays interpretable.
+            prop_vars = [_pl_atom(a) for a in args]
             formulas = list(prop_vars)
             pl_metrics["template"] = len(prop_vars)
-            argument_mapping = {f"p{i+1}": a[:60] for i, a in enumerate(args)}
+            argument_mapping = {prop_vars[i]: a[:60] for i, a in enumerate(args)}
             fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
             fallacies = (
                 fallacy_output.get("fallacies", [])
@@ -5187,9 +5189,7 @@ async def _invoke_propositional_logic(
         pl_backend_comparison: Optional[Dict[str, Any]] = None
         if context.get("compare_backends") and bridge is not None:
             try:
-                pl_backend_comparison = await bridge.compare_pl_backends(
-                    belief_set_str
-                )
+                pl_backend_comparison = await bridge.compare_pl_backends(belief_set_str)
                 logger.info(
                     "PL backend comparison: agreement=%s, decided=%s",
                     pl_backend_comparison.get("agreement"),
@@ -5207,8 +5207,7 @@ async def _invoke_propositional_logic(
             "query_count": 0,  # PL consistency is a satisfiability check (no entailment query)
             "message": msg,
             "logic_type": "propositional",
-            "argument_mapping": argument_mapping
-            or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+            "argument_mapping": argument_mapping or {_pl_atom(a): a[:60] for a in args},
             "pl_metrics": pl_metrics,
             **(
                 {"pl_backend_comparison": pl_backend_comparison}
@@ -5245,10 +5244,10 @@ async def _invoke_propositional_logic(
             return {
                 "formulas": valid_formulas,
                 "satisfiable": True,
-                "model": {f"p{i+1}": True for i in range(len(args))},
+                "model": {_pl_atom(a): True for a in args},
                 "logic_type": "propositional",
                 "argument_mapping": argument_mapping
-                or {f"p{i+1}": a[:60] for i, a in enumerate(args)},
+                or {_pl_atom(a): a[:60] for a in args},
                 "isolation_retry": True,
                 "rejected_count": len(formulas) - len(valid_formulas),
                 "pl_metrics": pl_metrics,
@@ -5912,7 +5911,7 @@ async def _invoke_modal_logic(
         }
         _atom_re = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
         _mlparser_legal_re = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*$")
-        # Reserve the already-legal atom names so generated ``mpN`` symbols never
+        # Reserve the already-legal atom names so normalised symbols never
         # collide with a real atom that is already MlParser-legal.
         _legal_atoms = {
             tok
@@ -5921,19 +5920,33 @@ async def _invoke_modal_logic(
             if tok not in _keyword_atoms and _mlparser_legal_re.match(tok)
         }
         _atom_symbol: Dict[str, str] = {}
-        _symbol_counter = 0
 
         def _legal_symbol(atom: str) -> str:
-            """Map a modal atom to an MlParser-legal identifier (memoized)."""
-            nonlocal _symbol_counter
+            """Map a modal atom to an MlParser-legal identifier (memoized).
+
+            #1260 (anti-pendule): previously collapsed any underscored atom to
+            opaque ``mp1, mp2``. Now transforms to a meaning-preserving
+            camelCase identifier (``heavy_rain`` → ``heavyRain``), which is
+            accepted by ``MlParser`` (it forbids underscores but allows
+            alphanumeric camelCase). The semantic stem survives. Only fallback
+            to a generic ``mpN`` if normalisation yields an empty/illegal stem.
+            """
             if atom in _keyword_atoms or _mlparser_legal_re.match(atom):
                 return atom
             if atom not in _atom_symbol:
-                _symbol_counter += 1
-                candidate = f"mp{_symbol_counter}"
-                while candidate in _legal_atoms:
-                    _symbol_counter += 1
-                    candidate = f"mp{_symbol_counter}"
+                # underscore/camelCase transform: split on non-alnum, PascalCase.
+                parts = [p for p in re.split(r"[^A-Za-z0-9]+", atom) if p]
+                candidate = "".join(p[:1].upper() + p[1:] for p in parts) or "mpAtom"
+                if not _mlparser_legal_re.match(candidate) or candidate in _legal_atoms:
+                    # Rare: degenerate stem or collision — disambiguate, but
+                    # keep the readable stem as the base (not a bare mpN).
+                    base = (
+                        candidate if _mlparser_legal_re.match(candidate) else "MpAtom"
+                    )
+                    suffix = 1
+                    while f"{base}{suffix}" in _legal_atoms:
+                        suffix += 1
+                    candidate = f"{base}{suffix}"
                 _atom_symbol[atom] = candidate
             return _atom_symbol[atom]
 

@@ -1,10 +1,20 @@
 """PL Formula Sanitizer for Tweety-compatible syntax (#537).
 
 Sits between LLM output and TweetyBridge.parse_pl_formula(). Handles:
-- Verbose proposition names (NL fragments) → atomic symbols (p, q, r, ...)
+- Normalisation of illegal tokens (accents/punctuation/spaces) into
+  snake_case atoms that **preserve the LLM-chosen meaning**.
 - Syntax validation against Tweety PL grammar before JPype submission
 - Graceful fallback: log warning and skip invalid formulas instead of raising
 - Symbol mapping storage for round-trip interpretation
+
+Epic #1258 Track 2 (#1260): the sanitizer used to collapse ANY atom longer
+than 30 chars (or NL-like) into opaque ``p, q, r`` — destroying the readable
+names the LLM produced. The collapse is now **subtracted**: a readable,
+parser-legal atom (``renewable_essential``) survives untouched regardless of
+length. Only tokens that would fail the Tweety grammar (accents, punctuation,
+embedded spaces) are normalised into a meaning-preserving snake_case atom;
+``symbol_mapping`` records those renames so Track 3 can opacify at export.
+The LLM names — this never generates a name.
 
 Tweety PL BNF (simplified):
     FORMULA ::= PROPOSITION | "(" FORMULA ")" | FORMULA "=>" FORMULA
@@ -64,17 +74,25 @@ class PLFormulaSanitizer:
         sanitizer = PLFormulaSanitizer()
         result = sanitizer.sanitize_batch(["rain && (rain => wet)", "verbose NL claim"])
         for f in result.sanitized_formulas:
-            print(f)  # "p && (p => q)"
-        print(result.symbol_mapping)  # {"p": "rain", "q": "wet"}
+            print(f)  # "rain && (rain => wet)" — readable atoms survive (#1260)
+        print(result.symbol_mapping)  # {"verbose_nl_claim": "verbose NL claim"}
     """
 
     def __init__(self, max_prop_length: int = 30):
+        # #1260: ``max_prop_length`` is retained for backward-compat but no
+        # longer caps readable atoms into ``p,q,r``. It is *not* read in the
+        # hot path — see ``_needs_normalization``. Kept (not deleted) only so
+        # existing call-sites passing it keep working.
         self._max_prop_length = max_prop_length
         self._symbol_counter = 0
         self._label_to_symbol: Dict[str, str] = {}
 
     def _next_symbol(self) -> str:
-        """Generate the next atomic symbol: p, q, r, s, t, u, v, w, x, y, z, p2, q2, ..."""
+        """Generate the next atomic symbol: p, q, r, s, t, u, v, w, x, y, z, p2, q2, ...
+
+        Retained for any future opt-in opaque-symbolisation, but #1260 stops
+        calling it for readable atoms — see ``_normalize_atom``.
+        """
         idx = self._symbol_counter
         # 11 letters: p(0), q(1), r(2), s(3), t(4), u(5), v(6), w(7), x(8), y(9), z(10)
         base = idx % 11
@@ -84,16 +102,48 @@ class PLFormulaSanitizer:
         self._symbol_counter += 1
         return symbol
 
+    def _needs_normalization(self, token: str) -> bool:
+        """Return True only if ``token`` would FAIL the Tweety proposition grammar.
+
+        #1260 (anti-pendule): previously an atom longer than 30 chars *or*
+        containing any NL marker was collapsed to ``p,q,r``. That destroyed
+        readable LLM-chosen atoms (``renewable_essential`` is perfectly legal
+        yet was >30c-readable). The cap is **subtracted**: a token needs
+        normalisation iff it is NOT already a valid ``PROPOSITION``. A long
+        but legal atom survives untouched.
+        """
+        return not _PROP_RE.match(token)
+
     def _is_nl_like(self, token: str) -> bool:
-        """Check if a token looks like NL text rather than a proposition name."""
-        if len(token) > self._max_prop_length:
-            return True
-        if _NL_TOKEN_RE.search(token):
-            return True
-        # Mixed language with accented chars
-        if re.search(r"[àâäéèêëïîôùûüÿçœæÀÂÄÉÈÊËÏÎÔÙÛÜŸÇŒÆ]", token):
-            return True
-        return False
+        """Backward-compatible alias for :meth:`_needs_normalization`.
+
+        #1260: the name is kept (callers + tests reference it) but the
+        semantics narrowed to "illegal for Tweety", not "looks like prose".
+        A readable long atom is no longer "NL-like" in the collapse sense.
+        """
+        return self._needs_normalization(token)
+
+    def _normalize_atom(self, atom: str) -> str:
+        """Normalise an illegal atom into a meaning-preserving snake_case atom.
+
+        #1260: replaces the old ``_map_label`` collapse to ``p,q,r``. The
+        transformation is lossy only in the syntactic sense (accents dropped,
+        non-alnum → ``_``) — the semantic stem of the LLM-chosen name is
+        preserved (``l``é``conomie_est_forte`` → ``l_e_conomie_est_forte``),
+        never replaced by an opaque letter. First alnum chars retained
+        (truncated to keep atoms reasonable); a short hash disambiguates
+        distinct inputs collapsing to the same stem. Deterministic.
+        """
+        if not atom:
+            return "x"
+        import hashlib as _hashlib
+
+        # Collapse runs of non-alnum to a single underscore, lowercase.
+        cleaned = re.sub(r"[^A-Za-z0-9]+", "_", atom).strip("_").lower()[:24]
+        if not cleaned:
+            cleaned = "x"
+        digest = _hashlib.md5(atom.encode("utf-8")).hexdigest()[:6]
+        return f"{cleaned}_{digest}"
 
     def _extract_propositions(self, formula: str) -> List[str]:
         """Extract proposition tokens from a normalized formula string."""
@@ -109,11 +159,17 @@ class PLFormulaSanitizer:
         return props
 
     def _map_label(self, label: str) -> str:
-        """Map a proposition label to an atomic symbol. Reuses existing mappings."""
+        """Map an illegal proposition label to a meaning-preserving atom.
+
+        #1260: previously produced opaque ``p,q,r``. Now normalises the label
+        into a readable snake_case atom (:meth:`_normalize_atom`) and records
+        the mapping in ``symbol_mapping`` (readable_atom → original NL) so
+        Track 3 can opacify at export. Reuses existing mappings for stability.
+        """
         label_lower = label.lower()
         if label_lower in self._label_to_symbol:
             return self._label_to_symbol[label_lower]
-        symbol = self._next_symbol()
+        symbol = self._normalize_atom(label)
         self._label_to_symbol[label_lower] = symbol
         return symbol
 
