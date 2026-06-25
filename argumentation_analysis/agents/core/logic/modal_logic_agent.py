@@ -65,8 +65,8 @@ ATTENTION - Syntaxe TweetyProject stricte requise :
 - Listez TOUTES les propositions utilisées dans le tableau "propositions" ; elles seront déclarées
   automatiquement par le moteur comme "type(prop)" (prédicat 0-aire). Ne générez PAS de "type(...)"
   vous-même dans "modal_formulas" — uniquement des formules.
-- Utilisez UNIQUEMENT des identifiants en minuscules avec underscores
-- Format JSON : {"propositions": ["prop1", "prop2"], "modal_formulas": ["[](prop1)", "<>(prop2)"]}
+- Utilisez UNIQUEMENT des identifiants en minuscules avec underscores (noms lisibles et porteurs de sens, ex. "climate_action" plutôt que "prop1")
+- Format JSON : {"propositions": ["climate_action", "energy_transition"], "modal_formulas": ["[](climate_action)", "<>(energy_transition)"]}
 - TOUJOURS entourer la proposition avec des parenthèses après un opérateur modal: [](prop), <>(prop)
 
 Si vous avez reçu une erreur de syntaxe précédemment, corrigez-la en utilisant la BNF TweetyProject :

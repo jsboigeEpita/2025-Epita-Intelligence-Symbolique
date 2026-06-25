@@ -792,14 +792,23 @@ class NLToLogicTranslator:
         sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
 
         if logic_type == "propositional":
-            variables = {}
-            for i, sent in enumerate(sentences[:5]):
-                var_name = f"p{i + 1}"
+            # #1260: derive a readable atom per sentence (was opaque p1,p2).
+            # Keeps up to 20 alnum chars of the sentence as the atom stem so the
+            # belief set stays interpretable; index suffix disambiguates.
+            variables: Dict[str, str] = {}
+            for sent in sentences[:5]:
+                stem = re.sub(r"[^A-Za-z0-9]+", "_", sent).strip("_").lower()[:20]
+                stem = stem or "claim"
+                idx = len(variables) + 1
+                var_name = stem
+                while var_name in variables:
+                    idx += 1
+                    var_name = f"{stem}_{idx}"
                 variables[var_name] = sent[:80]
 
             if len(variables) >= 2:
                 var_names = list(variables.keys())
-                # Simple implication chain: p1 => p2 => ... => pN
+                # Implication chain: stem_a => stem_b => ... => stemN
                 implications = [
                     f"{var_names[i]} => {var_names[i+1]}"
                     for i in range(len(var_names) - 1)
@@ -808,8 +817,13 @@ class NLToLogicTranslator:
             elif variables:
                 formula = list(variables.keys())[0]
             else:
-                formula = "p1"
-                variables = {"p1": text[:80]}
+                # Degenerate: no sentences long enough — single readable atom.
+                stem = (
+                    re.sub(r"[^A-Za-z0-9]+", "_", text).strip("_").lower()[:20]
+                    or "claim"
+                )
+                formula = stem
+                variables = {stem: text[:80]}
 
             return TranslationResult(
                 original_text=text,

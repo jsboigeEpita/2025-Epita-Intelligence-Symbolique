@@ -99,14 +99,22 @@ class TestNLDetection:
 
 
 class TestSymbolMapping:
-    """Test NL→atomic symbol mapping."""
+    """Test illegal-token → meaning-preserving atom mapping (#1260).
 
-    def test_basic_mapping(self):
+    #1260 (anti-pendule): previously NL-like labels collapsed to opaque
+    ``p,q,r``. They now normalise into a readable snake_case atom that
+    preserves the LLM-chosen meaning. Assertions check stability + that the
+    output is a readable stem (never an opaque single letter).
+    """
+
+    def test_basic_mapping_is_readable(self):
         s = PLFormulaSanitizer()
         sym1 = s._map_label("it is raining")
         sym2 = s._map_label("the ground is wet")
-        assert sym1 == "p"
-        assert sym2 == "q"
+        # Readable stem preserved, never an opaque "p"/"q".
+        assert "rain" in sym1 or "it_is_rain" in sym1
+        assert "wet" in sym2 or "ground_is_wet" in sym2
+        assert sym1 != "p" and sym2 != "q"
 
     def test_reuse_mapping(self):
         s = PLFormulaSanitizer()
@@ -114,28 +122,28 @@ class TestSymbolMapping:
         sym2 = s._map_label("rain")
         assert sym1 == sym2
 
-    def test_symbol_exhaustion(self):
+    def test_distinct_labels_distinct_symbols(self):
         s = PLFormulaSanitizer()
         symbols = [s._map_label(f"label_{i}") for i in range(30)]
-        assert symbols[0] == "p"
-        assert symbols[10] == "z"
-        assert symbols[11] == "p2"
-        assert symbols[12] == "q2"
+        # #1260: 30 distinct labels → 30 distinct readable atoms (no collision,
+        # hash disambiguates). None should be an opaque single letter.
         assert len(set(symbols)) == 30
+        assert all(not (len(sym) == 1 and sym.isalpha()) for sym in symbols)
 
     def test_case_insensitive_reuse(self):
         s = PLFormulaSanitizer()
         s._map_label("Rain")
         sym2 = s._map_label("rain")
-        assert sym2 == "p"
+        # Case-insensitive: same readable atom reused.
+        assert "rain" in sym2
 
     def test_reverse_mapping(self):
         s = PLFormulaSanitizer()
         s._map_label("it is raining")
         s._map_label("the ground is wet")
         rev = s.reverse_mapping()
-        assert rev["p"] == "it is raining"
-        assert rev["q"] == "the ground is wet"
+        # symbol → original NL label. Values preserved.
+        assert set(rev.values()) == {"it is raining", "the ground is wet"}
 
 
 class TestFormulaValidation:
@@ -274,17 +282,24 @@ class TestBatchSanitization:
         assert result.total_sanitized == 3
         assert len(result.skipped_formulas) == 2
 
-    def test_nl_formulas_mapped(self):
+    def test_readable_atoms_survive_unmapped(self):
+        # #1260 (DoD): long but LEGAL snake_case atoms must survive untouched.
+        # Previously these exceeded max_prop_length and were collapsed to p,q,r.
         s = PLFormulaSanitizer(max_prop_length=20)
-        # Long proposition names that exceed max_prop_length → mapped to atomic symbols
         formulas = [
             "national_sovereignty_requires && foreign_powers_threaten",
             "cooperation_yields_outcomes => defend_borders_against",
         ]
         result = s.sanitize_batch(formulas)
         assert result.total_sanitized == 2
-        # Long names should be mapped to p, q, r, s
-        assert len(result.symbol_mapping) >= 2
+        # Readable atoms survive verbatim → NO mapping needed (they were never
+        # illegal). symbol_mapping is empty for an all-legal batch.
+        assert result.symbol_mapping == {}
+        # The sanitized formulas still carry the readable names.
+        joined = " ".join(result.sanitized_formulas)
+        assert "national_sovereignty_requires" in joined
+        assert "foreign_powers_threaten" in joined
+        assert "p" != result.sanitized_formulas[0].split()[0]
 
     def test_symbol_mapping_populated(self):
         s = PLFormulaSanitizer()
@@ -308,6 +323,46 @@ class TestBatchSanitization:
         assert isinstance(result.sanitized_formulas, list)
         assert isinstance(result.symbol_mapping, dict)
         assert isinstance(result.skipped_formulas, list)
+
+
+class TestTrack2IntuitiveSymbols:
+    """Epic #1258 Track 2 (#1260) — readable atoms survive, illegal → readable."""
+
+    def test_illegal_atom_becomes_readable_snake_case(self):
+        # DoD: an illegal atom (spaces/accent) normalises to a meaning-preserving
+        # snake_case atom, NOT an opaque p/q/r. The stem carries the sense.
+        s = PLFormulaSanitizer()
+        result = s.sanitize_batch(["leconomie est forte => les marches montent"])
+        assert result.total_sanitized == 1
+        # The mapping records the readable normalised atom → original NL.
+        for atom in result.symbol_mapping.keys():
+            # Readable stem present, never a bare opaque letter.
+            assert len(atom) > 1
+            assert atom[0].isalpha()
+
+    def test_no_opaque_single_letter_atoms_produced(self):
+        # DoD: across a mixed batch, no atom should be an opaque p/q/r.
+        s = PLFormulaSanitizer()
+        result = s.sanitize_batch(
+            [
+                "renewable_essential => climate_stable",
+                "leconomie croit && foreign_powers_retreat",
+            ]
+        )
+        assert result.total_sanitized == 2
+        tokens = " ".join(result.sanitized_formulas).split()
+        atoms = [t for t in tokens if t not in {"=>", "<=>", "&&", "||", "!", "(", ")"}]
+        # Every atom is readable (length > 1, alnum/underscore).
+        for a in atoms:
+            assert len(a) > 1, f"opaque single-letter atom produced: {a}"
+
+    def test_long_legal_atom_survives_regardless_of_cap(self):
+        # DoD: the 30-char cap no longer collapses a legal readable atom.
+        s = PLFormulaSanitizer(max_prop_length=5)
+        result = s.sanitize_batch(["national_sovereignty_requires_immediate"])
+        assert result.total_sanitized == 1
+        assert result.sanitized_formulas[0] == "national_sovereignty_requires_immediate"
+        assert result.symbol_mapping == {}
 
 
 class TestEdgeCases:
