@@ -475,10 +475,19 @@ def _write_governance_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
         if isinstance(resolutions, list) and resolutions:
             winner = str(resolutions[0].get("resolution_type", "N/A"))
 
+    # Track E #1281 — propagate the honest origin signal: an LLM-assessed
+    # verdict is not a genuine multi-agent deliberation, and the restitution
+    # must not dress it as procedural legitimacy. extraction_method is computed
+    # by _invoke_governance (invoke_callables.py:1746) as "llm" | "heuristic".
+    extraction_method = output.get("extraction_method")
+    if not isinstance(extraction_method, str):
+        extraction_method = None
+
     state.add_governance_decision(
         method=str(recommended),
         winner=winner,
         scores=scores,
+        extraction_method=extraction_method,
     )
 
 

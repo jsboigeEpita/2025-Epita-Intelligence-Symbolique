@@ -29,7 +29,6 @@ from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
 
-
 # --- state stubs -------------------------------------------------------------
 
 
@@ -227,8 +226,7 @@ class TestReaderWriterContracts:
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             argument_quality_scores={
-                "arg_1": {"overall": 3.5, "scores": {"pertinence": 2.0,
-                                                      "clarte": 5.0}},
+                "arg_1": {"overall": 3.5, "scores": {"pertinence": 2.0, "clarte": 5.0}},
             },
         )
         ev = build_act2_evidence(state)
@@ -242,8 +240,7 @@ class TestReaderWriterContracts:
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             argument_quality_scores={
-                "arg_1": {"overall": 3.0,
-                          "scores_par_vertu": {"coherence": 4.0}},
+                "arg_1": {"overall": 3.0, "scores_par_vertu": {"coherence": 4.0}},
             },
         )
         ev = build_act2_evidence(state)
@@ -342,12 +339,84 @@ class TestReaderWriterContracts:
         """SV fail-loud: N/A winner → None; empty exchange → [] (#1019)."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
-            governance_decisions=[{"method": "majority", "winner": "N/A", "scores": {}}],
+            governance_decisions=[
+                {"method": "majority", "winner": "N/A", "scores": {}}
+            ],
             debate_transcripts=[{"exchanges": [{"point": "", "rebuttal": ""}]}],
         )
         ev = build_act2_evidence(state)
         assert ev.governance_verdict is None
         assert ev.debate_exchanges == []
+
+    # --- Track E #1281 — de-theatralise governance (LLM origin surfaced) ---
+
+    def test_governance_carries_llm_extraction_method(self):
+        """Track E #1281 — the verdict carries the honest origin signal."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {
+                    "method": "copeland",
+                    "winner": "opt_X",
+                    "scores": {"opt_X": 0.9},
+                    "extraction_method": "llm",
+                }
+            ],
+        )
+        ev = build_act2_evidence(state)
+        assert ev.governance_verdict is not None
+        assert ev.governance_verdict.extraction_method == "llm"
+
+    def test_governance_extraction_method_none_preserves_legacy(self):
+        """Track E #1281 — backward compat: no extraction_method → None."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+        )
+        ev = build_act2_evidence(state)
+        assert ev.governance_verdict is not None
+        assert ev.governance_verdict.extraction_method is None
+
+    def test_prompt_reframes_llm_governance_as_model_assessment(self):
+        """Track E #1281 — when extraction_method == 'llm', the prompt frames
+        the verdict as a MODEL assessment, NOT procedural legitimacy. The old
+        'social-choice' wording must NOT appear for LLM-origin verdicts."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {
+                    "method": "copeland",
+                    "winner": "opt_X",
+                    "scores": {"opt_X": 0.9},
+                    "extraction_method": "llm",
+                }
+            ],
+        )
+        ev = build_act2_evidence(state)
+        prompt = build_act2_prompt(ev)
+        # Honest framing surfaced for the reader.
+        assert "évaluation d'un modèle" in prompt.lower()
+        assert "pas comme une caution de légitimité procédurale" in prompt.lower()
+        assert "évaluation modèle" in prompt.lower()
+        # The old theatrical wording must NOT survive for LLM-origin verdicts.
+        assert "vote social-choice" not in prompt.lower()
+
+    def test_prompt_keeps_social_choice_wording_when_origin_unknown(self):
+        """Track E #1281 — when extraction_method is None (legacy / non-LLM),
+        the prompt keeps its prior framing (no regression on the social-choice
+        path). Anti-pendule: we re-label the LLM path, not blanket-rewrite."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+        )
+        ev = build_act2_evidence(state)
+        prompt = build_act2_prompt(ev)
+        assert "social-choice" in prompt.lower()
+        assert "évaluation d'un modèle" not in prompt.lower()
 
     def test_deliberation_block_in_prompt_sv(self):
         """SV: the deliberation block reaches the Acte II conducted prompt."""
@@ -370,10 +439,18 @@ class TestReaderWriterContracts:
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             identified_fallacies={
-                "fl_1": {"target_argument_id": "arg_1", "family": "ad hominem",
-                         "type": "ad hominem", "justification": "x"},
-                "fl_2": {"target_argument_id": "", "family": "fuite",
-                         "type": "fuite en avant", "justification": "y"},
+                "fl_1": {
+                    "target_argument_id": "arg_1",
+                    "family": "ad hominem",
+                    "type": "ad hominem",
+                    "justification": "x",
+                },
+                "fl_2": {
+                    "target_argument_id": "",
+                    "family": "fuite",
+                    "type": "fuite en avant",
+                    "justification": "y",
+                },
             },
         )
         ev = build_act2_evidence(state)
@@ -401,7 +478,6 @@ class TestReaderWriterContracts:
         assert ev.quality_axis_available is True
 
 
-
 class TestPrivacy:
     def test_long_description_truncated_in_prompt(self):
         long_desc = "x" * 500  # well over the _DESC_CAP
@@ -412,7 +488,9 @@ class TestPrivacy:
         assert long_desc not in prompt
         assert "[…]" in prompt
 
-    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    @pytest.mark.parametrize(
+        "deanonymized,expect_opaque", [(True, False), (False, True)]
+    )
     def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
         # Epic #1258 / Track 1 #1259 — opaque-ID directive present only when
         # NOT deanonymized; weaving rule always present.
@@ -500,7 +578,10 @@ class TestBuildNarrative:
                 state, llm_callable=_stub_llm(_WOVEN_NARRATIVE)  # type: ignore[arg-type]
             )
         )
-        assert any("qualité" in v.lower() or "qualit" in v.lower() for v in result.degraded.values())
+        assert any(
+            "qualité" in v.lower() or "qualit" in v.lower()
+            for v in result.degraded.values()
+        )
 
 
 # ============================================================================
@@ -545,7 +626,10 @@ class TestConsumedByRenderer:
         # The woven act2 narrative is rendered into the body verbatim.
         assert _WOVEN_NARRATIVE.splitlines()[0] in report.markdown
         # act1/act3 are reported as missing (fail-loud), not silently dropped.
-        assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+        assert (
+            "indisponible" in report.markdown.lower()
+            or "acte" in report.markdown.lower()
+        )
 
 
 # ============================================================================

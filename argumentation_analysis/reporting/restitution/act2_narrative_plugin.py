@@ -114,7 +114,9 @@ class FormalFinding:
     """A global formal-tenue anchor the LLM weaves as backing (verified-in-state)."""
 
     kind: str  # "pl" | "fol" | "dung"
-    verdict: str  # human-readable, e.g. "inconsistant (Tweety)", "rejet (Dung grounded)"
+    verdict: (
+        str  # human-readable, e.g. "inconsistant (Tweety)", "rejet (Dung grounded)"
+    )
     detail: str
 
 
@@ -126,11 +128,19 @@ class GovernanceVerdict:
     Copeland winner, consensus) but it was invisible in the report — the same
     debranching G6 fixed for counter-argument validity. ``scores`` maps opaque
     option IDs → Copeland/influence score (privacy: opaque keys, never party names).
+
+    Track E #1281 — ``extraction_method`` carries the honest origin signal so the
+    restitution can frame the verdict correctly. ``"llm"`` means the assessment was
+    produced by a SINGLE LLM call dressed as governance (NOT a genuine multi-agent
+    deliberation); the narrative must then present it as a model-assessed ranking,
+    not procedural legitimacy. ``None`` = origin not recorded (caller pre-#1281);
+    the prompt then falls back to its prior framing.
     """
 
     method: str
     winner: str
     scores: Dict[str, float] = field(default_factory=dict)
+    extraction_method: Optional[str] = None  # "llm" | "heuristic" | None
 
 
 @dataclass
@@ -503,7 +513,18 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
         # Trivial / placeholder winners ("N/A", empty) carry no verdict.
         if not method or not winner or winner == "N/A":
             continue
-        chosen = GovernanceVerdict(method=method, winner=winner, scores=scores)
+        # Track E #1281 — carry the honest origin signal so the prompt can frame
+        # an LLM-assessed verdict as model-assessed, not procedural legitimacy.
+        em_raw = d.get("extraction_method")
+        extraction_method = (
+            str(em_raw).strip() if isinstance(em_raw, str) and em_raw.strip() else None
+        )
+        chosen = GovernanceVerdict(
+            method=method,
+            winner=winner,
+            scores=scores,
+            extraction_method=extraction_method,
+        )
     return chosen
 
 
@@ -538,7 +559,11 @@ def _collect_debate(state: Any) -> List[DebateExchange]:
             # G8 (#1184): carry the scheme grounding (None when no scheme matched
             # — honest absence, not fabricated).
             scheme_raw = ex.get("scheme")
-            scheme = str(scheme_raw).strip() if isinstance(scheme_raw, str) and scheme_raw.strip() else None
+            scheme = (
+                str(scheme_raw).strip()
+                if isinstance(scheme_raw, str) and scheme_raw.strip()
+                else None
+            )
             cq_raw = ex.get("critical_question")
             critical_question = (
                 str(cq_raw).strip()
@@ -592,16 +617,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # would conflate the unverified sentinel (None) with ``inconsistent``
         # (False), an #1019 silent-degradation.
         consistent = sum(
-            1
-            for r in pl
-            if isinstance(r, dict)
-            and _pl_verdict(r) is True
+            1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is True
         )
         inconsistent = sum(
-            1
-            for r in pl
-            if isinstance(r, dict)
-            and _pl_verdict(r) is False
+            1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is False
         )
         if consistent or inconsistent:
             findings.append(
@@ -620,14 +639,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
     fol = getattr(state, "fol_analysis_results", None)
     if isinstance(fol, list):
         consistent = sum(
-            1
-            for r in fol
-            if isinstance(r, dict) and r.get("consistent") is True
+            1 for r in fol if isinstance(r, dict) and r.get("consistent") is True
         )
         inconsistent = sum(
-            1
-            for r in fol
-            if isinstance(r, dict) and r.get("consistent") is False
+            1 for r in fol if isinstance(r, dict) and r.get("consistent") is False
         )
         if consistent or inconsistent:
             findings.append(
@@ -718,11 +733,10 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     blocks: List[str] = []
     for mvt in evidence.movements:
         is_soutiens = mvt.theme == _SOUTIENS_THEME
-        header = (
-            f"MOUVEMENT « {mvt.theme} » — "
-            + ("les soutiens qui tiennent (aucun sophisme localisé)"
-               if is_soutiens
-               else f"les arguments attaqués par la famille « {mvt.theme} »")
+        header = f"MOUVEMENT « {mvt.theme} » — " + (
+            "les soutiens qui tiennent (aucun sophisme localisé)"
+            if is_soutiens
+            else f"les arguments attaqués par la famille « {mvt.theme} »"
         )
         lines: List[str] = [header]
         for a in mvt.arguments:
@@ -747,9 +761,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
-                lines.append(
-                    f"      Contre-argument ({ca.strategy}) : {ca.snippet}"
-                )
+                lines.append(f"      Contre-argument ({ca.strategy}) : {ca.snippet}")
             if a.dung_rejected:
                 lines.append(
                     f"      Rejet formel : cadre de Dung isole cet argument "
@@ -770,13 +782,34 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     # report. We surface what exists — honestly sparse when the schemes-engine
     # gap (β G8) left debate thin. Each citation must bind to a narrative beat
     # (spec §4 anti-énumération); never a bare score/label line.
+    # Track E #1281 — frame governance honestly. When extraction_method == "llm",
+    # the verdict is a SINGLE-LLM assessment dressed as a voting layer (NOT a
+    # genuine multi-agent deliberation); present it as a model-assessed ranking,
+    # never as procedural legitimacy / an independent social-choice verdict.
     deliberation_lines: List[str] = []
     gv = evidence.governance_verdict
     if gv is not None:
+        if gv.extraction_method == "llm":
+            gov_origin = (
+                "ATTENTION : ce verdict governance est une ÉVALUATION D'UN MODÈLE "
+                "(issue d'un seul appel LLM, pas d'une délibération multi-agent "
+                "réelle). Présente-le comme un classement évalué par le modèle, "
+                "PAS comme une caution de légitimité procédurale indépendante."
+            )
+            gov_lead = (
+                f"  - GOUVERNANCE (évaluation modèle) : l'analyste-LLM classe "
+                f"{gv.winner} en tête sous la méthode « {gv.method} ». "
+            )
+        else:
+            gov_origin = ""
+            gov_lead = (
+                f"  - GOUVERNANCE : sous la méthode « {gv.method} », l'option "
+                f"{gv.winner} sort gagnante du vote social-choice. "
+            )
+        if gov_origin:
+            deliberation_lines.append(gov_origin)
         deliberation_lines.append(
-            f"  - GOUVERNANCE : sous la méthode « {gv.method} », l'option "
-            f"{gv.winner} sort gagnante du vote social-choice. "
-            "(noms d'options maintenus opaques — discipline FB-34.)"
+            gov_lead + "(noms d'options maintenus opaques — discipline FB-34.)"
         )
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
@@ -926,8 +959,7 @@ async def build_act2_narrative(
     degraded: Dict[str, str] = {}
     if verdict.band != "PASS":
         degraded["act2_narrative_gate"] = (
-            f"Self-check §4 = {verdict.band}: "
-            + "; ".join(verdict.reasons[:3])
+            f"Self-check §4 = {verdict.band}: " + "; ".join(verdict.reasons[:3])
         )
     if not evidence.quality_axis_available:
         degraded["act2_narrative"] = (
