@@ -114,8 +114,40 @@ class FormalFinding:
     """A global formal-tenue anchor the LLM weaves as backing (verified-in-state)."""
 
     kind: str  # "pl" | "fol" | "dung"
-    verdict: str  # human-readable, e.g. "inconsistant (Tweety)", "rejet (Dung grounded)"
+    verdict: (
+        str  # human-readable, e.g. "inconsistant (Tweety)", "rejet (Dung grounded)"
+    )
     detail: str
+
+
+@dataclass
+class DungSolverTrace:
+    """Concrete Dung computation trace (opaque IDs) for honest framing.
+
+    Track D #1280 — the restitution used to say « Dung rejette X » ~15× while
+    presenting the framework as an *external oracle*. In reality the attack
+    graph is **built from the extracted arguments** (the pipeline's own attacks),
+    so Dung only reorganises what the upstream extraction produced — it is not
+    an independent corroboration. This trace surfaces the actual computation
+    (graph size, accepted members, rejected args, a sample of the attack
+    relations) so the narrative can frame it honestly: « le graphe construit à
+    partir des arguments extraits donne… ». All IDs stay opaque (arg_N, never
+    source text) — privacy HARD.
+    """
+
+    available: bool = False  # False when no verification_* framework was written
+    semantics_label: str = ""  # e.g. "grounded", "preferred" — the primary one surfaced
+    n_arguments: int = 0
+    n_attacks: int = 0
+    accepted_members: List[str] = field(
+        default_factory=list
+    )  # opaque arg_ids in the extension
+    rejected_args: Dict[str, str] = field(
+        default_factory=dict
+    )  # arg_id -> semantics label
+    sample_attacks: List[List[str]] = field(
+        default_factory=list
+    )  # up to N opaque [attacker, target] pairs
 
 
 @dataclass
@@ -265,6 +297,113 @@ def _dung_rejected_by_arg(state: Any) -> Dict[str, str]:
             if isinstance(arg, str) and arg not in accepted:
                 rejected.setdefault(arg, semantics)
     return rejected
+
+
+# Cap on how many attack relations we surface in the trace / prompt. The full
+# attack list can be long; a representative sample suffices to make the graph
+# inspectable without blowing the prompt budget (privacy + budget discipline).
+_TRACE_ATTACK_SAMPLE = 4
+
+
+def _collect_dung_trace(state: Any) -> DungSolverTrace:
+    """Collect the concrete Dung computation trace for honest framing (#1280).
+
+    Reads ``state.dung_frameworks`` (written by ``state_writers`` as
+    ``verification_{semantics}`` entries carrying ``arguments`` + ``attacks`` +
+    ``extensions``). The attack graph is **built from the extracted arguments**,
+    so this trace lets the restitution frame the result as « le graphe construit
+    à partir des arguments extraits donne… » rather than as an external oracle.
+
+    Picks the primary framework (preferred → grounded → first verification_*),
+    then records graph size, the accepted extension members, the rejected args
+    (reusing ``_dung_rejected_by_arg``), and a capped sample of attack pairs.
+    All IDs opaque (arg_N) — privacy HARD. Returns ``available=False`` when no
+    verification framework was written (honest absence, not fabricated).
+    """
+    frameworks = getattr(state, "dung_frameworks", {}) or {}
+    if not isinstance(frameworks, dict):
+        return DungSolverTrace()
+    # Prefer the semantics the pipeline surfaces as primary (preferred, then
+    # grounded), then any verification_* entry as a last resort.
+    primary: Optional[Dict[str, Any]] = None
+    primary_sem = ""
+    for pref in ("preferred", "grounded"):
+        for _fid, fw in frameworks.items():
+            if not isinstance(fw, dict):
+                continue
+            name = str(fw.get("name", "") or "")
+            if name == f"verification_{pref}":
+                primary = fw
+                primary_sem = pref
+                break
+        if primary is not None:
+            break
+    if primary is None:
+        for _fid, fw in frameworks.items():
+            if not isinstance(fw, dict):
+                continue
+            name = str(fw.get("name", "") or "")
+            if name.startswith("verification_"):
+                primary = fw
+                primary_sem = name[len("verification_") :] or "grounded"
+                break
+    if primary is None:
+        return DungSolverTrace()
+
+    fw_args = primary.get("arguments", []) or []
+    fw_args = fw_args if isinstance(fw_args, list) else []
+    fw_attacks = primary.get("attacks", []) or []
+    fw_attacks = fw_attacks if isinstance(fw_attacks, list) else []
+
+    # Accepted extension members (opaque arg_ids).
+    accepted: List[str] = []
+    ext = primary.get("extensions", [])
+    if isinstance(ext, dict) and "all_members" in ext:
+        members = ext.get("all_members", []) or []
+        accepted = [str(m) for m in members if isinstance(m, str)]
+    elif isinstance(ext, dict):
+        for val in ext.values():
+            if isinstance(val, list):
+                for item in val:
+                    if isinstance(item, list):
+                        accepted.extend(str(x) for x in item if isinstance(x, str))
+                    elif isinstance(item, str):
+                        accepted.append(item)
+        accepted = sorted(set(accepted))
+    elif isinstance(ext, list):
+        for item in ext:
+            if isinstance(item, list):
+                accepted.extend(str(x) for x in item if isinstance(x, str))
+            elif isinstance(item, str):
+                accepted.append(item)
+        accepted = sorted(set(accepted))
+
+    # Rejected args (arg present in the framework but absent from the accepted
+    # extension) — reuse the canonical resolver so the labels stay consistent
+    # with the per-argument ``dung_rejected`` beat.
+    rejected = _dung_rejected_by_arg(state)
+
+    sample_attacks: List[List[str]] = []
+    for pair in fw_attacks:
+        if (
+            isinstance(pair, (list, tuple))
+            and len(pair) >= 2
+            and isinstance(pair[0], str)
+            and isinstance(pair[1], str)
+        ):
+            sample_attacks.append([pair[0], pair[1]])
+        if len(sample_attacks) >= _TRACE_ATTACK_SAMPLE:
+            break
+
+    return DungSolverTrace(
+        available=True,
+        semantics_label=primary_sem or "grounded",
+        n_arguments=len(fw_args),
+        n_attacks=len(fw_attacks),
+        accepted_members=accepted,
+        rejected_args=rejected,
+        sample_attacks=sample_attacks,
+    )
 
 
 def _quality_axis_usable(quality: Any) -> bool:
@@ -538,7 +677,11 @@ def _collect_debate(state: Any) -> List[DebateExchange]:
             # G8 (#1184): carry the scheme grounding (None when no scheme matched
             # — honest absence, not fabricated).
             scheme_raw = ex.get("scheme")
-            scheme = str(scheme_raw).strip() if isinstance(scheme_raw, str) and scheme_raw.strip() else None
+            scheme = (
+                str(scheme_raw).strip()
+                if isinstance(scheme_raw, str) and scheme_raw.strip()
+                else None
+            )
             cq_raw = ex.get("critical_question")
             critical_question = (
                 str(cq_raw).strip()
@@ -592,16 +735,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # would conflate the unverified sentinel (None) with ``inconsistent``
         # (False), an #1019 silent-degradation.
         consistent = sum(
-            1
-            for r in pl
-            if isinstance(r, dict)
-            and _pl_verdict(r) is True
+            1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is True
         )
         inconsistent = sum(
-            1
-            for r in pl
-            if isinstance(r, dict)
-            and _pl_verdict(r) is False
+            1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is False
         )
         if consistent or inconsistent:
             findings.append(
@@ -620,14 +757,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
     fol = getattr(state, "fol_analysis_results", None)
     if isinstance(fol, list):
         consistent = sum(
-            1
-            for r in fol
-            if isinstance(r, dict) and r.get("consistent") is True
+            1 for r in fol if isinstance(r, dict) and r.get("consistent") is True
         )
         inconsistent = sum(
-            1
-            for r in fol
-            if isinstance(r, dict) and r.get("consistent") is False
+            1 for r in fol if isinstance(r, dict) and r.get("consistent") is False
         )
         if consistent or inconsistent:
             findings.append(
@@ -643,19 +776,32 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 )
             )
 
-    dung_rejected = _dung_rejected_by_arg(state)
-    if dung_rejected:
-        sems = sorted(set(dung_rejected.values()))
-        findings.append(
-            FormalFinding(
-                kind="dung",
-                verdict=(
-                    f"{len(dung_rejected)} argument(s) rejeté(s) par le cadre "
-                    f"abstrait de Dung (sémantique: {', '.join(sems)})"
-                ),
-                detail="cadre de Dung — argument rejeté (absent de l'extension acceptée)",
-            )
+    dung_trace = _collect_dung_trace(state)
+    if dung_trace.available and dung_trace.rejected_args:
+        sems = sorted(set(dung_trace.rejected_args.values()))
+        n_acc = len(dung_trace.accepted_members)
+        n_rej = len(dung_trace.rejected_args)
+        # Track D #1280 — frame Dung honestly: the attack graph is BUILT from the
+        # extracted arguments (the pipeline's own attack relations), so Dung
+        # reorganises upstream extraction rather than corroborating it from
+        # outside. Surface the graph so the reader can see the computation, not
+        # a black-box oracle. Cadrage « graphe construit à partir des arguments
+        # extraits », pas « le cadre isole ».
+        verdict = (
+            f"graphe de Dung construit sur les {dung_trace.n_arguments} arguments "
+            f"extraits ({dung_trace.n_attacks} relations d'attaque) — "
+            f"extension {dung_trace.semantics_label} : {n_acc} retenu(s), "
+            f"{n_rej} rejeté(s) (absents de l'extension acceptée)."
         )
+        accepted_preview = ", ".join(sorted(dung_trace.accepted_members)[:6]) or "—"
+        attacks_preview = "; ".join(f"{p[0]}→{p[1]}" for p in dung_trace.sample_attacks)
+        detail = (
+            f"cadre abstrait de Dung bâti à partir des arguments extraits "
+            f"(PAS un oracle externe indépendant) — acceptés: [{accepted_preview}] ; "
+            f"attaques échantillonnées: {attacks_preview or '—'} ; "
+            f"sémantique(s): {', '.join(sems)}."
+        )
+        findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
 
     return findings
 
@@ -718,11 +864,10 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     blocks: List[str] = []
     for mvt in evidence.movements:
         is_soutiens = mvt.theme == _SOUTIENS_THEME
-        header = (
-            f"MOUVEMENT « {mvt.theme} » — "
-            + ("les soutiens qui tiennent (aucun sophisme localisé)"
-               if is_soutiens
-               else f"les arguments attaqués par la famille « {mvt.theme} »")
+        header = f"MOUVEMENT « {mvt.theme} » — " + (
+            "les soutiens qui tiennent (aucun sophisme localisé)"
+            if is_soutiens
+            else f"les arguments attaqués par la famille « {mvt.theme} »"
         )
         lines: List[str] = [header]
         for a in mvt.arguments:
@@ -747,13 +892,15 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
-                lines.append(
-                    f"      Contre-argument ({ca.strategy}) : {ca.snippet}"
-                )
+                lines.append(f"      Contre-argument ({ca.strategy}) : {ca.snippet}")
             if a.dung_rejected:
+                # Track D #1280 — frame honestly: the Dung graph is built from
+                # the extracted arguments, so the verdict is a reorganisation of
+                # upstream extraction, not an external corroboration.
                 lines.append(
-                    f"      Rejet formel : cadre de Dung isole cet argument "
-                    f"comme défaillant (sémantique {a.dung_rejected})."
+                    f"      Tenue formelle : le graphe de Dung bâti sur les "
+                    f"arguments extraits ne retient pas {a.arg_id} dans "
+                    f"l'extension acceptée (sémantique {a.dung_rejected})."
                 )
         blocks.append("\n".join(lines))
 
@@ -831,8 +978,10 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "« le solveur Tweety confirme l'inconsistance de cette inférence » "
         "(théorie inconsistante), « le solveur Tweety confirme la cohérence de "
         "cette inférence » (théorie consistante — un résultat formel aussi) ou "
-        "« le cadre de Dung isole cet argument comme rejeté/défaillant » "
-        "(argument absent de l'extension acceptée).\n"
+        "« le graphe de Dung bâti sur les arguments extraits ne retient pas cet "
+        "argument dans l'extension acceptée » (Dung : le graphe d'attaques est "
+        "construit à partir des arguments extraits, ce n'est PAS un oracle "
+        "externe — cadre-le comme un reorganisation du matériau extrait).\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
         "- Le récit doit VARIER selon le contenu réel ci-dessus : pas de prose\n"
@@ -926,8 +1075,7 @@ async def build_act2_narrative(
     degraded: Dict[str, str] = {}
     if verdict.band != "PASS":
         degraded["act2_narrative_gate"] = (
-            f"Self-check §4 = {verdict.band}: "
-            + "; ".join(verdict.reasons[:3])
+            f"Self-check §4 = {verdict.band}: " + "; ".join(verdict.reasons[:3])
         )
     if not evidence.quality_axis_available:
         degraded["act2_narrative"] = (

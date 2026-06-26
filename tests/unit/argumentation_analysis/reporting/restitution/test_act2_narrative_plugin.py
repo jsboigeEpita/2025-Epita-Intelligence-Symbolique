@@ -29,7 +29,6 @@ from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
 
-
 # --- state stubs -------------------------------------------------------------
 
 
@@ -227,8 +226,7 @@ class TestReaderWriterContracts:
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             argument_quality_scores={
-                "arg_1": {"overall": 3.5, "scores": {"pertinence": 2.0,
-                                                      "clarte": 5.0}},
+                "arg_1": {"overall": 3.5, "scores": {"pertinence": 2.0, "clarte": 5.0}},
             },
         )
         ev = build_act2_evidence(state)
@@ -242,8 +240,7 @@ class TestReaderWriterContracts:
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             argument_quality_scores={
-                "arg_1": {"overall": 3.0,
-                          "scores_par_vertu": {"coherence": 4.0}},
+                "arg_1": {"overall": 3.0, "scores_par_vertu": {"coherence": 4.0}},
             },
         )
         ev = build_act2_evidence(state)
@@ -317,6 +314,51 @@ class TestReaderWriterContracts:
         arg1 = next(a for m in ev.movements for a in m.arguments if a.arg_id == "arg_1")
         assert arg1.dung_rejected == "stable"
 
+    # --- Track D #1280 — Dung trace + honest framing (no oracle wording) ---
+
+    def test_collect_dung_trace_reads_concrete_graph_opaque(self):
+        """The trace surfaces the real graph (size, accepted, rejected, sample
+        attacks) so the restitution can frame Dung honestly (#1280)."""
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _collect_dung_trace,
+        )
+
+        trace = _collect_dung_trace(_rich_state())
+        assert trace.available is True
+        assert trace.semantics_label == "preferred"
+        assert trace.n_arguments == 2  # arg_1, arg_2
+        assert trace.n_attacks == 1  # [arg_2, arg_1]
+        assert trace.accepted_members == ["arg_2"]
+        assert "arg_1" in trace.rejected_args  # arg_1 absent from the extension
+        assert trace.sample_attacks == [["arg_2", "arg_1"]]
+
+    def test_collect_dung_trace_absent_when_no_framework(self):
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _collect_dung_trace,
+        )
+
+        trace = _collect_dung_trace(_state())
+        assert trace.available is False
+
+    def test_dung_finding_framed_as_built_graph_not_oracle(self):
+        """Track D #1280 — the Dung finding must frame the graph as BUILT from
+        the extracted arguments (reorganisation, not external corroboration),
+        and surface the concrete computation. The old oracle wording « le cadre
+        de Dung isole » must NOT survive."""
+        ev = build_act2_evidence(_rich_state())
+        dung = next((f for f in ev.formal_findings if f.kind == "dung"), None)
+        assert dung is not None
+        # Honest framing: the graph is constructed from extracted arguments.
+        assert "construit" in dung.verdict.lower()
+        assert "arguments extraits" in dung.verdict.lower()
+        # The concrete computation is surfaced (accepted count, semantics).
+        assert "retenu" in dung.verdict
+        assert "preferred" in dung.verdict
+        # Detail names it is NOT an external oracle.
+        assert "oracle externe" in dung.detail.lower()
+        # The old black-box oracle wording must be gone.
+        assert "isole" not in dung.verdict.lower()
+
     def test_governance_and_debate_surfaced_sv(self):
         """SV (#1182): governance verdict + debate exchange reach Acte II."""
         state = _state(
@@ -342,7 +384,9 @@ class TestReaderWriterContracts:
         """SV fail-loud: N/A winner → None; empty exchange → [] (#1019)."""
         state = _state(
             identified_arguments={"arg_1": "Claim."},
-            governance_decisions=[{"method": "majority", "winner": "N/A", "scores": {}}],
+            governance_decisions=[
+                {"method": "majority", "winner": "N/A", "scores": {}}
+            ],
             debate_transcripts=[{"exchanges": [{"point": "", "rebuttal": ""}]}],
         )
         ev = build_act2_evidence(state)
@@ -370,10 +414,18 @@ class TestReaderWriterContracts:
         state = _state(
             identified_arguments={"arg_1": "Claim."},
             identified_fallacies={
-                "fl_1": {"target_argument_id": "arg_1", "family": "ad hominem",
-                         "type": "ad hominem", "justification": "x"},
-                "fl_2": {"target_argument_id": "", "family": "fuite",
-                         "type": "fuite en avant", "justification": "y"},
+                "fl_1": {
+                    "target_argument_id": "arg_1",
+                    "family": "ad hominem",
+                    "type": "ad hominem",
+                    "justification": "x",
+                },
+                "fl_2": {
+                    "target_argument_id": "",
+                    "family": "fuite",
+                    "type": "fuite en avant",
+                    "justification": "y",
+                },
             },
         )
         ev = build_act2_evidence(state)
@@ -401,7 +453,6 @@ class TestReaderWriterContracts:
         assert ev.quality_axis_available is True
 
 
-
 class TestPrivacy:
     def test_long_description_truncated_in_prompt(self):
         long_desc = "x" * 500  # well over the _DESC_CAP
@@ -412,7 +463,9 @@ class TestPrivacy:
         assert long_desc not in prompt
         assert "[…]" in prompt
 
-    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    @pytest.mark.parametrize(
+        "deanonymized,expect_opaque", [(True, False), (False, True)]
+    )
     def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
         # Epic #1258 / Track 1 #1259 — opaque-ID directive present only when
         # NOT deanonymized; weaving rule always present.
@@ -500,7 +553,10 @@ class TestBuildNarrative:
                 state, llm_callable=_stub_llm(_WOVEN_NARRATIVE)  # type: ignore[arg-type]
             )
         )
-        assert any("qualité" in v.lower() or "qualit" in v.lower() for v in result.degraded.values())
+        assert any(
+            "qualité" in v.lower() or "qualit" in v.lower()
+            for v in result.degraded.values()
+        )
 
 
 # ============================================================================
@@ -545,7 +601,10 @@ class TestConsumedByRenderer:
         # The woven act2 narrative is rendered into the body verbatim.
         assert _WOVEN_NARRATIVE.splitlines()[0] in report.markdown
         # act1/act3 are reported as missing (fail-loud), not silently dropped.
-        assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+        assert (
+            "indisponible" in report.markdown.lower()
+            or "acte" in report.markdown.lower()
+        )
 
 
 # ============================================================================
