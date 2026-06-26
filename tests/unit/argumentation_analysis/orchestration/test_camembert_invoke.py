@@ -131,6 +131,67 @@ class TestInvokeCamemBERTFallacy:
 
         assert result["tiers_used"] == ["none"]
 
+    async def test_invoke_camembert_runtime_failure_is_degraded(self):
+        """Anti-théâtre #1019 (#1275): a runtime failure (e.g. the configured
+        SELF_HOSTED_LLM_MODEL 404s on the endpoint) must surface as degraded,
+        NOT silently read as "ran and found 0 fallacies".
+
+        Endpoint+model are configured (so the not-configured gate passes), but
+        the plugin call raises — simulating the 404 observed in capstone #1269.
+        """
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_camembert_fallacy,
+        )
+
+        # Plugin call raises (model 404 / endpoint error surfaces here)
+        mock_plugin = MagicMock()
+        mock_plugin.run_guided_analysis = AsyncMock(
+            side_effect=RuntimeError("404 - model does not exist on endpoint")
+        )
+
+        env = {
+            "SELF_HOSTED_LLM_ENDPOINT": "http://localhost:5000/v1",
+            "SELF_HOSTED_LLM_MODEL": "qwen3.5-35b-a3b",
+        }
+
+        with patch.dict("os.environ", env, clear=True), patch(
+            "argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
+            create=True,
+        ), patch("openai.AsyncOpenAI"), patch("semantic_kernel.kernel.Kernel"), patch(
+            "semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"
+        ):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "openai": MagicMock(AsyncOpenAI=MagicMock()),
+                    "semantic_kernel.kernel": MagicMock(Kernel=MagicMock()),
+                    "semantic_kernel.connectors.ai.open_ai": MagicMock(
+                        OpenAIChatCompletion=MagicMock()
+                    ),
+                    "argumentation_analysis.plugins.fallacy_workflow_plugin": MagicMock(
+                        FallacyWorkflowPlugin=MagicMock(return_value=mock_plugin)
+                    ),
+                },
+            ):
+                result = await _invoke_camembert_fallacy(
+                    "Argument ad hominem classique.", {}
+                )
+
+        # Honest zero: the run did NOT succeed, it degraded.
+        assert result["total_fallacies"] == 0
+        assert result["tiers_used"] == ["none"]
+        assert result["detected_fallacies"] == {}
+        # Anti-théâtre signal: downstream MUST be able to tell this apart from
+        # a successful run that genuinely found 0 fallacies.
+        assert result["status"] == "unavailable"
+        assert result["degraded"] is True
+        reason = result["degradation_reason"]
+        assert isinstance(reason, str) and reason
+        # Reason must attribute the failure to the configured model/endpoint
+        # (not a generic "failed") so the operator can fix the config.
+        assert "qwen3.5-35b-a3b" in reason
+        assert "localhost:5000" in reason
+
 
 class TestCamemBERTRegistryRegistration:
     """Tests for neural_fallacy_detection registration in setup_registry."""

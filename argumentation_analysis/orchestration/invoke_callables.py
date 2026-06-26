@@ -2384,6 +2384,10 @@ async def _invoke_camembert_fallacy(
             "arguments": {},
             "tiers_used": ["none"],
             "status": "unavailable",
+            # Same degraded signal as the runtime-failure branch below (#1275):
+            # both "not configured" and "failed at runtime" are honest zeros.
+            "degraded": True,
+            "degradation_reason": ("Self-hosted LLM endpoint/model not configured"),
             "explanation": "Self-hosted LLM endpoint not configured",
             "total_fallacies": 0,
         }
@@ -2462,11 +2466,28 @@ async def _invoke_camembert_fallacy(
         return _ret
 
     except Exception as e:
-        logger.warning("Self-hosted LLM fallacy detection failed: %s", e)
+        logger.warning(
+            "Self-hosted LLM fallacy detection failed (model=%s, endpoint=%s): %s",
+            model_id,
+            endpoint,
+            e,
+        )
         return {
             "detected_fallacies": {},
             "arguments": {},
             "tiers_used": ["none"],
+            # Anti-théâtre #1019 (#1275): a runtime failure — e.g. the configured
+            # SELF_HOSTED_LLM_MODEL does not exist on the endpoint (404) — must
+            # NOT read downstream as "ran and found 0 fallacies". Surface a
+            # degraded status + reason, consistent with the not-configured
+            # branch above, so the empty result is honestly attributed instead
+            # of silently passing as a clean zero.
+            "status": "unavailable",
+            "degraded": True,
+            "degradation_reason": (
+                f"self-hosted LLM call failed (model={model_id!r}, "
+                f"endpoint={endpoint!r}): {e}"
+            ),
             "explanation": f"Self-hosted LLM unavailable: {e}",
             "total_fallacies": 0,
             "error": str(e),
