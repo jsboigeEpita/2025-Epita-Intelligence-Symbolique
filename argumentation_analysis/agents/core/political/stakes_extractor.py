@@ -12,9 +12,22 @@ Privacy: outputs pseudonymised references (Speaker_A, Group_X), never raw text.
 
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 logger = logging.getLogger("StakesExtractor")
+
+
+async def _default_chat_completion(client: Any, **kwargs: Any) -> Any:
+    """Default async LLM call: a direct ``chat.completions.create``.
+
+    The orchestrator (``_invoke_stakes_extractor``) injects the #708
+    budget-guarded variant (``_guarded_chat_completion``) so this specialist's
+    call is counted against the per-run runaway ceiling; unit tests inject
+    fakes. Keeping the call injectable lets the specialist stay decoupled from
+    the orchestration layer (no specialist imports the orchestrator) while
+    still funnelling through the circuit-breaker in production.
+    """
+    return await client.chat.completions.create(**kwargs)
 
 EXTRACTION_PROMPT = (
     "You are a political-rhetorical analyst. Analyse the following discourse excerpt "
@@ -47,7 +60,7 @@ EXTRACTION_PROMPT = (
 class StakesExtractor:
     """Lightweight specialist for stakes & stakeholders extraction."""
 
-    def extract(
+    async def extract(
         self,
         arguments: List[Dict[str, Any]],
         source_metadata: Dict[str, str],
@@ -55,6 +68,8 @@ class StakesExtractor:
         llm_client: Optional[Any] = None,
         determinism_params: Optional[Dict[str, Any]] = None,
         deanonymized: bool = True,
+        model_id: str = "",
+        llm_call: Optional[Callable[..., Awaitable[Any]]] = None,
     ) -> Dict[str, Any]:
         """Extract stakes, stakeholders, register, and arena from discourse.
 
@@ -63,9 +78,16 @@ class StakesExtractor:
                        'description' keys).
             source_metadata: Speaker, venue, topic, era, language.
             raw_text: Full discourse text (truncated to 3000 chars for prompt).
-            llm_client: OpenAI client with .chat.completions.create(). If None,
-                        returns empty result.
+            llm_client: Async OpenAI client whose ``chat.completions.create``
+                        is awaitable. If None, returns empty result.
             determinism_params: Optional temperature/seed for reproducibility.
+            model_id: Resolved model id to send (threaded from
+                      ``_get_openai_client`` by the orchestrator). Falls back to
+                      ``determinism_params["model"]`` then ``gpt-4o-mini``.
+            llm_call: Async callable ``(client, **kwargs) -> response``. Defaults
+                      to a direct ``await client.chat.completions.create``; the
+                      orchestrator injects ``_guarded_chat_completion`` (#708
+                      runaway guard).
 
         Returns:
             Dict matching UnifiedAnalysisState.stakes_and_stakeholders schema.
@@ -118,8 +140,10 @@ class StakesExtractor:
 
         try:
             params = determinism_params or {}
-            response = llm_client.chat.completions.create(
-                model=params.get("model", "gpt-4o-mini"),
+            call_fn = llm_call or _default_chat_completion
+            response = await call_fn(
+                llm_client,
+                model=model_id or params.get("model", "gpt-4o-mini"),
                 messages=[{"role": "user", "content": prompt}],
                 temperature=params.get("temperature", 0.3),
                 **({} if "seed" not in params else {"seed": params["seed"]}),

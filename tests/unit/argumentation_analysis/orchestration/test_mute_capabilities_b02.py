@@ -123,7 +123,7 @@ class TestInvokeStakesExtractor:
 
     @patch(
         "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
-        return_value=None,
+        return_value=(None, ""),
     )
     def test_extracts_stakes_with_mock_state(self, mock_client):
         """Stakes extractor runs on a populated state (LLM=None, fallback path)."""
@@ -142,7 +142,7 @@ class TestInvokeStakesExtractor:
 
     @patch(
         "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
-        return_value=None,
+        return_value=(None, ""),
     )
     def test_stakes_written_to_state(self, mock_client):
         """Results are written to state.stakes_and_stakeholders."""
@@ -158,7 +158,7 @@ class TestInvokeStakesExtractor:
 
     @patch(
         "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
-        return_value=None,
+        return_value=(None, ""),
     )
     def test_dict_arguments_passed_as_list_of_dicts(self, mock_client):
         """Audit #1151 §3(b): identified_arguments is {arg_id: description}
@@ -176,7 +176,7 @@ class TestInvokeStakesExtractor:
         captured = {}
 
         class _StubExtractor:
-            def extract(self, **kwargs):
+            async def extract(self, **kwargs):
                 captured.update(kwargs)
                 return {
                     "stakes": [],
