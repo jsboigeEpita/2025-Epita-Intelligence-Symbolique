@@ -506,7 +506,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         only short metadata fields (privacy HARD).
         """
         if not isinstance(metadata, dict):
-            state_logger.warning("set_source_metadata ignored non-dict: %r", type(metadata))
+            state_logger.warning(
+                "set_source_metadata ignored non-dict: %r", type(metadata)
+            )
             return
         # Defensive: never accept raw_text/full_text keys (privacy HARD).
         _FORBIDDEN = {"raw_text", "full_text", "full_text_segment", "raw_text_snippet"}
@@ -630,9 +632,21 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return df_id
 
     def add_governance_decision(
-        self, method: str, winner: str, scores: Dict[str, float]
+        self,
+        method: str,
+        winner: str,
+        scores: Dict[str, float],
+        extraction_method: Optional[str] = None,
     ) -> str:
-        """Add a governance voting decision."""
+        """Add a governance voting decision.
+
+        Track E #1281 — ``extraction_method`` carries the honest origin signal
+        (``"llm"`` | ``"heuristic"`` | ``None``) so the restitution can frame
+        the verdict correctly: an LLM-produced assessment is NOT a genuine
+        multi-agent deliberation, and must not be dressed as procedural
+        legitimacy. ``None`` preserves backward compat for callers that don't
+        supply it (the restitution then falls back to its prior framing).
+        """
         gd_id = self._generate_id("gov", self.governance_decisions)
         entry = {
             "id": gd_id,
@@ -640,6 +654,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "winner": winner,
             "scores": scores,
         }
+        if extraction_method:
+            entry["extraction_method"] = extraction_method
         self.governance_decisions.append(entry)
         state_logger.info(f"Governance decision added: {gd_id} ({method}: {winner})")
         return gd_id

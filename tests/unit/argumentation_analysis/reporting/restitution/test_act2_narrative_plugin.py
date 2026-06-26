@@ -393,6 +393,76 @@ class TestReaderWriterContracts:
         assert ev.governance_verdict is None
         assert ev.debate_exchanges == []
 
+    # --- Track E #1281 — de-theatralise governance (LLM origin surfaced) ---
+
+    def test_governance_carries_llm_extraction_method(self):
+        """Track E #1281 — the verdict carries the honest origin signal."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {
+                    "method": "copeland",
+                    "winner": "opt_X",
+                    "scores": {"opt_X": 0.9},
+                    "extraction_method": "llm",
+                }
+            ],
+        )
+        ev = build_act2_evidence(state)
+        assert ev.governance_verdict is not None
+        assert ev.governance_verdict.extraction_method == "llm"
+
+    def test_governance_extraction_method_none_preserves_legacy(self):
+        """Track E #1281 — backward compat: no extraction_method → None."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+        )
+        ev = build_act2_evidence(state)
+        assert ev.governance_verdict is not None
+        assert ev.governance_verdict.extraction_method is None
+
+    def test_prompt_reframes_llm_governance_as_model_assessment(self):
+        """Track E #1281 — when extraction_method == 'llm', the prompt frames
+        the verdict as a MODEL assessment, NOT procedural legitimacy. The old
+        'social-choice' wording must NOT appear for LLM-origin verdicts."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {
+                    "method": "copeland",
+                    "winner": "opt_X",
+                    "scores": {"opt_X": 0.9},
+                    "extraction_method": "llm",
+                }
+            ],
+        )
+        ev = build_act2_evidence(state)
+        prompt = build_act2_prompt(ev)
+        # Honest framing surfaced for the reader.
+        assert "évaluation d'un modèle" in prompt.lower()
+        assert "pas comme une caution de légitimité procédurale" in prompt.lower()
+        assert "évaluation modèle" in prompt.lower()
+        # The old theatrical wording must NOT survive for LLM-origin verdicts.
+        assert "vote social-choice" not in prompt.lower()
+
+    def test_prompt_keeps_social_choice_wording_when_origin_unknown(self):
+        """Track E #1281 — when extraction_method is None (legacy / non-LLM),
+        the prompt keeps its prior framing (no regression on the social-choice
+        path). Anti-pendule: we re-label the LLM path, not blanket-rewrite."""
+        state = _state(
+            identified_arguments={"arg_1": "Claim."},
+            governance_decisions=[
+                {"method": "copeland", "winner": "opt_X", "scores": {"opt_X": 0.9}}
+            ],
+        )
+        ev = build_act2_evidence(state)
+        prompt = build_act2_prompt(ev)
+        assert "social-choice" in prompt.lower()
+        assert "évaluation d'un modèle" not in prompt.lower()
+
     def test_deliberation_block_in_prompt_sv(self):
         """SV: the deliberation block reaches the Acte II conducted prompt."""
         state = _state(
