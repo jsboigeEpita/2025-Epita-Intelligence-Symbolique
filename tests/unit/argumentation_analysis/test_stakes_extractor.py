@@ -10,7 +10,7 @@ Covers:
 
 import json
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from argumentation_analysis.agents.core.political.stakes_extractor import (
     StakesExtractor,
@@ -24,14 +24,20 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 
 def _mock_llm_client(response_dict: dict) -> MagicMock:
-    """Create a mock OpenAI client returning the given dict as JSON."""
+    """Create a mock async OpenAI client returning the given dict as JSON.
+
+    ``chat.completions.create`` is an AsyncMock: ``extract`` now awaits the
+    call (it runs on an AsyncOpenAI client in production). A plain MagicMock
+    return_value is not awaitable and would mask the real call path — which is
+    exactly how the original tuple-unpack bug hid for so long.
+    """
     content = json.dumps(response_dict)
     mock_choice = MagicMock()
     mock_choice.message.content = content
     mock_response = MagicMock()
     mock_response.choices = [mock_choice]
     client = MagicMock()
-    client.chat.completions.create.return_value = mock_response
+    client.chat.completions.create = AsyncMock(return_value=mock_response)
     return client
 
 
@@ -100,10 +106,10 @@ SAMPLE_LLM_RESPONSE = {
 class TestStakesExtractor:
     """StakesExtractor with mock LLM."""
 
-    def test_extract_with_valid_llm_response(self):
+    async def test_extract_with_valid_llm_response(self):
         client = _mock_llm_client(SAMPLE_LLM_RESPONSE)
         extractor = StakesExtractor()
-        result = extractor.extract(
+        result = await extractor.extract(
             arguments=SAMPLE_ARGUMENTS,
             source_metadata=SAMPLE_METADATA,
             raw_text="Full discourse text here...",
@@ -116,9 +122,9 @@ class TestStakesExtractor:
         assert result["rhetorical_register"] == "mobilization"
         assert result["discursive_arena"] == "parliamentary debate"
 
-    def test_extract_no_llm_client_returns_empty(self):
+    async def test_extract_no_llm_client_returns_empty(self):
         extractor = StakesExtractor()
-        result = extractor.extract(
+        result = await extractor.extract(
             arguments=SAMPLE_ARGUMENTS,
             source_metadata=SAMPLE_METADATA,
             llm_client=None,
@@ -128,16 +134,16 @@ class TestStakesExtractor:
         assert result["rhetorical_register"] == ""
         assert result["discursive_arena"] == ""
 
-    def test_extract_handles_malformed_json(self):
+    async def test_extract_handles_malformed_json(self):
         mock_choice = MagicMock()
         mock_choice.message.content = "NOT JSON AT ALL"
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
         client = MagicMock()
-        client.chat.completions.create.return_value = mock_response
+        client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         extractor = StakesExtractor()
-        result = extractor.extract(
+        result = await extractor.extract(
             arguments=SAMPLE_ARGUMENTS,
             source_metadata=SAMPLE_METADATA,
             llm_client=client,
@@ -145,7 +151,7 @@ class TestStakesExtractor:
         assert result["stakes"] == []
         assert result["rhetorical_register"] == ""
 
-    def test_extract_strips_markdown_fences(self):
+    async def test_extract_strips_markdown_fences(self):
         raw_json = json.dumps(SAMPLE_LLM_RESPONSE)
         fenced = f"```json\n{raw_json}\n```"
         mock_choice = MagicMock()
@@ -153,17 +159,17 @@ class TestStakesExtractor:
         mock_response = MagicMock()
         mock_response.choices = [mock_choice]
         client = MagicMock()
-        client.chat.completions.create.return_value = mock_response
+        client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         extractor = StakesExtractor()
-        result = extractor.extract(
+        result = await extractor.extract(
             arguments=SAMPLE_ARGUMENTS,
             source_metadata=SAMPLE_METADATA,
             llm_client=client,
         )
         assert len(result["stakes"]) == 3
 
-    def test_extract_caps_at_10_entries(self):
+    async def test_extract_caps_at_10_entries(self):
         large_response = {
             "stakes": [
                 {
@@ -187,7 +193,7 @@ class TestStakesExtractor:
         }
         client = _mock_llm_client(large_response)
         extractor = StakesExtractor()
-        result = extractor.extract(
+        result = await extractor.extract(
             arguments=SAMPLE_ARGUMENTS,
             source_metadata=SAMPLE_METADATA,
             llm_client=client,
@@ -195,10 +201,10 @@ class TestStakesExtractor:
         assert len(result["stakes"]) == 10
         assert len(result["stakeholders"]) == 10
 
-    def test_prompt_contains_arguments_and_metadata(self):
+    async def test_prompt_contains_arguments_and_metadata(self):
         client = _mock_llm_client(SAMPLE_LLM_RESPONSE)
         extractor = StakesExtractor()
-        extractor.extract(
+        await extractor.extract(
             arguments=SAMPLE_ARGUMENTS,
             source_metadata=SAMPLE_METADATA,
             raw_text="Test discourse",
@@ -209,6 +215,23 @@ class TestStakesExtractor:
         assert "[0] We must increase defence spending" in prompt
         assert "Speaker_A" in prompt
         assert "parliamentary debate" in prompt
+
+    async def test_extract_threads_resolved_model_id(self):
+        """The resolved model_id is sent, not the hardcoded gpt-4o-mini default.
+
+        Regression guard for the async-contract fix: the orchestrator threads
+        the model resolved by _get_openai_client through to the call.
+        """
+        client = _mock_llm_client(SAMPLE_LLM_RESPONSE)
+        extractor = StakesExtractor()
+        await extractor.extract(
+            arguments=SAMPLE_ARGUMENTS,
+            source_metadata=SAMPLE_METADATA,
+            llm_client=client,
+            model_id="resolved-fleet-model",
+        )
+        sent_model = client.chat.completions.create.call_args[1]["model"]
+        assert sent_model == "resolved-fleet-model"
 
 
 # ---------------------------------------------------------------------------
@@ -300,3 +323,56 @@ class TestDeepSynthesisStakesBlock:
             for k in ("stakes", "stakeholders", "rhetorical_register")
         )
         assert not has_data
+
+
+# ---------------------------------------------------------------------------
+# 4. Integration: _invoke_stakes_extractor with a REAL-shaped async client
+#    (the path that the original tuple-unpack bug silently broke)
+# ---------------------------------------------------------------------------
+
+
+class TestInvokeStakesExtractorIntegration:
+    """End-to-end _invoke_stakes_extractor with a mock AsyncOpenAI client.
+
+    This is the test the original bug lacked: it exercises the FULL production
+    path — _get_openai_client() tuple unpack → extract() → awaited
+    _guarded_chat_completion(client, model=model_id) — with a real-shaped async
+    client returning a well-formed response, and asserts stakes come back
+    NON-empty. Before the fix, _invoke_stakes_extractor passed the (client,
+    model_id) TUPLE as llm_client → '.tuple' object has no attribute 'chat' →
+    swallowed by extract's broad except → empty stakes. This test fails on that
+    code and passes on the fixed code.
+    """
+
+    async def test_invoke_returns_non_empty_stakes_with_mock_client(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_stakes_extractor,
+        )
+
+        mock_client = _mock_llm_client(SAMPLE_LLM_RESPONSE)
+        state = UnifiedAnalysisState(
+            "We must increase defence spending to protect our borders."
+        )
+        # Real writer schema: {arg_id: description}.
+        state.identified_arguments = {
+            "arg_1": "We must increase defence spending to protect our borders.",
+            "arg_2": "The economic cost is too high for ordinary citizens.",
+        }
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(mock_client, "resolved-fleet-model"),
+        ):
+            result = await _invoke_stakes_extractor(
+                "", {"_state_object": state, "source_metadata": SAMPLE_METADATA}
+            )
+
+        # The bug returned empty stakes (tuple-as-client crash, swallowed).
+        assert len(result["stakes"]) == 3, result
+        assert result["stakes"][0]["stake_type"] == "security"
+        assert len(result["stakeholders"]) == 3
+        # Resolved model_id was threaded to the actual LLM call (not gpt-4o-mini).
+        sent_model = mock_client.chat.completions.create.call_args[1]["model"]
+        assert sent_model == "resolved-fleet-model"
+        # State was written.
+        assert len(state.stakes_and_stakeholders["stakes"]) == 3

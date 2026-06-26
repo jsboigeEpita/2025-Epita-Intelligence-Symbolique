@@ -7479,12 +7479,19 @@ async def _invoke_stakes_extractor(
     if not source_metadata:
         source_metadata = context.get("source_metadata", {})
 
-    # Get LLM client
+    # Get LLM client + resolved model id. _get_openai_client() returns a
+    # (client, model_id) tuple — it MUST be unpacked (canonical pattern at
+    # l.602/848/1123/...). Previously this site assigned the whole tuple to
+    # ``client`` (a tuple is always truthy), then passed that tuple as
+    # ``llm_client`` → ``.chat`` AttributeError inside extract → swallowed by
+    # its broad ``except`` → empty stakes on every real (LLM-on) run. The bug
+    # was masked because unit tests exercised only the LLM=None short-circuit.
     llm_client = None
+    model_id = ""
     determinism_params = {}
     try:
-        client = _get_openai_client()
-        if client:
+        client, model_id = _get_openai_client()
+        if client is not None:
             llm_client = client
             determinism_params = _get_determinism_params()
     except Exception:
@@ -7492,12 +7499,17 @@ async def _invoke_stakes_extractor(
 
     raw_text = getattr(state, "raw_text", "") or input_text
 
-    result = extractor.extract(
+    # extract() is now async (it awaits the LLM call on an AsyncOpenAI client);
+    # thread the resolved model_id (not a hardcoded default) and route the call
+    # through _guarded_chat_completion (#708 per-run runaway guard).
+    result = await extractor.extract(
         arguments=arguments,
         source_metadata=source_metadata,
         raw_text=raw_text,
         llm_client=llm_client,
         determinism_params=determinism_params,
+        model_id=model_id,
+        llm_call=_guarded_chat_completion,
         deanonymized=bool(getattr(state, "deanonymized", True)),
     )
 
