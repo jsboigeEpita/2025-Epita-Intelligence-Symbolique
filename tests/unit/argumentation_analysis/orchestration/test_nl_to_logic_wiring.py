@@ -1,6 +1,9 @@
 """Tests for NL-to-logic wiring in PL and FOL pipeline phases (#208-H).
 
-Verifies the 3-tier fallback: upstream translations → on-the-fly translator → templates.
+FOL contract (Track B #1278): upstream translations → on-the-fly translator →
+FAIL LOUD (``unavailable:no-translation``). The template fabrication fallback
+(Asserted(argN)) was removed — it masked NL→FOL starvation as a confident
+"consistent" verdict (#1019).
 """
 
 import pytest
@@ -234,21 +237,32 @@ class TestFOLReasoningNLWiring:
         assert "Human(socrates)" in result["formulas"]
         assert "Mortal(socrates)" in result["formulas"]
 
-    async def test_fol_falls_back_to_templates(self):
-        """FOL phase generates Asserted(argN) templates when no translations available."""
+    async def test_fol_unavailable_when_no_translation(self):
+        """Track B #1278: no FOL translation → axis is unavailable:no-translation.
+
+        Never 'trivially consistent sur vide', never fabricated Asserted(argN)
+        templates (#1019). The NL translator is forced unavailable so the path
+        is deterministic regardless of API-key presence.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fol_reasoning,
         )
 
         context = _make_context_with_args(["Arg one", "Arg two"])
-        result = await _invoke_fol_reasoning("text", context)
+        with patch.dict(
+            "sys.modules", {"argumentation_analysis.services.nl_to_logic": None}
+        ):
+            result = await _invoke_fol_reasoning("text", context)
 
         assert result["logic_type"] == "first_order"
-        assert "Asserted(arg1)" in result["formulas"]
-        assert "Asserted(arg2)" in result["formulas"]
+        assert result["formulas"] == []
+        assert result["consistent"] is None
+        assert result["fol_status"] == "unavailable:no-translation"
+        assert "Asserted(arg1)" not in result.get("formulas", [])
 
     async def test_fol_ignores_propositional_translations(self):
-        """FOL phase only uses translations with logic_type='fol'."""
+        """FOL phase only uses translations with logic_type='fol'; a purely
+        propositional translation yields no FOL formula → unavailable (#1278)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fol_reasoning,
         )
@@ -268,12 +282,17 @@ class TestFOLReasoningNLWiring:
                 }
             },
         )
-
-        result = await _invoke_fol_reasoning("text", context)
-        assert "Asserted(arg1)" in result["formulas"]
+        with patch.dict(
+            "sys.modules", {"argumentation_analysis.services.nl_to_logic": None}
+        ):
+            result = await _invoke_fol_reasoning("text", context)
+        assert result["fol_status"] == "unavailable:no-translation"
+        assert result["formulas"] == []
+        assert "Asserted(arg1)" not in result.get("formulas", [])
 
     async def test_fol_nl_translator_import_failure(self):
-        """FOL phase gracefully falls back when NLToLogicTranslator import fails."""
+        """FOL phase fails loud when NLToLogicTranslator import fails — axis
+        marked unavailable:no-translation, not fabricated templates (#1278)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fol_reasoning,
         )
@@ -286,4 +305,6 @@ class TestFOLReasoningNLWiring:
             result = await _invoke_fol_reasoning("text", context)
 
         assert result["logic_type"] == "first_order"
-        assert "Asserted(arg1)" in result["formulas"]
+        assert result["fol_status"] == "unavailable:no-translation"
+        assert result["consistent"] is None
+        assert "Asserted(arg1)" not in result.get("formulas", [])

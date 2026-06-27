@@ -794,6 +794,37 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     detail="solveur Tweety (logique du premier ordre)",
                 )
             )
+        else:
+            # Track B #1278: no decided FOL verdict — surface the honest
+            # unavailability instead of silence. An entry with consistent=None
+            # and message "unavailable:<raison>" means the pipeline tried but
+            # could not formalize the source (no translation / parse-fail).
+            # The reader must see that the axis is honestly absent, never a
+            # "trivially consistent sur vide" fabrication (#1019).
+            unavailable = [
+                r
+                for r in fol
+                if isinstance(r, dict)
+                and r.get("consistent") is None
+                and isinstance(r.get("message"), str)
+                and str(r.get("message")).startswith("unavailable:")
+            ]
+            if unavailable:
+                findings.append(
+                    FormalFinding(
+                        kind="fol",
+                        verdict=(
+                            "FOL indisponible : aucune théorie du premier ordre "
+                            "n'a pu être formalisée puis validée sur ce corpus"
+                        ),
+                        detail=(
+                            "logique du premier ordre — la traduction NL→FOL n'a "
+                            "produit aucune formule analysable (belief set vide ou "
+                            "non parsable) ; axe honnêtement absent, non « consistant "
+                            "sur vide » (#1278/#1019)"
+                        ),
+                    )
+                )
 
     dung_trace = _collect_dung_trace(state)
     if dung_trace.available and dung_trace.rejected_args:
