@@ -6,12 +6,25 @@ FAIL LOUD (``unavailable:no-translation``). The template fabrication fallback
 "consistent" verdict (#1019).
 """
 
+import re
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 TWEETY_BRIDGE_PATH = (
     "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
 )
+
+# A valid Tweety PlParser atom: lowercase letter then alnum/underscore (#1260
+# _pl_atom slug). Structural check — NOT an exact key — so the test does not
+# rot again when the slug scheme changes (#1287 anti-pendule: don't freeze a
+# new exact key that would be just as fragile as the old p1/p2/p3).
+_PL_ATOM_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+
+
+def _is_pl_atom(formula: str) -> bool:
+    """True if ``formula`` is a single valid PL atom (opaque label)."""
+    return bool(isinstance(formula, str) and _PL_ATOM_RE.match(formula))
 
 
 def _make_context_with_args(args_texts, extra=None):
@@ -104,18 +117,29 @@ class TestPropositionalLogicNLWiring:
         assert len(result["formulas"]) >= 1
 
     async def test_pl_falls_back_to_templates(self):
-        """PL phase generates p1, p2, ... templates when no translations available."""
+        """PL phase generates one valid atom per argument when no translations available.
+
+        #1260 changed the opaque ``p1,p2`` template to a meaning-preserving slug
+        via ``_pl_atom`` (e.g. ``p_arg_one_<hash>``). #1287 (anti-pendule): assert
+        the structural contract — one valid PL atom per argument, distinct —
+        instead of freezing an exact key that rots when the slug scheme changes.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_propositional_logic,
         )
 
-        context = _make_context_with_args(["Arg one", "Arg two", "Arg three"])
+        args = ["Arg one", "Arg two", "Arg three"]
+        context = _make_context_with_args(args)
         result = await _invoke_propositional_logic("text", context)
 
         assert result["logic_type"] == "propositional"
-        assert "p1" in result["formulas"]
-        assert "p2" in result["formulas"]
-        assert "p3" in result["formulas"]
+        formulas = result["formulas"]
+        # One atom per argument (the template fallback covers every argument).
+        assert len(formulas) == len(args)
+        # Each is a valid PL atom; all distinct (the hash suffix disambiguates
+        # args that collapse to the same slug).
+        assert all(_is_pl_atom(f) for f in formulas), formulas
+        assert len(set(formulas)) == len(formulas), formulas
 
     async def test_pl_argument_mapping_from_translations(self):
         """argument_mapping is populated from NL-to-logic translations."""
@@ -152,7 +176,10 @@ class TestPropositionalLogicNLWiring:
         assert any("Original text" in v for v in mapping_values)
 
     async def test_pl_nl_translator_import_failure(self):
-        """PL phase gracefully falls back when NLToLogicTranslator import fails."""
+        """PL phase falls back to valid atoms when NLToLogicTranslator import fails.
+
+        #1287: structural check (valid PL atom) instead of the stale ``p1`` key.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_propositional_logic,
         )
@@ -165,7 +192,9 @@ class TestPropositionalLogicNLWiring:
             result = await _invoke_propositional_logic("text", context)
 
         assert result["logic_type"] == "propositional"
-        assert "p1" in result["formulas"]
+        formulas = result["formulas"]
+        assert len(formulas) >= 1
+        assert all(_is_pl_atom(f) for f in formulas), formulas
 
 
 class TestFOLReasoningNLWiring:
