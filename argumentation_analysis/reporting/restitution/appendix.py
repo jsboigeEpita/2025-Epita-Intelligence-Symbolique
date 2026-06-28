@@ -52,6 +52,45 @@ def _safe_len(value: Any) -> int:
         return 0
 
 
+def _fol_axis_status(fol: Any) -> Any:
+    """Coarse FOL-axis status for the appendix, aligned with Acte II's reader.
+
+    #1290: the pipeline stores ``fol_analysis_results`` as a *list* of per-theory
+    dicts (``{"consistent": bool|None, "message": str, ...}``) — the exact shape
+    Acte II's narrative reads (act2_narrative_plugin.py). The appendix previously
+    only recognised a ``Mapping`` and labelled every list "indisponible", so a
+    genuinely *decided* FOL axis (corpus_A: 2 consistent, corpus_B: 1 inconsistent)
+    contradicted the prose that cited it. Read the list shape too, and report a
+    tri-state honest status (decided / unavailable / indisponible) rather than a
+    false-negative. ``bool(consistent)`` is NOT used — ``None`` (degraded) must not
+    collapse to ``False`` (#1019/#1278).
+    """
+    if isinstance(fol, Mapping):
+        return {
+            "consistent": bool(fol.get("consistent")),
+            "formules": _safe_len(fol.get("formulas")),
+        }
+    if isinstance(fol, list) and fol:
+        decided = [
+            r
+            for r in fol
+            if isinstance(r, dict) and r.get("consistent") in (True, False)
+        ]
+        if decided:
+            consistent = sum(1 for r in decided if r.get("consistent") is True)
+            inconsistent = sum(1 for r in decided if r.get("consistent") is False)
+            return {
+                "verdict": "décidé",
+                "consistantes": consistent,
+                "inconsistantes": inconsistent,
+                "verifiees": len(decided),
+            }
+        # No decided entry — honestly degraded/unavailable, not "indisponible"
+        # (which reads as "the axis never ran"). It ran but could not decide.
+        return "indisponible (aucun verdict décidé — dégradé)"
+    return "indisponible"
+
+
 def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     """Honest provenance summary: counts + verdict flags, no corpus content.
 
@@ -71,15 +110,7 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     counts["scores_qualite"] = _safe_len(_g("argument_quality_scores", {}))
 
     # formal axes — report presence + a coarse status, not the raw belief sets
-    fol = _g("fol_analysis_results")
-    counts["axe_fol"] = (
-        {
-            "consistent": bool(fol.get("consistent")),
-            "formules": _safe_len(fol.get("formulas")),
-        }
-        if isinstance(fol, Mapping)
-        else "indisponible"
-    )
+    counts["axe_fol"] = _fol_axis_status(_g("fol_analysis_results"))
     counts["axe_pl"] = (
         "disponible" if _g("propositional_analysis_results") else "indisponible"
     )

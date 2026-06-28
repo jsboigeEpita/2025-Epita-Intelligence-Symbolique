@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 
 from argumentation_analysis.reporting.restitution.appendix import (
+    _fol_axis_status,
     _provenance_counts,
     _strip_leak_keys,
     render_appendix,
@@ -49,6 +50,86 @@ class TestProvenanceCounts:
         assert counts["axe_modale"] == "indisponible"
         assert counts["synthese_narrative"] == "présente"
         assert counts["synthese_formelle"] == "absente"
+
+
+class TestFolAxisStatusListShape:
+    """#1290: the pipeline stores ``fol_analysis_results`` as a *list* of
+    per-theory dicts (the shape Acte II reads). The appendix used to recognise
+    only a Mapping and labelled every list "indisponible", contradicting the
+    prose that cited a real FOL verdict. The axis status must agree with the
+    narrative: decided when the reasoner decided, honest-degraded otherwise.
+    """
+
+    def test_list_all_consistent_is_decided(self):
+        # corpus_A real shape: two theories, both consistent (EProver).
+        fol = [
+            {"consistent": True, "message": None},
+            {
+                "consistent": True,
+                "message": "FOL consistency check (EProver): consistent",
+            },
+        ]
+        status = _fol_axis_status(fol)
+        assert status == {
+            "verdict": "décidé",
+            "consistantes": 2,
+            "inconsistantes": 0,
+            "verifiees": 2,
+        }
+
+    def test_list_mixed_verdict_is_decided(self):
+        # corpus_B real shape: one consistent, one inconsistent.
+        fol = [
+            {"consistent": True, "message": None},
+            {
+                "consistent": False,
+                "message": "FOL consistency check (EProver): inconsistent",
+            },
+        ]
+        status = _fol_axis_status(fol)
+        assert status["verdict"] == "décidé"
+        assert status["consistantes"] == 1
+        assert status["inconsistantes"] == 1
+
+    def test_list_all_degraded_is_not_decided(self):
+        # After the fol_handler #1290 fix, a parse-fail yields consistent=None
+        # (degraded). A list of only-None entries must NOT read as decided, and
+        # must NOT collapse None→False (#1019/#1278).
+        fol = [
+            {
+                "consistent": None,
+                "message": "Degraded: FOL consistency check error (...)",
+            },
+            {"consistent": None, "message": "Degraded: reasoner unavailable"},
+        ]
+        status = _fol_axis_status(fol)
+        assert status == "indisponible (aucun verdict décidé — dégradé)"
+
+    def test_list_decided_ignores_degraded_entries(self):
+        # corpus_C post-fix: one genuinely consistent + one parse-fail degraded.
+        # The degraded entry drops out of the decided counts — no fabricated
+        # "inconsistante" from a parse error.
+        fol = [
+            {"consistent": True, "message": None},
+            {
+                "consistent": None,
+                "message": "Degraded: FOL consistency check error (parse)",
+            },
+        ]
+        status = _fol_axis_status(fol)
+        assert status["verdict"] == "décidé"
+        assert status["consistantes"] == 1
+        assert status["inconsistantes"] == 0
+        assert status["verifiees"] == 1
+
+    def test_empty_and_none_are_indisponible(self):
+        assert _fol_axis_status([]) == "indisponible"
+        assert _fol_axis_status(None) == "indisponible"
+
+    def test_legacy_mapping_shape_preserved(self):
+        # Back-compat: the old Mapping shape still produces the old summary.
+        status = _fol_axis_status({"consistent": True, "formulas": ["a", "b"]})
+        assert status == {"consistent": True, "formules": 2}
 
 
 class TestLeakStripping:
