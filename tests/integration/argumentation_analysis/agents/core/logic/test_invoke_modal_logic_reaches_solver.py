@@ -47,13 +47,22 @@ def jvm():
 @pytest.fixture
 def tweety_solver():
     """Force the pure-Java default (TWEETY / SimpleMlReasoner) — the
-    always-available, always-deciding modal path (no external binary)."""
+    always-available, always-deciding modal path (no external binary).
+
+    Track C #1279: the pipeline now prefers vendored SPASS when detected. To
+    keep testing the SimpleMlReasoner path explicitly (this test's intent), opt
+    out of the SPASS preference in addition to pinning TWEETY."""
     previous = settings.modal_solver
+    previous_prefer = settings.modal_prefer_spass_when_available
     settings.modal_solver = ModalSolverChoice.TWEETY
+    object.__setattr__(settings, "modal_prefer_spass_when_available", False)
     try:
         yield
     finally:
         settings.modal_solver = previous
+        object.__setattr__(
+            settings, "modal_prefer_spass_when_available", previous_prefer
+        )
 
 
 # Parseable modal KBs (FP-11 grammar: type(prop) declarations, MlParser).

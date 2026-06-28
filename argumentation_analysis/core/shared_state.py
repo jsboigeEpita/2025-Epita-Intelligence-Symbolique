@@ -946,8 +946,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         formulas: List[str],
         valid: bool,
         modalities: List[str],
+        message: Optional[str] = None,
     ) -> str:
-        """Add a modal logic analysis result."""
+        """Add a modal logic analysis result.
+
+        #1279 (Track C): ``message`` is an optional provenance field (mirrors the
+        FOL/PL siblings). It carries the honest status — e.g.
+        ``unavailable:no-translation`` / ``unavailable:no-solver`` (OOM) — so
+        downstream consumers can confirm the entry is a real solver decision OR
+        an explicit degradation, never a silent None (#1019).
+        """
         ml_id = self._generate_id("modal", self.modal_analysis_results)
         entry = {
             "id": ml_id,
@@ -955,6 +963,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "valid": valid,
             "modalities": modalities,
         }
+        if message:
+            entry["message"] = message
         self.modal_analysis_results.append(entry)
         state_logger.info(f"Modal analysis added: {ml_id} (valid={valid})")
         return ml_id
