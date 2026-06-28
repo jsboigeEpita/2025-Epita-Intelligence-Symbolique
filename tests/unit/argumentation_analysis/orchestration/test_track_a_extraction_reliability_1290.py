@@ -76,6 +76,13 @@ class TestStrictJsonModeOnSuccess:
         # strict-JSON-mode: response_format was threaded into the call kwargs.
         kwargs = mock_call.call_args.kwargs
         assert kwargs.get("response_format") == {"type": "json_object"}
+        # #1290 M1 (po-2023 diagnostic): max_tokens is threaded so dense corpora
+        # are not silently truncated by the default completion ceiling.
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _EXTRACTION_MAX_TOKENS,
+        )
+
+        assert kwargs.get("max_tokens") == _EXTRACTION_MAX_TOKENS
 
 
 # ---------------------------------------------------------------------------
@@ -209,6 +216,105 @@ class TestResponseFormatRejectedDegradesGracefully:
 
         assert result["extraction_status"] == "ok"
         assert result["argument_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# DoD M1 (po-2023 diagnostic) — max_tokens rejection degrades gracefully
+# ---------------------------------------------------------------------------
+
+
+class TestMaxTokensRejectedDegrades:
+    """When the endpoint rejects max_tokens, the next attempt drops it and
+    proceeds without consuming the whole budget on a config issue."""
+
+    def test_max_tokens_rejection_then_success(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fact_extraction,
+        )
+
+        err = ValueError("400 max_tokens exceeds the model limit")
+        attempts: list[dict] = []
+
+        async def _impl(client, **kwargs):
+            attempts.append(dict(kwargs))
+            if len(attempts) == 1:
+                assert kwargs.get("max_tokens") is not None
+                raise err
+            # Subsequent attempt must have dropped max_tokens.
+            assert "max_tokens" not in kwargs
+            return _resp(_VALID_JSON)
+
+        with (
+            patch(f"{INVOKE_PATH}._get_openai_client", return_value=(MagicMock(), "m")),
+            patch(f"{INVOKE_PATH}._guarded_chat_completion", new=_impl),
+            patch(f"{INVOKE_PATH}._get_determinism_params", return_value={}),
+        ):
+            result = _run(_invoke_fact_extraction("some text", {"_state_object": None}))
+
+        assert result["extraction_status"] == "ok"
+        assert result["argument_count"] == 1
+
+
+# ---------------------------------------------------------------------------
+# DoD chemin B (po-2023 diagnostic) — no-json-object vs unparseable-json
+# ---------------------------------------------------------------------------
+
+
+class TestCheminBNoJsonObjectDistinction:
+    """The fail-loud reason distinguishes 'model emitted no JSON at all'
+    (chemin B, latent hole) from 'JSON present but unparseable' (truncation
+    M1 or malformed structure) — so the diagnostic is actionable."""
+
+    def test_no_braces_marks_no_json_object(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _EXTRACTION_MAX_ATTEMPTS,
+            _invoke_fact_extraction,
+        )
+
+        with (
+            patch(f"{INVOKE_PATH}._get_openai_client", return_value=(MagicMock(), "m")),
+            patch(
+                f"{INVOKE_PATH}._guarded_chat_completion",
+                new=AsyncMock(return_value=_resp(_MALFORMED)),
+            ),
+            patch(f"{INVOKE_PATH}._get_determinism_params", return_value={}),
+        ):
+            result = _run(
+                _invoke_fact_extraction("Some text here.", {"_state_object": None})
+            )
+
+        # _MALFORMED has no braces → chemin B (no-json-object), distinct from
+        # a truncation that leaves braces (unparseable-json).
+        assert "no-json-object" in result["extraction_status"]
+        assert result["arguments"] == []
+        # The budget was actually spent (bounded retry exercised).
+        assert _EXTRACTION_MAX_ATTEMPTS >= 1
+
+    def test_braces_but_unparseable_marks_unparseable_json(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fact_extraction,
+        )
+
+        # Both braces present but the content is not valid JSON (malformed
+        # structure — a truncation that happens to keep a closing brace, or a
+        # garbled object). Distinct from no-braces-at-all (chemin B).
+        _GARBLED = '{"arguments": [invalid content here]}'
+
+        with (
+            patch(f"{INVOKE_PATH}._get_openai_client", return_value=(MagicMock(), "m")),
+            patch(
+                f"{INVOKE_PATH}._guarded_chat_completion",
+                new=AsyncMock(return_value=_resp(_GARBLED)),
+            ),
+            patch(f"{INVOKE_PATH}._get_determinism_params", return_value={}),
+        ):
+            result = _run(
+                _invoke_fact_extraction("Some text here.", {"_state_object": None})
+            )
+
+        assert "unparseable-json" in result["extraction_status"]
+        assert "no-json-object" not in result["extraction_status"]
+        assert result["arguments"] == []
 
 
 # ---------------------------------------------------------------------------

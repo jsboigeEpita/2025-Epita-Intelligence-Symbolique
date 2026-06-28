@@ -416,6 +416,21 @@ try:
 except (ValueError, TypeError):
     _EXTRACTION_MAX_ATTEMPTS = 3
 
+# #1290 M1 (po-2023 diagnostic) — the malformed-JSON signature
+# ``Expecting value (char ~3033)`` is a *truncated output*, not bad escaping:
+# the LLM's JSON gets cut mid-generation when the default completion budget
+# runs out on a dense corpus. strict-JSON-mode forces the *format*, not the
+# *length*, so without an explicit ceiling a dense extraction still truncates
+# → fail-loud fires (good, levier 3) but the downstream stays starved (no
+# substance). Thread an explicit generous max_tokens so dense corpora are not
+# silently clipped at the default ceiling. This is the cause-root lever; the
+# retry (levier 2) only masks the truncation probabilistically. Override via
+# EXTRACTION_MAX_TOKENS=8192 (set 0 to omit the param entirely).
+try:
+    _EXTRACTION_MAX_TOKENS = int(os.environ.get("EXTRACTION_MAX_TOKENS", "8192") or 0)
+except (ValueError, TypeError):
+    _EXTRACTION_MAX_TOKENS = 8192
+
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
     """Single funnel for every LLM chat-completion call (#708 runaway guard).
@@ -4791,11 +4806,17 @@ async def _invoke_fact_extraction(
         # OpenRouter-backed models reject response_format; on such a rejection
         # we retry without it (the parse-retry loop still applies).
         use_json_mode = True
+        # #1290 M1 (po-2023 diagnostic) — explicit max_tokens so a dense
+        # corpus's JSON output is not silently truncated by the default
+        # completion ceiling (the root cause of ``Expecting value (char ~3033)``).
+        use_max_tokens = _EXTRACTION_MAX_TOKENS > 0
         for attempt in range(1, _EXTRACTION_MAX_ATTEMPTS + 1):
             try:
                 llm_kwargs: Dict[str, Any] = dict(det_params)
                 if use_json_mode:
                     llm_kwargs["response_format"] = {"type": "json_object"}
+                if use_max_tokens:
+                    llm_kwargs["max_tokens"] = _EXTRACTION_MAX_TOKENS
                 response = await _guarded_chat_completion(
                     client,
                     model=model_id,
@@ -4839,8 +4860,19 @@ async def _invoke_fact_extraction(
                         )
                     return _extract_result
                 # No parseable JSON — retry (the LLM is nondeterministic; a
-                # fresh call frequently parses cleanly).
-                last_reason = f"llm_no_valid_json(attempt={attempt},len={len(raw)})"
+                # fresh call frequently parses cleanly). Distinguish the two
+                # silent-fallback paths so the fail-loud reason is
+                # diagnostically useful (po-2023 diagnostic, chemin B):
+                #   - no JSON braces at all → "no-json-object" (the model
+                #     ignored the JSON instruction entirely — latent hole)
+                #   - braces present but unparseable → "unparseable-json"
+                #     (truncation M1 when max_tokens is still too low, or a
+                #     malformed structure)
+                has_braces = "{" in raw and "}" in raw
+                last_reason = (
+                    f"llm_{'unparseable-json' if has_braces else 'no-json-object'}"
+                    f"(attempt={attempt},len={len(raw)})"
+                )
                 logger.warning(
                     f"fact extraction: LLM returned no parseable JSON "
                     f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}, {last_reason})"
@@ -4848,17 +4880,30 @@ async def _invoke_fact_extraction(
             except Exception as e:
                 msg = str(e)
                 low = msg.lower()
-                # response_format is not supported by every endpoint/model.
-                # Drop it and continue the retry loop (this is a config issue,
-                # not a transient LLM failure — the retry is still worthwhile).
-                if use_json_mode and (
-                    "response_format" in low or "json" in low or "400" in msg
-                ):
+                # Config-rejection handling: response_format / max_tokens are
+                # not supported by every endpoint/model. Drop the offending
+                # param(s) and continue the retry loop (config issue, not a
+                # transient LLM failure — the retry is still worthwhile). Each
+                # param is dropped at most once, so the budget is not spent on
+                # the same config rejection repeatedly.
+                dropped = False
+                if use_json_mode and ("response_format" in low or "json_object" in low):
                     logger.info(
                         "fact extraction: response_format json_mode rejected by "
                         "endpoint, retrying without it"
                     )
                     use_json_mode = False
+                    dropped = True
+                if use_max_tokens and (
+                    "max_tokens" in low or "max_completion_tokens" in low
+                ):
+                    logger.info(
+                        "fact extraction: max_tokens rejected by endpoint, "
+                        "retrying without it"
+                    )
+                    use_max_tokens = False
+                    dropped = True
+                if dropped:
                     continue
                 last_reason = (
                     f"llm_call_error(attempt={attempt},"
