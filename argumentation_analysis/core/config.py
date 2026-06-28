@@ -50,15 +50,28 @@ class ArgAnalysisSettings(BaseSettings):
     # Le choix du solveur pour la logique modale.
     # 'tweety' (défaut) utilise SimpleMlReasoner (pure-Java) — query-based
     #   consistency DÉCIDE réellement, aucun binaire externe requis (#1205,
-    #   firsthand-vérifié). C'est le défaut honnête.
-    # 'spass' utilise SPASSMlReasoner (binaire externe) — disponible mais exige
-    #   un build CLI exécutable de SPASS ; le binaire vendoré actuel est un build
-    #   GUI/élévation (CreateProcess err740), donc SPASS reste fail-loud None
-    #   tant qu'un vrai CLI n'est pas fourni (anti-théâtre #1019, pas de fallback
-    #   silencieux). L'ancien défaut 'spass' (#939) n'a jamais décidé :
-    #   SPASSMlReasoner n'expose pas isConsistent + binaire non exécutable.
+    #   firsthand-vérifié). C'est le défaut honnête QUAND SPASS n'est pas
+    #   disponible.
+    # 'spass' utilise SPASSMlReasoner (binaire externe) — le binaire vendoré
+    #   `ext_tools/spass/SPASS.exe` (build CLI natif post-#1242, + adapter
+    #   EML→eml) DÉCIDE sur les KB qui OOM SimpleMlReasoner (#1239/#1242,
+    #   firsthand 4/4). Track C #1279 : le chemin pipeline réel préfère
+    #   SPASS quand il est détecté (voir ``modal_prefer_spass_when_available``).
     #
     modal_solver: ModalSolverChoice = ModalSolverChoice.TWEETY
+
+    #
+    # Track C #1279 : quand un binaire SPASS vendoré est détecté
+    # (``EXTERNAL_TOOL_PATHS['spass']`` peuplé par ``jvm_setup``), le chemin
+    # pipeline ``_invoke_modal_logic`` route vers SPASS — le solveur qui DÉCIDE
+    # sans OOM, au lieu du défaut SimpleMlReasoner (Kripke naïf, OOM sur KB
+    # réels ~12 atomes, FP-16 #1231). Anti-pendule : on *soustrait* le défaut
+    # OOM-prone en routant vers le solveur capable, on n'empile pas un try/except
+    # sur l'OOM. Un utilisateur/fixture peut forcer TWEETY (False) pour tester
+    # le path SimpleMlReasoner explicitement — un ``modal_solver`` explicitement
+    # choisi est toujours respecté.
+    #
+    modal_prefer_spass_when_available: bool = True
 
     #
     # Le choix du solveur pour la logique propositionnelle.

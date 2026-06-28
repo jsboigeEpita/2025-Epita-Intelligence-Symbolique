@@ -882,8 +882,22 @@ def _write_modal_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         formulas = []
     if not isinstance(modalities, list):
         modalities = []
+    # Track C #1279: surface the honest status token when the modal axis is
+    # unavailable (no-translation / no-solver OOM), mirroring the FOL writer
+    # (#1278). A decided/unverified verdict keeps the solver's own message.
+    modal_status = output.get("modal_status")
+    raw_msg = output.get("message")
+    if isinstance(modal_status, str) and modal_status.startswith("unavailable:"):
+        status_message: Optional[str] = modal_status
+    elif isinstance(raw_msg, str):
+        status_message = raw_msg
+    else:
+        status_message = None
     state.add_modal_analysis_result(
-        formulas, valid if valid is not None else None, modalities
+        formulas,
+        valid if valid is not None else None,
+        modalities,
+        message=status_message,
     )
 
 

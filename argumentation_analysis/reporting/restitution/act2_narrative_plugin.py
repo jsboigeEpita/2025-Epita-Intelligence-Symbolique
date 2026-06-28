@@ -826,6 +826,55 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                     )
                 )
 
+    modal = getattr(state, "modal_analysis_results", None)
+    if isinstance(modal, list):
+        # Track C #1279: surface the modal verdict when decided, OR the honest
+        # unavailability (no-translation / no-solver OOM) instead of silence —
+        # mirroring the FOL block (#1278). ``valid`` is tri-state: True/False =
+        # SPASS/SimpleMlReasoner decided; None = degraded.
+        decided = [
+            r for r in modal if isinstance(r, dict) and r.get("valid") in (True, False)
+        ]
+        if decided:
+            sat = sum(1 for r in decided if r.get("valid") is True)
+            unsat = sum(1 for r in decided if r.get("valid") is False)
+            findings.append(
+                FormalFinding(
+                    kind="modal",
+                    verdict=(
+                        f"{unsat} théorie(s) modales inconsistantes sur "
+                        f"{len(decided)} vérifiée(s)"
+                        if unsat
+                        else f"{sat} théorie(s) modales consistantes"
+                    ),
+                    detail="solveur modal (SPASS/Tweety)",
+                )
+            )
+        else:
+            unavailable_modal = [
+                r
+                for r in modal
+                if isinstance(r, dict)
+                and r.get("valid") is None
+                and isinstance(r.get("message"), str)
+                and str(r.get("message")).startswith("unavailable:")
+            ]
+            if unavailable_modal:
+                findings.append(
+                    FormalFinding(
+                        kind="modal",
+                        verdict=(
+                            "Modal indisponible : aucune théorie modale n'a pu "
+                            "être formalisée puis validée sur ce corpus"
+                        ),
+                        detail=(
+                            "logique modale — traduction NL→modal vide ou solveur "
+                            "indisponible (OOM/absent) ; axe honnêtement absent, "
+                            "non silencieusement dégradé (#1279/#1019)"
+                        ),
+                    )
+                )
+
     dung_trace = _collect_dung_trace(state)
     if dung_trace.available and dung_trace.rejected_args:
         sems = sorted(set(dung_trace.rejected_args.values()))
