@@ -877,8 +877,17 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         inferences: List[str],
         confidence: float = 0.0,
         arg_id: Optional[str] = None,
+        message: Optional[str] = None,
     ) -> str:
-        """Add a first-order logic analysis result."""
+        """Add a first-order logic analysis result.
+
+        #1278 (Track B): ``message`` is an optional provenance field (mirrors the
+        PL sibling's ``message``). It carries the honest status — e.g.
+        ``unavailable:no-translation`` / ``unavailable:parse-fail`` — so downstream
+        consumers (restitution, measurement matrix) can confirm the entry is a
+        real solver decision OR an explicit degradation, never a silent
+        "trivially consistent sur vide" (#1019).
+        """
         fol_id = self._generate_id("fol", self.fol_analysis_results)
         entry = {
             "id": fol_id,
@@ -889,6 +898,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         }
         if arg_id:
             entry["arg_id"] = arg_id
+        if message:
+            entry["message"] = message
         self.fol_analysis_results.append(entry)
         state_logger.info(f"FOL analysis added: {fol_id} (consistent={consistent})")
         return fol_id

@@ -5540,25 +5540,16 @@ async def _invoke_fol_reasoning(
                 except Exception as e:
                     logger.debug(f"NL-to-logic FOL translation unavailable: {e}")
 
-        if not formulas:
-            # Final fallback: template-based FOL predicates
-            formulas = []
-            fol_metrics["template"] = len(args)
-            for i in range(len(args)):
-                formulas.append(f"Asserted(arg{i+1})")
-            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-            fallacies = (
-                fallacy_output.get("fallacies", [])
-                if isinstance(fallacy_output, dict)
-                else []
-            )
-            for j, f in enumerate(fallacies):
-                if isinstance(f, dict):
-                    target_idx = min(j, len(args) - 1) if args else 0
-                    formulas.append(f"Undermines(fallacy{j+1}, arg{target_idx+1})")
-                    formulas.append(f"Fallacious(arg{target_idx+1})")
-            if fallacies:
-                formulas.append("forall X: (Fallacious(X) -> !FullySupported(X))")
+        # Track B #1278 (anti-théâtre #1019): the template fabrication fallback
+        # that lived here (Asserted(argN), Undermines(fallacyN, argM),
+        # Fallacious(argM), ``forall X: Fallacious(X)->!FullySupported(X)``) is
+        # REMOVED. Those predicates are not translated from the source — they
+        # are fabricated to make the FOL axis "look alive". Downstream they
+        # produced a "consistent" verdict on meaningless formulas (or, when no
+        # arguments were extracted, an empty belief set that
+        # fol_handler.check_consistency reports as "trivially consistent sur
+        # vide"), masking NL→FOL starvation as a confident result. The honest
+        # fail-loud early-return below now handles the no-translation case.
 
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
@@ -5574,6 +5565,41 @@ async def _invoke_fol_reasoning(
             inferences.append(
                 f"Argument undermined by {f.get('type', f.get('fallacy_type', 'unknown'))} fallacy"
             )
+
+    # Track B #1278: gate fol_handler.py:830 from the caller. When NO real FOL
+    # formula was translated from the source arguments, do NOT hand an empty
+    # belief set to the prover — check_consistency treats the empty theory as
+    # "trivially consistent" (mathematically sound; see
+    # test_empty_belief_set_still_consistent), which downstream reads as a
+    # confident "FOL consistent" verdict on a corpus the pipeline failed to
+    # formalize. Fail loud: mark the axis unavailable with the honest reason.
+    # (#1019; coordinator R479: gate the empty case — do not fabricate FOL nor
+    # over-engineer the NL→FOL prompt.)
+    if not formulas:
+        logger.warning(
+            "FOL reasoning: no formulas translated from %d argument(s) — "
+            "marking axis unavailable:no-translation (not 'trivially "
+            "consistent sur vide', #1278/#1019).",
+            len(args),
+        )
+        return {
+            "formulas": [],
+            "fol_signature": [],
+            "fol_metadata": {},
+            "consistent": None,
+            "inferences": inferences,
+            "confidence": 0.0,
+            "message": (
+                "unavailable:no-translation — NL→FOL produced no valid "
+                "formulas from the source arguments; the belief set is empty "
+                "and is NOT reported as 'trivially consistent' (#1278/#1019)."
+            ),
+            "fol_status": "unavailable:no-translation",
+            "logic_type": "first_order",
+            "argument_count": len(args),
+            "fol_metrics": fol_metrics,
+            **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
+        }
 
     # Bind bridge outside the try so the except isolation loop can reference it
     # even if TweetyBridge import/construction itself raises (#697 Track HH).
@@ -5660,6 +5686,12 @@ async def _invoke_fol_reasoning(
                 else (0.0 if is_consistent is None else 0.4)
             ),
             "message": msg,
+            # Track B #1278: real formulas reached the prover. "decided" only
+            # when the prover returned a definite True/False; None stays
+            # "unverified" (degraded), never fabricated (#1019).
+            "fol_status": (
+                "decided" if is_consistent in (True, False) else "unverified"
+            ),
             "logic_type": "first_order",
             "argument_count": len(args),
             "fol_metrics": fol_metrics,
@@ -5738,6 +5770,11 @@ async def _invoke_fol_reasoning(
                     else (0.0 if iso_consistent is None else 0.4)
                 ),
                 "message": iso_msg,
+                # Track B #1278: real formulas survived per-formula isolation;
+                # "decided" only on a definite prover verdict (#1019).
+                "fol_status": (
+                    "decided" if iso_consistent in (True, False) else "unverified"
+                ),
                 "logic_type": "first_order",
                 "argument_count": len(args),
                 "isolation_retry": True,
@@ -5772,9 +5809,15 @@ async def _invoke_fol_reasoning(
             "consistent": None,
             "inferences": inferences,
             "confidence": 0.0,
+            "message": (
+                "unavailable:parse-fail — NL→FOL produced formulas but none "
+                "parsed into a verifiable belief set; no consistency verdict "
+                "(#1278/#1019)."
+            ),
             "logic_type": "first_order",
             "argument_count": len(args),
             "solver": "none",
+            "fol_status": "unavailable:parse-fail",
             "diagnostic": str(tweety_err),
             "fol_metrics": fol_metrics,
             **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),

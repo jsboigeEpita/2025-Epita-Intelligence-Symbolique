@@ -843,11 +843,24 @@ def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         confidence = 0.0
     # Preserve None (unverified) vs True (consistent) vs False (inconsistent).
     # bool(None) == False would silently conflate "unknown" with "inconsistent" (#1019).
+    fol_status = output.get("fol_status")
+    raw_msg = output.get("message")
+    # Track B #1278: surface the honest status token when the FOL axis is
+    # unavailable (no-translation / parse-fail), so the restitution can mark
+    # it honestly instead of silence or a fabricated "consistent" finding
+    # (#1019). Decided/unverified keep the prover's own message.
+    if isinstance(fol_status, str) and fol_status.startswith("unavailable:"):
+        status_message: Optional[str] = fol_status
+    elif isinstance(raw_msg, str):
+        status_message = raw_msg
+    else:
+        status_message = None
     state.add_fol_analysis_result(
         formulas,
         consistent if consistent is not None else None,
         inferences,
         float(confidence),
+        message=status_message,
     )
     # Store FOL signature metadata (#348)
     fol_signature = output.get("fol_signature", [])
