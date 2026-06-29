@@ -400,6 +400,37 @@ _LLM_CALL_TIMEOUT_S = _safe_float_env("LLM_CALL_TIMEOUT_S", 300.0)
 # DUNG_TIMEOUT_S=0 to disable timeout (not recommended).
 _DUNG_TIMEOUT_S = _safe_float_env("DUNG_TIMEOUT_S", 180.0)
 
+# #1290 — Bounded deterministic retry for LLM fact extraction. The LLM
+# occasionally emits malformed JSON (e.g. ``Expecting value (char 3033)``),
+# which previously fell straight through to a *silent* heuristic fallback
+# (``arguments:[]`` with no signal), starving every downstream layer
+# (FOL/Dung/Modal/Acte II/III) while looking like an empty corpus. A bounded
+# retry recovers transiently-malformed outputs (the LLM is nondeterministic —
+# a second call frequently parses cleanly); remaining failures surface an
+# explicit ``extraction_status="failed:<reason>"`` instead of a silent ``[]``.
+# Override via EXTRACTION_MAX_ATTEMPTS=3 (min 1).
+try:
+    _EXTRACTION_MAX_ATTEMPTS = max(
+        1, int(os.environ.get("EXTRACTION_MAX_ATTEMPTS", "3"))
+    )
+except (ValueError, TypeError):
+    _EXTRACTION_MAX_ATTEMPTS = 3
+
+# #1290 M1 (po-2023 diagnostic) — the malformed-JSON signature
+# ``Expecting value (char ~3033)`` is a *truncated output*, not bad escaping:
+# the LLM's JSON gets cut mid-generation when the default completion budget
+# runs out on a dense corpus. strict-JSON-mode forces the *format*, not the
+# *length*, so without an explicit ceiling a dense extraction still truncates
+# → fail-loud fires (good, levier 3) but the downstream stays starved (no
+# substance). Thread an explicit generous max_tokens so dense corpora are not
+# silently clipped at the default ceiling. This is the cause-root lever; the
+# retry (levier 2) only masks the truncation probabilistically. Override via
+# EXTRACTION_MAX_TOKENS=8192 (set 0 to omit the param entirely).
+try:
+    _EXTRACTION_MAX_TOKENS = int(os.environ.get("EXTRACTION_MAX_TOKENS", "8192") or 0)
+except (ValueError, TypeError):
+    _EXTRACTION_MAX_TOKENS = 8192
+
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
     """Single funnel for every LLM chat-completion call (#708 runaway guard).
@@ -4713,108 +4744,189 @@ def _normalize_fallacies_with_quotes(items: list[Any]) -> list[Dict[str, Any]]:
 async def _invoke_fact_extraction(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Extract verifiable claims and arguments from text using LLM with heuristic fallback."""
+    """Extract verifiable claims and arguments from text via LLM.
+
+    #1290 — reliability, not theatre: the LLM occasionally emits malformed JSON
+    (``Expecting value (char 3033)``). Previously that fell straight through to
+    a *silent* heuristic fallback (``arguments:[]`` with no signal), starving
+    every downstream layer (FOL/Dung/Modal/Acte II/III) while looking like an
+    empty corpus. Now: (1) strict-JSON-mode (``response_format`` json_object)
+    where the endpoint allows it, (2) a bounded deterministic retry on parse
+    failure, and (3) on total failure an explicit
+    ``extraction_status="failed:<reason>"`` instead of a bare ``[]``. The
+    heuristic fallback still supplies *claims* (it never fabricated
+    *arguments*), but the failure is now loud (#1019).
+    """
     import re
 
-    # Try LLM-based extraction first
-    try:
-        client, model_id = _get_openai_client()
+    last_reason = "no-client"
+    client, model_id = _get_openai_client()
 
-        if client:
-            det_params = _get_determinism_params()
-            # JJ #699: non-English dense text under-recalls (corpus B/DE extracts
-            # ~2 args vs ~7/5 for A/C-EN), starving every downstream layer. The
-            # English-only prompt gives the model no cue to analyze in the source
-            # language. Detect the language (reusing the tested heuristic) and add
-            # a language-aware instruction so non-English extraction reaches parity.
-            lang_clause = ""
-            try:
-                from argumentation_analysis.orchestration.conversational_orchestrator import (
-                    _detect_language,
-                )
-
-                _lang = _detect_language(input_text)
-                _lang_names = {"de": "German", "fr": "French", "en": "English"}
-                if _lang in _lang_names and _lang != "en":
-                    lang_clause = (
-                        f" The source text is in {_lang_names[_lang]}. Analyze it in "
-                        f"its original language and extract ALL distinct arguments and "
-                        f"claims with the SAME thoroughness as you would for English — "
-                        f"do not under-extract because the text is non-English. Keep "
-                        f"the 'text' descriptions in {_lang_names[_lang]}."
-                    )
-            except Exception:
-                lang_clause = ""
-            response = await _guarded_chat_completion(
-                client,
-                model=model_id,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are an expert argument analyst. Extract the key arguments "
-                            "and verifiable claims from the text. "
-                            "For each argument and claim, include the exact quote from the "
-                            "source text that supports it (verbatim, max 150 chars). "
-                            "Do NOT detect fallacies — that is handled by a separate specialist. "
-                            "Focus on: (1) identifying distinct argumentative positions, "
-                            "(2) extracting factual claims that can be verified, "
-                            "(3) noting rhetorical strategies used (without labeling them as fallacies). "
-                            + lang_clause
-                            + " Respond with ONLY a JSON object:\n"
-                            '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
-                            '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
-                            '"summary": "brief analysis summary"}'
-                        ),
-                    },
-                    {"role": "user", "content": input_text[:3000]},
-                ],
-                **det_params,
+    if client:
+        det_params = _get_determinism_params()
+        # JJ #699: non-English dense text under-recalls (corpus B/DE extracts
+        # ~2 args vs ~7/5 for A/C-EN), starving every downstream layer. The
+        # English-only prompt gives the model no cue to analyze in the source
+        # language. Detect the language (reusing the tested heuristic) and add
+        # a language-aware instruction so non-English extraction reaches parity.
+        lang_clause = ""
+        try:
+            from argumentation_analysis.orchestration.conversational_orchestrator import (
+                _detect_language,
             )
-            raw = response.choices[0].message.content or ""
-            # Parse JSON from response
-            text_content = raw.strip()
-            if "```json" in text_content:
-                text_content = text_content.split("```json")[1].split("```")[0]
-            elif "```" in text_content:
-                text_content = text_content.split("```")[1].split("```")[0]
-            start = text_content.find("{")
-            end = text_content.rfind("}") + 1
-            if start >= 0 and end > start:
-                data = json.loads(text_content[start:end])
-                # Normalize arguments/claims: accept both str and dict formats
-                raw_args = data.get("arguments", [])
-                raw_claims = data.get("claims", [])
-                raw_fallacies = data.get("fallacies", [])
-                arguments = _normalize_items_with_quotes(raw_args)
-                claims = _normalize_items_with_quotes(raw_claims)
-                fallacies = _normalize_fallacies_with_quotes(raw_fallacies)
-                _extract_result = {
-                    "arguments": arguments,
-                    "claims": claims,
-                    "fallacies": fallacies,
-                    "summary": data.get("summary", ""),
-                    "claim_count": len(claims),
-                    "argument_count": len(arguments),
-                    "source_length": len(input_text),
-                    "extraction_method": "llm",
-                }
-                # Trace entry for fact extraction specialist
-                _state = context.get("_state_object")
-                if _state is not None:
-                    _n_args = _extract_result.get("argument_count", 0)
-                    _n_claims = _extract_result.get("claim_count", 0)
-                    _state.add_trace_entry(
-                        phase="extract",
-                        agent="FactExtractor",
-                        reacts_to=[],
-                        summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.",
-                    )
-                return _extract_result
-    except Exception as e:
-        logger.warning(f"LLM fact extraction failed, falling back to heuristic: {e}")
 
-    # Heuristic fallback
+            _lang = _detect_language(input_text)
+            _lang_names = {"de": "German", "fr": "French", "en": "English"}
+            if _lang in _lang_names and _lang != "en":
+                lang_clause = (
+                    f" The source text is in {_lang_names[_lang]}. Analyze it in "
+                    f"its original language and extract ALL distinct arguments and "
+                    f"claims with the SAME thoroughness as you would for English — "
+                    f"do not under-extract because the text is non-English. Keep "
+                    f"the 'text' descriptions in {_lang_names[_lang]}."
+                )
+        except Exception:
+            lang_clause = ""
+        system_content = (
+            "You are an expert argument analyst. Extract the key arguments "
+            "and verifiable claims from the text. "
+            "For each argument and claim, include the exact quote from the "
+            "source text that supports it (verbatim, max 150 chars). "
+            "Do NOT detect fallacies — that is handled by a separate specialist. "
+            "Focus on: (1) identifying distinct argumentative positions, "
+            "(2) extracting factual claims that can be verified, "
+            "(3) noting rhetorical strategies used (without labeling them as fallacies). "
+            + lang_clause
+            + " Respond with ONLY a JSON object:\n"
+            '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
+            '"claims": [{"text": "claim description", "source_quote": "exact quote..."}], '
+            '"summary": "brief analysis summary"}'
+        )
+        # #1290 — strict-JSON-mode where the endpoint supports it. Some
+        # OpenRouter-backed models reject response_format; on such a rejection
+        # we retry without it (the parse-retry loop still applies).
+        use_json_mode = True
+        # #1290 M1 (po-2023 diagnostic) — explicit max_tokens so a dense
+        # corpus's JSON output is not silently truncated by the default
+        # completion ceiling (the root cause of ``Expecting value (char ~3033)``).
+        use_max_tokens = _EXTRACTION_MAX_TOKENS > 0
+        for attempt in range(1, _EXTRACTION_MAX_ATTEMPTS + 1):
+            try:
+                llm_kwargs: Dict[str, Any] = dict(det_params)
+                if use_json_mode:
+                    llm_kwargs["response_format"] = {"type": "json_object"}
+                if use_max_tokens:
+                    llm_kwargs["max_tokens"] = _EXTRACTION_MAX_TOKENS
+                response = await _guarded_chat_completion(
+                    client,
+                    model=model_id,
+                    messages=[
+                        {"role": "system", "content": system_content},
+                        {"role": "user", "content": input_text[:3000]},
+                    ],
+                    **llm_kwargs,
+                )
+                raw = response.choices[0].message.content or ""
+                data = _parse_json_from_llm(raw)
+                if data:
+                    # Normalize arguments/claims: accept both str and dict formats
+                    raw_args = data.get("arguments", [])
+                    raw_claims = data.get("claims", [])
+                    raw_fallacies = data.get("fallacies", [])
+                    arguments = _normalize_items_with_quotes(raw_args)
+                    claims = _normalize_items_with_quotes(raw_claims)
+                    fallacies = _normalize_fallacies_with_quotes(raw_fallacies)
+                    _extract_result = {
+                        "arguments": arguments,
+                        "claims": claims,
+                        "fallacies": fallacies,
+                        "summary": data.get("summary", ""),
+                        "claim_count": len(claims),
+                        "argument_count": len(arguments),
+                        "source_length": len(input_text),
+                        "extraction_method": "llm",
+                        "extraction_status": "ok",
+                    }
+                    # Trace entry for fact extraction specialist
+                    _state = context.get("_state_object")
+                    if _state is not None:
+                        _n_args = _extract_result.get("argument_count", 0)
+                        _n_claims = _extract_result.get("claim_count", 0)
+                        _state.add_trace_entry(
+                            phase="extract",
+                            agent="FactExtractor",
+                            reacts_to=[],
+                            summary=f"{_n_args} arguments et {_n_claims} claims identifiés — extraction LLM. Phase fondatrice du pipeline.",
+                        )
+                    return _extract_result
+                # No parseable JSON — retry (the LLM is nondeterministic; a
+                # fresh call frequently parses cleanly). Distinguish the two
+                # silent-fallback paths so the fail-loud reason is
+                # diagnostically useful (po-2023 diagnostic, chemin B):
+                #   - no JSON braces at all → "no-json-object" (the model
+                #     ignored the JSON instruction entirely — latent hole)
+                #   - braces present but unparseable → "unparseable-json"
+                #     (truncation M1 when max_tokens is still too low, or a
+                #     malformed structure)
+                has_braces = "{" in raw and "}" in raw
+                last_reason = (
+                    f"llm_{'unparseable-json' if has_braces else 'no-json-object'}"
+                    f"(attempt={attempt},len={len(raw)})"
+                )
+                logger.warning(
+                    f"fact extraction: LLM returned no parseable JSON "
+                    f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}, {last_reason})"
+                )
+            except Exception as e:
+                msg = str(e)
+                low = msg.lower()
+                # Config-rejection handling: response_format / max_tokens are
+                # not supported by every endpoint/model. Drop the offending
+                # param(s) and continue the retry loop (config issue, not a
+                # transient LLM failure — the retry is still worthwhile). Each
+                # param is dropped at most once, so the budget is not spent on
+                # the same config rejection repeatedly.
+                dropped = False
+                if use_json_mode and ("response_format" in low or "json_object" in low):
+                    logger.info(
+                        "fact extraction: response_format json_mode rejected by "
+                        "endpoint, retrying without it"
+                    )
+                    use_json_mode = False
+                    dropped = True
+                if use_max_tokens and (
+                    "max_tokens" in low or "max_completion_tokens" in low
+                ):
+                    logger.info(
+                        "fact extraction: max_tokens rejected by endpoint, "
+                        "retrying without it"
+                    )
+                    use_max_tokens = False
+                    dropped = True
+                if dropped:
+                    continue
+                last_reason = (
+                    f"llm_call_error(attempt={attempt},"
+                    f"type={type(e).__name__},msg={msg[:120]})"
+                )
+                logger.warning(
+                    f"fact extraction: LLM call failed "
+                    f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}): {e}"
+                )
+        logger.error(
+            f"LLM fact extraction FAILED after {_EXTRACTION_MAX_ATTEMPTS} attempts "
+            f"(last_reason={last_reason}) — falling back to heuristic claims with "
+            f"explicit extraction_status (#1290)"
+        )
+    else:
+        last_reason = "no-openai-client"
+        logger.warning("fact extraction: no OpenAI client configured")
+
+    # Heuristic fallback — supplies *claims* (sentence split) but NEVER
+    # fabricates *arguments* (arguments:[]). #1290: the failure is now loud via
+    # ``extraction_status`` rather than a silent ``[]`` masquerading as an empty
+    # corpus. Anti-pendule (#1019): reliability, not maquillage — we do NOT
+    # invent arguments here.
     sentences = re.split(r"(?<=[.!?])\s+", input_text.strip())
     claims = [s.strip() for s in sentences if len(s.strip()) > 20]  # type: ignore[misc]
     _heuristic_result = {
@@ -4826,6 +4938,7 @@ async def _invoke_fact_extraction(
         "argument_count": 0,
         "source_length": len(input_text),
         "extraction_method": "heuristic",
+        "extraction_status": f"failed:{last_reason}",
     }
     # Trace entry for heuristic fact extraction
     _state = context.get("_state_object")
@@ -4835,7 +4948,7 @@ async def _invoke_fact_extraction(
             phase="extract",
             agent="FactExtractor",
             reacts_to=[],
-            summary=f"0 arguments, {_n_claims} claims — extraction heuristique (fallback). Pipeline initialisé sans LLM.",
+            summary=f"0 arguments, {_n_claims} claims — extraction heuristique (fallback, extraction_status=failed). Pipeline initialisé sans LLM exploitable.",
         )
     return _heuristic_result
 

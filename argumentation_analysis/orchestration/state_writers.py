@@ -793,6 +793,15 @@ def _write_fact_extraction_to_state(
     # NOTE: Fallacy detection removed from fact_extraction (issue #179).
     # Fallacies are the sole responsibility of hierarchical_fallacy_detection,
     # which uses deep taxonomy navigation for precise identification.
+    # #1290 — surface the explicit extraction status so the pipeline and
+    # restitution can tell a genuine "LLM succeeded, found 0 args" from a
+    # "LLM failed after retries, heuristic-claims fallback". A silent ``[]``
+    # starves downstream (FOL/Dung/Modal/Acte II/III) masquerading as an empty
+    # corpus (#1019). Method "llm" + status "ok" = real extraction; method
+    # "heuristic" + status "failed:<reason>" = loud failure.
+    extraction_status = output.get("extraction_status")
+    if isinstance(extraction_status, str) and extraction_status:
+        state.add_task(f"[extraction_status] {extraction_status}")
     # Set summary as analysis task if present
     summary = output.get("summary", "")
     if summary and isinstance(summary, str):
