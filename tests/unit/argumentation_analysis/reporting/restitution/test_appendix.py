@@ -11,6 +11,8 @@ import json
 
 from argumentation_analysis.reporting.restitution.appendix import (
     _fol_axis_status,
+    _modal_axis_status,
+    _pl_axis_status,
     _provenance_counts,
     _strip_leak_keys,
     render_appendix,
@@ -144,6 +146,86 @@ class TestFolAxisStatusListShape:
         # Back-compat: the old Mapping shape still produces the old summary.
         status = _fol_axis_status({"consistent": True, "formulas": ["a", "b"]})
         assert status == {"consistent": True, "formules": 2}
+
+
+class TestModalAxisStatus:
+    """#1276 (po-2023 R487): the modal axis was reduced to a binary presence flag
+    even when SPASS decided ``valid=True`` (capstone 3/3). The appendix must
+    surface the real tri-state verdict (decided / degraded / unavailable),
+    mirroring ``axe_fol`` — never collapse None→False (#1019/#1279).
+    """
+
+    def test_list_decided_surfaces_verdict(self):
+        # capstone shape: a decided modal theory (valid=True via SPASS)
+        modal = [{"valid": True, "message": None}]
+        status = _modal_axis_status(modal)
+        assert status["verdict"] == "décidé"
+        assert status["consistantes"] == 1
+        assert status["inconsistantes"] == 0
+        assert status["verifiees"] == 1
+        assert "degradees" not in status
+
+    def test_list_mixed_decided_and_degraded_surfaces_degradees(self):
+        modal = [
+            {"valid": True, "message": None},
+            {"valid": None, "message": "unavailable:no-translation"},
+        ]
+        status = _modal_axis_status(modal)
+        assert status["verifiees"] == 1
+        assert status["degradees"] == 1  # the degraded theory is visible, not dropped
+
+    def test_list_degraded_only_is_honest_unavailable(self):
+        # ran but could not decide — NOT a bare "indisponible" (axis never ran)
+        modal = [{"valid": None, "message": "unavailable:no-solver"}]
+        assert _modal_axis_status(modal) == "indisponible (aucun verdict décidé — dégradé)"
+
+    def test_external_solver_mapping_shape(self):
+        # SPASS external-solver path (state_writers external_valid)
+        status = _modal_axis_status({"external_solver": "spass", "external_valid": True})
+        assert status == {"verdict": "décidé", "consistante": True}
+
+    def test_empty_and_none_are_indisponible(self):
+        assert _modal_axis_status([]) == "indisponible"
+        assert _modal_axis_status(None) == "indisponible"
+
+
+class TestPlAxisStatus:
+    """#1276 (po-2023 R487): the PL axis was flattened to "disponible" even when
+    PySAT decided satisfiability. Surface the verdict tri-state, mirroring
+    ``axe_fol``. Canonical key ``satisfiable`` (#1151), legacy ``consistent``.
+    """
+
+    def test_list_decided_surfaces_verdict(self):
+        pl = [
+            {"satisfiable": True},
+            {"satisfiable": False},
+        ]
+        status = _pl_axis_status(pl)
+        assert status["verdict"] == "décidé"
+        assert status["satisfiables"] == 1
+        assert status["insatisfiables"] == 1
+        assert status["verifiees"] == 2
+        assert "degradees" not in status
+
+    def test_legacy_consistent_key_fallback(self):
+        pl = [{"consistent": True}]
+        status = _pl_axis_status(pl)
+        assert status["satisfiables"] == 1
+
+    def test_list_mixed_decided_and_degraded(self):
+        pl = [{"satisfiable": True}, {"satisfiable": None}]
+        status = _pl_axis_status(pl)
+        assert status["verifiees"] == 1
+        assert status["degradees"] == 1
+
+    def test_mapping_without_verdict_stays_disponible(self):
+        # back-compat: a non-empty mapping with no parseable verdict is still
+        # honestly "disponible" (data present), not a fabricated verdict
+        assert _pl_axis_status({"something": 1}) == "disponible"
+
+    def test_empty_and_none_are_indisponible(self):
+        assert _pl_axis_status([]) == "indisponible"
+        assert _pl_axis_status(None) == "indisponible"
 
 
 class TestLeakStripping:
