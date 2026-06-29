@@ -105,6 +105,94 @@ def _fol_axis_status(fol: Any) -> Any:
     return "indisponible"
 
 
+def _modal_axis_status(modal: Any) -> Any:
+    """Coarse Modal-axis status, mirroring :func:`_fol_axis_status`.
+
+    #1276 (po-2023 R487): the appendix reduced the modal axis to a bare
+    "disponible"/"indisponible" presence flag, so a genuinely *decided* modal
+    axis (``valid=True`` via SPASS — capstone 3/3) was under-reported as merely
+    "available", hiding formal work actually done while ``axe_fol`` surfaced its
+    verdict richly. Surface the real tri-state verdict instead. ``valid`` is
+    tri-state (True/False/None) — never collapse None→False (#1019/#1279). State
+    stores modal results either as a per-belief-set *list* (capstone shape, the
+    shape Acte II reads) or as an external-solver *Mapping* (SPASS path,
+    state_writers ``external_valid``); both are read here. ``valid=True`` =
+    consistante (aligned with Acte II's reader).
+    """
+    if isinstance(modal, Mapping):
+        v = modal.get("external_valid", modal.get("valid"))
+        if v is True or v is False:
+            return {"verdict": "décidé", "consistante": v}
+        if v is None and ("external_valid" in modal or "external_degraded" in modal):
+            return "indisponible (aucun verdict décidé — dégradé)"
+        return "disponible" if modal else "indisponible"
+    if isinstance(modal, list) and modal:
+        decided = [
+            r for r in modal if isinstance(r, dict) and r.get("valid") in (True, False)
+        ]
+        degraded = [
+            r for r in modal if isinstance(r, dict) and r.get("valid") is None
+        ]
+        if decided:
+            status: Dict[str, Any] = {
+                "verdict": "décidé",
+                "consistantes": sum(1 for r in decided if r.get("valid") is True),
+                "inconsistantes": sum(1 for r in decided if r.get("valid") is False),
+                "verifiees": len(decided),
+            }
+            if degraded:
+                status["degradees"] = len(degraded)
+            return status
+        return "indisponible (aucun verdict décidé — dégradé)"
+    return "indisponible"
+
+
+def _pl_verdict_of(result: Any) -> Optional[bool]:
+    """Strict PL satisfiability verdict, or ``None`` when unverified (#1019).
+
+    Canonical key is ``satisfiable`` (#1151 Finding C), with ``consistent`` as
+    the legacy fallback. ``None`` (unverified) is never collapsed to ``False``.
+    """
+    if not isinstance(result, dict):
+        return None
+    sat = result.get("satisfiable")
+    if sat is None:
+        sat = result.get("consistent")
+    return sat if isinstance(sat, bool) else None
+
+
+def _pl_axis_status(pl: Any) -> Any:
+    """Coarse PL-axis status, mirroring :func:`_fol_axis_status`.
+
+    #1276 (po-2023 R487): same under-reporting as the modal axis — a decided PL
+    axis (PySAT) was flattened to "disponible". Surface the satisfiability
+    verdict tri-state instead. ``satisfiable``/``consistent`` is tri-state;
+    ``None`` (unverified) is never collapsed to ``False`` (#1019).
+    """
+    if isinstance(pl, Mapping):
+        v = _pl_verdict_of(pl)
+        if v is True or v is False:
+            return {"verdict": "décidé", "satisfiable": v}
+        return "disponible" if pl else "indisponible"
+    if isinstance(pl, list) and pl:
+        decided = [r for r in pl if _pl_verdict_of(r) in (True, False)]
+        degraded = [
+            r for r in pl if isinstance(r, dict) and _pl_verdict_of(r) is None
+        ]
+        if decided:
+            status: Dict[str, Any] = {
+                "verdict": "décidé",
+                "satisfiables": sum(1 for r in decided if _pl_verdict_of(r) is True),
+                "insatisfiables": sum(1 for r in decided if _pl_verdict_of(r) is False),
+                "verifiees": len(decided),
+            }
+            if degraded:
+                status["degradees"] = len(degraded)
+            return status
+        return "indisponible (aucun verdict décidé — dégradé)"
+    return "indisponible"
+
+
 def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     """Honest provenance summary: counts + verdict flags, no corpus content.
 
@@ -125,12 +213,8 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
 
     # formal axes — report presence + a coarse status, not the raw belief sets
     counts["axe_fol"] = _fol_axis_status(_g("fol_analysis_results"))
-    counts["axe_pl"] = (
-        "disponible" if _g("propositional_analysis_results") else "indisponible"
-    )
-    counts["axe_modale"] = (
-        "disponible" if _g("modal_analysis_results") else "indisponible"
-    )
+    counts["axe_pl"] = _pl_axis_status(_g("propositional_analysis_results"))
+    counts["axe_modale"] = _modal_axis_status(_g("modal_analysis_results"))
     counts["axe_dung"] = "disponible" if _g("dung_frameworks") else "indisponible"
     counts["axe_aspic"] = "disponible" if _g("aspic_results") else "indisponible"
 
