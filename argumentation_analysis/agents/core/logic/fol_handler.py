@@ -943,10 +943,22 @@ class FOLHandler:
                 # Fail-loud: degraded, not "consistent".
                 return None, "Degraded: no Tweety initializer; no consistency verdict."
 
-        except (ValueError, Exception) as e:
+        except Exception as e:
+            # #1290 (anti-theater #1019/#1278): an exception here means the
+            # check could NOT run — most often a Tweety parse failure
+            # ("Erreur de parsing Tweety") raised while building the belief set.
+            # Returning ``False`` fabricated a *decided* "inconsistent" verdict
+            # from a parse error: corpus_C's snapshot then carried
+            # ``consistent=False`` and Acte II narrated a real "inconsistance"
+            # that never happened. Per this method's own contract (docstring:
+            # degraded => None), surface the honest unknown so downstream
+            # consumers cannot mistake "could not check" for "is inconsistent".
             error_msg = str(e)
             self.logger.error(f"FOL consistency check failed: {error_msg}")
-            return False, f"FOL consistency check error: {error_msg}"
+            return (
+                None,
+                f"Degraded: FOL consistency check error ({error_msg}); no verdict.",
+            )
 
     async def compare_fol_backends(self, belief_set_input) -> dict:
         """Run ALL available FOL backends on the same belief set and compare.

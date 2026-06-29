@@ -283,6 +283,29 @@ class TestFOLCheckConsistencyFailLoud:
         is_consistent, _ = result
         assert is_consistent is True
 
+    def test_parse_error_returns_degraded_not_false(self, handler):
+        """#1290: a Tweety parse failure must NOT be reported as a *decided*
+        ``inconsistent`` verdict. The outer catch-all used to return ``False``,
+        so corpus_C's snapshot carried ``consistent=False`` with message
+        "FOL consistency check error: Erreur de parsing Tweety…" and Acte II
+        narrated a real "inconsistance" that never happened. Per the method
+        contract (degraded => None), surface the honest unknown instead."""
+        # Parsing the belief-set string raises (the corpus_C failure mode).
+        with patch.object(
+            handler,
+            "create_belief_set_from_string",
+            side_effect=ValueError("Erreur de parsing Tweety: org.tweetyproject..."),
+        ):
+            result = handler.check_consistency("malformed :: fol :: string")
+
+        is_consistent, msg = result
+        assert is_consistent is None, (
+            "A parse error is not a decided 'inconsistent' verdict — must be "
+            "None (degraded), never fabricate False (#1019/#1278)."
+        )
+        assert is_consistent is not False
+        assert "degraded" in msg.lower()
+
 
 # ──── FP-3 #1192 DoD: modal signature fix ────
 
