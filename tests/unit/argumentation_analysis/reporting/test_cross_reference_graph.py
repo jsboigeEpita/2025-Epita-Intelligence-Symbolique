@@ -21,8 +21,8 @@ def _make_mock_state():
         "arg_2": {"text": "Third argument about health"},
     }
     state.identified_fallacies = {
-        "fal_0": {"fallacy_type": "ad_hominem", "target_arg_id": "arg_0"},
-        "fal_1": {"fallacy_type": "straw_man", "target_arg_id": "arg_1"},
+        "fal_0": {"fallacy_type": "ad_hominem", "target_argument_id": "arg_0"},
+        "fal_1": {"fallacy_type": "straw_man", "target_argument_id": "arg_1"},
     }
     state.jtms_beliefs = {
         "jtms_0": {"name": "climate_is_real", "valid": True, "justifications": []},
