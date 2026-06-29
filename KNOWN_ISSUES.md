@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-05-04
+Last updated: 2026-06-29
 
 ---
 
@@ -77,6 +77,49 @@ Last updated: 2026-05-04
 
 ---
 
+## Resolved — Formal Robustness, Restitution Honesty & Infra (May–June 2026)
+
+Architectural hardening landed across several epics. Entries below are verified against `main` (`b6dcf927`) and the merged PRs; statuses asserted are firsthand-checked, not assumed.
+
+### Test-Infra: `scripts` Namespace Collision Aborted Full-Suite Collection
+- **Identified**: 2026-06-29 | **Resolved**: 2026-06-29
+- **Symptom**: `pytest tests/ --collect-only` aborted (exit 2, `Interrupted: errors during collection`) on 5 modules `ModuleNotFoundError: No module named 'scripts.*'`. Passed in isolation, failed full-suite (first-import-wins poisoning).
+- **Root cause**: a phantom vestigial `tests/scripts/__init__.py` (0 importers, mass-commit `865140b7`) rebound the bare top-level `scripts` package during prepend-mode collection.
+- **Fix**: PR #1294 (`fafd0bc1`) removed the phantom, added the missing `scripts/analysis/__init__.py`, deleted the dead `[tool.pytest.ini_options]` block from `pyproject.toml` (overridden by `pytest.ini` — see below), and reconciled CLAUDE.md to name `pytest.ini` the single source of truth. `pythonpath` unchanged (CI-safe).
+- **Verified**: `pytest tests/ --collect-only` → exit 0, 14212 collected (firsthand 2026-06-29).
+- **Status**: RESOLVED
+
+### Determinism: 3 `.env` Files With Divergent OpenAI Keys
+- **Identified**: 2026-06-29 | **Resolved**: 2026-06-29
+- **Symptom**: 401 on all LLM call-sites — `find_dotenv()` + `override=False` pinned a dead key from a sub-directory `.env` (first-import-wins) over the valid root key.
+- **Fix**: PR #1296 (`cf7eda6f`) — `environment_manager.py` detects the repo root via a `pyproject.toml` sentinel, loads the root `.env` with `override=True` (root always wins), and emits a masked WARNING when a secondary `.env` diverges (no secret in logs). Sub-`.env` files preserved (may serve other services — anti-pendule, no deletion).
+- **Status**: RESOLVED
+
+### Pytest Markers `debuglog` / `use_mock_numpy` Not Registered
+- **Symptom**: `PytestUnknownMarkWarning` (cosmetic).
+- **Fix**: both markers now declared in `pytest.ini` (`markers` section).
+- **Verified**: `grep` of `pytest.ini` shows `use_mock_numpy` + `debuglog` registered (firsthand 2026-06-29).
+- **Status**: RESOLVED
+
+### Starlette Tests: Event Loop Contamination in Full Suite
+- **Symptom**: 18 ERRORs in `test_interface_web_starlette.py` running the full suite; all 18 pass in isolation.
+- **Root cause**: tests reused the module-level `routes` list with a shared `StaticFiles` ASGI sub-app accumulating lifecycle state across long sessions.
+- **Fix**: tests build fresh API-only routes per fixture (verified: `Build fresh API routes for testing` helper present), importing only endpoint functions, excluding the StaticFiles mount. Same fix applied to `test_dashboard.py`.
+- **Related**: Issue #276
+- **Status**: RESOLVED *(was previously mislabeled under Active Issues)*
+
+### Formal Robustness — Reasoners Decide-or-Fail-Loud (Epic #1191)
+- **What changed**: the logic axes no longer fabricate verdicts. PL routes to PySAT and persists state; FOL is decided on Windows (EProver E2.0, with Mace4/Prover9 selectable + cross-validated) and honest-degraded on Linux; Modal parses end-to-end and decides via vendored SPASS (EML→eml adapter) instead of OOM-ing `SimpleMlReasoner`; DL/DeLP/CF2 decide or fail-loud. The invariant throughout (#1019): a formal verdict is `True`/`False` (decided) or `None` (degraded) — **never** collapsed `None`→`False`.
+- **Refs**: #1191 (closed, DoD satisfied by #1291/#1292), #1234/#1239 (modal SPASS), #1243/#1245 (FOL multi-prover), #1278/#1286 (FOL fail-loud), #1279/#1288 (modal fail-loud).
+- **Status**: RESOLVED (epic closed)
+
+### Restitution Honesty & Reliability (Epic #1276 / #1290)
+- **What changed**: the spectacular 3-act restitution no longer primes or fabricates. Acte II/III prompt builders carry honesty guardrails — no claim that "Tweety confirms inconsistance" unless the FOL axis actually reports it (the appendix `axe_fol` is tri-state: decided / degraded / unavailable, degraded surfaced not silently dropped); internal identifiers (`gv.winner`/`gv.method`) are described by role, never echoed raw into reader-facing prose (parity guardrail across **both** Acte II and Acte III builders — #1297 + #1298). LLM fact-extraction is strict-JSON + bounded-retry + fail-loud with explicit `max_tokens` (no silent `[]`).
+- **Refs**: #1290/#1291 (extraction reliability), #1292 (FOL prose/annex coherence), #1297 (3 findings), #1298 (Acte III jargon parity). Epic #1276 at user-gate (4/4 worker readings PASSE).
+- **Status**: components RESOLVED; epic closure pending user gate.
+
+---
+
 ## Active Issues
 
 ### JVM "Access Violation" Warning Under pytest (cosmetic)
@@ -103,17 +146,6 @@ Last updated: 2026-05-04
 - **Status**: Stable — skip count remains low and consistent across runs
 - **Related**: #28, #30, #94, #112
 
-### Starlette Tests: Event Loop Contamination in Full Suite — RESOLVED
-- **Symptom**: 18 ERRORs in `test_interface_web_starlette.py` when running full suite, but all 18 pass in isolation
-- **Root cause**: Tests reused the module-level `routes` list containing a shared `StaticFiles` ASGI sub-app instance that accumulated state across long test sessions. The `TestClient` context manager triggers ASGI lifecycle events on the shared instance, causing fixture setup failures after 3+ hours.
-- **Fix**: Tests now build fresh API-only routes per fixture, importing only endpoint functions (not the module-level `routes`/`app`). The StaticFiles mount (not tested in unit tests) is excluded. Same fix applied to `test_dashboard.py`.
-- **Related**: Issue #276
-
-### Pytest Markers Not Registered (cosmetic warnings)
-- **Symptom**: `PytestUnknownMarkWarning` for `debuglog`, `use_mock_numpy` markers
-- **Impact**: None — tests run correctly despite warnings
-- **Fix Needed**: Add custom markers to `pytest.ini`
-
 ### gpt-5-mini Constraints
 - No `temperature` parameter (hardcoded to 1.0)
 - No `max_tokens` (use `max_completion_tokens`, but omit entirely via SK 1.37 to avoid empty responses)
@@ -129,14 +161,14 @@ Last updated: 2026-05-04
 
 ---
 
-## Test Statistics (as of 2026-05-04)
+## Test Statistics (as of 2026-06-29)
 
-- **Full suite**: 2845+ tests passed, 4 skipped (CI mode with `--disable-jvm-session`)
+- **Full suite**: 14212 tests collected, exit 0 (collection verified firsthand 2026-06-29, post-#1294). Earlier May-2026 baseline reported 2845+ passed / 4 skipped in CI mode (`--disable-jvm-session`); the pass count has not been re-measured at the new collection size.
 - **Spectacular pipeline**: 75+ golden tests (17 phases, 0 failures on golden fixture)
 - **Epic B pedagogy**: 53+ tests (HTML report, Jupyter notebook, scenario fixtures, slide deck, README quickstart)
 - **Epic A hardening**: 11 property tests (ATMS/JTMS invariants, requires `hypothesis` dep), profiling tests
 - **Epic C discourse mining**: 71+ tests (privacy plumbing, batch runner, pattern aggregator, report generator, enrichment workflow)
-- **CI**: GREEN on main (`b6e36025`)
+- **CI**: GREEN on main (`b6dcf927`)
 - **Conda env**: `projet-is` (primary) or `projet-is-roo-new` (latest deps)
 - **Known flaky**: robustness adversarial tests (~87 tests, resource exhaustion after 1.5h runs). Starlette tests resolved.
 - **Property tests**: Require `hypothesis` package (not installed by default — `pip install hypothesis`)
