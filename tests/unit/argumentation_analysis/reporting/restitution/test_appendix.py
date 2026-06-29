@@ -105,10 +105,13 @@ class TestFolAxisStatusListShape:
         status = _fol_axis_status(fol)
         assert status == "indisponible (aucun verdict décidé — dégradé)"
 
-    def test_list_decided_ignores_degraded_entries(self):
-        # corpus_C post-fix: one genuinely consistent + one parse-fail degraded.
-        # The degraded entry drops out of the decided counts — no fabricated
-        # "inconsistante" from a parse error.
+    def test_list_decided_surfaces_degraded_entries(self):
+        # corpus_B/C post-fix: one genuinely consistent + one parse-fail degraded.
+        # #1276 (po-2023 R487): the degraded entry stays OUT of the decided
+        # counts (no fabricated "inconsistante" from a parse error) but MUST be
+        # surfaced as ``degradees`` — otherwise ``verifiees: 1`` reads as full
+        # coverage while a second theory in fact degraded (silent omission #1019,
+        # the annex contradicting the prose's tri-state honesty #1292).
         fol = [
             {"consistent": True, "message": None},
             {
@@ -121,6 +124,17 @@ class TestFolAxisStatusListShape:
         assert status["consistantes"] == 1
         assert status["inconsistantes"] == 0
         assert status["verifiees"] == 1
+        assert status["degradees"] == 1  # the degraded theory is now visible
+
+    def test_list_all_decided_has_no_degradees_key(self):
+        # corpus_A: both consistent, no degraded — the ``degradees`` key must be
+        # absent (no noise on fully-decided corpora).
+        fol = [
+            {"consistent": True, "message": None},
+            {"consistent": True, "message": None},
+        ]
+        status = _fol_axis_status(fol)
+        assert "degradees" not in status
 
     def test_empty_and_none_are_indisponible(self):
         assert _fol_axis_status([]) == "indisponible"
