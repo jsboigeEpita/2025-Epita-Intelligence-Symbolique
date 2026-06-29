@@ -302,6 +302,37 @@ class TestBuildEvidence:
         assert "DÉLIBÉRATION COLLECTIVE" in prompt
         assert "opt_X" in prompt
 
+    def test_governance_jargon_leak_guarded(self):
+        """Regression for po-2023 finding R487 (Acte III half) — the conclusion
+        prose leaked raw internal identifiers (« agent_1 » / « social_choice »).
+
+        The Acte III prompt mirrors the Acte II guardrail: the governance data
+        line must flag its identifiers as INTERNAL and instruct a role-based
+        description, and the CONSIGNE must carry the general anti-jargon
+        guardrail. (Without this fix the Acte III leak survived the Acte II-only
+        fix — surfaced by the R488 validation re-run.) FB-34 source-opacity is
+        orthogonal — describing by role deanonymises nothing.
+        """
+        state = _state(
+            governance_decisions=[
+                {
+                    "method": "social_choice",
+                    "winner": "agent_1",
+                    "scores": {"agent_1": 0.9},
+                }
+            ],
+        )
+        ev = build_act3_evidence(state)
+        prompt = build_act3_prompt(ev)
+        # Data line flags the id as internal and instructs role-based prose.
+        assert "identifiant interne" in prompt.lower()
+        assert "rôle" in prompt.lower()
+        # CONSIGNE carries the general anti-jargon guardrail.
+        assert "JARGON INTERNE INTERDIT" in prompt
+        assert "snake_case" in prompt
+        # FB-34 source-opacity explicitly preserved.
+        assert "déanonymise aucune source" in prompt.lower()
+
     def test_debate_scheme_grounding_g8(self):
         """G8 (#1184): a scheme-grounded exchange surfaces scheme + CQ.
 

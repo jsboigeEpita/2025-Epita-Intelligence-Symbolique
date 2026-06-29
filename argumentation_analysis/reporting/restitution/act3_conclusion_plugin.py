@@ -897,8 +897,11 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     gv = evidence.governance_verdict
     if gv is not None:
         deliberation_lines.append(
-            f"  - GOUVERNANCE : méthode « {gv.method} » — l'option {gv.winner} "
-            "sort gagnante du vote social-choice. (options opaques, FB-34.)"
+            f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », l'option "
+            f"d'identifiant interne « {gv.winner} » sort gagnante du vote "
+            "social-choice. DÉCRIS-la par son rôle dans la prose (p.ex. "
+            "« l'argument arrivé en tête »), ne recopie PAS l'identifiant "
+            "technique brut ni le nom de méthode snake_case. (options opaques, FB-34.)"
         )
     if evidence.debate_exchanges:
         for i, ex in enumerate(evidence.debate_exchanges, start=1):
@@ -965,6 +968,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  au service du jugement du lecteur, jamais en sous-section isolée.\n"
         "- Respecte STRICTEMENT le plafond de claim de la bande : ne formule rien\n"
         "  au-delà de ce qu'elle autorise.\n"
+        "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un\n"
+        "  identifiant technique brut — token snake_case (agent_1, social_choice,\n"
+        "  modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne.\n"
+        "  Ils sont opaques pour le lecteur non-technicien à qui ce récit\n"
+        "  s'adresse. Décris-les par leur RÔLE en français courant (« l'argument\n"
+        "  arrivé en tête », « la méthode de vote employée »). L'opacité des\n"
+        "  sources (FB-34) reste préservée : décrire par rôle ne\n"
+        "  déanonymise aucune source.\n"
         "- La conclusion doit VARIER selon le contenu réel ci-dessus : pas de\n"
         "  prose générique recyclable.\n"
         "- Rédige en français, markdown léger. 300-600 mots selon la richesse.\n"
