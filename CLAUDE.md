@@ -81,7 +81,7 @@ pytest tests/ -m "belief_set" -v         # Logic belief set tests
 
 **Async mode**: `asyncio_mode = auto` — no need for `@pytest.mark.asyncio`.
 
-**Python path**: pytest resolves from `.`, `argumentation_analysis`, and `project_core` (configured in `pyproject.toml`).
+**Python path**: pytest config lives in **`pytest.ini`** (the single source of truth — `pythonpath = . src`; `argumentation_analysis` and `project_core` are reachable as subdirs of `.`). Do not assume `pyproject.toml`'s `[tool.pytest.ini_options]` applies: pytest discovers exactly one config file and `pytest.ini` wins, so any `[tool.pytest.ini_options]` section is dead/overridden (removed in #1293 to kill the drift).
 
 **DLL load order on Windows**: `conftest.py` imports torch/transformers BEFORE jpype to avoid `WinError 182` crashes. Do not reorder these imports.
 
