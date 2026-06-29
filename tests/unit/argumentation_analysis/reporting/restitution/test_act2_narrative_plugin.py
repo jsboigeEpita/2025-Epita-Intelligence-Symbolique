@@ -788,3 +788,62 @@ class TestVirtuousMode:
         assert result.is_virtuous is True
         assert result.status == "woven"
         assert "act2_virtuous_mode" in result.degraded
+
+
+class TestTweetyInconsistanceGapRegression:
+    """Regression for po-2023 finding R487 — «Tweety inconsistency gap».
+
+    When FOL formal_findings says 'consistantes' (0 inconsistantes), the LLM
+    prompt MUST NOT contain the phrasing 'confirme l'inconsistance' as a
+    ready-to-use template that the model can copy regardless of the actual
+    verdict (#1019 theatre — prose claiming inconsistance when annex shows
+    0 inconsistantes).
+
+    build_act2_prompt is deterministic (no LLM) so we pin the prompt contract
+    directly: the removed example phrasing ('confirme l'inconsistance de cette
+    inférence') must not appear in the prompt, replaced by a guardrail that
+    instructs the model to cite the verified verdict verbatim.
+    """
+
+    def _fol_consistent_state(self) -> SimpleNamespace:
+        """State where all FOL results are consistent (0 inconsistantes)."""
+        return _state(
+            identified_arguments={
+                "arg_1": "Un argument défendu par un raisonnement causal.",
+                "arg_2": "Une affirmation appuyée par des preuves factuelles.",
+            },
+            fol_analysis_results=[
+                {"consistent": True, "message": None},
+                {"consistent": True, "message": None},
+            ],
+        )
+
+    def test_prompt_does_not_contain_inconsistance_template_phrasing(self):
+        """The priming phrasing 'confirme l'inconsistance de cette inférence'
+        must be absent from the prompt — it was the root cause of the finding."""
+        ev = build_act2_evidence(self._fol_consistent_state())
+        prompt = build_act2_prompt(ev)
+        assert "confirme l'inconsistance de cette inférence" not in prompt, (
+            "The priming template 'confirme l'inconsistance de cette inférence' "
+            "must not appear in the prompt when FOL shows only consistent results "
+            "(po-2023 finding R487 regression)"
+        )
+
+    def test_prompt_contains_guardrail_against_fabricated_inconsistance(self):
+        """The prompt must include the explicit prohibition against inverting the
+        formal verdict."""
+        ev = build_act2_evidence(self._fol_consistent_state())
+        prompt = build_act2_prompt(ev)
+        assert "INTERDIT" in prompt and "inconsistant" in prompt, (
+            "Prompt must contain an explicit INTERDIT guardrail against "
+            "fabricating inconsistance when the formal verdict says consistant"
+        )
+
+    def test_formal_block_with_consistent_fol_says_consistantes(self):
+        """Verify the formal_block passed to the prompt correctly says
+        'consistantes' (not 'inconsistantes') when all FOL are consistent."""
+        ev = build_act2_evidence(self._fol_consistent_state())
+        fol = next((f for f in ev.formal_findings if f.kind == "fol"), None)
+        assert fol is not None
+        assert "consistante" in fol.verdict.lower()
+        assert "inconsistante" not in fol.verdict.lower()
