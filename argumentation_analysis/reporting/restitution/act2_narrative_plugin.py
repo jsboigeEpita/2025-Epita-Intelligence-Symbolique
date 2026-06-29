@@ -797,9 +797,16 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         else:
             # Track B #1278: no decided FOL verdict — surface the honest
             # unavailability instead of silence. An entry with consistent=None
-            # and message "unavailable:<raison>" means the pipeline tried but
-            # could not formalize the source (no translation / parse-fail).
-            # The reader must see that the axis is honestly absent, never a
+            # means the pipeline tried but could not decide. Two degraded
+            # message conventions exist and BOTH must surface honest-absent:
+            #   - "unavailable:<raison>" — caller-side gate (no translation /
+            #     empty belief set, #1278).
+            #   - "Degraded: ..." — solver-side degraded (parse-fail / reasoner
+            #     unavailable, #1290 fol_handler fix). Without this branch a
+            #     100%-parse-fail corpus would emit NO FOL finding at all — a
+            #     silent omission (#1019) reintroduced by the very fix that
+            #     stopped fabricating a False verdict.
+            # The reader must see the axis is honestly absent, never a
             # "trivially consistent sur vide" fabrication (#1019).
             unavailable = [
                 r
@@ -807,7 +814,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 if isinstance(r, dict)
                 and r.get("consistent") is None
                 and isinstance(r.get("message"), str)
-                and str(r.get("message")).startswith("unavailable:")
+                and (
+                    str(r.get("message")).startswith("unavailable:")
+                    or str(r.get("message")).startswith("Degraded:")
+                )
             ]
             if unavailable:
                 findings.append(

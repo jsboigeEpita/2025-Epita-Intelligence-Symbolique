@@ -212,6 +212,58 @@ class TestBuildEvidence:
         assert "inconsistantes" in pl.verdict
 
 
+class TestFolHonestAbsent:
+    """#1278/#1290: when FOL produced no *decided* verdict, the axis must be
+    surfaced as honestly absent — never silently dropped (#1019). BOTH degraded
+    message conventions count: 'unavailable:' (caller-side gate #1278) AND
+    'Degraded:' (solver-side parse-fail / reasoner-unavailable, #1290)."""
+
+    def test_unavailable_prefix_surfaces_fol_indisponible(self):
+        state = _state(
+            fol_analysis_results=[
+                {"consistent": None, "message": "unavailable:no-translation"},
+            ],
+        )
+        ev = build_act2_evidence(state)
+        fol = next((f for f in ev.formal_findings if f.kind == "fol"), None)
+        assert fol is not None
+        assert "indisponible" in fol.verdict.lower()
+
+    def test_degraded_prefix_surfaces_fol_indisponible(self):
+        # #1290: a 100%-parse-fail corpus yields consistent=None with a
+        # "Degraded: FOL consistency check error (...)" message. Without the
+        # Degraded-prefix branch this emitted NO fol finding (silent #1019).
+        state = _state(
+            fol_analysis_results=[
+                {
+                    "consistent": None,
+                    "message": "Degraded: FOL consistency check error (parse); no verdict.",
+                },
+            ],
+        )
+        ev = build_act2_evidence(state)
+        fol = next((f for f in ev.formal_findings if f.kind == "fol"), None)
+        assert (
+            fol is not None
+        ), "Degraded solver verdict must surface honest-absent, not be dropped"
+        assert "indisponible" in fol.verdict.lower()
+
+    def test_decided_entry_takes_precedence_over_degraded(self):
+        # One decided + one degraded → the axis is DECIDED (the degraded entry
+        # does not downgrade a real verdict).
+        state = _state(
+            fol_analysis_results=[
+                {"consistent": True, "message": None},
+                {"consistent": None, "message": "Degraded: parse error"},
+            ],
+        )
+        ev = build_act2_evidence(state)
+        fol = next((f for f in ev.formal_findings if f.kind == "fol"), None)
+        assert fol is not None
+        assert "consistante" in fol.verdict.lower()
+        assert "indisponible" not in fol.verdict.lower()
+
+
 class TestReaderWriterContracts:
     """#1153: prove each reader↔writer schema fix (Finding A/C/D + note(a) + §5).
 
