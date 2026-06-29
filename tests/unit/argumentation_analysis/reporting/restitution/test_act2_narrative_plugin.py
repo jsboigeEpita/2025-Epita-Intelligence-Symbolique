@@ -788,3 +788,120 @@ class TestVirtuousMode:
         assert result.is_virtuous is True
         assert result.status == "woven"
         assert "act2_virtuous_mode" in result.degraded
+
+
+class TestTweetyInconsistanceGapRegression:
+    """Regression for po-2023 finding R487 — «Tweety inconsistency gap».
+
+    When FOL formal_findings says 'consistantes' (0 inconsistantes), the LLM
+    prompt MUST NOT contain the phrasing 'confirme l'inconsistance' as a
+    ready-to-use template that the model can copy regardless of the actual
+    verdict (#1019 theatre — prose claiming inconsistance when annex shows
+    0 inconsistantes).
+
+    build_act2_prompt is deterministic (no LLM) so we pin the prompt contract
+    directly: the removed example phrasing ('confirme l'inconsistance de cette
+    inférence') must not appear in the prompt, replaced by a guardrail that
+    instructs the model to cite the verified verdict verbatim.
+    """
+
+    def _fol_consistent_state(self) -> SimpleNamespace:
+        """State where all FOL results are consistent (0 inconsistantes)."""
+        return _state(
+            identified_arguments={
+                "arg_1": "Un argument défendu par un raisonnement causal.",
+                "arg_2": "Une affirmation appuyée par des preuves factuelles.",
+            },
+            fol_analysis_results=[
+                {"consistent": True, "message": None},
+                {"consistent": True, "message": None},
+            ],
+        )
+
+    def test_prompt_does_not_contain_inconsistance_template_phrasing(self):
+        """The priming phrasing 'confirme l'inconsistance de cette inférence'
+        must be absent from the prompt — it was the root cause of the finding."""
+        ev = build_act2_evidence(self._fol_consistent_state())
+        prompt = build_act2_prompt(ev)
+        assert "confirme l'inconsistance de cette inférence" not in prompt, (
+            "The priming template 'confirme l'inconsistance de cette inférence' "
+            "must not appear in the prompt when FOL shows only consistent results "
+            "(po-2023 finding R487 regression)"
+        )
+
+    def test_prompt_contains_guardrail_against_fabricated_inconsistance(self):
+        """The prompt must include the explicit prohibition against inverting the
+        formal verdict."""
+        ev = build_act2_evidence(self._fol_consistent_state())
+        prompt = build_act2_prompt(ev)
+        assert "INTERDIT" in prompt and "inconsistant" in prompt, (
+            "Prompt must contain an explicit INTERDIT guardrail against "
+            "fabricating inconsistance when the formal verdict says consistant"
+        )
+
+    def test_formal_block_with_consistent_fol_says_consistantes(self):
+        """Verify the formal_block passed to the prompt correctly says
+        'consistantes' (not 'inconsistantes') when all FOL are consistent."""
+        ev = build_act2_evidence(self._fol_consistent_state())
+        fol = next((f for f in ev.formal_findings if f.kind == "fol"), None)
+        assert fol is not None
+        assert "consistante" in fol.verdict.lower()
+        assert "inconsistante" not in fol.verdict.lower()
+
+
+class TestGovernanceJargonLeakRegression:
+    """Regression for po-2023 finding R487 — internal-jargon leak in the prose.
+
+    The render leaked raw internal identifiers into the reader-facing Acte II
+    prose (« l'analyste-LLM a classé **agent_1** sous **social_choice** »): the
+    governance block injected ``gv.winner``/``gv.method`` verbatim and the LLM
+    echoed them. Those snake_case tokens are opaque to the non-technical reader
+    the spectacular restitution targets.
+
+    build_act2_prompt is deterministic, so we pin the prompt contract: the
+    governance data line must flag its identifiers as INTERNAL and instruct a
+    role-based description, and the CONSIGNE must carry a general anti-jargon
+    guardrail. (FB-34 source-opacity is orthogonal — describing by role
+    deanonymises nothing.)
+    """
+
+    def _governance_state(self) -> SimpleNamespace:
+        # Mirror the leaked shape: a numbered-agent winner + snake_case method.
+        return _state(
+            identified_arguments={"arg_1": "Une thèse appuyée par un raisonnement."},
+            governance_decisions=[
+                {
+                    "method": "social_choice",
+                    "winner": "agent_1",
+                    "scores": {"agent_1": 0.9},
+                    "extraction_method": "llm",
+                }
+            ],
+        )
+
+    def test_governance_block_flags_winner_id_as_internal(self):
+        """The governance data line must label the raw winner id as an INTERNAL
+        identifier and instruct a role-based description, not a bare echo."""
+        ev = build_act2_evidence(self._governance_state())
+        prompt = build_act2_prompt(ev)
+        assert "identifiant interne" in prompt.lower()
+        # The instruction to describe by role (not echo the raw id) is present.
+        assert "rôle" in prompt.lower()
+        assert "ne recopie pas" in prompt.lower() or "ne recopie PAS" in prompt
+
+    def test_consigne_contains_anti_jargon_guardrail(self):
+        """The static CONSIGNE must carry the general anti-jargon guardrail so
+        the LLM is told not to echo snake_case tokens / numbered-agent ids."""
+        ev = build_act2_evidence(self._governance_state())
+        prompt = build_act2_prompt(ev)
+        assert "JARGON INTERNE INTERDIT" in prompt
+        assert "snake_case" in prompt
+        assert "agent_1" in prompt  # cited as a concrete example to avoid
+
+    def test_anti_jargon_guardrail_preserves_source_opacity(self):
+        """The guardrail must explicitly state it does not weaken FB-34 source
+        opacity (describing a winner by role deanonymises no source)."""
+        ev = build_act2_evidence(self._governance_state())
+        prompt = build_act2_prompt(ev)
+        assert "fb-34" in prompt.lower()
+        assert "déanonymise aucune source" in prompt.lower()

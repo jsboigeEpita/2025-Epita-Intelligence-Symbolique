@@ -76,15 +76,29 @@ def _fol_axis_status(fol: Any) -> Any:
             for r in fol
             if isinstance(r, dict) and r.get("consistent") in (True, False)
         ]
+        degraded = [
+            r for r in fol if isinstance(r, dict) and r.get("consistent") is None
+        ]
         if decided:
             consistent = sum(1 for r in decided if r.get("consistent") is True)
             inconsistent = sum(1 for r in decided if r.get("consistent") is False)
-            return {
+            status: Dict[str, Any] = {
                 "verdict": "décidé",
                 "consistantes": consistent,
                 "inconsistantes": inconsistent,
                 "verifiees": len(decided),
             }
+            # #1276 (po-2023 R487): when a corpus mixes decided + degraded
+            # theories (e.g. corpus_B/C: 1 consistent + 1 parse-fail), the
+            # degraded entry must be SURFACED, not silently dropped — otherwise
+            # ``verifiees: 1`` reads as full coverage while a second theory in
+            # fact degraded. The degraded entries stay OUT of the
+            # consistent/inconsistent counts (they are not decided — never
+            # collapse None→False, #1019/#1278) but are counted explicitly so
+            # the annex matches the prose's tri-state honesty (#1292).
+            if degraded:
+                status["degradees"] = len(degraded)
+            return status
         # No decided entry — honestly degraded/unavailable, not "indisponible"
         # (which reads as "the axis never ran"). It ran but could not decide.
         return "indisponible (aucun verdict décidé — dégradé)"
