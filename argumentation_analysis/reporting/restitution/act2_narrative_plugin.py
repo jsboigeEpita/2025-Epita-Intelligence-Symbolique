@@ -1041,14 +1041,20 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 "PAS comme une caution de légitimité procédurale indépendante."
             )
             gov_lead = (
-                f"  - GOUVERNANCE (évaluation modèle) : l'analyste-LLM classe "
-                f"{gv.winner} en tête sous la méthode « {gv.method} ». "
+                f"  - GOUVERNANCE (évaluation modèle) : l'analyste-LLM classe en "
+                f"tête l'option d'identifiant interne « {gv.winner} » sous la "
+                f"méthode interne « {gv.method} ». DÉCRIS cette option par son "
+                f"RÔLE dans la prose (p.ex. « l'argument arrivé en tête »), ne "
+                f"recopie PAS l'identifiant technique brut ni le nom de méthode "
+                f"snake_case. "
             )
         else:
             gov_origin = ""
             gov_lead = (
-                f"  - GOUVERNANCE : sous la méthode « {gv.method} », l'option "
-                f"{gv.winner} sort gagnante du vote social-choice. "
+                f"  - GOUVERNANCE : sous la méthode interne « {gv.method} », "
+                f"l'option d'identifiant « {gv.winner} » sort gagnante du vote "
+                f"social-choice. DÉCRIS-la par son rôle dans la prose, ne recopie "
+                f"pas l'identifiant technique brut. "
             )
         if gov_origin:
             deliberation_lines.append(gov_origin)
@@ -1115,6 +1121,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "extrait, pas comme une vérification indépendante.\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
+        "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un "
+        "identifiant technique brut — token snake_case (agent_1, social_choice, "
+        "modal_kb…), nom d'agent numéroté, ou nom de méthode/modèle interne. "
+        "Ils sont opaques et illisibles pour le lecteur non-technicien à qui ce "
+        "récit s'adresse. Décris-les par leur RÔLE en français courant "
+        "(« l'argument arrivé en tête », « la méthode de vote employée »). "
+        "L'opacité des sources (FB-34) reste préservée : décrire par rôle ne "
+        "déanonymise aucune source.\n"
         "- Le récit doit VARIER selon le contenu réel ci-dessus : pas de prose\n"
         "  générique recyclable. Ce que tu écris découle des données.\n"
         "- Rédige en français, markdown léger (titres thématiques en ###). "

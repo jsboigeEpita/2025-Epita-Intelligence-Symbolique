@@ -847,3 +847,61 @@ class TestTweetyInconsistanceGapRegression:
         assert fol is not None
         assert "consistante" in fol.verdict.lower()
         assert "inconsistante" not in fol.verdict.lower()
+
+
+class TestGovernanceJargonLeakRegression:
+    """Regression for po-2023 finding R487 — internal-jargon leak in the prose.
+
+    The render leaked raw internal identifiers into the reader-facing Acte II
+    prose (« l'analyste-LLM a classé **agent_1** sous **social_choice** »): the
+    governance block injected ``gv.winner``/``gv.method`` verbatim and the LLM
+    echoed them. Those snake_case tokens are opaque to the non-technical reader
+    the spectacular restitution targets.
+
+    build_act2_prompt is deterministic, so we pin the prompt contract: the
+    governance data line must flag its identifiers as INTERNAL and instruct a
+    role-based description, and the CONSIGNE must carry a general anti-jargon
+    guardrail. (FB-34 source-opacity is orthogonal — describing by role
+    deanonymises nothing.)
+    """
+
+    def _governance_state(self) -> SimpleNamespace:
+        # Mirror the leaked shape: a numbered-agent winner + snake_case method.
+        return _state(
+            identified_arguments={"arg_1": "Une thèse appuyée par un raisonnement."},
+            governance_decisions=[
+                {
+                    "method": "social_choice",
+                    "winner": "agent_1",
+                    "scores": {"agent_1": 0.9},
+                    "extraction_method": "llm",
+                }
+            ],
+        )
+
+    def test_governance_block_flags_winner_id_as_internal(self):
+        """The governance data line must label the raw winner id as an INTERNAL
+        identifier and instruct a role-based description, not a bare echo."""
+        ev = build_act2_evidence(self._governance_state())
+        prompt = build_act2_prompt(ev)
+        assert "identifiant interne" in prompt.lower()
+        # The instruction to describe by role (not echo the raw id) is present.
+        assert "rôle" in prompt.lower()
+        assert "ne recopie pas" in prompt.lower() or "ne recopie PAS" in prompt
+
+    def test_consigne_contains_anti_jargon_guardrail(self):
+        """The static CONSIGNE must carry the general anti-jargon guardrail so
+        the LLM is told not to echo snake_case tokens / numbered-agent ids."""
+        ev = build_act2_evidence(self._governance_state())
+        prompt = build_act2_prompt(ev)
+        assert "JARGON INTERNE INTERDIT" in prompt
+        assert "snake_case" in prompt
+        assert "agent_1" in prompt  # cited as a concrete example to avoid
+
+    def test_anti_jargon_guardrail_preserves_source_opacity(self):
+        """The guardrail must explicitly state it does not weaken FB-34 source
+        opacity (describing a winner by role deanonymises no source)."""
+        ev = build_act2_evidence(self._governance_state())
+        prompt = build_act2_prompt(ev)
+        assert "fb-34" in prompt.lower()
+        assert "déanonymise aucune source" in prompt.lower()
