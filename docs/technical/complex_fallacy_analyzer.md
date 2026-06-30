@@ -1,50 +1,35 @@
-# Analyseur de Sophismes Complexes
+# Analyseur de sophismes complexes (`EnhancedComplexFallacyAnalyzer`)
 
 ## Objectif
-Analyse les structures argumentatives complexes et identifie les erreurs logiques imbriquées.
+Analyse la structure globale d'un ensemble d'arguments : identifie les patrons structurels de chaque argument, les relations (support, contradiction) entre arguments, puis évalue la cohérence globale et les vulnérabilités potentielles.
+
+## Chemin d'import
+```python
+from argumentation_analysis.plugins.analysis_tools.logic.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
+```
 
 ## Utilisation
 ```python
-from argumentation_analysis.tools import EnhancedComplexFallacyAnalyzer
+from argumentation_analysis.plugins.analysis_tools.logic.complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 
-analyzer = EnhancedComplexFallacyAnalyzer(depth=3, strict_mode=False)
-result = analyzer.analyze(text="Texte à analyser")
-print(result.complex_fallacies)  # Liste des sophismes imbriqués
-print(result.dependency_tree)  # Arbre des dépendances logiques
+# La construction requiert un détecteur de sophismes (AbstractFallacyDetector) injecté.
+analyzer = EnhancedComplexFallacyAnalyzer(fallacy_detector=mon_detecteur)
+result = analyzer.analyze_argument_structure(
+    arguments=["Argument 1.", "Argument 2.", "Argument 3."],
+    context="général",  # optionnel
+)
+print(result)  # Dict[str, Any] : structures, relations, cohérence, vulnérabilités
 ```
 
-## Paramètres
-| Paramètre | Type | Description | Valeur par défaut |
-|-----------|------|-------------|-------------------|
-| `depth` | int | Profondeur d'analyse des structures | 2 |
-| `strict_mode` | bool | Mode strict pour détection rigoureuse | False |
-| `language_model` | str | Modèle LLM à utiliser | "default" |
+## Constructeur
+`EnhancedComplexFallacyAnalyzer(fallacy_detector: AbstractFallacyDetector)` — un détecteur de sophismes **requis**.
 
-## Résultats
-- Arbre des dépendances logiques
-- Liste des sophismes imbriqués avec niveaux
-- Score de complexité logique
-- Suggestions de simplification
+## Méthodes principales
+- `analyze_argument_structure(arguments: list[str], context: str = "général") -> dict`
+- `detect_composite_fallacies(...)`
+- `analyze_inter_argument_coherence(...)`
 
-## Exemple de Diagramme
-```mermaid
-graph TD
-    A[Argument principal] --> B[Argument secondaire 1]
-    A --> C[Argument secondaire 2]
-    B --> D[Sophisme de type X]
-    C --> E[Sophisme de type Y]
-    D --> F[Sous-sophisme de type Z]
-    classDef complex fill:#ffcc99,stroke:#000;
-    classDef simple fill:#cce5ff,stroke:#000;
-    class D,E,F complex
-```
+## Résultat
+`Dict[str, Any]` riche : structures identifiées, relations entre arguments, évaluation de cohérence, vulnérabilités potentielles. Source de vérité : `argumentation_analysis/plugins/analysis_tools/logic/complex_fallacy_analyzer.py`.
 
-## Extension
-Pour ajouter un nouveau niveau d'analyse :
-```python
-class CustomDepthAnalyzer:
-    def analyze_depth(self, structure):
-        # Implémentation personnalisée
-        return depth_score, explanations
-
-analyzer.add_depth_analyzer(CustomDepthAnalyzer())
+> Note : ce document et `enhanced_complex_fallacy_analyzer.md` décrivent la même classe (`EnhancedComplexFallacyAnalyzer`).
