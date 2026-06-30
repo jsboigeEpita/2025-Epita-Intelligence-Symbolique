@@ -12,20 +12,20 @@ graph TD
 
 ## Étendre les Outils Existants
 
-### Ajouter un Critère de Cohérence
+### Étendre l'évaluateur de cohérence
 ```python
-from argumentation_analysis.tools import CoherenceEvaluator
+from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
 
-class CustomCoherenceCriterion:
-    def evaluate(self, segment1, segment2):
+# ArgumentCoherenceEvaluator évalue 5 axes internes (logique, thématique,
+# structurelle, rhétorique, épistémique). Pour étendre l'évaluation, sous-classer
+# et surcharger l'une des méthodes _evaluate_*_coherence, ou ajouter un nouvel axe
+# dans coherence_types + la méthode _evaluate_* correspondante.
+# Note : il n'existe pas d'API publique add_criterion() ; l'évaluation est
+# actuellement simulée (scores pré-définis — voir la docstring du module).
+class CustomArgumentCoherenceEvaluator(ArgumentCoherenceEvaluator):
+    def _evaluate_logical_coherence(self, arguments, semantic_analysis):
         # Implémentation personnalisée
-        score = self._calculate_score(segment1, segment2)
-        explanation = self._generate_explanation(segment1, segment2)
-        return score, explanation
-
-# Enregistrement du critère
-evaluator = CoherenceEvaluator()
-evaluator.add_criterion(CustomCoherenceCriterion())
+        return super()._evaluate_logical_coherence(arguments, semantic_analysis)
 ```
 
 ### Créer un Nouveau Type de Sophisme
