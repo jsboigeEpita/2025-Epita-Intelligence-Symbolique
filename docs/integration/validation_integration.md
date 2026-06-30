@@ -118,7 +118,10 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
    from argumentiation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
    
    detector = ContextualFallacyDetector()
-   results = detector.analyze(text, context_info)
+   results = detector.detect_contextual_fallacies(
+       argument="Argument à analyser",
+       context_description="Contexte du débat",
+   )
    ```
 
 2. **Visualiseur de structure d'arguments** : Utilisez cet outil pour générer des représentations visuelles des structures argumentatives.
@@ -126,8 +129,11 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
    from argumentiation_analysis.agents.tools.analysis.new.argument_structure_visualizer import ArgumentStructureVisualizer
    
    visualizer = ArgumentStructureVisualizer()
-   visualization = visualizer.visualize(argument_data)
-   visualization.save("argument_structure.png")
+   result = visualizer.visualize_argument_structure(
+       arguments=["Argument 1", "Argument 2", "Argument 3"],
+       output_format="html",
+       output_path="argument_structure",  # sauvegarde les fichiers si fourni
+   )
    ```
 
 3. **Évaluateur de cohérence d'arguments** : Utilisez cette fonctionnalité pour évaluer la cohérence logique entre différentes parties d'un argument.
@@ -135,7 +141,11 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
    from argumentiation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
    
    evaluator = ArgumentCoherenceEvaluator()
-   coherence_score = evaluator.evaluate(argument)
+   result = evaluator.evaluate_coherence(
+       arguments=["Argument 1", "Argument 2"],
+       context="Contexte de l'analyse",
+   )
+   coherence_score = result["overall_coherence"]
    ```
 
 ### Utilisation du système de communication amélioré
@@ -143,19 +153,17 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
    ```python
    from argumentiation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
    
-   channel = HierarchicalChannel(
-       name="strategic_tactical",
-       upper_level="strategic",
-       lower_level="tactical"
-   )
+   # channel_id est requis ; config (dict) est optionnel
+   channel = HierarchicalChannel(channel_id="strategic_tactical")
    ```
 
 2. **Utilisation des adaptateurs d'agents** :
    ```python
    from argumentiation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter import PLAgentAdapter
    
-   adapter = PLAgentAdapter(agent_config)
-   result = adapter.process_request(request_data)
+   adapter = PLAgentAdapter(name="PLAgent")
+   # process_task est asynchrone et exige initialize(kernel, llm_service_id, project_context) au préalable
+   result = await adapter.process_task(task)
    ```
 
 ### Utilisation des scripts utilitaires
