@@ -29,41 +29,71 @@ evaluator.add_criterion(CustomCoherenceCriterion())
 ```
 
 ### Créer un Nouveau Type de Sophisme
+
+Il n'existe pas d'API `register_detector()` de type plug-in. Deux voies réelles :
+
+**1. Sous-classer un détecteur existant** et surcharger sa logique de règles :
+
 ```python
-from argumentation_analysis.tools import ContextualFallacyDetector
+from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+
+class CustomFallacyDetector(ContextualFallacyDetector):
+    def detect_contextual_fallacies(self, argument, context_description, contextual_factors=None):
+        # Règle personnalisée, puis complétion par la détection de base
+        result = super().detect_contextual_fallacies(argument, context_description, contextual_factors)
+        # ...ajouter ou modifier les détections dans result...
+        return result
+
+detector = CustomFallacyDetector()
+result = detector.detect_contextual_fallacies(
+    argument="Argument à analyser",
+    context_description="Contexte du débat",
+)
+```
+
+**2. Exposer la détection comme un plugin Semantic Kernel** (méthode recommandée
+pour l'intégration au registre) via `@kernel_function`, puis l'enregistrer :
+
+```python
+from semantic_kernel.functions import kernel_function
+from argumentation_analysis.core.capability_registry import CapabilityRegistry
 
 class CustomFallacyPlugin:
-    def detect(self, context):
+    @kernel_function(description="Détecte un sophisme personnalisé")
+    def detect(self, argument: str) -> dict:
         # Logique de détection personnalisée
-        if self._is_fallacious(context):
-            return "custom_fallacy", 0.95
-        return None, 0.0
+        return {"fallacy": "custom_fallacy", "confidence": 0.95}
 
-# Enregistrement du plugin
-detector = ContextualFallacyDetector()
-detector.register_detector(CustomFallacyPlugin())
+registry = CapabilityRegistry()
+registry.register_plugin(name="custom_fallacy", plugin_class=CustomFallacyPlugin)
 ```
 
 ## Créer un Nouvel Outil
 
 ### Structure de Base
-```python
-from argumentation_analysis.core import BaseRhetoricalTool
 
-class MyNewTool(BaseRhetoricalTool):
+> Les classes `BaseRhetoricalTool` / `RhetoricalResults` et le `tool_registry`
+> décrits dans les versions précédentes n'existent pas dans le code. Le mécanisme
+> d'extension réel est l'architecture Lego : un plugin Semantic Kernel
+> (`@kernel_function`) enregistré dans `CapabilityRegistry`.
+
+```python
+from semantic_kernel.functions import kernel_function
+from argumentation_analysis.core.capability_registry import CapabilityRegistry
+
+class MyNewToolPlugin:
     def __init__(self, param1, param2):
-        super().__init__()
         self.param1 = param1
         self.param2 = param2
 
-    def analyze(self, text):
+    @kernel_function(description="Analyse personnalisée")
+    def analyze(self, text: str) -> dict:
         # Implémentation de l'analyse
-        results = self._process(text)
-        return RhetoricalResults(results)
+        return {"score": 0.8, "details": "..."}
 
-# Enregistrement de l'outil
-from argumentation_analysis.registry import tool_registry
-tool_registry.register("my_new_tool", MyNewTool)
+# Enregistrement dans le registre (Lego architecture)
+registry = CapabilityRegistry()
+registry.register_plugin(name="my_new_tool", plugin_class=MyNewToolPlugin)
 ```
 
 ## Bonnes Pratiques
@@ -85,13 +115,12 @@ graph LR
 ```
 
 ## Structure de Répertoire
-```
+
+```text
 argumentation_analysis/
-├── tools/
-│   ├── __init__.py
-│   ├── coherence.py
-│   ├── fallacy.py
-│   └── custom_tool.py  ← Nouvel outil
-└── tests/
-    └── tools/
-        └── test_custom_tool.py  ← Tests associés
+├── agents/                     # BaseAgent + agents (logic, extract, informal, synthesis…)
+│   └── tools/analysis/new/     # Évaluateurs/détecteurs (coherence, fallacy…)
+├── core/                       # CapabilityRegistry, communication, llm_service, jvm_setup
+├── orchestration/              # unified_pipeline, workflow_dsl, hierarchical/
+└── plugins/                    # plugins SK (quality, fallacy, governance)
+```

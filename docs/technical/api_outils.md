@@ -1,119 +1,102 @@
-# Référence API - Outils d'Analyse Rhétorique
+# Référence API — Analyse Rhétorique
 
-## Architecture Modulaire
-```mermaid
-classDiagram
-    class RhetoricalAnalysisSystem {
-        +configure_tool(tool_name, params)
-        +create_pipeline(tools_list)
-        +analyze(text)
-    }
-    
-    class StrategicLayer {
-        +plan_analysis(text)
-        +allocate_tools(pipeline)
-    }
-    
-    class TacticalLayer {
-        +coordinate_tools()
-        +resolve_conflicts(results)
-    }
-    
-    class OperationalLayer {
-        +execute_tool(tool, text)
-        +format_results(data)
-    }
-    
-    StrategicLayer <|--> RhetoricalAnalysisSystem
-    TacticalLayer <|--> StrategicLayer
-    OperationalLayer <|--> TacticalLayer
+> ⚠️ **Note d'exactitude.** Les versions précédentes de cette page décrivaient une
+> classe `RhetoricalAnalysisSystem` (`configure_tool` / `create_pipeline` / `analyze`)
+> ainsi que des modules `tools/`, `BaseRhetoricalTool`, `RhetoricalResults`,
+> `StrategicLayer`, `TacticalLayer`, `OperationalLayer`, `MermaidVisualizer`,
+> `LLMValidator`, etc. **Aucun de ces éléments n'existe dans le code.**
+> Cette page documente les vrais points d'entrée. Le code source reste la source
+> de vérité (`argumentation_analysis/`).
+
+## Hiérarchie d'agents (3 tiers)
+
+```text
+Strategic   → Orchestrators (workflows multi-étapes)
+Tactical    → Coordinators (interactions entre agents)
+Operational → Base agents (Sherlock, Watson, FOL, Modal, PL, détection de sophismes)
 ```
 
-## Modules Principaux
+Source : `argumentation_analysis/agents/core/`, `docs/architecture/`.
 
-### Module Core
+## Point d'entrée principal — `run_unified_analysis`
+
 ```python
-class BaseRhetoricalTool:
-    def analyze(self, text: str) -> RhetoricalResults:
-        pass
+import asyncio
+from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
 
-class RhetoricalResults:
-    def __init__(self, score: float, explanations: List[str], visualization: str):
-        self.score = score
-        self.explanations = explanations
-        self.visualization = visualization
+async def main():
+    results = await run_unified_analysis(
+        text="Texte à analyser",
+        workflow_name="standard",   # "light" | "standard" | "full"
+    )
+    print(results)
+
+asyncio.run(main())
 ```
 
-### Module Strategic
+Signature vérifiée dans `argumentation_analysis/orchestration/unified_pipeline.py` :
+
 ```python
-class StrategicPlanner:
-    def create_analysis_plan(self, text: str) -> AnalysisPlan:
-        """Génère un plan d'analyse basé sur la structure du texte"""
-        
-class AnalysisPlan:
-    def __init__(self, steps: List[AnalysisStep]):
-        self.steps = steps
+async def run_unified_analysis(
+    text: str,
+    workflow_name: str = "standard",
+    registry: Optional[CapabilityRegistry] = None,
+    custom_workflow: Optional[WorkflowDefinition] = None,
+    ...
+) -> Dict[str, Any]
 ```
 
-### Module Tactical
+## Architecture Lego — `CapabilityRegistry`
+
+Le registre central câble agents, plugins et services. `UnifiedPipeline.setup_registry()`
+enregistre automatiquement tous les composants.
+
 ```python
-class TacticalResolver:
-    def resolve_tool_chain(self, plan: AnalysisPlan) -> List[ToolExecution]:
-        """Crée une chaîne d'exécution des outils"""
-        
-class ToolExecution:
-    def __init__(self, tool_name: str, parameters: Dict[str, Any]):
-        self.tool_name = tool_name
-        self.parameters = parameters
+from argumentation_analysis.core.capability_registry import CapabilityRegistry
+
+registry = CapabilityRegistry()
+registry.register_agent(name="my_agent", agent_class=MyAgent)
+registry.register_plugin(name="my_plugin", plugin_class=MyPlugin)
+registry.register_service(name="my_service", service_class=MyService)
+
+# Recherche par capacité (find_*_for_capability)
+agent = registry.find_agent_for_capability("...")
 ```
 
-### Module Operational
+Source : `argumentation_analysis/core/capability_registry.py`.
+
+## Écrire un nouvel outil / plugin
+
+Le mécanisme d'extension réel est un **plugin Semantic Kernel** (méthode décorée
+`@kernel_function`) enregistré dans `CapabilityRegistry`. Il n'existe pas de
+classe de base `BaseRhetoricalTool` ni de `tool_registry`.
+
 ```python
-class MermaidVisualizer:
-    def generate(self, results: RhetoricalResults) -> str:
-        """Convertit les résultats en diagramme Mermaid"""
-        
-class LLMValidator:
-    def validate_extracts(self, text: str) -> ValidationReport:
-        """Valide les extraits avec un modèle LLM"""
+from semantic_kernel.functions import kernel_function
+from argumentation_analysis.core.capability_registry import CapabilityRegistry
+
+class MyToolPlugin:
+    @kernel_function(description="Analyse personnalisée")
+    def analyze(self, text: str) -> dict:
+        return {"score": 0.8, "details": "..."}
+
+registry = CapabilityRegistry()
+registry.register_plugin(name="my_tool", plugin_class=MyToolPlugin)
 ```
 
-## Améliorations Techniques
-| Limitation Initiale | Solution Implémentée |
-|---------------------|---------------------|
-| Gestion des contextes | Fenêtrage contextuel dynamique |
-| Performance | Exécution asynchrone des outils |
-| Extensibilité | Système de plug-ins modulaire |
-| Robustesse | Validation des extraits avec LLM |
+Voir aussi les plugins existants : `argumentation_analysis/plugins/`
+(`quality_scoring_plugin.py`, `french_fallacy_plugin.py`, `governance_plugin.py`).
 
-## Exemple d'API Utilisation
-```python
-from argumentation_analysis import RhetoricalAnalysisSystem
+## Autres points d'entrée
 
-system = RhetoricalAnalysisSystem()
-system.configure_tool("coherence_evaluator", {"threshold": 0.7})
+| Point d'entrée | Localisation | Usage |
+|----------------|--------------|-------|
+| API REST FastAPI | `api/main.py` | 7 routers, 25+ routes, WebSocket streaming |
+| CLI multi-mode | `argumentation_analysis/run_orchestration.py` | `--mode pipeline\|conversational\|legacy` |
+| Web UI Starlette | `interface_web/app.py` | Frontend React + API d'analyse |
 
-plan = StrategicPlanner().create_analysis_plan("Texte à analyser")
-executions = TacticalResolver().resolve_tool_chain(plan)
+## Workflows pré-construits
 
-results = OperationalLayer().execute_tool_chain(executions)
-visualization = MermaidVisualizer().generate(results)
-```
-
-## Structure des Répertoires
-```
-argumentation_analysis/
-├── orchestration/
-│   ├── strategic/
-│   │   ├── planner.py
-│   │   └── allocator.py
-│   ├── tactical/
-│   │   ├── coordinator.py
-│   │   └── resolver.py
-│   └── operational/
-│       ├── adapters/
-│       └── manager.py
-└── tools/
-    ├── coherence.py
-    ├── fallacy.py
-    └── visualizer.py
+`UnifiedPipeline` expose 3 workflows : `light`, `standard`, `full`
+(plus `collaborative`), construits déclarativement via `WorkflowDSL`
+(`argumentation_analysis/orchestration/workflow_dsl.py`).
