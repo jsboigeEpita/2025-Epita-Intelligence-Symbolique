@@ -1,6 +1,6 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-06-29
+Last updated: 2026-06-30
 
 ---
 
@@ -151,6 +151,13 @@ Architectural hardening landed across several epics. Entries below are verified 
 - No `max_tokens` (use `max_completion_tokens`, but omit entirely via SK 1.37 to avoid empty responses)
 - **Related**: #22 (closed)
 
+### CI test suite silently skipped — green badge misleading
+- **Symptom**: The `automated-tests` job is `success` (green) on every run, but runs **zero tests**. The README CI badge advertises a pipeline that does not, in fact, test.
+- **Root cause**: `.github/workflows/ci.yml` gates the pytest step on `if: env.API_KEYS_CONFIGURED == 'true'`. `secrets.OPENAI_API_KEY` is not configured on this repo → the step is `[skipped]` (confirmed on runs 2026-06-21 → 2026-06-29). The conditional design is intentional since `241e3395` (2025-07-24, don't burn LLM budget on every push); the defect is the **signaling** — a green badge reads as "tests passed", not "tests skipped".
+- **Impact**: Every merged PR (May–June 2026) was validated only by `mypy strict` (black/flake8 are `continue-on-error`). Latent test regressions are invisible to the gate. A local full run does report failures, but the raw count is **inflated by environment gaps** (e.g. `pyfakefs` declared in `requirements.txt` but not installed in `projet-is-roo-new`) — the true bug count is lower and must be re-measured after a full `pip install -r requirements.txt`.
+- **Workaround**: Run tests locally before trusting any PR (`conda run -n projet-is-roo-new pytest <path> -q`). Only `mypy strict` is a real CI gate today.
+- **Related**: #1303
+
 ### 4 Overlapping Web Applications → 3 (partially resolved)
 - `api/main.py` (FastAPI + JVM bootstrap)
 - `argumentation_analysis/api/main.py` (FastAPI + JTMS plugins)
@@ -161,14 +168,14 @@ Architectural hardening landed across several epics. Entries below are verified 
 
 ---
 
-## Test Statistics (as of 2026-06-29)
+## Test Statistics (as of 2026-06-30)
 
 - **Full suite**: 14212 tests collected, exit 0 (collection verified firsthand 2026-06-29, post-#1294). Earlier May-2026 baseline reported 2845+ passed / 4 skipped in CI mode (`--disable-jvm-session`); the pass count has not been re-measured at the new collection size.
 - **Spectacular pipeline**: 75+ golden tests (17 phases, 0 failures on golden fixture)
 - **Epic B pedagogy**: 53+ tests (HTML report, Jupyter notebook, scenario fixtures, slide deck, README quickstart)
 - **Epic A hardening**: 11 property tests (ATMS/JTMS invariants, requires `hypothesis` dep), profiling tests
 - **Epic C discourse mining**: 71+ tests (privacy plumbing, batch runner, pattern aggregator, report generator, enrichment workflow)
-- **CI**: GREEN on main (`b6dcf927`)
+- **CI**: GREEN on main (`eb0bd4c3`) — ⚠️ but the `automated-tests` job is **silently skipped** (`OPENAI_API_KEY` secret not configured); only `mypy strict` actually runs. See *Active Issues* / #1303.
 - **Conda env**: `projet-is` (primary) or `projet-is-roo-new` (latest deps)
 - **Known flaky**: robustness adversarial tests (~87 tests, resource exhaustion after 1.5h runs). Starlette tests resolved.
 - **Property tests**: Require `hypothesis` package (not installed by default — `pip install hypothesis`)
