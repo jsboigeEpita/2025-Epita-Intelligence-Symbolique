@@ -18,7 +18,7 @@ graph TD
 
 ## Exemple d'Utilisation
 ```python
-from argumentiation_analysis import RhetoricalAnalysisSystem
+from argumentation_analysis import RhetoricalAnalysisSystem
 
 # Initialisation du système
 system = RhetoricalAnalysisSystem()

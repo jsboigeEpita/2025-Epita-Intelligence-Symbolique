@@ -5,7 +5,7 @@ Génère des représentations graphiques des analyses argumentatives pour une me
 
 ## Utilisation
 ```python
-from argumentiation_analysis.tools import RhetoricalVisualizer
+from argumentation_analysis.tools import RhetoricalVisualizer
 
 visualizer = RhetoricalVisualizer(style="mermaid", detail_level=2)
 result = visualizer.generate(analysis_results)

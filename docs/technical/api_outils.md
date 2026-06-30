@@ -88,7 +88,7 @@ class LLMValidator:
 
 ## Exemple d'API Utilisation
 ```python
-from argumentiation_analysis import RhetoricalAnalysisSystem
+from argumentation_analysis import RhetoricalAnalysisSystem
 
 system = RhetoricalAnalysisSystem()
 system.configure_tool("coherence_evaluator", {"threshold": 0.7})
@@ -102,7 +102,7 @@ visualization = MermaidVisualizer().generate(results)
 
 ## Structure des Répertoires
 ```
-argumentiation_analysis/
+argumentation_analysis/
 ├── orchestration/
 │   ├── strategic/
 │   │   ├── planner.py

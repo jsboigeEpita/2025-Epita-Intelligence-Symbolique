@@ -215,7 +215,7 @@ def main():
     parser.add_argument(
         "--dir",
         type=str,
-        default="argumentiation_analysis",
+        default="argumentation_analysis",
         help="Répertoire à analyser",
     )
     parser.add_argument(

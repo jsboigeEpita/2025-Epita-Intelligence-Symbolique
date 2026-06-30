@@ -5,7 +5,7 @@
 
 ## Utilisation
 ```python
-from argumentiation_analysis.tools import ArgumentCoherenceEvaluator
+from argumentation_analysis.tools import ArgumentCoherenceEvaluator
 
 evaluator = ArgumentCoherenceEvaluator()
 result = evaluator.analyze(text="Tous les chats sont des mammifères. Les mammifères sont des vertébrés. Donc, les chats sont des vertébrés.")

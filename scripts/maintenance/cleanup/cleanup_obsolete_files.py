@@ -46,13 +46,13 @@ logger = logging.getLogger(__name__)
 # Liste des fichiers obsolètes à supprimer
 OBSOLETE_FILES = [
     # Scripts d'extraction refactorisés
-    "argumentiation_analysis/utils/extract_repair/repair_extract_markers.py",
-    "argumentiation_analysis/utils/extract_repair/verify_extracts.py",
-    "argumentiation_analysis/utils/extract_repair/fix_missing_first_letter.py",
-    "argumentiation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
-    "argumentiation_analysis/utils/extract_repair/repair_extract_markers.ipynb",
+    "argumentation_analysis/utils/extract_repair/repair_extract_markers.py",
+    "argumentation_analysis/utils/extract_repair/verify_extracts.py",
+    "argumentation_analysis/utils/extract_repair/fix_missing_first_letter.py",
+    "argumentation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
+    "argumentation_analysis/utils/extract_repair/repair_extract_markers.ipynb",
     # Utilitaires remplacés par des services
-    "argumentiation_analysis/ui/extract_utils.py",
+    "argumentation_analysis/ui/extract_utils.py",
 ]
 
 # Répertoire d'archives

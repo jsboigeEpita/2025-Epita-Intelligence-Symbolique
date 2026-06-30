@@ -54,9 +54,9 @@ La fusion a ajouté plus de 150 fichiers au projet, principalement des composant
 
 2. **Utilisation des canaux de communication appropriés** : Choisir le type de canal adapté au besoin de communication entre agents. Consulter `docs/guide_developpeur_systeme_communication.md` pour des conseils détaillés.
 
-3. **Extension des outils d'analyse rhétorique** : Pour ajouter de nouveaux outils d'analyse, suivre les modèles existants dans `argumentiation_analysis/agents/tools/analysis/` et s'assurer de créer les tests correspondants.
+3. **Extension des outils d'analyse rhétorique** : Pour ajouter de nouveaux outils d'analyse, suivre les modèles existants dans `argumentation_analysis/agents/tools/analysis/` et s'assurer de créer les tests correspondants.
 
-4. **Tests d'intégration** : Lors de modifications importantes, exécuter les tests d'intégration pour s'assurer que tous les composants fonctionnent correctement ensemble. Les scripts de test se trouvent dans `argumentiation_analysis/tests/`.
+4. **Tests d'intégration** : Lors de modifications importantes, exécuter les tests d'intégration pour s'assurer que tous les composants fonctionnent correctement ensemble. Les scripts de test se trouvent dans `argumentation_analysis/tests/`.
 
 5. **Documentation** : Maintenir la documentation à jour lors de l'ajout ou de la modification de fonctionnalités. Suivre le format existant pour assurer la cohérence.
 

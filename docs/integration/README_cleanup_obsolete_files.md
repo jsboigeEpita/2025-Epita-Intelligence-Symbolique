@@ -17,14 +17,14 @@ Suite à la refactorisation du code et à la migration des fonctionnalités vers
 Les fichiers obsolètes identifiés sont :
 
 1. Scripts d'extraction refactorisés :
-   - `argumentiation_analysis/utils/extract_repair/repair_extract_markers.py`
-   - `argumentiation_analysis/utils/extract_repair/verify_extracts.py`
-   - `argumentiation_analysis/utils/extract_repair/fix_missing_first_letter.py`
-   - `argumentiation_analysis/utils/extract_repair/verify_extracts_with_llm.py`
-   - `argumentiation_analysis/utils/extract_repair/repair_extract_markers.ipynb`
+   - `argumentation_analysis/utils/extract_repair/repair_extract_markers.py`
+   - `argumentation_analysis/utils/extract_repair/verify_extracts.py`
+   - `argumentation_analysis/utils/extract_repair/fix_missing_first_letter.py`
+   - `argumentation_analysis/utils/extract_repair/verify_extracts_with_llm.py`
+   - `argumentation_analysis/utils/extract_repair/repair_extract_markers.ipynb`
 
 2. Utilitaires remplacés par des services :
-   - `argumentiation_analysis/ui/extract_utils.py`
+   - `argumentation_analysis/ui/extract_utils.py`
 
 ## Utilisation
 
@@ -109,7 +109,7 @@ _archives/
   └── backup_YYYYMMDD_HHMMSS/
       ├── metadata.json
       ├── rapport_suppression_YYYYMMDD_HHMMSS.md
-      └── argumentiation_analysis/
+      └── argumentation_analysis/
           ├── ui/
           │   └── extract_utils.py
           └── utils/

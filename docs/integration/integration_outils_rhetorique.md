@@ -13,10 +13,10 @@ graph TD
 ```
 
 ### Étapes d'Intégration
-1. **Installation** : `pip install argumentiation-analysis`
+1. **Installation** : `pip install argumentation-analysis`
 2. **Importation** : 
    ```python
-   from argumentiation_analysis import RhetoricalAnalysisSystem
+   from argumentation_analysis import RhetoricalAnalysisSystem
    ```
 3. **Configuration** :
    ```python
@@ -53,7 +53,7 @@ async def analyze_text(text: str):
 ## Gestion des Dépendances
 ```bash
 # Requirements.txt
-argumentiation-analysis>=1.2.0
+argumentation-analysis>=1.2.0
 mermaid>=10.3.0
 ```
 

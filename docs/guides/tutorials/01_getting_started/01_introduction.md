@@ -9,13 +9,13 @@ Apprendre à installer, configurer et exécuter une analyse rhétorique de base
 
 ## Installation
 ```bash
-cd argumentiation_analysis
+cd argumentation_analysis
 pip install -r requirements.txt
 ```
 
 ## Structure du projet
 ```
-argumentiation_analysis/
+argumentation_analysis/
 ├── orchestration/
 │   └── hierarchical/  # Architecture à trois niveaux
 ├── agents/            # Agents spécialisés
@@ -27,7 +27,7 @@ argumentiation_analysis/
 
 ## Premier exemple d'analyse
 ```python
-from argumentiation_analysis.examples.run_hierarchical_orchestration import HierarchicalOrchestrator
+from argumentation_analysis.examples.run_hierarchical_orchestration import HierarchicalOrchestrator
 
 async def main():
     orchestrator = HierarchicalOrchestrator()

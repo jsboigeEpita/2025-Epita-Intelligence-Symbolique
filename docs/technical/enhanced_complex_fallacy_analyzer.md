@@ -5,7 +5,7 @@ Analyse les structures argumentatives complexes pour détecter les sophismes imb
 
 ## Utilisation
 ```python
-from argumentiation_analysis.tools import EnhancedComplexFallacyAnalyzer
+from argumentation_analysis.tools import EnhancedComplexFallacyAnalyzer
 
 analyzer = EnhancedComplexFallacyAnalyzer()
 result = analyzer.analyze(text="""

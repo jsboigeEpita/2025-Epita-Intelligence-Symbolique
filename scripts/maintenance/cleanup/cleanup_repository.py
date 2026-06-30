@@ -83,8 +83,8 @@ def main():
     print("\n=== Gestion des fichiers de configuration ===")
 
     # Création d'un fichier .env.example comme modèle
-    env_path = base_path / "argumentiation_analysis" / ".env"
-    env_example_path = base_path / "argumentiation_analysis" / ".env.example"
+    env_path = base_path / "argumentation_analysis" / ".env"
+    env_example_path = base_path / "argumentation_analysis" / ".env.example"
 
     print(f"Vérification du fichier .env à: {env_path}")
 
@@ -117,19 +117,19 @@ TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"
     else:
         print(f"Fichier .env non trouvé à {env_path}")
 
-    # Chemin absolu vers le dossier argumentiation_analysis
+    # Chemin absolu vers le dossier argumentation_analysis
     # Comme nous sommes déjà dans le répertoire de travail actuel, nous devons remonter
-    # si nous sommes dans un sous-répertoire de argumentiation_analysis
-    if "argumentiation_analysis" in str(base_path):
-        # Si nous sommes dans un sous-répertoire de argumentiation_analysis
+    # si nous sommes dans un sous-répertoire de argumentation_analysis
+    if "argumentation_analysis" in str(base_path):
+        # Si nous sommes dans un sous-répertoire de argumentation_analysis
         parts = base_path.parts
-        idx = parts.index("argumentiation_analysis")
+        idx = parts.index("argumentation_analysis")
         arg_analysis_path = Path(*parts[: idx + 1])
     else:
         # Si nous sommes à la racine du projet
-        arg_analysis_path = base_path / "argumentiation_analysis"
+        arg_analysis_path = base_path / "argumentation_analysis"
 
-    print(f"Chemin vers argumentiation_analysis: {arg_analysis_path}")
+    print(f"Chemin vers argumentation_analysis: {arg_analysis_path}")
 
     # Suppression du dossier config vide
     config_path = arg_analysis_path / "config"

@@ -20,7 +20,7 @@ Le fichier `pytest.ini` définit les paramètres par défaut pour l'exécution d
 pytest
 
 # Exécuter les tests avec des options supplémentaires
-pytest -v --cov=argumentiation_analysis
+pytest -v --cov=argumentation_analysis
 ```
 
 ### Dépendances de Test

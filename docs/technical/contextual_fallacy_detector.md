@@ -5,7 +5,7 @@ Identifie les erreurs rhétoriques dans leur contexte, en analysant les relation
 
 ## Utilisation
 ```python
-from argumentiation_analysis.tools import ContextualFallacyDetector
+from argumentation_analysis.tools import ContextualFallacyDetector
 
 detector = ContextualFallacyDetector(sensitivity=0.8, context_window=100)
 result = detector.analyze(text="Texte à analyser")

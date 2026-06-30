@@ -14,7 +14,7 @@ graph TD
 
 ### Ajouter un Critère de Cohérence
 ```python
-from argumentiation_analysis.tools import CoherenceEvaluator
+from argumentation_analysis.tools import CoherenceEvaluator
 
 class CustomCoherenceCriterion:
     def evaluate(self, segment1, segment2):
@@ -30,7 +30,7 @@ evaluator.add_criterion(CustomCoherenceCriterion())
 
 ### Créer un Nouveau Type de Sophisme
 ```python
-from argumentiation_analysis.tools import ContextualFallacyDetector
+from argumentation_analysis.tools import ContextualFallacyDetector
 
 class CustomFallacyPlugin:
     def detect(self, context):
@@ -48,7 +48,7 @@ detector.register_detector(CustomFallacyPlugin())
 
 ### Structure de Base
 ```python
-from argumentiation_analysis.core import BaseRhetoricalTool
+from argumentation_analysis.core import BaseRhetoricalTool
 
 class MyNewTool(BaseRhetoricalTool):
     def __init__(self, param1, param2):
@@ -62,7 +62,7 @@ class MyNewTool(BaseRhetoricalTool):
         return RhetoricalResults(results)
 
 # Enregistrement de l'outil
-from argumentiation_analysis.registry import tool_registry
+from argumentation_analysis.registry import tool_registry
 tool_registry.register("my_new_tool", MyNewTool)
 ```
 
@@ -86,7 +86,7 @@ graph LR
 
 ## Structure de Répertoire
 ```
-argumentiation_analysis/
+argumentation_analysis/
 ├── tools/
 │   ├── __init__.py
 │   ├── coherence.py
