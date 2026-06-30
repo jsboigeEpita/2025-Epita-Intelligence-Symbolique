@@ -1,5 +1,12 @@
 # Rapport d'Analyse des Échecs de Tests `pytest`
 
+> ⚠️ **Historical snapshot — 2025-07-23.** This captured the test-suite state right after the
+> `jpype`/`opentelemetry` JVM-crash workaround (Total: 2433 tests, 135 failed). The suite has
+> since grown to 14000+ collected tests and the failure profile has changed entirely. Kept for
+> provenance, **not** as a description of the present test status. For current test statistics
+> see `KNOWN_ISSUES.md` (Test Statistics); for the still-active OpenTelemetry workaround see
+> `tests/conftest.py` and `opentelemetry_workaround.md`.
+
 Ce document présente une analyse détaillée des résultats de la suite de tests exécutée après avoir contourné le crash fatal de la JVM.
 
 ## 1. Résumé Quantitatif
