@@ -16,10 +16,10 @@ cp .env.example .env
 
 # 3. Activate and test
 conda activate projet-is-roo-new
-python examples/scripts_demonstration/demonstration_epita.py --quick-start
+python examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py --quick-start
 ```
 
-Linux/macOS: use `setup_project_env.sh` instead.
+Linux/macOS: no `setup_project_env.sh` is provided — create the Conda env manually (`conda create -n projet-is-roo-new python=3.10`, then `pip install -r requirements.txt`) or adapt the `.ps1` script.
 
 ## Repository Map
 
