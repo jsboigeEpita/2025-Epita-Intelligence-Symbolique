@@ -11,8 +11,8 @@ Apprendre à analyser des discours avec structures imbriquées, arguments multip
 
 ## Configuration avancée
 ```python
-from argumentiation_analysis.orchestration.hierarchical.strategic.planner import StrategicPlanner
-from argumentiation_analysis.orchestration.hierarchical.tactical.resolver import TacticalResolver
+from argumentation_analysis.orchestration.hierarchical.strategic.planner import StrategicPlanner
+from argumentation_analysis.orchestration.hierarchical.tactical.resolver import TacticalResolver
 
 config = {
     "objectives": [
@@ -43,8 +43,8 @@ resolver = TacticalResolver(planner)
 
 ## Utilisation des outils spécialisés
 ```python
-from argumentiation_analysis.utils.taxonomy_loader import load_fallacy_taxonomy
-from argumentiation_analysis.services.definition_service import DefinitionService
+from argumentation_analysis.utils.taxonomy_loader import load_fallacy_taxonomy
+from argumentation_analysis.services.definition_service import DefinitionService
 
 async def analyze_complex_discourse(text):
     # Initialisation des services

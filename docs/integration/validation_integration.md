@@ -115,7 +115,7 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
 ### Utilisation des nouveaux outils d'analyse rhétorique
 1. **Détecteur de sophismes contextuels** : Utilisez cette fonctionnalité pour analyser des discours complexes où le contexte joue un rôle important dans l'identification des sophismes.
    ```python
-   from argumentiation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+   from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
    
    detector = ContextualFallacyDetector()
    results = detector.detect_contextual_fallacies(
@@ -126,7 +126,7 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
 
 2. **Visualiseur de structure d'arguments** : Utilisez cet outil pour générer des représentations visuelles des structures argumentatives.
    ```python
-   from argumentiation_analysis.agents.tools.analysis.new.argument_structure_visualizer import ArgumentStructureVisualizer
+   from argumentation_analysis.agents.tools.analysis.new.argument_structure_visualizer import ArgumentStructureVisualizer
    
    visualizer = ArgumentStructureVisualizer()
    result = visualizer.visualize_argument_structure(
@@ -138,7 +138,7 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
 
 3. **Évaluateur de cohérence d'arguments** : Utilisez cette fonctionnalité pour évaluer la cohérence logique entre différentes parties d'un argument.
    ```python
-   from argumentiation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
+   from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
    
    evaluator = ArgumentCoherenceEvaluator()
    result = evaluator.evaluate_coherence(
@@ -151,7 +151,7 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
 ### Utilisation du système de communication amélioré
 1. **Configuration des canaux de communication** :
    ```python
-   from argumentiation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
+   from argumentation_analysis.core.communication.hierarchical_channel import HierarchicalChannel
    
    # channel_id est requis ; config (dict) est optionnel
    channel = HierarchicalChannel(channel_id="strategic_tactical")
@@ -159,7 +159,7 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
 
 2. **Utilisation des adaptateurs d'agents** :
    ```python
-   from argumentiation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter import PLAgentAdapter
+   from argumentation_analysis.orchestration.hierarchical.operational.adapters.pl_agent_adapter import PLAgentAdapter
    
    adapter = PLAgentAdapter(name="PLAgent")
    # process_task est asynchrone et exige initialize(kernel, llm_service_id, project_context) au préalable
@@ -169,22 +169,22 @@ Performance globale : Amélioration de 18% par rapport à la version précédent
 ### Utilisation des scripts utilitaires
 1. **Correction des problèmes d'encodage** :
    ```bash
-   python fix_encoding.py --directory ./argumentiation_analysis --recursive
+   python fix_encoding.py --directory ./argumentation_analysis --recursive
    ```
 
 2. **Vérification de la syntaxe** :
    ```bash
-   python check_syntax.py --file ./argumentiation_analysis/agents/tools/analysis/new/contextual_fallacy_detector.py
+   python check_syntax.py --file ./argumentation_analysis/agents/tools/analysis/new/contextual_fallacy_detector.py
    ```
 
 3. **Normalisation des docstrings** :
    ```bash
-   python fix_docstrings.py --directory ./argumentiation_analysis/agents/tools --recursive
+   python fix_docstrings.py --directory ./argumentation_analysis/agents/tools --recursive
    ```
 
 4. **Correction des problèmes d'indentation** :
    ```bash
-   python fix_indentation.py --directory ./argumentiation_analysis --recursive
+   python fix_indentation.py --directory ./argumentation_analysis --recursive
    ```
 
 ## Prochaines étapes après l'intégration

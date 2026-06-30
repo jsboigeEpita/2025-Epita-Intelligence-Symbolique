@@ -6,11 +6,11 @@
 Le projet est un système d'orchestration agentique d'analyse rhétorique organisé en plusieurs composantes :
 
 1. **Outils d'analyse rhétorique** :
-   - Nouveaux outils dans `argumentiation_analysis/agents/tools/analysis/new/`
-   - Outils améliorés dans `argumentiation_analysis/agents/tools/analysis/enhanced/`
+   - Nouveaux outils dans `argumentation_analysis/agents/tools/analysis/new/`
+   - Outils améliorés dans `argumentation_analysis/agents/tools/analysis/enhanced/`
 
 2. **Adaptateurs d'agents** :
-   - Adaptateurs dans `argumentiation_analysis/orchestration/hierarchical/operational/adapters/`
+   - Adaptateurs dans `argumentation_analysis/orchestration/hierarchical/operational/adapters/`
 
 3. **Scripts utilitaires** :
    - Scripts de correction à la racine du projet (`fix_encoding.py`, `check_syntax.py`, `fix_docstrings.py`, `fix_indentation.py`)
@@ -46,26 +46,26 @@ Ces fichiers ont été sauvegardés dans `_archives/backup_20250506_151107/` ava
 ### Étape 2 : Intégration des outils d'analyse rhétorique
 1. Intégrer les nouveaux outils d'analyse :
    ```bash
-   git checkout sauvegarde-modifications-locales -- argumentiation_analysis/agents/tools/analysis/new/
+   git checkout sauvegarde-modifications-locales -- argumentation_analysis/agents/tools/analysis/new/
    ```
 2. Intégrer les outils améliorés :
    ```bash
-   git checkout sauvegarde-modifications-locales -- argumentiation_analysis/agents/tools/analysis/enhanced/
+   git checkout sauvegarde-modifications-locales -- argumentation_analysis/agents/tools/analysis/enhanced/
    ```
 3. Vérifier la syntaxe et les imports des fichiers intégrés :
    ```bash
-   python check_syntax.py argumentiation_analysis/agents/tools/analysis/new/
-   python check_syntax.py argumentiation_analysis/agents/tools/analysis/enhanced/
+   python check_syntax.py argumentation_analysis/agents/tools/analysis/new/
+   python check_syntax.py argumentation_analysis/agents/tools/analysis/enhanced/
    ```
 
 ### Étape 3 : Intégration des adaptateurs d'agents
 1. Intégrer les adaptateurs d'agents :
    ```bash
-   git checkout sauvegarde-modifications-locales -- argumentiation_analysis/orchestration/hierarchical/operational/adapters/
+   git checkout sauvegarde-modifications-locales -- argumentation_analysis/orchestration/hierarchical/operational/adapters/
    ```
 2. Vérifier la syntaxe et les imports des adaptateurs :
    ```bash
-   python check_syntax.py argumentiation_analysis/orchestration/hierarchical/operational/adapters/
+   python check_syntax.py argumentation_analysis/orchestration/hierarchical/operational/adapters/
    ```
 
 ### Étape 4 : Intégration des scripts utilitaires
@@ -84,11 +84,11 @@ Ces fichiers ont été sauvegardés dans `_archives/backup_20250506_151107/` ava
 ### Étape 5 : Tests et validation
 1. Exécuter les tests unitaires pour les outils d'analyse :
    ```bash
-   python -m argumentiation_analysis.tests.tools.run_rhetorical_tools_tests
+   python -m argumentation_analysis.tests.tools.run_rhetorical_tools_tests
    ```
 2. Exécuter les tests d'intégration pour les adaptateurs :
    ```bash
-   python -m argumentiation_analysis.tests.test_operational_agents_integration
+   python -m argumentation_analysis.tests.test_operational_agents_integration
    ```
 3. Vérifier que les scripts utilitaires fonctionnent sur des exemples simples
 
@@ -96,11 +96,11 @@ Ces fichiers ont été sauvegardés dans `_archives/backup_20250506_151107/` ava
 1. Préparer les commits par composante :
    ```bash
    # Commit pour les outils d'analyse
-   git add argumentiation_analysis/agents/tools/analysis/
+   git add argumentation_analysis/agents/tools/analysis/
    git commit -m "Intégration des nouveaux outils d'analyse rhétorique et améliorations des outils existants"
    
    # Commit pour les adaptateurs d'agents
-   git add argumentiation_analysis/orchestration/hierarchical/operational/adapters/
+   git add argumentation_analysis/orchestration/hierarchical/operational/adapters/
    git commit -m "Intégration des adaptateurs d'agents pour l'architecture hiérarchique"
    
    # Commit pour les scripts utilitaires

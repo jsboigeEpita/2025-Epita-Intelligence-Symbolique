@@ -5,7 +5,7 @@ Analyse les structures argumentatives complexes et identifie les erreurs logique
 
 ## Utilisation
 ```python
-from argumentiation_analysis.tools import EnhancedComplexFallacyAnalyzer
+from argumentation_analysis.tools import EnhancedComplexFallacyAnalyzer
 
 analyzer = EnhancedComplexFallacyAnalyzer(depth=3, strict_mode=False)
 result = analyzer.analyze(text="Texte à analyser")

@@ -19,7 +19,7 @@ texte = """
 
 ## Configuration de l'analyse
 ```python
-from argumentiation_analysis.orchestration.hierarchical.strategic.planner import StrategicPlanner
+from argumentation_analysis.orchestration.hierarchical.strategic.planner import StrategicPlanner
 
 config = {
     "objectives": [
@@ -41,7 +41,7 @@ planner = StrategicPlanner(config)
 
 ## Exécution de l'analyse
 ```python
-from argumentiation_analysis.examples.run_hierarchical_orchestration import HierarchicalOrchestrator
+from argumentation_analysis.examples.run_hierarchical_orchestration import HierarchicalOrchestrator
 
 async def main():
     orchestrator = HierarchicalOrchestrator()

@@ -5,7 +5,7 @@
 
 ## Utilisation
 ```python
-from argumentiation_analysis.tools import CoherenceEvaluator
+from argumentation_analysis.tools import CoherenceEvaluator
 
 evaluator = CoherenceEvaluator(threshold=0.7, explanations=True)
 result = evaluator.analyze(text="Texte à analyser")

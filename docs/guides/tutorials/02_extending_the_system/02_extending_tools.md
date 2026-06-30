@@ -6,7 +6,7 @@ Apprendre à étendre les fonctionnalités des outils d'analyse existants pour a
 ## Identification des besoins
 ```python
 # Analyse des limitations actuelles
-from argumentiation_analysis.tests.tools.test_rhetorical_tools_integration import analyze_tool_coverage
+from argumentation_analysis.tests.tools.test_rhetorical_tools_integration import analyze_tool_coverage
 
 coverage_report = analyze_tool_coverage()
 print(f"Couverture actuelle: {coverage_report['coverage_percent']:.1f}%")
@@ -54,7 +54,7 @@ class ContextualFallacyAnalyzer:
 ## Implémentation et intégration
 ```python
 # Intégration dans le pipeline d'analyse
-from argumentiation_analysis.orchestration.hierarchical.tactical.resolver import TacticalResolver
+from argumentation_analysis.orchestration.hierarchical.tactical.resolver import TacticalResolver
 
 class EnhancedResolver(TacticalResolver):
     def __init__(self):
@@ -76,7 +76,7 @@ class EnhancedResolver(TacticalResolver):
 ```python
 # Tests de performance et de précision
 import time
-from argumentiation_analysis.tests.tools.test_rhetorical_tools_performance import run_benchmark
+from argumentation_analysis.tests.tools.test_rhetorical_tools_performance import run_benchmark
 
 def evaluate_extension():
     # Mesure des performances

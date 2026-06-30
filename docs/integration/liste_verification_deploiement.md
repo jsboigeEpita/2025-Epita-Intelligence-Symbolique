@@ -1,13 +1,13 @@
-# Liste de vérification pour le déploiement du projet "argumentiation_analysis"
+# Liste de vérification pour le déploiement du projet "argumentation_analysis"
 
 ## Introduction
 
-Ce document présente une liste de vérification complète pour s'assurer que le projet "argumentiation_analysis" est prêt à être déployé pour les étudiants de l'EPITA. Cette liste couvre tous les aspects essentiels du projet, de la structure aux dépendances, en passant par la documentation et les tests.
+Ce document présente une liste de vérification complète pour s'assurer que le projet "argumentation_analysis" est prêt à être déployé pour les étudiants de l'EPITA. Cette liste couvre tous les aspects essentiels du projet, de la structure aux dépendances, en passant par la documentation et les tests.
 
 ## 1. Vérification de la structure du projet
 
 - [ ] Vérifier que tous les dossiers principaux sont présents et correctement organisés :
-  - `argumentiation_analysis/` (dossier principal)
+  - `argumentation_analysis/` (dossier principal)
   - `agents/` (agents spécialistes)
   - `config/` (fichiers de configuration)
   - `core/` (composants fondamentaux)
@@ -35,12 +35,12 @@ Ce document présente une liste de vérification complète pour s'assurer que le
 
 - [ ] Exécuter tous les tests unitaires et vérifier qu'ils passent :
   ```bash
-  python -m argumentiation_analysis.tests.run_tests
+  python -m argumentation_analysis.tests.run_tests
   ```
 
 - [ ] Vérifier la couverture des tests :
   ```bash
-  python -m argumentiation_analysis.tests.run_coverage
+  python -m argumentation_analysis.tests.run_coverage
   ```
 
 - [ ] S'assurer que les tests couvrent tous les composants principaux :
@@ -191,4 +191,4 @@ Ce document présente une liste de vérification complète pour s'assurer que le
 
 ## Conclusion
 
-Cette liste de vérification couvre les aspects essentiels à vérifier avant le déploiement du projet "argumentiation_analysis" pour les étudiants de l'EPITA. En suivant cette liste, vous vous assurez que le projet est prêt à être utilisé et que les étudiants pourront travailler efficacement sur leurs projets pendant le mois qui leur est alloué.
+Cette liste de vérification couvre les aspects essentiels à vérifier avant le déploiement du projet "argumentation_analysis" pour les étudiants de l'EPITA. En suivant cette liste, vous vous assurez que le projet est prêt à être utilisé et que les étudiants pourront travailler efficacement sur leurs projets pendant le mois qui leur est alloué.

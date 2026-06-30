@@ -99,11 +99,11 @@ def main():
     # Créer les répertoires nécessaires
     logging.info("\n=== Création des répertoires nécessaires ===")
     directories = [
-        project_dir / "argumentiation_analysis" / "libs",
-        project_dir / "argumentiation_analysis" / "libs" / "native",
-        project_dir / "argumentiation_analysis" / "tests" / "resources" / "libs",
+        project_dir / "argumentation_analysis" / "libs",
+        project_dir / "argumentation_analysis" / "libs" / "native",
+        project_dir / "argumentation_analysis" / "tests" / "resources" / "libs",
         project_dir
-        / "argumentiation_analysis"
+        / "argumentation_analysis"
         / "tests"
         / "resources"
         / "libs"
@@ -120,16 +120,16 @@ def main():
     # Créer les fichiers .gitkeep
     logging.info("\n=== Création des fichiers .gitkeep ===")
     gitkeep_files = [
-        project_dir / "argumentiation_analysis" / "libs" / ".gitkeep",
-        project_dir / "argumentiation_analysis" / "libs" / "native" / ".gitkeep",
+        project_dir / "argumentation_analysis" / "libs" / ".gitkeep",
+        project_dir / "argumentation_analysis" / "libs" / "native" / ".gitkeep",
         project_dir
-        / "argumentiation_analysis"
+        / "argumentation_analysis"
         / "tests"
         / "resources"
         / "libs"
         / ".gitkeep",
         project_dir
-        / "argumentiation_analysis"
+        / "argumentation_analysis"
         / "tests"
         / "resources"
         / "libs"
@@ -206,7 +206,7 @@ def main():
     else:
         logging.info("Toutes les étapes ont été exécutées.")
         logging.info("Pour tester les modifications, exécutez les tests unitaires:")
-        logging.info("  cd argumentiation_analysis/tests")
+        logging.info("  cd argumentation_analysis/tests")
         logging.info("  python run_tests.py")
 
     return 0

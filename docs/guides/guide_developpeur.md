@@ -404,8 +404,8 @@ middleware.add_routing_rule(
 Voici un exemple complet de création d'un nouveau canal de communication pour la gestion des alertes :
 
 ```python
-from argumentiation_analysis.core.communication.channel_interface import Channel
-from argumentiation_analysis.core.communication.message import MessagePriority
+from argumentation_analysis.core.communication.channel_interface import Channel
+from argumentation_analysis.core.communication.message import MessagePriority
 import threading
 import time
 import logging
@@ -841,7 +841,7 @@ Voici un exemple complet de création d'un nouvel adaptateur pour un agent de vi
 
 ```python
 from argumentation_analysis.core.communication.message import Message, MessageType, MessagePriority, AgentLevel # Assurez-vous que Message est importé si utilisé dans l'exemple VisualizationAdapter
-from argumentiation_analysis.core.communication.message import MessageType, MessagePriority, AgentLevel
+from argumentation_analysis.core.communication.message import MessageType, MessagePriority, AgentLevel
 import logging
 
 class VisualizationAdapter:
@@ -1635,8 +1635,8 @@ Voici un exemple complet de création d'un nouveau protocole de communication po
 
 ```python
 # Note: L'import de ProtocolInterface est supprimé car elle n'existe pas.
-# from argumentiation_analysis.core.communication.protocol_interface import ProtocolInterface
-from argumentiation_analysis.core.communication.message import MessageType, Message
+# from argumentation_analysis.core.communication.protocol_interface import ProtocolInterface
+from argumentation_analysis.core.communication.message import MessageType, Message
 import threading
 import time
 import uuid

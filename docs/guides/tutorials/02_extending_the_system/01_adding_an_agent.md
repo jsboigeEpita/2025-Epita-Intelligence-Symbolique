@@ -22,7 +22,7 @@ class BaseAgent:
 ## Implémentation d'un agent de détection de biais
 ```python
 # agents/bias_detector_agent.py
-from argumentiation_analysis.orchestration.hierarchical.operational.adapters.base_agent import BaseAgent
+from argumentation_analysis.orchestration.hierarchical.operational.adapters.base_agent import BaseAgent
 
 class BiasDetectorAgent(BaseAgent):
     def __init__(self, config):
@@ -55,7 +55,7 @@ class BiasDetectorAgent(BaseAgent):
 ## Intégration dans le système
 ```python
 # Mise à jour du registre d'agents
-from argumentiation_analysis.orchestration.hierarchical.strategic.planner import register_agent
+from argumentation_analysis.orchestration.hierarchical.strategic.planner import register_agent
 
 register_agent("bias_detector", BiasDetectorAgent)
 
