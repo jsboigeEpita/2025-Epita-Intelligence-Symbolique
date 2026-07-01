@@ -136,8 +136,6 @@ Gate criteria:
 
 ## 8. Related Documents
 
-- [Plan file](../../.claude/plans/playful-painting-rossum.md) — detailed execution plan
-- [INTEGRATION_PLANS/](INTEGRATION_PLANS/) — per-project integration plans (to be created)
 - [TWEETY_CAPABILITY_MAP.md](TWEETY_CAPABILITY_MAP.md) — Tweety module mapping (to be created)
 
 ---
