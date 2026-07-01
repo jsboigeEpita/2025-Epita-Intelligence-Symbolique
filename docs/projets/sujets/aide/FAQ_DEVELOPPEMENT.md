@@ -20,19 +20,19 @@ Cette FAQ vise à répondre aux questions courantes que vous pourriez rencontrer
 
 **Q: Quels sont les principaux guides et documents de référence ?**
 **R:** Le projet dispose de plusieurs documents clés pour vous aider à démarrer et à approfondir :
--   **[`README.md`](README.md:0) (à la racine)** : Fournit une vue d'ensemble du projet, ses objectifs, et des instructions de démarrage rapide. C'est le premier fichier à consulter.
--   **[`GETTING_STARTED.md`](GETTING_STARTED.md:0)** : Guide de démarrage rapide, complémentaire au README principal.
--   **[`GUIDE_INSTALLATION_ETUDIANTS.md`](GUIDE_INSTALLATION_ETUDIANTS.md:0)** : Instructions détaillées pour l'installation de l'environnement de développement, spécifiquement pour les étudiants.
--   **Répertoire [`docs/guides/`](docs/guides/:0)** : Contient des guides thématiques plus approfondis :
-    -   [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) : Informations essentielles pour les développeurs contribuant au projet (architecture, conventions, tests, etc.).
-    -   [`docs/guides/guide_utilisation.md`](docs/guides/guide_utilisation.md:0) : Comment utiliser les fonctionnalités principales de l'application.
-    -   [`docs/guides/integration_api_web.md`](docs/guides/integration_api_web.md:0) : Détails sur l'utilisation et l'extension de l'API Web.
-    -   [`docs/guides/utilisation_agents_logiques.md`](docs/guides/utilisation_agents_logiques.md:0) : Explications sur l'utilisation des agents logiques et du moteur d'argumentation.
+-   **[`README.md`](../../../../README.md) (à la racine)** : Fournit une vue d'ensemble du projet, ses objectifs, et des instructions de démarrage rapide. C'est le premier fichier à consulter.
+-   **[`GETTING_STARTED.md`](../../../guides/GETTING_STARTED.md)** : Guide de démarrage rapide, complémentaire au README principal.
+-   **[`GUIDE_INSTALLATION_ETUDIANTS.md`](../../../guides/GUIDE_INSTALLATION_ETUDIANTS.md)** : Instructions détaillées pour l'installation de l'environnement de développement, spécifiquement pour les étudiants.
+-   **Répertoire [`docs/guides/`](../../../guides)** : Contient des guides thématiques plus approfondis :
+    -   [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) : Informations essentielles pour les développeurs contribuant au projet (architecture, conventions, tests, etc.).
+    -   [`docs/guides/guide_utilisation.md`](../../../guides/guide_utilisation.md) : Comment utiliser les fonctionnalités principales de l'application.
+    -   [`docs/guides/integration_api_web.md`](../../../guides/integration_api_web.md) : Détails sur l'utilisation et l'extension de l'API Web.
+    -   [`docs/guides/utilisation_agents_logiques.md`](../../../guides/utilisation_agents_logiques.md) : Explications sur l'utilisation des agents logiques et du moteur d'argumentation.
     -   D'autres guides spécifiques peuvent s'y trouver (par exemple, sur le déploiement, la contribution, etc.).
--   **[`docs/structure_projet.md`](docs/structure_projet.md:0)** : Décrit l'organisation des dossiers et des fichiers au sein du projet, vous aidant à naviguer dans le code source.
--   **[`docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md`](docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md:0) (ce fichier)** : Foire Aux Questions pour les problèmes courants de développement.
--   **[`services/README.md`](services/README.md:0)** : Documentation spécifique au(x) service(s) backend, notamment l'API Web.
--   Les `README.md` présents dans les sous-répertoires (par exemple, [`examples/README.md`](examples/README.md:0), [`scripts/README.md`](scripts/README.md:0), [`tests/README.md`](tests/README.md:0)) fournissent un contexte pour ces parties spécifiques du projet.
+-   **[`docs/structure_projet.md`](../../../technical/structure_projet.md)** : Décrit l'organisation des dossiers et des fichiers au sein du projet, vous aidant à naviguer dans le code source.
+-   **[`docs/projets/sujets/aide/FAQ_DEVELOPPEMENT.md`](FAQ_DEVELOPPEMENT.md) (ce fichier)** : Foire Aux Questions pour les problèmes courants de développement.
+-   **[`services/README.md`](../../../../services/README.md)** : Documentation spécifique au(x) service(s) backend, notamment l'API Web.
+-   Les `README.md` présents dans les sous-répertoires (par exemple, [`examples/README.md`](../../../../examples/README.md), [`scripts/README.md`](../../../../scripts/README.md), [`tests/README.md`](../../../../tests/README.md)) fournissent un contexte pour ces parties spécifiques du projet.
 
 **Q: Comment comprendre rapidement l'architecture du projet ?**
 **R:** Consultez `docs/architecture.md` (s'il existe) et `docs/structure_projet.md`. Le code est organisé en modules logiques (API, moteur d'analyse, interface).
@@ -43,13 +43,13 @@ Cette FAQ vise à répondre aux questions courantes que vous pourriez rencontrer
 
 **Q: Comment démarrer l'API web ?**
 **R:** Pour démarrer l'API web :
-1.  Assurez-vous que votre environnement Python est correctement configuré. Vous pouvez utiliser le script [`setup_project_env.ps1`](setup_project_env.ps1:0) pour initialiser l'environnement du projet si nécessaire.
+1.  Assurez-vous que votre environnement Python est correctement configuré. Vous pouvez utiliser le script [`setup_project_env.ps1`](../../../../setup_project_env.ps1) pour initialiser l'environnement du projet si nécessaire.
 2.  Naviguez vers le répertoire de l'API et installez les dépendances :
     ```bash
     cd services/web_api
     pip install -r requirements.txt
     ```
-3.  Démarrez l'API. La méthode recommandée (voir [`services/README.md#démarrage-rapide`](services/README.md:76)) est :
+3.  Démarrez l'API. La méthode recommandée (voir [`services/README.md#démarrage-rapide`](../../../../services/README.md)) est :
     ```bash
     python start_api.py
     ```
@@ -57,26 +57,26 @@ Cette FAQ vise à répondre aux questions courantes que vous pourriez rencontrer
     ```bash
     python app.py
     ```
-L'API sera alors disponible sur http://localhost:5000. Des exemples de tests et d'utilisation de l'API se trouvent dans [`services/web_api/tests/`](services/web_api/tests/) et [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0).
+L'API sera alors disponible sur http://localhost:5000. Des exemples de tests et d'utilisation de l'API se trouvent dans [`services/web_api/tests/`](../../../../argumentation_analysis/services/web_api/tests) et `examples/logic_agents/api_integration_example.py`.
 
 **Q: Comment tester les endpoints de l'API ?**
 **R:** Plusieurs options :
 - Utilisez l'endpoint `/api/endpoints` pour une documentation interactive des endpoints disponibles.
-- Utilisez des outils comme Postman ou `curl` pour envoyer des requêtes manuelles. Des exemples de commandes `curl` sont disponibles dans le guide [`services/README.md#vérification-du-fonctionnement`](services/README.md:100).
-- Exécutez les tests automatisés situés dans [`services/web_api/tests/`](services/web_api/tests/). Vous y trouverez des fichiers comme [`test_endpoints.py`](services/web_api/tests/test_endpoints.py:0) et [`test_services.py`](services/web_api/tests/test_services.py:0) qui couvrent différents aspects de l'API. Le guide [`services/README.md#tests-et-validation`](services/README.md:221) explique comment les exécuter.
-- Consultez l'exemple d'intégration [`examples/logic_agents/api_integration_example.py`](examples/logic_agents/api_integration_example.py:0) pour voir comment interagir avec l'API depuis un script Python.
+- Utilisez des outils comme Postman ou `curl` pour envoyer des requêtes manuelles. Des exemples de commandes `curl` sont disponibles dans le guide [`services/README.md#vérification-du-fonctionnement`](../../../../services/README.md).
+- Exécutez les tests automatisés situés dans [`services/web_api/tests/`](../../../../argumentation_analysis/services/web_api/tests). Vous y trouverez des fichiers comme [`test_endpoints.py`](../../../../argumentation_analysis/services/web_api/tests/test_endpoints.py) et [`test_services.py`](../../../../argumentation_analysis/services/web_api/tests/test_services.py) qui couvrent différents aspects de l'API. Le guide [`services/README.md#tests-et-validation`](../../../../services/README.md) explique comment les exécuter.
+- Consultez l'exemple d'intégration `examples/logic_agents/api_integration_example.py` pour voir comment interagir avec l'API depuis un script Python.
 
 **Q: L'API retourne une erreur CORS, que faire ?**
 **R:** Assurez-vous que l'origine de votre requête frontend (ex: `http://localhost:3000`) est autorisée dans la configuration CORS de l'API Flask (`app.py` ou configuration dédiée).
 
 **Q: Comment étendre l'API avec de nouveaux endpoints ?**
-**R:** Pour ajouter un nouvel endpoint, suivez ces étapes (détaillées dans [`services/README.md#développement-et-extension`](services/README.md:191)) :
-1.  Créez votre logique métier dans un nouveau fichier de service, par exemple [`services/web_api/services/mon_nouveau_service.py`](services/web_api/services/mon_nouveau_service.py:0). Inspirez-vous de services existants comme [`services/web_api/services/analysis_service.py`](services/web_api/services/analysis_service.py:0).
-2.  Définissez les modèles de données (requête et réponse) dans [`services/web_api/models/request_models.py`](services/web_api/models/request_models.py:0) et [`services/web_api/models/response_models.py`](services/web_api/models/response_models.py:0) en utilisant Pydantic.
-3.  Ajoutez la nouvelle route Flask dans [`services/web_api/app.py`](services/web_api/app.py:0), en liant l'URL à votre service.
+**R:** Pour ajouter un nouvel endpoint, suivez ces étapes (détaillées dans [`services/README.md#développement-et-extension`](../../../../services/README.md)) :
+1.  Créez votre logique métier dans un nouveau fichier de service, par exemple `services/web_api/services/mon_nouveau_service.py`. Inspirez-vous de services existants comme [`services/web_api/services/analysis_service.py`](../../../../argumentation_analysis/services/web_api/services/analysis_service.py).
+2.  Définissez les modèles de données (requête et réponse) dans [`services/web_api/models/request_models.py`](../../../../argumentation_analysis/services/web_api/models/request_models.py) et [`services/web_api/models/response_models.py`](../../../../argumentation_analysis/services/web_api/models/response_models.py) en utilisant Pydantic.
+3.  Ajoutez la nouvelle route Flask dans [`services/web_api/app.py`](../../../../argumentation_analysis/services/web_api/app.py), en liant l'URL à votre service.
 4.  Documentez le nouvel endpoint dans la fonction `list_endpoints()` (généralement dans `app.py` ou un module de documentation dédié) pour qu'il apparaisse sur `/api/endpoints`.
-5.  N'oubliez pas d'ajouter des tests pour votre nouveau service et endpoint dans [`services/web_api/tests/`](services/web_api/tests/).
-Pour plus de détails, consultez le guide [`docs/guides/integration_api_web.md`](docs/guides/integration_api_web.md:0).
+5.  N'oubliez pas d'ajouter des tests pour votre nouveau service et endpoint dans [`services/web_api/tests/`](../../../../argumentation_analysis/services/web_api/tests).
+Pour plus de détails, consultez le guide [`docs/guides/integration_api_web.md`](../../../guides/integration_api_web.md).
 
 ---
 
@@ -84,7 +84,7 @@ Pour plus de détails, consultez le guide [`docs/guides/integration_api_web.md`]
 
 **Q: Comment accéder au moteur d'analyse depuis mon code ?**
 **R:** Vous pouvez accéder au moteur de plusieurs manières :
-1.  **Via l'API web** (recommandé pour l'interface web et les clients externes). Consultez la section [API Web](#api-web) de cette FAQ et le fichier [`services/README.md`](services/README.md:0).
+1.  **Via l'API web** (recommandé pour l'interface web et les clients externes). Consultez la section [API Web](#api-web) de cette FAQ et le fichier [`services/README.md`](../../../../services/README.md).
 2.  **Directement via les imports Python** (utile pour le développement du serveur MCP, des scripts, ou des tests). Voici un exemple d'import :
     ```python
     from argumentation_analysis.agents.core.informal.informal_agent import InformalAgent
@@ -92,10 +92,10 @@ Pour plus de détails, consultez le guide [`docs/guides/integration_api_web.md`]
     # Et d'autres composants du moteur...
     ```
     Vous trouverez de nombreux exemples d'utilisation directe dans :
-    - Les scripts du dossier [`examples/logic_agents/`](examples/logic_agents/) (par exemple, [`propositional_logic_example.py`](examples/logic_agents/propositional_logic_example.py:0), [`first_order_logic_example.py`](examples/logic_agents/first_order_logic_example.py:0)).
-    - Les scripts de démonstration comme [`examples/scripts_demonstration/demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) et [`examples/scripts_demonstration/demonstration_epita.py`](examples/scripts_demonstration/demonstration_epita.py:0).
-    - Les tests unitaires et d'intégration dans le dossier [`tests/`](tests/).
-    Le guide [`docs/guides/utilisation_agents_logiques.md`](docs/guides/utilisation_agents_logiques.md:0) fournit également des informations utiles.
+    - Les scripts du dossier `examples/logic_agents/` (par exemple, `propositional_logic_example.py`, `first_order_logic_example.py`).
+    - Les scripts de démonstration comme [`examples/scripts_demonstration/demo_tweety_interaction_simple.py`](../../../../examples/02_core_system_demos/scripts_demonstration/demo_tweety_interaction_simple.py) et [`examples/scripts_demonstration/demonstration_epita.py`](../../../../examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py).
+    - Les tests unitaires et d'intégration dans le dossier [`tests/`](../../../../tests).
+    Le guide [`docs/guides/utilisation_agents_logiques.md`](../../../guides/utilisation_agents_logiques.md) fournit également des informations utiles.
 
 **Q: Comment fonctionne la détection de sophismes ?**
 **R:** La détection de sophismes utilise une combinaison d'approches, notamment :
@@ -106,10 +106,10 @@ Pour plus de détails, consultez le guide [`docs/guides/integration_api_web.md`]
 
 Ces analyses sont principalement effectuées par des composants tels que `ComplexFallacyAnalyzer` et `ContextualFallacyAnalyzer`. Pour voir comment ces analyseurs sont utilisés et testés, vous pouvez consulter :
 - Les tests unitaires spécifiques, par exemple :
-    - [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py:0)
-    - [`tests/agents/tools/analysis/enhanced/test_enhanced_contextual_fallacy_analyzer.py`](tests/agents/tools/analysis/enhanced/test_enhanced_contextual_fallacy_analyzer.py:0)
+    - [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](../../../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_complex_fallacy_analyzer.py)
+    - [`tests/agents/tools/analysis/enhanced/test_enhanced_contextual_fallacy_analyzer.py`](../../../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_contextual_fallacy_analyzer.py)
 - Des exemples d'utilisation dans les scripts de démonstration ou les tests d'intégration qui font appel à la détection de sophismes.
-Le guide [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) peut également contenir des sections pertinentes sur l'architecture de ces composants.
+Le guide [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) peut également contenir des sections pertinentes sur l'architecture de ces composants.
 
 **Q: Comment sont calculées les extensions des frameworks de Dung ?**
 **R:** Les extensions des frameworks d'argumentation de Dung sont calculées à l'aide de TweetyProject, qui implémente diverses sémantiques. Les principales utilisées sont :
@@ -117,29 +117,29 @@ Le guide [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0
 - **Preferred Semantics** : Peut fournir plusieurs extensions maximales (au sens de l'inclusion), calculées avec `SimplePreferredReasoner`.
 - **Stable Semantics** : Fournit des extensions qui attaquent tout argument en dehors d'elles-mêmes, calculées avec `SimpleStableReasoner`.
 
-Le service `FrameworkService` (exposé via l'API Web, voir [`services/web_api/services/framework_service.py`](services/web_api/services/framework_service.py:0) si le fichier existe) encapsule ces calculs.
+Le service `FrameworkService` (exposé via l'API Web, voir [`services/web_api/services/framework_service.py`](../../../../argumentation_analysis/services/web_api/services/framework_service.py) si le fichier existe) encapsule ces calculs.
 Pour des exemples concrets d'utilisation de ces reasoners avec TweetyProject en Python :
-- Consultez les scripts dans [`examples/logic_agents/`](examples/logic_agents/), notamment ceux qui manipulent des `DungTheory` (par exemple, [`examples/logic_agents/combined_logic_example.py`](examples/logic_agents/combined_logic_example.py:0)).
-- Le script [`examples/scripts_demonstration/demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) montre également des interactions basiques avec Tweety.
-- Le guide [`docs/guides/utilisation_agents_logiques.md`](docs/guides/utilisation_agents_logiques.md:0) et les exemples de logique spécifiques (ex: [`docs/guides/exemples_logique_propositionnelle.md`](docs/guides/exemples_logique_propositionnelle.md:0)) peuvent illustrer la construction de théories et l'interrogation.
+- Consultez les scripts dans `examples/logic_agents/`, notamment ceux qui manipulent des `DungTheory` (par exemple, `examples/logic_agents/combined_logic_example.py`).
+- Le script [`examples/scripts_demonstration/demo_tweety_interaction_simple.py`](../../../../examples/02_core_system_demos/scripts_demonstration/demo_tweety_interaction_simple.py) montre également des interactions basiques avec Tweety.
+- Le guide [`docs/guides/utilisation_agents_logiques.md`](../../../guides/utilisation_agents_logiques.md) et les exemples de logique spécifiques (ex: [`docs/guides/exemples_logique_propositionnelle.md`](../../../guides/exemples_logique_propositionnelle.md)) peuvent illustrer la construction de théories et l'interrogation.
 
 **Q: Comment gérer les performances pour les analyses complexes ?**
 **R:** La gestion des performances pour les analyses complexes est cruciale. Voici quelques pistes :
 -   **Limiter la portée de l'analyse** : Utilisez les paramètres `options` de l'API ou des agents pour ne demander que les analyses strictement nécessaires.
--   **Mise en cache** : Implémentez ou utilisez un système de cache pour les résultats d'analyses coûteuses et fréquemment demandées. Le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) pourrait aborder les stratégies de cache du projet.
+-   **Mise en cache** : Implémentez ou utilisez un système de cache pour les résultats d'analyses coûteuses et fréquemment demandées. Le [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) pourrait aborder les stratégies de cache du projet.
 -   **Optimisation des frameworks d'argumentation** : Pour les frameworks volumineux, limitez le nombre de sémantiques calculées ou explorez des reasoners plus performants si disponibles dans TweetyProject pour des cas spécifiques.
 -   **Timeouts** : Mettez en place des timeouts pour les opérations longues afin d'éviter de bloquer le système.
 -   **Traitement asynchrone** : Pour les tâches très longues, envisagez un traitement asynchrone avec un système de notification ou de récupération des résultats différée.
-Des exemples de code spécifiques illustrant ces techniques peuvent se trouver dans les services de l'API (par exemple, la gestion des timeouts lors d'appels à Tweety) ou dans des scripts d'orchestration complexes. Consultez également les tests de performance s'ils existent ([`scripts/execution/run_performance_tests.py`](scripts/execution/run_performance_tests.py:0)).
+Des exemples de code spécifiques illustrant ces techniques peuvent se trouver dans les services de l'API (par exemple, la gestion des timeouts lors d'appels à Tweety) ou dans des scripts d'orchestration complexes. Consultez également les tests de performance s'ils existent (`scripts/execution/run_performance_tests.py`).
 
 ---
 
 ## Interface Web
 
 **Q: Comment gérer les appels asynchrones à l'API ?**
-**R:** Utilisez `async/await` avec `fetch` ou une librairie comme `axios`. Le projet fournit des exemples concrets dans le répertoire [`docs/projets/sujets/aide/interface-web/exemples-react/`](docs/projets/sujets/aide/interface-web/exemples-react/:0).
+**R:** Utilisez `async/await` avec `fetch` ou une librairie comme `axios`. Le projet fournit des exemples concrets dans le répertoire [`docs/projets/sujets/aide/interface-web/exemples-react/`](interface-web/exemples-react).
 
-Plus spécifiquement, le hook personnalisé [`docs/projets/sujets/aide/interface-web/exemples-react/hooks/useArgumentationAPI.js`](docs/projets/sujets/aide/interface-web/exemples-react/hooks/useArgumentationAPI.js:0) montre une gestion robuste des appels à l'API du backend, incluant la gestion des états de chargement et des erreurs. Vous pouvez vous en inspirer pour vos propres composants.
+Plus spécifiquement, le hook personnalisé [`docs/projets/sujets/aide/interface-web/exemples-react/hooks/useArgumentationAPI.js`](interface-web/exemples-react/hooks/useArgumentationAPI.js) montre une gestion robuste des appels à l'API du backend, incluant la gestion des états de chargement et des erreurs. Vous pouvez vous en inspirer pour vos propres composants.
 
 **Exemple générique avec Axios (similaire à ce que vous pourriez trouver dans le hook) :**
 ```javascript
@@ -187,10 +187,10 @@ const callApiFetch = async (endpoint, payload) => {
   }
 };
 ```
-Consultez le [`README.md`](docs/projets/sujets/aide/interface-web/exemples-react/README.md:0) dans le dossier des exemples React pour plus de contexte sur leur utilisation.
+Consultez le [`README.md`](interface-web/exemples-react/README.md) dans le dossier des exemples React pour plus de contexte sur leur utilisation.
 
 **Q: Comment visualiser un framework de Dung avec D3.js ?**
-**R:** La visualisation de graphes d'argumentation peut être complexe. L'exemple de code ci-dessous donne une base avec D3.js. Pour une intégration plus poussée et des fonctionnalités avancées (comme la construction interactive de frameworks), vous pouvez examiner le composant [`FrameworkBuilder.jsx`](docs/projets/sujets/aide/interface-web/exemples-react/FrameworkBuilder.jsx:0) disponible dans les exemples React du projet. Ce composant pourrait utiliser D3.js ou une autre librairie de visualisation de graphes.
+**R:** La visualisation de graphes d'argumentation peut être complexe. L'exemple de code ci-dessous donne une base avec D3.js. Pour une intégration plus poussée et des fonctionnalités avancées (comme la construction interactive de frameworks), vous pouvez examiner le composant [`FrameworkBuilder.jsx`](interface-web/exemples-react/FrameworkBuilder.jsx) disponible dans les exemples React du projet. Ce composant pourrait utiliser D3.js ou une autre librairie de visualisation de graphes.
 
 **Exemple de base avec D3.js (conceptuel) :**
 ```javascript
@@ -295,12 +295,12 @@ const DungFrameworkVisualizer = ({ data }) => { // data = { nodes: [{id: 'a'}, .
 
 export default DungFrameworkVisualizer;
 ```
-Consultez le [`README.md`](docs/projets/sujets/aide/interface-web/exemples-react/README.md:0) et les composants comme [`FrameworkBuilder.jsx`](docs/projets/sujets/aide/interface-web/exemples-react/FrameworkBuilder.jsx:0) pour des implémentations plus complètes et adaptées au projet.
+Consultez le [`README.md`](interface-web/exemples-react/README.md) et les composants comme [`FrameworkBuilder.jsx`](interface-web/exemples-react/FrameworkBuilder.jsx) pour des implémentations plus complètes et adaptées au projet.
 
 **Q: Comment mettre en évidence les sophismes dans le texte ?**
 **R:** Pour mettre en évidence les sophismes, vous pouvez créer un composant React qui prend le texte original et une liste d'objets représentant les sophismes (avec leurs positions `start` et `end`, type, message, etc.). Ce composant découpera le texte et enveloppera les segments de sophismes dans des balises `<span>` stylisées.
 
-Le projet fournit un exemple concret avec le composant [`FallacyDetector.jsx`](docs/projets/sujets/aide/interface-web/exemples-react/FallacyDetector.jsx:0) et son CSS associé [`FallacyDetector.css`](docs/projets/sujets/aide/interface-web/exemples-react/FallacyDetector.css:0). Ces fichiers montrent une implémentation fonctionnelle que vous pouvez étudier et adapter.
+Le projet fournit un exemple concret avec le composant [`FallacyDetector.jsx`](interface-web/exemples-react/FallacyDetector.jsx) et son CSS associé [`FallacyDetector.css`](interface-web/exemples-react/FallacyDetector.css). Ces fichiers montrent une implémentation fonctionnelle que vous pouvez étudier et adapter.
 
 **Concept général (similaire à ce que vous trouverez dans `FallacyDetector.jsx`) :**
 ```jsx
@@ -353,7 +353,7 @@ const HighlightedTextWithFallacies = ({ text, fallacies }) => {
 
 export default HighlightedTextWithFallacies;
 ```
-**CSS (extrait conceptuel, voir [`FallacyDetector.css`](docs/projets/sujets/aide/interface-web/exemples-react/FallacyDetector.css:0) pour l'implémentation réelle) :**
+**CSS (extrait conceptuel, voir [`FallacyDetector.css`](interface-web/exemples-react/FallacyDetector.css) pour l'implémentation réelle) :**
 ```css
 /* .fallacy-highlight {
   padding: 0.1em 0.2em;
@@ -371,14 +371,14 @@ export default HighlightedTextWithFallacies;
   font-weight: bold;
 } */
 ```
-Référez-vous aux fichiers [`FallacyDetector.jsx`](docs/projets/sujets/aide/interface-web/exemples-react/FallacyDetector.jsx:0) et [`FallacyDetector.css`](docs/projets/sujets/aide/interface-web/exemples-react/FallacyDetector.css:0) pour l'implémentation détaillée et les styles utilisés dans le projet.
+Référez-vous aux fichiers [`FallacyDetector.jsx`](interface-web/exemples-react/FallacyDetector.jsx) et [`FallacyDetector.css`](interface-web/exemples-react/FallacyDetector.css) pour l'implémentation détaillée et les styles utilisés dans le projet.
 
 **Q: Comment implémenter un éditeur d'arguments avec analyse en temps réel ?**
 **R:** Pour implémenter un éditeur d'arguments avec analyse en temps réel, vous combinerez un champ de texte (par exemple, `textarea`), un état React pour stocker le texte, et un `useEffect` pour déclencher l'analyse. Il est crucial d'utiliser une technique de *debounce* pour éviter de surcharger l'API à chaque frappe.
 
-Le projet fournit des exemples pertinents dans [`docs/projets/sujets/aide/interface-web/exemples-react/`](docs/projets/sujets/aide/interface-web/exemples-react/:0) :
--   Le composant [`ArgumentAnalyzer.jsx`](docs/projets/sujets/aide/interface-web/exemples-react/ArgumentAnalyzer.jsx:0) est susceptible de contenir une telle logique.
--   Le hook [`useArgumentationAPI.js`](docs/projets/sujets/aide/interface-web/exemples-react/hooks/useArgumentationAPI.js:0) gère les appels à l'API et pourrait être utilisé par `ArgumentAnalyzer.jsx`.
+Le projet fournit des exemples pertinents dans [`docs/projets/sujets/aide/interface-web/exemples-react/`](interface-web/exemples-react) :
+-   Le composant [`ArgumentAnalyzer.jsx`](interface-web/exemples-react/ArgumentAnalyzer.jsx) est susceptible de contenir une telle logique.
+-   Le hook [`useArgumentationAPI.js`](interface-web/exemples-react/hooks/useArgumentationAPI.js) gère les appels à l'API et pourrait être utilisé par `ArgumentAnalyzer.jsx`.
 
 **Concept général (inspiré par les composants existants) :**
 ```jsx
@@ -481,7 +481,7 @@ const RealtimeArgumentEditor = () => {
 
 export default RealtimeArgumentEditor;
 ```
-Pour une implémentation complète et stylisée, référez-vous à [`ArgumentAnalyzer.jsx`](docs/projets/sujets/aide/interface-web/exemples-react/ArgumentAnalyzer.jsx:0), [`ArgumentAnalyzer.css`](docs/projets/sujets/aide/interface-web/exemples-react/ArgumentAnalyzer.css:0), et au hook [`useArgumentationAPI.js`](docs/projets/sujets/aide/interface-web/exemples-react/hooks/useArgumentationAPI.js:0).
+Pour une implémentation complète et stylisée, référez-vous à [`ArgumentAnalyzer.jsx`](interface-web/exemples-react/ArgumentAnalyzer.jsx), [`ArgumentAnalyzer.css`](interface-web/exemples-react/ArgumentAnalyzer.css), et au hook [`useArgumentationAPI.js`](interface-web/exemples-react/hooks/useArgumentationAPI.js).
 
 ---
 
@@ -492,41 +492,41 @@ Pour une implémentation complète et stylisée, référez-vous à [`ArgumentAna
 ```bash
 pytest tests/unit
 ```
-Assurez-vous que votre environnement est correctement configuré (voir [`setup_project_env.ps1`](setup_project_env.ps1:0) ou [`setup_project_env.sh`](setup_project_env.sh:0)) et que les dépendances de test sont installées (souvent incluses dans `requirements.txt` ou un fichier `requirements-dev.txt`).
-La configuration de `pytest` peut être trouvée dans [`pytest.ini`](pytest.ini:0).
-Pour des options d'exécution alternatives ou des scripts de test spécifiques, consultez le répertoire [`scripts/testing/`](scripts/testing/). Le guide [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) (section Tests) peut également fournir plus de détails.
+Assurez-vous que votre environnement est correctement configuré (voir [`setup_project_env.ps1`](../../../../setup_project_env.ps1) ou [`setup_project_env.sh`](../../../../scripts/setup/setup_project_env.sh)) et que les dépendances de test sont installées (souvent incluses dans `requirements.txt` ou un fichier `requirements-dev.txt`).
+La configuration de `pytest` peut être trouvée dans [`pytest.ini`](../../../../pytest.ini).
+Pour des options d'exécution alternatives ou des scripts de test spécifiques, consultez le répertoire [`scripts/testing/`](../../../../scripts/testing). Le guide [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) (section Tests) peut également fournir plus de détails.
 
 **Q: Comment lancer les tests d'intégration ?**
 **R:** Pour lancer les tests d'intégration, utilisez :
 ```bash
 pytest tests/integration
 ```
-Ces tests peuvent avoir des dépendances externes (par exemple, une API Web en cours d'exécution pour tester les clients API) ou nécessiter une configuration d'environnement plus spécifique. Consultez le [`README.md`](tests/integration/README.md:0) dans le dossier `tests/integration` et le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) pour les prérequis.
-Le fichier [`pytest.ini`](pytest.ini:0) s'applique également ici.
+Ces tests peuvent avoir des dépendances externes (par exemple, une API Web en cours d'exécution pour tester les clients API) ou nécessiter une configuration d'environnement plus spécifique. Consultez le [`README.md`](../../../../tests/integration/README.md) dans le dossier `tests/integration` et le [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) pour les prérequis.
+Le fichier [`pytest.ini`](../../../../pytest.ini) s'applique également ici.
 
 **Q: Où trouver des exemples de tests ?**
 **R:** Vous trouverez de nombreux exemples de tests dans les répertoires suivants :
--   [`tests/unit/`](tests/unit/) : Pour les tests unitaires ciblant des fonctions ou classes isolées. Par exemple :
-    -   Tests des analyseurs de sophismes : [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py:0)
-    -   Tests des utilitaires centraux : [`tests/project_core/`](tests/project_core/)
--   [`tests/integration/`](tests/integration/) : Pour les tests vérifiant l'interaction entre plusieurs composants. Par exemple :
-    -   Tests des endpoints de l'API (si l'API est structurée ainsi) : `services/web_api/tests/test_endpoints.py` (chemin hypothétique basé sur [`services/README.md`](services/README.md:0)) ou des tests d'intégration client API dans [`tests/integration/`](tests/integration/).
-    -   Tests d'intégration des outils d'agents : [`tests/integration/test_agents_tools_integration.py`](tests/integration/test_agents_tools_integration.py:0)
+-   [`tests/unit/`](../../../../tests/unit) : Pour les tests unitaires ciblant des fonctions ou classes isolées. Par exemple :
+    -   Tests des analyseurs de sophismes : [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](../../../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_complex_fallacy_analyzer.py)
+    -   Tests des utilitaires centraux : [`tests/project_core/`](../../../../tests/project_core)
+-   [`tests/integration/`](../../../../tests/integration) : Pour les tests vérifiant l'interaction entre plusieurs composants. Par exemple :
+    -   Tests des endpoints de l'API (si l'API est structurée ainsi) : `services/web_api/tests/test_endpoints.py` (chemin hypothétique basé sur [`services/README.md`](../../../../services/README.md)) ou des tests d'intégration client API dans [`tests/integration/`](../../../../tests/integration).
+    -   Tests d'intégration des outils d'agents : [`tests/integration/test_agents_tools_integration.py`](../../../../tests/integration/test_agents_tools_integration.py)
 Parcourez ces dossiers pour trouver des tests pertinents pour la fonctionnalité que vous souhaitez tester.
 
 **Q: Comment ajouter un nouveau test ?**
 **R:** Pour ajouter un nouveau test :
 1.  **Identifiez la portée** : Déterminez s'il s'agit d'un test unitaire (isolant un composant) ou d'un test d'intégration (vérifiant l'interaction entre composants).
 2.  **Localisation** :
-    *   Pour les tests unitaires, placez votre fichier dans un sous-répertoire de [`tests/unit/`](tests/unit/) qui reflète la structure du code source (par exemple, un test pour `argumentation_analysis/logic/my_module.py` irait dans `tests/unit/argumentation_analysis/logic/test_my_module.py`).
-    *   Pour les tests d'intégration, placez-le dans [`tests/integration/`](tests/integration/).
+    *   Pour les tests unitaires, placez votre fichier dans un sous-répertoire de [`tests/unit/`](../../../../tests/unit) qui reflète la structure du code source (par exemple, un test pour `argumentation_analysis/logic/my_module.py` irait dans `tests/unit/argumentation_analysis/logic/test_my_module.py`).
+    *   Pour les tests d'intégration, placez-le dans [`tests/integration/`](../../../../tests/integration).
 3.  **Nommage** : Nommez votre fichier `test_*.py` (par exemple, `test_nouvelle_fonctionnalite.py`) et vos fonctions de test `test_*` (par exemple, `def test_comportement_attendu():`).
 4.  **Écriture** :
     *   Importez les modules nécessaires et `pytest`.
-    *   Utilisez des fixtures `pytest` (définies dans des fichiers `conftest.py` ou localement, voir par exemple [`tests/fixtures/agent_fixtures.py`](tests/fixtures/agent_fixtures.py:0)) pour préparer l'environnement de test (données, objets mockés, etc.).
+    *   Utilisez des fixtures `pytest` (définies dans des fichiers `conftest.py` ou localement, voir par exemple [`tests/fixtures/agent_fixtures.py`](../../../../tests/fixtures/agent_fixtures.py)) pour préparer l'environnement de test (données, objets mockés, etc.).
     *   Écrivez des assertions claires (`assert condition`) pour vérifier les résultats.
 5.  **Exécution** : Lancez `pytest` pour vérifier que votre nouveau test passe et n'introduit pas de régressions.
-Consultez le guide [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) (section sur l'écriture des tests) pour des conventions et des exemples plus détaillés.
+Consultez le guide [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) (section sur l'écriture des tests) pour des conventions et des exemples plus détaillés.
 
 ---
 
@@ -535,27 +535,27 @@ Consultez le guide [`docs/guides/guide_developpeur.md`](docs/guides/guide_develo
 **Q: Comment configurer l'environnement de développement ?**
 **R:** La configuration de l'environnement de développement est une étape cruciale. Suivez ces indications :
 -   **Scripts d'initialisation** : Utilisez les scripts fournis à la racine du projet :
-    -   [`setup_project_env.ps1`](setup_project_env.ps1:0) pour Windows (PowerShell).
-    -   [`setup_project_env.sh`](setup_project_env.sh:0) pour Linux/macOS (Bash).
+    -   [`setup_project_env.ps1`](../../../../setup_project_env.ps1) pour Windows (PowerShell).
+    -   [`setup_project_env.sh`](../../../../scripts/setup/setup_project_env.sh) pour Linux/macOS (Bash).
     Ces scripts créent généralement un environnement virtuel Python, installent les dépendances et peuvent effectuer d'autres configurations initiales.
 -   **Dépendances Python** :
-    -   La liste principale des dépendances Python se trouve dans [`requirements.txt`](requirements.txt:0) (pour `pip`).
-    -   Si vous utilisez Conda, le fichier [`environment.yml`](environment.yml:0) définit l'environnement.
+    -   La liste principale des dépendances Python se trouve dans [`requirements.txt`](../../../../requirements.txt) (pour `pip`).
+    -   Si vous utilisez Conda, le fichier [`environment.yml`](../../../../environment.yml) définit l'environnement.
 -   **Java Development Kit (JDK)** : Une version compatible du JDK est requise pour JPype et l'utilisation de TweetyProject. Assurez-vous que `JAVA_HOME` est correctement configuré.
 -   **Guides d'installation** : Pour des instructions plus détaillées, consultez :
-    -   [`GUIDE_INSTALLATION_ETUDIANTS.md`](GUIDE_INSTALLATION_ETUDIANTS.md:0)
-    -   [`GETTING_STARTED.md`](GETTING_STARTED.md:0)
-    -   La section "Configuration de l'environnement" dans [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0).
+    -   [`GUIDE_INSTALLATION_ETUDIANTS.md`](../../../guides/GUIDE_INSTALLATION_ETUDIANTS.md)
+    -   [`GETTING_STARTED.md`](../../../guides/GETTING_STARTED.md)
+    -   La section "Configuration de l'environnement" dans [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md).
 
 **Q: Quelles sont les dépendances clés du projet ?**
 **R:** Les dépendances clés du projet incluent :
 -   **Backend :**
     -   **Python** : Langage principal.
     -   **Java (via JPype)** : Pour l'intégration avec les bibliothèques Java.
-    -   **TweetyProject** : Bibliothèque Java pour la logique et l'argumentation. Les `.jar` nécessaires sont souvent inclus dans le projet (voir [`libs/`](libs/:0) ou une configuration Maven/Gradle si applicable).
-    -   **Flask** : Framework web pour l'API (voir [`services/web_api/requirements.txt`](services/web_api/requirements.txt:0) si spécifique, sinon [`requirements.txt`](requirements.txt:0) global).
+    -   **TweetyProject** : Bibliothèque Java pour la logique et l'argumentation. Les `.jar` nécessaires sont souvent inclus dans le projet (voir [`libs/`](../../../../libs) ou une configuration Maven/Gradle si applicable).
+    -   **Flask** : Framework web pour l'API (voir [`services/web_api/requirements.txt`](../../../../requirements.txt) si spécifique, sinon [`requirements.txt`](../../../../requirements.txt) global).
     -   **Pydantic** : Pour la validation des données de l'API.
-    Les dépendances Python sont listées dans [`requirements.txt`](requirements.txt:0) et/ou [`environment.yml`](environment.yml:0).
+    Les dépendances Python sont listées dans [`requirements.txt`](../../../../requirements.txt) et/ou [`environment.yml`](../../../../environment.yml).
 -   **Frontend (Interface Web) :**
     -   **React** : Bibliothèque JavaScript pour la construction de l'interface utilisateur.
     -   **D3.js** : Pour les visualisations de données (graphiques, etc.).
@@ -583,8 +583,8 @@ Consultez les fichiers de dépendances mentionnés pour les versions exactes.
 
 -   **Logging et Monitoring :** Mettre en place des solutions de logging centralisé et de monitoring pour surveiller la santé et les performances de l'application.
 
-Pour des instructions spécifiques au projet, consultez le guide [`docs/guides/guide_deploiement.md`](docs/guides/guide_deploiement.md:0) s'il existe. Des exemples de configuration pour Nginx ou des fichiers `Dockerfile` peuvent également être présents dans le projet (par exemple, dans un dossier `deployment/` ou à la racine).
-Le script [`scripts/env/setup_prod_env.sh`](scripts/env/setup_prod_env.sh:0) (s'il existe) pourrait contenir des étapes d'automatisation pour un environnement de production.
+Pour des instructions spécifiques au projet, consultez le guide [`docs/guides/guide_deploiement.md`](../../../guides/GUIDE_DEPLOIEMENT_PRODUCTION.md) s'il existe. Des exemples de configuration pour Nginx ou des fichiers `Dockerfile` peuvent également être présents dans le projet (par exemple, dans un dossier `deployment/` ou à la racine).
+Le script `scripts/env/setup_prod_env.sh` (s'il existe) pourrait contenir des étapes d'automatisation pour un environnement de production.
 
 ---
 
@@ -608,7 +608,7 @@ Le script [`scripts/env/setup_prod_env.sh`](scripts/env/setup_prod_env.sh:0) (s'
 8.  **Revue** : Votre PR sera revue par les mainteneurs. Adressez les commentaires et suggestions.
 9.  **Merge** : Une fois approuvée, votre PR sera fusionnée.
 
-Pour des directives plus détaillées, consultez le fichier `CONTRIBUTING.md` (s'il existe à la racine du projet) ou la section "Contribuer au projet" dans le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0).
+Pour des directives plus détaillées, consultez le fichier `CONTRIBUTING.md` (s'il existe à la racine du projet) ou la section "Contribuer au projet" dans le [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md).
 
 **Q: Quelles sont les conventions de codage ?**
 **R:** Le respect des conventions de codage est essentiel pour la maintenabilité :
@@ -625,7 +625,7 @@ Pour des directives plus détaillées, consultez le fichier `CONTRIBUTING.md` (s
     -   Nommer les variables, fonctions et classes de manière descriptive.
     -   Viser un code modulaire et facile à tester.
 
-Consultez la section "Conventions de codage" dans le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0) pour les règles spécifiques au projet et des exemples.
+Consultez la section "Conventions de codage" dans le [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) pour les règles spécifiques au projet et des exemples.
 
 **Q: Comment gérer les branches et les commits ?**
 **R:** Une bonne gestion des branches et des commits facilite la collaboration et la maintenance de l'historique :
@@ -643,7 +643,7 @@ Consultez la section "Conventions de codage" dans le [`docs/guides/guide_develop
         -   `test: Ajoute des tests unitaires pour le FallacyService`
     -   Le message doit avoir un sujet concis (max 50-72 caractères) et optionnellement un corps plus détaillé.
 
-Ces pratiques sont souvent détaillées dans `CONTRIBUTING.md` ou le [`docs/guides/guide_developpeur.md`](docs/guides/guide_developpeur.md:0).
+Ces pratiques sont souvent détaillées dans `CONTRIBUTING.md` ou le [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md).
 
 **Q: Où signaler les bugs ou proposer des fonctionnalités ?**
 **R:** Pour signaler des bugs ou proposer de nouvelles fonctionnalités, veuillez utiliser l'onglet **"Issues"** du dépôt GitHub du projet.

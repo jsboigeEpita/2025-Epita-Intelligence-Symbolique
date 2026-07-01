@@ -539,11 +539,11 @@ L'analyse montre qu'il n'est pas permis de divulguer publiquement une informatio
 
 ## Ressources supplémentaires
 
-- [Guide d'utilisation des agents logiques](utilisation_agents_logiques.md)
-- [Exemples de logique propositionnelle](exemples_logique_propositionnelle.md)
-- [Exemples de logique du premier ordre](exemples_logique_premier_ordre.md)
-- [Script complet avec divers exemples de logique modale](../../examples/logic_agents/modal_logic_example.py)
-- [Tutoriel API Logique (Section Logique Modale)](../../examples/notebooks/api_logic_tutorial.ipynb#4.3-Logique-modale)
-- [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
+- Guide d'utilisation des agents logiques
+- Exemples de logique propositionnelle
+- Exemples de logique du premier ordre
+- Script complet avec divers exemples de logique modale
+- [Tutoriel API Logique (Section Logique Modale)](../../examples/05_notebooks/api_logic_tutorial.ipynb#4.3-Logique-modale)
+- [Tutoriel interactif sur les agents logiques](../../examples/05_notebooks/logic_agents_tutorial.ipynb)
 - [Documentation de TweetyProject sur la logique modale](http://tweetyproject.org/doc/modal-logic.html)
 - [Stanford Encyclopedia of Philosophy: Modal Logic](https://plato.stanford.edu/entries/logic-modal/)
