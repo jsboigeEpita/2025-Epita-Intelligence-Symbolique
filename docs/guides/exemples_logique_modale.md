@@ -539,9 +539,9 @@ L'analyse montre qu'il n'est pas permis de divulguer publiquement une informatio
 
 ## Ressources supplémentaires
 
-- Guide d'utilisation des agents logiques
-- Exemples de logique propositionnelle
-- Exemples de logique du premier ordre
+- [Guide d'utilisation des agents logiques](utilisation_agents_logiques.md)
+- [Exemples de logique propositionnelle](exemples_logique_propositionnelle.md)
+- [Exemples de logique du premier ordre](exemples_logique_premier_ordre.md)
 - Script complet avec divers exemples de logique modale
 - [Tutoriel API Logique (Section Logique Modale)](../../examples/05_notebooks/api_logic_tutorial.ipynb#4.3-Logique-modale)
 - [Tutoriel interactif sur les agents logiques](../../examples/05_notebooks/logic_agents_tutorial.ipynb)

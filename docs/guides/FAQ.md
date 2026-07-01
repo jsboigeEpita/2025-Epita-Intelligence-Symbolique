@@ -157,7 +157,7 @@ R: Les agents communiquent via l'orchestrateur tactique qui :
 2. Collecte leurs résultats
 3. Résout les conflits potentiels
 4. Produit un rapport consolidé
-Le [Guide du Développeur](guide_developpeur.md) et le guide sur l'Utilisation des Agents Logiques fournissent plus de détails sur ces interactions.
+Le [Guide du Développeur](guide_developpeur.md) et le guide sur [l'Utilisation des Agents Logiques](utilisation_agents_logiques.md) fournissent plus de détails sur ces interactions.
 
 ### Flux de données
 
