@@ -18,7 +18,6 @@ project_root = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # --- Imports du projet (après configuration du path) ---
-import argumentation_analysis.core.environment  # Import déplacé ici
 from project_core.service_manager import InfrastructureServiceManager, ServiceConfig
 
 
