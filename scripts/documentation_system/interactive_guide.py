@@ -194,7 +194,7 @@ class InteractiveDocumentationGuide:
                         <div class="entry-item">
                             <h4>{entry['name']}</h4>
                             <span class="badge badge-{entry['category']}">{entry['category']}</span>
-                            <p>{entry.get('docstring', 'Module d\'entrée du système')[:120]}...</p>
+                            <p>{entry.get("docstring", "Module d'entrée du système")[:120]}...</p>
                         </div>'''
 
         html_content += """
