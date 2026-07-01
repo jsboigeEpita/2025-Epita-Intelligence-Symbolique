@@ -7,11 +7,7 @@ Ce répertoire contient des scripts spécifiques pour des scénarios de test, de
 - **`debug_test_crypto_cycle.py`**: Script pour déboguer le cycle de chiffrement/déchiffrement dans des contextes de test.
 - **`get_test_metrics.py`**: Calcule et affiche des métriques sur l'exécution des tests (potentiellement à partir de rapports JUnit/XML).
 - **`run_tests_alternative.py`**: Un autre script pour lancer des tests, potentiellement avec une configuration ou un périmètre différent.
-- **`simple_test_runner.py`** / **`test_runner_simple.py`**: Runners de test simplifiés pour des exécutions rapides ou ciblées.
-- **`simulation_agent_informel.py`** : Script de simulation pour tester le comportement des agents informels dans différents contextes d'analyse.
-- **`test_agent_informel.py`** : Script de test pour valider le fonctionnement des agents informels et leur capacité à analyser des arguments.
-- **`test_fallacy_adapter.py`**: Script dédié au test de l'adaptateur de sophismes, vérifiant sa capacité à interfacer correctement avec les logiques de détection de sophismes.
-- **`test_rhetorical_analysis.py`**: Script pour tester les fonctionnalités d'analyse rhétorique, potentiellement en exécutant des analyses sur des exemples de textes et en validant les sorties.
+- **`simple_test_runner.py`**: Runner de test simplifié pour des exécutions rapides ou ciblées.
 - **`validate_embed_tests.py`**: Valide les résultats des tests d'embarquement.
 
 ## Utilisation
