@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 """
 Orchestration complexe multi-agents utilisant les outils de reporting existants.
 SANS emojis Unicode pour éviter les problèmes d'encodage.

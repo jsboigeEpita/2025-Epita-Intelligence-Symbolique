@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
+import argumentation_analysis.core.environment
 """
 Script de migration vers le système Enhanced PM Orchestration v2.0 unifié
 Aide à passer des anciens scripts éparpillés au nouveau système consolidé.

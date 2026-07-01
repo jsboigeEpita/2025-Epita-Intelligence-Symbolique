@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
+import argumentation_analysis.core.environment
 """Test de stabilité du système récupéré sur 3 exécutions"""
 
 import time

@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 
 """
 Script pour générer des synthèses des analyses rhétoriques avec des extraits concrets.

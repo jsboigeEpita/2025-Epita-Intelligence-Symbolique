@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 """
 VALIDATION POINT 1/5 : DEMOS CLUEDO/EINSTEIN SHERLOCK-WATSON-MORIARTY AVEC VRAIS LLMS
 

@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 
 """
 Script pour générer un rapport textuel sur la couverture des tests.

@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
+import argumentation_analysis.core.environment
 """
 Phase 4 - Validation configuration et environnement
 """

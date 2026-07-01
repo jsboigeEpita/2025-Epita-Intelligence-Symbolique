@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 """
 Script pour comparer les performances des différents agents spécialistes d'analyse rhétorique.
 Ce script utilise les utilitaires de argumentation_analysis.utils.reporting_utils.
