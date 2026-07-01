@@ -1,5 +1,15 @@
 # Tutoriel 1: Prise en main du système d'analyse rhétorique
 
+> **⚠️ Tutoriel en sommeil (mode Hiérarchique dormant).**
+> Ce tutoriel parcourt le mode d'orchestration **Hiérarchique**, actuellement
+> **dormant** (voir la table *Orchestration Modes* de `CLAUDE.md`). Le code de
+> référence reste présent à l'emplacement canonique
+> `argumentation_analysis/orchestration/hierarchical/` (expérimental, non branché
+> dans le pipeline actif). **Point d'entrée recommandé** aujourd'hui :
+> [`demonstration_epita.py`](../../../../examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py)
+> et `run_unified_analysis` (mode Pipeline actif). Les exemples d'imports
+> ci-dessous peuvent ne pas s'exécuter tels quels.
+
 ## Objectif
 Apprendre à installer, configurer et exécuter une analyse rhétorique de base
 
