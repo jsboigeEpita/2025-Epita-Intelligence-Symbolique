@@ -2,6 +2,7 @@ import jpype
 import logging
 from typing import Optional, Tuple
 
+from .modal_kb_identifier_normalizer import ModalIdentifierNormalizer
 from .tweety_initializer import TweetyInitializer
 from argumentation_analysis.core.config import settings, ModalSolverChoice
 
@@ -104,6 +105,34 @@ class ModalHandler:
             return self._get_spass_reasoner()
         return self._modal_reasoner
 
+    @staticmethod
+    def _normalize_for_parse(belief_set_content: str) -> str:
+        """Normalize modal KB identifiers so ``MlParser`` accepts them (#1326).
+
+        ``MlParser`` forbids underscores/separators in predicate declarations
+        (``[a-zA-Z][a-zA-Z0-9]*``), but producers such as the spectacular-path
+        ``_construct_modal_kb_from_json`` and LLM-generated identifiers emit
+        underscored multi-word atoms (``joke_teleprompter``) — which raised
+        ``ParserException: Illegal characters in predicate definition`` so the
+        KB never parsed and consistency was never decided (R519: 3/3 modal axes
+        undecided). Applied here, *amont* de ``parseBeliefBase``, it protects
+        every caller regardless of upstream producer (defense-in-depth).
+
+        Idempotent on already-legal atoms: the nl path pre-sanitizes via
+        ``invoke_callables._legal_symbol`` and the second pass is a no-op.
+        Anti-pendule: normalizes sort-name SYNTAX only (PascalCase stem
+        survives), no heuristic masking a parse-fail (#1019 fail-loud).
+        """
+        normalized, reverse = ModalIdentifierNormalizer().normalize_belief_set(
+            belief_set_content
+        )
+        if reverse:
+            logger.debug(
+                "Modal KB identifiers normalized for MlParser (#1326): %s",
+                reverse,
+            )
+        return normalized
+
     def validate_modal_formula(self, formula_str: str) -> Tuple[bool, str]:
         """
         Validates the syntax of a modal logic formula by attempting to parse it.
@@ -138,6 +167,20 @@ class ModalHandler:
         logger.debug(f"Executing modal query '{query_string}' with {reasoner_name}")
         try:
             StringReader = jpype.JClass("java.io.StringReader")
+
+            # #1326: normalize identifiers amont de parseBeliefBase so
+            # underscored atoms (joke_teleprompter) become MlParser-legal
+            # (JokeTeleprompter). One shared normalizer maps belief-set and
+            # query atoms consistently so query names match the KB signature.
+            normalizer = ModalIdentifierNormalizer()
+            belief_set_content, _bs_rev = normalizer.normalize_belief_set(
+                belief_set_content
+            )
+            query_string, _q_rev = normalizer.normalize_belief_set(query_string)
+            if _bs_rev:
+                logger.debug(
+                    "Modal query KB identifiers normalized (#1326): %s", _bs_rev
+                )
 
             # Parse belief set
             belief_set_reader = StringReader(belief_set_content)
@@ -229,6 +272,12 @@ class ModalHandler:
         solver_name = settings.modal_solver.value
         reasoner = self._get_active_reasoner()
         logger.debug(f"Checking modal KB consistency with {solver_name}.")
+
+        # #1326: normalize identifiers amont de parseBeliefBase so underscored
+        # atoms (joke_teleprompter) become MlParser-legal (JokeTeleprompter) and
+        # the configured solver actually receives a parseable belief set to
+        # DECIDE — rather than degrading to None on a ParserException.
+        belief_set_content = self._normalize_for_parse(belief_set_content)
 
         try:
             StringReader = jpype.JClass("java.io.StringReader")
