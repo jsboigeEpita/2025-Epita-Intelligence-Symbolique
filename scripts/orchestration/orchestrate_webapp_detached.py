@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
+import argumentation_analysis.core.environment
 """
 Orchestrateur webapp détaché - utilise les outils de haut niveau existants
 Démarre backend/frontend en arrière-plan et retourne immédiatement le contrôle

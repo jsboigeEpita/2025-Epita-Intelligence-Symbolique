@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 """
 Utilitaire simple pour sélectionner des extraits du corpus.
 Usage: python select_extract.py [--random] [--index N] [--list]

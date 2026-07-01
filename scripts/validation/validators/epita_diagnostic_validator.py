@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 
 """
 Validateur pour le Diagnostic complet de la démo Épita et de ses composants illustrés

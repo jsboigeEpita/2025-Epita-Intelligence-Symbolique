@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 
 """
 Script pour générer un rapport d'analyse complet qui synthétise tous les résultats des tests précédents.

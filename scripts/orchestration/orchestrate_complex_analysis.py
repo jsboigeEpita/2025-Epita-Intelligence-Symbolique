@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 """
 Orchestrateur d'analyse complexe multi-agents avec génération de rapport Markdown.
 """

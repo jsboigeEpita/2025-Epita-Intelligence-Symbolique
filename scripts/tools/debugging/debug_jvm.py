@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
+import argumentation_analysis.core.environment
 """Script de diagnostic JVM pour identifier le problème d'initialisation"""
 
 import os

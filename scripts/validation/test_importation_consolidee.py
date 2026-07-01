@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
+import argumentation_analysis.core.environment
 """
 Test d'importation consolidée du système universel récupéré
 Valide l'intégrité et la cohérence des 553 fichiers Python récupérés
