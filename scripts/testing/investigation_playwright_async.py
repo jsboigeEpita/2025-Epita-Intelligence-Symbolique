@@ -1,10 +1,9 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Script Python Asynchrone - Investigation Playwright Textes Variés
 Alternative non bloquante au script PowerShell
 """
+import argumentation_analysis.core.environment
 
 import asyncio
 import json

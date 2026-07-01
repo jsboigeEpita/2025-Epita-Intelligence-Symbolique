@@ -1,7 +1,6 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import argumentation_analysis.core.environment
 
 """
 Script simple pour exécuter les tests embed_all_sources.

@@ -1,6 +1,5 @@
-import argumentation_analysis.core.environment
-
 # scripts/debug_test_crypto_cycle.py
+import argumentation_analysis.core.environment
 import base64
 import sys
 import os
