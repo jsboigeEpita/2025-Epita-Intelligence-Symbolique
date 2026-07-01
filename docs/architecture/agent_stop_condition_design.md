@@ -25,7 +25,7 @@ Cela se décline en deux axes de modification principaux :
 
 ### 3.1. Modification du `ExplorationPlugin`
 
-Le fichier [`argumentation_analysis/agents/plugins/exploration_plugin.py`](argumentation_analysis/agents/plugins/exploration_plugin.py) doit être modifié.
+Le fichier [`argumentation_analysis/plugins/exploration_plugin.py`](../../argumentation_analysis/plugins/exploration_plugin.py) doit être modifié.
 
 #### 3.1.1. Nouvelle Fonction `conclude_no_fallacy`
 
@@ -52,7 +52,7 @@ Une nouvelle fonction `kernel_function` doit être ajoutée à la classe `Explor
 
 ### 3.2. Modification du `FallacyWorkflowPlugin`
 
-Le fichier [`argumentation_analysis/agents/plugins/fallacy_workflow_plugin.py`](argumentation_analysis/agents/plugins/fallacy_workflow_plugin.py) requiert des modifications à plusieurs endroits.
+Le fichier [`argumentation_analysis/plugins/fallacy_workflow_plugin.py`](../../argumentation_analysis/plugins/fallacy_workflow_plugin.py) requiert des modifications à plusieurs endroits.
 
 #### 3.2.1. Mise à jour du Prompt Système de l'Esclave
 

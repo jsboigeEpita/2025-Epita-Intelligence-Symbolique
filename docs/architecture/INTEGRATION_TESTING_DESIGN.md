@@ -33,7 +33,7 @@ Nous adopterons une structure de répertoires claire et standard pour isoler les
 
 ## 3. Stratégie des Données de Test
 
-Pour découpler les données de test de la logique de test, nous utiliserons un fichier JSON centralisé : [`tests/integration/test_cases.json`](tests/integration/test_cases.json:1).
+Pour découpler les données de test de la logique de test, nous utiliserons un fichier JSON centralisé : [`tests/integration/test_cases.json`](../../tests/integration/test_cases.json:1).
 
 Ce fichier contiendra une liste d'objets, où chaque objet représente un cas de test avec la structure suivante :
 
@@ -43,7 +43,7 @@ Ce fichier contiendra une liste d'objets, où chaque objet représente un cas de
 
 ## 4. Stratégie d'Implémentation des Tests
 
-Le fichier de test principal sera [`tests/integration/test_agent_family.py`](tests/integration/test_agent_family.py:1).
+Le fichier de test principal sera [`tests/integration/test_agent_family.py`](../../tests/integration/test_agent_family.py:1).
 
 ### Fixtures Pytest
 
@@ -56,7 +56,7 @@ Nous utiliserons des fixtures `pytest` pour gérer la configuration et le nettoy
 
 La fonction de test principale sera paramétrée pour atteindre une couverture exhaustive :
 
-1.  Les cas de test seront chargés à partir du fichier [`test_cases.json`](tests/integration/test_cases.json:1).
+1.  Les cas de test seront chargés à partir du fichier [`test_cases.json`](../../tests/integration/test_cases.json:1).
 2.  Les types d'agents seront récupérés à partir de l'énumération `AgentType`.
 3.  Nous utiliserons `pytest.mark.parametrize` pour créer dynamiquement un test pour **chaque combinaison** d'un cas de test et d'un type d'agent.
 
