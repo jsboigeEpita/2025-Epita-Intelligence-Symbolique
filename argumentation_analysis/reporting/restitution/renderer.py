@@ -30,6 +30,7 @@ from typing import Any, Mapping, Optional
 
 from .acts import ACT_TITLES, RestitutionActs
 from .appendix import render_appendix
+from .factual_consistency_check import check_factual_consistency
 from .readability_gate import GateVerdict, ReadabilityGate
 
 # Minimum substantive length for an act body, below which we treat it as
@@ -132,6 +133,13 @@ class RestitutionReportRenderer:
         verdict = self.gate.check(acts)
         if thin_notes:
             verdict = verdict.merge(GateVerdict(band="WARN", reasons=thin_notes))
+
+        # factual cross-check of rendered prose vs appendix (#1316, opt A):
+        # detect prose theatre — a formal authority cited for an inconsistency
+        # the appendix data does not support. Composes with the structural gate
+        # as defense-in-depth with the #1297 prompt guardrail. Skipped honestly
+        # (PASS) when no state was provided (no source of truth to check against).
+        verdict = verdict.merge(check_factual_consistency(body, state))
 
         # assemble the final document
         doc = self._assemble(acts, body, verdict, state, include_full_state_json)
