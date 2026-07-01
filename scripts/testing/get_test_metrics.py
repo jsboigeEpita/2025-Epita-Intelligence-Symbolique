@@ -1,9 +1,8 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Script pour obtenir des métriques rapides des tests sans blocage.
 """
+import argumentation_analysis.core.environment
 
 import subprocess
 import sys

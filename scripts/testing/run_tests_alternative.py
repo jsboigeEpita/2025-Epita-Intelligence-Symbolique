@@ -1,9 +1,8 @@
-import argumentation_analysis.core.environment
-
 #!/usr/bin/env python3
 """
 Runner de test alternatif à pytest
 """
+import argumentation_analysis.core.environment
 
 import sys
 import os
