@@ -1,32 +1,54 @@
-# Évaluateur de cohérence argumentative
+# Évaluateur de cohérence argumentative (`ArgumentCoherenceEvaluator`)
 
 ## Objectif
-Évalue la cohérence logique des arguments dans un texte en vérifiant l'alignement entre les prémisses et la conclusion.
+Évalue la cohérence d'un ensemble d'arguments selon cinq dimensions (logique, thématique, structurelle, rhétorique, épistémique) et produit un score global pondéré ainsi que des recommandations.
+
+> ⚠️ **Statut d'implémentation — simulation.** Le module est actuellement un squelette : les scores par dimension sont pré-définis et ne dérivent pas d'une analyse sémantique réelle. Il sert de cadre pour une future implémentation. Source de vérité : la docstring du module `argumentation_analysis/agents/tools/analysis/new/argument_coherence_evaluator.py`.
+
+## Chemin d'import
+```python
+from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
+```
 
 ## Utilisation
 ```python
-from argumentation_analysis.tools import ArgumentCoherenceEvaluator
+from argumentation_analysis.agents.tools.analysis.new.argument_coherence_evaluator import ArgumentCoherenceEvaluator
 
 evaluator = ArgumentCoherenceEvaluator()
-result = evaluator.analyze(text="Tous les chats sont des mammifères. Les mammifères sont des vertébrés. Donc, les chats sont des vertébrés.")
-print(result.coherence_score)
+result = evaluator.evaluate_coherence(
+    arguments=[
+        "Tous les chats sont des mammifères.",
+        "Les mammifères sont des vertébrés.",
+        "Donc, les chats sont des vertébrés.",
+    ],
+    context="Déduction catégorique",  # optionnel
+)
+print(result["overall_coherence"])
 ```
 
-## Paramètres
-- `text` (str): Texte à analyser
-- `threshold` (float, optional): Seuil de cohérence minimal (défaut: 0.7)
-- `explanation` (bool, optional): Activer les explications détaillées (défaut: False)
+## Constructeur
+`ArgumentCoherenceEvaluator()` — aucun paramètre.
 
-## Résultats
-Retourne un objet contenant:
-- `coherence_score` (float): Note entre 0 et 1
-- `inconsistencies` (list): Liste des incohérences détectées
-- `suggestions` (list): Recommandations pour améliorer la cohérence
+## Méthode principale
+`evaluate_coherence(arguments: list[str], context: str | None = None) -> dict`
 
-## Personnalisation
-Pour ajouter un nouveau critère d'évaluation:
-```python
-class CustomCoherenceCriterion:
-    def evaluate(self, argument):
-        # Implémentation personnalisée
-        return score, feedback
+## Résultat (dictionnaire)
+| Clé | Type | Description |
+|-----|------|-------------|
+| `overall_coherence` | float | Score global (moyenne pondérée des 5 axes, 0–1) |
+| `coherence_evaluations` | dict | Scores détaillés par axe (`logique`, `thématique`, `structurelle`, `rhétorique`, `épistémique`) |
+| `recommendations` | list | Recommandations basées sur les points faibles identifiés |
+| `context` | str | Contexte utilisé (`"Analyse d'arguments"` par défaut) |
+| `timestamp` | str | Horodatage ISO 8601 de l'évaluation |
+
+## Axes d'évaluation (et pondérations)
+| Axe | Poids |
+|-----|-------|
+| logique | 0.30 |
+| thématique | 0.20 |
+| structurelle | 0.20 |
+| rhétorique | 0.15 |
+| épistémique | 0.15 |
+
+## Tests
+`tests/unit/argumentation_analysis/agents/tools/analysis/new/test_argument_coherence_evaluator.py`
