@@ -1,5 +1,17 @@
 # 📚 Tutoriels
 
+> **⚠️ Documentation en sommeil (mode Hiérarchique dormant).**
+> Ces tutoriels décrivent le mode d'orchestration **Hiérarchique**, actuellement
+> **dormant** (voir la table *Orchestration Modes* de `CLAUDE.md`). Le code de
+> référence reste présent à l'emplacement canonique
+> `argumentation_analysis/orchestration/hierarchical/` (expérimental, non branché
+> dans le pipeline actif) — ces tutoriels sont donc **en sommeil, pas cassés**.
+>
+> **Point d'entrée recommandé** pour démarrer aujourd'hui :
+> [`examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py`](../../../examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py)
+> et la fonction `run_unified_analysis` (mode Pipeline actif).
+> Les exemples d'imports ci-dessous peuvent ne pas s'exécuter tels quels.
+
 ## 📋 Vue d'Ensemble
 
 Les tutoriels offrent des guides pas-à-pas pour apprendre à utiliser et étendre le système d'argumentation de l'Intelligence Symbolique EPITA. Ils sont organisés du niveau débutant au niveau avancé, avec une progression pédagogique claire.

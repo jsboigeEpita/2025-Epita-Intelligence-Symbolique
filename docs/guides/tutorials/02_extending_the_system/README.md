@@ -1,5 +1,16 @@
 # 📗 Extending the System
 
+> **⚠️ Documentation en sommeil (mode Hiérarchique dormant).**
+> Les tutoriels de cette section décrivent le mode d'orchestration
+> **Hiérarchique**, actuellement **dormant** (voir la table *Orchestration Modes*
+> de `CLAUDE.md`). Le code de référence reste présent à l'emplacement canonique
+> `argumentation_analysis/orchestration/hierarchical/` (expérimental, non branché
+> dans le pipeline actif) — ces tutoriels sont donc **en sommeil, pas cassés**.
+> **Point d'entrée recommandé** aujourd'hui :
+> [`demonstration_epita.py`](../../../../examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py)
+> et `run_unified_analysis` (mode Pipeline actif). Les exemples d'imports
+> ci-dessous peuvent ne pas s'exécuter tels quels.
+
 ## Description
 
 Ce répertoire contient les tutoriels avancés pour étendre et personnaliser le système d'analyse argumentative. Ces tutoriels s'adressent aux développeurs qui souhaitent enrichir le système avec leurs propres agents, outils d'analyse, ou fonctionnalités personnalisées.
