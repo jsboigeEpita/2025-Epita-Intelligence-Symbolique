@@ -1,48 +1,32 @@
-# Détecteur de Sophismes Contextuels
+# Détecteur de sophismes contextuels (`ContextualFallacyDetector`)
 
 ## Objectif
-Identifie les erreurs rhétoriques dans leur contexte, en analysant les relations sémantiques entre les arguments.
+Détecte les sophismes contextuels dans un argument : pour chaque sophisme de la base de règles, recherche ses marqueurs dans le texte, calcule une gravité selon le contexte, et signale le sophisme si sa gravité dépasse 0.5.
+
+## Chemin d'import
+```python
+from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
+```
 
 ## Utilisation
 ```python
-from argumentation_analysis.tools import ContextualFallacyDetector
+from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import ContextualFallacyDetector
 
-detector = ContextualFallacyDetector(sensitivity=0.8, context_window=100)
-result = detector.analyze(text="Texte à analyser")
-print(result.fallacies)  # Liste des sophismes détectés
-print(result.context_map)  # Cartographie des relations contextuelles
+detector = ContextualFallacyDetector()
+result = detector.detect_contextual_fallacies(
+    argument="Cet argument...",
+    context_description="Débat parlementaire sur l'énergie",
+    # contextual_factors={"audience": "experts"},  # optionnel ; inféré depuis la description sinon
+)
+print(result)  # Dict[str, Any] : sophismes détectés pour cet argument
 ```
 
-## Paramètres
-| Paramètre | Type | Description | Valeur par défaut |
-|-----------|------|-------------|-------------------|
-| `sensitivity` | float | Niveau de sensibilité à la détection | 0.7 |
-| `context_window` | int | Taille de la fenêtre contextuelle | 80 |
-| `language_model` | str | Modèle LLM à utiliser | "default" |
+## Constructeur
+`ContextualFallacyDetector()` — aucun paramètre.
 
-## Résultats
-- Liste des sophismes avec type, position et gravité
-- Cartographie visuelle des relations contextuelles
-- Exemples de reformulation suggérés
+## Méthodes principales
+- `detect_contextual_fallacies(argument: str, context_description: str, contextual_factors: dict | None = None) -> dict` — un seul argument.
+- `detect_multiple_contextual_fallacies(...)` — plusieurs arguments.
 
-## Exemple de Diagramme
-```mermaid
-graph TD
-    A[Argument 1] -->|Fallacieux| B[Argument 2]
-    B -->|Valide| C[Argument 3]
-    C -->|Ambigu| D[Argument 4]
-    classDef fallacy fill:#ff9999,stroke:#000;
-    classDef valid fill:#cce5ff,stroke:#000;
-    class A fallacy
-    class D fallacy
-```
-
-## Extension
-Pour ajouter un nouveau type de sophisme :
-```python
-class CustomFallacyDetector:
-    def detect(self, context):
-        # Implémentation personnalisée
-        return fallacy_type, confidence
-
-detector.register_detector(CustomFallacyDetector())
+## Résultat
+`Dict[str, Any]` contenant la liste des sophismes détectés pour l'argument (gravité > 0.5). Source de vérité : `argumentation_analysis/agents/tools/analysis/new/contextual_fallacy_detector.py`.
