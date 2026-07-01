@@ -1,43 +1,34 @@
-# Visualiseur de Résultats Rhétoriques
+# Visualiseur de résultats rhétoriques (`RhetoricalResultVisualizer`)
 
 ## Objectif
-Génère des représentations graphiques des analyses argumentatives pour une meilleure compréhension visuelle.
+Génère des visualisations (graphes d'arguments, distributions de sophismes, cartes de chaleur, rapport HTML) à partir de l'état d'analyse rhétorique (`state`).
+
+> Note : la classe réelle est **`RhetoricalResultVisualizer`** (le nom `RhetoricalVisualizer` utilisé précédemment dans ce document n'existe pas dans le code).
+
+## Chemin d'import
+```python
+from argumentation_analysis.agents.tools.analysis.rhetorical_result_visualizer import RhetoricalResultVisualizer
+```
 
 ## Utilisation
 ```python
-from argumentation_analysis.tools import RhetoricalVisualizer
+from argumentation_analysis.agents.tools.analysis.rhetorical_result_visualizer import RhetoricalResultVisualizer
 
-visualizer = RhetoricalVisualizer(style="mermaid", detail_level=2)
-result = visualizer.generate(analysis_results)
-print(result.mermaid_code)  # Code Mermaid pour intégration
+visualizer = RhetoricalResultVisualizer()
+mermaid_graph = visualizer.generate_argument_graph(state)   # str : code Mermaid
+all_viz = visualizer.generate_all_visualizations(state)     # Dict[str, str]
+html = visualizer.generate_html_report(state)               # str : rapport HTML
 ```
 
-## Paramètres
-| Paramètre | Type | Description | Valeur par défaut |
-|-----------|------|-------------|-------------------|
-| `style` | str | Format de visualisation (mermaid, svg, etc.) | "mermaid" |
-| `detail_level` | int | Niveau de détail des diagrammes | 1 |
-| `theme` | str | Thème visuel | "default" |
+## Constructeur
+`RhetoricalResultVisualizer()` — aucun paramètre.
 
-## Exemple de Sortie
-```mermaid
-graph TD
-    A[Argument Principal] --> B[Argument 1]
-    A --> C[Argument 2]
-    B --> D[Sophisme de type X]
-    C --> E[Sophisme de type Y]
-    D --> F[Segment incohérent]
-    classDef fallacy fill:#ff4d4d,stroke:#000;
-    classDef valid fill:#90ee90,stroke:#000;
-    class D,E,F fallacy
-```
+## Méthodes principales (toutes prennent un `state: dict`)
+- `generate_argument_graph(state) -> str` — graphe Mermaid des arguments.
+- `generate_fallacy_distribution(state) -> str` — distribution des sophismes.
+- `generate_argument_quality_heatmap(state) -> str` — carte de chaleur de qualité.
+- `generate_all_visualizations(state) -> dict[str, str]` — toutes les visualisations.
+- `generate_html_report(state) -> str` — rapport HTML agrégé.
 
-## Extension
-Pour ajouter un nouveau format de visualisation :
-```python
-class CustomVisualizer:
-    def generate(self, results):
-        # Implémentation personnalisée
-        return visualization_data
-
-visualizer.register_format("custom", CustomVisualizer())
+## Résultat
+Chaque générateur retourne une chaîne (ou un dict de chaînes pour `generate_all_visualizations`). Source de vérité : `argumentation_analysis/agents/tools/analysis/rhetorical_result_visualizer.py`.
