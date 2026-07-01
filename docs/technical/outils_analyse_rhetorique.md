@@ -1,7 +1,14 @@
-# Documentation des Outils d'Analyse Rhétorique Améliorés
+# Documentation des Outils d'Analyse Rhétorique
+
+> ⚠️ **Note de véracité (2026-06-30).** L'exemple précédent utilisait une façade
+> `RhetoricalAnalysisSystem` (`system.configure_tool(...)`, `system.create_pipeline([...])`,
+> `pipeline.analyze(...)`). **Cette classe n'existe pas dans le code** (vérifié). Le vrai point
+> d'entrée programmatique est `run_unified_analysis` (async,
+> `argumentation_analysis.orchestration.unified_pipeline`). Les paramètres par outil documentés
+> ci-après renvoient aux docs par classe, corrigés contre le code (#1307/#1308/#1309).
 
 ## Vue d'Ensemble
-Les outils d'analyse rhétorique améliorés offrent une infrastructure modulaire pour l'analyse argumentative, intégrant trois couches d'abstraction :
+Les outils d'analyse rhétorique offrent une infrastructure modulaire pour l'analyse argumentative, organisée selon l'architecture Lego (`CapabilityRegistry` + `UnifiedPipeline` + `WorkflowDSL` + `AgentFactory`).
 
 ```mermaid
 graph TD
@@ -16,60 +23,45 @@ graph TD
 3. **Analyse de complexité logique** : Étude des structures argumentatives complexes
 4. **Visualisation des résultats** : Représentation graphique des analyses
 
-## Exemple d'Utilisation
+## Exemple d'Utilisation (`run_unified_analysis`)
+
 ```python
-from argumentation_analysis import RhetoricalAnalysisSystem
+import asyncio
+from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
 
-# Initialisation du système
-system = RhetoricalAnalysisSystem()
+async def main():
+    result = await run_unified_analysis(
+        text="Argumentation complexe à analyser.",
+        workflow_name="standard",   # "light" | "standard" | "full"
+    )
+    print(result)   # Dict[str, Any] : résultats d'analyse agrégés
 
-# Configuration des outils
-system.configure_tool("coherence_evaluator", {
-    "threshold": 0.7,
-    "explanations": True
-})
-
-# Création d'un pipeline
-pipeline = system.create_pipeline([
-    "coherence_evaluator",
-    "contextual_fallacy_detector",
-    "enhanced_complex_fallacy_analyzer"
-])
-
-# Exécution de l'analyse
-results = pipeline.analyze(text="Argumentation complexe à analyser")
-print(results.visualization)
+asyncio.run(main())
 ```
 
-## Paramètres Clés
-| Outil | Paramètres | Valeurs par défaut |
-|-------|------------|-------------------|
-| `coherence_evaluator` | `threshold`, `explanations` | 0.65, False |
-| `contextual_fallacy_detector` | `sensitivity`, `context_window` | 0.8, 100 |
-| `enhanced_complex_fallacy_analyzer` | `depth`, `strict_mode` | 3, False |
+## Outils par classe (API vérifiée contre le code)
 
-## Résultats Attendus
-- Score de cohérence entre 0 et 1
-- Liste des sophismes détectés avec leur type et position
-- Représentation graphique au format Mermaid
-- Suggestions de réécriture pour les textes problématiques
+Voir les documents dédiés dans `docs/technical/` :
 
-## Améliorations par Rapport aux Limitations Initiales
-1. **Gestion des contextes complexes** : Nouveau système de fenêtrage contextuel
-2. **Performance optimisée** : Architecture asynchrone pour les analyses parallèles
-3. **Extensibilité** : API standardisée pour l'ajout de nouveaux critères
-4. **Robustesse** : Mécanismes de validation des extraits d'arguments
+| Outil | Classe réelle | Doc |
+|---|---|---|
+| Évaluateur de cohérence | `ArgumentCoherenceEvaluator` | `argument_coherence_evaluator.md` |
+| Détecteur de sophismes contextuels | `ContextualFallacyDetector` | `contextual_fallacy_detector.md` |
+| Analyseur de sophismes complexes | `EnhancedComplexFallacyAnalyzer` | `complex_fallacy_analyzer.md` |
+| Visualiseur de résultats | `RhetoricalResultVisualizer` | `visualizer.md` |
 
-## Structure des Fichiers
+> Note : `coherence_evaluator.md` est un redirect (l'ancien nom `CoherenceEvaluator` n'existe pas).
+
+## Résultats
+`run_unified_analysis` retourne un `Dict[str, Any]` agrégeant les sorties des phases du workflow (cohérence, sophismes, structure, etc.). Pour une restitution lisible, voir le paramètre `render_restitution=True` de `run_unified_analysis` (rapport 3-actes).
+
+## Structure des Fichiers (docs par outil)
+
 ```
-docs/outils/
-├── coherence_evaluator.md
+docs/technical/
+├── argument_coherence_evaluator.md
 ├── contextual_fallacy_detector.md
 ├── complex_fallacy_analyzer.md
+├── enhanced_complex_fallacy_analyzer.md
 └── visualizer.md
 ```
-
-## Prochaines Étapes
-1. Créer les documents spécifiques pour chaque outil dans `docs/outils/`
-2. Ajouter des diagrammes détaillés pour chaque composant
-3. Documenter les cas d'utilisation avancés
