@@ -310,15 +310,23 @@ def render_step_1(data: Dict):
     print()
     kv("Claims extracted:", str(len(out["extracted_claims"])), C.G)
     for claim in out["extracted_claims"]:
-        conf_color = C.G if claim["confidence"] >= 0.85 else C.Y if claim["confidence"] >= 0.70 else C.R
-        print(f"    {_c(conf_color, f'{claim["confidence"]:.0%}')}  {claim["text"][:65]}")
-        print(f"         {_c(C.DIM, f'type={claim["type"]}  id={claim["id"]}')}")
+        # Local vars avoid nested same-quote f-strings (PEP 701-incompatible on
+        # Python 3.10 = CI target): dict access with " inside f'...' inside f"..."
+        # terminates the outer string. See #1329 (same family).
+        conf = claim["confidence"]
+        conf_color = C.G if conf >= 0.85 else C.Y if conf >= 0.70 else C.R
+        claim_text = claim["text"]
+        claim_type = claim["type"]
+        claim_id = claim["id"]
+        print(f"    {_c(conf_color, f'{conf:.0%}')}  {claim_text[:65]}")
+        print(f"         {_c(C.DIM, f'type={claim_type}  id={claim_id}')}")
 
     print()
     kv("Arguments:", str(len(out["extracted_arguments"])), C.B)
     for arg in out["extracted_arguments"]:
         premises = ", ".join(arg["premises"])
-        print(f"    {premises} → {arg['conclusion']}  {_c(C.DIM, f'({arg["type"]})')}")
+        arg_type = arg["type"]
+        print(f"    {premises} → {arg['conclusion']}  {_c(C.DIM, f'({arg_type})')}")
 
     print()
     kv("Extraction time:", f"{out['extraction_stats']['time_ms']}ms", C.DIM)
@@ -333,8 +341,9 @@ def render_step_2(data: Dict):
     kv("FOL Translations:", str(len(out["fol_formulas"])), C.M)
     for f in out["fol_formulas"]:
         valid_icon = badge("VALID", C.G) if f["valid"] else badge("INVALID", C.R)
+        natural = f["natural"]
         print(f"    {valid_icon}  {f['formal'][:55]}")
-        print(f"         {_c(C.DIM, f'≈ {f["natural"][:55]}')}")
+        print(f"         {_c(C.DIM, f'≈ {natural[:55]}')}")
 
     print()
     kv("Propositional:", str(len(out["propositional"])), C.B)
@@ -349,7 +358,9 @@ def render_step_2(data: Dict):
     print()
     kv("Modal:", str(len(out["modal"])) + " formula(s)", C.Y)
     for m in out["modal"]:
-        print(f"    {m['formula']}  {_c(C.DIM, f'({m['system']}: {m['meaning'][:45]})')}")
+        m_system = m['system']
+        m_meaning = m['meaning']
+        print(f"    {m['formula']}  {_c(C.DIM, f'({m_system}: {m_meaning[:45]})')}")
 
     vs = out["validation_summary"]
     print()
@@ -364,8 +375,9 @@ def render_step_3(data: Dict):
 
     sev_colors = {"high": C.R, "medium": C.Y, "low": C.G}
     for fallacy in out["detected_fallacies"]:
-        sc = sev_colors.get(fallacy["severity"], C.W)
-        print(f"    {_c(sc, f'[{fallacy["severity"].upper():>6s}]')}  {_c(C.BOLD, fallacy['type'])} → {fallacy['sub']}")
+        sev = fallacy["severity"]
+        sc = sev_colors.get(sev, C.W)
+        print(f"    {_c(sc, f'[{sev.upper():>6s}]')}  {_c(C.BOLD, fallacy['type'])} → {fallacy['sub']}")
         print(f"           {fallacy['excerpt'][:60]}")
         print(f"           {_c(C.DIM, fallacy['explanation'][:65])}")
         print()
@@ -390,7 +402,8 @@ def render_step_4(data: Dict):
     print()
     kv("Attacks:", str(len(dung["attacks"])), C.R)
     for atk in dung["attacks"]:
-        print(f"    {atk['from']} → {atk['to']}  {_c(C.DIM, f'({atk["type"]})')}")
+        atk_type = atk["type"]
+        print(f"    {atk['from']} → {atk['to']}  {_c(C.DIM, f'({atk_type})')}")
 
     print()
     ext = dung["extensions"]
@@ -411,11 +424,13 @@ def render_step_4(data: Dict):
     kv("JTMS Beliefs:", str(len(jtms["beliefs"])), C.M)
     status_colors = {"IN": C.G, "OUT": C.R, "UNDECIDED": C.Y}
     for bid, bdata in jtms["beliefs"].items():
-        sc = status_colors.get(bdata["status"], C.W)
+        bstatus = bdata["status"]
+        sc = status_colors.get(bstatus, C.W)
         extra = ""
         if "retracted_by" in bdata:
-            extra = f"  ← {_c(C.R, f'retracted by {bdata['retracted_by']}')}"
-        print(f"    {_c(sc, f'{bdata["status"]:>10s}')}  {bid}{extra}")
+            retracted_by = bdata['retracted_by']
+            extra = f"  ← {_c(C.R, f'retracted by {retracted_by}')}"
+        print(f"    {_c(sc, f'{bstatus:>10s}')}  {bid}{extra}")
 
     print()
     if jtms["retraction_cascade"]:
@@ -435,16 +450,20 @@ def render_step_5(data: Dict):
     print()
 
     for r in out["rounds"]:
-        print(f"    {_c(C.BOLD, f'Round {r["round"]}')}")
+        round_num = r["round"]
+        score_def = r['score_defender']
+        score_atk = r['score_attacker']
+        print(f"    {_c(C.BOLD, f'Round {round_num}')}")
         print(f"      {_c(C.B, 'Defender:')}  {r['defender'][:60]}")
         print(f"      {_c(C.R, 'Attacker:')}  {r['attacker'][:60]}")
-        print(f"             {_c(C.B, f'D {r['score_defender']:.1f}')}  vs  {_c(C.R, f'A {r['score_attacker']:.1f}')}")
+        print(f"             {_c(C.B, f'D {score_def:.1f}')}  vs  {_c(C.R, f'A {score_atk:.1f}')}")
         print()
 
     kv("Counter-arguments:", str(len(out["counter_arguments"])), C.G)
     for ca in out["counter_arguments"]:
+        ca_strength = ca['strength']
         print(f"    {badge(ca['strategy'], C.M)}  {ca['text'][:55]}")
-        print(f"         {_c(C.DIM, f'strength={ca['strength']:.0%}')}")
+        print(f"         {_c(C.DIM, f'strength={ca_strength:.0%}')}")
 
     gov = out["governance"]
     print()
