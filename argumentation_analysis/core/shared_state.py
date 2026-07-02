@@ -367,8 +367,12 @@ class RhetoricalAnalysisState:
                 "next_agent_designated": self._next_agent_designated,
                 # CONV-C #1334: deliberation trace (count only in the summary;
                 # full records via the non-summarized snapshot / direct field).
-                "deliberation_turn_count": len(
-                    getattr(self, "deliberation_trace", [])
+                # cap_breach markers are NOT designations — excluded from the
+                # count so the metric reflects PM conduction turns only.
+                "deliberation_turn_count": sum(
+                    1
+                    for r in getattr(self, "deliberation_trace", [])
+                    if r.get("record_type") != "cap_breach"
                 ),
             }
         else:
@@ -601,6 +605,85 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "jtms_belief_count": len(getattr(self, "jtms_beliefs", {})),
             "conclusion_present": self.final_conclusion is not None,
         }
+
+    def backfill_last_designation_for(self, agent: str) -> bool:
+        """Close the most recent open DesignationRecord when its agent returns.
+
+        CONV-C #1334 phase 3 (design doc §7.3). The conversational ``_run_phase``
+        calls this after each turn with the name of the agent that just spoke.
+        The record is closed **only** when ``agent`` matches the record's
+        ``designated_agent`` — i.e. the designated specialist has actually
+        returned (not the PM speaking its own freshly-opened record, nor a
+        round-robin interloper). ``fingerprint_after`` reuses
+        :meth:`_designation_fingerprint` so before/after are directly comparable,
+        making the "conditioned on intermediate results" judgement inspectable
+        without a new measurement path.
+
+        Returns:
+            True if a record was closed, False otherwise (no open record, or the
+            open record is for a different agent and is left open).
+        """
+        for record in reversed(self.deliberation_trace):
+            if record.get("record_type") == "cap_breach":
+                continue  # audit marker, not a designation
+            if record.get("state_fingerprint_after") is None:
+                if record.get("designated_agent") != agent:
+                    return False  # open record exists, but for another agent
+                fp_after = self._designation_fingerprint()
+                record["state_fingerprint_after"] = fp_after
+                record["delta_summary"] = self._designation_delta_summary(
+                    record.get("state_fingerprint_before") or {}, fp_after
+                )
+                return True
+        return False
+
+    @staticmethod
+    def _designation_delta_summary(
+        before: Dict[str, Any], after: Dict[str, Any]
+    ) -> str:
+        """One-line human-readable delta between two designation fingerprints."""
+        parts: List[str] = []
+        for key in (
+            "argument_count",
+            "fallacy_count",
+            "belief_set_count",
+            "counter_argument_count",
+            "jtms_belief_count",
+        ):
+            delta = int(after.get(key, 0)) - int(before.get(key, 0))
+            if delta:
+                sign = "+" if delta > 0 else ""
+                parts.append(f"{key.removesuffix('_count')}{sign}{delta}")
+        if after.get("conclusion_present") and not before.get(
+            "conclusion_present"
+        ):
+            parts.append("conclusion_set")
+        return ", ".join(parts) if parts else "no_growth"
+
+    def record_cap_breach(self, cap_kind: str, turn: int, detail: str = "") -> None:
+        """Append a CapBreachRecord to the deliberation trace (§6 fail-loud).
+
+        CONV-C #1334. When a pipeline-global or per-phase turn cap is hit, the
+        breach is recorded as a structured entry — not a silent truncation — so
+        the #708 anti-runaway audit and CONV-D can see the run ended on a cap,
+        not on convergence. Marked ``record_type="cap_breach"`` to distinguish
+        from a DesignationRecord (and excluded from the designation count).
+        """
+        self.deliberation_trace.append(
+            {
+                "record_type": "cap_breach",
+                "cap_kind": cap_kind,
+                "turn": turn,
+                "detail": detail,
+                "state_fingerprint_before": self._designation_fingerprint(),
+            }
+        )
+        state_logger.warning(
+            "[CONV-C] Cap dur atteint tour %s (%s): %s",
+            turn,
+            cap_kind,
+            detail,
+        )
 
     def set_source_metadata(self, metadata: Dict[str, str]) -> None:
         """Populate source-level metadata (Epic #1258 / Track 1 #1259).
