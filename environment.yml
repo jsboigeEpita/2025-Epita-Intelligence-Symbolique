@@ -89,3 +89,4 @@ dependencies:
     - tiktoken
     - hypothesis  # #1303: property tests (tests/property/) — CI collection breaks without it
     - pytest-timeout  # CI hang guard: --timeout=900 in ci.yml converts a hung test into a stack-dumped failure
+    - pyfakefs>=5.0.0  # #1336: provides the `fs` fixture for test_plugin_loader.py — CI errors "fixture 'fs' not found" without it
