@@ -86,6 +86,13 @@ jobs:
 
       - name: Run automated tests
         if: env.API_KEYS_CONFIGURED == 'true'
+        # Gate scope (#1336/#1341): tests/unit only, LLM- and slow-marked tests
+        # excluded. The full suite cannot be a per-push gate: integration tests
+        # spawn a JVM subprocess or make real LLM calls (~1 test/min — the
+        # 2026-07-01 full run reached 2% of 14k tests in 6h before GitHub's job
+        # limit killed it), and tests/bench runs 15+ min LLM benchmarks by
+        # design. Integration/e2e/bench/LLM lanes need a scheduled or on-demand
+        # workflow, not this gate.
         # Backstop below the 6h GitHub job default; --timeout converts a hung
         # test into a failure with a stack dump of every thread (thread method
         # is the only one available on Windows; it aborts the run on fire, so
@@ -96,7 +103,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
         run: |
-          conda run -n projet-is --no-capture-output pytest tests/ --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()
