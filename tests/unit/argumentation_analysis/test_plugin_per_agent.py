@@ -62,8 +62,23 @@ class TestAgentSpecialityMap:
     def test_counter_argument_has_counter_plugin(self):
         assert "counter_argument" in AGENT_SPECIALITY_MAP["counter_argument"]
 
-    def test_pm_has_no_speciality_plugins(self):
-        assert AGENT_SPECIALITY_MAP["project_manager"] == []
+    def test_pm_carries_only_narrative_synthesis(self):
+        """ProjectManager orchestrates + synthesizes; it carries the
+        narrative_synthesis plugin (its own role) and no operational
+        analysis plugins (extraction / fallacy / formal-logic).
+
+        Legacy contract asserted ``== []`` (#1336): obsolete since PM gained
+        the ``narrative_synthesis`` plugin. Converted to a fail-loud pin on the
+        exact plugin set + a negative isolation check against operational
+        domains — adding an operational plugin to PM must break this test.
+        """
+        plugins = set(AGENT_SPECIALITY_MAP["project_manager"])
+        assert plugins == {"narrative_synthesis"}
+        assert not (
+            plugins
+            & {"toulmin", "text_to_kb", "french_fallacy", "fallacy_workflow",
+               "tweety_logic"}
+        )
 
 
 # --- Plugin registry ---
@@ -104,8 +119,9 @@ class TestLoadPluginsForAgent:
             mock_kernel, "project_manager", state=mock_state
         )
         assert "state_manager" in loaded
-        # PM has no speciality plugins, so only StateManager
-        mock_kernel.add_plugin.assert_called_once()
+        # PM carries state_manager (state provided) + narrative_synthesis
+        # (its own speciality plugin) -> exactly 2 plugins registered.
+        assert mock_kernel.add_plugin.call_count == 2
 
     def test_no_state_manager_without_state(self):
         mock_kernel = MagicMock()
@@ -186,12 +202,18 @@ class TestGetPluginInstances:
     def test_returns_state_manager_when_state_provided(self):
         mock_state = MagicMock()
         instances = get_plugin_instances("project_manager", state=mock_state)
-        assert len(instances) == 1
-        assert type(instances[0]).__name__ == "StateManagerPlugin"
+        # PM carries state_manager (state provided) + narrative_synthesis
+        # (its own speciality plugin) -> exactly 2 instances.
+        instance_types = {type(i).__name__ for i in instances}
+        assert len(instances) == 2
+        assert "StateManagerPlugin" in instance_types
+        assert "NarrativeSynthesisPlugin" in instance_types
 
-    def test_returns_empty_without_state_for_pm(self):
+    def test_returns_narrative_synthesis_without_state_for_pm(self):
+        # PM carries its own narrative_synthesis plugin even without a state.
         instances = get_plugin_instances("project_manager", state=None)
-        assert instances == []
+        instance_types = {type(i).__name__ for i in instances}
+        assert instance_types == {"NarrativeSynthesisPlugin"}
 
     def test_returns_speciality_plugins(self):
         with patch("importlib.import_module") as mock_import:
@@ -245,9 +267,27 @@ class TestConvOrchestratorIntegration:
 
 
 class TestPluginCounts:
-    def test_no_agent_has_more_than_3_plugins(self):
-        """No agent should be loaded with too many plugins — focused speciality."""
+    def test_cross_domain_plugin_isolation(self):
+        """No agent may carry plugins from mutually-exclusive domains at once.
+
+        Legacy contract asserted ``len(plugins) <= 3`` (#1336): obsolete —
+        formal_logic legitimately carries the full formal-logic stack (11
+        plugins). A plugin COUNT is not the right invariant; the real one is
+        cross-DOMAIN isolation: an agent scoped to informal fallacies must not
+        also carry formal-logic plugins, and vice-versa. Converted to a
+        fail-loud check on that invariant.
+        """
+        fallacy_domain = {"french_fallacy", "fallacy_workflow"}
+        logic_domain = {
+            "tweety_logic", "nl_to_logic", "coordinated_logic", "atms",
+            "ranking", "aspic", "belief_revision", "logic_agents",
+            "tweety_interpretation", "kb_to_tweety",
+        }
         for speciality, plugins in AGENT_SPECIALITY_MAP.items():
-            assert (
-                len(plugins) <= 3
-            ), f"Agent '{speciality}' has {len(plugins)} plugins — too many"
+            plugin_set = set(plugins)
+            if plugin_set & fallacy_domain:
+                assert not (plugin_set & logic_domain), (
+                    f"Agent '{speciality}' mixes fallacy-detection + "
+                    f"formal-logic plugins (cross-domain isolation violated): "
+                    f"{plugin_set}"
+                )
