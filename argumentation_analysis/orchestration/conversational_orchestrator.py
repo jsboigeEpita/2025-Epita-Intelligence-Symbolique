@@ -161,30 +161,37 @@ AGENT_CONFIG = {
     "ProjectManager": {
         "speciality": "project_manager",
         "instructions": (
-            "Tu es le chef de projet d'analyse argumentative. Tu coordonnes l'equipe "
-            "d'agents specialises. A chaque tour :\n"
-            "1. Lis l'etat courant via get_current_state_snapshot()\n"
-            "2. Identifie ce qui manque (arguments? sophismes? formalisation? qualite? JTMS?)\n"
-            "3. Designe l'agent suivant via designate_next_agent(nom_exact)\n"
-            "4. Formule une question precise pour cet agent\n\n"
-            "EXTRACTION GATE (#595) — AVANT toute autre action :\n"
-            "- Verifie state.identified_arguments dans le snapshot. Si la liste est VIDE, "
-            "designe ExtractAgent en priorite ABSOLUE et demande-lui d'extraire TOUS les arguments.\n"
-            "- Ne passe PAS a InformalAgent, FormalAgent ou autre agent tant que identified_arguments est vide.\n"
-            "- Extraire des arguments est plus important que creer des croyances JTMS.\n"
-            "- Le minimum acceptable est 3 arguments sur un texte de >5000 mots.\n\n"
-            "CROSS-KB ENRICHMENT (#208-I) — tu dois diriger les synergies entre agents :\n"
-            "- Apres ExtractAgent : demande-lui d'abord de verifier que identified_arguments est rempli. "
-            "ENSUITE seulement, demande de creer des croyances JTMS (jtms_create_belief)\n"
-            "- Apres InformalAgent : demande a QualityAgent de TENIR COMPTE des sophismes detectes "
-            "en utilisant evaluate_with_cross_kb_context() avec les sophismes en contexte\n"
-            "- Apres QualityAgent : demande a CounterAgent de CIBLER les arguments faibles (score < 5/9)\n"
-            "- Apres FormalAgent : signale aux autres si des INCONSISTANCES logiques ont ete trouvees\n"
-            "- Apres DebateAgent : demande a GovernanceAgent d'evaluer le CONSENSUS avec "
-            "detect_conflicts() puis social_choice_vote() si des positions divergent\n"
-            "- Si JTMS retracte une croyance (jtms_check_consistency), signale-le et demande re-evaluation\n\n"
-            "CONVERGENCE : Quand tous les aspects sont couverts et que le consensus est evalue, "
-            "appelle set_final_conclusion() avec ta synthese. Cela signalera la fin de la phase."
+            "Tu es le chef de projet. Tu conduis l'analyse pour produire un ETAT RICHE "
+            "(couverture de toutes les dimensions pertinentes du texte), pas pour suivre un script. "
+            "Aucune sequence n'est imposee : c'est a toi de juger, a chaque tour, qui doit parler.\n\n"
+            "A CHAQUE TOUR :\n"
+            "1. Lis l'etat courant via get_current_state_snapshot().\n"
+            "2. Decide, en fonction de ce qui manque ou de ce qu'un resultat intermediaire "
+            "t'apprend, quel specialiste doit parler ensuite — ET POURQUOI.\n"
+            "3. Enregistre ta decision via record_designation(agent, motivation, trigger). "
+            "La motivation est OBLIGATOIRE : 1-2 phrases sur ce qui te fait convoquer cet agent "
+            "MAINTENANT (ex. 'InformalAgent a trouve une contradiction sur arg_3, je convoque "
+            "FormalAgent pour la formaliser'). trigger parmi : initial, deepening, synergy, convergence.\n"
+            "4. Designe l'agent via designate_next_agent(nom_exact) et pose-lui une question precise.\n\n"
+            "CARTE DES CAPACITES — ces synergies existent, c'est a toi d'en juger l'opportunite "
+            "(personne ne te l'impose) :\n"
+            "- ExtractAgent — extrait les arguments (add_identified_argument). [Fait : les "
+            "specialistes travaillent sur l'etat partage ; tant que l'extraction n'a rien "
+            "enregistre, l'etat est vide et rien d'autre n'a de substrate.]\n"
+            "- InformalAgent — sophismes (run_guided_analysis, add_identified_fallacy).\n"
+            "- FormalAgent — coherence logique (inconsistances signalees).\n"
+            "- QualityAgent — peut evaluer EN CONTEXTE les sophismes detectes "
+            "(evaluate_with_cross_kb_context).\n"
+            "- CounterAgent — peut cibler les arguments faibles.\n"
+            "- DebateAgent — positions adversariales ; GovernanceAgent — consensus, conflits, "
+            "vote (detect_conflicts, social_choice_vote).\n"
+            "- JTMS — croyances et retractations (jtms_create_belief, jtms_check_consistency) ; "
+            "une retractation peut invalider un fil.\n\n"
+            "BUDGET : tu as au plus {budget_turns} tours (pipeline-global) pour couvrir "
+            "l'analyse. La couverture prime sur l'epuisement du budget, mais le budget est DUR — "
+            "si tu l'atteins sans converger, le depassement est tracé (pas silencieux).\n\n"
+            "CONVERGENCE : quand l'etat est suffisamment couvert (dimensions pertinentes remplies, "
+            "consensus evalue si des positions divergent), appelle set_final_conclusion() avec ta synthese."
         ),
     },
     "ExtractAgent": {
@@ -389,6 +396,7 @@ def create_conversational_agents(
     llm_service_id: str,
     agent_names: Optional[List[str]] = None,
     agent_state_class: Optional[Dict[str, type]] = None,
+    pm_budget_turns: Optional[int] = None,
 ) -> List[ChatCompletionAgent]:
     """Create agents with specialized plugins for conversational mode.
 
@@ -408,6 +416,9 @@ def create_conversational_agents(
         agent_state_class: Optional mapping of agent_name → phase-scoped state
             plugin class (#605). When provided, the mapped agent gets the
             scoped class instead of the full StateManagerPlugin.
+        pm_budget_turns: CONV-C #1334 — pipeline-global tour budget surfaced to
+            the PM as the ``{budget_turns}`` placeholder in its instructions
+            (design doc §6). None falls back to a conservative default.
     """
     from argumentation_analysis.agents.factory import get_plugin_instances
 
@@ -436,11 +447,19 @@ def create_conversational_agents(
             state_plugin_class=state_cls,
         )
 
+        # CONV-C #1334: the PM instructions carry a {budget_turns} placeholder
+        # (design doc §5/§6) surfacing the pipeline-global cap to the conductor.
+        # Format it once at build time; non-PM agents have no placeholder.
+        instructions = config["instructions"]
+        if name == "ProjectManager":
+            budget = pm_budget_turns if pm_budget_turns else 30
+            instructions = instructions.format(budget_turns=budget)
+
         agent = ChatCompletionAgent(
             kernel=kernel,
             service=llm_service,
             name=name,
-            instructions=config["instructions"],
+            instructions=instructions,
             plugins=plugins,
             function_choice_behavior=FunctionChoiceBehavior.Auto(
                 auto_invoke_kernel_functions=True,
@@ -473,6 +492,7 @@ async def run_conversational_analysis(
     enable_reprompt_tracing: bool = False,
     source_metadata: Optional[Dict[str, str]] = None,
     selector_context: Optional[Dict[str, Any]] = None,
+    max_total_turns: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -498,6 +518,12 @@ async def run_conversational_analysis(
             only see StateManagerPlugin functions relevant to their phase (#605).
         enable_reprompt_tracing: If True, capture structured RepromptTrace
             records from growth validation re-prompt events (#609).
+        max_total_turns: CONV-C #1334 — pipeline-global tour budget (design doc
+            §6). When set, the sum of turns across phases is capped and surfaced
+            to the PM as its ``{budget_turns}``. The cap is a fixed contract
+            (not adjusted at runtime); hitting it appends a ``CapBreachRecord``
+            and ends the run with status ``BUDGET_EXHAUSTED`` (#708 fail-loud).
+            None defaults to the sum of the three macro-phase caps.
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -529,6 +555,7 @@ async def run_conversational_analysis(
             enable_reprompt_tracing=enable_reprompt_tracing,
             source_metadata=source_metadata,
             selector_context=selector_context,
+            max_total_turns=max_total_turns,
         )
 
 
@@ -547,9 +574,26 @@ async def _run_conversational_analysis_inner(
     enable_reprompt_tracing: bool = False,
     source_metadata: Optional[Dict[str, str]] = None,
     selector_context: Optional[Dict[str, Any]] = None,
+    max_total_turns: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
     start_time = time.time()
+
+    # CONV-C #1334 §6: pipeline-global tour cap. Default = sum of every phase
+    # cap (3 macro + conditional Re-Analysis), derived from the per-phase config
+    # so the default never binds (the cap only constrains when a caller sets a
+    # smaller explicit budget). The cap is a fixed contract surfaced to the PM
+    # and enforced across phases; breach is recorded (CapBreachRecord) and ends
+    # the run fail-loud.
+    if max_total_turns is None:
+        max_total_turns = (
+            extraction_max_turns
+            + formal_max_turns
+            + synthesis_max_turns
+            + reanalysis_max_turns
+        )
+    turns_used = 0
+    budget_exhausted = False
 
     # 0b. Env var override for growth validation (#597)
     _env_growth = os.environ.get("ENABLE_GROWTH_VALIDATION", "").lower()
@@ -618,6 +662,7 @@ async def _run_conversational_analysis_inner(
         "conversational_llm",
         agent_names,
         agent_state_class=agent_state_class,
+        pm_budget_turns=max_total_turns,
     )
     agent_by_name = {a.name: a for a in all_agents}
 
@@ -694,6 +739,27 @@ async def _run_conversational_analysis_inner(
     ]
 
     for phase_cfg in phase_configs:
+        # CONV-C #1334 §6: pipeline-global cap — stop once the budget is spent.
+        # The cap is a fixed contract; hitting it ends the run fail-loud
+        # (CapBreachRecord + BUDGET_EXHAUSTED status), not a silent truncation.
+        if turns_used >= max_total_turns:
+            budget_exhausted = True
+            if hasattr(state, "record_cap_breach"):
+                state.record_cap_breach(
+                    cap_kind="pipeline_global",
+                    turn=turns_used,
+                    detail=(
+                        f"budget {max_total_turns} atteint avant phase "
+                        f"'{phase_cfg['name']}'"
+                    ),
+                )
+            logger.warning(
+                f"[CONV-C] Budget pipeline-global atteint ({turns_used}/"
+                f"{max_total_turns}) — phase '{phase_cfg['name']}' et les "
+                f"suivantes sont sautées."
+            )
+            break
+
         phase_name = phase_cfg["name"]
         phase_agent_names = phase_cfg["agents"]
         phase_agents = [
@@ -704,12 +770,15 @@ async def _run_conversational_analysis_inner(
             logger.warning(f"No agents available for phase '{phase_name}', skipping")
             continue
 
-        # Per-phase turn limit (falls back to global max_turns_per_phase)
+        # Per-phase turn limit (falls back to global max_turns_per_phase),
+        # further clamped to the remaining pipeline-global budget (§6).
         phase_max_turns = phase_cfg.get("max_turns", max_turns_per_phase)
+        remaining = max_total_turns - turns_used
+        effective_max_turns = min(phase_max_turns, remaining)
 
         logger.info(
             f"=== Phase: {phase_name} ({len(phase_agents)} agents, "
-            f"max {phase_max_turns} turns) ==="
+            f"max {effective_max_turns} turns) ==="
         )
 
         # Trace: capture state before phase
@@ -721,7 +790,7 @@ async def _run_conversational_analysis_inner(
         phase_log = await _run_phase(
             phase_agents,
             phase_cfg["initial_prompt"],
-            max_turns=phase_max_turns,
+            max_turns=effective_max_turns,
             phase_name=phase_name,
             state=state,
             enable_growth_validation=enable_growth_validation,
@@ -729,6 +798,14 @@ async def _run_conversational_analysis_inner(
             reprompt_extractor=reprompt_extractor,
         )
         conversation_log.extend(phase_log)
+
+        # CONV-C #1334 §6: accumulate turns consumed (highest turn index in the
+        # phase) against the pipeline-global budget.
+        phase_turns = max(
+            (m.get("turn", 0) for m in phase_log if isinstance(m.get("turn"), int)),
+            default=0,
+        )
+        turns_used += phase_turns
 
         # Conflict resolution (#214): detect and resolve conflicts between agents
         conflict_resolutions = await _resolve_phase_conflicts(
@@ -776,7 +853,9 @@ async def _run_conversational_analysis_inner(
     # re-evaluated, arguments missing fallacy analysis), add an extra phase
     # to re-analyze using informal + quality + governance agents.
     reanalysis_added = False
-    if hasattr(state, "get_enrichment_summary"):
+    # CONV-C #1334 §6: skip the conditional Re-Analysis phase if the
+    # pipeline-global budget is already exhausted (the run ended fail-loud).
+    if not budget_exhausted and hasattr(state, "get_enrichment_summary"):
         try:
             enrichment = state.get_enrichment_summary()
             needs_reanalysis = _should_add_reanalysis_phase(enrichment, state)
@@ -821,6 +900,12 @@ async def _run_conversational_analysis_inner(
                         f"max {reanalysis_cfg['max_turns']} turns) ==="
                     )
 
+                    # CONV-C #1334 §6: clamp Re-Analysis to remaining budget.
+                    remaining = max(0, max_total_turns - turns_used)
+                    reanalysis_effective = max(
+                        1, min(reanalysis_cfg["max_turns"], remaining)
+                    )
+
                     try:
                         trace.begin_phase(
                             phase_name, state.get_state_snapshot(summarize=False)
@@ -831,7 +916,7 @@ async def _run_conversational_analysis_inner(
                     phase_log = await _run_phase(
                         reanalysis_agents,
                         reanalysis_cfg["initial_prompt"],
-                        max_turns=reanalysis_cfg["max_turns"],
+                        max_turns=reanalysis_effective,
                         phase_name=phase_name,
                         state=state,
                         enable_growth_validation=enable_growth_validation,
@@ -839,6 +924,15 @@ async def _run_conversational_analysis_inner(
                         reprompt_extractor=reprompt_extractor,
                     )
                     conversation_log.extend(phase_log)
+
+                    turns_used += max(
+                        (
+                            m.get("turn", 0)
+                            for m in phase_log
+                            if isinstance(m.get("turn"), int)
+                        ),
+                        default=0,
+                    )
 
                     # Trace recording
                     for msg in phase_log:
@@ -1119,6 +1213,23 @@ async def _run_conversational_analysis_inner(
         "unified_state": state,
         "trace_report": trace_report,
         "reprompt_traces": reprompt_extractor.to_dict() if reprompt_extractor else None,
+        # CONV-C #1334 §6: pipeline-global budget accounting + fail-loud status.
+        "budget": {
+            "max_total_turns": max_total_turns,
+            "turns_used": turns_used,
+            "exhausted": budget_exhausted,
+            "deliberation_turn_count": sum(
+                1
+                for r in getattr(state, "deliberation_trace", [])
+                if r.get("record_type") != "cap_breach"
+            ),
+            "cap_breaches": [
+                r
+                for r in getattr(state, "deliberation_trace", [])
+                if r.get("record_type") == "cap_breach"
+            ],
+        },
+        "status": "BUDGET_EXHAUSTED" if budget_exhausted else "COMPLETED",
         "summary": {
             "completed": len(phase_configs),
             "failed": 0,
@@ -1273,6 +1384,25 @@ def _get_growth_fingerprint(state: Any) -> tuple[int, ...]:
     )
 
 
+def _backfill_designation_if_present(state: Any, agent: Optional[str]) -> None:
+    """CONV-C #1334 §7.3: close the open DesignationRecord when its agent returns.
+
+    Thin guard around ``state.backfill_last_designation_for`` so ``_run_phase``
+    callers don't branch on state type: a no-op for base
+    ``RhetoricalAnalysisState`` (no deliberation trace) or when ``agent`` is
+    None. The matching logic (designated_agent == agent) lives on the state.
+    """
+    if agent is None:
+        return
+    backfill = getattr(state, "backfill_last_designation_for", None)
+    if backfill is None:
+        return
+    try:
+        backfill(agent)
+    except Exception:
+        logger.debug("backfill_last_designation_for failed", exc_info=True)
+
+
 # Phases where state growth is expected (Extraction, Fallacy, Re-Analysis).
 _GROWTH_EXPECTING_PATTERNS = (
     "xtraction",
@@ -1412,6 +1542,12 @@ async def _run_phase(
             messages.append(msg_entry)
             logger.info(f"  [{phase_name}] Turn {turn}: {msg_entry['agent']}")
 
+            # CONV-C #1334 §7.3: close the open DesignationRecord when its
+            # designated agent returns (no-op if the PM spoke or no record is
+            # open). Pairs each motivated designation with the state delta it
+            # produced, without a new measurement path.
+            _backfill_designation_if_present(state, msg_entry["agent"])
+
             # Convergence check
             if _check_convergence(state, phase_name, messages):
                 break
@@ -1526,6 +1662,10 @@ async def _run_phase(
                 }
             )
             logger.info(f"  [{phase_name}] Turn {turn}: {agent.name}")
+
+            # CONV-C #1334 §7.3: close the open DesignationRecord when its
+            # designated agent returns (mirrors the AgentGroupChat path).
+            _backfill_designation_if_present(state, agent.name)
 
             # Convergence check after each turn
             if _check_convergence(state, phase_name, messages):
