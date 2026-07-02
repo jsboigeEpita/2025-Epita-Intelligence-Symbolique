@@ -8,6 +8,13 @@ on:
     branches:
       - main
 
+# Since secrets were configured (#1303) every run executes the LLM-dependent
+# suite — concurrent duplicate runs bill real API usage. A new push to a ref
+# supersedes the in-flight run for that ref (per-PR refs stay independent).
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   lint-and-format:
     runs-on: windows-latest
@@ -79,12 +86,17 @@ jobs:
 
       - name: Run automated tests
         if: env.API_KEYS_CONFIGURED == 'true'
+        # Backstop below the 6h GitHub job default; --timeout converts a hung
+        # test into a failure with a stack dump of every thread (thread method
+        # is the only one available on Windows; it aborts the run on fire, so
+        # the dump in the log — not the junitxml — is the diagnostic artifact).
+        timeout-minutes: 240
         shell: pwsh
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
         run: |
-          conda run -n projet-is --no-capture-output pytest tests/ --junitxml=pytest_report.xml -v
+          conda run -n projet-is --no-capture-output pytest tests/ --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()
