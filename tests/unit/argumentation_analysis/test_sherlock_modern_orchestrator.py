@@ -35,8 +35,15 @@ SAMPLE_DISCOURSE = (
 )
 
 
+@pytest.mark.slow
 class TestSherlockModernOrchestrator:
-    """Tests for the main orchestrator class."""
+    """Tests for the main orchestrator class.
+
+    Instantiates the full SherlockModernOrchestrator and runs end-to-end
+    multi-agent investigations (~25 min / 13 tests, max ~155s each in the
+    CI tally run 28582260688). These are integration-style checks, not unit
+    tests; marked `slow` so the per-push gate excludes them (#1336, R535).
+    """
 
     def test_investigate_returns_result(self):
         orch = SherlockModernOrchestrator()
