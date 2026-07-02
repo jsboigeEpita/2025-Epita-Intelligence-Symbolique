@@ -20,7 +20,9 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 def mock_kernel():
     """Create a kernel with a test LLM service (fake API key)."""
     kernel = Kernel()
-    service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+    service = OpenAIChatCompletion(
+        service_id="default", ai_model_id="gpt-4", api_key="test-key"
+    )
     kernel.add_service(service)
     return kernel
 
@@ -539,7 +541,9 @@ class TestCounterArgumentAgent:
 
         # Create kernel with test service
         self.kernel = Kernel()
-        service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+        service = OpenAIChatCompletion(
+            service_id="default", ai_model_id="gpt-4", api_key="test-key"
+        )
         self.kernel.add_service(service)
 
     def _create_agent(self, **kwargs):
