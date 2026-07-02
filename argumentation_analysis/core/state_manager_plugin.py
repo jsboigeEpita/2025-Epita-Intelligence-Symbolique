@@ -363,6 +363,53 @@ class StateManagerPlugin:
             )
             return f"FUNC_ERROR: Erreur désignation agent {agent_name}: {e}"
 
+    @kernel_function(
+        description=(
+            "Enregistre une désignation motivée dans la trace de délibération "
+            "(CONV-C #1334). À appeler AVANT designate_next_agent : capture le "
+            "POURQUOI de la désignation (motivation, 1-2 phrases) et le type de "
+            "déclencheur. La motivation est OBLIGATOIRE."
+        ),
+        name="record_designation",
+    )
+    def record_designation(
+        self,
+        agent: str,
+        motivation: str,
+        trigger: str,
+    ) -> str:
+        """Trace une désignation motivée du PM dans ``state.deliberation_trace``.
+
+        CONV-C #1334. Companion de ``designate_next_agent`` : cette fonction
+        écrit le *pourquoi* (matériau des métriques CONV-A/C, de l'audit #708,
+        et de l'Acte II de CONV-D), tandis que ``designate_next_agent`` écrit
+        le signal de sélection lu par ``DelegatingSelectionStrategy``. On garde
+        les deux séparées : la trace et le signal servent des lecteurs
+        différents et peuvent découpler (ex. un record d'audit seul).
+        """
+        self._logger.info(
+            f"Appel record_designation: agent='{agent}', trigger='{trigger}'"
+        )
+        try:
+            record_method = getattr(self._state, "record_designation", None)
+            if record_method is None:
+                return (
+                    "FUNC_ERROR: l'état n'expose pas record_designation "
+                    "(UnifiedAnalysisState requis pour CONV-C)."
+                )
+            turn = record_method(agent, motivation, trigger)
+            self._logger.info(f" -> Désignation tracée tour {turn} pour '{agent}'.")
+            return (
+                f"OK. Désignation tracée (tour {turn}, agent '{agent}', "
+                f"trigger '{trigger}')."
+            )
+        except Exception as e:
+            self._logger.error(
+                f"Erreur lors de l'enregistrement de la désignation: {e}",
+                exc_info=True,
+            )
+            return f"FUNC_ERROR: Erreur enregistrement désignation: {e}"
+
     # =========================================================================
     # JTMS Hub Integration (#214)
     # =========================================================================
@@ -702,7 +749,9 @@ class StateManagerPlugin:
         self, arg_id: str, scores_json: str, overall: str = "0.5"
     ) -> str:
         try:
-            scores = json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            scores = (
+                json.loads(scores_json) if isinstance(scores_json, str) else scores_json
+            )
             self._state.add_quality_score(arg_id, scores, float(overall))
             return f"OK: Quality scores added for {arg_id}"
         except Exception as e:
@@ -722,7 +771,9 @@ class StateManagerPlugin:
         try:
             arguments = json.loads(arguments_json)
             attacks = json.loads(attacks_json)
-            extensions = json.loads(extensions_json) if extensions_json != "{}" else None
+            extensions = (
+                json.loads(extensions_json) if extensions_json != "{}" else None
+            )
             df_id = self._state.add_dung_framework(name, arguments, attacks, extensions)
             return df_id
         except Exception as e:

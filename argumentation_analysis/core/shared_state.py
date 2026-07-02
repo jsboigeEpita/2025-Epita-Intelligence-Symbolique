@@ -1,6 +1,6 @@
 # core/shared_state.py
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Any, Optional, cast
 import logging
 
@@ -28,6 +28,35 @@ class ArgumentProfile:
     counter_arguments: List[Dict[str, Any]] = field(default_factory=list)
     jtms_beliefs: List[Dict[str, Any]] = field(default_factory=list)
     formal_results: List[Dict[str, Any]] = field(default_factory=list)
+
+
+@dataclass
+class DesignationRecord:
+    """Trace d'une désignation motivée du PM conversationnel (CONV-C #1334).
+
+    Une structure commune servent trois consommateurs : (1) les métriques
+    CONV-A/C (conduite non-round-robin démontrable), (2) l'audit anti-runaway
+    #708 (cap respecté, fail-loud sur breach), (3) l'Acte II de CONV-D
+    (restitution de la délibération — ne doit narrer QUE des events tracés).
+
+    Attributes:
+        turn: Index du tour pipeline-global (auto si None : len(trace)+1).
+        designated_agent: Nom exact de l'agent convoqué (ex. "FormalAgent").
+        motivation: 1-2 phrases du PM sur POURQUOI maintenant (obligatoire).
+        trigger: "initial" | "deepening" | "synergy" | "convergence".
+        state_fingerprint_before: Empreinte de l'état avant l'appel (counts).
+        state_fingerprint_after: Empreinte après le retour de l'agent (backfill
+            par ``_run_phase``), None tant que l'agent n'a pas répondu.
+        delta_summary: Résumé humain du delta observé (backfill ``_run_phase``).
+    """
+
+    designated_agent: str
+    motivation: str
+    trigger: str
+    turn: Optional[int] = None
+    state_fingerprint_before: Optional[Dict[str, Any]] = None
+    state_fingerprint_after: Optional[Dict[str, Any]] = None
+    delta_summary: Optional[str] = None
 
 
 class RhetoricalAnalysisState:
@@ -336,6 +365,9 @@ class RhetoricalAnalysisState:
                 "tasks_answered": list(self.answers.keys()),
                 "conclusion_present": self.final_conclusion is not None,
                 "next_agent_designated": self._next_agent_designated,
+                # CONV-C #1334: deliberation trace (count only in the summary;
+                # full records via the non-summarized snapshot / direct field).
+                "deliberation_turn_count": len(getattr(self, "deliberation_trace", [])),
             }
         else:
             return cast(Dict[str, Any], json.loads(self.to_json(indent=None)))
@@ -494,6 +526,77 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # RA-4 #1049: Strategic NL journaling bridge
         self.strategic_objectives: List[Dict[str, Any]] = []
         self.strategic_decisions_log: List[Dict[str, Any]] = []
+        # CONV-C #1334: deliberation trace of the conversational PM. Each
+        # DesignationRecord (agent designated + motivation + trigger + state
+        # fingerprint before/after + delta) is the shared material of (1) the
+        # CONV-A/C metrics (non-round-robin conduction), (2) the #708 anti-
+        # runaway audit, (3) CONV-D Act II. Appended by record_designation();
+        # the PM writes a record BEFORE designating (fingerprint_before), and
+        # the conversational _run_phase backfills fingerprint_after/delta when
+        # the designated agent returns. Stored as plain dicts (via asdict) so
+        # the trace serializes with the rest of __dict__ (to_json); the
+        # DesignationRecord dataclass is the typed constructor. One spine, no
+        # second state object.
+        self.deliberation_trace: List[Dict[str, Any]] = []
+
+    def record_designation(
+        self,
+        agent: str,
+        motivation: str,
+        trigger: str,
+        turn: Optional[int] = None,
+    ) -> int:
+        """Append a motivated PM designation record to the deliberation trace.
+
+        CONV-C #1334. The PM calls this (via the StateManagerPlugin
+        ``record_designation`` kernel function) BEFORE ``designate_next_agent``:
+        it captures the *why* of the designation and a fingerprint of the state
+        at the moment of the decision. ``fingerprint_after`` / ``delta_summary``
+        are backfilled by the conversational ``_run_phase`` when the designated
+        agent returns.
+
+        Args:
+            agent: Exact name of the designated agent (e.g. "FormalAgent").
+            motivation: 1-2 sentences on WHY now (obligatory; the central
+                CONV-C requirement — designations must be motivated, not
+                round-robin).
+            trigger: "initial" | "deepening" | "synergy" | "convergence".
+            turn: Pipeline-global turn index. Auto-derived (len(trace)+1) when
+                None, so the PM does not have to track it.
+
+        Returns:
+            The 1-based turn index assigned to this record (for log/audit).
+        """
+        if turn is None:
+            turn = len(self.deliberation_trace) + 1
+        record = DesignationRecord(
+            designated_agent=agent,
+            motivation=motivation,
+            trigger=trigger,
+            turn=turn,
+            state_fingerprint_before=self._designation_fingerprint(),
+        )
+        self.deliberation_trace.append(asdict(record))
+        state_logger.info(
+            f"[CONV-C] Désignation tracée tour {turn}: '{agent}' "
+            f"(trigger={trigger}) — {motivation[:80]}"
+        )
+        return turn
+
+    def _designation_fingerprint(self) -> Dict[str, Any]:
+        """Compact state fingerprint at a designation moment (for the trace).
+
+        Lightweight counts only — enough for the metrics (growth / coverage)
+        and the #708 audit, without the full snapshot payload.
+        """
+        return {
+            "argument_count": len(self.identified_arguments),
+            "fallacy_count": len(self.identified_fallacies),
+            "belief_set_count": len(self.belief_sets),
+            "counter_argument_count": len(getattr(self, "counter_arguments", [])),
+            "jtms_belief_count": len(getattr(self, "jtms_beliefs", {})),
+            "conclusion_present": self.final_conclusion is not None,
+        }
 
     def set_source_metadata(self, metadata: Dict[str, str]) -> None:
         """Populate source-level metadata (Epic #1258 / Track 1 #1259).
