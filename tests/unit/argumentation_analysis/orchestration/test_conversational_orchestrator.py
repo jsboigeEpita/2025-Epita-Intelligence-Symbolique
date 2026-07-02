@@ -88,13 +88,32 @@ class TestAgentConfig:
                 f"which is not in AGENT_SPECIALITY_MAP"
             )
 
-    def test_pm_has_no_specialty_plugins(self):
-        speciality = AGENT_CONFIG["ProjectManager"]["speciality"]
-        assert AGENT_SPECIALITY_MAP[speciality] == []
+    def test_pm_carries_only_narrative_synthesis(self):
+        """ProjectManager orchestrates + synthesizes; it carries no operational
+        analysis plugins (extraction / fallacy / formal-logic).
 
-    def test_extract_has_no_specialty_plugins(self):
+        Legacy contract asserted ``== []`` (#1336): obsolete since PM gained the
+        ``narrative_synthesis`` plugin (synthesis is the PM's own role, not an
+        operational capability). Converted to a fail-loud pin on the exact
+        plugin set — adding an operational plugin to PM must break this test.
+        """
+        speciality = AGENT_CONFIG["ProjectManager"]["speciality"]
+        assert AGENT_SPECIALITY_MAP[speciality] == ["narrative_synthesis"]
+
+    def test_extract_is_scoped_to_extraction(self):
+        """ExtractAgent carries only its extraction-scoped plugins (Toulmin
+        argument structuring + KB building); it must NOT carry formal-logic or
+        fallacy-detection capabilities.
+
+        Legacy contract asserted ``== []`` (#1336): obsolete since ExtractAgent
+        gained ``toulmin`` + ``text_to_kb`` (its signature extraction plugins).
+        Converted to a fail-loud pin on the exact plugin set + a negative
+        isolation check against the logic/fallacy domains.
+        """
         speciality = AGENT_CONFIG["ExtractAgent"]["speciality"]
-        assert AGENT_SPECIALITY_MAP[speciality] == []
+        plugins = set(AGENT_SPECIALITY_MAP[speciality])
+        assert plugins == {"toulmin", "text_to_kb"}
+        assert not (plugins & {"tweety_logic", "french_fallacy", "fallacy_workflow"})
 
     def test_informal_has_fallacy_plugin(self):
         speciality = AGENT_CONFIG["InformalAgent"]["speciality"]
@@ -127,12 +146,37 @@ class TestAgentConfig:
             found = any(ind in config["instructions"] for ind in french_indicators)
             assert found, f"{name} instructions don't appear to be in French"
 
-    def test_no_agent_has_all_plugins(self):
-        """No single agent should have more than 2 specialty plugins."""
+    def test_cross_domain_plugin_isolation(self):
+        """No agent may carry plugins from mutually-exclusive domains at once.
+
+        Legacy contract asserted ``len(plugins) <= 2`` (#1336): obsolete —
+        FormalAgent legitimately carries the full formal-logic stack (11
+        plugins) and InformalAgent carries 3. A plugin COUNT is not the right
+        invariant; the real one is cross-DOMAIN isolation: an agent scoped to
+        informal fallacies must not also carry formal-logic plugins, and
+        vice-versa. Converted to a fail-loud check on that invariant.
+        """
+        fallacy_domain = {"french_fallacy", "fallacy_workflow"}
+        logic_domain = {
+            "tweety_logic",
+            "nl_to_logic",
+            "coordinated_logic",
+            "atms",
+            "ranking",
+            "aspic",
+            "belief_revision",
+            "logic_agents",
+            "tweety_interpretation",
+            "kb_to_tweety",
+        }
         for name, config in AGENT_CONFIG.items():
             speciality = config["speciality"]
-            plugins = AGENT_SPECIALITY_MAP.get(speciality, [])
-            assert len(plugins) <= 2, f"{name} has {len(plugins)} plugins — too many"
+            plugins = set(AGENT_SPECIALITY_MAP.get(speciality, []))
+            if plugins & fallacy_domain:
+                assert not (plugins & logic_domain), (
+                    f"{name} mixes fallacy-detection + formal-logic plugins "
+                    f"(cross-domain isolation violated): {plugins}"
+                )
 
     def test_plugin_isolation_informal_no_tweety(self):
         """InformalAgent should NOT have tweety_logic plugin."""
@@ -488,7 +532,8 @@ class TestRunConversationalAnalysis:
             "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
             return_value=mock_kernel,
         ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
+            "argumentation_analysis.orchestration.conversational_orchestrator.create_llm_service",
+            return_value=mock_service,
         ) as MockLLM, patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
             side_effect=make_fake_agent,
@@ -498,7 +543,7 @@ class TestRunConversationalAnalysis:
         ), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
         ):
-            MockLLM.return_value = mock_service
+            # create_llm_service mock returns mock_service via the patch above
 
             results = await run_conversational_analysis(
                 text=SAMPLE_TEXT,
@@ -550,8 +595,14 @@ class TestRunConversationalAnalysis:
         phase_names_seen = []
 
         async def tracking_run_phase(
-            agents, prompt, max_turns=5, phase_name="", state=None,
-            enable_growth_validation=True, growth_re_prompt_limit=2,
+            agents,
+            prompt,
+            max_turns=5,
+            phase_name="",
+            state=None,
+            enable_growth_validation=True,
+            growth_re_prompt_limit=2,
+            reprompt_extractor=None,
         ):
             phase_names_seen.append(phase_name)
             return [
@@ -572,7 +623,8 @@ class TestRunConversationalAnalysis:
             "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
             return_value=mock_kernel,
         ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
+            "argumentation_analysis.orchestration.conversational_orchestrator.create_llm_service",
+            return_value=mock_service,
         ) as MockLLM, patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
             side_effect=make_fake_agent,
@@ -585,7 +637,7 @@ class TestRunConversationalAnalysis:
         ), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
         ):
-            MockLLM.return_value = mock_service
+            # create_llm_service mock returns mock_service via the patch above
             results = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
             )
@@ -619,7 +671,8 @@ class TestRunConversationalAnalysis:
             "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
             return_value=mock_kernel,
         ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
+            "argumentation_analysis.orchestration.conversational_orchestrator.create_llm_service",
+            return_value=mock_service,
         ) as MockLLM, patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
             side_effect=make_fake_agent,
@@ -629,7 +682,7 @@ class TestRunConversationalAnalysis:
         ), patch.dict(
             "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
         ):
-            MockLLM.return_value = mock_service
+            # create_llm_service mock returns mock_service via the patch above
             results = await run_conversational_analysis(
                 text=SAMPLE_TEXT,
                 max_turns_per_phase=2,
@@ -637,8 +690,10 @@ class TestRunConversationalAnalysis:
 
         log = results["conversation_log"]
         phases_in_log = set(m["phase"] for m in log)
-        # Should have messages from all 3 phases
-        assert len(phases_in_log) == 3
+        # 3 macro-phases (Extraction, Formal Analysis, Synthesis & Debate)
+        # plus the post_processing stage (stakes extraction / deep synthesis
+        # / restitution) = 4 distinct phase labels in the aggregated log.
+        assert len(phases_in_log) == 4
 
 
 # ── Edge cases ──
