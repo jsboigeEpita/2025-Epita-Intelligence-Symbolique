@@ -552,29 +552,17 @@ class TestSetAFValueGate:
     honest unavailability (extensions=None, solver='unavailable').
     """
 
-    async def test_setaf_fallback_reports_unavailable(self):
-        """SetAF fallback must report unavailability, not fabricated extensions."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_setaf,
-        )
+    async def test_setaf_fallback_raises_fail_loud(self):
+        """SetAF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
 
-        # Force the fallback by patching asyncio.to_thread in the invoke module
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_setaf("test", {"arguments": ["a", "b", "c"]})
-
-        assert result.get("extensions") is None, (
-            f"SetAF fallback returned extensions={result.get('extensions')} "
-            "instead of None. Must report unavailability (#964)."
-        )
-        assert result.get("solver") == "unavailable", (
-            f"SetAF fallback solver={result.get('solver')}, expected 'unavailable' (#964)."
-        )
-
-    async def test_setaf_fallback_no_args_slice(self):
-        """The fallback must not contain the old args[:2] fabrication."""
+        Contract evolution: the earlier #964 guard asserted an honest-unavailable
+        *dict* (extensions=None, solver='unavailable'). Post-#1252/#1019/RA-8
+        #1053, the brick was hardened to RAISE RuntimeError in its except block
+        so a solver failure can never enter state — degraded-dict OR fabricated
+        extensions alike. This guard is STRICTER than the old None-dict: it
+        asserts the raise itself, closing both the fabrication and the silent
+        degraded-dict paths. Triage #1336 (stale-contract update).
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_setaf,
         )
@@ -583,12 +571,8 @@ class TestSetAFValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_setaf("test", {"arguments": ["a", "b", "c"]})
-
-        ext = result.get("extensions")
-        assert ext is None or ext != [["a", "b"]], (
-            "SetAF fallback still returns fabricated args[:2] extension (#964)."
-        )
+            with pytest.raises(RuntimeError, match="SetAF analysis unavailable"):
+                await _invoke_setaf("test", {"arguments": ["a", "b", "c"]})
 
 
 class TestWeightedValueGate:
@@ -599,8 +583,16 @@ class TestWeightedValueGate:
     unavailability (scores=None, extensions=None, solver='unavailable').
     """
 
-    async def test_weighted_fallback_reports_unavailable(self):
-        """Weighted fallback must report unavailability, not fabricated scores."""
+    async def test_weighted_fallback_raises_fail_loud(self):
+        """Weighted AF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #964 guard asserted an honest-unavailable
+        *dict* (scores=None). Post-#1252/#1019 the except block was hardened to
+        RAISE RuntimeError so a solver failure can never enter state — fabricated
+        OR silently-degraded scores alike. STRICTER than the old None-dict. The
+        old positional-scoring fabrication (1.0/(i+1)) is doubly impossible: the
+        function raises before any score is computed. Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_weighted,
         )
@@ -609,33 +601,8 @@ class TestWeightedValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_weighted("test", {"arguments": ["a", "b", "c"]})
-
-        assert result.get("scores") is None, (
-            f"Weighted fallback returned scores={result.get('scores')} "
-            "instead of None. Must report unavailability (#964)."
-        )
-        assert result.get("extensions") is None, (
-            f"Weighted fallback returned extensions={result.get('extensions')} "
-            "instead of None (#964)."
-        )
-
-    async def test_weighted_fallback_no_positional_scoring(self):
-        """The fallback must not contain the old 1.0/(i+1) fabrication."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_weighted,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_weighted("test", {"arguments": ["x", "y"]})
-
-        scores = result.get("scores")
-        assert scores is None or scores != {"x": 1.0, "y": 0.5}, (
-            "Weighted fallback still returns fabricated positional scores (#964)."
-        )
+            with pytest.raises(RuntimeError, match="Weighted AF analysis unavailable"):
+                await _invoke_weighted("test", {"arguments": ["a", "b", "c"]})
 
 
 class TestDeLPValueGate:
@@ -647,41 +614,36 @@ class TestDeLPValueGate:
     solver='unavailable').
     """
 
-    async def test_delp_fallback_reports_unavailable(self):
-        """DeLP fallback must report unavailability, not all-undecided."""
+    async def test_delp_no_program_reports_unavailable(self):
+        """DeLP must report honest unavailability (status='unavailable') when no program.
+
+        Contract evolution (#1215/FP-12): DeLP syntax is not prose, so the brick
+        REQUIRES an explicit ``program`` in context. Without one it returns an
+        honest-absent dict ``{status: 'unavailable', message: ...}``` — it does
+        NOT feed raw text to DelpParser (which guaranteed a parse failure + corpus
+        leak). The earlier #964 guard asserted ``solver='unavailable'`` on a
+        fabricated all-undecided dict; both the key and the fabrication are gone.
+        This guard pins the honest early-return shape under the #1215 contract.
+        Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_delp,
         )
 
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_delp("test prog", {"queries": ["p", "q"]})
+        # No 'program' in context -> early-return before to_thread (not patched).
+        result = await _invoke_delp("test prog", {"queries": ["p", "q"]})
 
+        assert result.get("status") == "unavailable", (
+            f"DeLP without a program must return status='unavailable', "
+            f"got status={result.get('status')!r} keys={sorted(result.keys())} (#1215)."
+        )
+        assert "program" in result.get("message", "").lower(), (
+            f"DeLP unavailable message must explain the missing 'program', "
+            f"got {result.get('message')!r} (#1215)."
+        )
+        # No fabricated results / verdict.
         assert result.get("results") is None, (
-            f"DeLP fallback returned results={result.get('results')} "
-            "instead of None. Must report unavailability (#964)."
-        )
-        assert result.get("solver") == "unavailable", (
-            f"DeLP fallback solver={result.get('solver')}, expected 'unavailable' (#964)."
-        )
-
-    async def test_delp_fallback_no_undecided_dict(self):
-        """The fallback must not contain the old all-undecided fabrication."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_delp,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_delp("test", {"queries": ["p"]})
-
-        results = result.get("results")
-        assert results is None or results != {"p": "undecided"}, (
-            "DeLP fallback still returns fabricated all-undecided dict (#964)."
+            f"DeLP must not fabricate results when unavailable: {result.get('results')}"
         )
 
 
@@ -693,8 +655,15 @@ class TestBipolarValueGate:
     honest unavailability (extensions=None, solver='unavailable').
     """
 
-    async def test_bipolar_fallback_reports_unavailable(self):
-        """Bipolar fallback must report unavailability, not fabricated extensions."""
+    async def test_bipolar_fallback_raises_fail_loud(self):
+        """Bipolar AF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #964 guard asserted an honest-unavailable
+        *dict* (extensions=None, solver='unavailable'). Post-#1252/#1019 the
+        except block was hardened to RAISE RuntimeError, so a solver failure can
+        never enter state — fabricated OR silently-degraded extensions alike.
+        STRICTER than the old None-dict. Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_bipolar,
         )
@@ -703,32 +672,8 @@ class TestBipolarValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_bipolar("test", {"arguments": ["a", "b", "c"]})
-
-        assert result.get("extensions") is None, (
-            f"Bipolar fallback returned extensions={result.get('extensions')} "
-            "instead of None. Must report unavailability (#964)."
-        )
-        assert result.get("solver") == "unavailable", (
-            f"Bipolar fallback solver={result.get('solver')}, expected 'unavailable' (#964)."
-        )
-
-    async def test_bipolar_fallback_no_args_slice(self):
-        """The fallback must not contain the old args[:2] fabrication."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_bipolar,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_bipolar("test", {"arguments": ["a", "b", "c"]})
-
-        ext = result.get("extensions")
-        assert ext is None or ext != [["a", "b"]], (
-            "Bipolar fallback still returns fabricated args[:2] extension (#964)."
-        )
+            with pytest.raises(RuntimeError, match="Bipolar analysis .* unavailable"):
+                await _invoke_bipolar("test", {"arguments": ["a", "b", "c"]})
 
 
 # ============================================================
@@ -825,71 +770,30 @@ class TestDungValueGate:
     on a non-trivial attack graph — not just echo the input.
     """
 
-    def test_grounded_fixpoint_with_chain_defense(self):
-        """A→B→C chain: grounded must be {A, C} (A unattacked, C defended)."""
+    def test_python_dung_fallback_is_fail_loud(self):
+        """_python_dung_fallback is a fail-loud stub (#1252/#1019, FP-22 #1249).
+
+        The previous pure-Python grounded-fixpoint enumeration — formerly pinned
+        by test_grounded_fixpoint_with_chain_defense / test_no_attacks_all_accepted
+        / test_mutual_attack_empty_grounded / test_statistics_match_input —
+        produced non-empty extension sets WITHOUT a genuine Tweety reasoner call,
+        an anti-theatre violation. It was removed; the function now raises so no
+        fabricated extension can enter state. Call sites (_invoke_dung_extensions)
+        return honest-absent degraded dicts instead of calling this stub.
+
+        Triage #1336 (stale-contract update): the 4 semantic variants collapse
+        into one fail-loud guard because the computed semantics no longer exist —
+        the guard still proves no fabricated Dung result is produced (it raises).
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
 
-        result = _python_dung_fallback(
-            arguments=["A", "B", "C"],
-            attacks=[["A", "B"], ["B", "C"]],
-        )
-
-        assert result["semantics"] == "python_fallback"
-        grounded = result["extensions"]["grounded"]
-        assert set(grounded) == {"A", "C"}, (
-            f"Grounded extension expected {{A, C}} but got {grounded}. "
-            "The fixpoint must accept unattacked A and defend C via A attacking B."
-        )
-
-    def test_no_attacks_all_accepted(self):
-        """With zero attacks, all arguments land in grounded."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _python_dung_fallback,
-        )
-
-        result = _python_dung_fallback(
-            arguments=["X", "Y", "Z"],
-            attacks=[],
-        )
-
-        grounded = result["extensions"]["grounded"]
-        assert set(grounded) == {"X", "Y", "Z"}, (
-            f"With no attacks, all args should be grounded, got {grounded}"
-        )
-
-    def test_mutual_attack_empty_grounded(self):
-        """A↔B mutual attack: grounded must be empty (neither defended)."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _python_dung_fallback,
-        )
-
-        result = _python_dung_fallback(
-            arguments=["A", "B"],
-            attacks=[["A", "B"], ["B", "A"]],
-        )
-
-        # When grounded is empty, the function may return {} or {"grounded": []}
-        extensions = result["extensions"]
-        grounded = extensions.get("grounded", [])
-        assert set(grounded) == set(), (
-            f"Mutual attack should yield empty grounded, got {grounded}"
-        )
-
-    def test_statistics_match_input(self):
-        """Statistics must reflect actual input sizes."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _python_dung_fallback,
-        )
-
-        result = _python_dung_fallback(
-            arguments=["A", "B", "C", "D"],
-            attacks=[["A", "B"], ["C", "D"]],
-        )
-
-        assert result["statistics"]["arguments_count"] == 4
-        assert result["statistics"]["attacks_count"] == 2
+        with pytest.raises(RuntimeError, match="Dung extension computation unavailable"):
+            _python_dung_fallback(
+                arguments=["A", "B", "C"],
+                attacks=[["A", "B"], ["B", "C"]],
+            )
 
 
 # =====================================================================
@@ -1387,17 +1291,19 @@ class TestFOLValueGate:
       3. When Tweety is available: consistent is a real bool, formulas > 0.
     """
 
-    async def test_fol_fallback_reports_python_not_fabricated(self):
-        """FOL fallback must report 'fallback: python', not fabricated consistency.
+    async def test_fol_fallback_reports_honest_unavailable(self):
+        """FOL must report honest unavailable (consistent=None) when solvers fail (#1278/#1019).
 
-        When TweetyBridge fails and per-formula isolation saves nothing,
-        the Python fallback uses template formulas. It must NOT claim
-        consistent=True when formulas contain 'Fallacious' predicates
-        (which indicate undermined arguments -- consistent should be False).
-
-        #986: Type + non-empty assertions are UNCONDITIONAL.
-        #996: Semantic invariant (Fallacious→consistent=False) is restored
-        behind the non-vacuous precondition guaranteed by #986.
+        Contract evolution: the earlier #976 guard expected a 'fallback: python'
+        dict with template formulas + a real-bool consistent. Track B
+        #1278/#1292 replaced the template-fabrication path with an honest
+        DEGRADED RETURN: when no formula parses into a verifiable belief set,
+        FOL returns consistent=None + fol_status='unavailable:...' — never a
+        fabricated bool, never a template-only fallback. This guard asserts that
+        honest-degraded shape (the anti-theatre intent of #976 preserved under
+        the stricter #1278 contract). Triage #1336 (stale-contract update).
+        Happy-path (Tweety succeeds) still covered by
+        test_fol_consistent_is_bool_when_tweety_available below.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
@@ -1412,9 +1318,6 @@ class TestFOLValueGate:
             },
         }
 
-        # Force TweetyBridge to fail AND no LLM -> pure Python fallback.
-        # TweetyBridge is imported locally inside the function, so we patch
-        # at the source module.
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("No JVM for test"),
@@ -1424,42 +1327,31 @@ class TestFOLValueGate:
         ):
             result = await _invoke_fol_reasoning(text, context)
 
-        assert result.get("fallback") == "python", (
-            f"FOL fallback should be 'python', got fallback={result.get('fallback')} (#976)."
+        # Honest degraded: consistent is None (NOT a fabricated bool).
+        assert result.get("consistent") is None, (
+            f"FOL must report consistent=None when no formula is verifiable, "
+            f"got consistent={result.get('consistent')!r}. A real bool here would "
+            f"mean a fabricated/template verdict re-entered state (#976/#1278)."
+        )
+        # Status must honestly report unavailability (parse-fail or no-translation).
+        fol_status = result.get("fol_status", "")
+        assert isinstance(fol_status, str) and fol_status.startswith("unavailable"), (
+            f"FOL fol_status must start with 'unavailable' when degraded, "
+            f"got {fol_status!r} (#1278/#1292)."
+        )
+        # The removed theatrical 'fallback: python' contract must NOT reappear.
+        assert result.get("fallback") != "python", (
+            "FOL still returns fallback='python' — the template-fabrication path "
+            "was removed in #1278/#1292; its return is a regression (#976)."
         )
 
-        # #986: UNCONDITIONAL — fallback must always report a real bool for
-        # consistent, not None/missing.  The value itself may vary (True/False)
-        # depending on NL-to-logic output, but it must EXIST and be bool.
-        assert isinstance(result.get("consistent"), bool), (
-            f"FOL fallback consistent must be a real bool, "
-            f"got {type(result.get('consistent')).__name__}: "
-            f"{result.get('consistent')} (#986)."
-        )
+    async def test_fol_degraded_message_is_honest(self):
+        """FOL degraded message must be marked unavailable, not 'consistent' theatre (#1278).
 
-        # #986: Precondition — formulas must be non-empty (otherwise the test
-        # asserts nothing about consistency semantics).
-        formulas = result.get("formulas", [])
-        assert len(formulas) > 0, (
-            f"FOL fallback produced zero formulas — test is vacuous (#986)."
-        )
-
-        # #996: Semantic invariant — only meaningful when Fallacious is present.
-        # The unconditional guards above ensure the test is never vacuous,
-        # so this conditional check cannot silently pass at-zero.
-        if any("Fallacious" in f for f in formulas):
-            assert result["consistent"] is False, (
-                f"FOL fallback with Fallacious predicates must report "
-                f"consistent=False (#976/#996). formulas={formulas}"
-            )
-
-    async def test_fol_template_formulas_are_honest(self):
-        """FOL fallback formulas must be non-empty and honestly typed.
-
-        When no Tweety is available, FOL falls back to either NL-to-logic
-        translations or Asserted(argN) templates. Both are honest — they
-        must produce non-empty formulas and report fallback='python'.
-        A regression to zero formulas would be the #941 false-zero.
+        Companion to test_fol_fallback_reports_honest_unavailable: pins the
+        degraded *message* shape (must contain 'unavailable') so downstream
+        consumers and the 3-act restitution can surface the honest gap rather
+        than reading a fabricated consistency verdict.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
@@ -1477,22 +1369,12 @@ class TestFOLValueGate:
         ):
             result = await _invoke_fol_reasoning(text, context)
 
-        assert result.get("fallback") == "python", (
-            "Expected Python fallback when JVM unavailable (#976)."
+        assert result.get("consistent") is None, (
+            f"Degraded FOL must keep consistent=None, got {result.get('consistent')!r}."
         )
-        formulas = result.get("formulas", [])
-        assert len(formulas) > 0, (
-            "FOL must produce >=1 formula even in fallback mode, "
-            "not zero formulas that would look like a false-zero (#976)."
-        )
-        # Formulas must be predicate-shaped (Pred(arg) or Asserted(arg))
-        # NOT bare text fragments — distinguishes structured fallback
-        # from degenerate empty output.
-        has_pred_form = any("(" in f and ")" in f for f in formulas)
-        assert has_pred_form, (
-            f"FOL fallback formulas should be predicate-shaped (contain parens), "
-            f"got {formulas}. Structured predicates distinguish fallback from "
-            f"degenerate plain-text output (#976)."
+        message = result.get("message", "")
+        assert "unavailable" in message, (
+            f"FOL degraded message must state unavailability, got {message!r} (#1278)."
         )
 
     async def test_fol_consistent_is_bool_when_tweety_available(self):
@@ -1555,45 +1437,18 @@ class TestPLValueGate:
       3. When Tweety is available: satisfiable is a real bool, formulas > 0.
     """
 
-    async def test_pl_fallback_reports_python_not_fabricated(self):
-        """PL fallback must report 'fallback: python', not claim satisfiable=True
-        on empty formulas or fabricated model.
+    async def test_pl_fallback_raises_fail_loud(self):
+        """PL must RAISE (fail-loud) when all Tweety solvers fail — anti-theatre (#1252/#1019).
 
-        When TweetyBridge fails and per-formula isolation saves nothing,
-        the Python fallback must be honest about using templates.
-        """
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_propositional_logic,
-        )
-
-        text = "The data shows X. Therefore Y follows."
-        context = {}
-
-        with patch(
-            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
-            side_effect=RuntimeError("No JVM for test"),
-        ), patch(
-            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
-            return_value=(None, None),
-        ):
-            result = await _invoke_propositional_logic(text, context)
-
-        assert result.get("fallback") == "python", (
-            f"PL fallback should be 'python', got fallback={result.get('fallback')} (#977)."
-        )
-        # satisfiable must be a bool (not None, not missing)
-        assert isinstance(result.get("satisfiable"), bool), (
-            f"PL 'satisfiable' should be bool in fallback, "
-            f"got {type(result.get('satisfiable'))} (#977)."
-        )
-
-    async def test_pl_template_formulas_are_honest(self):
-        """PL fallback formulas must be non-empty and honestly typed.
-
-        When no Tweety is available, PL falls back to either NL-to-logic
-        translations or pN template variables. Both are honest — they
-        must produce non-empty formulas and report fallback='python'.
-        A regression to zero formulas would be the false-zero.
+        Contract evolution: the earlier #977 guards asserted a 'fallback: python'
+        dict (template pN formulas + a fabricated satisfiable bool). Post-#1252/
+        #1019 (RA-8 #1053) the per-formula-isolation failure path was hardened
+        to RAISE RuntimeError (invoke_callables.py:5392) — no template-fabrication
+        fallback remains, so a zero-survivor parse can never enter state as a
+        fabricated satisfiable verdict. STRICTER than the old bool/template dicts
+        — the raise proves no fabricated satisfiable/formulas are produced.
+        Happy-path (Tweety succeeds) still covered by
+        test_pl_satisfiable_is_bool_when_tweety_available below. Triage #1336.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_propositional_logic,
@@ -1609,29 +1464,10 @@ class TestPLValueGate:
             "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(None, None),
         ):
-            result = await _invoke_propositional_logic(text, context)
-
-        assert result.get("fallback") == "python", (
-            "Expected Python fallback when JVM unavailable (#977)."
-        )
-        formulas = result.get("formulas", [])
-        assert len(formulas) > 0, (
-            "PL must produce >=1 formula even in fallback mode, "
-            "not zero formulas that would look like a false-zero (#977)."
-        )
-        # Formulas must contain PL operators or be atomic propositions.
-        # Honest fallback produces either pN variables or sanitized NL-derived
-        # formulas — both are structured, not degenerate plain text.
-        has_structure = any(
-            any(op in f for op in ["=>", "||", "&&", "!", "<=>", "("])
-            or (f.startswith("p") and f[1:].isdigit())
-            for f in formulas
-        )
-        assert has_structure, (
-            f"PL fallback formulas should contain PL operators or template vars, "
-            f"got {formulas}. Structured formulas distinguish fallback from "
-            f"degenerate plain-text output (#977)."
-        )
+            with pytest.raises(
+                RuntimeError, match="Propositional logic analysis unavailable"
+            ):
+                await _invoke_propositional_logic(text, context)
 
     async def test_pl_satisfiable_is_bool_when_tweety_available(self):
         """When Tweety path succeeds, 'satisfiable' must be a real bool.
@@ -1735,8 +1571,16 @@ class TestEAFValueGate:
     Gate: must return non-empty args and an extensions list (even if synthetic).
     """
 
-    async def test_eaf_fallback_returns_structure(self):
-        """EAF fallback must return args and extensions, not empty."""
+    async def test_eaf_fallback_raises_fail_loud(self):
+        """EAF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #1005/#1013 guards asserted a
+        *Python-fallback dict* (synthetic epistemic states, believed_arguments).
+        Post-#1252/#1019 (RA-8 #1053) the except block was hardened to RAISE so
+        synthetic epistemic states can never enter state. STRICTER: the raise
+        closes both the synthetic-extensions and the silent-degraded paths.
+        Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_eaf,
         )
@@ -1745,49 +1589,8 @@ class TestEAFValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_eaf("test", {"arguments": ["a", "b"]})
-
-        assert "arguments" in result or "args" in result, (
-            f"EAF fallback missing args: {list(result.keys())} (#1005)."
-        )
-        assert "extensions" in result, (
-            f"EAF fallback missing 'extensions': {list(result.keys())} (#1005)."
-        )
-        # Fallback must signal degradation
-        fallback = result.get("fallback")
-        assert fallback is not None, (
-            "EAF fallback did not set 'fallback' flag (#1005)."
-        )
-
-    async def test_eaf_extensions_non_empty_when_args_provided(self):
-        """EAF fallback must compute non-empty extensions from args (#1013)."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_eaf,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_eaf("test", {
-                "arguments": ["alpha", "beta", "gamma"],
-            })
-
-        extensions = result.get("extensions", [])
-        assert len(extensions) > 0, (
-            f"EAF produced 0 extensions from 3 args — vacuous gate (#1013). "
-            f"Keys: {list(result.keys())}"
-        )
-        believed = result.get("believed_arguments", [])
-        assert len(believed) > 0, (
-            f"EAF believed_arguments empty from 3 args — vacuous gate (#1013). "
-            f"Keys: {list(result.keys())}"
-        )
-        # Epistemic summary must reflect arg count
-        summary = result.get("epistemic_summary", {})
-        assert summary.get("total", 0) > 0, (
-            "EAF epistemic_summary.total must be > 0 (#1013)."
-        )
+            with pytest.raises(RuntimeError, match="Epistemic AF analysis .* unavailable"):
+                await _invoke_eaf("test", {"arguments": ["alpha", "beta", "gamma"]})
 
 
 class TestQBFValueGate:
@@ -1824,8 +1627,16 @@ class TestABAValueGate:
     to report honest unavailability, this test should be updated.
     """
 
-    async def test_aba_fallback_returns_structure(self):
-        """ABA fallback must return extensions and flag fallback mode."""
+    async def test_aba_fallback_raises_fail_loud(self):
+        """ABA must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #1005 guards asserted a *Python-fallback
+        dict* that DOCUMENTED a known assumptions[:2] fabrication (flagged
+        fallback='python'). Post-#1252/#1019 that fabrication was removed: the
+        except block now RAISES RuntimeError so synthetic ABA extensions can
+        never enter state. STRICTER than the documented-fabrication guard — the
+        raise proves no fabricated result is produced. Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_aba,
         )
@@ -1834,45 +1645,8 @@ class TestABAValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_aba("test", {"arguments": ["a", "b", "c"]})
-
-        assert "extensions" in result, (
-            f"ABA fallback missing 'extensions': {list(result.keys())} (#1005)."
-        )
-        assert result.get("fallback") == "python", (
-            f"ABA fallback should flag fallback='python', got {result.get('fallback')} (#1005)."
-        )
-        # Document known fabrication: extensions use assumptions[:2]
-        ext = result.get("extensions", [])
-        assert len(ext) > 0, (
-            "ABA fallback returned empty extensions — must have at least 1 (#1005)."
-        )
-
-    async def test_aba_fallback_documents_fabrication(self):
-        """ABA fallback produces synthetic extensions — document this known state."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_aba,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_aba("test argument text", {})
-
-        # Fallback must return extensions (even if synthetic) and flag fallback
-        assert "extensions" in result, (
-            f"ABA fallback missing 'extensions': {list(result.keys())} (#1005)."
-        )
-        assert result.get("fallback") == "python", (
-            "ABA must flag fallback='python' (#1005)."
-        )
-        # Document: extensions are fabricated from synthetic assumptions,
-        # not from real argumentation-theoretic computation
-        ext = result.get("extensions", [])
-        assert isinstance(ext, list), (
-            f"ABA extensions should be list, got {type(ext)} (#1005)."
-        )
+            with pytest.raises(RuntimeError, match="ABA reasoning unavailable"):
+                await _invoke_aba("test", {"arguments": ["a", "b", "c"]})
 
 
 class TestADFValueGate:
@@ -1882,8 +1656,17 @@ class TestADFValueGate:
     this test should be updated.
     """
 
-    async def test_adf_fallback_returns_structure(self):
-        """ADF fallback must return interpretations and flag fallback mode."""
+    async def test_adf_fallback_raises_fail_loud(self):
+        """ADF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #1005/#1013 guards asserted a
+        *Python-fallback dict* that DOCUMENTED a statements[:2]→all-True
+        fabrication (flagged fallback='python'). Post-#1252/#1019 that
+        fabrication was removed: the except block now RAISES RuntimeError so
+        synthetic ADF interpretations can never enter state. STRICTER than the
+        documented-fabrication guard — the raise proves no fabricated result.
+        Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_adf,
         )
@@ -1892,64 +1675,8 @@ class TestADFValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_adf("test", {"arguments": ["s1", "s2"]})
-
-        assert "interpretations" in result, (
-            f"ADF fallback missing 'interpretations': {list(result.keys())} (#1005)."
-        )
-        assert result.get("fallback") == "python", (
-            f"ADF fallback should flag fallback='python', got {result.get('fallback')} (#1005)."
-        )
-
-    async def test_adf_fallback_documents_fabrication(self):
-        """ADF fallback produces synthetic interpretations — document known state."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_adf,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_adf("test argument text", {})
-
-        interpretations = result.get("interpretations", [])
-        assert len(interpretations) > 0, (
-            "ADF fallback returned no interpretations (#1005)."
-        )
-        # Document: interpretations are fabricated (statements[:2] → all True),
-        # not from real ADF semantics computation
-        assert result.get("fallback") == "python", (
-            "ADF must flag fallback='python' (#1005)."
-        )
-
-    async def test_adf_interpretations_have_statement_content(self):
-        """ADF fallback interpretations must map statements to truth values (#1013)."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_adf,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_adf("test argument text", {
-                "arguments": ["claim_alpha", "claim_beta"],
-            })
-
-        interpretations = result.get("interpretations", [])
-        assert len(interpretations) > 0, (
-            f"ADF produced 0 interpretations from 2 statements — vacuous gate (#1013)."
-        )
-        # Each interpretation dict must map statement names to truth values
-        first_interp = interpretations[0]
-        assert isinstance(first_interp, dict) and len(first_interp) > 0, (
-            f"ADF interpretation is empty dict — vacuous gate (#1013). "
-            f"Got: {first_interp}"
-        )
-        assert result.get("fallback") == "python", (
-            "ADF must flag fallback='python' (#1013)."
-        )
+            with pytest.raises(RuntimeError, match="ADF reasoning unavailable"):
+                await _invoke_adf("test", {"arguments": ["claim_alpha", "claim_beta"]})
 
 
 class TestProbabilisticValueGate:
@@ -1961,52 +1688,15 @@ class TestProbabilisticValueGate:
     is honestly set rather than asserting non-uniform values (anti-pendule).
     """
 
-    async def test_probabilistic_fallback_returns_structure(self):
-        """Probabilistic fallback must return acceptance probabilities."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_probabilistic,
-        )
+    async def test_probabilistic_fallback_raises_fail_loud(self):
+        """Probabilistic AF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
 
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
-
-        assert "acceptance_probabilities" in result, (
-            f"Probabilistic fallback missing 'acceptance_probabilities': {list(result.keys())} (#1005)."
-        )
-        assert result.get("fallback") == "python", (
-            f"Probabilistic must flag fallback='python', got {result.get('fallback')} (#1005)."
-        )
-
-    async def test_probabilistic_acceptance_values_bounded(self):
-        """Acceptance probabilities must be in [0, 1]."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_probabilistic,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
-
-        acceptance = result.get("acceptance_probabilities", {})
-        assert isinstance(acceptance, dict), (
-            f"Acceptance should be dict, got {type(acceptance)} (#1005)."
-        )
-        for arg, prob in acceptance.items():
-            assert 0.0 <= prob <= 1.0, (
-                f"Acceptance for '{arg}' out of [0,1]: {prob} (#1005)."
-            )
-
-    async def test_probabilistic_fallback_honestly_flagged(self):
-        """Probabilistic fallback must flag honestly + acceptance values bounded (#1009/#1013).
-
-        Anti-pendule: uniform 0.5 is LEGITIMATE when no attacks are present
-        (acceptance = initial_probability / (1 + attack_count) = 0.5 / 1 = 0.5).
-        The gate asserts the honest degraded flag AND that values are ~uniform.
+        Contract evolution: the earlier #1005/#1009/#1013 guards asserted a
+        *Python-fallback dict* (acceptance_probabilities from heuristic
+        initial_probability/(1+attack_count)). Post-#1252/#1019 the except block
+        was hardened to RAISE RuntimeError so fabricated probabilities can never
+        enter state. STRICTER than the old bounded/uniform dicts — the raise
+        proves no synthetic acceptance value is produced. Triage #1336.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_probabilistic,
@@ -2016,25 +1706,28 @@ class TestProbabilisticValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
+            with pytest.raises(RuntimeError, match="Probabilistic argumentation unavailable"):
+                await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
 
-        # The fallback flag MUST be present — this is the honest signal
-        assert result.get("fallback") == "python", (
-            "Probabilistic fallback must flag fallback='python' for honest "
-            f"degraded reporting, got {result.get('fallback')} (#1009)."
+    async def test_probabilistic_fallback_honestly_flagged(self):
+        """Probabilistic must RAISE (no fabricated probabilities) when JVM down.
+
+        Companion to test_probabilistic_fallback_raises_fail_loud — pins the
+        honest-failure intent of the old #1009 'flag honestly' guard under the
+        stricter #1252/#1019 raise contract: the brick never produces a (bounded,
+        uniform, or otherwise) fabricated acceptance value, it raises.
+        Triage #1336.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_probabilistic,
         )
-        # Acceptance values must be approximately uniform when no attacks
-        acceptance = result.get("acceptance_probabilities", {})
-        assert len(acceptance) > 0, (
-            "Probabilistic fallback must produce non-empty acceptance_probabilities (#1013)."
-        )
-        values = list(acceptance.values())
-        if len(values) >= 2:
-            spread = max(values) - min(values)
-            assert spread < 0.1, (
-                f"Probabilistic fallback: expected ~uniform values with no attacks, "
-                f"but spread={spread:.4f}. Values: {acceptance} (#1013)."
-            )
+
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=RuntimeError("No JVM for test"),
+        ):
+            with pytest.raises(RuntimeError, match="Probabilistic argumentation unavailable"):
+                await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
 
 
 class TestDialogueValueGate:
@@ -2044,8 +1737,16 @@ class TestDialogueValueGate:
     Gate: must return dialogue trace and flag fallback.
     """
 
-    async def test_dialogue_fallback_returns_trace(self):
-        """Dialogue fallback must return a turn trace with a winner."""
+    async def test_dialogue_fallback_raises_fail_loud(self):
+        """Dialogue must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #1005/#1013 guards asserted a
+        *Python-fallback dict* (a turn-by-turn trace splitting args into
+        proponent/opponent with a winner). Post-#1252/#1019 the except block was
+        hardened to RAISE RuntimeError so a synthetic dialogue trace can never
+        enter state. STRICTER than the old trace/winner dicts — the raise proves
+        no fabricated trace or outcome is produced. Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_dialogue,
         )
@@ -2054,45 +1755,10 @@ class TestDialogueValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_dialogue("test argument text", {})
-
-        assert "trace" in result or "turns" in result or "winner" in result, (
-            f"Dialogue fallback missing trace/turns/winner: {list(result.keys())} (#1005)."
-        )
-        assert result.get("fallback") is not None, (
-            "Dialogue must flag fallback mode (#1005)."
-        )
-
-    async def test_dialogue_trace_has_substantive_content(self):
-        """Dialogue fallback must produce a trace with turns and outcome (#1013)."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_dialogue,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_dialogue("test argument text", {
-                "arguments": ["pro-arg-1", "pro-arg-2"],
-            })
-
-        # dialogue_trace must be non-empty with actual turn content
-        trace = result.get("dialogue_trace", [])
-        assert len(trace) > 0, (
-            f"Dialogue produced empty dialogue_trace — vacuous gate (#1013). "
-            f"Keys: {list(result.keys())}"
-        )
-        # Each trace entry must have substantive fields
-        first_turn = trace[0]
-        assert "speaker" in first_turn or "turn" in first_turn, (
-            f"Dialogue trace entry missing speaker/turn: {first_turn} (#1013)."
-        )
-        # Outcome must be a valid winner string
-        outcome = result.get("outcome", "")
-        assert outcome in ("proponent", "opponent", "draw"), (
-            f"Dialogue outcome invalid: {outcome!r} (#1013)."
-        )
+            with pytest.raises(RuntimeError, match="Dialogue protocol unavailable"):
+                await _invoke_dialogue("test argument text", {
+                    "arguments": ["pro-arg-1", "pro-arg-2"],
+                })
 
 
 class TestBeliefRevisionValueGate:
@@ -2102,8 +1768,16 @@ class TestBeliefRevisionValueGate:
     Gate: must return revised belief set and flag fallback.
     """
 
-    async def test_belief_revision_fallback_returns_revised_set(self):
-        """Belief revision fallback must return a revised belief set."""
+    async def test_belief_revision_fallback_raises_fail_loud(self):
+        """Belief revision must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #1005/#1013 guards asserted a
+        *Python-fallback dict* (literal set modification: drop negated belief,
+        append new belief). Post-#1252/#1019 the except block was hardened to
+        RAISE RuntimeError so a fabricated revised set can never enter state.
+        STRICTER than the old revised-differs-from-original dicts — the raise
+        proves no synthetic revision is produced. Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_belief_revision,
         )
@@ -2117,44 +1791,8 @@ class TestBeliefRevisionValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_belief_revision("test", context)
-
-        assert "revised" in result or "revised_belief_set" in result, (
-            f"Belief revision missing revised set: {list(result.keys())} (#1005)."
-        )
-        assert result.get("fallback") is not None, (
-            "Belief revision must flag fallback mode (#1005)."
-        )
-
-    async def test_belief_revision_revised_differs_from_original(self):
-        """Belief revision fallback: revised set must differ from original (#1013)."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_belief_revision,
-        )
-
-        context = {
-            "belief_set": ["a", "b"],
-            "new_belief": "c",
-            "revision_method": "dalal",
-        }
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_belief_revision("test", context)
-
-        revised = result.get("revised", [])
-        original = result.get("original", [])
-        assert revised != original, (
-            f"Belief revision: revised set identical to original — no revision "
-            f"occurred. original={original}, revised={revised} (#1013)."
-        )
-        assert "c" in revised, (
-            f"Belief revision: new_belief 'c' not in revised set: {revised} (#1013)."
-        )
-        assert result.get("fallback") == "python", (
-            "Belief revision must flag fallback='python' (#1013)."
-        )
+            with pytest.raises(RuntimeError, match="Belief revision .* unavailable"):
+                await _invoke_belief_revision("test", context)
 
 
 class TestATMSValueGate:
@@ -2226,8 +1864,16 @@ class TestASPICValueGate:
     Audit (#1009): tighten to assert rules are non-empty (value gate).
     """
 
-    async def test_aspic_fallback_returns_argument_structure(self):
-        """ASPIC+ fallback must return argument structure from context."""
+    async def test_aspic_fallback_raises_fail_loud(self):
+        """ASPIC+ must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+
+        Contract evolution: the earlier #1005/#1009 guards asserted a
+        *Python-fallback dict* (defensibility-derived strict/defeasible rules).
+        Post-#1252/#1019 the except block was hardened to RAISE RuntimeError so
+        fabricated argument structure can never enter state. STRICTER than the
+        old rules-non-empty dicts — the raise proves no synthetic rules are
+        produced. Triage #1336.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_aspic,
         )
@@ -2236,52 +1882,11 @@ class TestASPICValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            result = await _invoke_aspic("test argument text", {
-                "phase_extract_output": {
-                    "claims": [{"text": "claim 1"}],
-                    "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
-                },
-                "phase_hierarchical_fallacy_output": {"fallacies": []},
-            })
-
-        assert "fallback" in result, (
-            f"ASPIC must flag fallback mode: {list(result.keys())} (#1005)."
-        )
-        # Must return some form of argument structure
-        has_structure = any(
-            k in result
-            for k in ("arguments", "defeasible_rules", "strict_rules", "defensible")
-        )
-        assert has_structure, (
-            f"ASPIC returned no argument structure: {list(result.keys())} (#1005)."
-        )
-
-    async def test_aspic_rules_non_empty(self):
-        """Audit (#1009): ASPIC fallback rules must be non-empty (value gate)."""
-        from argumentation_analysis.orchestration.invoke_callables import (
-            _invoke_aspic,
-        )
-
-        with patch(
-            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
-        ):
-            result = await _invoke_aspic("test argument text", {
-                "phase_extract_output": {
-                    "claims": [{"text": "claim 1"}],
-                    "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
-                },
-                "phase_hierarchical_fallacy_output": {"fallacies": []},
-            })
-
-        # At least one of the rule lists must be non-empty when args provided
-        rules = (
-            result.get("defeasible_rules", [])
-            or result.get("strict_rules", [])
-            or result.get("arguments", [])
-        )
-        if isinstance(rules, (list, dict)):
-            assert len(rules) > 0, (
-                f"ASPIC fallback produced 0 rules from 2 args — vacuous gate (#1009). "
-                f"Keys: {list(result.keys())}"
-            )
+            with pytest.raises(RuntimeError, match="ASPIC\\+ analysis unavailable"):
+                await _invoke_aspic("test argument text", {
+                    "phase_extract_output": {
+                        "claims": [{"text": "claim 1"}],
+                        "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
+                    },
+                    "phase_hierarchical_fallacy_output": {"fallacies": []},
+                })
