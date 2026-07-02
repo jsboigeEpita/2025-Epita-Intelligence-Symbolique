@@ -82,3 +82,39 @@ def mock_parse_args():
     """Fixture pour mocker la fonction `parse_args` d'argparse."""
     with patch("argparse.ArgumentParser.parse_args") as mock:
         yield mock
+
+
+@pytest.fixture(autouse=True)
+def _shutdown_leaked_communication_threads():
+    """Arrête les threads d'arrière-plan de communication fuyants après chaque test.
+
+    Root cause du hang CI (#1341) : les tests de communication créent des
+    MessageMiddleware (et donc des PublishSubscribeProtocol /
+    RequestResponseProtocol) sans appeler ``shutdown()``. Leurs threads
+    daemon (cleanup 60s pour pub_sub, monitor 0.1s pour request_response)
+    fuient à travers la session ; sous la réentrance ``nest_asyncio`` du
+    conftest global, ils bloquent la boucle asyncio des tests async suivants
+    → le job ``automated-tests`` hang >5h et ne complète jamais.
+
+    Ce balayage (O(instances vivantes), négligeable sur les ~14k tests où
+    la WeakSet est vide) arrête les threads fuyants après chaque test. Les
+    protocoles enregistrent leurs instances dans une WeakSet faible
+    (``shutdown_all``) ; la WeakSet auto-retire les instances GC-ées.
+    """
+    yield
+    try:
+        from argumentation_analysis.core.communication.pub_sub import (
+            PublishSubscribeProtocol,
+        )
+
+        PublishSubscribeProtocol.shutdown_all()
+    except Exception:
+        pass
+    try:
+        from argumentation_analysis.core.communication.request_response import (
+            RequestResponseProtocol,
+        )
+
+        RequestResponseProtocol.shutdown_all()
+    except Exception:
+        pass
