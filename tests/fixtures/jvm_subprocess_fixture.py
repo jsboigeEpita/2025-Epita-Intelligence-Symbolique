@@ -53,16 +53,36 @@ def run_in_jvm_subprocess():
             f"Exécution du worker en sous-processus: {' '.join(command_for_subprocess)}"
         )
 
-        result = subprocess.run(
-            command_for_subprocess,
-            capture_output=True,
-            check=False,
-            cwd=project_root,
-            env=env,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
+        # Borne dure : un worker JVM qui ne sort jamais (ex. env CI sans JDK
+        # portable) ne doit pas suspendre la suite entière — échec bruyant
+        # avec la sortie partielle du worker comme diagnostic.
+        timeout_s = float(os.environ.get("JVM_SUBPROCESS_TIMEOUT", "300"))
+        try:
+            result = subprocess.run(
+                command_for_subprocess,
+                capture_output=True,
+                check=False,
+                cwd=project_root,
+                env=env,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_s,
+            )
+        except subprocess.TimeoutExpired as exc:
+            out = exc.stdout or ""
+            err = exc.stderr or ""
+            if isinstance(out, bytes):
+                out = out.decode("utf-8", errors="replace")
+            if isinstance(err, bytes):
+                err = err.decode("utf-8", errors="replace")
+            pytest.fail(
+                f"Le sous-processus JVM n'a pas terminé en {timeout_s:.0f}s "
+                f"(JVM_SUBPROCESS_TIMEOUT) et a été tué.\n"
+                f"STDOUT (fin):\n{out[-2000:] if out else '(vide)'}\n"
+                f"STDERR (fin):\n{err[-2000:] if err else '(vide)'}",
+                pytrace=False,
+            )
 
         # Print captured output so pytest shows it
         if result.stdout:
