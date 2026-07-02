@@ -9,6 +9,7 @@ récepteurs et permet une communication one-to-many efficace.
 import uuid
 import threading
 import asyncio
+import weakref
 from typing import Dict, Any, Optional, Callable, List, Set
 from datetime import datetime, timedelta
 
@@ -261,6 +262,10 @@ class PublishSubscribeProtocol:
     publication de messages.
     """
 
+    # Registre faible des instances vivantes, pour le nettoyage des threads
+    # d'arrière-plan fuyants lors des tests (root cause du hang CI #1341).
+    _instances: "weakref.WeakSet[PublishSubscribeProtocol]" = weakref.WeakSet()
+
     def __init__(self, middleware):
         """
         Initialise le protocole de publication-abonnement.
@@ -274,9 +279,12 @@ class PublishSubscribeProtocol:
 
         # Démarrer le thread de nettoyage des messages expirés
         self.running = True
+        self._stop_event = threading.Event()  # Rend l'attente du cleanup interruptible par shutdown()
         self.cleanup_thread = threading.Thread(target=self._cleanup_expired_messages)
         self.cleanup_thread.daemon = True
         self.cleanup_thread.start()
+
+        PublishSubscribeProtocol._instances.add(self)
 
     def create_topic(
         self,
@@ -484,15 +492,32 @@ class PublishSubscribeProtocol:
                                 > now
                             ]
 
-                # Attendre avant le prochain nettoyage
-                threading.Event().wait(60)  # Nettoyer toutes les minutes
+                # Attendre avant le prochain nettoyage (interruptible par shutdown)
+                self._stop_event.wait(60)  # Nettoyer toutes les minutes
 
             except Exception as e:
                 print(f"Error in message cleanup: {e}")
-                threading.Event().wait(5)  # Attendre un peu en cas d'erreur
+                self._stop_event.wait(5)  # Attendre un peu en cas d'erreur
 
     def shutdown(self):
         """Arrête proprement le protocole."""
         self.running = False
+        self._stop_event.set()  # Réveille immédiatement le thread de cleanup
         if self.cleanup_thread.is_alive():
             self.cleanup_thread.join(timeout=2)
+
+    @classmethod
+    def shutdown_all(cls):
+        """Arrête toutes les instances vivantes (nettoyage test, #1341).
+
+        Les tests de communication créent des PublishSubscribeProtocol via
+        MessageMiddleware sans appeler shutdown() ; leurs threads cleanup
+        (daemon, attente 60s) fuient à travers la session et, sous la
+        réentrance nest_asyncio, bloquent la boucle asyncio des tests async
+        suivants. Ce balayage arrête les threads fuyants après chaque test.
+        """
+        for instance in list(cls._instances):
+            try:
+                instance.shutdown()
+            except Exception:
+                pass

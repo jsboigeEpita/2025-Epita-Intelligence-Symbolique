@@ -11,6 +11,7 @@ import time
 import threading
 import asyncio
 import logging
+import weakref
 from typing import Dict, Any, Optional, Callable, Tuple, List
 from datetime import datetime, timedelta
 
@@ -30,6 +31,10 @@ class RequestResponseProtocol:
     Ce protocole gère l'envoi de requêtes et la réception des réponses correspondantes,
     avec gestion des timeouts et des réessais.
     """
+
+    # Registre faible des instances vivantes, pour le nettoyage des threads
+    # d'arrière-plan fuyants lors des tests (root cause du hang CI #1341).
+    _instances: "weakref.WeakSet[RequestResponseProtocol]" = weakref.WeakSet()
 
     def __init__(self, middleware):
         """
@@ -61,6 +66,8 @@ class RequestResponseProtocol:
         self.timeout_thread = threading.Thread(target=self._monitor_timeouts)
         self.timeout_thread.daemon = True
         self.timeout_thread.start()
+
+        RequestResponseProtocol._instances.add(self)
 
     def send_request(
         self,
@@ -819,3 +826,18 @@ class RequestResponseProtocol:
             self.pending_requests.clear()
             self.early_responses.clear()
             self.early_responses_by_conversation.clear()
+
+    @classmethod
+    def shutdown_all(cls):
+        """Arrête toutes les instances vivantes (nettoyage test, #1341).
+
+        Les tests de communication créent des RequestResponseProtocol via
+        MessageMiddleware sans appeler shutdown() ; leurs threads timeout
+        (daemon) fuient à travers la session. Ce balayage les arrête après
+        chaque test, en complément de PublishSubscribeProtocol.shutdown_all().
+        """
+        for instance in list(cls._instances):
+            try:
+                instance.shutdown()
+            except Exception:
+                pass
