@@ -75,18 +75,18 @@ class TestResolveConflict:
     def test_collaborative_strategy(self, conflict):
         result = resolve_conflict(conflict, "collaborative")
         assert result["resolution_type"] == "collaborative"
-        assert result["success_probability"] == 0.8
+        assert result["success_probability"] is None  # None until #971
         assert result["agents"] == ["A", "B"]
 
     def test_competitive_strategy(self, conflict):
         result = resolve_conflict(conflict, "competitive")
         assert result["resolution_type"] == "competitive"
-        assert result["success_probability"] == 0.5
+        assert result["success_probability"] is None  # None until #971
 
     def test_compromise_strategy(self, conflict):
         result = resolve_conflict(conflict, "compromise")
         assert result["resolution_type"] == "compromise"
-        assert result["success_probability"] == 0.7
+        assert result["success_probability"] is None  # None until #971
 
     def test_default_strategy(self, conflict):
         result = resolve_conflict(conflict)
@@ -113,19 +113,19 @@ class TestMediationStrategies:
     def test_collaborative_mediation(self, conflict):
         result = collaborative_mediation(conflict)
         assert result["resolution_type"] == "collaborative"
-        assert result["success_probability"] == 0.8
+        assert result["success_probability"] is None  # None until #971
         assert "common ground" in result["details"]
 
     def test_competitive_mediation(self, conflict):
         result = competitive_mediation(conflict)
         assert result["resolution_type"] == "competitive"
-        assert result["success_probability"] == 0.5
+        assert result["success_probability"] is None  # None until #971
         assert "compete" in result["details"]
 
     def test_compromise_mediation(self, conflict):
         result = compromise_mediation(conflict)
         assert result["resolution_type"] == "compromise"
-        assert result["success_probability"] == 0.7
+        assert result["success_probability"] is None  # None until #971
         assert "middle ground" in result["details"]
 
     def test_all_results_have_agents(self, conflict):
@@ -147,6 +147,10 @@ class TestMediationStrategies:
             assert isinstance(result["details"], str)
             assert len(result["details"]) > 0
 
+    @pytest.mark.xfail(
+        reason="#971: success_probability is a None placeholder until measurement "
+        "is implemented; ordering is undefined in the interim."
+    )
     def test_success_probability_ordering(self, conflict):
         collab = collaborative_mediation(conflict)["success_probability"]
         comp = competitive_mediation(conflict)["success_probability"]

@@ -516,7 +516,7 @@ class TestConflictResolution:
         conflict = {"agents": ["alice", "bob"], "conflict_level": 1.0}
         resolution = resolve_conflict(conflict, strategy="collaborative")
         assert resolution["resolution_type"] == "collaborative"
-        assert resolution["success_probability"] == 0.8
+        assert resolution["success_probability"] is None  # None until #971
 
     def test_resolve_competitive(self):
         """Competitive mediation has lower success."""
@@ -527,7 +527,7 @@ class TestConflictResolution:
         conflict = {"agents": ["alice", "bob"], "conflict_level": 1.0}
         resolution = resolve_conflict(conflict, strategy="competitive")
         assert resolution["resolution_type"] == "competitive"
-        assert resolution["success_probability"] == 0.5
+        assert resolution["success_probability"] is None  # None until #971
 
     def test_resolve_compromise(self):
         """Compromise mediation returns expected format."""
@@ -538,7 +538,7 @@ class TestConflictResolution:
         conflict = {"agents": ["alice", "bob"], "conflict_level": 1.0}
         resolution = resolve_conflict(conflict, strategy="compromise")
         assert resolution["resolution_type"] == "compromise"
-        assert resolution["success_probability"] == 0.7
+        assert resolution["success_probability"] is None  # None until #971
 
 
 class TestSimulation:
