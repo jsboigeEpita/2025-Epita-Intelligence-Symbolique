@@ -1,0 +1,111 @@
+# Lane à la demande pour les ~640 tests exclus de la gate per-push (ci.yml).
+# NON-BLOQUANTE : ne se déclenche que manuellement (workflow_dispatch), jamais
+# sur push/pull_request — elle ne gate aucune PR et n'a aucun coût passif.
+#
+# Rationale : ci.yml exécute tests/unit -m "not slow and not requires_api" pour
+# rester sous quelques minutes sans facturer d'appels LLM à chaque push. Les 640
+# tests écartés (integration 434, e2e 74, bench 11, unit slow/requires_api 121)
+# ne sont PAS exemptés de passer — ils sont différés vers cette lane, qu'on
+# déclenche à la demande (avant une release, après un gros merge) avec les vraies
+# clés. C'est aussi le seul foyer du test non-hermétique quarantiné en #1343.
+#
+# Déclenchement : onglet Actions → "Extended Test Lanes" → Run workflow →
+# choisir la lane (all ou une seule). Ou : gh workflow run extended-tests.yml -f lane=bench
+
+name: Extended Test Lanes (integration / e2e / bench / API)
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: "Quelle lane exécuter"
+        type: choice
+        default: all
+        options: [all, integration-jvm, integration-rest, e2e, bench, unit-api]
+
+# Un seul run étendu par ref ; un nouveau supersède l'en-vol.
+concurrency:
+  group: extended-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  extended:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false   # une lane rouge ne masque pas les autres
+      matrix:
+        lane: [integration-jvm, integration-rest, e2e, bench, unit-api]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: "temurin"
+          java-version: "11"
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15
+        with:
+          python-version: "3.10"
+          environment-file: environment.yml
+          activate-environment: projet-is
+          use-mamba: true
+          auto-update-conda: false
+
+      # Skip la lane si le dispatch cible une lane précise (pas "all").
+      - name: Should this lane run?
+        id: gate
+        shell: pwsh
+        run: |
+          $want = "${{ github.event.inputs.lane }}"
+          if ($want -eq "" -or $want -eq "all") { $want = "all" }
+          $me = "${{ matrix.lane }}"
+          if ($want -eq "all" -or $want -eq $me) {
+            echo "RUN=true" >> $env:GITHUB_ENV
+          } else {
+            echo "RUN=false" >> $env:GITHUB_ENV
+            Write-Host "Lane $me sautée (dispatch ciblé sur $want)"
+          }
+
+      - name: Check API keys
+        if: env.RUN == 'true'
+        shell: pwsh
+        run: |
+          if ("${{ secrets.OPENAI_API_KEY }}" -ne "") {
+            echo "API_KEYS_CONFIGURED=true" >> $env:GITHUB_ENV
+          } else {
+            echo "API_KEYS_CONFIGURED=false" >> $env:GITHUB_ENV
+          }
+
+      # Chaque lane a son propre sélecteur. Le timeout de step est le garde-fou
+      # sous la limite GitHub 6h ; --timeout=900 borne chaque test individuel.
+      - name: Run lane ${{ matrix.lane }}
+        if: env.RUN == 'true' && env.API_KEYS_CONFIGURED == 'true'
+        timeout-minutes: 330
+        shell: pwsh
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
+        run: |
+          $lane = "${{ matrix.lane }}"
+          $common = "--junitxml=pytest_report_$lane.xml -v --timeout=900 --timeout-method=thread"
+          switch ($lane) {
+            "integration-jvm"  { $sel = "tests/integration/jpype_tweety tests/integration/logical_agents" }
+            "integration-rest" { $sel = "tests/integration --ignore=tests/integration/jpype_tweety --ignore=tests/integration/logical_agents" }
+            "e2e"              { $sel = "tests/e2e" }
+            "bench"            { $sel = "tests/bench" }
+            "unit-api"         { $sel = "tests/unit -m `"slow or requires_api`"" }
+          }
+          Write-Host "Lane $lane -> pytest $sel"
+          conda run -n projet-is --no-capture-output pytest $sel.Split(" ") $common.Split(" ")
+
+      - name: Upload lane results
+        if: always() && env.RUN == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-results-${{ matrix.lane }}
+          path: pytest_report_*.xml
+          if-no-files-found: warn
