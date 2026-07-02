@@ -397,7 +397,9 @@ class TestHelperGenerators:
     def test_statistical_counter(self, strategies):
         arg = _make_arg()
         result = strategies._generate_statistical_counter(arg)
-        assert "15%" in result
+        # Prod returns an honest "[template/placeholder]" (no fabricated data);
+        # assert the honest marker instead of the stale fabricated "15%".
+        assert "[template/placeholder]" in result
 
     def test_fallback_direct_refutation(self, strategies):
         arg = _make_arg()
