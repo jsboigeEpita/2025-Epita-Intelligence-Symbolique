@@ -531,8 +531,12 @@ class TestRunUnifiedAnalysis:
 # ============================================================
 
 
+@pytest.mark.slow
 class TestRealInvocationViaUnifiedAnalysis:
-    """Test that run_unified_analysis produces real outputs (not None)."""
+    """Test that run_unified_analysis produces real outputs (not None).
+
+    Real-invocation tests: call run_unified_analysis end-to-end (CI tally
+    run 28582260688: ~142s). Marked `slow` for the per-push gate (#1336, R535)."""
 
     @pytest.mark.asyncio
     async def test_light_workflow_produces_quality_output(self):
@@ -589,7 +593,10 @@ class TestRealInvocationViaUnifiedAnalysis:
 # ============================================================
 
 
+@pytest.mark.slow
 class TestStateViaRunUnifiedAnalysis:
+    """Real-invocation tests: call run_unified_analysis end-to-end (CI tally
+    run 28582260688: ~68s). Marked `slow` for the per-push gate (#1336, R535)."""
     @pytest.mark.asyncio
     async def test_state_returned_by_default(self):
         """run_unified_analysis returns unified_state and state_snapshot by default."""
@@ -1873,8 +1880,12 @@ class TestAdditionalWorkflows:
 # ============================================================
 
 
+@pytest.mark.slow
 class TestRunUnifiedAnalysisEdgeCases:
-    """Test edge cases in run_unified_analysis."""
+    """Test edge cases in run_unified_analysis.
+
+    Real-invocation tests: call run_unified_analysis end-to-end (CI tally
+    run 28582260688: ~114s). Marked `slow` for the per-push gate (#1336, R535)."""
 
     async def test_run_with_auto_routing_fallback(self):
         """run_unified_analysis with workflow_name='auto' falls back to standard on error."""

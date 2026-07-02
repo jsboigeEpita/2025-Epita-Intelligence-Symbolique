@@ -29,6 +29,15 @@ from argumentation_analysis.orchestration.unified_pipeline import (
     reset_workflow_catalog,
 )
 
+# Every test in this module runs `run_unified_analysis` (a full orchestration
+# pipeline) against adversarial inputs, each under a 30s per-call timeout.
+# The CI tally (run 28582260688) shows this module alone accounts for ~3h of
+# the ~4h gate — these are integration-style robustness checks, not unit
+# tests. Marked `slow` at module level so the per-push gate
+# (`-m "not slow and not requires_api"`) excludes them; they still run in the
+# on-demand Extended Test Lane (#1336, R535).
+pytestmark = pytest.mark.slow
+
 # ============================================================
 # Fixtures
 # ============================================================

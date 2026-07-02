@@ -7,6 +7,7 @@ import os
     reason="Le test du worker JVM échoue actuellement en raison de problèmes de configuration de l'environnement."
 )
 @pytest.mark.no_jvm_session
+@pytest.mark.slow
 def test_api_endpoints_via_worker(run_in_jvm_subprocess):
     """
     Exécute les tests des endpoints de l'API via un script worker dans un sous-processus.
