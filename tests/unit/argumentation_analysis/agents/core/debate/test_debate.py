@@ -31,7 +31,9 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 def mock_kernel():
     """Create a Kernel with a mock OpenAI service for testing."""
     kernel = Kernel()
-    service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+    service = OpenAIChatCompletion(
+        service_id="default", ai_model_id="gpt-4", api_key="test-key"
+    )
     kernel.add_service(service)
     return kernel
 
@@ -811,7 +813,9 @@ class TestDebateAgent:
 
         self.AgentClass = DebateAgent
         self.kernel = Kernel()
-        service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+        service = OpenAIChatCompletion(
+            service_id="default", ai_model_id="gpt-4", api_key="test-key"
+        )
         self.kernel.add_service(service)
 
     def _create_agent(self, **kwargs):
@@ -963,7 +967,9 @@ class TestDebateModerator:
     def setup_method(self):
         """Set up kernel for agent creation."""
         self.kernel = Kernel()
-        service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+        service = OpenAIChatCompletion(
+            service_id="default", ai_model_id="gpt-4", api_key="test-key"
+        )
         self.kernel.add_service(service)
 
     def test_moderator_creation(self):
