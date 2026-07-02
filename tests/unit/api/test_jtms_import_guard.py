@@ -96,11 +96,22 @@ class TestGuardRuntimeBehavior:
     """Verify guard logic using constructed test apps."""
 
     def test_app_with_jtms_has_jtms_routes(self):
-        """When JTMS available, app has /api/v1/jtms routes."""
+        """When JTMS available, app has /api/v1/jtms routes.
+
+        Resolves served paths via ``app.openapi()["paths"]`` rather than
+        iterating ``app.routes``. Since FastAPI 0.138, ``include_router`` no
+        longer flattens the sub-router's routes into ``app.routes`` — it
+        registers a single deferred ``_IncludedRouter`` entry, so
+        ``[r.path for r in app.routes]`` sees only FastAPI's default routes
+        (openapi/docs/redoc) and misses every jtms route even though they ARE
+        served (verified: the production app exposes 17 ``/api/v1/jtms`` paths
+        via its OpenAPI schema and responds 200 to them). The OpenAPI schema
+        is the authoritative enumeration of what the app actually publishes.
+        """
         app = _make_test_app_with_guard(jtms_available=True)
-        routes = [r.path for r in app.routes if hasattr(r, "path")]
-        jtms = [r for r in routes if "/jtms" in r]
-        assert len(jtms) > 0, f"No JTMS routes in {len(routes)} routes"
+        served_paths = list(app.openapi().get("paths", {}).keys())
+        jtms = [p for p in served_paths if "/jtms" in p]
+        assert len(jtms) > 0, f"No JTMS routes served (got {len(served_paths)} paths: {served_paths})"
 
     def test_app_without_jtms_has_no_jtms_routes(self):
         """When JTMS unavailable, app has no /api/v1/jtms routes."""
