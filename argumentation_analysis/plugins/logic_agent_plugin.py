@@ -22,7 +22,17 @@ def _jvm_available() -> bool:
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
-        return TweetyBridge.get_instance().is_jvm_ready()
+        # CONV-B #1333 (po-2025): ``is_jvm_ready()`` lives on ``TweetyInitializer``
+        # (exposed via the bridge's ``initializer`` property), NOT on TweetyBridge
+        # itself. The previous ``bridge.is_jvm_ready()`` raised AttributeError;
+        # the bare ``except`` swallowed it, so ``_jvm_available()`` ALWAYS returned
+        # False and every LogicAgentPlugin decider (check_pl/fol/modal_consistency
+        # -- the REAL conversational deciders) short-circuited to
+        # ``{"error": "JVM/Tweety non disponible"}`` even with a ready bridge. This
+        # was the CONV-B DoD #1 root cause: the FormalAgent invoked its deciders,
+        # always got the "JVM not available" error, and fell back to parametric
+        # answering (the R530 tagheur).
+        return TweetyBridge.get_instance().initializer.is_jvm_ready()
     except Exception:
         return False
 
@@ -67,9 +77,7 @@ class LogicAgentPlugin:
 
             bridge = TweetyBridge.get_instance()
             is_valid = bridge.validate_pl_formula(formula)
-            return json.dumps(
-                {"is_valid": is_valid, "formula": formula, "error": None}
-            )
+            return json.dumps({"is_valid": is_valid, "formula": formula, "error": None})
         except Exception as e:
             return _error_json(str(e))
 
@@ -200,8 +208,11 @@ class LogicAgentPlugin:
             )
 
             bridge = TweetyBridge.get_instance()
+            # CONV-B #1333: TweetyBridge.check_consistency routes "first_order"
+            # (not "fol") to FOLHandler -- "fol" fell to the else-branch and
+            # returned a fabricated (False, "Unknown logic type: fol").
             is_consistent, message = bridge.check_consistency(
-                belief_set, logic_type="fol"
+                belief_set, logic_type="first_order"
             )
             return json.dumps(
                 {
@@ -281,9 +292,26 @@ class LogicAgentPlugin:
             )
 
             bridge = TweetyBridge.get_instance()
+            # CONV-B #1333: TweetyBridge.check_consistency routes the BARE modal
+            # logic codes ["K","T","S4","S5"] -- ``f"modal_{logic_type.lower()}"``
+            # (e.g. "modal_s5") fell to the else-branch and returned a fabricated
+            # (False, "Unknown logic type: modal_s5"). Validate the code so an
+            # unknown value fails loud rather than being silently mis-routed.
+            if logic_type not in ("K", "T", "S4", "S5"):
+                return _error_json(
+                    f"logic_type modal non supporte: {logic_type} "
+                    f"(attendu: K/T/S4/S5)"
+                )
             is_consistent, message = bridge.check_consistency(
-                belief_set, logic_type=f"modal_{logic_type.lower()}"
+                belief_set, logic_type=logic_type
             )
+            # #1339/#1019: name the resolved solver in the verdict (SPASS when
+            # auto-routed) -- the genuine-solver invariant, so a conversational
+            # call labels WHICH reasoner actually decided.
+            try:
+                solver = bridge.modal_handler._resolve_active_solver_choice().value
+            except Exception:  # noqa: BLE001
+                solver = None
             return json.dumps(
                 {
                     "is_consistent": is_consistent,
@@ -291,7 +319,9 @@ class LogicAgentPlugin:
                     "truncated": len(belief_set) > 200,
                     "message": message,
                     "logic_type": logic_type,
-                }
+                    "solver": solver,
+                },
+                default=str,
             )
         except Exception as e:
             return _error_json(str(e))
@@ -328,9 +358,7 @@ class LogicAgentPlugin:
             elif logic_type == "fol":
                 is_valid, _ = bridge.check_consistency(formula, logic_type="fol")
             elif logic_type == "modal":
-                is_valid, _ = bridge.check_consistency(
-                    formula, logic_type="modal_k"
-                )
+                is_valid, _ = bridge.check_consistency(formula, logic_type="modal_k")
             else:
                 return _error_json(f"Unknown logic_type: {logic_type}")
 
