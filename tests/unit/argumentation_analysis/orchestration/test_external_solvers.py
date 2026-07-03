@@ -147,11 +147,20 @@ class TestInvokeModalWithSPASS:
         )
         return _invoke_modal_logic
 
+    # #1279 (2ccb1de3): a modal KB is supplied through ``context['formulas']``
+    # (the direct/hand-written-KB channel). Raw text with no nl_to_logic
+    # translation and no direct formulas is honestly marked
+    # ``unavailable:no-translation`` — the pre-#1279 ``[input_text]`` raw-parse
+    # fallback was removed as the #1224 trap (never feed raw prose to MlParser,
+    # #1019). These tests pass the formula via context, matching the already-
+    # passing ``test_formulas_from_context``; the modality-detection assertions
+    # are unchanged.
+
     def test_default_tweety_routing(self):
-        """Without modal_solver context, uses TweetyBridge or heuristic."""
+        """Default routing (no explicit modal_solver) detects necessity."""
         invoke = self._get_invoke()
         result = asyncio.get_event_loop().run_until_complete(
-            invoke("[](p -> q)", {})
+            invoke("[](p -> q)", {"formulas": ["[](p -> q)"]})
         )
         assert "modalities" in result
         assert "necessity" in result["modalities"]
@@ -160,7 +169,7 @@ class TestInvokeModalWithSPASS:
         """Detects [] as necessity modality."""
         invoke = self._get_invoke()
         result = asyncio.get_event_loop().run_until_complete(
-            invoke("[](p)", {})
+            invoke("[](p)", {"formulas": ["[](p)"]})
         )
         assert "necessity" in result["modalities"]
 
@@ -168,7 +177,7 @@ class TestInvokeModalWithSPASS:
         """Detects <> as possibility modality."""
         invoke = self._get_invoke()
         result = asyncio.get_event_loop().run_until_complete(
-            invoke("<>(p)", {})
+            invoke("<>(p)", {"formulas": ["<>(p)"]})
         )
         assert "possibility" in result["modalities"]
 
