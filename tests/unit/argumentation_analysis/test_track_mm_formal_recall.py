@@ -89,6 +89,7 @@ class TestPLMetricsPresent:
             "post_sanitize",
             "post_tweety",
             "wide_net_extras",
+            "isolation_survivors",
         }
         assert expected_keys == set(metrics.keys())
 
@@ -189,6 +190,8 @@ class TestFOLMetricsPresent:
             "pass2_candidates",
             "fallback_nl",
             "template",
+            "pre_sanitize",
+            "post_sanitize",
             "pre_tweety",
             "post_tweety",
             "isolation_survivors",
