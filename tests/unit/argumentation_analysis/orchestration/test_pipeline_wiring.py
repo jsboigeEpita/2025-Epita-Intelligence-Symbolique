@@ -101,9 +101,11 @@ class TestWorkflowFormalPhases:
 
         wf = build_standard_workflow()
         # extract, neural_detect, hierarchical_fallacy, nl_to_logic, pl, fol,
-        # dung_extensions, aspic_analysis, quality, counter, jtms, governance, debate,
-        # local_llm = 14 phases (#835 A-10)
-        assert len(wf.phases) == 14
+        # dung_extensions, aspic_analysis, quality, counter, jtms, governance,
+        # debate, narrative_synthesis, local_llm = 15 phases (#835 A-10 +
+        # narrative_synthesis). The build now emits 15 (narrative_synthesis was
+        # added after this count was last updated).
+        assert len(wf.phases) == 15
 
 
 # ============================================================
