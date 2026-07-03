@@ -21,7 +21,14 @@ class TestRankingPlugin:
             assert isinstance(result, list)
             assert "categorizer" in result
             assert "burden" in result
-            assert len(result) == 7
+            # RankingPlugin.list_ranking_methods returns
+            # RankingHandler.REASONERS.keys() — the handler now exposes 12
+            # formal ranking methods (categorizer, burden, discussion, counting,
+            # tuples, strategy, propagation, saf, counter_transitivity,
+            # probabilistic_ranking, iterated_graded_defense, serialisable).
+            # The count was 7 when Track A handlers were first added
+            # (7e8c2ce0); it grew as more reasoners were wired in.
+            assert len(result) == 12
 
     def test_rank_arguments_returns_json(self):
         mock_handler = MagicMock()
