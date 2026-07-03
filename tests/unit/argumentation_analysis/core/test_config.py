@@ -6,10 +6,11 @@ from unittest.mock import patch
 # ou utiliser importlib.reload pour forcer la relecture.
 
 
-def test_default_solver_is_tweety():
+def test_default_fol_solver_is_eprover():
     """
-    Vérifie que le solveur par défaut est 'tweety' lorsqu'aucune variable
-    d'environnement n'est définie.
+    Vérifie que le solveur FOL par défaut est 'eprover' lorsqu'aucune variable
+    d'environnement n'est définie (#940 : eprover est le défaut robust, tweety
+    est désormais un fallback de dernier recours seulement).
     """
     # S'assurer que la variable d'env n'est pas définie pour ce test
     with patch.dict(os.environ, {}, clear=True):
@@ -17,7 +18,7 @@ def test_default_solver_is_tweety():
 
         # Forcer la relecture du module pour prendre en compte l'environnement mocké
         importlib.reload(config)
-        assert config.settings.solver == config.SolverChoice.TWEETY
+        assert config.settings.solver == config.SolverChoice.EPROVER
 
 
 def test_solver_loads_from_environment_variable():
