@@ -78,7 +78,12 @@ class TestFormalAgentInstructions:
         )
 
         formal_instructions = AGENT_CONFIG["FormalAgent"]["instructions"]
-        assert "atomes partages" in formal_instructions
+        # CONV-B #1336 (#560/#561 follow-up): the 2-pass CoordinatedLogicPlugin
+        # rewrite dropped the bare phrase "atomes partages" -- the shared
+        # inventory is now named "atomes PL partages" / "signature FOL partagee"
+        # (ETAPE 0). Assert the shared concept + the inter-argument coherence
+        # usage it enables (ETAPE 0 step 5).
+        assert "partages" in formal_instructions
         assert "coherence inter-arguments" in formal_instructions
 
     def test_formal_agent_instructions_preserve_existing_etapes(self):
@@ -102,7 +107,13 @@ class TestFormalAgentInstructions:
         )
 
         formal_instructions = AGENT_CONFIG["FormalAgent"]["instructions"]
-        assert "inclus-les" in formal_instructions or "guide" in formal_instructions
+        # CONV-B #1336 (#560/#561 follow-up): the 2-pass rewrite replaced the
+        # prose "inclus-les" with an explicit generator call that takes the
+        # shared atoms as a parameter (ETAPE 1 step 3:
+        # generate_pl_formulas_with_shared_atoms(..., shared_atoms=atoms_json)).
+        # Asserting the parameter name is a STRICTER inclusion check than the
+        # vague "guide"/"inclus-les" prose.
+        assert "shared_atoms" in formal_instructions
 
 
 class TestEndToEndSharedStateFlow:
