@@ -4,7 +4,7 @@ Tests cover:
   1. cross_reference_graph uses correct fallacy key (target_argument_id)
   2. ASPIC+ fallacy undermining uses canonical arg_id, not positional index
   3. ATMS hypothesis quality lookup uses canonical key, not free text
-  4. Social scoring quality lookup uses canonical key, not free text
+  4. Social scoring fallback is fail-loud (FP-22 #1249) — JVM/Tweety required
 """
 
 import pytest
@@ -237,11 +237,24 @@ class TestATMSHypothesisQualityLookup:
         assert len(hypotheses) >= 1
 
 
-class TestSocialScoringQualityLookup:
-    """BUG IC6 fix: social scoring quality lookup uses canonical key."""
+class TestSocialFallbackIsFailLoud:
+    """_python_social_fallback raises RuntimeError (#1019, RA-8 #1053, FP-22 #1249).
 
-    def test_quality_boost_applied_with_canonical_key(self):
-        """Social scoring incorporates quality when keyed by canonical arg_id."""
+    The previous pure-Python social-scoring fallback (BUG IC6 canonical-key
+    quality lookup) was retired because it produced synthetic social scores
+    that entered state as authentic formal results — an anti-theater violation.
+    Social AF is now JVM/Tweety-only: _invoke_social delegates to SocialHandler,
+    and this fallback exists solely to fail loud when the JVM/Tweety backend is
+    unavailable. Same doctrine as _python_dung_fallback / _python_eaf_fallback.
+
+    The two original IC6 tests asserted the retired pure-Python return value
+    (`result["social_scores"]`) — a stale contract. They are rewritten as
+    regression guards asserting the fail-loud RuntimeError so the anti-theater
+    boundary cannot silently regress.
+    """
+
+    def test_social_fallback_raises_without_jvm(self):
+        """_python_social_fallback must raise, never return synthetic scores."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_social_fallback,
         )
@@ -257,12 +270,11 @@ class TestSocialScoringQualityLookup:
                 },
             },
         }
-        result = _python_social_fallback(args, attacks, votes, context)
-        scores = result["social_scores"]
-        assert scores["First argument"] > scores["Second argument"]
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_social_fallback(args, attacks, votes, context)
 
-    def test_no_quality_boost_without_data(self):
-        """Social scoring works without quality data (base scores only)."""
+    def test_social_fallback_raises_without_quality_data(self):
+        """Fail-loud is independent of quality data presence."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_social_fallback,
         )
@@ -271,6 +283,5 @@ class TestSocialScoringQualityLookup:
         attacks = []
         votes = {}
         context = {}
-        result = _python_social_fallback(args, attacks, votes, context)
-        scores = result["social_scores"]
-        assert len(scores) == 2
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_social_fallback(args, attacks, votes, context)
