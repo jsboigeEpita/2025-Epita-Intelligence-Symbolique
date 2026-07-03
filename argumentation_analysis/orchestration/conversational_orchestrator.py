@@ -469,7 +469,18 @@ def create_conversational_agents(
             plugins=plugins,
             function_choice_behavior=FunctionChoiceBehavior.Auto(
                 auto_invoke_kernel_functions=True,
-                maximum_auto_invoke_attempts=5,
+                # CONV-B #1333 DoD #1 (po-2025, dispatch R545): the FormalAgent's
+                # prescribed 4-stage cascade is ETAPE 0 (3 tool-calls: snapshot +
+                # extract_shared_pl_atoms + extract_shared_fol_signature) -> ETAPE 1
+                # (>=2: generate_fol_formulas + generate_pl_formulas + store) ->
+                # ETAPE 2 (up to 4 deciders: PL/FOL/modal/Dung). A cap of 5 starves
+                # the descent: the budget is exhausted at ETAPE 0+1 before the
+                # deciding kernel_functions (#1371/#1374) are ever reached mid-turn,
+                # so the FormalAgent answers from parametric knowledge instead of
+                # invoking a solver (the CONV-A #1332 "tagheur"). 12 covers the
+                # full cascade (3+3+4=10) with a small margin; a hard bound (not
+                # unlimited) still guards against a runaway tool-call loop.
+                maximum_auto_invoke_attempts=12,
             ),
         )
         agents.append(agent)
