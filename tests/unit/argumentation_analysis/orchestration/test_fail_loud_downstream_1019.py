@@ -294,34 +294,32 @@ class TestFormalSynthesisScoring:
 # ---------------------------------------------------------------------------
 
 
-class TestDungPowerSetCap:
-    """Python Dung fallback must skip power-set enumeration for >25 arguments."""
+class TestDungFallbackIsFailLoud:
+    """_python_dung_fallback is a fail-loud stub — pure-Python Dung extension
+    enumeration was removed as anti-theatre (#1019, FP-22 #1249): the previous
+    combinatorial power-set path produced non-empty extension sets without a
+    genuine Tweety reasoner call. The stub raises so no accidental call can
+    enter fabricated results into state. Call sites in _invoke_dung_extensions
+    return honest-absent degraded dicts instead. These tests lock the
+    anti-theatre fix (regression guard) — they replace the old cap-enumeration
+    tests, which asserted the now-excised fabricated behavior.
+    """
 
-    def test_large_argument_set_only_grounded(self):
-        """When >25 arguments, only grounded extension is computed (direct test)."""
+    def test_large_set_raises_fail_loud(self):
+        """For >25 arguments the stub raises (no fabricated extensions)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
 
-        # Create 30 arguments — above the 25 cap
+        # 30 arguments — formerly above the 25 power-set cap.
         arguments = [f"arg_{i}" for i in range(30)]
         attacks = [[f"arg_{i}", f"arg_{i+1}"] for i in range(29)]
 
-        result = _python_dung_fallback(arguments, attacks)
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_dung_fallback(arguments, attacks)
 
-        # Grounded must be present
-        assert "grounded" in result.get("extensions", {}), (
-            "Grounded extension must always be computed"
-        )
-        # Complete/preferred/stable must NOT be present (cap exceeded)
-        exts = result.get("extensions", {})
-        for sem in ("complete", "preferred", "stable"):
-            assert sem not in exts, (
-                f"{sem} should not be computed for n=30 (>25 cap)"
-            )
-
-    def test_at_cap_computes_all_four(self):
-        """When exactly 25 arguments (at cap), all 4 semantics are computed."""
+    def test_at_cap_raises_fail_loud(self):
+        """Even at the old 25-arg cap, no pure-Python path remains — stub raises."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_dung_fallback,
         )
@@ -329,13 +327,8 @@ class TestDungPowerSetCap:
         arguments = [f"arg_{i}" for i in range(25)]
         attacks = [[f"arg_{i}", f"arg_{i+1}"] for i in range(24)]
 
-        result = _python_dung_fallback(arguments, attacks)
-
-        exts = result.get("extensions", {})
-        assert "grounded" in exts
-        assert "complete" in exts
-        assert "preferred" in exts
-        assert "stable" in exts
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_dung_fallback(arguments, attacks)
 
 
 # ---------------------------------------------------------------------------
