@@ -3475,9 +3475,31 @@ async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     """Invoke SAT solver handler (#86)."""
     from argumentation_analysis.agents.core.logic.sat_handler import SATHandler
 
-    handler = SATHandler(context.get("solver", "cadical195"))
     formulas = context.get("formulas", [input_text] if input_text else [])
     mode = context.get("sat_mode", "solve")  # solve, maxsat, mus
+    try:
+        handler = SATHandler(context.get("solver", "cadical195"))
+    except RuntimeError as exc:
+        # PySAT (python-sat) is an OPTIONAL backend and is not provisioned in
+        # every environment — e.g. the CI env provisions via environment.yml,
+        # which does not list python-sat (it is absent from both environment.yml
+        # and requirements.txt). SATHandler.__init__ fails loud with a
+        # RuntimeError when PYSAT_AVAILABLE is False (#1019). Surface that gap
+        # as a structured degraded result at the orchestration boundary —
+        # honest-degraded, not a raw crash — mirroring the MUS branch below and
+        # every other _invoke_* on solver-absence. The test contract
+        # (test_sat_solve / test_sat_mus_mode) anticipates ``error`` / ``mode``
+        # keys, never an exception escaping the boundary. Same outlier class as
+        # the MUS wrap landed in #1360, one level up (construction, not call).
+        logger.warning("SAT backend unavailable (PySAT not installed): %s", exc)
+        return {
+            "mode": mode,
+            "satisfiable": None,
+            "model": None,
+            "mus_count": 0,
+            "error": str(exc),
+            "statistics": {"handler": "SATHandler", "backend": "pysat-unavailable"},
+        }
     if mode == "mus":
         try:
             mus_list = await asyncio.to_thread(handler.find_mus, formulas)
