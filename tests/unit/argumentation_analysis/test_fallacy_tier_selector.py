@@ -124,13 +124,28 @@ class TestFallacyTierDispatch:
             _invoke_hierarchical_fallacy_per_argument,
         )
 
+        # FB-36 (#1123): _invoke_hierarchical_fallacy_per_argument extracts
+        # arguments first and SKIPS the per-argument pass (returns a degraded
+        # verdict, no LLM call) when no arguments are extractable. A single
+        # short string like "Some text" produces no arguments, so it never
+        # reaches create_llm_service and the fail-loud RuntimeError never
+        # fires. Provide a 2-paragraph input (each >20 chars, \n\n-separated)
+        # so _extract_arguments_for_parallel Source 3 yields args and the
+        # harness proceeds to the LLM call where the patched ValueError is
+        # re-raised as PER_ARG_FALLACY_UNAVAILABLE.
+        text = (
+            "First argument paragraph long enough to be extracted by the "
+            "paragraph-break heuristic.\n\n"
+            "Second argument paragraph also long enough for extraction."
+        )
+
         with patch(
             "argumentation_analysis.core.llm_service.create_llm_service",
             side_effect=ValueError("No API key configured"),
         ):
             with pytest.raises(RuntimeError, match="PER_ARG_FALLACY_UNAVAILABLE"):
                 await _invoke_hierarchical_fallacy_per_argument(
-                    "Some text", {"fallacy_tier": "llm"}
+                    text, {"fallacy_tier": "llm"}
                 )
 
 
