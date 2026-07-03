@@ -39,7 +39,7 @@ class TestExtractArgumentsForParallel:
         )
 
         context = {
-            "phase_extraction_output": {
+            "phase_extract_output": {
                 "arguments": [
                     {"text": "Argument one is a substantial text for testing purposes here"},
                     {"text": "Argument two is another substantial text for testing"},
@@ -137,14 +137,18 @@ class TestInvokeHierarchicalFallacyPerArgument:
 
     @pytest.mark.asyncio
     async def test_falls_back_to_single_when_no_args(self):
+        """No extractable arguments -> fail-loud skip (FB-36 #1123, anti-recursion).
+
+        The per-argument pass runs AFTER the wide-net descent (its results are
+        merged by the caller at _merge_fallacy_results), so re-entering
+        _invoke_hierarchical_fallacy here is redundant and -- with no splittable
+        input (no state args / no phase_extract_output / no paragraph breaks) --
+        infinite. The function returns a degraded per_argument_skipped_no_args
+        dict instead of recursing; the wide-net result is retained by the caller.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_hierarchical_fallacy_per_argument,
         )
-
-        mock_single_result = {
-            "fallacies": [{"fallacy_type": "ad_hominem"}],
-            "exploration_method": "one_shot",
-        }
 
         with patch(
             "argumentation_analysis.orchestration.invoke_callables.os.path.isfile",
@@ -152,13 +156,11 @@ class TestInvokeHierarchicalFallacyPerArgument:
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
             return_value=[],
-        ), patch(
-            "argumentation_analysis.orchestration.invoke_callables._invoke_hierarchical_fallacy",
-            new_callable=AsyncMock,
-            return_value=mock_single_result,
         ):
             result = await _invoke_hierarchical_fallacy_per_argument("short text", {})
-            assert result["fallacies"][0]["fallacy_type"] == "ad_hominem"
+        assert result["exploration_method"] == "per_argument_skipped_no_args"
+        assert result["fallacies"] == []
+        assert result["degraded"] is True
 
     @pytest.mark.asyncio
     async def test_parallel_execution_with_mocked_plugin(self):
@@ -450,7 +452,16 @@ class TestInvokeHierarchicalFallacyPerArgument:
         assert result["fallacies"][0]["fallacy_type"] == "post_hoc"
 
     @pytest.mark.asyncio
-    async def test_no_api_key_returns_unavailable(self):
+    async def test_no_api_key_raises_fail_loud(self):
+        """No API key -> fail-loud RuntimeError (anti-theater #1019/#1046).
+
+        Returning an empty/unavailable dict here would read as "found nothing"
+        and silently starve every downstream layer (Dung/Modal/synthesis feed on
+        fallacies). The function raises PER_ARG_FALLACY_UNAVAILABLE so the caller
+        (wide-net merge) handles the gap explicitly. The no-key failure is
+        simulated at the create_llm_service injection point so the test is
+        hermetic (independent of the real .env / cached settings).
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_hierarchical_fallacy_per_argument,
         )
@@ -462,9 +473,10 @@ class TestInvokeHierarchicalFallacyPerArgument:
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
             return_value=[("arg_1", "A long enough argument text for testing here")],
         ), patch(
-            "argumentation_analysis.orchestration.invoke_callables.os.environ",
-            {"OPENAI_API_KEY": "", "OPENAI_BASE_URL": "", "OPENAI_CHAT_MODEL_ID": ""},
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            side_effect=RuntimeError(
+                "Aucune clé API LLM définie. Définissez OPENAI_API_KEY."
+            ),
         ):
-            result = await _invoke_hierarchical_fallacy_per_argument("text", {})
-            assert result["exploration_method"] == "unavailable"
-            assert result["fallacies"] == []
+            with pytest.raises(RuntimeError, match="PER_ARG_FALLACY_UNAVAILABLE"):
+                await _invoke_hierarchical_fallacy_per_argument("text", {})
