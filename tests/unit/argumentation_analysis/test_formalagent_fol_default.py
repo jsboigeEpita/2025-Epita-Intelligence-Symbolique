@@ -13,15 +13,29 @@ import pytest
 class TestFormalAgentFOLDefault:
 
     def test_fol_is_default_translation(self):
-        """FormalAgent should start with FOL, not PL."""
+        """FormalAgent should start with FOL, not PL.
+
+        Post-CONV-C (#1345) the ETAPE 1 wording evolved from the single-shot
+        "commence par translate_to_fol" to a 2-pass coordinated flow that builds
+        a shared signature first. The FOL-default INTENT is preserved: FOL
+        formulas are generated BEFORE PL in ETAPE 1 (generate_fol_formulas
+        precedes generate_pl_formulas), and translate_to_fol remains the
+        no-shared-inventory fallback. We assert the current primary FOL path +
+        the fallback rather than the retired word-level phrase.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             AGENT_CONFIG,
         )
 
         instructions = AGENT_CONFIG["FormalAgent"]["instructions"]
-        # ETAPE 1 should say "commence par translate_to_fol"
+        # FOL is generated first in the 2-pass coordinated ETAPE 1 (#1345)
+        assert "generate_fol_formulas_with_shared_signature" in instructions
+        # translate_to_fol remains the fallback when no shared inventory exists
         assert "translate_to_fol" in instructions
-        assert "commence par translate_to_fol" in instructions
+        # FOL generation must appear before PL generation (FOL is the default)
+        assert instructions.index("generate_fol_formulas") < instructions.index(
+            "generate_pl_formulas"
+        )
 
     def test_pl_is_fallback(self):
         """PL should be listed as fallback when FOL fails."""
