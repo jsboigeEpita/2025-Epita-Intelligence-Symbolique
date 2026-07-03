@@ -278,14 +278,14 @@ class TestPrebuiltWorkflows:
         assert "counter_argument_generation" in caps
 
     def test_build_standard_workflow(self):
-        """Standard workflow has 11 phases (incl. optional CamemBERT, hierarchical fallacy, nl_to_logic, pl, fol)."""
+        """Standard workflow has 15 phases (incl. narrative_synthesis #981 + local_llm #835)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             build_standard_workflow,
         )
 
         wf = build_standard_workflow()
         assert wf.name == "standard_analysis"
-        assert len(wf.phases) == 13
+        assert len(wf.phases) == 15
         # Quality depends on extract
         quality_phase = wf.get_phase("quality")
         assert "extract" in quality_phase.depends_on
@@ -841,7 +841,11 @@ class TestInvokeCallables:
         assert result["logic_type"] == "propositional"
 
     async def test_invoke_propositional_logic_error(self):
-        """_invoke_propositional_logic falls back to Python on exception."""
+        """_invoke_propositional_logic fails loud when Tweety unavailable (#1019, #1249).
+
+        No fabricated Python fallback — a RuntimeError surfaces so callers mark
+        the phase degraded instead of treating an empty result as a verdict.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_propositional_logic,
         )
@@ -850,20 +854,22 @@ class TestInvokeCallables:
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("JVM not started"),
         ):
-            result = await _invoke_propositional_logic("p", {})
-        # Now uses Python fallback instead of error dict
-        assert result["logic_type"] == "propositional"
-        assert "formulas" in result
-        assert "argument_mapping" in result
+            with pytest.raises(RuntimeError, match="Propositional logic"):
+                await _invoke_propositional_logic("p", {})
 
     async def test_invoke_propositional_logic_non_list_formulas(self):
-        """_invoke_propositional_logic handles non-list formulas context."""
+        """_invoke_propositional_logic wraps a non-list (string) formulas context."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_propositional_logic,
         )
 
         mock_bridge = MagicMock()
-        mock_bridge.check_consistency.return_value = (False, "inconsistent")
+        # Prod calls check_consistency_detailed (3-tuple: consistent, model, msg).
+        mock_bridge.check_consistency_detailed.return_value = (
+            False,
+            {},
+            "inconsistent",
+        )
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
@@ -992,7 +998,12 @@ class TestInvokeCallables:
         assert "modalities" in result
 
     async def test_invoke_dung_extensions_error(self):
-        """_invoke_dung_extensions falls back to Python when handler unavailable."""
+        """_invoke_dung_extensions returns honest-absent when handler unavailable (#1019, #1249).
+
+        No fabricated Python fallback — degraded dict with semantics='unavailable'
+        so the report is honest about the missing JVM reasoner. The pure-Python
+        enumerator was a fail-loud stub since FP-22 #1249 (anti-theatre).
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
@@ -1002,7 +1013,8 @@ class TestInvokeCallables:
             side_effect=Exception("no handler"),
         ):
             result = await _invoke_dung_extensions("text", {})
-        assert result["semantics"] == "python_fallback"
+        assert result["semantics"] == "unavailable"
+        assert result.get("degraded") is True
         assert "extensions" in result
 
     async def test_invoke_dung_extensions_no_arguments(self):
@@ -2211,68 +2223,61 @@ class TestHierarchicalFallacyWorkflow:
         assert result["fallacies"] == []
 
     async def test_invoke_hierarchical_fallacy_no_api_key(self):
-        """_invoke_hierarchical_fallacy returns unavailable when no API key."""
+        """_invoke_hierarchical_fallacy fails loud when no LLM key is configured (#1019).
+
+        force_authentic=True (prod) routes through create_llm_service, which raises
+        ValueError on an empty key; the invoke wraps it as
+        FALLACY_DETECTION_UNAVAILABLE so callers mark the phase degraded rather than
+        treating an empty result as a verdict. No real network: create_llm_service
+        is mocked to raise deterministically.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_hierarchical_fallacy,
         )
 
-        with patch("os.path.isfile", return_value=True), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": ""}, clear=False
+        with patch("os.path.isfile", return_value=True), patch(
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            side_effect=ValueError("Aucune clé API LLM définie"),
         ):
-            result = await _invoke_hierarchical_fallacy("text", {})
-        assert result["exploration_method"] == "unavailable"
-        assert result["fallacies"] == []
+            with pytest.raises(RuntimeError, match="FALLACY_DETECTION_UNAVAILABLE"):
+                await _invoke_hierarchical_fallacy("text", {})
 
     async def test_invoke_hierarchical_fallacy_unexpected_error_reraises(self):
-        """_invoke_hierarchical_fallacy re-raises unexpected errors (not ImportError/RuntimeError).
+        """_invoke_hierarchical_fallacy wraps plugin errors as FALLACY_DETECTION_UNAVAILABLE.
 
-        This ensures the executor marks the phase as FAILED instead of silently
-        returning empty results, making debugging possible (#301).
+        The invoke catches ImportError/RuntimeError/ValueError from the plugin and
+        re-raises a RuntimeError so the executor marks the phase FAILED instead of
+        silently returning empty results (anti-theater #1019, #301). No real
+        network: create_llm_service + the plugin are mocked deterministically.
         """
+        from unittest.mock import AsyncMock
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_hierarchical_fallacy,
         )
 
-        with patch("os.path.isfile", return_value=True), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False
+        mock_plugin_instance = MagicMock()
+        mock_plugin_instance.run_guided_analysis = AsyncMock(
+            side_effect=ValueError("Unexpected LLM response format"),
+        )
+        with patch("os.path.isfile", return_value=True), patch(
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            return_value=MagicMock(),
+        ), patch(
+            "argumentation_analysis.plugins.fallacy_workflow_plugin."
+            "FallacyWorkflowPlugin",
+            return_value=mock_plugin_instance,
         ):
-            # Mock the plugin to raise a ValueError (unexpected error)
-            import argumentation_analysis.plugins.fallacy_workflow_plugin as fwp_mod
-            import semantic_kernel.connectors.ai.open_ai as sk_oai
-            import semantic_kernel.kernel as sk_kernel
-            import openai as openai_mod
-
-            orig_plugin = fwp_mod.FallacyWorkflowPlugin
-            orig_oai = sk_oai.OpenAIChatCompletion
-            orig_kernel = sk_kernel.Kernel
-            orig_async_client = openai_mod.AsyncOpenAI
-
-            from unittest.mock import AsyncMock
-
-            mock_plugin_instance = MagicMock()
-            mock_plugin_instance.run_guided_analysis = AsyncMock(
-                side_effect=ValueError("Unexpected LLM response format"),
-            )
-            fwp_mod.FallacyWorkflowPlugin = MagicMock(return_value=mock_plugin_instance)
-            sk_oai.OpenAIChatCompletion = MagicMock()
-            sk_kernel.Kernel = MagicMock()
-            openai_mod.AsyncOpenAI = MagicMock()
-            try:
-                with pytest.raises(ValueError, match="Unexpected LLM response format"):
-                    await _invoke_hierarchical_fallacy("some text", {})
-            finally:
-                fwp_mod.FallacyWorkflowPlugin = orig_plugin
-                sk_oai.OpenAIChatCompletion = orig_oai
-                sk_kernel.Kernel = orig_kernel
-                openai_mod.AsyncOpenAI = orig_async_client
+            with pytest.raises(RuntimeError, match="FALLACY_DETECTION_UNAVAILABLE"):
+                await _invoke_hierarchical_fallacy("some text", {})
 
     async def test_invoke_hierarchical_fallacy_success(self):
-        """_invoke_hierarchical_fallacy returns parsed result on success.
+        """_invoke_hierarchical_fallacy returns parsed wide-net result on success.
 
-        Tests the full invoke function by mocking SK service + plugin.
+        Mocks create_llm_service + the plugin's wide-net run_guided_analysis. With
+        no extractable per-arguments, the per-arg enrichment is skipped fail-loud
+        (FB-36 #1123) and extraction_method is relabeled
+        'widenet_only_no_perarg_args' — the wide-net fallacies are retained.
         """
-        import json
-        import sys
         from unittest.mock import AsyncMock
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_hierarchical_fallacy,
@@ -2297,42 +2302,23 @@ class TestHierarchicalFallacyWorkflow:
             branches_explored=2,
             total_iterations=5,
         )
-        mock_result_json = mock_result.model_dump_json(indent=2)
-
         mock_plugin_instance = MagicMock()
         mock_plugin_instance.run_guided_analysis = AsyncMock(
-            return_value=mock_result_json
+            return_value=mock_result.model_dump_json(indent=2)
         )
-        mock_plugin_cls = MagicMock(return_value=mock_plugin_instance)
-        mock_llm_service = MagicMock()
-        mock_kernel_cls = MagicMock()
-
-        with patch("os.path.isfile", return_value=True), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False
+        with patch("os.path.isfile", return_value=True), patch(
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            return_value=MagicMock(),
+        ), patch(
+            "argumentation_analysis.plugins.fallacy_workflow_plugin."
+            "FallacyWorkflowPlugin",
+            return_value=mock_plugin_instance,
         ):
-            # Mock at the source modules that the function imports from
-            import argumentation_analysis.plugins.fallacy_workflow_plugin as fwp_mod
-            import semantic_kernel.connectors.ai.open_ai as sk_oai
-            import semantic_kernel.kernel as sk_kernel
-            import openai as openai_mod
+            result = await _invoke_hierarchical_fallacy("some argument text", {})
 
-            orig_plugin = fwp_mod.FallacyWorkflowPlugin
-            orig_oai = sk_oai.OpenAIChatCompletion
-            orig_kernel = sk_kernel.Kernel
-            orig_async_client = openai_mod.AsyncOpenAI
-            fwp_mod.FallacyWorkflowPlugin = mock_plugin_cls
-            sk_oai.OpenAIChatCompletion = MagicMock(return_value=mock_llm_service)
-            sk_kernel.Kernel = mock_kernel_cls
-            openai_mod.AsyncOpenAI = MagicMock()
-            try:
-                result = await _invoke_hierarchical_fallacy("some argument text", {})
-            finally:
-                fwp_mod.FallacyWorkflowPlugin = orig_plugin
-                sk_oai.OpenAIChatCompletion = orig_oai
-                sk_kernel.Kernel = orig_kernel
-                openai_mod.AsyncOpenAI = orig_async_client
-
-        assert result["extraction_method"] == "iterative_deepening"
+        # Per-arg pass skipped (no extractable args) — wide-net result retained,
+        # extraction_method relabeled honestly (FB-36 #1123, anti-theater #1019).
+        assert result["extraction_method"] == "widenet_only_no_perarg_args"
         assert len(result["fallacies"]) == 1
         assert result["fallacies"][0]["fallacy_type"] == "Ad hominem"
         assert result["branches_explored"] == 2
