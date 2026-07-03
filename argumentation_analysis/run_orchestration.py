@@ -27,14 +27,30 @@ Exemples :
     python argumentation_analysis/run_orchestration.py --text "Mon argument" --mode conversational
 """
 
+import sys
+from pathlib import Path
+
+# Bootstrap sys.path BEFORE any ``argumentation_analysis.*`` import (#883, #1336).
+# When executed as ``python argumentation_analysis/run_orchestration.py``,
+# sys.path[0] is the script directory (argumentation_analysis/), so the
+# ``argumentation_analysis`` package itself is unresolvable until the project
+# root is added. This MUST precede the dll_guard import below, otherwise the
+# bare-subprocess invocation (no PYTHONPATH, no editable install — the CI
+# condition) fails at the first line with ModuleNotFoundError. This is the
+# root cause the test_run_orchestration subprocess tests assert against.
+current_dir = Path(__file__).parent
+project_root = current_dir.parent
+if str(current_dir) not in sys.path:
+    sys.path.append(str(current_dir))
+if str(project_root) not in sys.path:
+    sys.path.append(str(project_root))
+
 import argumentation_analysis.core.dll_guard  # noqa: F401 — must load before jpype (#1019)
 
-import sys
 import json
 import asyncio
 import argparse
 import logging
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 # Ensure .env is loaded BEFORE any other import that might need API keys
@@ -44,14 +60,6 @@ try:
     load_dotenv()
 except ImportError:
     pass
-
-# Ajouter les répertoires au chemin de recherche des modules
-current_dir = Path(__file__).parent
-project_root = current_dir.parent
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
-if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))
 
 
 def setup_logging(verbose: bool = False) -> None:
