@@ -24,6 +24,7 @@ class TestNLToLogicPlugin:
         plugin = NLToLogicPlugin()
         assert hasattr(plugin, "translate_to_pl")
         assert hasattr(plugin, "translate_to_fol")
+        assert hasattr(plugin, "translate_to_modal")
         assert hasattr(plugin, "translate_batch_to_pl")
         assert hasattr(plugin, "translate_batch_to_fol")
 
@@ -81,6 +82,64 @@ class TestNLToLogicPlugin:
         assert "forall" in result["formula"]
         assert result["logic_type"] == "fol"
         assert result["is_valid"] is True
+
+    @pytest.mark.asyncio
+    async def test_translate_to_modal_success(self):
+        """translate_to_modal returns JSON with a modal belief set (#1391)."""
+        plugin = NLToLogicPlugin()
+
+        mock_result = MagicMock()
+        mock_result.original_text = "Citizens must vote and may protest"
+        # #1391: a modal belief set = type(<atom>) declarations + [] / <> formulas
+        mock_result.formula = "type(vote)\ntype(protest)\n\n[](vote)\n<>(protest)"
+        mock_result.logic_type = "modal"
+        mock_result.is_valid = True
+        mock_result.validation_message = "Valid modal formulas (2, Tweety)"
+        mock_result.attempts = 1
+        mock_result.variables = {"vote": "vote", "protest": "protest"}
+        mock_result.confidence = 0.8
+
+        with patch(
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
+        ) as MockTranslator:
+            MockTranslator.return_value.translate = AsyncMock(return_value=mock_result)
+            result_str = await plugin.translate_to_modal(
+                "Citizens must vote and may protest"
+            )
+
+        result = json.loads(result_str)
+        assert result["logic_type"] == "modal"
+        assert result["is_valid"] is True
+        assert "type(vote)" in result["formula"]
+        assert "[](vote)" in result["formula"]
+        assert "<>(protest)" in result["formula"]
+
+    @pytest.mark.asyncio
+    async def test_translate_to_modal_honest_absent(self):
+        """Modal-free input -> valid empty result (honest absent, #1391/#1019)."""
+        plugin = NLToLogicPlugin()
+
+        mock_result = MagicMock()
+        mock_result.original_text = "The cat sat on the mat"
+        mock_result.formula = ""  # no modal content
+        mock_result.logic_type = "modal"
+        mock_result.is_valid = True  # valid-but-empty = honest absent
+        mock_result.validation_message = "No modal content (honest absent)"
+        mock_result.attempts = 1
+        mock_result.variables = {}
+        mock_result.confidence = 0.0
+
+        with patch(
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
+        ) as MockTranslator:
+            MockTranslator.return_value.translate = AsyncMock(return_value=mock_result)
+            result_str = await plugin.translate_to_modal("The cat sat on the mat")
+
+        result = json.loads(result_str)
+        assert result["is_valid"] is True
+        assert result["formula"] == ""
+        # Honest absent MUST NOT be a fabricated verdict -- empty + valid.
+        assert "absent" in result["validation_message"].lower()
 
     @pytest.mark.asyncio
     async def test_translate_to_pl_invalid_formula(self):

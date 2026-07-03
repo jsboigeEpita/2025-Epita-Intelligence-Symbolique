@@ -84,6 +84,38 @@ def _extract_fol_metadata(parsed: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _build_modal_belief_set(constants: List[str], formulas: List[str]) -> str:
+    """Build a Tweety MlParser belief-set string for modal logic (#1391).
+
+    Format (firsthand-confirmed via test_modal_logic_agent.py:316
+    ``ModalBeliefSet("type(urgent)\\n\\n[](urgent)")`` and the SPASS track
+    test_track_c_modal_spass_1279 ``{"formulas": ["type(p)", "p"]}``):
+        type(<atom>)
+        <blank line>
+        <modal-formula using [] / <>
+
+    Each modal atom is declared with ``type(<atom>)`` (NOT ``constant <atom>``
+    -- that is the TweetyBridgeSK *simulation* format; the real MlParser
+    rejects it with "Missing '=' in sort declaration"). Atoms are de-duplicated
+    and limited to legal identifiers ``[A-Za-z][A-Za-z0-9]*``; the
+    ModalIdentifierNormalizer (#1326/#1327) PascalCases any residual illegal
+    atom at parse time (defense-in-depth).
+    """
+    legal = []
+    seen: set[str] = set()
+    for c in constants:
+        if isinstance(c, str) and re.match(r"^[A-Za-z][A-Za-z0-9]*$", c):
+            if c not in seen:
+                seen.add(c)
+                legal.append(c)
+    parts = [f"type({c})" for c in legal]
+    formula_lines = [f.strip() for f in formulas if isinstance(f, str) and f.strip()]
+    if formula_lines:
+        parts.append("")  # blank line separating declarations from formulas
+        parts.extend(formula_lines)
+    return "\n".join(parts)
+
+
 # ── Data classes ─────────────────────────────────────────────────────────
 
 
@@ -173,6 +205,47 @@ FOL_RETRY_PROMPT = (
     "Original text: {original}\n"
     "Previous (invalid) formulas: {formulas}\n\n"
     "Respond with ONLY a corrected JSON object."
+)
+
+# Modal logic (alethic/deontic). Tweety MlParser belief-set grammar:
+#   constant <atom>            (one declaration per modal atom)
+#   <modal-formula>            (using [] necessarily, <> possibly)
+# Atoms MUST match [a-zA-Z][a-zA-Z0-9]* -- no underscores (MlParser rejects
+# them; ModalIdentifierNormalizer PascalCases as defense-in-depth, but emit
+# clean identifiers). #1391 (CONV-B DoD #1 modal parity): mirrors translate_to_fol.
+MODAL_SYSTEM_PROMPT = (
+    "You are a formal logic expert. Translate natural language arguments "
+    "into modal logic (alethic and deontic) using Tweety MlParser syntax.\n\n"
+    "Modal operators:\n"
+    "- []  means NECESSARILY / MUST / OBLIGATORY (box)\n"
+    "- <>  means POSSIBLY / MIGHT / PERMITTED (diamond)\n\n"
+    "Rules:\n"
+    "- Atoms are simple alphanumeric identifiers, no underscores "
+    "(e.g. rain, peace, action)\n"
+    "- Each distinct atom must be declared as a constant\n"
+    "- Boolean operators: && (and), || (or), => (implies), ! (not), <=> (iff)\n"
+    "- Capture modalities: 'must/necessarily/obliged' -> [], "
+    "'may/possibly/permitted' -> <>\n"
+    "- If the text has NO modal flavor (no necessity/possibility), return "
+    "EMPTY formulas and an empty constants list.\n\n"
+    "Respond with ONLY a JSON object:\n"
+    '{"constants": ["action", "peace"], '
+    '"formulas": ["[](action => peace)", "<>peace"], '
+    '"confidence": 0.8}'
+)
+
+MODAL_RETRY_PROMPT = (
+    "Your previous modal translation was invalid. The validator returned:\n"
+    "Error: {error}\n\n"
+    "Common issues:\n"
+    "- Atom names must be [a-zA-Z][a-zA-Z0-9]* (NO underscores)\n"
+    "- Every atom used in a formula must appear in 'constants'\n"
+    "- Operators are [] and <> (not □ ◇ or 'box'/'diamond')\n"
+    "- Unmatched parentheses\n\n"
+    "Original text: {original}\n"
+    "Previous (invalid) formulas: {formulas}\n\n"
+    "Respond with ONLY a corrected JSON object. If the text has no modal "
+    "content, return empty constants and formulas."
 )
 
 
@@ -295,10 +368,14 @@ class NLToLogicTranslator:
         client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
         system_prompt = (
-            PL_SYSTEM_PROMPT if logic_type == "propositional" else FOL_SYSTEM_PROMPT
+            PL_SYSTEM_PROMPT
+            if logic_type == "propositional"
+            else FOL_SYSTEM_PROMPT if logic_type == "fol" else MODAL_SYSTEM_PROMPT
         )
         retry_template = (
-            PL_RETRY_PROMPT if logic_type == "propositional" else FOL_RETRY_PROMPT
+            PL_RETRY_PROMPT
+            if logic_type == "propositional"
+            else FOL_RETRY_PROMPT if logic_type == "fol" else MODAL_RETRY_PROMPT
         )
 
         last_error = ""
@@ -333,6 +410,31 @@ class NLToLogicTranslator:
                 if logic_type == "propositional":
                     formula = parsed.get("formula", "")
                     variables = parsed.get("variables", {})
+                    confidence = parsed.get("confidence", 0.7)
+                    last_formula = formula
+                    fol_metadata = None
+                elif logic_type == "modal":
+                    # #1391: build a modal belief set (constant declarations +
+                    # formulas) so the decider's parseBeliefBase accepts it.
+                    modal_constants = parsed.get("constants", []) or []
+                    modal_formulas = parsed.get("formulas", []) or []
+                    # Anti-théâtre #1019 (#1391): a modal-free input yields
+                    # EMPTY formulas. That is honest-absent, NOT a validation
+                    # failure -- do not retry into a fabricated verdict. Return
+                    # a valid empty result so the caller skips the modal decider.
+                    if not modal_formulas:
+                        return TranslationResult(
+                            original_text=text,
+                            formula="",
+                            logic_type="modal",
+                            is_valid=True,
+                            validation_message=("No modal content (honest absent)"),
+                            attempts=attempt,
+                            variables={},
+                            confidence=0.0,
+                        )
+                    formula = _build_modal_belief_set(modal_constants, modal_formulas)
+                    variables = {c: c for c in modal_constants}
                     confidence = parsed.get("confidence", 0.7)
                     last_formula = formula
                     fol_metadata = None
@@ -456,6 +558,24 @@ class NLToLogicTranslator:
                 return True, "Valid propositional formula (Tweety)"
             else:
                 return False, "Invalid propositional formula syntax"
+        elif logic_type == "modal":
+            # #1391: validate the FULL modal belief set the way the decider
+            # consumes it (parseBeliefBase). Use the ready SINGLETON
+            # (``get_instance``) -- a fresh ``TweetyBridge()`` lacks the fully
+            # initialized SPASS reasoner + modal parser signature and rejects
+            # even ``<>(p)`` with "Unknown object p". The singleton (same one
+            # ``check_modal_consistency`` uses) parses it fine (#1380).
+            #   (None, "Modal KB parse error...") -> invalid syntax -> retry
+            #   (True/False, ...)                -> parsed -> valid belief set
+            # The consistency value is decided again in ETAPE 2; here we only
+            # assert parse-ability (anti-theater: never false-green).
+            modal_bridge = TweetyBridge.get_instance()
+            verdict, dec_msg = await asyncio.to_thread(
+                modal_bridge.check_consistency, formula, "K"
+            )
+            if verdict is None:
+                return False, f"Modal belief set parse failed: {dec_msg}"
+            return True, f"Valid modal belief set (parsed, Tweety): {dec_msg}"
         else:
             # FOL: build signature from metadata and validate all formulas together
             fol_formulas = [f.strip() for f in formula.split(";") if f.strip()]
@@ -644,8 +764,43 @@ class NLToLogicTranslator:
         """Lightweight Python-based syntax validation (no JVM needed)."""
         if logic_type == "propositional":
             return self._validate_pl_python(formula)
+        elif logic_type == "modal":
+            return self._validate_modal_python(formula)
         else:
             return self._validate_fol_python(formula)
+
+    def _validate_modal_python(self, formula: str) -> Tuple[bool, str]:
+        """Basic modal belief-set syntax validation (no JVM needed).
+
+        Checks balanced parentheses and that each non-declaration line is
+        non-empty. The atom-identifier grammar ([a-zA-Z][a-zA-Z0-9]*) is
+        enforced by the ModalIdentifierNormalizer at parse time; here we only
+        catch gross syntax errors so the retry loop has a fallback when Tweety
+        is unavailable.
+        """
+        lines = [ln.strip() for ln in formula.split("\n") if ln.strip()]
+        if not lines:
+            return False, "Empty modal belief set"
+        formulas = [ln for ln in lines if not ln.startswith("constant ")]
+        if not formulas:
+            return False, "No modal formulas"
+        for f in formulas:
+            depth = 0
+            for ch in f:
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                if depth < 0:
+                    return False, f"Unmatched closing parenthesis in '{f}'"
+            if depth != 0:
+                return False, f"Unmatched parentheses in '{f}'"
+            # Modal formulas must carry a box/diamond or a boolean op/atom
+            if "[]" not in f and "<>" not in f and "=>" not in f and "&&" not in f:
+                # bare atom is legal (a declared constant) -- allow
+                if not re.match(r"^[A-Za-z][A-Za-z0-9]*$", f):
+                    return False, f"Invalid modal formula '{f}'"
+        return True, f"Valid modal formulas ({len(formulas)}, Python)"
 
     def _validate_pl_python(self, formula: str) -> Tuple[bool, str]:
         """Basic propositional logic syntax validation."""
@@ -790,6 +945,72 @@ class NLToLogicTranslator:
 
         sentences = re.split(r"[.!?;]", text)
         sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
+
+        if logic_type == "modal":
+            # #1391: heuristic modal extraction. Detect necessity/possibility
+            # cues and emit a minimal modal belief set. If the text carries no
+            # modal cue, return an honest-absent empty result (#1019) rather
+            # than fabricating one.
+            text_lower = text.lower()
+            necessity_cues = (
+                "must",
+                "necessarily",
+                "obligatory",
+                "required",
+                "il faut",
+                "doit",
+                "doivent",
+                "obligatoire",
+            )
+            possibility_cues = (
+                "may",
+                "might",
+                "possibly",
+                "permitted",
+                "can",
+                "peut",
+                "peuvent",
+                "possible",
+                "permis",
+            )
+            has_nec = any(c in text_lower for c in necessity_cues)
+            has_pos = any(c in text_lower for c in possibility_cues)
+            if not (has_nec or has_pos):
+                return TranslationResult(
+                    original_text=text,
+                    formula="",
+                    logic_type="modal",
+                    is_valid=True,
+                    validation_message=("No modal content (heuristic, honest absent)"),
+                    attempts=0,
+                    variables={},
+                    confidence=0.0,
+                )
+            # Derive one atom from the longest sentence stem.
+            stems = []
+            for sent in sentences[:3]:
+                stem = re.sub(r"[^A-Za-z0-9]+", "", sent).strip()[:12]
+                stem = stem.capitalize() or "MpAtom"
+                stems.append(stem)
+            if not stems:
+                stems = ["MpAtom"]
+            constants = list(dict.fromkeys(stems))[:3]
+            formulas = []
+            if has_nec:
+                formulas.append(f"[]({constants[0]})")
+            if has_pos and len(constants) > 1:
+                formulas.append(f"<>({constants[-1]})")
+            belief_set = _build_modal_belief_set(constants, formulas)
+            return TranslationResult(
+                original_text=text,
+                formula=belief_set,
+                logic_type="modal",
+                is_valid=True,
+                validation_message="Heuristic modal translation (no LLM)",
+                attempts=0,
+                variables={c: c for c in constants},
+                confidence=0.2,
+            )
 
         if logic_type == "propositional":
             # #1260: derive a readable atom per sentence (was opaque p1,p2).

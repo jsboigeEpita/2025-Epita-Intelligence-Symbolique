@@ -273,15 +273,24 @@ AGENT_CONFIG = {
             "argument_text='...', shared_atoms=atoms_json)\n"
             "4. Si aucun inventaire partage n'existe (fallback) : utilise translate_to_fol "
             "puis translate_to_pl comme avant\n"
-            "5. Stock la traduction via add_nl_to_logic_translation(\n"
-            "   original_text='...', formula='...', logic_type='propositional'|'fol',\n"
+            "5. MODAL (#1391) : pour chaque argument cle qui exprime une modalite "
+            "(necessite/possibilite : 'doit', 'faut', 'peut', 'necessairement', "
+            "'possible', 'obligatoire'), appelle translate_to_modal(text='...') -> "
+            "belief set modal (declarations 'constant <atom>' + formules [] / <>). "
+            "Stock le resultat via add_nl_to_logic_translation(logic_type='modal'). "
+            "Si l'argument n'a aucune saveur modale, l'outil retourne un resultat "
+            "valide vide (honnête absent, #1019) -- NE fabrique PAS de contenu modal.\n"
+            "6. Stock la traduction via add_nl_to_logic_translation(\n"
+            "   original_text='...', formula='...', logic_type='propositional'|'fol'|'modal',\n"
             "   is_valid=True/False, variables=JSON. confidence=0.0-1.0)\n\n"
             "ETAPE 2 — Validation Tweety (OBLIGATOIRE et IMMEDIATE apres ETAPE 1, pas finale) :\n"
             "#1333 (a) Pour CHAQUE formule generee en ETAPE 1 (sans exception, pas seulement les valides) :\n"
-            "1. PL: appelle check_pl_consistency(belief_set=\"p => q\\np\")  (formules separees par \\n)\n"
-            "2. FOL: appelle check_fol_consistency(belief_set=\"forall X: (P(X))\")\n"
+            '1. PL: appelle check_pl_consistency(belief_set="p => q\\np")  (formules separees par \\n)\n'
+            '2. FOL: appelle check_fol_consistency(belief_set="forall X: (P(X))")\n'
             "3. Modal (possibilite/obligation): appelle check_modal_consistency(\n"
-            "   payload='{\"belief_set\": \"<>(p)\", \"logic_type\": \"S5\"}')  (K/T/S4/S5)\n"
+            '   payload=\'{"belief_set": "<belief_set_modal_de_translate_to_modal>", '
+            '"logic_type": "K"}\')  (K/T/S4/S5). #1391: passe le belief set modal '
+            "PRODUIT par translate_to_modal (ETAPE 1 step 5), ne le freehand pas.\n"
             "4. Si inconstistances: signalez au PM. NE PAS passer a ETAPE 3 tant que chaque formule n'a pas de verdict.\n\n"
             "ETAPE 3 — Analyse Dung (Argumentation Abstraite) :\n"
             "1. Construis un graphe d'attaque depuis les arguments et sophismes detectes\n"
@@ -848,7 +857,9 @@ async def _run_conversational_analysis_inner(
         # Parent harness (#578 tier 3): always fire on dense texts after Detection
         if "etection" in phase_name and len(text) > 5000:
             harness_log = await _run_parent_harness_fallback(
-                text, state, selector_context=selector_context,
+                text,
+                state,
+                selector_context=selector_context,
             )
             if harness_log:
                 conversation_log.append(harness_log)
@@ -1536,9 +1547,7 @@ async def _run_phase(
                     DelegatingSelectionStrategy,
                 )
 
-                selection = DelegatingSelectionStrategy(
-                    agents=agents, state=state
-                )
+                selection = DelegatingSelectionStrategy(agents=agents, state=state)
             except (ImportError, TypeError, ValueError):
                 logger.warning(
                     "DelegatingSelectionStrategy unavailable, using SK default selection"
@@ -1824,7 +1833,9 @@ def _extract_fallacy_type(fallacy_dict: Dict[str, Any]) -> str:
 
 
 async def _run_parent_harness_fallback(
-    text: str, state: Any, selector_context: Optional[Dict[str, Any]] = None,
+    text: str,
+    state: Any,
+    selector_context: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Invoke tier-3 parent harness on dense texts after Detection phase (#578, #600).
 
