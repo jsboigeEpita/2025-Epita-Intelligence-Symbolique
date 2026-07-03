@@ -31,11 +31,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-for line in open(ROOT / ".env", encoding="utf-8"):
-    line = line.strip()
-    if line and not line.startswith("#") and "=" in line:
-        k, _, v = line.partition("=")
-        os.environ.setdefault(k.strip(), v.strip())
+# Load .env if present (local dev). No-op when absent (CI provisions secrets via
+# env, no .env file) — use load_dotenv (project-wide convention, ~10 scripts)
+# instead of a bare open() that raised FileNotFoundError at module import and
+# broke the 5 unit tests importing _classify_capability (gate #1336).
+from dotenv import load_dotenv
+
+load_dotenv(ROOT / ".env")
 
 # Privacy HARD — redact any substring of any corpus.
 _REDACT_CHUNKS: "list[str]" = []
