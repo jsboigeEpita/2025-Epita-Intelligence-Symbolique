@@ -356,9 +356,13 @@ class LogicAgentPlugin:
             if logic_type == "propositional":
                 is_valid = bridge.validate_pl_formula(formula)
             elif logic_type == "fol":
-                is_valid, _ = bridge.check_consistency(formula, logic_type="fol")
+                # CONV-B #1333 (#1380 follow-up): bridge routes "first_order", not
+                # "fol" (else-branch fabricated "Unknown logic type: fol").
+                is_valid, _ = bridge.check_consistency(formula, logic_type="first_order")
             elif logic_type == "modal":
-                is_valid, _ = bridge.check_consistency(formula, logic_type="modal_k")
+                # CONV-B #1333 (#1380 follow-up): bridge routes BARE modal codes,
+                # not "modal_k" (else-branch fabricated verdict).
+                is_valid, _ = bridge.check_consistency(formula, logic_type="K")
             else:
                 return _error_json(f"Unknown logic_type: {logic_type}")
 
