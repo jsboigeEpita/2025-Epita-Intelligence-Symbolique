@@ -3479,7 +3479,24 @@ async def _invoke_sat(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     formulas = context.get("formulas", [input_text] if input_text else [])
     mode = context.get("sat_mode", "solve")  # solve, maxsat, mus
     if mode == "mus":
-        mus_list = await asyncio.to_thread(handler.find_mus, formulas)
+        try:
+            mus_list = await asyncio.to_thread(handler.find_mus, formulas)
+        except RuntimeError as exc:
+            # MUS extraction requires z3-solver (MARCO). z3 is an OPTIONAL
+            # backend and may be absent from the environment; SATHandler.find_mus
+            # fails loud with a RuntimeError in that case. Surface the gap as a
+            # structured degraded result rather than letting the exception escape
+            # the orchestration boundary — honest-degraded, not silent, and not a
+            # raw crash either (#1019). Every other _invoke_* callable returns a
+            # dict on solver-absence; the MUS branch was the outlier.
+            logger.warning("SAT MUS mode unavailable: %s", exc)
+            return {
+                "mode": "mus",
+                "mus_count": 0,
+                "mus_subsets": [],
+                "error": str(exc),
+                "statistics": {"handler": "SATHandler", "backend": "Z3-MARCO"},
+            }
         return {
             "mode": "mus",
             "mus_count": len(mus_list),
