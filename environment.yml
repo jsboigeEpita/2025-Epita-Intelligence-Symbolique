@@ -90,3 +90,4 @@ dependencies:
     - hypothesis  # #1303: property tests (tests/property/) — CI collection breaks without it
     - pytest-timeout  # CI hang guard: --timeout=900 in ci.yml converts a hung test into a stack-dumped failure
     - pyfakefs>=5.0.0  # #1336: provides the `fs` fixture for test_plugin_loader.py — CI errors "fixture 'fs' not found" without it
+    - diskcache  # #1336: LLM response cache (llm_cache.py CachedChatCompletion). In requirements.txt but not environment.yml — CI provisions via environment.yml, so diskcache was absent on runners → CachedChatCompletion fell back to OFF mode, failing 5 test_llm_cache tests. Same drift class as pyfakefs (#1353) and hypothesis (#1303).
