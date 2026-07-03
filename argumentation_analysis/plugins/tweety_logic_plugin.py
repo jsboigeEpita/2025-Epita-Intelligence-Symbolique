@@ -102,12 +102,22 @@ class TweetyLogicPlugin:
     def analyze_dung_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
 
-        handler = AFHandler()
+        # CONV-B #1333 (po-2025): AFHandler requires an ``initializer_instance``
+        # (af_handler.py:38) and exposes ``analyze_dung_framework`` -- NOT
+        # ``compute_extensions``. Same dead-cable bug class as the modal decider
+        # (#1371): the previous call constructed the handler with no args
+        # (TypeError) and invoked a nonexistent method (AttributeError), so the
+        # FormalAgent's prescribed ETAPE 3 (Dung analysis) crashed at call time.
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        handler = AFHandler(initializer)
         args = params.get("arguments", [])
         attacks = params.get("attacks", [])
         semantics = params.get("semantics", "preferred")
-        result = handler.compute_extensions(args, attacks, semantics)
+        result = handler.analyze_dung_framework(args, attacks, semantics)
         return json.dumps(result, default=str)
 
     # ── Propositional Logic ───────────────────────────────────────────

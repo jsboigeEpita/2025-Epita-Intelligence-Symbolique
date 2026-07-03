@@ -138,3 +138,27 @@ class TestConvBKernelDeciders:
         assert (
             isinstance(solver, str) and solver
         ), f"modal verdict must name its solver (genuine-solver #1019): {result}"
+
+    def test_dung_decider_produces_extensions(self, plugin: TweetyLogicPlugin):
+        """CONV-B #1333 (po-2025): the Dung decider (FormalAgent ETAPE 3) must
+        produce extensions, not crash. Same dead-cable bug class as the modal
+        decider (#1371): ``AFHandler()`` missing ``initializer_instance`` +
+        nonexistent ``compute_extensions`` method. The repaired contract
+        constructs ``AFHandler(TweetyInitializer())`` and calls
+        ``analyze_dung_framework``.
+        """
+        # A trivially grounded framework: one argument, no attacks -> the
+        # argument is in every extension under preferred semantics.
+        result = _parsed(
+            plugin.analyze_dung_framework(
+                '{"arguments": ["a"], "attacks": [], "semantics": "preferred"}'
+            )
+        )
+        assert isinstance(
+            result, dict
+        ), f"Dung decider must return a JSON object, got {type(result).__name__}: {result}"
+        assert (
+            result.get("error") != "JVM not available"
+        ), "Dung decider unreachable (JVM short-circuit)"
+        # The repaired contract returns {semantics, extensions, statistics}.
+        assert "extensions" in result, f"Dung decider produced no extensions: {result}"
