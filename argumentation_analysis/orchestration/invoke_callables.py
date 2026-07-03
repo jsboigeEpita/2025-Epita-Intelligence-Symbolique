@@ -4996,8 +4996,14 @@ async def _invoke_propositional_logic(
     # baseline; the conversational path already wins because it always runs the
     # 2-pass. Per-formula Tweety isolation below keeps only parseable survivors,
     # so unioning the upstream extras can only add verified count, never lower it.
+    # Guard a non-list (e.g. a bare string formula) the same way the main path
+    # does below (``if not isinstance(formulas, list): formulas = [str(formulas)]``)
+    # — otherwise iterating a string silently char-splits it into garbage atoms.
+    _raw_upstream = context.get("formulas")
+    if isinstance(_raw_upstream, str):
+        _raw_upstream = [_raw_upstream]
     upstream_formulas: List[str] = [
-        str(f).strip() for f in (context.get("formulas") or []) if f
+        str(f).strip() for f in (_raw_upstream or []) if f
     ]
     formulas: Optional[List[str]] = None
     argument_mapping: Dict[str, str] = {}
