@@ -63,7 +63,12 @@ class TestSpectacularWorkflowPhases:
         )
 
         wf = build_spectacular_workflow()
-        assert len(wf.phases) == 23
+        # #1179 (#1178) wired the 4 dormant-reasoner handlers into spectacular,
+        # taking the phase count from 23 (the 3 text-to-kb phases of #506 atop
+        # the original 20) to 40. Sibling tests (test_spectacular_regression_suite,
+        # test_belief_revision_spectacular, test_external_solver_spectacular,
+        # test_spectacular_workflow_dag) already assert 40; this one was missed.
+        assert len(wf.phases) == 40
 
 
 class TestInvokeCallables:
