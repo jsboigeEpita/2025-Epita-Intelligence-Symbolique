@@ -15,6 +15,29 @@ Validates:
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
 from starlette.testclient import TestClient
+from pathlib import Path
+
+# The Starlette app mounts StaticFiles(directory=.../build) at module import
+# (interface_web/app.py: app = Starlette(routes=[Mount(app=StaticFiles(...))])).
+# The React build is a gitignored npm artifact (CLAUDE.md) not provisioned on
+# CI, so importing the app raises "RuntimeError: Directory '...build' does not
+# exist" there. Skip the whole module when the build is absent — conditional on
+# the artifact, not unconditional (anti-pendule). On a machine WITH the build
+# (local dev) all tests run. Tracked in #1362 (real fix = npm step in ci.yml,
+# owner decision).
+_REPO_ROOT = Path(__file__).resolve()
+while _REPO_ROOT.parent != _REPO_ROOT and not (_REPO_ROOT / "pytest.ini").exists():
+    _REPO_ROOT = _REPO_ROOT.parent
+_BUILD_DIR = (
+    _REPO_ROOT / "services" / "web_api" / "interface-web-argumentative" / "build"
+)
+pytestmark = pytest.mark.skipif(
+    not _BUILD_DIR.exists(),
+    reason=(
+        "React build artifact absent (not in git) — prerequisite: npm run build in "
+        "services/web_api/interface-web-argumentative/ (CLAUDE.md). Tracked in #1362."
+    ),
+)
 
 
 class TestStarletteProxyStructure:
