@@ -270,11 +270,11 @@ AGENT_CONFIG = {
             "   original_text='...', formula='...', logic_type='propositional'|'fol',\n"
             "   is_valid=True/False, variables=JSON. confidence=0.0-1.0)\n\n"
             "ETAPE 2 — Validation Tweety :\n"
-            "1. Pour les formules valides, appeelle check_propositional_consistency(\n"
-            '   input=\'{"formulas": ["p => q", "q"]}\') \n'
-            "2. Pour FOL: check_fol_consistency(input='{\"formulas\": [...]}')\n"
-            "3. Pour les modalites (possibilite/obligation): check_modal_satisfiability(\n"
-            '   input=\'{"formula": "<>P", "logic_type": "S5"}\')\n'
+            "1. Pour les formules PL valides, appelle check_pl_consistency(\n"
+            "   belief_set=\"p => q\\np\")  (formules PL separees par \\n)\n"
+            "2. Pour FOL: check_fol_consistency(belief_set=\"forall X: (P(X))\")\n"
+            "3. Pour les modalites (possibilite/obligation): check_modal_consistency(\n"
+            "   payload='{\"belief_set\": \"<>(p)\", \"logic_type\": \"S5\"}')  (K/T/S4/S5)\n"
             "4. Si inconstistances: signalez au PM\n\n"
             "ETAPE 3 — Analyse Dung (Argumentation Abstraite) :\n"
             "1. Construis un graphe d'attaque depuis les arguments et sophismes detectes\n"
@@ -296,7 +296,7 @@ AGENT_CONFIG = {
             "- Verifie la consistance JTMS via jtms_check_consistency()\n\n"
             "CROSS-KB (#208-I) : Lis les sophismes detectes par InformalAgent — si un argument "
             "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee).\n"
-            "Modal: Si tu detectes des modalites (possibilite/necessite), utilise check_modal_satisfiability()."
+            "Modal: Si tu detectes des modalites (possibilite/necessite), utilise check_modal_consistency()."
         ),
     },
     "QualityAgent": {
