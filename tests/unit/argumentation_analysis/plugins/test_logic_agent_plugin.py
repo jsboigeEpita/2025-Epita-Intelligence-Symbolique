@@ -267,8 +267,12 @@ class TestFOLMethods:
             result = json.loads(plugin.check_fol_consistency("forall X: p(X)"))
 
         assert result["is_consistent"] is True
+        # CONV-B #1333 (#1380): the plugin now routes FOL through
+        # ``logic_type="first_order"`` (the code TweetyBridge.check_consistency
+        # actually dispatches to FOLHandler). The old "fol" code fell to the
+        # else-branch and returned a fabricated "Unknown logic type: fol".
         bridge.check_consistency.assert_called_once_with(
-            "forall X: p(X)", logic_type="fol"
+            "forall X: p(X)", logic_type="first_order"
         )
 
 
@@ -322,7 +326,11 @@ class TestModalMethods:
         assert result["logic_type"] == "T"
         bridge.check_consistency.assert_called_once()
         call_kwargs = bridge.check_consistency.call_args
-        assert "modal_t" in call_kwargs[1]["logic_type"]
+        # CONV-B #1333 (#1380): the plugin now forwards the BARE modal logic
+        # code ("T") -- TweetyBridge.check_consistency routes ["K","T","S4","S5"]
+        # directly. The old f"modal_{logic_type.lower()}" (e.g. "modal_t") fell
+        # to the else-branch and returned a fabricated "Unknown logic type".
+        assert call_kwargs[1]["logic_type"] == "T"
 
 
 # ---------------------------------------------------------------------------
