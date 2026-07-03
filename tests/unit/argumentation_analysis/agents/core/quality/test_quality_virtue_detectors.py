@@ -247,10 +247,33 @@ class TestNeutralizeFaultyTorch:
     "the bug shipped because nothing asserted the dispatch".
     """
 
+    # Sentinel for "torch was absent from sys.modules before this test". A bare
+    # ``object()`` instance — distinct from None (which the neutraliser itself
+    # plants as a sentinel) and from any real torch module object.
+    _TORCH_ABSENT = object()
+
+    def setup_method(self) -> None:
+        # Snapshot torch's pre-test state and isolate each test by popping
+        # torch (the tests below assert on torch's absence/sentinel and expect
+        # a clean slate at entry). The snapshot is restored in teardown.
+        self._torch_before = sys.modules.get("torch", self._TORCH_ABSENT)
+        sys.modules.pop("torch", None)
+
     def teardown_method(self) -> None:
         # Restore module-global state between tests.
         qe._TORCH_NEUTRALIZED = False
-        sys.modules.pop("torch", None)
+        # Restore torch to its pre-test state instead of leaving it popped. The
+        # old teardown did a blind pop and never restored — so once this class
+        # had run, sys.modules["torch"] was gone for the rest of the session,
+        # and the next ``import torch`` (transitive, e.g. via french_fallacy_plugin
+        # in test_architecture_compliance) re-imported torch from scratch and hit
+        # the DLL fault (#882) on affected envs. That blind pop was the
+        # collection-order pollution root cause (gate #1336 tail). Restoring the
+        # snapshot keeps a healthy session-start torch available downstream.
+        if self._torch_before is self._TORCH_ABSENT:
+            sys.modules.pop("torch", None)
+        else:
+            sys.modules["torch"] = self._torch_before
 
     def _patched_import(self, behaviour):
         """Return a fake ``__import__`` that applies ``behaviour`` for torch."""

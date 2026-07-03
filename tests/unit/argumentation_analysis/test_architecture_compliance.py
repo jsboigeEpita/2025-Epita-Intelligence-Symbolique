@@ -27,7 +27,13 @@ from semantic_kernel.functions import kernel_function
 def mock_kernel():
     """Kernel with mock OpenAI service for agent tests."""
     kernel = Kernel()
-    service = OpenAIChatCompletion(service_id="default", api_key="test-key")
+    # ai_model_id is required by Semantic Kernel >= 1.40 (CI env). Established
+    # passing pattern (PR #1351 fixed the same omission in test_counter_argument
+    # / test_debate); test_architecture_compliance was missed. The value is
+    # arbitrary — the service is never called, only constructed.
+    service = OpenAIChatCompletion(
+        service_id="default", api_key="test-key", ai_model_id="gpt-4"
+    )
     kernel.add_service(service)
     return kernel
 
