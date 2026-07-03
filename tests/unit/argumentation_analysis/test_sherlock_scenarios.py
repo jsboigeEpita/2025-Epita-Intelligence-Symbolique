@@ -66,7 +66,11 @@ class TestScenarioRunner:
     def test_scenarios_doc_exists(self):
         from pathlib import Path
 
-        path = Path("docs/sherlock/scenarios.md")
+        # PR #449 archived docs/sherlock/scenarios.md to docs/archives/.
+        # The scenario doc still exists (and still uses opaque IDs — see
+        # TestScenarioPrivacy); only its path moved. Update the assertion to
+        # the live location so the existence + privacy coverage is preserved.
+        path = Path("docs/archives/sherlock/scenarios.md")
         assert path.exists()
 
     def test_scenario_definitions_valid(self):
@@ -146,7 +150,9 @@ class TestScenarioPrivacy:
         """Scenarios doc uses only opaque IDs."""
         from pathlib import Path
 
-        content = Path("docs/sherlock/scenarios.md").read_text(encoding="utf-8")
+        # PR #449 archived docs/sherlock/scenarios.md to docs/archives/.
+        # The privacy coverage (opaque IDs, no plaintext leak) is unchanged.
+        content = Path("docs/archives/sherlock/scenarios.md").read_text(encoding="utf-8")
         assert "doc_A" in content
         assert "doc_B" in content
         assert "doc_C" in content
