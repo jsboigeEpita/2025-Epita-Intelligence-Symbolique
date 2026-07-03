@@ -412,11 +412,74 @@ class TestModalHandlerSPASS:
         return init
 
     def test_default_reasoner_is_tweety(self, mock_initializer):
+        """Default TWEETY stays SimpleMlReasoner when no SPASS binary is wired.
+
+        #1339: the resolution now auto-upgrades TWEETY→SPASS when a vendored
+        SPASS is detected, so this test pins the *SPASS-absent* case explicitly
+        (``_get_spass_path`` → None) rather than relying on the ambient env.
+        """
         with patch(
             "argumentation_analysis.agents.core.logic.modal_handler.settings"
-        ) as mock_settings:
+        ) as mock_settings, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value=None,
+        ):
             mock_settings.modal_solver = ModalSolverChoice.TWEETY
+            mock_settings.modal_prefer_spass_when_available = True
             handler = ModalHandler(mock_initializer)
+            reasoner = handler._get_active_reasoner()
+            assert reasoner == mock_initializer.get_modal_reasoner()
+            assert (
+                handler._resolve_active_solver_choice() == ModalSolverChoice.TWEETY
+            )
+
+    def test_default_tweety_auto_upgrades_to_spass_when_available(self, mock_initializer):
+        """#1339: with the prefer flag set (default) and a vendored SPASS binary
+        detected, the default TWEETY resolves to SPASS at the *shared handler*
+        layer — so direct/conversational callers (CONV-B) get the solver that
+        DÉCIDE, not the OOM-prone SimpleMlReasoner. Mirrors the pipeline routing
+        that previously lived only in ``_invoke_modal_logic``."""
+        with patch(
+            "argumentation_analysis.agents.core.logic.modal_handler.settings"
+        ) as mock_settings, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler.jpype"
+        ) as mock_jpype, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
+            mock_settings.modal_solver = ModalSolverChoice.TWEETY
+            mock_settings.modal_prefer_spass_when_available = True
+            mock_spass = MagicMock()
+            mock_jpype.JClass.return_value = lambda *args, **kwargs: mock_spass
+
+            handler = ModalHandler(mock_initializer)
+            assert (
+                handler._resolve_active_solver_choice() == ModalSolverChoice.SPASS
+            )
+            reasoner = handler._get_active_reasoner()
+            # Routed to the lazily-loaded SPASS reasoner, NOT the tweety default.
+            assert reasoner is not mock_initializer.get_modal_reasoner()
+            mock_jpype.JClass.assert_any_call(
+                "org.tweetyproject.logics.ml.reasoner.SPASSMlReasoner"
+            )
+
+    def test_prefer_flag_off_keeps_tweety_even_when_spass_available(self, mock_initializer):
+        """#1339 anti-pendule (#1219): the explicit opt-out
+        ``modal_prefer_spass_when_available=False`` keeps SimpleMlReasoner even
+        when a vendored SPASS is detected — the resolution never overrides an
+        opt-out."""
+        with patch(
+            "argumentation_analysis.agents.core.logic.modal_handler.settings"
+        ) as mock_settings, patch(
+            "argumentation_analysis.agents.core.logic.modal_handler._get_spass_path",
+            return_value="/registered/spass.exe",
+        ):
+            mock_settings.modal_solver = ModalSolverChoice.TWEETY
+            mock_settings.modal_prefer_spass_when_available = False
+            handler = ModalHandler(mock_initializer)
+            assert (
+                handler._resolve_active_solver_choice() == ModalSolverChoice.TWEETY
+            )
             reasoner = handler._get_active_reasoner()
             assert reasoner == mock_initializer.get_modal_reasoner()
 

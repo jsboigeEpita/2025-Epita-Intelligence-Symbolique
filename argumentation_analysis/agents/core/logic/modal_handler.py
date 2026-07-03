@@ -99,9 +99,43 @@ class ModalHandler:
                 raise RuntimeError(f"SPASS reasoner not available: {e}") from e
         return self._spass_reasoner
 
-    def _get_active_reasoner(self):
-        """Returns the active reasoner based on configuration."""
+    def _resolve_active_solver_choice(self) -> ModalSolverChoice:
+        """Resolve which modal solver is actually in effect (#1339).
+
+        The "prefer the vendored SPASS binary when available" upgrade used to
+        live ONLY at the pipeline site
+        (``invoke_callables._invoke_modal_logic``), which applied it by mutating
+        the global ``settings.modal_solver`` before driving the handler. Direct
+        callers of the shared handler — notably the conversational path
+        ``ModalLogicAgent`` → ``TweetyBridge.modal_handler.is_modal_kb_consistent``
+        (CONV-B) — bypass that site and silently got the OOM-prone
+        ``SimpleMlReasoner`` default (FP-16 #1231). Hoisting the resolution here
+        gives every caller the same routing to the solver that DÉCIDE.
+
+        Anti-pendule (#1279): an explicit ``SPASS`` choice is honored directly;
+        the default ``TWEETY`` is upgraded to ``SPASS`` only when (a) the prefer
+        flag is set and (b) a vendored SPASS binary is detected. ``TWEETY`` with
+        the prefer flag off stays ``TWEETY`` — the explicit opt-out the #1219
+        regression pins. This *routes* to the capable solver rather than catching
+        an OOM and reporting degraded.
+        """
         if settings.modal_solver == ModalSolverChoice.SPASS:
+            return ModalSolverChoice.SPASS
+        if (
+            settings.modal_solver == ModalSolverChoice.TWEETY
+            and bool(settings.modal_prefer_spass_when_available)
+            and _get_spass_path() is not None
+        ):
+            return ModalSolverChoice.SPASS
+        return settings.modal_solver
+
+    def _get_active_reasoner(self):
+        """Returns the active reasoner based on the resolved solver choice.
+
+        #1339: resolution is centralised in ``_resolve_active_solver_choice`` so
+        the pipeline AND direct (conversational) callers share the same routing.
+        """
+        if self._resolve_active_solver_choice() == ModalSolverChoice.SPASS:
             return self._get_spass_reasoner()
         return self._modal_reasoner
 
@@ -269,7 +303,10 @@ class ModalHandler:
         build). Honest ``None`` (no silent fallback to another reasoner, no
         fabricated verdict) per the anti-theater contract (#1019/#961).
         """
-        solver_name = settings.modal_solver.value
+        # #1339: report the RESOLVED solver (SPASS when auto-routed), not the
+        # raw ``settings.modal_solver`` — otherwise a conversational call that
+        # auto-upgrades to SPASS would still label its verdict "tweety".
+        solver_name = self._resolve_active_solver_choice().value
         reasoner = self._get_active_reasoner()
         logger.debug(f"Checking modal KB consistency with {solver_name}.")
 
