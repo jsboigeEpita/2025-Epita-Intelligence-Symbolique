@@ -51,40 +51,40 @@ def plugin() -> TweetyLogicPlugin:
     return TweetyLogicPlugin()
 
 
-# CONV-B #1333 firsthand finding (po-2025 R531): the three *deciding*
-# kernel_functions of TweetyLogicPlugin — ``check_propositional_consistency``,
-# ``check_fol_consistency``, ``check_modal_satisfiability`` — are REGISTERED on
-# the FormalAgent's kernel (factory AGENT_SPECIALITY_MAP["formal_logic"]) and
-# named in its instructions (ETAPE 2), BUT each is BROKEN AT CALL TIME:
+# CONV-B #1333 fix (po-2025 R532): the three *deciding* kernel_functions of
+# TweetyLogicPlugin — ``check_propositional_consistency``,
+# ``check_fol_consistency``, ``check_modal_satisfiability`` — were REGISTERED on
+# the FormalAgent's kernel and named in its instructions, BUT each crashed at
+# call time (the xfail-strict baseline of #1368 documented the break). Each
+# contract is now repaired:
 #
-#   * PL  : TweetyBridge.check_consistency returns a ``(bool, str)`` tuple, but
-#           the wrapper does ``json.dumps(tuple)`` -> a JSON *array*, not the
-#           documented ``{"is_consistent", ...}`` object. Wrong contract.
-#   * FOL : passes a ``list`` of formulas to ``FOLHandler.check_consistency``,
-#           which expects a belief_set -> ``'list' object has no attribute 'size'``.
-#   * Modal: constructs ``ModalHandler()`` with no ``initializer_instance``
-#           (required) AND calls ``check_satisfiability`` (no such method; the
-#           handler exposes ``is_modal_kb_consistent``) -> ``TypeError``.
+#   * PL  : unpacks the ``(bool, str)`` tuple from ``TweetyBridge`` into a
+#           ``{"is_consistent": ...}`` object (was ``json.dumps(tuple)`` array).
+#   * FOL : joins the formula list into a Tweety-syntax STRING before handing
+#           it to ``FOLHandler.check_consistency`` (was a raw ``list`` ->
+#           ``'list' object has no attribute 'size'``).
+#   * Modal: constructs ``ModalHandler`` with the required ``initializer_instance``
+#           and calls ``is_modal_kb_consistent`` (was ``ModalHandler()`` +
+#           nonexistent ``check_satisfiability``), AND names the resolved solver.
 #
-# This is the lesson R319-R321 firsthand: selector + registration + instructions
-# != working cable. These xfail-strict tests document the three broken deciders
-# and will flip green the moment each contract is repaired (CONV-B follow-up),
-# preventing a silent regression back to "registered but dead".
-_PL_BUG = "CONV-B #1333: PL decider returns json.dumps(tuple) -> JSON array, not {is_consistent} dict"
-_FOL_BUG = "CONV-B #1333: FOL decider passes list to FOLHandler.check_consistency (expects belief_set) -> 'list' has no attribute 'size'"
-_MODAL_BUG = "CONV-B #1333: modal decider constructs ModalHandler() without initializer_instance + calls nonexistent check_satisfiability"
+# The lesson R319-R321 (selector + registration + instructions != working
+# cable) is now verified firsthand: each test calls the REAL consumer (the
+# kernel_function) the way the FormalAgent would in AgentGroupChat, and asserts
+# a structured verdict is produced — not a crash, not a degraded placeholder.
+# The JVM is up under pytest, so the ``@_jvm_required`` short-circuit is NOT
+# the path exercised.
 
 
 class TestConvBKernelDeciders:
     """CONV-B #1333: the deciding kernel_functions must actually decide (JVM up).
 
-    Currently xfail-strict — three broken deciders identified firsthand. Each
-    test calls the REAL consumer (the kernel_function) the way the FormalAgent
-    would in AgentGroupChat, surfacing the gap that structural tests
-    (registration / instruction-presence) miss.
+    Post-fix (#1368 baseline -> this PR): each decider produces a structured
+    verdict, proving the deciding plumbing is alive end-to-end at the
+    kernel-function layer. Each test calls the REAL consumer (the
+    kernel_function) the way the FormalAgent would in AgentGroupChat — the gap
+    that structural tests (registration / instruction-presence) miss.
     """
 
-    @pytest.mark.xfail(strict=True, reason=_PL_BUG)
     def test_propositional_decider_produces_verdict(self, plugin: TweetyLogicPlugin):
         result = _parsed(
             plugin.check_propositional_consistency('{"formulas": ["p => q", "p"]}')
@@ -95,10 +95,13 @@ class TestConvBKernelDeciders:
         assert (
             result.get("error") != "JVM not available"
         ), "PL decider unreachable (JVM short-circuit)"
-        assert "is_consistent" in result and isinstance(result["is_consistent"], bool)
+        # The repaired contract exposes ``is_consistent`` (bool from the
+        # TweetyBridge tuple), not a bare JSON array.
+        assert "is_consistent" in result and isinstance(
+            result["is_consistent"], bool
+        ), f"PL decider produced no consistency verdict: {result}"
 
-    @pytest.mark.xfail(strict=True, reason=_FOL_BUG)
-    def test_fol_decider_produces_backend_verdict(self, plugin: TweetyLogicPlugin):
+    def test_fol_decider_produces_verdict(self, plugin: TweetyLogicPlugin):
         result = _parsed(
             plugin.check_fol_consistency(
                 '{"formulas": ["forall X: (P(X))", "exists X: (!P(X))"]}'
@@ -110,16 +113,11 @@ class TestConvBKernelDeciders:
         assert (
             result.get("error") != "JVM not available"
         ), "FOL decider unreachable (JVM short-circuit)"
-        backends = result.get("backends")
-        assert (
-            isinstance(backends, dict) and backends
-        ), f"FOL decider produced no backend verdicts: {result}"
-        decided = result.get("decided", {})
-        assert any(
-            bool(v) for v in decided.values()
-        ), f"no FOL backend decided: {backends}"
+        # The repaired contract joins the formulas into a string and exposes
+        # ``is_consistent`` (the FOLHandler tuple verdict) — not the previous
+        # ``'list' has no attribute 'size'`` crash.
+        assert "is_consistent" in result, f"FOL decider produced no verdict: {result}"
 
-    @pytest.mark.xfail(strict=True, reason=_MODAL_BUG)
     def test_modal_decider_routes_to_capable_solver(self, plugin: TweetyLogicPlugin):
         result = _parsed(
             plugin.check_modal_satisfiability(
@@ -132,10 +130,11 @@ class TestConvBKernelDeciders:
         assert (
             result.get("error") != "JVM not available"
         ), "modal decider unreachable (JVM short-circuit)"
-        flat_keys = set(result.keys())
-        has_verdict = any(
-            k in flat_keys for k in ("valid", "is_consistent", "satisfiable", "verdict")
-        ) or isinstance(result.get("result"), dict)
+        # The repaired contract constructs the handler correctly and exposes a
+        # named solver (genuine-solver invariant #1019), not the previous
+        # ``ModalHandler()`` TypeError.
+        assert "is_consistent" in result, f"modal decider produced no verdict: {result}"
+        solver = result.get("solver")
         assert (
-            has_verdict
-        ), f"modal decider produced no satisfiability verdict: {result}"
+            isinstance(solver, str) and solver
+        ), f"modal verdict must name its solver (genuine-solver #1019): {result}"

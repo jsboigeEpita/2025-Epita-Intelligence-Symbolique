@@ -127,9 +127,25 @@ class TweetyLogicPlugin:
 
         bridge = TweetyBridge()
         formulas = params.get("formulas", [input])
-        kb_str = "\n".join(formulas)
-        result = bridge.check_consistency(kb_str)
-        return json.dumps(result, default=str)
+        if not isinstance(formulas, list):
+            formulas = [str(formulas)]
+        kb_str = "\n".join(str(f) for f in formulas)
+        # CONV-B #1333 (po-2025): TweetyBridge.check_consistency returns a
+        # ``(bool, str)`` tuple; ``json.dumps(tuple)`` serialized it as a JSON
+        # *array* ``[true, "..."]`` instead of the documented
+        # ``{"is_consistent": ...}`` object, breaking the SK tool-call contract.
+        is_consistent, message = bridge.check_consistency(
+            kb_str, logic_type="propositional"
+        )
+        return json.dumps(
+            {
+                "is_consistent": is_consistent,
+                "belief_set": kb_str[:200],
+                "truncated": len(kb_str) > 200,
+                "message": message,
+            },
+            default=str,
+        )
 
     # ── First-Order Logic ─────────────────────────────────────────────
 
@@ -148,8 +164,22 @@ class TweetyLogicPlugin:
 
         handler = FOLHandler()
         formulas = params.get("formulas", [input])
-        result = handler.check_consistency(formulas)
-        return json.dumps(result, default=str)
+        if not isinstance(formulas, list):
+            formulas = [str(formulas)]
+        # CONV-B #1333 (po-2025): FOLHandler.check_consistency accepts a
+        # Tweety-syntax STRING (or a Java FolBeliefSet), NOT a Python list —
+        # passing the list raised ``'list' object has no attribute 'size'``.
+        belief_set_str = "\n".join(str(f) for f in formulas)
+        is_consistent, message = handler.check_consistency(belief_set_str)
+        return json.dumps(
+            {
+                "is_consistent": is_consistent,
+                "belief_set": belief_set_str[:200],
+                "truncated": len(belief_set_str) > 200,
+                "message": message,
+            },
+            default=str,
+        )
 
     # ── Modal Logic ───────────────────────────────────────────────────
 
@@ -165,12 +195,32 @@ class TweetyLogicPlugin:
     def check_modal_satisfiability(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formula": input})
         from argumentation_analysis.agents.core.logic.modal_handler import ModalHandler
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
 
-        handler = ModalHandler()
+        # CONV-B #1333 (po-2025): ``ModalHandler`` requires an
+        # ``initializer_instance`` in its constructor and exposes
+        # ``is_modal_kb_consistent`` (query-based consistency, #1205); the
+        # previous call constructed the handler with no args (TypeError) and
+        # invoked a nonexistent ``check_satisfiability`` (AttributeError).
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        handler = ModalHandler(initializer)
         formula = params.get("formula", input)
-        logic_type = params.get("logic_type", "S5")
-        result = handler.check_satisfiability(formula, logic_type)
-        return json.dumps(result, default=str)
+        is_consistent, message = handler.is_modal_kb_consistent(str(formula))
+        # #1339: name the RESOLVED solver in the verdict (SPASS when
+        # auto-routed) — the genuine-solver invariant (#1019), surfacing which
+        # reasoner actually decided rather than the configured default.
+        solver_name = handler._resolve_active_solver_choice().value
+        return json.dumps(
+            {
+                "is_consistent": is_consistent,
+                "formula": str(formula)[:200],
+                "solver": solver_name,
+                "message": message,
+            },
+            default=str,
+        )
 
     # ── Ranking Semantics ─────────────────────────────────────────────
 
