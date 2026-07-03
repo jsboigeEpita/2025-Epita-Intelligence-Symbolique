@@ -88,7 +88,16 @@ class TestFormalAgentFOLDefault:
         instructions = AGENT_CONFIG["FormalAgent"]["instructions"]
         assert "ETAPE 2" in instructions
         assert "check_fol_consistency" in instructions
-        assert "check_propositional_consistency" in instructions
+        # CONV-B #1333 DoD #1: ETAPE 2 must cite the REAL advertised
+        # kernel_function names. The instruction previously named
+        # ``check_propositional_consistency`` / ``check_modal_satisfiability``
+        # (TweetyLogicPlugin method names that are NOT registered on the
+        # conversational kernel's manifest), so the FormalAgent LLM could not
+        # resolve them and never emitted the tool_calls -> 0 decider verdicts.
+        # The manifest advertises ``LogicAgentPlugin-check_pl_consistency``
+        # (and check_fol/modal_consistency); the instruction now cites those.
+        assert "check_pl_consistency" in instructions
+        assert "check_modal_consistency" in instructions
 
     def test_etape_3_dung_preserved(self):
         """ETAPE 3 (Dung analysis) should still be present."""

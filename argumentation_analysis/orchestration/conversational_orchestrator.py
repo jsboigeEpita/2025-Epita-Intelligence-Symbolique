@@ -243,7 +243,14 @@ AGENT_CONFIG = {
         "speciality": "formal_logic",
         "instructions": (
             "Tu es l'agent de logique formelle. Quand le PM te donne la parole :\n\n"
-            "WORKFLOW OBLIGATOIRE (4 etapes) :\n\n"
+            "WORKFLOW OBLIGATOIRE (5 etapes) :\n\n"
+            "#1333 (a) PRIORITE ABSOLUE - VERDICTS DE COHERENCE : ta mission premiere "
+            "est de PRODUIRE DES VERDICTS via les solveurs Tweety "
+            "(check_pl_consistency / check_fol_consistency / check_modal_consistency), "
+            "PAS d'accumuler des traductions. DES QUE des formules existent dans l'etat "
+            "(tes add_nl_to_logic_translation / add_belief_set), appelle le check_*_consistency "
+            "adequat DESSUS AVANT de generer d'autres formules. Ne laisse JAMAIS une formule "
+            "non-verifiee -- la verification est le coeur de ton role, pas une etape finale optionnelle.\n\n"
             "ETAPE 0 — Build Shared Atom/Signature Inventory (#560/#561) :\n"
             "1. Lis l'etat via get_current_state_snapshot() pour obtenir le texte source\n"
             "2. Appelle extract_shared_pl_atoms(full_text=source_text) pour extraire les atomes PL partages\n"
@@ -269,13 +276,13 @@ AGENT_CONFIG = {
             "5. Stock la traduction via add_nl_to_logic_translation(\n"
             "   original_text='...', formula='...', logic_type='propositional'|'fol',\n"
             "   is_valid=True/False, variables=JSON. confidence=0.0-1.0)\n\n"
-            "ETAPE 2 — Validation Tweety :\n"
-            "1. Pour les formules valides, appeelle check_propositional_consistency(\n"
-            '   input=\'{"formulas": ["p => q", "q"]}\') \n'
-            "2. Pour FOL: check_fol_consistency(input='{\"formulas\": [...]}')\n"
-            "3. Pour les modalites (possibilite/obligation): check_modal_satisfiability(\n"
-            '   input=\'{"formula": "<>P", "logic_type": "S5"}\')\n'
-            "4. Si inconstistances: signalez au PM\n\n"
+            "ETAPE 2 — Validation Tweety (OBLIGATOIRE et IMMEDIATE apres ETAPE 1, pas finale) :\n"
+            "#1333 (a) Pour CHAQUE formule generee en ETAPE 1 (sans exception, pas seulement les valides) :\n"
+            "1. PL: appelle check_pl_consistency(belief_set=\"p => q\\np\")  (formules separees par \\n)\n"
+            "2. FOL: appelle check_fol_consistency(belief_set=\"forall X: (P(X))\")\n"
+            "3. Modal (possibilite/obligation): appelle check_modal_consistency(\n"
+            "   payload='{\"belief_set\": \"<>(p)\", \"logic_type\": \"S5\"}')  (K/T/S4/S5)\n"
+            "4. Si inconstistances: signalez au PM. NE PAS passer a ETAPE 3 tant que chaque formule n'a pas de verdict.\n\n"
             "ETAPE 3 — Analyse Dung (Argumentation Abstraite) :\n"
             "1. Construis un graphe d'attaque depuis les arguments et sophismes detectes\n"
             "2. Appelle analyze_dung_framework(input=JSON) avec :\n"
@@ -296,7 +303,7 @@ AGENT_CONFIG = {
             "- Verifie la consistance JTMS via jtms_check_consistency()\n\n"
             "CROSS-KB (#208-I) : Lis les sophismes detectes par InformalAgent — si un argument "
             "est fallacieux, sa formalisation doit refleter cette faiblesse (ex: premisse contestee).\n"
-            "Modal: Si tu detectes des modalites (possibilite/necessite), utilise check_modal_satisfiability()."
+            "Modal: Si tu detectes des modalites (possibilite/necessite), utilise check_modal_consistency()."
         ),
     },
     "QualityAgent": {
