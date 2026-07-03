@@ -13,12 +13,21 @@ class TestLlmEnrichQuality:
     """Tests for _llm_enrich_quality function."""
 
     async def test_returns_none_when_no_api_key(self):
-        """LLM enrichment returns None gracefully when OPENAI_API_KEY is absent."""
+        """LLM enrichment returns None gracefully when no API key is available.
+
+        Patch _get_openai_client to return its documented no-key sentinel
+        ``(None, "")`` rather than clearing os.environ: on CI (which provisions
+        a real key via secrets) the env-clear did not prevent a live client, so
+        the enrichment made a real LLM call instead of the no-key short-circuit.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _llm_enrich_quality,
         )
 
-        with patch.dict("os.environ", {}, clear=True):
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, ""),
+        ):
             result = await _llm_enrich_quality(
                 {"arg_1": {"note_finale": 5.0, "scores_par_vertu": {"clarity": 6.0}}},
                 [{"text": "Some argument"}],
@@ -32,7 +41,7 @@ class TestLlmEnrichQuality:
         )
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(MagicMock(), "gpt-5-mini"),
         ):
             result = await _llm_enrich_quality({}, [])
@@ -45,7 +54,7 @@ class TestLlmEnrichQuality:
         )
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(MagicMock(), "gpt-5-mini"),
         ):
             result = await _llm_enrich_quality(
@@ -85,7 +94,7 @@ class TestLlmEnrichQuality:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             result = await _llm_enrich_quality(
@@ -122,7 +131,7 @@ class TestLlmEnrichQuality:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             result = await _llm_enrich_quality(
@@ -145,7 +154,7 @@ class TestLlmEnrichQuality:
         )
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             result = await _llm_enrich_quality(
@@ -181,7 +190,7 @@ class TestLlmEnrichQuality:
         raw_args = [{"text": f"Argument {i}"} for i in range(1, 8)]
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             await _llm_enrich_quality(heuristic, raw_args)
@@ -212,7 +221,7 @@ class TestLlmEnrichQuality:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "test-model"),
         ) as mock_get:
             await _llm_enrich_quality(
@@ -249,7 +258,7 @@ class TestInvokeQualityWithLlmEnrichment:
             "argumentation_analysis.agents.core.quality.quality_evaluator.ArgumentQualityEvaluator",
             return_value=mock_evaluator,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
+            "argumentation_analysis.orchestration.invoke_callables._llm_enrich_quality",
             return_value=enrichment_data,
         ):
             context = {
@@ -278,7 +287,7 @@ class TestInvokeQualityWithLlmEnrichment:
             "argumentation_analysis.agents.core.quality.quality_evaluator.ArgumentQualityEvaluator",
             return_value=mock_evaluator,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
+            "argumentation_analysis.orchestration.invoke_callables._llm_enrich_quality",
             return_value=None,
         ):
             context = {
@@ -317,7 +326,7 @@ class TestLlmEnrichQualityWithFallacies:
         ]
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             await _llm_enrich_quality(
@@ -349,7 +358,7 @@ class TestLlmEnrichQualityWithFallacies:
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
         with patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             await _llm_enrich_quality(
@@ -390,7 +399,7 @@ class TestLlmEnrichQualityWithFallacies:
             "argumentation_analysis.agents.core.quality.quality_evaluator.ArgumentQualityEvaluator",
             return_value=mock_evaluator,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
+            "argumentation_analysis.orchestration.invoke_callables._llm_enrich_quality",
             return_value=enrichment_data,
         ):
             context = {
@@ -424,7 +433,7 @@ class TestLlmEnrichQualityWithFallacies:
             "argumentation_analysis.agents.core.quality.quality_evaluator.ArgumentQualityEvaluator",
             return_value=mock_evaluator,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
+            "argumentation_analysis.orchestration.invoke_callables._llm_enrich_quality",
             return_value=None,
         ):
             context = {
