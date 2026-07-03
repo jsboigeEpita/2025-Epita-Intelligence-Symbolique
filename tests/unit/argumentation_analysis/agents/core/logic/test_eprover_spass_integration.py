@@ -275,6 +275,17 @@ class TestEProverWiringContract:
     verdict).
     """
 
+    @pytest.fixture(autouse=True)
+    def _clear_eprover_delivery_cache(self):
+        """The #1204 delivery self-check memoises per-path reliability in a
+        module global; clear it around each contract test so the sentinel is
+        exercised firsthand rather than inheriting a verdict cached elsewhere."""
+        from argumentation_analysis.agents.core.logic import fol_handler
+
+        fol_handler._EPROVER_DELIVERY_RELIABLE.clear()
+        yield
+        fol_handler._EPROVER_DELIVERY_RELIABLE.clear()
+
     def test_eprover_path_read_from_registry_on_query(self, mock_belief_set):
         """_fol_query_with_eprover must pass the registered path to EFOLReasoner."""
         mock_reasoner = MagicMock()
@@ -312,7 +323,19 @@ class TestEProverWiringContract:
         is EPROVER and the binary path is registered (#1196: previously it
         hardcoded SimpleFolReasoner regardless of settings)."""
         mock_reasoner = MagicMock()
-        mock_reasoner.query.return_value = False  # bottom not entailed => consistent
+
+        # The #1204/#1232 delivery self-check probes the SAME reasoner with a
+        # known-inconsistent sentinel {P(a),!P(a)} and requires it to be
+        # reported inconsistent (query -> True) before trusting EProver. Only
+        # the real belief set is the consistent KB (bottom not entailed ->
+        # False). A single return_value cannot model both phases, so key on the
+        # belief-set argument.
+        def _query_side_effect(belief_set, _formula):
+            if belief_set is mock_belief_set:
+                return False  # real KB: bottom not entailed => consistent
+            return True  # sentinel KB: inconsistent => delivery trusted
+
+        mock_reasoner.query.side_effect = _query_side_effect
         mock_parser_instance = MagicMock()
         mock_parser_instance.parseFormula.return_value = "bottom_formula"
         mock_parser_factory = MagicMock(return_value=mock_parser_instance)
