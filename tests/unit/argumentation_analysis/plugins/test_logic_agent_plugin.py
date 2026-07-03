@@ -372,7 +372,7 @@ class TestValidateFormula:
         assert result["is_valid"] is True
         assert result["logic_type"] == "fol"
         bridge.check_consistency.assert_called_once_with(
-            "forall X: p(X)", logic_type="fol"
+            "forall X: p(X)", logic_type="first_order"
         )
 
     def test_validate_modal(self, plugin_and_bridge):
@@ -387,7 +387,7 @@ class TestValidateFormula:
         assert result["is_valid"] is True
         assert result["logic_type"] == "modal"
         bridge.check_consistency.assert_called_once_with(
-            "[](a => b)", logic_type="modal_k"
+            "[](a => b)", logic_type="K"
         )
 
     def test_validate_invalid_formula_returns_false(self, plugin_and_bridge):
