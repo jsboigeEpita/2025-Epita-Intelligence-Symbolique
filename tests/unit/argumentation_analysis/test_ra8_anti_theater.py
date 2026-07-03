@@ -53,7 +53,6 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_propositional_logic,
 )
 
-
 # ---------------------------------------------------------------------------
 # Test data fixtures
 # ---------------------------------------------------------------------------
@@ -96,113 +95,186 @@ _CTX = {
 class TestRankingFailLoud:
     def test_raises_runtime_error(self):
         """When ranking handler import fails, must raise RuntimeError."""
-        with patch.dict(sys.modules, {
-            "argumentation_analysis.agents.core.logic.ranking_handler": None,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "argumentation_analysis.agents.core.logic.ranking_handler": None,
+            },
+        ):
             with pytest.raises(RuntimeError, match="Ranking semantics"):
                 _run(_invoke_ranking(_INPUT, _CTX))
 
 
 class TestBipolarFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Bipolar analysis"):
-            _run(_invoke_bipolar(_INPUT, _CTX))
+        # Force the handler import to fail (JVM-unavailable scenario) — on a
+        # JVM-available machine (CI/agent) the real handler would run and never
+        # fail-loud, so we mock it to fail exactly as the file docstring says.
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.bipolar_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Bipolar analysis"):
+                _run(_invoke_bipolar(_INPUT, _CTX))
 
 
 class TestABAFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="ABA reasoning"):
-            _run(_invoke_aba(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.aba_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="ABA reasoning"):
+                _run(_invoke_aba(_INPUT, _CTX))
 
 
 class TestADFFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="ADF reasoning"):
-            _run(_invoke_adf(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.adf_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="ADF reasoning"):
+                _run(_invoke_adf(_INPUT, _CTX))
 
 
 class TestASPICFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="ASPIC\\+"):
-            _run(_invoke_aspic(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.aspic_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="ASPIC\\+"):
+                _run(_invoke_aspic(_INPUT, _CTX))
 
 
 class TestBeliefRevisionFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Belief revision"):
-            _run(_invoke_belief_revision(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.belief_revision_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Belief revision"):
+                _run(_invoke_belief_revision(_INPUT, _CTX))
 
 
 class TestProbabilisticFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Probabilistic"):
-            _run(_invoke_probabilistic(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.probabilistic_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Probabilistic"):
+                _run(_invoke_probabilistic(_INPUT, _CTX))
 
 
 class TestDialogueFailLoud:
     def test_raises_runtime_error(self):
         """When dialogue handler import fails, must raise RuntimeError."""
-        with patch.dict(sys.modules, {
-            "argumentation_analysis.agents.core.logic.dialogue_handler": None,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "argumentation_analysis.agents.core.logic.dialogue_handler": None,
+            },
+        ):
             with pytest.raises(RuntimeError, match="Dialogue protocol"):
                 _run(_invoke_dialogue(_INPUT, _CTX))
 
 
 class TestDLFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Description Logic"):
-            _run(_invoke_dl(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.dl_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Description Logic"):
+                _run(_invoke_dl(_INPUT, _CTX))
 
 
 class TestCLFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Conditional Logic"):
-            _run(_invoke_cl(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.cl_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Conditional Logic"):
+                _run(_invoke_cl(_INPUT, _CTX))
 
 
 class TestSetAFFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="SetAF"):
-            _run(_invoke_setaf(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.setaf_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="SetAF"):
+                _run(_invoke_setaf(_INPUT, _CTX))
 
 
 class TestWeightedFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Weighted AF"):
-            _run(_invoke_weighted(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.weighted_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Weighted AF"):
+                _run(_invoke_weighted(_INPUT, _CTX))
 
 
 class TestSocialFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Social argumentation"):
-            _run(_invoke_social(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.social_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Social argumentation"):
+                _run(_invoke_social(_INPUT, _CTX))
 
 
 class TestEAFFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="Epistemic AF"):
-            _run(_invoke_eaf(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.eaf_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="Epistemic AF"):
+                _run(_invoke_eaf(_INPUT, _CTX))
 
 
 class TestDeLPFailLoud:
     def test_raises_runtime_error(self):
-        with pytest.raises(RuntimeError, match="DeLP"):
-            _run(_invoke_delp(_INPUT, _CTX))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.delp_handler": None},
+        ):
+            with pytest.raises(RuntimeError, match="DeLP"):
+                _run(_invoke_delp(_INPUT, _CTX))
 
 
 class TestPLFailLoud:
     """PL handler: when all Tweety solvers fail, must raise RuntimeError."""
 
     def test_raises_runtime_error(self):
-        """When Tweety cannot parse any formula, PL must fail-loud."""
-        # Use unparseable formulas to trigger the "all formulas failed" path
+        """When Tweety/PySAT is unavailable, PL must fail-loud.
+
+        The old input ``$$UNPARSEABLE$$`` no longer reaches the fail-loud path:
+        the #537 PL sanitizer legitimately salvages it into the valid atom
+        ``__UNPARSEABLE__``, which PySAT then decides SAT — a real solver
+        verdict, not theater. To exercise the actual "all Tweety solvers
+        failed" contract (invoke_callables L5390) we force the TweetyBridge
+        import to fail (JVM/Tweety-unavailable scenario), matching the
+        sys.modules pattern the other fail-loud tests use.
+        """
         ctx_bad = {
             "arguments": ["arg1", "arg2"],
-            "formulas": ["$$UNPARSEABLE$$"],
+            "formulas": ["p & q"],
         }
-        with pytest.raises(RuntimeError, match="Propositional logic"):
-            _run(_invoke_propositional_logic("test input", ctx_bad))
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.agents.core.logic.tweety_bridge": None},
+        ):
+            with pytest.raises(RuntimeError, match="Propositional logic"):
+                _run(_invoke_propositional_logic("test input", ctx_bad))
 
 
 # ---------------------------------------------------------------------------
@@ -256,9 +328,12 @@ class TestStateWriterGuard:
 
         mock_state = MagicMock()
         # Invoke raises RuntimeError (as it does now when JVM unavailable)
-        with patch.dict(sys.modules, {
-            "argumentation_analysis.agents.core.logic.aba_handler": None,
-        }):
+        with patch.dict(
+            sys.modules,
+            {
+                "argumentation_analysis.agents.core.logic.aba_handler": None,
+            },
+        ):
             with pytest.raises(RuntimeError):
                 _run(_invoke_aba(_INPUT, _CTX))
         # Writer was never called because invoke raised before producing output
