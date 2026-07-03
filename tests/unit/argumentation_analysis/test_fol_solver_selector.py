@@ -141,11 +141,17 @@ class TestSettingsSolverBugFix:
         assert "fol_solver" not in field_names, "fol_solver should not exist"
 
     def test_solver_enum_values(self):
-        """SolverChoice enum should have tweety/prover9/eprover."""
+        """SolverChoice enum should have tweety/prover9/eprover/mace4.
+
+        FP-19 #1243 added Mace4 (LADR model-finder) as a selectable FOL backend
+        — a SEMI-decision procedure for satisfiability (proves CONSISTENT by
+        exhibiting a finite model), the sound complement to the refutation
+        provers EProver/Prover9 (which prove INCONSISTENT).
+        """
         from argumentation_analysis.core.config import SolverChoice
 
         values = {s.value for s in SolverChoice}
-        assert values == {"tweety", "prover9", "eprover"}
+        assert values == {"tweety", "prover9", "eprover", "mace4"}
 
     def test_settings_default_solver_is_eprover(self):
         """Default settings.solver should be SolverChoice.EPROVER (#939)."""
@@ -225,6 +231,14 @@ class TestExternalFOLSolverConsumer:
 
         TweetyBridge and FOLLogicAgent are imported locally inside the function,
         so we must patch their source modules, not invoke_callables.
+
+        Hermicity (#982): _invoke_external_fol_solver gates the eprover branch
+        on `shutil.which("eprover")` — the EProver binary is NOT on PATH in CI
+        (external bundled solver, not installed on runners). Without mocking
+        that probe the function falls through to the TweetyBridge path and the
+        routing-under-test never executes. We mock shutil.which to simulate a
+        present EProver binary so the test exercises the eprover branch
+        deterministically, independent of the runner's PATH.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
@@ -242,6 +256,9 @@ class TestExternalFOLSolverConsumer:
         mock_bridge.check_consistency = MagicMock(return_value=(True, "consistent"))
 
         with patch(
+            "argumentation_analysis.orchestration.invoke_callables.shutil.which",
+            return_value="/usr/local/bin/eprover",
+        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ), patch(
@@ -294,7 +311,17 @@ class TestExternalFOLSolverConsumer:
         assert result.get("solver") in ("prover9", "tweety_fallback", "tweety")
 
     async def test_default_eprover_uses_eprover_branch(self):
-        """When context has no fol_solver, default eprover path should be used (#939)."""
+        """When context has no fol_solver, default eprover path should be used (#939).
+
+        Hermicity (#982, #900): two probes must be mocked here. (1) The EProver
+        binary gate `shutil.which("eprover")` — CI runners lack the bundled
+        external solver. (2) The settings fallback: with no context override the
+        function reads `str(settings.solver)`, which reflects the real .env /
+        pydantic-settings defaults (tweety on many envs) and would route away
+        from eprover regardless of the binary probe. We force settings.solver to
+        the #939 default ("eprover") so the test exercises the default-eprover
+        routing deterministically, independent of runner config.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
         )
@@ -309,7 +336,16 @@ class TestExternalFOLSolverConsumer:
         mock_bridge = MagicMock()
         mock_bridge.check_consistency = MagicMock(return_value=(True, "OK"))
 
+        mock_settings = MagicMock()
+        mock_settings.solver = "eprover"
+
         with patch(
+            "argumentation_analysis.orchestration.invoke_callables.shutil.which",
+            return_value="/usr/local/bin/eprover",
+        ), patch(
+            "argumentation_analysis.core.config.settings",
+            mock_settings,
+        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ), patch(
@@ -320,8 +356,8 @@ class TestExternalFOLSolverConsumer:
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
-        # Default eprover path → eprover (or tweety_fallback if eprover unavailable)
-        assert result.get("solver") in ("eprover", "tweety_fallback")
+        # Default eprover path → eprover (binary present + settings default via mock)
+        assert result.get("solver") == "eprover"
         assert result.get("logic_type") == "first_order"
 
     async def test_no_context_falls_back_gracefully(self):
