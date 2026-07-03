@@ -174,6 +174,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=False,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
         )
         assert adapter._camembert is not None
@@ -203,6 +204,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=False,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
         )
         # Mock CamemBERT as available
@@ -223,6 +225,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=False,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
         )
 
@@ -251,6 +254,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=False,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
         )
         # CamemBERT unavailable (no model)
@@ -272,6 +276,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=False,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
             camembert_model_path="/custom/model/path",
         )
@@ -287,6 +292,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=False,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
             camembert_threshold=0.7,
         )
@@ -303,6 +309,7 @@ class TestFrenchFallacyAdapterCamemBERT:
             enable_symbolic=True,
             enable_nli=False,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             enable_camembert=True,
         )
 

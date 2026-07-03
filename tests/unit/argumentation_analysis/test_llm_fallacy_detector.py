@@ -199,5 +199,5 @@ class TestFrenchFallacyAdapterDefaults:
             FrenchFallacyAdapter,
         )
 
-        adapter = FrenchFallacyAdapter(enable_camembert=True)
+        adapter = FrenchFallacyAdapter(enable_camembert=True, enable_self_hosted_llm=False)
         assert adapter._camembert is not None
