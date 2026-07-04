@@ -87,9 +87,13 @@ class TestDAGOrdering:
 
         wf = build_spectacular_workflow()
         ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
+        # The spectacular workflow has no ``narrative_synthesis`` phase — its
+        # narrative output is produced via the ``act1_framing`` /
+        # ``act2_narrative`` / ``act3_conclusion`` phases. deep_synthesis
+        # depends on synthesis + belief_revision + stakes (the validated DAG
+        # edges; all three exist as spectacular phases).
         assert set(ds_phase.depends_on) == {
             "synthesis",
-            "narrative_synthesis",
             "belief_revision",
             "stakes",
         }
