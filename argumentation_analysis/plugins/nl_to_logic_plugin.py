@@ -87,6 +87,40 @@ class NLToLogicPlugin:
         )
 
     @kernel_function(
+        name="translate_to_modal",
+        description=(
+            "Translate a natural language argument into modal logic (alethic "
+            "and deontic) using Tweety MlParser syntax. "
+            "Uses LLM with Tweety validation and retry loop. "
+            "Input: plain text argument that expresses necessity/possibility "
+            "(must, may, necessarily, possibly). "
+            "Returns JSON with 'formula' (a modal belief set: constant "
+            "declarations + [] / <> formulas), 'logic_type', 'is_valid', "
+            "'confidence'. Returns is_valid=true with empty formula when the "
+            "input carries no modal content (honest absent, #1391)."
+        ),
+    )
+    async def translate_to_modal(self, text: str) -> str:
+        """Translate NL text to modal logic (#1391, mirror of translate_to_fol)."""
+        from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
+
+        translator = NLToLogicTranslator(max_retries=3, logic_type="modal")
+        result = await translator.translate(text, logic_type="modal")
+
+        return json.dumps(
+            {
+                "original_text": result.original_text[:200],
+                "formula": result.formula,
+                "logic_type": result.logic_type,
+                "is_valid": result.is_valid,
+                "validation_message": result.validation_message,
+                "attempts": result.attempts,
+                "variables": result.variables,
+                "confidence": result.confidence,
+            }
+        )
+
+    @kernel_function(
         name="translate_batch_to_pl",
         description=(
             "Translate multiple NL arguments to propositional logic in batch. "
