@@ -276,7 +276,7 @@ AGENT_CONFIG = {
             "5. MODAL (#1391) : pour chaque argument cle qui exprime une modalite "
             "(necessite/possibilite : 'doit', 'faut', 'peut', 'necessairement', "
             "'possible', 'obligatoire'), appelle translate_to_modal(text='...') -> "
-            "belief set modal (declarations 'constant <atom>' + formules [] / <>). "
+            "belief set modal (declarations 'type(<atom>)' + formules [] / <>, #1327). "
             "Stock le resultat via add_nl_to_logic_translation(logic_type='modal'). "
             "Si l'argument n'a aucune saveur modale, l'outil retourne un resultat "
             "valide vide (honnête absent, #1019) -- NE fabrique PAS de contenu modal.\n"
