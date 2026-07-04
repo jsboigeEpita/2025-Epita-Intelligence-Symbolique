@@ -196,6 +196,93 @@ class TestGenerateFOLFormulasWithSharedSignature:
         assert "error" in data
 
 
+# ── Pass 1: Modal signature extraction (#1396) ──
+
+class TestExtractSharedModalSignature:
+
+    @pytest.mark.asyncio
+    async def test_extracts_modal_atoms_on_cued_text(self, plugin, mock_openai_response):
+        """Modal atoms extracted when text carries FR modal cues (#1396)."""
+        llm_output = json.dumps({
+            "atoms": ["citizen", "ObeysLaw", "peace"],
+            "modal_flavors": ["deontic"],
+        })
+        cued_text = (
+            "Les citoyens doivent voter et il est obligatoire de respecter la loi. "
+            "Ils peuvent manifester pacifiquement. " * 5  # >100 chars, modal cues
+        )
+        with patch(
+            "argumentation_analysis.plugins.coordinated_logic_plugin._get_openai_client"
+        ) as mock_client:
+            client = AsyncMock()
+            client.chat.completions.create = AsyncMock(return_value=mock_openai_response(llm_output))
+            mock_client.return_value = (client, "gpt-test", "key")
+
+            result = await plugin.extract_shared_modal_signature(full_text=cued_text)
+            data = json.loads(result)
+
+        assert data["atoms"] == ["citizen", "ObeysLaw", "peace"]
+        assert data["modal_present"] is True
+        assert data["count"] == 3
+
+    @pytest.mark.asyncio
+    async def test_filters_underscore_atoms(self, plugin, mock_openai_response):
+        """Underscored atoms filtered out (MlParser rejects them, #1327)."""
+        llm_output = json.dumps({"atoms": ["valid_atom", "bad_atom_name", "ok"]})
+        cued_text = "Il faut agir et on doit respecter la loi. " * 5
+        with patch(
+            "argumentation_analysis.plugins.coordinated_logic_plugin._get_openai_client"
+        ) as mock_client:
+            client = AsyncMock()
+            client.chat.completions.create = AsyncMock(return_value=mock_openai_response(llm_output))
+            mock_client.return_value = (client, "gpt-test", "key")
+
+            result = await plugin.extract_shared_modal_signature(full_text=cued_text)
+            data = json.loads(result)
+
+        # Underscores rejected by [A-Za-z][A-Za-z0-9]* -- only "ok" survives
+        assert data["atoms"] == ["ok"]
+
+    @pytest.mark.asyncio
+    async def test_cue_gate_no_modal_cues_returns_empty_without_llm_call(self, plugin):
+        """Anti-theater #1019 (#1396): non-modal text -> honest empty, NO LLM call."""
+        non_modal_text = (
+            "Socrates is a philosopher. Plato was his student. They discussed ideas "
+            "about justice and the nature of knowledge in ancient Athens. " * 3  # >100 chars
+        )
+        with patch(
+            "argumentation_analysis.plugins.coordinated_logic_plugin._get_openai_client"
+        ) as mock_client:
+            result = await plugin.extract_shared_modal_signature(full_text=non_modal_text)
+            data = json.loads(result)
+            # The cue-gate must short-circuit BEFORE any LLM client is built.
+            mock_client.assert_not_called()
+
+        assert data["atoms"] == []
+        assert data["modal_present"] is False
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_for_short_text(self, plugin):
+        result = await plugin.extract_shared_modal_signature(full_text="short")
+        data = json.loads(result)
+        assert data["atoms"] == []
+        assert data["modal_present"] is False
+
+    @pytest.mark.asyncio
+    async def test_returns_error_when_no_api_key(self, plugin):
+        # 'obligatoire' is an exact FR modal cue (substring 'doit' != 'doivent')
+        cued_text = "Il est obligatoire de voter et de respecter la loi. " * 5
+        with patch(
+            "argumentation_analysis.plugins.coordinated_logic_plugin._get_openai_client",
+            return_value=(None, "", ""),
+        ):
+            result = await plugin.extract_shared_modal_signature(full_text=cued_text)
+            data = json.loads(result)
+        assert data["atoms"] == []
+        assert data["modal_present"] is False
+        assert "error" in data
+
+
 # ── Integration: FormalAgent instructions reference plugin ──
 
 class TestFormalAgentInstructions:
@@ -208,6 +295,18 @@ class TestFormalAgentInstructions:
         assert "extract_shared_fol_signature" in instructions
         assert "generate_fol_formulas_with_shared_signature" in instructions
         assert "generate_pl_formulas_with_shared_atoms" in instructions
+
+    def test_instructions_reference_modal_lane(self):
+        """#1396: modal co-equal lane wired into ETAPE 0 + ETAPE 1."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import AGENT_CONFIG
+
+        instructions = AGENT_CONFIG["FormalAgent"]["instructions"]
+        # Modal Pass-1 inventory in ETAPE 0 (cue-gated)
+        assert "extract_shared_modal_signature" in instructions
+        # Modal Pass-2 consumes the shared atoms for inter-arg coherence
+        assert "shared_atoms" in instructions
+        # ETAPE 1 RAISONNEMENT rebalanced: 3 logics co-equal, cue-keyed
+        assert "co-egales" in instructions or "co-egales" in instructions.replace("é", "e")
 
     def test_instructions_have_etape_0_building(self):
         from argumentation_analysis.orchestration.conversational_orchestrator import AGENT_CONFIG

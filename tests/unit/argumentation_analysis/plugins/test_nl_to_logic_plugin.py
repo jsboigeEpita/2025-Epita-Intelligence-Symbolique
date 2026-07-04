@@ -115,6 +115,63 @@ class TestNLToLogicPlugin:
         assert "<>(protest)" in result["formula"]
 
     @pytest.mark.asyncio
+    async def test_translate_to_modal_passes_shared_atoms(self):
+        """#1396: plugin forwards shared_atoms to translator for inter-arg coherence."""
+        plugin = NLToLogicPlugin()
+
+        mock_result = MagicMock()
+        mock_result.original_text = "Citizens must vote"
+        mock_result.formula = "type(vote)\n\n[](vote)"
+        mock_result.logic_type = "modal"
+        mock_result.is_valid = True
+        mock_result.validation_message = "Valid modal"
+        mock_result.attempts = 1
+        mock_result.variables = {"vote": "vote"}
+        mock_result.confidence = 0.8
+
+        with patch(
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
+        ) as MockTranslator:
+            translate_mock = AsyncMock(return_value=mock_result)
+            MockTranslator.return_value.translate = translate_mock
+            await plugin.translate_to_modal(
+                "Citizens must vote",
+                shared_atoms='["vote", "obeysLaw"]',
+            )
+
+        # The plugin must forward the parsed shared atom list to the translator
+        # (plugin -> translator plumbing for ETAPE 0 -> ETAPE 1 coherence, #1396).
+        assert translate_mock.called
+        call_kwargs = translate_mock.call_args
+        assert call_kwargs.kwargs.get("logic_type") == "modal"
+        assert call_kwargs.kwargs.get("shared_atoms") == ["vote", "obeysLaw"]
+
+    @pytest.mark.asyncio
+    async def test_translate_to_modal_shared_atoms_invalid_json_falls_back(self):
+        """#1396: malformed shared_atoms JSON -> unconstrained translation (no crash)."""
+        plugin = NLToLogicPlugin()
+
+        mock_result = MagicMock()
+        mock_result.original_text = "x"
+        mock_result.formula = ""
+        mock_result.logic_type = "modal"
+        mock_result.is_valid = True
+        mock_result.validation_message = "ok"
+        mock_result.attempts = 1
+        mock_result.variables = {}
+        mock_result.confidence = 0.0
+
+        with patch(
+            "argumentation_analysis.services.nl_to_logic.NLToLogicTranslator"
+        ) as MockTranslator:
+            translate_mock = AsyncMock(return_value=mock_result)
+            MockTranslator.return_value.translate = translate_mock
+            await plugin.translate_to_modal("x", shared_atoms="not json{")
+
+        # Falls back to None (unconstrained) rather than raising
+        assert translate_mock.call_args.kwargs.get("shared_atoms") is None
+
+    @pytest.mark.asyncio
     async def test_translate_to_modal_honest_absent(self):
         """Modal-free input -> valid empty result (honest absent, #1391/#1019)."""
         plugin = NLToLogicPlugin()

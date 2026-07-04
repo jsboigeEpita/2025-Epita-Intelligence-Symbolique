@@ -92,20 +92,36 @@ class NLToLogicPlugin:
             "Translate a natural language argument into modal logic (alethic "
             "and deontic) using Tweety MlParser syntax. "
             "Uses LLM with Tweety validation and retry loop. "
-            "Input: plain text argument that expresses necessity/possibility "
-            "(must, may, necessarily, possibly). "
+            "Input: 'text' (plain text argument that expresses necessity/possibility "
+            "must, may, necessarily, possibly) and optional 'shared_atoms' (JSON "
+            "list of modal atom names from extract_shared_modal_signature, for "
+            "inter-argument coherence #1396). "
             "Returns JSON with 'formula' (a modal belief set: constant "
             "declarations + [] / <> formulas), 'logic_type', 'is_valid', "
             "'confidence'. Returns is_valid=true with empty formula when the "
             "input carries no modal content (honest absent, #1391)."
         ),
     )
-    async def translate_to_modal(self, text: str) -> str:
-        """Translate NL text to modal logic (#1391, mirror of translate_to_fol)."""
+    async def translate_to_modal(self, text: str, shared_atoms: str = "") -> str:
+        """Translate NL text to modal logic (#1391, mirror of translate_to_fol).
+
+        Args:
+            text: Natural language argument text.
+            shared_atoms: Optional JSON list of shared modal atom names
+                (from extract_shared_modal_signature, #1396). Empty string = no
+                shared inventory (backward-compatible with #1392 callers).
+        """
         from argumentation_analysis.services.nl_to_logic import NLToLogicTranslator
 
+        parsed_atoms = None
+        if shared_atoms:
+            try:
+                parsed_atoms = json.loads(shared_atoms) if isinstance(shared_atoms, str) else shared_atoms
+            except json.JSONDecodeError:
+                parsed_atoms = None  # fall back to unconstrained translation
+
         translator = NLToLogicTranslator(max_retries=3, logic_type="modal")
-        result = await translator.translate(text, logic_type="modal")
+        result = await translator.translate(text, logic_type="modal", shared_atoms=parsed_atoms)
 
         return json.dumps(
             {
