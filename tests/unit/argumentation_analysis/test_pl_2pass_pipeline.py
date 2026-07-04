@@ -259,7 +259,7 @@ class TestBackwardCompat:
         assert "p => q" in result["formulas"]
 
     def test_explicit_formulas_context_still_works(self):
-        """When context already has formulas, use them directly."""
+        """When context already has formulas, use them (sanitized for Tweety)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_propositional_logic,
         )
@@ -273,7 +273,13 @@ class TestBackwardCompat:
         )
 
         assert result is not None
-        assert "a & b" in result["formulas"]
+        # PLFormulaSanitizer (#537) normalizes formulas for Tweety: the PL AND
+        # operator is "&&" (not "&"), so "a & b" -> "a && b". Already-valid
+        # operators like "=>" are preserved (so "a => c" survives as-is). The
+        # sibling test_existing_translations_path_still_works passes because
+        # "p => q" has no operator needing normalization.
+        assert "a && b" in result["formulas"]  # sanitized "&" -> "&&" (#537)
+        assert "a => c" in result["formulas"]  # valid operator, preserved
 
     def test_no_state_object_graceful(self):
         """Should work even without _state_object in context."""
