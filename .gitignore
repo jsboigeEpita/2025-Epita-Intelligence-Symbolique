@@ -235,3 +235,15 @@ scripts/_write_c03_report.py
 scripts/run_baselines.py
 docs/reports/spectacular_perf_bench.md
 docs/reports/spectacular_vs_baseline.md
+
+# === Run-artifacts leak guard (#1396 R547) ===
+# The spectacular conversational runner dumps per-arg/per-fallacy trace files
+# at repo root during a run (trace_arg_*, trace_fallacy_*, reanalysis_arg_*).
+# These contain corpus-derived content (privacy: never commit). They have
+# leaked as untracked-root files repeatedly (R543, R544, R547). Gitignore the
+# pattern so runs never surface them in `git status`. Move existing ones to a
+# gitignored scratchpad before/after runs.
+/trace_arg_*
+/trace_fallacy_*
+/reanalysis_arg_*
+
