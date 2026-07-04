@@ -542,6 +542,7 @@ async def run_conversational_analysis(
     source_metadata: Optional[Dict[str, str]] = None,
     selector_context: Optional[Dict[str, Any]] = None,
     max_total_turns: Optional[int] = None,
+    render_restitution: bool = False,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -573,6 +574,12 @@ async def run_conversational_analysis(
             (not adjusted at runtime); hitting it appends a ``CapBreachRecord``
             and ends the run with status ``BUDGET_EXHAUSTED`` (#708 fail-loud).
             None defaults to the sum of the three macro-phase caps.
+        render_restitution: CONV-D #1335 — if True, generate the 3-act
+            restitution report from the completed state and attach it under
+            ``result["restitution_report"]``. The conversational path does not
+            run the act-generation phases, so the acts are produced from the
+            completed ``UnifiedAnalysisState`` (same renderer/acts as the
+            pipeline path). Fail-loud-non-fatal: reporting never fails the run.
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -605,6 +612,7 @@ async def run_conversational_analysis(
             source_metadata=source_metadata,
             selector_context=selector_context,
             max_total_turns=max_total_turns,
+            render_restitution=render_restitution,
         )
 
 
@@ -624,6 +632,7 @@ async def _run_conversational_analysis_inner(
     source_metadata: Optional[Dict[str, str]] = None,
     selector_context: Optional[Dict[str, Any]] = None,
     max_total_turns: Optional[int] = None,
+    render_restitution: bool = False,
 ) -> Dict[str, Any]:
     """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
     start_time = time.time()
@@ -1247,7 +1256,10 @@ async def _run_conversational_analysis_inner(
     # Generate trace report (#208-S)
     trace_report = trace.generate_report()
 
-    result = {
+    # Dict[str, Any] (matches the return type): the literal holds heterogeneous
+    # value types (state objects, counts, lists, the RenderedReport), and a
+    # narrow inference rejects later heterogeneous assignments (#1335 wiring).
+    result: Dict[str, Any] = {
         "mode": "conversational",
         "workflow_name": "spectacular_analysis" if spectacular else "conversational",
         "phases": [p["name"] for p in phase_configs],
@@ -1325,6 +1337,30 @@ async def _run_conversational_analysis_inner(
         f"Conversational analysis complete: {len(conversation_log)} messages, "
         f"{non_empty} state fields, {duration:.1f}s"
     )
+
+    # CONV-D #1335 périmètre 1+2: assemble the readable 3-act restitution report
+    # from the completed conversational state. The conversational path does not
+    # run the act-generation phases (it runs Extraction/Formal/Synthesis
+    # macro-phases via AgentGroupChat), so the acts are generated here from the
+    # completed state, then rendered. Honest on any state — missing/unavailable
+    # acts are named by the renderer, never fabricated (#1019/#369). Reporting
+    # never fails the run (same fail-loud-non-fatal idiom as the pipeline path).
+    if render_restitution and state is not None:
+        try:
+            from argumentation_analysis.reporting.restitution.conversational_adapter import (
+                generate_and_render_for_conversational_state,
+            )
+
+            result["restitution_report"] = (
+                await generate_and_render_for_conversational_state(state, text)
+            )
+        except Exception as exc:  # noqa: BLE001 — reporting must never fail the run
+            logger.warning(
+                "Conversational restitution rendering failed (fail-loud, "
+                "non-fatal): %s",
+                exc,
+            )
+            result["restitution_report"] = None
 
     return result
 
