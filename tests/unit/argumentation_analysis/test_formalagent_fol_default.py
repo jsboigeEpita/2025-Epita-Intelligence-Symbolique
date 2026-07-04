@@ -1,10 +1,9 @@
-"""Unit tests for FormalAgent FOL-by-default behavior (#552).
+"""Unit tests for FormalAgent translation logic (#552, rebalanced #1396).
 
-Tests verify:
-- FormalAgent instructions specify FOL as default (not gated on quantifiers)
-- PL is listed as fallback when FOL fails
-- Instructions preserve shared state consultation (ETAPE 0)
-- Instructions preserve validation (ETAPE 2), Dung (ETAPE 3), storage (ETAPE 4)
+#1396 retired the 'FOL-by-default' bias that starved modal in the coordinated
+pipeline (R544/R545 root cause). The 3 logics (PL/FOL/modal) are now co-equal,
+cue-keyed. Tests verify the rebalanced behavior while preserving the FOL
+rationale content (relations/predicates, #1375) and the ETAPE 0-4 structure.
 """
 
 import pytest
@@ -59,14 +58,24 @@ class TestFormalAgentFOLDefault:
         assert "Si l'argument contient des quantificateurs" not in instructions
 
     def test_fol_rationale_present(self):
-        """Instructions should explain WHY FOL is default."""
+        """#1396: FOL rationale preserved in CONTENT while 'par defaut' bias retired.
+
+        The ETAPE 1 RAISONNEMENT was rebalanced from 'FOL par defaut' to 3
+        co-equal cue-keyed logics (#1396 anti-pendule: retire the bias that
+        starved modal, don't replace it). The FOL rationale CONTENT
+        (relations/predicates between entities, #1375) is preserved.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             AGENT_CONFIG,
         )
 
         instructions = AGENT_CONFIG["FormalAgent"]["instructions"]
-        assert "logique par defaut" in instructions
+        # FOL rationale content preserved (#1375 intent)
         assert "relations" in instructions or "predicats" in instructions
+        # The bias phrase 'logique par defaut' is RETIRED (#1396 anti-pendule)
+        assert "logique par defaut" not in instructions
+        # 3 logics co-equal cue-keyed rationale is present
+        assert "co-egales" in instructions
 
     def test_etape_0_preserved(self):
         """ETAPE 0 (shared state consultation) should still be present."""

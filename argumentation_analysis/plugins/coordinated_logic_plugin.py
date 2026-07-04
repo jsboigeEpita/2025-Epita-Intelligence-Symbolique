@@ -20,6 +20,26 @@ from semantic_kernel.functions import kernel_function
 logger = logging.getLogger(__name__)
 
 
+# Modal cues (FR) gating the modal Pass-1 inventory (#1396). The coordinated
+# pipeline primed only PL+FOL inventories in ETAPE 0, starving modal by
+# construction (R544/R545). extract_shared_modal_signature is cue-gated so a
+# modal-free source returns an honest-empty inventory WITHOUT an LLM call
+# (anti-theater #1019: no fabricated modal atoms on non-modal text).
+MODAL_CUES: List[str] = [
+    "doit", "faut", "peut", "necessairement", "nécessairement",
+    "possible", "obligatoire", "interdit", "permis", "exige",
+    "exigeons", "devons", "pourront", " pourraient", "devraient",
+]
+
+
+def _has_modal_cues(text: str) -> bool:
+    """Return True iff the text carries any FR modal cue (lowercased match)."""
+    if not text:
+        return False
+    lowered = text.lower()
+    return any(cue.strip() in lowered for cue in MODAL_CUES)
+
+
 def _parse_json_from_llm(raw: str) -> dict:
     """Extract JSON from LLM response, handling markdown fences and noise."""
     text = raw.strip()
@@ -169,6 +189,79 @@ class CoordinatedLogicPlugin:
         except Exception as e:
             logger.debug(f"FOL signature extraction failed: {e}")
             return json.dumps({"sorts": {}, "predicates": {}, "constants": {}, "error": str(e)})
+
+    @kernel_function(
+        name="extract_shared_modal_signature",
+        description=(
+            "Extract a shared modal signature (modal atoms) from full text. "
+            "Pass 1 of the modal pipeline (#1396). Returns JSON with 'atoms' "
+            "(list of Tweety MlParser atom identifiers [A-Za-z][A-Za-z0-9]*, "
+            "no underscores) and 'modal_present' (bool). Cue-gated: if the text "
+            "carries NO FR modal cue (doit, peut, necessairement, possible, "
+            "obligatoire...), returns modal_present=false with an empty atom "
+            "list and NO LLM call (honest absent, #1019). Call ONCE per source "
+            "before translate_to_modal so modal atoms stay consistent across args."
+        ),
+    )
+    async def extract_shared_modal_signature(self, full_text: str) -> str:
+        empty = json.dumps({"atoms": [], "modal_present": False})
+        if not full_text or len(full_text) < 100:
+            return json.dumps({"atoms": [], "modal_present": False, "error": "Text too short"})
+
+        # Anti-theater #1019 (#1396): a modal-free source yields an honest-empty
+        # inventory WITHOUT burning an LLM call. This is the cue-gate.
+        if not _has_modal_cues(full_text):
+            logger.info("Modal Pass 1: no modal cues -> honest-empty signature (no LLM call)")
+            return empty
+
+        client, model_id, _ = _get_openai_client()  # type: ignore[no-untyped-call]  # 5th call site (#1396)
+        if client is None:
+            return json.dumps({"atoms": [], "modal_present": False, "error": "No API key"})
+
+        prompt = (
+            "You are a formal logic expert. Analyze the text and extract a "
+            "MODAL logic signature -- the atomic propositions on which modal "
+            "operators (necessity [] / possibility <>) and deontic operators "
+            "(obligation [] / permission <>) will apply.\n\n"
+            "Output a JSON object with:\n"
+            '- "atoms": list of atom identifiers, each matching [A-Za-z][A-Za-z0-9]* '
+            "(NO underscores -- Tweety MlParser rejects them). CamelCase or "
+            "lowercase alphanum, e.g. [\"citizen\", \"obeysLaw\", \"peace\"].\n"
+            '- "modal_flavors": list subset of ["alethic", "deontic"] present.\n\n'
+            "Rules:\n"
+            "- Atoms are PROPOSITIONS (what is necessary/possible/obligatory), "
+            "not entities. Group related propositions.\n"
+            "- Keep atoms generic enough to be reused across several arguments "
+            "(shared inventory) but specific enough to be meaningful.\n"
+            "- If the text genuinely has no modal flavor despite the cue "
+            "detection, return an empty atoms list.\n\n"
+            f"Text:\n{full_text[:4000]}"
+        )
+
+        try:
+            resp = await client.chat.completions.create(
+                model=model_id,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            raw = resp.choices[0].message.content or ""
+            sig_data = _parse_json_from_llm(raw)
+            raw_atoms = sig_data.get("atoms", []) or []
+            # Defense-in-depth: filter to legal MlParser identifiers (#1327).
+            valid_atoms = [a for a in raw_atoms if re.match(r"^[A-Za-z][A-Za-z0-9]*$", a)]
+            flavors = sig_data.get("modal_flavors", []) or []
+
+            logger.info(f"Modal Pass 1: {len(valid_atoms)} modal atoms, flavors={flavors}")
+            return json.dumps(
+                {
+                    "atoms": valid_atoms,
+                    "modal_flavors": flavors,
+                    "modal_present": len(valid_atoms) > 0,
+                    "count": len(valid_atoms),
+                }
+            )
+        except Exception as e:
+            logger.debug(f"Modal signature extraction failed: {e}")
+            return json.dumps({"atoms": [], "modal_present": False, "error": str(e)})
 
     # ── Pass 2: Per-argument formula generation ──
 

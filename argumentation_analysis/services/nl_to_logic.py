@@ -276,12 +276,17 @@ class NLToLogicTranslator:
         self,
         text: str,
         logic_type: Optional[str] = None,
+        shared_atoms: Optional[List[str]] = None,
     ) -> TranslationResult:
         """Translate a single NL argument to formal logic.
 
         Args:
             text: Natural language argument text.
             logic_type: Override default logic type.
+            shared_atoms: Optional shared modal atom inventory (ETAPE 0 Pass 1,
+                #1396). When provided for ``logic_type='modal'``, the modal
+                translator constrains its atoms to this inventory for
+                inter-argument coherence. Ignored for PL/FOL.
 
         Returns:
             TranslationResult with formula, validity, and metadata.
@@ -290,7 +295,7 @@ class NLToLogicTranslator:
 
         # Try LLM-based translation with retry loop
         try:
-            return await self._translate_with_llm(text, lt)
+            return await self._translate_with_llm(text, lt, shared_atoms=shared_atoms)
         except Exception as e:
             logger.warning(f"LLM translation failed, using heuristic: {e}")
             return self._translate_heuristic(text, lt)
@@ -342,6 +347,7 @@ class NLToLogicTranslator:
         self,
         text: str,
         logic_type: str,
+        shared_atoms: Optional[List[str]] = None,
     ) -> TranslationResult:
         """Translate via LLM with validate-retry loop."""
         from openai import AsyncOpenAI
@@ -367,11 +373,25 @@ class NLToLogicTranslator:
 
         client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
-        system_prompt = (
-            PL_SYSTEM_PROMPT
-            if logic_type == "propositional"
-            else FOL_SYSTEM_PROMPT if logic_type == "fol" else MODAL_SYSTEM_PROMPT
-        )
+        # #1396: when a shared modal atom inventory (ETAPE 0 Pass 1) is provided,
+        # extend the base MODAL_SYSTEM_PROMPT to constrain the translator to it
+        # for inter-argument coherence. Anti-pendule: EXTEND the base prompt,
+        # do not rewrite it (preserves the #1391 modal grammar contract).
+        if logic_type == "modal" and shared_atoms:
+            shared_str = ", ".join(shared_atoms)
+            system_prompt = MODAL_SYSTEM_PROMPT + (
+                f"\n\nSHARED MODAL ATOM INVENTORY (#1396): reuse these atoms for "
+                f"coherence across arguments: [{shared_str}]. Prefer them when "
+                f"a proposition matches; you MAY add a new atom only if the "
+                f"argument requires a proposition none of them covers. Every "
+                f"atom (shared or new) must still match [A-Za-z][A-Za-z0-9]*."
+            )
+        else:
+            system_prompt = (
+                PL_SYSTEM_PROMPT
+                if logic_type == "propositional"
+                else FOL_SYSTEM_PROMPT if logic_type == "fol" else MODAL_SYSTEM_PROMPT
+            )
         retry_template = (
             PL_RETRY_PROMPT
             if logic_type == "propositional"
