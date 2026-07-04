@@ -79,8 +79,13 @@ class TestWideNetCandidates:
         result = asyncio.get_event_loop().run_until_complete(
             plugin._wide_net_candidates("Some argument text here")
         )
-        assert "2" in result  # Ad hominem PK
-        assert "175" in result  # Manipulation mentale PK
+        # FB-19 (#1107): _wide_net_candidates tries the deep index (depth 2-3)
+        # BEFORE falling back to root PKs (see test_fb19_beam_descent.py
+        # TestWideNetDeepMapping). "Ad hominem abusif" is a depth-3 leaf
+        # (PK 2_1_1) → deep index returns the leaf, not the root "2".
+        # "Manipulation mentale" has no deep match → root fallback PK 175.
+        assert "2_1_1" in result  # Ad hominem abusif → deep leaf PK
+        assert "175" in result  # Manipulation mentale root PK (deep miss → root)
 
     def test_handles_empty_response(self):
         plugin = _make_plugin()
