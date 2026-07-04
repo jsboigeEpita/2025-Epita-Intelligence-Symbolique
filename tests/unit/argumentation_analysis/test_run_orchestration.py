@@ -66,3 +66,66 @@ class TestRunOrchestrationCLI:
         # Should list at least the standard workflows
         assert "standard" in result.stdout
         assert "light" in result.stdout
+
+    def test_render_restitution_flag_advertised(self):
+        """CONV-D #1335: --help advertises --render-restitution (CLI reachability)."""
+        result = subprocess.run(
+            [sys.executable, str(CLI_SCRIPT), "--help"],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            cwd=str(CLI_SCRIPT.parent.parent),
+        )
+        assert result.returncode == 0
+        assert "--render-restitution" in result.stdout
+        assert "--restitution-output" in result.stdout
+
+
+# ============================================================================
+# surface_restitution helper — CONV-D #1335
+# ============================================================================
+
+
+class TestSurfaceRestitution:
+    """Unit tests for the surface_restitution CLI helper (#1335)."""
+
+    def test_noop_when_report_absent(self, capsys, tmp_path):
+        from argumentation_analysis.run_orchestration import surface_restitution
+
+        # No restitution_report key → silent no-op (no print, no write).
+        surface_restitution({}, str(tmp_path / "out.md"))
+        captured = capsys.readouterr()
+        assert "Restitution" not in captured.out
+
+    def test_prints_gate_band_and_writes_markdown(self, capsys, tmp_path):
+        from argumentation_analysis.run_orchestration import surface_restitution
+
+        class _Verdict:
+            band = "PASS"
+
+        class _Report:
+            markdown = "# Restitution corpus_A\n\nActe I…"
+            verdict = _Verdict()
+
+        out = tmp_path / "nested" / "report.md"
+        surface_restitution({"restitution_report": _Report()}, str(out))
+        # the gate band + char count are surfaced in the summary
+        captured = capsys.readouterr()
+        assert "gate=PASS" in captured.out
+        # the markdown is written to the (nested) path
+        assert out.exists()
+        assert out.read_text(encoding="utf-8").startswith("# Restitution")
+
+    def test_prints_verdict_without_writing_when_no_path(self, capsys, tmp_path):
+        from argumentation_analysis.run_orchestration import surface_restitution
+
+        class _Verdict:
+            band = "WARN"
+
+        class _Report:
+            markdown = "x"
+            verdict = _Verdict()
+
+        surface_restitution({"restitution_report": _Report()}, None)
+        captured = capsys.readouterr()
+        assert "gate=WARN" in captured.out
