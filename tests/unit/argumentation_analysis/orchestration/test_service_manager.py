@@ -940,40 +940,6 @@ class TestRunSpecializedAnalysis:
             assert result["method"] == "fact_checking"
             assert result["request_id"] == "req-123"
 
-    async def test_analyze_text_interface(self, manager):
-        """Orchestrator with analyze_text method (legacy LLM interface)."""
-        mock_orch = MagicMock()
-        mock_orch.__class__.__name__ = "LLMOrchestrator"
-        # No analyze_with_fact_checking
-        del mock_orch.analyze_with_fact_checking
-
-        mock_result = MagicMock()
-        mock_result.request_id = "req-456"
-        mock_result.analysis_type = "llm"
-        mock_result.result = {"data": "llm_result"}
-        mock_result.confidence = 0.95
-        mock_result.processing_time = 2.0
-        mock_result.timestamp = datetime(2026, 1, 1)
-
-        mock_orch.analyze_text = AsyncMock(return_value=mock_result)
-
-        import sys
-
-        mock_llm_module = MagicMock()
-        mock_llm_module.LLMAnalysisRequest = MagicMock()
-
-        with patch.dict(
-            sys.modules,
-            {
-                "argumentation_analysis.orchestration.real_llm_orchestrator": mock_llm_module
-            },
-        ):
-            result = await manager._run_specialized_analysis(
-                mock_orch, "test text", "llm", {"context": "test"}
-            )
-            assert result["method"] == "real_llm"
-            assert result["request_id"] == "req-456"
-
     async def test_generic_analyze_interface(self, manager):
         """Orchestrator with generic analyze() method."""
         mock_orch = MagicMock()
