@@ -295,17 +295,15 @@ class TestInvokeCollaborativeAnalysis:
         """Without API key, should use heuristic fallback."""
         context = {"phase_extract_output": {"arguments": [{"text": "Test argument"}]}}
 
-        # Blank BOTH providers so the toggle (now honored via resolve_chat_endpoint,
-        # #1079) resolves to no key → heuristic fallback. Robust to --allow-dotenv
-        # or OS env carrying OPENROUTER_*.
-        with patch.dict(
-            "os.environ",
-            {
-                "OPENAI_API_KEY": "",
-                "OPENROUTER_API_KEY": "",
-                "OPENROUTER_BASE_URL": "",
-            },
-            clear=False,
+        # ATT-1 #1336: collection-order pollution — patching os.environ is not
+        # enough in the full suite (a prior test leaks a mock/state that re-
+        # exposes the client). Make this robust by patching the canonical
+        # resolver (option B, approved coord R558) → api_key="" hermetically,
+        # regardless of ambient env / leaked mocks. The resolver is imported
+        # lazily inside _invoke_collaborative_analysis, so patch at its source.
+        with patch(
+            "argumentation_analysis.core.llm_service.resolve_chat_endpoint",
+            return_value=("", "", ""),
         ):
             result = await _invoke_collaborative_analysis("test text", context)
 

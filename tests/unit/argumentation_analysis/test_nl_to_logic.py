@@ -144,22 +144,25 @@ class TestNLToLogicTranslator:
     async def test_translate_no_api_key_uses_heuristic(self):
         """Without API key, translate falls back to heuristic."""
         translator = self._make_translator()
-        # ATT-1 #1336: isolate BOTH API channels. The prod translator
-        # (_translate_with_llm) checks OpenRouter FIRST, then OpenAI; patching
-        # only OPENAI_API_KEY with clear=False leaks OPENROUTER_API_KEY from the
-        # real .env, routing to the LLM path (high confidence) instead of the
-        # heuristic. Hermétique isolation = patch both channels.
-        with patch.dict(
-            "os.environ",
-            {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": ""},
-            clear=False,
-        ):
+        # ATT-1 #1336: collection-order pollution — patching os.environ is not
+        # enough in the full suite (a prior test leaks a mock/state that re-
+        # exposes an api_key, routing to the LLM path). Make this robust by
+        # patching the AsyncOpenAI constructor to raise (option B, approved
+        # coord R558): translate() catches and falls back to heuristic, so this
+        # tests the "LLM unavailable → heuristic" intent hermetically,
+        # independent of ambient env / leaked mocks.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no key")):
             result = await translator.translate(
                 "All men are mortal. Socrates is a man. Therefore Socrates is mortal.",
                 logic_type="propositional",
             )
         assert result.is_valid is True
-        assert result.confidence <= 0.3  # heuristic confidence
+        # Heuristic markers (#1019 anti-théâtre): the heuristic path sets
+        # confidence=0.3 and a "Heuristic translation (no LLM)" message. Assert
+        # both so a silent LLM-path leak (confidence=0.7+, LLM message) fails
+        # loud rather than passing on the wrong branch.
+        assert result.confidence == 0.3
+        assert "Heuristic" in result.validation_message
 
     @pytest.mark.asyncio
     async def test_translate_with_mock_llm(self):
@@ -374,12 +377,11 @@ class TestNLToLogicPipelineIntegration:
                 ],
             },
         }
-        # ATT-1 #1336: isolate BOTH API channels (see test_translate_no_api_key_uses_heuristic).
-        with patch.dict(
-            "os.environ",
-            {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": ""},
-            clear=False,
-        ):
+        # ATT-1 #1336: collection-order pollution — patching os.environ is not
+        # enough in the full suite (see test_translate_no_api_key_uses_heuristic).
+        # Patch the AsyncOpenAI constructor (option B, coord R558) so the LLM
+        # path fails hermetically → translate() catches → heuristic.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no key")):
             result = await _invoke_nl_to_logic("test input text", context)
 
         assert "translations" in result

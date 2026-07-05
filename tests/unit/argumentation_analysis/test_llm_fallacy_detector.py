@@ -32,8 +32,16 @@ class TestLLMFallacyDetector:
     def test_is_not_available_without_api_key(self):
         """Detector unavailable without OPENAI_API_KEY."""
         detector = self._make_detector()
-        with patch.dict("os.environ", {}, clear=True):
-            detector._available = None
+        # ATT-1 #1336: collection-order pollution — a prior test in the full
+        # suite leaks a mock/state such that, even with clear=True, the LLM
+        # client resolves as available. Make this test robust by patching the
+        # canonical resolver (option B, approved coord R558) so api_key is ""
+        # hermetically, regardless of ambient env / leaked mocks.
+        with patch(
+            "argumentation_analysis.core.llm_service.resolve_chat_endpoint",
+            return_value=("", "", ""),
+        ):
+            detector._available = None  # reset cache
             assert not detector.is_available()
 
     async def test_detect_async_parses_response(self):
