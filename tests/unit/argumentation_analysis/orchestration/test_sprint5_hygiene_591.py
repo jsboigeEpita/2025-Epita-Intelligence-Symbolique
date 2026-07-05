@@ -96,7 +96,13 @@ class TestDungIdempotency:
         """conversational_orchestrator must skip Dung if dung_frameworks is non-empty."""
         from argumentation_analysis.orchestration import conversational_orchestrator
 
-        source = inspect.getsource(conversational_orchestrator.run_conversational_analysis)
+        # The spectacular post-processing (Dung/ASPIC/Modal hooks) lives in the
+        # _run_conversational_analysis_inner body — run_conversational_analysis
+        # is now a thin wrapper that delegates to it. Inspect the body that
+        # actually holds the guard so the assertion survives the extraction.
+        source = inspect.getsource(
+            conversational_orchestrator._run_conversational_analysis_inner
+        )
         # Check that the guard 'not state.dung_frameworks' appears in the Dung block
         assert "not state.dung_frameworks" in source, (
             "Dung hook should have idempotency guard checking "
@@ -111,7 +117,12 @@ class TestAspicIdempotency:
         """conversational_orchestrator must skip ASPIC if aspic_results is non-empty."""
         from argumentation_analysis.orchestration import conversational_orchestrator
 
-        source = inspect.getsource(conversational_orchestrator.run_conversational_analysis)
+        # See test_conversational_orchestrator_dung_guard: the guard moved into
+        # _run_conversational_analysis_inner when the body was extracted from
+        # the (now wrapper) run_conversational_analysis.
+        source = inspect.getsource(
+            conversational_orchestrator._run_conversational_analysis_inner
+        )
         assert "not state.aspic_results" in source, (
             "ASPIC hook should have idempotency guard checking "
             "'not state.aspic_results' before invocation"
