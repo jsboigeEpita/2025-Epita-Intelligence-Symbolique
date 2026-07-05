@@ -144,7 +144,16 @@ class TestNLToLogicTranslator:
     async def test_translate_no_api_key_uses_heuristic(self):
         """Without API key, translate falls back to heuristic."""
         translator = self._make_translator()
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        # ATT-1 #1336: isolate BOTH API channels. The prod translator
+        # (_translate_with_llm) checks OpenRouter FIRST, then OpenAI; patching
+        # only OPENAI_API_KEY with clear=False leaks OPENROUTER_API_KEY from the
+        # real .env, routing to the LLM path (high confidence) instead of the
+        # heuristic. Hermétique isolation = patch both channels.
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": ""},
+            clear=False,
+        ):
             result = await translator.translate(
                 "All men are mortal. Socrates is a man. Therefore Socrates is mortal.",
                 logic_type="propositional",
@@ -365,7 +374,12 @@ class TestNLToLogicPipelineIntegration:
                 ],
             },
         }
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        # ATT-1 #1336: isolate BOTH API channels (see test_translate_no_api_key_uses_heuristic).
+        with patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": ""},
+            clear=False,
+        ):
             result = await _invoke_nl_to_logic("test input text", context)
 
         assert "translations" in result
