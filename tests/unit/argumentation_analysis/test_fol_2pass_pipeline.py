@@ -119,7 +119,14 @@ class TestFolTwoPassPipeline:
             _invoke_fol_reasoning,
         )
 
-        text = "Socrates argues about justice. Plato disagrees."
+        # Text must exceed the 100-char gate (invoke_callables.py:5530) so the
+        # 2-pass pipeline actually runs and consumes the pass-1 signature.
+        # The original 47-char text fell through to the NL fallback and never
+        # reached pass-2, leaving formulas empty — a stillborn test since #544.
+        text = (
+            "Socrates argues about justice in the city of Athens. "
+            "Plato disagrees and proposes a different theory of justice."
+        )
         state = UnifiedAnalysisState(text)
         ctx = _make_context(text, state)
 
@@ -146,6 +153,11 @@ class TestFolTwoPassPipeline:
         assert result is not None
         assert "formulas" in result
         assert len(result["formulas"]) > 0
+        # Honor the test name: pass-2 formulas must reference predicates drawn
+        # from the pass-1 shared signature (Argues/Disagrees), proving the
+        # signature is consumed by pass-2 — not ignored.
+        joined = " ".join(result["formulas"])
+        assert "Argues" in joined or "Disagrees" in joined
 
     def test_fallback_when_no_api_key(self):
         """Without API key, should fall back to template."""
