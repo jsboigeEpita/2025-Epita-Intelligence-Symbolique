@@ -140,6 +140,40 @@ jobs:
           }
           Write-Host "═══════════════════════════════════════════════"
 
+      - name: Fail-loud guard — JVM-startup skip storm (#1385, anti-théâtre #1019)
+        # A JVM-startup failure on the runner makes an autouse conftest guard
+        # (tests/conftest.py:522) skip ~98% of the suite with the message
+        # "Saut du test car la JVM n'est pas réellement démarrée". With 0
+        # failures the job concludes "success" — a green badge from an infra
+        # failure that decided nothing (#1385). This guard fails the job
+        # honestly when that specific signature dominates. It is targeted to
+        # the JVM skip message, NOT the raw skip rate, so legitimate skips
+        # (orphan-model, build-absent, requires_api) never trip it.
+        if: always() && env.API_KEYS_CONFIGURED == 'true'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path pytest_report.xml)) {
+            Write-Host "ℹ️ No pytest_report.xml — JVM-startup guard skipped (tests produced no report; failure already captured upstream)."
+            exit 0
+          }
+          [xml]$xml = Get-Content pytest_report.xml
+          $total = [int]$xml.testsuites.tests
+          $content = Get-Content pytest_report.xml -Raw
+          $jvmSignature = "JVM n'est pas réellement démarrée"
+          # Count <skipped message="...signature..."> occurrences (scoped to
+          # skip messages, so a signature mention in test names / stdout cannot
+          # inflate the count).
+          $jvmSkipCount = ([regex]::Matches($content, 'message="[^"]*' + [regex]::Escape($jvmSignature))).Count
+          $pct = if ($total -gt 0) { [math]::Round(100 * $jvmSkipCount / $total) } else { 0 }
+          Write-Host "🔍 JVM-startup guard: $jvmSkipCount / $total tests ($pct%) skipped with JVM-not-started signature."
+          if ($total -gt 0 -and ($jvmSkipCount / $total) -gt 0.5) {
+            Write-Host "❌ FAIL-LOUD: $jvmSkipCount tests ($pct%) were skipped because the JVM did not start."
+            Write-Host "   The run decided nothing — a green badge here would be theater (#1385, #1019)."
+            Write-Host "   Likely cause: transient Temurin/JVM-setup flake on the runner. Re-run; if it persists, JVM init is broken on CI (urgent)."
+            exit 1
+          }
+          Write-Host "✅ JVM-startup guard OK — JVM-dependent tests ran (or skipped for legitimate non-JVM reasons)."
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
