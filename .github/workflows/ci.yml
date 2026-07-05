@@ -72,6 +72,26 @@ jobs:
           use-mamba: true  # Résolution 5-10x plus rapide
           auto-update-conda: false  # Évite instabilités cache
 
+      # Provision the React frontend build so the Starlette app imports cleanly
+      # (interface_web/app.py mounts StaticFiles(directory=.../build) at module
+      # import — the build dir is gitignored, CLAUDE.md prerequisite). Without
+      # this, 29 starlette/proxy tests skip via the #1363 skipif (honest absence).
+      # With it, CI genuinely tests the starlette surface (#1362 real fix).
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'  # LTS, compatible with react-scripts 5.0.1
+          cache: 'npm'
+          cache-dependency-path: services/web_api/interface-web-argumentative/package-lock.json
+
+      - name: Build React frontend
+        working-directory: services/web_api/interface-web-argumentative
+        shell: pwsh
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          Write-Host "✅ React build produced: $((Get-ChildItem -Recurse build | Measure-Object).Count) files"
+
       - name: Check API keys availability
         id: check_secrets
         shell: pwsh
