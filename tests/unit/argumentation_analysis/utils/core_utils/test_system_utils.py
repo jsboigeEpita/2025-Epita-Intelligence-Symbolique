@@ -189,19 +189,17 @@ def test_run_shell_command_with_work_dir(mock_subprocess_run, tmp_path):
 def test_run_shell_command_empty_command_string(caplog):
     """Teste le comportement avec une chaîne de commande vide."""
     # shlex.split('') -> []
-    # subprocess.run([]) lèvera probablement une exception (FileNotFoundError ou autre)
-    # car il n'y a pas de commande à exécuter.
+    # subprocess.run([]) lève OSError [WinError 87] sur Windows (commande vide),
+    # attrapée par le bloc `except Exception` générique → retourne -11.
     ret_code, out, err = run_shell_command("")
 
-    assert (
-        ret_code == -11
-    )  # OSError: [WinError 87] Paramètre incorrect est capturée par le except Exception générique
-    assert "Paramètre incorrect" in err  # Vérifie une partie du message de OSError
-    # Le log devrait indiquer une erreur générique car OSError est attrapée par le bloc Exception
-    assert (
-        "Une erreur inattendue est survenue lors de l'exécution de '': OSError - [WinError 87] Paramètre incorrect"
-        in caplog.text
-    )
-    # Les commentaires et assertions précédents supposaient un FileNotFoundError ou IndexError,
-    # mais c'est une OSError sur Windows pour une commande vide passée à subprocess.run,
-    # qui est ensuite attrapée par le bloc `except Exception`.
+    assert ret_code == -11  # OSError capturée par le except Exception générique
+    # ATT-1 #1336: le message OS est locale-dépendant (« Paramètre incorrect » en
+    # FR, « The parameter is incorrect » en en-US sur le runner CI). Le numéro
+    # [WinError 87] est stable cross-locale — asserter sur lui, pas sur le texte
+    # traduit. (précédemment : assert "Paramètre incorrect" → RED sur CI en-US)
+    assert "[WinError 87]" in err
+    # Le log prod préfixe en français (« Une erreur inattendue... ») — stable,
+    # contrairement au message OS traduit. Vérifier le préfixe + le code d'erreur.
+    assert "Une erreur inattendue est survenue lors de l'exécution de ''" in caplog.text
+    assert "[WinError 87]" in caplog.text

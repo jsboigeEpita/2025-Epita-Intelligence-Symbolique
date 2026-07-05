@@ -85,18 +85,22 @@ class TestJPypeDependencyValidator:
 
     def test_environment_diagnostics(self):
         """Test 6: Diagnostics détaillés de l'environnement"""
-        import pkg_resources
+        # ATT-1 #1336: pkg_resources est déprécié/retiré dans setuptools récent
+        # (>=67 deprecated, retiré par défaut en 81+/82 → ModuleNotFoundError sur
+        # CI et localement). Migrer vers importlib.metadata (stdlib, Python 3.8+),
+        # replacement officiel pour parcourir les distributions installées.
+        from importlib.metadata import distributions
 
         # Rechercher tous les packages JPype
         jpype_packages = [
-            pkg
-            for pkg in pkg_resources.working_set
-            if "jpype" in pkg.project_name.lower()
+            dist
+            for dist in distributions()
+            if "jpype" in (dist.metadata.get("Name", "") or "").lower()
         ]
 
         print(f"\n📦 Packages JPype trouvés: {len(jpype_packages)}")
-        for pkg in jpype_packages:
-            print(f"   - {pkg.project_name} {pkg.version} ({pkg.location})")
+        for dist in jpype_packages:
+            print(f"   - {dist.metadata['Name']} {dist.version} ({dist.locate_file('')})")
 
         # Vérifier l'environnement Python
         print(f"\n🐍 Environnement Python:")
