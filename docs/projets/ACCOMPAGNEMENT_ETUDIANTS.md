@@ -6,18 +6,18 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
 
 ## 1. Points d'Attention Généraux
 
-*   **Configuration de l'environnement** : Assurez-vous d'avoir correctement configuré votre environnement Python, Java (JDK 11+), et JPype. Le notebook [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb) (Partie 1) détaille les étapes. Pour vérifier certains aspects de votre configuration ou voir des exemples de scripts d'initialisation, les scripts dans [`scripts/testing/`](scripts/testing/) et [`scripts/execution/`](scripts/execution/) peuvent s'avérer utiles.
+*   **Configuration de l'environnement** : Assurez-vous d'avoir correctement configuré votre environnement Python, Java (JDK 11+), et JPype. Le notebook Tweety (Partie 1) — situé dans le dossier du cours `D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/` — détaille les étapes. Pour des exemples de scripts d'initialisation, voir le répertoire [`scripts/`](../../scripts/) (les anciens sous-dossiers `scripts/execution/` et `scripts/testing/` ont été consolidés dans `scripts/`).
 *   **Utilisation de TweetyProject** : De nombreux sujets s'appuient sur TweetyProject. Familiarisez-vous avec :
-    *   Le notebook principal : [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb)
-    *   Les exemples de code par projet : [`docs/projets/exemples_tweety_par_projet.md`](docs/projets/exemples_tweety_par_projet.md)
+    *   Le notebook principal : Tweety (voir `D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/`)
+    *   Les exemples de code par projet : [`exemples_tweety_par_projet.md`](./exemples_tweety_par_projet.md)
 *   **Gestion de projet** : Pour les travaux en groupe, référez-vous aux conseils donnés dans le [message d'annonce](./message_annonce_etudiants.md#conseils-selon-la-taille-du-groupe). Utilisez GitHub (forks, branches, issues) efficacement.
-*   **Livrables** : N'oubliez pas les livrables attendus (code, documentation, tests, rapport final) décrits dans le [message d'annonce](./message_annonce_etudiants.md#livrables-attendus). Vous trouverez des exemples concrets de tests unitaires dans [`tests/unit/`](tests/unit/) (par exemple, [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0)) et de tests d'intégration dans [`tests/integration/`](tests/integration/) (par exemple, [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0)) qui peuvent vous servir de modèle et d'inspiration.
+*   **Livrables** : N'oubliez pas les livrables attendus (code, documentation, tests, rapport final) décrits dans le [message d'annonce](./message_annonce_etudiants.md#livrables-attendus). Vous trouverez des exemples concrets de tests unitaires dans [`tests/unit/`](../../tests/unit/) (par exemple, [`tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py`](../../tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py)) et de tests d'intégration dans [`tests/integration/`](../../tests/integration/) (par exemple, [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py)) qui peuvent vous servir de modèle et d'inspiration.
 
 ## 2. Problèmes Connus et Pistes de Résolution
 
 ### 2.1 Problème d'import avec `org.tweetyproject.beliefdynamics.InformationObject` dans `Tweety.ipynb`
 
-*   **Description** : Lors de l'exécution du notebook [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb), un problème peut survenir lors du chargement de la classe `org.tweetyproject.beliefdynamics.InformationObject`. La JVM signale que la classe n'est pas trouvée, même si le JAR `org.tweetyproject.beliefdynamics-1.28-with-dependencies.jar` semble être correctement téléchargé et inclus dans le classpath.
+*   **Description** : Lors de l'exécution du notebook Tweety (`D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/`), un problème peut survenir lors du chargement de la classe `org.tweetyproject.beliefdynamics.InformationObject`. La JVM signale que la classe n'est pas trouvée, même si le JAR `org.tweetyproject.beliefdynamics-1.28-with-dependencies.jar` semble être correctement téléchargé et inclus dans le classpath.
 *   **Impact** : Les cellules du notebook utilisant cette classe (notamment celles liées à la révision de croyances multi-agents, section 3.1 du notebook) et les projets étudiants s'appuyant sur le module `beliefdynamics` (ex: Projet 1.4.5) pourraient être affectés.
 *   **Pistes de vérification/résolution** :
     1.  **Redémarrage du noyau** : Après le téléchargement des JARs (Cellule 7 du notebook), assurez-vous de bien redémarrer le noyau Jupyter (`Kernel -> Restart Kernel`) avant d'exécuter la cellule de démarrage de la JVM (Cellule 12).
@@ -31,7 +31,7 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
 
 ### 2.2 Configuration des Outils Externes pour `Tweety.ipynb`
 
-*   **Description** : Le notebook [`docs/resources/notebooks/Tweety.ipynb`](docs/resources/notebooks/Tweety.ipynb) utilise potentiellement des outils externes pour certaines fonctionnalités avancées (solveurs SAT, prouveurs FOL/ML, etc.). La configuration de ces outils est gérée dans les cellules 10 et 11 du notebook.
+*   **Description** : Le notebook Tweety (`D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/`) utilise potentiellement des outils externes pour certaines fonctionnalités avancées (solveurs SAT, prouveurs FOL/ML, etc.). La configuration de ces outils est gérée dans les cellules 10 et 11 du notebook.
 *   **Points d'attention** :
     1.  **Installation Manuelle** : Plusieurs outils comme EProver, et SPASS (sous Windows), nécessitent une installation manuelle sur votre système. Suivez les instructions sur leurs sites web respectifs. Clingo peut être détecté s'il est dans le PATH.
     2.  **Configuration des Chemins** : Après installation, vous devez indiquer les chemins d'accès corrects aux exécutables dans la variable `EXTERNAL_TOOLS` de la cellule 10 du notebook.
@@ -47,13 +47,13 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
 *   **Communiquez** : N'hésitez pas à poser des questions à l'équipe pédagogique et à échanger avec les autres étudiants (via le forum de discussion mentionné).
 *   **Documentez au fur et à mesure** : Une bonne documentation facilite la collaboration et la compréhension de votre travail.
 *   **Testez régulièrement** : Écrivez des tests unitaires et d'intégration pour assurer la robustesse de votre code.
-    *   Vous trouverez l'ensemble des tests unitaires dans le répertoire [`tests/unit/`](tests/unit/) et les tests d'intégration dans [`tests/integration/`](tests/integration/).
-    *   Par exemple, pour comprendre comment tester des utilitaires de fichiers, consultez le test unitaire [`tests/unit/project_core/utils/test_file_utils.py`](tests/unit/project_core/utils/test_file_utils.py:0).
-    *   Pour des exemples de tests d'intégration, notamment pour les agents logiques, explorez [`tests/integration/test_logic_agents_integration.py`](tests/integration/test_logic_agents_integration.py:0). Le répertoire [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/) contient également des tests pertinents pour l'interaction avec Tweety via JPype.
-    *   Des scripts d'exécution et de test plus généraux, pouvant servir d'exemples ou d'outils, sont disponibles dans [`scripts/execution/`](scripts/execution/) et [`scripts/testing/`](scripts/testing/).
-    *   Les notebooks Jupyter dans [`examples/notebooks/`](examples/notebooks/) (comme [`api_logic_tutorial.ipynb`](examples/notebooks/api_logic_tutorial.ipynb:0)) peuvent aussi illustrer l'utilisation et le test de certaines fonctionnalités.
-    *   De même, les scripts Python dans [`examples/logic_agents/`](examples/logic_agents/) (ex: [`api_integration_example.py`](examples/logic_agents/api_integration_example.py:0)) et [`examples/scripts_demonstration/`](examples/scripts_demonstration/) (ex: [`demo_tweety_interaction_simple.py`](examples/scripts_demonstration/demo_tweety_interaction_simple.py:0)) offrent des cas d'usage concrets.
-    *   N'oubliez pas les données d'exemple dans [`examples/test_data/`](examples/test_data/) qui sont souvent utilisées par ces tests et exemples.
+    *   Vous trouverez l'ensemble des tests unitaires dans le répertoire [`tests/unit/`](../../tests/unit/) et les tests d'intégration dans [`tests/integration/`](../../tests/integration/).
+    *   Par exemple, pour comprendre comment tester des utilitaires de fichiers, consultez le test unitaire [`tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py`](../../tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py).
+    *   Pour des exemples de tests d'intégration, notamment pour les agents logiques, explorez [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py). Le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) contient également des tests pertinents pour l'interaction avec Tweety via JPype.
+    *   Des scripts d'exécution et de test plus généraux, pouvant servir d'exemples ou d'outils, sont disponibles dans [`scripts/`](../../scripts/) (les anciens sous-dossiers `scripts/execution/` et `scripts/testing/` ont été consolidés).
+    *   Les notebooks Jupyter dans [`examples/notebooks/`](../../examples/notebooks/) peuvent aussi illustrer l'utilisation et le test de certaines fonctionnalités.
+    *   De même, les scripts Python dans [`examples/`](../../examples/) offrent des cas d'usage concrets.
+    *   N'oubliez pas les données d'exemple (référencées par certains tests et exemples) — la structure d'exemples changeant fréquemment, voir [`examples/`](../../examples/) pour les jeux de données disponibles.
 *   **Versionnez votre code** : Utilisez Git et GitHub de manière rigoureuse (commits fréquents, messages clairs, branches pour les fonctionnalités).
 
 ## 4. Liens Utiles (Rappel)
@@ -65,6 +65,6 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
     *   [Développement système et infrastructure](./developpement_systeme.md)
     *   [Expérience utilisateur et applications](./experience_utilisateur.md)
 *   [Exemples TweetyProject par projet](./exemples_tweety_par_projet.md)
-*   [Notebook principal Tweety.ipynb](../resources/notebooks/Tweety.ipynb)
+*   Notebook principal Tweety (voir `D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/`)
 
 Nous vous souhaitons un excellent projet !
