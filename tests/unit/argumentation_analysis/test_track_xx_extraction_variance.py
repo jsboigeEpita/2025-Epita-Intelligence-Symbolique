@@ -272,7 +272,20 @@ class TestExtractionMetricsDeterminism:
         assert r1 == r2
 
     def test_dung_fallback_deterministic(self):
-        """_python_social_fallback produces same scores for same input."""
+        """_python_social_fallback is a fail-loud JVM-required stub (#1019).
+
+        The function is a deterministic RA-8 anti-théâtre guard: it ALWAYS raises
+        ``RuntimeError("Social argumentation unavailable: JVM/Tweety required...")``
+        because the social argumentation path requires a real JVM/Tweety bridge
+        and there is no pure-Python fallback (synthetic scores would violate
+        anti-théâtre #1019 — see docstring of ``_python_social_fallback``).
+
+        Determinism here means: two consecutive invocations raise the same
+        exception. The test was previously asserting a non-existent ``social_scores``
+        key on a dict the function never returns (it raises), which made the test
+        fail-loud at runtime in any env without JVM/Tweety. Mark with ``jpype``
+        since the production behavior depends on JVM availability.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _python_social_fallback,
         )
@@ -281,9 +294,12 @@ class TestExtractionMetricsDeterminism:
         attacks = [("Arg A", "Arg B")]
         votes = {"Arg A": 3, "Arg B": 1, "Arg C": 2}
         context = {}
-        r1 = _python_social_fallback(args, attacks, votes, context)
-        r2 = _python_social_fallback(args, attacks, votes, context)
-        assert r1["social_scores"] == r2["social_scores"]
+
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_social_fallback(args, attacks, votes, context)
+        # Determinism: a second invocation raises identically.
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_social_fallback(args, attacks, votes, context)
 
 
 class TestDeterminismParamsInSource:

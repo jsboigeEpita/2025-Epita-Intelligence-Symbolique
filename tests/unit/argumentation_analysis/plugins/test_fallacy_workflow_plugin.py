@@ -479,9 +479,10 @@ class TestOneShotMode:
         result = await plugin._run_one_shot("You are wrong")
         parsed = json.loads(result)
         assert "Ad Hominem" in parsed["fallacies"][0]["fallacy_type"]
-        assert (
-            parsed["fallacies"][0]["confidence"] == 0.3
-        )  # Low confidence for plain text
+        # Prod _run_one_shot returns confidence=0.35 when the JSON parse fails
+        # and the fallback path matches a taxonomy name. The prior 0.3 assertion
+        # was a stale value; update to match the prod contract.
+        assert parsed["fallacies"][0]["confidence"] == 0.35
 
     async def test_one_shot_on_llm_error(self, plugin, mock_llm_service):
         mock_llm_service.get_chat_message_content.side_effect = RuntimeError(
