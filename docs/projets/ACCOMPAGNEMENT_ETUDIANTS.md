@@ -6,7 +6,7 @@ Ce document a pour but de centraliser les informations utiles, les conseils, les
 
 ## 1. Points d'Attention Généraux
 
-*   **Configuration de l'environnement** : Assurez-vous d'avoir correctement configuré votre environnement Python, Java (JDK 11+), et JPype. Le notebook Tweety (Partie 1) — situé dans le dossier du cours `D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/` — détaille les étapes. Pour des exemples de scripts d'initialisation, voir le répertoire [`scripts/`](../../scripts/) (les anciens sous-dossiers `scripts/execution/` et `scripts/testing/` ont été consolidés dans `scripts/`).
+*   **Configuration de l'environnement** : Assurez-vous d'avoir correctement configuré votre environnement Python, Java (JDK 11+), et JPype. Le notebook Tweety (Partie 1) — situé dans le dossier du cours `D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/` — détaille les étapes. Pour des exemples de scripts d'initialisation, voir le répertoire [`scripts/`](../../scripts/) (l'ancien sous-dossier `scripts/execution/` a été consolidé dans `scripts/` ; [`scripts/testing/`](../../scripts/testing/) reste disponible séparément).
 *   **Utilisation de TweetyProject** : De nombreux sujets s'appuient sur TweetyProject. Familiarisez-vous avec :
     *   Le notebook principal : Tweety (voir `D:/CoursIA/MyIA.AI.Notebooks/SymbolicAI/Tweety/`)
     *   Les exemples de code par projet : [`exemples_tweety_par_projet.md`](./exemples_tweety_par_projet.md)
