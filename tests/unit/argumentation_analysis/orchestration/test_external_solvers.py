@@ -260,27 +260,52 @@ class TestRegistryASPService:
 
 
 class TestSafeFloatEnv:
-    """Test _safe_float_env guards against non-numeric env vars (#1003)."""
+    """Test _safe_float_env guards against non-numeric env vars (#1003).
+
+    Hermeticity: ATT-1 (#1336) env-read cluster. We patch the bound
+    ``os.environ.get`` *at the module level* (``mod.os.environ.get``) so the
+    prod call inside ``_safe_float_env`` sees the test value regardless of
+    ambient env pollution (some prior test leaking a mocked env). This is the
+    same fix pattern as PR #1406 (no-key option B): make the test contract
+    explicit by mocking the exact call site, not the global ``os.environ``.
+    """
+
+    def _patch_mod_env_get(self, key_to_value):
+        """Helper: patch ``mod.os.environ.get`` so ``key`` returns *value*
+        and other keys fall through to the real ``os.environ.get``.
+        """
+        import argumentation_analysis.orchestration.invoke_callables as mod
+        import os as _os
+
+        _real_get = mod.os.environ.get
+        _override = dict(key_to_value)
+
+        def side_effect(key, default=None):
+            if key in _override:
+                return _override[key]
+            return _real_get(key, default)
+
+        return patch.object(mod.os.environ, "get", side_effect=side_effect)
 
     def test_valid_numeric_string(self):
         """Numeric string is parsed correctly."""
         import argumentation_analysis.orchestration.invoke_callables as mod
 
-        with patch.dict("os.environ", {"_TEST_FLOAT": "42.5"}):
+        with self._patch_mod_env_get({"_TEST_FLOAT": "42.5"}):
             assert mod._safe_float_env("_TEST_FLOAT", 10.0) == 42.5
 
     def test_non_numeric_falls_back_to_default(self):
         """Non-numeric env var falls back to default without crash."""
         import argumentation_analysis.orchestration.invoke_callables as mod
 
-        with patch.dict("os.environ", {"_TEST_FLOAT": "not_a_number"}):
+        with self._patch_mod_env_get({"_TEST_FLOAT": "not_a_number"}):
             assert mod._safe_float_env("_TEST_FLOAT", 10.0) == 10.0
 
     def test_missing_key_falls_back_to_default(self):
         """Missing env var falls back to default."""
         import argumentation_analysis.orchestration.invoke_callables as mod
 
-        env = {"_TEST_FLOAT": "irrelevant"}
-        env.pop("_TEST_FLOAT_MISSING", None)
-        with patch.dict("os.environ", env, clear=False):
+        # Provide a present-but-unrelated key so the override is non-empty;
+        # the test asserts the MISSING key still falls back to default.
+        with self._patch_mod_env_get({"_TEST_FLOAT": "irrelevant"}):
             assert mod._safe_float_env("_TEST_FLOAT_MISSING", 99.0) == 99.0

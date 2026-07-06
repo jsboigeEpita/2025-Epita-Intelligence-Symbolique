@@ -2,11 +2,42 @@
 
 Verifies the self-hosted LLM fallacy detection invoke function that replaced
 the dead CamemBERT adapter (PR #299).
+
+Hermeticity (ATT-1 #1336 camembert cluster): the prod reads
+``SELF_HOSTED_LLM_ENDPOINT``/``SELF_HOSTED_LLM_MODEL`` via
+``os.environ.get`` directly. Patching ``os.environ`` globally with
+``patch.dict`` was fragile in the full suite (a prior test leaks a mocked
+env, and the prod call sees the empty defaults). Same fix as PR #1406
+(no-key option B): patch the *bound* ``os.environ.get`` at the
+``invoke_callables`` module level so the override reaches the prod call
+site hermetically. Plus, ``_invoke_camembert_fallacy`` lives in
+``unified_pipeline`` but imports ``os`` itself — the patch is applied to
+``invoke_callables.os`` because the function-level ``os`` import resolves
+to the same ``os`` module object (CPython caches it in ``sys.modules``).
 """
 
 import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
+
+
+def _patch_invokecallables_env_get(overrides):
+    """Patch ``invoke_callables.os.environ.get`` so the listed keys return
+    the test-supplied *overrides* values; other keys fall through to the
+    real ``os.environ.get``. This is hermetic against leaked mocks because
+    it targets the *exact* prod call site, not the global ``os.environ``.
+    """
+    from argumentation_analysis.orchestration import invoke_callables as mod
+
+    _real_get = mod.os.environ.get
+    _override = dict(overrides)
+
+    def side_effect(key, default=None):
+        if key in _override:
+            return _override[key]
+        return _real_get(key, default)
+
+    return patch.object(mod.os.environ, "get", side_effect=side_effect)
 
 
 class TestInvokeCamemBERTFallacy:
@@ -18,7 +49,11 @@ class TestInvokeCamemBERTFallacy:
             _invoke_camembert_fallacy,
         )
 
-        with patch.dict("os.environ", {}, clear=True):
+        # No SELF_HOSTED_LLM_ENDPOINT / MODEL override => prod sees empty
+        # strings and takes the not-configured branch (the "real_get"
+        # fallback may return ambient values, which are equally "" if
+        # unconfigured).
+        with _patch_invokecallables_env_get({}):
             result = await _invoke_camembert_fallacy("test text", {})
 
         assert result["total_fallacies"] == 0
@@ -53,7 +88,7 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "test-model",
         }
 
-        with patch.dict("os.environ", env, clear=True), patch(
+        with _patch_invokecallables_env_get(env), patch(
             "argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
             create=True,
         ) as mock_fwp_cls, patch("openai.AsyncOpenAI"), patch(
@@ -91,7 +126,7 @@ class TestInvokeCamemBERTFallacy:
         )
 
         # Without endpoint, returns early regardless of text
-        with patch.dict("os.environ", {}, clear=True):
+        with _patch_invokecallables_env_get({}):
             result = await _invoke_camembert_fallacy("", {})
 
         assert result["total_fallacies"] == 0
@@ -108,7 +143,7 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "test-model",
         }
 
-        with patch.dict("os.environ", env, clear=True), patch.dict(
+        with _patch_invokecallables_env_get(env), patch.dict(
             "sys.modules", {"openai": None}
         ):
             result = await _invoke_camembert_fallacy("test text", {})
@@ -126,7 +161,7 @@ class TestInvokeCamemBERTFallacy:
 
         # Without endpoint configured, the function returns early
         # without calling any async operations
-        with patch.dict("os.environ", {}, clear=True):
+        with _patch_invokecallables_env_get({}):
             result = await _invoke_camembert_fallacy("test", {})
 
         assert result["tiers_used"] == ["none"]
@@ -154,7 +189,7 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "qwen3.5-35b-a3b",
         }
 
-        with patch.dict("os.environ", env, clear=True), patch(
+        with _patch_invokecallables_env_get(env), patch(
             "argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
             create=True,
         ), patch("openai.AsyncOpenAI"), patch("semantic_kernel.kernel.Kernel"), patch(

@@ -132,23 +132,47 @@ class TestBudgetAggregatesAcrossTasks:
 
 
 class TestBudgetCeilingResolution:
-    """Ceiling comes from the explicit arg, else env LLM_CALL_BUDGET, else 500."""
+    """Ceiling comes from the explicit arg, else env LLM_CALL_BUDGET, else 500.
+
+    Hermeticity (ATT-1 #1336 env-read cluster): the prod reads via
+    ``os.environ.get`` directly. Patching ``os.environ`` globally with
+    ``patch.dict`` is fragile when a prior test in the suite has leaked a
+    mock of ``os.environ``. Same fix as PR #1406 (no-key option B): patch
+    the *bound* ``os.environ.get`` at the module level so the override
+    reaches the prod call site regardless of ambient state.
+    """
+
+    @staticmethod
+    def _patch_env_get(overrides, also_remove_keys=()):
+        """Patch ``mod.os.environ.get`` so listed keys return *overrides*
+        and *also_remove_keys* raise ``KeyError`` (simulating missing key).
+        """
+        from argumentation_analysis.orchestration import invoke_callables as mod
+
+        _real_get = mod.os.environ.get
+
+        def side_effect(key, default=None):
+            if key in overrides:
+                return overrides[key]
+            if key in also_remove_keys:
+                return default
+            return _real_get(key, default)
+
+        return patch.object(mod.os.environ, "get", side_effect=side_effect)
 
     async def test_env_override(self):
-        with patch.dict("os.environ", {"LLM_CALL_BUDGET": "7"}):
+        with self._patch_env_get({"LLM_CALL_BUDGET": "7"}):
             with llm_budget_scope() as budget:
                 assert budget.ceiling == 7
 
     async def test_default_when_unset(self):
-        with patch.dict("os.environ", {}, clear=False):
-            import os
-
-            os.environ.pop("LLM_CALL_BUDGET", None)
+        # Simulate the LLM_CALL_BUDGET key being absent from the env.
+        with self._patch_env_get({}, also_remove_keys={"LLM_CALL_BUDGET"}):
             with llm_budget_scope() as budget:
                 assert budget.ceiling == 500
 
     async def test_malformed_env_falls_back_to_500(self):
-        with patch.dict("os.environ", {"LLM_CALL_BUDGET": "not-a-number"}):
+        with self._patch_env_get({"LLM_CALL_BUDGET": "not-a-number"}):
             with llm_budget_scope() as budget:
                 assert budget.ceiling == 500
 
