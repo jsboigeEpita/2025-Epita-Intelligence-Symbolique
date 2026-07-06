@@ -24,26 +24,18 @@ Décrit le concept et l'implémentation d'une interface permettant aux agents d'
 ### [`Reasoning Engine`](./reasoning_engine.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Présente l'ensemble des composants et capacités dédiés à l'évaluation de la structure logique, la validité, la cohérence des arguments, et à l'exécution d'inférences logiques.
 
-### [`Structure du Projet`](../structure_projet.md)
+### [`Structure du Projet`](./structure_projet.md)
 Documentation complète de la structure du projet, incluant l'organisation des dossiers et des fichiers.
 
 ### [`Synthèse de la Collaboration entre Agents`](./synthese_collaboration.md) <!-- TODO: Vérifier l'existence et le chemin de ce fichier. S'il n'existe pas ou est ailleurs, mettre à jour ou supprimer cette entrée. -->
 Analyse de la collaboration entre les différents agents du système et des mécanismes qui la rendent possible.
 
-### [`Agent Analyse`](./agent_analyse.md) <!-- TODO: Rédiger une brève description pour ce document. -->
-<!-- Description à venir. -->
-
-### [`Agent Communication`](./agent_communication.md) <!-- TODO: Rédiger une brève description pour ce document. -->
-<!-- Description à venir. -->
-
-### [`Agent Coordination`](./agent_coordination.md) <!-- TODO: Rédiger une brève description pour ce document. -->
-<!-- Description à venir. -->
-
-### [`Agent Gestion Connaissances`](./agent_gestion_connaissances.md) <!-- TODO: Rédiger une brève description pour ce document. -->
-<!-- Description à venir. -->
-
-### [`Agent Orchestration`](./agent_orchestration.md) <!-- TODO: Rédiger une brève description pour ce document. -->
-<!-- Description à venir. -->
+<!-- Les entrées ci-dessous référençaient des fichiers `agent_*.md` qui n'existent pas dans ce dossier. Les topics couverts sont déjà documentés via [`Agent Management`](./agent_management.md) et [`Agents Spécialistes`](./agents_specialistes.md). Entries retirées (ATT-5 #1315 Phase 1) :
+- `agent_analyse.md` (non rédigé) → voir [`Agents Spécialistes`](./agents_specialistes.md)
+- `agent_communication.md` (non rédigé) → voir [`Orchestration`](./agents_specialistes.md#orchestration) au sein d'Agents Spécialistes
+- `agent_coordination.md` (non rédigé) → voir [`Agent Management`](./agent_management.md)
+- `agent_gestion_connaissances.md` (non rédigé) → voir [`Knowledge Base Interface`](./knowledge_base_interface.md)
+- `agent_orchestration.md` (non rédigé) → voir [`Reasoning Engine`](./reasoning_engine.md) -->
 
 ## Composants Principaux
 
@@ -85,4 +77,4 @@ Les composants du système interagissent selon des patterns bien définis :
 
 ## Extensibilité
 
-Le système est conçu pour être extensible, permettant l'ajout de nouveaux agents et composants. Pour plus d'informations sur l'extension du système, consultez le [Guide du Développeur](../guides/demarrage_rapide_developpement.md). <!-- TODO: Confirmer que 'demarrage_rapide_developpement.md' est le guide approprié ici. -->
+Le système est conçu pour être extensible, permettant l'ajout de nouveaux agents et composants. Pour plus d'informations sur l'extension du système, consultez le [Guide du Développeur](../guides/guide_developpeur.md).

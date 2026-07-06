@@ -40,11 +40,10 @@ Pour une vue d'ensemble de tous les sujets avec leur structure standardisée :
 
 De nombreuses ressources sont à votre disposition pour vous aider à démarrer :
 
-- **Exemples de scripts** : [`../examples/logic_agents/`](../examples/logic_agents/), [`../examples/scripts_demonstration/`](../examples/scripts_demonstration/)
-- **Notebooks Jupyter didactiques** : [`../examples/notebooks/`](../examples/notebooks/)
-- **Données d'exemple** : [`../examples/test_data/`](../examples/test_data/)
-- **Tests unitaires** : [`../tests/unit/`](../tests/unit/)
-- **Tests d'intégration** : [`../tests/integration/`](../tests/integration/)
+- **Exemples de scripts** : [`../../examples/`](../../examples/) (les anciens sous-dossiers `examples/logic_agents/` et `examples/scripts_demonstration/` ont été consolidés)
+- **Notebooks Jupyter didactiques** : [`../../examples/notebooks/`](../../examples/notebooks/)
+- **Tests unitaires** : [`../../tests/unit/`](../../tests/unit/)
+- **Tests d'intégration** : [`../../tests/integration/`](../../tests/integration/)
 - **Exemples spécifiques TweetyProject** : [`exemples_tweety_par_projet.md`](exemples_tweety_par_projet.md)
 
 ### 4. Démarrage Rapide
@@ -75,8 +74,7 @@ Le dossier "projets" est le point central pour les étudiants souhaitant s'engag
 
 Ces projets sont conçus pour permettre aux étudiants de contribuer à l'amélioration d'un système d'orchestration agentique d'analyse rhétorique, une plateforme avancée qui utilise plusieurs agents IA spécialisés collaborant pour analyser des textes argumentatifs sous différents angles. Pour bien appréhender l'écosystème dans lequel ces projets s'inscrivent, il est fortement recommandé de consulter les documentations de référence du système :
 - La **[Documentation d'Architecture](../architecture/README.md)** : pour comprendre la conception globale, les flux de communication (notamment via le `MessageMiddleware`) et l'architecture hiérarchique des agents.
-- La **[Documentation des Composants](../composants/README.md)** : pour découvrir les modules réutilisables existants (comme le `Moteur de Raisonnement`, le `Pont Tweety` ou l'`API Web`) et comment ils interagissent.
-- Le **[Portail des Guides](../guides/README.md)** : qui centralise les guides pratiques pour les développeurs, les utilisateurs, et des exemples d'utilisation des différentes logiques.
+- Le **[Portail des Guides](../guides/README.md)** : qui centralise les guides pratiques pour les développeurs, les utilisateurs, et des exemples d'utilisation des différentes logiques. (Les modules techniques sont décrits dans [`../technical/`](../technical/README.md) post-consolidation Epic #317.)
 
 Chaque projet est présenté avec une structure standardisée incluant le contexte, les objectifs, les technologies clés, le niveau de difficulté, l'estimation d'effort, les interdépendances avec d'autres projets, les références et les livrables attendus.
 
@@ -98,8 +96,8 @@ Organisation des fichiers et sous-dossiers du dossier projets :
   - **`README.md`** <!-- TODO: Confirmer si un README.md général pour `sujets/` doit être listé ici. Il est présent dans la structure fournie. -->
   - **`aide/`** : Ressources pratiques spécialisées pour faciliter la réalisation des projets.
     - **`README.md`** <!-- TODO: Le fichier `docs/projets/sujets/aide/README.md` est présent dans la structure mais n'était pas explicitement listé ici. Ajouté pour cohérence. -->
-    - **`interface-web/`** : Exemples et guides pour le développement d'interfaces web (voir [./sujets/aide/interface-web/README.md](./sujets/aide/interface-web/README.md)).
-    - **`DEMARRAGE_RAPIDE.md`** : Guide de démarrage rapide pour les projets.
+    - **`interface-web/`** : Exemples et guides pour le développement d'interfaces web (voir [`./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md`](./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md)).
+    - **`DEMARRAGE_RAPIDE.md`** : Guide de démarrage rapide pour les projets (voir [`./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md`](./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md)).
     - **`FAQ_DEVELOPPEMENT.md`** : Réponses aux questions fréquentes sur le développement.
     - **`GUIDE_INTEGRATION_PROJETS.md`** : Guide pour l'intégration des projets.
     - **`PRESENTATION_KICKOFF.md`** : Présentation initiale des projets.
@@ -117,12 +115,12 @@ Les projets sont organisés en trois catégories thématiques principales :
 2. **[Développement système et infrastructure](./developpement_systeme.md)** - Projets axés sur l'architecture, l'orchestration et les composants techniques, incluant :
    - Architecture et orchestration (voir [Documentation d'Architecture](../architecture/README.md))
    - Gestion des sources et données
-   - Moteur agentique et agents spécialistes (voir [Documentation des Composants](../composants/README.md))
+   - Moteur agentique et agents spécialistes (voir [`../technical/`](../technical/README.md) pour les modules techniques post-consolidation Epic #317)
    - Indexation sémantique
    - Automatisation et intégration MCP
 
 3. **[Expérience utilisateur et applications](./experience_utilisateur.md)** - Projets orientés vers les interfaces, visualisations et cas d'usage concrets, incluant :
-   - Interfaces utilisateurs (s'appuyant souvent sur l'[API Web](../composants/api_web.md) <!-- TODO: Confirmer l'existence et le nom exact du fichier cible 'api_web.md' pour ce lien. -->)
+   - Interfaces utilisateurs (s'appuyant souvent sur l'API Web décrite dans [`../technical/api_web.md`](../technical/api_web.md))
    - Visualisations
    - Applications spécifiques
    - Lutte contre la désinformation
@@ -148,11 +146,11 @@ Les projets sont documentés à travers plusieurs fichiers complémentaires :
 
 3. **Dossier de ressources d'aide** :
    - [sujets/aide/README.md](./sujets/aide/README.md) - Point d'entrée pour les ressources d'aide spécifiques aux projets (ce document pointe également vers le [Portail des Guides](../guides/README.md) pour une aide plus générale).
-   - [sujets/aide/DEMARRAGE_RAPIDE.md](./sujets/aide/DEMARRAGE_RAPIDE.md) - Guide de démarrage rapide
+   - [sujets/aide/DEMARRAGE_RAPIDE.md](./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md) - Guide de démarrage rapide (situé dans `interface-web/`)
    - [sujets/aide/FAQ_DEVELOPPEMENT.md](./sujets/aide/FAQ_DEVELOPPEMENT.md) - FAQ pour le développement
    - [sujets/aide/GUIDE_INTEGRATION_PROJETS.md](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Guide d'intégration
    - [sujets/aide/PRESENTATION_KICKOFF.md](./sujets/aide/PRESENTATION_KICKOFF.md) <!-- TODO: Le fichier `PRESENTATION_KICKOFF.md` est dans la structure mais n'était pas listé ici. Ajouté pour cohérence. -->
-   - [sujets/aide/interface-web/README.md](./sujets/aide/interface-web/README.md) <!-- TODO: Ce lien pointait vers un dossier. Vérifier s'il doit pointer vers un fichier spécifique (ex: README.md) à l'intérieur de ce dossier. Le lien a été modifié pour pointer vers README.md en supposant son existence. --> - Ressources pour les interfaces web
+   - [sujets/aide/interface-web/DEMARRAGE_RAPIDE.md](./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md) - Ressources pour les interfaces web
 
 Les fichiers sont interconnectés par des liens relatifs pour faciliter la navigation entre les différents aspects des projets.
 
@@ -315,7 +313,7 @@ Pour faciliter la réalisation des projets, plusieurs ressources sont mises à d
 1.  **Documentation Générale du Système (Fortement Recommandé)**:
     *   **[Portail des Guides](../guides/README.md)** : Point d'entrée principal vers tous les guides pratiques (développement, utilisation, API web, conventions, exemples de logiques, etc.). **À consulter en priorité.**
     *   **[Documentation d'Architecture](../architecture/README.md)** : Décrit l'architecture globale du système, l'orchestration des agents, la communication inter-agents, l'architecture hiérarchique, et d'autres concepts fondamentaux. Essentiel pour les projets touchant au cœur du système.
-    *   **[Documentation des Composants](../composants/README.md)** : Présente les différents modules et composants réutilisables du système (Moteur de Raisonnement, Pont Tweety, API Web, etc.), leurs fonctionnalités et comment les intégrer.
+    *   **[Documentation des Composants](../technical/README.md)** : Présente les différents modules et composants réutilisables du système (Moteur de Raisonnement, Pont Tweety, API Web, etc.), leurs fonctionnalités et comment les intégrer. (Le dossier `docs/composants/` a été consolidé dans `docs/technical/` par l'Epic #317.)
 
 2.  **Documentation Spécifique aux Projets**:
     *   [Exemples TweetyProject](./exemples_tweety.md) - Guide d'utilisation de la bibliothèque TweetyProject pour l'argumentation.
@@ -323,7 +321,7 @@ Pour faciliter la réalisation des projets, plusieurs ressources sont mises à d
 
 3.  **Ressources d'Aide Pratique (au sein de `docs/projets/`)**:
     *   [Point d'entrée de l'aide aux projets](./sujets/aide/README.md) - Centralise les ressources d'aide spécifiques aux projets et oriente vers les guides généraux.
-    *   [Guide de démarrage rapide](./sujets/aide/DEMARRAGE_RAPIDE.md) - Instructions pour commencer rapidement.
+    *   [Guide de démarrage rapide](./sujets/aide/interface-web/DEMARRAGE_RAPIDE.md) - Instructions pour commencer rapidement (situé dans `interface-web/`).
     *   [FAQ Développement](./sujets/aide/FAQ_DEVELOPPEMENT.md) - Réponses aux questions fréquentes.
     *   [Guide d'intégration des projets](./sujets/aide/GUIDE_INTEGRATION_PROJETS.md) - Comment intégrer votre projet.
     *   [Présentation Kickoff des Projets](./sujets/aide/PRESENTATION_KICKOFF.md) <!-- TODO: Le fichier `PRESENTATION_KICKOFF.md` est dans la structure mais n'était pas listé ici. Ajouté pour cohérence. -->
