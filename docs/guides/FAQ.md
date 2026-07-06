@@ -180,7 +180,7 @@ R: Les résultats sont stockés dans plusieurs formats :
 - Markdown pour la lisibilité humaine
 - Base de données (optionnel) pour la persistance
 - Visualisations graphiques pour la présentation
-Vous pouvez trouver des exemples de ces formats de sortie dans le répertoire `examples/test_data/results/` (si disponible) ou générés par les scripts dans [`scripts/`](../../scripts/) et [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/).
+Vous pouvez trouver des exemples de ces formats de sortie dans le répertoire `examples/test_data/results/` (si disponible) ou générés par les scripts dans [`scripts/`](../../scripts/) et [`examples/02_core_system_demos/scripts_demonstration/`](../../examples/02_core_system_demos/scripts_demonstration/).
 
 ### Extension du système
 
@@ -266,7 +266,7 @@ R: En cas de problèmes de compatibilité :
 
 R: Vous pouvez contribuer de plusieurs façons :
 1. Corriger des bugs et soumettre des pull requests
-2. Ajouter de nouveaux exemples (scripts, notebooks, données de test) dans les sous-répertoires de [`examples/`](../../examples) tels que `examples/notebooks/` et [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/). (Les anciens sous-dossiers `examples/logic_agents/` et `examples/test_data/` ont été consolidés.)
+2. Ajouter de nouveaux exemples (scripts, notebooks, données de test) dans les sous-répertoires de [`examples/`](../../examples) tels que `examples/notebooks/` et [`examples/02_core_system_demos/scripts_demonstration/`](../../examples/02_core_system_demos/scripts_demonstration/). (Les anciens sous-dossiers `examples/logic_agents/` et `examples/test_data/` ont été consolidés.)
 3. Améliorer la documentation
 4. Proposer de nouvelles fonctionnalités via les issues GitHub
 
