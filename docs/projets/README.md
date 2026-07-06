@@ -40,7 +40,7 @@ Pour une vue d'ensemble de tous les sujets avec leur structure standardisée :
 
 De nombreuses ressources sont à votre disposition pour vous aider à démarrer :
 
-- **Exemples de scripts** : [`../../examples/`](../../examples/) (les anciens sous-dossiers `examples/logic_agents/` et `examples/scripts_demonstration/` ont été consolidés)
+- **Exemples de scripts** : [`../../examples/`](../../examples/) et [`../../examples/scripts_demonstration/`](../../examples/scripts_demonstration/) (l'ancien sous-dossier `examples/logic_agents/` a été consolidé)
 - **Notebooks Jupyter didactiques** : [`../../examples/notebooks/`](../../examples/notebooks/)
 - **Tests unitaires** : [`../../tests/unit/`](../../tests/unit/)
 - **Tests d'intégration** : [`../../tests/integration/`](../../tests/integration/)

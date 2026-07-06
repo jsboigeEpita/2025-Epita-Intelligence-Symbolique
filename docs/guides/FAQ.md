@@ -85,7 +85,7 @@ R: Si vous rencontrez des conflits, essayez d'installer les dépendances dans ce
 
 R: Pour une utilisation rapide, suivez ces étapes :
 1. Installez le package : `pip install -e .`
-2. Exécutez l'analyse sur un exemple : `python scripts/run_analysis.py --file examples/exemple_sophisme.txt`. Pour d'autres exemples de scripts prêts à l'emploi, explorez le répertoire [`scripts/`](../../scripts/) (l'ancien sous-dossier `examples/scripts_demonstration/` a été consolidé). Si vous souhaitez utiliser l'interface web, consultez le guide de démarrage rapide : [`docs/projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md`](../projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md).
+2. Exécutez l'analyse sur un exemple : `python argumentation_analysis/run_orchestration.py --file examples/scenarios/philosophy.txt`. Pour d'autres exemples de scripts prêts à l'emploi, explorez le répertoire [`scripts/`](../../scripts/). Si vous souhaitez utiliser l'interface web, consultez le guide de démarrage rapide : [`docs/projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md`](../projets/sujets/aide/interface-web/DEMARRAGE_RAPIDE.md).
 3. Consultez les résultats dans le dossier `results/`
 
 **Q: Comment utiliser l'API web ?**
@@ -180,7 +180,7 @@ R: Les résultats sont stockés dans plusieurs formats :
 - Markdown pour la lisibilité humaine
 - Base de données (optionnel) pour la persistance
 - Visualisations graphiques pour la présentation
-Vous pouvez trouver des exemples de ces formats de sortie dans le répertoire `examples/test_data/results/` (si disponible) ou générés par les scripts dans [`scripts/`](../../scripts/) (l'ancien sous-dossier `examples/scripts_demonstration/` a été consolidé).
+Vous pouvez trouver des exemples de ces formats de sortie dans le répertoire `examples/test_data/results/` (si disponible) ou générés par les scripts dans [`scripts/`](../../scripts/) et [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/).
 
 ### Extension du système
 
@@ -266,7 +266,7 @@ R: En cas de problèmes de compatibilité :
 
 R: Vous pouvez contribuer de plusieurs façons :
 1. Corriger des bugs et soumettre des pull requests
-2. Ajouter de nouveaux exemples (scripts, notebooks, données de test) dans les sous-répertoires de [`examples/`](../../examples) tels que `examples/notebooks/`. (Les anciens sous-dossiers `examples/logic_agents/`, `examples/scripts_demonstration/` et `examples/test_data/` ont été consolidés dans `examples/` ou `scripts/`.)
+2. Ajouter de nouveaux exemples (scripts, notebooks, données de test) dans les sous-répertoires de [`examples/`](../../examples) tels que `examples/notebooks/` et [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/). (Les anciens sous-dossiers `examples/logic_agents/` et `examples/test_data/` ont été consolidés.)
 3. Améliorer la documentation
 4. Proposer de nouvelles fonctionnalités via les issues GitHub
 
