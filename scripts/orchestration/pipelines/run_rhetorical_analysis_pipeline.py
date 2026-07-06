@@ -18,7 +18,7 @@ sys.path.insert(0, str(project_root))
 
 # Import des composants locaux nécessaires
 from argumentation_analysis.orchestration import analysis_runner_v2 as analysis_runner
-from examples.scripts_demonstration.generate_complex_synthetic_data import (
+from scripts.orchestration.pipelines.generate_complex_synthetic_data import (
     ComplexSyntheticDataGenerator,
 )
 from argumentation_analysis.core.llm_service import create_llm_service
