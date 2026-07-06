@@ -74,8 +74,22 @@ class TestCamemBERTFallacyDetector:
         results = detector.detect("Cet argument est fallacieux.")
         assert results == []
 
+    @pytest.mark.xfail(
+        reason="stale pre-PR #299: CamemBERTFallacyDetector removed in #299 and "
+        "replaced by self-hosted LLM endpoint (see test_camembert_invoke.py). "
+        "Marking xfail per R565 ATT-1 endgame triage.",
+        strict=False,
+    )
     def test_detect_with_mock_model(self):
-        """detect() returns correct FallacyDetection with mocked model."""
+        """detect() returns correct FallacyDetection with mocked model.
+
+        Stale pre-PR #299: this test exercises the removed CamemBERT detector's
+        internal API (mocking ``_tokenizer`` / ``_model`` directly). The detector
+        was deleted in PR #299 and replaced by ``_invoke_camembert_fallacy`` which
+        talks to the self-hosted LLM endpoint. The replacement coverage lives in
+        ``tests/unit/argumentation_analysis/orchestration/test_camembert_invoke.py``
+        (PR #1408 cluster). Marked xfail — see R565 triage.
+        """
         import torch
         from argumentation_analysis.adapters.french_fallacy_adapter import (
             CamemBERTFallacyDetector,

@@ -29,7 +29,11 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
 
-from semantic_kernel.kernel import Kernel
+# Import is deferred inside the workflow_plugin fixture to avoid the
+# ``tests/conftest.py`` semantic_kernel auto-marker picking this file up as a
+# real-LLM integration test (the auto-marker deactivates the mock LLM service
+# at runtime). This is a calibration test that uses a fully mocked LLM — see
+# the fixture body for the deferred import.
 
 # Ajout pour forcer la reconnaissance du package principal
 current_script_path = Path(__file__).resolve()
@@ -76,6 +80,12 @@ class TestFallacyWorkflowCalibration:
     @pytest.fixture
     def workflow_plugin(self, mock_llm_service, mock_kernel):
         """Crée une instance du plugin avec des mocks."""
+        # Deferred import: ``from semantic_kernel.kernel import Kernel`` at
+        # module scope triggers conftest's ``llm_integration`` auto-marker,
+        # which then deactivates the mock LLM at runtime (see fixture-level
+        # comment).
+        from semantic_kernel.kernel import Kernel
+
         taxonomy_path = (
             Path(project_root_for_test)
             / "argumentation_analysis"
@@ -97,12 +107,12 @@ class TestFallacyWorkflowCalibration:
         """
         Test que le workflow détecte des sophismes dans le texte calibré.
 
-        With mock LLM, the workflow is limited by MAX_BRANCHES (4) and can only
-        navigate to taxonomy leaf nodes. With a real LLM, deeper detection and
-        custom naming would yield >= 5 matches. Here we verify:
-        - The workflow correctly explores multiple branches in parallel.
-        - At least MAX_BRANCHES (4) distinct fallacies are identified.
-        - Each detected fallacy has a valid taxonomy PK and navigation trace.
+        With the wide-net Phase 1 dispatch (PR #578) and a mock LLM that
+        confirms every leaf it is shown, the workflow identifies 6 distinct
+        fallacies from 6 wide-net candidates (one per depth-2 leaf). The
+        exploration method label is ``wide_net_parallel`` since PR #578 (it
+        was ``iterative_deepening`` before that refactor). The mock LLM
+        confirms every leaf via ``confirm_fallacy`` per PR #471.
         """
         result_json = asyncio.run(
             workflow_plugin.run_guided_analysis(CALIBRATED_TEXT_8_FALLACIES)
@@ -113,7 +123,8 @@ class TestFallacyWorkflowCalibration:
         detected = result.get("fallacies", [])
         detected_names = [f.get("fallacy_type", "").lower() for f in detected]
 
-        # Verify multi-branch exploration produced multiple fallacies
+        # Verify multi-branch exploration produced multiple fallacies.
+        # With the wide-net + leaf-confirm mock, 6 leaves → 6 distinct fallacies.
         assert len(detected) >= 4, (
             f"Expected >= 4 fallacies from multi-branch exploration, got {len(detected)}: "
             f"{detected_names}"
@@ -123,10 +134,10 @@ class TestFallacyWorkflowCalibration:
         for f in detected:
             assert f.get("taxonomy_pk"), f"Detected fallacy missing taxonomy_pk: {f}"
 
-        # Verify exploration method is iterative_deepening (not one-shot fallback)
+        # Verify exploration method is wide_net_parallel (PR #578 dispatch)
         assert (
-            result.get("exploration_method") == "iterative_deepening"
-        ), f"Expected iterative_deepening, got {result.get('exploration_method')}"
+            result.get("exploration_method") == "wide_net_parallel"
+        ), f"Expected wide_net_parallel, got {result.get('exploration_method')}"
 
     def test_epita_text_2_fallacies(self, workflow_plugin):
         """
@@ -200,18 +211,19 @@ def mock_kernel():
 def mock_llm_service():
     """Mock du service LLM for calibration tests.
 
-    Simulates a two-phase hierarchical fallacy detection workflow:
-    - get_chat_message_contents (plural): Used by Phase 1 (branch selection) and
-      Phase 2 (iterative deepening). Context-aware: inspects the chat_history to
-      determine whether this is a Phase 1 call (root selection) or Phase 2 call
-      (branch exploration), and returns appropriate function calls.
-    - get_chat_message_content (singular): Used by the one-shot fallback. Must be
-      an async callable (not a plain MagicMock) to avoid TypeError on await.
+    Simulates the wide-net hierarchical fallacy detection workflow (since PR #578):
+    - get_chat_message_content (singular, wide-net Phase 1): detects the wide-net
+      prompt ("List EVERY fallacy" / "Available root categories") and returns a
+      JSON-array of candidate fallacies (one entry per expected Phase 2 branch).
+    - get_chat_message_contents (plural, Phase 2 + leaf confirmation): returns
+      explore_branch calls to navigate depth-1 → depth-2 leaves, then returns
+      confirm_fallacy calls at leaf nodes (the prod asks the LLM to confirm,
+      not auto-confirm — see PR #471).
 
-    Fix for Issue #269: The original mock used MagicMock for the service, which
-    auto-creates non-async attributes. When the one-shot fallback path was added
-    in PR #261 (commit 34a7e03a), it called get_chat_message_content (singular)
-    which was a plain MagicMock and could not be awaited.
+    Fixes for Issue #269: MagicMock auto-created non-async attributes. After
+    PR #261 (one-shot fallback) and PR #578 (wide-net Phase 1), the mock must
+    be async callable. Stale fixture detected in CI R564 — singular was
+    returning a single object when the prod now expects a JSON-array.
     """
     from semantic_kernel.contents import ChatMessageContent, FunctionCallContent
 
@@ -252,14 +264,58 @@ def mock_llm_service():
     def _is_phase1(chat_history):
         """Detect if this is a Phase 1 call (root category selection).
 
-        Phase 1 prompts contain 'ROOT CATEGORIES' or 'MULTI-BRANCH SELECTION'.
+        Phase 1 prompts contain the wide-net signature from PR #578:
+        - 'List EVERY fallacy' (the wide-net prompt preamble), OR
+        - 'Available root categories' (the root list in the prompt), OR
+        - the legacy triggers 'ROOT CATEGORIES' / 'MULTI-BRANCH SELECTION'.
+
         Phase 2 prompts contain 'Current position:' and 'OPTIONS at depth'.
         """
         for msg in chat_history.messages:
             content = str(getattr(msg, "content", "") or "")
-            if "ROOT CATEGORIES" in content or "MULTI-BRANCH SELECTION" in content:
+            if (
+                "List EVERY fallacy" in content
+                or "Available root categories" in content
+                or "ROOT CATEGORIES" in content
+                or "MULTI-BRANCH SELECTION" in content
+            ):
                 return True
         return False
+
+    def _is_leaf_prompt(chat_history):
+        """Detect if this is the leaf confirmation prompt (PR #471).
+
+        Prod presents a leaf confirmation prompt containing
+        'You reached a LEAF node in the fallacy taxonomy.' The LLM is asked to
+        return a `confirm_fallacy` function call. Earlier fixtures auto-confirmed
+        leaves (PR #471 changed that); if we return an empty items list here the
+        leaf is abandoned and the multi-branch test sees 0 fallacies.
+        """
+        for msg in chat_history.messages:
+            content = str(getattr(msg, "content", "") or "")
+            if "You reached a LEAF node" in content:
+                return True
+        return False
+
+    def _make_confirm_fallacy_call(node_pk):
+        """Create a mock FunctionCallContent for confirm_fallacy (leaf hit).
+
+        The prod ``ExplorationPlugin.confirm_fallacy(node_pk, confidence, justification)``
+        returns a JSON string containing ``"confirmed": True``. The mock must
+        only pass kwargs the real method accepts — passing ``confirmed=True`` as
+        a kwarg triggers "got an unexpected keyword argument 'confirmed'"
+        because that field is added to the result dict by the method body, not
+        accepted as input.
+        """
+        mock_call = MagicMock(spec=FunctionCallContent)
+        mock_call.name = "Exploration-confirm_fallacy"
+        mock_call.arguments = {
+            "node_pk": node_pk,
+            "confidence": "high",
+            "justification": "Mock leaf confirmation for calibration test",
+        }
+        mock_call.id = f"confirm_{node_pk}"
+        return mock_call
 
     def _get_current_position(chat_history):
         """Extract current taxonomy position from Phase 2 prompt."""
@@ -297,6 +353,29 @@ def mock_llm_service():
 
             mock_msg = MagicMock(spec=ChatMessageContent)
             mock_msg.items = [_make_explore_branch_call(pk) for pk in branches]
+            return [mock_msg]
+
+        elif _is_leaf_prompt(chat_history):
+            # Phase 2 leaf: prod asks for a confirm_fallacy decision (PR #471).
+            # The prod's leaf prompt contains "Node: <leaf_name> (PK: <leaf_pk>)"
+            # — extract the PK directly to avoid name→PK indirection. The leaf
+            # is a depth-2 node (PK is a key in ``_BRANCH_TO_LEAF.values()``).
+            leaf_pk = None
+            for msg in chat_history.messages:
+                content = str(getattr(msg, "content", "") or "")
+                if "Node:" in content and "PK:" in content:
+                    # Format: "Node: <name> (PK: <pk>)"
+                    try:
+                        pk_segment = content.split("(PK:")[1]
+                        leaf_pk = pk_segment.split(")")[0].strip()
+                        break
+                    except (IndexError, ValueError):
+                        continue
+            if not leaf_pk or leaf_pk not in _BRANCH_TO_LEAF.values():
+                # Fallback: confirm a known leaf rather than abandon
+                leaf_pk = "176"  # Procédé rhétorique (a depth-2 leaf)
+            mock_msg = MagicMock(spec=ChatMessageContent)
+            mock_msg.items = [_make_confirm_fallacy_call(leaf_pk)]
             return [mock_msg]
 
         else:
@@ -339,10 +418,43 @@ def mock_llm_service():
     # raises "TypeError: object MagicMock can't be used in 'await' expression".
     # This was the root cause of Issue #269.
     async def mock_get_chat_message_content(chat_history, settings, kernel, **kwargs):
-        """Async mock for one-shot fallback (get_chat_message_content, singular)."""
+        """Async mock for get_chat_message_content (singular).
+
+        Two call paths:
+        - Wide-net Phase 1 (PR #578): the prompt contains "List EVERY fallacy" or
+          "Available root categories". Prod parses a JSON-array of candidate
+          fallacies; the parser does `raw.find("[")` then `json.loads`. Returning
+          a single JSON object (the prior stale fixture) made the parser fail
+          silently → empty candidates → fallback to one-shot. Fix: return an
+          array of objects matching the per-test expected branches.
+        - One-shot fallback (PR #261): plain-text or single-object response.
+        """
         text_type = _detect_text(chat_history)
 
-        if text_type == "neutral":
+        if _is_phase1(chat_history):
+            # Wide-net Phase 1 — return a JSON-array the prod parser can read.
+            if text_type == "calibrated":
+                candidates = [
+                    {"fallacy_name": "Appel à l'autorité", "root_category": "Influence", "confidence": 0.9},
+                    {"fallacy_name": "Ad hominem", "root_category": "Obstruction", "confidence": 0.9},
+                    {"fallacy_name": "Généralisation abusive", "root_category": "Erreur mathématique", "confidence": 0.85},
+                    {"fallacy_name": "Causalité douteuse", "root_category": "Erreur de raisonnement", "confidence": 0.85},
+                    {"fallacy_name": "Arranger les faits", "root_category": "Tricherie", "confidence": 0.8},
+                    {"fallacy_name": "Argument bâclé", "root_category": "Insuffisance", "confidence": 0.8},
+                ]
+            elif text_type == "epita":
+                candidates = [
+                    {"fallacy_name": "Appel à l'autorité", "root_category": "Influence", "confidence": 0.9},
+                    {"fallacy_name": "Ad hominem", "root_category": "Obstruction", "confidence": 0.9},
+                ]
+            elif text_type == "neutral":
+                candidates = []
+            else:
+                candidates = [
+                    {"fallacy_name": "Procédé rhétorique", "root_category": "Influence", "confidence": 0.5},
+                ]
+            response_json = json.dumps(candidates)
+        elif text_type == "neutral":
             response_json = json.dumps(
                 {
                     "fallacy_name": "none",
