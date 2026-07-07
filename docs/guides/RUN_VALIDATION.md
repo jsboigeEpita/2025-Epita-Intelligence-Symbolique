@@ -62,9 +62,9 @@ python scripts/webapp/unified_web_orchestrator.py --integration --visible
 
 ## 📚 **Documentation Complète**
 
-- **[Guide Runners Complet](docs/RUNNERS_ET_VALIDATION_WEB.md)**
-- **[Guide Démarrage Rapide](docs/guides/GUIDE_DEMARRAGE_RAPIDE_PROJET_EPITA.md)**
-- **[Architecture 3 Niveaux](docs/architecture/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md)**
+- **[Guide Runners Complet](./RUNNERS_ET_VALIDATION_WEB.md)**
+- **[Guide Démarrage Rapide](./GUIDE_DEMARRAGE_RAPIDE_PROJET_EPITA.md)**
+- **[Architecture 3 Niveaux](../architecture/ARCHITECTURE_HIERARCHIQUE_3_NIVEAUX.md)**
 
 ---
 

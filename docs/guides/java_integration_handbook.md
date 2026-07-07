@@ -14,7 +14,7 @@ L'architecture actuelle repose sur des principes clés pour assurer la résilien
 Pour les erreurs spécifiques et leur résolution, consultez les guides dédiés :
 
 *   **Crash JVM (Access Violation) au Démarrage des Tests :** Causé par une mauvaise détection des sessions E2E.
-    *   **Solution :** [Résolution du Crash JVM dû à la détection E2E](../troubleshooting/jpype_e2e_detection_crash.md)
+    *   **Solution :** [Résolution du Crash JVM dû à la détection E2E](./jpype_e2e_detection_crash.md)
 
 *   **Modularité des solveurs logiques** grâce à un sélecteur (`FOLHandler` refactorisé) permettant de basculer entre `tweety` (basé sur Java) et `prover9` (exécutable externe) via une variable d'environnement.
 
@@ -101,7 +101,7 @@ Ce contexte historique montre que la gestion du cycle de vie de la JVM est extr�
 *   **Cause Racine 2 (Erreur de Chemin)** : Quatre tests échouaient systématiquement avec le code d'erreur 4 de `pytest` ("file or directory not found"). L'enquête a montré qu'une faute de frappe s'était glissée dans le nom du fichier de test (`authentic_components.py` au lieu de `test_authentic_components.py`).
 *   **Solution** :
     1.  Correction de l'assignation dans `FOLLogicAgent` pour utiliser l'attribut interne `_tweety_bridge` au lieu de la propriété publique.
-    2.  Correction de la faute de frappe dans les fichiers [`tests_jvm.txt`](maintenance/tests_jvm.txt:1) (utilisé par le script d'isolation) pour pointer vers le bon fichier de test.
+    2.  Correction de la faute de frappe dans les fichiers `tests_jvm.txt` (utilisé par le script d'isolation) pour pointer vers le bon fichier de test.
     3.  Ces corrections, combinées au refactoring précédent qui a introduit l'injection de dépendance pour `TweetyBridge` via une fixture `pytest`, ont permis de rendre la suite de tests `jvm_test` entièrement fonctionnelle.
 
 ### Phase 6 : Stabilisation des Tests End-to-End (Début Août 2025)

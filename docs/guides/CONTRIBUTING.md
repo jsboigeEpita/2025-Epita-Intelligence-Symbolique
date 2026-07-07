@@ -17,7 +17,7 @@ La documentation est organisée selon une structure hiérarchique à trois nivea
 - **Niveau 2** : Sous-catégories ou thèmes spécifiques
 - **Niveau 3** : Documents individuels
 
-Pour plus de détails sur la structure, consultez le fichier [docs/STRUCTURE.md](docs/STRUCTURE.md).
+Pour plus de détails sur la structure, consultez le fichier docs/STRUCTURE.md.
 
 ## Conventions de Nommage
 
@@ -89,4 +89,4 @@ La documentation doit être révisée régulièrement pour :
 
 - [Guide de syntaxe Markdown](https://www.markdownguide.org/basic-syntax/)
 - [Mermaid pour les diagrammes](https://mermaid-js.github.io/mermaid/#/)
-- [Documentation sur les conventions du projet](./guides/conventions_importation.md)
+- [Documentation sur les conventions du projet](./conventions_importation.md)

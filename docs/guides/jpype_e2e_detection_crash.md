@@ -18,7 +18,7 @@ L'enquête a révélé que le crash n'était pas directement dû à `jpype` ou �
 
 Le correctif a consisté à remplacer la détection par chaîne de caractères par une méthode plus robuste et spécifique à `pytest`, qui vérifie la présence explicite du marqueur `@pytest.mark.e2e`.
 
-**Fichier modifié :** [`tests/conftest.py`](tests/conftest.py:1)
+**Fichier modifié :** [`tests/conftest.py`](../../tests/conftest.py:1)
 
 ```python
 # Ligne 251

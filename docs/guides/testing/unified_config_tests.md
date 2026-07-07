@@ -35,7 +35,7 @@ tests/
 
 ## 🧪 Tests unitaires détaillés
 
-### [`test_unified_config.py`](unit/config/test_unified_config.py)
+### [`test_unified_config.py`](../../../tests/unit/config/test_unified_config.py)
 
 **Couverture :** Configuration principale, énumérations, validation
 
@@ -80,7 +80,7 @@ def test_get_agent_classes()              # Mapping agents → classes
 
 ## 🖥️ Tests CLI
 
-### [`test_configuration_cli.py`](unit/scripts/test_configuration_cli.py)
+### [`test_configuration_cli.py`](../../../tests/unit/argumentation_analysis/test_configuration_cli.py)
 
 **Couverture :** Interface CLI, conversion arguments, validation
 
@@ -132,7 +132,7 @@ python scripts/main/analyze_text.py \
 
 ## 🔗 Tests d'intégration
 
-### [`test_unified_config_integration.py`](unit/integration/test_unified_config_integration.py)
+### [`test_unified_config_integration.py`](../../../tests/unit/integration/test_unified_config_integration.py)
 
 **Couverture :** Pipeline complet, presets, compatibilité
 
@@ -159,7 +159,7 @@ def test_configuration_validation_comprehensive()   # Validation complète
 
 ## 💻 Tests PowerShell CLI
 
-### [`test_unified_config_cli.ps1`](scripts/test_unified_config_cli.ps1)
+### [`test_unified_config_cli.ps1`](../../../tests/scripts/test_unified_config_cli.ps1)
 
 **Couverture :** CLI système, intégration Windows, validation bout-en-bout
 
@@ -191,7 +191,7 @@ python analyze_text.py --source-type simple --format json --output test.json
 
 ## 🚀 Orchestrateur de tests
 
-### [`run_unified_config_tests.py`](run_unified_config_tests.py)
+### `run_unified_config_tests.py`
 
 **Couverture :** Automatisation complète, rapports, métriques
 

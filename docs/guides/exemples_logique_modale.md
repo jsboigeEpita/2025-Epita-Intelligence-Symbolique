@@ -110,7 +110,7 @@ Résultat: True - Tweety Result: Modal Query '<>(somme_angles_triangle_180)' is 
 ```
 L'argument est valide. Puisque la somme des angles d'un triangle est nécessairement égale à 180 degrés ([](somme_angles_triangle_180)), elle est vraie (somme_angles_triangle_180). Et puisqu'elle est vraie, elle est possiblement vraie (<>(somme_angles_triangle_180)).
 
-Pour voir cet exemple en action, consultez la fonction `process_necessity_possibility_example` dans [le script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:91).
+Pour voir cet exemple en action, consultez la fonction `process_necessity_possibility_example` dans le script d'exemples de logique modale.
 ```
 
 ### Exemple 2: Raisonnement épistémique
@@ -159,7 +159,7 @@ Résultat: True - Tweety Result: Modal Query 'K(alice, obtention_diplome)' is AC
 ```
 L'argument est valide. Puisqu'Alice sait que si elle réussit son examen, elle obtiendra son diplôme, et qu'elle sait qu'elle a réussi son examen, elle sait logiquement qu'elle obtiendra son diplôme. Cela illustre la propriété de clôture sous implication de la connaissance.
 
-Pour un exemple de code illustrant ce type de raisonnement, référez-vous à la fonction `process_epistemic_example` dans [le script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:143).
+Pour un exemple de code illustrant ce type de raisonnement, référez-vous à la fonction `process_epistemic_example` dans le script d'exemples de logique modale.
 ```
 
 ### Exemple 3: Raisonnement déontique
@@ -208,7 +208,7 @@ Résultat: False - Tweety Result: Modal Query '!circuler_librement => !respecter
 ```
 L'argument n'est pas valide. Le fait qu'il soit permis de circuler librement si on respecte la loi n'implique pas que si on ne circule pas librement, alors on ne respecte pas la loi. La permission de faire quelque chose n'implique pas l'obligation de le faire. C'est une erreur de raisonnement connue sous le nom de "négation de l'antécédent".
 
-Le code correspondant à cet exemple se trouve dans la fonction `process_deontic_example` du [script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:174).
+Le code correspondant à cet exemple se trouve dans la fonction `process_deontic_example` du script d'exemples de logique modale.
 ```
 
 ## Exemples intermédiaires
@@ -259,7 +259,7 @@ Résultat: True - Tweety Result: Modal Query 'F(routes_mouillees)' is ACCEPTED (
 ```
 L'argument est valide. Puisqu'il pleuvra demain (F(pluie)) et que s'il pleut, les routes seront mouillées (pluie => routes_mouillees), il s'ensuit que les routes seront mouillées demain (F(routes_mouillees)).
 
-Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans [`modal_logic_example.py`](../../examples/logic_agents/modal_logic_example.py:0), les principes de conversion de texte et d'exécution de requêtes modales sont illustrés par les autres fonctions du script.
+Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans `modal_logic_example.py`, les principes de conversion de texte et d'exécution de requêtes modales sont illustrés par les autres fonctions du script.
 ```
 
 ### Exemple 5: Croyances et connaissances
@@ -311,7 +311,7 @@ Résultat: True - Tweety Result: Modal Query '!K(jean, terre_plate)' is ACCEPTED
 ```
 L'argument est valide. Si Jean savait que la Terre est plate, alors la Terre serait plate (par la propriété de véracité de la connaissance). Or, la Terre n'est pas plate. Donc, Jean ne sait pas que la Terre est plate, même s'il le croit.
 
-Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans [`modal_logic_example.py`](../../examples/logic_agents/modal_logic_example.py:0), les principes de conversion de texte et d'exécution de requêtes modales sont illustrés par les autres fonctions du script.
+Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans `modal_logic_example.py`, les principes de conversion de texte et d'exécution de requêtes modales sont illustrés par les autres fonctions du script.
 ```
 
 ## Exemples avancés
@@ -362,7 +362,7 @@ Résultat: True - Tweety Result: Modal Query '<>([](P(sauver_vie)))' is ACCEPTED
 ```
 L'argument est valide. Puisqu'il est possible que sauver une vie soit obligatoire (<>(O(sauver_vie))), et que si une action est obligatoire, alors il est nécessaire qu'elle soit permise (O(a) => [](P(a))), il s'ensuit qu'il est possible qu'il soit nécessaire que sauver une vie soit permis (<>([](P(sauver_vie)))).
 
-Vous pouvez retrouver une implémentation de cet exemple complexe dans la fonction `process_complex_example` du [script d'exemples de logique modale](../../examples/logic_agents/modal_logic_example.py:210).
+Vous pouvez retrouver une implémentation de cet exemple complexe dans la fonction `process_complex_example` du script d'exemples de logique modale.
 ```
 
 ### Exemple 7: Paradoxes modaux
@@ -418,7 +418,7 @@ L'ensemble de croyances est incohérent. Le paradoxe vient de la combinaison des
 
 Cette combinaison mène à une contradiction dans certains systèmes modaux, illustrant les subtilités et les défis de la logique modale.
 
-Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans [`modal_logic_example.py`](../../examples/logic_agents/modal_logic_example.py:0), les principes de conversion de texte et d'exécution de requêtes modales, y compris la vérification de la cohérence (bien que la requête ici soit formulée pour tester une conséquence spécifique qui se révèle fausse, indiquant l'incohérence), sont illustrés par les autres fonctions du script.
+Bien qu'il n'y ait pas de fonction dédiée pour cet exemple spécifique dans `modal_logic_example.py`, les principes de conversion de texte et d'exécution de requêtes modales, y compris la vérification de la cohérence (bien que la requête ici soit formulée pour tester une conséquence spécifique qui se révèle fausse, indiquant l'incohérence), sont illustrés par les autres fonctions du script.
 ```
 
 ## Cas d'utilisation réels

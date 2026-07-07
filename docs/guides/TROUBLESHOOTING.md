@@ -32,9 +32,9 @@ Avant de plonger dans des problèmes spécifiques, plusieurs scripts et ensemble
 *   **Tests Généraux :** Le répertoire [`scripts/testing/`](../../scripts/testing/) contient divers scripts pour tester différentes fonctionnalités du projet.
 *   **Tests Unitaires :** Pour isoler des problèmes au niveau des modules, exécutez les tests situés dans [`tests/unit/`](../../tests/unit/).
 *   **Tests d'Intégration :** Si vous suspectez des problèmes d'interaction entre différents composants, les tests dans [`tests/integration/`](../../tests/integration/) peuvent être utiles.
-*   **Test de l'API :** Pour les problèmes spécifiques à l'API web, le script [`libs/web_api/test_api.py`](../../libs/web_api/test_api.py) permet de vérifier son bon fonctionnement.
+*   **Test de l'API :** Pour les problèmes spécifiques à l'API web, le script `libs/web_api/test_api.py` permet de vérifier son bon fonctionnement.
 
-Consultez également la [FAQ générale de développement](projets/sujets/aide/FAQ_DEVELOPPEMENT.md) pour des réponses aux questions fréquentes.
+Consultez également la [FAQ générale de développement](../projets/sujets/aide/FAQ_DEVELOPPEMENT.md) pour des réponses aux questions fréquentes.
 
 ## Problèmes d'Installation
 
@@ -250,7 +250,7 @@ Consultez également la [FAQ générale de développement](projets/sujets/aide/F
 
 ## Problèmes d'API
 
-Pour tout problème lié à l'API, il est fortement recommandé d'exécuter le script de test dédié [`libs/web_api/test_api.py`](../../libs/web_api/test_api.py) qui peut aider à identifier la source du problème (connexion, routes, réponses attendues, etc.).
+Pour tout problème lié à l'API, il est fortement recommandé d'exécuter le script de test dédié `libs/web_api/test_api.py` qui peut aider à identifier la source du problème (connexion, routes, réponses attendues, etc.).
 
 ### Erreurs de connexion
 
@@ -596,8 +596,8 @@ Cette erreur se produit lorsque le système manque de mémoire pour traiter de g
 ---
 
 Si vous rencontrez un problème qui n'est pas couvert dans ce guide, veuillez consulter les ressources suivantes :
-*   La [FAQ générale de développement](projets/sujets/aide/FAQ_DEVELOPPEMENT.md).
-*   Pour les problèmes spécifiques à l'interface web, consultez le [guide de dépannage de l'interface web](projets/sujets/aide/interface-web/TROUBLESHOOTING.md).
+*   La [FAQ générale de développement](../projets/sujets/aide/FAQ_DEVELOPPEMENT.md).
+*   Pour les problèmes spécifiques à l'interface web, consultez le [guide de dépannage de l'interface web](../projets/sujets/aide/interface-web/TROUBLESHOOTING.md).
 
 Si le problème persiste, ouvrez une issue sur le dépôt GitHub du projet avec une description détaillée du problème, les étapes pour le reproduire, et les logs pertinents.
 

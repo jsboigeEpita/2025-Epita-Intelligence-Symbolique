@@ -19,7 +19,7 @@ Cette approche consiste à recréer la structure de base de la bibliothèque `mc
 
 2.  **Définir la structure de la classe `FastMCP` :**
 
-    Le fichier [`libs/mcp/server/fastmcp.py`](libs/mcp/server/fastmcp.py) doit contenir la classe `FastMCP`. En se basant sur son utilisation dans `services/mcp_server/main.py`, la classe devra implémenter les méthodes suivantes :
+    Le fichier [`libs/mcp/server/fastmcp.py`](../../libs/mcp/server/fastmcp.py) doit contenir la classe `FastMCP`. En se basant sur son utilisation dans `services/mcp_server/main.py`, la classe devra implémenter les méthodes suivantes :
     *   `__init__(self, ...)`: Pour l'initialisation.
     *   `tool(self, ...)`: Pour décorer et enregistrer de nouveaux outils.
     *   `run(self, ...)`: Pour démarrer le serveur et écouter les requêtes.

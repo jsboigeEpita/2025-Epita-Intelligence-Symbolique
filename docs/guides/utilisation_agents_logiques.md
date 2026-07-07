@@ -84,7 +84,7 @@ Le système d'agents logiques est composé des éléments suivants:
 1. **`BaseLogicAgent`**: Classe abstraite **unifiée** ([`argumentation_analysis/agents/core/abc/agent_bases.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py:159)) définissant l'interface commune à tous les agents logiques. Suite à un refactoring, elle intègre désormais à la fois les capacités de raisonnement formel et la logique d'orchestration de tâches (précédemment dans `AbstractLogicAgent`, qui a été supprimé).
 2. **Agents spécifiques**: Implémentations concrètes héritant de `BaseLogicAgent`:
    - [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py:35): Pour la logique propositionnelle
-   - [`FirstOrderLogicAgent`](../../argumentation_analysis/agents/core/logic/first_order_logic_agent.py:131): Pour la logique du premier ordre
+   - [`FirstOrderLogicAgent`](../../argumentation_analysis/agents/core/logic/fol_logic_agent.py:131): Pour la logique du premier ordre
    - [`ModalLogicAgent`](../../argumentation_analysis/agents/core/logic/modal_logic_agent.py:138): Pour la logique modale
 3. **`LogicAgentFactory`**: Factory ([`argumentation_analysis/agents/core/logic/logic_factory.py`](../../argumentation_analysis/agents/core/logic/logic_factory.py:20)) pour créer les agents appropriés selon le type de logique.
 4. **`BeliefSet`**: Représentation des ensembles de croyances ([`argumentation_analysis/agents/core/logic/belief_set.py`](../../argumentation_analysis/agents/core/logic/belief_set.py)).
@@ -128,7 +128,7 @@ llm_service_id = "default" # Assurez-vous que ce service est configuré dans vot
 agent = LogicAgentFactory.create_agent("propositional", kernel, llm_service_id)
 ```
 
-Pour un exemple complet d'initialisation et d'utilisation programmatique d'un agent logique, consultez les scripts disponibles dans le répertoire [`examples/logic_agents/`](../../examples/logic_agents/). Le script [`demo_tweety_interaction_simple.py`](../../examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) peut également offrir un contexte d'utilisation, bien qu'il soit plus orienté vers une démonstration d'interaction globale.
+Pour un exemple complet d'initialisation et d'utilisation programmatique d'un agent logique, consultez les scripts disponibles dans le répertoire `examples/logic_agents/`. Le script `demo_tweety_interaction_simple.py` peut également offrir un contexte d'utilisation, bien qu'il soit plus orienté vers une démonstration d'interaction globale.
 
 ### Conversion de texte en ensemble de croyances
 
@@ -191,7 +191,7 @@ interpretation = agent.interpret_results(text, belief_set, queries, results_for_
 print(f"Interprétation: {interpretation}")
 ```
 
-Des exemples illustrant l'ensemble de ce flux de travail (de la conversion du texte à l'interprétation des résultats) sont disponibles dans le répertoire [`examples/logic_agents/`](../../examples/logic_agents/).
+Des exemples illustrant l'ensemble de ce flux de travail (de la conversion du texte à l'interprétation des résultats) sont disponibles dans le répertoire `examples/logic_agents/`.
 
 ## Intégration avec d'autres composants
 
@@ -230,10 +230,10 @@ Les agents logiques sont exposés via l'API Web, permettant leur utilisation à 
 - Endpoint `/api/logic/belief-set`: Convertit un texte en ensemble de croyances
 - Endpoint `/api/logic/query`: Exécute une requête sur un ensemble de croyances
 - Endpoint `/api/logic/generate-queries`: Génère des requêtes pertinentes
-- Endpoint `/api/logic/interpret`: Interprète les résultats des requêtes (Note: Cet endpoint n'est actuellement pas implémenté dans [`libs/web_api/routes/logic_routes.py`](../../libs/web_api/routes/logic_routes.py)).
+- Endpoint `/api/logic/interpret`: Interprète les résultats des requêtes (Note: Cet endpoint n'est actuellement pas implémenté dans [`libs/web_api/routes/logic_routes.py`](../../argumentation_analysis/services/web_api/routes/logic_routes.py)).
 
-Pour un exemple concret d'intégration et d'utilisation de ces endpoints API, référez-vous au script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py).
-De plus, des tests d'intégration pour les agents logiques, y compris leur interaction via l'API, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](../tests/integration/test_logic_agents_integration.py).
+Pour un exemple concret d'intégration et d'utilisation de ces endpoints API, référez-vous au script `api_integration_example.py`.
+De plus, des tests d'intégration pour les agents logiques, y compris leur interaction via l'API, sont disponibles dans [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).
 
 ## Bonnes pratiques
 
@@ -291,19 +291,19 @@ logging.basicConfig(level=logging.DEBUG)
 - [Exemples de logique modale](exemples_logique_modale.md)
 - [Guide d'intégration avec l'API Web](integration_api_web.md)
 - [Documentation de TweetyProject](http://tweetyproject.org/doc/)
-- [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
+- Tutoriel interactif sur les agents logiques
 - **Exemples de scripts pour agents logiques**:
-    - Le répertoire [`examples/logic_agents/`](../../examples/logic_agents/) contient divers scripts illustrant l'utilisation des agents logiques.
-    - Le script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py) montre comment interagir avec les agents logiques via l'API.
-    - Certains scripts dans [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/) peuvent également offrir des contextes d'utilisation pertinents (ex: [`demo_tweety_interaction_simple.py`](../../examples/scripts_demonstration/demo_tweety_interaction_simple.py)).
+    - Le répertoire `examples/logic_agents/` contient divers scripts illustrant l'utilisation des agents logiques.
+    - Le script `api_integration_example.py` montre comment interagir avec les agents logiques via l'API.
+    - Certains scripts dans `examples/scripts_demonstration/` peuvent également offrir des contextes d'utilisation pertinents (ex: `demo_tweety_interaction_simple.py`).
 - **Notebooks Jupyter supplémentaires**:
-    - En complément du tutoriel `logic_agents_tutorial.ipynb` déjà listé, le notebook [`api_logic_tutorial.ipynb`](../../examples/notebooks/api_logic_tutorial.ipynb) peut offrir des exemples d'utilisation de l'API des agents logiques (vérifiez sa disponibilité et pertinence exacte pour votre besoin).
+    - En complément du tutoriel `logic_agents_tutorial.ipynb` déjà listé, le notebook `api_logic_tutorial.ipynb` peut offrir des exemples d'utilisation de l'API des agents logiques (vérifiez sa disponibilité et pertinence exacte pour votre besoin).
 - **Tests d'intégration**:
     - Pour comprendre comment les agents logiques sont testés et pour voir des exemples d'utilisation dans des scénarios d'intégration, consultez :
-        - Le fichier de test principal : [`tests/integration/test_logic_agents_integration.py`](../tests/integration/test_logic_agents_integration.py).
+        - Le fichier de test principal : [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py).
         - Le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour des tests spécifiques à l'intégration avec TweetyProject via JPype, qui est un composant clé.
 - **Données d'exemple**:
-    - Les données utilisées par les exemples ou les tests des agents logiques peuvent se trouver dans le répertoire [`examples/test_data/`](../../examples/test_data/). Il est recommandé d'explorer ce répertoire pour trouver des fichiers de données spécifiques si vous travaillez sur des exemples ou reproduisez des tests.
+    - Les données utilisées par les exemples ou les tests des agents logiques peuvent se trouver dans le répertoire `examples/test_data/`. Il est recommandé d'explorer ce répertoire pour trouver des fichiers de données spécifiques si vous travaillez sur des exemples ou reproduisez des tests.
 
 
 
