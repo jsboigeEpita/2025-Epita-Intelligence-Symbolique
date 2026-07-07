@@ -60,7 +60,7 @@ Les capacités de raisonnement sont principalement implémentées et orchestrée
 Certains outils d'analyse, bien que principalement axés sur d'autres aspects (comme les sophismes ou la rhétorique), peuvent intégrer des formes de raisonnement :
 
 *   **`ComplexFallacyAnalyzer`** ([`../../argumentation_analysis/agents/tools/analysis/complex_fallacy_analyzer.py`](../../argumentation_analysis/agents/tools/analysis/complex_fallacy_analyzer.py)) : Peut effectuer des inférences pour décomposer des arguments complexes ou identifier des contradictions implicites qui sous-tendent certains sophismes.
-*   **`RhetoricalResultAnalyzer`** ([`../../argumentation_analysis/agents/tools/analysis/rhetorical_result_analyzer.py`](../../argumentation_analysis/agents/tools/analysis/rhetorical_result_analyzer.py)) : Pourrait analyser la cohérence logique des stratégies rhétoriques employées ou inférer les intentions de l'orateur basées sur des patterns logiques.
+*   **`RhetoricalResultAnalyzer`** ([`../../argumentation_analysis/agents/tools/analysis/rhetorical_result_analyzer.py`](../../argumentation_analysis/plugins/analysis_tools/logic/rhetorical_result_analyzer.py)) : Pourrait analyser la cohérence logique des stratégies rhétoriques employées ou inférer les intentions de l'orateur basées sur des patterns logiques.
 
 La documentation spécifique de ces outils devrait détailler leurs capacités de raisonnement respectives.
 

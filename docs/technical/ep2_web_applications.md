@@ -12,11 +12,11 @@ L'exploration du code a révélé un écosystème hétérogène composé de plus
 
 | Application / Service | Chemin d'accès | Framework / Technologie | Statut de Lancement |
 | :--- | :--- | :--- | :--- |
-| **Interface Web Principale** | [`interface_web/`](./interface_web) | **Starlette / React** | ✅ **Lancée avec succès** |
-| **Application Web Legacy (Simple)** | [`services/web_api/interface-simple/`](./services/web_api/interface-simple) | **Flask** | ✅ **Lancée avec succès** |
-| API REST Principale | [`api/`](./api) | **FastAPI** | ✅ **Lancée avec succès** |
-| Application Mobile | [`3.1.5_Interface_Mobile/`](./3.1.5_Interface_Mobile) | **Expo (React Native)** | ✅ **Lancée avec succès** |
-| Orchestrateur Unifié | [`scripts/apps/webapp/`](./scripts/apps/webapp) | Python (Script) | N/A |
+| **Interface Web Principale** | [`interface_web/`](../../interface_web) | **Starlette / React** | ✅ **Lancée avec succès** |
+| **Application Web Legacy (Simple)** | `services/web_api/interface-simple/` | **Flask** | ✅ **Lancée avec succès** |
+| API REST Principale | [`api/`](../../api) | **FastAPI** | ✅ **Lancée avec succès** |
+| Application Mobile | [`3.1.5_Interface_Mobile/`](../../3.1.5_Interface_Mobile) | **Expo (React Native)** | ✅ **Lancée avec succès** |
+| Orchestrateur Unifié | [`scripts/apps/webapp/`](../../scripts/apps/webapp) | Python (Script) | N/A |
 
 ---
 
@@ -26,9 +26,9 @@ C'est l'application la plus moderne et la plus intégrée du projet. Elle est g�
 
 ### 3.1. Architecture
 
--   **Backend**: Une application [Starlette](https://www.starlette.io/) située dans [`interface_web/app.py`](./interface_web/app.py) qui sert une API et les fichiers statiques du frontend.
+-   **Backend**: Une application [Starlette](https://www.starlette.io/) située dans [`interface_web/app.py`](../../interface_web/app.py) qui sert une API et les fichiers statiques du frontend.
 -   **Frontend**: Une application [React](https://reactjs.org/) (initialisée avec `create-react-app`) dont le code source se trouve dans `services/web_api/interface-web-argumentative/`. Les fichiers buildés sont servis par le backend Starlette.
--   **Orchestration**: Le script [`unified_web_orchestrator.py`](./scripts/apps/webapp/unified_web_orchestrator.py) gère le cycle de vie complet : activation de l'environnement, installation des dépendances, nettoyage des ports, lancement des serveurs backend et frontend, et surveillance de leur état.
+-   **Orchestration**: Le script [`unified_web_orchestrator.py`](../../scripts/apps/webapp/unified_web_orchestrator.py) gère le cycle de vie complet : activation de l'environnement, installation des dépendances, nettoyage des ports, lancement des serveurs backend et frontend, et surveillance de leur état.
 
 ### 3.2. Procédure de Lancement
 
@@ -49,13 +49,13 @@ Lors du premier lancement, deux problèmes ont été identifiés et corrigés :
 
 1.  **Erreur `TypeError` sur `ServiceManager`**:
     -   **Symptôme**: Le script échouait avec une erreur `TypeError: OrchestrationServiceManager.__init__() got an unexpected keyword argument 'config'`.
-    -   **Cause**: L'instanciation de `ServiceManager` dans [`interface_web/app.py`](./interface_web/app.py:165) utilisait un ancien format avec un paramètre `config`.
+    -   **Cause**: L'instanciation de `ServiceManager` dans [`interface_web/app.py`](../../interface_web/app.py:165) utilisait un ancien format avec un paramètre `config`.
     -   **Solution**: La ligne a été modifiée pour appeler `ServiceManager()` sans argument, conformément à sa nouvelle définition.
 
 2.  **Erreur `404 Not Found` sur le Health Check**:
     -   **Symptôme**: L'orchestrateur démarrait le backend puis l'arrêtait immédiatement car le health check sur `/api/health` échouait.
     -   **Cause**: L'application exposait un endpoint `/api/status` mais l'orchestrateur était configuré pour interroger `/api/health`.
-    -   **Solution**: Un alias a été ajouté dans [`interface_web/app.py`](./interface_web/app.py:186) pour que la route `/api/health` pointe vers le même endpoint que `/api/status`.
+    -   **Solution**: Un alias a été ajouté dans [`interface_web/app.py`](../../interface_web/app.py:186) pour que la route `/api/health` pointe vers le même endpoint que `/api/status`.
 
 Avec ces deux corrections, l'application est désormais stable et peut être lancée de manière fiable.
 
@@ -67,7 +67,7 @@ Une application Flask autonome a été découverte dans `services/web_api/interf
 
 ### 4.1. Architecture
 
-- **Backend**: Une application [Flask](https://flask.palletsprojects.com/) simple définie dans [`app.py`](./services/web_api/interface-simple/app.py).
+- **Backend**: Une application [Flask](https://flask.palletsprojects.com/) simple définie dans `app.py`.
 - **Dépendances**: L'application s'appuie sur le `ServiceManager` global du projet, ce qui indique une intégration avec l'écosystème d'analyse d'argumentation.
 
 ### 4.2. Procédure de Lancement
@@ -89,7 +89,7 @@ Un bug critique, identique à celui trouvé dans l'application Starlette, a ét�
 
 1.  **Erreur `TypeError` sur `ServiceManager`**:
     -   **Symptôme**: L'application ne démarrait pas, levant une `TypeError: OrchestrationServiceManager.__init__() got an unexpected keyword argument 'config'`.
-    -   **Cause**: L'instanciation de `ServiceManager` dans [`services/web_api/interface-simple/app.py`](./services/web_api/interface-simple/app.py) était obsolète.
+    -   **Cause**: L'instanciation de `ServiceManager` dans `services/web_api/interface-simple/app.py` était obsolète.
     -   **Solution**: L'appel a été corrigé pour utiliser `ServiceManager()`, sans argument, ce qui a résolu l'erreur et permis au serveur de démarrer.
 
 ---
@@ -100,7 +100,7 @@ Une API REST basée sur FastAPI a été identifiée dans le répertoire `api/`. 
 
 ### 5.1. Architecture
 
-- **Backend**: Une application [FastAPI](https://fastapi.tiangolo.com/) définie dans [`main_simple.py`](./api/main_simple.py). Le serveur est lancé via [Uvicorn](https://www.uvicorn.org/).
+- **Backend**: Une application [FastAPI](https://fastapi.tiangolo.com/) définie dans `main_simple.py`. Le serveur est lancé via [Uvicorn](https://www.uvicorn.org/).
 - **Intégration**: L'application est conçue pour être exécutée comme un module Python (`python -m api.main_simple`), ce qui assure que les imports relatifs au projet fonctionnent correctement.
 
 ### 5.2. Procédure de Lancement
@@ -129,9 +129,9 @@ Le projet inclut une application mobile développée avec Expo et React Native. 
 
 ### 6.1. Architecture
 
-- **Framework**: [Expo (React Native)](https://expo.dev/) utilisant TypeScript. Le code source est situé dans [`3.1.5_Interface_Mobile/`](./3.1.5_Interface_Mobile).
+- **Framework**: [Expo (React Native)](https://expo.dev/) utilisant TypeScript. Le code source est situé dans [`3.1.5_Interface_Mobile/`](../../3.1.5_Interface_Mobile).
 - **Environnement**: L'application est autonome et repose sur l'écosystème Node.js/NPM. Elle n'a pas de dépendance directe avec l'environnement Conda du projet.
-- **Gestion des dépendances**: Un fichier [`package.json`](./3.1.5_Interface_Mobile/package.json) définit les dépendances et les scripts de lancement.
+- **Gestion des dépendances**: Un fichier [`package.json`](../../3.1.5_Interface_Mobile/package.json) définit les dépendances et les scripts de lancement.
 
 ### 6.2. Procédure de Lancement (Mode Web)
 
