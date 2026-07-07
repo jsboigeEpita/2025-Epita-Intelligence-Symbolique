@@ -4,7 +4,7 @@ Cette section contient la documentation de référence pour les API du système 
 
 ## Documents Disponibles
 
-### [Référence API du Système de Communication](./reference_api.md)
+### Référence API du Système de Communication
 Documentation complète de l'API du système de communication entre agents.
 
 ### [API des Agents](./agents/README.md)
@@ -78,7 +78,7 @@ L'API du système suit les principes du versionnement sémantique (SemVer) :
 - **Changements mineurs** : Ajouts de fonctionnalités compatibles avec les versions précédentes
 - **Correctifs** : Corrections de bugs sans modification de l'API
 
-Pour plus d'informations sur les changements d'API, consultez le [CHANGELOG](../../CHANGELOG.md).
+Pour plus d'informations sur les changements d'API, consultez le CHANGELOG.
 
 ## Structure de la Documentation
 

@@ -263,4 +263,4 @@ asyncio.run(main())
 ## Voir aussi
 
 - [API des Agents](../agents/README.md)
-- [API du Système de Communication](../reference_api.md)
+- API du Système de Communication

@@ -99,4 +99,4 @@ Les agents interagissent principalement via l'Agent PM, qui joue le rôle de coo
 ## Voir aussi
 
 - [API d'Orchestration](../orchestration/README.md)
-- [API du Système de Communication](../reference_api.md)
+- API du Système de Communication
