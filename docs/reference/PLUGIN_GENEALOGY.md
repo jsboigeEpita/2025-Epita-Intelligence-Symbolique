@@ -31,7 +31,7 @@ L'agent a connu plusieurs itérations majeures, chacune introduisant une nouvell
 
 ## 3. Analyse des Anciens Workflows pour Coexistence
 
-### Comparaison du Workflow Parallèle : `4d7132cc` vs. [`DESIGN_PARALLEL_WORKFLOW.md`](maintenance/DESIGN_PARALLEL_WORKFLOW.md:1)
+### Comparaison du Workflow Parallèle : `4d7132cc` vs. [`DESIGN_PARALLEL_WORKFLOW.md`](../design/DESIGN_PARALLEL_WORKFLOW.md:1)
 
 La différence entre l'ancienne et la nouvelle approche parallèle est fondamentale et illustre une maturité croissante de la conception.
 

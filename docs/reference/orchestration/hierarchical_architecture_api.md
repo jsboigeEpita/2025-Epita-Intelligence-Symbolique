@@ -620,4 +620,4 @@ print(f"Résultats: {results}")
 - [API du Niveau Tactique](./tactical_level_api.md)
 - [API du Niveau Opérationnel](./operational_level_api.md)
 - [API des Agents](../agents/README.md)
-- [API du Système de Communication](../reference_api.md)
+- API du Système de Communication
