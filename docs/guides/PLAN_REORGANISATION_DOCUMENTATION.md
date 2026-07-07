@@ -347,20 +347,20 @@ Le nouveau fichier `README.md` du répertoire `projets/` servira d'index princip
 ## Filtrage par Niveau de Difficulté
 
 ### Niveau ⭐⭐ (Accessible)
-- [Documentation et transfert de connaissances](./developpement_systeme.md#214-documentation-et-transfert-de-connaissances)
+- [Documentation et transfert de connaissances](../projets/developpement_systeme.md#214-documentation-et-transfert-de-connaissances)
 
 ### Niveau ⭐⭐⭐ (Intermédiaire)
-- [Taxonomie des schémas argumentatifs](./fondements_theoriques.md#131-taxonomie-des-schémas-argumentatifs)
-- [Classification des sophismes](./fondements_theoriques.md#132-classification-des-sophismes)
-- [Ontologie de l'argumentation](./fondements_theoriques.md#133-ontologie-de-largumentation)
+- [Taxonomie des schémas argumentatifs](../projets/fondements_theoriques.md#131-taxonomie-des-schémas-argumentatifs)
+- [Classification des sophismes](../projets/fondements_theoriques.md#132-classification-des-sophismes)
+- [Ontologie de l'argumentation](../projets/fondements_theoriques.md#133-ontologie-de-largumentation)
 
 ### Niveau ⭐⭐⭐⭐ (Avancé)
-- [Formules booléennes quantifiées (QBF)](./fondements_theoriques.md#115-formules-booléennes-quantifiées-qbf)
-- [Argumentation basée sur les hypothèses (ABA)](./fondements_theoriques.md#124-argumentation-basée-sur-les-hypothèses-aba)
+- [Formules booléennes quantifiées (QBF)](../projets/fondements_theoriques.md#115-formules-booléennes-quantifiées-qbf)
+- [Argumentation basée sur les hypothèses (ABA)](../projets/fondements_theoriques.md#124-argumentation-basée-sur-les-hypothèses-aba)
 
 ### Niveau ⭐⭐⭐⭐⭐ (Très avancé)
-- [ArgumentuMind: Système cognitif de compréhension argumentative](./lutte_desinformation.md#argumentumind-système-cognitif-de-compréhension-argumentative)
-- [ArgumentuShield: Système de protection cognitive contre la désinformation](./lutte_desinformation.md#argumentushield-système-de-protection-cognitive-contre-la-désinformation)
+- ArgumentuMind: Système cognitif de compréhension argumentative
+- ArgumentuShield: Système de protection cognitive contre la désinformation
 ```
 
 Cette approche permettra de conserver toutes les informations utiles des vues actuelles tout en éliminant les redondances et en améliorant la navigation.

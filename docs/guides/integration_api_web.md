@@ -418,9 +418,9 @@ En cas d'erreur, l'API renvoie un objet JSON avec les informations suivantes:
 
 ## Ressources supplémentaires
 
-- [Description technique de l'API Web](../composants/api_web.md)
+- [Description technique de l'API Web](../technical/api_web.md)
 - [Guide d'utilisation des agents logiques](utilisation_agents_logiques.md)
 - [Exemples de logique propositionnelle](exemples_logique_propositionnelle.md)
 - [Exemples de logique du premier ordre](exemples_logique_premier_ordre.md)
 - [Exemples de logique modale](exemples_logique_modale.md)
-- [Exemple d'intégration avec l'API Web](../../examples/logic_agents/api_integration_example.py)
+- Exemple d'intégration avec l'API Web

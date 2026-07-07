@@ -10,7 +10,7 @@ L'objectif de ce document est de vous fournir un retour constructif et un plan d
 
 Votre serveur MCP est bien conçu, mais il repose sur une hypothèse architecturale qui n'est plus d'actualité.
 
-**Le point clé :** Votre code dans [`mcp/main.py`](mcp/main.py:8) tente de contacter une API web à l'adresse `http://localhost:5000/api`.
+**Le point clé :** Votre code dans `mcp/main.py` tente de contacter une API web à l'adresse `http://localhost:5000/api`.
 
 ```python
 # mcp/main.py:8
@@ -23,7 +23,7 @@ Cette approche était valable avec l'ancienne architecture du projet. Cependant,
 
 Le projet n'expose plus une multitude de services sur des ports différents. À la place, nous avons un **point d'entrée unique** :
 
-- **[`project_core/webapp_from_scripts/unified_web_orchestrator.py`](project_core/webapp_from_scripts/unified_web_orchestrator.py)**
+- **[`project_core/webapp_from_scripts/unified_web_orchestrator.py`](../../scripts/apps/webapp/unified_web_orchestrator.py)**
 
 Cet orchestrateur est maintenant responsable du cycle de vie de toutes les applications et services. Il utilise une classe centrale, le `ServiceManager`, pour démarrer, arrêter et communiquer avec les différents composants, y compris les vôtres.
 
@@ -38,7 +38,7 @@ Voici un plan étape par étape pour aligner votre serveur MCP avec la nouvelle 
 Votre `main.py` ne doit plus être un simple "proxy" HTTP. Il doit devenir un véritable service qui utilise directement les fonctionnalités d'analyse du projet.
 
 **Action :**
-Modifiez les fonctions dans [`mcp/main.py`](mcp/main.py) pour qu'elles importent et appellent les classes et fonctions d'analyse du projet. Inspirez-vous de la manière dont le `ServiceManager` communique avec les autres services. Vous devrez probablement importer des éléments depuis `argumentation_analysis` ou `project_core`.
+Modifiez les fonctions dans `mcp/main.py` pour qu'elles importent et appellent les classes et fonctions d'analyse du projet. Inspirez-vous de la manière dont le `ServiceManager` communique avec les autres services. Vous devrez probablement importer des éléments depuis `argumentation_analysis` ou `project_core`.
 
 *Exemple (conceptuel) :*
 ```python
@@ -57,7 +57,7 @@ return result
 
 ### Étape 2 : Intégrer le lancement à l'Orchestrateur
 
-L'[`UnifiedWebOrchestrator`](project_core/webapp_from_scripts/unified_web_orchestrator.py) doit connaître votre serveur MCP pour le lancer en tant que sous-processus.
+L'[`UnifiedWebOrchestrator`](../../scripts/apps/webapp/unified_web_orchestrator.py) doit connaître votre serveur MCP pour le lancer en tant que sous-processus.
 
 **Action :**
 Identifiez dans le script de l'orchestrateur l'endroit où les autres services sont démarrés et ajoutez le code nécessaire pour lancer votre serveur. La commande sera probablement similaire à celle que vous avez définie dans votre `README.md` : `uv run mcp/main.py`.

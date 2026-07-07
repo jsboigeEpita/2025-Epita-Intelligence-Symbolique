@@ -98,7 +98,7 @@ Le cycle de vie d'une analyse argumentative suit les étapes suivantes :
         ```
         Ce script va :
         *   Vérifier la présence de Conda.
-        *   Créer ou mettre à jour l'environnement Conda `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclut Python 3.10, Clingo, JPype1, et toutes les autres dépendances.
+        *   Créer ou mettre à jour l'environnement Conda `projet-is` à partir du fichier [`environment.yml`](../../environment.yml:1). Cet environnement inclut Python 3.10, Clingo, JPype1, et toutes les autres dépendances.
         *   Gérer l'installation d'un JDK portable (pour JPype) si nécessaire.
         *   Créer et configurer un fichier `.env` à la racine du projet pour les variables d'environnement (comme `JAVA_HOME`, et les emplacements pour les clés API).
         *   Vous demander de confirmer la suppression d'anciens répertoires `venv` s'ils sont détectés.

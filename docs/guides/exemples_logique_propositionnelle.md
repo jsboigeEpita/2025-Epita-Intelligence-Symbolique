@@ -22,7 +22,7 @@
 
 ## Introduction
 
-Pour une implémentation complète des exemples présentés dans ce guide, vous pouvez consulter le script Python suivant : [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0). Ce script montre comment initialiser l'agent, convertir du texte, exécuter des requêtes et interpréter les résultats pour divers scénarios de logique propositionnelle.
+Pour une implémentation complète des exemples présentés dans ce guide, vous pouvez consulter le script Python suivant : `examples/logic_agents/propositional_logic_example.py`. Ce script montre comment initialiser l'agent, convertir du texte, exécuter des requêtes et interpréter les résultats pour divers scénarios de logique propositionnelle.
 
 La logique propositionnelle est le type de logique le plus fondamental, permettant de représenter et d'analyser des propositions simples et leurs relations. Ce document présente des exemples concrets d'utilisation de la logique propositionnelle avec notre système d'agents logiques.
 
@@ -50,7 +50,7 @@ Les variables propositionnelles sont généralement représentées par des lettr
 
 ### Exemple 1: Modus Ponens
 
-*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:91).* 
+*Le code complet pour cet exemple est disponible dans `examples/logic_agents/propositional_logic_example.py`.* 
 
 
 Le Modus Ponens est une règle d'inférence fondamentale: si on a "si P alors Q" et "P", on peut conclure "Q".
@@ -108,7 +108,7 @@ L'argument est valide selon le Modus Ponens. Puisque nous savons que "si le ciel
 
 ### Exemple 2: Modus Tollens
 
-*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:132).* 
+*Le code complet pour cet exemple est disponible dans `examples/logic_agents/propositional_logic_example.py`.* 
 
 
 Le Modus Tollens est une autre règle d'inférence: si on a "si P alors Q" et "non Q", on peut conclure "non P".
@@ -154,12 +154,12 @@ Résultat: True - Tweety Result: Query '!mammifere' is ACCEPTED (True).
 **Interprétation:**
 ```
 L'argument est valide selon le Modus Tollens. Puisque nous savons que "si un animal est un mammifère, alors il a des poils" et que "ce reptile n'a pas de poils", nous pouvons logiquement conclure que "ce reptile n'est pas un mammifère".
-Le script [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:163) exécute également une requête pour "mammifere", qui retourne `False`, renforçant la conclusion.
+Le script `examples/logic_agents/propositional_logic_example.py` exécute également une requête pour "mammifere", qui retourne `False`, renforçant la conclusion.
 ```
 
 ### Exemple 3: Syllogisme hypothétique
 
-*Bien qu'un exemple explicitement nommé "syllogisme hypothétique" ne soit pas présent dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0), le principe du raisonnement chaîné est illustré dans des exemples plus complexes, comme l'analyse d'argument complexe (voir Exemple 6).*
+*Bien qu'un exemple explicitement nommé "syllogisme hypothétique" ne soit pas présent dans `examples/logic_agents/propositional_logic_example.py`, le principe du raisonnement chaîné est illustré dans des exemples plus complexes, comme l'analyse d'argument complexe (voir Exemple 6).*
 
 Le syllogisme hypothétique combine des implications: si on a "si P alors Q" et "si Q alors R", on peut conclure "si P alors R".
 
@@ -210,7 +210,7 @@ L'argument est valide selon le syllogisme hypothétique. Puisque nous savons que
 
 ### Exemple 4: Raisonnement par cas
 
-*Le script [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:0) ne contient pas d'exemple explicitement nommé "raisonnement par cas". Cependant, la logique sous-jacente peut être construite en utilisant les fonctionnalités de l'agent.*
+*Le script `examples/logic_agents/propositional_logic_example.py` ne contient pas d'exemple explicitement nommé "raisonnement par cas". Cependant, la logique sous-jacente peut être construite en utilisant les fonctionnalités de l'agent.*
 
 Le raisonnement par cas consiste à examiner toutes les possibilités et à montrer que la même conclusion s'ensuit dans chaque cas.
 
@@ -262,7 +262,7 @@ L'argument est valide selon le raisonnement par cas. Puisque nous savons qu'"il 
 
 ### Exemple 5: Réduction à l'absurde
 
-*Le code complet pour un exemple de détection de contradiction, qui utilise un raisonnement similaire, est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:212).* 
+*Le code complet pour un exemple de détection de contradiction, qui utilise un raisonnement similaire, est disponible dans `examples/logic_agents/propositional_logic_example.py`.* 
 
 
 La réduction à l'absurde consiste à montrer qu'une hypothèse mène à une contradiction, prouvant ainsi que l'hypothèse est fausse.
@@ -315,7 +315,7 @@ L'argument est valide selon la réduction à l'absurde. Si nous supposons que "t
 
 ### Exemple 6: Analyse d'un argument complexe
 
-*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:168).* 
+*Le code complet pour cet exemple est disponible dans `examples/logic_agents/propositional_logic_example.py`.* 
 
 
 Analysons un argument plus complexe avec plusieurs prémisses et des relations logiques imbriquées.
@@ -380,7 +380,7 @@ Cela crée une contradiction. Par conséquent, notre supposition que le projet e
 
 ### Exemple 7: Détection de contradictions
 
-*Le code complet pour cet exemple est disponible dans [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:212).* 
+*Le code complet pour cet exemple est disponible dans `examples/logic_agents/propositional_logic_example.py`.* 
 
 
 Utilisons la logique propositionnelle pour détecter des contradictions dans un ensemble d'affirmations.
@@ -434,7 +434,7 @@ alice_reussite: True - Tweety Result: Query 'alice_reussite' is ACCEPTED (True).
 
 **Interprétation:**
 ```
-L'ensemble de croyances est incohérent (contradictoire). D'une part, nous pouvons dériver qu'Alice a réussi son examen (car elle étudie régulièrement et tous les étudiants qui étudient régulièrement réussissent). D'autre part, nous avons l'affirmation directe qu'Alice n'a pas réussi son examen. Ces deux conclusions (`alice_reussite` est VRAI et `!alice_reussite` est VRAI) sont contradictoires, ce qui indique qu'au moins une des prémisses doit être fausse. Le script [`examples/logic_agents/propositional_logic_example.py`](../../examples/logic_agents/propositional_logic_example.py:250) confirme cela en montrant que la requête `alice_reussite && !alice_reussite` est ACCEPTED (True) pour cet ensemble de croyances.
+L'ensemble de croyances est incohérent (contradictoire). D'une part, nous pouvons dériver qu'Alice a réussi son examen (car elle étudie régulièrement et tous les étudiants qui étudient régulièrement réussissent). D'autre part, nous avons l'affirmation directe qu'Alice n'a pas réussi son examen. Ces deux conclusions (`alice_reussite` est VRAI et `!alice_reussite` est VRAI) sont contradictoires, ce qui indique qu'au moins une des prémisses doit être fausse. Le script `examples/logic_agents/propositional_logic_example.py` confirme cela en montrant que la requête `alice_reussite && !alice_reussite` est ACCEPTED (True) pour cet ensemble de croyances.
 ```
 
 ## Cas d'utilisation réels
@@ -573,8 +573,8 @@ L'ensemble de croyances est contradictoire. D'une part, nous pouvons conclure qu
 - [Guide d'utilisation des agents logiques](utilisation_agents_logiques.md)
 - [Exemples de logique du premier ordre](exemples_logique_premier_ordre.md)
 - [Exemples de logique modale](exemples_logique_modale.md)
-- [Tutoriel interactif sur les agents logiques](../../examples/notebooks/logic_agents_tutorial.ipynb)
+- Tutoriel interactif sur les agents logiques
 - [Documentation de TweetyProject sur la logique propositionnelle](http://tweetyproject.org/doc/propositional-logic.html)
-- [Script d'exemples complets de logique propositionnelle](../../examples/logic_agents/propositional_logic_example.py)
-- [Tests d'intégration pour les opérations logiques (JPype/Tweety)](../tests/integration/jpype_tweety/test_logic_operations.py)
-- [Tutoriel interactif sur l'API logique (Notebook)](../../examples/notebooks/api_logic_tutorial.ipynb) (Note: se concentre sur une API Web, mais peut illustrer des concepts)
+- Script d'exemples complets de logique propositionnelle
+- [Tests d'intégration pour les opérations logiques (JPype/Tweety)](../../tests/integration/jpype_tweety/test_logic_operations.py)
+- Tutoriel interactif sur l'API logique (Notebook) (Note: se concentre sur une API Web, mais peut illustrer des concepts)

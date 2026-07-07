@@ -37,8 +37,8 @@ tutorials/
 | Tutoriel | Titre | Contenu Clé |
 |----------|-------|-------------|
 | **[01](./01_getting_started/01_introduction.md)** | Introduction | Présentation du système, architecture générale, concepts de base |
-| **[02](./01_getting_started/02_installation.md)** | Installation | Configuration de l'environnement, installation des dépendances, vérification |
-| **[03](./01_getting_started/03_first_steps.md)** | Premiers Pas | Première analyse, utilisation de l'API, interprétation des résultats |
+| **02** | Installation | Configuration de l'environnement, installation des dépendances, vérification |
+| **03** | Premiers Pas | Première analyse, utilisation de l'API, interprétation des résultats |
 
 **📖 [Documentation détaillée](./01_getting_started/README.md)**
 
@@ -59,8 +59,8 @@ tutorials/
 
 | Tutoriel | Titre | Contenu Clé |
 |----------|-------|-------------|
-| **[01](./02_extending_the_system/01_creating_plugins.md)** | Création de Plugins | Architecture des plugins, développement, intégration, bonnes pratiques |
-| **[02](./02_extending_the_system/02_custom_analyzers.md)** | Analyseurs Personnalisés | Création d'analyseurs spécialisés, extension de la taxonomie des sophismes |
+| **01** | Création de Plugins | Architecture des plugins, développement, intégration, bonnes pratiques |
+| **02** | Analyseurs Personnalisés | Création d'analyseurs spécialisés, extension de la taxonomie des sophismes |
 
 **📖 [Documentation détaillée](./02_extending_the_system/README.md)**
 
@@ -135,10 +135,10 @@ Niveau 2: Extending the System
 
 ## 🔗 Ressources Connexes
 
-- **[Démonstrations](../demos/README.md)** : Exemples fonctionnels complets du système
-- **[Exemples](../examples/README.md)** : Code réutilisable et patterns d'implémentation
-- **[Documentation](../docs/)** : Documentation technique complète et référence API
-- **[Plugins](../plugins/)** : Collection de plugins existants
+- **Démonstrations** : Exemples fonctionnels complets du système
+- **[Exemples](../../../examples/README.md)** : Code réutilisable et patterns d'implémentation
+- **[Documentation](../../../docs/)** : Documentation technique complète et référence API
+- **Plugins** : Collection de plugins existants
 
 ## 💡 Créer un Nouveau Tutoriel
 
@@ -205,9 +205,9 @@ ensure_env()
 
 Si vous rencontrez des difficultés en suivant ces tutoriels :
 
-1. **Consultez la [documentation technique](../docs/README.md)** pour des informations supplémentaires
-2. **Explorez les [exemples pratiques](../examples/README.md)** pour voir des implémentations concrètes
-3. **Testez les [démonstrations](../demos/README.md)** pour valider votre environnement
+1. **Consultez la [documentation technique](../../../docs/README.md)** pour des informations supplémentaires
+2. **Explorez les [exemples pratiques](../../../examples/README.md)** pour voir des implémentations concrètes
+3. **Testez les démonstrations** pour valider votre environnement
 4. **Vérifiez les problèmes connus** dans les issues GitHub du projet
 
 ## 🏆 Certification

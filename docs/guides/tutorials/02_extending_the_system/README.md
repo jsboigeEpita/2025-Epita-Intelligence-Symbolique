@@ -179,21 +179,21 @@ class EmotionalToneAnalyzer:
 
 ### Documentation Technique
 
-- **[Architecture du Système](../../docs/architecture/)** : Schémas et diagrammes
-- **[API Reference](../../docs/api/)** : Documentation des classes et méthodes
-- **[Design Patterns](../../docs/patterns/)** : Patterns utilisés dans le projet
+- **[Architecture du Système](../../../../docs/architecture/)** : Schémas et diagrammes
+- **API Reference** : Documentation des classes et méthodes
+- **Design Patterns** : Patterns utilisés dans le projet
 
 ### Exemples de Code
 
-- **[Plugins](../../examples/04_plugins/)** : Exemples de plugins fonctionnels
-- **[Core System Demos](../../examples/02_core_system_demos/)** : Démos système central
-- **[Tests](../../tests/)** : Suite de tests pour inspiration
+- **[Plugins](../../../../examples/04_plugins/)** : Exemples de plugins fonctionnels
+- **[Core System Demos](../../../../examples/02_core_system_demos/)** : Démos système central
+- **[Tests](../../../../tests/)** : Suite de tests pour inspiration
 
 ### Outils de Développement
 
-- **[Debugging Tools](../../demos/debugging/)** : Outils de débogage
-- **[Validation Tools](../../demos/validation/)** : Scripts de validation
-- **[Integration Tests](../../demos/integration/)** : Tests d'intégration
+- **Debugging Tools** : Outils de débogage
+- **Validation Tools** : Scripts de validation
+- **Integration Tests** : Tests d'intégration
 
 ## Bonnes Pratiques
 

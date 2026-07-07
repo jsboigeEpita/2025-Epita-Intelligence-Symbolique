@@ -9,13 +9,13 @@ Bienvenue dans le guide d'utilisation du système d'analyse argumentative. Ce do
 Avant toute chose, assurez-vous d'avoir correctement configuré votre environnement de développement. Des scripts sont fournis pour faciliter cette étape :
 
 *   Pour un environnement PowerShell : exécutez le script [`setup_project_env.ps1`](../../setup_project_env.ps1:0).
-*   Pour un environnement Bash (Linux/macOS) : exécutez le script [`setup_project_env.sh`](../../setup_project_env.sh:0).
+*   Pour un environnement Bash (Linux/macOS) : exécutez le script [`setup_project_env.sh`](../../scripts/setup/setup_project_env.sh:0).
 
 Ces scripts installeront les dépendances nécessaires et configureront les variables d'environnement.
 
 ## 2. Utilisation du Service d'Analyse Argumentative via l'API
 
-Le moyen principal d'interagir avec le système pour analyser un texte est d'utiliser son API Web. Cette section décrit comment soumettre un texte et interpréter les résultats. Pour une documentation exhaustive de l'API, veuillez consulter le document [`docs/composants/api_web.md`](../composants/api_web.md:1).
+Le moyen principal d'interagir avec le système pour analyser un texte est d'utiliser son API Web. Cette section décrit comment soumettre un texte et interpréter les résultats. Pour une documentation exhaustive de l'API, veuillez consulter le document [`docs/composants/api_web.md`](../technical/api_web.md:1).
 
 ### Soumettre un Texte pour Analyse Complète
 
@@ -49,7 +49,7 @@ Le corps de la requête doit être au format JSON et contenir le texte à analys
     *   `evaluate_coherence` (boolean) : Activer ou désactiver l'évaluation de la cohérence.
     *   `include_context` (boolean) : Inclure plus de contexte pour les éléments détectés.
     *   `severity_threshold` (float) : Seuil de sévérité pour la détection (par exemple, pour les sophismes).
-    Pour une liste complète et détaillée des options, référez-vous à la section sur l'endpoint `/api/analyze` dans la [documentation de l'API Web](../composants/api_web.md:58).
+    Pour une liste complète et détaillée des options, référez-vous à la section sur l'endpoint `/api/analyze` dans la [documentation de l'API Web](../technical/api_web.md:58).
 
 #### Exemple avec `curl`
 
@@ -125,24 +125,24 @@ Si une erreur survient (par exemple, une requête malformée ou une erreur inter
 
 Si vous êtes un développeur souhaitant comprendre les composants internes du système ou contribuer au projet, plusieurs exemples sont à votre disposition.
 
-*   **Scripts de démonstration :** Le répertoire [`examples/scripts_demonstration/`](../../examples/scripts_demonstration/) contient des scripts Python simples illustrant des interactions spécifiques. Par exemple, le script [`demo_tweety_interaction_simple.py`](../../examples/scripts_demonstration/demo_tweety_interaction_simple.py:0) montre une utilisation basique de la librairie Tweety.
-*   **Notebooks Jupyter :** Pour une approche plus interactive et didactique, consultez les notebooks disponibles dans [`examples/notebooks/`](../../examples/notebooks/). Le notebook [`api_logic_tutorial.ipynb`](../../examples/notebooks/api_logic_tutorial.ipynb:0) constitue un excellent point de départ pour comprendre l'utilisation de l'API logique.
+*   **Scripts de démonstration :** Le répertoire `examples/scripts_demonstration/` contient des scripts Python simples illustrant des interactions spécifiques. Par exemple, le script `demo_tweety_interaction_simple.py` montre une utilisation basique de la librairie Tweety.
+*   **Notebooks Jupyter :** Pour une approche plus interactive et didactique, consultez les notebooks disponibles dans [`examples/notebooks/`](../../examples/notebooks/). Le notebook `api_logic_tutorial.ipynb` constitue un excellent point de départ pour comprendre l'utilisation de l'API logique.
 
 ## 4. Intégration d'API et Agents Logiques (pour Développeurs)
 
 Le projet explore l'intégration avec des API externes et l'utilisation d'agents logiques.
 
-*   Des exemples concrets d'intégration d'API et de mise en œuvre d'agents logiques se trouvent dans le répertoire [`examples/logic_agents/`](../../examples/logic_agents/). Le script [`api_integration_example.py`](../../examples/logic_agents/api_integration_example.py:0) illustre un cas d'usage typique.
+*   Des exemples concrets d'intégration d'API et de mise en œuvre d'agents logiques se trouvent dans le répertoire `examples/logic_agents/`. Le script `api_integration_example.py` illustre un cas d'usage typique.
 
 ## 5. Utilisation des Données de Test (pour Développeurs)
 
 Un ensemble de données d'exemple est fourni pour vous permettre de tester et d'expérimenter avec le projet sans avoir à créer vos propres données initiales.
 
-*   Vous trouverez ces données dans le répertoire [`examples/test_data/`](../../examples/test_data/). N'hésitez pas à les explorer et à les utiliser avec les différents scripts et notebooks.
+*   Vous trouverez ces données dans le répertoire `examples/test_data/`. N'hésitez pas à les explorer et à les utiliser avec les différents scripts et notebooks.
 
 ## 6. Exécution de Scripts Spécifiques (pour Développeurs)
 
-Le répertoire [`scripts/execution/`](../../scripts/execution/) contient des scripts plus avancés pour des tâches spécifiques, comme l'analyse rhétorique ou des workflows complets.
+Le répertoire `scripts/execution/` contient des scripts plus avancés pour des tâches spécifiques, comme l'analyse rhétorique ou des workflows complets.
 
 *   Parcourez ce répertoire pour découvrir des exemples d'utilisation plus complexes et des chaînes de traitement de données.
 
@@ -151,14 +151,14 @@ Le répertoire [`scripts/execution/`](../../scripts/execution/) contient des scr
 Il est crucial de pouvoir vérifier l'intégrité et le bon fonctionnement du code. Plusieurs niveaux de tests sont disponibles.
 
 *   **Scripts de test dédiés :** Le répertoire [`scripts/testing/`](../../scripts/testing/) contient des scripts pour lancer des suites de tests spécifiques ou des simulations.
-*   **Tests Unitaires :** Les tests unitaires, qui vérifient des composants isolés du code, sont situés dans [`tests/unit/`](../../tests/unit/). Un exemple typique est [`tests/unit/project_core/utils/test_file_utils.py`](../../tests/unit/project_core/utils/test_file_utils.py:0), qui teste les utilitaires de gestion de fichiers.
-*   **Tests d'Intégration :** Les tests d'intégration, qui vérifient l'interaction entre plusieurs composants, se trouvent dans [`tests/integration/`](../../tests/integration/). Vous pouvez consulter [`tests/integration/test_logic_agents_integration.py`](../tests/integration/test_logic_agents_integration.py:0) pour un exemple d'intégration d'agents logiques, ou le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour les tests spécifiques à l'intégration JPype/Tweety.
+*   **Tests Unitaires :** Les tests unitaires, qui vérifient des composants isolés du code, sont situés dans [`tests/unit/`](../../tests/unit/). Un exemple typique est [`tests/unit/project_core/utils/test_file_utils.py`](../../tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py:0), qui teste les utilitaires de gestion de fichiers.
+*   **Tests d'Intégration :** Les tests d'intégration, qui vérifient l'interaction entre plusieurs composants, se trouvent dans [`tests/integration/`](../../tests/integration/). Vous pouvez consulter [`tests/integration/test_logic_agents_integration.py`](../../tests/integration/test_logic_agents_integration.py:0) pour un exemple d'intégration d'agents logiques, ou le répertoire [`tests/integration/jpype_tweety/`](../../tests/integration/jpype_tweety/) pour les tests spécifiques à l'intégration JPype/Tweety.
 
 ## Conclusion
 
 Ce guide vous a présenté comment utiliser le service d'analyse argumentative via son API, ainsi que les principales façons d'explorer les ressources du projet pour les développeurs. Pour une utilisation directe du service d'analyse, référez-vous à la section sur l'API (Section 2). Pour approfondir votre compréhension des mécanismes internes ou développer des fonctionnalités, les exemples et scripts décrits dans les sections suivantes restent à votre disposition.
 
-N'hésitez pas à consulter la documentation complète de l'API ([`docs/composants/api_web.md`](../composants/api_web.md:1)) et les README spécifiques à chaque module pour plus de détails.
+N'hésitez pas à consulter la documentation complète de l'API ([`docs/composants/api_web.md`](../technical/api_web.md:1)) et les README spécifiques à chaque module pour plus de détails.
 
 Bonne exploration !
 

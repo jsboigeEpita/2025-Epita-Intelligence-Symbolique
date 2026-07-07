@@ -25,9 +25,9 @@ Avant de commencer, assurez-vous d'avoir les éléments suivants installés sur 
 
 ## 2. Configuration Initiale de l'Environnement avec `setup_project_env.ps1`
 
-Le script [`setup_project_env.ps1`](setup_project_env.ps1:1) est conçu pour automatiser la configuration complète de votre environnement Conda. Il effectuera les actions suivantes :
+Le script [`setup_project_env.ps1`](../../setup_project_env.ps1:1) est conçu pour automatiser la configuration complète de votre environnement Conda. Il effectuera les actions suivantes :
 *   Vérification de l'installation de Conda.
-*   Création ou mise à jour de l'environnement Conda nommé `projet-is` à partir du fichier [`environment.yml`](environment.yml:1). Cet environnement inclura Python 3.10, Clingo, JPype1, et toutes les autres dépendances listées.
+*   Création ou mise à jour de l'environnement Conda nommé `projet-is` à partir du fichier [`environment.yml`](../../environment.yml:1). Cet environnement inclura Python 3.10, Clingo, JPype1, et toutes les autres dépendances listées.
 *   Téléchargement et configuration du JDK portable (Java Development Kit 17), si non géré par Conda.
 *   Configuration du fichier `.env` avec les chemins nécessaires (comme `JAVA_HOME`).
 *   Demande de confirmation pour supprimer les anciens répertoires `venv` s'ils existent.
@@ -71,7 +71,7 @@ Chaque fois que vous souhaitez travailler sur le projet, vous devez activer l'en
     python --version     # Devrait afficher Python 3.10.x
     conda list           # Pour voir les paquets installés dans l'environnement Conda
     ```
-    Le script [`activate_project_env.ps1`](activate_project_env.ps1:1) a été simplifié et sert maintenant principalement de rappel pour la commande `conda activate projet-is`. Vous pouvez toujours l'exécuter pour voir ce rappel :
+    Le script [`activate_project_env.ps1`](../../activate_project_env.ps1:1) a été simplifié et sert maintenant principalement de rappel pour la commande `conda activate projet-is`. Vous pouvez toujours l'exécuter pour voir ce rappel :
     ```powershell
     .\activate_project_env.ps1
     ```
@@ -80,7 +80,7 @@ Chaque fois que vous souhaitez travailler sur le projet, vous devez activer l'en
 
 ## 4. Vérification de l'Installation de JPype avec `check_jpype_env.py`
 
-Après avoir activé votre environnement avec `.\activate_project_env.ps1`, vous pouvez utiliser le script [`check_jpype_env.py`](check_jpype_env.py:1) pour effectuer un diagnostic de base de votre configuration JPype.
+Après avoir activé votre environnement avec `.\activate_project_env.ps1`, vous pouvez utiliser le script `check_jpype_env.py` pour effectuer un diagnostic de base de votre configuration JPype.
 
 **Étapes :**
 
@@ -121,7 +121,7 @@ Ce script est la première étape recommandée pour tester votre installation. I
 
 ### 5.2. Script de Démonstration Complet (Optionnel - Pour aller plus loin) : `scripts/demonstration_epita.py`
 
-Le script [`scripts/demonstration_epita.py`](scripts/demonstration_epita.py:1) est une démonstration plus exhaustive des capacités du projet. Il illustre des interactions avancées avec les services réels du projet, tels que l'analyse de texte via des LLMs et le déchiffrement de données.
+Le script [`scripts/demonstration_epita.py`](../../examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py:1) est une démonstration plus exhaustive des capacités du projet. Il illustre des interactions avancées avec les services réels du projet, tels que l'analyse de texte via des LLMs et le déchiffrement de données.
 
 **Prérequis Important : Configuration du Fichier `.env`**
 
@@ -136,7 +136,7 @@ Pour un fonctionnement complet de ce script, notamment l'utilisation des service
 *   **Fichier d'exemple :** Un fichier nommé `.env.example` peut exister (ou devrait être créé s'il n'est pas présent) dans le répertoire `argumentation_analysis`. Ce fichier sert de modèle et liste les variables d'environnement attendues. Copiez-le sous le nom `.env` et remplissez-le avec vos propres valeurs.
 
 **Ce que ce script démontre :**
-*   L'initialisation et l'utilisation du module de bootstrap ([`project_core/bootstrap.py`](project_core/bootstrap.py:1)) pour charger la configuration et les services.
+*   L'initialisation et l'utilisation du module de bootstrap ([`project_core/bootstrap.py`](../../argumentation_analysis/core/bootstrap.py:1)) pour charger la configuration et les services.
 *   L'interaction avec des services réels (LLM, déchiffrement, analyse logique) plutôt que des mocks internes pour ses fonctionnalités principales.
 *   Des opérations logiques complexes via Tweety (satisfiabilité, calcul de modèles).
 *   Des exemples d'analyse de sophismes et d'autres fonctionnalités avancées du projet en utilisant les données et services configurés.
@@ -161,7 +161,7 @@ Pour un fonctionnement complet de ce script, notamment l'utilisation des service
 
 ## 6. Dépannage des Problèmes JPype Courants
 
-Cette section vous aidera à diagnostiquer et résoudre les problèmes fréquents rencontrés avec JPype, **principalement si le script [`check_jpype_env.py`](check_jpype_env.py:1) signale des erreurs après avoir utilisé les scripts d'installation et d'activation.**
+Cette section vous aidera à diagnostiquer et résoudre les problèmes fréquents rencontrés avec JPype, **principalement si le script `check_jpype_env.py` signale des erreurs après avoir utilisé les scripts d'installation et d'activation.**
 
 ### 6.1. Problèmes liés à `jpype.config` et au Démarrage de la JVM
 
@@ -184,7 +184,7 @@ Cette section vous aidera à diagnostiquer et résoudre les problèmes fréquent
     *   **Cause potentielle :** Fichiers JAR non trouvés, `CLASSPATH` incorrect. Source fréquente de `java.lang.ClassNotFoundException`. Le script `activate_project_env.ps1` devrait configurer le `CLASSPATH` nécessaire pour Tweety si les JARs sont dans `libs/tweety_jars`.
     *   **Diagnostic/Solution :**
         1.  **Vérifier le `CLASSPATH` :** Après `.\activate_project_env.ps1`, exécutez `echo $env:CLASSPATH`. Il devrait inclure le chemin vers `libs/tweety_jars/*` si ce dossier existe et contient des JARs.
-        2.  **Afficher le `CLASSPATH` réel utilisé par Java :** Dans un script Python (comme [`check_jpype_env.py`](check_jpype_env.py:1) ou un script de test) après le démarrage de la JVM :
+        2.  **Afficher le `CLASSPATH` réel utilisé par Java :** Dans un script Python (comme `check_jpype_env.py` ou un script de test) après le démarrage de la JVM :
             ```python
             import jpype
             if jpype.isJVMStarted():
@@ -216,6 +216,6 @@ Cette section vous aidera à diagnostiquer et résoudre les problèmes fréquent
 
 ### 6.3. Script de Vérification `check_jpype_env.py` pour Auto-Diagnostic
 
-Référez-vous à la Section 4 pour l'utilisation du script [`check_jpype_env.py`](check_jpype_env.py:1). Ce script est votre premier outil de diagnostic. Il vérifie `JAVA_HOME`, le chemin de la JVM, tente de démarrer la JVM et d'accéder à une classe Java simple.
+Référez-vous à la Section 4 pour l'utilisation du script `check_jpype_env.py`. Ce script est votre premier outil de diagnostic. Il vérifie `JAVA_HOME`, le chemin de la JVM, tente de démarrer la JVM et d'accéder à une classe Java simple.
 
 Félicitations, votre environnement de développement devrait être prêt ! Si vous rencontrez d'autres problèmes, n'hésitez pas à demander de l'aide en fournissant les messages d'erreur complets que vous obtenez.

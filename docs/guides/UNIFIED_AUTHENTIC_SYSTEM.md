@@ -14,7 +14,7 @@ Le **Système Unifié Authentique** est une refactorisation majeure du système 
 
 ### 1. Configuration Dynamique Unifiée
 
-Le fichier [`config/unified_config.py`](../config/unified_config.py) centralise tous les paramètres configurables :
+Le fichier [`config/unified_config.py`](../../config/unified_config.py) centralise tous les paramètres configurables :
 
 ```python
 from config.unified_config import UnifiedConfig, LogicType, MockLevel
@@ -34,7 +34,7 @@ config = UnifiedConfig(
 
 ### 2. Agent FOL/PL de Substitution
 
-Le nouvel agent [`FOLLogicAgent`](../argumentation_analysis/agents/core/logic/fol_logic_agent.py) remplace l'agent Modal défaillant :
+Le nouvel agent [`FOLLogicAgent`](../../argumentation_analysis/agents/core/logic/fol_logic_agent.py) remplace l'agent Modal défaillant :
 
 ```python
 from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
@@ -51,7 +51,7 @@ print(f"Cohérence: {result.consistency_check}")
 
 ### 3. Élimination Automatique des Mocks
 
-Le système de détection [`mock_elimination.py`](../scripts/validation/mock_elimination.py) identifie et élimine tous les mocks :
+Le système de détection [`mock_elimination.py`](../../tests/unit/argumentation_analysis/test_mock_elimination.py) identifie et élimine tous les mocks :
 
 ```python
 from scripts.validation.mock_elimination import MockDetector

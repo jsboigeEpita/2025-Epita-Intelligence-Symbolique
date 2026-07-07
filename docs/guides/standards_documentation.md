@@ -202,7 +202,7 @@ Liens vers d'autres documents pertinents :
 
 ## Exemple d'Application
 
-Un exemple complet d'application de cette structure est disponible dans le README du module [scripts](../scripts/README.md).
+Un exemple complet d'application de cette structure est disponible dans le README du module [scripts](../../scripts/README.md).
 
 ## Validation
 

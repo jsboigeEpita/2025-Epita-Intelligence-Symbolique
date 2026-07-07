@@ -328,10 +328,10 @@ fi
 
 ## 📚 Documentation Associée
 
-- **[Guide Application Web](../docs/WEB_APPLICATION_GUIDE.md)** : Guide utilisateur complet
-- **[API Backend](../argumentation_analysis/services/web_api/README.md)** : Documentation API
-- **[Frontend React](../services/web_api/interface-web-argumentative/README.md)** : Documentation frontend
-- **[Script d'Exécution](../scripts/run_all_and_test.ps1)** : Pipeline automatisé
+- **[Guide Application Web](../WEB_APPLICATION_GUIDE.md)** : Guide utilisateur complet
+- **[API Backend](../../../argumentation_analysis/services/web_api/README.md)** : Documentation API
+- **[Frontend React](../../../services/web_api/interface-web-argumentative/README.md)** : Documentation frontend
+- **Script d'Exécution** : Pipeline automatisé
 
 ## 🤝 Maintenance et Évolution
 

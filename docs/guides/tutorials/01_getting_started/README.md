@@ -123,15 +123,15 @@ python -c "from argumentation_analysis.core.environment import ensure_env; ensur
 
 ### Pendant les Tutoriels
 
-- **[Démonstrations](../../demos/showcases/)** : Voir des exemples fonctionnels
-- **[Exemples](../../examples/)** : Code réutilisable
-- **[Documentation](../../docs/)** : Référence complète
+- **Démonstrations** : Voir des exemples fonctionnels
+- **[Exemples](../../../../examples/)** : Code réutilisable
+- **[Documentation](../../../../docs/)** : Référence complète
 
 ### Après les Tutoriels
 
 - **[Extending the System](../02_extending_the_system/)** : Niveau avancé
-- **[Plugins](../../examples/04_plugins/)** : Développement de plugins
-- **[Integration](../../demos/integration/)** : Tests d'intégration
+- **[Plugins](../../../../examples/04_plugins/)** : Développement de plugins
+- **Integration** : Tests d'intégration
 
 ## Conseils pour Réussir
 
@@ -172,10 +172,10 @@ Prochaine étape
 
 ### Besoin d'Aide ?
 
-1. **Consultez la [FAQ](../../docs/FAQ.md)** : Réponses aux questions fréquentes
-2. **Explorez les [démos](../../demos/)** : Voir le système en action
-3. **Testez les [exemples](../../examples/)** : Code prêt à l'emploi
-4. **Lisez la [documentation](../../docs/)** : Référence complète
+1. **Consultez la [FAQ](../../../../docs/guides/FAQ.md)** : Réponses aux questions fréquentes
+2. **Explorez les démos** : Voir le système en action
+3. **Testez les [exemples](../../../../examples/)** : Code prêt à l'emploi
+4. **Lisez la [documentation](../../../../docs/)** : Référence complète
 
 ### Feedback
 

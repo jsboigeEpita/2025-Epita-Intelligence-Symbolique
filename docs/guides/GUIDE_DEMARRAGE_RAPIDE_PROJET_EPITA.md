@@ -377,7 +377,7 @@ python -m pytest tests/unit/ -v --timeout=300 -m "not slow"
 
 ### 🏗️ Pour Développeurs
 - **[Architecture Système](../architecture/README.md)** : Documentation technique détaillée
-- **[Guide des Composants](../composants/README.md)** : Modules réutilisables
+- **[Guide des Composants](../technical/README.md)** : Modules réutilisables
 - **[Patterns d'Orchestration](GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** : Bonnes pratiques
 
 ### 🔬 Pour Chercheurs

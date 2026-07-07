@@ -114,11 +114,11 @@ Le système de communication multi-canal est organisé autour des classes princi
 Les principales classes et leurs responsabilités sont :
 
 1. **MessageMiddleware** : Composant central qui gère les canaux, les protocoles et le routage des messages.
-2. **Channel** : Classe de base abstraite que tous les canaux de communication doivent implémenter. Définie dans [`argumentation_analysis/core/communication/channel_interface.py`](argumentation_analysis/core/communication/channel_interface.py:30).
+2. **Channel** : Classe de base abstraite que tous les canaux de communication doivent implémenter. Définie dans [`argumentation_analysis/core/communication/channel_interface.py`](../../argumentation_analysis/core/communication/channel_interface.py:30).
 3. **Canaux spécifiques** (HierarchicalChannel, CollaborationChannel, etc.) : Implémentations concrètes des canaux.
-4. **Protocoles de communication** : Il n'existe pas d'interface formelle `ProtocolInterface`. Les protocoles comme `RequestResponseProtocol` (défini dans [`argumentation_analysis/core/communication/request_response.py`](argumentation_analysis/core/communication/request_response.py:25)) et `PublishSubscribeProtocol` (défini dans [`argumentation_analysis/core/communication/pub_sub.py`](argumentation_analysis/core/communication/pub_sub.py:235)) sont implémentés directement.
+4. **Protocoles de communication** : Il n'existe pas d'interface formelle `ProtocolInterface`. Les protocoles comme `RequestResponseProtocol` (défini dans [`argumentation_analysis/core/communication/request_response.py`](../../argumentation_analysis/core/communication/request_response.py:25)) et `PublishSubscribeProtocol` (défini dans [`argumentation_analysis/core/communication/pub_sub.py`](../../argumentation_analysis/core/communication/pub_sub.py:235)) sont implémentés directement.
 5. **Protocoles spécifiques** (RequestResponse, PublishSubscribe, etc.) : Implémentations concrètes des protocoles.
-6. **Adaptateurs d'agents** : Il n'existe pas de classe de base formelle `AgentAdapter`. Les adaptateurs spécifiques comme `StrategicAdapter` (défini dans [`argumentation_analysis/core/communication/strategic_adapter.py`](argumentation_analysis/core/communication/strategic_adapter.py:23)), `TacticalAdapter` (défini dans [`argumentation_analysis/core/communication/tactical_adapter.py`](argumentation_analysis/core/communication/tactical_adapter.py:23)), et `OperationalAdapter` (défini dans [`argumentation_analysis/core/communication/operational_adapter.py`](argumentation_analysis/core/communication/operational_adapter.py:22)) sont implémentés directement. Chaque adaptateur interagit avec le `MessageMiddleware`.
+6. **Adaptateurs d'agents** : Il n'existe pas de classe de base formelle `AgentAdapter`. Les adaptateurs spécifiques comme `StrategicAdapter` (défini dans [`argumentation_analysis/core/communication/strategic_adapter.py`](../../argumentation_analysis/core/communication/strategic_adapter.py:23)), `TacticalAdapter` (défini dans [`argumentation_analysis/core/communication/tactical_adapter.py`](../../argumentation_analysis/core/communication/tactical_adapter.py:23)), et `OperationalAdapter` (défini dans [`argumentation_analysis/core/communication/operational_adapter.py`](../../argumentation_analysis/core/communication/operational_adapter.py:22)) sont implémentés directement. Chaque adaptateur interagit avec le `MessageMiddleware`.
 7. **Adaptateurs spécifiques** (StrategicAdapter, TacticalAdapter, etc.) : Implémentations concrètes des adaptateurs.
 8. **Message** : Classe de base pour tous les types de messages.
 9. **Types de messages spécifiques** (CommandMessage, InformationMessage, etc.) : Implémentations concrètes des messages.
@@ -213,7 +213,7 @@ La structure typique d'un canal comprend :
 
 ### Interface à implémenter
 
-Tous les canaux de communication doivent hériter de la classe abstraite `Channel` (définie dans [`argumentation_analysis/core/communication/channel_interface.py`](argumentation_analysis/core/communication/channel_interface.py:30)) qui définit les méthodes requises pour interagir avec le middleware. Voici les principales méthodes de cette classe :
+Tous les canaux de communication doivent hériter de la classe abstraite `Channel` (définie dans [`argumentation_analysis/core/communication/channel_interface.py`](../../argumentation_analysis/core/communication/channel_interface.py:30)) qui définit les méthodes requises pour interagir avec le middleware. Voici les principales méthodes de cette classe :
 
 ```python
 class Channel(abc.ABC):
@@ -705,7 +705,7 @@ Il est crucial de tester vos implémentations de canaux. Vous pouvez vous inspir
 - Le fonctionnement des abonnements et des filtres.
 - La gestion des erreurs.
 
-Par exemple, consultez les tests unitaires pour les composants principaux dans [`tests/unit/project_core/`](tests/unit/project_core/) pour des idées sur la structure des tests.
+Par exemple, consultez les tests unitaires pour les composants principaux dans [`tests/unit/project_core/`](../../tests/unit/project_core/) pour des idées sur la structure des tests.
 
 ## Comment créer de nouveaux adaptateurs
 
@@ -723,12 +723,12 @@ La structure typique d'un adaptateur comprend :
 
 ### Interface à implémenter
 
-Il n'existe pas de classe de base `AgentAdapter` formelle à étendre. Chaque adaptateur spécifique (par exemple, `StrategicAdapter` dans [`argumentation_analysis/core/communication/strategic_adapter.py`](argumentation_analysis/core/communication/strategic_adapter.py:23), `TacticalAdapter` dans [`argumentation_analysis/core/communication/tactical_adapter.py`](argumentation_analysis/core/communication/tactical_adapter.py:23), et `OperationalAdapter` dans [`argumentation_analysis/core/communication/operational_adapter.py`](argumentation_analysis/core/communication/operational_adapter.py:22)) est une classe distincte.
+Il n'existe pas de classe de base `AgentAdapter` formelle à étendre. Chaque adaptateur spécifique (par exemple, `StrategicAdapter` dans [`argumentation_analysis/core/communication/strategic_adapter.py`](../../argumentation_analysis/core/communication/strategic_adapter.py:23), `TacticalAdapter` dans [`argumentation_analysis/core/communication/tactical_adapter.py`](../../argumentation_analysis/core/communication/tactical_adapter.py:23), et `OperationalAdapter` dans [`argumentation_analysis/core/communication/operational_adapter.py`](../../argumentation_analysis/core/communication/operational_adapter.py:22)) est une classe distincte.
 
 Lors de la création d'un nouvel adaptateur, vous devriez vous inspirer de ces implémentations existantes. Typiquement, un adaptateur :
 - Prend un `agent_id` et une instance du `MessageMiddleware` dans son constructeur.
 - Initialise un logger spécifique.
-- Implémente une méthode `_get_agent_level()` qui retourne la valeur appropriée de l'énumération `AgentLevel` (définie dans [`argumentation_analysis/core/communication/message.py`](argumentation_analysis/core/communication/message.py:38)).
+- Implémente une méthode `_get_agent_level()` qui retourne la valeur appropriée de l'énumération `AgentLevel` (définie dans [`argumentation_analysis/core/communication/message.py`](../../argumentation_analysis/core/communication/message.py:38)).
 - Fournit des méthodes spécifiques pour envoyer et recevoir des types de messages pertinents pour le niveau de l'agent qu'il sert. Ces méthodes construisent des objets `Message` et utilisent le `MessageMiddleware` pour les envoyer ou les recevoir. Par exemple, une méthode `send_message` générique pourrait ressembler à ceci (adapté des adaptateurs existants) :
   ```python
   # Dans votre classe d'adaptateur spécifique:
@@ -754,7 +754,7 @@ Lors de la création d'un nouvel adaptateur, vous devriez vous inspirer de ces i
   ```
 - Peut inclure des méthodes pour s'abonner à des sujets via le `MessageMiddleware`.
 
-Le `MessageMiddleware` possède une méthode `get_adapter(self, agent_id: str, level: AgentLevel)` (patchée via [`argumentation_analysis/core/communication/middleware_patch.py`](argumentation_analysis/core/communication/middleware_patch.py:8)) qui peut instancier l'adaptateur approprié en fonction du niveau de l'agent.
+Le `MessageMiddleware` possède une méthode `get_adapter(self, agent_id: str, level: AgentLevel)` (patchée via [`argumentation_analysis/core/communication/middleware_patch.py`](../../argumentation_analysis/core/communication/middleware_patch.py:8)) qui peut instancier l'adaptateur approprié en fonction du niveau de l'agent.
 
 ### Traduction des messages
 
@@ -1088,7 +1088,7 @@ Les adaptateurs doivent être testés pour s'assurer qu'ils traduisent correctem
 - Vérifiez la création correcte des messages sortants.
 - Assurez-vous que les messages entrants sont correctement interprétés.
 
-Vous trouverez des exemples de tests d'adaptateurs dans le répertoire [`tests/unit/argumentation_analysis/`](tests/unit/argumentation_analysis/) ou en examinant les tests des modules principaux.
+Vous trouverez des exemples de tests d'adaptateurs dans le répertoire [`tests/unit/argumentation_analysis/`](../../tests/unit/argumentation_analysis/) ou en examinant les tests des modules principaux.
 
 ## Bonnes pratiques de développement
 
@@ -1235,7 +1235,7 @@ class TestStrategicAdapter(unittest.TestCase):
         self.assertEqual(message.priority, MessagePriority.HIGH)
 ```
 
-Pour un exemple concret de test unitaire, vous pouvez examiner [`tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py`](tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py:0) qui teste les utilitaires de fichiers.
+Pour un exemple concret de test unitaire, vous pouvez examiner [`tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py`](../../tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py:0) qui teste les utilitaires de fichiers.
 
 #### 2. Tests d'intégration
 
@@ -1541,7 +1541,7 @@ La structure typique d'un protocole comprend :
 
 ### Structure d'un protocole
 
-Bien qu'il n'y ait pas d'interface `ProtocolInterface` formelle à implémenter, les protocoles existants comme `RequestResponseProtocol` ([`argumentation_analysis/core/communication/request_response.py`](argumentation_analysis/core/communication/request_response.py:25)) et `PublishSubscribeProtocol` ([`argumentation_analysis/core/communication/pub_sub.py`](argumentation_analysis/core/communication/pub_sub.py:235)) suivent une structure similaire. Un nouveau protocole devrait typiquement :
+Bien qu'il n'y ait pas d'interface `ProtocolInterface` formelle à implémenter, les protocoles existants comme `RequestResponseProtocol` ([`argumentation_analysis/core/communication/request_response.py`](../../argumentation_analysis/core/communication/request_response.py:25)) et `PublishSubscribeProtocol` ([`argumentation_analysis/core/communication/pub_sub.py`](../../argumentation_analysis/core/communication/pub_sub.py:235)) suivent une structure similaire. Un nouveau protocole devrait typiquement :
 
 - Prendre le `MessageMiddleware` en argument de son constructeur.
 - Posséder une méthode pour initialiser le protocole (si nécessaire).
@@ -1549,7 +1549,7 @@ Bien qu'il n'y ait pas d'interface `ProtocolInterface` formelle à implémenter,
 - Définir une méthode pour obtenir son nom (par exemple, `get_protocol_name()`).
 - Définir une méthode pour lister les types de messages qu'il supporte (par exemple, `get_supported_message_types()`).
 
-Le middleware ([`argumentation_analysis/core/communication/middleware.py`](argumentation_analysis/core/communication/middleware.py:19)) instancie et utilise ces protocoles.
+Le middleware ([`argumentation_analysis/core/communication/middleware.py`](../../argumentation_analysis/core/communication/middleware.py:19)) instancie et utilise ces protocoles.
 
 ### Gestion des échanges
 

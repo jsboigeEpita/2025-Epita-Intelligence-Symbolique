@@ -381,9 +381,9 @@ def pre_commit_authenticity_check():
 
 ### Documentation Technique
 
-- [Configuration Unifiée](../config/unified_config.py)
-- [Tests d'Authenticité](../tests/unit/authentication/)
-- [Scripts CLI](../scripts/)
+- [Configuration Unifiée](../../config/unified_config.py)
+- [Tests d'Authenticité](../../tests/unit/authentication/)
+- [Scripts CLI](../../scripts/)
 
 ### Standards de Qualité
 

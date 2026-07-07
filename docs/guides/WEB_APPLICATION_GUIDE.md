@@ -179,9 +179,9 @@ Test-NetConnection localhost -Port 3000
 
 ## 📚 Documentation Supplémentaire
 
-- **[Guide Installation](../GUIDE_INSTALLATION_ETUDIANTS.md)** : Configuration initiale
+- **[Guide Installation](./GUIDE_INSTALLATION_ETUDIANTS.md)** : Configuration initiale
 - **[Tests Fonctionnels](testing/functional_tests.md)** : Documentation des tests
-- **[API Documentation](../argumentation_analysis/services/web_api/README.md)** : Référence API détaillée
+- **[API Documentation](../../argumentation_analysis/services/web_api/README.md)** : Référence API détaillée
 
 ## 🤝 Contribution
 
