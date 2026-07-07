@@ -31,7 +31,7 @@ Ce rapport documente les tests effectués pour valider la nouvelle architecture 
 
 La validation a été entièrement réalisée à travers un script de test d'intégration dédié.
 
-- **Script de test** : [`demos/test_parallel_workflow_integration.py`](../demos/test_parallel_workflow_integration.py)
+- **Script de test** : [`demos/test_parallel_workflow_integration.py`](../../examples/03_demos_overflow/integration/test_parallel_workflow_integration.py)
 - **Environnement Conda** : `projet-is-new`
 - **Dépendances clés** : `semantic-kernel`, `jinja2`, `python-dotenv`
 
@@ -48,7 +48,7 @@ La méthodologie a suivi les étapes suivantes, toutes encapsulées dans le scri
 ## 3. Composants Validés
 
 ### 3.1. `ParallelWorkflowManager`
-- **Source** : [`argumentation_analysis/orchestration/workflow.py`](../argumentation_analysis/orchestration/workflow.py)
+- **Source** : [`argumentation_analysis/orchestration/workflow.py`](../../argumentation_analysis/orchestration/workflow.py)
 - **Validation** :
     -   Capacité à charger correctement les `ExplorationPlugin` et `SynthesisPlugin`.
     -   Utilisation réussie de `asyncio.gather` pour lancer les tâches d'exploration en parallèle.
@@ -56,21 +56,21 @@ La méthodologie a suivi les étapes suivantes, toutes encapsulées dans le scri
     -   Gestion des erreurs de parsing JSON (nettoyage des ```json ... ```) provenant du modèle LLM.
 
 ### 3.2. `ExplorationPlugin` (Étape "Map")
-- **Source** : [`argumentation_analysis/plugins/ExplorationPlugin/`](../argumentation_analysis/plugins/ExplorationPlugin/)
+- **Source** : [`argumentation_analysis/plugins/ExplorationPlugin/`](../../argumentation_analysis/plugins/ExplorationPlugin/)
 - **Validation** :
     -   Le prompt a correctement guidé le modèle pour qu'il se concentre sur **un seul type de sophisme** à la fois.
     -   Le format de sortie JSON a été respecté, incluant `name`, `definition`, `confidence`, `evidence`, et `explanation`.
 
 ### 3.3. `SynthesisPlugin` (Étape "Reduce")
-- **Source** : [`argumentation_analysis/plugins/SynthesisPlugin/`](../argumentation_analysis/plugins/SynthesisPlugin/)
+- **Source** : [`argumentation_analysis/plugins/SynthesisPlugin/`](../../argumentation_analysis/plugins/SynthesisPlugin/)
 - **Validation** :
     -   Le prompt a correctement guidé le modèle pour agréger les résultats de plusieurs analyses individuelles en un seul document JSON.
     -   Le plugin a réussi à conserver toutes les informations de chaque sophisme identifié, sans perte de données.
     -   La structure globale du JSON final (`summary`, `fallacies`) a été respectée.
 
 ### 3.4. Génération de Rapport
-- **Source du template** : [`templates/synthesis_report.md.template`](../templates/synthesis_report.md.template)
-- **Source du code de rendu** : [`argumentation_analysis/reporting/reporting.py`](../argumentation_analysis/reporting/reporting.py)
+- **Source du template** : [`templates/synthesis_report.md.template`](../../docs/reference/synthesis_report.md.template)
+- **Source du code de rendu** : [`argumentation_analysis/reporting/reporting.py`](../../argumentation_analysis/reporting/reporting.py)
 - **Validation** :
     -   Le moteur de template Jinja2 a correctement remplacé les variables (`{{ summary }}`, `{{ fallacies }}`).
     -   La logique de boucle (`for fallacy in fallacies`) a fonctionné comme prévu pour afficher chaque sophisme.

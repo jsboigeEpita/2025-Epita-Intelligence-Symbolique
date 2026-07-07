@@ -97,5 +97,5 @@ Ce répertoire contient des scripts de démonstration pour illustrer les fonctio
 
 Pour comprendre l'historique et les décisions qui ont mené à l'architecture actuelle, les documents suivants peuvent être consultés :
 
-*   **Plan de Nettoyage :** [`../refactoring/03_argumentation_analysis_cleanup_plan.md`](../refactoring/03_argumentation_analysis_cleanup_plan.md)
-*   **Rapport de Robustesse :** [`../reports_pass_2/rhetorical_analysis/hardening_report.md`](../reports_pass_2/rhetorical_analysis/hardening_report.md)
+*   **Plan de Nettoyage :** `../refactoring/03_argumentation_analysis_cleanup_plan.md`
+*   **Rapport de Robustesse :** `../reports_pass_2/rhetorical_analysis/hardening_report.md`

@@ -182,8 +182,8 @@ Architecture Stratégies - Métriques Validées:
 
 - **[Architecture Globale](../architecture_globale.md)** : Intégration des stratégies au niveau système
 - **[Orchestration Hiérarchique](../architecture_hierarchique.md)** : Position des stratégies au niveau tactical
-- **[Agents Spécialisés](../../composants/agents_specialistes.md)** : Coordination avec ProjectManager, Analyst, Critic
-- **[Services Core](../../composants/)** : Bridge avec Tweety et raisonneurs logiques
+- **[Agents Spécialisés](../../technical/agents_specialistes.md)** : Coordination avec ProjectManager, Analyst, Critic
+- **[Services Core](../../technical/)** : Bridge avec Tweety et raisonneurs logiques
 
 ### Documentation Complémentaire
 

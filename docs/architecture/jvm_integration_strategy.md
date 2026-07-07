@@ -12,7 +12,7 @@ Pour contrer ces instabilités, une stratégie de **défense en profondeur** a �
 &gt; Si vous découvrez l'intégration Python-Java, commencez par lire le document d'introduction : [**Architecture d'Intégration Python-Java (JPype/Tweety)**](integration_python_java_intro.md). Il présente les composants clés, l'architecture globale et le flux d'interaction typique avant d'aborder les stratégies avancées de stabilisation décrites ici.
 
 &gt; **Note sur l'Évolution de l'Architecture**
-&gt; Ce document se concentre sur les principes fondamentaux de stabilisation de la JVM. Pour une vue d'ensemble des évolutions plus récentes, incluant le refactoring du serveur MCP et la fiabilisation du pipeline de CI qui s'appuient sur ces bases, veuillez consulter le [Rapport de Refactoring : Serveur MCP, Stabilisation des Tests et CI](../refactoring/refactoring_mcp_et_stabilisation_ci.md).
+&gt; Ce document se concentre sur les principes fondamentaux de stabilisation de la JVM. Pour une vue d'ensemble des évolutions plus récentes, incluant le refactoring du serveur MCP et la fiabilisation du pipeline de CI qui s'appuient sur ces bases, veuillez consulter le Rapport de Refactoring : Serveur MCP, Stabilisation des Tests et CI.
 ## 2. Les Quatre Couches de la Stratégie de Défense
 
 Notre architecture s'articule autour des quatre concepts suivants, appliqués séquentiellement pour maîtriser le cycle de vie de la JVM.
@@ -23,7 +23,7 @@ Notre architecture s'articule autour des quatre concepts suivants, appliqués s�
 
 *   **Implémentation Technique :**
     *   Un point de sortie unique est défini via une fixture `pytest` de portée session dans `tests/conftest.py`.
-    *   Cette fixture, souvent nommée `jvm_session_manager`, utilise le hook `pytest_sessionfinish` pour déclencher la fonction `shutdown_jvm_if_needed()` de [`argumentation_analysis/core/jvm_setup.py`](argumentation_analysis/core/jvm_setup.py).
+    *   Cette fixture, souvent nommée `jvm_session_manager`, utilise le hook `pytest_sessionfinish` pour déclencher la fonction `shutdown_jvm_if_needed()` de [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py).
     *   Cet appel est conditionnel et protégé par des flags pour s'assurer qu'il n'est exécuté qu'une seule fois.
 
 *   **Problèmes Prévenus :**
@@ -36,7 +36,7 @@ Notre architecture s'articule autour des quatre concepts suivants, appliqués s�
 
 *   **Implémentation Technique :**
     *   La configuration de `jpype` est modifiée **avant** l'appel à `jpype.startJVM()`.
-    *   Dans [`argumentation_analysis/core/jvm_setup.py`](argumentation_analysis/core/jvm_setup.py), la ligne suivante est cruciale :
+    *   Dans [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py), la ligne suivante est cruciale :
         ```python
         jpype.config.destroy_jvm = False
         ```
@@ -51,9 +51,9 @@ Notre architecture s'articule autour des quatre concepts suivants, appliqués s�
 *   **Objectif :** Empêcher les initialisations concurrentes de la JVM dans un environnement asynchrone (`asyncio`) ou multi-thread. La JVM ne doit être démarrée qu'une seule fois.
 
 *   **Implémentation Technique :**
-    *   Un système de verrouillage (locking) et de "propriété" est implémenté dans [`argumentation_analysis/core/jvm_setup.py`](argumentation_analysis/core/jvm_setup.py).
+    *   Un système de verrouillage (locking) et de "propriété" est implémenté dans [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py).
     *   Des flags globaux comme `_SESSION_FIXTURE_OWNS_JVM` et `_JVM_WAS_SHUTDOWN` tracent l'état de la JVM.
-    *   Une fixture de session (ex: `jvm_session` dans [`tests/conftest.py`](tests/conftest.py)) est désignée comme le "propriétaire" unique de la JVM.
+    *   Une fixture de session (ex: `jvm_session` dans [`tests/conftest.py`](../../tests/conftest.py)) est désignée comme le "propriétaire" unique de la JVM.
     *   Toute autre partie du code, avant de tenter d'initialiser la JVM, **doit** vérifier l'état de ces flags via des fonctions dédiées.
 
 *   **Problèmes Prévenus :**

@@ -425,14 +425,14 @@ python -m pytest tests/unit/orchestration/hierarchical/operational/adapters/test
 ## 📚 **Documentation Technique Complète**
 
 ### **🔍 Références**
-- **[Tests Hiérarchiques](../tests/unit/orchestration/hierarchical/)** - Tests validation architecture
-- **[Adaptateurs Opérationnels](../tests/unit/orchestration/hierarchical/operational/adapters/)** - Tests adaptateurs
-- **[Patterns d'Orchestration](./guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** - Patterns et bonnes pratiques
+- **[Tests Hiérarchiques](../../tests/unit/orchestration/hierarchical/)** - Tests validation architecture
+- **[Adaptateurs Opérationnels](../../tests/unit/orchestration/hierarchical/operational/adapters/)** - Tests adaptateurs
+- **[Patterns d'Orchestration](../guides/GUIDE_PATTERNS_ORCHESTRATION_MODES.md)** - Patterns et bonnes pratiques
 
 ### **📖 Guides d'Utilisation**
-- **[Guide Développeur](./GUIDE_DEVELOPPEUR_ARCHITECTURE.md)** - Développement avec architecture
-- **[Guide Utilisateur](./GUIDE_UTILISATEUR_ARCHITECTURE.md)** - Utilisation pratique
-- **[Exemples Concrets](../examples/)** - Implémentations réelles
+- **Guide Développeur** - Développement avec architecture
+- **Guide Utilisateur** - Utilisation pratique
+- **[Exemples Concrets](../../examples/)** - Implémentations réelles
 
 ---
 

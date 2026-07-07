@@ -18,7 +18,7 @@ L'objectif de la refonte est d'implémenter une architecture hiérarchique à tr
 
 Pour cette analyse, nous avons examiné en détail les fichiers clés de l'architecture d'orchestration actuelle:
 - [`argumentation_analysis/orchestration/README.md`](../../argumentation_analysis/orchestration/README.md)
-- [`argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py)
+- `argumentation_analysis/orchestration/analysis_runner.py`
 - [`argumentation_analysis/core/README.md`](../../argumentation_analysis/core/README.md)
 - [`argumentation_analysis/core/shared_state.py`](../../argumentation_analysis/core/shared_state.py)
 - [`argumentation_analysis/core/state_manager_plugin.py`](../../argumentation_analysis/core/state_manager_plugin.py)
@@ -65,7 +65,7 @@ Le système utilise Semantic Kernel comme framework d'orchestration principal. C
 
 #### Flux d'exécution principal
 
-Le flux d'exécution principal, défini dans [`analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py#L66), suit ces étapes:
+Le flux d'exécution principal, défini dans `analysis_runner.py`, suit ces étapes:
 1. Création d'une instance d'état locale ([`RhetoricalAnalysisState`](../../argumentation_analysis/core/shared_state.py#L12))
 2. Création d'une instance de plugin de gestion d'état ([`StateManagerPlugin`](../../argumentation_analysis/core/state_manager_plugin.py#L16))
 3. Configuration d'un kernel Semantic Kernel local avec le service LLM
@@ -135,7 +135,7 @@ Le système utilise quatre agents spécialisés, dont les implémentations de ba
 
 Chaque agent a ses propres instructions et plugins spécifiques qui sont configurés sur le kernel local.
 
-#### Runner d'analyse ([`analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py#L66))
+#### Runner d'analyse (`analysis_runner.py`)
 
 Le runner d'analyse est le point d'entrée principal pour l'exécution de l'analyse. Il:
 - Crée et configure tous les composants nécessaires

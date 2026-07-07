@@ -68,17 +68,17 @@ graph LR
 ### 3.1. Environnement Python
 
 *   **Environnement Virtuel (`venv_py310`)** : Un environnement virtuel Python, nommé `venv_py310`, est utilisé pour isoler les dépendances du projet, garantissant ainsi la cohérence et évitant les conflits avec d'autres installations Python sur le système. Il est configuré pour utiliser Python 3.10.
-*   **Dépendance JPype (`JPype1`)** : La bibliothèque `JPype1` est la dépendance Python principale pour cette intégration. Elle est installée via le fichier [`requirements.txt`](../requirements.txt:1) lors de la configuration de l'environnement.
+*   **Dépendance JPype (`JPype1`)** : La bibliothèque `JPype1` est la dépendance Python principale pour cette intégration. Elle est installée via le fichier [`requirements.txt`](../../requirements.txt:1) lors de la configuration de l'environnement.
 
 ### 3.2. Environnement Java (JDK)
 
 *   **JDK Portable** : Pour simplifier la configuration et assurer la portabilité, un JDK portable (OpenJDK 17) est utilisé.
-    *   Le script [`setup_project_env.ps1`](../setup_project_env.ps1:1) gère le téléchargement (via la variable `$jdkUrl`) et l'extraction de ce JDK dans le répertoire `portable_jdk/` à la racine du projet.
-    *   La fonction `Get-JdkSubDir` dans [`setup_project_env.ps1`](../setup_project_env.ps1:1) détecte dynamiquement le nom exact du répertoire JDK une fois extrait (par exemple, `jdk-17.0.11_9`).
+    *   Le script [`setup_project_env.ps1`](../../setup_project_env.ps1:1) gère le téléchargement (via la variable `$jdkUrl`) et l'extraction de ce JDK dans le répertoire `portable_jdk/` à la racine du projet.
+    *   La fonction `Get-JdkSubDir` dans [`setup_project_env.ps1`](../../setup_project_env.ps1:1) détecte dynamiquement le nom exact du répertoire JDK une fois extrait (par exemple, `jdk-17.0.11_9`).
 *   **Configuration de `JAVA_HOME`** :
-    *   La variable d'environnement `JAVA_HOME` est cruciale pour que JPype et d'autres outils Java localisent le JDK. Elle est définie dans le fichier `.env` (à la racine du projet) par le script [`setup_project_env.ps1`](../setup_project_env.ps1:1), pointant vers le JDK portable.
-    *   Le script [`activate_project_env.ps1`](../activate_project_env.ps1:1) charge cette variable depuis `.env` et ajoute également le sous-répertoire `bin` du JDK au `PATH` de l'environnement activé.
-*   **Logique de Découverte de la JVM** : Le module [`argumentation_analysis/core/jvm_setup.py`](../argumentation_analysis/core/jvm_setup.py:1) contient la fonction `find_valid_java_home()` qui implémente une stratégie de découverte de la JVM avec les priorités suivantes :
+    *   La variable d'environnement `JAVA_HOME` est cruciale pour que JPype et d'autres outils Java localisent le JDK. Elle est définie dans le fichier `.env` (à la racine du projet) par le script [`setup_project_env.ps1`](../../setup_project_env.ps1:1), pointant vers le JDK portable.
+    *   Le script [`activate_project_env.ps1`](../../activate_project_env.ps1:1) charge cette variable depuis `.env` et ajoute également le sous-répertoire `bin` du JDK au `PATH` de l'environnement activé.
+*   **Logique de Découverte de la JVM** : Le module [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1) contient la fonction `find_valid_java_home()` qui implémente une stratégie de découverte de la JVM avec les priorités suivantes :
     1.  **JDK Portable** : Vérifie d'abord la présence du JDK dans le répertoire `portable_jdk/` (note : le code dans `jvm_setup.py` fait référence à une version spécifique `jdk-17.0.15+6` pour le nom du ZIP, tandis que `setup_project_env.ps1` télécharge `jdk-17.0.11+9`. La fonction `Get-JdkSubDir` dans le script PowerShell et la logique de recherche de dossier `jdk-*` dans `find_valid_java_home` devraient permettre de gérer cette différence si le nom du répertoire extrait est cohérent, mais une harmonisation des versions référencées serait préférable).
     2.  **Variable d'environnement `JAVA_HOME`** : Si le JDK portable n'est pas trouvé ou utilisé, la variable `JAVA_HOME` définie dans l'environnement est consultée.
     3.  **Heuristiques Système** : Si `JAVA_HOME` n'est pas défini, des heuristiques spécifiques à l'OS sont utilisées pour tenter de localiser une installation Java valide.
@@ -86,13 +86,13 @@ graph LR
 
 ### 3.3. Scripts d'Environnement
 
-*   **[`setup_project_env.ps1`](../setup_project_env.ps1:1)** : Ce script PowerShell est responsable de la configuration initiale complète de l'environnement de développement. Ses tâches incluent :
+*   **[`setup_project_env.ps1`](../../setup_project_env.ps1:1)** : Ce script PowerShell est responsable de la configuration initiale complète de l'environnement de développement. Ses tâches incluent :
     *   Vérification de la présence de la version Python requise (3.10).
     *   Téléchargement et extraction du JDK portable dans `portable_jdk/`.
     *   Création de l'environnement virtuel Python `venv_py310/`.
-    *   Installation des dépendances Python listées dans [`requirements.txt`](../requirements.txt:1).
+    *   Installation des dépendances Python listées dans [`requirements.txt`](../../requirements.txt:1).
     *   Création ou mise à jour du fichier `.env` avec le chemin correct vers `JAVA_HOME` (pointant vers le JDK portable).
-*   **[`activate_project_env.ps1`](../activate_project_env.ps1:1)** : Ce script doit être exécuté pour activer l'environnement de développement configuré. Il effectue les actions suivantes :
+*   **[`activate_project_env.ps1`](../../activate_project_env.ps1:1)** : Ce script doit être exécuté pour activer l'environnement de développement configuré. Il effectue les actions suivantes :
     *   Activation de l'environnement virtuel Python `venv_py310`.
     *   Chargement des variables d'environnement depuis le fichier `.env`, notamment `JAVA_HOME`.
     *   Ajout du répertoire `bin` du JDK (identifié par `JAVA_HOME`) au `PATH` de la session terminal active.
@@ -102,7 +102,7 @@ graph LR
 JPype est la bibliothèque Python qui rend possible l'interaction avec le code Java.
 *   **Rôle** : Démarrer une JVM, charger des classes Java, instancier des objets Java, appeler des méthodes Java et convertir les types de données entre Python et Java.
 *   **Initialisation de la JVM** :
-    *   La logique d'initialisation est principalement encapsulée dans la fonction `initialize_jvm()` du module [`argumentation_analysis/core/jvm_setup.py`](../argumentation_analysis/core/jvm_setup.py:1).
+    *   La logique d'initialisation est principalement encapsulée dans la fonction `initialize_jvm()` du module [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1).
     *   Cette fonction utilise `jpype.startJVM()` pour démarrer la JVM.
     *   Des arguments spécifiques peuvent être passés à la JVM lors de son démarrage, notamment :
         *   `-Djava.library.path` : Pour spécifier le chemin vers les bibliothèques natives (DLLs, SOs) si nécessaire. Dans ce projet, cela pointe vers `libs/native/`.
@@ -118,7 +118,7 @@ JPype est la bibliothèque Python qui rend possible l'interaction avec le code J
 ### 3.5. Bibliothèque Tweety
 
 *   **Rôle** : Tweety est une suite de bibliothèques Java pour l'intelligence artificielle, spécialisée dans l'argumentation computationnelle et les logiques non classiques. Elle fournit les fondations pour l'analyse argumentative formelle dans ce projet.
-*   **Stockage** : Les bibliothèques Tweety sont fournies sous forme de fichiers JAR (Java ARchive) situés dans le répertoire `libs/`. Le fichier [`libs/README.md`](../libs/README.md:1) liste les principaux modules Tweety utilisés.
+*   **Stockage** : Les bibliothèques Tweety sont fournies sous forme de fichiers JAR (Java ARchive) situés dans le répertoire `libs/`. Le fichier [`libs/README.md`](../../libs/README.md:1) liste les principaux modules Tweety utilisés.
 *   **Exemples de Classes Utilisées** :
     *   `org.tweetyproject.logics.pl.syntax.PlSignature`
     *   `org.tweetyproject.logics.pl.syntax.PlParser`
@@ -126,7 +126,7 @@ JPype est la bibliothèque Python qui rend possible l'interaction avec le code J
 
 ### 3.6. Script de Diagnostic
 
-*   **[`check_jpype_env.py`](../check_jpype_env.py:1)** : Ce script Python sert d'outil de diagnostic pour vérifier la configuration de l'intégration Python-Java. Il effectue les étapes suivantes :
+*   **`check_jpype_env.py`** : Ce script Python sert d'outil de diagnostic pour vérifier la configuration de l'intégration Python-Java. Il effectue les étapes suivantes :
     *   Vérifie l'importation de `jpype`.
     *   Affiche les informations de l'environnement (version Python, `JAVA_HOME`, chemin de l'exécutable Python).
     *   Tente de déterminer le chemin de la JVM par défaut.
@@ -140,10 +140,10 @@ JPype est la bibliothèque Python qui rend possible l'interaction avec le code J
 
 Pour faciliter l'utilisation et la maintenance, l'initialisation et la gestion de la JVM sont centralisées :
 
-*   **`JVMService`** : Comme mentionné dans [`libs/README.md`](../libs/README.md:1), un `JVMService` (probablement situé dans le package `argumentation_analysis.services`) semble encapsuler la logique d'interaction avec la JVM pour le code applicatif. Il fournirait des méthodes pour initialiser la JVM (`initialize()`), obtenir des classes Java (`get_class(...)`), et arrêter la JVM (`shutdown()`). Cela offre une abstraction par-dessus JPype.
-*   **Fixture `integration_jvm`** : Pour les tests, le fichier [`tests/conftest.py`](../tests/conftest.py:1) définit une fixture pytest nommée `integration_jvm`. Cette fixture est responsable de :
+*   **`JVMService`** : Comme mentionné dans [`libs/README.md`](../../libs/README.md:1), un `JVMService` (probablement situé dans le package `argumentation_analysis.services`) semble encapsuler la logique d'interaction avec la JVM pour le code applicatif. Il fournirait des méthodes pour initialiser la JVM (`initialize()`), obtenir des classes Java (`get_class(...)`), et arrêter la JVM (`shutdown()`). Cela offre une abstraction par-dessus JPype.
+*   **Fixture `integration_jvm`** : Pour les tests, le fichier [`tests/conftest.py`](../../tests/conftest.py:1) définit une fixture pytest nommée `integration_jvm`. Cette fixture est responsable de :
     *   Démarrer la JVM une seule fois pour la session de tests d'intégration.
-    *   Utiliser la fonction `initialize_jvm()` de [`argumentation_analysis/core/jvm_setup.py`](../argumentation_analysis/core/jvm_setup.py:1) pour la configuration et le démarrage.
+    *   Utiliser la fonction `initialize_jvm()` de [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1) pour la configuration et le démarrage.
     *   S'assurer que le vrai module `jpype` est utilisé pendant les tests d'intégration.
     *   Arrêter la JVM à la fin de la session de test.
     D'autres fixtures de test (par exemple, `dung_classes`) dépendent de `integration_jvm` pour accéder aux classes Tweety.
@@ -156,7 +156,7 @@ Le flux typique pour un développeur ou un script utilisant l'intégration est l
 2.  **Exécution du Script Python** : Un script Python (applicatif ou de test) qui nécessite des fonctionnalités de Tweety est exécuté.
 3.  **Initialisation de la JVM** :
     *   Le script appelle la logique d'initialisation de la JVM. Cela peut se faire via le `JVMService` (pour le code applicatif) ou automatiquement via la fixture `integration_jvm` (pour les tests).
-    *   En interne, la fonction `initialize_jvm()` de [`argumentation_analysis/core/jvm_setup.py`](../argumentation_analysis/core/jvm_setup.py:1) est appelée.
+    *   En interne, la fonction `initialize_jvm()` de [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1) est appelée.
     *   `initialize_jvm()` localise une installation Java valide (en priorisant le JDK portable).
     *   Elle construit le classpath en incluant tous les JARs de `libs/`.
     *   Elle démarre la JVM en utilisant `jpype.startJVM()` avec le classpath et les arguments nécessaires.
@@ -172,7 +172,7 @@ Plusieurs décisions de conception ont été prises pour cette intégration :
 
 *   **JDK Portable** :
     *   *Avantages* : Élimine la dépendance à une installation Java système, permet de contrôler précisément la version du JDK utilisée par le projet, et simplifie la configuration pour les nouveaux développeurs.
-    *   *Inconvénients/Points d'attention* : Augmente légèrement la taille du dépôt de projet. Une incohérence a été notée entre la version du JDK portable téléchargée par [`setup_project_env.ps1`](../setup_project_env.ps1:1) (`17.0.11+9`) et celle référencée dans [`argumentation_analysis/core/jvm_setup.py`](../argumentation_analysis/core/jvm_setup.py:1) (`17.0.15+6`). Bien que la détection dynamique du nom du répertoire puisse mitiger cela, une harmonisation est recommandée.
+    *   *Inconvénients/Points d'attention* : Augmente légèrement la taille du dépôt de projet. Une incohérence a été notée entre la version du JDK portable téléchargée par [`setup_project_env.ps1`](../../setup_project_env.ps1:1) (`17.0.11+9`) et celle référencée dans [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1) (`17.0.15+6`). Bien que la détection dynamique du nom du répertoire puisse mitiger cela, une harmonisation est recommandée.
 *   **Gestion du Classpath Dynamique** :
     *   *Avantages* : Le classpath est construit automatiquement en scannant le répertoire `libs/`. Cela facilite l'ajout ou la mise à jour des JARs de Tweety sans avoir à modifier manuellement des configurations de classpath.
 *   **Centralisation de l'Initialisation JVM** :
@@ -184,8 +184,8 @@ Plusieurs décisions de conception ont été prises pour cette intégration :
 
 Pour travailler avec cette intégration, un développeur doit s'assurer des points suivants :
 
-*   **Python** : Une installation de Python version 3.10 (ou la version spécifiée dans [`setup_project_env.ps1`](../setup_project_env.ps1:1)) doit être disponible et accessible via la commande `py -3.10` (ou `python3.10`).
-*   **Exécution du Script de Setup** : Le script [`setup_project_env.ps1`](../setup_project_env.ps1:1) doit avoir été exécuté au moins une fois pour configurer l'environnement, télécharger le JDK portable, et installer les dépendances.
+*   **Python** : Une installation de Python version 3.10 (ou la version spécifiée dans [`setup_project_env.ps1`](../../setup_project_env.ps1:1)) doit être disponible et accessible via la commande `py -3.10` (ou `python3.10`).
+*   **Exécution du Script de Setup** : Le script [`setup_project_env.ps1`](../../setup_project_env.ps1:1) doit avoir été exécuté au moins une fois pour configurer l'environnement, télécharger le JDK portable, et installer les dépendances.
 *   **Activation de l'Environnement** : Avant d'exécuter des scripts Python qui utilisent l'intégration Java, l'environnement doit être activé en exécutant `.\activate_project_env.ps1` dans un terminal PowerShell.
 *   **Compréhension de Base** : Une compréhension de base de Python est nécessaire. Une connaissance de Java peut être utile pour comprendre l'API de Tweety, mais n'est pas strictement requise pour une utilisation simple.
 *   **Connaissance de JPype (Optionnel)** : Pour des modifications avancées de l'intégration ou pour le débogage de problèmes liés à JPype, une connaissance de JPype est bénéfique.
@@ -194,11 +194,11 @@ Pour travailler avec cette intégration, un développeur doit s'assurer des poin
 ## 7. Points d'Attention et Maintenance
 
 *   **Incohérence de Version du JDK Portable** :
-    *   Comme mentionné, [`setup_project_env.ps1`](../setup_project_env.ps1:1) télécharge OpenJDK `17.0.11+9`, tandis que [`argumentation_analysis/core/jvm_setup.py`](../argumentation_analysis/core/jvm_setup.py:1) fait référence à `17.0.15+6` dans ses constantes pour le nom du ZIP et l'URL de téléchargement (bien que la logique de téléchargement direct dans `jvm_setup.py` soit actuellement désactivée).
-    *   La fonction `Get-JdkSubDir` dans [`setup_project_env.ps1`](../setup_project_env.ps1:1) et la recherche de dossiers `jdk-*` dans `find_valid_java_home` devraient permettre de trouver le JDK extrait quel que soit son nom exact de sous-répertoire.
+    *   Comme mentionné, [`setup_project_env.ps1`](../../setup_project_env.ps1:1) télécharge OpenJDK `17.0.11+9`, tandis que [`argumentation_analysis/core/jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1) fait référence à `17.0.15+6` dans ses constantes pour le nom du ZIP et l'URL de téléchargement (bien que la logique de téléchargement direct dans `jvm_setup.py` soit actuellement désactivée).
+    *   La fonction `Get-JdkSubDir` dans [`setup_project_env.ps1`](../../setup_project_env.ps1:1) et la recherche de dossiers `jdk-*` dans `find_valid_java_home` devraient permettre de trouver le JDK extrait quel que soit son nom exact de sous-répertoire.
     *   Il est recommandé d'harmoniser ces versions ou de s'assurer que la logique de détection est suffisamment robuste pour gérer différentes versions mineures/patchs du JDK 17.
 *   **Mise à Jour des JARs Tweety** :
-    *   Pour mettre à jour les bibliothèques Tweety, suivre les instructions fournies dans [`libs/README.md`](../libs/README.md:1) : télécharger les nouveaux JARs depuis le site officiel de Tweety et remplacer les anciens dans le répertoire `libs/`.
+    *   Pour mettre à jour les bibliothèques Tweety, suivre les instructions fournies dans [`libs/README.md`](../../libs/README.md:1) : télécharger les nouveaux JARs depuis le site officiel de Tweety et remplacer les anciens dans le répertoire `libs/`.
     *   Après une mise à jour, il est crucial d'exécuter les tests (notamment ceux d'intégration) pour vérifier la compatibilité.
 *   **Gestion des Bibliothèques Natives** :
     *   Les bibliothèques natives (par exemple, `.dll` pour Windows) se trouvent dans `libs/native/`.

@@ -80,7 +80,7 @@ L'efficacité de `AgentGroupChat` repose sur la configuration de ses stratégies
 Pour qu'un LLM agisse comme un chef d'orchestre (le rôle de l'ancien `ProjectManagerAgent`), cette stratégie est idéale.
 
 **Mécanisme interne :**
-Comme l'illustre le code de [`kernel_function_selection_strategy.py`](C:/Users/jsboi/.conda/envs/projet-is-new/Lib/site-packages/semantic_kernel/agents/strategies/selection/kernel_function_selection_strategy.py:1), la stratégie prépare et exécute une `KernelFunction` fournie par l'utilisateur.
+Comme l'illustre le code de `kernel_function_selection_strategy.py`, la stratégie prépare et exécute une `KernelFunction` fournie par l'utilisateur.
 
 ```python
 # Fichier: semantic_kernel/agents/strategies/selection/kernel_function_selection_strategy.py (extrait simplifié)
@@ -153,7 +153,7 @@ async def should_terminate_async(self, agent: "Agent", history: list[ChatMessage
 Nous combinons une condition sémantique et un garde-fou mécanique.
 
 1.  **Condition Sémantique (`KernelFunctionTerminationStrategy`)** : Un LLM évalue si la tâche est terminée.
-2.  **Garde-fou (`DefaultTerminationStrategy`)** : L'analyse du code de [`termination_strategy.py`](C:/Users/jsboi/.conda/envs/projet-is-new/Lib/site-packages/semantic_kernel/agents/strategies/termination/termination_strategy.py:1) montre que la classe de base possède une propriété `maximum_iterations`. La stratégie `DefaultTerminationStrategy` hérite de ce comportement et sert donc de simple compteur, mettant fin à la conversation après N tours pour éviter les boucles infinies.
+2.  **Garde-fou (`DefaultTerminationStrategy`)** : L'analyse du code de `termination_strategy.py` montre que la classe de base possède une propriété `maximum_iterations`. La stratégie `DefaultTerminationStrategy` hérite de ce comportement et sert donc de simple compteur, mettant fin à la conversation après N tours pour éviter les boucles infinies.
 
 ```python
 # Fichier: argumentation_analysis/orchestration/analysis_runner.py (pseudo-code de la factory de stratégie)
@@ -496,7 +496,7 @@ class InformalAnalysisAgent(AbstractAgent):
 
 La refactorisation de `InformalAnalysisAgent` n'est pas une simple réorganisation, mais l'application d'un **pattern architectural puissant et validé** que nous nommerons le **"Pattern de l'Agent Hybride"** ou **"Builder Plugin"**.
 
-L'exploration du code existant du projet, notamment dans [`argumentation_analysis/agents/core/logic/first_order_logic_agent.py`](argumentation_analysis/agents/core/logic/first_order_logic_agent.py:1), a révélé le `BeliefSetBuilderPlugin`. Ce plugin est l'exemple parfait de ce pattern : au lieu de demander au LLM de générer une syntaxe complexe et fragile, il lui fournit des "outils" simples (`add_sort`, `add_atomic_fact`, etc.). Le rôle du LLM est alors réduit à une tâche simple et fiable : décider quels outils appeler. Le plugin, quant à lui, agit comme un "builder", accumulant ces appels pour construire un objet complexe (`.fologic`) de manière déterministe et fiable.
+L'exploration du code existant du projet, notamment dans [`argumentation_analysis/agents/core/logic/first_order_logic_agent.py`](../../argumentation_analysis/agents/core/logic/fol_logic_agent.py:1), a révélé le `BeliefSetBuilderPlugin`. Ce plugin est l'exemple parfait de ce pattern : au lieu de demander au LLM de générer une syntaxe complexe et fragile, il lui fournit des "outils" simples (`add_sort`, `add_atomic_fact`, etc.). Le rôle du LLM est alors réduit à une tâche simple et fiable : décider quels outils appeler. Le plugin, quant à lui, agit comme un "builder", accumulant ces appels pour construire un objet complexe (`.fologic`) de manière déterministe et fiable.
 
 Notre `InformalAnalysisAgent` applique rigoureusement ce même pattern :
 1.  **Agent = Façade Simple :** Pour l'orchestrateur externe (`AgentGroupChat`), l'agent expose une interface simple (`get_response`).
@@ -1096,11 +1096,11 @@ L'implémentation est décomposée en une série de "Commandes de Travail" (Work
     *   Créez le répertoire `argumentation_analysis/agents/abc/`.
 
 2.  **Implémenter `AbstractAgent` :**
-    *   Créez le fichier [`argumentation_analysis/agents/abc/abstract_agent.py`](argumentation_analysis/agents/abc/abstract_agent.py).
+    *   Créez le fichier [`argumentation_analysis/agents/abc/abstract_agent.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py).
     *   Copiez-collez l'intégralité du code de `AbstractAgent` tel que défini en **Partie 2** du présent document.
 
 3.  **Implémenter `AgentFactory` :**
-    *   Créez le fichier [`argumentation_analysis/agents/agent_factory.py`](argumentation_analysis/agents/agent_factory.py).
+    *   Créez le fichier [`argumentation_analysis/agents/agent_factory.py`](../../argumentation_analysis/agents/factory.py).
     *   Remplissez la classe `AgentFactory` avec le squelette défini en **Partie 2**. Initialement, les méthodes `create_..._agent` peuvent retourner `NotImplementedError` ou être commentées.
 
 ---
@@ -1116,7 +1116,7 @@ L'implémentation est décomposée en une série de "Commandes de Travail" (Work
     *   Créez un fichier `.env.template` pour documenter les variables d'environnement nécessaires (ex: `OPENAI_API_KEY`). Les développeurs devront le copier en `.env` et le remplir.
 
 2.  **Implémenter le `KernelBuilder` :**
-    *   Créez le fichier [`argumentation_analysis/core/kernel_builder.py`](argumentation_analysis/core/kernel_builder.py).
+    *   Créez le fichier [`argumentation_analysis/core/kernel_builder.py`](../../argumentation_analysis/kernel/kernel_builder.py).
     *   Implémentez la classe `KernelBuilder` comme décrit en **Partie 4.2.2**. Cette classe doit lire `config.yaml` et `.env` pour assembler et configurer une instance de `Kernel` avec les services LLM appropriés.
 
 ---
@@ -1129,7 +1129,7 @@ L'implémentation est décomposée en une série de "Commandes de Travail" (Work
 
 1.  **Créer le Fichier de l'Agent :**
     *   Créez le répertoire `argumentation_analysis/agents/concrete_agents/`.
-    *   Créez le fichier [`argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py`](argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py).
+    *   Créez le fichier [`argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py`](../../argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py).
 
 2.  **Implémenter la Classe de l'Agent :**
     *   La classe `InformalFallacyAgent` doit hériter de `AbstractAgent`.
@@ -1140,7 +1140,7 @@ L'implémentation est décomposée en une série de "Commandes de Travail" (Work
         *   L'appel au `Kernel` avec les `OpenAIChatPromptExecutionSettings` forçant l'utilisation de l'outil Pydantic (`tool_choice="required"`).
 
 3.  **Mettre à jour la `AgentFactory` :**
-    *   Dans [`agent_factory.py`](argumentation_analysis/agents/agent_factory.py), implémentez la méthode `create_informal_fallacy_agent()` pour qu'elle crée, configure (`setup_agent_components`) et retourne une instance de `InformalFallacyAgent`.
+    *   Dans [`agent_factory.py`](../../argumentation_analysis/agents/factory.py), implémentez la méthode `create_informal_fallacy_agent()` pour qu'elle crée, configure (`setup_agent_components`) et retourne une instance de `InformalFallacyAgent`.
 
 ---
 
@@ -1166,7 +1166,7 @@ L'implémentation est décomposée en une série de "Commandes de Travail" (Work
 **Actions à réaliser :**
 
 1.  **Modifier `analysis_runner.py` :**
-    *   Ouvrez le fichier [`argumentation_analysis/orchestration/analysis_runner.py`](argumentation_analysis/orchestration/analysis_runner.py).
+    *   Ouvrez le fichier `argumentation_analysis/orchestration/analysis_runner.py`.
     *   Supprimez complètement l'ancienne boucle `for` et la logique de parsing manuelle.
 
 2.  **Implémenter la Nouvelle Logique :**

@@ -23,7 +23,7 @@ relevant_to_open_issue: 578
 
 ### 1.1. Contexte : Héritage et Complexité Croissante
 
-L'analyse du système existant, consignée dans les documents [`01_informal_fallacy_system_analysis.md`](./01_informal_fallacy_system_analysis.md) et [`02_system_legacy_and_evolution_analysis.md`](./02_system_legacy_and_evolution_analysis.md), a mis en lumière une réalité inévitable de tout projet innovant : une accumulation de strates architecturales. Le système actuel est une mosaïque fonctionnelle mais hétérogène, comprenant :
+L'analyse du système existant, consignée dans les documents `01_informal_fallacy_system_analysis.md` et `02_system_legacy_and_evolution_analysis.md`, a mis en lumière une réalité inévitable de tout projet innovant : une accumulation de strates architecturales. Le système actuel est une mosaïque fonctionnelle mais hétérogène, comprenant :
 *   Une architecture principale "Plan-and-Execute", la plus aboutie.
 *   Des architectures secondaires et héritées comme le pipeline "multi-niveaux" ou l'approche "one-shot".
 *   Une prolifération d'outils et de services, parfois redondants, témoignant d'une R&D continue.
@@ -32,7 +32,7 @@ Cette complexité, bien que naturelle, engendre des défis en termes de maintena
 
 ### 1.2. Vision Stratégique : La Consolidation Constructive
 
-Face à ce constat, le document [`03_informal_fallacy_consolidation_plan.md`](./03_informal_fallacy_consolidation_plan.md) a établi une vision claire : non pas une refonte totale ("big bang"), mais une **consolidation constructive**. L'objectif est de fédérer le meilleur des architectures existantes au sein d'un cadre unifié, gouverné par des principes forts :
+Face à ce constat, le document `03_informal_fallacy_consolidation_plan.md` a établi une vision claire : non pas une refonte totale ("big bang"), mais une **consolidation constructive**. L'objectif est de fédérer le meilleur des architectures existantes au sein d'un cadre unifié, gouverné par des principes forts :
 *   Un **Guichet de Service Unique** pour toutes les interactions.
 *   Une **architecture de plugins à deux niveaux** (Standard et Workflows).
 *   Une **externalisation complète de la personnalité des agents** et de leurs prompts.
@@ -43,7 +43,7 @@ Ce document traduit cette vision stratégique en une feuille de route technique.
 
 ## 2. Référence Stratégique
 
--   **Document source:** [`03_informal_fallacy_consolidation_plan.md`](./03_informal_fallacy_consolidation_plan.md)
+-   **Document source:** `03_informal_fallacy_consolidation_plan.md`
 -   **Méthodologie:** SDDD (Semantic Document Driven Design)
 
 ## 3. Décomposition Opérationnelle
@@ -64,7 +64,7 @@ Cette première phase vise à construire le socle physique et logiciel sur leque
 
 *   **Checklist Narrative et Technique Détaillée :**
     *   **1. Création du Cœur Agnostique (`src/core`)**
-        *   **Justification :** L'analyse ([`01_informal_fallacy_system_analysis.md`](./01_informal_fallacy_system_analysis.md)) a révélé de multiples composants logiques (outils d'analyse, services de taxonomie) utilisés par différentes architectures. Pour éviter la duplication et le couplage, le plan de consolidation ([`03_informal_fallacy_consolidation_plan.md`](./03_informal_fallacy_consolidation_plan.md)) impose la création d'un `core` agnostique.
+        *   **Justification :** L'analyse (`01_informal_fallacy_system_analysis.md`) a révélé de multiples composants logiques (outils d'analyse, services de taxonomie) utilisés par différentes architectures. Pour éviter la duplication et le couplage, le plan de consolidation (`03_informal_fallacy_consolidation_plan.md`) impose la création d'un `core` agnostique.
         *   **Tâche :** Créer le répertoire `src/core`.
 
     *   **2. Structuration de l'Écosystème de Plugins (`src/core/plugins`)**
@@ -80,7 +80,7 @@ Cette première phase vise à construire le socle physique et logiciel sur leque
         *   **Tâche :** Créer le répertoire `src/core/plugins/workflows`.
 
     *   **5. Création de la Racine des Agents (`src/agents`)**
-        *   **Justification :** L'analyse de l'évolution ([`02_system_legacy...`](./02_system_legacy_and_evolution_analysis.md)) montre un glissement d'agents monolithiques vers des agents orchestrés. Pour formaliser cette séparation, nous créons un espace de noms dédié à tout ce qui a trait aux agents.
+        *   **Justification :** L'analyse de l'évolution (`02_system_legacy...`) montre un glissement d'agents monolithiques vers des agents orchestrés. Pour formaliser cette séparation, nous créons un espace de noms dédié à tout ce qui a trait aux agents.
         *   **Tâche :** Créer le répertoire `src/agents`.
 
     *   **6. Centralisation des Personnalités d'Agents (`src/agents/personalities`)**

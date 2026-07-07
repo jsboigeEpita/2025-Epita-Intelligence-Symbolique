@@ -57,7 +57,7 @@ graph TD
 -   **Interface Utilisateur (UI)** : Permet aux utilisateurs de soumettre des textes pour analyse, de configurer les paramètres et de visualiser les résultats. Elle peut prendre la forme d'une application web, d'un notebook Jupyter ou d'une interface en ligne de commande.
 
 -   **Orchestration** : Le cœur du système qui gère le flux de travail de l'analyse.
-    *   Le fichier [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/core/orchestration_service.py) (décrivant un service d'orchestration centralisé) est **actuellement manquant** dans le code source.
+    *   Le fichier [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/agents/core/orchestration_service.py) (décrivant un service d'orchestration centralisé) est **actuellement manquant** dans le code source.
     *   L'orchestration actuelle pourrait être gérée par des scripts spécifiques ou s'appuyer davantage sur l'Agent Project Manager pour la définition et la séquence des tâches.
     *   L'**Agent Project Manager (PM)** ([`argumentation_analysis/agents/core/pm/README.md`](../../argumentation_analysis/agents/core/pm/README.md:1)) joue un rôle clé dans la planification stratégique, la définition des tâches pour les autres agents et la synthèse finale. Il ne gère pas directement l'état ou l'exécution mais fournit l'intelligence pour guider le flux.
     *   Une architecture d'orchestration hiérarchique plus formelle est une proposition et est détaillée dans le document ([`analyse_architecture_orchestration.md`](./analyse_architecture_orchestration.md:0)).
@@ -101,7 +101,7 @@ Le flux de données peut varier en fonction de l'orchestrateur spécifique mis e
     *   L'Agent PM peut être sollicité pour générer une synthèse ou une conclusion finale basée sur l'ensemble des résultats dans l'État Partagé.
 8.  **Présentation** : Les résultats finaux sont récupérés de l'État Partagé et présentés à l'utilisateur via l'Interface Utilisateur.
 
-Ce flux est une généralisation. Le document sur le [`flux_donnees_analyse.md`](./flux_donnees_analyse.md:0) (s'il existe et est à jour) devrait fournir une description plus détaillée et spécifique.
+Ce flux est une généralisation. Le document sur le `flux_donnees_analyse.md` (s'il existe et est à jour) devrait fournir une description plus détaillée et spécifique.
 
 ## Principes Clés de l'Architecture
 

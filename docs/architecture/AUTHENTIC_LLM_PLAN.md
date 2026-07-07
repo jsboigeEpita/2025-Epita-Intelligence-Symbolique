@@ -35,12 +35,12 @@ restored_reason: "audit rogue cleanup commits — issue #581 phase 2 / #580 sub-
 
 ### 2. **Élimination Mocks dans Agents Core**
 - Audit complet des agents: Informal, Extract, Oracle, PM
-- Suppression fallbacks mock dans [`UnifiedConfig`](config/unified_config.py)
+- Suppression fallbacks mock dans [`UnifiedConfig`](../../config/unified_config.py)
 - Validation `MockLevel.NONE` strict
 - Tests agents avec LLM réel uniquement
 
 ### 3. **Semantic Kernel Compatibility**
-- Validation [`semantic_kernel_compatibility.py`](argumentation_analysis/utils/semantic_kernel_compatibility.py)
+- Validation `semantic_kernel_compatibility.py`
 - Test AuthorRole, FunctionChoiceBehavior, AgentChatException
 - Vérification pas de mocks cachés dans compatibility layer
 
@@ -76,19 +76,19 @@ flowchart TD
 ## 📁 **Composants Cibles Critiques**
 
 ### **Core LLM Infrastructure**
-- [`argumentation_analysis.core.llm_service`](argumentation_analysis/core/llm_service.py)
-- [`config.unified_config.UnifiedConfig`](config/unified_config.py)
-- [`argumentation_analysis.utils.semantic_kernel_compatibility`](argumentation_analysis/utils/semantic_kernel_compatibility.py)
+- [`argumentation_analysis.core.llm_service`](../../argumentation_analysis/core/llm_service.py)
+- [`config.unified_config.UnifiedConfig`](../../config/unified_config.py)
+- `argumentation_analysis.utils.semantic_kernel_compatibility`
 
 ### **Agents Core à Valider**
-- [`argumentation_analysis.agents.core.informal.informal_agent`](argumentation_analysis/agents/core/informal/informal_agent.py)
-- [`argumentation_analysis.agents.core.extract.extract_agent`](argumentation_analysis/agents/core/extract/extract_agent.py)
-- [`argumentation_analysis.agents.core.oracle.oracle_base_agent`](argumentation_analysis/agents/core/oracle/oracle_base_agent.py)
-- [`argumentation_analysis.agents.core.pm.pm_agent`](argumentation_analysis/agents/core/pm/pm_agent.py)
+- [`argumentation_analysis.agents.core.informal.informal_agent`](../../argumentation_analysis/agents/core/informal/informal_agent.py)
+- [`argumentation_analysis.agents.core.extract.extract_agent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)
+- [`argumentation_analysis.agents.core.oracle.oracle_base_agent`](../../argumentation_analysis/agents/core/oracle/oracle_base_agent.py)
+- [`argumentation_analysis.agents.core.pm.pm_agent`](../../argumentation_analysis/agents/core/pm/pm_agent.py)
 
 ### **Tests de Validation**
-- [`tests.unit.argumentation_analysis.test_llm_service`](tests/unit/argumentation_analysis/test_llm_service.py)
-- [`tests.unit.config.test_unified_config`](tests/unit/config/test_unified_config.py)
+- [`tests.unit.argumentation_analysis.test_llm_service`](../../tests/unit/argumentation_analysis/test_llm_service.py)
+- [`tests.unit.config.test_unified_config`](../../tests/unit/config/test_unified_config.py)
 - Nouveaux tests authentiques à créer
 
 ---
