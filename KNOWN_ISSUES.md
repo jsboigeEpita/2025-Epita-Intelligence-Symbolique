@@ -141,6 +141,16 @@ Architectural hardening landed across several epics. Entries below are verified 
 - **Impact**: Low — individual tests are correct; only the marathon bulk run degrades.
 - **Workaround**: Run orchestration tests in smaller batches (e.g., by class), not as a full suite. Do NOT use this failure count as a regression signal — always verify individual test pass before investigating.
 
+### Flaky Test: `test_invoke_fact_extraction_short_text` (ATT-1 residual, latent)
+
+- **Symptom**: `tests/unit/argumentation_analysis/workflows/test_formal_verification.py::TestInvokeCallables::test_invoke_fact_extraction_short_text` asserts `claim_count == 0` on the trivial input `"Hi."`; can intermittently fail when the suite runs with an OpenAI key present.
+- **Root cause**: `_invoke_fact_extraction` (`invoke_callables.py`) issues a **real LLM call** even on a 3-character input. On `"Hi."` the model can occasionally hallucinate a claim, yielding `claim_count >= 1` and failing the assertion. This is **intrinsic LLM non-determinism**, not a code bug. The no-key path (heuristic fallback) is deterministic — `"Hi."` is below the per-sentence `len > 20` threshold, so `claims == []` and the test passes cleanly.
+- **Proof**: **PASSED** in the recent green run #1420 (run `28893501286`, `test_invoke_fact_extraction_short_text PASSED`). It is a *latent* floater, not a persistent CI-RED.
+- **Why not fixed (anti-théâtre #1019)**: a length short-circuit in `_invoke_fact_extraction` would regress `test_track_a_extraction_reliability_1290.py` (Track A #1290), which feeds `"some text"` (9 chars) with the LLM mocked and explicitly asserts the call is made (`mock_call.call_count == 2`, `response_format` threaded) — the extraction contract is that length does **not** gate the LLM. Mocking this test would be theatre (asserting the mock returns 0 is trivial and tests nothing). Coordinated characterization: documented, non-fixable without mock.
+- **Impact**: Low — green at the most recent run; part of the ATT-1 baseline (~1–2 ambient F+E floaters, count stable, non-regression).
+- **Workaround**: If it flakes on a run, re-run (a fresh LLM call typically returns 0 claims on `"Hi."`). Do NOT treat it as a regression signal without confirming its isolation pass first.
+- **Related**: #1355 (ATT-1), #1290 (Track A extraction reliability)
+
 ### Skipped Tests in Unit Suite
 - **Breakdown** (as of 2026-05-04): 4 skips observed in CI mode. Tests requiring API keys or JVM auto-skip gracefully.
 - **Status**: Stable — skip count remains low and consistent across runs
