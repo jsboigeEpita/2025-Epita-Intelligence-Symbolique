@@ -3,7 +3,7 @@
 **Note Importante :** Ce guide de dépannage est un complément aux documentations principales du projet. Pour une compréhension approfondie de l'architecture, des composants et des procédures de développement, veuillez consulter :
 *   Le portail des guides : [`docs/guides/README.md`](../../../../guides/README.md:1)
 *   La documentation d'architecture globale : [`docs/architecture/architecture_globale.md`](../../../../architecture/architecture_globale.md:1)
-*   La documentation des composants : [`docs/composants/`](../../../../composants/)
+*   La documentation des composants : [`docs/composants/`](../../../../technical/)
 
 ## 📋 Table des matières
 
@@ -127,7 +127,7 @@ netstat -an | grep :5000
    // Exemple : s'assurer que l'URL et le port correspondent à ceux de l'API
    const API_URL = 'http://localhost:5000'; // ou le port que vous utilisez
    ```
-   Consultez la documentation de l'[`API Web`](../../../../composants/api_web.md:1) pour les détails des endpoints.
+   Consultez la documentation de l'[`API Web`](../../../../technical/api_web.md:1) pour les détails des endpoints.
 
 3. **Vérifier le firewall**
    Assurez-vous que votre pare-feu autorise les connexions sur le port utilisé par l'API.
@@ -263,7 +263,7 @@ def handle_preflight():
 
 ## Erreurs de dépendances
 
-Consultez le [`Guide du Développeur`](../../../../guides/guide_developpeur.md:1) et la documentation sur la [`Structure du Projet`](../../../../composants/structure_projet.md:1) pour comprendre comment les modules sont organisés.
+Consultez le [`Guide du Développeur`](../../../../guides/guide_developpeur.md:1) et la documentation sur la [`Structure du Projet`](../../../../technical/structure_projet.md:1) pour comprendre comment les modules sont organisés.
 
 ### ❌ Erreur : "No module named 'argumentation_analysis'"
 
@@ -304,7 +304,7 @@ pip install -e .
    python start_api.py --debug
    ```
 3. **Installer les dépendances manquantes :** Si des dépendances spécifiques sont nécessaires pour ces modules (ex: bibliothèques C++, modèles de ML lourds), assurez-vous qu'elles sont installées conformément au [`Guide du Développeur`](../../../../guides/guide_developpeur.md:1).
-4. **Consulter la documentation des composants** comme [`Agents Spécialistes`](../../../../composants/agents_specialistes.md:1) ou [`Moteur de Raisonnement`](../../../../composants/reasoning_engine.md:1) pour comprendre les capacités attendues.
+4. **Consulter la documentation des composants** comme [`Agents Spécialistes`](../../../../technical/agents_specialistes.md:1) ou [`Moteur de Raisonnement`](../../../../technical/reasoning_engine.md:1) pour comprendre les capacités attendues.
 
 ### ❌ Erreur : Conflits de versions de dépendances
 
@@ -387,7 +387,7 @@ Vérifiez attentivement les chemins relatifs et absolus dans vos instructions `i
 
 ## Erreurs d'analyse
 
-Ces erreurs proviennent de l'API lorsqu'elle traite une requête d'analyse. Consultez la documentation de l'[`API Web`](../../../../composants/api_web.md:1) pour les formats de requête et de réponse attendus.
+Ces erreurs proviennent de l'API lorsqu'elle traite une requête d'analyse. Consultez la documentation de l'[`API Web`](../../../../technical/api_web.md:1) pour les formats de requête et de réponse attendus.
 
 ### ❌ Erreur : "Données invalides" (souvent une réponse HTTP 400 Bad Request)
 
@@ -412,7 +412,7 @@ console.log('Données envoyées à /api/analyze:', JSON.stringify(requestData, n
 **Solutions :**
 1. **Vérifier que le champ `text` n'est pas vide ou manquant.**
 2. **Vérifier que le corps de la requête est un JSON valide.**
-3. **Vérifier que les champs et les types de données correspondent à ce qui est attendu par l'API** (voir la documentation de l'[`API Web`](../../../../composants/api_web.md:1)).
+3. **Vérifier que les champs et les types de données correspondent à ce qui est attendu par l'API** (voir la documentation de l'[`API Web`](../../../../technical/api_web.md:1)).
 4. **Vérifier les `options` d'analyse :** Assurez-vous que les options envoyées sont valides et correctement formatées.
 
 ### ❌ Erreur : "Erreur interne du serveur" (souvent une réponse HTTP 500 Internal Server Error)
@@ -463,7 +463,7 @@ Measure-Command { Invoke-RestMethod -Uri http://localhost:5000/api/analyze -Meth
    ```
 3. **Redémarrer l'API :** Parfois, cela peut aider si des ressources sont bloquées.
 4. **Vérifier les logs de l'API en mode debug** pour voir si une étape spécifique de l'analyse prend beaucoup de temps.
-5. **Consulter la documentation des composants** (ex: [`Moteur de Raisonnement`](../../../../composants/reasoning_engine.md:1)) pour comprendre les implications de performance de certaines fonctionnalités.
+5. **Consulter la documentation des composants** (ex: [`Moteur de Raisonnement`](../../../../technical/reasoning_engine.md:1)) pour comprendre les implications de performance de certaines fonctionnalités.
 
 ### ❌ Interface React lente ou peu réactive
 
@@ -618,7 +618,7 @@ python diagnostic.py 2>&1 | tee diagnostic_api.log
 
 ### 🧪 Script de test complet de l'API
 
-Pour un ensemble de tests plus exhaustifs couvrant plusieurs endpoints de l'API (health check, analyse, validation, etc.) avec des charges utiles prédéfinies, utilisez le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py) (le chemin peut varier, vérifiez sa localisation actuelle dans le projet). Ce script est généralement plus détaillé que le diagnostic rapide.
+Pour un ensemble de tests plus exhaustifs couvrant plusieurs endpoints de l'API (health check, analyse, validation, etc.) avec des charges utiles prédéfinies, utilisez le script `libs/web_api/test_api.py` (le chemin peut varier, vérifiez sa localisation actuelle dans le projet). Ce script est généralement plus détaillé que le diagnostic rapide.
 Consultez le [`Guide du Développeur`](../../../../guides/guide_developpeur.md:1) pour des instructions sur l'exécution des suites de tests complètes.
 
 ```bash

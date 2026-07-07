@@ -122,7 +122,7 @@
     *   Rappeler l'importance de démarrer et d'arrêter correctement la JVM via `jpype` pour éviter les fuites de ressources ou les erreurs.
     *   Typiquement, `jpype.startJVM()` au début et `jpype.shutdownJVM()` à la fin, si l'application n'est pas un simple script.
 *   **Référence aux tests unitaires existants :**
-    *   Le fichier [`tests/integration/jpype_tweety/test_qbf.py`](tests/integration/jpype_tweety/test_qbf.py) contient des exemples concrets d'utilisation des fonctionnalités QBF de TweetyProject via `jpype`.
+    *   Le fichier [`tests/integration/jpype_tweety/test_qbf.py`](../../../tests/integration/jpype_tweety/test_qbf.py) contient des exemples concrets d'utilisation des fonctionnalités QBF de TweetyProject via `jpype`.
     *   Encourager les étudiants à étudier ce fichier pour comprendre comment interagir avec les classes Java, instancier des formules, et potentiellement appeler des solveurs.
 
 ## 5. Tests Unitaires et Validation
@@ -168,8 +168,8 @@
 
 *   **Documentation TweetyProject :** Commencer par se familiariser en profondeur avec la section QBF de la documentation de TweetyProject.
 *   **Étude des exemples existants :**
-    *   Analyser attentivement les exemples de code et les tests unitaires fournis dans le projet, notamment dans le répertoire [`tests/integration/jpype_tweety/`](tests/integration/jpype_tweety/).
-    *   Le fichier [`tests/integration/jpype_tweety/test_qbf.py`](tests/integration/jpype_tweety/test_qbf.py) est une ressource clé.
+    *   Analyser attentivement les exemples de code et les tests unitaires fournis dans le projet, notamment dans le répertoire [`tests/integration/jpype_tweety/`](../../../tests/integration/jpype_tweety/).
+    *   Le fichier [`tests/integration/jpype_tweety/test_qbf.py`](../../../tests/integration/jpype_tweety/test_qbf.py) est une ressource clé.
 *   **Approche itérative :**
     *   Commencer par implémenter les fonctionnalités de base (ex: instanciation d'une formule simple, appel à un solveur pour une formule triviale).
     *   Ajouter progressivement des fonctionnalités plus complexes et les tests correspondants.

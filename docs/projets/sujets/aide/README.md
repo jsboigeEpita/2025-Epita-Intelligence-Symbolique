@@ -131,18 +131,18 @@ Les ressources d'aide doivent être :
 ## 📚 Relation avec la Documentation Principale
 
 Ces ressources d'aide sont conçues pour être un complément pratique aux documentations principales du projet. Pour une compréhension approfondie des concepts, de l'architecture et des bonnes pratiques, veuillez consulter en priorité :
-- Le **[Portail des Guides Officiels](../../guides/README.md)**
-- La **[Documentation d'Architecture](../../architecture/README.md)**
-- La **[Documentation des Composants](../../composants/README.md)**
+- Le **[Portail des Guides Officiels](../../../guides/README.md)**
+- La **[Documentation d'Architecture](../../../architecture/README.md)**
+- La **[Documentation des Composants](../../../technical/README.md)**
 
 ### Complémentarité des Ressources
 
 | Type de Documentation | Objectif | Exemple |
 |----------------------|----------|---------|
-| **[Portail des Guides](../../guides/README.md)** (`docs/guides/`) | Expliquer les concepts, fournir des tutoriels et bonnes pratiques | Guide Interface Web complet |
+| **[Portail des Guides](../../../guides/README.md)** (`docs/guides/`) | Expliquer les concepts, fournir des tutoriels et bonnes pratiques | Guide Interface Web complet |
 | **Ressources d'aide** (`docs/projets/sujets/aide/`) | Fournir du code prêt à l'emploi | Composants React fonctionnels |
 | **API et services** (`services/`) | Exposer les fonctionnalités | API REST Flask |
-| **Documentation Technique** | Documenter l'architecture et les composants | [Architecture Globale](../../architecture/architecture_globale.md), [Composants Clés](../../composants/README.md) |
+| **Documentation Technique** | Documenter l'architecture et les composants | [Architecture Globale](../../../architecture/architecture_globale.md), [Composants Clés](../../../technical/README.md) |
 
 ### Parcours de Développement Recommandé
 
@@ -156,9 +156,9 @@ Ces ressources d'aide sont conçues pour être un complément pratique aux docum
 
 ### Ressources de Support
 
-- **Portail des Guides Officiels** : [`docs/guides/README.md`](../../guides/README.md) - **Source principale d'information recommandée.**
-- **Documentation d'Architecture** : [`docs/architecture/README.md`](../../architecture/README.md)
-- **Documentation des Composants** : [`docs/composants/README.md`](../../composants/README.md)
+- **Portail des Guides Officiels** : [`docs/guides/README.md`](../../../guides/README.md) - **Source principale d'information recommandée.**
+- **Documentation d'Architecture** : [`docs/architecture/README.md`](../../../architecture/README.md)
+- **Documentation des Composants** : [`docs/composants/README.md`](../../../technical/README.md)
 - **Issues GitHub** : Pour signaler des problèmes ou demander des fonctionnalités
 - **Discussions** : Pour poser des questions générales
 - **Pull Requests** : Pour contribuer des améliorations

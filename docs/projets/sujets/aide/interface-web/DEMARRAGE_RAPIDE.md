@@ -21,7 +21,7 @@ Pour une configuration plus automatisée de votre environnement de développemen
 # Depuis la racine du projet (par exemple, c:/dev/2025-Epita-Intelligence-Symbolique)
 ./setup_project_env.ps1
 ```
-Ce script vous aidera à configurer Conda, le JDK portable et d'autres aspects essentiels. Ce script est crucial pour configurer correctement l'environnement, y compris les aspects liés à Java nécessaires au [Moteur de Raisonnement](../../../../../docs/composants/reasoning_engine.md:1) et au [Pont Tweety](../../../../../docs/composants/tweety_bridge.md:1). Pour plus de détails sur la gestion de la JVM et la configuration de l'environnement de développement, consultez le [Guide du Développeur](../../../../../docs/guides/guide_developpeur.md:1).
+Ce script vous aidera à configurer Conda, le JDK portable et d'autres aspects essentiels. Ce script est crucial pour configurer correctement l'environnement, y compris les aspects liés à Java nécessaires au [Moteur de Raisonnement](../../../../technical/reasoning_engine.md:1) et au [Pont Tweety](../../../../technical/tweety_bridge.md:1). Pour plus de détails sur la gestion de la JVM et la configuration de l'environnement de développement, consultez le [Guide du Développeur](../../../../../docs/guides/guide_developpeur.md:1).
 
 **Important :** Si le script `setup_project_env.ps1` a configuré un environnement Conda (par exemple, `epita-env`), assurez-vous de l'activer dans votre terminal avant de poursuivre avec les commandes `pip` et `python` :
 ```bash
@@ -63,7 +63,7 @@ python start_api.py
 # OU méthode alternative (depuis services/web_api/)
 python app.py
 ```
-Pour comprendre le fonctionnement interne de l'API, ses différentes routes et options de configuration, consultez la documentation de l'[API Web](../../../../../docs/composants/api_web.md:1) et le guide d'[Intégration de l'API Web](../../../../../docs/guides/integration_api_web.md:1).
+Pour comprendre le fonctionnement interne de l'API, ses différentes routes et options de configuration, consultez la documentation de l'[API Web](../../../../technical/api_web.md:1) et le guide d'[Intégration de l'API Web](../../../../../docs/guides/integration_api_web.md:1).
 
 #### ☐ 5. Test de l'API
 ```bash
@@ -81,7 +81,7 @@ Vous pouvez également tester l'API de manière plus complète en exécutant le 
 # Assurez-vous que l'API est démarrée et que votre environnement est activé
 python libs/web_api/test_api.py
 ```
-Ce script effectue une série de tests sur les différents points d'accès de l'API. Consultez le fichier [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py) pour plus de détails. Ce script de test est un bon exemple d'interaction avec les différents *endpoints* décrits dans la documentation de l'[API Web](../../../../../docs/composants/api_web.md:1).
+Ce script effectue une série de tests sur les différents points d'accès de l'API. Consultez le fichier `libs/web_api/test_api.py` pour plus de détails. Ce script de test est un bon exemple d'interaction avec les différents *endpoints* décrits dans la documentation de l'[API Web](../../../../technical/api_web.md:1).
 
 **✅ Résultat attendu :** L'API répond avec un JSON contenant `"success": true` pour le test de santé, et une analyse pour le test d'analyse.
 
@@ -114,7 +114,7 @@ La gestion CORS est un aspect important de la sécurité et de la communication 
 
 #### ☐ 8. Création du service API
 Créez `src/services/api.js` dans votre projet React :
-Ce service encapsule la logique d'appel à l'API. Les *endpoints* `/api/analyze` et `/api/health` sont documentés en détail dans la documentation de l'[API Web](../../../../../docs/composants/api_web.md:1). Les options passées à `/api/analyze` (comme `detect_fallacies`) sont également décrites dans cette documentation.
+Ce service encapsule la logique d'appel à l'API. Les *endpoints* `/api/analyze` et `/api/health` sont documentés en détail dans la documentation de l'[API Web](../../../../technical/api_web.md:1). Les options passées à `/api/analyze` (comme `detect_fallacies`) sont également décrites dans cette documentation.
 ```javascript
 const API_BASE_URL = 'http://localhost:5000';
 
@@ -153,7 +153,7 @@ export const checkAPIHealth = async () => {
 
 #### ☐ 9. Composant de test simple
 Remplacez le contenu de `src/App.js` :
-Cet exemple montre comment appeler le service `api.js` et afficher les résultats. La structure des données retournées par l'API (par exemple, `result.overall_quality`, `result.fallacies`) est définie dans la documentation de l'[API Web](../../../../../docs/composants/api_web.md:1).
+Cet exemple montre comment appeler le service `api.js` et afficher les résultats. La structure des données retournées par l'API (par exemple, `result.overall_quality`, `result.fallacies`) est définie dans la documentation de l'[API Web](../../../../technical/api_web.md:1).
 ```jsx
 import React, { useState, useEffect } from 'react';
 import { analyzeText, checkAPIHealth } from './services/api';
@@ -352,7 +352,7 @@ npm start
 
 **✅ Résultat attendu :** L'interface affiche les résultats d'analyse. Si des sophismes sont détectés par l'API, ils devraient apparaître.
 
-Pour des tests plus automatisés et approfondis de l'API elle-même, vous pouvez réutiliser le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py) mentionné précédemment. Ce script est un outil précieux pour valider le bon fonctionnement de votre backend. Assurez-vous de comprendre son utilisation en consultant la documentation de l'[API Web](../../../../../docs/composants/api_web.md:1) et le [Guide du Développeur](../../../../../docs/guides/guide_developpeur.md:1) pour les bonnes pratiques de test.
+Pour des tests plus automatisés et approfondis de l'API elle-même, vous pouvez réutiliser le script `libs/web_api/test_api.py` mentionné précédemment. Ce script est un outil précieux pour valider le bon fonctionnement de votre backend. Assurez-vous de comprendre son utilisation en consultant la documentation de l'[API Web](../../../../technical/api_web.md:1) et le [Guide du Développeur](../../../../../docs/guides/guide_developpeur.md:1) pour les bonnes pratiques de test.
 
 ## 🎯 Objectifs de validation
 
@@ -412,7 +412,7 @@ Consultez le [Guide du Développeur](../../../../../docs/guides/guide_developpeu
 
 Une fois cette checklist terminée, consultez :
 
-1.  **Documentation de l'[API Web (Composant)](../../../../../docs/composants/api_web.md:1)** - Description détaillée du composant API, de ses routes et de ses options.
+1.  **Documentation de l'[API Web (Composant)](../../../../technical/api_web.md:1)** - Description détaillée du composant API, de ses routes et de ses options.
 2.  **[Guide d'Intégration de l'API Web](../../../../../docs/guides/integration_api_web.md:1)** - Comment utiliser et intégrer l'API plus en profondeur.
 3.  **[Exemples React avancés](./exemples-react/)** (`./exemples-react/`) - Pour des composants et des fonctionnalités React plus élaborés.
 4.  **[Guide de Troubleshooting général](./TROUBLESHOOTING.md)** (`./TROUBLESHOOTING.md`) - Solutions aux problèmes courants non spécifiques à ce démarrage rapide.
