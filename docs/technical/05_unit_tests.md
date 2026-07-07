@@ -35,10 +35,10 @@ Après une analyse approfondie, plusieurs actions de nettoyage ont été menées
 
 Les changements suivants ont été effectués :
 *   **Suppression du fichier de test d'adaptateur redondant :**
-    *   Le fichier [`tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py`](tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py) a été supprimé car il n'apportait pas de valeur ajoutée et ses tests étaient couverts par d'autres suites.
+    *   Le fichier [`tests/unit/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py`](../../tests/orchestration/hierarchical/operational/adapters/test_extract_agent_adapter.py) a été supprimé car il n'apportait pas de valeur ajoutée et ses tests étaient couverts par d'autres suites.
 *   **Suppression d'un test E2E invalide :**
-    *   Le fichier [`tests/e2e/python/test_service_manager.py`](tests/e2e/python/test_service_manager.py) a été retiré, car il contenait des tests E2E qui n'étaient pas à leur place dans la structure de tests unitaires et étaient devenus inutiles.
+    *   Le fichier [`tests/e2e/python/test_service_manager.py`](../../tests/unit/argumentation_analysis/orchestration/test_service_manager.py) a été retiré, car il contenait des tests E2E qui n'étaient pas à leur place dans la structure de tests unitaires et étaient devenus inutiles.
 *   **Suppression d'une fonction de test non pertinente :**
-    *   La fonction `test_save_definitions_unencrypted` dans le fichier [`tests/ui/test_extract_definition_persistence.py`](tests/ui/test_extract_definition_persistence.py) a été supprimée. Cette fonction testait un comportement qui n'est plus d'actualité, à savoir la sauvegarde de définitions non chiffrées.
+    *   La fonction `test_save_definitions_unencrypted` dans le fichier [`tests/ui/test_extract_definition_persistence.py`](../../tests/ui/test_extract_definition_persistence.py) a été supprimée. Cette fonction testait un comportement qui n'est plus d'actualité, à savoir la sauvegarde de définitions non chiffrées.
 
 Suite à ces opérations de nettoyage, la suite de tests unitaires est désormais stable et s'exécute avec succès. Ce cycle de refactoring est maintenant terminé pour ce point d'entrée, marquant une étape importante dans la fiabilisation de notre base de code.

@@ -35,7 +35,7 @@ L'architecture de la démo s'articule autour des composants clés suivants :
 Le bon fonctionnement de la démonstration dépend des éléments de configuration et des répertoires suivants :
 
 -   **Configuration Unifiée** :
-    -   [`config/unified_config.py`](config/unified_config.py:1) : Ce fichier est essentiel pour configurer le comportement du système, notamment pour s'assurer que de **vrais LLM** sont utilisés (`MockLevel.NONE`) et non des simulations.
+    -   [`config/unified_config.py`](../../config/unified_config.py:1) : Ce fichier est essentiel pour configurer le comportement du système, notamment pour s'assurer que de **vrais LLM** sont utilisés (`MockLevel.NONE`) et non des simulations.
 
 -   **Répertoires de Sortie** :
     -   `logs/` : Ce répertoire est utilisé pour stocker les logs détaillés de l'exécution de la session, y compris les traces complètes des interactions avec le LLM.

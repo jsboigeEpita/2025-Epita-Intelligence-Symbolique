@@ -10,7 +10,7 @@ Le système utilise deux approches principales pour l'orchestration et la collab
 
 ### 1.1 Orchestration Simple via `AgentGroupChat`
 
-Ce mécanisme, principalement implémenté dans [`argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py), s'appuie sur la fonctionnalité `AgentGroupChat` de la bibliothèque Semantic Kernel.
+Ce mécanisme, principalement implémenté dans `argumentation_analysis/orchestration/analysis_runner.py`, s'appuie sur la fonctionnalité `AgentGroupChat` de la bibliothèque Semantic Kernel.
 
 *   **Principes Clés** :
     *   **État Partagé Centralisé** : Une instance de `RhetoricalAnalysisState` (définie dans [`argumentation_analysis/core/shared_state.py`](../../argumentation_analysis/core/shared_state.py)) stocke toutes les informations pertinentes à l'analyse (texte initial, tâches, arguments identifiés, sophismes, `next_agent_to_act`, conclusion finale, etc.).
@@ -50,7 +50,7 @@ Une approche d'orchestration plus structurée et évoluée est implémentée dan
         *   **Adaptateurs d'Agents** ([`.../operational/adapters/`](../../argumentation_analysis/orchestration/hierarchical/operational/adapters/)) : Permettent d'intégrer les agents existants (PM, Informal, PL, Extract) dans ce niveau.
 
 *   **Communication Inter-Niveaux** :
-    *   L'architecture hiérarchique utilise un `MessageMiddleware` (probablement défini dans [`argumentation_analysis/core/communication.py`](../../argumentation_analysis/core/communication.py)) pour faciliter une communication structurée entre les niveaux.
+    *   L'architecture hiérarchique utilise un `MessageMiddleware` (probablement défini dans [`argumentation_analysis/core/communication.py`](../../argumentation_analysis/core/communication/middleware.py)) pour faciliter une communication structurée entre les niveaux.
     *   Des adaptateurs spécifiques (`StrategicAdapter`, `TacticalAdapter`, `OperationalAdapter`) gèrent l'envoi et la réception de messages (directives, rapports, requêtes de statut, résultats) entre les managers/coordinateurs de chaque niveau.
     *   Des interfaces dédiées comme `StrategicTacticalInterface` et `TacticalOperationalInterface` (définies dans [`.../interfaces/`](../../argumentation_analysis/orchestration/hierarchical/interfaces/)) formalisent les interactions.
 
@@ -115,4 +115,4 @@ Les agents spécialistes ([`ProjectManagerAgent`](../../argumentation_analysis/a
 
 ## 4. Conclusion
 
-Le système de collaboration des agents a évolué significativement avec l'introduction potentielle d'une architecture hiérarchique robuste en parallèle ou en remplacement d'une orchestration plus simple basée sur `AgentGroupChat`. La documentation actuelle, en particulier [`docs/composants/synthese_collaboration.md`](docs/composants/synthese_collaboration.md), nécessite une mise à jour majeure pour refléter fidèlement ces développements, en particulier l'architecture hiérarchique, ses composants, ses états distribués, et ses mécanismes de communication avancés. Cette actualisation permettra une meilleure compréhension du système et guidera plus efficacement les évolutions futures.
+Le système de collaboration des agents a évolué significativement avec l'introduction potentielle d'une architecture hiérarchique robuste en parallèle ou en remplacement d'une orchestration plus simple basée sur `AgentGroupChat`. La documentation actuelle, en particulier [`docs/composants/synthese_collaboration.md`](./synthese_collaboration.md), nécessite une mise à jour majeure pour refléter fidèlement ces développements, en particulier l'architecture hiérarchique, ses composants, ses états distribués, et ses mécanismes de communication avancés. Cette actualisation permettra une meilleure compréhension du système et guidera plus efficacement les évolutions futures.

@@ -24,7 +24,7 @@ Ce document décrit les mécanismes de gestion des agents au sein du système d'
 
 *   **Sources de configuration :**
     *   Paramètres des constructeurs (voir exemples dans [`agents_specialistes.md`](./agents_specialistes.md)).
-    *   Fichiers de configuration externes (ex: [`config/fallacies_taxonomy.json`](../../config/fallacies_taxonomy.json:1) pour `ContextualFallacyAnalyzer`).
+    *   Fichiers de configuration externes (ex: `config/fallacies_taxonomy.json` pour `ContextualFallacyAnalyzer`).
     *   (À compléter : y a-t-il un système de configuration centralisé pour les prompts, les modèles LLM par défaut/spécifiques ?).
 *   **Configuration des prompts et instructions système :**
     *   Localisation des prompts (généralement dans les répertoires des agents, ex: `argumentation_analysis/agents/core/informal/prompts/`).
@@ -32,7 +32,7 @@ Ce document décrit les mécanismes de gestion des agents au sein du système d'
 ## 5. Enregistrement et Intégration dans l'Orchestration
 
 *   **Orchestration Simple (`AgentGroupChat`) :**
-    *   Ajout des instances d'agents au `AgentGroupChat` (voir [`../../argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py:1)).
+    *   Ajout des instances d'agents au `AgentGroupChat` (voir `../../argumentation_analysis/orchestration/analysis_runner.py`).
 *   **Architecture Hiérarchique :**
     *   Rôle de l'`OperationalManager` ([`../../argumentation_analysis/orchestration/hierarchical/operational/manager.py`](../../argumentation_analysis/orchestration/hierarchical/operational/manager.py:1)) pour la prise en charge des agents opérationnels.
     *   Utilisation des adaptateurs ([`../../argumentation_analysis/orchestration/hierarchical/operational/adapters/`](../../argumentation_analysis/orchestration/hierarchical/operational/adapters/:1)) pour intégrer les agents existants.

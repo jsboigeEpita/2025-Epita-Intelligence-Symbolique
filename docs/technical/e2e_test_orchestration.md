@@ -2,7 +2,7 @@
 
 **Date:** 2025-09-04
 **Auteur:** Roo
-**Contexte:** Ce document a été rédigé dans le cadre de la refonte visant à stabiliser l'exécution des tests E2E lancés via `run_tests.ps1`, conformément aux recommandations du document [`docs/testing_entrypoints_audit.md`](docs/reports/testing_entrypoints_audit.md).
+**Contexte:** Ce document a été rédigé dans le cadre de la refonte visant à stabiliser l'exécution des tests E2E lancés via `run_tests.ps1`, conformément aux recommandations du document `docs/testing_entrypoints_audit.md`.
 
 ## 1. Contexte : Résoudre l'Instabilité des Tests E2E
 
@@ -16,8 +16,8 @@ Pour pallier ce problème, un nouvel orchestrateur, plus léger et spécialisé,
 
 Le nouvel orchestrateur suit une philosophie simple : être un "chef d'orchestre" **asynchrone, non bloquant et résilient**. Il s'appuie entièrement sur la bibliothèque `asyncio` de Python pour gérer les processus et les entrées/sorties, ce qui constitue sa différence fondamentale avec l'approche `subprocess` synchrone de l'ancien runner.
 
--   **Fichier Clé** : [`scripts/orchestration/run_e2e_tests.py`](scripts/orchestration/run_e2e_tests.py)
--   **Point d'Entrée** : Le script est exclusivement invoqué par [`run_tests.ps1`](run_tests.ps1) lorsque l'option `-Type "e2e"` est utilisée.
+-   **Fichier Clé** : [`scripts/orchestration/run_e2e_tests.py`](../../scripts/orchestration/run_e2e_tests.py)
+-   **Point d'Entrée** : Le script est exclusivement invoqué par [`run_tests.ps1`](../../run_tests.ps1) lorsque l'option `-Type "e2e"` est utilisée.
 
 ### 2.2. Flux d'Exécution
 

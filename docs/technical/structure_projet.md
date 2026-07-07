@@ -199,20 +199,20 @@ Avant que les textes ne soient soumis aux agents d'analyse principaux (comme `In
 
 ### 1. Normalisation de Base
 
-Des utilitaires de normalisation de texte sont disponibles dans [`argumentation_analysis/utils/core_utils/text_utils.py`](../../argumentation_analysis/utils/core_utils/text_utils.py:1). Ces fonctions permettent :
+Des utilitaires de normalisation de texte sont disponibles dans [`argumentation_analysis/utils/core_utils/text_utils.py`](../../argumentation_analysis/core/utils/text_utils.py:1). Ces fonctions permettent :
 
 *   **Conversion en Minuscules :** Uniformisation de la casse du texte.
 *   **Suppression des Accents :** Remplacement des caractères accentués par leurs équivalents non accentués (par exemple, "é" devient "e").
 *   **Suppression de la Ponctuation :** Retrait des signes de ponctuation standard. Une attention particulière est portée aux apostrophes pour tenter de conserver leur rôle linguistique lorsque c'est pertinent.
 *   **Normalisation des Espaces :** Remplacement des séquences d'espaces multiples (espaces, tabulations, sauts de ligne) par un seul espace, et suppression des espaces en début et fin de chaîne.
 
-La fonction principale pour ces opérations est `normalize_text(text: str)` ([`../../argumentation_analysis/utils/core_utils/text_utils.py:17`](../../argumentation_analysis/utils/core_utils/text_utils.py:17)).
+La fonction principale pour ces opérations est `normalize_text(text: str)` ([`../../argumentation_analysis/utils/core_utils/text_utils.py:17`](../../argumentation_analysis/core/utils/text_utils.py:17)).
 
 ### 2. Tokenisation
 
 Après la normalisation, le texte peut être segmenté en unités lexicales plus petites, appelées tokens (généralement des mots).
 
-*   La fonction `tokenize_text(text: str)` ([`../../argumentation_analysis/utils/core_utils/text_utils.py:85`](../../argumentation_analysis/utils/core_utils/text_utils.py:85)) effectue d'abord une normalisation du texte puis le divise en tokens en se basant sur les espaces.
+*   La fonction `tokenize_text(text: str)` ([`../../argumentation_analysis/utils/core_utils/text_utils.py:85`](../../argumentation_analysis/core/utils/text_utils.py:85)) effectue d'abord une normalisation du texte puis le divise en tokens en se basant sur les espaces.
 
 Ces tokens peuvent ensuite être utilisés pour des analyses statistiques, la création d'embeddings, ou d'autres traitements NLP.
 
