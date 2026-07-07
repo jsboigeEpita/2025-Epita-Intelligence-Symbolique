@@ -33,6 +33,20 @@ class BipolarHandler:
         self.BinarySupport = jpype.JClass(
             "org.tweetyproject.arg.bipolar.syntax.BinarySupport"
         )
+        # #1422 / #1178-class: NecessityArgumentationFramework inherits
+        # ``add(GeneralEdge)`` from AbstractBipolarFramework AND declares
+        # ``add(Attack)`` / ``add(Support)``; BinaryAttack/BinarySupport are
+        # assignable to both their specific type and GeneralEdge, so a plain
+        # ``framework.add(edge)`` is a JPype ambiguous-overload error. This was
+        # dormant while supports were always empty (absent_no_translator); the
+        # TR-1 translator (#1419) now feeds genuine supports and exposes it.
+        # Fix: cast the edge to its specific static type (Attack / Support, the
+        # same JObject idiom as cl_handler/qbf_handler) so JPype's most-specific
+        # overload selection resolves to add(Attack)/add(Support) — the
+        # supported subclass methods (the inherited add(GeneralEdge) is an
+        # UnsupportedOperationException stub).
+        self.Attack = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Attack")
+        self.Support = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Support")
 
     def analyze_bipolar_framework(
         self,
@@ -64,11 +78,21 @@ class BipolarHandler:
 
             for src, tgt in attacks:
                 if src in arg_map and tgt in arg_map:
-                    framework.add(self.BinaryAttack(arg_map[src], arg_map[tgt]))
+                    # #1422/#1178-class: cast to the Attack static type so the
+                    # most-specific add(Attack) overload is selected.
+                    edge = jpype.JObject(
+                        self.BinaryAttack(arg_map[src], arg_map[tgt]),
+                        self.Attack,
+                    )
+                    framework.add(edge)
 
             for src, tgt in supports:
                 if src in arg_map and tgt in arg_map:
-                    framework.add(self.BinarySupport(arg_map[src], arg_map[tgt]))
+                    edge = jpype.JObject(
+                        self.BinarySupport(arg_map[src], arg_map[tgt]),
+                        self.Support,
+                    )
+                    framework.add(edge)
 
             # Get attacks and supports count from the framework
             attack_count = len(attacks)
