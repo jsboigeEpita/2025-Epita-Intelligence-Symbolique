@@ -121,7 +121,7 @@ import FrameworkBuilder from './FrameworkBuilder';
 **Hook React personnalisé** pour interagir avec l'API d'argumentation.
 
 **Fonctionnalités :**
-- Gestion complète de tous les endpoints (voir la [documentation de l'API Web](../../../../composants/api_web.md) pour le détail des endpoints)
+- Gestion complète de tous les endpoints (voir la [documentation de l'API Web](../../../../../technical/api_web.md) pour le détail des endpoints)
 - États de chargement et gestion d'erreurs
 - Cache des résultats (si configuré et applicable)
 - Configuration flexible
@@ -319,8 +319,8 @@ Tous les composants utilisent des variables CSS pour faciliter la personnalisati
 La configuration de l'API se fait principalement dans le hook [`useArgumentationAPI.js`](#useargumentationapijs-hook). Il est crucial de s'assurer que l'URL de base (`baseURL`) pointe vers votre instance de l'API d'argumentation.
 
 Pour une compréhension détaillée des endpoints disponibles et des options de configuration avancées, référez-vous à :
-- **Documentation de l'API Web :** [`../../../../composants/api_web.md`](../../../../composants/api_web.md)
-- **Guide d'Intégration de l'API Web :** [`../../../../guides/integration_api_web.md`](../../../../guides/integration_api_web.md)
+- **Documentation de l'API Web :** [`../../../../composants/api_web.md`](../../../../../technical/api_web.md)
+- **Guide d'Intégration de l'API Web :** [`../../../../guides/integration_api_web.md`](../../../../../guides/integration_api_web.md)
 
 ```javascript
 // Dans useArgumentationAPI.js
@@ -353,7 +353,7 @@ const API_CONFIG = {
 
 3.  **Erreurs de validation des données :**
     - Utilisez les fonctions de validation fournies dans [`utils/validators.js`](#validatorsjs) avant d'envoyer des données à l'API.
-    - Consultez la [documentation de l'API Web](../../../../composants/api_web.md) pour les formats de données attendus par chaque endpoint.
+    - Consultez la [documentation de l'API Web](../../../../../technical/api_web.md) pour les formats de données attendus par chaque endpoint.
 
 ### Logs de débogage
 Pour activer des logs plus détaillés dans la console lors des interactions avec l'API (si le hook `useArgumentationAPI.js` le supporte) :
@@ -367,11 +367,11 @@ localStorage.setItem('DEBUG_API', 'true');
 
 Pour une compréhension approfondie de l'API Web et du système global, veuillez consulter :
 
-- **Documentation de l'API Web (Composant) :** [`../../../../composants/api_web.md`](../../../../composants/api_web.md) - Description détaillée du composant API Web, son architecture et ses endpoints.
-- **Guide d'Intégration de l'API Web :** [`../../../../guides/integration_api_web.md`](../../../../guides/integration_api_web.md) - Instructions pas à pas pour intégrer l'API Web dans vos applications.
-- **Guide du Développeur :** [`../../../../guides/guide_developpeur.md`](../../../../guides/guide_developpeur.md) - Informations générales pour les développeurs contribuant au projet.
-- **Portail des Guides :** [`../../../../guides/README.md`](../../../../guides/README.md) - Point d'entrée vers tous les guides techniques et d'utilisation.
-- **Architecture Globale :** [`../../../../architecture/architecture_globale.md`](../../../../architecture/architecture_globale.md) - Vue d'ensemble de l'architecture du système (pour contexte).
+- **Documentation de l'API Web (Composant) :** [`../../../../composants/api_web.md`](../../../../../technical/api_web.md) - Description détaillée du composant API Web, son architecture et ses endpoints.
+- **Guide d'Intégration de l'API Web :** [`../../../../guides/integration_api_web.md`](../../../../../guides/integration_api_web.md) - Instructions pas à pas pour intégrer l'API Web dans vos applications.
+- **Guide du Développeur :** [`../../../../guides/guide_developpeur.md`](../../../../../guides/guide_developpeur.md) - Informations générales pour les développeurs contribuant au projet.
+- **Portail des Guides :** [`../../../../guides/README.md`](../../../../../guides/README.md) - Point d'entrée vers tous les guides techniques et d'utilisation.
+- **Architecture Globale :** [`../../../../architecture/architecture_globale.md`](../../../../../architecture/architecture_globale.md) - Vue d'ensemble de l'architecture du système (pour contexte).
 
 Les anciens liens spécifiques à ce dossier d'exemples ont été remplacés ou complétés par les références ci-dessus, qui sont plus actuelles et centralisées au sein de la documentation globale du projet.
 

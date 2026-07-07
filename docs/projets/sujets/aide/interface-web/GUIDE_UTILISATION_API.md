@@ -15,7 +15,7 @@
 
 ## Introduction
 
-L'API d'Analyse Argumentative vous permet d'intégrer facilement les fonctionnalités d'analyse de textes argumentatifs dans votre interface web. Cette API expose plusieurs services principaux, détaillés dans la documentation du composant [`API Web`](../../../../composants/api_web.md:1) et le [`Guide d'Intégration de l'API Web`](../../../../guides/integration_api_web.md:1). Les services incluent typiquement :
+L'API d'Analyse Argumentative vous permet d'intégrer facilement les fonctionnalités d'analyse de textes argumentatifs dans votre interface web. Cette API expose plusieurs services principaux, détaillés dans la documentation du composant [`API Web`](../../../../technical/api_web.md:1) et le [`Guide d'Intégration de l'API Web`](../../../../guides/integration_api_web.md:1). Les services incluent typiquement :
 
 -   **Analyse complète** : Par exemple, détection de sophismes combinée à une analyse de structure.
 -   **Validation d'arguments** : Vérification de la logique d'un argument.
@@ -53,7 +53,7 @@ L'API Web est un composant du projet principal. Ses dépendances sont gérées d
     ```
     Consultez le [`Guide Développeur`](../../../../guides/guide_developpeur.md:1) pour les instructions d'installation détaillées.
 
-L'API elle-même se trouve dans le répertoire [`libs/web_api/`](../../../../../libs/web_api/:0).
+L'API elle-même se trouve dans le répertoire [`libs/web_api/`](../../../../../argumentation_analysis/services/web_api/:0).
 
 ### Variables d'environnement
 
@@ -70,7 +70,7 @@ CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 # Logging
 LOG_LEVEL=INFO
 ```
-Pour plus de détails sur la configuration, référez-vous au [`README de l'API Web`](../../../../../libs/web_api/README.md:0).
+Pour plus de détails sur la configuration, référez-vous au [`README de l'API Web`](../../../../../argumentation_analysis/services/web_api/README.md:0).
 
 ## Démarrage de l'API
 
@@ -89,7 +89,7 @@ python app.py
 # Exemple avec options personnalisées (si supporté par app.py ou start_api.py)
 # python app.py --port 8080 --debug --host 0.0.0.0
 ```
-Consultez le [`README de l'API Web`](../../../../../libs/web_api/README.md:0) pour les commandes de démarrage exactes et les options disponibles.
+Consultez le [`README de l'API Web`](../../../../../argumentation_analysis/services/web_api/README.md:0) pour les commandes de démarrage exactes et les options disponibles.
 
 ### Vérification du démarrage
 
@@ -114,7 +114,7 @@ Réponse attendue (la version et les services peuvent varier) :
 
 ## Endpoints Disponibles
 
-La liste exhaustive et les détails des endpoints sont disponibles dans la documentation du composant [`API Web`](../../../../composants/api_web.md:1) et le [`Guide d'Intégration de l'API Web`](../../../../guides/integration_api_web.md:1). Voici un aperçu des endpoints courants :
+La liste exhaustive et les détails des endpoints sont disponibles dans la documentation du composant [`API Web`](../../../../technical/api_web.md:1) et le [`Guide d'Intégration de l'API Web`](../../../../guides/integration_api_web.md:1). Voici un aperçu des endpoints courants :
 
 ### 🔍 Health Check
 -   **URL** : `GET /api/health`
@@ -154,7 +154,7 @@ La liste exhaustive et les détails des endpoints sont disponibles dans la docum
       "argument_type": "deductive" 
     }
     ```
-    Pour un exemple de test de cet endpoint, consultez la fonction [`test_validate_endpoint`](../../../../../libs/web_api/test_api.py:74) dans le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py:0).
+    Pour un exemple de test de cet endpoint, consultez la fonction `test_validate_endpoint` dans le script `libs/web_api/test_api.py`.
 
 ### 🚫 Détection de Sophismes
 -   **URL** : `POST /api/fallacies`
@@ -172,7 +172,7 @@ La liste exhaustive et les détails des endpoints sont disponibles dans la docum
       }
     }
     ```
-    Pour un exemple de test de cet endpoint, consultez la fonction [`test_fallacies_endpoint`](../../../../../libs/web_api/test_api.py:109) dans le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py:0).
+    Pour un exemple de test de cet endpoint, consultez la fonction `test_fallacies_endpoint` dans le script `libs/web_api/test_api.py`.
 
 ### 🕸️ Framework de Dung
 -   **URL** : `POST /api/framework`
@@ -200,10 +200,10 @@ La liste exhaustive et les détails des endpoints sont disponibles dans la docum
       }
     }
     ```
-    Pour un exemple de test de cet endpoint, consultez la fonction [`test_framework_endpoint`](../../../../../libs/web_api/test_api.py:143) dans le script [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py:0).
+    Pour un exemple de test de cet endpoint, consultez la fonction `test_framework_endpoint` dans le script `libs/web_api/test_api.py`.
 
 ### 📋 Liste des Endpoints (Documentation)
--   **URL** : `GET /api/endpoints` (ou un endpoint similaire, vérifiez la documentation de l'[`API Web`](../../../../composants/api_web.md:1))
+-   **URL** : `GET /api/endpoints` (ou un endpoint similaire, vérifiez la documentation de l'[`API Web`](../../../../technical/api_web.md:1))
 -   **Description** : Fournit une documentation (souvent au format OpenAPI/Swagger) de tous les endpoints disponibles.
 
 ## Exemples d'Utilisation
@@ -271,8 +271,8 @@ print(f"Sophismes détectés: {result.get('fallacy_count', 'N/A')}") # Utiliser 
 
 ### Inspiration pour Clients API Avancés
 Bien que ciblant une API pour agents logiques, les exemples suivants peuvent inspirer la création de clients API plus robustes :
--   Script Python d'intégration : [`examples/logic_agents/api_integration_example.py`](../../../../../examples/logic_agents/api_integration_example.py:0)
--   Tutoriel interactif Jupyter Notebook : [`examples/notebooks/api_logic_tutorial.ipynb`](../../../../../examples/notebooks/api_logic_tutorial.ipynb:0)
+-   Script Python d'intégration : `examples/logic_agents/api_integration_example.py`
+-   Tutoriel interactif Jupyter Notebook : `examples/notebooks/api_logic_tutorial.ipynb`
     (Voir aussi le [`Guide d'utilisation des agents logiques`](../../../../guides/utilisation_agents_logiques.md:1) pour le contexte de ces exemples.)
 
 ## Intégration avec React
@@ -368,7 +368,7 @@ export const useArgumentationAPI = () => {
 ```
 
 ### Composant React d'exemple (Concept)
-Le composant `ArgumentAnalyzer.jsx` fourni précédemment est un bon point de départ. Assurez-vous que les champs de `analysis` (ex: `overall_quality`, `fallacy_count`, `fallacies`, `argument_structure`) correspondent à la réponse réelle de votre API, telle que définie dans la documentation du composant [`API Web`](../../../../composants/api_web.md:1).
+Le composant `ArgumentAnalyzer.jsx` fourni précédemment est un bon point de départ. Assurez-vous que les champs de `analysis` (ex: `overall_quality`, `fallacy_count`, `fallacies`, `argument_structure`) correspondent à la réponse réelle de votre API, telle que définie dans la documentation du composant [`API Web`](../../../../technical/api_web.md:1).
 
 Consultez les exemples complets dans [`docs/projets/sujets/aide/interface-web/exemples-react/`](./exemples-react/README.md:0).
 
@@ -464,7 +464,7 @@ Consultez le [`Guide Développeur`](../../../../guides/guide_developpeur.md:1) p
       });
     });
     ```
--   Pour des exemples de tests d'intégration Python pour l'API elle-même, consultez [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py:0).
+-   Pour des exemples de tests d'intégration Python pour l'API elle-même, consultez `libs/web_api/test_api.py`.
 
 ### 6. Monitoring et Logging
 -   Utilisez des outils de logging côté client (ex: Sentry, LogRocket) pour capturer les erreurs en production.
@@ -473,12 +473,12 @@ Consultez le [`Guide Développeur`](../../../../guides/guide_developpeur.md:1) p
 ## Support et Ressources
 
 -   **Portail des Guides Officiels** : [`docs/guides/README.md`](../../../../guides/README.md:1) (point d'entrée principal pour la documentation).
--   **Documentation de l'API Web (Composant)** : [`docs/composants/api_web.md`](../../../../composants/api_web.md:1) (détails techniques de l'API).
+-   **Documentation de l'API Web (Composant)** : [`docs/composants/api_web.md`](../../../../technical/api_web.md:1) (détails techniques de l'API).
 -   **Guide d'Intégration de l'API Web** : [`docs/guides/integration_api_web.md`](../../../../guides/integration_api_web.md:1).
 -   **Guide Développeur Général** : [`docs/guides/guide_developpeur.md`](../../../../guides/guide_developpeur.md:1).
--   **README de l'API Web (Code)** : [`libs/web_api/README.md`](../../../../../libs/web_api/README.md:0) (informations spécifiques au code de l'API).
+-   **README de l'API Web (Code)** : [`libs/web_api/README.md`](../../../../../argumentation_analysis/services/web_api/README.md:0) (informations spécifiques au code de l'API).
 -   **Exemples de code React** : [`docs/projets/sujets/aide/interface-web/exemples-react/`](./exemples-react/README.md:0).
--   **Tests d'API en Python** : [`libs/web_api/test_api.py`](../../../../../libs/web_api/test_api.py:0).
+-   **Tests d'API en Python** : `libs/web_api/test_api.py`.
 -   **Autres guides pertinents** :
     -   [`Guide d'utilisation des agents logiques`](../../../../guides/utilisation_agents_logiques.md:1)
     -   Consultez le portail des guides pour d'autres logiques formelles si nécessaire.
@@ -487,7 +487,7 @@ Consultez le [`Guide Développeur`](../../../../guides/guide_developpeur.md:1) p
 
 ## Changelog
 
--   **vX.Y.Z** : (Consultez le changelog principal du projet ou le [`README de l'API Web`](../../../../../libs/web_api/README.md:0) pour les versions).
+-   **vX.Y.Z** : (Consultez le changelog principal du projet ou le [`README de l'API Web`](../../../../../argumentation_analysis/services/web_api/README.md:0) pour les versions).
 -   Ce document est régulièrement mis à jour pour refléter les évolutions de l'API et des bonnes pratiques.
 
 ---
