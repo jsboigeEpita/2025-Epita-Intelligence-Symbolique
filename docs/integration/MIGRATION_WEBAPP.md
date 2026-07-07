@@ -370,9 +370,9 @@ frontend:
 ## Ressources et liens utiles
 
 ### Documentation
-- [Configuration Guide](config/README.md)
-- [UnifiedWebOrchestrator API](docs/api/unified_web_orchestrator.md)
-- [Troubleshooting Guide](docs/troubleshooting.md)
+- [Configuration Guide](../../config/README.md)
+- UnifiedWebOrchestrator API
+- [Troubleshooting Guide](../guides/TROUBLESHOOTING.md)
 
 ### Scripts utiles
 - **Validation environnement** : `python -c "import scripts.webapp.unified_web_orchestrator; print('✅ Import OK')"`
@@ -380,8 +380,8 @@ frontend:
 - **Diagnostic complet** : `python start_webapp.py --verbose --no-conda`
 
 ### Support
-- **Issues GitHub** : [Créer un ticket](../../issues)
-- **Documentation équipe** : [Wiki interne](../../wiki)
+- **Issues GitHub** : Créer un ticket
+- **Documentation équipe** : Wiki interne
 - **Contact** : equipe-dev@projet-is.fr
 
 ---
