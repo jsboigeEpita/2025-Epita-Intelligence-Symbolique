@@ -108,14 +108,14 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 1 : Gestion des Fichiers Orphelins (Validation du workflow Git)
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:280) - Section 5.2, Lot 12
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 12
 *   **Objectif** : Activer la commande `maintenance_manager.py repo --find-orphans`. Ce lot sert de validation pour l'ensemble du processus (implémentation, test, CLI, commit, doc) sur une fonctionnalité à faible risque et bien isolée.
 *   **Description** : Ce lot consiste à implémenter la détection des fichiers non suivis par Git. La logique, anciennement dans `real_orphan_files_processor.py`, sera déplacée dans le `RepositoryManager`. La fonction utilisera `git status --porcelain` pour identifier les fichiers et retournera une liste structurée.
 
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Implémenter la fonction `find_untracked_files()` dans [`project_core/core_from_scripts/repository_manager.py`](project_core/core_from_scripts/repository_manager.py).
+    *   [ ] Implémenter la fonction `find_untracked_files()` dans [`project_core/core_from_scripts/repository_manager.py`](../../project_core/core_from_scripts/repository_manager.py).
     *   [ ] La fonction doit appeler l'utilitaire `shell_utils.execute_command()` de `argumentation_analysis` pour lancer `git status --porcelain -u`.
     *   [ ] La sortie de la commande doit être parsée pour extraire les chemins des fichiers non suivis.
     *   [ ] La fonction doit retourner une liste de chemins de fichiers.
@@ -123,15 +123,15 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 2 : Nettoyage de Base (Fichiers Temporaires)
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:247) - Section 5.2, Lot 9
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 9
 *   **Objectif** : Activer la commande `maintenance_manager.py cleanup --type temp-files`. Ce lot met en place le `CleanupManager` et une première fonctionnalité de nettoyage simple.
 *   **Description** : Ce lot consiste à déplacer la logique de suppression des fichiers temporaires (répertoires `__pycache__` et fichiers `.log`) des anciens scripts vers une fonction dédiée dans un nouveau `CleanupManager`.
 
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/cleanup_manager.py`](project_core/core_from_scripts/cleanup_manager.py)
-    *   [ ] Implémenter la fonction `cleanup_temporary_files()` dans [`project_core/core_from_scripts/cleanup_manager.py`](project_core/core_from_scripts/cleanup_manager.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/cleanup_manager.py`](../../project_core/core_from_scripts/cleanup_manager.py)
+    *   [ ] Implémenter la fonction `cleanup_temporary_files()` dans [`project_core/core_from_scripts/cleanup_manager.py`](../../project_core/core_from_scripts/cleanup_manager.py).
     *   [ ] La fonction doit utiliser `filesystem_utils` de `argumentation_analysis` pour trouver et supprimer récursivement les répertoires `__pycache__` et les fichiers se terminant par `.log`.
     *   [ ] La fonction doit retourner la liste des fichiers/dossiers supprimés.
 
@@ -157,7 +157,7 @@ Une fois que toute la logique a été migrée et validée.
 2.  **Tests Unitaires (`tests/unit`)**
 ### Lot 3 : Refactoring du Code et Maintenance de la Documentation
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:265) - Section 5.2, Lots 11 & 13
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lots 11 & 13
 *   **Objectif** : Activer `maintenance_manager.py refactor --type imports` et `repo --fix-docs`. Ce lot établit le `RefactoringManager` et enrichit le `RepositoryManager` avec des fonctionnalités de maintenance de la qualité du code et de la documentation.
 *   **Description** : Ce lot est divisé en deux sous-tâches. La première s'attaque à la standardisation des imports Python pour les rendre absolus. La seconde s'occupe de la validation et de la correction automatique des liens internes dans la documentation Markdown.
 
@@ -168,7 +168,7 @@ Une fois que toute la logique a été migrée et validée.
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/refactoring_manager.py`](project_core/core_from_scripts/refactoring_manager.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/refactoring_manager.py`](../../project_core/core_from_scripts/refactoring_manager.py).
     *   [ ] Implémenter la fonction `standardize_imports(path)` dans le `RefactoringManager`.
     *   [ ] La fonction devra scanner tous les fichiers `.py` dans le chemin fourni.
     *   [ ] Pour chaque fichier, elle utilisera l'AST (Abstract Syntax Tree) de Python pour identifier les imports relatifs et les transformer en imports absolus basés sur la racine du projet.
@@ -200,7 +200,7 @@ Une fois que toute la logique a été migrée et validée.
 1.  **Implémentation du Manager (`project_core`)**
     *   [ ] Dans `RepositoryManager`, implémenter la fonction `fix_documentation_links(path)`.
     *   [ ] La fonction devra scanner tous les fichiers `.md` dans le chemin fourni.
-    *   [ ] Pour chaque fichier, elle extraira tous les liens internes (ex: `[lien](./vers/un/fichier.md)`) et vérifiera si la cible du lien existe.
+    *   [ ] Pour chaque fichier, elle extraira tous les liens internes (ex: `lien`) et vérifiera si la cible du lien existe.
     *   [ ] Pour les liens brisés, elle tentera de trouver le fichier correspondant dans l'arborescence et corrigera le chemin.
     *   [ ] La fonction doit générer un rapport des liens corrigés et de ceux qui n'ont pas pu être résolus.
 
@@ -209,14 +209,14 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] Écrire un test `test_fix_documentation_links` qui vérifie que les fichiers sont correctement modifiés et que le rapport généré est exact.
 ### Lot 4 : Validation Complète du Système
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:290) - Section 5.2, Lot 14
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 14
 *   **Objectif** : Activer une suite de commandes de validation via `maintenance_manager.py validate`, culminant avec `validate --all`. Ce lot fournit un tableau de bord sur la santé du projet.
 *   **Description** : Ce lot consiste à créer un `ValidationEngine` qui orchestrera plusieurs types de vérifications (imports, structure de fichiers, couverture de test). Il remplacera l'ancien script `final_system_validation.py` par une approche modulaire.
 
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/validation_engine.py`](project_core/core_from_scripts/validation_engine.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/validation_engine.py`](../../project_core/core_from_scripts/validation_engine.py).
     *   [ ] Implémenter une fonction `validate_critical_imports(config)` qui tente d'importer une liste de modules clés définis dans un fichier de configuration.
     *   [ ] Implémenter une fonction `validate_project_structure(config)` qui vérifie l'existence des répertoires et fichiers essentiels (ex: `docs/`, `tests/`, `README.md`).
     *   [ ] Implémenter une fonction `run_test_coverage()` qui utilise `shell_utils` pour lancer `pytest --cov` et retourne le taux de couverture.
@@ -242,7 +242,7 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] **Commit** : `git commit -m "[FEAT] ValidationEngine - Implement system validation framework"`
 ### Lot 5 : Initialisation de la Gestion d'Environnement (Java & JVM)
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:123) - Section 5.1, Lot 1
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 1
 *   **Objectif** : Mettre en place la façade `setup_manager.py` et les premières fonctionnalités de gestion de l'environnement liées à Java.
 *   **Description** : Ce lot est le premier à s'attaquer à la complexité de la gestion de l'environnement. Il est divisé en trois parties, chacune implémentant une commande spécifique pour gérer la compatibilité du code, la validation du pont JVM, et le téléchargement des dépendances de test.
 
@@ -251,7 +251,7 @@ Une fois que toute la logique a été migrée et validée.
 **Partie A : Compatibilité `pyjnius`**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/environment_manager.py`](project_core/core_from_scripts/environment_manager.py) s'il n'existe pas.
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/environment_manager.py`](../../project_core/core_from_scripts/environment_manager.py) s'il n'existe pas.
     *   [ ] Y implémenter une fonction `apply_pyjnius_compatibility_patch(path)`.
     *   [ ] Cette fonction reprendra la logique de refactoring de l'ancien script `adapt_code_for_pyjnius.py` (utilisation de `regex` et de `mocks`).
 
@@ -260,7 +260,7 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] Tester `apply_pyjnius_compatibility_patch` sur un fichier Python de test pour valider que le code est correctement modifié.
 
 3.  **Façade CLI (`scripts`)**
-    *   [ ] Créer le fichier [`scripts/setup_manager.py`](scripts/setup_manager.py).
+    *   [ ] Créer le fichier [`scripts/setup_manager.py`](../../scripts/setup_manager.py).
     *   [ ] Ajouter la commande `compat --fix-pyjnius`.
 
 4.  **Documentation & Commit**
@@ -294,7 +294,7 @@ Une fois que toute la logique a été migrée et validée.
 1.  **Implémentation du Manager (`project_core`)**
 ### Lot 6 : Correction des Dépendances (Installation Ciblée)
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:142) - Section 5.1, Lot 2
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 2
 *   **Objectif** : Activer `setup_manager.py fix-deps --package numpy pandas ...`
 *   **Description** : Ce lot introduit la fonctionnalité de base de la commande `fix-deps`. Il centralise la logique de réinstallation forcée de dépendances Python spécifiques, en remplacement des anciens scripts `fix_all_dependencies`. La fonction devra être capable de détecter la version de Python pour potentiellement adapter sa stratégie.
 
@@ -320,14 +320,14 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] **Commit** : `git commit -m "[FEAT] EnvironmentManager - Add targeted dependency fixing"`
     *   [ ] **Pull/Push** : Exécuter `git pull --rebase` puis `git push`.
 
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/project_setup.py`](project_core/core_from_scripts/project_setup.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/project_setup.py`](../../project_core/core_from_scripts/project_setup.py).
     *   [ ] Y implémenter une fonction `download_test_jars()`.
     *   [ ] La fonction téléchargera les `.jar` de test depuis une URL (qui sera stockée dans `argumentation_analysis/config/settings.py`).
 
 2.  **Tests Unitaires (`tests/unit`)**
 ### Lot 7 : Réparation Avancée et Configuration du Chemin
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:155) - Section 5.1, Lot 3
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 3
 *   **Objectif** : Activer `setup_manager.py fix-deps --from-requirements <file>` et `setup_manager.py set-path`.
 *   **Description** : Ce lot étend les capacités de réparation et de configuration. La première partie permet d'installer des dépendances en masse depuis un fichier `requirements.txt`. La seconde partie fournit une méthode robuste pour configurer le `PYTHONPATH` via un fichier `.pth`, une solution de secours essentielle lorsque les installations en mode édition échouent.
 
@@ -379,7 +379,7 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] Tester `download_test_jars` en mockant la requête de téléchargement (`requests` ou `httpx`).
 ### Lot 8 : Gestion des Dépendances Externes et Spécifiques
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:172) - Section 5.1, Lot 4
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 4
 *   **Objectif** : Activer `setup_manager.py validate --component build-tools` et officialiser l'utilisation de `fix-deps` pour les sous-projets.
 *   **Description** : Ce lot gère les dépendances qui sortent du cadre standard de `pip`. La première partie se concentre sur la validation des prérequis système externes, comme les outils de compilation C++. La seconde partie confirme et documente l'utilisation de la commande `fix-deps` (du Lot 7) pour gérer les dépendances de sous-modules comme `abs_arg_dung`.
 
@@ -430,7 +430,7 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] Rédiger le docstring et le guide pour la commande `setup-deps`.
 ### Lot 9 : Stratégies de Réparation en Cascade (La Saga JPype)
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:187) - Section 5.1, Lot 5
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 5
 *   **Objectif** : Activer `setup_manager.py fix-deps --package JPype1 --strategy=aggressive`
 *   **Description** : Ce lot est au cœur de la robustesse de l'outil de gestion de l'environnement. Il implémente une logique de réparation en cascade, inspirée par les multiples tentatives des anciens scripts pour installer `JPype`. Lorsqu'une stratégie "agressive" est demandée, `EnvironmentManager` essaiera une série de méthodes d'installation de plus en plus spécifiques jusqu'à ce que l'une d'elles réussisse.
 
@@ -471,7 +471,7 @@ Une fois que toute la logique a été migrée et validée.
 4.  **Documentation**
 ### Lot 10 : Wheels Précompilés et Migration de la Documentation
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:199) - Section 5.1, Lot 6
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 6
 *   **Objectif** : Améliorer la stratégie de réparation avec la gestion des wheels précompilés et migrer la documentation critique des anciens `READMEs` vers le nouveau guide centralisé.
 *   **Description** : Ce lot a deux volets. Le premier ajoute une étape intelligente à la stratégie de réparation "agressive" pour tenter de télécharger et d'installer un "wheel" binaire avant de tenter une compilation locale. Le second volet est une tâche de documentation cruciale pour ne pas perdre les informations de configuration vitales contenues dans les anciens fichiers.
 
@@ -512,7 +512,7 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] **Commit** : `git commit -m "[DOCS] Migrate and consolidate environment setup guides"`
 ### Lot 11 : Simplification du Workflow de Test
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:214) - Section 5.1, Lot 7
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 7
 *   **Objectif** : Activer `setup_manager.py setup-test-env --with-mocks` et supprimer les anciens lanceurs de test.
 *   **Description** : Ce lot sépare la **configuration** de l'environnement de test de son **exécution**. Le `ProjectSetup` sera responsable de préparer l'environnement, y compris la mise en place de mocks. Le `TestRunner` déjà existant deviendra le seul et unique point d'entrée pour lancer `pytest`, rendant tous les scripts `run_*_tests.py` obsolètes.
 
@@ -545,7 +545,7 @@ Une fois que toute la logique a été migrée et validée.
     *   [ ] Mettre à jour le docstring de `fix_documentation_links`.
 ### Lot 12 : Orchestration Finale du Setup et de la Validation
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:229) - Section 5.1, Lot 8
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.1, Lot 8
 *   **Objectif** : Activer les méta-commandes `setup_manager.py setup --env=test` et `validate --all`.
 *   **Description** : Ce lot finalise le `setup_manager` en créant des commandes de haut niveau qui orchestrent plusieurs opérations en une seule fois. La commande `setup` devient le point d'entrée unique pour la configuration d'un environnement, et `validate --all` (déjà définie au lot 4) est confirmée comme le bilan de santé complet.
 
@@ -580,14 +580,14 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 13 : Organisation du Répertoire `results`
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:247) - Section 5.2, Lot 9
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 9
 *   **Objectif** : Activer `maintenance_manager.py organize --target results`.
 *   **Description** : Ce lot met en place un nouveau `OrganizationManager` et sa première fonctionnalité, qui est la réorganisation structurée du répertoire `results/`. Cette fonction s'inspire de l'ancien workflow de `clean_project.ps1` et inclut la sauvegarde, le déplacement de fichiers et la génération d'un rapport.
 
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/organization_manager.py`](project_core/core_from_scripts/organization_manager.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/organization_manager.py`](../../project_core/core_from_scripts/organization_manager.py).
     *   [ ] Y implémenter une fonction `organize_results_directory()`.
     *   [ ] La logique de la fonction doit :
         1.   Sauvegarder le répertoire `results/` actuel dans un emplacement d'archive.
@@ -612,7 +612,7 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 14 : Application des Plans de Réorganisation
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:280) - Section 5.2, Lot 12
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 12
 *   **Objectif** : Activer `maintenance_manager.py organize --apply-plan <plan.json>`.
 *   **Description** : Ce lot complète le workflow de gestion des fichiers orphelins. Le Lot 1 permet de générer un rapport de fichiers non suivis. Ce lot permet de consommer ce rapport (après une éventuelle édition manuelle de l'utilisateur) pour exécuter les actions de nettoyage (suppression, déplacement, etc.).
 
@@ -645,14 +645,14 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 15 : Nettoyage des Fichiers Temporaires
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:247) - Section 5.2, Lot 9 (`cleanup_temp_files`)
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 9 (`cleanup_temp_files`)
 *   **Objectif** : Activer `maintenance_manager.py cleanup --default`.
 *   **Description** : Ce lot met en place le `CleanupManager` et sa fonctionnalité de base : la suppression récursive des fichiers et répertoires temporaires standards (fichiers `.pyc`, répertoires `__pycache__`, etc.). Cette fonctionnalité est essentielle pour maintenir la propreté du projet.
 
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/cleanup_manager.py`](project_core/core_from_scripts/cleanup_manager.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/cleanup_manager.py`](../../project_core/core_from_scripts/cleanup_manager.py).
     *   [ ] Y implémenter une fonction `cleanup_temporary_files()`.
     *   [ ] La fonction devra définir une liste de patterns à supprimer (ex: `*.pyc`, `__pycache__`, `.pytest_cache`).
     *   [ ] Elle utilisera une fonction utilitaire (probablement dans `argumentation_analysis.core.utils.filesystem_utils`) pour trouver tous les fichiers et répertoires correspondant à ces patterns dans l'ensemble du projet.
@@ -676,14 +676,14 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 16 : Mise à Jour du Fichier `.gitignore`
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:247) - Section 5.2, Lot 9 (`update_gitignore`)
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 9 (`update_gitignore`)
 *   **Objectif** : Activer `maintenance_manager.py repo --update-gitignore`.
 *   **Description** : Ce lot ajoute une fonctionnalité au `RepositoryManager` pour standardiser et mettre à jour le fichier `.gitignore` du projet. Il s'assure que le projet ignore de manière cohérente tous les fichiers et répertoires qui ne doivent pas être versionnés, en se basant sur un template central.
 
 **Checklist des Tâches :**
 
 1.  **Création du Template**
-    *   [ ] Créer un fichier de template central : [`project_core/templates/project.gitignore.template`](project_core/templates/project.gitignore.template).
+    *   [ ] Créer un fichier de template central : [`project_core/templates/project.gitignore.template`](../../project_core/templates/project.gitignore.template).
     *   [ ] Remplir ce template avec toutes les règles standards pour un projet Python (`__pycache__/`, `*.pyc`, `*.egg-info/`) ainsi que les règles spécifiques à ce projet (ex: `results/`, `local_llm_data/`, etc.).
 
 2.  **Implémentation du Manager (`project_core`)**
@@ -709,14 +709,14 @@ Une fois que toute la logique a été migrée et validée.
 
 ### Lot 17 : Refactorisation Automatisée par Plan
 
-*   **Référence Architecturale** : [`docs/refactoring/06_final_architecture_plan.md`](docs/refactoring/06_final_architecture_plan.md:259) - Section 5.2, Lot 10 (`refactor-entire-project`)
+*   **Référence Architecturale** : `docs/refactoring/06_final_architecture_plan.md` - Section 5.2, Lot 10 (`refactor-entire-project`)
 *   **Objectif** : Activer `maintenance_manager.py refactor --plan <plan.json> [--dry-run]`.
 *   **Description** : Ce lot final et le plus avancé met en place un moteur de refactorisation capable d'appliquer des transformations de code à grande échelle basées sur un plan déclaratif. C'est l'outil qui permettra d'automatiser une grande partie de la migration finale du code legacy en modifiant les imports, les appels de fonction, etc.
 
 **Checklist des Tâches :**
 
 1.  **Implémentation du Manager (`project_core`)**
-    *   [ ] Créer le fichier [`project_core/core_from_scripts/refactoring_manager.py`](project_core/core_from_scripts/refactoring_manager.py).
+    *   [ ] Créer le fichier [`project_core/core_from_scripts/refactoring_manager.py`](../../project_core/core_from_scripts/refactoring_manager.py).
     *   [ ] Implémenter la fonction principale `apply_refactoring_plan(plan_path: str, dry_run: bool = False)`.
     *   [ ] La fonction lira un plan JSON, qui pourra contenir une liste de transformations. Ex: `{"action": "update_import", "old_path": "a.b.c", "new_path": "x.y.z"}`.
     *   [ ] Le manager s'appuiera sur des utilitaires d'analyse de code (probablement basés sur `ast` ou `libcst`) à développer dans `argumentation_analysis.core.utils.code_manipulation`.

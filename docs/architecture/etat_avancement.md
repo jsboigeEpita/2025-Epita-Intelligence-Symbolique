@@ -12,7 +12,7 @@ Les composants suivants de l'architecture actuelle sont implémentés et fonctio
     *   `DataChannel` ([`../../argumentation_analysis/core/communication/data_channel.py`](../../argumentation_analysis/core/communication/data_channel.py:253)) : Pour le transfert de données volumineuses.
     *   `CollaborationChannel` ([`../../argumentation_analysis/core/communication/collaboration_channel.py`](../../argumentation_analysis/core/communication/collaboration_channel.py:140)) : Pour la communication horizontale entre agents.
     *   (Voir [`communication_agents.md`](./communication_agents.md:1) pour plus de détails).
-*   **Adaptateurs d'Agents** ([`../../argumentation_analysis/core/communication/adapters.py`](../../argumentation_analysis/core/communication/adapters.py:1)) : Permettent aux agents d'interagir avec le `MessageMiddleware`.
+*   **Adaptateurs d'Agents** ([`../../argumentation_analysis/core/communication/adapters.py`](../../argumentation_analysis/core/communication/:1)) : Permettent aux agents d'interagir avec le `MessageMiddleware`.
 *   **Protocoles de Communication de Base** : Support pour Request-Response ([`../../argumentation_analysis/core/communication/request_response.py`](../../argumentation_analysis/core/communication/request_response.py:1)) et Publish-Subscribe ([`../../argumentation_analysis/core/communication/pub_sub.py`](../../argumentation_analysis/core/communication/pub_sub.py:1)).
 
 ### 1.2. Orchestration (Architecture Plate Actuelle)
@@ -83,7 +83,7 @@ L'architecture hiérarchique à trois niveaux (Stratégique, Tactique, Opératio
 
 *   **Orchestration Actuelle vs. Proposition Hiérarchique** : L'orchestration actuelle est fonctionnelle mais "plate", ce qui peut limiter la scalabilité. La proposition hiérarchique vise à adresser ce point. La coexistence des deux approches (l'actuelle en production, la proposition en étude/PoC) doit être gérée clairement.
 *   **Décision sur l'Architecture Cible** : Une décision formelle sur l'adoption complète et le plan de migration vers l'architecture hiérarchique est nécessaire pour guider les développements futurs à long terme.
-*   **Service d'Orchestration** : L'absence actuelle d'un `orchestration_service.py` explicite signifie que la logique d'orchestration est répartie (principalement dans [`../../argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py:1) et les stratégies de `AgentGroupChat`).
+*   **Service d'Orchestration** : L'absence actuelle d'un `orchestration_service.py` explicite signifie que la logique d'orchestration est répartie (principalement dans `../../argumentation_analysis/orchestration/analysis_runner.py` et les stratégies de `AgentGroupChat`).
 
 ## 5. Correspondance avec la Conception
 

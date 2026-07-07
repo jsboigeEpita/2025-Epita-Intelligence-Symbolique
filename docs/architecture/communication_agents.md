@@ -11,7 +11,7 @@ L'architecture de communication repose sur deux piliers principaux :
 1.  **Une structure hiérarchique à trois niveaux** (Stratégique, Tactique, Opérationnel) qui définit les flux de contrôle et de traduction des objectifs en tâches exécutables.
 2.  **Un `MessageMiddleware`** ([`../../argumentation_analysis/core/communication/middleware.py`](../../argumentation_analysis/core/communication/middleware.py:19)) qui gère la communication multi-canal entre les agents, indépendamment de leur niveau hiérarchique.
 
-![Architecture hiérarchique à trois niveaux (concept général)](../images/architecture_communication_agents.png)
+!Architecture hiérarchique à trois niveaux (concept général)
 *(Note: Cette image illustre le concept hiérarchique. La communication réelle est maintenant facilitée et étendue par le middleware.)*
 
 ### 2.1 Niveaux Hiérarchiques
@@ -41,7 +41,7 @@ Le `MessageMiddleware` ([`../../argumentation_analysis/core/communication/middle
 *   **Routage de Messages** : Il détermine le canal approprié pour un message donné en fonction de son type et de son contenu.
 *   **Envoi et Réception Unifiés** : Il offre des méthodes `send_message` et `receive_message` pour les agents.
 *   **Protocoles de Communication** : Il intègre des protocoles comme `RequestResponseProtocol` ([`../../argumentation_analysis/core/communication/request_response.py`](../../argumentation_analysis/core/communication/request_response.py)) et `PublishSubscribeProtocol` ([`../../argumentation_analysis/core/communication/pub_sub.py`](../../argumentation_analysis/core/communication/pub_sub.py)) pour des patterns d'interaction spécifiques.
-*   **Adaptateurs d'Agents** : Les agents interagissent avec le middleware via des adaptateurs spécifiques à leur niveau (ex: `StrategicAdapter`, `TacticalAdapter`, `OperationalAdapter` trouvés dans [`../../argumentation_analysis/core/communication/adapters.py`](../../argumentation_analysis/core/communication/adapters.py)).
+*   **Adaptateurs d'Agents** : Les agents interagissent avec le middleware via des adaptateurs spécifiques à leur niveau (ex: `StrategicAdapter`, `TacticalAdapter`, `OperationalAdapter` trouvés dans [`../../argumentation_analysis/core/communication/adapters.py`](../../argumentation_analysis/core/communication/)).
 
 Ce middleware ne repose pas sur des brokers de messages externes comme RabbitMQ ou ZeroMQ ; la communication via les canaux est gérée en mémoire.
 

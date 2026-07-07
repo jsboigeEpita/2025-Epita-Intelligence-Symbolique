@@ -2,7 +2,7 @@
 
 ## 1. Introduction
 
-Ce document présente une proposition de réorganisation de l'architecture du projet "2025-Epita-Intelligence-Symbolique". L'objectif principal est d'adresser les incohérences et les problèmes potentiels identifiés dans le rapport d'analyse de l'architecture actuelle ([`docs/architecture/current_state_analysis.md`](docs/architecture/current_state_analysis.md:1) et consolidés dans [`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:1)), afin de créer une structure de projet et une architecture applicative plus cohérentes, maintenables et alignées sur les bonnes pratiques.
+Ce document présente une proposition de réorganisation de l'architecture du projet "2025-Epita-Intelligence-Symbolique". L'objectif principal est d'adresser les incohérences et les problèmes potentiels identifiés dans le rapport d'analyse de l'architecture actuelle ([`docs/architecture/current_state_analysis.md`](./current_state_analysis.md:1) et consolidés dans `docs/architecture/rapport_analyse_architecture.md`), afin de créer une structure de projet et une architecture applicative plus cohérentes, maintenables et alignées sur les bonnes pratiques.
 
 Les principes directeurs de cette réorganisation sont :
 
@@ -96,9 +96,9 @@ Les principes directeurs de cette réorganisation sont :
 *   **Répertoire `tests/` Unique et Standardisé**:
     *   **Justification**: Centralise tous les tests, conformément aux bonnes pratiques. La structure interne (`unit/`, `functional/`, `integration/`, `environment_checks/`) permet une organisation claire. `tests/unit/` reflète la structure de `argumentation_analysis/` pour une navigation aisée. Un seul `tests/conftest.py` gère les fixtures globales. Cela élimine la redondance de `argumentation_analysis/tests/` et clarifie le rôle de `scripts/testing/` (qui pourrait contenir des scripts pour des scénarios de test complexes, mais pas les tests eux-mêmes).
 *   **Répertoire `scripts/` Centralisé**:
-    *   **Justification**: Rassemble tous les scripts qui ne font pas partie du package applicatif principal mais sont utiles pour le développement, la maintenance, le déploiement, etc. Les scripts précédemment à la racine (ex: [`check_jpype_env.py`](check_jpype_env.py:1)) y trouvent une place logique (ex: `scripts/validation/`).
+    *   **Justification**: Rassemble tous les scripts qui ne font pas partie du package applicatif principal mais sont utiles pour le développement, la maintenance, le déploiement, etc. Les scripts précédemment à la racine (ex: `check_jpype_env.py`) y trouvent une place logique (ex: `scripts/validation/`).
 *   **Répertoire `examples/`**:
-    *   **Justification**: Isole les notebooks Jupyter, les scripts d'expérimentation ou de démonstration (comme [`scratch_tweety_interactions.py`](scratch_tweety_interactions.py:1)) du code de production et des scripts utilitaires.
+    *   **Justification**: Isole les notebooks Jupyter, les scripts d'expérimentation ou de démonstration (comme `scratch_tweety_interactions.py`) du code de production et des scripts utilitaires.
 *   **Répertoire `docs/`**:
     *   **Justification**: Maintien de la structure actuelle qui est déjà bien organisée pour la documentation.
 *   **Gestion des Dépendances et Configuration (Standard Python)**:
@@ -161,11 +161,11 @@ Les principes directeurs de cette réorganisation sont :
 
 ## 5. Propositions d'Évolution de l'Architecture Applicative
 
-Au-delà de la structure des fichiers, l'analyse de l'architecture actuelle ([`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:1)) a mis en évidence des points d'amélioration concernant l'architecture applicative elle-même. Les propositions suivantes visent à adresser ces points.
+Au-delà de la structure des fichiers, l'analyse de l'architecture actuelle (`docs/architecture/rapport_analyse_architecture.md`) a mis en évidence des points d'amélioration concernant l'architecture applicative elle-même. Les propositions suivantes visent à adresser ces points.
 
 ### 5.1. Centralisation de l'Orchestration
 
-*   **Motivation**: L'orchestration actuelle est décrite comme "plate" et gérée principalement par le framework Semantic Kernel via `AgentGroupChat`, sans un service dédié clairement identifié. Le fichier [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/core/orchestration_service.py:1) est manquant, ce qui est une faiblesse pour la clarté et la maintenabilité de la logique d'orchestration (constat du [`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:93)).
+*   **Motivation**: L'orchestration actuelle est décrite comme "plate" et gérée principalement par le framework Semantic Kernel via `AgentGroupChat`, sans un service dédié clairement identifié. Le fichier [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/agents/core/orchestration_service.py:1) est manquant, ce qui est une faiblesse pour la clarté et la maintenabilité de la logique d'orchestration (constat du `docs/architecture/rapport_analyse_architecture.md`).
 *   **Proposition**:
     1.  Créer un module dédié `argumentation_analysis/core/orchestration_service.py`.
     2.  Ce service centraliserait la logique d'orchestration principale du système d'analyse rhétorique.
@@ -174,21 +174,21 @@ Au-delà de la structure des fichiers, l'analyse de l'architecture actuelle ([`d
         *   La coordination de haut niveau entre les différents agents ou groupes d'agents.
         *   L'exploitation structurée du `MessageMiddleware` ([`argumentation_analysis/core/communication/middleware.py`](../../argumentation_analysis/core/communication/middleware.py:1)) pour la communication inter-agents.
         *   L'interaction avec l'état partagé (`RhetoricalAnalysisState`) de manière contrôlée.
-*   **Justification**: Cette centralisation améliorerait la clarté de l'architecture, faciliterait la maintenance et l'évolution de la logique d'orchestration, et fournirait un point d'entrée unique pour la gestion des analyses. Cela répond aux recommandations formulées dans [`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:157).
+*   **Justification**: Cette centralisation améliorerait la clarté de l'architecture, faciliterait la maintenance et l'évolution de la logique d'orchestration, et fournirait un point d'entrée unique pour la gestion des analyses. Cela répond aux recommandations formulées dans `docs/architecture/rapport_analyse_architecture.md`.
 
 ### 5.2. Évaluation de l'Architecture Hiérarchique
 
-*   **Motivation**: Une architecture hiérarchique à trois niveaux (Stratégique, Tactique, Opérationnel) a été proposée ([`docs/architecture/architecture_hierarchique.md`](docs/architecture/architecture_hierarchique.md:1)) pour adresser les limitations de l'orchestration "plate" actuelle, notamment en termes de scalabilité et de gestion de la complexité. Le [`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:100) souligne que cette proposition est active mais encore conceptuelle pour ses aspects majeurs.
+*   **Motivation**: Une architecture hiérarchique à trois niveaux (Stratégique, Tactique, Opérationnel) a été proposée ([`docs/architecture/architecture_hierarchique.md`](./architecture_hierarchique.md:1)) pour adresser les limitations de l'orchestration "plate" actuelle, notamment en termes de scalabilité et de gestion de la complexité. Le `docs/architecture/rapport_analyse_architecture.md` souligne que cette proposition est active mais encore conceptuelle pour ses aspects majeurs.
 *   **Proposition**:
     1.  Mener une évaluation formelle de la pertinence et de la faisabilité de l'architecture hiérarchique proposée.
     2.  Si l'évaluation est positive et que cette direction est jugée prioritaire :
         *   Définir un plan d'implémentation par étapes, en commençant par un Proof of Concept (PoC).
         *   Le PoC pourrait se concentrer sur la validation des interactions clés entre un agent de chaque niveau (conceptuel) et l'utilisation du `HierarchicalChannel` ([`argumentation_analysis/core/communication/hierarchical_channel.py`](../../argumentation_analysis/core/communication/hierarchical_channel.py:1)) via le `MessageMiddleware`.
-*   **Justification**: Prendre une décision éclairée sur l'évolution de l'architecture d'orchestration est crucial. Un PoC permettrait de valider les concepts clés de l'architecture hiérarchique à moindre coût avant un engagement plus conséquent. Cela s'aligne avec les recommandations du [`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:153).
+*   **Justification**: Prendre une décision éclairée sur l'évolution de l'architecture d'orchestration est crucial. Un PoC permettrait de valider les concepts clés de l'architecture hiérarchique à moindre coût avant un engagement plus conséquent. Cela s'aligne avec les recommandations du `docs/architecture/rapport_analyse_architecture.md`.
 
 ### 5.3. Clarification de la Gestion de la JVM
 
-*   **Motivation**: La gestion de la JVM pour l'intégration avec TweetyProject a été identifiée comme un point nécessitant une clarification ([`docs/architecture/rapport_analyse_architecture.md`](docs/architecture/rapport_analyse_architecture.md:161)). Bien que la structure de fichiers proposée (section 2.1) centralise la logique dans `argumentation_analysis/core/jvm_setup.py`, il est important de s'assurer que son rôle est unique et bien compris.
+*   **Motivation**: La gestion de la JVM pour l'intégration avec TweetyProject a été identifiée comme un point nécessitant une clarification (`docs/architecture/rapport_analyse_architecture.md`). Bien que la structure de fichiers proposée (section 2.1) centralise la logique dans `argumentation_analysis/core/jvm_setup.py`, il est important de s'assurer que son rôle est unique et bien compris.
 *   **Proposition**:
     1.  Confirmer et documenter que `argumentation_analysis/core/jvm_setup.py` est le seul point d'initialisation et de configuration de la JVM pour l'ensemble du projet (application et tests).
     2.  S'assurer que toutes les dépendances aux JARs Tweety pointent correctement vers le répertoire `libs/tweety/` centralisé.
@@ -226,7 +226,7 @@ Voici la liste détaillée des opérations de déplacement, création et suppres
 3.  **Mise à Jour des Scripts de Setup et des Références aux JARs Tweety :**
     *   Les fichiers `*.jar` de `argumentation_analysis/libs/` doivent être déplacés vers `libs/tweety/`.
     *   **Action Requise Prioritaire :**
-        *   Modifier les scripts de setup du projet (ex: [`setup_project_env.ps1`](setup_project_env.ps1:1), [`setup_project_env.sh`](setup_project_env.sh:1), et potentiellement `scripts/setup/setup_env.py`) pour :
+        *   Modifier les scripts de setup du projet (ex: [`setup_project_env.ps1`](../../setup_project_env.ps1:1), [`setup_project_env.sh`](../../scripts/setup/setup_project_env.sh:1), et potentiellement `scripts/setup/setup_env.py`) pour :
             *   S'assurer qu'ils téléchargent/placent les JARs Tweety dans `libs/tweety/`.
             *   Nettoyer les anciens emplacements de JARs (ex: directement sous `libs/` si des scripts les y plaçaient, ou dans `argumentation_analysis/libs/`).
         *   Identifier tous les emplacements dans le code (`argumentation_analysis/`, `scripts/`, `tests/`) où ces JARs sont référencés, chargés, ou leur chemin est construit (ex: pour le classpath Java). Mettre à jour ces références pour pointer vers `libs/tweety/[nom_du_jar].jar`.
@@ -242,11 +242,11 @@ Voici la liste détaillée des opérations de déplacement, création et suppres
 **Phase 3: Réorganisation des Scripts**
 
 6.  **Déplacement des scripts Python de la racine :**
-    *   Déplacer [`check_jpype_env.py`](check_jpype_env.py:1) vers `scripts/validation/check_jpype_env.py`.
-    *   Déplacer [`minimal_jpype_test.py`](minimal_jpype_test.py:1) vers `tests/environment_checks/test_minimal_jpype.py` (changement de nom pour convention de test).
-    *   Déplacer [`scratch_tweety_interactions.py`](scratch_tweety_interactions.py:1) vers `examples/scratch_tweety_interactions.py`.
-    *   Déplacer [`temp_arch_check.py`](temp_arch_check.py:1) vers `scripts/validation/temp_arch_check.py`.
-    *   Déplacer [`setup_env.py`](setup_env.py:1) vers `scripts/setup/setup_env.py`.
+    *   Déplacer `check_jpype_env.py` vers `scripts/validation/check_jpype_env.py`.
+    *   Déplacer `minimal_jpype_test.py` vers `tests/environment_checks/test_minimal_jpype.py` (changement de nom pour convention de test).
+    *   Déplacer `scratch_tweety_interactions.py` vers `examples/scratch_tweety_interactions.py`.
+    *   Déplacer `temp_arch_check.py` vers `scripts/validation/temp_arch_check.py`.
+    *   Déplacer `setup_env.py` vers `scripts/setup/setup_env.py`.
 7.  **Déplacement des scripts PowerShell de la racine :**
     *   Déplacer `verify_jar_content.ps1` vers `scripts/validation/verify_jar_content.ps1`.
 8.  **Consolidation des scripts de `argumentation_analysis/scripts/` :**
@@ -267,7 +267,7 @@ Voici la liste détaillée des opérations de déplacement, création et suppres
     *   Supprimer le répertoire : `config/` (après déplacement/fusion de son contenu).
     *   Supprimer le répertoire : `argumentation_analysis/config/` (après déplacement/fusion de son contenu).
 10. **Nettoyage `conftest.py` à la racine :**
-    *   Supprimer le fichier : [`conftest.py`](conftest.py:1) (à la racine). Sa logique de chargement de `.env` sera gérée par des bibliothèques Python dédiées (ex: `python-dotenv`) et la gestion de `sys.path` sera moins critique avec la structure de package améliorée.
+    *   Supprimer le fichier : [`conftest.py`](../../tests/conftest.py:1) (à la racine). Sa logique de chargement de `.env` sera gérée par des bibliothèques Python dédiées (ex: `python-dotenv`) et la gestion de `sys.path` sera moins critique avec la structure de package améliorée.
 
 **Phase 5: Intégration de `project_core/` dans `argumentation_analysis/`**
 

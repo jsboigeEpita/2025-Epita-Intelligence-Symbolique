@@ -1703,7 +1703,7 @@ gh issue close ISSUE_NUMBER --comment "✅ Rotation complétée avec succès. An
 
 ## Historique
 
-Voir [`secrets_rotation_log.md`](secrets_rotation_log.md) pour l'historique complet.
+Voir `secrets_rotation_log.md` pour l'historique complet.
 
 ## Automatisation
 
@@ -2131,8 +2131,8 @@ gh workflow run ci.yml
 
 ### Documentation Interne
 
-- [`D-CI-01: Stabilisation Pipeline CI`](../mission_reports/D-CI-01_rapport_stabilisation_pipeline_ci.md)
-- [`D-CI-04: Tolérance .env`](../mission_reports/D-CI-04_rapport_resolution_env_ci.md)
+- [`D-CI-01: Stabilisation Pipeline CI`](../../docs/reports/D-CI-01_rapport_stabilisation_pipeline_ci.md)
+- [`D-CI-04: Tolérance .env`](../../docs/reports/D-CI-04_rapport_resolution_env_ci.md)
 - [`.env.example`](../../.env.example) - Template de configuration
 - [`pytest.ini`](../../pytest.ini) - Configuration pytest actuelle
 

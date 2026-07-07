@@ -2,31 +2,31 @@
 
 ## 1. Introduction
 
-Ce rapport détaille l'analyse de la structure actuelle du projet, mettant en lumière l'organisation des scripts, des composants applicatifs, des tests, de la configuration et de la documentation. Il analyse également les composants architecturaux clés et l'état de l'orchestration. L'objectif est d'identifier les forces, faiblesses, risques, opportunités, ainsi que les incohérences et les problèmes potentiels afin de préparer une future réorganisation et d'aligner ce document avec les autres analyses architecturales (cf. [`architecture_globale.md`](./architecture_globale.md:1), [`communication_agents.md`](./communication_agents.md:1), [`analyse_architecture_orchestration.md`](./analyse_architecture_orchestration.md:1), [`architecture_hierarchique.md`](./architecture_hierarchique.md:1)). Cette analyse s'appuie sur l'exploration des fichiers et répertoires ainsi que sur le rapport [`docs/cleaning_reports/final_cleanup_summary_report.md`](../cleaning_reports/final_cleanup_summary_report.md:1).
+Ce rapport détaille l'analyse de la structure actuelle du projet, mettant en lumière l'organisation des scripts, des composants applicatifs, des tests, de la configuration et de la documentation. Il analyse également les composants architecturaux clés et l'état de l'orchestration. L'objectif est d'identifier les forces, faiblesses, risques, opportunités, ainsi que les incohérences et les problèmes potentiels afin de préparer une future réorganisation et d'aligner ce document avec les autres analyses architecturales (cf. [`architecture_globale.md`](./architecture_globale.md:1), [`communication_agents.md`](./communication_agents.md:1), [`analyse_architecture_orchestration.md`](./analyse_architecture_orchestration.md:1), [`architecture_hierarchique.md`](./architecture_hierarchique.md:1)). Cette analyse s'appuie sur l'exploration des fichiers et répertoires ainsi que sur le rapport `docs/cleaning_reports/final_cleanup_summary_report.md`.
 
 ## 2. Cartographie de la Structure Actuelle des Fichiers
 
 ### 2.1. Code Applicatif Principal
 
 *   **`argumentation_analysis/`**: Module principal contenant la logique métier.
-    *   Sous-répertoires : `agents/`, `core/` (contient [`jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1), [`shared_state.py`](../../argumentation_analysis/core/shared_state.py:1), [`communication/`](../../argumentation_analysis/core/communication/:1)), `models/`, `orchestration/` (contient [`analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py:1)), `services/`, `ui/`, `utils/`.
-    *   Scripts d'exécution spécifiques : [`main_orchestrator.py`](../../argumentation_analysis/main_orchestrator.py:1), [`run_analysis.py`](../../argumentation_analysis/run_analysis.py:1), [`run_extract_editor.py`](../../argumentation_analysis/run_extract_editor.py:1), [`run_extract_repair.py`](../../argumentation_analysis/run_extract_repair.py:1), [`run_orchestration.py`](../../argumentation_analysis/run_orchestration.py:1).
+    *   Sous-répertoires : `agents/`, `core/` (contient [`jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1), [`shared_state.py`](../../argumentation_analysis/core/shared_state.py:1), [`communication/`](../../argumentation_analysis/core/communication/:1)), `models/`, `orchestration/` (contient `analysis_runner.py`), `services/`, `ui/`, `utils/`.
+    *   Scripts d'exécution spécifiques : [`main_orchestrator.py`](../../argumentation_analysis/main_orchestrator.py:1), `run_analysis.py`, [`run_extract_editor.py`](../../argumentation_analysis/utils/run_extract_editor.py:1), [`run_extract_repair.py`](../../argumentation_analysis/utils/run_extract_repair.py:1), [`run_orchestration.py`](../../argumentation_analysis/run_orchestration.py:1).
 *   **`project_core/`**: Modules transversaux et utilitaires de base.
-    *   [`bootstrap.py`](../../project_core/bootstrap.py:1) (rôle d'initialisation probable).
+    *   [`bootstrap.py`](../../argumentation_analysis/core/bootstrap.py:1) (rôle d'initialisation probable).
     *   Sous-répertoires : `dev_utils/`, `integration/`, `utils/`.
 *   **Fichiers Python à la racine (potentiellement à déplacer)**:
-    *   [`scratch_tweety_interactions.py`](../../scratch_tweety_interactions.py:1) (script d'expérimentation/bac à sable).
+    *   `scratch_tweety_interactions.py` (script d'expérimentation/bac à sable).
 
 ### 2.2. Scripts
 
 *   **`scripts/` (racine)**: Répertoire principal pour les scripts généraux, d'infrastructure et de maintenance.
     *   Bien organisé en sous-répertoires thématiques : `archived/`, `cleanup/`, `data_processing/`, `execution/`, `maintenance/`, `reporting/`, `setup/`, `testing/`, `utils/`, `validation/`.
-    *   Exemple : [`debug_jpype_classpath.py`](../../scripts/debug_jpype_classpath.py:1).
+    *   Exemple : `debug_jpype_classpath.py`.
 *   **Scripts d'environnement (racine)**:
     *   `activate_project_env.ps1`, `activate_project_env.sh`, `setup_project_env.ps1`, `setup_project_env.sh`, `environment.yml`, `setup_env.py`.
 *   **Scripts de diagnostic (racine) (potentiellement à déplacer)**:
-    *   [`check_jpype_env.py`](../../check_jpype_env.py:1) (diagnostic JPype/Tweety).
-    *   [`temp_arch_check.py`](../../temp_arch_check.py:1) (vérification d'architecture plateforme, probablement temporaire).
+    *   `check_jpype_env.py` (diagnostic JPype/Tweety).
+    *   `temp_arch_check.py` (vérification d'architecture plateforme, probablement temporaire).
 *   **`argumentation_analysis/scripts/`**: Scripts spécifiques aux tâches du module `argumentation_analysis`.
     *   Exemples : `repair_extract_markers.py`, `verify_extracts.py`, `test_performance_extraits.py`.
 
@@ -43,7 +43,7 @@ Ce rapport détaille l'analyse de la structure actuelle du projet, mettant en lu
 *   **`argumentation_analysis/tests/`**: Répertoire de tests qui semble redondant ou hérité, source de dispersion.
 *   **`argumentation_analysis/run_tests.py`**: Script d'exécution de tests, potentiellement une alternative à l'invocation `pytest` standard.
 *   **`scripts/testing/`**: Rôle à clarifier par rapport à la structure principale dans `tests/`.
-*   **[`minimal_jpype_test.py`](../../minimal_jpype_test.py:1) (racine)**: Script de test de diagnostic JPype, mieux placé dans `tests/environment_checks/` ou `tests/integration/`.
+*   **`minimal_jpype_test.py` (racine)**: Script de test de diagnostic JPype, mieux placé dans `tests/environment_checks/` ou `tests/integration/`.
 *   **[`conftest.py`](../../conftest.py:1) (racine)**: Gère le chargement de `.env`, la modification de `sys.path` et contenait une logique (maintenant désactivée) d'initialisation de la JVM. Sa présence en plus de [`tests/conftest.py`](../../tests/conftest.py:1) peut prêter à confusion.
 
 ### 2.4. Utilitaires (Code Partagé, Helpers)
@@ -72,7 +72,7 @@ Ce rapport détaille l'analyse de la structure actuelle du projet, mettant en lu
 ### 2.6. Documentation
 
 *   **`docs/`**: Répertoire principal pour la documentation.
-    *   Contient `cleaning_reports/` (ex: [`final_cleanup_summary_report.md`](../cleaning_reports/final_cleanup_summary_report.md:1)), et le sous-répertoire `architecture/` (contenant ce rapport et d'autres analyses architecturales).
+    *   Contient `cleaning_reports/` (ex: `final_cleanup_summary_report.md`), et le sous-répertoire `architecture/` (contenant ce rapport et d'autres analyses architecturales).
 *   **Fichiers `README.md`**: Présents à plusieurs niveaux (racine, `scripts/`, `tests/`, `argumentation_analysis/`, `config/`, `argumentation_analysis/libs/`).
 *   **Autres fichiers Markdown à la racine**: `GETTING_STARTED.md`, `GUIDE_INSTALLATION_ETUDIANTS.md`, `README_ETAT_ACTUEL.md`.
 *   **`LICENSE`**.
@@ -96,7 +96,7 @@ Cette section évalue les aspects fonctionnels et architecturaux du système, en
 
 ### 3.2. Faiblesses Actuelles
 
-*   **Absence d'un Service d'Orchestration Centralisé Explicite** : Le fichier [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/core/orchestration_service.py:1), qui décrirait un service d'orchestration centralisé, est manquant (identifié dans [`architecture_globale.md`](./architecture_globale.md:60)). L'orchestration actuelle est principalement gérée par [`argumentation_analysis/orchestration/analysis_runner.py`](../../argumentation_analysis/orchestration/analysis_runner.py:1) et les stratégies au sein de `AgentGroupChat`.
+*   **Absence d'un Service d'Orchestration Centralisé Explicite** : Le fichier [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/agents/core/orchestration_service.py:1), qui décrirait un service d'orchestration centralisé, est manquant (identifié dans [`architecture_globale.md`](./architecture_globale.md:60)). L'orchestration actuelle est principalement gérée par `argumentation_analysis/orchestration/analysis_runner.py` et les stratégies au sein de `AgentGroupChat`.
 *   **Architecture d'Orchestration "Plate"** : L'orchestration actuelle est de nature "plate", où les agents collaborent au sein d'un `AgentGroupChat` (décrit dans [`analyse_architecture_orchestration.md`](./analyse_architecture_orchestration.md:36)). L'architecture hiérarchique à trois niveaux (Stratégique, Tactique, Opérationnel) est une **proposition** détaillée dans [`architecture_hierarchique.md`](./architecture_hierarchique.md:1) et n'est pas implémentée.
 *   **Limitations de l'Orchestration Actuelle** : Le modèle actuel basé sur `AgentGroupChat` et la désignation explicite du prochain agent présente des limitations en termes de planification stratégique, de délégation de tâches complexes et de coordination avancée (analysé dans [`analyse_architecture_orchestration.md`](./analyse_architecture_orchestration.md:179)).
 *   **Sous-Exploitation Potentielle du `MessageMiddleware`** : Bien que le `MessageMiddleware` offre des capacités avancées, son intégration et son rôle dans le flux d'orchestration global ne sont pas pleinement définis ou exploités en l'absence d'un service d'orchestration plus structuré.
@@ -112,7 +112,7 @@ Cette section évalue les aspects fonctionnels et architecturaux du système, en
 ### 3.4. Opportunités
 
 *   **Implémentation de l'Architecture Hiérarchique** : Adopter et implémenter l'architecture hiérarchique proposée dans [`architecture_hierarchique.md`](./architecture_hierarchique.md:1) pour améliorer la scalabilité, la modularité, la séparation des préoccupations et la coordination.
-*   **Développement d'un Service d'Orchestration Clair** : Créer ou formaliser un service d'orchestration (potentiellement [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/core/orchestration_service.py:1)) qui exploiterait pleinement le `MessageMiddleware` et structurerait le flux d'analyse.
+*   **Développement d'un Service d'Orchestration Clair** : Créer ou formaliser un service d'orchestration (potentiellement [`argumentation_analysis/core/orchestration_service.py`](../../argumentation_analysis/agents/core/orchestration_service.py:1)) qui exploiterait pleinement le `MessageMiddleware` et structurerait le flux d'analyse.
 *   **Rationalisation de la Structure des Fichiers** : Poursuivre et achever la rationalisation de la structure des fichiers (bibliothèques, configuration, tests) pour éliminer les redondances et clarifier les responsabilités.
 *   **Amélioration de la Documentation Architecturale** : Continuer à mettre à jour et à synchroniser tous les documents d'architecture pour refléter une vision cohérente et actuelle du système.
 *   **Clarification de la Gestion de la JVM** : Documenter et potentiellement simplifier le processus d'initialisation et de gestion de la JVM.
@@ -120,7 +120,7 @@ Cette section évalue les aspects fonctionnels et architecturaux du système, en
 ## 4. Analyse des Incohérences et Points "Exotiques" de la Structure des Fichiers
 
 1.  **Code Source Dispersé à la Racine**:
-    *   Des fichiers comme [`check_jpype_env.py`](../../check_jpype_env.py:1), [`minimal_jpype_test.py`](../../minimal_jpype_test.py:1), [`scratch_tweety_interactions.py`](../../scratch_tweety_interactions.py:1), [`temp_arch_check.py`](../../temp_arch_check.py:1) se trouvent à la racine. Ils devraient être logiquement placés dans des répertoires plus spécifiques (`scripts/validation`, `tests/environment_checks`, `examples/` ou supprimés si temporaires).
+    *   Des fichiers comme `check_jpype_env.py`, `minimal_jpype_test.py`, `scratch_tweety_interactions.py`, `temp_arch_check.py` se trouvent à la racine. Ils devraient être logiquement placés dans des répertoires plus spécifiques (`scripts/validation`, `tests/environment_checks`, `examples/` ou supprimés si temporaires).
 2.  **Multiplication et Dispersion des Fichiers de Dépendances et de Configuration**:
     *   Plusieurs `requirements.txt` (racine, `argumentation_analysis/`) et un `requirements-test.txt` (dans `config/`).
     *   Deux fichiers `pytest.ini` (racine, `config/`).
@@ -161,7 +161,7 @@ Pour améliorer la clarté, la maintenabilité et la robustesse du projet, les r
     *   Si adoptée, planifier sa mise en œuvre.
     *   Si non, documenter clairement l'architecture "plate" actuelle et ses évolutions prévues, en s'assurant que [`analyse_architecture_orchestration.md`](./analyse_architecture_orchestration.md:1) et [`architecture_globale.md`](./architecture_globale.md:1) la reflètent fidèlement.
 2.  **Centraliser et Formaliser l'Orchestration** :
-    *   Envisager l'implémentation d'un [`orchestration_service.py`](../../argumentation_analysis/core/orchestration_service.py:1) qui servirait de point d'entrée et de gestionnaire principal du flux d'analyse, en s'appuyant sur le `MessageMiddleware`.
+    *   Envisager l'implémentation d'un [`orchestration_service.py`](../../argumentation_analysis/agents/core/orchestration_service.py:1) qui servirait de point d'entrée et de gestionnaire principal du flux d'analyse, en s'appuyant sur le `MessageMiddleware`.
 3.  **Rationaliser la Structure des Fichiers (Poursuite)** :
     *   **Bibliothèques** : Éliminer la duplication de `argumentation_analysis/libs/` en faveur de `libs/` racine (ou vice-versa, mais un seul emplacement).
     *   **Configuration** : Unifier les fichiers `pytest.ini` et `requirements.txt` autant que possible, en gardant une distinction claire pour les dépendances de test.
