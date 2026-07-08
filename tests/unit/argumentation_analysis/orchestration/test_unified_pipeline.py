@@ -908,7 +908,19 @@ class TestInvokeCallables:
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ):
-            result = await _invoke_fol_reasoning("text", {})
+            # Inject a real FOL formula via the upstream ``formulas`` context
+            # channel so the test exercises the bridge-inconsistent contract
+            # deterministically. Without this, the trivial ``"text"`` input is
+            # too short to trigger the 2-pass generator (len <= 100 gate) and
+            # falls back to ``NLToLogicTranslator`` — a real, non-mocked LLM
+            # call that intermittently yields an empty belief set, which the
+            # fail-loud guard returns as ``consistent=None`` (#1278/#1019),
+            # surfacing as a flaky ``assert None is False``. Supplying the
+            # formula upstream makes ``NLToLogicTranslator`` unreachable, so
+            # the mocked bridge decides the verdict every run.
+            result = await _invoke_fol_reasoning(
+                "text", {"formulas": ["forall X: P(X)"]}
+            )
         assert result["consistent"] is False
         assert result["confidence"] == 0.4
 
