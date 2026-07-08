@@ -3065,6 +3065,25 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
     supports = context.get("supports", [])
     fw_type = context.get("framework_type", "necessity")
+    # TR-1 #1419 / FP-17 #1236: when no genuine supports were supplied, derive
+    # them from the real text + extracted arguments (the translation gap). The
+    # translator validates relations against the real argument inventory —
+    # fabricated pairs are dropped, so an empty result keeps the honest
+    # absent_no_translator status (anti-théâtre #1019). Persisting into
+    # ``context`` lets _record_structured_arg_status label the axis "evaluated".
+    if not supports:
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_bipolar_supports,
+            )
+
+            supports = await translate_to_bipolar_supports(input_text, args)
+            if supports:
+                context["supports"] = supports
+        except Exception as e:
+            logger.info(
+                "Bipolar translator unavailable (%s); absent_no_translator.", e
+            )
 
     try:
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
@@ -3096,6 +3115,23 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     assumptions, rules = _aba_rules_from_context(args, context)
     contraries = context.get("contraries")
     semantics = context.get("semantics", "preferred")
+    # TR-1 #1419 / FP-17 #1236: when no genuine contraries were supplied, derive
+    # them from the real text + extracted arguments (the translation gap). Same
+    # honest-absent contract as bipolar: validated against the real inventory,
+    # empty result keeps absent_no_translator (anti-théâtre #1019).
+    if not contraries:
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_aba_contraries,
+            )
+
+            contraries = await translate_to_aba_contraries(input_text, args)
+            if contraries:
+                context["contraries"] = contraries
+        except Exception as e:
+            logger.info(
+                "ABA translator unavailable (%s); absent_no_translator.", e
+            )
 
     try:
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
