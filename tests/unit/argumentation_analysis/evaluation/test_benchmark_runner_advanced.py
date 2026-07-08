@@ -370,6 +370,13 @@ class TestRunCell:
             await asyncio.sleep(5)
             return {}
 
+        # asyncio.wait_for may fire the timeout slightly before the exact
+        # deadline (event-loop scheduling checks loop.time() >= when; one
+        # tick early is normal, ~6% observed on CI Windows). The assertion
+        # below uses a lower bound of half the timeout: it proves the timeout
+        # mechanism engaged (not an instant cancellation) while tolerating
+        # event-loop jitter. See ATT-1 floater characterization (#1355).
+        timeout = 0.1  # very short timeout
         with patch(
             "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
             side_effect=slow_analysis,
@@ -378,12 +385,12 @@ class TestRunCell:
                 workflow_name="light",
                 model_name="default",
                 document_index=0,
-                timeout=0.1,  # Very short timeout
+                timeout=timeout,
             )
 
             assert result.success is False
             assert "Timeout" in result.error
-            assert result.duration_seconds >= 0.1
+            assert result.duration_seconds >= timeout * 0.5
 
     @pytest.mark.asyncio
     async def test_run_cell_empty_document(self, tmp_path):

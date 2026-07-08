@@ -241,8 +241,14 @@ class TestCluedoOrchestratorIntegration:
         assert history[2]["sender"] == "Moriarty"
         assert history[2]["message"] == "Question de Moriarty."
 
-        # Verify metrics were collected
-        assert result["workflow_info"]["execution_time_seconds"] > 0
+        # Verify metrics were collected. execution_time_seconds is always a
+        # non-negative number (int 0 fallback, else float >= 0.0 from
+        # (end-start).total_seconds()). With fully-mocked agents the workflow
+        # can complete in sub-tick time, yielding exactly 0.0 — so assert a
+        # valid populated duration (>= 0), not a strictly-positive one the
+        # fast path cannot guarantee. Same timing-assertion class as the
+        # test_run_cell_timeout fix (#1355 floater stabilization).
+        assert result["workflow_info"]["execution_time_seconds"] >= 0
         assert (
             result["solution_analysis"]["success"] is False
         )  # No solution was proposed

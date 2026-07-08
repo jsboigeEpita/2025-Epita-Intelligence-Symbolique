@@ -212,17 +212,23 @@ class RequestResponseProtocol:
                         )
 
                 if response is None:
+                    # wait() returned True but no response was retrieved. This happens
+                    # when the background _monitor_timeouts daemon set the completed
+                    # event (timeout path) inside the narrow race window between our
+                    # wait deadline (monotonic clock) and response retrieval — the
+                    # daemon (wall clock, datetime.now()) already deleted the request.
+                    # The request genuinely timed out, so per the docstring contract
+                    # ("Raises: RequestTimeoutError") we raise rather than returning
+                    # None. The diagnostic is logged below; raising reports the
+                    # timeout, it does not mask it. Fixes the dual-clock race floater
+                    # test_timeout_raises_error (#1355).
                     self.logger.error(
                         f"send_request for {request.id} completed wait but response is None. This indicates a timeout or logic error."
                     )
-                    # Ne pas lever RequestTimeoutError ici si le wait a réussi, cela masquerait la cause.
-                    # Le timeout est géré par le `if not pending["completed"].wait(timeout=timeout):` plus haut.
-                    # Si on arrive ici, c'est que wait() a réussi mais response est None.
-                    # Cela peut arriver si _handle_timeout a été appelé et a supprimé la requête
-                    # avant que cette section ne soit atteinte, mais après que .wait() ait été débloqué.
-                    # Ou si handle_response n'a pas correctement stocké la réponse.
-                    # On retourne None, et l'appelant (test) échouera sur l'assertion.
-                    pass  # Laisser l'assertion du test échouer si guidance est None
+                    raise RequestTimeoutError(
+                        f"Request {request.id} timed out (completed-event set by "
+                        f"timeout monitor, no response retrieved)"
+                    )
 
                 return response
 
