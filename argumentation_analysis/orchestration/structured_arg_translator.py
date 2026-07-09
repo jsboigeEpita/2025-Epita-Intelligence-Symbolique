@@ -139,6 +139,21 @@ async def _llm_extract_relations(
             '{"rules": [{"premises": ["argN"], "conclusion": "argM", '
             '"rationale": "one short sentence"}]}'
         )
+    elif relation_kind == "setaf_attacks":
+        task = (
+            "Identify SET (collective) ATTACKS among these arguments: a SetAF "
+            "attack is a SET of arguments that JOINTLY defeat a target argument "
+            "— no single attacker defeats it alone, but together they do (a "
+            "joint attack). Report an ordinary pairwise attack as a singleton "
+            "attacker set. Cite every attacker AND the target by id; every id "
+            "must be present in the inventory. Report an attack ONLY when the "
+            "text genuinely presents the attackers as undermining the target — "
+            "do NOT connect unrelated arguments."
+        )
+        shape = (
+            '{"attacks": [{"attackers": ["argN"], "target": "argM", '
+            '"rationale": "one short sentence"}]}'
+        )
     else:
         raise ValueError(f"unknown relation_kind: {relation_kind!r}")
 
@@ -290,6 +305,62 @@ def _validate_aspic_rules(
     return out
 
 
+def _validate_setaf_attacks(
+    data: Dict[str, Any], arg_by_id: Dict[str, str]
+) -> List[Dict[str, Any]]:
+    """Validate LLM SetAF joint-attack proposals against the real inventory.
+
+    A SetAF (Set Argumentation Framework) attack is collective: a SET of
+    arguments jointly attacks a target. The target id AND every attacker id must
+    be in the inventory — a joint-attack citing any absent id is dropped
+    wholesale (never salvaged into a partly-fabricated attack, anti-théâtre
+    #1019). The target is removed from the attacker set (self-attack is
+    vacuous), and the attack is dropped if no attacker remains. Ids are re-mapped
+    to canonical argument text so the framework connects real nodes. Returns
+    handler-shaped ``{attackers, target}`` dicts. Dedup on
+    ``(frozenset(attackers), target)``.
+    """
+    raw = data.get("attacks", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    seen: set[Tuple[frozenset[str], str]] = set()
+    out: List[Dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        attackers = item.get("attackers", [])
+        if isinstance(attackers, str):
+            attackers = [attackers]
+        if not isinstance(attackers, list):
+            continue
+        tgt_id = str(item.get("target", "")).strip()
+        atk_ids = [str(a).strip() for a in attackers]
+        # Target and every attacker must be real — any unknown id drops the
+        # whole joint-attack (never a partly-fabricated attacker set).
+        if tgt_id not in arg_by_id:
+            continue
+        if not atk_ids or any(aid not in arg_by_id for aid in atk_ids):
+            continue
+        atk_ids = [aid for aid in atk_ids if aid != tgt_id]
+        if not atk_ids:
+            continue  # only attacker was the target itself → vacuous self-attack
+        # Dedup attacker ids within the set (preserve first-seen order).
+        uniq_ids: List[str] = []
+        id_seen: set[str] = set()
+        for aid in atk_ids:
+            if aid not in id_seen:
+                id_seen.add(aid)
+                uniq_ids.append(aid)
+        atk_texts = [arg_by_id[aid] for aid in uniq_ids]
+        tgt_text = arg_by_id[tgt_id]
+        key = (frozenset(atk_texts), tgt_text)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"attackers": atk_texts, "target": tgt_text})
+    return out
+
+
 async def translate_to_bipolar_supports(
     input_text: str, arguments: List[str]
 ) -> List[List[str]]:
@@ -390,12 +461,46 @@ async def translate_to_aspic_rules(
     return rules
 
 
+async def translate_to_setaf_attacks(
+    input_text: str, arguments: List[str]
+) -> List[Dict[str, Any]]:
+    """Derive genuine SetAF joint attacks from the text + arguments.
+
+    Returns a list of handler-shaped ``{attackers, target}`` joint-attack dicts
+    (canonical argument texts), validated against the real inventory. Empty list
+    when the LLM finds no genuine joint attacks OR no API key is configured — the
+    caller then stays ``absent_no_translator`` (honest absence, anti-théâtre
+    #1019). The gate ``_STRUCTURED_ARG_INPUT_KEYS['setaf_reasoning']`` accepts
+    ``set_attacks``; the gate itself is never modified.
+    """
+    arg_by_id, _ = _build_inventory(arguments)
+    if not arg_by_id:
+        return []
+    try:
+        data = await _llm_extract_relations(input_text, arguments, "setaf_attacks")
+    except Exception as e:  # network / parse / budget — never fatal to the run
+        logger.info(
+            "SetAF attacks translator failed (%s) — staying absent_no_translator.",
+            e,
+        )
+        return []
+    attacks = _validate_setaf_attacks(data, arg_by_id)
+    if attacks:
+        logger.info(
+            "SetAF translator: derived %d genuine joint attack(s) from text.",
+            len(attacks),
+        )
+    return attacks
+
+
 __all__ = [
     "translate_to_bipolar_supports",
     "translate_to_aba_contraries",
     "translate_to_aspic_rules",
+    "translate_to_setaf_attacks",
     "_build_inventory",
     "_validate_supports",
     "_validate_contraries",
     "_validate_aspic_rules",
+    "_validate_setaf_attacks",
 ]
