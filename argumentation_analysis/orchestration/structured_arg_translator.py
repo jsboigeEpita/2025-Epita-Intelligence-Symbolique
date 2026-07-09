@@ -36,7 +36,7 @@ gitignored state artifacts.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -114,7 +114,7 @@ async def _llm_extract_relations(
             '{"supports": [{"source": "argN", "target": "argM", '
             '"rationale": "one short sentence"}]}'
         )
-    else:  # contraries
+    elif relation_kind == "contraries":
         task = (
             "Identify ASSUMPTIONS and their CONTRARIES among these arguments: an "
             "assumption is a premise taken on faith (arguable), and its contrary "
@@ -126,6 +126,21 @@ async def _llm_extract_relations(
             '{"contraries": [{"assumption": "argN", "contrary": "defeating sentence", '
             '"rationale": "one short sentence"}]}'
         )
+    elif relation_kind == "aspic_rules":
+        task = (
+            "Identify DEFEASIBLE INFERENCE rules among these arguments: a rule is "
+            "(premises, conclusion) where the premise argument(s) defeasibly lead "
+            "to — justify — the conclusion argument. Cite premises AND conclusion "
+            "by id; every id must be present in the inventory. Report a rule ONLY "
+            "when the text genuinely presents the premises as reasons for the "
+            "conclusion — do NOT connect unrelated arguments."
+        )
+        shape = (
+            '{"rules": [{"premises": ["argN"], "conclusion": "argM", '
+            '"rationale": "one short sentence"}]}'
+        )
+    else:
+        raise ValueError(f"unknown relation_kind: {relation_kind!r}")
 
     system_content = (
         "You are an expert in formal argumentation theory. "
@@ -214,6 +229,67 @@ def _validate_contraries(
     return out
 
 
+def _validate_aspic_rules(
+    data: Dict[str, Any],
+    arg_by_id: Dict[str, str],
+    atom_fn: Callable[..., str],
+) -> List[Dict[str, Any]]:
+    """Validate LLM defeasible-rule proposals against the real inventory.
+
+    A genuine defeasible rule links real arguments: the conclusion id **and every
+    premise id** must be in the inventory (a rule citing any absent id is a
+    fabricated relation → the whole rule is dropped, anti-théâtre #1019), and at
+    least one premise must remain after removing any premise equal to the
+    conclusion (a rule concluding one of its own premises is vacuous).
+
+    Ids are mapped to canonical argument text, then to stable PL atoms via
+    ``atom_fn``. All argument atoms share the ``arg`` prefix so that an argument
+    used as a conclusion of one rule and as a premise of another maps to the SAME
+    atom — genuine ASPIC+ rule chaining. Returns handler-shaped
+    ``{head, body, name}`` dicts. Dedup on ``(head, frozenset(body))``.
+    """
+    raw = data.get("rules", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    seen: set[Tuple[str, frozenset[str]]] = set()
+    out: List[Dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        premises = item.get("premises", [])
+        if isinstance(premises, str):
+            premises = [premises]
+        if not isinstance(premises, list):
+            continue
+        concl_id = str(item.get("conclusion", "")).strip()
+        prem_ids = [str(p).strip() for p in premises]
+        # Every cited id must be real — a rule citing any unknown id is dropped
+        # wholesale (never salvaged into a partly-fabricated rule).
+        if concl_id not in arg_by_id:
+            continue
+        if not prem_ids or any(pid not in arg_by_id for pid in prem_ids):
+            continue
+        prem_ids = [pid for pid in prem_ids if pid != concl_id]
+        if not prem_ids:
+            continue  # only premise was the conclusion itself → vacuous
+        head_atom = atom_fn(arg_by_id[concl_id], prefix="arg")
+        body_atoms: List[str] = []
+        body_seen: set[str] = set()
+        for pid in prem_ids:
+            a = atom_fn(arg_by_id[pid], prefix="arg")
+            if a not in body_seen:
+                body_seen.add(a)
+                body_atoms.append(a)
+        key = (head_atom, frozenset(body_atoms))
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(
+            {"head": head_atom, "body": body_atoms, "name": f"def_rule_{len(out) + 1}"}
+        )
+    return out
+
+
 async def translate_to_bipolar_supports(
     input_text: str, arguments: List[str]
 ) -> List[List[str]]:
@@ -273,10 +349,53 @@ async def translate_to_aba_contraries(
     return contraries
 
 
+async def translate_to_aspic_rules(
+    input_text: str, arguments: List[str]
+) -> List[Dict[str, Any]]:
+    """Derive genuine ASPIC+ defeasible inference rules from the text + arguments.
+
+    Returns a list of handler-shaped ``{head, body, name}`` rule dicts with
+    PL-atom heads/bodies, validated against the real inventory. Empty list when
+    the LLM finds no genuine rules OR no API key is configured — the caller then
+    stays ``absent_no_translator`` (honest absence, anti-théâtre #1019).
+
+    Only **defeasible** rules are derived: natural-language argumentation is
+    defeasible, and strict rules / preference orderings are not reliably
+    extractable from prose (they stay auto-shaped, honestly not a genuine strict
+    layer). Feeding genuine defeasible rules is sufficient to flip the
+    honest-absent gate to ``evaluated`` — ``_STRUCTURED_ARG_INPUT_KEYS[
+    'aspic_plus_reasoning']`` accepts ``defeasible_rules``. The gate itself is
+    never modified.
+    """
+    arg_by_id, _ = _build_inventory(arguments)
+    if not arg_by_id:
+        return []
+    try:
+        data = await _llm_extract_relations(input_text, arguments, "aspic_rules")
+    except Exception as e:  # network / parse / budget — never fatal to the run
+        logger.info(
+            "ASPIC+ rules translator failed (%s) — staying absent_no_translator.",
+            e,
+        )
+        return []
+    # _pl_atom lives in invoke_callables (lazy import — no module-load cycle).
+    from argumentation_analysis.orchestration.invoke_callables import _pl_atom
+
+    rules = _validate_aspic_rules(data, arg_by_id, _pl_atom)
+    if rules:
+        logger.info(
+            "ASPIC+ translator: derived %d genuine defeasible rule(s) from text.",
+            len(rules),
+        )
+    return rules
+
+
 __all__ = [
     "translate_to_bipolar_supports",
     "translate_to_aba_contraries",
+    "translate_to_aspic_rules",
     "_build_inventory",
     "_validate_supports",
     "_validate_contraries",
+    "_validate_aspic_rules",
 ]
