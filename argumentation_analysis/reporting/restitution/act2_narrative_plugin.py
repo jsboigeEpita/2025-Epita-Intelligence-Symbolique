@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 from .readability_gate import GateVerdict, ReadabilityGate
@@ -56,6 +57,73 @@ _DEBATE_MAX_EXCHANGES = 6
 # content — safe to surface). The reserved theme for arguments no fallacy
 # targets — the claims that hold.
 _SOUTIENS_THEME = "soutiens"
+
+# Honest label for a fallacy the LLM named but that resolves to no taxonomy node
+# (#1421-1). ``inconnu`` read as a bug; ``hors taxonomie`` says the truth — the
+# LLM named a fallacy absent from our tree — without inventing a family.
+_HORS_TAXONOMIE = "hors taxonomie"
+
+# Lazy cache: lowercase fallacy name (``nom_vulgarisé`` / ``text_fr``) → ``Famille``
+# from the taxonomy CSV. Used ONLY to reconcile LLM-named fallacies whose
+# ``family`` arrived empty (defect #1421-1) — never to override an explicit one.
+_TAXONOMY_NAME_TO_FAMILY: Optional[Dict[str, str]] = None
+
+
+def _load_name_to_family() -> Dict[str, str]:
+    """Lazy-load a name→family map from the taxonomy CSV (lightweight, no JVM).
+
+    Maps every ``nom_vulgarisé`` and ``text_fr`` (lowercased) to its ``Famille``.
+    Failure to load is non-fatal: the reconciler then falls back to
+    ``hors taxonomie`` (honest absence), never a fabricated family (#1019).
+    """
+    global _TAXONOMY_NAME_TO_FAMILY
+    if _TAXONOMY_NAME_TO_FAMILY is not None:
+        return _TAXONOMY_NAME_TO_FAMILY
+    mapping: Dict[str, str] = {}
+    try:
+        import csv
+
+        csv_path = (
+            Path(__file__).resolve().parents[2] / "data" / "taxonomy_full.csv"
+        )
+        if csv_path.is_file():
+            with csv_path.open(newline="", encoding="utf-8") as fh:
+                for row in csv.DictReader(fh):
+                    famille = (row.get("Famille") or "").strip()
+                    if not famille:
+                        continue
+                    for key in ("nom_vulgarisé", "text_fr"):
+                        name = (row.get(key) or "").strip().lower()
+                        if name and name not in mapping:
+                            mapping[name] = famille
+    except Exception as exc:  # noqa: BLE001 — non-fatal, honest-absent fallback
+        logger.debug("taxonomy name→family map unavailable: %s", exc)
+    _TAXONOMY_NAME_TO_FAMILY = mapping
+    return mapping
+
+
+def _reconcile_family(fdata: Dict[str, Any]) -> str:
+    """Resolve a fallacy's family, honest about gaps (#1421-1).
+
+    Order: explicit non-empty ``family`` → name→taxonomy match on ``type`` →
+    ``hors taxonomie``. Never invents a family; ``hors taxonomie`` labels the
+    real gap (the LLM named a fallacy absent from our tree), unlike ``inconnu``
+    which reads as a bug. Anti-pendulum #1019: the label is surfaced, not hidden.
+    """
+    fam = str(fdata.get("family", "") or "").strip()
+    if fam and fam.lower() != "inconnu":
+        return fam
+    name = str(fdata.get("type", "") or "").strip().lower()
+    if name:
+        mapping = _load_name_to_family()
+        # exact then substring: ``type`` may be « ad hominem circonstanciel »
+        # while the CSV holds « ad hominem ».
+        if name in mapping:
+            return mapping[name]
+        for csv_name, famille in mapping.items():
+            if csv_name and (name in csv_name or csv_name in name):
+                return famille
+    return _HORS_TAXONOMIE
 
 
 # --- evidence dataclasses ----------------------------------------------------
@@ -487,7 +555,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         fallacy_by_arg.setdefault(tid, []).append(
             FallacyEvidence(
                 fallacy_id=str(_fid),
-                family=str(fdata.get("family", "inconnu")),
+                family=_reconcile_family(fdata),
                 type=str(fdata.get("type", "inconnu")),
                 taxonomy_path=str(fdata.get("taxonomy_path", "")),
                 justification=_truncate(
@@ -534,7 +602,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         flist = fallacy_by_arg.get(arg_id, [])
         if flist:
             families = sorted({f.family for f in flist if f.family})
-            key = families[0] if families else "inconnu"
+            key = families[0] if families else _HORS_TAXONOMIE
         else:
             key = _SOUTIENS_THEME
         movement_key_by_arg[arg_id] = key
@@ -902,13 +970,32 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             f"extension {dung_trace.semantics_label} : {n_acc} retenu(s), "
             f"{n_rej} rejeté(s) (absents de l'extension acceptée)."
         )
-        accepted_preview = ", ".join(sorted(dung_trace.accepted_members)[:6]) or "—"
-        attacks_preview = "; ".join(f"{p[0]}→{p[1]}" for p in dung_trace.sample_attacks)
+        # #1421-2: render the Dung detail with OPAQUE arg_ids only (FB-34). The
+        # upstream usually stores opaque ids in ``accepted_members``, but real
+        # corpora can leak full position descriptions there — keep only canonical
+        # arg_ids (from ``identified_arguments``) so the detail never dumps
+        # position text. ``rejected_args`` already maps opaque arg_id → label.
+        # The verdict carries the counts; the detail carries the IDs + attacks.
+        known_arg_ids = set(
+            getattr(state, "identified_arguments", {}) or {}
+        )
+        accepted_opaque = sorted(
+            m for m in dung_trace.accepted_members if m in known_arg_ids
+        )[:6]
+        rejected_opaque = sorted(dung_trace.rejected_args.keys())[:4]
+        attacks_opaque = "; ".join(
+            f"{p[0]}→{p[1]}" for p in dung_trace.sample_attacks
+        )
+        detail_parts = [
+            f"extension {dung_trace.semantics_label}",
+            f"acceptés [{', '.join(accepted_opaque) or '—'}]",
+        ]
+        if rejected_opaque:
+            detail_parts.append(f"rejetés [{', '.join(rejected_opaque)}]")
+        detail_parts.append(f"attaques clés : {attacks_opaque or '—'}")
         detail = (
             f"cadre abstrait de Dung bâti à partir des arguments extraits "
-            f"(PAS un oracle externe indépendant) — acceptés: [{accepted_preview}] ; "
-            f"attaques échantillonnées: {attacks_preview or '—'} ; "
-            f"sémantique(s): {', '.join(sems)}."
+            f"(PAS un oracle externe indépendant) — {' ; '.join(detail_parts)}."
         )
         findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
 

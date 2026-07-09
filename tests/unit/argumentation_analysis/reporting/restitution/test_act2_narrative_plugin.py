@@ -905,3 +905,125 @@ class TestGovernanceJargonLeakRegression:
         prompt = build_act2_prompt(ev)
         assert "fb-34" in prompt.lower()
         assert "déanonymise aucune source" in prompt.lower()
+
+
+# ============================================================================
+# ATT-3 restitution polish — #1421 (famille-inconnu leak + Dung opaque-ID wall)
+# ============================================================================
+
+
+class TestAtt3RestitutionPolish1421:
+    """Defect 1 (famille inconnu) + Defect 2 (Dung opaque-ID wall) — #1421."""
+
+    def test_reconcile_family_keeps_explicit_family(self):
+        """An explicit non-empty family is never overridden."""
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _reconcile_family,
+        )
+
+        assert _reconcile_family({"family": "ad hominem", "type": "x"}) == "ad hominem"
+
+    def test_reconcile_family_resolvable_name_uses_taxonomy(self):
+        """An empty family with a name present in the taxonomy CSV recovers its
+        family (option 1 — reconcile by name, fixes the cause)."""
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _reconcile_family,
+        )
+
+        # « généralisation hâtive » is a taxonomy node under « Insuffisance ».
+        fam = _reconcile_family({"family": "", "type": "généralisation hâtive"})
+        assert fam  # resolvable → real family, NOT hors taxonomie
+        assert fam.lower() != "inconnu"
+
+    def test_reconcile_family_unresolvable_labels_hors_taxonomie(self):
+        """An empty family with a name absent from the taxonomy is labelled
+        « hors taxonomie » (the honest gap), NEVER « inconnu » (#1421-1)."""
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _HORS_TAXONOMIE,
+            _reconcile_family,
+        )
+
+        fam = _reconcile_family({"family": "", "type": "Sophisme totalement inventé 42"})
+        assert fam == _HORS_TAXONOMIE
+        assert fam.lower() != "inconnu"
+
+    def test_reconcile_family_legacy_inconnu_is_reconciled(self):
+        """A legacy ``family == "inconnu"`` is treated as empty and reconciled
+        (not propagated as the buggy label)."""
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _HORS_TAXONOMIE,
+            _reconcile_family,
+        )
+
+        fam = _reconcile_family({"family": "inconnu", "type": "inexistant"})
+        assert fam == _HORS_TAXONOMIE  # unresolvable → honest label
+
+    def test_evidence_no_famille_inconnu_in_rendered_families(self):
+        """End-to-end: an unresolved LLM-named fallacy surfaces « hors taxonomie »
+        in the built evidence, never « inconnu »."""
+        state = _state(
+            identified_arguments={"arg_1": "Un argument attaqué."},
+            identified_fallacies={
+                "fl_1": {
+                    "target_argument_id": "arg_1",
+                    "family": "",  # unresolved → was « inconnu », now « hors taxonomie »
+                    "type": "Sophisme bidon inexistant",
+                    "taxonomy_path": "",
+                    "justification": "Justification.",
+                }
+            },
+        )
+        ev = build_act2_evidence(state)
+        families = {
+            f.family for mvt in ev.movements for arg in mvt.arguments for f in arg.fallacies
+        }
+        assert "inconnu" not in families
+        assert any(f.lower() == "hors taxonomie" for f in families)
+        # The movement theme itself is the honest label, not « inconnu ».
+        themes = {mvt.theme for mvt in ev.movements}
+        assert "inconnu" not in themes
+
+    def test_dung_detail_no_position_text_leak(self):
+        """Defect 2: when ``accepted_members`` leaks full position descriptions
+        (real-corpus case), the rendered Dung detail must NOT echo any position
+        text — only opaque arg_ids + counts + key attacks (FB-34, #1421-2)."""
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            _collect_formal_findings,
+        )
+
+        leak_text = "Position text one (long description that should NOT appear)."
+        state = _state(
+            identified_arguments={
+                "arg_1": leak_text,
+                "arg_2": "Position text two.",
+            },
+            dung_frameworks={
+                "fw_1": {
+                    "name": "verification_preferred",
+                    "arguments": ["arg_1", "arg_2"],
+                    "attacks": [["arg_2", "arg_1"]],
+                    # LEAK: descriptions instead of opaque ids
+                    "extensions": {"all_members": [leak_text, "Position text two."]},
+                }
+            },
+        )
+        findings = _collect_formal_findings(state)
+        dung = next((f for f in findings if f.kind == "dung"), None)
+        assert dung is not None
+        # No position text leaks into the detail.
+        assert "Position text" not in dung.detail
+        assert "should NOT appear" not in dung.detail
+        # Opaque rejected ids + attacks are still surfaced.
+        assert "arg_" in dung.detail
+
+    def test_dung_detail_renders_opaque_ids_when_clean(self):
+        """When ``accepted_members`` stores canonical opaque ids (nominal case),
+        the detail lists them — the fix must not regress the clean path."""
+        ev = build_act2_evidence(_rich_state())
+        dung = next((f for f in ev.formal_findings if f.kind == "dung"), None)
+        assert dung is not None
+        # arg_2 is accepted in _rich_state; it must appear (opaque id rendered).
+        assert "arg_2" in dung.detail
+        # The honest framing is preserved.
+        assert "oracle externe" in dung.detail.lower()
+
