@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 import types
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -25,10 +25,12 @@ from argumentation_analysis.orchestration.structured_arg_translator import (
     _validate_contraries,
     _validate_setaf_attacks,
     _validate_supports,
+    _validate_weighted_attacks,
     translate_to_aba_contraries,
     translate_to_aspic_rules,
     translate_to_bipolar_supports,
     translate_to_setaf_attacks,
+    translate_to_weighted_attacks,
 )
 
 
@@ -791,3 +793,210 @@ class TestSetafHandlerWiring:
         await _invoke_setaf("text", ctx)
         # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
         assert "set_attacks" not in ctx
+
+
+# -- Weighted argumentation (source, target, weight) -------------------------
+
+
+class TestValidateWeightedAttacks:
+    def test_keeps_valid_attack_with_weight(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"source": "arg1", "target": "arg2", "weight": 0.8, "rationale": "r"},
+        ]}
+        out = _validate_weighted_attacks(data, arg_by_id)
+        assert out == [("Alpha", "Beta", 0.8)]
+
+    def test_drops_attack_with_unknown_source(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [{"source": "arg9", "target": "arg2", "weight": 0.5}]}
+        assert _validate_weighted_attacks(data, arg_by_id) == []
+
+    def test_drops_attack_with_unknown_target(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [{"source": "arg1", "target": "arg9", "weight": 0.5}]}
+        assert _validate_weighted_attacks(data, arg_by_id) == []
+
+    def test_drops_self_attack(self):
+        arg_by_id = {"arg1": "Alpha"}
+        data = {"attacks": [{"source": "arg1", "target": "arg1", "weight": 0.5}]}
+        assert _validate_weighted_attacks(data, arg_by_id) == []
+
+    def test_clamps_weight_above_one(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [{"source": "arg1", "target": "arg2", "weight": 1.5}]}
+        out = _validate_weighted_attacks(data, arg_by_id)
+        assert out == [("Alpha", "Beta", 1.0)]
+
+    def test_clamps_weight_below_zero(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [{"source": "arg1", "target": "arg2", "weight": -0.3}]}
+        out = _validate_weighted_attacks(data, arg_by_id)
+        assert out == [("Alpha", "Beta", 0.0)]
+
+    def test_drops_non_numeric_weight(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"source": "arg1", "target": "arg2", "weight": "high"},  # non-numeric
+        ]}
+        assert _validate_weighted_attacks(data, arg_by_id) == []
+
+    def test_dedups_identical_attacks_keeps_first_weight(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"source": "arg1", "target": "arg2", "weight": 0.9},
+            {"source": "arg1", "target": "arg2", "weight": 0.1},  # dup → dropped
+        ]}
+        out = _validate_weighted_attacks(data, arg_by_id)
+        assert out == [("Alpha", "Beta", 0.9)]
+
+    def test_empty_or_malformed_returns_empty(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        assert _validate_weighted_attacks({}, arg_by_id) == []
+        assert _validate_weighted_attacks({"attacks": []}, arg_by_id) == []
+        assert _validate_weighted_attacks({"attacks": "nope"}, arg_by_id) == []
+        assert _validate_weighted_attacks(
+            {"attacks": [{"source": 1, "target": "arg1", "weight": 0.5}]},  # type: ignore[dict-item]
+            arg_by_id,
+        ) == []
+
+
+class TestWeightedTranslator:
+    async def test_empty_llm_output_returns_empty(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": []})
+        out = await translate_to_weighted_attacks("some text", ["a", "b"])
+        assert out == []
+
+    async def test_no_inventory_returns_empty(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": [
+            {"source": "arg1", "target": "arg2", "weight": 0.5},
+        ]})
+        out = await translate_to_weighted_attacks("text", [])
+        assert out == []
+
+    async def test_only_fabricated_attacks_dropped(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": [
+            {"source": "arg8", "target": "arg9", "weight": 0.5},  # unknown ids
+        ]})
+        out = await translate_to_weighted_attacks("text", ["a", "b"])
+        assert out == []
+
+    async def test_returns_validated_triples_with_real_weights(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": [
+            {"source": "arg1", "target": "arg2", "weight": 0.7},
+            {"source": "arg1", "target": "arg9", "weight": 0.5},  # dropped (unknown)
+            {"source": "arg2", "target": "arg1", "weight": 2.0},  # clamped to 1.0
+        ]})
+        out = await translate_to_weighted_attacks("text", ["Alpha", "Beta"])
+        assert out == [("Alpha", "Beta", 0.7), ("Beta", "Alpha", 1.0)]
+
+
+def _inject_fake_weighted_module(monkeypatch, payload):
+    """Inject fake WeightedHandler + TweetyInitializer so _invoke_weighted runs w/o JVM."""
+    fake_handler = types.ModuleType(
+        "argumentation_analysis.agents.core.logic.weighted_handler"
+    )
+
+    class _FakeWeightedHandler:
+        def __init__(self, initializer: Any) -> None:
+            self.initializer = initializer
+
+        def analyze_weighted_framework(self, args, attacks, semantics="grounded"):
+            return payload
+
+    fake_handler.WeightedHandler = _FakeWeightedHandler  # type: ignore[attr-defined]
+    monkeypatch.setitem(
+        sys.modules,
+        "argumentation_analysis.agents.core.logic.weighted_handler",
+        fake_handler,
+    )
+
+    fake_init = types.ModuleType(
+        "argumentation_analysis.agents.core.logic.tweety_initializer"
+    )
+
+    class _FakeTweetyInitializer:
+        pass
+
+    fake_init.TweetyInitializer = _FakeTweetyInitializer  # type: ignore[attr-defined]
+    monkeypatch.setitem(
+        sys.modules,
+        "argumentation_analysis.agents.core.logic.tweety_initializer",
+        fake_init,
+    )
+
+
+class TestWeightedHandlerWiring:
+    """The lazy translator call inside _invoke_weighted must persist genuine
+    weighted attacks into ``context`` so _record_structured_arg_status labels the
+    axis ``evaluated`` — and must stay absent when nothing genuine is derived."""
+
+    async def test_translates_and_persists_weighted_attacks(self, monkeypatch):
+        _inject_fake_weighted_module(monkeypatch, {"extensions": []})
+        genuine: List[Tuple[str, str, float]] = [("Alpha", "Beta", 0.8)]
+
+        async def _fake_attacks(text, args):
+            return genuine
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_weighted_attacks",
+            _fake_attacks,
+        )
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_weighted,
+        )
+
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
+        }
+        await _invoke_weighted("source text", ctx)
+        assert ctx.get("weighted_attacks") == genuine
+
+    async def test_does_not_override_caller_supplied_attacks(self, monkeypatch):
+        called = {"n": 0}
+
+        async def _fake_attacks(text, args):
+            called["n"] += 1
+            return [("x", "y", 0.5)]
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_weighted_attacks",
+            _fake_attacks,
+        )
+        _inject_fake_weighted_module(monkeypatch, {"extensions": []})
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_weighted,
+        )
+
+        genuine: List[Tuple[str, str, float]] = [("Alpha", "Beta", 0.9)]
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]},
+            "weighted_attacks": genuine,
+        }
+        await _invoke_weighted("text", ctx)
+        assert ctx["weighted_attacks"] is genuine  # unchanged
+        assert called["n"] == 0  # translator never invoked
+
+    async def test_honest_absent_when_translator_returns_empty(self, monkeypatch):
+        _inject_fake_weighted_module(monkeypatch, {"extensions": []})
+
+        async def _fake_attacks(text, args):
+            return []
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_weighted_attacks",
+            _fake_attacks,
+        )
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_weighted,
+        )
+
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
+        }
+        await _invoke_weighted("text", ctx)
+        # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
+        assert "weighted_attacks" not in ctx
