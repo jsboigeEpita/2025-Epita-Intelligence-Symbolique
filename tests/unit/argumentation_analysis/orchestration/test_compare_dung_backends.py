@@ -16,6 +16,7 @@ from typing import Any, Dict, List
 
 from argumentation_analysis.orchestration.invoke_callables import (
     _compare_dung_backends,
+    _default_student_dung_backend,
     _extensions_key,
     _normalize_extensions,
     _pairs,
@@ -312,3 +313,132 @@ class TestDungCompareWiring:
         assert out["backends"]["tweety"]["available"] is False
         assert out["backends"]["student"]["available"] is False
         assert out["comparison"]["overall_agreement"] is None
+
+
+# -- PR3 regression: student backend shape normalization ---------------------
+#
+# PR3 firsthand probing (real JVM, both backends) caught a spurious-disagreement
+# bug: DungStudentProvider.compute_extensions returns per-semantics extensions
+# nested under ``all_extensions`` (each value a ``{extensions, count, sizes,
+# all_members}`` wrapper), and the top-level ``extensions`` is only the DEFAULT
+# set, also wrapped. _default_student_dung_backend used to read that wrapper raw,
+# so _normalize_extensions extracted [] → a FALSE disagreement even when both
+# backends compute the identical extension set. These tests lock the fix using
+# the REAL observed shape (not an injected fake with the hoped-for shape).
+
+
+_STUDENT_REAL_SHAPE = {
+    "provider": "abs_arg_dung_student",
+    "semantics": "multi",
+    "extensions": {  # default-semantics wrapper (NOT the per-semantics dict)
+        "extensions": [["arg0", "arg2"]],
+        "count": 1,
+        "sizes": [2],
+        "all_members": ["arg0", "arg2"],
+    },
+    "all_extensions": {  # the actual per-semantics payload
+        sem: {
+            "extensions": [["arg0", "arg2"]],
+            "count": 1,
+            "sizes": [2],
+            "all_members": ["arg0", "arg2"],
+        }
+        for sem in ("grounded", "preferred", "stable", "complete")
+    },
+}
+
+
+class TestStudentBackendNormalization:
+    """The student backend must normalize the all_extensions wrapper into the
+    {sem: [[args]]} contract, or the comparison reads a spurious disagreement."""
+
+    async def test_backend_returns_per_semantics_dict(self, monkeypatch):
+        from argumentation_analysis.adapters import dung_student_provider as dsp
+
+        class _FakeProvider:
+            async def compute_extensions(self, arguments, attacks):
+                return _STUDENT_REAL_SHAPE
+
+        monkeypatch.setattr(dsp, "DungStudentProvider", _FakeProvider)
+
+        out = await _default_student_dung_backend(
+            ["arg0", "arg1", "arg2"], [["arg0", "arg1"], ["arg1", "arg2"]]
+        )
+        assert out["available"] is True
+        # Per-semantics dict extracted, not the raw wrapper.
+        assert out["extensions"]["grounded"] == [["arg0", "arg2"]]
+        assert out["extensions"]["preferred"] == [["arg0", "arg2"]]
+        assert out["extensions"]["stable"] == [["arg0", "arg2"]]
+        assert out["extensions"]["complete"] == [["arg0", "arg2"]]
+        # Wrapper keys must NOT leak into the per-semantics dict.
+        assert "count" not in out["extensions"]
+        assert "all_members" not in out["extensions"]
+
+    async def test_normalization_yields_genuine_agreement(self, monkeypatch):
+        """With the fix, two backends computing the SAME set AGREE — the
+        spurious disagreement is gone (anti-théâtre #1019)."""
+        from argumentation_analysis.adapters import dung_student_provider as dsp
+
+        ext_set = [["arg0", "arg2"]]
+
+        class _FakeProvider:
+            async def compute_extensions(self, arguments, attacks):
+                shape = {
+                    "extensions": {"extensions": ext_set, "count": 1,
+                                   "sizes": [2], "all_members": ["arg0", "arg2"]},
+                    "all_extensions": {
+                        sem: {"extensions": ext_set, "count": 1, "sizes": [2],
+                              "all_members": ["arg0", "arg2"]}
+                        for sem in ("grounded", "preferred", "stable", "complete")
+                    },
+                }
+                return shape
+
+        monkeypatch.setattr(dsp, "DungStudentProvider", _FakeProvider)
+
+        tweety = _backend(
+            {sem: ext_set for sem in ("grounded", "preferred", "stable", "complete")}
+        )
+        r = await _compare_dung_backends(
+            ["arg0", "arg1", "arg2"], [["arg0", "arg1"], ["arg1", "arg2"]],
+            backends={"tweety": tweety,
+                      "abs_arg_dung_student": _default_student_dung_backend},
+        )
+        # BEFORE the fix this was False (spurious); AFTER it is True (genuine).
+        assert r["comparison"]["overall_agreement"] is True
+        assert r["comparison"]["per_semantics"]["grounded"]["agreement"] is True
+        assert r["comparison"]["per_semantics"]["grounded"]["disagreement"] == []
+
+    async def test_real_disagreement_still_surfaced_with_student_normalized(
+        self, monkeypatch
+    ):
+        """Normalization does not mask a GENUINE disagreement: when the student
+        computes a different set than Tweety, it is still surfaced verbatim."""
+        from argumentation_analysis.adapters import dung_student_provider as dsp
+
+        class _FakeProvider:
+            async def compute_extensions(self, arguments, attacks):
+                return {
+                    "extensions": {"extensions": [["arg0"]], "count": 1,
+                                   "sizes": [1], "all_members": ["arg0"]},
+                    "all_extensions": {
+                        sem: {"extensions": [["arg0"]], "count": 1, "sizes": [1],
+                              "all_members": ["arg0"]}
+                        for sem in ("grounded", "preferred", "stable", "complete")
+                    },
+                }
+
+        monkeypatch.setattr(dsp, "DungStudentProvider", _FakeProvider)
+
+        tweety = _backend(
+            {sem: [["arg0", "arg2"]] for sem in
+             ("grounded", "preferred", "stable", "complete")}
+        )
+        r = await _compare_dung_backends(
+            ["arg0", "arg1", "arg2"], [["arg0", "arg1"], ["arg1", "arg2"]],
+            backends={"tweety": tweety,
+                      "abs_arg_dung_student": _default_student_dung_backend},
+        )
+        per = r["comparison"]["per_semantics"]["grounded"]
+        assert per["agreement"] is False  # genuine disagreement, not masked
+        assert len(per["disagreement"]) == 1
