@@ -205,3 +205,110 @@ class TestStructure:
             "A",
             "B",
         ]
+
+
+# -- wiring into _invoke_dung_extensions (I5 PR2) ----------------------------
+
+
+class TestDungCompareWiring:
+    """dung_mode="compare" routes _invoke_dung_extensions through the
+    multi-backend comparison, surfacing agreement (never reconciled) without a
+    JVM — the real backends are monkeypatched to deterministic fakes."""
+
+    async def test_compare_mode_routes_to_comparison(self, monkeypatch):
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        # Monkeypatch the real comparison fn → deterministic fake (no JVM).
+        fake_comparison = {
+            "backends": {
+                "tweety": {"extensions": {"grounded": [["a", "b"]]}, "available": True},
+                "student": {"extensions": {"grounded": [["a"]]}, "available": True},
+            },
+            "comparison": {
+                "semantics": ["grounded"],
+                "per_semantics": {
+                    "grounded": {
+                        "agreement": False,
+                        "decided": ["tweety", "student"],
+                        "disagreement": ["tweety vs student"],
+                    }
+                },
+                "overall_agreement": False,
+            },
+            "statistics": {"arguments_count": 2, "attacks_count": 1, "backends_count": 2},
+        }
+
+        async def _fake_compare(arguments, attacks, **kwargs):
+            return fake_comparison
+
+        monkeypatch.setattr(ic, "_compare_dung_backends", _fake_compare)
+
+        ctx = {
+            "phase_extract_output": {"arguments": ["a", "b"]},
+            "dung_mode": "compare",
+        }
+        out = await ic._invoke_dung_extensions("source text", ctx)
+
+        assert out["semantics"] == "multi_compare"
+        assert out["comparison"]["overall_agreement"] is False
+        assert out["statistics"]["backends_count"] == 2
+        # Disagreement surfaced verbatim, never reconciled.
+        assert out["comparison"]["per_semantics"]["grounded"]["disagreement"] == [
+            "tweety vs student"
+        ]
+        assert "NEVER auto-reconciled" in out["note"]
+
+    async def test_default_mode_does_not_compare(self, monkeypatch):
+        # Without dung_mode="compare", the comparison fn is NEVER invoked.
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        called = {"n": 0}
+
+        async def _fake_compare(arguments, attacks, **kwargs):
+            called["n"] += 1
+            return {}
+
+        monkeypatch.setattr(ic, "_compare_dung_backends", _fake_compare)
+        # Monkeypatch the native AFHandler path so no JVM is needed: make the
+        # try-block raise → degraded honest-absent return (the real fallback).
+        monkeypatch.setattr(
+            ic.asyncio, "to_thread", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no JVM"))
+        )
+
+        ctx = {"phase_extract_output": {"arguments": ["a", "b"]}}
+        out = await ic._invoke_dung_extensions("source text", ctx)
+
+        assert called["n"] == 0  # compare fn never invoked (default mode)
+        assert out["semantics"] == "unavailable"  # degraded honest-absent (no JVM)
+
+    async def test_compare_mode_available_backend_unavailable_reported(self, monkeypatch):
+        # Even in compare mode, an unavailable backend is reported, not omitted.
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        fake_comparison = {
+            "backends": {
+                "tweety": {"extensions": {}, "available": False, "note": "no JVM"},
+                "student": {"extensions": {}, "available": False, "note": "no JVM"},
+            },
+            "comparison": {
+                "semantics": ["grounded"],
+                "per_semantics": {"grounded": {"agreement": None, "decided": [], "disagreement": []}},
+                "overall_agreement": None,
+            },
+            "statistics": {"arguments_count": 1, "attacks_count": 0, "backends_count": 2},
+        }
+
+        async def _fake_compare(arguments, attacks, **kwargs):
+            return fake_comparison
+
+        monkeypatch.setattr(ic, "_compare_dung_backends", _fake_compare)
+
+        ctx = {
+            "phase_extract_output": {"arguments": ["a"]},
+            "dung_mode": "compare",
+        }
+        out = await ic._invoke_dung_extensions("source text", ctx)
+        # Both backends reported unavailable (fail-loud), agreement indeterminate.
+        assert out["backends"]["tweety"]["available"] is False
+        assert out["backends"]["student"]["available"] is False
+        assert out["comparison"]["overall_agreement"] is None
