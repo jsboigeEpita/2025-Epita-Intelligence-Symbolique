@@ -13,8 +13,9 @@ import json
 import logging
 import os
 import re
+import time
 from contextlib import contextmanager
-from typing import Dict, Any, Iterator, Optional, List, Tuple
+from typing import Dict, Any, Awaitable, Callable, Iterator, Optional, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -152,6 +153,7 @@ __all__ = [
     "_invoke_modal_logic",
     "_invoke_dung_extensions",
     "_python_dung_fallback",
+    "_compare_dung_backends",
     "_invoke_formal_synthesis",
     "_invoke_narrative_synthesis",
     "_invoke_text_to_kb",
@@ -6658,6 +6660,263 @@ def _python_dung_fallback(
         "Dung extension computation unavailable: JVM/Tweety required. "
         "Install JVM and ensure Tweety JARs are on the classpath."
     )
+
+
+# --- I5 #1430: multi-backend Dung comparison (pattern compare_fol_backends) ---
+#
+# The Dung axis already selects a backend by hint (student vs Tweety) but the
+# outputs are never COMPARED. ``_compare_dung_backends`` runs every available
+# backend on the SAME abstract framework and surfaces agreement / disagreement
+# PER SEMANTICS. Disagreement is NEVER auto-reconciled — it is the result
+# (anti-pendule #1019, mirroring the FOL multi-prover frame #1243). A backend
+# that cannot run (no JVM / library missing) is reported ``unavailable``
+# (fail-loud), never silently omitted (DoD #1019).
+
+# Semantics common to both the student library (4) and the native engine
+# (subset of 11) — the only ones a cross-backend verdict is meaningful for.
+_COMPARE_DUNG_SEMANTICS: Tuple[str, ...] = (
+    "grounded",
+    "preferred",
+    "stable",
+    "complete",
+)
+
+# A backend fn: (arguments, attacks) -> {"extensions": {sem: [[arg,...],...]},
+# "available": bool, "note": str}. Fakes injected for unit tests (no JVM).
+_DungBackendFn = Callable[
+    [List[str], List[List[str]]], Awaitable[Dict[str, Any]]
+]
+
+
+def _normalize_extensions(
+    raw: Any, semantics: Tuple[str, ...]
+) -> List[List[str]]:
+    """Coerce a backend's per-semantics extension payload to a flat list.
+
+    Tolerates the two producer shapes (``analyze_multi_semantics`` returns
+    ``{sem: [[args]] | {"error": ...}}``; ``compute_extensions`` returns
+    ``{"extensions": {sem: [...]}}``). Drops error / non-list entries so a
+    failed semantics is treated as "no extension decided" (honest-absent), not
+    a fabricated empty agreement.
+    """
+    if isinstance(raw, dict):
+        # compute_extensions nests under "extensions".
+        candidate = raw.get("extensions", raw)
+    else:
+        candidate = raw
+    if not isinstance(candidate, dict):
+        return []
+    flat: List[List[str]] = []
+    for sem in semantics:
+        val = candidate.get(sem)
+        if isinstance(val, list):
+            flat.extend(v for v in val if isinstance(v, list))
+    return flat
+
+
+def _extensions_key(extensions: List[List[str]]) -> frozenset[frozenset[str]]:
+    """Order-independent canonical key for a set of extensions.
+
+    A Dung extension SET is compared as a set of sets, so ``[[a,b],[c]]`` and
+    ``[[c],[b,a]]`` are equal (genuine agreement), independent of listing order.
+    """
+    return frozenset(frozenset(ext) for ext in extensions)
+
+
+async def _default_tweety_dung_backend(
+    arguments: List[str], attacks: List[List[str]]
+) -> Dict[str, Any]:
+    """Native AFHandler (Tweety) as a comparison backend (lazy import)."""
+    start = time.perf_counter()
+    try:
+        from argumentation_analysis.agents.core.logic.af_handler import (
+            AFHandler,
+            SEMANTICS_REASONERS,
+        )
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
+        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        handler = AFHandler(initializer)
+        sem_list = [s for s in _COMPARE_DUNG_SEMANTICS if s in SEMANTICS_REASONERS]
+        result = await asyncio.to_thread(
+            handler.analyze_multi_semantics, arguments, attacks, sem_list
+        )
+        elapsed = (time.perf_counter() - start) * 1000.0
+        return {
+            "extensions": result.get("extensions", {}),
+            "available": True,
+            "note": "tweety AFHandler",
+            "elapsed_ms": round(elapsed, 1),
+        }
+    except Exception as e:
+        elapsed = (time.perf_counter() - start) * 1000.0
+        return {
+            "extensions": {},
+            "available": False,
+            "note": f"unavailable: {e}",
+            "elapsed_ms": round(elapsed, 1),
+        }
+
+
+async def _default_student_dung_backend(
+    arguments: List[str], attacks: List[List[str]]
+) -> Dict[str, Any]:
+    """abs_arg_dung student provider as a comparison backend (lazy import).
+
+    The student library is a SANCTUARY (never modified, #893); this only wraps
+    its public ``compute_extensions`` adapter from the outside.
+    """
+    start = time.perf_counter()
+    try:
+        from argumentation_analysis.adapters.dung_student_provider import (
+            DungStudentProvider,
+        )
+
+        provider = DungStudentProvider()  # type: ignore[no-untyped-call]
+        _typed_attacks = [(a[0], a[1]) for a in attacks if len(a) >= 2]
+        result = await provider.compute_extensions(arguments, _typed_attacks)
+        elapsed = (time.perf_counter() - start) * 1000.0
+        if result.get("status") == "unavailable":
+            return {
+                "extensions": {},
+                "available": False,
+                "note": f"unavailable: {result.get('error', 'student provider')}",
+                "elapsed_ms": round(elapsed, 1),
+            }
+        return {
+            "extensions": result.get("extensions", {}),
+            "available": True,
+            "note": "abs_arg_dung_student",
+            "elapsed_ms": round(elapsed, 1),
+        }
+    except Exception as e:
+        elapsed = (time.perf_counter() - start) * 1000.0
+        return {
+            "extensions": {},
+            "available": False,
+            "note": f"unavailable: {e}",
+            "elapsed_ms": round(elapsed, 1),
+        }
+
+
+async def _compare_dung_backends(
+    arguments: List[str],
+    attacks: List[List[str]],
+    *,
+    backends: Optional[Dict[str, _DungBackendFn]] = None,
+    semantics: Optional[Tuple[str, ...]] = None,
+) -> Dict[str, Any]:
+    """Run every available Dung backend on the same AF and compare (I5 #1430).
+
+    Mirrors :meth:`compare_fol_backends` (fol_handler.py:963): each backend
+    reasons INDEPENDENTLY over the same framework and the per-semantics
+    agreement is surfaced, **never auto-reconciled**. A backend that cannot run
+    is reported ``available=False`` (fail-loud), never silently dropped.
+
+    ``backends`` defaults to the two real providers (Tweety ``AFHandler`` +
+    student ``DungStudentProvider``); inject fakes (``{name: async_fn}``) for
+    JVM-free unit tests. Each backend fn returns ``{"extensions": {sem: [...]},
+    "available": bool, "note": str}``.
+
+    Returns::
+
+        {
+          "backends": {name: {"extensions": {sem: [[args]]}, "available": bool,
+                              "note": str, "elapsed_ms": float}},
+          "comparison": {
+            "semantics": [sem, ...],
+            "per_semantics": {sem: {"agreement": Optional[bool],
+                                    "decided": [name, ...],
+                                    "disagreement": [str, ...]}},
+            "overall_agreement": Optional[bool],   # None if <2 backends decided
+          },
+          "statistics": {"arguments_count", "attacks_count", "backends_count"},
+        }
+    """
+    sem_tuple = semantics if semantics is not None else _COMPARE_DUNG_SEMANTICS
+
+    if backends is None:
+        backends = {
+            "tweety": _default_tweety_dung_backend,
+            "abs_arg_dung_student": _default_student_dung_backend,
+        }
+
+    backend_results: Dict[str, Dict[str, Any]] = {}
+    for name, fn in backends.items():
+        try:
+            res = await fn(arguments, attacks)
+        except Exception as e:  # a buggy backend never poisons the comparison
+            res = {"extensions": {}, "available": False, "note": f"unavailable: {e}"}
+        backend_results[name] = {
+            "extensions": res.get("extensions", {}),
+            "available": bool(res.get("available", False)),
+            "note": str(res.get("note", "")),
+            "elapsed_ms": float(res.get("elapsed_ms", 0.0)),
+        }
+
+    # Per-semantics agreement over the decided backends.
+    per_sem: Dict[str, Dict[str, Any]] = {}
+    any_disagree = False
+    any_decided_pair = False
+    for sem in sem_tuple:
+        keys_by_backend: Dict[str, frozenset[frozenset[str]]] = {}
+        for name, res in backend_results.items():
+            if not res["available"]:
+                continue
+            ext = _normalize_extensions({"extensions": res["extensions"]}, (sem,))
+            keys_by_backend[name] = _extensions_key(ext)
+        decided = list(keys_by_backend.keys())
+        distinct = set(keys_by_backend.values())
+        if len(decided) >= 2:
+            any_decided_pair = True
+        if len(decided) < 2:
+            agreement: Optional[bool] = None
+            disagreement: List[str] = []
+        elif len(distinct) == 1:
+            agreement = True
+            disagreement = []
+        else:
+            agreement = False
+            any_disagree = True
+            disagreement = [
+                f"{a}: {sorted(sorted(e) for e in keys_by_backend[a])} vs "
+                f"{b}: {sorted(sorted(e) for e in keys_by_backend[b])}"
+                for a, b in _pairs(decided)
+                if keys_by_backend[a] != keys_by_backend[b]
+            ]
+        per_sem[sem] = {
+            "agreement": agreement,
+            "decided": decided,
+            "disagreement": disagreement,
+        }
+
+    if not any_decided_pair:
+        overall: Optional[bool] = None
+    elif any_disagree:
+        overall = False
+    else:
+        overall = True
+
+    return {
+        "backends": backend_results,
+        "comparison": {
+            "semantics": list(sem_tuple),
+            "per_semantics": per_sem,
+            "overall_agreement": overall,
+        },
+        "statistics": {
+            "arguments_count": len(arguments),
+            "attacks_count": len(attacks),
+            "backends_count": len(backend_results),
+        },
+    }
+
+
+def _pairs(items: List[str]) -> List[Tuple[str, str]]:
+    """Yield unordered pairs for cross-backend disagreement notes."""
+    return [(items[i], items[j]) for i in range(len(items)) for j in range(i + 1, len(items))]
 
 
 async def _invoke_formal_synthesis(
