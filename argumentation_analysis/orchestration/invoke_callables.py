@@ -3674,6 +3674,23 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
+    # Genuine weighted attacks: if the caller did not supply them, try to
+    # derive them from the text (validated by id). Never overrides a caller's
+    # explicit set; empty/failed derivation leaves the key unset so the handler
+    # honestly falls back to auto-shaped pairwise attacks with neutral weight.
+    if not context.get("weighted_attacks"):
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_weighted_attacks,
+            )
+
+            derived_attacks = await translate_to_weighted_attacks(input_text, args)
+            if derived_attacks:
+                context["weighted_attacks"] = derived_attacks
+        except Exception as e:
+            logger.info(
+                "Weighted translator unavailable (%s); absent_no_translator.", e
+            )
     # Weighted attacks come as (source, target, weight) triples. Upstream may
     # provide them directly, else shape from the canonical pairwise graph with
     # neutral weight 0.5 (#1019: no fabricated confidence).

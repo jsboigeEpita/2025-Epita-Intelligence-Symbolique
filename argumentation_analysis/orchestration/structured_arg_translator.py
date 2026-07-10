@@ -154,6 +154,21 @@ async def _llm_extract_relations(
             '{"attacks": [{"attackers": ["argN"], "target": "argM", '
             '"rationale": "one short sentence"}]}'
         )
+    elif relation_kind == "weighted_attacks":
+        task = (
+            "Identify WEIGHTED ATTACKS among these arguments: a weighted attack "
+            "is a pair (source, target) where the source argument attacks the "
+            "target, together with a WEIGHT in [0.0, 1.0] expressing how strongly "
+            "the source defeats the target (1.0 = total defeat, 0.0 = negligible). "
+            "Cite source AND target by id; every id must be present in the "
+            "inventory. Report an attack ONLY when the text genuinely presents "
+            "the source as undermining the target — do NOT connect unrelated "
+            "arguments."
+        )
+        shape = (
+            '{"attacks": [{"source": "argN", "target": "argM", "weight": 0.8, '
+            '"rationale": "one short sentence"}]}'
+        )
     else:
         raise ValueError(f"unknown relation_kind: {relation_kind!r}")
 
@@ -361,6 +376,51 @@ def _validate_setaf_attacks(
     return out
 
 
+def _validate_weighted_attacks(
+    data: Dict[str, Any], arg_by_id: Dict[str, str]
+) -> List[Tuple[str, str, float]]:
+    """Validate LLM weighted-attack proposals against the real inventory.
+
+    A weighted attack is a ``(source, target, weight)`` triple: the source and
+    target ids must both be in the inventory and distinct (self-attack is not
+    genuine), and the weight must be a number in ``[0, 1]``. A triple citing any
+    unknown id is dropped (anti-théâtre #1019); a non-numeric weight is dropped
+    (no fabricated confidence). Weights outside ``[0, 1]`` are CLAMPED — the
+    attack relation is genuine, only the magnitude needs sanitising to the valid
+    range. Ids are re-mapped to canonical argument text. Returns
+    ``(source_text, target_text, weight)`` tuples. Dedup on ``(source, target)``
+    keeps the first weight seen.
+    """
+    raw = data.get("attacks", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    seen: set[Tuple[str, str]] = set()
+    out: List[Tuple[str, str, float]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        src_id = str(item.get("source", "")).strip()
+        tgt_id = str(item.get("target", "")).strip()
+        if src_id not in arg_by_id or tgt_id not in arg_by_id:
+            continue  # fabricated / malformed → dropped (anti-théâtre)
+        if src_id == tgt_id:
+            continue  # self-attack is not a genuine relation
+        try:
+            w = float(item.get("weight", 0.5))
+        except (TypeError, ValueError):
+            continue  # non-numeric weight → dropped (no fabricated confidence)
+        # Clamp to the valid [0, 1] range — the relation is genuine, the
+        # magnitude is sanitised rather than invented or discarded.
+        w = max(0.0, min(1.0, w))
+        src, tgt = arg_by_id[src_id], arg_by_id[tgt_id]
+        key = (src, tgt)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append((src, tgt, w))
+    return out
+
+
 async def translate_to_bipolar_supports(
     input_text: str, arguments: List[str]
 ) -> List[List[str]]:
@@ -493,14 +553,49 @@ async def translate_to_setaf_attacks(
     return attacks
 
 
+async def translate_to_weighted_attacks(
+    input_text: str, arguments: List[str]
+) -> List[Tuple[str, str, float]]:
+    """Derive genuine weighted attacks from the text + arguments.
+
+    Returns a list of ``(source, target, weight)`` triples (canonical argument
+    texts, weight clamped to ``[0, 1]``), validated against the real inventory.
+    Empty list when the LLM finds no genuine weighted attacks OR no API key is
+    configured — the caller then stays ``absent_no_translator`` (honest absence,
+    anti-théâtre #1019). The gate ``_STRUCTURED_ARG_INPUT_KEYS[
+    'weighted_argumentation']`` accepts ``weighted_attacks``; the gate itself is
+    never modified.
+    """
+    arg_by_id, _ = _build_inventory(arguments)
+    if not arg_by_id:
+        return []
+    try:
+        data = await _llm_extract_relations(input_text, arguments, "weighted_attacks")
+    except Exception as e:  # network / parse / budget — never fatal to the run
+        logger.info(
+            "Weighted attacks translator failed (%s) — staying absent_no_translator.",
+            e,
+        )
+        return []
+    attacks = _validate_weighted_attacks(data, arg_by_id)
+    if attacks:
+        logger.info(
+            "Weighted translator: derived %d genuine weighted attack(s) from text.",
+            len(attacks),
+        )
+    return attacks
+
+
 __all__ = [
     "translate_to_bipolar_supports",
     "translate_to_aba_contraries",
     "translate_to_aspic_rules",
     "translate_to_setaf_attacks",
+    "translate_to_weighted_attacks",
     "_build_inventory",
     "_validate_supports",
     "_validate_contraries",
     "_validate_aspic_rules",
     "_validate_setaf_attacks",
+    "_validate_weighted_attacks",
 ]
