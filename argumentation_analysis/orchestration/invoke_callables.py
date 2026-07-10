@@ -6818,8 +6818,28 @@ async def _default_student_dung_backend(
                 "note": f"unavailable: {result.get('error', 'student provider')}",
                 "elapsed_ms": round(elapsed, 1),
             }
+        # Normalize the student payload to the {sem: [[args]]} contract the
+        # comparison expects. ``compute_extensions`` returns per-semantics
+        # extensions nested under ``all_extensions`` (each value a
+        # ``{extensions:[[args]], count, sizes, all_members}`` wrapper); the
+        # top-level ``extensions`` is only the DEFAULT set, also wrapped. Reading
+        # the wrapper raw makes _normalize_extensions extract [] → a SPURIOUS
+        # disagreement even when both backends compute the same set (PR3
+        # firsthand probe, anti-théâtre #1019).
+        normalized: Dict[str, List[List[str]]] = {}
+        all_ext = result.get("all_extensions")
+        if isinstance(all_ext, dict):
+            for _sem, _payload in all_ext.items():
+                if isinstance(_payload, dict):
+                    _exts = _payload.get("extensions", [])
+                elif isinstance(_payload, list):
+                    _exts = _payload
+                else:
+                    _exts = []
+                if isinstance(_exts, list):
+                    normalized[_sem] = [e for e in _exts if isinstance(e, list)]
         return {
-            "extensions": result.get("extensions", {}),
+            "extensions": normalized,
             "available": True,
             "note": "abs_arg_dung_student",
             "elapsed_ms": round(elapsed, 1),
