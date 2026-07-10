@@ -154,6 +154,7 @@ __all__ = [
     "_invoke_dung_extensions",
     "_python_dung_fallback",
     "_compare_dung_backends",
+    "compare_all_axes",
     "_invoke_formal_synthesis",
     "_invoke_narrative_synthesis",
     "_invoke_text_to_kb",
@@ -3083,9 +3084,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             if supports:
                 context["supports"] = supports
         except Exception as e:
-            logger.info(
-                "Bipolar translator unavailable (%s); absent_no_translator.", e
-            )
+            logger.info("Bipolar translator unavailable (%s); absent_no_translator.", e)
 
     try:
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
@@ -3131,9 +3130,7 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             if contraries:
                 context["contraries"] = contraries
         except Exception as e:
-            logger.info(
-                "ABA translator unavailable (%s); absent_no_translator.", e
-            )
+            logger.info("ABA translator unavailable (%s); absent_no_translator.", e)
 
     try:
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
@@ -3244,9 +3241,7 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             if derived_rules:
                 context["defeasible_rules"] = derived_rules
         except Exception as e:
-            logger.info(
-                "ASPIC+ translator unavailable (%s); absent_no_translator.", e
-            )
+            logger.info("ASPIC+ translator unavailable (%s); absent_no_translator.", e)
 
     # Build meaningful rules from upstream data
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
@@ -5134,9 +5129,7 @@ async def _invoke_propositional_logic(
     _raw_upstream = context.get("formulas")
     if isinstance(_raw_upstream, str):
         _raw_upstream = [_raw_upstream]
-    upstream_formulas: List[str] = [
-        str(f).strip() for f in (_raw_upstream or []) if f
-    ]
+    upstream_formulas: List[str] = [str(f).strip() for f in (_raw_upstream or []) if f]
     formulas: Optional[List[str]] = None
     argument_mapping: Dict[str, str] = {}
     shared_atoms: List[str] = []
@@ -6716,14 +6709,10 @@ _COMPARE_DUNG_SEMANTICS: Tuple[str, ...] = (
 
 # A backend fn: (arguments, attacks) -> {"extensions": {sem: [[arg,...],...]},
 # "available": bool, "note": str}. Fakes injected for unit tests (no JVM).
-_DungBackendFn = Callable[
-    [List[str], List[List[str]]], Awaitable[Dict[str, Any]]
-]
+_DungBackendFn = Callable[[List[str], List[List[str]]], Awaitable[Dict[str, Any]]]
 
 
-def _normalize_extensions(
-    raw: Any, semantics: Tuple[str, ...]
-) -> List[List[str]]:
+def _normalize_extensions(raw: Any, semantics: Tuple[str, ...]) -> List[List[str]]:
     """Coerce a backend's per-semantics extension payload to a flat list.
 
     Tolerates the two producer shapes (``analyze_multi_semantics`` returns
@@ -6969,7 +6958,375 @@ async def _compare_dung_backends(
 
 def _pairs(items: List[str]) -> List[Tuple[str, str]]:
     """Yield unordered pairs for cross-backend disagreement notes."""
-    return [(items[i], items[j]) for i in range(len(items)) for j in range(i + 1, len(items))]
+    return [
+        (items[i], items[j])
+        for i in range(len(items))
+        for j in range(i + 1, len(items))
+    ]
+
+
+# --------------------------------------------------------------------------- #
+# I6 #1437 — Unified multi-axis comparison harness (NORTH-STAR consolidation)  #
+# --------------------------------------------------------------------------- #
+#
+# We now have THREE independent multi-backend comparison axes:
+#   * fol     — compare_fol_backends (fol_handler.py, multi-prover FOL)
+#   * dung    — _compare_dung_backends (this module, Tweety vs student Dung)
+#   * sophism — compare_sophism_backends (neuro_symbolic_arbitrator.py,
+#                neural vs neuro-symbolic Walton-CQ arbitrage)
+#
+# The NORTH-STAR wants them selectable/comparable from a SINGLE point. This
+# harness is a ROUTER + UNIFORM-SHAPE AGGREGATOR only — it never re-implements a
+# comparator, never invents cross-axis translation (each axis reasons over a
+# different input shape), and NEVER auto-reconciles a disagreement (a
+# disagreement is a result, anti-pendule #1019, mirroring all 3 axes). An axis
+# or backend that cannot run is reported ``available=False`` (fail-loud), never
+# silently omitted.
+#
+# The 3 comparators are injected (DI) so unit tests run JVM/LLM-free with
+# deterministic fakes; the defaults lazy-import the real comparators.
+
+_AXIS_NAMES = ("fol", "dung", "sophism")
+
+# An injected comparator fn for an axis: returns the axis's NATIVE payload (the
+# raw dict/dataclass the real comparator returns). The harness then normalizes
+# it to the uniform shape via the per-axis _normalize_* helper below.
+_AxisFn = Callable[..., Awaitable[Any]]
+
+
+async def _default_fol_axis(
+    belief_set: Any, compare_fn: Optional[_AxisFn] = None
+) -> Any:
+    """Lazy route to compare_fol_backends. Returns its native payload.
+
+    ``compare_fn`` lets a test inject a fake FOL comparison without a JVM.
+    """
+    if compare_fn is not None:
+        return await compare_fn(belief_set)
+    from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
+
+    handler = FOLHandler()
+    return await handler.compare_fol_backends(belief_set)
+
+
+async def _default_dung_axis(
+    arguments: List[str],
+    attacks: List[List[str]],
+    compare_fn: Optional[_AxisFn] = None,
+) -> Any:
+    """Lazy route to _compare_dung_backends. Returns its native payload."""
+    if compare_fn is not None:
+        return await compare_fn(arguments, attacks)
+    return await _compare_dung_backends(arguments, attacks)
+
+
+async def _default_sophism_axis(
+    candidates: Any,
+    span_text_for: Any,
+    compare_fn: Optional[_AxisFn] = None,
+    **kwargs: Any,
+) -> Dict[str, Any]:
+    """Lazy route to compare_sophism_backends. Returns its NATIVE payload cast to
+    a plain dict (the real comparator returns a SophismComparison dataclass)."""
+    if compare_fn is not None:
+        res = await compare_fn(candidates, span_text_for=span_text_for, **kwargs)
+    else:
+        from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator import (
+            compare_sophism_backends,
+        )
+
+        res = compare_sophism_backends(  # sync comparator
+            candidates, span_text_for=span_text_for, **kwargs
+        )
+    # Normalize the SophismComparison dataclass to a plain dict so the harness
+    # treats every axis uniformly downstream.
+    if isinstance(res, dict):
+        return res
+    # dataclass-like: read the known public fields by name.
+    return {
+        "neural_ids": getattr(res, "neural_ids", frozenset()),
+        "neuro_symbolic_ids": getattr(res, "neuro_symbolic_ids", frozenset()),
+        "eliminated_ids": getattr(res, "eliminated_ids", frozenset()),
+        "arbitrated": getattr(res, "arbitrated", None),
+        "span_coverage": getattr(res, "span_coverage", None),
+    }
+
+
+def _normalize_fol_payload(payload: Any) -> Dict[str, Any]:
+    """FolHandler.compare_fol_backends → uniform axis shape.
+
+    Native: {backends:{name:{verdict,note,elapsed_ms,available}},
+             decided:{name:bool}, agreement:bool|None, disagreement:[str]}.
+    """
+    if not isinstance(payload, dict):
+        return {
+            "available": False,
+            "agreement": None,
+            "disagreements": [],
+            "backends": {},
+            "timings_ms": {},
+        }
+    backends = payload.get("backends", {}) or {}
+    available = any(
+        isinstance(b, dict) and b.get("available") for b in backends.values()
+    )
+    timings = {
+        n: float(b.get("elapsed_ms", 0.0))
+        for n, b in backends.items()
+        if isinstance(b, dict)
+    }
+    return {
+        "available": available,
+        "agreement": payload.get("agreement"),
+        "disagreements": list(payload.get("disagreement", []) or []),
+        "backends": backends,
+        "timings_ms": timings,
+    }
+
+
+def _normalize_dung_payload(payload: Any) -> Dict[str, Any]:
+    """_compare_dung_backends → uniform axis shape.
+
+    Native: {backends:{name:{extensions,available,note,elapsed_ms}},
+             comparison:{semantics,per_semantics:{sem:{agreement,decided,
+             disagreement}}, overall_agreement}, statistics}.
+    Disagreements are gathered per-semantics (verbatim, never reconciled).
+    """
+    if not isinstance(payload, dict):
+        return {
+            "available": False,
+            "agreement": None,
+            "disagreements": [],
+            "backends": {},
+            "timings_ms": {},
+        }
+    backends = payload.get("backends", {}) or {}
+    available = any(
+        isinstance(b, dict) and b.get("available") for b in backends.values()
+    )
+    timings = {
+        n: float(b.get("elapsed_ms", 0.0))
+        for n, b in backends.items()
+        if isinstance(b, dict)
+    }
+    comparison = payload.get("comparison", {}) or {}
+    per_sem = comparison.get("per_semantics", {}) or {}
+    disagreements: List[str] = []
+    for sem, per in per_sem.items():
+        if isinstance(per, dict):
+            for note in per.get("disagreement", []) or []:
+                disagreements.append(f"[{sem}] {note}")
+    return {
+        "available": available,
+        "agreement": comparison.get("overall_agreement"),
+        "disagreements": disagreements,
+        "backends": backends,
+        "timings_ms": timings,
+    }
+
+
+def _normalize_sophism_payload(payload: Any) -> Dict[str, Any]:
+    """compare_sophism_backends → uniform axis shape.
+
+    Native: {neural_ids, neuro_symbolic_ids, eliminated_ids, arbitrated,
+             span_coverage}. The axis's "disagreement" is the set of candidates
+    the symbolic layer ELIMINATED relative to the neural baseline (a genuine
+    divergence in detection outcome, surfaced verbatim, never reconciled).
+    Agreement = True when nothing was eliminated (neuro-symbolic == neural);
+    None when the symbolic layer was honest-absent (no genuine CQ evaluation).
+    """
+    if not isinstance(payload, dict):
+        return {
+            "available": False,
+            "agreement": None,
+            "disagreements": [],
+            "backends": {},
+            "timings_ms": {},
+        }
+    neural = payload.get("neural_ids", frozenset()) or frozenset()
+    neuro = payload.get("neuro_symbolic_ids", frozenset()) or frozenset()
+    eliminated = payload.get("eliminated_ids", frozenset()) or frozenset()
+    # honest-absent = the symbolic layer had no genuine signal (arbitrated is
+    # None or its honest_absent flag is True) → agreement indeterminate, not a
+    # fabricated agreement.
+    arbitrated = payload.get("arbitrated")
+    honest_absent = True
+    if arbitrated is not None and isinstance(arbitrated, dict):
+        honest_absent = bool(arbitrated.get("honest_absent", True))
+    elif arbitrated is not None:
+        honest_absent = bool(getattr(arbitrated, "honest_absent", True))
+    if honest_absent:
+        agreement: Optional[bool] = None
+    elif eliminated:
+        agreement = False
+    else:
+        agreement = True
+    disagreements = [f"eliminated: {cid}" for cid in sorted(eliminated)]
+    backends = {
+        "neural": {"available": True},
+        "neuro_symbolic": {"available": not honest_absent},
+    }
+    return {
+        "available": True,  # the axis ran (the neural backend always exists)
+        "agreement": agreement,
+        "disagreements": disagreements,
+        "backends": backends,
+        "timings_ms": {},  # sync comparator has no per-backend timing
+    }
+
+
+_AXIS_NORMALIZERS: Dict[str, Callable[[Any], Dict[str, Any]]] = {
+    "fol": _normalize_fol_payload,
+    "dung": _normalize_dung_payload,
+    "sophism": _normalize_sophism_payload,
+}
+
+
+async def compare_all_axes(
+    *,
+    axes: Optional[List[str]] = None,
+    fol_belief_set: Any = None,
+    fol_compare_fn: Optional[_AxisFn] = None,
+    dung_arguments: Optional[List[str]] = None,
+    dung_attacks: Optional[List[List[str]]] = None,
+    dung_compare_fn: Optional[_AxisFn] = None,
+    sophism_candidates: Any = None,
+    sophism_span_text_for: Any = None,
+    sophism_compare_fn: Optional[_AxisFn] = None,
+    sophism_kwargs: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Run 1..N comparison axes from a single point and report uniformly (I6).
+
+    The NORTH-STAR consolidation: route each selected axis to its EXISTING
+    comparator (no re-implementation), and return a report of uniform shape per
+    axis. Disagreements are surfaced **verbatim and NEVER auto-reconciled** (a
+    disagreement is a result, anti-pendule #1019). An axis that cannot run is
+    reported ``available=False`` (fail-loud), never silently omitted.
+
+    Each axis reasons over a DIFFERENT input shape (FOL belief set, Dung
+    arguments+attacks, sophism candidates+span_text_for) — there is no invented
+    cross-axis translation. A caller supplies the inputs for the axes it wants
+    run; axes with no input are skipped (unless explicitly listed, then reported
+    available=False).
+
+    The 3 comparators are injectable (``*_compare_fn``) so unit tests run
+    JVM/LLM-free with deterministic fakes; the defaults lazy-import the real
+    comparators.
+
+    Args:
+        axes: subset of {"fol","dung","sophism"} to run. Defaults to every axis
+            whose input was supplied (``fol_belief_set`` / ``dung_arguments`` /
+            ``sophism_candidates``).
+        fol_belief_set: FOL belief set (string or Java object) for the fol axis.
+        fol_compare_fn: injected FOL comparator (test override).
+        dung_arguments / dung_attacks: Dung arguments / attacks for the dung
+            axis.
+        dung_compare_fn: injected Dung comparator (test override).
+        sophism_candidates: sequence of sophism candidates for the sophism axis.
+        sophism_span_text_for: callable(candidate) -> span text for the bridge.
+        sophism_compare_fn: injected sophism comparator (test override).
+        sophism_kwargs: extra kwargs forwarded to the sophism comparator
+            (classifier / cq_evaluator / solver / semantics / conflict_policy).
+
+    Returns::
+
+        {
+          "axes": {
+            axis: {
+              "available": bool,
+              "agreement": Optional[bool],   # all-agree/disagree/<2 decided
+              "disagreements": [str, ...],   # verbatim, never reconciled
+              "backends": {...},             # native per-backend detail
+              "timings_ms": {backend: float},
+            }
+          },
+          "overall": {
+            "axes_run": [axis, ...],
+            "any_disagreement": bool,        # True if ANY axis disagrees
+          },
+        }
+    """
+    # Resolve which axes to run.
+    supplied = {
+        "fol": fol_belief_set is not None,
+        "dung": dung_arguments is not None,
+        "sophism": sophism_candidates is not None,
+    }
+    if axes is None:
+        selected = [a for a in _AXIS_NAMES if supplied[a]]
+    else:
+        bad = [a for a in axes if a not in _AXIS_NAMES]
+        if bad:
+            raise ValueError(
+                f"Unknown axis name(s) {bad}; expected subset of {_AXIS_NAMES}"
+            )
+        selected = list(axes)
+
+    report_axes: Dict[str, Dict[str, Any]] = {}
+    any_disagree = False
+
+    for axis in selected:
+        normalizer = _AXIS_NORMALIZERS[axis]
+        try:
+            if axis == "fol":
+                if fol_belief_set is None and fol_compare_fn is None:
+                    payload: Any = None
+                else:
+                    payload = await _default_fol_axis(
+                        fol_belief_set, compare_fn=fol_compare_fn
+                    )
+            elif axis == "dung":
+                if dung_arguments is None and dung_compare_fn is None:
+                    payload = None
+                else:
+                    payload = await _default_dung_axis(
+                        dung_arguments or [],
+                        dung_attacks or [],
+                        compare_fn=dung_compare_fn,
+                    )
+            else:  # sophism
+                if sophism_candidates is None and sophism_compare_fn is None:
+                    payload = None
+                else:
+                    payload = await _default_sophism_axis(
+                        sophism_candidates,
+                        sophism_span_text_for,
+                        compare_fn=sophism_compare_fn,
+                        **(sophism_kwargs or {}),
+                    )
+            if payload is None:
+                report_axes[axis] = {
+                    "available": False,
+                    "agreement": None,
+                    "disagreements": [],
+                    "backends": {},
+                    "timings_ms": {},
+                    "note": f"axis '{axis}' selected but no input supplied",
+                }
+                continue
+            normalized = normalizer(payload)
+            report_axes[axis] = normalized
+            if normalized["agreement"] is False:
+                any_disagree = True
+        except Exception as e:
+            # A buggy comparator never poisons the harness — the axis is
+            # reported unavailable (fail-loud), other axes still run.
+            report_axes[axis] = {
+                "available": False,
+                "agreement": None,
+                "disagreements": [],
+                "backends": {},
+                "timings_ms": {},
+                "note": f"unavailable: {e}",
+            }
+
+    return {
+        "axes": report_axes,
+        "overall": {
+            "axes_run": list(report_axes.keys()),
+            "any_disagreement": any_disagree,
+        },
+    }
 
 
 async def _invoke_formal_synthesis(

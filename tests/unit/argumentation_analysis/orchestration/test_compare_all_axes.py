@@ -1,0 +1,358 @@
+"""I6 #1437 — compare_all_axes unified multi-axis comparison harness tests.
+
+Mirrors the anti-théâtre contract of all 3 underlying comparators (#1243 FOL,
+I5 Dung, I1 sophism): DISAGREEMENT per axis is surfaced, NEVER auto-reconciled
+(a disagreement is a result, not a bug to mask). An axis/backend that cannot run
+is reported ``available=False`` (fail-loud), never silently omitted. The harness
+is a router + uniform-shape aggregator only — it reuses the 3 comparators
+(injected here as deterministic fakes) and never re-implements them.
+
+No JVM, no real LLM, synthetic opaque inputs only (privacy HARD).
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+import pytest
+
+from argumentation_analysis.orchestration.invoke_callables import (
+    compare_all_axes,
+    _normalize_dung_payload,
+    _normalize_fol_payload,
+    _normalize_sophism_payload,
+)
+
+# -- fake comparators (mirror the NATIVE shapes of the 3 real comparators) -----
+
+
+def _fol_fake(verdicts: Dict[str, Any], agreement: Any, disagreement: List[str]):
+    """Build a fake FOL comparator returning the native FOL shape."""
+
+    async def _fn(belief_set: Any) -> Dict[str, Any]:
+        backends = {
+            n: {
+                "verdict": v,
+                "note": "fake",
+                "elapsed_ms": 1.0,
+                "available": True,
+            }
+            for n, v in verdicts.items()
+        }
+        decided = {n: v for n, v in verdicts.items() if isinstance(v, bool)}
+        return {
+            "backends": backends,
+            "decided": decided,
+            "agreement": agreement,
+            "disagreement": list(disagreement),
+        }
+
+    return _fn
+
+
+def _dung_fake(per_sem: Dict[str, Dict[str, Any]], overall: Any):
+    """Build a fake Dung comparator returning the native Dung shape."""
+
+    async def _fn(arguments: List[str], attacks: List[List[str]]) -> Dict[str, Any]:
+        return {
+            "backends": {
+                "tweety": {
+                    "extensions": {},
+                    "available": True,
+                    "note": "fake",
+                    "elapsed_ms": 1.0,
+                },
+                "student": {
+                    "extensions": {},
+                    "available": True,
+                    "note": "fake",
+                    "elapsed_ms": 1.0,
+                },
+            },
+            "comparison": {
+                "semantics": list(per_sem.keys()),
+                "per_semantics": per_sem,
+                "overall_agreement": overall,
+            },
+            "statistics": {
+                "arguments_count": len(arguments),
+                "attacks_count": len(attacks),
+                "backends_count": 2,
+            },
+        }
+
+    return _fn
+
+
+def _sophism_fake(eliminated: List[str], honest_absent: bool = False):
+    """Build a fake sophism comparator returning a SophismComparison-like dict."""
+
+    async def _fn(candidates: Any, *, span_text_for: Any, **kw: Any) -> Dict[str, Any]:
+        neural = [c for c in (candidates or [])]
+        neuro = [c for c in neural if c not in eliminated]
+        return {
+            "neural_ids": frozenset(neural),
+            "neuro_symbolic_ids": frozenset(neuro),
+            "eliminated_ids": frozenset(eliminated),
+            "arbitrated": {"honest_absent": honest_absent},
+            "span_coverage": None,
+        }
+
+    return _fn
+
+
+# -- axis selection -----------------------------------------------------------
+
+
+class TestAxisSelection:
+    async def test_default_selects_only_supplied_axes(self):
+        # Only dung input supplied → only dung runs.
+        r = await compare_all_axes(
+            dung_arguments=["s0", "s1"],
+            dung_attacks=[["s0", "s1"]],
+            dung_compare_fn=_dung_fake(
+                {"grounded": {"agreement": True, "decided": ["a"], "disagreement": []}},
+                True,
+            ),
+        )
+        assert r["overall"]["axes_run"] == ["dung"]
+        assert "fol" not in r["axes"]
+
+    async def test_explicit_axes_overrides_supply_detection(self):
+        # Explicit axes=["fol"] even though dung is supplied → only fol runs.
+        r = await compare_all_axes(
+            axes=["fol"],
+            fol_belief_set="dummy",
+            fol_compare_fn=_fol_fake({"e": True, "p": True}, True, []),
+            dung_arguments=["s0"],
+            dung_attacks=[],
+            dung_compare_fn=_dung_fake(
+                {"grounded": {"agreement": True, "decided": ["a"], "disagreement": []}},
+                True,
+            ),
+        )
+        assert r["overall"]["axes_run"] == ["fol"]
+
+    async def test_unknown_axis_raises(self):
+        with pytest.raises(ValueError, match="Unknown axis"):
+            await compare_all_axes(axes=["bogus"])
+
+    async def test_all_three_axes_run(self):
+        r = await compare_all_axes(
+            fol_belief_set="dummy",
+            fol_compare_fn=_fol_fake({"e": True}, True, []),
+            dung_arguments=["s0"],
+            dung_attacks=[],
+            dung_compare_fn=_dung_fake(
+                {"grounded": {"agreement": True, "decided": ["a"], "disagreement": []}},
+                True,
+            ),
+            sophism_candidates=["c0"],
+            sophism_span_text_for=lambda c: "x",
+            sophism_compare_fn=_sophism_fake([], honest_absent=False),
+        )
+        assert sorted(r["overall"]["axes_run"]) == ["dung", "fol", "sophism"]
+
+
+# -- per-axis agreement / disagreement ---------------------------------------
+
+
+class TestPerAxisAgreement:
+    async def test_fol_disagreement_surfaced_not_reconciled(self):
+        r = await compare_all_axes(
+            fol_belief_set="dummy",
+            fol_compare_fn=_fol_fake(
+                {"e": True, "p": False}, False, ["DISAGREEMENT (NOT reconciled): e=p"]
+            ),
+        )
+        assert r["axes"]["fol"]["agreement"] is False
+        assert "NOT reconciled" in r["axes"]["fol"]["disagreements"][0]
+        assert r["overall"]["any_disagreement"] is True
+
+    async def test_dung_disagreement_per_semantics_surfaced(self):
+        r = await compare_all_axes(
+            dung_arguments=["s0", "s1"],
+            dung_attacks=[["s0", "s1"]],
+            dung_compare_fn=_dung_fake(
+                {
+                    "grounded": {
+                        "agreement": False,
+                        "decided": ["t", "s"],
+                        "disagreement": ["t vs s"],
+                    },
+                    "preferred": {
+                        "agreement": True,
+                        "decided": ["t", "s"],
+                        "disagreement": [],
+                    },
+                },
+                False,
+            ),
+        )
+        # Dung disagreements are gathered per-semantics with the [sem] prefix.
+        dis = r["axes"]["dung"]["disagreements"]
+        assert any("[grounded]" in d and "t vs s" in d for d in dis)
+        assert not any("preferred" in d for d in dis)
+        assert r["axes"]["dung"]["agreement"] is False
+        assert r["overall"]["any_disagreement"] is True
+
+    async def test_sophism_elimination_is_disagreement(self):
+        # The symbolic layer eliminated cand-1 → neuro-symbolic != neural.
+        r = await compare_all_axes(
+            sophism_candidates=["c0", "c1"],
+            sophism_span_text_for=lambda c: "x",
+            sophism_compare_fn=_sophism_fake(["c1"], honest_absent=False),
+        )
+        assert r["axes"]["sophism"]["agreement"] is False
+        assert any("eliminated: c1" in d for d in r["axes"]["sophism"]["disagreements"])
+        assert r["overall"]["any_disagreement"] is True
+
+    async def test_sophism_honest_absent_is_indeterminate_not_agreement(self):
+        # No genuine CQ evaluation → honest-absent → agreement None, NOT a
+        # fabricated True agreement (anti-théâtre #1019).
+        r = await compare_all_axes(
+            sophism_candidates=["c0", "c1"],
+            sophism_span_text_for=lambda c: "x",
+            sophism_compare_fn=_sophism_fake([], honest_absent=True),
+        )
+        assert r["axes"]["sophism"]["agreement"] is None
+        assert r["axes"]["sophism"]["disagreements"] == []
+        assert r["overall"]["any_disagreement"] is False
+
+    async def test_full_agreement_all_axes(self):
+        r = await compare_all_axes(
+            fol_belief_set="dummy",
+            fol_compare_fn=_fol_fake({"e": True, "p": True}, True, []),
+            dung_arguments=["s0"],
+            dung_attacks=[],
+            dung_compare_fn=_dung_fake(
+                {
+                    "grounded": {
+                        "agreement": True,
+                        "decided": ["a", "b"],
+                        "disagreement": [],
+                    }
+                },
+                True,
+            ),
+            sophism_candidates=["c0"],
+            sophism_span_text_for=lambda c: "x",
+            sophism_compare_fn=_sophism_fake([], honest_absent=False),
+        )
+        for axis in ("fol", "dung", "sophism"):
+            assert r["axes"][axis]["agreement"] is True
+        assert r["overall"]["any_disagreement"] is False
+
+
+# -- unavailable / fail-loud -------------------------------------------------
+
+
+class TestUnavailableFailLoud:
+    async def test_axis_no_input_reported_unavailable(self):
+        # fol explicitly selected but no belief set supplied → available=False,
+        # NOT omitted.
+        r = await compare_all_axes(axes=["fol"])
+        assert r["axes"]["fol"]["available"] is False
+        assert r["axes"]["fol"]["agreement"] is None
+        assert "no input supplied" in r["axes"]["fol"]["note"]
+
+    async def test_buggy_comparator_reported_not_poisoning(self):
+        # A comparator that raises must NOT poison the harness.
+        async def _boom(belief_set):
+            raise RuntimeError("fol exploded")
+
+        r = await compare_all_axes(
+            fol_belief_set="dummy",
+            fol_compare_fn=_boom,
+            dung_arguments=["s0"],
+            dung_attacks=[],
+            dung_compare_fn=_dung_fake(
+                {"grounded": {"agreement": True, "decided": ["a"], "disagreement": []}},
+                True,
+            ),
+        )
+        assert r["axes"]["fol"]["available"] is False
+        assert "exploded" in r["axes"]["fol"]["note"]
+        # The dung axis still ran.
+        assert r["axes"]["dung"]["available"] is True
+
+
+# -- payload normalizers ------------------------------------------------------
+
+
+class TestNormalizers:
+    def test_fol_normalizer_extracts_timings(self):
+        out = _normalize_fol_payload(
+            {
+                "backends": {
+                    "e": {
+                        "verdict": True,
+                        "note": "n",
+                        "elapsed_ms": 5.0,
+                        "available": True,
+                    }
+                },
+                "decided": {"e": True},
+                "agreement": True,
+                "disagreement": [],
+            }
+        )
+        assert out["available"] is True
+        assert out["timings_ms"] == {"e": 5.0}
+        assert out["agreement"] is True
+
+    def test_dung_normalizer_gathers_per_semantics_disagreements(self):
+        out = _normalize_dung_payload(
+            {
+                "backends": {
+                    "t": {
+                        "available": True,
+                        "elapsed_ms": 2.0,
+                        "extensions": {},
+                        "note": "",
+                    }
+                },
+                "comparison": {
+                    "semantics": ["grounded", "preferred"],
+                    "per_semantics": {
+                        "grounded": {
+                            "agreement": False,
+                            "decided": ["t", "s"],
+                            "disagreement": ["t vs s"],
+                        },
+                        "preferred": {
+                            "agreement": True,
+                            "decided": ["t", "s"],
+                            "disagreement": [],
+                        },
+                    },
+                    "overall_agreement": False,
+                },
+                "statistics": {},
+            }
+        )
+        assert out["agreement"] is False
+        assert len(out["disagreements"]) == 1
+        assert "[grounded]" in out["disagreements"][0]
+
+    def test_sophism_normalizer_honest_absent(self):
+        out = _normalize_sophism_payload(
+            {
+                "neural_ids": frozenset({"c0"}),
+                "neuro_symbolic_ids": frozenset({"c0"}),
+                "eliminated_ids": frozenset(),
+                "arbitrated": {"honest_absent": True},
+            }
+        )
+        assert out["agreement"] is None  # honest-absent → indeterminate
+
+    def test_normalizers_handle_bad_payload(self):
+        for fn in (
+            _normalize_fol_payload,
+            _normalize_dung_payload,
+            _normalize_sophism_payload,
+        ):
+            out = fn("not-a-dict")
+            assert out["available"] is False
+            assert out["agreement"] is None
+            assert out["disagreements"] == []
