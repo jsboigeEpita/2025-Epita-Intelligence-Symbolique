@@ -3223,6 +3223,29 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     """
     args = _extract_arguments_from_context(input_text, context)
 
+    # TR-2 #1425: when the caller supplied no genuine defeasible rules, derive
+    # them from the real text + extracted arguments (mirror TR-1 bipolar/ABA).
+    # The translator validates each premise→conclusion link against the real
+    # argument inventory — rules citing unknown ids are dropped, so an empty
+    # result keeps the honest absent_no_translator status (anti-théâtre #1019).
+    # Persisting into ``context["defeasible_rules"]`` lets
+    # _record_structured_arg_status label the axis "evaluated" via the existing
+    # has_genuine_input path. Caller-supplied rules are never overridden, and the
+    # honest-absent gate is not modified.
+    if not context.get("defeasible_rules"):
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_aspic_rules,
+            )
+
+            derived_rules = await translate_to_aspic_rules(input_text, args)
+            if derived_rules:
+                context["defeasible_rules"] = derived_rules
+        except Exception as e:
+            logger.info(
+                "ASPIC+ translator unavailable (%s); absent_no_translator.", e
+            )
+
     # Build meaningful rules from upstream data
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
     fallacies = (

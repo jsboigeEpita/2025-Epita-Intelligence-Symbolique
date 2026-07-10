@@ -21,11 +21,18 @@ import pytest
 
 from argumentation_analysis.orchestration.structured_arg_translator import (
     _build_inventory,
+    _validate_aspic_rules,
     _validate_contraries,
     _validate_supports,
     translate_to_aba_contraries,
+    translate_to_aspic_rules,
     translate_to_bipolar_supports,
 )
+
+
+def _atom(text: str, prefix: str = "arg") -> str:
+    """Trivial deterministic atom_fn for validation tests (no _pl_atom import)."""
+    return f"{prefix}:{text}"
 
 
 # -- _build_inventory --------------------------------------------------------
@@ -341,3 +348,220 @@ class TestHandlerWiringPersistsToContext:
         ctx: Dict[str, Any] = {"arguments": ["Alpha", "Beta"]}
         await _invoke_bipolar("text", ctx)
         assert "supports" not in ctx
+
+
+# -- TR-2 #1425: ASPIC+ defeasible-rule translator ---------------------------
+
+
+class TestValidateAspicRules:
+    def test_keeps_valid_rule_mapped_to_atoms(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
+        data = {"rules": [
+            {"premises": ["arg1", "arg2"], "conclusion": "arg3", "rationale": "r"},
+        ]}
+        out = _validate_aspic_rules(data, arg_by_id, _atom)
+        assert out == [
+            {
+                "head": "arg:Gamma",
+                "body": ["arg:Alpha", "arg:Beta"],
+                "name": "def_rule_1",
+            }
+        ]
+
+    def test_drops_rule_with_unknown_premise(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"rules": [
+            {"premises": ["arg1", "arg9"], "conclusion": "arg2"},  # arg9 unknown
+        ]}
+        assert _validate_aspic_rules(data, arg_by_id, _atom) == []
+
+    def test_drops_rule_with_unknown_conclusion(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"rules": [
+            {"premises": ["arg1"], "conclusion": "arg9"},  # unknown conclusion
+        ]}
+        assert _validate_aspic_rules(data, arg_by_id, _atom) == []
+
+    def test_drops_rule_with_no_premises(self):
+        arg_by_id = {"arg1": "Alpha"}
+        data = {"rules": [{"premises": [], "conclusion": "arg1"}]}
+        assert _validate_aspic_rules(data, arg_by_id, _atom) == []
+
+    def test_removes_conclusion_from_premises_keeps_rest(self):
+        arg_by_id = {"arg1": "Alpha", "arg3": "Gamma"}
+        data = {"rules": [
+            {"premises": ["arg1", "arg3"], "conclusion": "arg3"},  # arg3 dropped
+        ]}
+        out = _validate_aspic_rules(data, arg_by_id, _atom)
+        assert out == [
+            {"head": "arg:Gamma", "body": ["arg:Alpha"], "name": "def_rule_1"}
+        ]
+
+    def test_drops_self_only_rule(self):
+        arg_by_id = {"arg3": "Gamma"}
+        data = {"rules": [{"premises": ["arg3"], "conclusion": "arg3"}]}
+        assert _validate_aspic_rules(data, arg_by_id, _atom) == []
+
+    def test_dedups_identical_rules(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"rules": [
+            {"premises": ["arg1"], "conclusion": "arg2"},
+            {"premises": ["arg1"], "conclusion": "arg2"},
+        ]}
+        out = _validate_aspic_rules(data, arg_by_id, _atom)
+        assert out == [
+            {"head": "arg:Beta", "body": ["arg:Alpha"], "name": "def_rule_1"}
+        ]
+
+    def test_dedups_repeated_body_atoms(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"rules": [
+            {"premises": ["arg1", "arg1"], "conclusion": "arg2"},
+        ]}
+        out = _validate_aspic_rules(data, arg_by_id, _atom)
+        assert out[0]["body"] == ["arg:Alpha"]
+
+    def test_premises_as_string_normalized(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"rules": [{"premises": "arg1", "conclusion": "arg2"}]}
+        out = _validate_aspic_rules(data, arg_by_id, _atom)
+        assert out == [
+            {"head": "arg:Beta", "body": ["arg:Alpha"], "name": "def_rule_1"}
+        ]
+
+    def test_empty_or_malformed_returns_empty(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        assert _validate_aspic_rules({}, arg_by_id, _atom) == []
+        assert _validate_aspic_rules({"rules": []}, arg_by_id, _atom) == []
+        assert _validate_aspic_rules({"rules": "nope"}, arg_by_id, _atom) == []
+        assert _validate_aspic_rules(
+            {"rules": [{"premises": 1, "conclusion": "arg1"}]},  # type: ignore[dict-item]
+            arg_by_id,
+            _atom,
+        ) == []
+
+
+class TestAspicTranslator:
+    async def test_empty_llm_output_returns_empty(self, monkeypatch):
+        _patch_llm(monkeypatch, {"rules": []})
+        out = await translate_to_aspic_rules("some text", ["a", "b"])
+        assert out == []
+
+    async def test_no_inventory_returns_empty(self, monkeypatch):
+        _patch_llm(monkeypatch, {"rules": [
+            {"premises": ["arg1"], "conclusion": "arg2"},
+        ]})
+        out = await translate_to_aspic_rules("text", [])
+        assert out == []
+
+    async def test_only_fabricated_rules_dropped(self, monkeypatch):
+        _patch_llm(monkeypatch, {"rules": [
+            {"premises": ["arg8"], "conclusion": "arg9"},   # unknown ids
+            {"premises": ["phantom"], "conclusion": "ghost"},
+        ]})
+        out = await translate_to_aspic_rules("text", ["a", "b"])
+        assert out == []
+
+    async def test_returns_validated_rules_with_real_atoms(self, monkeypatch):
+        # Uses the real _pl_atom; assert head/body are the deterministic atoms
+        # for the cited canonical argument texts.
+        from argumentation_analysis.orchestration.invoke_callables import _pl_atom
+
+        _patch_llm(monkeypatch, {"rules": [
+            {"premises": ["arg1", "arg2"], "conclusion": "arg3"},
+            {"premises": ["arg1"], "conclusion": "arg9"},  # dropped (unknown)
+        ]})
+        out = await translate_to_aspic_rules("text", ["Alpha", "Beta", "Gamma"])
+        assert len(out) == 1
+        assert out[0]["head"] == _pl_atom("Gamma", prefix="arg")
+        assert out[0]["body"] == [
+            _pl_atom("Alpha", prefix="arg"),
+            _pl_atom("Beta", prefix="arg"),
+        ]
+        assert out[0]["name"] == "def_rule_1"
+
+
+def _inject_fake_aspic_module(monkeypatch, payload):
+    """Inject a fake ASPICHandler so _invoke_aspic runs without a JVM."""
+    fake = types.ModuleType("argumentation_analysis.agents.core.logic.aspic_handler")
+
+    class _FakeASPICHandler:
+        def analyze_aspic_framework(self, strict, defeasible, axioms=None):
+            return payload
+
+    fake.ASPICHandler = _FakeASPICHandler  # type: ignore[attr-defined]
+    monkeypatch.setitem(
+        sys.modules,
+        "argumentation_analysis.agents.core.logic.aspic_handler",
+        fake,
+    )
+
+
+class TestAspicHandlerWiring:
+    """The lazy translator call inside _invoke_aspic must persist genuine
+    defeasible rules into ``context`` so _record_structured_arg_status labels the
+    axis ``evaluated`` — and must stay absent when nothing genuine is derived."""
+
+    async def test_translates_and_persists_defeasible_rules(self, monkeypatch):
+        _inject_fake_aspic_module(monkeypatch, {"extensions": []})
+        genuine = [{"head": "arg:h", "body": ["arg:b"], "name": "def_rule_1"}]
+
+        async def _fake_rules(text, args):
+            return genuine
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_aspic_rules",
+            _fake_rules,
+        )
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_aspic
+
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
+        }
+        await _invoke_aspic("source text", ctx)
+        assert ctx.get("defeasible_rules") == genuine
+
+    async def test_does_not_override_caller_supplied_rules(self, monkeypatch):
+        called = {"n": 0}
+
+        async def _fake_rules(text, args):
+            called["n"] += 1
+            return [{"head": "arg:x", "body": ["arg:y"], "name": "should_not_be_used"}]
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_aspic_rules",
+            _fake_rules,
+        )
+        _inject_fake_aspic_module(monkeypatch, {"extensions": []})
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_aspic
+
+        genuine = [{"head": "arg:real", "body": ["arg:prem"], "name": "def_rule_1"}]
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]},
+            "defeasible_rules": genuine,
+        }
+        await _invoke_aspic("text", ctx)
+        assert ctx["defeasible_rules"] is genuine  # unchanged
+        assert called["n"] == 0  # translator never invoked
+
+    async def test_honest_absent_when_translator_returns_empty(self, monkeypatch):
+        _inject_fake_aspic_module(monkeypatch, {"extensions": []})
+
+        async def _fake_rules(text, args):
+            return []
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_aspic_rules",
+            _fake_rules,
+        )
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_aspic
+
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
+        }
+        await _invoke_aspic("text", ctx)
+        # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
+        assert "defeasible_rules" not in ctx
