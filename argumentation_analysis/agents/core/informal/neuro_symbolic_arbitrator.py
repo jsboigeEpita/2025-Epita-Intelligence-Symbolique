@@ -45,8 +45,13 @@ for production use in PR2/PR3. This mirrors the ``compare_*_backends`` DI idiom.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from typing import Callable, Optional, Protocol, Sequence, runtime_checkable
+from dataclasses import dataclass, field, replace
+from typing import Any, Callable, Optional, Protocol, Sequence, runtime_checkable
+
+from argumentation_analysis.agents.core.debate.argumentation_schemes import (
+    ArgumentationScheme,
+    classify_scheme,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -391,3 +396,338 @@ def arbitrate(
         neural_count=len(candidate_ids),
         arbitrated_count=len(arbitrated_ids),
     )
+
+
+# --------------------------------------------------------------------------- #
+# PR2 — Walton critical-question bridge + neural/neuro-symbolic comparison    #
+# --------------------------------------------------------------------------- #
+#
+# The arbitrator consumes ``failed_critical_questions`` as an opaque declared
+# signal (PR1). PR2 wires the NEURAL→SYMBOLIC bridge that produces that
+# declaration honestly: for each candidate, classify the argumentation scheme of
+# its evidence span (``classify_scheme``), then ask an injected evaluator which
+# of that scheme's *canonical* Walton critical questions are genuinely
+# unsatisfied. The bridge only ever propagates questions that are members of the
+# classified scheme's canonical set — an evaluator can never inject a question
+# the scheme does not actually ask. This is the hard anti-fabrication guard.
+#
+# The default evaluator declares ZERO unsatisfied questions (honest-absent), so
+# without a genuine evaluator (LLM, wired in PR3) the bridge is a no-op and the
+# neuro-symbolic pipeline coincides exactly with the neural one. This keeps PR2
+# JVM/LLM-free and unit-testable while PR3 supplies the real evaluation.
+
+# Classifies a span's text to its Walton argumentation scheme (or None). DI so
+# tests can inject a deterministic classifier; default is the real
+# ``argumentation_schemes.classify_scheme``.
+SchemeClassifier = Callable[[str], Optional[ArgumentationScheme]]
+
+# Given a span, its scheme, and the candidate under test, returns the critical
+# questions the passage genuinely fails to satisfy. The contract is honesty: the
+# caller (the bridge) validates the result against the scheme's canonical CQs,
+# but the evaluator itself must not fabricate failures — return an empty sequence
+# when none are genuinely unsatisfied.
+CQEvaluator = Callable[[str, ArgumentationScheme, SophismCandidate], Sequence[str]]
+
+
+def default_cq_evaluator(
+    span_text: str,
+    scheme: ArgumentationScheme,
+    candidate: SophismCandidate,
+) -> Sequence[str]:
+    """Declare ZERO unsatisfied critical questions.
+
+    Honest-absent by construction: without a genuine evaluator (LLM in PR3), the
+    bridge must not invent any critical-question failure. The neuro-symbolic
+    pipeline therefore coincides with the neural one until a real evaluator is
+    injected — the anti-théâtre guarantee.
+    """
+
+    return ()
+
+
+def walton_cq_bridge(
+    candidates: Sequence[SophismCandidate],
+    *,
+    span_text_for: Callable[[SophismCandidate], str],
+    classifier: Optional[SchemeClassifier] = None,
+    cq_evaluator: Optional[CQEvaluator] = None,
+) -> tuple[list[SophismCandidate], dict[str, str]]:
+    """Enrich candidates with their unsatisfied Walton critical questions.
+
+    For each candidate, classifies the argumentation scheme of its evidence span
+    (``span_text_for``), then asks ``cq_evaluator`` which of that scheme's
+    canonical critical questions are genuinely unsatisfied. Returns new
+    ``SophismCandidate`` instances with ``failed_critical_questions`` set to the
+    validated subset.
+
+    Anti-fabrication: only critical questions that are MEMBERS of the classified
+    scheme's canonical ``critical_questions`` are propagated — an evaluator can
+    never inject a question the scheme does not actually ask. When no scheme is
+    classified for a span (``classify_scheme`` returns ``None``), the candidate is
+    returned unchanged with no declared CQ.
+
+    Args:
+        candidates: Raw neural candidates.
+        span_text_for: Yields the evidence-span text for a candidate. Supplied by
+            the upstream caller that holds the real text + segmentation (PR3).
+        classifier: Scheme classifier (default: ``classify_scheme``).
+        cq_evaluator: CQ evaluator (default: :func:`default_cq_evaluator` —
+            declares nothing, honest-absent).
+
+    Returns:
+        ``(enriched_candidates, span_coverage)`` where ``span_coverage`` maps each
+        candidate id to the classified scheme key (``""`` when no scheme matched)
+        — useful for PR3's synthesis report.
+    """
+
+    cls = classifier or classify_scheme
+    evaluator = cq_evaluator or default_cq_evaluator
+
+    enriched: list[SophismCandidate] = []
+    coverage: dict[str, str] = {}
+    for cand in candidates:
+        span_text = span_text_for(cand)
+        scheme = cls(span_text)
+        coverage[cand.candidate_id] = scheme.key if scheme is not None else ""
+
+        failed: tuple[str, ...] = ()
+        if scheme is not None:
+            canonical = set(scheme.critical_questions)
+            declared = evaluator(span_text, scheme, cand)
+            # Hard anti-fabrication guard: keep only declared questions that are
+            # genuine members of THIS scheme's canonical critical questions.
+            failed = tuple(q for q in declared if q in canonical)
+
+        enriched.append(replace(cand, failed_critical_questions=failed))
+
+    return enriched, coverage
+
+
+@dataclass(frozen=True)
+class SophismComparison:
+    """Side-by-side neural vs neuro-symbolic outcome (NORTH-STAR comparable).
+
+    ``neural_ids`` is the raw detector output (all candidates kept);
+    ``neuro_symbolic_ids`` is the set that survives Dung arbitrage after the
+    Walton CQ bridge. ``eliminated_ids`` = ``neural_ids - neuro_symbolic_ids``
+    (the candidates the symbolic layer rejected), and ``arbitrated`` carries the
+    full diagnostics (rejected reasons, attacks, challengers) so PR3 can render a
+    detailed comparison report. ``span_coverage`` maps each candidate id to the
+    Walton scheme key classified on its span (``""`` if none).
+    """
+
+    neural_ids: frozenset[str]
+    neuro_symbolic_ids: frozenset[str]
+    arbitrated: ArbitrationResult
+    eliminated_ids: frozenset[str]
+    span_coverage: dict[str, str]
+
+
+def compare_sophism_backends(
+    candidates: Sequence[SophismCandidate],
+    *,
+    span_text_for: Callable[[SophismCandidate], str],
+    classifier: Optional[SchemeClassifier] = None,
+    cq_evaluator: Optional[CQEvaluator] = None,
+    solver: Optional[DungSolver] = None,
+    semantics: str = "grounded",
+    conflict_policy: Optional[ConflictPolicy] = None,
+) -> SophismComparison:
+    """Compare the neural-only and neuro-symbolic pipelines on the same batch.
+
+    **Neural** = all candidates kept (raw detector output). **Neuro-symbolic** =
+    candidates enriched by :func:`walton_cq_bridge` then arbitrated under Dung
+    semantics via :func:`arbitrate`. The comparison surfaces exactly which
+    candidates the symbolic layer eliminates and why (through the embedded
+    :class:`ArbitrationResult`), realising the NORTH-STAR
+    "selectable/comparable" requirement.
+
+    With the default evaluator (no genuine CQ evaluation), the bridge declares no
+    failures and the two pipelines coincide — the symbolic layer is transparent
+    until there is something genuine to arbitrate. Inject ``cq_evaluator`` (PR3
+    wires a real LLM evaluator) and/or ``solver`` to exercise real defeats.
+
+    Args mirror :func:`arbitrate` plus the bridge's ``span_text_for`` /
+    ``classifier`` / ``cq_evaluator``.
+    """
+
+    neural_ids = frozenset(c.candidate_id for c in candidates)
+    enriched, coverage = walton_cq_bridge(
+        candidates,
+        span_text_for=span_text_for,
+        classifier=classifier,
+        cq_evaluator=cq_evaluator,
+    )
+    result = arbitrate(
+        enriched,
+        solver=solver,
+        semantics=semantics,
+        conflict_policy=conflict_policy,
+    )
+    return SophismComparison(
+        neural_ids=neural_ids,
+        neuro_symbolic_ids=result.arbitrated_ids,
+        arbitrated=result,
+        eliminated_ids=neural_ids - result.arbitrated_ids,
+        span_coverage=coverage,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# PR3 — Real LLM cq_evaluator (production wiring of the bridge)               #
+# --------------------------------------------------------------------------- #
+#
+# PR2 keeps the bridge honest-absent by default: the default evaluator declares
+# ZERO unsatisfied critical questions. PR3 supplies a real evaluator that asks
+# the LLM (OpenAI / OpenRouter via ``invoke_callables`` helpers) which of a
+# candidate's scheme's canonical Walton critical questions are genuinely
+# unsatisfied for that span.
+#
+# The mirror is exact of the TR-1/TR-2 structured_arg_translator pattern:
+#   * lazy import of invoke_callables helpers (avoids any module-load cycle),
+#   * no API key ⇒ returns () so the call fails-soft to honest-absent,
+#   * JSON-mode response parsed by ``_parse_json_from_llm``,
+#   * validations: ``failed`` keys must be MEMBERS of the scheme's canonical
+#     critical_questions (the bridge re-validates against the same canonical
+#     set, so this is double-belt-and-braces anti-fabrication).
+#
+# Exposed as :func:`make_llm_cq_evaluator` returning a ``CQEvaluator``-compatible
+# async-callable. The CQEvaluator protocol is sync today — PR3 keeps the sync
+# shape (the bridge does NOT await), wrapping the async LLM call synchronously
+# via ``asyncio.run`` from the probe side, mirroring how ``compare_sophism_backends``
+# is called from synchronous PR3 probe code.
+
+# Async signature of the LLM-backed CQ evaluator. The synchronous CQEvaluator
+# used by :func:`walton_cq_bridge` is the production entry point; the async form
+# lets the probe ``await`` it once per candidate without spinning a thread.
+AsyncCQEvaluator = Callable[[str, ArgumentationScheme, SophismCandidate], "Any"]
+
+
+async def _llm_cq_evaluator_async(
+    span_text: str, scheme: ArgumentationScheme, candidate: SophismCandidate
+) -> Sequence[str]:
+    """Ask the LLM which canonical critical questions this span genuinely fails.
+
+    Mirrors :func:`_llm_extract_relations` (TR-1/TR-2 pattern): lazy imports,
+    no-API-key honest-absent, JSON-mode parse, fail-soft exception handling.
+    Validates against the scheme's canonical CQ set as a defence-in-depth guard
+    on top of the bridge's same check.
+
+    Returns an empty tuple on any failure path — the bridge's anti-fabrication
+    posture means a failure to evaluate MUST stay transparent, not invent CQ
+    failures. PR3 probe surfaces the failure mode (key missing, parse, etc.) via
+    the caller's own logging.
+    """
+
+    # Lazy import: invoke_callables imports the informal modules lazily from the
+    # handlers, so importing its helpers here is safe at call time (no cycle).
+    from argumentation_analysis.orchestration.invoke_callables import (
+        _get_determinism_params,
+        _get_openai_client,
+        _guarded_chat_completion,
+        _parse_json_from_llm,
+    )
+
+    canonical_cqs = list(scheme.critical_questions)
+    if not canonical_cqs:
+        return ()
+
+    client, model_id = _get_openai_client()
+    if client is None:
+        logger.info("LLM cq_evaluator: no API key configured — staying honest-absent.")
+        return ()
+
+    canonical_list = "; ".join(f"- {q}" for q in canonical_cqs)
+    system_content = (
+        "You are an expert in Walton-style argumentation schemes. "
+        "For the given passage and its classified argumentation scheme, decide "
+        "which of the scheme's canonical critical questions are GENUINELY "
+        "unsatisfied by the passage — i.e. which CQ, if asked of the passage, "
+        "would expose a real weakness. Report a CQ ONLY when the passage "
+        "genuinely fails to satisfy it. If none are genuinely unsatisfied, "
+        "return an empty list. Do NOT invent failures. "
+        f"Candidate id: {candidate.candidate_id} (opaque, ignore its meaning). "
+        f"Canonical critical questions of scheme « {scheme.label} »: "
+        f"{canonical_list}. "
+        "Respond with ONLY a JSON object of shape: "
+        '{"failed": ["verbatim CQ text 1", ...]}'
+    )
+    user_content = (
+        f"Scheme key: {scheme.key}\n"
+        f"Passage (the candidate's evidence span):\n{span_text[:3000]}\n\n"
+        "Return the JSON."
+    )
+
+    det_params = _get_determinism_params()
+    llm_kwargs: dict[str, Any] = dict(det_params)
+    llm_kwargs["response_format"] = {"type": "json_object"}
+    try:
+        response = await _guarded_chat_completion(
+            client,
+            model=model_id,
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
+            ],
+            **llm_kwargs,
+        )
+    except Exception as exc:  # noqa: BLE001 — fail-soft: any LLM error → honest-absent
+        logger.info("LLM cq_evaluator: call failed (%s); staying honest-absent.", exc)
+        return ()
+
+    raw = response.choices[0].message.content or ""
+    try:
+        data = _parse_json_from_llm(raw)
+    except Exception as exc:  # noqa: BLE001
+        logger.info("LLM cq_evaluator: parse failed (%s); staying honest-absent.", exc)
+        return ()
+
+    declared = data.get("failed") if isinstance(data, dict) else None
+    if not isinstance(declared, list):
+        return ()
+    canonical_set = set(canonical_cqs)
+    return tuple(q for q in declared if isinstance(q, str) and q in canonical_set)
+
+
+def make_llm_cq_evaluator() -> CQEvaluator:
+    """Build a synchronous ``CQEvaluator`` wrapping the async LLM-backed one.
+
+    The bridge's :func:`walton_cq_bridge` consumes a sync callable. The returned
+    ``CQEvaluator`` runs the async LLM call to completion via
+    ``asyncio.run`` — safe from the PR3 probe (sync entry point that runs once
+    per candidate). If called from an already-running event loop (e.g. inside
+    another async context), the call fails soft: returns () so the bridge stays
+    honest-absent for that candidate rather than crashing the run.
+
+    Lazy-imports the async helper so importing this module stays LLM-free (no
+    network calls at import time, no module-load cycle with ``invoke_callables``).
+    """
+
+    def _sync(
+        span_text: str, scheme: ArgumentationScheme, candidate: SophismCandidate
+    ) -> Sequence[str]:
+        try:
+            import asyncio
+
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop — safe to drive the async helper synchronously.
+            try:
+                return asyncio.run(
+                    _llm_cq_evaluator_async(span_text, scheme, candidate)
+                )
+            except Exception as exc:  # noqa: BLE001 — fail-soft
+                logger.info(
+                    "LLM cq_evaluator (sync wrapper): run failed (%s); "
+                    "staying honest-absent.",
+                    exc,
+                )
+                return ()
+        # Already inside an event loop — cannot asyncio.run. Fail soft.
+        logger.info(
+            "LLM cq_evaluator: sync wrapper called from a running loop; "
+            "staying honest-absent. Use _llm_cq_evaluator_async directly."
+        )
+        return ()
+
+    return _sync
