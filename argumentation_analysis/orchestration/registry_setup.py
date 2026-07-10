@@ -32,6 +32,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_fol_reasoning,
     _invoke_modal_logic,
     _invoke_dung_extensions,
+    _invoke_multi_axis_compare,
     _invoke_formal_synthesis,
     _invoke_nl_to_logic,
     _invoke_sat,
@@ -466,6 +467,12 @@ def setup_registry(
             _invoke_dung_extensions,
         ),
         (
+            "multi_axis_compare_service",
+            ["multi_axis_compare"],
+            "Unified multi-axis comparison (fol/dung/sophism) via compare_all_axes",
+            _invoke_multi_axis_compare,
+        ),
+        (
             "formal_synthesis_service",
             ["formal_synthesis"],
             "Aggregate formal analysis into unified report",
@@ -727,7 +734,11 @@ def setup_registry(
         registry.register_service(
             name="ai_shield_service",
             service_class=type("AIShieldService", (), {}),
-            capabilities=["input_validation", "output_filtering", "adversarial_protection"],
+            capabilities=[
+                "input_validation",
+                "output_filtering",
+                "adversarial_protection",
+            ],
             metadata={
                 "description": "AI Shield — adversarial protection for LLM pipeline (injection, jailbreak, bias, leak detection)",
                 "presets": ["basic", "advanced", "output_only", "strict"],
