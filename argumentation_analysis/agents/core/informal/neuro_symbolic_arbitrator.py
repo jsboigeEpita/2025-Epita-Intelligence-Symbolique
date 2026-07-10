@@ -46,7 +46,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field, replace
-from typing import Callable, Optional, Protocol, Sequence, runtime_checkable
+from typing import Any, Callable, Optional, Protocol, Sequence, runtime_checkable
 
 from argumentation_analysis.agents.core.debate.argumentation_schemes import (
     ArgumentationScheme,
@@ -571,3 +571,163 @@ def compare_sophism_backends(
         eliminated_ids=neural_ids - result.arbitrated_ids,
         span_coverage=coverage,
     )
+
+
+# --------------------------------------------------------------------------- #
+# PR3 — Real LLM cq_evaluator (production wiring of the bridge)               #
+# --------------------------------------------------------------------------- #
+#
+# PR2 keeps the bridge honest-absent by default: the default evaluator declares
+# ZERO unsatisfied critical questions. PR3 supplies a real evaluator that asks
+# the LLM (OpenAI / OpenRouter via ``invoke_callables`` helpers) which of a
+# candidate's scheme's canonical Walton critical questions are genuinely
+# unsatisfied for that span.
+#
+# The mirror is exact of the TR-1/TR-2 structured_arg_translator pattern:
+#   * lazy import of invoke_callables helpers (avoids any module-load cycle),
+#   * no API key ⇒ returns () so the call fails-soft to honest-absent,
+#   * JSON-mode response parsed by ``_parse_json_from_llm``,
+#   * validations: ``failed`` keys must be MEMBERS of the scheme's canonical
+#     critical_questions (the bridge re-validates against the same canonical
+#     set, so this is double-belt-and-braces anti-fabrication).
+#
+# Exposed as :func:`make_llm_cq_evaluator` returning a ``CQEvaluator``-compatible
+# async-callable. The CQEvaluator protocol is sync today — PR3 keeps the sync
+# shape (the bridge does NOT await), wrapping the async LLM call synchronously
+# via ``asyncio.run`` from the probe side, mirroring how ``compare_sophism_backends``
+# is called from synchronous PR3 probe code.
+
+# Async signature of the LLM-backed CQ evaluator. The synchronous CQEvaluator
+# used by :func:`walton_cq_bridge` is the production entry point; the async form
+# lets the probe ``await`` it once per candidate without spinning a thread.
+AsyncCQEvaluator = Callable[[str, ArgumentationScheme, SophismCandidate], "Any"]
+
+
+async def _llm_cq_evaluator_async(
+    span_text: str, scheme: ArgumentationScheme, candidate: SophismCandidate
+) -> Sequence[str]:
+    """Ask the LLM which canonical critical questions this span genuinely fails.
+
+    Mirrors :func:`_llm_extract_relations` (TR-1/TR-2 pattern): lazy imports,
+    no-API-key honest-absent, JSON-mode parse, fail-soft exception handling.
+    Validates against the scheme's canonical CQ set as a defence-in-depth guard
+    on top of the bridge's same check.
+
+    Returns an empty tuple on any failure path — the bridge's anti-fabrication
+    posture means a failure to evaluate MUST stay transparent, not invent CQ
+    failures. PR3 probe surfaces the failure mode (key missing, parse, etc.) via
+    the caller's own logging.
+    """
+
+    # Lazy import: invoke_callables imports the informal modules lazily from the
+    # handlers, so importing its helpers here is safe at call time (no cycle).
+    from argumentation_analysis.orchestration.invoke_callables import (
+        _get_determinism_params,
+        _get_openai_client,
+        _guarded_chat_completion,
+        _parse_json_from_llm,
+    )
+
+    canonical_cqs = list(scheme.critical_questions)
+    if not canonical_cqs:
+        return ()
+
+    client, model_id = _get_openai_client()
+    if client is None:
+        logger.info("LLM cq_evaluator: no API key configured — staying honest-absent.")
+        return ()
+
+    canonical_list = "; ".join(f"- {q}" for q in canonical_cqs)
+    system_content = (
+        "You are an expert in Walton-style argumentation schemes. "
+        "For the given passage and its classified argumentation scheme, decide "
+        "which of the scheme's canonical critical questions are GENUINELY "
+        "unsatisfied by the passage — i.e. which CQ, if asked of the passage, "
+        "would expose a real weakness. Report a CQ ONLY when the passage "
+        "genuinely fails to satisfy it. If none are genuinely unsatisfied, "
+        "return an empty list. Do NOT invent failures. "
+        f"Candidate id: {candidate.candidate_id} (opaque, ignore its meaning). "
+        f"Canonical critical questions of scheme « {scheme.label} »: "
+        f"{canonical_list}. "
+        "Respond with ONLY a JSON object of shape: "
+        '{"failed": ["verbatim CQ text 1", ...]}'
+    )
+    user_content = (
+        f"Scheme key: {scheme.key}\n"
+        f"Passage (the candidate's evidence span):\n{span_text[:3000]}\n\n"
+        "Return the JSON."
+    )
+
+    det_params = _get_determinism_params()
+    llm_kwargs: dict[str, Any] = dict(det_params)
+    llm_kwargs["response_format"] = {"type": "json_object"}
+    try:
+        response = await _guarded_chat_completion(
+            client,
+            model=model_id,
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
+            ],
+            **llm_kwargs,
+        )
+    except Exception as exc:  # noqa: BLE001 — fail-soft: any LLM error → honest-absent
+        logger.info("LLM cq_evaluator: call failed (%s); staying honest-absent.", exc)
+        return ()
+
+    raw = response.choices[0].message.content or ""
+    try:
+        data = _parse_json_from_llm(raw)
+    except Exception as exc:  # noqa: BLE001
+        logger.info("LLM cq_evaluator: parse failed (%s); staying honest-absent.", exc)
+        return ()
+
+    declared = data.get("failed") if isinstance(data, dict) else None
+    if not isinstance(declared, list):
+        return ()
+    canonical_set = set(canonical_cqs)
+    return tuple(q for q in declared if isinstance(q, str) and q in canonical_set)
+
+
+def make_llm_cq_evaluator() -> CQEvaluator:
+    """Build a synchronous ``CQEvaluator`` wrapping the async LLM-backed one.
+
+    The bridge's :func:`walton_cq_bridge` consumes a sync callable. The returned
+    ``CQEvaluator`` runs the async LLM call to completion via
+    ``asyncio.run`` — safe from the PR3 probe (sync entry point that runs once
+    per candidate). If called from an already-running event loop (e.g. inside
+    another async context), the call fails soft: returns () so the bridge stays
+    honest-absent for that candidate rather than crashing the run.
+
+    Lazy-imports the async helper so importing this module stays LLM-free (no
+    network calls at import time, no module-load cycle with ``invoke_callables``).
+    """
+
+    def _sync(
+        span_text: str, scheme: ArgumentationScheme, candidate: SophismCandidate
+    ) -> Sequence[str]:
+        try:
+            import asyncio
+
+            asyncio.get_running_loop()
+        except RuntimeError:
+            # No running loop — safe to drive the async helper synchronously.
+            try:
+                return asyncio.run(
+                    _llm_cq_evaluator_async(span_text, scheme, candidate)
+                )
+            except Exception as exc:  # noqa: BLE001 — fail-soft
+                logger.info(
+                    "LLM cq_evaluator (sync wrapper): run failed (%s); "
+                    "staying honest-absent.",
+                    exc,
+                )
+                return ()
+        # Already inside an event loop — cannot asyncio.run. Fail soft.
+        logger.info(
+            "LLM cq_evaluator: sync wrapper called from a running loop; "
+            "staying honest-absent. Use _llm_cq_evaluator_async directly."
+        )
+        return ()
+
+    return _sync

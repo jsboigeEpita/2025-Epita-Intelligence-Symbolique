@@ -22,11 +22,13 @@ from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator impor
     SophismComparison,
     _CQ_CHALLENGER_PREFIX,
     _grounded_extension_pure,
+    _llm_cq_evaluator_async,
     arbitrate,
     build_dung_framework,
     compare_sophism_backends,
     default_conflict_policy,
     make_dung_agent_solver,
+    make_llm_cq_evaluator,
     pure_python_solver,
     walton_cq_bridge,
 )
@@ -337,6 +339,110 @@ class TestCompareSophismBackends:
             span_text_for=lambda c: "Selon un expert du domaine la chose est vraie.",
         )
         assert cmp.span_coverage == {"s0": "expert_opinion"}
+
+
+class TestLlmCqEvaluator:
+    """PR3 — production wiring of the LLM-backed CQ evaluator.
+
+    These tests are JVM/LLM-free by design: they cover the fail-soft paths (no
+    API key, no running loop, invalid input) and the lazy-import contract. The
+    genuine LLM path is exercised end-to-end by the PR3 probe (scratchpad,
+    gitignored) on real-corpus text.
+    """
+
+    _EXPERT_SPAN = "Selon un expert du domaine, la mesure est efficace."
+
+    def test_factory_returns_callable(self) -> None:
+        ev = make_llm_cq_evaluator()
+        assert callable(ev)
+
+    @pytest.mark.asyncio
+    async def test_async_helper_returns_empty_when_no_api_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """No API key configured ⇒ async helper returns () (honest-absent)."""
+
+        def _no_client() -> tuple[object, str]:
+            return None, ""
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            _no_client,
+        )
+        scheme = classify_scheme(self._EXPERT_SPAN)
+        assert scheme is not None
+        out = await _llm_cq_evaluator_async(self._EXPERT_SPAN, scheme, _cand("s0"))
+        assert out == ()
+
+    @pytest.mark.asyncio
+    async def test_async_helper_validates_against_canonical(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """LLM response that declares a non-canonical CQ is dropped (anti-fab)."""
+
+        import json
+
+        scheme = classify_scheme(self._EXPERT_SPAN)
+        assert scheme is not None
+        canonical = scheme.critical_questions[0]
+        declared_non_canonical = "Question jamais posée par aucun schème Walton"
+        # json.dumps produces strictly valid JSON (escapes the French apostrophe
+        # and any other specials). repr() would emit Python-style single quotes
+        # that _parse_json_from_llm rejects, masking the anti-fabrication path.
+        payload = json.dumps({"failed": [canonical, declared_non_canonical]})
+
+        # Fake LLM plumbing: a stub client + a guarded completion that returns
+        # the canned JSON, plus the real parse_json_from_llm.
+
+        class _Msg:
+            def __init__(self, content: str) -> None:
+                self.content = content
+
+        class _Choice:
+            def __init__(self, content: str) -> None:
+                self.message = _Msg(content)
+
+        class _Resp:
+            def __init__(self, content: str) -> None:
+                self.choices = [_Choice(content)]
+
+        async def _fake_completion(*_a: object, **_k: object) -> _Resp:
+            return _Resp(payload)
+
+        def _fake_client() -> tuple[object, str]:
+            return object(), "fake-model"
+
+        import argumentation_analysis.orchestration.invoke_callables as ic
+
+        monkeypatch.setattr(ic, "_get_openai_client", _fake_client)
+        monkeypatch.setattr(ic, "_guarded_chat_completion", _fake_completion)
+        monkeypatch.setattr(ic, "_get_determinism_params", lambda: {})
+
+        out = await _llm_cq_evaluator_async(self._EXPERT_SPAN, scheme, _cand("s0"))
+        assert canonical in out
+        assert declared_non_canonical not in out
+        # The bridge re-validates too, but this is the helper's own defence.
+        assert all(q in scheme.critical_questions for q in out)
+
+    def test_sync_wrapper_fails_soft_when_no_api_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        ev = make_llm_cq_evaluator()
+        scheme = classify_scheme(self._EXPERT_SPAN)
+        assert scheme is not None
+        # Force the no-key path: stub the async helper directly to mirror the
+        # "no client" behaviour end-to-end.
+        import asyncio
+
+        async def _empty(*_a: object, **_k: object) -> tuple[str, ...]:
+            return ()
+
+        monkeypatch.setattr(
+            "argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator._llm_cq_evaluator_async",
+            _empty,
+        )
+        # Sync path (no running loop): the wrapper awaits the async helper.
+        assert ev(self._EXPERT_SPAN, scheme, _cand("s0")) == ()
 
 
 class TestDungAgentSolverAdapter:
