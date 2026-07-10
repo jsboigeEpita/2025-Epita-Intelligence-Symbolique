@@ -6463,12 +6463,45 @@ async def _invoke_dung_extensions(
     #908: If ``context["dung_provider_hint"]`` is set to
     ``"abs_arg_dung_student"``, delegates to the student Dung provider
     instead of the native AFHandler.
+
+    I5 #1430: If ``context["dung_mode"]`` is set to ``"compare"``, runs EVERY
+    available backend on the same AF and surfaces per-semantics agreement /
+    disagreement (never auto-reconciled, anti-pendule #1019). Backends that
+    cannot run are reported ``unavailable`` (fail-loud), never omitted. See
+    :func:`_compare_dung_backends`.
     """
     # 1. Extract arguments from upstream phases
     arguments = _extract_arguments_from_context(input_text, context)
 
     # 2. Build attack relations from fallacies and counter-arguments
     attacks = _generate_attacks_from_args(arguments, context)
+
+    # I5 #1430: compare mode — run every available backend on the same AF and
+    # surface agreement / disagreement (never auto-reconciled). Short-circuits
+    # the single-backend selection below; a backend that cannot run is reported
+    # ``unavailable`` (fail-loud) inside the comparison payload.
+    dung_mode = context.get("dung_mode")
+    if dung_mode == "compare":
+        comparison = await _compare_dung_backends(arguments, attacks)
+        logger.info(
+            "Dung extensions computed in compare mode (%d backend(s)) — "
+            "overall_agreement=%s",
+            comparison["statistics"]["backends_count"],
+            comparison["comparison"]["overall_agreement"],
+        )
+        return {
+            "semantics": "multi_compare",
+            "comparison": comparison["comparison"],
+            "backends": comparison["backends"],
+            "arguments": arguments,
+            "attacks": attacks,
+            "statistics": comparison["statistics"],
+            "note": (
+                "I5 #1430: multi-backend comparison. Disagreements are surfaced "
+                "per-semantics and NEVER auto-reconciled (anti-pendule #1019); "
+                "unavailable backends are reported, never omitted."
+            ),
+        }
 
     # #908: Provider selection — delegate to student provider if hinted
     provider_hint = context.get("dung_provider_hint")
