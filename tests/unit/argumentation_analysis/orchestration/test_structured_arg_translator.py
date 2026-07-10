@@ -23,10 +23,12 @@ from argumentation_analysis.orchestration.structured_arg_translator import (
     _build_inventory,
     _validate_aspic_rules,
     _validate_contraries,
+    _validate_setaf_attacks,
     _validate_supports,
     translate_to_aba_contraries,
     translate_to_aspic_rules,
     translate_to_bipolar_supports,
+    translate_to_setaf_attacks,
 )
 
 
@@ -565,3 +567,227 @@ class TestAspicHandlerWiring:
         await _invoke_aspic("text", ctx)
         # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
         assert "defeasible_rules" not in ctx
+
+
+# -- SetAF (collective / joint attacks) --------------------------------------
+
+
+class TestValidateSetafAttacks:
+    def test_keeps_valid_joint_attack_mapped_to_text(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
+        data = {"attacks": [
+            {"attackers": ["arg1", "arg2"], "target": "arg3", "rationale": "r"},
+        ]}
+        out = _validate_setaf_attacks(data, arg_by_id)
+        assert out == [{"attackers": ["Alpha", "Beta"], "target": "Gamma"}]
+
+    def test_drops_attack_with_unknown_attacker(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"attackers": ["arg1", "arg9"], "target": "arg2"},  # arg9 unknown
+        ]}
+        assert _validate_setaf_attacks(data, arg_by_id) == []
+
+    def test_drops_attack_with_unknown_target(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"attackers": ["arg1"], "target": "arg9"},  # unknown target
+        ]}
+        assert _validate_setaf_attacks(data, arg_by_id) == []
+
+    def test_drops_attack_with_no_attackers(self):
+        arg_by_id = {"arg1": "Alpha"}
+        data = {"attacks": [{"attackers": [], "target": "arg1"}]}
+        assert _validate_setaf_attacks(data, arg_by_id) == []
+
+    def test_removes_target_from_attackers_keeps_rest(self):
+        arg_by_id = {"arg1": "Alpha", "arg3": "Gamma"}
+        data = {"attacks": [
+            {"attackers": ["arg1", "arg3"], "target": "arg3"},  # arg3 removed
+        ]}
+        out = _validate_setaf_attacks(data, arg_by_id)
+        assert out == [{"attackers": ["Alpha"], "target": "Gamma"}]
+
+    def test_drops_self_only_attack(self):
+        arg_by_id = {"arg3": "Gamma"}
+        data = {"attacks": [{"attackers": ["arg3"], "target": "arg3"}]}
+        assert _validate_setaf_attacks(data, arg_by_id) == []
+
+    def test_dedups_identical_attacks(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"attackers": ["arg1"], "target": "arg2"},
+            {"attackers": ["arg1"], "target": "arg2"},
+        ]}
+        out = _validate_setaf_attacks(data, arg_by_id)
+        assert out == [{"attackers": ["Alpha"], "target": "Beta"}]
+
+    def test_dedups_repeated_attackers(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [
+            {"attackers": ["arg1", "arg1"], "target": "arg2"},
+        ]}
+        out = _validate_setaf_attacks(data, arg_by_id)
+        assert out[0]["attackers"] == ["Alpha"]
+
+    def test_dedups_attacker_order_independence(self):
+        # SetAF attacker set is a SET: {arg1,arg2} == {arg2,arg1} → one attack.
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
+        data = {"attacks": [
+            {"attackers": ["arg1", "arg2"], "target": "arg3"},
+            {"attackers": ["arg2", "arg1"], "target": "arg3"},
+        ]}
+        out = _validate_setaf_attacks(data, arg_by_id)
+        assert len(out) == 1
+
+    def test_attackers_as_string_normalized(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        data = {"attacks": [{"attackers": "arg1", "target": "arg2"}]}
+        out = _validate_setaf_attacks(data, arg_by_id)
+        assert out == [{"attackers": ["Alpha"], "target": "Beta"}]
+
+    def test_empty_or_malformed_returns_empty(self):
+        arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
+        assert _validate_setaf_attacks({}, arg_by_id) == []
+        assert _validate_setaf_attacks({"attacks": []}, arg_by_id) == []
+        assert _validate_setaf_attacks({"attacks": "nope"}, arg_by_id) == []
+        assert _validate_setaf_attacks(
+            {"attacks": [{"attackers": 1, "target": "arg1"}]},  # type: ignore[dict-item]
+            arg_by_id,
+        ) == []
+
+
+class TestSetafTranslator:
+    async def test_empty_llm_output_returns_empty(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": []})
+        out = await translate_to_setaf_attacks("some text", ["a", "b"])
+        assert out == []
+
+    async def test_no_inventory_returns_empty(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": [
+            {"attackers": ["arg1"], "target": "arg2"},
+        ]})
+        out = await translate_to_setaf_attacks("text", [])
+        assert out == []
+
+    async def test_only_fabricated_attacks_dropped(self, monkeypatch):
+        _patch_llm(monkeypatch, {"attacks": [
+            {"attackers": ["arg8"], "target": "arg9"},   # unknown ids
+            {"attackers": ["phantom"], "target": "ghost"},
+        ]})
+        out = await translate_to_setaf_attacks("text", ["a", "b"])
+        assert out == []
+
+    async def test_returns_validated_attacks_with_real_texts(self, monkeypatch):
+        # SetAF attacks use canonical argument TEXTS (no PL-atom mapping).
+        _patch_llm(monkeypatch, {"attacks": [
+            {"attackers": ["arg1", "arg2"], "target": "arg3"},
+            {"attackers": ["arg1"], "target": "arg9"},  # dropped (unknown)
+        ]})
+        out = await translate_to_setaf_attacks("text", ["Alpha", "Beta", "Gamma"])
+        assert out == [{"attackers": ["Alpha", "Beta"], "target": "Gamma"}]
+
+
+def _inject_fake_setaf_module(monkeypatch, payload):
+    """Inject fake SetAFHandler + TweetyInitializer so _invoke_setaf runs w/o JVM."""
+    fake_handler = types.ModuleType(
+        "argumentation_analysis.agents.core.logic.setaf_handler"
+    )
+
+    class _FakeSetAFHandler:
+        def __init__(self, initializer: Any) -> None:
+            self.initializer = initializer
+
+        def analyze_setaf(self, args, attacks, semantics="grounded"):
+            return payload
+
+    fake_handler.SetAFHandler = _FakeSetAFHandler  # type: ignore[attr-defined]
+    monkeypatch.setitem(
+        sys.modules,
+        "argumentation_analysis.agents.core.logic.setaf_handler",
+        fake_handler,
+    )
+
+    fake_init = types.ModuleType(
+        "argumentation_analysis.agents.core.logic.tweety_initializer"
+    )
+
+    class _FakeTweetyInitializer:
+        pass
+
+    fake_init.TweetyInitializer = _FakeTweetyInitializer  # type: ignore[attr-defined]
+    monkeypatch.setitem(
+        sys.modules,
+        "argumentation_analysis.agents.core.logic.tweety_initializer",
+        fake_init,
+    )
+
+
+class TestSetafHandlerWiring:
+    """The lazy translator call inside _invoke_setaf must persist genuine joint
+    attacks into ``context`` so _record_structured_arg_status labels the axis
+    ``evaluated`` — and must stay absent when nothing genuine is derived."""
+
+    async def test_translates_and_persists_joint_attacks(self, monkeypatch):
+        _inject_fake_setaf_module(monkeypatch, {"extensions": []})
+        genuine = [{"attackers": ["Alpha"], "target": "Beta"}]
+
+        async def _fake_attacks(text, args):
+            return genuine
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_setaf_attacks",
+            _fake_attacks,
+        )
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
+
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
+        }
+        await _invoke_setaf("source text", ctx)
+        assert ctx.get("set_attacks") == genuine
+
+    async def test_does_not_override_caller_supplied_attacks(self, monkeypatch):
+        called = {"n": 0}
+
+        async def _fake_attacks(text, args):
+            called["n"] += 1
+            return [{"attackers": ["x"], "target": "should_not_be_used"}]
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_setaf_attacks",
+            _fake_attacks,
+        )
+        _inject_fake_setaf_module(monkeypatch, {"extensions": []})
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
+
+        genuine = [{"attackers": ["Alpha"], "target": "Beta"}]
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]},
+            "set_attacks": genuine,
+        }
+        await _invoke_setaf("text", ctx)
+        assert ctx["set_attacks"] is genuine  # unchanged
+        assert called["n"] == 0  # translator never invoked
+
+    async def test_honest_absent_when_translator_returns_empty(self, monkeypatch):
+        _inject_fake_setaf_module(monkeypatch, {"extensions": []})
+
+        async def _fake_attacks(text, args):
+            return []
+
+        monkeypatch.setattr(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_setaf_attacks",
+            _fake_attacks,
+        )
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
+
+        ctx: Dict[str, Any] = {
+            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
+        }
+        await _invoke_setaf("text", ctx)
+        # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
+        assert "set_attacks" not in ctx

@@ -3624,6 +3624,21 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
+    # Genuine SetAF joint-attacks: if the caller did not supply them, try to
+    # derive them from the text (validated by id). Never overrides a caller's
+    # explicit set; empty/failed derivation leaves the key unset so the handler
+    # honestly falls back to auto-shaped pairwise attacks.
+    if not context.get("set_attacks"):
+        try:
+            from argumentation_analysis.orchestration.structured_arg_translator import (
+                translate_to_setaf_attacks,
+            )
+
+            derived_attacks = await translate_to_setaf_attacks(input_text, args)
+            if derived_attacks:
+                context["set_attacks"] = derived_attacks
+        except Exception as e:
+            logger.info("SetAF translator unavailable (%s); absent_no_translator.", e)
     # SetAF attacks come as {attackers, target} dicts. Upstream may provide
     # them directly, else shape from the canonical pairwise attack graph.
     raw_attacks = context.get("set_attacks")
