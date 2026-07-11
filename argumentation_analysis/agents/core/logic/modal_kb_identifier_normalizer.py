@@ -61,6 +61,37 @@ _KEYWORDS = frozenset(
 # captured as ONE token rather than split around the underscore.
 _ATOM_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
+# Illegal ``sort`` declaration lines (#1441). The Tweety FOL/ML grammar
+# (firsthand-confirmed vs FolParser/MlParser BNF: ``tweety_fol_bnf.md``) has
+# NO ``sort`` keyword — sorts are declared as ``NAME = {constants}`` and
+# propositions as ``type(prop)``. Producers occasionally emit ``sort ((a || b
+# || c))`` (a compound boolean where the parser expects a single sort
+# identifier), which raises ``ParserException: Illegal characters / Missing '='
+# in sort definition`` on EVERY modal KB and leaves the modal axis falling back
+# to SPASS noisily (ATT-3 firsthand finding, 3/3 corpus). Stripping the line is
+# the honest fix: the declaration is syntactically unrepresentable (there is no
+# "union sort" in Tweety), and the propositions it names are already declared
+# via ``type(prop)`` — so removing it changes nothing semantic, only silences a
+# quasi-dead path's error trace. Anti-pendule: strip the illegal SYNTAX only,
+# do not mask a genuine parse-fail (#1019 fail-loud) — a KB malformed beyond
+# this still raises.
+_ILLEGAL_SORT_LINE_RE = re.compile(r"^[ \t]*sort\b[^\n]*\n?", re.MULTILINE)
+
+
+def strip_illegal_sort_declarations(content: str) -> Tuple[str, int]:
+    """Remove illegal ``sort ...`` declaration lines a Tweety ML KB cannot parse.
+
+    Returns ``(cleaned_content, removed_count)``. ``removed_count`` lets callers
+    log the sanitization (visible, not silent — anti-théâtre #1019).
+    """
+    if "sort" not in content:  # fast path: most KBs declare via type(prop)
+        return content, 0
+    matches = _ILLEGAL_SORT_LINE_RE.findall(content)
+    if not matches:
+        return content, 0
+    return _ILLEGAL_SORT_LINE_RE.sub("", content), len(matches)
+
+
 # The MlParser declaration grammar (firsthand-confirmed via the ParserException
 # message reproduced in #1326): first letter alphabetic, rest alphanumeric, NO
 # underscores/separators.
@@ -108,7 +139,16 @@ class ModalIdentifierNormalizer:
         Returns ``(normalized_content, reverse_map)`` where ``reverse_map`` is
         ``{normalized: original}`` for readability/traceability. Atoms already
         legal are absent from the map (they pass through verbatim).
+
+        Also strips illegal ``sort ...`` declaration lines (#1441): the ML
+        grammar has no ``sort`` keyword, so such a line is never parseable.
+        The strip count is surfaced via the ``reverse_map`` under a synthetic
+        ``__stripped_sort_lines__`` key so callers can log it (visible, not
+        silent — anti-théâtre #1019).
         """
+        content, removed = strip_illegal_sort_declarations(content)
         normalized = _ATOM_RE.sub(lambda m: self.legalize(m.group(0)), content)
         reverse = {v: k for k, v in self._forward.items()}
+        if removed:
+            reverse["__stripped_sort_lines__"] = str(removed)
         return normalized, reverse

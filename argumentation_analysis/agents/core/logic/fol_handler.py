@@ -35,6 +35,29 @@ def _get_eprover_path() -> "str | None":
         return None
 
 
+# #1441: bare-constant boolean sanitization for FOL formulas. Tweety's FOL BNF
+# (``tweety_fol_bnf.md``, firsthand-confirmed vs FolParser.java) uses ``+``/``-``
+# for Top/Bottom — a bare ``T``/``F`` emitted by an LLM is an undeclared atom and
+# raises ``ParserException: Unrecognized formula type 'T'`` (ATT-3 corpus C
+# firsthand finding). The map targets standalone uppercase ``T``/``F`` tokens only
+# (word boundaries), so ``Table``, ``T1``, and lowercase ``t`` survive untouched.
+_FOL_BOOL_CONSTANT_RE = re.compile(r"(?<![A-Za-z0-9_])([TF])(?![A-Za-z0-9_])")
+_FOL_BOOL_MAP = {"T": "+", "F": "-"}
+
+
+def _sanitize_fol_bool_constants(formula: str) -> str:
+    """Map bare ``T``/``F`` to Tweety Top/Bottom ``+``/``-`` (#1441).
+
+    Idempotent and conservative: only standalone uppercase tokens are mapped,
+    so identifiers (``Table``, ``T1``) and lowercase (``t``) pass through.
+    """
+    if "T" not in formula and "F" not in formula:
+        return formula
+    return _FOL_BOOL_CONSTANT_RE.sub(
+        lambda m: _FOL_BOOL_MAP.get(m.group(1), m.group(1)), formula
+    )
+
+
 # Cache: eprover binary path -> bool (delivery contract verified on this platform).
 # The sentinel is a one-off subprocess per binary, not per-query overhead.
 _EPROVER_DELIVERY_RELIABLE: "dict[str, bool]" = {}
@@ -226,6 +249,26 @@ class FOLHandler:
         """
         if not isinstance(formula_str, str):
             raise TypeError("Input formula must be a string.")
+
+        # #1441: sanitize LLM-emitted boolean constants BEFORE parsing. Tweety's
+        # FOL grammar (firsthand-confirmed BNF, ``tweety_fol_bnf.md``) uses
+        # ``+``/``-`` for Top/Bottom, NOT ``T``/``F`` — so a formula like
+        # ``forall X: (P(X) => T)`` raises ``ParserException`` and the formula is
+        # lost (ATT-3 firsthand finding, corpus C). Mapping bare ``T``/``F``
+        # tokens (word-boundary, uppercase only) to ``+``/``-`` recovers them.
+        # ``Table``/``T1``/lowercase ``t`` are untouched. Applied to the formula
+        # string only (predicate declarations go through the Java ``Predicate``
+        # API, unaffected), and the substitution is logged when it fires
+        # (visible, not silent — anti-théâtre #1019 fail-loud).
+        sanitized = _sanitize_fol_bool_constants(formula_str)
+        if sanitized != formula_str:
+            logger.warning(
+                "FOL formula boolean constants sanitized (T->+, F->-) "
+                "#1441: %r -> %r",
+                formula_str,
+                sanitized,
+            )
+        formula_str = sanitized
 
         parser_to_use = custom_parser if custom_parser else self._fol_parser
 
