@@ -118,3 +118,86 @@ class TestNormalizeBeliefSet:
         n = ModalIdentifierNormalizer(reserved={"HeavyRain"})
         # An underscored atom that would PascalCase to HeavyRain must disambiguate.
         assert n.legalize("heavy_rain") == "HeavyRain1"
+
+
+class TestStripIllegalSortDeclarations:
+    """``sort ...`` declaration stripping (#1441 Bug A).
+
+    Firsthand-reproduced (probe, JVM up): the Tweety MlParser grammar has NO
+    ``sort`` keyword — sorts are ``NAME = {constants}``, propositions are
+    ``type(prop)``. A producer emitting ``sort ((PrevWeak || PrevLawless ||
+    PrevRadical))`` (a compound boolean where a single sort identifier is
+    expected) raises ``ParserException: Illegal characters / Missing '=' in
+    sort definition`` on EVERY modal KB (ATT-3 firsthand finding, 3/3 corpus).
+    The line is unrepresentable (no "union sort" in Tweety) and the propositions
+    it names are already declared via ``type(prop)`` — stripping changes nothing
+    semantic, only silences the quasi-dead path's error trace.
+    """
+
+    def test_compound_boolean_sort_line_is_stripped(self):
+        n = ModalIdentifierNormalizer()
+        kb = (
+            "type(PrevWeak)\ntype(PrevLawless)\n"
+            "sort ((PrevWeak || PrevLawless || PrevRadical))\n"
+            "[](PrevWeak => PrevLawless)\nPrevWeak\n"
+        )
+        normalized, reverse = n.normalize_belief_set(kb)
+        assert "sort" not in normalized
+        assert "type(PrevWeak)" in normalized
+        assert reverse["__stripped_sort_lines__"] == "1"
+
+    def test_ampersand_compound_sort_line_is_stripped(self):
+        n = ModalIdentifierNormalizer()
+        kb = "type(A)\ntype(B)\nsort (A && B)\nA\n"
+        normalized, _ = n.normalize_belief_set(kb)
+        assert "sort" not in normalized
+
+    def test_kb_without_sort_lines_is_unchanged_by_stripper(self):
+        n = ModalIdentifierNormalizer()
+        kb = "type(Rain)\ntype(Wet)\n\n[](Rain => Wet)\nRain\n"
+        normalized, reverse = n.normalize_belief_set(kb)
+        # No 'sort' in this KB → strip is a no-op, no synthetic key added.
+        assert "__stripped_sort_lines__" not in reverse
+        assert normalized == "type(Rain)\ntype(Wet)\n\n[](Rain => Wet)\nRain\n"
+
+
+@pytest.mark.tweety
+class TestSortStripperRealParse:
+    """End-to-end via the production normalizer + the real MlParser: a modal KB
+    carrying an illegal ``sort ((a || b || c))`` line (ATT-3 firsthand finding)
+    previously ``ParserException``'d on EVERY modal KB; after normalization the
+    line is stripped and the KB parses cleanly (JVM required, marker
+    ``tweety``). Mirrors the FOL ``TestBoolConstantSanitizerRealParse`` for the
+    two-bug family #1441.
+    """
+
+    def test_compound_sort_kb_parses_after_stripping(self):
+        from argumentation_analysis.core import jvm_setup
+
+        jvm_setup.initialize_jvm()
+        from argumentation_analysis.agents.core.logic.tweety_initializer import (
+            TweetyInitializer,
+        )
+
+        TweetyInitializer().ensure_jvm_and_components_are_ready()
+
+        import jpype
+
+        StringReader = jpype.JClass("java.io.StringReader")
+        MlParser = jpype.JClass("org.tweetyproject.logics.ml.parser.MlParser")
+
+        n = ModalIdentifierNormalizer()
+        # The exact ATT-3 corpus shape: a compound-boolean ``sort`` line where
+        # the grammar expects a single sort identifier. Before the fix the
+        # MlParser raised on this line; after stripping it parses.
+        kb = (
+            "type(PrevWeak)\ntype(PrevLawless)\n"
+            "sort ((PrevWeak || PrevLawless || PrevRadical))\n"
+            "[](PrevWeak => PrevLawless)\nPrevWeak\n"
+        )
+        normalized, reverse = n.normalize_belief_set(kb)
+        # The sort line was stripped (visible via the synthetic key, not silent).
+        assert reverse.get("__stripped_sort_lines__") == "1"
+        # Real MlParser parse: no ParserException is raised (#1441 Bug A fix).
+        MlParser().parseBeliefBase(StringReader(normalized))
+
