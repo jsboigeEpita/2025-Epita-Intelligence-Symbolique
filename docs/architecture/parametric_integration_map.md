@@ -90,6 +90,65 @@ Le projet contient **80 capabilities, 22 workflows, 49 routes API** (vérifié R
 
 ---
 
+## F. NORTH-STAR — translateurs formels + comparaison multi-backends (R606, post-merge #1438/#1439)
+
+> Mise à jour 2026-07-11 (po-2025, base `994baf93`). Les mécanismes NORTH-STAR
+> ci-dessous sont **complets côté code et sélectionnables** via le pipeline. Le
+> seul travail restant = le **run corpus réel multi-axes (ATT-3)**, gated sur
+> décision user — marqué OUVERT, PAS coché (anti-pendule : ne pas déclarer fait
+> ce qui ne l'est pas).
+
+### F.1 Translateurs texte→structuré (5/5 formalismes)
+
+Chaque formalisme a un handler `_invoke_*` qui traduit le texte d'entrée en
+théorie structurée consommée par le gate `evaluated`. Tous registered et
+sélectionnables via le `CapabilityRegistry`.
+
+| Formalisme | Capability | Handler (`invoke_callables.py`) | Livré |
+|-----------|-----------|---------------------------------|-------|
+| Bipolar AF | `bipolar_argumentation` | `_invoke_bipolar` (l.3064) | #1422 (TR-1) |
+| ABA | `aba_reasoning` | `_invoke_aba` (l.3111) | #1422 (TR-1) |
+| ASPIC+ | `aspic_plus_reasoning` | `_invoke_aspic` (l.3217) | #1427 (TR-2) |
+| SetAF | `setaf_reasoning` | `_invoke_setaf` (l.3620) | #1428 (TR-2) |
+| Weighted AF | `weighted_argumentation` | `_invoke_weighted` (l.3670) | #1431 (TR-2) |
+
+Pointeurs vérifiés `git grep` : `registry_setup.py:765,772,784,822,828`.
+
+### F.2 Axes de comparaison multi-backends (3/3)
+
+Chaque axe compare plusieurs backends sur le même input et surface les
+désaccords **verbatim, jamais auto-réconciliés** (anti-théâtre #1019). Un
+backend indisponible = `available=False` fail-loud, jamais omis.
+
+| Axe | Comparateur | Backends | Livré |
+|-----|-------------|----------|-------|
+| FOL | `compare_fol_backends` (`fol_handler.py:963`) | EProver / Prover9 / Mace4 | pré-existant |
+| Dung | `_compare_dung_backends` (`invoke_callables.py:6847`) | Tweety / student (`abs_arg_dung`) | #1432/#1434/#1436 (I5 #1430) |
+| Sophism | `compare_sophism_backends` (`neuro_symbolic_arbitrator.py:526`, SYNC) | neural / neuro-symbolic (Walton CQ) | #1433/#1435 (I1 #1429) |
+
+### F.3 Harness unifié + capability pipeline-sélectionnable
+
+`compare_all_axes` (`invoke_callables.py:7186`) route les 3 axes depuis un
+**seul point** : routeur + agrégateur de shape uniforme
+`{available, agreement, disagreements, backends, timings_ms}`, **zéro
+ré-implémentation** (chaque axe garde sa shape d'entrée native).
+
+Exposé comme **capability pipeline-sélectionnable** `multi_axis_compare` via le
+handler `_invoke_multi_axis_compare` (`invoke_callables.py:7333`), registered
+`multi_axis_compare_service` (`registry_setup.py:470`). Dung dérivé de l'amont
+**seulement si le caller opte pour l'axe** (selectable, not imposed) ; default
+honest-absent `agreement=None` (jamais un accord fabriqué). Mirrors le wiring
+`dung_mode=compare` de `_invoke_dung_extensions` (`invoke_callables.py:6478`,
+I5 #1434).
+
+### F.4 Reste ouvert (ATT-3)
+
+Le **run corpus réel multi-axes** (data feeding terminal) n'est PAS fait —
+gated sur feu vert user, exécution ai-01-local (artefacts nominatifs,
+non-délégeable). Honnêtement laissé ouvert.
+
+---
+
 ## Prochaines tracks d'intégration (ordonnées par effort/valeur)
 
 | # | Track | Axe | Effort | Valeur |
