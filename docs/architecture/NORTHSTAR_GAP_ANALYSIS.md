@@ -150,16 +150,53 @@ a static selector.
 
 ---
 
-## 6. Dung Provider (#908 — in progress, po-2025)
+## 6. Dung Provider (#908 — ✅ CLOSED via multi-backend comparison, I5 #1430)
 
 | Aspect | Detail |
 |--------|--------|
-| **Consumer** | `invoke_callables.py:5441` — `_invoke_dung_extensions` hardcodes AFHandler |
-| **Provider** | `dung_student_provider.py:217` — `invoke_dung_student()` adapter ready |
-| **CLI** | ❌ No `--dung-provider` flag |
-| **API** | ❌ Deferred in `proposal_models.py:78` |
-| **Effort** | LOW (consumer wiring) — premise corrected R327 |
-| **Status** | Track 10, dispatched to po-2025 |
+| **Original gap** | `_invoke_dung_extensions` hardcoded AFHandler — no backend selection |
+| **Resolution** | Multi-backend **comparison** (not selection): `dung_mode=compare` routes to `_compare_dung_backends` (`invoke_callables.py:6847`), running Tweety + student (`abs_arg_dung`) and surfacing per-semantics agreement/disagreement verbatim (never reconciled). Livré #1432/#1434/#1436. |
+| **Note** | The pivot from "select one provider" → "compare all providers" supersedes the original `--dung-provider` selector framing. Disagreement between backends is a **result**, not masked (#1019). |
+
+---
+
+## 7. NORTH-STAR Consolidation — ✅ MECHANISMS COMPLETE, selectable (R606)
+
+> Updated 2026-07-11 (po-2025, base `994baf93`). All NORTH-STAR mechanisms are
+> now **complete and pipeline-selectable**. The **only** remaining open gap is
+> the real-corpus run (ATT-3), gated on user go — honestly left OPEN.
+
+### 7a. Text→structured translators — 5/5 ✅ CLOSED
+
+| Formalism | Capability | Handler | Status |
+|-----------|-----------|---------|--------|
+| Bipolar AF | `bipolar_argumentation` | `_invoke_bipolar` (`invoke_callables.py:3064`) | ✅ #1422 |
+| ABA | `aba_reasoning` | `_invoke_aba` (`invoke_callables.py:3111`) | ✅ #1422 |
+| ASPIC+ | `aspic_plus_reasoning` | `_invoke_aspic` (`invoke_callables.py:3217`) | ✅ #1427 |
+| SetAF | `setaf_reasoning` | `_invoke_setaf` (`invoke_callables.py:3620`) | ✅ #1428 |
+| Weighted AF | `weighted_argumentation` | `_invoke_weighted` (`invoke_callables.py:3670`) | ✅ #1431 |
+
+### 7b. Multi-backend comparison axes — 3/3 ✅ CLOSED
+
+| Axis | Comparator | Backends | Status |
+|------|-----------|----------|--------|
+| FOL | `compare_fol_backends` (`fol_handler.py:963`) | EProver/Prover9/Mace4 | ✅ (pre-existing) |
+| Dung | `_compare_dung_backends` (`invoke_callables.py:6847`) | Tweety/student | ✅ #1432-#1436 |
+| Sophism | `compare_sophism_backends` (`neuro_symbolic_arbitrator.py:526`) | neural/neuro-symbolic | ✅ #1433/#1435 |
+
+### 7c. Unified harness + pipeline-selectable capability — ✅ CLOSED
+
+- `compare_all_axes` (`invoke_callables.py:7186`) — router + uniform aggregator over the 3 axes, zero re-implementation. ✅ #1438
+- `_invoke_multi_axis_compare` (`invoke_callables.py:7333`) → capability `multi_axis_compare`, registered `multi_axis_compare_service` (`registry_setup.py:470`). Selectable, NOT forced into presets; default honest-absent. ✅ #1439
+
+### 7d. ⏳ STILL OPEN — real-corpus multi-axis run (ATT-3)
+
+The terminal data-feeding run over the real (encrypted) corpus is **not done**.
+Gated on user decision; execution ai-01-local (nominative artefacts,
+non-delegable). **Honestly left OPEN** — not coché.
+
+> All pointers above verified via `git grep` (verify-before-assert, mandate R563).
+> No invented capabilities; only merged code is cited as ✅.
 
 ---
 
@@ -189,4 +226,4 @@ no user demand yet. Narrative synthesis mode is already accessible via workflow 
 | FOL solver | `--fol-solver` | ❌ | `invoke_callables.py:6023` |
 | Counter strategy | `--counter-strategy` | ❌ | `invoke_callables.py` `_invoke_counter_argument` |
 | Formal extension | `--formal-extension` | ❌ | `workflows.py` `filter_formal_extensions()` |
-| Dung provider | ❌ (pending #908) | ❌ (deferred) | `invoke_callables.py:5441` |
+| Dung provider | ❌ (superseded) | ❌ (superseded) | ✅ CLOSED §6 — multi-backend **comparison** via `dung_mode=compare` (`invoke_callables.py:6478`), not single-provider selection |
