@@ -18,6 +18,7 @@ import pytest
 
 from argumentation_analysis.orchestration.invoke_callables import (
     compare_all_axes,
+    _invoke_multi_axis_compare,
     _normalize_dung_payload,
     _normalize_fol_payload,
     _normalize_sophism_payload,
@@ -356,3 +357,109 @@ class TestNormalizers:
             assert out["available"] is False
             assert out["agreement"] is None
             assert out["disagreements"] == []
+
+
+# -- I6 PR2: pipeline-selectable handler wiring ------------------------------
+
+
+class TestMultiAxisCompareHandler:
+    """_invoke_multi_axis_compare wraps compare_all_axes and exposes it as a
+    pipeline-selectable capability. Inputs are read from context["multi_axis"];
+    DI comparators keep it JVM/LLM-free."""
+
+    async def test_handler_routes_to_comparison_with_uniform_shape(self):
+        ctx = {
+            "multi_axis": {
+                "fol_belief_set": "dummy",
+                "fol_compare_fn": _fol_fake({"e": True}, True, []),
+                "sophism_candidates": ["c0"],
+                "sophism_span_text_for": lambda c: "x",
+                "sophism_compare_fn": _sophism_fake([], honest_absent=False),
+            }
+        }
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        assert out["semantics"] == "multi_axis_compare"
+        assert out["comparison"]["overall"]["axes_run"] == ["fol", "sophism"]
+        assert "NEVER auto-reconciled" in out["note"]
+
+    async def test_handler_dung_inputs_derived_from_upstream(self):
+        # dung axis explicitly selected, no explicit dung_arguments → derived
+        # from phase_extract_output via the same helpers _invoke_dung_extensions
+        # uses.
+        ctx = {
+            "phase_extract_output": {"arguments": ["s0", "s1"]},
+            "multi_axis": {
+                "axes": ["dung"],
+                "dung_compare_fn": _dung_fake(
+                    {
+                        "grounded": {
+                            "agreement": True,
+                            "decided": ["a"],
+                            "disagreement": [],
+                        }
+                    },
+                    True,
+                ),
+            },
+        }
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        # The dung axis ran (inputs derived) and the fake comparator was called.
+        assert out["comparison"]["overall"]["axes_run"] == ["dung"]
+        assert out["comparison"]["axes"]["dung"]["available"] is True
+
+    async def test_handler_explicit_axes_filter(self):
+        ctx = {
+            "multi_axis": {
+                "axes": ["fol"],
+                "fol_belief_set": "dummy",
+                "fol_compare_fn": _fol_fake({"e": True, "p": True}, True, []),
+                "sophism_candidates": ["c0"],  # supplied but filtered out
+                "sophism_span_text_for": lambda c: "x",
+                "sophism_compare_fn": _sophism_fake([], honest_absent=False),
+            }
+        }
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        assert out["comparison"]["overall"]["axes_run"] == ["fol"]
+
+    async def test_handler_empty_config_is_honest_absent(self):
+        # No multi_axis cfg, no upstream extraction → no axis decided → NOT a
+        # fabricated agreement (anti-théâtre #1019).
+        out = await _invoke_multi_axis_compare("source text", {})
+        assert out["semantics"] == "multi_axis_compare"
+        assert out["comparison"]["overall"]["axes_run"] == []
+        assert out["comparison"]["overall"]["any_disagreement"] is False
+
+    async def test_handler_surfaces_disagreement_not_reconciled(self):
+        ctx = {
+            "multi_axis": {
+                "fol_belief_set": "dummy",
+                "fol_compare_fn": _fol_fake(
+                    {"e": True, "p": False}, False, ["NOT reconciled: e vs p"]
+                ),
+            }
+        }
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        fol = out["comparison"]["axes"]["fol"]
+        assert fol["agreement"] is False
+        assert any("NOT reconciled" in d for d in fol["disagreements"])
+        assert out["comparison"]["overall"]["any_disagreement"] is True
+
+    async def test_capability_registered_selectable(self):
+        # The handler must be registered under the multi_axis_compare capability
+        # so a workflow phase can select it (I6 PR2 DoD). We verify the wiring
+        # statically (the service tuple names the capability + handler) rather
+        # than building the full registry, which would instantiate JVM agents.
+        import inspect
+
+        from argumentation_analysis.orchestration import registry_setup
+
+        src = inspect.getsource(registry_setup)
+        # The capability string and the handler are both wired in the source.
+        assert "multi_axis_compare" in src
+        assert "_invoke_multi_axis_compare" in src
+        # And the handler is importable from the module (the import the tuple uses).
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_multi_axis_compare as _h,
+        )
+
+        assert callable(_h)
