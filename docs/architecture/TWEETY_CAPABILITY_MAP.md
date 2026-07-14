@@ -4,7 +4,7 @@ Maps Tweety library modules to the Lego architecture slots declared in `Capabili
 
 ## Current Tweety Integration
 
-The system uses Tweety 1.28 via JPype. JVM initialization is handled by `core/jvm_setup.py`.
+The system ships **two** Tweety fat-JAR revisions via JPype — **1.28** (legacy) and **1.29** (current) — both present under `libs/tweety/`. The active revision is selected by the JVM classpath wiring in `core/jvm_setup.py` (do not edit lightly — native crash risk, see the 4 canonical JVM docs). JVM initialization is handled by `core/jvm_setup.py`.
 
 ### Active Tweety Usage
 
@@ -19,8 +19,11 @@ The system uses Tweety 1.28 via JPype. JVM initialization is handled by `core/jv
 
 ### Tweety JARs
 
-Located in `libs/tweety/`:
-- `org.tweetyproject.tweety-full-1.28-with-dependencies.jar` — main JAR
+Located in `libs/tweety/` (two revisions shipped side-by-side):
+- `org.tweetyproject.tweety-full-1.28-with-dependencies.jar` — legacy fat JAR (kept for regression parity)
+- `org.tweetyproject.tweety-full-1.29-with-dependencies.jar` — current fat JAR
+
+> **Note.** The two revisions coexist deliberately so the modal/FOL sanitization fixes (#1443 — `strip_illegal_sort_declarations`, `_sanitize_fol_bool_constants`) can be validated against both parser grammars. Which JAR the JVM loads is decided by `jvm_setup.py`; this doc does not prescribe a classpath change (candidate D, tracked separately).
 
 ## Lego Extension Slots
 
