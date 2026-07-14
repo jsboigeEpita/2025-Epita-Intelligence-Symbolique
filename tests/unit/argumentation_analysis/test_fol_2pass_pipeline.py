@@ -63,7 +63,10 @@ class TestFolSharedSignatureField:
             "constants_raw": {"socrates": "philosopher"},
         }
         state.fol_shared_signature["corpus_a"] = sig
-        assert state.fol_shared_signature["corpus_a"]["sorts"]["Person"] == ["socrates", "plato"]
+        assert state.fol_shared_signature["corpus_a"]["sorts"]["Person"] == [
+            "socrates",
+            "plato",
+        ]
 
     def test_multiple_sources(self):
         state = UnifiedAnalysisState("test text")
@@ -96,11 +99,13 @@ class TestFolTwoPassPipeline:
 
         pass2_data = {"formulas": ["Man(socrates)", "forall X: (Man(X) => Mortal(X))"]}
 
-        mock_client = _mock_openai([
-            _mock_response(json.dumps(pass1_data)),
-            _mock_response(json.dumps(pass2_data)),
-            _mock_response(json.dumps(pass2_data)),
-        ])
+        mock_client = _mock_openai(
+            [
+                _mock_response(json.dumps(pass1_data)),
+                _mock_response(json.dumps(pass2_data)),
+                _mock_response(json.dumps(pass2_data)),
+            ]
+        )
 
         with patch("openai.AsyncOpenAI", return_value=mock_client):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -138,11 +143,13 @@ class TestFolTwoPassPipeline:
 
         pass2_data = {"formulas": ["Argues(socrates)", "Disagrees(plato)"]}
 
-        mock_client = _mock_openai([
-            _mock_response(json.dumps(pass1_data)),
-            _mock_response(json.dumps(pass2_data)),
-            _mock_response(json.dumps(pass2_data)),
-        ])
+        mock_client = _mock_openai(
+            [
+                _mock_response(json.dumps(pass1_data)),
+                _mock_response(json.dumps(pass2_data)),
+                _mock_response(json.dumps(pass2_data)),
+            ]
+        )
 
         with patch("openai.AsyncOpenAI", return_value=mock_client):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -168,10 +175,27 @@ class TestFolTwoPassPipeline:
         state = UnifiedAnalysisState("Test argument.")
         ctx = _make_context(state.raw_text, state)
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
-            result = asyncio.get_event_loop().run_until_complete(
-                _invoke_fol_reasoning(state.raw_text, ctx)
-            )
+        # #1452: render the no-key/fallback path DETERMINISTIC regardless of the
+        # ambient env (collection-order pollution / OpenRouter toggle). The test
+        # previously only emptied OPENAI_API_KEY: with the OpenRouter toggle ON
+        # (OPENROUTER_BASE_URL+KEY set, as in CI), _get_openai_client resolves a
+        # REAL client and the nl_to_logic path fires a live LLM call on this
+        # trivial text — whose non-deterministic output (sometimes [] formulas)
+        # is what reddened main. Clearing the OpenRouter vars too forces the
+        # no-key branch (client=None), and mocking openai.AsyncOpenAI to raise
+        # doubly guarantees no live call leaks. The fallback code then runs for
+        # real — it is not skipped (anti-théâtre #1019, mirrors L105/147/190).
+        mock_client = _mock_openai([Exception("no key — exercise fallback")])
+        no_key_env = {
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+            "OPENROUTER_BASE_URL": "",
+        }
+        with patch("openai.AsyncOpenAI", return_value=mock_client):
+            with patch.dict("os.environ", no_key_env):
+                result = asyncio.get_event_loop().run_until_complete(
+                    _invoke_fol_reasoning(state.raw_text, ctx)
+                )
 
         assert result is not None
         assert "formulas" in result
@@ -253,15 +277,40 @@ class TestFolBackwardCompat:
             "arguments": ["test argument"],
         }
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
-            result = asyncio.get_event_loop().run_until_complete(
-                _invoke_fol_reasoning("test text", ctx)
-            )
+        # #1452: deterministic mock — see test_fallback_when_no_api_key.
+        mock_client = _mock_openai([Exception("no key — exercise fallback")])
+        no_key_env = {
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+            "OPENROUTER_BASE_URL": "",
+        }
+        with patch("openai.AsyncOpenAI", return_value=mock_client):
+            with patch.dict("os.environ", no_key_env):
+                result = asyncio.get_event_loop().run_until_complete(
+                    _invoke_fol_reasoning("test text", ctx)
+                )
 
         assert result is not None
 
     def test_template_fallback_includes_fallacies(self):
-        """Template fallback should produce formulas even with fallacies context."""
+        """FOL pipeline delegates to NLToLogicTranslator when 2-pass is skipped.
+
+        The template-fabrication fallback (Asserted/Undermines/Fallacious) that
+        this test originally exercised was REMOVED in #1278/#1019 as théâtre.
+        With no upstream NL→logic translation and text below the len>100 2-pass
+        gate, the only formula source is the NLToLogicTranslator delegation
+        (invoke_callables.py:5763-5786). This test mocks the translator (the LLM
+        boundary) to return a valid translation and asserts the delegation path
+        populates `formulas` even with a fallacies context — the code under test
+        (filter is_valid, split ';', populate) runs for real, NOT skipped (zero
+        théâtre #1019). The `phase_hierarchical_fallacy_output` now feeds
+        `inferences` (invoke_callables.py:5804), not `formulas`.
+
+        #1452: patching the translator METHOD (not AsyncOpenAI + env-var clearing)
+        is robust against collection-order env pollution: it short-circuits env
+        resolution entirely, so the prior fix's failure under suite ordering (the
+        translator read OPENROUTER_* despite a patch.dict clear) cannot recur.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
         )
@@ -274,10 +323,23 @@ class TestFolBackwardCompat:
             ]
         }
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
+        # Mock the translator's batch method (LLM boundary). The delegation code
+        # in _invoke_fol_reasoning (filter is_valid, split ';', populate) runs.
+        valid_translation = MagicMock()
+        valid_translation.is_valid = True
+        valid_translation.formula = "Test(fallacies)"
+        mock_batch = MagicMock()
+        mock_batch.translations = [valid_translation]
+
+        with patch(
+            "argumentation_analysis.services.nl_to_logic."
+            "NLToLogicTranslator.translate_batch",
+            new=AsyncMock(return_value=mock_batch),
+        ):
             result = asyncio.get_event_loop().run_until_complete(
                 _invoke_fol_reasoning(state.raw_text, ctx)
             )
 
         assert result is not None
         assert len(result["formulas"]) > 0
+        assert "Test(fallacies)" in result["formulas"]
