@@ -24,7 +24,7 @@ import logging
 import os
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
@@ -614,6 +614,97 @@ async def run_conversational_analysis(
             max_total_turns=max_total_turns,
             render_restitution=render_restitution,
         )
+
+
+def _formal_axis_genuine(results: List[Any]) -> bool:
+    """True iff at least one result entry is a genuine reasoning artifact.
+
+    Constat n°5 (#1355): a formal axis (FOL/modal/PL) counts as *genuinely
+    used* only when an entry carries non-empty ``formulas`` (something was
+    actually formalized) AND bears no explicit ``unavailable:*`` degradation
+    token. Requiring non-empty formulas prevents an empty theory from reading
+    as a "trivially consistent" decision — the exact theatre #1019 forbids.
+    The ``unavailable:`` marker is the canonical honest-degradation signal
+    written by the FOL/modal writers (#1278/#1279: ``no-translation``,
+    ``parse-fail``, ``no-solver``).
+    """
+    for entry in results:
+        if not isinstance(entry, dict):
+            continue
+        message = entry.get("message")
+        if isinstance(message, str) and message.startswith("unavailable:"):
+            continue
+        if entry.get("formulas"):
+            return True
+    return False
+
+
+def _axis_produced_formulas(results: List[Any]) -> bool:
+    """True iff at least one entry carries non-empty formulas.
+
+    Distinct from :func:`_formal_axis_genuine`: NL→formal *translation*
+    succeeded whenever formulas exist on an axis, even if the solver later
+    degraded (e.g. modal ``unavailable:no-solver`` keeps the translated
+    formulas — invoke_callables.py:6429). This lets ``nl_to_logic_translation``
+    be reported genuine while ``modal_logic`` is reported degraded.
+    """
+    for entry in results:
+        if isinstance(entry, dict) and entry.get("formulas"):
+            return True
+    return False
+
+
+def _classify_formal_capabilities(
+    state: Any,
+) -> Tuple[Set[str], Set[str], Set[str]]:
+    """Split FormalAgent participation into honest used/degraded/missing sets.
+
+    Constat n°5 (#1355): the spectacular rollup previously declared every
+    formal capability as ``used`` the moment FormalAgent spoke — even when
+    FOL/modal were ``degraded=true`` (parse-fail, no-translation, solver OOM).
+    This crosses participation with the REAL per-axis decision status already
+    recorded in ``state`` (``fol/modal/propositional_analysis_results``),
+    mirroring the honest ``structured_arg_status`` layer but for the
+    ``fol_reasoning``/``modal_logic``/``propositional_logic``/
+    ``nl_to_logic_translation`` vocabulary.
+
+    Returns ``(used, degraded, missing)``:
+      * *used* — axis genuinely decided/produced (non-empty formulas, no
+        ``unavailable:*`` token).
+      * *degraded* — axis participated but every entry is a degradation.
+      * *missing* — FormalAgent participated but the axis left no entry.
+
+    Anti-théâtre #1019: a degraded axis is never reported as ``used``; an empty
+    theory is never reported as a genuine decision.
+    """
+    fol_res = list(getattr(state, "fol_analysis_results", []) or [])
+    modal_res = list(getattr(state, "modal_analysis_results", []) or [])
+    pl_res = list(getattr(state, "propositional_analysis_results", []) or [])
+    used: Set[str] = set()
+    degraded: Set[str] = set()
+    missing: Set[str] = set()
+    for cap, results in (
+        ("fol_reasoning", fol_res),
+        ("modal_logic", modal_res),
+        ("propositional_logic", pl_res),
+    ):
+        if _formal_axis_genuine(results):
+            used.add(cap)
+        elif results:
+            degraded.add(cap)
+        else:
+            missing.add(cap)
+    # nl_to_logic_translation is genuine iff translation produced formulas on
+    # ANY axis (distinct from the solver later degrading). If FormalAgent
+    # participated but produced no formulas anywhere, it degraded; if it left
+    # no formal entries at all, it is missing.
+    if any(_axis_produced_formulas(r) for r in (fol_res, modal_res, pl_res)):
+        used.add("nl_to_logic_translation")
+    elif fol_res or modal_res or pl_res:
+        degraded.add("nl_to_logic_translation")
+    else:
+        missing.add("nl_to_logic_translation")
+    return used, degraded, missing
 
 
 async def _run_conversational_analysis_inner(
@@ -1302,9 +1393,18 @@ async def _run_conversational_analysis_inner(
         },
     }
 
-    # Spectacular mode: add capability mapping from conversation log
+    # Spectacular mode: add capability mapping from conversation log.
+    # Constat n°5 (#1355): formal capabilities are crossed with the REAL
+    # per-axis decision status in ``state`` — a degraded axis (parse-fail,
+    # no-translation, solver OOM) is reported via ``capabilities_degraded``,
+    # NOT as ``used`` identical to a genuine decision (anti-théâtre #1019).
+    # ``capabilities_missing`` reflects axes that participated but left no
+    # entry, instead of a hardcoded empty list.
     if spectacular:
-        capabilities_used = set()
+        capabilities_used: Set[str] = set()
+        capabilities_degraded: Set[str] = set()
+        capabilities_missing: Set[str] = set()
+        formal_participated = False
         for msg in conversation_log:
             agent = msg.get("agent", "")
             if agent == "ExtractAgent":
@@ -1314,14 +1414,7 @@ async def _run_conversational_analysis_inner(
                     ["neural_fallacy_detection", "hierarchical_fallacy_detection"]
                 )
             elif agent == "FormalAgent":
-                capabilities_used.update(
-                    [
-                        "nl_to_logic_translation",
-                        "fol_reasoning",
-                        "modal_logic",
-                        "propositional_logic",
-                    ]
-                )
+                formal_participated = True
             elif agent == "QualityAgent":
                 capabilities_used.add("argument_quality")
             elif agent == "CounterAgent":
@@ -1330,8 +1423,15 @@ async def _run_conversational_analysis_inner(
                 capabilities_used.add("adversarial_debate")
             elif agent == "GovernanceAgent":
                 capabilities_used.add("governance_simulation")
-        result["capabilities_used"] = list(capabilities_used)
-        result["capabilities_missing"] = []
+        if formal_participated:
+            f_used, f_degraded, f_missing = _classify_formal_capabilities(state)
+            capabilities_used |= f_used
+            capabilities_degraded |= f_degraded
+            capabilities_missing |= f_missing
+        # Sorted for deterministic output (golden/compare snapshots, #1355).
+        result["capabilities_used"] = sorted(capabilities_used)
+        result["capabilities_degraded"] = sorted(capabilities_degraded)
+        result["capabilities_missing"] = sorted(capabilities_missing)
 
     logger.info(
         f"Conversational analysis complete: {len(conversation_log)} messages, "

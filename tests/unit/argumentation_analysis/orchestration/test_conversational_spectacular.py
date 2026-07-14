@@ -248,13 +248,149 @@ class TestSpectacularCapabilityMapping:
             result = await run_conversational_analysis("test text", spectacular=True)
 
         caps = result["capabilities_used"]
+        # Non-formal agents map purely from participation (no degradation
+        # concept) — these remain in capabilities_used.
         assert "fact_extraction" in caps
         assert "neural_fallacy_detection" in caps
-        assert "fol_reasoning" in caps
         assert "argument_quality" in caps
         assert "counter_argument_generation" in caps
         assert "adversarial_debate" in caps
         assert "governance_simulation" in caps
+        # Constat n°5 (#1355): FormalAgent participated here, but the mocked
+        # _run_phase populated NO formal result entries in state — so the
+        # formal axes are NOT reported as ``used`` (that was the bug). With
+        # empty formal state, they are ``missing`` (participated, no entry).
+        # The genuine-vs-degraded distinction is covered directly by
+        # TestConstat5FormalCapabilityHonesty below.
+        assert "fol_reasoning" not in caps
+        assert "modal_logic" not in caps
+        assert "propositional_logic" not in caps
+        assert "nl_to_logic_translation" not in caps
+        assert "fol_reasoning" in result["capabilities_missing"]
+        assert result["capabilities_degraded"] == [] or all(
+            c not in ("fol_reasoning", "modal_logic", "propositional_logic")
+            for c in result["capabilities_degraded"]
+        )
+
+
+class TestConstat5FormalCapabilityHonesty:
+    """Constat n°5 (#1355): degraded formal axes ≠ used — DI synthetic tests.
+
+    Proves the honest split without any JVM/LLM: ``_classify_formal_capabilities``
+    crosses FormalAgent participation with the REAL per-axis decision status
+    already recorded in state. A degraded axis (``unavailable:*`` token or empty
+    theory) is never reported as ``used`` (anti-théâtre #1019).
+    """
+
+    def _make_state(self) -> "UnifiedAnalysisState":
+        return UnifiedAnalysisState("corpus_A synthetic")
+
+    def test_degraded_fol_not_used(self):
+        """FOL degraded (no-translation) → fol_reasoning in degraded, not used."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _classify_formal_capabilities,
+        )
+
+        state = self._make_state()
+        state.add_fol_analysis_result(
+            [], None, [], 0.0, message="unavailable:no-translation — empty theory"
+        )
+        used, degraded, missing = _classify_formal_capabilities(state)
+        assert "fol_reasoning" not in used
+        assert "fol_reasoning" in degraded
+        assert "fol_reasoning" not in missing
+        # No formulas produced anywhere → nl_to_logic degraded (attempted, failed)
+        assert "nl_to_logic_translation" not in used
+        assert "nl_to_logic_translation" in degraded
+
+    def test_genuine_fol_is_used(self):
+        """FOL genuine decision → fol_reasoning + nl_to_logic_translation used."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _classify_formal_capabilities,
+        )
+
+        state = self._make_state()
+        state.add_fol_analysis_result(
+            ["forall x (P(x) -> Q(x))"], True, ["Q(x) derived"], 0.9
+        )
+        used, degraded, missing = _classify_formal_capabilities(state)
+        assert "fol_reasoning" in used
+        assert "fol_reasoning" not in degraded
+        assert "nl_to_logic_translation" in used
+
+    def test_modal_solver_oom_split_is_the_crux(self):
+        """modal unavailable:no-solver keeps formulas → modal degraded BUT
+        nl_to_logic_translation used (translation succeeded, solver failed).
+
+        This is the crux distinction: translation-success ≠ solver-success.
+        """
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _classify_formal_capabilities,
+        )
+
+        state = self._make_state()
+        # Formulas present (translation worked) but solver OOM'd.
+        state.add_modal_analysis_result(
+            ["[]p", "<>q"], None, [], message="unavailable:no-solver — SPASS OOM"
+        )
+        used, degraded, missing = _classify_formal_capabilities(state)
+        assert "modal_logic" not in used
+        assert "modal_logic" in degraded
+        # Translation DID produce formulas → nl_to_logic is genuine.
+        assert "nl_to_logic_translation" in used
+        assert "nl_to_logic_translation" not in degraded
+
+    def test_missing_when_no_entries(self):
+        """FormalAgent participated but no formal entries → all four missing."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _classify_formal_capabilities,
+        )
+
+        state = self._make_state()  # empty
+        used, degraded, missing = _classify_formal_capabilities(state)
+        assert used == set()
+        assert degraded == set()
+        assert missing == {
+            "fol_reasoning",
+            "modal_logic",
+            "propositional_logic",
+            "nl_to_logic_translation",
+        }
+
+    def test_mixed_fol_genuine_modal_degraded_per_axis(self):
+        """Per-axis independence: FOL genuine + modal degraded in one run."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _classify_formal_capabilities,
+        )
+
+        state = self._make_state()
+        state.add_fol_analysis_result(["forall x P(x)"], True, [], 0.8)
+        state.add_modal_analysis_result(
+            [], None, [], message="unavailable:no-translation — empty"
+        )
+        used, degraded, missing = _classify_formal_capabilities(state)
+        assert "fol_reasoning" in used
+        assert "modal_logic" in degraded
+        assert "modal_logic" not in used
+        assert "fol_reasoning" not in degraded
+        # FOL produced formulas → nl_to_logic used.
+        assert "nl_to_logic_translation" in used
+
+    def test_parse_fail_fol_is_degraded(self):
+        """FOL unavailable:parse-fail (formulas produced but unparseable)
+        → degraded. Verifies the unavailable:* prefix contract."""
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _formal_axis_genuine,
+        )
+
+        # Even if formulas leaked non-empty, the unavailable: prefix marks
+        # the axis degraded (the prover decided nothing).
+        assert not _formal_axis_genuine(
+            [{"formulas": ["forall x P(x)"], "message": "unavailable:parse-fail"}]
+        )
+        assert _formal_axis_genuine([{"formulas": ["forall x P(x)"], "message": None}])
+        # Empty theory with no degradation token is NOT genuine (#1019).
+        assert not _formal_axis_genuine([{"formulas": [], "message": None}])
 
 
 class TestUnifiedAnalysisStateFields:
