@@ -181,6 +181,7 @@ async def main_async(label: str, offset: int = 0, out_suffix: str = "") -> None:
         "workflow_name": result.get("workflow_name"),
         "summary": summary,
         "capabilities_used": result.get("capabilities_used"),
+        "capabilities_degraded": result.get("capabilities_degraded"),
         "capabilities_missing": result.get("capabilities_missing"),
         "gate": gate,
         "report_chars": (
