@@ -293,7 +293,24 @@ class TestFolBackwardCompat:
         assert result is not None
 
     def test_template_fallback_includes_fallacies(self):
-        """Template fallback should produce formulas even with fallacies context."""
+        """FOL pipeline delegates to NLToLogicTranslator when 2-pass is skipped.
+
+        The template-fabrication fallback (Asserted/Undermines/Fallacious) that
+        this test originally exercised was REMOVED in #1278/#1019 as théâtre.
+        With no upstream NL→logic translation and text below the len>100 2-pass
+        gate, the only formula source is the NLToLogicTranslator delegation
+        (invoke_callables.py:5763-5786). This test mocks the translator (the LLM
+        boundary) to return a valid translation and asserts the delegation path
+        populates `formulas` even with a fallacies context — the code under test
+        (filter is_valid, split ';', populate) runs for real, NOT skipped (zero
+        théâtre #1019). The `phase_hierarchical_fallacy_output` now feeds
+        `inferences` (invoke_callables.py:5804), not `formulas`.
+
+        #1452: patching the translator METHOD (not AsyncOpenAI + env-var clearing)
+        is robust against collection-order env pollution: it short-circuits env
+        resolution entirely, so the prior fix's failure under suite ordering (the
+        translator read OPENROUTER_* despite a patch.dict clear) cannot recur.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
         )
@@ -306,18 +323,23 @@ class TestFolBackwardCompat:
             ]
         }
 
-        # #1452: deterministic mock — see test_fallback_when_no_api_key.
-        mock_client = _mock_openai([Exception("no key — exercise fallback")])
-        no_key_env = {
-            "OPENAI_API_KEY": "",
-            "OPENROUTER_API_KEY": "",
-            "OPENROUTER_BASE_URL": "",
-        }
-        with patch("openai.AsyncOpenAI", return_value=mock_client):
-            with patch.dict("os.environ", no_key_env):
-                result = asyncio.get_event_loop().run_until_complete(
-                    _invoke_fol_reasoning(state.raw_text, ctx)
-                )
+        # Mock the translator's batch method (LLM boundary). The delegation code
+        # in _invoke_fol_reasoning (filter is_valid, split ';', populate) runs.
+        valid_translation = MagicMock()
+        valid_translation.is_valid = True
+        valid_translation.formula = "Test(fallacies)"
+        mock_batch = MagicMock()
+        mock_batch.translations = [valid_translation]
+
+        with patch(
+            "argumentation_analysis.services.nl_to_logic."
+            "NLToLogicTranslator.translate_batch",
+            new=AsyncMock(return_value=mock_batch),
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                _invoke_fol_reasoning(state.raw_text, ctx)
+            )
 
         assert result is not None
         assert len(result["formulas"]) > 0
+        assert "Test(fallacies)" in result["formulas"]
