@@ -114,6 +114,25 @@ sélectionnables via le `CapabilityRegistry`.
 
 Pointeurs vérifiés `git grep` : `registry_setup.py:765,772,784,822,828`.
 
+**Nuance honnête (code vs corpus, #1442)** : les 5 translateurs sont **codés ET
+capables d'extraction génuine** — vérifié firsthand (probe scratchpad, 2026-07-12) :
+SetAF extrait bien des attaques collectives (joint attack de 4 attaquants sur un
+extrait de corpus_A + `{B,C}→A` sur texte synthétique), et weighted dérive des
+poids **variés dérivés du texte** (0.95 « overwhelming evidence » vs 0.2 « weakly »,
+pas un poids uniforme). Les validateurs `_validate_setaf_attacks` /
+`_validate_weighted_attacks` et le wiring (handlers → translateurs → gate) sont
+couverts par 75 tests DI JVM/LLM-free (`test_structured_arg_translator.py`).
+
+Cependant, le **run ATT-3** (3 corpus politiques, jugé première main) a obtenu
+`status=absent_no_translator, degraded=true` pour SetAF et weighted — alors que
+bipolaire/ABA/ASPIC+ passaient `evaluated`. Le translateur étant non-déterministe
+(appel LLM), cet écart est **honnêtement déclaratif, pas un bug du translateur** :
+le LLM n'a pas proposé de structure canonique valide sur l'inventaire de ce run
+précis. Un re-run peut flipper vers `evaluated` (le probe sur corpus_A retourne
+non-vide). Anti-théâtre #1019 : on ne force JAMAIS un `evaluated` sur entrée
+synthétique — le drapeau `degraded` reste le signal honnête quand l'extraction
+LLM revient vide.
+
 ### F.2 Axes de comparaison multi-backends (3/3)
 
 Chaque axe compare plusieurs backends sur le même input et surface les

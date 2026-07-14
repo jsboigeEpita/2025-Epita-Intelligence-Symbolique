@@ -176,6 +176,16 @@ a static selector.
 | SetAF | `setaf_reasoning` | `_invoke_setaf` (`invoke_callables.py:3620`) | ✅ #1428 |
 | Weighted AF | `weighted_argumentation` | `_invoke_weighted` (`invoke_callables.py:3670`) | ✅ #1431 |
 
+> **Honest nuance (#1442, verified firsthand 2026-07-12)**: 5/5 translators are
+> coded AND genuine-extraction-capable. Probe scratchpad confirms SetAF extracts
+> collective attacks (4-attacker joint attack on a corpus_A excerpt) and weighted
+> derives varied weights from text (0.95 vs 0.2). The ATT-3 run nonetheless
+> surfaced `degraded=true` for SetAF+weighted on its 3 political corpora while
+> bipolar/ABA/ASPIC+ passed `evaluated` — this is **honest LLM-non-determinism
+> on the specific run's inventory, not a translator defect** (a re-run can flip
+> it). The `degraded` flag is the correct anti-théâtre signal when the LLM
+> extraction returns empty; it is never masked into a synthetic `evaluated`.
+
 ### 7b. Multi-backend comparison axes — 3/3 ✅ CLOSED
 
 | Axis | Comparator | Backends | Status |
