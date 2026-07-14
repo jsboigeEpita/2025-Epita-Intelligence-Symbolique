@@ -277,6 +277,30 @@ async def run_unified_analysis(
         if r.status in (PhaseStatus.FAILED, PhaseStatus.SKIPPED)
     ]
 
+    # Constat n°5 (#1355): a COMPLETED phase may still be *degraded* — e.g.
+    # setaf/weighted ``absent_no_translator`` (no genuine extraction on this
+    # corpus, honest LLM non-determinism), or a solver ParserException caught
+    # into an honest-degraded verdict. capabilities_used (built from
+    # PhaseStatus.COMPLETED alone) would report these identical to a genuine
+    # decision — the exact theatre #1019 forbids. Cross with the honest
+    # ``structured_arg_status`` layer (already populated on the state) so a
+    # degraded capability surfaces via capabilities_degraded, NOT as ``used``.
+    # Mirrors the conversational_orchestrator fix (#1446). Additive key: zero
+    # blast radius on consumers (all read capabilities_used via .get(..., [])).
+    capabilities_degraded: list[str] = []
+    if state is not None:
+        structured = getattr(state, "structured_arg_status", None) or {}
+        degraded_caps = {
+            cap
+            for cap, info in structured.items()
+            if isinstance(info, dict) and info.get("degraded")
+        }
+        if degraded_caps:
+            capabilities_degraded = sorted(degraded_caps)
+            capabilities_used = [
+                c for c in capabilities_used if c not in degraded_caps
+            ]
+
     result = {
         "workflow_name": workflow.name,
         "phases": phase_results,
@@ -290,6 +314,7 @@ async def run_unified_analysis(
             "skipped_phases": skipped_phases,
         },
         "capabilities_used": capabilities_used,
+        "capabilities_degraded": capabilities_degraded,
         "capabilities_missing": capabilities_missing,
     }
 
