@@ -75,14 +75,15 @@ Il est crucial de respecter la syntaxe attendue par TweetyProject pour les formu
     *   XOR : `^^`
     *   Constantes : `true`, `false`
     *   Variables propositionnelles : `a, b, prop1, ...`
-*   **Logique du Premier Ordre :**
+*   **Logique du Premier Ordre (FOL) :** BNF officiel dans [`tweety_fol_bnf.md`](../../argumentation_analysis/agents/core/logic/tweety_fol_bnf.md).
     *   Quantificateurs : `forall X: (formula)`, `exists X: (formula)`
     *   Prédicats : `P(X,y)`
-    *   Connecteurs : similaires à PL.
-*   **Logique Modale :**
-    *   Opérateur de nécessité (Box) : `[]` ou `Box`
-    *   Opérateur de possibilité (Diamond) : `<>` ou `Diamond`
-    *   Connecteurs : similaires à PL.
+    *   Connecteurs : `&&`, `||`, `!`, `=>`, `<=>`, `==`, `/==`, `^^` (symboles identiques à PL).
+    *   **Constantes Top/Bottom : `+` / `-`** — et **NON** `true`/`false` hérités de PL. Un atome `T`/`F` (ou `true`/`false`) émis par un LLM lève `ParserException: Unrecognized formula type 'T'` et la formule est perdue. `fol_handler._sanitize_fol_bool_constants` (#1441 Bug B) mappe `T`→`+` / `F`→`-` (word-boundary ; `Table`, `T1`, `t` minuscule intacts) en amont du parse.
+*   **Logique Modale (ML) — `MlParser`, grammaire plus stricte que le `FolParser` :**
+    *   Opérateurs : nécessité `[]` (ou `Box`), possibilité `<>` (ou `Diamond`) ; connecteurs `&&`/`||`/`!`/`=>`/`<=>`.
+    *   **Pas de mot-clé `sort`** : les propositions se déclarent via `type(prop)` (un KB modal ne déclare pas les sortes à la mode FOL). Une ligne `sort (...)` lève `ParserException: Illegal characters / Missing '=' in sort definition` sur **tout** le KB. `ModalIdentifierNormalizer.strip_illegal_sort_declarations` (#1441 Bug A) supprime ces lignes en amont de `parseBeliefBase`.
+    *   **Identifiants stricts `[a-zA-Z][a-zA-Z0-9]*`** : les underscores et autres séparateurs sont rejetés (`joke_teleprompter` → `ParserException`). `ModalIdentifierNormalizer.legalize` (#1326) mappe ces atomes vers du PascalCase légal (`JokeTeleprompter`) en amont du parse, avec garde anti-collision.
 
 Les ensembles de croyances sont typiquement une liste de formules, chacune sur une nouvelle ligne. Les commentaires peuvent être introduits par `#`.
 
