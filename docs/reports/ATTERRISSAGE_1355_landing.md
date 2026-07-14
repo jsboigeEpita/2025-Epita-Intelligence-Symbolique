@@ -25,7 +25,7 @@ L'Epic #1355 « Atterrissage » vise à faire descendre le système d'un cycle d
 
 **Atteint.** `mypy --strict` sur les 8 fichiers core est le seul vrai gate CI. `black`/`flake8` sont `continue-on-error` (bruit). Les tests sautent gracieusement sans clé API.
 
-- ⚠ **Floater résiduel** `tests/.../test_fol_2pass_pipeline.py::test_template_fallback_includes_fallacies` : échec par **collection-order pollution** (le test pose `OPENAI_API_KEY=""` sans mocker `openai.AsyncOpenAI`, contrairement à ses frères L105/147/190). **Non-régressif**, **dispatché à po-2023 (#1452, T0)** — ne pas fixer côté po-2025 (collision sur le fichier test). Cité ici honnêtement comme « floater ATT-1 sous fix #1452 », pas comme « main vert ».
+- ✅ **Floater résiduel résolu** `tests/.../test_fol_2pass_pipeline.py::test_template_fallback_includes_fallacies` : échec par **collection-order pollution** (le test posait `OPENAI_API_KEY=""` sans mocker `openai.AsyncOpenAI`, contrairement à ses frères L105/147/190). **Non-régressif**, corrigé par **#1453** (fix de l'issue #1452, po-2023) — mocking déterministe aligné sur les frères — **mergé sur main `9512fe32`**. Ce document est rebasé sur ce main : le fix est donc présent dans la base de test de ce livrable.
 
 ### ATT-3 — Capstone texte-terminal
 
@@ -58,7 +58,7 @@ Anti-pendule : l'atterrissage ne déclare pas « tout est vert ». Voici les ré
 
 | Résidu | Nature | Statut |
 |--------|--------|--------|
-| Floater `test_template_fallback_includes_fallacies` | Collection-order pollution (test, pas code) | Sous fix `#1452` (po-2023, parallèle) |
+| Floater `test_template_fallback_includes_fallacies` | Collection-order pollution (test, pas code) | ✅ Résolu `#1453` (mergé main `9512fe32`) |
 | `setaf_reasoning` `absent_no_translator` | Pas de traducteur extractant sur ce corpus | Honnête (degraded, jamais masqué) |
 | FOL `fol_2` corpus B `ParserException` | Token de parse FOL résiduel (≠ `#1443`) | Catché fail-loud degraded `#1019` |
 | Corpus B Acte II vide | Générateur narration muet (`--offset 120000`) | Gate `FAIL` reporté verbatim |
