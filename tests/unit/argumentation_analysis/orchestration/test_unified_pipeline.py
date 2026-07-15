@@ -597,6 +597,7 @@ class TestRealInvocationViaUnifiedAnalysis:
 class TestStateViaRunUnifiedAnalysis:
     """Real-invocation tests: call run_unified_analysis end-to-end (CI tally
     run 28582260688: ~68s). Marked `slow` for the per-push gate (#1336, R535)."""
+
     @pytest.mark.asyncio
     async def test_state_returned_by_default(self):
         """run_unified_analysis returns unified_state and state_snapshot by default."""
@@ -713,6 +714,125 @@ class TestInvokeCallables:
             result = await _invoke_debate_analysis("Some debate text", {})
         assert result["score"] == 7
         assert result["winner"] == "pro"
+
+    async def test_invoke_debate_analysis_no_args_upstream_is_degraded_1467(self):
+        """GE-5 #1467: if upstream extraction yielded no arguments, debate is
+        honestly degraded — NO debate_quality is fabricated, the call short-
+        circuits BEFORE any LLM call.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_debate_analysis,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.analyze_argument_quality.return_value = (
+            '{"persuasiveness": 0.7, "logical_coherence": 0.6}'
+        )
+        with patch(
+            "argumentation_analysis.agents.core.debate.debate_agent.DebatePlugin",
+            return_value=mock_plugin,
+        ):
+            # No phase_extract_output → empty arguments upstream → degraded.
+            result = await _invoke_debate_analysis(
+                "Topic", {"phase_extract_output": {"arguments": []}}
+            )
+        assert result["debate_degraded"] is True
+        assert result["debate_degraded_reason"] == "no_arguments_upstream"
+        # Crucial anti-théâtre invariant: debate_quality is None, NOT 0,
+        # and the source is "unscored" (no measurement was taken).
+        assert result["debate_quality"] is None
+        assert result["debate_quality_source"] == "unscored"
+
+    async def test_invoke_debate_analysis_llm_quality_is_honored_1467(self):
+        """GE-5 #1467: when the LLM path returns a valid debate_quality ∈ [1,5],
+        that value is hoisted into base_scores (source=llm). The previous bug
+        dropped the field entirely, defaulting to 0/5 (THEATER).
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_debate_analysis,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.analyze_argument_quality.return_value = (
+            '{"persuasiveness": 0.7, "logical_coherence": 0.6}'
+        )
+
+        class _Msg:
+            content = (
+                '{"winner": "Agent B", "debate_quality": 3, '
+                '"key_exchanges": [], "new_insights": [], "reasoning": "ok"}'
+            )
+
+        class _Choice:
+            message = _Msg()
+
+        class _Resp:
+            choices = [_Choice()]
+
+        class _Completions:
+            async def create(self, *args, **kwargs):
+                return _Resp()
+
+        class _Chat:
+            completions = _Completions()
+
+        class _Client:
+            chat = _Chat()
+
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        with patch(
+            "argumentation_analysis.agents.core.debate.debate_agent.DebatePlugin",
+            return_value=mock_plugin,
+        ), patch.object(ic, "_get_openai_client", return_value=(_Client(), "fake")):
+            result = await _invoke_debate_analysis(
+                "Topic", {"phase_extract_output": {"arguments": ["A1"]}}
+            )
+        # LLM-reported value (3) wins over the heuristic (0.7*5=3.5 → round 4).
+        assert result["debate_quality"] == 3.0
+        assert result["debate_quality_source"] == "llm"
+        assert result["winner"] == "Agent B"
+
+    async def test_invoke_debate_analysis_llm_fail_falls_back_to_heuristic_1467(self):
+        """GE-5 #1467: when the LLM path fails (exception), the trace MUST
+        show a genuine measurement from the plugin heuristic, NOT 0/5.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_debate_analysis,
+        )
+
+        mock_plugin = MagicMock()
+        mock_plugin.analyze_argument_quality.return_value = (
+            '{"persuasiveness": 0.6, "logical_coherence": 0.5, '
+            '"evidence_quality": 0.4, "relevance_score": 0.7, '
+            '"emotional_appeal": 0.2, "fact_check_score": 0.5, '
+            '"novelty_score": 0.6, "readability_score": 0.8}'
+        )
+
+        class _Completions:
+            async def create(self, *args, **kwargs):
+                raise RuntimeError("LLM call failed (401 unauthorized)")
+
+        class _Chat:
+            completions = _Completions()
+
+        class _Client:
+            chat = _Chat()
+
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        with patch(
+            "argumentation_analysis.agents.core.debate.debate_agent.DebatePlugin",
+            return_value=mock_plugin,
+        ), patch.object(ic, "_get_openai_client", return_value=(_Client(), "fake")):
+            result = await _invoke_debate_analysis(
+                "Topic", {"phase_extract_output": {"arguments": ["A1"]}}
+            )
+        # Heuristic derivation: 0.6 * 5 = 3.0. NOT 0 (that was the old bug).
+        assert result["debate_quality"] == 3.0
+        assert result["debate_quality_source"] == "heuristic"
+        # Anti-théâtre: no LLM assessment in result (it failed).
+        assert "llm_debate_assessment" not in result
 
     async def test_invoke_governance(self):
         """_invoke_governance calls GovernancePlugin and returns enriched result."""
