@@ -267,6 +267,131 @@ class TestNLToLogicTranslator:
             )
         assert len(batch.translations) == 1
 
+    # ── #1457: NL→modal silent collapse guard ────────────────────────
+
+    @pytest.mark.asyncio
+    async def test_modal_formula_without_box_or_diamond_is_honest_absent_1457(self):
+        """#1457 — probe `check_consistency("K", "p => q")` returns
+        ``(True, "consistent")`` (Tweety accepts any syntactically valid
+        K-modal formula, including material implications and bare atoms).
+        The LLM sometimes emits ``"p => q"`` / ``"p"`` for ``logic_type=modal``
+        when the source text has modal *flavor* but no genuine necessity /
+        possibility — that is honest-absent (the validator below would
+        false-green it as a valid modal belief set). The guard at
+        ``_translate_with_llm`` must catch this BEFORE retrying and return
+        the same honest-absent sentinel as the EMPTY-formulas branch:
+        ``is_valid=True`` + ``validation_message="No modal operator in
+        formulas (honest absent)"`` + ``formula=""`` + ``confidence=0.0``.
+        Critically: NOT a fabricated modal verdict (anti-théâtre #1019).
+        """
+        translator = self._make_translator()
+
+        # LLM emits ONLY material implications / bare atoms — no [] / <>.
+        # Both are precisely the cases the empirical probe confirmed Tweety
+        # silently accepts (verdict=VALID, msg="Knowledge base is
+        # consistent (spass)" for both ``p => q`` and ``p``).
+        bad_modal_response = MagicMock()
+        bad_modal_response.choices = [MagicMock()]
+        bad_modal_response.choices[0].message.content = (
+            '{"logic_type": "modal", '
+            '"constants": ["p", "q"], '
+            '"formulas": ["p => q"], '
+            '"confidence": 0.7}'
+        )
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(return_value=bad_modal_response)
+
+        # The guard fires BEFORE ``_validate_formula`` — the mock below would
+        # false-green any input if it were reached. Asserting it is NEVER
+        # called proves the guard short-circuits at the source.
+        validate_call_count = 0
+
+        async def fail_validate(*args, **kwargs):
+            nonlocal validate_call_count
+            validate_call_count += 1
+            return (True, "THIS MUST NEVER RUN — guard should short-circuit")
+
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False):
+            with patch("openai.AsyncOpenAI", return_value=mock_client):
+                with patch.object(translator, "_validate_formula", fail_validate):
+                    result = await translator.translate(
+                        "If it rains, the ground gets wet — this is a necessary consequence.",
+                        logic_type="modal",
+                    )
+
+        # Honest-absent sentinel — NOT a false-green modal verdict.
+        assert result.is_valid is True, (
+            "Without modal operator, the LLM response is honest-absent "
+            "(is_valid=True with empty formula + 0.0 confidence), NOT invalid."
+        )
+        assert result.formula == "", (
+            f"#1457 REGRESSION: silent modal collapse — formula {result.formula!r} "
+            f"without []/<> was accepted as a modal belief set (anti-théâtre #1019)."
+        )
+        assert result.confidence == 0.0
+        assert "honest absent" in result.validation_message.lower()
+        # The validator MUST NOT have been reached — the guard short-circuits
+        # before retrying, so no JVM call, no fabricated Tweety verdict.
+        assert validate_call_count == 0, (
+            f"#1457 REGRESSION: _validate_formula called {validate_call_count} "
+            f"time(s); guard must short-circuit BEFORE validation (no retry loop)."
+        )
+
+    @pytest.mark.asyncio
+    async def test_modal_formula_with_box_or_diamond_passes_guard_1457(self):
+        """#1457 — companion control: the new guard must NOT reject genuine
+        modal formulas carrying ``[]`` or ``<>``. We mock ``_validate_formula``
+        to a no-op (True, ...) and assert that (a) the guard lets them
+        through, (b) the resulting TranslationResult has the formula from
+        ``_build_modal_belief_set`` (NOT empty), (c) confidence is preserved
+        (NOT zeroed — that's the honest-absent signal from the guard)."""
+        translator = self._make_translator()
+
+        good_modal_response = MagicMock()
+        good_modal_response.choices = [MagicMock()]
+        good_modal_response.choices[0].message.content = (
+            '{"logic_type": "modal", '
+            '"constants": ["p", "q"], '
+            '"formulas": ["[](p => q)", "<>(p)"], '
+            '"confidence": 0.8}'
+        )
+
+        mock_client = AsyncMock()
+        mock_client.chat.completions.create = AsyncMock(
+            return_value=good_modal_response
+        )
+
+        async def passthrough_validate(formula, logic_type, **kwargs):
+            # Mimic the real Tweety happy path: VALID modal belief set.
+            return (True, "Valid modal belief set (mocked)")
+
+        with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}, clear=False):
+            with patch("openai.AsyncOpenAI", return_value=mock_client):
+                with patch.object(
+                    translator, "_validate_formula", passthrough_validate
+                ):
+                    result = await translator.translate(
+                        "It is necessarily true that p implies q, and p is possible.",
+                        logic_type="modal",
+                    )
+
+        # Guard did NOT trigger — formula carried [] / <>, so the genuine
+        # modal path ran end-to-end.
+        assert result.is_valid is True
+        assert result.formula, (
+            "#1457 REGRESSION: genuine modal formulas ([] / <>) were rejected "
+            "by the guard — formula is unexpectedly empty."
+        )
+        # No "honest absent" message — the guard did not short-circuit.
+        assert "honest absent" not in result.validation_message.lower()
+        # Confidence preserved (NOT the honest-absent zeroing).
+        assert result.confidence == 0.8
+        # _build_modal_belief_set prefix: type(...) declarations + formulas.
+        assert "type(" in result.formula
+        assert "[](p => q)" in result.formula or "[]( p => q )" in result.formula
+        assert "<>(p)" in result.formula or "<>( p )" in result.formula
+
 
 # ── Pipeline integration tests ───────────────────────────────────────
 

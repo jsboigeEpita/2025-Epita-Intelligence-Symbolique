@@ -453,6 +453,34 @@ class NLToLogicTranslator:
                             variables={},
                             confidence=0.0,
                         )
+                    # Anti-théâtre #1019 (#1457): silent modal collapse.
+                    # Probe `check_consistency(formula, "K")` on
+                    # `_build_modal_belief_set(["p","q"], ["p => q"])` returns
+                    # (True, "consistent") — Tweety accepts any syntactically
+                    # valid K-modal formula, INCLUDING material implications
+                    # and bare atoms that have no modal operator. The LLM
+                    # sometimes emits "p => q" or "p" for `logic_type=modal`
+                    # (e.g. when the source text has modal *flavor* but no
+                    # genuine necessity/possibility). That is honest-absent:
+                    # the validator below would false-green it as a valid
+                    # modal belief set. Detect here, before retrying, and
+                    # return the same honest-absent sentinel as the
+                    # EMPTY-formulas branch above — both are "no genuine
+                    # modality in the LLM response", differing only in the
+                    # parser-coercion path that produced them.
+                    if not any("[]" in f or "<>" in f for f in modal_formulas):
+                        return TranslationResult(
+                            original_text=text,
+                            formula="",
+                            logic_type="modal",
+                            is_valid=True,
+                            validation_message=(
+                                "No modal operator in formulas (honest absent)"
+                            ),
+                            attempts=attempt,
+                            variables={},
+                            confidence=0.0,
+                        )
                     formula = _build_modal_belief_set(modal_constants, modal_formulas)
                     variables = {c: c for c in modal_constants}
                     confidence = parsed.get("confidence", 0.7)
