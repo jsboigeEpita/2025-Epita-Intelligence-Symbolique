@@ -186,6 +186,63 @@ a static selector.
 > it). The `degraded` flag is the correct anti-théâtre signal when the LLM
 > extraction returns empty; it is never masked into a synthetic `evaluated`.
 
+> **GE-1 honest-degraded diagnosis (#1450, verified firsthand 2026-07-14)**: the
+> ATT-3-degraded finding for SetAF+weighted is now **mechanically explained** on
+> the 3 real corpora (the `#1442` nuance called it "LLM non-determinism"; this
+> pass discriminates its source).
+
+**Genuine-extraction matrix (corpus_A/B/C, `structured_arg_status` firsthand)**:
+
+| Translator | corpus_A | corpus_B | corpus_C |
+|------------|----------|----------|----------|
+| SetAF      | degraded-honnête | degraded-honnête | degraded-honnête |
+| Weighted   | degraded-honnête | **genuine evaluated** | degraded-honnête |
+
+**Causal diagnosis** (multi-sample, single event loop, ≥2 runs per case — anti [[reference_llm_run_nondeterminism]]):
+
+1. **corpus_A — auto-promotional speech.** All 10 arguments are parallel
+   self-praise (« grandeur », « redressement », « faute admin »); no mutual
+   attacks. Raw LLM (`_llm_extract_relations`) returns `{"attacks": []}`
+   honestly: the translator sees no structure to extract. **Genuine-absence,
+   not translator defect.**
+2. **corpus_B — manifesto with oppositions.** Weighted extracts genuine
+   dyadic attacks on the baseline run. SetAF returns `[]` on the same window
+   on 2/3 re-probes and singleton-only sets on the 1/3 successful run — the
+   few hits are singletons (= dyadic, already captured by weighted), never a
+   true joint (`attacker-set-size > 1`). Stochasticity is LLM-native on hard
+   text, not a window-size artefact.
+3. **corpus_C — placeholder synthetic.** Neither formalism finds extractable
+   structure; the handler falls back to auto-shaped synthetic flagged
+   `degraded=true`. Documented in `state_writers._record_structured_arg_status`.
+
+**Window-size hypothesis REFUTED** (`structured_arg_translator.py:184` sends
+`input_text[:3000]`). Window-isolation probe N=3 per window:
+
+| window | SetAF success on corpus_B |
+|--------|---------------------------|
+| `[:3000]` (production) | 0/3 |
+| `[:30000]`             | 1/3 |
+| `[:60000]` (full)      | 0/3 |
+
+Widening the window does **not** improve extraction → the [:3000] cap is not
+the bottleneck. The stochasticity is genuine LLM variance on hard text, not
+a leakable artifact of the prompt construction.
+
+**Positive control (decisive)**: synthetic corpus with a known 3→1 joint
+attack (3 independent considerations jointly defeat a proposal) → SetAF
+**reliably extracts `attacker-set-size=[3]` (2/2 samples)**. This proves the
+prompt and translator are **genuine-capable**; the degraded status on the
+real corpora is a property of the **material** (absence of collective-attack
+structure in A and C; only dyadic structure in B), not a property of the
+code.
+
+**Conclusion**: SetAF+weighted are honest translators — coded correctly,
+genuinely reachable when the source text carries the structure, and
+correctly marked `degraded` (anti-théâtre #1019) when it does not. No code
+fix is warranted. Forcing a populated SetAF on corpus_A auto-promotion or
+on corpus_C would be **théâtre** — fabricating joint attacks the text does
+not carry.
+
 ### 7b. Multi-backend comparison axes — 3/3 ✅ CLOSED
 
 | Axis | Comparator | Backends | Status |
