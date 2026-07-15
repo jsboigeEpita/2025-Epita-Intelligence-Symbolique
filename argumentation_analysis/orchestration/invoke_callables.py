@@ -1388,6 +1388,40 @@ def _evaluate_counter_arguments(
     return llm_counters
 
 
+def _resolve_debate_quality(
+    base_scores: Dict[str, Any],
+    llm_debate: Optional[Dict[str, Any]],
+) -> Tuple[Optional[float], str]:
+    """Resolve an honest debate_quality value (GE-5 #1467, anti-théâtre #1019).
+
+    Returns (value, source) where:
+        - value ∈ [0.0, 5.0] or None
+        - source ∈ {"llm", "heuristic", "unscored"}
+
+    Order of preference (most to least authoritative):
+        1. LLM-reported debate_quality ∈ [1, 5] (int or float).
+           The LLM is asked to produce an integer 1-5 score; we accept any
+           value within that range as authoritative.
+        2. Plugin heuristic `persuasiveness` ∈ [0, 1] (always computed by
+           DebatePlugin.analyze_argument_quality). Multiplied by 5 to map
+           into the same scale. Honest about its origin.
+        3. None (unscored). The downstream trace must display "—/5", never "0/5".
+
+    Anti-théâtre rationale: returning 0 here is a lie — it implies the
+    debate ran and the score is genuinely 0, when in fact no measurement
+    was taken. Distinguishing "LLM scored 1/5" from "no score available"
+    matters for the corpus_A "qualité 0/5" diagnostic.
+    """
+    if isinstance(llm_debate, dict):
+        raw_q = llm_debate.get("debate_quality")
+        if isinstance(raw_q, (int, float)) and 1 <= raw_q <= 5:
+            return float(raw_q), "llm"
+    persu = base_scores.get("persuasiveness")
+    if isinstance(persu, (int, float)) and 0.0 <= float(persu) <= 1.0:
+        return float(persu) * 5.0, "heuristic"
+    return None, "unscored"
+
+
 async def _invoke_debate_analysis(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -1397,6 +1431,32 @@ async def _invoke_debate_analysis(
     plugin = DebatePlugin()  # type: ignore[no-untyped-call]
     scores_json = plugin.analyze_argument_quality(input_text)
     base_scores = json.loads(scores_json)
+
+    # GE-5 #1467 — honest degraded branch: if upstream extraction yielded no
+    # arguments, there is nothing to debate. Mirror the SetAF corpus-A/C
+    # honest-degraded pattern (anti-théâtre #1019, no fabricated debate).
+    extract_output = context.get("phase_extract_output", {}) or {}
+    raw_arguments = (
+        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    )
+    if not raw_arguments:
+        base_scores["debate_degraded"] = True
+        base_scores["debate_degraded_reason"] = "no_arguments_upstream"
+        base_scores["debate_quality"] = None
+        base_scores["debate_quality_source"] = "unscored"
+        _state = context.get("_state_object")
+        if _state is not None:
+            _state.add_trace_entry(
+                phase="debate",
+                agent="DebateAgent",
+                reacts_to=["counter", "quality", "jtms"],
+                summary=(
+                    "Débat NON TENU — aucun argument extrait en amont "
+                    "(degraded=True, raison=no_arguments_upstream). "
+                    "Pas de verdict fabriqué."
+                ),
+            )
+        return base_scores  # type: ignore[no-any-return]
 
     # Enrich with LLM-based adversarial debate assessment
     try:
@@ -1561,19 +1621,41 @@ async def _invoke_debate_analysis(
     except Exception as e:
         logger.warning(f"LLM debate assessment failed: {e}")
 
+    # GE-5 #1467 — resolve debate_quality HONESTLY. The previous contract
+    # returned 0/5 whenever the LLM path failed (rate-limit, JSON parse, missing
+    # field) — that is THEATER (no real measurement, but reported as 0/5).
+    # New contract:
+    #   - LLM said it  → use it (source="llm")
+    #   - LLM absent/failed but plugin heuristic ran  → derive from
+    #     base_scores["persuasiveness"] (∈ [0,1]) × 5 (source="heuristic")
+    #   - nothing usable → None (source="unscored")
+    # Stored as `debate_quality` (rounded int in [0,5] or None) +
+    # `debate_quality_source` (string). Anti-théâtre: never silently 0.
+    _quality_value, _quality_source = _resolve_debate_quality(
+        base_scores, base_scores.get("llm_debate_assessment")
+    )
+    base_scores["debate_quality"] = _quality_value
+    base_scores["debate_quality_source"] = _quality_source
+
     # Trace entry for debate analysis specialist
     _state = context.get("_state_object")
     if _state is not None and base_scores:
         _winner = base_scores.get("winner", "indéterminé")
-        _quality = base_scores.get("debate_quality", 0)
-        _completed = (
-            "oui" if base_scores.get("llm_debate_assessment") else "heuristique"
+        # GE-5 #1467 — honest rendering: None displayed as "—/5", not "0/5".
+        _quality_str = (
+            f"{int(round(_quality_value))}/5"
+            if isinstance(_quality_value, (int, float))
+            else "—/5"
         )
         _state.add_trace_entry(
             phase="debate",
             agent="DebateAgent",
             reacts_to=["counter", "quality", "jtms"],
-            summary=f"Débat complété ({_completed}) — vainqueur: {_winner}, qualité: {_quality}/5. Évaluation adversariale multi-agent.",
+            summary=(
+                f"Débat complété (source={_quality_source}) — "
+                f"vainqueur: {_winner}, qualité: {_quality_str}. "
+                f"Évaluation adversariale multi-agent."
+            ),
         )
     return base_scores  # type: ignore[no-any-return]
 
@@ -1605,8 +1687,12 @@ def _derive_governance_profile(
         else {}
     )
     if not isinstance(per_arg, dict) or len(per_arg) < 2:
-        return [], [], [], False, (
-            "fewer than 2 evaluated arguments — no collective choice possible"
+        return (
+            [],
+            [],
+            [],
+            False,
+            ("fewer than 2 evaluated arguments — no collective choice possible"),
         )
 
     options = sorted(per_arg.keys())
@@ -1623,8 +1709,12 @@ def _derive_governance_profile(
                 virtue_to_scores.setdefault(virtue, []).append((float(score), arg_id))
 
     if not virtue_to_scores:
-        return [], [], [], False, (
-            "no per-virtue scores available — cannot derive ordered preferences"
+        return (
+            [],
+            [],
+            [],
+            False,
+            ("no per-virtue scores available — cannot derive ordered preferences"),
         )
 
     agents: List[Any] = []
@@ -1646,8 +1736,12 @@ def _derive_governance_profile(
     if not agents:
         return [], [], [], False, "no elector produced a full ordering"
 
-    return options, ballots, agents, True, (
-        f"{len(agents)} electors derived from {len(virtue_to_scores)} virtues"
+    return (
+        options,
+        ballots,
+        agents,
+        True,
+        (f"{len(agents)} electors derived from {len(virtue_to_scores)} virtues"),
     )
 
 
@@ -7625,11 +7719,7 @@ async def _invoke_multi_axis_compare(
         or sophism_compare_fn is not None
     )
     sophism_kwargs: Optional[Dict[str, Any]] = cfg.get("sophism_kwargs")
-    if (
-        wants_sophism
-        and sophism_candidates is None
-        and sophism_compare_fn is None
-    ):
+    if wants_sophism and sophism_candidates is None and sophism_compare_fn is None:
         from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator import (
             llm_neural_detect_async,
         )
