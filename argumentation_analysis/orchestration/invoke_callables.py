@@ -7050,6 +7050,7 @@ async def _default_sophism_axis(
         "eliminated_ids": getattr(res, "eliminated_ids", frozenset()),
         "arbitrated": getattr(res, "arbitrated", None),
         "span_coverage": getattr(res, "span_coverage", None),
+        "neural_reachable": getattr(res, "neural_reachable", True),
     }
 
 
@@ -7147,6 +7148,35 @@ def _normalize_sophism_payload(payload: Any) -> Dict[str, Any]:
     neural = payload.get("neural_ids", frozenset()) or frozenset()
     neuro = payload.get("neuro_symbolic_ids", frozenset()) or frozenset()
     eliminated = payload.get("eliminated_ids", frozenset()) or frozenset()
+    # GE-3 (#1456): neural_reachable records whether the NEURAL tier genuinely
+    # decided. When False (no LLM configured / detection failed) the comparison
+    # is unilateral theatre — the axis is NOT genuinely available as a
+    # comparison, agreement is indeterminate, and the neural backend is
+    # unavailable with a proven cause (fail-loud #1019, anti-théâtre). A
+    # reachable tier that detected zero fallacies stays reachable: an
+    # empty-but-reachable verdict is an honest negative, not a degraded failure.
+    neural_reachable = payload.get("neural_reachable", True)
+    if not neural_reachable:
+        return {
+            "available": False,
+            "agreement": None,
+            "disagreements": [],
+            "backends": {
+                "neural": {
+                    "available": False,
+                    "note": (
+                        "neural tier unreachable (no LLM configured / detection "
+                        "failed) — comparison NOT run (degraded, #1456)"
+                    ),
+                },
+                "neuro_symbolic": {"available": False},
+            },
+            "timings_ms": {},
+            "note": (
+                "sophism axis degraded: neural tier did not decide — no genuine "
+                "comparison (anti-théâtre #1019)"
+            ),
+        }
     # honest-absent = the symbolic layer had no genuine signal (arbitrated is
     # None or its honest_absent flag is True) → agreement indeterminate, not a
     # fabricated agreement.
@@ -7168,7 +7198,7 @@ def _normalize_sophism_payload(payload: Any) -> Dict[str, Any]:
         "neuro_symbolic": {"available": not honest_absent},
     }
     return {
-        "available": True,  # the axis ran (the neural backend always exists)
+        "available": True,  # the axis ran with a reachable neural tier
         "agreement": agreement,
         "disagreements": disagreements,
         "backends": backends,
@@ -7388,6 +7418,39 @@ async def _invoke_multi_axis_compare(
             dung_arguments = _args
             dung_attacks = _generate_attacks_from_args(_args, context)
 
+    # GE-3 (#1456): the sophism axis is genuinely bilateral only when the NEURAL
+    # tier decides. When the caller opted into the sophism axis but supplied no
+    # explicit candidates (and no test-injected comparator), auto-derive them
+    # from a genuine LLM neural detection — mirroring how the dung axis auto-
+    # derives from upstream extraction. The tier is reachable wherever the main
+    # LLM is (it routes through ``_get_openai_client``); if no key is configured
+    # or the call fails, ``neural_reachable=False`` propagates through the
+    # sophism kwargs so the axis surfaces as ``degraded`` (never as a fake
+    # comparison — anti-théâtre #1019).
+    sophism_candidates = cfg.get("sophism_candidates")
+    sophism_span_text_for = cfg.get("sophism_span_text_for")
+    sophism_compare_fn = cfg.get("sophism_compare_fn")
+    wants_sophism = (
+        (explicit_axes is not None and "sophism" in explicit_axes)
+        or sophism_candidates is not None
+        or sophism_compare_fn is not None
+    )
+    sophism_kwargs: Optional[Dict[str, Any]] = cfg.get("sophism_kwargs")
+    if (
+        wants_sophism
+        and sophism_candidates is None
+        and sophism_compare_fn is None
+    ):
+        from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator import (
+            llm_neural_detect_async,
+        )
+
+        sophism_candidates, sophism_span_text_for, _neural_reachable = (
+            await llm_neural_detect_async(input_text)
+        )
+        sophism_kwargs = dict(sophism_kwargs or {})
+        sophism_kwargs["neural_reachable"] = _neural_reachable
+
     comparison = await compare_all_axes(
         axes=cfg.get("axes"),
         fol_belief_set=cfg.get("fol_belief_set"),
@@ -7395,10 +7458,10 @@ async def _invoke_multi_axis_compare(
         dung_arguments=dung_arguments,
         dung_attacks=dung_attacks,
         dung_compare_fn=cfg.get("dung_compare_fn"),
-        sophism_candidates=cfg.get("sophism_candidates"),
-        sophism_span_text_for=cfg.get("sophism_span_text_for"),
-        sophism_compare_fn=cfg.get("sophism_compare_fn"),
-        sophism_kwargs=cfg.get("sophism_kwargs"),
+        sophism_candidates=sophism_candidates,
+        sophism_span_text_for=sophism_span_text_for,
+        sophism_compare_fn=sophism_compare_fn,
+        sophism_kwargs=sophism_kwargs,
     )
 
     logger.info(

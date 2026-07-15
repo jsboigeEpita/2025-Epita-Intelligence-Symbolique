@@ -341,6 +341,52 @@ class TestCompareSophismBackends:
         assert cmp.span_coverage == {"s0": "expert_opinion"}
 
 
+class TestGE3NeuralReachable:
+    """GE-3 (#1456) — the neural_reachable flag distinguishes a genuine bilateral
+    comparison from unilateral theatre. A reachable tier that decided ⇒
+    neural_reachable=True (the genuine case). An unreachable tier ⇒ False, which
+    the downstream normalizer must turn into ``degraded`` (never a fake agreement).
+    Pure-python, JVM/LLM-free."""
+
+    def test_neural_reachable_defaults_true(self) -> None:
+        cmp = compare_sophism_backends(
+            [_cand("s0")], span_text_for=lambda c: "x"
+        )
+        assert cmp.neural_reachable is True
+
+    def test_neural_unreachable_propagates_to_comparison(self) -> None:
+        cmp = compare_sophism_backends(
+            [_cand("s0")], span_text_for=lambda c: "x", neural_reachable=False
+        )
+        assert cmp.neural_reachable is False
+        # Neural tier absent ⇒ no genuine decision; ids are empty by contract
+        # (the caller passes [] when unreachable), but the FLAG is the signal.
+        assert cmp.neural_ids == frozenset({"s0"})  # input echoed verbatim
+
+    def test_two_tiers_decide_genuine_comparison(self) -> None:
+        """DoD #1456 (a): both tiers decide ⇒ agreement is computed (not None)
+        and reflects the genuine symbolic elimination. The neural tier accepts
+        both candidates; the symbolic layer eliminates s0 (failed canonical CQ).
+        This is a real bilateral comparison, reachable=True throughout."""
+        scheme = classify_scheme("Selon un expert du domaine cela fonctionne.")
+        assert scheme is not None
+        canonical_cq = scheme.critical_questions[0]
+
+        def ev(_t: str, _s: object, c: SophismCandidate) -> tuple[str, ...]:
+            return (canonical_cq,) if c.candidate_id == "s0" else ()
+
+        cmp = compare_sophism_backends(
+            [_cand("s0", span="x"), _cand("s1", span="y")],
+            span_text_for=lambda c: "Selon un expert du domaine cela fonctionne.",
+            cq_evaluator=ev,
+            neural_reachable=True,
+        )
+        assert cmp.neural_reachable is True
+        assert cmp.eliminated_ids == frozenset({"s0"})  # symbolic disagreed
+        assert cmp.neuro_symbolic_ids == frozenset({"s1"})
+        assert cmp.arbitrated.honest_absent is False  # genuine arbitrage ran
+
+
 class TestLlmCqEvaluator:
     """PR3 — production wiring of the LLM-backed CQ evaluator.
 

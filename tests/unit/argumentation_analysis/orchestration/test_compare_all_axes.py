@@ -463,3 +463,129 @@ class TestMultiAxisCompareHandler:
         )
 
         assert callable(_h)
+
+
+# -- GE-3 #1456: genuinely-reachable neural tier for the sophism axis ----------
+
+
+class TestGE3NeuralTier:
+    """GE-3 (#1456, Epic #1448). The sophism axis is genuinely bilateral only
+    when the NEURAL tier decides. These tests pin the honest-degraded contract:
+    neural unreachable ⇒ axis available=False (degraded, never a fake agreement);
+    neural reachable ⇒ axis runs with the derived candidates. No JVM, no real
+    LLM (the detector is monkeypatched)."""
+
+    _NEURAL_DETECT_PATH = (
+        "argumentation_analysis.agents.core.informal."
+        "neuro_symbolic_arbitrator.llm_neural_detect_async"
+    )
+
+    def test_normalize_neural_unreachable_is_degraded(self) -> None:
+        """A sophism payload with neural_reachable=False surfaces as available=False
+        with a proven degraded cause — NOT as a vacuous agreement (anti-théâtre)."""
+        out = _normalize_sophism_payload(
+            {
+                "neural_ids": frozenset(),
+                "neuro_symbolic_ids": frozenset(),
+                "eliminated_ids": frozenset(),
+                "arbitrated": {"honest_absent": True},
+                "span_coverage": {},
+                "neural_reachable": False,
+            }
+        )
+        assert out["available"] is False
+        assert out["agreement"] is None
+        assert out["backends"]["neural"]["available"] is False
+        assert "degraded" in out["note"]
+
+    def test_normalize_reachable_with_genuine_split_reports_disagreement(
+        self,
+    ) -> None:
+        """Reachable tier + a genuine symbolic elimination ⇒ available=True and
+        agreement=False (a real, unreconciled bilateral disagreement)."""
+        out = _normalize_sophism_payload(
+            {
+                "neural_ids": frozenset({"s0", "s1"}),
+                "neuro_symbolic_ids": frozenset({"s1"}),
+                "eliminated_ids": frozenset({"s0"}),
+                "arbitrated": {"honest_absent": False},
+                "span_coverage": {"s0": "expert_opinion"},
+                "neural_reachable": True,
+            }
+        )
+        assert out["available"] is True
+        assert out["agreement"] is False
+        assert out["disagreements"] == ["eliminated: s0"]
+
+    async def test_handler_auto_derives_sophism_from_llm(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """DoD #1456 (a): caller opts into the sophism axis without explicit
+        candidates ⇒ the handler auto-derives them from the (mocked) reachable
+        neural tier and the axis genuinely runs (available=True)."""
+        from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator import (
+            SophismCandidate,
+        )
+
+        async def _fake_detect(text: str):
+            cands = [
+                SophismCandidate("s0", "ad_hominem", "span_a", 0.9),
+                SophismCandidate("s1", "straw_man", "span_b", 0.7),
+            ]
+            return cands, lambda c: "passage text", True
+
+        monkeypatch.setattr(self._NEURAL_DETECT_PATH, _fake_detect)
+
+        ctx = {"multi_axis": {"axes": ["sophism"]}}
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        ax = out["comparison"]["axes"]["sophism"]
+        assert ax["available"] is True
+        assert ax["backends"]["neural"]["available"] is True
+
+    async def test_handler_neural_unreachable_is_degraded(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """DoD #1456 (b): neural tier genuinely unavailable (no key / call failed)
+        ⇒ the sophism axis is degraded (available=False), NEVER presented as a
+        genuine comparison (anti-théâtre #1019)."""
+        from argumentation_analysis.agents.core.informal.neuro_symbolic_arbitrator import (
+            SophismCandidate,
+        )
+
+        async def _fake_unreachable(text: str):
+            return [], lambda c: "", False
+
+        monkeypatch.setattr(self._NEURAL_DETECT_PATH, _fake_unreachable)
+
+        ctx = {"multi_axis": {"axes": ["sophism"]}}
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        ax = out["comparison"]["axes"]["sophism"]
+        assert ax["available"] is False  # degraded, NOT a fake comparison
+        assert ax["agreement"] is None
+        assert ax["backends"]["neural"]["available"] is False
+        assert "degraded" in ax.get("note", "")
+
+    async def test_handler_explicit_candidates_skip_auto_derivation(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """When the caller supplies explicit candidates, auto-derivation is NOT
+        triggered (the detector must not be called) — anti-pendule: don't run an
+        LLM call the caller did not ask for."""
+
+        async def _boom(text: str):
+            raise AssertionError("auto-derivation must not run when candidates given")
+
+        monkeypatch.setattr(self._NEURAL_DETECT_PATH, _boom)
+
+        ctx = {
+            "multi_axis": {
+                "axes": ["sophism"],
+                "sophism_candidates": ["c0"],
+                "sophism_span_text_for": lambda c: "x",
+                "sophism_compare_fn": _sophism_fake([], honest_absent=True),
+            }
+        }
+        out = await _invoke_multi_axis_compare("source text", ctx)
+        ax = out["comparison"]["axes"]["sophism"]
+        assert ax["available"] is True  # injected comparator ran, no LLM call
+
