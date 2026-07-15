@@ -102,5 +102,21 @@ carries: #1443 (modal/FOL sanitization) — porté directement dans la surface v
 
 - [`TWEETY_CAPABILITY_MAP.md`](TWEETY_CAPABILITY_MAP.md) — map modules Tweety ↔ slots Lego (corrigé : 1.28 + 1.29, 2 JARs).
 - [`docs/technical/tweety_bridge.md`](../technical/tweety_bridge.md) — §6 : FOL Top/Bottom BNF + gotchas MlParser (`#1444`).
-- Issue `#1451` (track CI-1) · Epic `#1448` (CoursIA pin refresh).
+- [`docs/coursia_contrib/governance_voting_methods.ipynb`](../coursia_contrib/governance_voting_methods.ipynb) — notebook pédagogique CI-2 (axe gouvernance, corpus-free).
+- Issue `#1451` (track CI-1) · Issue `#1458` (track CI-2) · Epic `#1448` (CoursIA pin refresh).
 - Issues `#1441` / `#1443` — sanitization modal-sort + FOL-bool (la surface portée par ce refresh).
+
+---
+
+## 6. Contributions pédagogiques corpus-free (CI-2)
+
+Le track CI-2 (#1458) prépare des **notebooks pédagogiques** illustrant des axes vendorés-mais-non-enseignés, livrés comme **propositions amont** (dans `docs/coursia_contrib/`, jamais poussés sur CoursIA). Le professeur peut les importer dans CoursIA lors d'un re-pull coordonné.
+
+| Notebook | Axe | Statut | Pin d'exécution |
+|----------|-----|--------|-----------------|
+| [`governance_voting_methods.ipynb`](../coursia_contrib/governance_voting_methods.ipynb) | governance (7 méthodes de vote + théorie du choix social) | ✓ livré, exécuté firsthand | code local `argumentation_analysis.agents.core.governance` (refresh essence à venir) |
+
+**DoD CI-2 respecté** : le notebook tourne firsthand (8 cellules exécutées, sorties présentes), textes **synthétiques domaine-public uniquement** (un club de robotique choisit un menu — aucun corpus chiffré, aucun `raw_text`), et illustre que la méthode de vote décide du gagnant (pluralité élit le perdant de Condorcet ; Borda/Condorcet élisent le gagnant de Condorcet), le paradoxe de Condorcet (cycle sans gagnant), et la manipulabilité de la Borda (backfire du vote stratégique).
+
+> **Note d'import.** Le notebook localise la racine du dépôt en remontant depuis son CWD et importe `argumentation_analysis.agents.core.governance`. Lors du refresh du pin essence, l'import devra pointer vers l'`argumentation_lib/` vendoré — surface API (`Agent`, `GOVERNANCE_METHODS`, `approval_voting`/`stv`/`copeland`/`condorcet_winner`) identique.
+
