@@ -44,6 +44,7 @@ for production use in PR2/PR3. This mirrors the ``compare_*_backends`` DI idiom.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 from dataclasses import dataclass, field, replace
 from typing import Any, Callable, Optional, Protocol, Sequence, runtime_checkable
@@ -521,6 +522,7 @@ class SophismComparison:
     arbitrated: ArbitrationResult
     eliminated_ids: frozenset[str]
     span_coverage: dict[str, str]
+    neural_reachable: bool = True
 
 
 def compare_sophism_backends(
@@ -532,6 +534,7 @@ def compare_sophism_backends(
     solver: Optional[DungSolver] = None,
     semantics: str = "grounded",
     conflict_policy: Optional[ConflictPolicy] = None,
+    neural_reachable: bool = True,
 ) -> SophismComparison:
     """Compare the neural-only and neuro-symbolic pipelines on the same batch.
 
@@ -549,6 +552,13 @@ def compare_sophism_backends(
 
     Args mirror :func:`arbitrate` plus the bridge's ``span_text_for`` /
     ``classifier`` / ``cq_evaluator``.
+
+    ``neural_reachable`` (GE-3 #1456) records whether the NEURAL tier genuinely
+    decided. When ``False`` (no LLM configured / detection failed) the comparison
+    is unilateral theatre — the caller MUST surface it as ``degraded``, never as a
+    genuine comparison (anti-théâtre #1019). A reachable tier that detected zero
+    fallacies stays ``True``: an empty-but-reachable neural verdict is an honest
+    negative, not a degraded failure.
     """
 
     neural_ids = frozenset(c.candidate_id for c in candidates)
@@ -570,6 +580,7 @@ def compare_sophism_backends(
         arbitrated=result,
         eliminated_ids=neural_ids - result.arbitrated_ids,
         span_coverage=coverage,
+        neural_reachable=neural_reachable,
     )
 
 
@@ -687,6 +698,154 @@ async def _llm_cq_evaluator_async(
         return ()
     canonical_set = set(canonical_cqs)
     return tuple(q for q in declared if isinstance(q, str) and q in canonical_set)
+
+
+# --------------------------------------------------------------------------- #
+# GE-3 (#1456, Epic #1448) — genuinely-reachable NEURAL tier                   #
+# --------------------------------------------------------------------------- #
+#
+# ``compare_sophism_backends`` is bilateral only when the NEURAL side genuinely
+# decides. The cluster's existing neural entry point (``_invoke_camembert_fallacy``)
+# depends on the SELF_HOSTED_LLM_* endpoint, which is not configured here → it
+# returns ``status="unavailable"`` and the axis stays honest-absent (constat C3:
+# the "comparison" is unilateral theatre). This detector routes through
+# ``_get_openai_client()`` (the configured OpenAI/OpenRouter client) so the neural
+# tier is reachable wherever the main LLM is — exactly like ``_llm_cq_evaluator``
+# does for the symbolic CQ side (PR3).
+
+
+async def llm_neural_detect_async(
+    input_text: str, *, max_candidates: int = 25
+) -> "tuple[list[SophismCandidate], Callable[[SophismCandidate], str], bool]":
+    """LLM-backed neural sophism detection producing genuine ``SophismCandidate``s.
+
+    Asks the configured LLM to detect the fallacies genuinely present in the
+    text, then maps each to an opaque candidate. Mirrors ``_llm_cq_evaluator``
+    (PR3): lazy imports, no-API-key honest-absent, JSON-mode, fail-soft.
+
+    Returns ``(candidates, span_text_for, reachable)``:
+
+    * ``candidates`` — ``SophismCandidate`` list (opaque ids ``s0..sN``, family
+      from the LLM label, span_id from a deterministic hash of the span text so
+      two detections on the same span with rival families are declared rivals
+      under :func:`default_conflict_policy`, confidence clamped to ``[0, 1]``);
+    * ``span_text_for`` — accessor feeding the Walton-CQ bridge;
+    * ``reachable`` — ``False`` when no key is configured OR the call/parse
+      failed (the axis MUST then surface as ``degraded``, never as a genuine
+      comparison — anti-théâtre #1019). ``True`` when the LLM genuinely ran
+      (even if it returned zero fallacies: a reachable negative is honest, not
+      degraded — see :func:`compare_sophism_backends` semantics).
+    """
+
+    # Lazy import (same no-cycle rationale as the CQ evaluator above).
+    from argumentation_analysis.orchestration.invoke_callables import (
+        _get_determinism_params,
+        _get_openai_client,
+        _guarded_chat_completion,
+        _parse_json_from_llm,
+    )
+
+    client, model_id = _get_openai_client()
+    if client is None:
+        logger.info(
+            "LLM neural detect: no API key configured — neural tier "
+            "unreachable (degraded, #1456)."
+        )
+        return [], lambda c: "", False
+
+    system_content = (
+        "You are an expert at detecting informal fallacies in argumentative text. "
+        "Identify the GENUINE fallacies present — report a fallacy ONLY when the "
+        "passage really commits it. Do NOT invent fallacies. For each one give: "
+        "a short family label (e.g. ad_hominem, straw_man, appeal_to_authority, "
+        "false_dilemma, hasty_generalization, slippery_slope, circular_reasoning, "
+        "equivocation, appeal_to_emotion, red_herring), the exact span text that "
+        "commits it (verbatim, <= 400 chars), and a confidence in [0,1]. "
+        "Respond with ONLY a JSON object of shape: "
+        '{"fallacies": [{"family": "...", "span_text": "...", "confidence": 0.0}]}'
+    )
+    user_content = (
+        f"Analyse the following text for fallacies:\n\n{input_text[:8000]}\n\n"
+        "Return the JSON."
+    )
+
+    det_params = _get_determinism_params()
+    llm_kwargs: dict[str, Any] = dict(det_params)
+    llm_kwargs["response_format"] = {"type": "json_object"}
+    try:
+        response = await _guarded_chat_completion(
+            client,
+            model=model_id,
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
+            ],
+            **llm_kwargs,
+        )
+    except Exception as exc:  # noqa: BLE001 — fail-soft: any LLM error → degraded
+        logger.info(
+            "LLM neural detect: call failed (%s); neural tier unreachable "
+            "(degraded, #1456).",
+            exc,
+        )
+        return [], lambda c: "", False
+
+    raw = response.choices[0].message.content or ""
+    try:
+        data = _parse_json_from_llm(raw)
+    except Exception as exc:  # noqa: BLE001
+        logger.info(
+            "LLM neural detect: parse failed (%s); neural tier unreachable "
+            "(degraded, #1456).",
+            exc,
+        )
+        return [], lambda c: "", False
+
+    raw_fallacies = data.get("fallacies") if isinstance(data, dict) else None
+    if not isinstance(raw_fallacies, list):
+        # Reachable, but nothing structured to detect — a reachable negative.
+        return [], lambda c: "", True
+
+    span_by_id: dict[str, str] = {}
+    candidates: list[SophismCandidate] = []
+    seen_ids: set[str] = set()
+    for i, f in enumerate(raw_fallacies[:max_candidates]):
+        if not isinstance(f, dict):
+            continue
+        family = str(f.get("family", "unknown")).strip() or "unknown"
+        span_text = str(f.get("span_text", "")).strip()[:400]
+        if not span_text:
+            continue
+        try:
+            confidence = float(f.get("confidence", 0.5))
+        except (TypeError, ValueError):
+            confidence = 0.5
+        confidence = max(0.0, min(1.0, confidence))
+        # Deterministic, opaque span anchor: same span text ⇒ same span_id, so
+        # rival-family detections on one passage are declared conflicts.
+        span_id = "span_" + hashlib.md5(span_text.encode("utf-8")).hexdigest()[:8]
+        cid = f"s{i}"
+        while cid in seen_ids:  # defensive: never collide with a challenger id
+            cid = f"s{i}_{len(seen_ids)}"
+        seen_ids.add(cid)
+        span_by_id[cid] = span_text
+        candidates.append(
+            SophismCandidate(
+                candidate_id=cid,
+                family=family,
+                span_id=span_id,
+                confidence=confidence,
+            )
+        )
+
+    def span_text_for(c: SophismCandidate) -> str:
+        return span_by_id.get(c.candidate_id, "")
+
+    logger.info(
+        "LLM neural detect: %d genuine candidate(s); neural tier reachable (#1456).",
+        len(candidates),
+    )
+    return candidates, span_text_for, True
 
 
 def make_llm_cq_evaluator() -> CQEvaluator:
