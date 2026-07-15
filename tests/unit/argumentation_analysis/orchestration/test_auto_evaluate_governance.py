@@ -149,7 +149,10 @@ class TestGovernanceAutoVote:
     """Tests for #294 — governance auto-triggers social_choice_vote."""
 
     async def test_governance_runs_vote_with_positions(self):
-        """Governance auto-runs Copeland vote when positions are available."""
+        """GE-4 #1462: governance produces a FORMAL vote aggregation
+        (governance_verdict) when the quality phase carries derivable
+        per-virtue preferences — superseding the former single mocked
+        social_choice_vote (#294)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_governance,
         )
@@ -157,11 +160,8 @@ class TestGovernanceAutoVote:
         mock_plugin = MagicMock()
         mock_plugin.list_governance_methods.return_value = '["majority", "copeland"]'
         mock_plugin.detect_conflicts_fn.return_value = "[]"
-        mock_plugin.social_choice_vote.return_value = json.dumps(
-            {
-                "winner": "agent_1",
-                "copeland_scores": {"agent_1": 2, "agent_2": 1, "agent_3": 0},
-            }
+        mock_plugin.compute_consensus_metrics.return_value = json.dumps(
+            {"consensus_rate": 1.0}
         )
 
         with patch(
@@ -179,12 +179,25 @@ class TestGovernanceAutoVote:
                         {"text": "Arg 3"},
                     ]
                 },
+                "phase_quality_output": {
+                    "per_argument_scores": {
+                        "arg_1": {"scores_par_vertu": {"clarte": 9.0, "pertinence": 4.0, "structure": 3.0}},
+                        "arg_2": {"scores_par_vertu": {"clarte": 5.0, "pertinence": 8.0, "structure": 7.0}},
+                        "arg_3": {"scores_par_vertu": {"clarte": 2.0, "pertinence": 6.0, "structure": 5.0}},
+                    }
+                },
             }
             result = await _invoke_governance("Test", context)
 
-        assert "vote_result" in result
-        assert result["vote_result"]["winner"] == "agent_1"
-        mock_plugin.social_choice_vote.assert_called_once()
+        assert result["governance_decided_firsthand"] is True
+        verdict = result["governance_verdict"]
+        assert verdict["degraded"] is False
+        assert verdict["condorcet_winner"] == "arg_2"
+        assert verdict["n_methods_decided"] >= 3
+        # Backward-compat vote_result is reconstructed honestly from the verdict.
+        assert result["vote_result"]["winner"] == "arg_2"
+        # GE-4: the aggregation bypasses the plugin's social_choice_vote.
+        mock_plugin.social_choice_vote.assert_not_called()
 
     async def test_governance_no_vote_with_single_position(self):
         """Governance skips vote when less than 2 positions."""

@@ -1578,6 +1578,160 @@ async def _invoke_debate_analysis(
     return base_scores  # type: ignore[no-any-return]
 
 
+def _derive_governance_profile(
+    quality_output: Dict[str, Any],
+) -> Tuple[List[str], List[List[str]], List[Any], bool, str]:
+    """Derive a multi-elector preference profile from upstream quality scores (GE-4 #1462).
+
+    HONEST derivation — no fabricated preferences. Each of the 9 argumentative
+    virtues is a real evaluation criterion, hence a legitimate *elector* whose
+    preference ranks the extracted arguments by its own score.
+
+    - Options = evaluated arguments (opaque ids ``arg_1``, ``arg_2``…).
+    - Electors = virtues present in ``scores_par_vertu`` across the arguments.
+    - Preference of elector *v* = arguments ordered by their score on *v* (desc).
+
+    Returns ``(options, ballots, agents, derivable, reason)``. ``derivable=False``
+    triggers the honest-degraded branch (<2 options or no virtue scores): the
+    material carries no orderable preferences, mirroring the SetAF branch-OR on
+    corpus A/C. Unanimous preferences are NOT degraded — they are reported
+    honestly as concordant (empty divergence), a genuine collective decision.
+    """
+    from argumentation_analysis.agents.core.governance.governance_agent import Agent
+
+    per_arg = (
+        quality_output.get("per_argument_scores", {})
+        if isinstance(quality_output, dict)
+        else {}
+    )
+    if not isinstance(per_arg, dict) or len(per_arg) < 2:
+        return [], [], [], False, (
+            "fewer than 2 evaluated arguments — no collective choice possible"
+        )
+
+    options = sorted(per_arg.keys())
+    virtue_to_scores: Dict[str, List[Tuple[float, str]]] = {}
+    for arg_id in options:
+        result = per_arg.get(arg_id)
+        if not isinstance(result, dict):
+            continue
+        scores = result.get("scores_par_vertu", {})
+        if not isinstance(scores, dict):
+            continue
+        for virtue, score in scores.items():
+            if isinstance(score, (int, float)):
+                virtue_to_scores.setdefault(virtue, []).append((float(score), arg_id))
+
+    if not virtue_to_scores:
+        return [], [], [], False, (
+            "no per-virtue scores available — cannot derive ordered preferences"
+        )
+
+    agents: List[Any] = []
+    ballots: List[List[str]] = []
+    for virtue in sorted(virtue_to_scores.keys()):
+        ranked = sorted(virtue_to_scores[virtue], key=lambda t: (-t[0], t[1]))
+        order = [arg_id for _, arg_id in ranked]
+        if len(order) < 2:
+            continue
+        agents.append(
+            Agent(
+                name=f"elector_{virtue}",
+                personality="stubborn",
+                preferences=list(order),
+            )
+        )
+        ballots.append(list(order))
+
+    if not agents:
+        return [], [], [], False, "no elector produced a full ordering"
+
+    return options, ballots, agents, True, (
+        f"{len(agents)} electors derived from {len(virtue_to_scores)} virtues"
+    )
+
+
+def _aggregate_governance_votes(
+    agents: List[Any], options: List[str], ballots: List[List[str]]
+) -> Dict[str, Any]:
+    """Run the 7 agent-based + 5 social-choice voting methods on the derived
+    profile (GE-4 #1462).
+
+    Returns the per-method winners and the **divergence set** (distinct winners
+    across methods) — reported verbatim, NEVER reconciled into a single number
+    (cf. multi-prover FOL / I5 anti-reconcile discipline).
+
+    Deterministic by construction: ``byzantine`` and ``raft`` are stochastic by
+    design (faulty-agent / leader-election models); they run under a fixed local
+    seed (RNG state snapshotted and restored) so the verdict is reproducible and
+    flagged ``stochastic_methods``.
+    """
+    import numpy as np
+
+    from argumentation_analysis.agents.core.governance.governance_methods import (
+        GOVERNANCE_METHODS,
+    )
+    from argumentation_analysis.agents.core.governance import social_choice as sc
+
+    stochastic_methods = ["byzantine", "raft"]
+    agent_context: Dict[str, Any] = {}
+    winners: Dict[str, Any] = {}
+
+    # 7 agent-based methods (byzantine/raft under a fixed local seed).
+    rng_state = np.random.get_state()
+    np.random.seed(42)
+    try:
+        for name, fn in GOVERNANCE_METHODS.items():
+            try:
+                winners[name] = fn(agents, options, agent_context)  # type: ignore[no-untyped-call]  # legacy governance_methods (GE-4 #1462)
+            except Exception as exc:  # noqa: BLE001 — fail-soft per method
+                winners[name] = None
+                logger.debug("governance method %s failed: %s", name, exc)
+    finally:
+        np.random.set_state(rng_state)
+
+    # 5 social-choice methods (operate on the preference ballots directly).
+    social_winners: Dict[str, Any] = {}
+    try:
+        social_winners["approval"] = sc.approval_voting(ballots, options)[0]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("approval voting skipped: %s", exc)
+    try:
+        stv_winners, _rounds = sc.stv(ballots, options, seats=1)
+        social_winners["stv"] = stv_winners[0] if stv_winners else None
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("stv skipped: %s", exc)
+    try:
+        social_winners["copeland"] = sc.copeland(ballots, options)[0]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("copeland skipped: %s", exc)
+    try:
+        social_winners["schulze"] = sc.schulze(ballots, options)[0]
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("schulze skipped: %s", exc)
+    try:
+        social_winners["condorcet_winner"] = sc.condorcet_winner(ballots, options)
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("condorcet_winner skipped: %s", exc)
+
+    winners.update(social_winners)
+
+    decided = {k: v for k, v in winners.items() if v is not None}
+    distinct_winners = sorted({str(v) for v in decided.values()})
+    n_decided = len(decided)
+    disagreement = len(distinct_winners) > 1
+
+    return {
+        "winners_per_method": winners,
+        "n_methods_decided": n_decided,
+        "distinct_winners": distinct_winners,
+        "inter_method_disagreement": disagreement,
+        "condorcet_winner": social_winners.get("condorcet_winner"),
+        "stochastic_methods": stochastic_methods,
+        "derivation": "formal-vote-aggregation (virtue electors)",
+    }
+
+
 async def _invoke_governance(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -1621,25 +1775,23 @@ async def _invoke_governance(
             resolutions.append(json.loads(resolution_json))
 
     # (#294) Auto-run social choice vote when we have enough positions
-    vote_result = None
-    if len(positions) >= 2:
-        try:
-            options = list(positions.keys())
-            # Build preference ballots: each agent ranks others based on position order
-            ballots = []
-            for agent in options:
-                pref = [a for a in options if a != agent] + [agent]
-                ballots.append(pref)
-            vote_input = json.dumps(
-                {
-                    "method": context.get("vote_method", "copeland"),
-                    "ballots": ballots,
-                    "options": options,
-                }
-            )
-            vote_result = json.loads(plugin.social_choice_vote(vote_input))
-        except Exception as e:
-            logger.debug(f"Social choice vote skipped: {e}")
+    # GE-4 #1462 — formal vote aggregation on HONESTLY derived preferences.
+    # The 9 quality virtues act as electors (real criteria, not fabricated).
+    # Verdict = the formal aggregation; the LLM assessment below is a prior only.
+    g_options, g_ballots, g_agents, g_derivable, g_reason = _derive_governance_profile(
+        quality_output
+    )
+    if g_derivable:
+        governance_verdict = _aggregate_governance_votes(g_agents, g_options, g_ballots)
+        governance_verdict["degraded"] = False
+        governance_verdict["derivation_reason"] = g_reason
+    else:
+        governance_verdict = {
+            "degraded": True,
+            "reason": g_reason,
+            "derivation": "formal-vote-aggregation (virtue electors)",
+        }
+        logger.debug("governance formal aggregation degraded: %s", g_reason)
 
     # Enrich with LLM-based governance and deliberation assessment
     llm_governance = None
@@ -1772,6 +1924,26 @@ async def _invoke_governance(
     except Exception as e:
         logger.warning(f"LLM governance assessment failed: {e}")
 
+    # GE-4 #1462 — reconstruct a backward-compatible, HONEST vote_result from
+    # the formal aggregation (per-method winners as the 'votes' list; the winner
+    # is the Condorcet winner if one exists, else the plurality winner). This
+    # supersedes the former fabricated self-deprecating ballots.
+    vote_result = None
+    if not governance_verdict.get("degraded"):
+        wpm = governance_verdict.get("winners_per_method", {})
+        winner = (
+            governance_verdict.get("condorcet_winner")
+            or wpm.get("majority")
+            or wpm.get("plurality")
+        )
+        votes = [v for v in wpm.values() if v is not None]
+        vote_result = {
+            "winner": winner,
+            "votes": votes,
+            "method": "formal-aggregation",
+            "results": governance_verdict,
+        }
+
     result = {
         "available_methods": available_methods,
         "positions": positions,
@@ -1779,6 +1951,11 @@ async def _invoke_governance(
         "resolutions": resolutions,
         "conflict_count": len(conflicts),
         "extraction_method": "llm" if llm_governance else "heuristic",
+        # GE-4 #1462 — the genuine verdict: a formal vote aggregation (or an
+        # honest-degraded marker). NOT LLM-scored; the LLM assessment below is
+        # at most a prior (recommended method), never the verdict.
+        "governance_verdict": governance_verdict,
+        "governance_decided_firsthand": not governance_verdict.get("degraded", True),
     }
     if vote_result:
         result["vote_result"] = vote_result
@@ -1795,6 +1972,8 @@ async def _invoke_governance(
         except Exception as e:
             logger.debug(f"Consensus metrics computation skipped: {e}")
     if llm_governance:
+        # GE-4 #1462: LLM assessment is a PRIOR (method recommendation /
+        # qualitative framing), explicitly not the governance verdict.
         result["llm_governance_assessment"] = llm_governance
         result["recommended_method"] = llm_governance.get("recommended_method")
         result["consensus_potential"] = llm_governance.get("consensus_potential")
@@ -1802,14 +1981,24 @@ async def _invoke_governance(
     _state = context.get("_state_object")
     if _state is not None and result.get("conflict_count", 0) > 0:
         _n_conflicts = result.get("conflict_count", 0)
-        _vote = result.get("vote_result", {})
-        _consensus = result.get("consensus_potential", "N/A")
-        _method = result.get("recommended_method", "copeland")
+        _decided = result.get("governance_decided_firsthand", False)
+        _verdict = result.get("governance_verdict", {})
+        _distinct = _verdict.get("distinct_winners", [])
+        _disagree = _verdict.get("inter_method_disagreement", False)
+        _verdict_kind = (
+            f"verdict formel ({len(_verdict.get('winners_per_method', {}))} méthodes, "
+            f"divergence={'oui' if _disagree else 'non'})"
+            if _decided
+            else f"verdict dégradé ({_verdict.get('reason', 'n/a')})"
+        )
         _state.add_trace_entry(
             phase="governance",
             agent="GovernanceModule",
             reacts_to=["quality", "hierarchical_fallacy", "jtms"],
-            summary=f"{_n_conflicts} conflits détectés — méthode: {_method}, consensus: {_consensus}. Vote social-choice appliqué.",
+            summary=(
+                f"{_n_conflicts} conflits détectés — {_verdict_kind}. "
+                f"Gagnants distincts: {_distinct}. (GE-4 #1462)"
+            ),
         )
     return result
 
