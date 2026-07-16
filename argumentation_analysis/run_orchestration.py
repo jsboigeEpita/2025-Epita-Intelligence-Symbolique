@@ -381,6 +381,24 @@ Exemples:
         "fails loud on a degraded chain instead of hardcoded fallback).",
     )
     parser.add_argument(
+        "--registry",
+        action="store_true",
+        default=True,
+        help="Build a CapabilityRegistry (via setup_registry) and wire it into "
+        "--mode hierarchical so the operational tier can dispatch to real "
+        "providers. Default ON since BO-1 #1471 R651. Use --no-registry to "
+        "restore the legacy no-registry path (deliberately fails loud on "
+        "delegation via DelegationError — anti-pendule #1019, kept for "
+        "programmatic assertions).",
+    )
+    parser.add_argument(
+        "--no-registry",
+        dest="registry",
+        action="store_false",
+        help="Disable registry construction (see --registry). Honors the "
+        "fail-loud DelegationError path on delegation mode.",
+    )
+    parser.add_argument(
         "--verbose", "-v", action="store_true", help="Afficher les logs détaillés"
     )
     parser.add_argument(
@@ -693,7 +711,36 @@ Exemples:
             logging.info(
                 "Mode HIÉRARCHIQUE (M2 bridge) : StrategicManager → Lego WorkflowExecutor"
             )
-        results = await run_hierarchical_analysis(text=text_content, mode=hier_mode)
+        # BO-1 #1471 R651: wire the CapabilityRegistry into the CLI so the
+        # operational tier can dispatch to real providers (delegation mode
+        # requires it; bridge mode is also happier with it). The
+        # fail-loud DelegationError raised for ``capability_registry=None``
+        # remains in place for programmatic callers that explicitly opt
+        # out (``--no-registry``).
+        hier_registry = None
+        if getattr(args, "registry", True):
+            from argumentation_analysis.orchestration.registry_setup import (
+                setup_registry,
+            )
+
+            try:
+                hier_registry = setup_registry(include_optional=True)
+                logging.info(
+                    "CapabilityRegistry câblée pour le mode hiérarchique "
+                    "(providers disponibles pour delegation/bridge)."
+                )
+            except Exception as exc:  # noqa: BLE001 — best-effort CLI wiring
+                # Fail-loud is reserved for the delegation mode's runtime
+                # chain (anti-pendule #1019). Here we surface a CLI-visible
+                # error so the user sees WHY their run can't proceed, rather
+                # than handing a half-built registry down the chain.
+                logging.error("Impossible de construire le CapabilityRegistry: %s", exc)
+                raise SystemExit(2) from exc
+        results = await run_hierarchical_analysis(
+            text=text_content,
+            mode=hier_mode,
+            capability_registry=hier_registry,
+        )
 
         # Afficher le résumé
         conclusion = results.get("conclusion", "")
