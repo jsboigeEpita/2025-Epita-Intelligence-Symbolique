@@ -2050,6 +2050,14 @@ async def _invoke_governance(
         # at most a prior (recommended method), never the verdict.
         "governance_verdict": governance_verdict,
         "governance_decided_firsthand": not governance_verdict.get("degraded", True),
+        # BO-2 #1472 — emit the codebase-standard ``degraded`` canon at the
+        # top level so the pipeline rollup (unified_pipeline.run_unified_analysis)
+        # surfaces this phase in ``capabilities_degraded`` instead of
+        # ``capabilities_used``. Without it, a 9-phase deliberation whose
+        # governance verdict is empty (no derivable preferences) is reported as
+        # 9/9 success — the theatre #1019 forbids (Constat n°5: degraded !=
+        # used). Mirrors the existing canon in state_writers / fallacy_detection.
+        "degraded": bool(governance_verdict.get("degraded", False)),
     }
     if vote_result:
         result["vote_result"] = vote_result

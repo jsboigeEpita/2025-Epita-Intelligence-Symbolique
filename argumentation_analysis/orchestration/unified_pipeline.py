@@ -288,6 +288,7 @@ async def run_unified_analysis(
     # Mirrors the conversational_orchestrator fix (#1446). Additive key: zero
     # blast radius on consumers (all read capabilities_used via .get(..., [])).
     capabilities_degraded: list[str] = []
+    degraded_caps: set[str] = set()
     if state is not None:
         structured = getattr(state, "structured_arg_status", None) or {}
         degraded_caps = {
@@ -295,11 +296,29 @@ async def run_unified_analysis(
             for cap, info in structured.items()
             if isinstance(info, dict) and info.get("degraded")
         }
-        if degraded_caps:
-            capabilities_degraded = sorted(degraded_caps)
-            capabilities_used = [
-                c for c in capabilities_used if c not in degraded_caps
-            ]
+
+    # BO-2 #1472 — ``structured_arg_status`` only covers the formal/logic
+    # axes (ASPIC+/SetAF/weighted/Dung). Non-formal workflows (e.g.
+    # ``democratech``) carry their honest-degraded verdict in the phase
+    # output itself, via the codebase's standard ``output["degraded"] = True``
+    # canon (state_writers._write_external_*_solver, fallacy_detection,
+    # governance per GE-4 #1462). Without this cross-check, a 9-phase
+    # deliberation whose governance verdict is empty (no derivable
+    # preferences — no LLM key, sparse upstream) reports as 9/9 success —
+    # exactly the theatre #1019 forbids. Surface phase-level degraded
+    # markers here too. Additive: phases without the marker are unaffected.
+    for pr in phase_results.values():
+        if pr.status != PhaseStatus.COMPLETED:
+            continue
+        out = getattr(pr, "output", None)
+        if isinstance(out, dict) and out.get("degraded") is True:
+            degraded_caps.add(pr.capability)
+
+    if degraded_caps:
+        capabilities_degraded = sorted(degraded_caps)
+        capabilities_used = [
+            c for c in capabilities_used if c not in degraded_caps
+        ]
 
     result = {
         "workflow_name": workflow.name,
