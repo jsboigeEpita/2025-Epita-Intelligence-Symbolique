@@ -206,9 +206,18 @@ class StrategicManager:
 
         self._log_decision("Évaluation finale", "Conclusion formulée.")
 
-        self.adapter.publish_strategic_decision(
-            decision_type="final_conclusion",
-            content={"conclusion": conclusion, "evaluation": evaluation},
+        # GE-FIX M3 BO-1 #1471: replace non-existent publish_strategic_decision()
+        # with the closest equivalent in StrategicAdapter: broadcast_objective()
+        # (which accepts an objective_type + content payload).
+        # The previous call crashed Phase 4 with AttributeError, hiding the
+        # honest decision from downstream consumers (anti-théâtre #1019).
+        self.adapter.broadcast_objective(
+            objective_type="strategic_decision",
+            content={
+                "decision_type": "final_conclusion",
+                "conclusion": conclusion,
+                "evaluation": evaluation,
+            },
             priority=MessagePriority.HIGH,
         )
 

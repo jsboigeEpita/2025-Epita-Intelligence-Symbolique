@@ -153,6 +153,12 @@ class TestStrategicManager:
     def test_evaluate_final_results_and_publish(self, strategic_manager):
         """
         Teste l'évaluation des résultats finaux et la publication de la conclusion.
+
+        BO-1 #1471 (M3 hierarchical mode): ``publish_strategic_decision`` was
+        never implemented on ``StrategicAdapter`` — it crashed Phase 4 with
+        ``AttributeError``. Fixed by routing through ``broadcast_objective`` with
+        ``objective_type="strategic_decision"`` (closest equivalent in the
+        adapter API). This test mirrors the new contract.
         """
         # Pré-remplir les objectifs dans l'état pour que l'évaluation fonctionne
         strategic_manager.state.global_objectives = [
@@ -165,9 +171,10 @@ class TestStrategicManager:
             "obj-2": {"success_rate": 0.75},
         }
 
-        # Espionner la publication de la décision finale
+        # Espionner la publication de la décision finale via le canal
+        # broadcast_objective (l'API réelle de StrategicAdapter).
         spy_publish = MagicMock()
-        strategic_manager.adapter.publish_strategic_decision = spy_publish
+        strategic_manager.adapter.broadcast_objective = spy_publish
 
         # Exécution
         result = strategic_manager.evaluate_final_results(final_results_from_tactical)
@@ -177,11 +184,13 @@ class TestStrategicManager:
         assert "evaluation" in result
         assert result["evaluation"]["overall_success_rate"] > 0.8
 
-        # 2. Vérifier que la conclusion a été publiée
+        # 2. Vérifier que la conclusion a été publiée via broadcast_objective
         spy_publish.assert_called_once()
         call_kwargs = spy_publish.call_args.kwargs
-        assert call_kwargs.get("decision_type") == "final_conclusion"
-        assert "conclusion" in call_kwargs.get("content", {})
+        assert call_kwargs.get("objective_type") == "strategic_decision"
+        payload = call_kwargs.get("content", {})
+        assert payload.get("decision_type") == "final_conclusion"
+        assert "conclusion" in payload
 
 
 class TestTaskCoordinator:
