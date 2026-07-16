@@ -124,8 +124,12 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         # Verify that a decision was logged
         self.mock_strategic_state.log_strategic_decision.assert_called()
 
-        # Verify that the conclusion was published
-        self.strategic_manager.adapter.publish_strategic_decision.assert_called_once()
+        # Verify that the conclusion was published via the adapter.
+        # BO-1 #1471 R644 replaced the non-existent ``publish_strategic_decision``
+        # with ``broadcast_objective(objective_type="strategic_decision", ...)``
+        # (the closest equivalent in StrategicAdapter). Lock in the new contract
+        # going forward — anti-pendule: do not reintroduce the ghost method.
+        self.strategic_manager.adapter.broadcast_objective.assert_called_once()
 
         # Check the result structure
         self.assertIn("conclusion", result)
