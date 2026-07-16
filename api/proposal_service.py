@@ -5,10 +5,12 @@ Uses an in-memory dict (no persistence) — suitable for demo/dev.
 """
 
 import asyncio
+import dataclasses
 import logging
 import uuid
-from datetime import datetime
-from typing import Dict, List, Optional
+from datetime import date, datetime
+from enum import Enum
+from typing import Any, Dict, List, Optional, cast
 
 from .proposal_models import (
     DeliberationStatus,
@@ -21,6 +23,64 @@ from .proposal_models import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# ──── JSON sanitization for API responses ────
+
+
+def _jsonable(obj: Any, _depth: int = 0, _max_depth: int = 12) -> Any:
+    """Best-effort conversion of an arbitrary value to JSON-safe primitives.
+
+    Preserves the genuine analysis payload (nested dicts / lists / primitives —
+    e.g. ``governance_decided_firsthand``, ``governance_verdict``,
+    ``capabilities_*``, per-phase ``output``) while coercing dataclasses
+    (``PhaseResult``), pydantic models, enums and datetimes. Anything else
+    falls back to ``str()``. Depth-guarded so a stray cyclic object cannot
+    cause runaway recursion.
+    """
+    if obj is None or isinstance(obj, (str, int, float, bool)):
+        return obj
+    if _depth >= _max_depth:
+        return str(obj)
+    if isinstance(obj, Enum):
+        return obj.value
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {str(k): _jsonable(v, _depth + 1) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple, set)):
+        return [_jsonable(v, _depth + 1) for v in obj]
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return {
+            f.name: _jsonable(getattr(obj, f.name), _depth + 1)
+            for f in dataclasses.fields(obj)
+        }
+    for attr in ("model_dump", "dict"):
+        method = getattr(obj, attr, None)
+        if callable(method):
+            try:
+                return _jsonable(method(), _depth + 1)
+            except Exception:  # noqa: BLE001 — best-effort serialization
+                pass
+    return str(obj)
+
+
+def sanitize_workflow_result(result: Any) -> Dict[str, Any]:
+    """Coerce a pipeline/orchestrator result into a JSON-serializable dict.
+
+    ``run_unified_analysis`` returns a dict carrying the live
+    ``unified_state`` object and ``phases`` as ``PhaseResult`` dataclasses —
+    neither is JSON-serializable, so returning it verbatim through a FastAPI
+    ``response_model`` (``DeliberationStatusResponse.results`` /
+    ``WorkflowResult.results``) raises at encode time and the client gets a
+    500 with an empty body (BO-2 #1472). This drops ``unified_state``
+    (redundant with the JSON-safe ``state_snapshot``) and converts everything
+    else to primitives while preserving the genuine verdict markers.
+    """
+    if not isinstance(result, dict):
+        return {"raw_result": _jsonable(result)}
+    safe = {k: v for k, v in result.items() if k != "unified_state"}
+    return cast(Dict[str, Any], _jsonable(safe))
 
 
 class ProposalStore:
@@ -171,12 +231,11 @@ async def _run_pipeline(text: str, workflow: str, options: Dict) -> Dict:
         )
 
         result = await run_unified_analysis(text, workflow_name=workflow)
-        # Extract serializable results
-        if hasattr(result, "dict"):
-            return result.dict()
-        if isinstance(result, dict):
-            return result
-        return {"raw_result": str(result)}
+        # Coerce to a JSON-safe dict: the raw result carries the live
+        # unified_state object + PhaseResult dataclasses, which break FastAPI
+        # response serialization (500 with empty body). The genuine verdict
+        # markers survive; unified_state is dropped (BO-2 #1472).
+        return sanitize_workflow_result(result)
     except ImportError:
         logger.warning("UnifiedPipeline not available, using stub results")
         return {
