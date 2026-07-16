@@ -24,6 +24,7 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
 from argumentation_analysis.paths import DATA_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
+    create_default_middleware,
     StrategicAdapter,
     TacticalAdapter,
     ChannelType,
@@ -74,7 +75,7 @@ class StrategicTacticalInterface:
         self.tactical_state = tactical_state or TacticalState()
         self.logger = logging.getLogger(__name__)
 
-        self.middleware = middleware or MessageMiddleware()
+        self.middleware = middleware or create_default_middleware()
         self.strategic_adapter = StrategicAdapter(
             agent_id="strategic_interface", middleware=self.middleware
         )

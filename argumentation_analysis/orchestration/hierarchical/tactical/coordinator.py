@@ -11,7 +11,10 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
 from argumentation_analysis.paths import RESULTS_DIR
-from argumentation_analysis.core.communication.middleware import MessageMiddleware
+from argumentation_analysis.core.communication.middleware import (
+    MessageMiddleware,
+    create_default_middleware,
+)
 from argumentation_analysis.core.communication.tactical_adapter import TacticalAdapter
 from argumentation_analysis.core.communication.operational_adapter import (
     OperationalAdapter,
@@ -72,7 +75,7 @@ class TaskCoordinator:
         """
         self.state = tactical_state or TacticalState()
         self.logger = logging.getLogger(__name__)
-        self.middleware = middleware or MessageMiddleware()
+        self.middleware = middleware or create_default_middleware()
         self.adapter = TacticalAdapter(
             agent_id="tactical_coordinator", middleware=self.middleware
         )

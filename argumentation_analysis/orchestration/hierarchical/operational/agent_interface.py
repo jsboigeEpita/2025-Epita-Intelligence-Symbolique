@@ -17,6 +17,7 @@ from argumentation_analysis.orchestration.hierarchical.operational.state import 
 from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
+    create_default_middleware,
     OperationalAdapter,
     Message,
     ChannelType,
@@ -55,7 +56,7 @@ class OperationalAgent(ABC):
         self.logger = logging.getLogger(f"OperationalAgent.{name}")
 
         # Initialiser le middleware de communication
-        self.middleware = middleware if middleware else MessageMiddleware()
+        self.middleware = middleware if middleware else create_default_middleware()
 
         # Créer l'adaptateur opérationnel
         self.adapter = OperationalAdapter(agent_id=name, middleware=self.middleware)
