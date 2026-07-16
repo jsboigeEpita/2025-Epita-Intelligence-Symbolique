@@ -27,7 +27,10 @@ if TYPE_CHECKING:
     from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import (
         TacticalOperationalInterface,
     )
-from argumentation_analysis.core.communication.middleware import MessageMiddleware
+from argumentation_analysis.core.communication.middleware import (
+    MessageMiddleware,
+    create_default_middleware,
+)
 from argumentation_analysis.core.communication.operational_adapter import (
     OperationalAdapter,
 )
@@ -106,7 +109,7 @@ class OperationalManager:
         self.result_queue = asyncio.Queue()
         self.running = False
         self.worker_task = None
-        self.middleware = middleware or MessageMiddleware()
+        self.middleware = middleware or create_default_middleware()
         self.adapter = OperationalAdapter(
             agent_id="operational_manager", middleware=self.middleware
         )

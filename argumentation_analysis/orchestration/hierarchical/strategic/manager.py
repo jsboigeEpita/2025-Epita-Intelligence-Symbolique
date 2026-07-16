@@ -23,6 +23,7 @@ from argumentation_analysis.orchestration.hierarchical.strategic.state import (
 from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
+    create_default_middleware,
     StrategicAdapter,
     MessagePriority,
     ChannelType,
@@ -84,7 +85,7 @@ class StrategicManager:
         """
         self.state = strategic_state or StrategicState()
         self.logger = logging.getLogger(__name__)
-        self.middleware = middleware or MessageMiddleware()
+        self.middleware = middleware or create_default_middleware()
         self.adapter = StrategicAdapter(
             agent_id="strategic_manager", middleware=self.middleware
         )
@@ -272,12 +273,15 @@ class StrategicManager:
                     )
                     objectives = self._fallback_objectives()
                 else:
-                    objectives = loop.run_until_complete(self._generate_llm_objectives())
+                    objectives = loop.run_until_complete(
+                        self._generate_llm_objectives()
+                    )
             except (json.JSONDecodeError, ValueError, TypeError, RuntimeError) as e:
                 # Narrowed catch: only LLM/parse/async errors, not blanket Exception.
                 self.logger.warning(
                     "LLM objective generation failed (%s: %s), using degraded fallback",
-                    type(e).__name__, e,
+                    type(e).__name__,
+                    e,
                 )
                 objectives = self._fallback_objectives()
             except Exception as e:
@@ -285,7 +289,8 @@ class StrategicManager:
                 self.logger.error(
                     "UNEXPECTED error in LLM objective generation (%s: %s), "
                     "using degraded fallback — investigate if persistent",
-                    type(e).__name__, e,
+                    type(e).__name__,
+                    e,
                 )
                 objectives = self._fallback_objectives()
         else:
@@ -372,16 +377,23 @@ class StrategicManager:
 
         try:
             from semantic_kernel.functions import KernelArguments
-            from semantic_kernel.prompt_template import PromptTemplateConfig, InputVariable
+            from semantic_kernel.prompt_template import (
+                PromptTemplateConfig,
+                InputVariable,
+            )
 
             # Use a simple invoke on the kernel with a direct prompt
             result = await self._kernel.invoke_prompt(
                 function_name="generate_objectives",
                 plugin_name="StrategicObjectiveGenerator",
                 prompt=prompt,
-                settings=self._kernel.get_service(self._llm_service_id).get_prompt_execution_settings()
-                if hasattr(self._kernel, "get_service")
-                else None,
+                settings=(
+                    self._kernel.get_service(
+                        self._llm_service_id
+                    ).get_prompt_execution_settings()
+                    if hasattr(self._kernel, "get_service")
+                    else None
+                ),
             )
 
             response_text = str(result).strip()
@@ -412,21 +424,24 @@ class StrategicManager:
             # Parse/validation errors — expected failure modes
             self.logger.warning(
                 "LLM objective generation failed (%s: %s), using degraded fallback",
-                type(e).__name__, e,
+                type(e).__name__,
+                e,
             )
             return self._fallback_objectives()
         except (ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
             # Network/timeout errors — expected failure modes
             self.logger.warning(
                 "LLM objective generation network error (%s: %s), using degraded fallback",
-                type(e).__name__, e,
+                type(e).__name__,
+                e,
             )
             return self._fallback_objectives()
         except Exception as e:
             # Unexpected errors: fail-loud at ERROR level
             self.logger.error(
                 "UNEXPECTED error in _generate_llm_objectives (%s: %s) — investigate",
-                type(e).__name__, e,
+                type(e).__name__,
+                e,
             )
             return self._fallback_objectives()
 
@@ -444,18 +459,26 @@ class StrategicManager:
                 objectives = await self._generate_llm_objectives()
                 for obj in objectives:
                     self.state.add_global_objective(obj)
-            except (json.JSONDecodeError, ValueError, TypeError,
-                    ConnectionError, TimeoutError, asyncio.TimeoutError) as e:
+            except (
+                json.JSONDecodeError,
+                ValueError,
+                TypeError,
+                ConnectionError,
+                TimeoutError,
+                asyncio.TimeoutError,
+            ) as e:
                 self.logger.warning(
                     "LLM objectives failed in async path (%s: %s), using degraded fallback",
-                    type(e).__name__, e,
+                    type(e).__name__,
+                    e,
                 )
                 for obj in self._fallback_objectives():
                     self.state.add_global_objective(obj)
             except Exception as e:
                 self.logger.error(
                     "UNEXPECTED error in async LLM objectives (%s: %s) — investigate",
-                    type(e).__name__, e,
+                    type(e).__name__,
+                    e,
                 )
                 for obj in self._fallback_objectives():
                     self.state.add_global_objective(obj)
@@ -497,11 +520,12 @@ class StrategicManager:
         if self._unified_state is None:
             return
         try:
-            from argumentation_analysis.core.strategic_bridge import sync_strategic_to_unified
-            count = sync_strategic_to_unified(self.state, self._unified_state)
-            self.logger.info(
-                "Bridged %d objectives to UnifiedAnalysisState", count
+            from argumentation_analysis.core.strategic_bridge import (
+                sync_strategic_to_unified,
             )
+
+            count = sync_strategic_to_unified(self.state, self._unified_state)
+            self.logger.info("Bridged %d objectives to UnifiedAnalysisState", count)
         except Exception as e:
             self.logger.warning("Failed to bridge to UnifiedAnalysisState: %s", e)
 

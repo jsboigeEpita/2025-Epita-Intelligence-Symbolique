@@ -16,6 +16,56 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import Channel, ChannelType, ChannelException
 
 
+def create_default_middleware(
+    config: Optional[Dict[str, Any]] = None,
+) -> "MessageMiddleware":
+    """Return a :class:`MessageMiddleware` with the standard channel set wired.
+
+    BO-1 #1471 R652 (constat firsthand coord) : the delegation path used to
+    fall back to ``results/*.json`` file-drop because the per-tier
+    ``MessageMiddleware()`` instances were created without registering any
+    channel. ``send_message`` then logged ``Channel not found: hierarchical``
+    and the bus stayed silent.
+
+    This helper centralises the wiring of the two channels the hierarchical
+    orchestration actually uses (HIERARCHICAL + DATA, mirroring
+    :class:`~argumentation_analysis.core.communication.middleware.MessageMiddleware.determine_channel`).
+    It is the single source of truth — do not duplicate ``register_channel``
+    calls at the call site (anti-pendule: a future addition of e.g. a
+    FEEDBACK channel should not require touching every manager / coordinator
+    / adapter).
+
+    Args:
+        config: Optional configuration forwarded to the middleware constructor.
+
+    Returns:
+        A ``MessageMiddleware`` instance with HIERARCHICAL and DATA channels
+        registered. Both channels are constructed with the conventional IDs
+        ``hierarchical_main`` / ``data_main`` (matching
+        ``argumentation_analysis.config.settings``).
+    """
+    middleware = MessageMiddleware(config=config)
+
+    # Imports locaux pour éviter cycles et préserver le lazy-loading existant.
+    from .hierarchical_channel import HierarchicalChannel
+    from .data_channel import DataChannel
+
+    try:
+        middleware.register_channel(HierarchicalChannel(channel_id="hierarchical_main"))
+    except Exception as exc:  # noqa: BLE001 — surface, ne pas masquer
+        logging.getLogger("MessageMiddleware").error(
+            "Failed to register HierarchicalChannel: %s", exc
+        )
+    try:
+        middleware.register_channel(DataChannel(channel_id="data_main"))
+    except Exception as exc:  # noqa: BLE001 — surface, ne pas masquer
+        logging.getLogger("MessageMiddleware").error(
+            "Failed to register DataChannel: %s", exc
+        )
+
+    return middleware
+
+
 class MessageMiddleware:
     """
     Middleware de messagerie central pour le système de communication multi-canal.

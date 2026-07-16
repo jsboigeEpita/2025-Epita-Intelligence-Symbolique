@@ -19,7 +19,7 @@ from .channel_interface import (
     ChannelType,
     LocalChannel,
 )  # Ajout de LocalChannel
-from .middleware import MessageMiddleware
+from .middleware import MessageMiddleware, create_default_middleware
 from .request_response import RequestResponseProtocol
 from .pub_sub import PublishSubscribeProtocol
 from .hierarchical_channel import HierarchicalChannel
@@ -41,6 +41,7 @@ __all__ = [
     "ChannelType",
     "LocalChannel",  # Ajout de LocalChannel
     "MessageMiddleware",
+    "create_default_middleware",
     "RequestResponseProtocol",
     "PublishSubscribeProtocol",
     "HierarchicalChannel",
