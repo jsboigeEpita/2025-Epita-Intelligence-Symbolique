@@ -34,6 +34,7 @@ from .proposal_service import (
     ProposalStore,
     get_proposal_store,
     run_deliberation_workflow,
+    sanitize_workflow_result,
 )
 
 logger = logging.getLogger(__name__)
@@ -275,18 +276,14 @@ async def run_custom_workflow(request: CustomWorkflowRequest):
                 context=context or None,
             )
 
-        if isinstance(result, dict):
-            return WorkflowResult(
-                workflow=request.workflow, status="completed", results=result
-            )
-        if hasattr(result, "dict"):
-            return WorkflowResult(
-                workflow=request.workflow, status="completed", results=result.dict()
-            )
+        # Coerce to a JSON-safe dict: pipeline/orchestrator results carry the
+        # live unified_state object + PhaseResult dataclasses, which break
+        # FastAPI response serialization (500, empty body). The genuine
+        # analysis payload survives; unified_state is dropped (BO-2 #1472).
         return WorkflowResult(
             workflow=request.workflow,
             status="completed",
-            results={"raw": str(result)},
+            results=sanitize_workflow_result(result),
         )
     except Exception as e:
         logger.error(f"Custom workflow failed: {e}")
