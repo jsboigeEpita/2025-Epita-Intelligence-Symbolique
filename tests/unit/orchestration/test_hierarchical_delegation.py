@@ -21,6 +21,7 @@ tests to run.
 """
 
 from unittest.mock import MagicMock
+from typing import Any, Dict
 
 import pytest
 
@@ -216,10 +217,26 @@ async def test_registry_executor_missing_provider_is_honest_failure():
 
 
 async def test_registry_executor_invokes_real_provider_with_intent():
-    """The default executor routes the strategic NL intent to the provider."""
+    """The default executor routes the strategic NL intent to the provider.
 
-    async def fake_invoke(input_data, context):
-        return {"echo": input_data.get("strategic_objective_description")}
+    BO-1 #1471 cont. R648: the executor normalises the signature so that
+    ``input_text`` (position 1) is the textual payload (``command["description"]``,
+    a ``str``) and the structured fields land in ``context["input_data"]`` —
+    mirroring the contract ``RegistryBackedOperationalRegistry.invoke_capability``
+    expects. The NL intent ``strategic_objective_description`` flows S→T→O via
+    the command dict, so the provider must read it from ``context["input_data"]``.
+    """
+    captured: Dict[str, Any] = {}
+
+    async def fake_invoke(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
+        captured["input_text_type"] = type(input_text).__name__
+        captured["intent_in_input_data"] = (
+            isinstance(context, dict)
+            and "input_data" in context
+            and context["input_data"].get("strategic_objective_description")
+            == "INTENT_MARK_opaque"
+        )
+        return {"echo": context["input_data"]["strategic_objective_description"]}
 
     registry = _FakeRegistry(
         {"fallacy_detection": [_FakeProvider("informal_v1", fake_invoke)]}
@@ -229,12 +246,20 @@ async def test_registry_executor_invokes_real_provider_with_intent():
         {
             "tactical_task_id": "t1",
             "objective_id": "obj-2",
+            "description": "Some tactical description for the provider.",
             "required_capabilities": ["fallacy_detection"],
             "strategic_objective_description": "INTENT_MARK_opaque",
         }
     )
     assert result["status"] == "completed"
     assert result["capability"] == "fallacy_detection"
+    assert captured["input_text_type"] == "str", (
+        f"provider received {captured['input_text_type']} at position 1 — "
+        f"the dict/str normalisation regressed"
+    )
+    assert captured[
+        "intent_in_input_data"
+    ], "strategic NL intent must reach the provider via context['input_data']"
     assert result["outputs"]["echo"] == "INTENT_MARK_opaque"
 
 

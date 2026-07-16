@@ -100,9 +100,45 @@ def make_registry_operational_executor(
 
     async def _executor(command: Dict[str, Any]) -> Dict[str, Any]:
         required = command.get("required_capabilities") or []
+        # BO-1 #1471 cont. R648: bridge the legacy capability names hardcoded
+        # in TaskCoordinator.agent_capabilities (coordinator.py:79-92) to the
+        # registry-side capability names. This was the actual cause-racine:
+        # delegation-mode's M3 chain produced no_provider_for_required_capabilities
+        # for tasks labelled ``text_extraction`` / ``argument_identification`` /
+        # etc., even when the registry had providers under different names
+        # (``fact_extraction``, ``argument_parsing``, ...). Anti-pendule #1019:
+        # map only at the lookup seam, never silently replace an unmatched
+        # legacy cap with a fabricated one (the legacy caps still surface in
+        # the ``required_capabilities`` field of failed-task results).
         chosen: Optional[str] = next(
             (cap for cap in required if op_registry.has_capability(cap)), None
         )
+        if chosen is None:
+            for legacy in required:
+                mapped = LEGACY_TO_REGISTRY_CAPABILITY.get(legacy)
+                if mapped and op_registry.has_capability(mapped):
+                    chosen = mapped
+                    break
+        # Fallback for empty ``required_capabilities`` (generic tasks): read
+        # the originating strategic objective's NL description and try the
+        # bridge's keyword map. Keeps the fix surgical — we reuse
+        # ``_OBJECTIVE_CAPABILITY_MAP`` rather than reinventing it.
+        if chosen is None and not required:
+            nl = command.get("strategic_objective_description", "").lower()
+            if nl:
+                # Imported lazily to avoid a hard cycle with the bridge module.
+                from argumentation_analysis.orchestration.hierarchical.hierarchy_bridge import (
+                    _OBJECTIVE_CAPABILITY_MAP,
+                )
+
+                for keyword, caps in _OBJECTIVE_CAPABILITY_MAP.items():
+                    if keyword in nl:
+                        for c in caps:
+                            if op_registry.has_capability(c):
+                                chosen = c
+                                break
+                        if chosen is not None:
+                            break
         base = {
             "task_id": command.get("tactical_task_id"),
             "objective_id": command.get("objective_id"),
@@ -123,8 +159,24 @@ def make_registry_operational_executor(
                 "strategic_objective_description", ""
             ),
         }
+        # BO-1 #1471 cont. R648: bridge the dict/str signature mismatch. Every
+        # ``_invoke_*`` registered in the CapabilityRegistry (see
+        # invoke_callables.py) is declared ``async def _invoke_X(input_text: str,
+        # context: Dict)``. The bridge mode (``objectives_to_workflow`` →
+        # ``WorkflowExecutor``) passes the raw user ``text`` as ``input_text``;
+        # the delegation mode previously passed the full ``input_data`` dict
+        # here, which raised ``AttributeError: 'dict' object has no attribute
+        # 'strip'`` (or similar) the moment any provider tried to handle it as
+        # text. Pass the textual payload (``description``) as the position the
+        # signatures actually declare, and keep the structured fields in the
+        # context so providers that need them can still find them.
+        textual_input = command.get("description", "") or ""
+        bridge_context = {
+            **(command.get("context") or {}),
+            "input_data": input_data,
+        }
         result = await op_registry.invoke_capability(
-            chosen, input_data, command.get("context")
+            chosen, textual_input, bridge_context
         )
         if result is None:
             return {
@@ -141,6 +193,25 @@ def make_registry_operational_executor(
         }
 
     return _executor
+
+
+# Legacy capability names emitted by ``TaskCoordinator._decompose_objective_to_tasks``
+# (see coordinator.py:79-92 agent_capabilities table) mapped to the canonical
+# CapabilityRegistry names that actually carry a provider. Keyed by legacy name
+# (the only one the tactical tier ever emits). Anti-pendule: minimal mapping,
+# only the names that the empirical probe (R648) showed were failing — extending
+# to unknown legacy caps is NOT a goal here, honesty about the gap is.
+LEGACY_TO_REGISTRY_CAPABILITY: Dict[str, str] = {
+    "text_extraction": "fact_extraction",
+    "argument_identification": "argument_parsing",
+    "argument_visualization": "argument_visualization",  # placeholder; no provider yet
+    "summary_generation": "synthesis",
+    "formal_logic": "propositional_logic",
+    "validity_checking": "propositional_logic",
+    "consistency_analysis": "propositional_logic",
+    "rhetorical_analysis": "argument_quality",
+    "preprocessing": "fact_extraction",
+}
 
 
 class DelegationOrchestrator:
