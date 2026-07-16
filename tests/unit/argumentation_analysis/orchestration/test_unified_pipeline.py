@@ -525,6 +525,71 @@ class TestRunUnifiedAnalysis:
         assert isinstance(result["capabilities_used"], list)
         assert isinstance(result["capabilities_missing"], list)
 
+    @pytest.mark.asyncio
+    async def test_degraded_phase_surfaces_in_capabilities_degraded_bo2_1472(self):
+        """BO-2 #1472 — anti-théâtre rollup (Constat n°5 / #1019).
+
+        A COMPLETED phase whose output carries the codebase-standard
+        ``degraded: True`` canon MUST surface in ``capabilities_degraded``
+        and be REMOVED from ``capabilities_used``. Without this, a
+        ``democratech`` deliberation whose governance verdict is empty (no
+        derivable preferences — e.g. no LLM key) reports as full 9/9
+        success — exactly the theatre #1019 forbids. The degraded marker on
+        ``structured_arg_status`` (formal/logic axes only, #1454) leaves
+        non-formal workflows silent; this test pins the phase-output canon
+        cross-check added in run_unified_analysis.
+        """
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        async def _degraded_invoke(text, context):
+            return {"degraded": True, "reason": "no_llm_key_synthetic"}
+
+        async def _genuine_invoke(text, context):
+            return {"note_finale": 7.5}
+
+        registry = CapabilityRegistry()
+        registry.register_agent(
+            name="degraded_quality",
+            agent_class=type("DQ", (), {}),
+            capabilities=["argument_quality"],
+            invoke=_degraded_invoke,
+        )
+        registry.register_agent(
+            name="genuine_counter",
+            agent_class=type("GC", (), {}),
+            capabilities=["counter_argument_generation"],
+            invoke=_genuine_invoke,
+        )
+        custom_wf = (
+            WorkflowBuilder("bo2_degraded_rollup")
+            .add_phase("quality", capability="argument_quality")
+            .add_phase("counter", capability="counter_argument_generation")
+            .build()
+        )
+        result = await run_unified_analysis(
+            "Synthetic domain-public proposition.",
+            registry=registry,
+            custom_workflow=custom_wf,
+        )
+
+        # The degraded phase surfaces honestly — NOT masked as "used".
+        assert "argument_quality" in result["capabilities_degraded"], (
+            f"degraded phase must surface in capabilities_degraded, got "
+            f"{result['capabilities_degraded']}"
+        )
+        assert "argument_quality" not in result["capabilities_used"], (
+            f"degraded phase must NOT be in capabilities_used, got "
+            f"{result['capabilities_used']}"
+        )
+        # A genuine phase is unaffected — still reported as used.
+        assert "counter_argument_generation" in result["capabilities_used"]
+        assert "counter_argument_generation" not in result["capabilities_degraded"]
+        # Both phases executed (completed) — the summary counts execution,
+        # not genuineness; that separation is what capabilities_degraded is for.
+        assert result["summary"]["completed"] == 2
+
 
 # ============================================================
 # Test: real invocation through run_unified_analysis
@@ -852,6 +917,66 @@ class TestInvokeCallables:
         assert "conflicts" in result
         assert "extraction_method" in result
         assert result["conflict_count"] == 0
+
+    async def test_invoke_governance_emits_degraded_canon_when_verdict_empty_bo2_1472(self):
+        """BO-2 #1472 — _invoke_governance emits the codebase-standard
+        ``degraded`` canon at the top level when the formal aggregation
+        cannot decide (no derivable preferences — e.g. sparse upstream / no
+        LLM key). This lets the pipeline rollup (run_unified_analysis)
+        surface the phase in ``capabilities_degraded`` instead of
+        masquerading an empty verdict as a used capability (#1019)."""
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        mock_plugin = MagicMock()
+        mock_plugin.list_governance_methods.return_value = '["majority", "borda"]'
+        mock_plugin.detect_conflicts_fn.return_value = "[]"
+        with patch(
+            "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
+            return_value=mock_plugin,
+        ), patch.object(
+            ic,
+            "_derive_governance_profile",
+            return_value=([], [], [], False, "no_preferences_synthetic"),
+        ):
+            result = await ic._invoke_governance("text", {})
+        # The verdict is honestly degraded.
+        assert result["governance_verdict"]["degraded"] is True
+        assert result["governance_decided_firsthand"] is False
+        # BO-2 canon: top-level degraded marker, consumed by the rollup.
+        assert result["degraded"] is True
+
+    async def test_invoke_governance_no_degraded_canon_when_genuine_bo2_1472(self):
+        """BO-2 #1472 — when governance genuinely decides, ``degraded`` is
+        False at the top level so the capability surfaces in
+        ``capabilities_used`` (the happy path the coord re-runs with a live
+        LLM key). Pins that the canon does not false-positive on a genuine
+        verdict."""
+        from argumentation_analysis.orchestration import invoke_callables as ic
+
+        mock_plugin = MagicMock()
+        mock_plugin.list_governance_methods.return_value = '["majority", "borda"]'
+        mock_plugin.detect_conflicts_fn.return_value = "[]"
+        fake_verdict = {
+            "winners_per_method": {"majority": "A", "plurality": "A"},
+            "condorcet_winner": "A",
+            "distinct_winners": ["A"],
+            "inter_method_disagreement": False,
+        }
+        with patch(
+            "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
+            return_value=mock_plugin,
+        ), patch.object(
+            ic,
+            "_derive_governance_profile",
+            return_value=(["A", "B"], {"qe": ["A", "B"]}, ["qe"], True, "ok"),
+        ), patch.object(
+            ic,
+            "_aggregate_governance_votes",
+            return_value=fake_verdict,
+        ):
+            result = await ic._invoke_governance("text", {})
+        assert result["degraded"] is False
+        assert result["governance_decided_firsthand"] is True
 
     async def test_invoke_jtms(self):
         """_invoke_jtms creates beliefs from real argument content with JTMS API."""
