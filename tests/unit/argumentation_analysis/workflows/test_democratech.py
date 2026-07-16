@@ -32,11 +32,14 @@ class TestBuildDemocratechWorkflow:
 
     def test_phase_count(self):
         wf = build_democratech_workflow()
-        assert len(wf.phases) == 9
+        # BO-2 #1472: 10 phases — extract prepended so quality→governance has
+        # argument material to reason over (was 9; governance never decided).
+        assert len(wf.phases) == 10
 
     def test_required_capabilities(self):
         wf = build_democratech_workflow()
         caps = wf.get_required_capabilities()
+        assert "fact_extraction" in caps
         assert "argument_quality" in caps
         assert "counter_argument_generation" in caps
         assert "adversarial_debate" in caps
@@ -54,6 +57,7 @@ class TestBuildDemocratechWorkflow:
     def test_required_phases(self):
         wf = build_democratech_workflow()
         required_names = {p.name for p in wf.phases if not p.optional}
+        assert "extract" in required_names
         assert "quality_baseline" in required_names
         assert "counter_arguments" in required_names
         assert "adversarial_debate" in required_names
@@ -64,6 +68,8 @@ class TestBuildDemocratechWorkflow:
         order = wf.get_execution_order()
         # Flatten to a flat list
         flat = [phase for level in order for phase in level]
+        # BO-2 #1472: extract feeds quality_baseline (the material to reason over)
+        assert flat.index("extract") < flat.index("quality_baseline")
         assert flat.index("quality_baseline") < flat.index("counter_arguments")
         assert flat.index("counter_arguments") < flat.index("adversarial_debate")
         assert flat.index("adversarial_debate") < flat.index("democratic_vote")
@@ -143,6 +149,7 @@ class TestDemocratechExecution:
     @pytest.mark.asyncio
     async def test_execute_full_pipeline(self):
         registry = _make_registry(
+            "fact_extraction",
             "speech_transcription",
             "argument_quality",
             "neural_fallacy_detection",
@@ -156,6 +163,7 @@ class TestDemocratechExecution:
         executor = WorkflowExecutor(registry)
         results = await executor.execute(wf, "Test proposition")
 
+        assert results["extract"].status == PhaseStatus.COMPLETED
         assert results["quality_baseline"].status == PhaseStatus.COMPLETED
         assert results["counter_arguments"].status == PhaseStatus.COMPLETED
         assert results["adversarial_debate"].status == PhaseStatus.COMPLETED
@@ -164,6 +172,7 @@ class TestDemocratechExecution:
     @pytest.mark.asyncio
     async def test_execute_missing_optional_capabilities(self):
         registry = _make_registry(
+            "fact_extraction",
             "argument_quality",
             "counter_argument_generation",
             "adversarial_debate",
@@ -173,7 +182,8 @@ class TestDemocratechExecution:
         executor = WorkflowExecutor(registry)
         results = await executor.execute(wf, "Test proposition")
 
-        # Required phases complete
+        # Required phases complete (extract is required since BO-2 #1472)
+        assert results["extract"].status == PhaseStatus.COMPLETED
         assert results["quality_baseline"].status == PhaseStatus.COMPLETED
         assert results["democratic_vote"].status == PhaseStatus.COMPLETED
         # Optional phases skipped
@@ -185,6 +195,7 @@ class TestDemocratechExecution:
         """Low consensus triggers quality recheck."""
         low_consensus = AsyncMock(return_value={"consensus": 0.3, "method": "majority"})
         registry = _make_registry(
+            "fact_extraction",
             "counter_argument_generation",
             "adversarial_debate",
         )
@@ -217,6 +228,7 @@ class TestDemocratechExecution:
             return_value={"consensus": 0.95, "method": "condorcet"}
         )
         registry = _make_registry(
+            "fact_extraction",
             "counter_argument_generation",
             "adversarial_debate",
         )
@@ -250,6 +262,12 @@ class TestDemocratechExecution:
             return {"captured": True}
 
         registry = CapabilityRegistry()
+        registry.register(
+            "extract",
+            ComponentType.AGENT,
+            capabilities=["fact_extraction"],
+            invoke=AsyncMock(return_value={"arguments": [{"text": "an argument"}]}),
+        )
         quality_invoke = AsyncMock(return_value={"note_finale": 7.5})
         registry.register(
             "quality",
@@ -317,3 +335,107 @@ class TestRunDeliberation:
             # Verify threshold is 0.5
             ctx = {"phase_democratic_vote_output": {"consensus": 0.4}}
             assert recheck.condition(ctx) is True
+
+
+# --- Governance cabling tests (BO-2 #1472) ---
+
+
+class TestGovernanceCabling:
+    """BO-2 #1472: governance must resolve democratech's phase-name variants.
+
+    The democratech workflow names its phases ``quality_baseline`` /
+    ``adversarial_debate`` / ``counter_arguments`` / ``fallacy_detection`` /
+    ``belief_tracking``, but the canonical context keys governance historically
+    read were ``phase_quality_output`` / ``phase_debate_output`` / etc. Without
+    the multi-key fallback, governance received an empty upstream and rendered
+    a permanently-degraded verdict — the theatre #1019 forbids.
+    """
+
+    def test_resolve_phase_output_canonical_key(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _resolve_phase_output,
+        )
+
+        ctx = {"phase_quality_output": {"note_finale": 7.0}}
+        assert _resolve_phase_output(ctx, "phase_quality_output") == {"note_finale": 7.0}
+
+    def test_resolve_phase_output_democratech_fallback(self):
+        """The crux: governance finds quality under the democratech phase name."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _resolve_phase_output,
+        )
+
+        ctx = {"phase_quality_baseline_output": {"per_argument_scores": {"arg_1": {}}}}
+        out = _resolve_phase_output(
+            ctx, "phase_quality_output", "phase_quality_baseline_output"
+        )
+        assert out == {"per_argument_scores": {"arg_1": {}}}
+
+    def test_resolve_phase_output_prefers_first_non_empty(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _resolve_phase_output,
+        )
+
+        ctx = {
+            "phase_quality_output": {},  # present but empty
+            "phase_quality_baseline_output": {"note_finale": 8.0},
+        }
+        out = _resolve_phase_output(
+            ctx, "phase_quality_output", "phase_quality_baseline_output"
+        )
+        assert out == {"note_finale": 8.0}
+
+    def test_resolve_phase_output_empty_when_absent(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _resolve_phase_output,
+        )
+
+        assert _resolve_phase_output({}, "phase_quality_output") == {}
+
+    def test_resolve_phase_output_ignores_non_dict(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _resolve_phase_output,
+        )
+
+        ctx = {"phase_quality_output": "not a dict"}
+        assert _resolve_phase_output(ctx, "phase_quality_output") == {}
+
+
+@pytest.mark.requires_api
+@pytest.mark.slow
+class TestDemocratechE2EGenuineFirsthand:
+    """BO-2 #1472 DoD #1: the democratech workflow decides E2E firsthand with
+    real LLM agents (no mock), rendering a genuine governance verdict.
+
+    Runs the real workflow with a live LLM key on a synthetic multi-option
+    proposition (privacy HARD: domain-public chess-club budget). With the
+    extract phase + governance cabling fixes, governance must receive >=2
+    evaluated arguments and decide firsthand (12-method formal aggregation).
+    Marked requires_api+slow: skips without a key / on the fast CI gate.
+    """
+
+    @pytest.mark.asyncio
+    async def test_governance_decides_firsthand_on_multi_option_proposition(self):
+        from argumentation_analysis.workflows.democratech import run_deliberation
+
+        proposition = (
+            "Le club d'echecs dispose d'un budget participatif de 2000 euros. "
+            "Option A : tournoi inter-villes a 2000 euros pour la visibilite et "
+            "le recrutement de nouveaux membres. "
+            "Option B : materiel pedagogique (echiquiers, horloges, supports) car "
+            "les debutants manquent de supports. "
+            "Option C : format hybride 1000 tournoi + 1000 materiel."
+        )
+        result = await run_deliberation(proposition, consensus_threshold=0.7)
+        phases = result.get("phases", {})
+        gov = phases.get("democratic_vote")
+        assert gov is not None, "democratic_vote phase must run"
+        assert isinstance(gov.output, dict)
+        # DoD #1 crux: a genuine firsthand decision, not a degraded/empty verdict.
+        assert gov.output.get("governance_decided_firsthand") is True, (
+            f"governance must decide firsthand with a live LLM key on multi-option "
+            f"material (got verdict={gov.output.get('governance_verdict')!r})"
+        )
+        # Honnête anti-théâtre: a decided verdict is NOT marked degraded.
+        assert gov.output.get("degraded") is False
+        assert "governance_simulation" not in result.get("capabilities_degraded", [])
