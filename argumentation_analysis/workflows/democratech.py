@@ -1,19 +1,23 @@
 """
 Democratech workflow: democratic deliberation pipeline.
 
-A 9-phase pipeline that takes a proposition and subjects it to multi-agent
+A 10-phase pipeline that takes a proposition and subjects it to multi-agent
 argumentative analysis, producing a democratic decision with full audit trail.
 
 Phases:
-1. transcription          — Speech-to-text (optional, if audio input)
-2. quality_baseline       — 9-virtue argument quality evaluation
-3. fallacy_detection      — Neural fallacy detection (optional)
-4. counter_arguments      — Generate counter-arguments (5 strategies)
-5. adversarial_debate     — Multi-agent debate simulation
-6. belief_tracking        — JTMS belief maintenance (optional)
-7. democratic_vote        — Multi-method governance voting
-8. indexing               — Semantic indexing for future retrieval (optional)
-9. quality_recheck        — Re-evaluate quality if consensus is low (conditional)
+1. extract               — Argument extraction (the material the deliberation
+                           reasons about; without it the downstream quality →
+                           governance chain is starved and governance can never
+                           render a genuine verdict — BO-2 #1472)
+2. transcription          — Speech-to-text (optional, if audio input)
+3. quality_baseline       — 9-virtue argument quality evaluation (per-argument)
+4. fallacy_detection      — Neural fallacy detection (optional)
+5. counter_arguments      — Generate counter-arguments (5 strategies)
+6. adversarial_debate     — Multi-agent debate simulation
+7. belief_tracking        — JTMS belief maintenance (optional)
+8. democratic_vote        — Multi-method governance voting (12 methods)
+9. indexing               — Semantic indexing for future retrieval (optional)
+10. quality_recheck       — Re-evaluate quality if consensus is low (conditional)
 """
 
 import logging
@@ -54,7 +58,7 @@ def build_democratech_workflow(
             quality recheck phase. Below this, quality is reassessed.
 
     Returns:
-        A 9-phase WorkflowDefinition composing the full analysis stack.
+        A 10-phase WorkflowDefinition composing the full analysis stack.
     """
 
     def recheck_condition(ctx: Dict[str, Any]) -> bool:
@@ -62,57 +66,68 @@ def build_democratech_workflow(
 
     return (
         WorkflowBuilder("democratech")
-        # Phase 1: Optional transcription
+        # Phase 1: Argument extraction (BO-2 #1472) — the material the
+        # deliberation reasons about. Without this, quality scores only the
+        # raw text as a single argument and governance can never aggregate a
+        # collective choice (<2 options) → permanent degraded verdict = the
+        # theatre #1019 forbids. Mirrors the extract→quality wiring in the
+        # light/standard workflows.
+        .add_phase(
+            "extract",
+            capability="fact_extraction",
+        )
+        # Phase 2: Optional transcription
         .add_phase(
             "transcription",
             capability="speech_transcription",
             optional=True,
         )
-        # Phase 2: Quality baseline (required)
+        # Phase 3: Quality baseline (required, per-argument via extract)
         .add_phase(
             "quality_baseline",
             capability="argument_quality",
+            depends_on=["extract"],
         )
-        # Phase 3: Optional fallacy detection
+        # Phase 4: Optional fallacy detection
         .add_phase(
             "fallacy_detection",
             capability="neural_fallacy_detection",
             optional=True,
             depends_on=["quality_baseline"],
         )
-        # Phase 4: Generate counter-arguments
+        # Phase 5: Generate counter-arguments
         .add_phase(
             "counter_arguments",
             capability="counter_argument_generation",
             depends_on=["quality_baseline"],
         )
-        # Phase 5: Adversarial debate
+        # Phase 6: Adversarial debate
         .add_phase(
             "adversarial_debate",
             capability="adversarial_debate",
             depends_on=["counter_arguments"],
         )
-        # Phase 6: Optional belief tracking
+        # Phase 7: Optional belief tracking
         .add_phase(
             "belief_tracking",
             capability="belief_maintenance",
             optional=True,
             depends_on=["adversarial_debate"],
         )
-        # Phase 7: Democratic vote
+        # Phase 8: Democratic vote
         .add_phase(
             "democratic_vote",
             capability="governance_simulation",
             depends_on=["adversarial_debate"],
         )
-        # Phase 8: Optional semantic indexing
+        # Phase 9: Optional semantic indexing
         .add_phase(
             "indexing",
             capability="semantic_indexing",
             optional=True,
             depends_on=["democratic_vote"],
         )
-        # Phase 9: Conditional quality recheck
+        # Phase 10: Conditional quality recheck
         .add_phase(
             "quality_recheck",
             capability="argument_quality",

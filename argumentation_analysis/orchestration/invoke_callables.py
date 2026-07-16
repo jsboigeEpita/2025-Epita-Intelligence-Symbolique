@@ -1826,6 +1826,27 @@ def _aggregate_governance_votes(
     }
 
 
+def _resolve_phase_output(context: Dict[str, Any], *keys: str) -> Dict[str, Any]:
+    """Resolve a phase output dict by trying multiple context keys in order.
+
+    Different workflows name the same logical phase differently — e.g. the
+    ``democratech`` workflow names its quality phase ``quality_baseline`` and
+    its debate phase ``adversarial_debate``, while the canonical context keys
+    most callables read are ``phase_quality_output`` / ``phase_debate_output``.
+    Without this fallback, a workflow whose phase names don't match the
+    canonical keys feeds governance an empty upstream → the verdict is
+    *always* degraded (BO-2 #1472: ``democratech`` reported an empty
+    governance verdict even with a live LLM key, because governance read
+    ``phase_quality_output`` while the populated key was
+    ``phase_quality_baseline_output``). Returns the first non-empty dict.
+    """
+    for key in keys:
+        value = context.get(key)
+        if isinstance(value, dict) and value:
+            return value
+    return {}
+
+
 async def _invoke_governance(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -1836,13 +1857,33 @@ async def _invoke_governance(
     methods_json = plugin.list_governance_methods()
     available_methods = json.loads(methods_json)
 
-    # (#289) Build positions from upstream phases (extract, debate, counter, quality, fallacy, jtms)
-    extract_output = context.get("phase_extract_output", {})
-    debate_output = context.get("phase_debate_output", {})
-    counter_output = context.get("phase_counter_output", {})
-    quality_output = context.get("phase_quality_output", {})
-    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-    jtms_output = context.get("phase_jtms_output", {})
+    # (#289) Build positions from upstream phases (extract, debate, counter,
+    # quality, fallacy, jtms). BO-2 #1472: resolve via canonical key first,
+    # then the democratech phase-name variants — otherwise a workflow whose
+    # phase names differ from the canonical keys (democratech: quality_baseline,
+    # adversarial_debate, counter_arguments, fallacy_detection, belief_tracking)
+    # feeds governance an empty upstream and the verdict is always degraded.
+    extract_output = _resolve_phase_output(context, "phase_extract_output")
+    debate_output = _resolve_phase_output(
+        context, "phase_debate_output", "phase_adversarial_debate_output"
+    )
+    counter_output = _resolve_phase_output(
+        context, "phase_counter_output", "phase_counter_arguments_output"
+    )
+    quality_output = _resolve_phase_output(
+        context,
+        "phase_quality_output",
+        "phase_quality_baseline_output",
+        "phase_quality_recheck_output",
+    )
+    fallacy_output = _resolve_phase_output(
+        context,
+        "phase_hierarchical_fallacy_output",
+        "phase_fallacy_detection_output",
+    )
+    jtms_output = _resolve_phase_output(
+        context, "phase_jtms_output", "phase_belief_tracking_output"
+    )
 
     arguments = extract_output.get("arguments", [])
     claims = extract_output.get("claims", [])
