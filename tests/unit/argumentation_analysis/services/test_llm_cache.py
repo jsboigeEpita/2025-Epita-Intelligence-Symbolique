@@ -19,7 +19,11 @@ from argumentation_analysis.services.llm_cache import (
     CachedChatCompletion,
     LLMCacheMiss,
     compute_cache_key,
+    compute_raw_cache_key,
+    cached_raw_chat_completion,
     get_cache_mode,
+    get_raw_cache,
+    reset_raw_cache,
     _serialize_messages,
     _serialize_response,
     _deserialize_response,
@@ -381,3 +385,190 @@ class TestCachedChatCompletion:
         cached = CachedChatCompletion(inner, cache_dir=cache_tmpdir, mode=RECORD)
         cached.close()
         cached.close()  # should not raise
+
+
+# --- Raw-path cache (direct OpenAI calls via _guarded_chat_completion) ---
+# BO-3 #1473: the CachedChatCompletion class above wraps the SK service, but the
+# direct path (_guarded_chat_completion -> client.chat.completions.create) needs
+# its own cache at the raw-kwargs level. These guard that cache on the fast gate.
+
+
+class FakeRawClient:
+    """Stand-in for an AsyncOpenAI client. Counts chat.completions.create calls."""
+
+    def __init__(self, response=None):
+        from openai.types.chat import ChatCompletion, ChatCompletionMessage
+        from openai.types.chat.chat_completion import Choice
+
+        self._response = response or ChatCompletion(
+            id="chatcmpl-x",
+            object="chat.completion",
+            created=1700000000,
+            model="gpt-5-mini",
+            choices=[
+                Choice(
+                    index=0,
+                    message=ChatCompletionMessage(role="assistant", content="live"),
+                    finish_reason="stop",
+                )
+            ],
+        )
+        self.calls = 0
+
+        async def _create(**kwargs):
+            self.calls += 1
+            return self._response
+
+        self.chat = type("C", (), {})()
+        self.chat.completions = type("P", (), {})()
+        self.chat.completions.create = _create
+
+
+@pytest.fixture
+def isolated_raw_cache(cache_tmpdir, monkeypatch):
+    """Point the raw cache at a tmpdir + reset the singleton for isolation."""
+    monkeypatch.setenv("LLM_CACHE_DIR", str(cache_tmpdir))
+    reset_raw_cache()
+    yield cache_tmpdir
+    reset_raw_cache()
+
+
+class TestComputeRawCacheKey:
+    def test_deterministic(self):
+        kw = {"model": "gpt-5-mini", "messages": [{"role": "user", "content": "hi"}]}
+        assert compute_raw_cache_key(**kw) == compute_raw_cache_key(**kw)
+
+    def test_different_messages_different_key(self):
+        k1 = compute_raw_cache_key(model="m", messages=[{"role": "user", "content": "a"}])
+        k2 = compute_raw_cache_key(model="m", messages=[{"role": "user", "content": "b"}])
+        assert k1 != k2
+
+    def test_different_model_different_key(self):
+        msgs = [{"role": "user", "content": "x"}]
+        assert compute_raw_cache_key(model="a", messages=msgs) != compute_raw_cache_key(
+            model="b", messages=msgs
+        )
+
+    def test_temperature_affects_key(self):
+        msgs = [{"role": "user", "content": "x"}]
+        k1 = compute_raw_cache_key(model="m", messages=msgs, temperature=0.0)
+        k2 = compute_raw_cache_key(model="m", messages=msgs, temperature=1.0)
+        assert k1 != k2
+
+    def test_non_deterministic_fields_ignored(self):
+        msgs = [{"role": "user", "content": "x"}]
+        # `user` (per-request user id) must NOT fragment the key.
+        k1 = compute_raw_cache_key(model="m", messages=msgs, user="alice")
+        k2 = compute_raw_cache_key(model="m", messages=msgs, user="bob")
+        assert k1 == k2
+
+
+class TestCachedRawChatCompletion:
+    @pytest.mark.asyncio
+    async def test_off_mode_passthrough(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "off"}):
+            reset_raw_cache()
+            client = FakeRawClient()
+            r = await cached_raw_chat_completion(
+                client, model="m", messages=[{"role": "user", "content": "q"}]
+            )
+            assert r.choices[0].message.content == "live"
+            assert client.calls == 1
+
+    @pytest.mark.asyncio
+    async def test_record_mode_caches_then_hits(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            client = FakeRawClient()
+            kw = {"model": "m", "messages": [{"role": "user", "content": "q"}]}
+            r1 = await cached_raw_chat_completion(client, **kw)
+            r2 = await cached_raw_chat_completion(client, **kw)
+            assert r1.choices[0].message.content == "live"
+            assert r2.choices[0].message.content == "live"
+            assert client.calls == 1  # second call served from cache
+
+    @pytest.mark.asyncio
+    async def test_replay_mode_hit_no_live_call(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            recorder = FakeRawClient()
+            kw = {"model": "m", "messages": [{"role": "user", "content": "q"}]}
+            await cached_raw_chat_completion(recorder, **kw)
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            replayer = FakeRawClient()
+            r = await cached_raw_chat_completion(replayer, **kw)
+            assert r.choices[0].message.content == "live"  # served from cache
+            assert replayer.calls == 0  # NO live call in replay
+
+    @pytest.mark.asyncio
+    async def test_replay_mode_miss_raises_fail_loud(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            client = FakeRawClient()
+            with pytest.raises(LLMCacheMiss, match="Raw cache miss in replay mode"):
+                await cached_raw_chat_completion(
+                    client,
+                    model="m",
+                    messages=[{"role": "user", "content": "never seen"}],
+                )
+            assert client.calls == 0  # fail-loud: must NOT silently call the API
+
+    @pytest.mark.asyncio
+    async def test_tool_calls_roundtrip(self, isolated_raw_cache):
+        """Function-calling responses (tool_calls) must survive the cache."""
+        from openai.types.chat import ChatCompletion, ChatCompletionMessage
+        from openai.types.chat.chat_completion import Choice
+
+        tc_response = ChatCompletion(
+            id="chatcmpl-tc",
+            object="chat.completion",
+            created=1700000000,
+            model="gpt-5-mini",
+            choices=[
+                Choice(
+                    index=0,
+                    message=ChatCompletionMessage(
+                        role="assistant",
+                        content=None,
+                        tool_calls=[
+                            {
+                                "id": "call_1",
+                                "type": "function",
+                                "function": {"name": "extract", "arguments": '{"x":1}'},
+                            }
+                        ],
+                    ),
+                    finish_reason="tool_calls",
+                )
+            ],
+        )
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            recorder = FakeRawClient(response=tc_response)
+            kw = {"model": "m", "messages": [{"role": "user", "content": "call tool"}]}
+            await cached_raw_chat_completion(recorder, **kw)
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            replayer = FakeRawClient()
+            r = await cached_raw_chat_completion(replayer, **kw)
+            assert r.choices[0].message.tool_calls[0].function.name == "extract"
+            assert replayer.calls == 0
+
+
+class TestGetRawCache:
+    def test_off_returns_none(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "off"}):
+            reset_raw_cache()
+            assert get_raw_cache() is None
+
+    def test_record_returns_cache(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            cache = get_raw_cache()
+            assert cache is not None
+
+    def test_singleton_reused(self, isolated_raw_cache):
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            assert get_raw_cache() is get_raw_cache()

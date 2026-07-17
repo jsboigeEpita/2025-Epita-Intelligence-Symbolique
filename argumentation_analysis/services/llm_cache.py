@@ -16,7 +16,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
@@ -240,3 +240,145 @@ class CachedChatCompletion(ChatCompletionClientBase):
         if self._cache is not None:
             self._cache.close()
             self._cache = None
+
+
+# ──── Raw-path cache (direct OpenAI calls via _guarded_chat_completion) ────
+#
+# CachedChatCompletion above wraps the SK service (kernel/agents path). But the
+# direct path — ``_guarded_chat_completion`` → ``client.chat.completions.create``
+# (extract/governance/quality/fallacy/counter-arg) — never touches an SK service,
+# so it needs its own cache at the raw OpenAI-kwargs level. Both share the same
+# diskcache backend + CACHE_DIR so a single record run seeds every call site,
+# and a single replay run replays every call site (BO-3 #1473, determinism DoD).
+
+_RAW_CACHE_KEY_FIELDS = (
+    "temperature",
+    "max_tokens",
+    "top_p",
+    "presence_penalty",
+    "frequency_penalty",
+    "response_format",
+    "tool_choice",
+    "tools",
+)
+
+
+def compute_raw_cache_key(**kwargs: Any) -> str:
+    """SHA-256 over the deterministic part of a raw chat.completions.create call.
+
+    The cache key captures the fields that affect the LLM output: model,
+    messages, and the deterministic sampling/tooling kwargs. Non-deterministic
+    kwargs (e.g. ``user``, ``seed`` if unset) are ignored. The ``client`` is
+    NOT part of the key (two clients with the same provider → same answer).
+    Takes the full ``client.chat.completions.create`` kwargs and extracts the
+    relevant fields itself, so callers never risk a double-arg collision.
+    """
+    key_data: Dict[str, Any] = {
+        "model": kwargs.get("model"),
+        "messages": kwargs.get("messages", []),
+    }
+    for field in _RAW_CACHE_KEY_FIELDS:
+        if field in kwargs and kwargs[field] is not None:
+            key_data[field] = kwargs[field]
+    raw = json.dumps(key_data, sort_keys=True, ensure_ascii=False, default=str)
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
+def _serialize_chat_completion(response: Any) -> Dict[str, Any]:
+    """Serialize an OpenAI ChatCompletion to a JSON-safe dict (diskcache-storable).
+
+    Uses pydantic ``model_dump`` (OpenAI v1+ SDK). The dict round-trips via
+    ``ChatCompletion.model_validate`` (probed firsthand: content + tool_calls +
+    JSON-string all survive).
+    """
+    if hasattr(response, "model_dump"):
+        return cast(Dict[str, Any], response.model_dump())
+    # Fallback: already a dict-like.
+    return {"_fallback": str(response)}
+
+
+def _deserialize_chat_completion(data: Any) -> Any:
+    """Reconstruct an OpenAI ChatCompletion from a cached dict."""
+    if isinstance(data, dict) and "_fallback" in data:
+        return data["_fallback"]
+    from openai.types.chat import ChatCompletion
+
+    return ChatCompletion.model_validate(data)
+
+
+# Module-level singleton diskcache for the raw path (shared with CACHE_DIR).
+_raw_cache: Any = None
+_raw_cache_dir: Optional[str] = None
+
+
+def get_raw_cache(cache_dir: Optional[Path] = None) -> Any:
+    """Return the shared raw-path diskcache, or None when caching is off.
+
+    Lazily initialized so importing the module never opens a cache. Reuses one
+    diskcache across calls within a process; a different ``cache_dir`` re-opens.
+    """
+    mode = get_cache_mode()
+    if mode == OFF:
+        return None
+    env_cache_dir: Optional[str] = os.getenv("LLM_CACHE_DIR")
+    target = str(cache_dir or env_cache_dir or CACHE_DIR)
+    global _raw_cache, _raw_cache_dir
+    if _raw_cache is None or _raw_cache_dir != target:
+        Path(target).mkdir(parents=True, exist_ok=True)
+        try:
+            import diskcache
+
+            _raw_cache = diskcache.Cache(target)
+            _raw_cache_dir = target
+        except ImportError:
+            logger.warning("diskcache not installed, raw cache disabled")
+            return None
+    return _raw_cache
+
+
+def reset_raw_cache() -> None:
+    """Close + drop the module-level raw cache singleton (test isolation)."""
+    global _raw_cache, _raw_cache_dir
+    if _raw_cache is not None:
+        try:
+            _raw_cache.close()
+        except Exception:  # noqa: BLE001 — best-effort teardown
+            pass
+    _raw_cache = None
+    _raw_cache_dir = None
+
+
+async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
+    """Cache-aware wrapper for ``client.chat.completions.create(**kwargs)``.
+
+    Mirrors ``CachedChatCompletion`` but for the direct (non-SK) path. In replay
+    mode a miss raises ``LLMCacheMiss`` (fail-loud — never a silent live call,
+    BO-3 #1473 anti-theatre); in record mode a miss calls the API and caches the
+    response; in off mode it passes through. The cache key is computed from the
+    deterministic kwargs only (see ``compute_raw_cache_key``).
+    """
+    mode = get_cache_mode()
+    if mode == OFF:
+        return await client.chat.completions.create(**kwargs)
+    cache = get_raw_cache()
+    if cache is None:  # diskcache unavailable
+        return await client.chat.completions.create(**kwargs)
+    key = compute_raw_cache_key(**kwargs)
+    if mode == REPLAY:
+        cached = cache.get(key)
+        if cached is None:
+            raise LLMCacheMiss(
+                f"Raw cache miss in replay mode for key {key[:16]}... "
+                f"Record fixtures first with LLM_CACHE_MODE=record"
+            )
+        logger.debug("Raw cache HIT (replay): %s...", key[:16])
+        return _deserialize_chat_completion(cached)
+    # RECORD mode
+    cached = cache.get(key)
+    if cached is not None:
+        logger.debug("Raw cache HIT (record): %s...", key[:16])
+        return _deserialize_chat_completion(cached)
+    logger.debug("Raw cache MISS (record): %s..., calling API", key[:16])
+    response = await client.chat.completions.create(**kwargs)
+    cache.set(key, _serialize_chat_completion(response))
+    return response

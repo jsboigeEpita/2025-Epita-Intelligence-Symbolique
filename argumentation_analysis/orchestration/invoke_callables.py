@@ -460,12 +460,24 @@ async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:
                 f"({budget.count} > {budget.ceiling}) in a single analysis run "
                 f"— runaway guard (issue #708)."
             )
+    # Cache-aware dispatch (BO-3 #1473): route the direct OpenAI call through
+    # the raw LLM cache. In record mode the response is persisted; in replay
+    # mode a miss raises LLMCacheMiss (fail-loud — never a silent live call);
+    # in off mode it passes through unchanged. This single seam covers EVERY
+    # direct-path phase (extract/governance/quality/fallacy/counter-arg), so a
+    # replay run is deterministic for these phases. SK-native agent calls
+    # (ChatCompletionAgent/AgentGroupChat) bypass this funnel and are cached at
+    # the service level (create_llm_service) — separate follow-up.
+    from argumentation_analysis.services.llm_cache import (
+        cached_raw_chat_completion,
+    )
+
     if _LLM_CALL_TIMEOUT_S > 0:
         return await asyncio.wait_for(
-            client.chat.completions.create(**kwargs),
+            cached_raw_chat_completion(client, **kwargs),
             timeout=_LLM_CALL_TIMEOUT_S,
         )
-    return await client.chat.completions.create(**kwargs)
+    return await cached_raw_chat_completion(client, **kwargs)
 
 
 # --- Invoke callables for registered components ---
