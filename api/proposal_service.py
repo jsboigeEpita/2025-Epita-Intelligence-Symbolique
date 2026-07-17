@@ -10,7 +10,7 @@ import logging
 import uuid
 from datetime import date, datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional, cast
+from typing import Any, Awaitable, Callable, Dict, List, Optional, cast
 
 from .proposal_models import (
     DeliberationStatus,
@@ -208,6 +208,15 @@ async def run_deliberation_workflow(
     proposal_id = store.get_deliberation(delib_id).proposal_id
     store.update_status(proposal_id, ProposalStatus.ANALYZING)
 
+    # Stream lifecycle/verdict to any WS client subscribed to this deliberation.
+    # The session_id IS the delib_id (POST /deliberate returns it before the
+    # client connects to /ws/deliberation/{delib_id}). Broadcasting is best-effort:
+    # _send_to_session no-ops when nobody is connected, and WS failures must never
+    # break the deliberation itself (BO-2 #1472 WS last-mile — the routes + manager
+    # existed but NOTHING in the execution path ever emitted, so a connected client
+    # received only pongs: theatre #1019 at the WS boundary).
+    await _broadcast_ws(delib_id, lambda m: m.broadcast_status(delib_id, "running", workflow))
+
     try:
         # Try to run via UnifiedPipeline
         results = await _run_pipeline(proposal_text, workflow, options)
@@ -217,10 +226,67 @@ async def run_deliberation_workflow(
         store.set_analysis_results(proposal_id, results)
         store.update_status(proposal_id, ProposalStatus.DECIDED)
         logger.info(f"Deliberation {delib_id} completed successfully")
+        await _broadcast_ws_deliberation_result(delib_id, proposal_id, results)
+        await _broadcast_ws(
+            delib_id, lambda m: m.broadcast_status(delib_id, "completed")
+        )
     except Exception as e:
         logger.error(f"Deliberation {delib_id} failed: {e}")
         store.update_deliberation(delib_id, DeliberationStatus.FAILED, error=str(e))
         store.update_status(proposal_id, ProposalStatus.PENDING)
+        await _broadcast_ws(delib_id, lambda m: m.broadcast_error(delib_id, str(e)))
+        await _broadcast_ws(
+            delib_id, lambda m: m.broadcast_status(delib_id, "failed")
+        )
+
+
+async def _broadcast_ws(
+    delib_id: str, emit: Callable[[Any], Awaitable[None]]
+) -> None:
+    """Best-effort broadcast to the WS session for ``delib_id``.
+
+    Swallows any error: a streaming glitch must never propagate into the
+    deliberation's own success/failure state. ``emit`` receives the manager.
+    """
+    try:
+        from argumentation_analysis.services.websocket_manager import (
+            get_websocket_manager,
+        )
+
+        await emit(get_websocket_manager())
+    except Exception as e:  # noqa: BLE001 — streaming is best-effort
+        logger.warning(f"WS broadcast failed for deliberation {delib_id}: {e}")
+
+
+async def _broadcast_ws_deliberation_result(
+    delib_id: str, proposal_id: str, results: Dict[str, Any]
+) -> None:
+    """Extract the governance verdict from sanitized results and broadcast it.
+
+    ``results`` is already JSON-safe (``sanitize_workflow_result``), so the
+    democratic_vote phase output is a plain dict. A missing/degraded verdict is
+    broadcast honestly (``decided_firsthand=False``) rather than fabricated.
+    """
+    gov_output = (
+        results.get("phases", {})
+        .get("democratic_vote", {})
+        .get("output", {})
+    )
+    verdict = gov_output.get("governance_verdict") or {}
+    await _broadcast_ws(
+        delib_id,
+        lambda m: m.broadcast_deliberation_result(
+            delib_id,
+            proposal_id,
+            winner=verdict.get("condorcet_winner"),
+            decided_firsthand=bool(gov_output.get("governance_decided_firsthand", False)),
+            degraded=bool(gov_output.get("degraded", False)),
+            summary={
+                "governance_verdict": verdict,
+                "capabilities_degraded": results.get("capabilities_degraded", []),
+            },
+        ),
+    )
 
 
 async def _run_pipeline(text: str, workflow: str, options: Dict) -> Dict:

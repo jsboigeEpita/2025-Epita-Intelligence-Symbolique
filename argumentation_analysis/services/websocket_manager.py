@@ -167,6 +167,36 @@ class AnalysisWebSocketManager:
             },
         )
 
+    async def broadcast_deliberation_result(
+        self,
+        session_id: str,
+        proposal_id: str,
+        winner: Optional[str],
+        decided_firsthand: bool,
+        degraded: bool = False,
+        summary: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Broadcast a terminal deliberation verdict (governance decision).
+
+        Distinct from ``broadcast_vote_update`` (a single voter's ballot): this
+        carries the aggregated governance verdict emitted by the
+        ``democratic_vote`` phase — the ``condorcet_winner`` plus the genuine
+        marker, so a WS client learns *both* that the deliberation resolved and
+        whether it decided firsthand (BO-2 #1472 WS last-mile).
+        """
+        await self._send_to_session(
+            session_id,
+            {
+                "type": "deliberation_result",
+                "proposal_id": proposal_id,
+                "winner": winner,
+                "governance_decided_firsthand": decided_firsthand,
+                "degraded": degraded,
+                "summary": _safe_serialize(summary or {}),
+                "timestamp": time.time(),
+            },
+        )
+
     async def broadcast_status(self, session_id: str, status: str, detail: str = ""):
         """Broadcast a generic status message."""
         await self._send_to_session(
