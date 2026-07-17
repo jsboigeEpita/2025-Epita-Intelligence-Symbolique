@@ -169,7 +169,10 @@ def create_llm_service(
         )
 
     resilient_client = get_resilient_async_client()
-    llm_instance = None
+    # Typed as the SK base so the authentic OpenAI/Azure instance, and the
+    # cache wrapper (CachedChatCompletion) added below in record/replay mode,
+    # are all valid assignments (BO-3 #1473 PR2).
+    llm_instance: Union[ChatCompletionClientBase, None] = None
 
     try:
         if service_type == "OpenAIChatCompletion":
@@ -223,6 +226,34 @@ def create_llm_service(
 
     if not llm_instance:
         raise RuntimeError("La configuration du service LLM a échoué silencieusement.")
+
+    # Cache-aware SK-service wrapping (BO-3 #1473, PR2 — SK-native path):
+    # wrap the freshly built service with CachedChatCompletion so SK-native agent
+    # calls (ChatCompletionAgent.invoke / AgentGroupChat.invoke — the
+    # conversational & cluedo orchestration modes, which reach the OpenAI API
+    # through the kernel service and BYPASS the direct-path funnel
+    # ``_guarded_chat_completion`` wired in PR1) are replayed from the same disk
+    # cache. Inert in off mode (no wrapping, zero behavior change); record
+    # persists the response, replay raises ``LLMCacheMiss`` on a miss (fail-loud
+    # — never a silent live call, anti-théâtre #1019). Mirrors
+    # ``_guarded_chat_completion`` (PR1, direct path). Both layers share
+    # CACHE_DIR, so one record run seeds every call site and one replay run
+    # replays every call site (BO-3 determinism DoD).
+    #
+    # CachedChatCompletion overrides get_chat_message_contents (plural); the
+    # singular variant delegates to it via ``self`` (SK base class, line 190),
+    # so both non-streaming entry points are intercepted. Streaming is out of
+    # scope (same boundary as the direct path).
+    from argumentation_analysis.services.llm_cache import (
+        OFF,
+        CachedChatCompletion,
+        get_cache_mode,
+    )
+
+    cache_mode = get_cache_mode()
+    if cache_mode != OFF:
+        llm_instance = CachedChatCompletion(inner=llm_instance, mode=cache_mode)
+        logger.info(f"Service LLM SK wrappé avec cache (mode={cache_mode}).")
 
     return llm_instance
 
