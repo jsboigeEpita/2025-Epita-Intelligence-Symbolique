@@ -205,6 +205,99 @@ The test prints the per-phase record-vs-replay table and the `CacheStats` totals
 
 ---
 
+## Demo Bundle Profiling (5 propositions, BO-3 #1473 residual / dispatch R660)
+
+The PR3 batch test above used 3 synthetic propositions. This section profiles the
+**full 5-proposition demo bundle** (`examples/democratech_deliberation/synthetic_proposals.py`,
+merged #1486) through the same record→replay harness — extending the determinism
+proof to the demoable bundle and isolating the per-phase residual honestly.
+
+### Bundle results (record vs replay, 5 synthetic domain-public propositions)
+
+| Metric | Record leg | Replay leg |
+|--------|-----------:|-----------:|
+| Live API calls (`CacheStats.live`) | **25** | **0** ✅ |
+| Cache hits | 5 | 30 |
+| Cache misses (`miss_replay`) | 0 | 0 |
+| Decided firsthand | 5/5 | 5/5 |
+| Wall-clock total | 745.62 s | 179.62 s |
+| Replay as % of record | — | **24.1%** |
+
+**DoD T2 firsthand-proven** (not asserted): the whole 5-prop replay batch made
+**zero live API calls** (`CacheStats.live == 0`, proven via the shared counter),
+zero cache misses, and every proposition decided firsthand with an identical
+verdict (winner `arg_1`, 12 voting methods) on both legs.
+
+### Per-proposition wall-clock
+
+| Proposition | Record (s) | Replay (s) | Replay % |
+|-------------|-----------:|-----------:|---------:|
+| prop_A (chess club) | 134.22 | 36.00 | 26.8% |
+| prop_B (library) | 163.73 | 36.23 | 22.1% |
+| prop_C (sports assoc) | 157.13 | 35.82 | 22.8% |
+| prop_D (park) | 149.33 | 35.54 | 23.8% |
+| prop_E (music school) | 141.22 | 36.03 | 25.5% |
+
+### Per-phase breakdown (prop_A, representative)
+
+| Phase | Record (s) | Replay (s) | LLM-bound? |
+|-------|-----------:|-----------:|:----------:|
+| extract | 27.98 | 0.06 | yes → collapses |
+| quality_baseline | 39.04 | 0.52 | yes → collapses |
+| counter_arguments | 16.19 | 0.07 | yes → collapses |
+| adversarial_debate | 29.77 | 0.04 | yes → collapses |
+| democratic_vote | 18.44 | 0.04 | yes → collapses |
+| fallacy_detection | 0.19 | **32.78** | **no (neural-tier, uncached — see below)** |
+| indexing | 2.04 | 2.03 | no (~constant) |
+| belief_tracking | 0.00 | 0.00 | no |
+| quality_recheck | 0.30 | 0.45 | partial |
+| transcription | 0.00 | 0.00 | no |
+
+Every LLM-bound phase routed through `_guarded_chat_completion` (direct) or
+`CachedChatCompletion` (SK) **collapses** at replay (record → sub-0.1 s), matching
+the PR3 finding.
+
+### Residual wall-clock floor (documented honestly, not masked)
+
+The bundle replay is **24.1%** of record — higher than the PR3 batch's 1.6%. The
+floor is **not** a cache defect; it is a per-proposition orchestration + uncached
+neural-tier cost that the cache does not (and should not) absorb:
+
+- **`fallacy_detection` = 32.78 s at replay** (vs 0.19 s at record). The neural
+  fallacy tier (`self_hosted_fallacy_detector`) uses its **own** OpenAI client and
+  is **not** routed through `_guarded_chat_completion`, so it is outside both
+  cache layers. On this run the configured neural model (`qwen3.5-35b-a3b`) 404s
+  and the tier retries to timeout (visible in the log as `NotFoundError` /
+  `APITimeoutError` on the fallacy wide-net). At *record* this phase happened to
+  fail fast (0.19 s heuristic fallback); at *replay* the same timeout path
+  re-executes every time. This is the dominant residual — **~33 s × 5 = ~165 s
+  of the 180 s replay total is uncached neural-tier timeout, not LLM work**.
+- **`indexing` ≈ 2.0 s** (semantic index build, non-LLM, ~constant per prop).
+- **Registry build + torch import** (~1–2 s per prop): the standalone driver
+  re-instantiates the `CapabilityRegistry` (37 services) per proposition.
+
+Strip the neural-tier timeout and the per-prop replay floor drops to ~3 s
+(indexing + orchestration) → bundle replay would be ~3–4% of record, consistent
+with the PR3 batch. The determinism invariant (`live == 0` at replay) is
+unaffected: the neural tier makes no *LLM chat* call that the cache must cover.
+
+### Reproducing the bundle profiling run
+
+```bash
+# Requires a working LLM key in .env (OpenRouter preferred). The standalone
+# driver reuses the cache harness from test_replay_cache_profiling_batch.py over
+# the 5 demo propositions, isolated to a scratch cache_dir.
+LLM_CACHE_MODE=record python <driver>   # seeds the cache (live, ~12 min)
+LLM_CACHE_MODE=replay python <driver>   # replays (0 live call, ~3 min)
+```
+
+Provider-routing note: an early pipeline import can inject stale env vars (a
+dead `OPENAI_API_KEY`, empty `OPENROUTER_*`) before the driver's `load_dotenv`;
+the driver must call `load_dotenv(.env, override=True)` so `create_llm_service`
+routes to the working OpenRouter key (else 401 on api.openai.com).
+
+---
+
 View the pyinstrument flame graph: `open .profiling/spectacular_pyinstrument.html`
 View cProfile interactively: `snakeviz .profiling/spectacular_cprofile.prof`
 
