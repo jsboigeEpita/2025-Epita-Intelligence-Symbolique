@@ -143,6 +143,68 @@ No action needed unless the workflow grows to 30+ phases.
 - **Phase timing**: instrumented WorkflowExecutor per-phase wall-clock
 - **Reproducibility**: run with `LLM_CACHE_MODE=replay` for deterministic cached responses
 
+## Record vs Replay Determinism Profiling (BO-3 #1473 PR3)
+
+The LLM replay cache (PR1 direct path + PR2 SK-native path) makes a run
+deterministically reproducible: one `LLM_CACHE_MODE=record` run seeds the disk
+cache, then `LLM_CACHE_MODE=replay` replays every LLM call from it — **zero live
+API calls on the replay batch**. This section profiles the record→replay speedup
+and the cache monitoring counters.
+
+### Profiling methodology (per-phase, both layers)
+
+Per-phase latency is extracted from the pipeline's own `PhaseResult.duration_seconds`
+(already tracked by the WorkflowExecutor — PR3 adds **no** pipeline
+instrumentation). The shared `CacheStats` counters
+(`argumentation_analysis.services.llm_cache.get_cache_stats`) report how many
+calls each layer served from cache vs. the API:
+
+| Counter | Meaning |
+|---------|---------|
+| `hit` | served from cache (record or replay) |
+| `miss_record` | record-mode miss → API call + store |
+| `miss_replay` | replay-mode miss → `LLMCacheMiss` raised (never live) |
+| `live` | actual API round-trip (off passthrough OR record miss) |
+
+`live` is the anti-théâtre invariant: **at replay it MUST stay 0** — any non-zero
+value means a cache miss silently fell through to the API (#1019).
+
+### Batch reproducibility (DoD #1473)
+
+A batch of ≥2 synthetic propositions is recorded, then replayed. Proven firsthand
+in `tests/integration/orchestration/test_replay_cache_profiling_batch.py`
+(`requires_api`+`slow`):
+
+- the **whole replay batch** makes `live == 0` API calls (asserted via the shared
+  counter, not by absence of error);
+- `miss_replay == 0` (record seeded every key);
+- replay total wall-clock is a fraction of record (LLM-bound phases collapse to
+  near-instant cache reads);
+- the per-phase `duration_seconds` table is printed in the test log.
+
+### Residual wall-clock field (documented honestly, not masked)
+
+The `belief_tracking` phase embeds `creation_timestamp`
+(`datetime.now()`, `argumentation_analysis/.../extended_belief.py:32`) in its RAW
+output. That field is wall-clock by construction and is **never reproducible**
+between two real runs — cache or no cache (the phase makes no LLM call). Its
+DECISIONAL output matches across runs (PR1 proved this via the decisional hash).
+The latency table therefore reports `belief_tracking` as a ~constant non-LLM
+phase; this is expected, not a cache gap.
+
+### Reproducing the profiling run
+
+```bash
+# Fresh record+replay profiling (requires OPENAI_API_KEY in .env)
+conda run -n projet-is-roo-new --no-capture-output pytest \
+  tests/integration/orchestration/test_replay_cache_profiling_batch.py \
+  -v -s -m "requires_api and slow"
+```
+
+The test prints the per-phase record-vs-replay table and the `CacheStats` totals.
+
+---
+
 View the pyinstrument flame graph: `open .profiling/spectacular_pyinstrument.html`
 View cProfile interactively: `snakeviz .profiling/spectacular_cprofile.prof`
 

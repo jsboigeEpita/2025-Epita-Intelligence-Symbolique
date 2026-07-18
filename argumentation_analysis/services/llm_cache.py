@@ -38,6 +38,69 @@ class LLMCacheMiss(Exception):
     pass
 
 
+# ──── Cache monitoring (BO-3 #1473 PR3 — profiling/batch/monitoring) ────
+#
+# Thread-safe counters shared by BOTH cache layers (CachedChatCompletion for the
+# SK-native path, cached_raw_chat_completion for the direct path). Exposes a
+# single truthful view of how many calls were served from cache vs. hit the API,
+# so a replay batch can be proven to make ZERO live calls (anti-théâtre #1019:
+# a silent live fallback on a cache miss is exactly the theater this measures).
+# PR3 measures the cache wired in PR1/PR2 — it does NOT add caching logic.
+
+import threading
+
+
+class CacheStats:
+    """Counters for cache hit/miss/live across both layers (BO-3 #1473 PR3).
+
+    - ``hit``: served from cache (record or replay mode)
+    - ``miss_record``: record-mode miss → API call + store
+    - ``miss_replay``: replay-mode miss → ``LLMCacheMiss`` raised (never live)
+    - ``live``: actual API round-trip made (off passthrough OR record miss)
+
+    ``live`` is the anti-theatre metric: at replay it MUST stay 0 — any non-zero
+    value means a cache miss silently fell through to the API.
+    """
+
+    __slots__ = ("_lock", "hit", "miss_record", "miss_replay", "live")
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self.hit = 0
+        self.miss_record = 0
+        self.miss_replay = 0
+        self.live = 0
+
+    def as_dict(self) -> Dict[str, int]:
+        with self._lock:
+            return {
+                "hit": self.hit,
+                "miss_record": self.miss_record,
+                "miss_replay": self.miss_replay,
+                "live": self.live,
+            }
+
+    def reset(self) -> None:
+        with self._lock:
+            self.hit = 0
+            self.miss_record = 0
+            self.miss_replay = 0
+            self.live = 0
+
+
+_cache_stats = CacheStats()
+
+
+def get_cache_stats() -> Dict[str, int]:
+    """Snapshot of the shared cache counters (both layers, BO-3 #1473 PR3)."""
+    return _cache_stats.as_dict()
+
+
+def reset_cache_stats() -> None:
+    """Zero the shared cache counters (test isolation / per-batch measurement)."""
+    _cache_stats.reset()
+
+
 def get_cache_mode() -> str:
     """Read LLM_CACHE_MODE env var. Defaults to 'off'."""
     mode = os.getenv("LLM_CACHE_MODE", OFF).lower()
@@ -202,6 +265,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
     ) -> List[ChatMessageContent]:
         """Intercept LLM calls with caching logic."""
         if self._mode == OFF or self._cache is None:
+            _cache_stats.live += 1
             return await self._inner.get_chat_message_contents(
                 chat_history=chat_history, settings=settings, **kwargs
             )
@@ -211,23 +275,28 @@ class CachedChatCompletion(ChatCompletionClientBase):
         if self._mode == REPLAY:
             cached = self._cache.get(key)
             if cached is None:
+                _cache_stats.miss_replay += 1
                 raise LLMCacheMiss(
                     f"Cache miss in replay mode for key {key[:16]}... "
                     f"Record fixtures first with LLM_CACHE_MODE=record"
                 )
+            _cache_stats.hit += 1
             logger.debug("Cache HIT (replay): %s...", key[:16])
             return _deserialize_response(cached)
 
         # RECORD mode: check cache, fall back to API
         cached = self._cache.get(key)
         if cached is not None:
+            _cache_stats.hit += 1
             logger.debug("Cache HIT (record): %s...", key[:16])
             return _deserialize_response(cached)
 
         logger.debug("Cache MISS (record): %s..., calling API", key[:16])
+        _cache_stats.miss_record += 1
         response = await self._inner.get_chat_message_contents(
             chat_history=chat_history, settings=settings, **kwargs
         )
+        _cache_stats.live += 1
         self._cache.set(key, _serialize_response(response))
         return response
 
@@ -359,26 +428,33 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     """
     mode = get_cache_mode()
     if mode == OFF:
+        _cache_stats.live += 1
         return await client.chat.completions.create(**kwargs)
     cache = get_raw_cache()
     if cache is None:  # diskcache unavailable
+        _cache_stats.live += 1
         return await client.chat.completions.create(**kwargs)
     key = compute_raw_cache_key(**kwargs)
     if mode == REPLAY:
         cached = cache.get(key)
         if cached is None:
+            _cache_stats.miss_replay += 1
             raise LLMCacheMiss(
                 f"Raw cache miss in replay mode for key {key[:16]}... "
                 f"Record fixtures first with LLM_CACHE_MODE=record"
             )
+        _cache_stats.hit += 1
         logger.debug("Raw cache HIT (replay): %s...", key[:16])
         return _deserialize_chat_completion(cached)
     # RECORD mode
     cached = cache.get(key)
     if cached is not None:
+        _cache_stats.hit += 1
         logger.debug("Raw cache HIT (record): %s...", key[:16])
         return _deserialize_chat_completion(cached)
     logger.debug("Raw cache MISS (record): %s..., calling API", key[:16])
+    _cache_stats.miss_record += 1
     response = await client.chat.completions.create(**kwargs)
+    _cache_stats.live += 1
     cache.set(key, _serialize_chat_completion(response))
     return response
