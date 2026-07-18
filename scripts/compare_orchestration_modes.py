@@ -1,24 +1,41 @@
 """Compare orchestration modes on the same corpus.
 
-Runs multiple orchestration modes (pipeline, conversational, hierarchical,
-cluedo_baseline, cluedo_extended, conversation_deterministic) on benchmark
-texts and produces a markdown comparison report with aggregate metrics.
+Runs multiple orchestration modes (pipeline, hierarchical_bridge,
+hierarchical_delegation, conversational, conversation_deterministic) on
+benchmark texts and produces a markdown + JSON comparison report with
+aggregate trade-off metrics (terminates / wall-time / decides / scope).
+
+R652+#1471-era entry-points are wired here:
+- ``pipeline``              -> ``run_unified_analysis``
+- ``hierarchical_bridge``   -> ``run_hierarchical_analysis(..., mode="bridge")``
+- ``hierarchical_delegation`` -> ``run_hierarchical_analysis(..., mode="delegation")``
+- ``conversational``        -> ``run_conversational_analysis`` (wall-time-bounded)
+- ``conversation_deterministic`` -> ``ConversationOrchestrator(mode="demo")`` (no LLM)
 
 Usage:
     # Compare all available modes on benchmark texts
     python scripts/compare_orchestration_modes.py
 
     # Specific modes only
-    python scripts/compare_orchestration_modes.py --modes pipeline conversational
+    python scripts/compare_orchestration_modes.py \\
+        --modes pipeline hierarchical_bridge hierarchical_delegation
 
-    # Save report to file
+    # Bound conversational wall-clock (default 180s)
+    python scripts/compare_orchestration_modes.py \\
+        --modes conversational --max-wall-seconds 60
+
+    # Save report to file (markdown + json)
     python scripts/compare_orchestration_modes.py --output report.md
 
     # Dry run (show which modes would run, no execution)
     python scripts/compare_orchestration_modes.py --dry-run
 
-Modes are skipped gracefully if their orchestrator is unavailable (e.g. missing
-LLM, JVM not initialized, or mode not yet wired).
+Anti-pendule (#1019) — what this script does NOT do:
+- Does not re-stub runners: it calls the real entry-points post-#1478/#1479.
+- Does not fake the conversational completion on budget breach: it surfaces
+  ``terminated_by_budget=True`` and a verdict partiel HONNÊTE.
+- Does not hide the Stubs cluedo: they were removed from ``MODE_RUNNERS``
+  (they were dead-code ``success=False`` placeholders, not real modes).
 """
 
 import argparse
@@ -30,7 +47,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -47,6 +64,13 @@ logger = logging.getLogger("orchestration_mode_harness")
 # Reduce noisy loggers
 for _name in ("httpx", "openai", "semantic_kernel", "urllib3"):
     logging.getLogger(_name).setLevel(logging.WARNING)
+
+# Default conversational wall-time budget (seconds). Pre-R653, the
+# conversational mode was unbounded and ran >600s on 643-octet input;
+# 180s is a reasonable budget that lets a real run reach the Synthesis
+# phase on a short corpus without making the harness itself a CI
+# bottleneck. Overridable via --max-wall-seconds.
+DEFAULT_CONVERSATIONAL_WALL_SECONDS = 180.0
 
 
 # ── Benchmark texts (opaque IDs, no raw content in reports) ──────────────
@@ -91,7 +115,28 @@ BENCHMARK_TEXTS = {
 
 @dataclass
 class ModeResult:
-    """Result of running one orchestration mode on one corpus."""
+    """Result of running one orchestration mode on one corpus.
+
+    Trade-off columns (per BO-4 #1480 DoD)::
+
+        terminates         — bool: did the runner reach a terminal state?
+                            ``False`` if the runner crashed mid-flight.
+        wall_time_seconds  — measured wall-clock (matches duration_seconds,
+                            kept as a separate column for the report).
+        decides            — bool: did the mode emit a decision (verdict,
+                            classification, or governance outcome)?
+        terminated_by_budget — bool: True iff the run hit the wall-clock
+                            budget and was killed by asyncio.wait_for.
+                            Treated as a HONEST PARTIAL verdict (anti-pendule
+                            #1019 — never faked into success=True).
+        scope_of_work      — short human-readable description of what the
+                            mode actually does (used in the trade-off table).
+
+    The legacy columns (success / duration_seconds / state_fill_rate /
+    fallacy_count / argument_count / phases_completed / phases_total /
+    capabilities_used / capabilities_missing) are kept for backward
+    compatibility with downstream readers of the JSON report.
+    """
 
     mode: str
     corpus_id: str
@@ -106,6 +151,11 @@ class ModeResult:
     capabilities_used: List[str] = field(default_factory=list)
     capabilities_missing: List[str] = field(default_factory=list)
     extra_metrics: Dict[str, Any] = field(default_factory=dict)
+    # Trade-off columns (BO-4 #1480):
+    terminates: bool = True
+    decides: bool = False
+    terminated_by_budget: bool = False
+    scope_of_work: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -131,8 +181,7 @@ async def run_pipeline_mode(
 
     total_fields = len(state) if state else 1
     non_empty = sum(
-        1 for v in (state or {}).values()
-        if v and v not in ([], {}, "", None, 0)
+        1 for v in (state or {}).values() if v and v not in ([], {}, "", None, 0)
     )
 
     return ModeResult(
@@ -151,34 +200,83 @@ async def run_pipeline_mode(
 
 
 async def run_conversational_mode(
-    text: str, corpus_id: str
+    text: str,
+    corpus_id: str,
+    max_wall_seconds: float = DEFAULT_CONVERSATIONAL_WALL_SECONDS,
 ) -> ModeResult:
-    """Run conversational orchestrator (AgentGroupChat multi-agent)."""
+    """Run conversational orchestrator (AgentGroupChat multi-agent).
+
+    Bounded by ``max_wall_seconds`` (default 180s — pre-R653 the
+    conversational mode was unbounded and ran >600s on a 643-octet
+    input). On timeout, the verdict is PARTIAL HONNÊTE: ``success=False``
+    but ``terminates=True`` (we DID terminate, we did not crash), and
+    ``terminated_by_budget=True`` so downstream readers can distinguish
+    a budget breach from a real failure. Anti-pendule #1019 — we never
+    fake ``success=True`` to fill the trade-off table.
+    """
     from argumentation_analysis.orchestration.conversational_orchestrator import (
         run_conversational_analysis,
     )
 
+    scope = (
+        "AgentGroupChat multi-agent (3 macro-phases, "
+        f"wall-time-bounded at {max_wall_seconds:g}s)"
+    )
     start = time.time()
-    result = await run_conversational_analysis(text=text)
+    try:
+        result = await asyncio.wait_for(
+            run_conversational_analysis(text=text),
+            timeout=max_wall_seconds,
+        )
+    except asyncio.TimeoutError:
+        duration = time.time() - start
+        logger.warning(
+            f"Conversational mode on {corpus_id} hit the "
+            f"{max_wall_seconds:g}s budget after {duration:.2f}s — "
+            "recording partial verdict (terminated_by_budget=True)."
+        )
+        return ModeResult(
+            mode="conversational",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            duration_seconds=round(duration, 2),
+            error=f"Budget breached (>={max_wall_seconds:g}s)",
+            scope_of_work=scope,
+        )
+    except Exception as exc:
+        duration = time.time() - start
+        return ModeResult(
+            mode="conversational",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=False,
+            duration_seconds=round(duration, 2),
+            error=str(exc)[:200],
+            scope_of_work=scope,
+        )
     duration = time.time() - start
 
     state = result.get("state_snapshot", {})
     total_fields = len(state) if state else 1
     non_empty = sum(
-        1 for v in (state or {}).values()
-        if v and v not in ([], {}, "", None, 0)
+        1 for v in (state or {}).values() if v and v not in ([], {}, "", None, 0)
     )
 
     return ModeResult(
         mode="conversational",
         corpus_id=corpus_id,
         success=True,
+        terminates=True,
         duration_seconds=round(duration, 2),
         state_fill_rate=round(non_empty / max(total_fields, 1), 3),
         fallacy_count=result.get("extra_metrics", {}).get("fallacy_count", 0),
         phases_completed=len(result.get("phases", [])),
         phases_total=len(result.get("phases", [])),
         capabilities_used=result.get("capabilities_used", []),
+        decides=bool(result.get("phases")),
+        scope_of_work=scope,
         extra_metrics={
             "total_messages": result.get("total_messages", 0),
             "duration_seconds_raw": result.get("duration_seconds", 0),
@@ -186,9 +284,7 @@ async def run_conversational_mode(
     )
 
 
-async def run_conversation_deterministic_mode(
-    text: str, corpus_id: str
-) -> ModeResult:
+async def run_conversation_deterministic_mode(text: str, corpus_id: str) -> ModeResult:
     """Run ConversationOrchestrator in demo mode (SimulatedAgent, no LLM)."""
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
@@ -205,11 +301,14 @@ async def run_conversation_deterministic_mode(
         mode="conversation_deterministic",
         corpus_id=corpus_id,
         success=True,
+        terminates=True,
         duration_seconds=round(duration, 3),
         state_fill_rate=round(conv_state.get("state", {}).get("score", 0), 3),
         fallacy_count=conv_state.get("state", {}).get("fallacies_detected", 0),
         phases_completed=3,  # informal + fol + synthesis
         phases_total=3,
+        decides=True,
+        scope_of_work=("ConversationOrchestrator(mode=demo, SimulatedAgent, no LLM)"),
         extra_metrics={
             "messages_count": conv_state.get("messages_count", 0),
             "tools_count": conv_state.get("tools_count", 0),
@@ -218,89 +317,244 @@ async def run_conversation_deterministic_mode(
     )
 
 
-async def run_hierarchical_mode(
-    text: str, corpus_id: str
-) -> ModeResult:
-    """Run hierarchical orchestrator (if available)."""
-    try:
-        from argumentation_analysis.orchestration.hierarchical.orchestrator import (
-            HierarchicalOrchestrator,
-        )
-    except ImportError:
-        return ModeResult(
-            mode="hierarchical",
-            corpus_id=corpus_id,
-            success=False,
-            error="HierarchicalOrchestrator not available (not yet merged)",
-        )
+async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
+    """Run hierarchical analysis via the bridge mode (M2 default).
+
+    The bridge mode short-circuits the 3-tier chain via
+    ``objectives_to_workflow`` -> ``WorkflowExecutor`` (Lego/DAG).
+    It is the post-#1474 + #1476 + #1478 + #1479 wiring: the harness
+    must call the REAL entry-point ``run_hierarchical_analysis`` with a
+    populated ``CapabilityRegistry``, NOT the legacy ``HierarchicalOrchestrator().
+    analyze()`` (which predates the registry and never distinguishes
+    bridge vs delegation).
+    """
+    from argumentation_analysis.orchestration.hierarchical.orchestrator import (
+        run_hierarchical_analysis,
+    )
+    from argumentation_analysis.orchestration.registry_setup import (
+        setup_registry,
+    )
 
     start = time.time()
+    registry = setup_registry(include_optional=True)
     try:
-        orch = HierarchicalOrchestrator()
-        result = await orch.analyze(text)
-        duration = time.time() - start
-
-        return ModeResult(
-            mode="hierarchical",
-            corpus_id=corpus_id,
-            success=True,
-            duration_seconds=round(duration, 2),
-            extra_metrics=result if isinstance(result, dict) else {},
+        result = await run_hierarchical_analysis(
+            text=text,
+            capability_registry=registry,
+            mode="bridge",
         )
-    except Exception as e:
+    except Exception as exc:
         duration = time.time() - start
         return ModeResult(
-            mode="hierarchical",
+            mode="hierarchical_bridge",
             corpus_id=corpus_id,
             success=False,
-            error=str(e)[:200],
+            terminates=False,
+            error=str(exc)[:200],
             duration_seconds=round(duration, 2),
+            scope_of_work=(
+                "Strategic planning -> objectives_to_workflow -> "
+                "WorkflowExecutor (Lego/DAG, 4 axes)"
+            ),
         )
+    duration = time.time() - start
 
+    summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    phases_completed = summary.get("completed", 0)
+    phases_total = summary.get("total", 0)
+    # Bridge mode DÉCIDE firsthand via real agents when the registry is
+    # populated: it returns a `conclusion` (R644). Treat presence of
+    # `conclusion` as `decides=True`.
+    decides = bool(
+        isinstance(result, dict)
+        and (
+            result.get("conclusion")
+            or result.get("strategic_decision")
+            or result.get("governance_decided_firsthand") is True
+        )
+    )
 
-async def run_cluedo_baseline_mode(
-    text: str, corpus_id: str
-) -> ModeResult:
-    """Run Cluedo 2-agent baseline (if available)."""
     return ModeResult(
-        mode="cluedo_baseline",
+        mode="hierarchical_bridge",
         corpus_id=corpus_id,
-        success=False,
-        error="Cluedo baseline requires LLM + kernel setup — not yet wired for text analysis",
+        success=True,
+        terminates=True,
+        duration_seconds=round(duration, 2),
+        phases_completed=phases_completed,
+        phases_total=phases_total,
+        capabilities_used=result.get("capabilities_used", [])
+        if isinstance(result, dict)
+        else [],
+        decides=decides,
+        scope_of_work=(
+            "Strategic planning -> objectives_to_workflow -> "
+            "WorkflowExecutor (Lego/DAG, 4 axes)"
+        ),
+        extra_metrics={
+            "objectives_count": len(result.get("objectives", []))
+            if isinstance(result, dict)
+            else 0,
+        },
     )
 
 
-async def run_cluedo_extended_mode(
-    text: str, corpus_id: str
-) -> ModeResult:
-    """Run Cluedo 3-agent extended (if available)."""
-    return ModeResult(
-        mode="cluedo_extended",
-        corpus_id=corpus_id,
-        success=False,
-        error="Cluedo extended requires LLM + kernel setup — not yet wired for text analysis",
+async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeResult:
+    """Run hierarchical analysis via the delegation mode (M3, RA-10 #1069).
+
+    True strategic -> tactical -> operational delegation driven by
+    explicit sequential calls (5/5 tasks when the registry is fully
+    populated, per R648+R649+R651+R652). Wired via
+    ``run_hierarchical_analysis(..., mode="delegation")``.
+    """
+    from argumentation_analysis.orchestration.hierarchical.orchestrator import (
+        run_hierarchical_analysis,
     )
+    from argumentation_analysis.orchestration.registry_setup import (
+        setup_registry,
+    )
+
+    start = time.time()
+    registry = setup_registry(include_optional=True)
+    try:
+        result = await run_hierarchical_analysis(
+            text=text,
+            capability_registry=registry,
+            mode="delegation",
+        )
+    except Exception as exc:
+        duration = time.time() - start
+        return ModeResult(
+            mode="hierarchical_delegation",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=False,
+            error=str(exc)[:200],
+            duration_seconds=round(duration, 2),
+            scope_of_work=(
+                "Strategic -> Tactical -> Operational (3-tier, "
+                "5 tasks via CapabilityRegistry)"
+            ),
+        )
+    duration = time.time() - start
+
+    summary = result.get("summary", {}) if isinstance(result, dict) else {}
+    phases_completed = summary.get("completed", 0)
+    phases_total = summary.get("total", 0)
+    # Delegation mode DÉCIDE firsthand on hierarchical_fallacy (R648).
+    decides = bool(
+        isinstance(result, dict)
+        and (
+            result.get("conclusion")
+            or result.get("strategic_decision")
+            or result.get("broadcasted_to_zero_agents") is False
+            or phases_completed > 0
+        )
+    )
+
+    return ModeResult(
+        mode="hierarchical_delegation",
+        corpus_id=corpus_id,
+        success=True,
+        terminates=True,
+        duration_seconds=round(duration, 2),
+        phases_completed=phases_completed,
+        phases_total=phases_total,
+        capabilities_used=result.get("capabilities_used", [])
+        if isinstance(result, dict)
+        else [],
+        decides=decides,
+        scope_of_work=(
+            "Strategic -> Tactical -> Operational (3-tier, "
+            "5 tasks via CapabilityRegistry)"
+        ),
+        extra_metrics={
+            "objectives_count": len(result.get("objectives", []))
+            if isinstance(result, dict)
+            else 0,
+        },
+    )
+
+
+# Backward-compat alias kept for downstream scripts that previously
+# invoked `hierarchical` as a single-mode runner. The new world has
+# TWO comparable sub-modes (bridge + delegation) — point the alias
+# at the bridge default for compatibility while documenting the
+# deprecation (the issue body of #1480 covers the full migration).
+async def run_hierarchical_mode(text: str, corpus_id: str) -> ModeResult:
+    """Deprecated alias for ``run_hierarchical_bridge_mode``.
+
+    Kept so that ``--modes hierarchical`` on an old caller does not
+    silently break; the alias routes to bridge (the historical default).
+    New code should request ``hierarchical_bridge`` or
+    ``hierarchical_delegation`` explicitly.
+    """
+    return await run_hierarchical_bridge_mode(text, corpus_id)
 
 
 # ── Mode registry ────────────────────────────────────────────────────────
+#
+# The previous registry listed ``cluedo_baseline`` and ``cluedo_extended``
+# as runners; both were dead-code ``success=False`` stubs ("not yet wired
+# for text analysis"). Anti-pendule strict: we REMOVE them from the
+# harness rather than carry them as fake modes. They are out of scope
+# for the comparative trade-off — cluedo is a Sherlock-Watson game, not
+# an argumentation-analysis mode comparable to the others.
 
-MODE_RUNNERS = {
+MODE_RUNNERS: Dict[str, Callable[[str, str], Awaitable[ModeResult]]] = {
     "pipeline": lambda text, cid: run_pipeline_mode(text, cid, "standard"),
     "pipeline_light": lambda text, cid: run_pipeline_mode(text, cid, "light"),
     "pipeline_full": lambda text, cid: run_pipeline_mode(text, cid, "full"),
     "conversational": run_conversational_mode,
     "conversation_deterministic": run_conversation_deterministic_mode,
+    "hierarchical_bridge": run_hierarchical_bridge_mode,
+    "hierarchical_delegation": run_hierarchical_delegation_mode,
+    # Backward-compat alias (see deprecation note above).
     "hierarchical": run_hierarchical_mode,
-    "cluedo_baseline": run_cluedo_baseline_mode,
-    "cluedo_extended": run_cluedo_extended_mode,
+}
+
+# Mode -> human-readable scope-of-work description, for the report table.
+# Modes NOT in this map use the value already stored in ``ModeResult.scope_of_work``.
+MODE_SCOPE_DESCRIPTIONS = {
+    "pipeline": ("UnifiedPipeline DAG (light/standard/full workflows)"),
+    "pipeline_light": "UnifiedPipeline DAG (light workflow, minimal)",
+    "pipeline_full": "UnifiedPipeline DAG (full workflow, all axes)",
+    "conversational": (
+        "AgentGroupChat multi-agent (3 macro-phases, wall-time-bounded)"
+    ),
+    "conversation_deterministic": (
+        "ConversationOrchestrator(mode=demo, SimulatedAgent, no LLM)"
+    ),
+    "hierarchical_bridge": (
+        "Strategic -> objectives_to_workflow -> WorkflowExecutor " "(Lego/DAG, 4 axes)"
+    ),
+    "hierarchical_delegation": (
+        "Strategic -> Tactical -> Operational "
+        "(3-tier, 5 tasks via CapabilityRegistry)"
+    ),
+    "hierarchical": (
+        "[deprecated alias -> hierarchical_bridge] Strategic -> "
+        "objectives_to_workflow -> WorkflowExecutor"
+    ),
 }
 
 
 # ── Reporting ────────────────────────────────────────────────────────────
 
 
-def generate_report(results: List[ModeResult], title: str = "Orchestration Mode Comparison") -> str:
-    """Generate markdown comparison report."""
+def generate_report(
+    results: List[ModeResult], title: str = "Orchestration Mode Comparison"
+) -> str:
+    """Generate markdown comparison report.
+
+    The trade-off table (BO-4 #1480) uses these columns::
+
+        Mode | Corpus | Terminates | Wall-Time | Decides | Phases | Scope
+
+    Status legend:
+      ✅ terminates=True, success=True
+      ⏱ terminates=True, terminated_by_budget=True (honest partial)
+      ❌ terminates=False (real failure / exception)
+    """
     lines = [
         f"# {title}",
         "",
@@ -311,8 +565,36 @@ def generate_report(results: List[ModeResult], title: str = "Orchestration Mode 
         "",
     ]
 
-    # Summary table
-    lines.append("## Summary")
+    # Trade-off table (BO-4 DoD)
+    lines.append("## Trade-off Summary")
+    lines.append("")
+    lines.append(
+        "| Mode | Corpus | Terminates | Wall-Time | Decides | Phases | Scope |"
+    )
+    lines.append(
+        "|------|--------|------------|-----------|---------|--------|-------|"
+    )
+
+    for r in sorted(results, key=lambda x: (x.mode, x.corpus_id)):
+        if r.terminated_by_budget:
+            status = "⏱ budget"
+        elif r.terminates and r.success:
+            status = "✅"
+        else:
+            status = "❌"
+        decides = "✅" if r.decides else "—"
+        scope = r.scope_of_work or MODE_SCOPE_DESCRIPTIONS.get(r.mode, "")
+        lines.append(
+            f"| {r.mode} | {r.corpus_id} | {status} | "
+            f"{r.duration_seconds:.2f}s | {decides} | "
+            f"{r.phases_completed}/{r.phases_total} | {scope} |"
+        )
+
+    lines.append("")
+
+    # Legacy detail table (preserves backward-compat for readers of
+    # the previous report format).
+    lines.append("## Detailed Summary (legacy format)")
     lines.append("")
     lines.append(
         "| Mode | Corpus | Success | Duration | State Fill | Fallacies | Args | Phases |"
@@ -343,35 +625,46 @@ def generate_report(results: List[ModeResult], title: str = "Orchestration Mode 
         lines.append(f"## {corpus_id} — Cross-Mode Comparison")
         lines.append("")
 
-        # Duration comparison
-        durations = {r.mode: r.duration_seconds for r in corpus_results}
+        # Duration comparison (only on terminating runs)
+        durations = {
+            r.mode: r.duration_seconds
+            for r in corpus_results
+            if r.terminates and r.success
+        }
         if durations:
             fastest = min(durations, key=durations.get)
             lines.append(f"**Fastest mode**: `{fastest}` ({durations[fastest]:.2f}s)")
             lines.append("")
 
         # Fill rate comparison
-        fills = {r.mode: r.state_fill_rate for r in corpus_results if r.state_fill_rate > 0}
+        fills = {
+            r.mode: r.state_fill_rate for r in corpus_results if r.state_fill_rate > 0
+        }
         if fills:
             best_fill = max(fills, key=fills.get)
-            lines.append(f"**Highest state fill**: `{best_fill}` ({fills[best_fill]:.1%})")
+            lines.append(
+                f"**Highest state fill**: `{best_fill}` ({fills[best_fill]:.1%})"
+            )
             lines.append("")
 
         # Capabilities used
         for r in corpus_results:
             if r.capabilities_used:
-                lines.append(f"**{r.mode}** capabilities: {', '.join(r.capabilities_used)}")
+                lines.append(
+                    f"**{r.mode}** capabilities: {', '.join(r.capabilities_used)}"
+                )
                 lines.append("")
 
         lines.append("")
 
-    # Skipped/failed modes
+    # Skipped/failed modes (including budget breaches)
     failed = [r for r in results if not r.success]
     if failed:
-        lines.append("## Skipped/Failed Modes")
+        lines.append("## Skipped/Failed/Partial Modes")
         lines.append("")
         for r in failed:
-            lines.append(f"- **{r.mode}** ({r.corpus_id}): {r.error}")
+            label = "BUDGET BREACH" if r.terminated_by_budget else "FAILURE"
+            lines.append(f"- **{r.mode}** ({r.corpus_id}) [{label}]: {r.error}")
         lines.append("")
 
     return "\n".join(lines)
@@ -385,8 +678,15 @@ async def run_all(
     corpora: Optional[List[str]] = None,
     output_file: Optional[str] = None,
     dry_run: bool = False,
+    max_wall_seconds: float = DEFAULT_CONVERSATIONAL_WALL_SECONDS,
 ) -> List[ModeResult]:
-    """Run selected modes on selected corpora."""
+    """Run selected modes on selected corpora.
+
+    Args:
+        max_wall_seconds: Wall-clock budget applied to the conversational
+            runner. Breach is recorded as a HONEST PARTIAL verdict
+            (``terminated_by_budget=True``) — never faked into success.
+    """
     if modes is None:
         modes = list(MODE_RUNNERS.keys())
     if corpora is None:
@@ -399,11 +699,13 @@ async def run_all(
             available = "available" if runner else "UNKNOWN"
             print(f"  {mode}: {available}")
         print(f"\nCorpora: {', '.join(corpora)}")
+        print(f"Conversational wall-time budget: {max_wall_seconds:g}s")
         return []
 
     # Load environment
     try:
         from argumentation_analysis.core.jvm_setup import initialize_jvm
+
         initialize_jvm()
     except Exception as e:
         logger.warning(f"JVM init failed: {e}")
@@ -424,17 +726,30 @@ async def run_all(
 
             logger.info(f"Running {mode} on {corpus_id} ({len(text)} chars)...")
             try:
-                result = await runner(text, corpus_id)
+                # The conversational runner needs the wall-time budget;
+                # pass it explicitly. All other runners ignore extra kwargs.
+                if mode == "conversational":
+                    result = await runner(text, corpus_id, max_wall_seconds)
+                else:
+                    result = await runner(text, corpus_id)
                 results.append(result)
-                status = "OK" if result.success else f"FAILED: {result.error}"
-                logger.info(f"  → {mode} on {corpus_id}: {status} ({result.duration_seconds:.2f}s)")
+                if result.terminated_by_budget:
+                    status = f"BUDGET BREACH ({result.duration_seconds:.2f}s)"
+                elif result.success:
+                    status = "OK"
+                else:
+                    status = f"FAILED: {result.error}"
+                logger.info(f"  → {mode} on {corpus_id}: {status}")
             except Exception as e:
-                results.append(ModeResult(
-                    mode=mode,
-                    corpus_id=corpus_id,
-                    success=False,
-                    error=f"Exception: {str(e)[:200]}",
-                ))
+                results.append(
+                    ModeResult(
+                        mode=mode,
+                        corpus_id=corpus_id,
+                        success=False,
+                        terminates=False,
+                        error=f"Exception: {str(e)[:200]}",
+                    )
+                )
                 logger.error(f"  → {mode} on {corpus_id}: EXCEPTION {e}")
 
     # Generate report
@@ -464,29 +779,52 @@ def main():
         description="Compare orchestration modes on benchmark corpora",
     )
     parser.add_argument(
-        "--modes", "-m", nargs="+", default=None,
+        "--modes",
+        "-m",
+        nargs="+",
+        default=None,
         help=f"Modes to test: {', '.join(MODE_RUNNERS.keys())}",
     )
     parser.add_argument(
-        "--corpora", "-c", nargs="+", default=None,
+        "--corpora",
+        "-c",
+        nargs="+",
+        default=None,
         help=f"Corpora to test: {', '.join(BENCHMARK_TEXTS.keys())}",
     )
     parser.add_argument(
-        "--output", "-o", default=None,
+        "--output",
+        "-o",
+        default=None,
         help="Output file for report (markdown + json)",
     )
     parser.add_argument(
-        "--dry-run", action="store_true",
+        "--dry-run",
+        action="store_true",
         help="Show which modes would run without executing",
+    )
+    parser.add_argument(
+        "--max-wall-seconds",
+        type=float,
+        default=DEFAULT_CONVERSATIONAL_WALL_SECONDS,
+        help=(
+            f"Wall-clock budget for the conversational mode in seconds "
+            f"(default {DEFAULT_CONVERSATIONAL_WALL_SECONDS:g}). "
+            f"On breach, the verdict is recorded as PARTIAL HONNÊTE "
+            f"(terminated_by_budget=True), never as success=True."
+        ),
     )
     args = parser.parse_args()
 
-    asyncio.run(run_all(
-        modes=args.modes,
-        corpora=args.corpora,
-        output_file=args.output,
-        dry_run=args.dry_run,
-    ))
+    asyncio.run(
+        run_all(
+            modes=args.modes,
+            corpora=args.corpora,
+            output_file=args.output,
+            dry_run=args.dry_run,
+            max_wall_seconds=args.max_wall_seconds,
+        )
+    )
 
 
 if __name__ == "__main__":
