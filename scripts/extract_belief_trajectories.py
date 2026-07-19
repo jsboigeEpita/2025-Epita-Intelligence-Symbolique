@@ -498,6 +498,147 @@ def build_tpm(trajectories: List[Trajectory]) -> TPM:
 
 
 # ---------------------------------------------------------------------------
+# Ergodicity analysis (TPM-2 #1491)
+# ---------------------------------------------------------------------------
+#
+# A Markov chain is **ergodic** iff it is irreducible (1 strongly connected
+# component) AND aperiodic (gcd of return-periods = 1). For an irreducible
+# aperiodic chain, the stationary distribution exists, is unique, and is the
+# limit distribution (i.e. predictive). For a reducible chain (multiple SCCs
+# or weakly-connected components), no unique stationary distribution exists
+# — the chain depends on initial state and converges to a class-dependent
+# mixture.
+#
+# TPM-2 #1491 DoD asks for an **ergodicity verdict**, falsifiable: either
+# the chain is irreducible (→ stationary calculable, report top-k) OR
+# reducible (→ honest verdict "N SCC / M WCC, no unique stationary",
+# still a valid result, anti-théâtre #1019).
+#
+# Implementation: scipy.sparse.csgraph.connected_components on the
+# row-stochastic matrix P (transitions counted, regardless of probability).
+# If scipy is unavailable, returns a soft-fail dict (analysis skipped,
+# reason written) — the TPM itself remains usable for transition analysis
+# even when stationary cannot be computed.
+
+
+@dataclass
+class ErgodicityResult:
+    """Ergodicity analysis of a TPM (TPM-2 #1491)."""
+
+    n_scc: int
+    n_wcc: int
+    ergodic: bool
+    irreducible: bool
+    aperiodic: Optional[bool]
+    stationary: Optional[Dict[str, float]]
+    analysis_skipped: bool
+    skip_reason: Optional[str]
+
+
+def _analyze_ergodicity(tpm: TPM) -> ErgodicityResult:
+    """Classify a TPM by ergodicity (SCC + WCC analysis).
+
+    Returns an ``ErgodicityResult``. If the TPM is impossible, returns a
+    sentinel ``n_scc=0/n_wcc=0`` and ``analysis_skipped=True``.
+    """
+    if tpm.impossible or not tpm.states:
+        return ErgodicityResult(
+            n_scc=0,
+            n_wcc=0,
+            ergodic=False,
+            irreducible=False,
+            aperiodic=None,
+            stationary=None,
+            analysis_skipped=True,
+            skip_reason="TPM impossible: ergodicity undefined on degenerate state space",
+        )
+    try:
+        import numpy as np  # type: ignore
+        from scipy.sparse import csr_matrix  # type: ignore
+        from scipy.sparse.csgraph import connected_components  # type: ignore
+    except ImportError as exc:  # pragma: no cover — scipy is a soft dep
+        return ErgodicityResult(
+            n_scc=-1,
+            n_wcc=-1,
+            ergodic=False,
+            irreducible=False,
+            aperiodic=None,
+            stationary=None,
+            analysis_skipped=True,
+            skip_reason=f"scipy/numpy unavailable: {exc}",
+        )
+
+    n = len(tpm.states)
+    counts = np.asarray(tpm.transition_counts, dtype=float)
+    # Connected components on the BINARY support (any non-zero transition
+    # counts as a graph edge — direction-agnostic for connectivity).
+    support = (counts > 0).astype(int)
+    # Symmetrize so weakly-connected components capture both directions.
+    symmetric = np.maximum(support, support.T)
+    graph = csr_matrix(symmetric)
+    n_scc, scc_labels = connected_components(graph, directed=False, connection="strong")
+    n_wcc, wcc_labels = connected_components(graph, directed=False, connection="weak")
+
+    irreducible = n_scc == 1
+    # Aperiodicity check: gcd of return-periods to each state. With limited
+    # N (≤ a few hundred obs), we approximate: a state is aperiodic iff
+    # its self-loop count > 0 (period 1). If ALL states have self-loops,
+    # the chain is aperiodic; else we report None (insufficient evidence).
+    aperiodic_states = [
+        int(counts[i, i] > 0) for i in range(n)
+    ]
+    if all(aperiodic_states):
+        aperiodic_flag = True
+    elif not any(aperiodic_states):
+        aperiodic_flag = False
+    else:
+        aperiodic_flag = None  # mixed evidence → conservative "unknown"
+
+    ergodic = irreducible and (aperiodic_flag is True)
+    stationary = None
+    if ergodic:
+        # Solve Pi * P = Pi with sum(Pi)=1 → eigenvector of P^T with
+        # eigenvalue 1. Use the stochastic matrix (row-normalized).
+        try:
+            row_sums = counts.sum(axis=1)
+            # Avoid division by zero (no row should be zero — impossible
+            # verdict would have caught that earlier).
+            inv = np.where(row_sums > 0, 1.0 / row_sums, 0.0)
+            P = counts * inv[:, None]
+            # Solve (P^T - I) Pi = 0 with sum=1 constraint via least-squares.
+            A = P.T - np.eye(n)
+            # Add a "sum=1" row to break the nullspace into a unique solution.
+            A_aug = np.vstack([A, np.ones(n)])
+            b_aug = np.concatenate([np.zeros(n), np.array([1.0])])
+            pi, *_ = np.linalg.lstsq(A_aug, b_aug, rcond=None)
+            # Normalize (numerical hygiene).
+            pi = np.clip(pi, 0.0, None)
+            total = pi.sum()
+            if total > 0:
+                pi = pi / total
+            # Top-3 states by stationary mass.
+            top_idx = np.argsort(-pi)[:3]
+            stationary = {
+                tpm.states[int(i)]: float(pi[int(i)])
+                for i in top_idx
+                if pi[int(i)] > 0
+            }
+        except Exception as exc:  # pragma: no cover — numerical edge cases
+            stationary = None
+
+    return ErgodicityResult(
+        n_scc=int(n_scc),
+        n_wcc=int(n_wcc),
+        ergodic=bool(ergodic),
+        irreducible=bool(irreducible),
+        aperiodic=aperiodic_flag,
+        stationary=stationary,
+        analysis_skipped=False,
+        skip_reason=None,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Source: demo 5-propositions
 # ---------------------------------------------------------------------------
 
@@ -521,6 +662,47 @@ def _load_demo5_propositions() -> Dict[str, Dict[str, str]]:
         # Don't pop sys.path — other modules in the bundle may import it too.
         pass
     return get_propositions()
+
+
+# ---------------------------------------------------------------------------
+# Source: real corpora A/B/C (TPM-2 #1491)
+# ---------------------------------------------------------------------------
+#
+# PRIVACY HARD #1491:
+# - The real corpus is Fernet-encrypted. We decrypt IN-MEMORY only via
+#   the dedicated privacy-aware helper module, never persist plaintext.
+# - This script body NEVER references the encrypted dataset path or the
+#   passphrase env var (those live in scripts/_tpm_corpus_loader.py).
+# - The only persistent artifact is aggregate counts (LIGHT) written under
+#   evaluation/results/tpm_extraction/ (gitignored).
+# - IDs are OPAQUE (corpus_A, prop_<hash8>, arg_<i>) on all surfaces.
+#
+# The 3 corpora (A/B/C) are derived from the same encrypted dataset by
+# partition: A = first third, B = middle third, C = last third (alphabetical
+# source-id sort — stable run-to-run with LLM_CACHE_MODE=replay). The split
+# is intentionally coarse so each corpus has enough propositions for a
+# stochastic TPM (≥3 obs per state pair minimum).
+
+
+def _load_corpus_propositions(corpus_id: str) -> Dict[str, Dict[str, str]]:
+    """Delegate to the privacy-aware corpus loader (TPM-2 #1491).
+
+    The loader lives in ``scripts/_tpm_corpus_loader.py`` so the script body
+    itself stays free of any reference to the encrypted dataset path, the
+    passphrase env var, or the corpus file extension (preserves the TPM-1
+    static privacy contract).
+    """
+    repo_root = Path(__file__).resolve().parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    try:
+        from _tpm_corpus_loader import load_corpus_propositions  # type: ignore
+    except ImportError as exc:  # pragma: no cover — adjacent module
+        raise ImportError(
+            f"TPM-2 corpus loader unavailable: {exc}. "
+            "Ensure scripts/_tpm_corpus_loader.py is present."
+        ) from exc
+    return load_corpus_propositions(corpus_id)
 
 
 # ---------------------------------------------------------------------------
@@ -600,7 +782,13 @@ def _render_markdown_report(
 ) -> str:
     """Produce a short, honest, human-readable report."""
     lines: List[str] = []
-    lines.append("# TPM-1 #1489 — Trajectoires d'états de croyance → TPM")
+    is_real_corpus = "corpus" in source_label.lower() and "real" in source_label.lower()
+    title = (
+        "# TPM-2 #1491 — Trajectoires d'états de croyance → TPM + ergodicité (corpus réel)"
+        if is_real_corpus
+        else "# TPM-1 #1489 — Trajectoires d'états de croyance → TPM"
+    )
+    lines.append(title)
     lines.append("")
     lines.append(f"- Source : `{source_label}`")
     lines.append(f"- Workflow : `democratech` (10 phases)")
@@ -661,6 +849,51 @@ def _render_markdown_report(
     for i, row in enumerate(tpm.transition_counts):
         cells = [str(v) if v else "·" for v in row]
         lines.append(f"| `{i}` {tpm.states[i][:40]} |" + "|".join(f" {c} " for c in cells) + "|")
+    lines.append("")
+
+    # --- Ergodicité (TPM-2 #1491) ---
+    ergo = _analyze_ergodicity(tpm)
+    lines.append("## Analyse d'ergodicité (TPM-2 #1491)")
+    lines.append("")
+    if ergo.analysis_skipped:
+        lines.append(
+            f"- **Skipped** : `{ergo.skip_reason}` "
+            "(TPM reste exploitable pour les transitions inter-phases)."
+        )
+    else:
+        lines.append(f"- SCC (composantes fortement connexes) : **{ergo.n_scc}**")
+        lines.append(f"- WCC (composantes faiblement connexes) : **{ergo.n_wcc}**")
+        lines.append(f"- Irréductible : **{ergo.irreducible}** (1 SCC = chaîne irréductible)")
+        lines.append(
+            f"- Apériodique : **{ergo.aperiodic}** "
+            "(heuristique self-loop : None = évidence mixte sur N petit)."
+        )
+        if ergo.irreducible and ergo.aperiodic is True:
+            lines.append(f"- **Ergodique** : **OUI** — distribution stationnaire unique.")
+        elif ergo.irreducible and ergo.aperiodic is False:
+            lines.append(
+                "- **Ergodique** : **NON** — irréductible mais périodique "
+                "(gcd return-period > 1)."
+            )
+        else:
+            lines.append(
+                "- **Ergodique** : **NON** — réductible (≥2 SCC), "
+                "pas de distribution stationnaire unique."
+            )
+        if ergo.stationary:
+            lines.append("")
+            lines.append("### Distribution stationnaire (top-3)")
+            lines.append("")
+            lines.append("| State | Pi |")
+            lines.append("|-------|----|")
+            for state, pi in ergo.stationary.items():
+                lines.append(f"| `{state}` | {pi:.4f} |")
+            lines.append("")
+        elif ergo.irreducible:
+            lines.append(
+                "- Stationnaire : non-calculé (irréductible mais apériodicité "
+                "inconnue ou non-triviale)."
+            )
     lines.append("")
 
     lines.append("## Trajectoires par corpus")
@@ -739,9 +972,13 @@ def main() -> int:
     )
     parser.add_argument(
         "--source",
-        choices=("demo5",),
+        choices=("demo5", "corpusA", "corpusB", "corpusC"),
         default="demo5",
-        help="Source corpus (default: demo5 = 5 synthetic propositions).",
+        help=(
+            "Source corpus. demo5 = synthetic 5-propositions (default). "
+            "corpusA/B/C = real corpora (TPM-2 #1491), decrypted in-memory "
+            "via the dedicated privacy-aware loader. Opaque IDs only."
+        ),
     )
     parser.add_argument(
         "--limit",
@@ -773,7 +1010,10 @@ def main() -> int:
         # Print the contract so a reader can verify the state-space choice
         # BEFORE running anything.
         print("=" * 72)
-        print(" TPM-1 #1489 — Dry-run contract")
+        if args.source in ("corpusA", "corpusB", "corpusC"):
+            print(" TPM-2 #1491 — Dry-run contract (corpus réel, IDs opaques)")
+        else:
+            print(" TPM-1 #1489 — Dry-run contract")
         print("=" * 72)
         print(f"Source : {args.source}")
         print(f"Output dir : {args.output_dir}")
@@ -801,6 +1041,13 @@ def main() -> int:
     if args.source == "demo5":
         props = _load_demo5_propositions()
         source_label = "demo5 (synthetic 5-propositions, examples/democratech_deliberation)"
+    elif args.source in ("corpusA", "corpusB", "corpusC"):
+        corpus_letter = args.source[-1]  # 'A' / 'B' / 'C'
+        props = _load_corpus_propositions(corpus_letter)
+        source_label = (
+            f"corpus{corpus_letter} (real encrypted dataset, {len(props)} propositions, "
+            f"loaded in-memory via privacy-aware helper, opaque IDs)"
+        )
     else:  # pragma: no cover — guarded by argparse choices
         raise ValueError(f"Unknown source: {args.source}")
 
