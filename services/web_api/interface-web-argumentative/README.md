@@ -233,6 +233,50 @@ console.log('API Response:', response);
 console.log('Graph Data:', graphData);
 ```
 
+## 🏛️ Dashboard de Gouvernance (BO-2b #1493)
+
+Le composant `src/components/governance/GovernanceDashboard.js` est câblé
+aux endpoints FastAPI réels (`api/proposal_endpoints.py`) via
+`src/services/proposalApi.js`. Pas de fixtures statiques : chaque donnée
+provient d'un run `democratech` réel (cf. `tests/integration/api/test_deliberation_genuine_verdict.py`).
+
+### Endpoints câblés (8/8)
+
+| Fonction `proposalApi.js` | Endpoint FastAPI |
+|---|---|
+| `submitProposal` | `POST /api/propose` |
+| `listProposals` | `GET /api/proposals` |
+| `getProposal` | `GET /api/proposals/{id}` |
+| `castVote` | `POST /api/proposals/{id}/vote` |
+| `startDeliberation` | `POST /api/deliberate` |
+| `getDeliberationStatus` | `GET /api/deliberate/{id}/status` |
+| `getCapabilities` | `GET /api/capabilities` |
+| `runCustomWorkflow` | `POST /api/workflow/custom` |
+
+### Preuve E2E (offline, sans navigateur)
+
+Les scripts `scripts/proof_bo2b_dashboard_e2e.py` + `scripts/render_bo2b_dashboard_static.py`
+exécutent un cycle propose→vote→deliberate réel via `ProposalStore` (en mémoire),
+sérialisent le payload JSON-safe, puis produisent un snapshot HTML statique du
+dashboard — preuve visuelle reproductible, no LLM/JVM/browser requis.
+
+```bash
+# Cycle propose→vote→deliberate réel + snapshot JSON
+python scripts/proof_bo2b_dashboard_e2e.py \
+    --output evaluation/results/bo2b_dashboard_proof/dashboard_data.json
+
+# Snapshot HTML statique à partir du JSON
+python scripts/render_bo2b_dashboard_static.py
+
+# Tests du contrat (no-key, no-LLM)
+pytest tests/scripts/test_proof_bo2b_dashboard_1493.py --noconftest -q
+```
+
+Le payload respecte **Privacy HARD** : proposition chess-club synthétique
+domaine public, IDs opaques (`prop_<8hex>`) sur toute surface.
+Si le pipeline LLM est indisponible localement, la branche "dégradée"
+est capturée honnêtement (anti-théâtre #1019) — voir `degraded` dans le JSON.
+
 ## 📊 Performance
 
 ### Optimisations
