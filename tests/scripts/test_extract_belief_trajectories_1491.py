@@ -195,6 +195,26 @@ class TestCorpusLoaderContract:
         sig = inspect.signature(loader.load_corpus_propositions)
         assert "corpus_id" in sig.parameters
 
+    def test_loader_import_graph_resolves(self) -> None:
+        """Anti-regression (R672): the loader must import cleanly.
+
+        TPM-2 #1491 (PR #1492) shipped with a loader that referenced a
+        non-existent ``derive_key_from_passphrase``. Tests / ``--dry-run``
+        never exercised the inner imports, so CI stayed green while the
+        real flow crashed on ImportError when ``_load_corpus_propositions``
+        was actually called. This test forces the inner import graph to
+        resolve (importing the loader does NOT trigger the late imports —
+        it has to be exercised by calling ``load_corpus_definitions`` with
+        a missing env, which then enters the late-import block and re-raises
+        something other than ``ImportError`` on the helper module).
+        """
+        loader = _load_corpus_loader_module()
+        # Calling without TEXT_CONFIG_PASSPHRASE must raise EnvironmentError,
+        # NOT ImportError — that would mean the loader references a symbol
+        # that does not exist in crypto_utils / io_manager.
+        with pytest.raises((EnvironmentError, FileNotFoundError)):
+            loader.load_corpus_definitions("A")
+
     def test_corpus_loader_rejects_unknown_id(self) -> None:
         loader = _load_corpus_loader_module()
         with pytest.raises(ValueError, match="Unknown corpus id"):

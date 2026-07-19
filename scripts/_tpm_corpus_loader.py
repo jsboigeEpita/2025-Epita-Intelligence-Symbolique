@@ -58,11 +58,15 @@ def load_corpus_definitions(corpus_id: str) -> List[Dict[str, Any]]:
 
     # Late imports — keep this module's import graph small for the test path.
     from argumentation_analysis.core.utils.crypto_utils import (
-        derive_key_from_passphrase,
+        load_encryption_key,
     )
     from argumentation_analysis.core.io_manager import load_extract_definitions
 
-    key = derive_key_from_passphrase(passphrase)
+    # `load_encryption_key` resolves the passphrase (arg > settings.passphrase)
+    # and derives a Fernet-compatible b64url-encoded key (bytes). The runtime
+    # accepts both ``str`` and ``bytes`` via ``decrypt_data_with_fernet``'s
+    # ``Union[str, bytes]`` annotation, so we pass the bytes through directly.
+    key = load_encryption_key(passphrase)
     all_defs = load_extract_definitions(
         config_file=enc_path,
         b64_derived_key=key,
