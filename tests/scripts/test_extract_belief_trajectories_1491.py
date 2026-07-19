@@ -159,6 +159,45 @@ class TestErgodicityAnalysis:
         assert ergo.ergodic is False
         assert ergo.stationary is None
 
+    def test_irreducible_aperiodic_unknown_verdict_not_contradictory(self) -> None:
+        """Real-corpus regression: a 1-SCC chain whose aperiodicity is
+        undetermined (aperiodic is None on small N) must NOT be rendered as
+        ``réductible (≥2 SCC)`` — that contradicts the 1-SCC / irréductible
+        verdict printed two lines above. Observed firsthand on corpus A
+        (--limit 1): the report claimed both ``Irréductible: True`` and
+        ``réductible (≥2 SCC)``. The verdict must be internally consistent.
+        """
+        mod = _load_script_module()
+        # Exact transition structure observed on the real corpus A single
+        # trajectory (opaque count data — no privacy concern): 1 SCC, 1 WCC,
+        # irreducible=True, aperiodic=None.
+        counts = [
+            [2, 1, 0, 0],
+            [0, 2, 0, 1],
+            [0, 0, 0, 1],
+            [0, 0, 1, 1],
+        ]
+        states = [f"completed:s{i}" for i in range(4)]
+        tpm = mod.TPM(
+            states=states,
+            transition_counts=counts,
+            n_transitions=9,
+            n_trajectories=1,
+            n_observations_total=10,
+        )
+        ergo = mod._analyze_ergodicity(tpm)
+        if ergo.analysis_skipped:
+            pytest.skip("scipy absent — ergodicity path not exercised.")
+        # Precondition: this is precisely the irreducible-but-undetermined case.
+        assert ergo.irreducible is True
+        assert ergo.aperiodic is None
+        report = mod._render_markdown_report(
+            [], tpm, "corpusA (real encrypted dataset)", pathlib.Path(".")
+        )
+        # The contradiction guard: never claim reducibility for a 1-SCC chain.
+        assert "réductible (≥2 SCC)" not in report
+        assert "indéterminé" in report
+
     def test_disconnected_two_wcc(self) -> None:
         """4 states, no transitions at all → 4 SCCs, multiple WCCs possible."""
         mod = _load_script_module()
