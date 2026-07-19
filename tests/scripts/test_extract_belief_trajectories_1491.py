@@ -209,11 +209,20 @@ class TestCorpusLoaderContract:
         something other than ``ImportError`` on the helper module).
         """
         loader = _load_corpus_loader_module()
-        # Calling without TEXT_CONFIG_PASSPHRASE must raise EnvironmentError,
-        # NOT ImportError — that would mean the loader references a symbol
-        # that does not exist in crypto_utils / io_manager.
-        with pytest.raises((EnvironmentError, FileNotFoundError)):
+        # The R672 invariant is: calling the loader must NOT raise ImportError
+        # (that would mean it references a symbol absent from crypto_utils /
+        # io_manager). It may legitimately raise EnvironmentError (no
+        # passphrase) / FileNotFoundError (no dataset), OR succeed when the
+        # secret is present — all three prove the import graph resolves. Do
+        # not assert the missing-passphrase path specifically: that makes the
+        # test env-fragile (it breaks the moment TEXT_CONFIG_PASSPHRASE is set,
+        # e.g. alongside the real-decrypt regression below).
+        try:
             loader.load_corpus_definitions("A")
+        except ImportError as exc:  # pragma: no cover — the regression we guard
+            pytest.fail(f"Loader import graph broken (R672 regression): {exc}")
+        except (EnvironmentError, FileNotFoundError, ValueError):
+            pass  # expected when the secret / dataset is absent
 
     def test_corpus_loader_rejects_unknown_id(self) -> None:
         loader = _load_corpus_loader_module()
@@ -221,11 +230,18 @@ class TestCorpusLoaderContract:
             loader.load_corpus_definitions("Z")
 
     def test_opaque_id_format(self) -> None:
-        """Opaque IDs must start with ``prop_`` and be 13 chars (prop_ + 8 hex)."""
+        """Opaque IDs must start with ``prop_`` and be 13 chars (prop_ + 8 hex).
+
+        The fixture uses ``full_text`` — the REAL dataset field (there is NO
+        bare ``text`` key). The earlier fixture used ``text``, which masked the
+        shape bug that shipped in #1492 (loader filtered on a non-existent
+        field → 0 props from the real corpus). Keep this fixture aligned with
+        the real schema.
+        """
         loader = _load_corpus_loader_module()
         fake_defs = [
-            {"id": "src0_ext0", "text": "Hello world.", "source_name": "Dictator X"},
-            {"id": "src0_ext1", "text": "Another text.", "source_name": "Politician Y"},
+            {"id": "src0_ext0", "full_text": "Hello world.", "source_name": "Dictator X"},
+            {"id": "src0_ext1", "full_text": "Another text.", "source_name": "Politician Y"},
         ]
         loader.load_corpus_definitions = lambda cid: fake_defs  # type: ignore[assignment]
         props = loader.load_corpus_propositions("A")
@@ -236,8 +252,16 @@ class TestCorpusLoaderContract:
             # The OPAQUE proposition ID must NEVER contain the source name.
             assert "Dictator" not in pid
             assert "Politician" not in pid
-            # Text is the only field exposed to the pipeline.
-            assert "text" in meta
+            # The run loop reads BOTH ``text`` and ``label`` — a missing
+            # ``label`` KeyErrors on the first real proposition (2nd shape bug
+            # that shipped in #1492).
+            assert "text" in meta and meta["text"]
+            assert "label" in meta
+            # ``label`` is persisted as ``corpus_label`` → must stay opaque
+            # (no source name), and reference the opaque prop id.
+            assert "Dictator" not in meta["label"]
+            assert "Politician" not in meta["label"]
+            assert pid in meta["label"]
 
     def test_empty_corpus_raises(self) -> None:
         loader = _load_corpus_loader_module()
@@ -347,3 +371,71 @@ class TestCLIContract:
         )
         assert result.returncode != 0
         assert "invalid choice" in result.stderr.lower() or "argument" in result.stderr.lower()
+
+
+# ---------------------------------------------------------------------------
+# Real-decrypt regression — the shape-bug guard the dry-run tests lacked
+# ---------------------------------------------------------------------------
+
+
+import os  # noqa: E402  (local to the gated test below)
+
+_ENC_PATH = (
+    REPO_ROOT / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
+)
+_HAS_SECRET = bool(os.environ.get("TEXT_CONFIG_PASSPHRASE")) and _ENC_PATH.exists()
+
+
+@pytest.mark.skipif(
+    not _HAS_SECRET,
+    reason="TEXT_CONFIG_PASSPHRASE not set or encrypted dataset absent — "
+    "real-decrypt regression skips gracefully (CI without the secret).",
+)
+class TestCorpusLoaderRealDecrypt:
+    """Decrypt the REAL corpus and assert the loader yields usable props.
+
+    This is the guard that was missing when #1492 shipped: every prior test
+    either mocked ``load_corpus_definitions`` with the wrong schema (a bare
+    ``text`` key the real dataset never had) or stopped at ``--dry-run``
+    (which returns before the run loop). As a result, TWO shape bugs reached
+    ``main`` green:
+
+    1. The loader filtered on ``d.get("text")`` → 0 props from the real
+       corpus (real field is ``full_text``).
+    2. The run loop reads ``meta["label"]`` → KeyError on the first real prop
+       (loader returned only ``_source_label``).
+
+    This test exercises the true decrypt path with real data and asserts the
+    exact shape the run loop consumes — ``text`` (non-empty) + ``label``
+    (opaque). It prints NO text (privacy HARD): it asserts on lengths and
+    prefixes only.
+    """
+
+    def test_real_corpus_yields_props_with_run_loop_shape(self) -> None:
+        loader = _load_corpus_loader_module()
+        props = loader.load_corpus_propositions("A")
+        assert props, "Real corpus A produced 0 propositions (shape regression)."
+        for pid, meta in props.items():
+            # Opaque ID on every surface.
+            assert pid.startswith("prop_") and len(pid) == 13
+            # The run loop reads BOTH keys — both must exist and be usable.
+            assert meta.get("text"), f"{pid}: empty/absent text (full_text mapping regression)."
+            assert meta.get("label"), f"{pid}: absent label (run-loop KeyError regression)."
+            # Persisted ``corpus_label`` must stay opaque: it references the
+            # opaque id and never the internal source name.
+            assert pid in meta["label"]
+            assert meta["label"] != meta.get("_source_label", "")
+
+    def test_real_corpus_no_source_name_in_persisted_label(self) -> None:
+        """The persisted ``label`` must not equal the internal source name."""
+        loader = _load_corpus_loader_module()
+        props = loader.load_corpus_propositions("A")
+        for _pid, meta in props.items():
+            src = meta.get("_source_label", "")
+            # _source_label is internal grouping only; label (persisted) must
+            # not carry it verbatim.
+            if src and src != "unknown":
+                assert src not in meta["label"], (
+                    "Privacy HARD: internal source name leaked into the "
+                    "persisted opaque label."
+                )
