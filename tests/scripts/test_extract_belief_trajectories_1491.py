@@ -205,6 +205,32 @@ class TestErgodicityAnalysis:
         # ...and never simultaneously claimed irreducible.
         assert "Irréductible : **True**" not in report
 
+    def test_directed_path_wcc1_scc_reducible(self) -> None:
+        """Minimal directed-path regression (coord DoD #2): a pure forward
+        chain ``0→1→2→3`` with no return edges is WEAKLY connected (1 WCC)
+        but has 4 SCCs (no mutual reachability). The pre-fix code (symmetrize
+        + ``directed=False``) computed n_scc = WCC = 1 → ``irreducible=True``
+        (wrong). This test would have caught the ergodicity bug: the verdict
+        must say reducible.
+        """
+        mod = _load_script_module()
+        # 0→1→2→3, no self-loops, no return edges.
+        counts = [
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+            [0, 0, 0, 0],
+        ]
+        tpm = _fake_tpm(["s0", "s1", "s2", "s3"], counts)
+        ergo = mod._analyze_ergodicity(tpm)
+        if ergo.analysis_skipped:
+            pytest.skip("scipy absent — ergodicity path not exercised.")
+        # Weakly connected (1 WCC) but 4 SCC → reducible.
+        assert ergo.n_wcc == 1
+        assert ergo.n_scc == 4
+        assert ergo.irreducible is False
+        assert ergo.ergodic is False
+
     def test_irreducible_aperiodic_unknown_verdict_not_contradictory(self) -> None:
         """A GENUINELY irreducible (1 SCC) chain whose aperiodicity is
         undetermined (aperiodic is None on small N) must NOT be rendered as
