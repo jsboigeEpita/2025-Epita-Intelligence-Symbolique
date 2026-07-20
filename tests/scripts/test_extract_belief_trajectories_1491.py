@@ -159,18 +159,21 @@ class TestErgodicityAnalysis:
         assert ergo.ergodic is False
         assert ergo.stationary is None
 
-    def test_irreducible_aperiodic_unknown_verdict_not_contradictory(self) -> None:
-        """Real-corpus regression: a 1-SCC chain whose aperiodicity is
-        undetermined (aperiodic is None on small N) must NOT be rendered as
-        ``réductible (≥2 SCC)`` — that contradicts the 1-SCC / irréductible
-        verdict printed two lines above. Observed firsthand on corpus A
-        (--limit 1): the report claimed both ``Irréductible: True`` and
-        ``réductible (≥2 SCC)``. The verdict must be internally consistent.
+    def test_corpusa_single_trajectory_reducible_regression(self) -> None:
+        """Real-corpus regression (TPM-2 #1491 ergodicity bug): the corpus A
+        single-trajectory transition structure is REDUCIBLE (3 SCC), not
+        irreducible. Previously the symmetrized + ``directed=False`` SCC
+        computation reported ``n_scc=1`` / ``irreducible=True`` because
+        ``directed=False`` makes scipy ignore ``connection="strong"`` and
+        compute weak components — so ``n_scc`` silently measured WCC. The
+        directed-SCC fix must classify this honestly as reducible, and the
+        rendered report must stay internally consistent (never claim both
+        ``Irréductible: True`` and ``réductible``).
         """
         mod = _load_script_module()
-        # Exact transition structure observed on the real corpus A single
-        # trajectory (opaque count data — no privacy concern): 1 SCC, 1 WCC,
-        # irreducible=True, aperiodic=None.
+        # Exact transition structure observed on corpus A single trajectory
+        # (opaque count data — no privacy concern). TRUE directed SCC = 3:
+        # {s0} (no inbound edge), {s1} (only s0→s1), {s2,s3} (s2→s3, s3→s2).
         counts = [
             [2, 1, 0, 0],
             [0, 2, 0, 1],
@@ -188,7 +191,76 @@ class TestErgodicityAnalysis:
         ergo = mod._analyze_ergodicity(tpm)
         if ergo.analysis_skipped:
             pytest.skip("scipy absent — ergodicity path not exercised.")
+        # Honest verdict: 3 SCC, reducible.
+        assert ergo.n_scc == 3
+        assert ergo.n_wcc == 1
+        assert ergo.irreducible is False
+        assert ergo.aperiodic is None  # mixed self-loop evidence (s2 has none)
+        assert ergo.ergodic is False
+        report = mod._render_markdown_report(
+            [], tpm, "corpusA (real encrypted dataset)", pathlib.Path(".")
+        )
+        # Consistency guard: a reducible chain is rendered as reducible...
+        assert "réductible" in report
+        # ...and never simultaneously claimed irreducible.
+        assert "Irréductible : **True**" not in report
+
+    def test_directed_path_wcc1_scc_reducible(self) -> None:
+        """Minimal directed-path regression (coord DoD #2): a pure forward
+        chain ``0→1→2→3`` with no return edges is WEAKLY connected (1 WCC)
+        but has 4 SCCs (no mutual reachability). The pre-fix code (symmetrize
+        + ``directed=False``) computed n_scc = WCC = 1 → ``irreducible=True``
+        (wrong). This test would have caught the ergodicity bug: the verdict
+        must say reducible.
+        """
+        mod = _load_script_module()
+        # 0→1→2→3, no self-loops, no return edges.
+        counts = [
+            [0, 1, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 0, 1],
+            [0, 0, 0, 0],
+        ]
+        tpm = _fake_tpm(["s0", "s1", "s2", "s3"], counts)
+        ergo = mod._analyze_ergodicity(tpm)
+        if ergo.analysis_skipped:
+            pytest.skip("scipy absent — ergodicity path not exercised.")
+        # Weakly connected (1 WCC) but 4 SCC → reducible.
+        assert ergo.n_wcc == 1
+        assert ergo.n_scc == 4
+        assert ergo.irreducible is False
+        assert ergo.ergodic is False
+
+    def test_irreducible_aperiodic_unknown_verdict_not_contradictory(self) -> None:
+        """A GENUINELY irreducible (1 SCC) chain whose aperiodicity is
+        undetermined (aperiodic is None on small N) must NOT be rendered as
+        ``réductible (≥2 SCC)`` — that contradicts the 1-SCC / irréductible
+        verdict printed above. Preserves the original contradiction guard
+        (TPM-2 #1491) using a matrix that is truly 1 SCC under directed
+        strong connectivity, with mixed self-loop evidence → aperiodic=None.
+        """
+        mod = _load_script_module()
+        # 3 states in a bidirectional chain s0↔s1↔s2 → genuinely 1 SCC
+        # (all mutually reachable). Self-loops on s0 and s2 only →
+        # aperiodic_states=[1,0,1] → mixed → aperiodic=None.
+        counts = [
+            [1, 1, 0],
+            [1, 0, 1],
+            [0, 1, 1],
+        ]
+        states = [f"completed:s{i}" for i in range(3)]
+        tpm = mod.TPM(
+            states=states,
+            transition_counts=counts,
+            n_transitions=6,
+            n_trajectories=1,
+            n_observations_total=6,
+        )
+        ergo = mod._analyze_ergodicity(tpm)
+        if ergo.analysis_skipped:
+            pytest.skip("scipy absent — ergodicity path not exercised.")
         # Precondition: this is precisely the irreducible-but-undetermined case.
+        assert ergo.n_scc == 1
         assert ergo.irreducible is True
         assert ergo.aperiodic is None
         report = mod._render_markdown_report(

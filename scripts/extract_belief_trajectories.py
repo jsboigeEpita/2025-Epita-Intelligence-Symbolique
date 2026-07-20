@@ -571,13 +571,14 @@ def _analyze_ergodicity(tpm: TPM) -> ErgodicityResult:
     n = len(tpm.states)
     counts = np.asarray(tpm.transition_counts, dtype=float)
     # Connected components on the BINARY support (any non-zero transition
-    # counts as a graph edge — direction-agnostic for connectivity).
+    # counts as a directed graph edge). ``directed=True`` is REQUIRED for
+    # ``connection="strong"``: with ``directed=False`` scipy ignores the
+    # ``connection`` argument and computes WEAK components for both calls,
+    # so ``n_scc`` silently measured WCC (TPM-2 #1491 ergodicity bug).
     support = (counts > 0).astype(int)
-    # Symmetrize so weakly-connected components capture both directions.
-    symmetric = np.maximum(support, support.T)
-    graph = csr_matrix(symmetric)
-    n_scc, scc_labels = connected_components(graph, directed=False, connection="strong")
-    n_wcc, wcc_labels = connected_components(graph, directed=False, connection="weak")
+    graph = csr_matrix(support)
+    n_scc, scc_labels = connected_components(graph, directed=True, connection="strong")
+    n_wcc, wcc_labels = connected_components(graph, directed=True, connection="weak")
 
     irreducible = n_scc == 1
     # Aperiodicity check: gcd of return-periods to each state. With limited
@@ -863,7 +864,7 @@ def _render_markdown_report(
     else:
         lines.append(f"- SCC (composantes fortement connexes) : **{ergo.n_scc}**")
         lines.append(f"- WCC (composantes faiblement connexes) : **{ergo.n_wcc}**")
-        lines.append(f"- Irréductible : **{ergo.irreducible}** (1 SCC = chaîne irréductible)")
+        lines.append(f"- Irréductible : **{ergo.irreducible}** ({ergo.n_scc} SCC)")
         lines.append(
             f"- Apériodique : **{ergo.aperiodic}** "
             "(heuristique self-loop : None = évidence mixte sur N petit)."
