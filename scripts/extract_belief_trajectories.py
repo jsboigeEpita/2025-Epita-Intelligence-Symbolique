@@ -875,6 +875,15 @@ def _render_markdown_report(
                 "- **Ergodique** : **NON** — irréductible mais périodique "
                 "(gcd return-period > 1)."
             )
+        elif ergo.irreducible:
+            # Irreducible (1 SCC) but aperiodicity undetermined (aperiodic is
+            # None — mixed self-loop evidence on small N). Do NOT claim
+            # "réductible" here: that contradicts the 1-SCC verdict just above.
+            lines.append(
+                "- **Ergodique** : **indéterminé** — irréductible (1 SCC) mais "
+                "apériodicité indéterminée sur N petit ; ergodicité non "
+                "conclue (pas de distribution stationnaire garantie)."
+            )
         else:
             lines.append(
                 "- **Ergodique** : **NON** — réductible (≥2 SCC), "

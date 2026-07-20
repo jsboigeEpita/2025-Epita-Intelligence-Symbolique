@@ -103,12 +103,22 @@ def load_corpus_propositions(corpus_id: str) -> Dict[str, Dict[str, str]]:
         raw_id = str(d.get("id", ""))
         if not raw_id:
             continue
-        text = str(d.get("text", "")).strip()
+        # The encrypted dataset stores the document under ``full_text`` (the
+        # extracts also carry ``extract_text``); it has no bare ``text`` key.
+        # Map onto the single ``text`` field the pipeline consumes. This maps
+        # into the IN-MEMORY dict only — the extractor persists LIGHT
+        # aggregates, never the text (privacy HARD #1491).
+        text = str(d.get("full_text", "") or d.get("text", "")).strip()
         if not text:
             continue
         opaque = "prop_" + hashlib.sha256(raw_id.encode("utf-8")).hexdigest()[:8]
         out[opaque] = {
             "text": text,
+            # ``label`` is read by the run loop and PERSISTED as ``corpus_label``
+            # in tpm.json — it MUST stay opaque for the real corpus. The real
+            # source name lives only in ``_source_label`` (internal grouping,
+            # never persisted by the extractor). Privacy HARD #1491.
+            "label": f"corpus{corpus_id.upper()} · {opaque}",
             "_source_label": str(d.get("source_name", "unknown"))[:32],
         }
     if not out:
