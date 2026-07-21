@@ -25,6 +25,7 @@ Usage::
 Privacy: this CLI touches **only synthetic frameworks**. It never reads
 the encrypted corpus.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -45,7 +46,6 @@ from abs_arg_dung.backends import (  # noqa: E402
     generate_sbm,
     parse_iccma_af_file,
 )
-
 
 # ---------------------------------------------------------------------------
 # Result types
@@ -100,6 +100,7 @@ def _disagreements(
 # Backend runners
 # ---------------------------------------------------------------------------
 
+
 def _run_python(args: List[str], atts: List[Tuple[str, str]]) -> BackendReport:
     r = backend_python(args, atts)
     # Cast to BackendReport type for callers.
@@ -114,6 +115,7 @@ def _run_python_grounded_only(
     (O(V*(V+E)) polynomial)."""
     import time
     from abs_arg_dung.backends import compute_grounded
+
     t0 = time.monotonic()
     grounded = compute_grounded(args, atts)
     elapsed_ms = (time.monotonic() - t0) * 1000.0
@@ -137,11 +139,22 @@ def _try_run_tweety(
     """
     try:
         from abs_arg_dung.agent import DungAgent  # sanctuary #893  # noqa: E402
-        from adapters.dung_student_provider import DungStudentProvider  # noqa: F401, E402
+        from argumentation_analysis.core.jvm_setup import initialize_jvm  # noqa: E402
     except Exception:
         return False, None
 
     try:
+        # DungAgent requires a live JVM (its __init__ raises otherwise). The
+        # standalone CLI has no application entry point starting it, so we do
+        # it here. initialize_jvm() is idempotent (starts at most once) and
+        # returns False if the JDK/JVM is genuinely unavailable — in which case
+        # Tweety degrades honestly rather than reporting a fabricated result.
+        if not initialize_jvm():
+            return False, {
+                "backend": "tweety",
+                "available": False,
+                "note": "JVM unavailable (initialize_jvm returned False)",
+            }
         agent = DungAgent()  # type: ignore[no-untyped-call]
         for a in args:
             agent.add_argument(a)
@@ -167,6 +180,7 @@ def _try_run_tweety(
 # Suite dispatch
 # ---------------------------------------------------------------------------
 
+
 def _suite_classics() -> List[Tuple[str, List[str], List[Tuple[str, str]]]]:
     out: List[Tuple[str, List[str], List[Tuple[str, str]]]] = []
     for name, (a, atts) in generate_classic_examples().items():
@@ -183,10 +197,14 @@ def _suite_sbm(
 ) -> List[Tuple[str, List[str], List[Tuple[str, str]]]]:
     block_sizes = [block_size] * num_blocks
     args, atts = generate_sbm(block_sizes, p_in=p_in, p_out=p_out, seed=seed)
-    return [(f"sbm[{'x'.join(map(str, block_sizes))}@{p_in},{p_out}@{seed}]", args, atts)]
+    return [
+        (f"sbm[{'x'.join(map(str, block_sizes))}@{p_in},{p_out}@{seed}]", args, atts)
+    ]
 
 
-def _suite_er(num_args: int, p: float, seed: int) -> List[Tuple[str, List[str], List[Tuple[str, str]]]]:
+def _suite_er(
+    num_args: int, p: float, seed: int
+) -> List[Tuple[str, List[str], List[Tuple[str, str]]]]:
     args, atts = generate_er(num_args, p=p, seed=seed)
     return [(f"er[{num_args}@{p}@{seed}]", args, atts)]
 
@@ -200,15 +218,20 @@ def _suite_iccma(path: str) -> List[Tuple[str, List[str], List[Tuple[str, str]]]
 # Main
 # ---------------------------------------------------------------------------
 
+
 def _build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         description="Cross-check Dung backends on synthetic frameworks (no real corpus).",
     )
     p.add_argument(
-        "--suite", choices=["classics", "sbm", "er", "iccma"], required=True,
+        "--suite",
+        choices=["classics", "sbm", "er", "iccma"],
+        required=True,
         help="Which suite of frameworks to evaluate.",
     )
-    p.add_argument("--af", type=str, default=None, help="Path to .af file (--suite iccma)")
+    p.add_argument(
+        "--af", type=str, default=None, help="Path to .af file (--suite iccma)"
+    )
     # SBM options
     p.add_argument("--num-blocks", type=int, default=4)
     p.add_argument("--block-size", type=int, default=10)
@@ -221,16 +244,20 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=42)
     # Output
     p.add_argument(
-        "--only-disagreements", action="store_true",
+        "--only-disagreements",
+        action="store_true",
         help="Print only disagreement lines; suppress the per-framework headers.",
     )
     p.add_argument(
-        "--grounded-only", action="store_true",
+        "--grounded-only",
+        action="store_true",
         help="Skip complete/stable enumeration (O(2^n) in the worst case); "
-             "useful for SBM scaling demos with >25 arguments.",
+        "useful for SBM scaling demos with >25 arguments.",
     )
     p.add_argument(
-        "--json", type=str, default=None,
+        "--json",
+        type=str,
+        default=None,
         help="Write the full report (one row per framework) as JSON to this path.",
     )
     return p
@@ -242,7 +269,9 @@ def main(argv: List[str] | None = None) -> int:
     if args.suite == "classics":
         suite = _suite_classics()
     elif args.suite == "sbm":
-        suite = _suite_sbm(args.num_blocks, args.block_size, args.p_in, args.p_out, args.seed)
+        suite = _suite_sbm(
+            args.num_blocks, args.block_size, args.p_in, args.p_out, args.seed
+        )
     elif args.suite == "er":
         suite = _suite_er(args.num_args, args.p_er, args.seed)
     elif args.suite == "iccma":
@@ -267,7 +296,11 @@ def main(argv: List[str] | None = None) -> int:
             if args.grounded_only
             else _run_python(f_args, f_atts)
         )
-        tw_report: BackendReport = {"backend": "tweety", "available": False, "note": "Tweety not available"}
+        tw_report: BackendReport = {
+            "backend": "tweety",
+            "available": False,
+            "note": "Tweety not available",
+        }
         if tweety_ok:
             ok, tw = _try_run_tweety(f_args, f_atts)
             if ok and tw is not None:
@@ -279,15 +312,23 @@ def main(argv: List[str] | None = None) -> int:
         tw_ext: Extensions = tw_report.get("extensions", _empty_extensions())  # type: ignore[assignment]
 
         agree, per_sem = _extensions_match(py_ext, tw_ext)
-        rows.append({
-            "framework": name,
-            "n_args": len(f_args),
-            "n_attacks": len(f_atts),
-            "agree": agree,
-            "per_semantics": per_sem,
-            "python": {"available": py_report["available"], "elapsed_ms": py_report["elapsed_ms"]},
-            "tweety": {"available": tw_report["available"], "note": tw_report.get("note", "")},
-        })
+        rows.append(
+            {
+                "framework": name,
+                "n_args": len(f_args),
+                "n_attacks": len(f_atts),
+                "agree": agree,
+                "per_semantics": per_sem,
+                "python": {
+                    "available": py_report["available"],
+                    "elapsed_ms": py_report["elapsed_ms"],
+                },
+                "tweety": {
+                    "available": tw_report["available"],
+                    "note": tw_report.get("note", ""),
+                },
+            }
+        )
         if not args.only_disagreements or not agree:
             print(f"\n=== {name} (n_args={len(f_args)}, n_attacks={len(f_atts)}) ===")
             print(f"  python ({py_report['elapsed_ms']:.1f}ms):")
@@ -302,7 +343,9 @@ def main(argv: List[str] | None = None) -> int:
                     print(f"  {line}")
 
     n_disagree = sum(1 for r in rows if not r["agree"])
-    print(f"\nSummary: {len(rows)} frameworks; {n_disagree} disagreements; tweety={'yes' if tweety_ok else 'no'}")
+    print(
+        f"\nSummary: {len(rows)} frameworks; {n_disagree} disagreements; tweety={'yes' if tweety_ok else 'no'}"
+    )
     if args.json:
         Path(args.json).write_text(json.dumps(rows, indent=2), encoding="utf-8")
         print(f"Written: {args.json}")
