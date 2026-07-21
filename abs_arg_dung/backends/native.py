@@ -71,16 +71,35 @@ def _defends(
 
 
 def _attacked_by(s: FrozenSet[str], x: str, attackers: Dict[str, FrozenSet[str]]) -> bool:
-    """Is x attacked by some element of s? (i.e. is there d ∈ s with (d, x) ∈ attacks?)."""
-    for d in s:
-        if x in attackers.get(d, frozenset()):
-            return True
-    return False
+    """Is x attacked by some element of s? (i.e. is there d ∈ s with (d, x) ∈ attacks?).
+
+    Corrected in #1502 résidu: previous version iterated `s` and tested
+    ``x in attackers.get(d, ...)`` which inverts direction (it asks "does d
+    attack x?" against a target-keyed map). The right check is whether any
+    attacker of ``x`` lies in ``s``.
+    """
+    return bool(s & attackers.get(x, frozenset()))
 
 
 # ---------------------------------------------------------------------------
 # Grounded semantics (least fixpoint of Dung's characteristic function)
 # ---------------------------------------------------------------------------
+
+def _build_attacks_from(
+    arguments: Sequence[str],
+    attacks: Iterable[Tuple[str, str]],
+) -> Dict[str, FrozenSet[str]]:
+    """Build the forward attack map: ``src -> frozenset of targets attacked by src``.
+
+    Companion to :func:`_build_attackers` (target -> attackers). Needed for
+    efficient attack-range computation in :func:`compute_grounded`.
+    """
+    targets: Dict[str, Set[str]] = {a: set() for a in arguments}
+    for src, tgt in attacks:
+        if src in targets and tgt in targets:
+            targets[src].add(tgt)
+    return {a: frozenset(s) for a, s in targets.items()}
+
 
 def compute_grounded(
     arguments: Sequence[str],
@@ -96,19 +115,26 @@ def compute_grounded(
     in at most |V| iterations, total O(V*(V+E)).
 
     Reference: Dung 1995, "On the Acceptability of Arguments".
+
+    Corrected in #1502 résidu: previous ``attack_range`` was built by
+    iterating ``grounded`` and reading ``attackers.get(s, ...)`` (target ->
+    attackers map), which collects the set of arguments *attacking s*
+    instead of the set attacked *by s*. This version uses the forward map
+    ``attacks_from[s]`` (src -> targets).
     """
     arg_set: Set[str] = set(arguments)
     attackers = _build_attackers(arguments, attacks)
+    attacks_from = _build_attacks_from(arguments, attacks)
 
     grounded: Set[str] = set()
     changed = True
     while changed:
         changed = False
-        # Attack range of the current grounded set.
+        # Attack range of the current grounded set: union of targets each
+        # grounded element attacks (FORWARD direction).
         attack_range: Set[str] = set()
         for s in grounded:
-            for tgt in attackers.get(s, frozenset()):
-                attack_range.add(tgt)
+            attack_range |= attacks_from.get(s, frozenset())
 
         for x in arg_set - grounded:
             x_attackers = attackers.get(x, frozenset())
@@ -196,7 +222,6 @@ def compute_complete_extensions(
             #        not attack anyone in in_set).
             #   (iii) `a` does not attack itself (self-loop a -> a).
             a_attackers = attackers.get(a, frozenset())
-            a_attacks = attackers.get(a, frozenset())  # symmetric map not built; build reverse
             conflict = a in a_attackers  # (iii) self-loop
             if not conflict:
                 for atk in a_attackers:

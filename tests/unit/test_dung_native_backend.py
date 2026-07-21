@@ -23,7 +23,7 @@ from abs_arg_dung.backends import (
 NIXON_DIAMOND: Dict[str, Any] = {
     "args": ["a", "b", "c", "d"],
     "atts": [("a", "b"), ("b", "a"), ("c", "d"), ("d", "c"), ("a", "c"), ("b", "d")],
-    # grounded empty, stable = [{a,d}, {b,c}]
+    # grounded empty, complete = [[], [a,d], [b,c]], stable = [{a,d}, {b,c}]
 }
 
 TRIANGLE_CYCLE: Dict[str, Any] = {
@@ -48,6 +48,33 @@ CHAIN: Dict[str, Any] = {
     "args": ["a", "b", "c"],
     "atts": [("a", "b"), ("a", "c"), ("b", "c")],
     # only {a} survives (chain attack)
+}
+
+
+# --- Asymmetric regression fixtures (Track I5 #1502 résidu) ---
+# Symmetric frameworks (nixon_diamond, a↔b, triangle) MASK the direction
+# inversion bug. The asymmetrics below expose it.
+
+ASYMMETRIC_CHAIN: Dict[str, Any] = {
+    "args": ["a", "b", "c"],
+    "atts": [("a", "b"), ("b", "c")],
+    # grounded = {a, c} (a defends nothing of b's attackers → b dropped,
+    # c unattacked → trivially defended). complete = [[], [a, c]].
+}
+
+ASYMMETRIC_DIAMOND: Dict[str, Any] = {
+    "args": ["a", "b", "c", "d"],
+    "atts": [("a", "b"), ("b", "c"), ("a", "d"), ("d", "c")],
+    # grounded = {a, c}: a defended (no attacker); b attacked by a (in
+    # attack_range of {a}); c defended (b ∈ attack_range of {a}); d
+    # attacked by a (in attack_range).
+}
+
+ASYMMETRIC_VS: Dict[str, Any] = {
+    "args": ["x", "y", "z"],
+    "atts": [("x", "y"), ("y", "x")],
+    # NOT the same as RECIPROCAL (which is symmetric). Same shape here, so
+    # we test it for parity with RECIPROCAL.
 }
 
 
@@ -89,19 +116,30 @@ class TestGrounded:
 
 class TestComplete:
     def test_nixon_complete_cardinality(self) -> None:
-        # Reference: 5 complete extensions for the Nixon diamond.
+        # Correct nixon_diamond complete count = 3: [[], {a, d}, {b, c}].
+        # {c} and {d} alone are NOT admissible (c attacked by a, d attacked
+        # by b — neither {c} nor {d} contains their defender).
+        # Reference: Dung 1995, computed via manual enumeration.
         comp = compute_complete_extensions(NIXON_DIAMOND["args"], NIXON_DIAMOND["atts"])
-        assert len(comp) == 5
-        for ext in comp:
-            # Each must include all defended arguments
-            for ext_set in [set(e) for e in comp]:
-                pass
+        assert len(comp) == 3
 
     def test_nixon_includes_two_stable(self) -> None:
         comp = compute_complete_extensions(NIXON_DIAMOND["args"], NIXON_DIAMOND["atts"])
         comp_sets = [set(c) for c in comp]
         assert {"a", "d"} in comp_sets
         assert {"b", "c"} in comp_sets
+
+    def test_nixon_includes_empty(self) -> None:
+        # Empty is trivially admissible + complete when no self-attacks.
+        comp = compute_complete_extensions(NIXON_DIAMOND["args"], NIXON_DIAMOND["atts"])
+        assert [] in comp
+
+    def test_nixon_excludes_singletons(self) -> None:
+        # {c} alone: a attacks c, {c} contains no defender of c → not
+        # admissible. Same for {d}. Regression for #1502 résidu.
+        comp = compute_complete_extensions(NIXON_DIAMOND["args"], NIXON_DIAMOND["atts"])
+        for ext in comp:
+            assert ext not in (["c"], ["d"])
 
     def test_triangle_cycle_only_empty(self) -> None:
         comp = compute_complete_extensions(TRIANGLE_CYCLE["args"], TRIANGLE_CYCLE["atts"])
@@ -132,6 +170,78 @@ class TestComplete:
         comp = compute_complete_extensions(["z", "x", "y"], [])
         for ext in comp:
             assert ext == sorted(ext)
+
+
+# --- Asymmetric regression tests (Track I5 #1502 résidu) ---
+# These frameworks are NOT symmetric. Symmetric frameworks (nixon, RECIPROCAL,
+# TRIANGLE) MASK the direction inversion in `_attacked_by` + the backward
+# relation in `compute_grounded.attack_range`. The chains/diamonds below
+# expose any direction bug immediately.
+
+class TestAsymmetricRegression:
+    def test_grounded_asymmetric_chain(self) -> None:
+        # a → b → c : a is unattacked, attacks b; b attacks c. Grounded = {a, c}
+        # (a survives trivially, b is attacked by a in attack_range, c is
+        # unattacked AND attacked by b which is in attack_range of {a}).
+        assert compute_grounded(
+            ASYMMETRIC_CHAIN["args"], ASYMMETRIC_CHAIN["atts"]
+        ) == ["a", "c"]
+
+    def test_complete_asymmetric_chain(self) -> None:
+        # complete = [{a, c}]: empty is NOT complete (a has no attacker, so
+        # empty defends a — fixpoint condition forces a into the set). Only
+        # {a, c} survives (b attacked by a, undefended).
+        comp = compute_complete_extensions(
+            ASYMMETRIC_CHAIN["args"], ASYMMETRIC_CHAIN["atts"]
+        )
+        comp_sets = [set(c) for c in comp]
+        assert {"a", "c"} in comp_sets
+        assert set() not in comp_sets  # a is undefended → empty incomplete
+        assert {"b"} not in comp_sets
+        assert {"c"} not in comp_sets  # c undefended but isolated; not complete alone
+        assert {"a"} not in comp_sets  # c undefended, must be in fixpoint
+        assert len(comp_sets) == 1
+
+    def test_stable_asymmetric_chain(self) -> None:
+        # Stable subset: same as complete for this AF.
+        stab = compute_stable_extensions(
+            ASYMMETRIC_CHAIN["args"], ASYMMETRIC_CHAIN["atts"]
+        )
+        stab_sets = [set(s) for s in stab]
+        assert {"a", "c"} in stab_sets
+
+    def test_grounded_asymmetric_diamond(self) -> None:
+        # a → b → c, a → d → c : b and d each attacked by a. Grounded = {a, c}.
+        assert compute_grounded(
+            ASYMMETRIC_DIAMOND["args"], ASYMMETRIC_DIAMOND["atts"]
+        ) == ["a", "c"]
+
+    def test_complete_asymmetric_diamond(self) -> None:
+        # complete = [{a, c}] only. Empty is not complete (a undefended →
+        # must be in fixpoint). b, d each attacked by a, undefended alone.
+        comp = compute_complete_extensions(
+            ASYMMETRIC_DIAMOND["args"], ASYMMETRIC_DIAMOND["atts"]
+        )
+        comp_sets = [set(c) for c in comp]
+        assert {"a", "c"} in comp_sets
+        assert set() not in comp_sets
+        assert {"b"} not in comp_sets
+        assert {"d"} not in comp_sets
+        assert {"c"} not in comp_sets  # c undefended → fixpoint forces a in
+        assert len(comp_sets) == 1
+
+    def test_grounded_simple_path(self) -> None:
+        # Smallest direction-exposing case: a → b. Grounded = {a}.
+        # (b attacked by a, a unattacked.)
+        assert compute_grounded(["a", "b"], [("a", "b")]) == ["a"]
+
+    def test_grounded_three_step_path(self) -> None:
+        # a → b → c → d. Grounded = {a, c}: a undefended, b attacked by a,
+        # c attacked by b which IS in attack_range of {a}, d attacked by c
+        # which is in attack_range of {a, c} — so d drops.
+        assert compute_grounded(
+            ["a", "b", "c", "d"], [("a", "b"), ("b", "c"), ("c", "d")]
+        ) == ["a", "c"]
 
 
 # --- Stable (subset of complete) ---

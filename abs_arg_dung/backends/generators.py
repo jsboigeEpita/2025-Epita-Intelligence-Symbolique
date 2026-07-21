@@ -209,6 +209,10 @@ def generate_classic_examples() -> Dict[str, Framework]:
     * ``"mutual_attack"`` — 2 args a↔b, both forms admissible.
     * ``"chain"`` — ``a -> b -> c``, only ``{a}`` survives.
     * ``"isolated"`` — 3 unattached args.
+    * ``"asym_chain"`` — ``a -> b -> c`` (no a->c). Asymmetric, regression
+      target for direction-inversion bugs (#1502 résidu).
+    * ``"asym_diamond"`` — ``a -> b -> c`` + ``a -> d -> c`` (no cross).
+      Asymmetric, exposes any direction inversion in `attack_range`.
     """
     a, b, c, d, e = "a", "b", "c", "d", "e"
     return {
@@ -239,5 +243,13 @@ def generate_classic_examples() -> Dict[str, Framework]:
         "isolated": (
             [a, b, c],
             [],
+        ),
+        "asym_chain": (
+            [a, b, c],
+            [(a, b), (b, c)],
+        ),
+        "asym_diamond": (
+            [a, b, c, d],
+            [(a, b), (b, c), (a, d), (d, c)],
         ),
     }
