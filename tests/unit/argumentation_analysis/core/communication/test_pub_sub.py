@@ -356,7 +356,12 @@ class TestProtocolPublish:
         proto = PublishSubscribeProtocol(mw)
         proto.publish("t1", "sender", AgentLevel.OPERATIONAL, {"data": "test"})
         assert "t1" in proto.topics
-        mw.send_message.assert_called_once()
+        # C2 #1500: publish fans the broadcast out to the middleware's global
+        # handlers (genuine delivery) instead of the dead ``send_message``,
+        # which could never deliver a ``recipient=None`` broadcast. The old
+        # ``mw.send_message.assert_called_once()`` pinned that dead call.
+        mw._handle_message.assert_called_once()
+        mw.send_message.assert_not_called()
         proto.shutdown()
 
     def test_publish_returns_recipients(self):

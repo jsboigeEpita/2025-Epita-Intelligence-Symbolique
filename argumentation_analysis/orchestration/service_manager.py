@@ -103,7 +103,7 @@ try:
         MessagePriority,
         MessageType,
         AgentLevel,
-        HierarchicalChannel,  # Importer la classe concrète du canal
+        create_default_middleware,  # C2 #1500: factory wiring HIERARCHICAL + DATA
     )
 except ImportError as e:
     logging.error(
@@ -115,7 +115,7 @@ except ImportError as e:
     MessageMiddleware = (
         None  # Pour éviter des NameError plus loin si on continue malgré tout
     )
-    HierarchicalChannel = None  # Idem
+    create_default_middleware = None  # C2 #1500 idem
     # Les autres (Message, ChannelType, etc.) causeront des NameError s'ils sont utilisés.
 
 
@@ -208,7 +208,9 @@ class OrchestrationServiceManager:
         # Orchestrateurs spécialisés
         self.cluedo_orchestrator: Optional[CluedoOrchestrator] = None
         self.conversation_orchestrator: Optional[ConversationOrchestrator] = None
-        self.llm_orchestrator: Optional[Any] = None  # Removed RealLLMOrchestrator (#885)
+        self.llm_orchestrator: Optional[Any] = (
+            None  # Removed RealLLMOrchestrator (#885)
+        )
         self.fact_checking_orchestrator: Optional[FactCheckingOrchestrator] = None
 
         # Middleware de communication
@@ -385,31 +387,20 @@ class OrchestrationServiceManager:
 
         if (
             settings.service_manager.enable_communication_middleware
-            and MessageMiddleware
+            and create_default_middleware
         ):
-            self.middleware = MessageMiddleware()
-            self.logger.info("Middleware de communication instancié.")
-
-            # Enregistrer les canaux nécessaires
-            if HierarchicalChannel:
-                try:
-                    hierarchical_channel_id = (
-                        settings.service_manager.hierarchical_channel_id
-                    )
-                    hc = HierarchicalChannel(channel_id=hierarchical_channel_id)
-                    self.middleware.register_channel(hc)
-                    self.logger.info(
-                        f"Canal HIERARCHICAL '{hierarchical_channel_id}' enregistré dans le middleware."
-                    )
-                except Exception as e_chan:
-                    self.logger.error(
-                        f"Échec de l'enregistrement du HierarchicalChannel: {e_chan}",
-                        exc_info=True,
-                    )
-            else:
-                self.logger.error(
-                    "Classe HierarchicalChannel non disponible pour enregistrement."
-                )
+            # C2 #1500: shared middleware wired with BOTH channels (HIERARCHICAL
+            # + DATA) via the single-source-of-truth factory, mirroring the
+            # PR #1479 / R652 fix. The previous hand-built HierarchicalChannel-
+            # only bus dropped every PUBLICATION broadcast on the unregistered
+            # DATA channel ("Channel not found: data"). Channel lookups are by
+            # type, so the conventional IDs (hierarchical_main / data_main)
+            # replace the configured hierarchical_channel_id harmlessly.
+            self.middleware = create_default_middleware()
+            self.logger.info(
+                "Middleware de communication instancié (HIERARCHICAL + DATA "
+                "via create_default_middleware)."
+            )
         else:
             self.logger.warning(
                 "Middleware de communication désactivé ou non disponible."

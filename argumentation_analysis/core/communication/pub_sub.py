@@ -279,7 +279,9 @@ class PublishSubscribeProtocol:
 
         # Démarrer le thread de nettoyage des messages expirés
         self.running = True
-        self._stop_event = threading.Event()  # Rend l'attente du cleanup interruptible par shutdown()
+        self._stop_event = (
+            threading.Event()
+        )  # Rend l'attente du cleanup interruptible par shutdown()
         self.cleanup_thread = threading.Thread(target=self._cleanup_expired_messages)
         self.cleanup_thread.daemon = True
         self.cleanup_thread.start()
@@ -380,11 +382,21 @@ class PublishSubscribeProtocol:
             metadata={"topic": topic_id, "ttl": ttl or topic.ttl, **(metadata or {})},
         )
 
-        # Publier le message sur le topic
+        # Publier le message sur le topic (livraison aux abonnés du topic)
         recipients = topic.publish_message(message)
 
-        # Envoyer le message via le middleware
-        self.middleware.send_message(message)
+        # C2 #1500 — fan-out du broadcast aux listeners globaux du middleware.
+        # ``send_message`` était mort pour les broadcasts : le message porte
+        # ``recipient=None`` (broadcast), or les canaux HIERARCHICAL et DATA le
+        # rejettent tous deux ("has no recipient") ; et quand le canal DATA
+        # n'est pas enregistré (middleware shared hand-built, Sites main_orchest-
+        # rator / service_manager avant Fix A) on logge en boucle
+        # "Channel not found: data" — d'où le défaut R653 « broadcasts atteignant
+        # 0 agent ». On livre donc aux ``global_handlers`` du middleware (le
+        # mécanisme "listen to all messages") : un agent qui s'enregistre comme
+        # listener reçoit réellement le broadcast (anti-#1019 : livraison
+        # genuine, pas un masquage try/except ; et plus de send_message mort).
+        self.middleware._handle_message(message)
 
         return recipients
 

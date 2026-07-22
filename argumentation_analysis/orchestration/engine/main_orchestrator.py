@@ -43,6 +43,7 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
+
     # RealLLMOrchestrator and LogiqueComplexeOrchestrator removed (#885)
 except ImportError as e:
     logger.error(
@@ -1184,9 +1185,8 @@ if __name__ == "__main__":
     from argumentation_analysis.orchestration.hierarchical.operational.manager import (
         OperationalManager,
     )
-    from argumentation_analysis.core.communication.middleware import MessageMiddleware
-    from argumentation_analysis.core.communication.hierarchical_channel import (
-        HierarchicalChannel,
+    from argumentation_analysis.core.communication.middleware import (
+        create_default_middleware,
     )
 
     logging.basicConfig(
@@ -1214,8 +1214,11 @@ if __name__ == "__main__":
             OpenAIChatCompletion(service_id="chat_completion", api_key=api_key)
         )
 
-        shared_middleware = MessageMiddleware()
-        shared_middleware.register_channel(HierarchicalChannel("hierarchical_channel"))
+        # C2 #1500: shared middleware wired with BOTH channels via the
+        # single-source-of-truth factory (mirror of the PR #1479 / R652 fix).
+        # The previous hand-built HierarchicalChannel-only bus dropped every
+        # PUBLICATION broadcast on the unregistered DATA channel.
+        shared_middleware = create_default_middleware()
         strategic_manager = StrategicManager(middleware=shared_middleware)
         tactical_coordinator = TacticalCoordinator(middleware=shared_middleware)
         operational_manager = OperationalManager(middleware=shared_middleware)
