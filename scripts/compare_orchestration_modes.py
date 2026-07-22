@@ -161,6 +161,151 @@ class ModeResult:
         return asdict(self)
 
 
+# ── Depth-parity trade-off (C3 #1500) ─────────────────────────────────────
+#
+# The 4 modes are comparable in INTERFACE (all produce a verdict on the
+# same synthetic input) but NOT in work-perimeter. R653 surfaced the
+# asymmetry firsthand: pipeline = breadth (workflow DAG phase count),
+# hierarchical = delegation (4 default objectives / 3-tier), conversational
+# = dialogue-depth (3 macro-phases, multi-turn). Aligning them would be a
+# pendulum (gut pipeline's catalogue OR inflate hierarchical/conversational
+# artificially — both anti-#1019). C3 documents the trade-off instead.
+#
+# Structural chiffres verified firsthand (po-2023, build_*_workflow
+# introspection): pipeline light=3 / standard=15 / full=17 phases
+# (workflow_dsl.py add_phase); hierarchical bridge = 4 default objectives
+# (delegation_orchestrator.py:291); conversational = 3 macro-phases
+# (informal → formal → synthesis, AgentGroupChat).
+
+
+@dataclass
+class DepthParityRow:
+    """One row of the C3 #1500 structural depth-per-mode trade-off table.
+
+    The modes do NOT share a single depth axis — ``depth_dimension`` names
+    what kind of depth the count measures (workflow phases / objectives /
+    dialogue macro-phases), so the counts are honest labels, not a false
+    common scale.
+    """
+
+    mode: str
+    depth_dimension: str
+    depth_count: int
+    nature: str
+    verdict_dimension: str
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+def compute_depth_parity() -> List[DepthParityRow]:
+    """Deterministic structural depth-per-mode (C3 #1500).
+
+    JVM/LLM-free: introspects the pure workflow builders (light/standard/
+    full) for the pipeline breadth axis, and uses the documented structural
+    constants for the hierarchical (delegation) and conversational
+    (dialogue-depth) axes. Returns the depth asymmetry the mode-comparison
+    surfaces — DOCUMENTED as a deliberate trade-off (anti-pendule, anti-#1019:
+    aligning would fabricate parity where there is none).
+    """
+    from argumentation_analysis.orchestration.workflows import (
+        build_full_workflow,
+        build_light_workflow,
+        build_standard_workflow,
+    )
+
+    rows: List[DepthParityRow] = []
+    for mode_name, builder in (
+        ("pipeline_light", build_light_workflow),
+        ("pipeline_standard", build_standard_workflow),
+        ("pipeline_full", build_full_workflow),
+    ):
+        workflow = builder()
+        rows.append(
+            DepthParityRow(
+                mode=mode_name,
+                depth_dimension="workflow phases (DAG)",
+                depth_count=len(workflow.phases),
+                nature="breadth",
+                verdict_dimension="per-capability verdicts aggregated by WorkflowExecutor",
+            )
+        )
+    rows.append(
+        DepthParityRow(
+            mode="hierarchical_bridge",
+            depth_dimension="strategic objectives (default axes)",
+            depth_count=4,
+            nature="delegation",
+            verdict_dimension="objectives_to_workflow -> WorkflowExecutor",
+        )
+    )
+    rows.append(
+        DepthParityRow(
+            mode="hierarchical_delegation",
+            depth_dimension="strategic objectives (LLM-derived)",
+            depth_count=0,  # variable: strategic tier produces N objectives per input
+            nature="delegation (3-tier depth)",
+            verdict_dimension="Strategic -> Tactical -> Operational chain",
+        )
+    )
+    rows.append(
+        DepthParityRow(
+            mode="conversational",
+            depth_dimension="dialogue macro-phases (multi-turn)",
+            depth_count=3,
+            nature="dialogue-depth",
+            verdict_dimension="AgentGroupChat synthesis",
+        )
+    )
+    rows.append(
+        DepthParityRow(
+            mode="conversation_deterministic",
+            depth_dimension="dialogue macro-phases (deterministic)",
+            depth_count=3,
+            nature="dialogue-depth (no LLM)",
+            verdict_dimension="ConversationOrchestrator synthesis",
+        )
+    )
+    return rows
+
+
+_DEPTH_PARITY_TRADEOFF_VERDICT = (
+    "The 4 modes are comparable in interface (all produce a verdict on the "
+    "same synthetic input) but NOT in work-perimeter. They occupy three "
+    "different depth dimensions: pipeline = breadth (a wide capability "
+    "catalogue, shallow per-capability), hierarchical = delegation (few "
+    "objectives, multi-tier decomposition), conversational = dialogue-depth "
+    "(few macro-phases, deep multi-turn). This asymmetry is a DELIBERATE "
+    "design trade-off, not a defect: aligning the catalogue would mean "
+    "gutting pipeline's breadth or artificially inflating hierarchical/"
+    "conversational — both pendulum swings the project rejects (anti-#1019). "
+    "Making the trade-off explicit and firsthand-chiffred (this section) is "
+    "the honest C3 deliverable."
+)
+
+
+def render_depth_parity_section() -> str:
+    """Render the C3 #1500 depth-parity trade-off section (markdown)."""
+    rows = compute_depth_parity()
+    lines = [
+        "## Depth-Parity Trade-off (C3 #1500)",
+        "",
+        "Structural depth per mode — firsthand chiffres (JVM/LLM-free,",
+        "deterministic workflow introspection). The modes do NOT share a",
+        "single depth axis; ``depth_dimension`` names what each count measures.",
+        "",
+        "| Mode | Depth dimension | Count | Nature |",
+        "|------|-----------------|-------|--------|",
+    ]
+    for r in rows:
+        count = str(r.depth_count) if r.depth_count > 0 else "variable (LLM-derived)"
+        lines.append(f"| {r.mode} | {r.depth_dimension} | {count} | {r.nature} |")
+    lines.append("")
+    lines.append(_DEPTH_PARITY_TRADEOFF_VERDICT)
+    lines.append("")
+    return "\n".join(lines)
+
+
 # ── Mode runners ─────────────────────────────────────────────────────────
 
 
@@ -382,18 +527,18 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
         duration_seconds=round(duration, 2),
         phases_completed=phases_completed,
         phases_total=phases_total,
-        capabilities_used=result.get("capabilities_used", [])
-        if isinstance(result, dict)
-        else [],
+        capabilities_used=(
+            result.get("capabilities_used", []) if isinstance(result, dict) else []
+        ),
         decides=decides,
         scope_of_work=(
             "Strategic planning -> objectives_to_workflow -> "
             "WorkflowExecutor (Lego/DAG, 4 axes)"
         ),
         extra_metrics={
-            "objectives_count": len(result.get("objectives", []))
-            if isinstance(result, dict)
-            else 0,
+            "objectives_count": (
+                len(result.get("objectives", [])) if isinstance(result, dict) else 0
+            ),
         },
     )
 
@@ -459,18 +604,18 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
         duration_seconds=round(duration, 2),
         phases_completed=phases_completed,
         phases_total=phases_total,
-        capabilities_used=result.get("capabilities_used", [])
-        if isinstance(result, dict)
-        else [],
+        capabilities_used=(
+            result.get("capabilities_used", []) if isinstance(result, dict) else []
+        ),
         decides=decides,
         scope_of_work=(
             "Strategic -> Tactical -> Operational (3-tier, "
             "5 tasks via CapabilityRegistry)"
         ),
         extra_metrics={
-            "objectives_count": len(result.get("objectives", []))
-            if isinstance(result, dict)
-            else 0,
+            "objectives_count": (
+                len(result.get("objectives", [])) if isinstance(result, dict) else 0
+            ),
         },
     )
 
@@ -591,6 +736,11 @@ def generate_report(
         )
 
     lines.append("")
+
+    # Depth-parity trade-off (C3 #1500): structural depth per mode, surfaced
+    # on EVERY report so the mode-comparison makes the work-perimeter
+    # asymmetry explicit (not buried in capabilities_used lists).
+    lines.append(render_depth_parity_section())
 
     # Legacy detail table (preserves backward-compat for readers of
     # the previous report format).
@@ -814,7 +964,20 @@ def main():
             f"(terminated_by_budget=True), never as success=True."
         ),
     )
+    parser.add_argument(
+        "--depth-parity",
+        action="store_true",
+        help=(
+            "Print ONLY the C3 #1500 depth-parity trade-off section and exit "
+            "(deterministic workflow introspection — no mode runs, no LLM, no "
+            "JVM). Surfaces the structural depth asymmetry across the 4 modes."
+        ),
+    )
     args = parser.parse_args()
+
+    if args.depth_parity:
+        print(render_depth_parity_section())
+        return
 
     asyncio.run(
         run_all(
