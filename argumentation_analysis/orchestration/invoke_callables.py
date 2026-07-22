@@ -167,6 +167,7 @@ __all__ = [
     "_invoke_deep_synthesis",
     "_invoke_stakes_extractor",
     "_invoke_ai_shield",
+    "_invoke_dung_arbitration",
 ]
 
 
@@ -7701,6 +7702,83 @@ async def compare_all_axes(
             "axes_run": list(report_axes.keys()),
             "any_disagreement": any_disagree,
         },
+    }
+
+
+async def _invoke_dung_arbitration(
+    input_text: str, context: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Pipeline-selectable Dung-arbitration stage over fallacy candidates (I1 #1501 PR2).
+
+    A PRODUCTION STAGE — distinct from ``_invoke_dung_extensions`` (which computes
+    extensions over the global argument AF) and from ``_invoke_multi_axis_compare``
+    (which runs the #1429 sophism-axis comparison harness). This stage consumes
+    sophism CANDIDATES, derives attacks from DECLARED Walton-Krabbe relations +
+    same-span rivalry, and lets the grounded extension decide which candidates
+    survive — ALTERING the detection verdict when ``dung_arbitration`` is selected.
+
+    Selectable (default OFF, backward-compat): gated by ``context["dung_arbitration"]``.
+    OFF ⇒ passthrough verdict (surviving == input). ON ⇒ grounded arbitration.
+
+    Rule-vs-ML provenance: candidates are collected from the rule taxonomy phase
+    (``phase_taxonomy_sophisms_output``) and the ML/hierarchical phase
+    (``phase_hierarchical_fallacy_output``), bridged to opaque ``SophismCandidate``
+    atoms. Provenance is preserved on each atom; cross-source disagreement surfaces
+    via declared Walton-Krabbe relations (``walton_krabbe_relations``) and same-span
+    rivalry, NOT span overlap (the rule detector carries no text span).
+
+    Honest-absent (anti-#1019): with no declared refutations and no same-span
+    rivalry, the enabled stage returns surviving == input (no fabricated attack).
+    """
+    # Lazy imports — mirror the camembert handler pattern to avoid churning the
+    # top-level import block of this large module.
+    from argumentation_analysis.agents.core.informal.detection_candidate_bridge import (
+        combine_candidate_sources,
+        taxonomy_detections_to_candidates,
+    )
+    from argumentation_analysis.agents.core.informal.dung_arbitration_stage import (
+        arbitrate_detections,
+    )
+
+    enabled = bool(context.get("dung_arbitration", False))
+
+    sources: Dict[str, List[Any]] = {}
+    rule_detections = context.get("phase_taxonomy_sophisms_output") or []
+    if rule_detections:
+        sources["rule_taxonomy"] = taxonomy_detections_to_candidates(rule_detections)
+    hierarchical = context.get("phase_hierarchical_fallacy_output") or {}
+    if isinstance(hierarchical, dict):
+        ml_fallacies = hierarchical.get("fallacies") or []
+        if ml_fallacies:
+            sources["ml_llm"] = taxonomy_detections_to_candidates(
+                ml_fallacies, detector="ml_llm"
+            )
+
+    candidates = combine_candidate_sources(sources) if sources else []
+
+    verdict = arbitrate_detections(
+        candidates,
+        dung_arbitration=enabled,
+        walton_krabbe_relations=context.get("walton_krabbe_relations"),
+    )
+
+    surviving = sorted(verdict.surviving_ids)
+    eliminated = {str(k): str(v) for k, v in verdict.eliminated_ids.items()}
+    attack_pairs = [[str(a), str(b)] for a, b in sorted(verdict.attacks)]
+
+    return {
+        "verdict": {
+            "enabled": verdict.enabled,
+            "surviving_ids": surviving,
+            "eliminated_ids": eliminated,
+            "attacks": attack_pairs,
+            "honest_absent": verdict.honest_absent,
+            "input_count": verdict.input_count,
+            "surviving_count": verdict.surviving_count,
+        },
+        "dung_arbitration": enabled,
+        "candidate_count": len(candidates),
+        "degraded": False,
     }
 
 
