@@ -488,60 +488,60 @@ class TestInitializeMiddleware:
             await manager.initialize_middleware()
             assert manager.middleware is None
 
-    async def test_middleware_success_with_channel(self, manager):
-        mock_settings = MagicMock()
-        mock_settings.service_manager.enable_communication_middleware = True
-        mock_settings.service_manager.hierarchical_channel_id = "test_channel"
-
-        mock_mw_class = MagicMock()
-        mock_mw_instance = MagicMock()
-        mock_mw_class.return_value = mock_mw_instance
-
-        mock_hc_class = MagicMock()
-        mock_hc_instance = MagicMock()
-        mock_hc_class.return_value = mock_hc_instance
-
-        with patch(f"{SM_MODULE}.settings", mock_settings), patch(
-            f"{SM_MODULE}.MessageMiddleware", mock_mw_class
-        ), patch(f"{SM_MODULE}.HierarchicalChannel", mock_hc_class):
-            await manager.initialize_middleware()
-            assert manager.middleware is mock_mw_instance
-            mock_mw_instance.register_channel.assert_called_once_with(mock_hc_instance)
-
-    async def test_middleware_no_hierarchical_channel_class(self, manager):
+    async def test_middleware_created_via_factory(self, manager):
+        """C2 #1500 — ``initialize_middleware`` wires the shared bus via the
+        single-source-of-truth factory ``create_default_middleware`` (not a
+        hand-built ``MessageMiddleware`` + ``register_channel``). Replaces the
+        pre-fix ``test_middleware_success_with_channel`` which pinned the dead
+        hand-built contract.
+        """
         mock_settings = MagicMock()
         mock_settings.service_manager.enable_communication_middleware = True
 
-        mock_mw_class = MagicMock()
-        mock_mw_instance = MagicMock()
-        mock_mw_class.return_value = mock_mw_instance
-
+        mock_factory_instance = MagicMock()
         with patch(f"{SM_MODULE}.settings", mock_settings), patch(
-            f"{SM_MODULE}.MessageMiddleware", mock_mw_class
-        ), patch(f"{SM_MODULE}.HierarchicalChannel", None):
+            f"{SM_MODULE}.create_default_middleware", return_value=mock_factory_instance
+        ) as mock_factory:
             await manager.initialize_middleware()
-            assert manager.middleware is mock_mw_instance
-            # No channel registered since HierarchicalChannel is None
-            mock_mw_instance.register_channel.assert_not_called()
+            assert manager.middleware is mock_factory_instance
+            mock_factory.assert_called_once_with()
 
-    async def test_middleware_channel_registration_error(self, manager):
+    async def test_middleware_factory_unavailable_fallback(self, manager):
+        """C2 #1500 — honest-degraded: when the communication import failed at
+        module load (``create_default_middleware is None``), the middleware
+        stays ``None`` with a logged warning, no crash. Replaces the pre-fix
+        ``test_middleware_no_hierarchical_channel_class`` which pinned the dead
+        ``HierarchicalChannel is None`` contract.
+        """
         mock_settings = MagicMock()
         mock_settings.service_manager.enable_communication_middleware = True
-        mock_settings.service_manager.hierarchical_channel_id = "test_channel"
-
-        mock_mw_class = MagicMock()
-        mock_mw_instance = MagicMock()
-        mock_mw_class.return_value = mock_mw_instance
-        mock_mw_instance.register_channel.side_effect = RuntimeError("channel error")
-
-        mock_hc_class = MagicMock()
 
         with patch(f"{SM_MODULE}.settings", mock_settings), patch(
-            f"{SM_MODULE}.MessageMiddleware", mock_mw_class
-        ), patch(f"{SM_MODULE}.HierarchicalChannel", mock_hc_class):
-            # Should not raise, error is logged
+            f"{SM_MODULE}.create_default_middleware", None
+        ):
             await manager.initialize_middleware()
-            assert manager.middleware is mock_mw_instance
+            assert manager.middleware is None
+
+    async def test_middleware_factory_registers_both_channels(self, manager):
+        """C2 #1500 — the shared bus wires BOTH HIERARCHICAL and DATA (the
+        core of the fix: a PUBLICATION routed to DATA was dropped pre-fix on a
+        HIERARCHICAL-only bus). Firsthand assertion on the real factory output,
+        mirroring ``test_broadcast_bus_fix_1500.py``. Replaces the pre-fix
+        ``test_middleware_channel_registration_error`` which pinned the dead
+        per-channel ``register_channel`` error-handling contract.
+        """
+        from argumentation_analysis.core.communication.channel_interface import (
+            ChannelType,
+        )
+
+        mock_settings = MagicMock()
+        mock_settings.service_manager.enable_communication_middleware = True
+
+        with patch(f"{SM_MODULE}.settings", mock_settings):
+            await manager.initialize_middleware()
+            assert manager.middleware is not None
+            assert manager.middleware.get_channel(ChannelType.HIERARCHICAL) is not None
+            assert manager.middleware.get_channel(ChannelType.DATA) is not None
 
 
 # ========================================================================
@@ -632,9 +632,7 @@ class TestInitializeSpecializedOrchestrators:
 
         with patch(f"{SM_MODULE}.CluedoOrchestrator", mock_cluedo), patch(
             f"{SM_MODULE}.ConversationOrchestrator", mock_conversation
-        ), patch(
-            f"{SM_MODULE}.FactCheckingOrchestrator", None
-        ):
+        ), patch(f"{SM_MODULE}.FactCheckingOrchestrator", None):
             await manager._initialize_specialized_orchestrators()
             assert manager.cluedo_orchestrator is not None
             assert manager.conversation_orchestrator is not None
@@ -647,9 +645,7 @@ class TestInitializeSpecializedOrchestrators:
     async def test_all_none_when_classes_none(self, manager):
         with patch(f"{SM_MODULE}.CluedoOrchestrator", None), patch(
             f"{SM_MODULE}.ConversationOrchestrator", None
-        ), patch(
-            f"{SM_MODULE}.FactCheckingOrchestrator", None
-        ):
+        ), patch(f"{SM_MODULE}.FactCheckingOrchestrator", None):
             await manager._initialize_specialized_orchestrators()
             assert manager.cluedo_orchestrator is None
             assert manager.conversation_orchestrator is None
@@ -866,8 +862,7 @@ class TestSelectOrchestrator:
 
     def test_modal_type(self, manager):
         assert (
-            manager._select_orchestrator("modal")
-            is manager.fact_checking_orchestrator
+            manager._select_orchestrator("modal") is manager.fact_checking_orchestrator
         )
 
     def test_propositional_type(self, manager):
