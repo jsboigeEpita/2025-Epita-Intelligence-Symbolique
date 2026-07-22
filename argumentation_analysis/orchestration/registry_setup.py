@@ -32,6 +32,7 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_fol_reasoning,
     _invoke_modal_logic,
     _invoke_dung_extensions,
+    _invoke_dung_arbitration,
     _invoke_multi_axis_compare,
     _invoke_formal_synthesis,
     _invoke_nl_to_logic,
@@ -465,6 +466,12 @@ def setup_registry(
             ["dung_extensions"],
             "Dung AF extension computation via AFHandler",
             _invoke_dung_extensions,
+        ),
+        (
+            "dung_arbitration_service",
+            ["dung_arbitration"],
+            "Selectable Dung grounded arbitration over sophism candidates (Walton-Krabbe)",
+            _invoke_dung_arbitration,
         ),
         (
             "multi_axis_compare_service",

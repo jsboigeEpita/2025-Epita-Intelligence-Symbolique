@@ -959,6 +959,67 @@ def _write_dung_extensions_to_state(
                 )
 
 
+def _write_dung_arbitration_to_state(
+    output: Any, state: Any, ctx: dict[str, Any]
+) -> None:
+    """Write the Dung-arbitration verdict to UnifiedAnalysisState (#1501 PR2, DoD #4).
+
+    The formal verdict (surviving / eliminated candidates + grounded attacks) is
+    stored as a Dung framework named ``dung_arbitration`` via the existing
+    ``add_dung_framework`` hook — the sibling pattern used by the SetAF/ABA/Dung
+    writers, where formalism-specifics are stuffed into the ``extensions`` dict.
+    A trace entry is added so the verdict is auditable in the analysis timeline.
+
+    Passthrough (``enabled=False``) and honest-absent verdicts are still recorded
+    (the stage RAN), but carry ``honest_absent=True`` so a downstream report can
+    tell "arbitration found nothing genuine to decide" from "arbitration altered
+    nothing because it was off".
+    """
+    if not output or not isinstance(output, dict):
+        return
+    verdict = output.get("verdict")
+    if not isinstance(verdict, dict):
+        return
+    surviving = verdict.get("surviving_ids") or []
+    eliminated = verdict.get("eliminated_ids") or {}
+    attacks = verdict.get("attacks") or []
+    # Opaque candidate ids are the AF's arguments; attacks are [src, tgt] pairs.
+    arguments = [str(c) for c in surviving] + [str(c) for c in eliminated]
+    attack_pairs = [
+        [str(pair[0]), str(pair[1])]
+        for pair in attacks
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2
+    ]
+    state.add_dung_framework(
+        name="dung_arbitration",
+        arguments=arguments,
+        attacks=attack_pairs,
+        extensions={
+            "surviving_ids": [str(c) for c in surviving],
+            "eliminated_ids": {str(k): str(v) for k, v in eliminated.items()},
+            "honest_absent": bool(verdict.get("honest_absent", False)),
+            "enabled": bool(verdict.get("enabled", False)),
+            "input_count": int(verdict.get("input_count", 0)),
+            "surviving_count": int(verdict.get("surviving_count", 0)),
+        },
+    )
+    if verdict.get("enabled"):
+        state.add_trace_entry(
+            phase="dung_arbitration",
+            agent="DungArbitrationStage",
+            reacts_to=["hierarchical_fallacy"],
+            summary=(
+                f"Grounded arbitration: {len(surviving)} surviving, "
+                f"{len(eliminated)} eliminated"
+                + (
+                    " (honest-absent: no genuine attack)"
+                    if verdict.get("honest_absent")
+                    else ""
+                )
+            ),
+        )
+
+
 def _write_formal_synthesis_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -1398,6 +1459,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "fol_reasoning": _write_fol_to_state,
     "modal_logic": _write_modal_to_state,
     "dung_extensions": _write_dung_extensions_to_state,
+    "dung_arbitration": _write_dung_arbitration_to_state,
     "formal_synthesis": _write_formal_synthesis_to_state,
     "hierarchical_fallacy_detection": _write_hierarchical_fallacy_to_state,
     "description_logic": _write_dl_to_state,
