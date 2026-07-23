@@ -276,12 +276,27 @@ class TestInvokeCallables:
 
     @pytest.mark.asyncio
     async def test_invoke_fact_extraction_short_text(self):
+        # #1510 — hermeticity: exercise the no-client heuristic fallback ("Hi." < 20 chars
+        # => claim_count 0). _invoke_fact_extraction takes the LLM path whenever
+        # _get_openai_client() returns a client. When real API keys are in
+        # os.environ (pytest-dotenv .env load, or a shell/fixture leak), "Hi."
+        # is routed to the LLM whose claim_count is nondeterministic (usually 0,
+        # occasionally 1) => spurious CI red on unrelated PRs. delenv is
+        # insufficient (.env keys leak back faster than a function-scoped delenv
+        # can hold); force the no-client path by patching _get_openai_client so
+        # the test deterministically exercises the heuristic fallback under test
+        # (soustraction of the leaky env/client dependency, not a retry/rerun).
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fact_extraction,
         )
 
-        result = await _invoke_fact_extraction("Hi.", {})
-        assert result["claim_count"] == 0  # Too short
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, ""),
+        ):
+            result = await _invoke_fact_extraction("Hi.", {})
+        assert result["extraction_method"] == "heuristic"
+        assert result["claim_count"] == 0  # Too short (< 20 chars heuristic threshold)
 
     @pytest.mark.asyncio
     async def test_invoke_propositional_logic_error_fallback(self):
