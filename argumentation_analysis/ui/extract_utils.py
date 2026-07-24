@@ -188,7 +188,7 @@ def highlight_search_results(
 
 def load_extract_definitions_safely(
     config_file: Union[str, Path],
-    encryption_key: Optional[str],
+    encryption_key: Optional[Union[str, bytes]],
     fallback_json_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[List[Dict[str, Any]], str]:
     """
@@ -200,8 +200,10 @@ def load_extract_definitions_safely(
     :param config_file: Chemin vers le fichier de configuration principal (potentiellement chiffré).
     :type config_file: Union[str, Path]
     :param encryption_key: La clé de chiffrement binaire. Si None, le déchiffrement
-                           du fichier principal n'est pas tenté.
-    :type encryption_key: Optional[str]  # Devrait être Optional[bytes] pour CryptoService
+                           du fichier principal n'est pas tenté. Accepte ``bytes``
+                           (canonique pour ``CryptoService``) ou ``str`` (legacy —
+                           encodée en UTF-8 au site d'appel).
+    :type encryption_key: Optional[bytes]
     :param fallback_json_file: Chemin optionnel vers un fichier JSON non chiffré
                                de secours.
     :type fallback_json_file: Optional[Union[str, Path]]
@@ -210,12 +212,14 @@ def load_extract_definitions_safely(
              si tout échoue.
     :rtype: Tuple[List[Dict[str, Any]], str]
     """
-    # TODO: L'encryption_key devrait être de type bytes pour CryptoService.
-    #       Une conversion ou une adaptation de CryptoService pourrait être nécessaire.
-    #       Pour l'instant, on suppose que CryptoService gère la conversion si besoin.
+    # NOTE: encryption_key est canoniquement ``bytes`` (cf. CryptoService).
+    # Une conversion str→bytes est appliquée au site d'appel pour préserver la
+    # compat avec les callers legacy qui passent ``str``.
     try:
         # Essayer d'abord de charger depuis le fichier chiffré
         if encryption_key:
+            if isinstance(encryption_key, str):
+                encryption_key = encryption_key.encode("utf-8")
             try:
                 config_path = Path(config_file)
                 if config_path.exists():
@@ -253,7 +257,7 @@ def load_extract_definitions_safely(
 def save_extract_definitions_safely(
     extract_definitions: List[Dict[str, Any]],
     config_file: Union[str, Path],
-    encryption_key: Optional[str],
+    encryption_key: Optional[Union[str, bytes]],
     fallback_json_file: Optional[Union[str, Path]] = None,
 ) -> Tuple[bool, str]:
     """
@@ -268,8 +272,10 @@ def save_extract_definitions_safely(
     :param config_file: Chemin vers le fichier de configuration principal (pour la version chiffrée).
     :type config_file: Union[str, Path]
     :param encryption_key: La clé de chiffrement binaire. Si None, le chiffrement
-                           n'est pas effectué pour `config_file`.
-    :type encryption_key: Optional[str] # Devrait être Optional[bytes]
+                           n'est pas effectué pour `config_file`. Accepte ``bytes``
+                           (canonique pour ``CryptoService``) ou ``str`` (legacy —
+                           encodée en UTF-8 au site d'appel).
+    :type encryption_key: Optional[bytes]
     :param fallback_json_file: Chemin optionnel vers un fichier JSON non chiffré
                                où sauvegarder les données en clair.
     :type fallback_json_file: Optional[Union[str, Path]]
@@ -277,7 +283,9 @@ def save_extract_definitions_safely(
              et un message de statut.
     :rtype: Tuple[bool, str]
     """
-    # TODO: L'encryption_key devrait être de type bytes.
+    # NOTE: encryption_key est canoniquement ``bytes`` (cf. CryptoService).
+    # Une conversion str→bytes est appliquée au site d'appel pour préserver la
+    # compat avec les callers legacy qui passent ``str``.
     try:
         # Convertir en JSON
         json_data = json.dumps(extract_definitions, ensure_ascii=False, indent=2)
@@ -292,6 +300,8 @@ def save_extract_definitions_safely(
 
         # Sauvegarder dans le fichier chiffré si une clé est fournie
         if encryption_key:
+            if isinstance(encryption_key, str):
+                encryption_key = encryption_key.encode("utf-8")
             try:
                 config_path = Path(config_file)
                 config_path.parent.mkdir(parents=True, exist_ok=True)
