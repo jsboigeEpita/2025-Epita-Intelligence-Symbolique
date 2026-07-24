@@ -918,7 +918,9 @@ class TestInvokeCallables:
         assert "extraction_method" in result
         assert result["conflict_count"] == 0
 
-    async def test_invoke_governance_emits_degraded_canon_when_verdict_empty_bo2_1472(self):
+    async def test_invoke_governance_emits_degraded_canon_when_verdict_empty_bo2_1472(
+        self,
+    ):
         """BO-2 #1472 — _invoke_governance emits the codebase-standard
         ``degraded`` canon at the top level when the formal aggregation
         cannot decide (no derivable preferences — e.g. sparse upstream / no
@@ -1061,12 +1063,25 @@ class TestInvokeCallables:
         assert isinstance(result.get("fallacies", []), list)
 
     async def test_invoke_fact_extraction_empty(self):
-        """_invoke_fact_extraction handles empty text."""
+        """_invoke_fact_extraction handles empty text (heuristic fallback)."""
+        # #1510 sibling — same pytest-dotenv flake class as
+        # test_invoke_fact_extraction_short_text: in CI, real API keys leak into
+        # os.environ via pytest-dotenv (.env sessionstart load), so empty input
+        # is routed to the LLM whose claim_count is nondeterministic (usually 0,
+        # occasionally a hallucinated claim) instead of the deterministic
+        # heuristic fallback (0 claims, no sentences > 20 chars). Force the
+        # no-client path by patching _get_openai_client so the test exercises
+        # the heuristic path it asserts (soustraction of the leaky dependency).
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fact_extraction,
         )
 
-        result = await _invoke_fact_extraction("", {})
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, ""),
+        ):
+            result = await _invoke_fact_extraction("", {})
+        assert result["extraction_method"] == "heuristic"
         assert result["claim_count"] == 0
 
     async def test_invoke_propositional_logic_success(self):
