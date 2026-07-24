@@ -1,0 +1,21 @@
+{
+  "mode": "shape_fixture_for_test_only",
+  "produced_at": "2026-07-24T00:00:00Z",
+  "warning": "THIS IS A SHAPE TEST FIXTURE, NOT A REAL VERDICT. Used solely to exercise the SNAPSHOT replay code path in test_democratech_demo_one_command.py. It carries no deliberative truth. The anti-theater marker decided_firsthand=PRE-RECORDED will be stamped on every verdict by _load_snapshot.",
+  "propositions": {
+    "prop_A": {
+      "label": "Chess club — annual budget",
+      "verdict": {
+        "decided_firsthand": true,
+        "winner": "Option A",
+        "n_methods": 1,
+        "methods": {"shape": "Option A"},
+        "consensus_rate": 1.0
+      },
+      "phase_rows": [
+        ["extract", "completed", "shape"],
+        ["governance", "completed", "shape"]
+      ]
+    }
+  }
+}
