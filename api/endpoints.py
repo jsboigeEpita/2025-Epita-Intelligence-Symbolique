@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 
+from .errors import TimeoutError_, UpstreamError
+
 from .models import (
     AnalysisRequest,
     AnalysisResponse,
@@ -170,6 +172,10 @@ def _build_response_payload(analysis_result: Dict) -> Dict:
 async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Request):
     """
     Analyse un texte donné pour en extraire la structure argumentative.
+
+    DT-1 #1499: replaces the prior silent `try/except: pass` with a
+    legible error surface. Real upstream errors are now raised as
+    ``UpstreamError`` (HTTP 502 with machine-parseable envelope).
     """
     analysis_id = str(uuid.uuid4())[:8]
     logger.info(
@@ -182,9 +188,25 @@ async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Requ
     try:
         service_result = _perform_tweety_analysis(analysis_req.text, project_context)
         logger.info(f"[{analysis_id}] Analyse réussie.")
-    except Exception as e:
-        logger.error(f"[{analysis_id}] Erreur lors de l'analyse: {e}", exc_info=True)
-        service_result = {"summary": f"Erreur du service d'analyse: {e}"}
+    except TimeoutError as exc:
+        logger.error(
+            f"[{analysis_id}] Analyse timeout: {exc}", exc_info=True
+        )
+        raise TimeoutError_(
+            f"Analysis exceeded its time budget: {exc}",
+            context={"analysis_id": analysis_id},
+        ) from exc
+    except Exception as exc:
+        logger.error(
+            f"[{analysis_id}] Erreur lors de l'analyse: {exc}", exc_info=True
+        )
+        raise UpstreamError(
+            f"Analysis service failed: {exc}",
+            context={
+                "analysis_id": analysis_id,
+                "exception_type": type(exc).__name__,
+            },
+        ) from exc
 
     duration = time.time() - start_time
     service_result.setdefault("duration", duration)
