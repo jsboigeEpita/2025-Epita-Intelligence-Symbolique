@@ -34,7 +34,7 @@ suitable for CoursIA's public side. Two non-trivial design axes:
 
 1. **Tier routing** — which extracts become public (fables/mythes,
    public-domain, weak-load) vs which stay encrypted (figures
-   universellement condamnées — Anschluss-1938, Mandchourie) vs which
+   universellement condamnées — tier historique-condamné, chiffré) vs which
    are excluded entirely (figures contemporaines, même chiffrées).
 2. **Schema exposure** — the encrypted blob stores opaque `source_name`
    + `path` + `host_parts`; the public-facing layer must consume that
