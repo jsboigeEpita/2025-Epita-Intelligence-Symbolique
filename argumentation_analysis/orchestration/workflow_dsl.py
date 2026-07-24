@@ -29,6 +29,7 @@ from typing import (
     Optional,
     Set,
     Tuple,
+    Type,
 )
 from dataclasses import dataclass, field
 from enum import Enum
@@ -55,6 +56,32 @@ class LoopConfig:
 
 
 @dataclass
+class RetryConfig:
+    """Configuration for retry/backoff on transient phase failures.
+
+    Anti-theater (#1019): retry ONLY on transient/retryable exceptions
+    (configurable). All other exceptions fail immediately, never masked.
+
+    Defaults: 3 attempts total (1 + 2 retries), exponential backoff
+    starting at 0.5s, capped at 5s. These are sane defaults for LLM
+    upstream calls (OpenRouter/OpenAI rate-limit, transient network).
+    """
+
+    max_attempts: int = 3
+    initial_delay_seconds: float = 0.5
+    backoff_factor: float = 2.0
+    max_delay_seconds: float = 5.0
+    # Anti-theater: by default we retry ONLY on transient exceptions. A
+    # logic bug or a 4xx-style error MUST NOT be retried silently.
+    retryable_exceptions: Tuple[Type[BaseException], ...] = (
+        TimeoutError,
+        ConnectionError,
+        OSError,
+        asyncio.TimeoutError,
+    )
+
+
+@dataclass
 class WorkflowPhase:
     """Definition d'une phase dans un workflow."""
 
@@ -67,6 +94,10 @@ class WorkflowPhase:
     condition: Optional[Callable[[Dict[str, Any]], bool]] = None
     loop_config: Optional[LoopConfig] = None
     input_transform: Optional[Callable[[Any, Dict[str, Any]], Any]] = None
+    # NEW (DT-1 #1499): retry/backoff for transient upstream failures.
+    # None disables retry (default = keep current behavior). Set to a
+    # RetryConfig() to enable 3-attempt exponential backoff.
+    retry_config: Optional[RetryConfig] = None
 
 
 @dataclass
@@ -80,6 +111,14 @@ class PhaseResult:
     output: Any = None
     error: Optional[str] = None
     duration_seconds: float = 0.0
+    # NEW (DT-1 #1499): honest degradation flag.
+    # True iff (a) the phase is `optional=True`, (b) it failed AFTER
+    # retry exhausted, (c) the orchestrator decided to continue the
+    # workflow with output=None. NEVER silently True on a non-optional
+    # failure (that case is FAILED with degraded=False).
+    # Consumers MUST surface this flag — anti-theater #1019.
+    degraded: bool = False
+    attempts: int = 1
 
 
 @dataclass
@@ -474,13 +513,23 @@ class WorkflowExecutor:
         )
         failed = sum(1 for r in results.values() if r.status == PhaseStatus.FAILED)
         skipped = sum(1 for r in results.values() if r.status == PhaseStatus.SKIPPED)
+        # NEW (DT-1 #1499): honest degradation count = phases that
+        # exhausted retry and stayed FAILED on an optional slot. The
+        # consumer (CLI summary, API summary, dashboard) MUST surface
+        # this — anti-theater #1019.
+        degraded_phases = sorted(
+            name for name, r in results.items() if r.degraded
+        )
+        degraded = len(degraded_phases) > 0
         slog.info(
             f"Workflow '{workflow.name}' finished: "
-            f"{completed} completed, {failed} failed, {skipped} skipped",
+            f"{completed} completed, {failed} failed, {skipped} skipped, "
+            f"{len(degraded_phases)} degraded",
             extra={
                 "workflow": workflow.name,
                 "phases_completed": completed,
                 "phases_total": len(results),
+                "phases_degraded": degraded_phases,
             },
         )
 
@@ -492,6 +541,8 @@ class WorkflowExecutor:
                         "completed": completed,
                         "failed": failed,
                         "skipped": skipped,
+                        "degraded": degraded,
+                        "degraded_phases": degraded_phases,
                         "phases": {name: r.status.value for name, r in results.items()},
                     },
                 )
@@ -499,6 +550,68 @@ class WorkflowExecutor:
                 logger.warning(f"Failed to store workflow results in state: {sw_err}")
 
         return results
+
+    async def _invoke_with_retry(
+        self,
+        phase: WorkflowPhase,
+        provider: Any,
+        phase_input: Any,
+        ctx: Dict[str, Any],
+    ) -> Tuple[Any, int]:
+        """Invoke a provider with optional timeout and retry/backoff.
+
+        Anti-theater #1019: retry ONLY on transient/retryable exceptions
+        listed in ``phase.retry_config.retryable_exceptions``. Any other
+        exception (TypeError, ValueError, programming error) bubbles up
+        immediately — no silent retry mask.
+
+        Returns:
+            (output, attempts_used). The number of attempts is forwarded
+            to ``PhaseResult.attempts`` for honest observability.
+        """
+        retry_cfg = phase.retry_config
+        max_attempts = retry_cfg.max_attempts if retry_cfg is not None else 1
+        last_exc: Optional[BaseException] = None
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                if phase.timeout_seconds:
+                    output = await asyncio.wait_for(
+                        provider.invoke(phase_input, ctx),
+                        timeout=phase.timeout_seconds,
+                    )
+                else:
+                    output = await provider.invoke(phase_input, ctx)
+                return output, attempt
+            except BaseException as exc:  # noqa: BLE001 — see below
+                last_exc = exc
+                # Anti-theater: only retry transient exceptions.
+                if retry_cfg is None:
+                    raise
+                if not isinstance(exc, retry_cfg.retryable_exceptions):
+                    raise
+                # Non-retryable: if this is the LAST attempt, raise.
+                if attempt >= max_attempts:
+                    logger.warning(
+                        f"Phase '{phase.name}' exhausted {max_attempts} "
+                        f"retry attempts on {type(exc).__name__}: {exc}"
+                    )
+                    raise
+                # Otherwise sleep with exponential backoff and retry.
+                delay = min(
+                    retry_cfg.initial_delay_seconds
+                    * (retry_cfg.backoff_factor ** (attempt - 1)),
+                    retry_cfg.max_delay_seconds,
+                )
+                logger.info(
+                    f"Phase '{phase.name}' attempt {attempt}/{max_attempts} "
+                    f"failed with {type(exc).__name__} — retrying in {delay:.2f}s"
+                )
+                await asyncio.sleep(delay)
+
+        # Unreachable — the loop either returns or raises on the last attempt.
+        assert last_exc is not None
+        raise last_exc
 
     async def _execute_phase(
         self,
@@ -584,6 +697,7 @@ class WorkflowExecutor:
                     phase_input = input_data
 
             output = None
+            attempts = 1
             if provider.invoke is not None:
                 if phase.loop_config is not None:
                     output = await self._execute_loop(
@@ -593,13 +707,10 @@ class WorkflowExecutor:
                         ctx,
                         phase.loop_config,
                     )
-                elif phase.timeout_seconds:
-                    output = await asyncio.wait_for(
-                        provider.invoke(phase_input, ctx),
-                        timeout=phase.timeout_seconds,
-                    )
                 else:
-                    output = await provider.invoke(phase_input, ctx)
+                    output, attempts = await self._invoke_with_retry(
+                        phase, provider, phase_input, ctx
+                    )
             else:
                 logger.warning(
                     f"Phase '{phase_name}': component '{provider.name}' "
@@ -616,12 +727,26 @@ class WorkflowExecutor:
                     component_used=provider.name,
                     output=output,
                     duration_seconds=duration,
+                    attempts=attempts,
                 ),
                 output,
             )
 
         except Exception as e:
             duration = time.time() - start
+            # Anti-theater #1019: a phase that exhausted retry and still
+            # failed is DEGRADED only if `optional=True`. Status stays
+            # FAILED so downstream consumers must surface it loudly.
+            # ``attempts`` reports the count actually consumed: 1 for
+            # non-retryable errors (no retry attempted), retry_cfg.max_attempts
+            # for retry-exhausted transient failures.
+            retry_cfg = phase.retry_config
+            if retry_cfg is None or not isinstance(
+                e, retry_cfg.retryable_exceptions
+            ):
+                attempts_used = 1
+            else:
+                attempts_used = retry_cfg.max_attempts
             return (
                 phase_name,
                 PhaseResult(
@@ -631,6 +756,8 @@ class WorkflowExecutor:
                     component_used=provider.name,
                     error=str(e),
                     duration_seconds=duration,
+                    degraded=phase.optional,
+                    attempts=attempts_used,
                 ),
                 None,
             )

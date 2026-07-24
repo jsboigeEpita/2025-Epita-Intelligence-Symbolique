@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Callable, Optional
 
+from .errors import install_error_handlers
+
 
 def create_app(
     title: str,
@@ -54,5 +56,10 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # NEW (DT-1 #1499): install the legible error surface for the
+    # Democratech critical path. Other endpoints keep their existing
+    # HTTPException behavior. Anti-pendule: do NOT replace globally.
+    install_error_handlers(app)
 
     return app
