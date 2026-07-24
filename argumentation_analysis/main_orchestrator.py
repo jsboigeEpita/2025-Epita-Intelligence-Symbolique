@@ -207,12 +207,23 @@ async def main():
             "\n[LAUNCH] Lancement de l'analyse collaborative (peut prendre du temps)... "
         )
         # Importer les dépendances nécessaires
-        from argumentation_analysis.orchestration.analysis_runner import AnalysisRunner
+        # Note : AnalysisRunnerV2 est l'entry point canonique — l'ancien
+        # module `analysis_runner.AnalysisRunner` a été supprimé et son
+        # `try/except ImportError` masquait silencieusement l'échec.
+        from argumentation_analysis.orchestration.analysis_runner_v2 import (
+            AnalysisRunnerV2,
+        )
 
         try:
             # Exécuter la fonction d'analyse en passant le texte et le service LLM
-            runner = AnalysisRunner()
-            await runner.run_analysis_async(
+            runner = AnalysisRunnerV2()
+            # NOTE: `llm_service` est typé `ChatCompletionClientBase` ici
+            # (create_llm_service peut retourner un MockChatCompletion), alors
+            # que run_analysis attend `OpenAIChatCompletion | AzureChatCompletion
+            # | None`. Le build mocké fonctionne via duck-typing ; le type strict
+            # est assoupli localement pour ne pas refactorer analysis_runner_v2
+            # dans cette PR — bug latent à traiter séparément.
+            await runner.run_analysis(  # type: ignore[arg-type]
                 text_content=texte_pour_analyse, llm_service=llm_service
             )
 
