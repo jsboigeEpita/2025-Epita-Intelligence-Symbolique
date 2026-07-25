@@ -73,6 +73,20 @@ for _name in ("httpx", "openai", "semantic_kernel", "urllib3"):
 DEFAULT_CONVERSATIONAL_WALL_SECONDS = 180.0
 
 
+def _conversational_safety_net_timeout(max_wall_seconds: float) -> float:
+    """C1 #1500: safety-net timeout wrapping the internally-bounded call.
+
+    The wall-clock bound is enforced INSIDE ``run_conversational_analysis``
+    (clean exit between turns → real partial verdict, anti-#1019). This outer
+    ``asyncio.wait_for`` only catches a single in-flight LLM round-trip that
+    overshoots the between-turn check. The headroom is the larger of 20 % of
+    the budget or 30 s, so the internal bound reliably fires first; if the
+    safety net ever fires the verdict is still an honest partial
+    (``terminated_by_budget=True``, never faked into success).
+    """
+    return max(max_wall_seconds * 1.2, max_wall_seconds + 30.0)
+
+
 # ── Benchmark texts (opaque IDs, no raw content in reports) ──────────────
 
 BENCHMARK_TEXTS = {
@@ -351,13 +365,25 @@ async def run_conversational_mode(
 ) -> ModeResult:
     """Run conversational orchestrator (AgentGroupChat multi-agent).
 
-    Bounded by ``max_wall_seconds`` (default 180s — pre-R653 the
-    conversational mode was unbounded and ran >600s on a 643-octet
-    input). On timeout, the verdict is PARTIAL HONNÊTE: ``success=False``
-    but ``terminates=True`` (we DID terminate, we did not crash), and
-    ``terminated_by_budget=True`` so downstream readers can distinguish
-    a budget breach from a real failure. Anti-pendule #1019 — we never
-    fake ``success=True`` to fill the trade-off table.
+    C1 #1500: the wall-clock bound is enforced INTERNALLY by
+    ``run_conversational_analysis(max_wall_seconds=...)`` — when the deadline
+    is reached the orchestrator exits cleanly between turns and the PARTIAL
+    state accumulated so far IS the verdict (a real bounded verdict,
+    anti-#1019 — not a ``return None`` nor a coroutine killed by
+    ``asyncio.wait_for`` that would lose the partial state).
+
+    ``asyncio.wait_for`` is retained only as a safety net at a headroom margin
+    (see ``_conversational_safety_net_timeout``); the internal bound is
+    expected to fire first.
+
+    Outcomes:
+      * Internal bound fired (common on a real LLM): ``success=True``,
+        ``terminates=True``, ``decides=True`` (real partial verdict), with
+        ``extra_metrics["wall_clock_bounded"]=True`` as the honest nuance.
+      * Safety-net timeout (rare — single in-flight call hung past the
+        between-turn check): ``success=False``, ``terminates=True``,
+        ``terminated_by_budget=True`` (honest partial, never faked into
+        success — anti-#1019).
     """
     from argumentation_analysis.orchestration.conversational_orchestrator import (
         run_conversational_analysis,
@@ -368,17 +394,18 @@ async def run_conversational_mode(
         f"wall-time-bounded at {max_wall_seconds:g}s)"
     )
     start = time.time()
+    safety_net = _conversational_safety_net_timeout(max_wall_seconds)
     try:
         result = await asyncio.wait_for(
-            run_conversational_analysis(text=text),
-            timeout=max_wall_seconds,
+            run_conversational_analysis(text=text, max_wall_seconds=max_wall_seconds),
+            timeout=safety_net,
         )
     except asyncio.TimeoutError:
         duration = time.time() - start
         logger.warning(
-            f"Conversational mode on {corpus_id} hit the "
-            f"{max_wall_seconds:g}s budget after {duration:.2f}s — "
-            "recording partial verdict (terminated_by_budget=True)."
+            f"Conversational mode on {corpus_id} hit the {safety_net:g}s "
+            f"safety-net (internal {max_wall_seconds:g}s bound did not exit "
+            f"in time) after {duration:.2f}s — recording honest partial."
         )
         return ModeResult(
             mode="conversational",
@@ -387,7 +414,7 @@ async def run_conversational_mode(
             terminates=True,
             terminated_by_budget=True,
             duration_seconds=round(duration, 2),
-            error=f"Budget breached (>={max_wall_seconds:g}s)",
+            error=f"Safety-net timeout (>={safety_net:g}s)",
             scope_of_work=scope,
         )
     except Exception as exc:
@@ -403,11 +430,26 @@ async def run_conversational_mode(
         )
     duration = time.time() - start
 
+    budget = result.get("budget", {}) if isinstance(result, dict) else {}
+    wall_clock_bounded = bool(budget.get("wall_clock_bounded", False))
+
     state = result.get("state_snapshot", {})
     total_fields = len(state) if state else 1
     non_empty = sum(
         1 for v in (state or {}).values() if v and v not in ([], {}, "", None, 0)
     )
+
+    planned_phases = result.get("phases", []) if isinstance(result, dict) else []
+    conv_log = result.get("conversation_log", []) if isinstance(result, dict) else []
+    # Honest phase count: only planned macro-phases that actually produced an
+    # agent message. A phase skipped by the wall-clock bound does NOT count
+    # (anti-théâtre #1019 — no inflated phases_completed for an empty partial).
+    phases_ran = {
+        m.get("phase")
+        for m in conv_log
+        if isinstance(m, dict) and m.get("phase") in planned_phases
+    }
+    total_messages = result.get("total_messages", 0) if isinstance(result, dict) else 0
 
     return ModeResult(
         mode="conversational",
@@ -417,14 +459,20 @@ async def run_conversational_mode(
         duration_seconds=round(duration, 2),
         state_fill_rate=round(non_empty / max(total_fields, 1), 3),
         fallacy_count=result.get("extra_metrics", {}).get("fallacy_count", 0),
-        phases_completed=len(result.get("phases", [])),
-        phases_total=len(result.get("phases", [])),
+        phases_completed=len(phases_ran),
+        phases_total=len(planned_phases),
         capabilities_used=result.get("capabilities_used", []),
-        decides=bool(result.get("phases")),
+        # C1 #1500: a real verdict — partial state reached at the bound counts.
+        # ``decides`` reflects whether any agent actually produced a message,
+        # honest on both clean completion and wall-clock-bounded partial.
+        decides=total_messages > 0,
+        terminated_by_budget=False,
         scope_of_work=scope,
         extra_metrics={
-            "total_messages": result.get("total_messages", 0),
+            "total_messages": total_messages,
             "duration_seconds_raw": result.get("duration_seconds", 0),
+            "wall_clock_bounded": wall_clock_bounded,
+            "conversational_status": result.get("status"),
         },
     )
 
@@ -696,8 +744,12 @@ def generate_report(
         Mode | Corpus | Terminates | Wall-Time | Decides | Phases | Scope
 
     Status legend:
-      ✅ terminates=True, success=True
-      ⏱ terminates=True, terminated_by_budget=True (honest partial)
+      ✅ terminates=True, success=True (clean completion)
+      ✅⏱ bounded — success on a wall-clock-bounded PARTIAL verdict (C1 #1500):
+            the conversational mode exited cleanly at the bound and the partial
+            state IS the verdict (real, comparable — not a killed coroutine).
+      ⏱ terminates=True, terminated_by_budget=True (honest partial — safety-net
+            timeout fired, no verdict produced)
       ❌ terminates=False (real failure / exception)
     """
     lines = [
@@ -723,6 +775,8 @@ def generate_report(
     for r in sorted(results, key=lambda x: (x.mode, x.corpus_id)):
         if r.terminated_by_budget:
             status = "⏱ budget"
+        elif r.extra_metrics.get("wall_clock_bounded"):
+            status = "✅⏱ bounded"
         elif r.terminates and r.success:
             status = "✅"
         else:

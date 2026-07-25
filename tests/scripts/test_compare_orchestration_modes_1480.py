@@ -33,6 +33,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -182,6 +183,180 @@ class TestConversationalWallBudget:
         assert "Budget breached" in (result.error or "")
         # Surface the patched runner to silence the linter about real_runner.
         _ = real_runner
+
+
+class TestConversationalInternalBound:
+    """C1 #1500 — the wall-clock bound is enforced INTERNALLY by
+    ``run_conversational_analysis``; the harness maps the resulting partial
+    verdict to ``success=True`` / ``decides=True`` (a REAL verdict at the
+    bound, anti-#1019), keeping ``asyncio.wait_for`` only as a safety net.
+
+    Distinct from ``TestConversationalWallBudget`` above, which covers the
+    safety-net-fires contract via a stub runner. These tests exercise the real
+    ``run_conversational_mode`` with the inner runner patched.
+    """
+
+    def test_safety_net_timeout_math(self) -> None:
+        """The safety net gives 20 % headroom for large budgets, 30 s min for
+        small ones — so the internal bound reliably fires first."""
+        mod = _load_harness_module()
+        # 20 % headroom dominates for large budgets.
+        assert mod._conversational_safety_net_timeout(180.0) == 216.0
+        # 30 s minimum headroom dominates for small budgets.
+        assert mod._conversational_safety_net_timeout(10.0) == 40.0
+        assert mod._conversational_safety_net_timeout(60.0) == 90.0
+
+    def test_internal_bound_maps_to_real_partial_verdict(self) -> None:
+        mod = _load_harness_module()
+        fake_result = {
+            "phases": [
+                "Extraction & Detection",
+                "Formal Analysis & Quality",
+                "Synthesis & Debate",
+            ],
+            "conversation_log": [
+                {
+                    "phase": "Extraction & Detection",
+                    "turn": 1,
+                    "agent": "ExtractAgent",
+                    "content": "partial",
+                },
+            ],
+            "total_messages": 1,
+            "state_snapshot": {"identified_arguments": ["arg_0"]},
+            "budget": {"wall_clock_bounded": True},
+            "capabilities_used": ["fact_extraction"],
+            "status": "WALL_CLOCK_BOUNDED",
+            "duration_seconds": 30.0,
+        }
+
+        async def fake_run(**kwargs):
+            return fake_result
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.conversational_orchestrator"
+                ".run_conversational_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_conversational_mode(
+                    "text", "corpus_A", max_wall_seconds=30.0
+                )
+
+        result = asyncio.run(_drive())
+
+        # The partial state reached at the bound IS a real verdict (anti-#1019).
+        assert result.success is True
+        assert result.terminates is True
+        assert result.decides is True
+        assert result.terminated_by_budget is False
+        assert result.extra_metrics["wall_clock_bounded"] is True
+        assert result.extra_metrics["conversational_status"] == "WALL_CLOCK_BOUNDED"
+        # Honest phase count: only 1 of 3 planned phases produced a message.
+        assert result.phases_completed == 1
+        assert result.phases_total == 3
+
+    def test_clean_completion_not_marked_bounded(self) -> None:
+        """A run that completes within the bound is not flagged bounded."""
+        mod = _load_harness_module()
+        fake_result = {
+            "phases": [
+                "Extraction & Detection",
+                "Formal Analysis & Quality",
+                "Synthesis & Debate",
+            ],
+            "conversation_log": [
+                {
+                    "phase": "Extraction & Detection",
+                    "turn": 1,
+                    "agent": "ExtractAgent",
+                    "content": "x",
+                },
+                {
+                    "phase": "Formal Analysis & Quality",
+                    "turn": 1,
+                    "agent": "FormalAgent",
+                    "content": "y",
+                },
+                {
+                    "phase": "Synthesis & Debate",
+                    "turn": 1,
+                    "agent": "DebateAgent",
+                    "content": "z",
+                },
+            ],
+            "total_messages": 3,
+            "state_snapshot": {"identified_arguments": ["arg_0"]},
+            "budget": {"wall_clock_bounded": False},
+            "capabilities_used": ["fact_extraction"],
+            "status": "COMPLETED",
+            "duration_seconds": 12.0,
+        }
+
+        async def fake_run(**kwargs):
+            return fake_result
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.conversational_orchestrator"
+                ".run_conversational_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_conversational_mode(
+                    "text", "corpus_A", max_wall_seconds=30.0
+                )
+
+        result = asyncio.run(_drive())
+
+        assert result.success is True
+        assert result.decides is True
+        assert result.extra_metrics["wall_clock_bounded"] is False
+        assert result.phases_completed == 3
+
+    def test_safety_net_timeout_is_honest_partial(self) -> None:
+        """When the safety-net ``asyncio.wait_for`` DOES fire (a single
+        in-flight call hung past the between-turn check), the verdict is an
+        honest partial — never faked into success (anti-#1019)."""
+        mod = _load_harness_module()
+
+        async def fake_wait_for(coro, timeout=None):
+            coro.close()  # avoid 'coroutine never awaited' warning
+            raise asyncio.TimeoutError()
+
+        async def _drive():
+            with patch.object(asyncio, "wait_for", fake_wait_for):
+                return await mod.run_conversational_mode(
+                    "text", "corpus_A", max_wall_seconds=30.0
+                )
+
+        result = asyncio.run(_drive())
+
+        assert result.success is False
+        assert result.terminates is True
+        assert result.terminated_by_budget is True
+        assert "Safety-net timeout" in (result.error or "")
+
+    def test_report_marks_bounded_verdict_distinctly(self) -> None:
+        """The trade-off table distinguishes a bounded partial verdict (✅⏱)
+        from a clean completion (✅) and a safety-net breach (⏱ budget)."""
+        mod = _load_harness_module()
+        report = mod.generate_report(
+            [
+                mod.ModeResult(
+                    mode="conversational",
+                    corpus_id="corpus_A",
+                    success=True,
+                    terminates=True,
+                    decides=True,
+                    duration_seconds=180.0,
+                    phases_completed=2,
+                    phases_total=3,
+                    scope_of_work="AgentGroupChat (bounded)",
+                    extra_metrics={"wall_clock_bounded": True},
+                ),
+            ]
+        )
+        assert "✅⏱ bounded" in report
 
 
 class TestReportFormat:
