@@ -137,8 +137,22 @@ class ModeResult:
                             ``False`` if the runner crashed mid-flight.
         wall_time_seconds  — measured wall-clock (matches duration_seconds,
                             kept as a separate column for the report).
-        decides            — bool: did the mode emit a decision (verdict,
-                            classification, or governance outcome)?
+        decides            — Optional[bool]: did the mode produce at least one
+                            usable VERDICT ARTIFACT? Computed UNIFORMLY for
+                            every mode by :func:`_compute_decides` (Track CA
+                            #1529) — never hand-set per runner. A mode decides
+                            iff it left behind any of: a non-empty shared state
+                            (``state_fill_rate > 0``), an extracted argument or
+                            fallacy, an agent dialogue message, a mode-specific
+                            conclusion/synthesis (``extra_metrics["verdict_artifact"]``),
+                            or a completed workflow phase. ``None`` = not yet
+                            computed (a runner that bypassed the helper);
+                            ``False`` = computed "no artifact" (e.g. a
+                            conversational run cut at the safety-net with 0/0
+                            phases — honestly ``—``, anti-#1019: "I checked,
+                            nothing" is not "indeterminate"). A budget breach
+                            that still produced partial artifacts honestly
+                            decides ``True`` (the partial state IS the verdict).
         terminated_by_budget — bool: True iff the run hit the wall-clock
                             budget and was killed by asyncio.wait_for.
                             Treated as a HONEST PARTIAL verdict (anti-pendule
@@ -167,12 +181,57 @@ class ModeResult:
     extra_metrics: Dict[str, Any] = field(default_factory=dict)
     # Trade-off columns (BO-4 #1480):
     terminates: bool = True
-    decides: bool = False
+    # Track CA #1529: default is None ("not computed"), NOT False ("no"). A
+    # runner that forgets the uniform helper shows `—` (indeterminate) rather
+    # than asserting a false "no". run_all computes the real value for every
+    # result via _compute_decides before the report is rendered.
+    decides: Optional[bool] = None
     terminated_by_budget: bool = False
     scope_of_work: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+def _compute_decides(result: ModeResult) -> bool:
+    """The ONE uniform definition of whether a mode *decided* (Track CA #1529).
+
+    A mode decides iff it produced at least one usable **verdict artifact**.
+    The signals are read off the common ``ModeResult`` fields every runner
+    populates — so the same definition applies to pipeline / conversational /
+    hierarchical alike, and no runner hand-sets ``decides`` on a local
+    criterion (the BO-4 #1480 defect: three runners, three ad-hoc
+    definitions, plus a misleading ``False`` default that painted the
+    hardest-working mode — pipeline 15/15 phases — as ``Decides —``).
+
+    Order is irrelevant (short-circuit on the first artifact found):
+
+    * ``state_fill_rate > 0`` — the shared analysis state was populated.
+    * ``argument_count > 0`` or ``fallacy_count > 0`` — extracted artifacts.
+    * ``extra_metrics["total_messages"] > 0`` — agent dialogue (conversational).
+    * ``extra_metrics["verdict_artifact"]`` — a mode-specific conclusion /
+      synthesis / strategic decision (e.g. hierarchical_bridge emits a
+      ``conclusion`` without filling the shared state — documented as a
+      legitimate decide, per DoD-4 #1529).
+    * ``phases_completed > 0`` — a completed workflow phase emits its phase's
+      artifact by definition.
+
+    Anti-#1019 / anti-pendule: returning ``True`` everywhere would destroy the
+    column's discriminating power. The non-regression test is that a genuinely
+    sterile run (conversational cut at the safety-net: 0/0 phases, 0 % fill,
+    0 messages) stays ``False`` → ``—``.
+    """
+    if result.state_fill_rate > 0:
+        return True
+    if result.argument_count > 0 or result.fallacy_count > 0:
+        return True
+    if result.extra_metrics.get("total_messages", 0) > 0:
+        return True
+    if result.extra_metrics.get("verdict_artifact"):
+        return True
+    if result.phases_completed > 0:
+        return True
+    return False
 
 
 # ── Depth-parity trade-off (C3 #1500) ─────────────────────────────────────
@@ -462,10 +521,8 @@ async def run_conversational_mode(
         phases_completed=len(phases_ran),
         phases_total=len(planned_phases),
         capabilities_used=result.get("capabilities_used", []),
-        # C1 #1500: a real verdict — partial state reached at the bound counts.
-        # ``decides`` reflects whether any agent actually produced a message,
-        # honest on both clean completion and wall-clock-bounded partial.
-        decides=total_messages > 0,
+        # Track CA #1529: `decides` is no longer hand-set here — run_all
+        # computes it uniformly from phases_completed + total_messages below.
         terminated_by_budget=False,
         scope_of_work=scope,
         extra_metrics={
@@ -500,7 +557,7 @@ async def run_conversation_deterministic_mode(text: str, corpus_id: str) -> Mode
         fallacy_count=conv_state.get("state", {}).get("fallacies_detected", 0),
         phases_completed=3,  # informal + fol + synthesis
         phases_total=3,
-        decides=True,
+        # Track CA #1529: `decides` computed uniformly (phases_completed=3 → True).
         scope_of_work=("ConversationOrchestrator(mode=demo, SimulatedAgent, no LLM)"),
         extra_metrics={
             "messages_count": conv_state.get("messages_count", 0),
@@ -556,16 +613,24 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
     phases_completed = summary.get("completed", 0)
     phases_total = summary.get("total", 0)
     # Bridge mode DÉCIDE firsthand via real agents when the registry is
-    # populated: it returns a `conclusion` (R644). Treat presence of
-    # `conclusion` as `decides=True`.
-    decides = bool(
-        isinstance(result, dict)
-        and (
+    # populated: it returns a `conclusion` (R644). Track CA #1529: we no longer
+    # hand-set `decides` — instead we stash the mode-specific verdict artifact
+    # (conclusion / strategic_decision / governance-decoded-firsthand flag)
+    # into the uniform `extra_metrics["verdict_artifact"]` channel, and run_all
+    # computes `decides` uniformly via `_compute_decides`. This documents that a
+    # strategic conclusion counts as deciding EVEN WITHOUT shared-state fill
+    # (the DoD-4 #1529 case: bridge 0.0 % fill but Decides ✅ is legitimate).
+    verdict_artifact = None
+    if isinstance(result, dict):
+        verdict_artifact = (
             result.get("conclusion")
             or result.get("strategic_decision")
-            or result.get("governance_decided_firsthand") is True
+            or (
+                "governance_decided_firsthand"
+                if result.get("governance_decided_firsthand") is True
+                else None
+            )
         )
-    )
 
     return ModeResult(
         mode="hierarchical_bridge",
@@ -578,7 +643,6 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
         capabilities_used=(
             result.get("capabilities_used", []) if isinstance(result, dict) else []
         ),
-        decides=decides,
         scope_of_work=(
             "Strategic planning -> objectives_to_workflow -> "
             "WorkflowExecutor (Lego/DAG, 4 axes)"
@@ -587,6 +651,7 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
             "objectives_count": (
                 len(result.get("objectives", [])) if isinstance(result, dict) else 0
             ),
+            "verdict_artifact": verdict_artifact,
         },
     )
 
@@ -633,16 +698,20 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
     summary = result.get("summary", {}) if isinstance(result, dict) else {}
     phases_completed = summary.get("completed", 0)
     phases_total = summary.get("total", 0)
-    # Delegation mode DÉCIDE firsthand on hierarchical_fallacy (R648).
-    decides = bool(
-        isinstance(result, dict)
-        and (
+    # Delegation mode DÉCIDE firsthand on hierarchical_fallacy (R648). Track CA
+    # #1529: `decides` is computed uniformly by run_all via `_compute_decides`
+    # — from phases_completed (above) and the stashed verdict artifact below.
+    verdict_artifact = None
+    if isinstance(result, dict):
+        verdict_artifact = (
             result.get("conclusion")
             or result.get("strategic_decision")
-            or result.get("broadcasted_to_zero_agents") is False
-            or phases_completed > 0
+            or (
+                "broadcasted_to_nonzero_agents"
+                if result.get("broadcasted_to_zero_agents") is False
+                else None
+            )
         )
-    )
 
     return ModeResult(
         mode="hierarchical_delegation",
@@ -655,7 +724,6 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
         capabilities_used=(
             result.get("capabilities_used", []) if isinstance(result, dict) else []
         ),
-        decides=decides,
         scope_of_work=(
             "Strategic -> Tactical -> Operational (3-tier, "
             "5 tasks via CapabilityRegistry)"
@@ -664,6 +732,7 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
             "objectives_count": (
                 len(result.get("objectives", [])) if isinstance(result, dict) else 0
             ),
+            "verdict_artifact": verdict_artifact,
         },
     )
 
@@ -955,6 +1024,15 @@ async def run_all(
                     )
                 )
                 logger.error(f"  → {mode} on {corpus_id}: EXCEPTION {e}")
+
+    # Track CA #1529: compute `decides` UNIFORMLY for every mode from the
+    # common ModeResult fields — the single source of truth, so no runner can
+    # hand-set it on a local criterion. A budget breach that still produced
+    # partial artifacts honestly decides True (the partial state IS the
+    # verdict, anti-#1019); a genuinely sterile run (conversational cut at the
+    # safety-net: 0/0 phases, 0 % fill) stays False → `—`.
+    for r in results:
+        r.decides = _compute_decides(r)
 
     # Generate report
     report = generate_report(results)

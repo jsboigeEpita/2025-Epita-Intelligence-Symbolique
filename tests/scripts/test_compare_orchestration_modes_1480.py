@@ -136,7 +136,10 @@ class TestModeResultColumns:
         mod = _load_harness_module()
         result = mod.ModeResult(mode="x", corpus_id="y", success=True)
         assert result.terminates is True
-        assert result.decides is False
+        # Track CA #1529: the default is now None ("not computed"), NOT False
+        # ("no") — a runner that bypasses the uniform _compute_decides helper
+        # surfaces as indeterminate, not as a false "no verdict".
+        assert result.decides is None
         assert result.terminated_by_budget is False
         assert result.scope_of_work == ""
 
@@ -248,7 +251,13 @@ class TestConversationalInternalBound:
         # The partial state reached at the bound IS a real verdict (anti-#1019).
         assert result.success is True
         assert result.terminates is True
-        assert result.decides is True
+        # Track CA #1529: `decides` is now computed UNIFORMLY by run_all (not
+        # hand-set by the runner), so a direct runner call leaves it None. The
+        # partial-verdict-is-real contract is verified via the uniform helper:
+        # the fields the runner populated (1 message, 1/3 phases, non-empty
+        # state) DO constitute a decision.
+        assert result.decides is None
+        assert mod._compute_decides(result) is True
         assert result.terminated_by_budget is False
         assert result.extra_metrics["wall_clock_bounded"] is True
         assert result.extra_metrics["conversational_status"] == "WALL_CLOCK_BOUNDED"
@@ -309,7 +318,8 @@ class TestConversationalInternalBound:
         result = asyncio.run(_drive())
 
         assert result.success is True
-        assert result.decides is True
+        # Track CA #1529: decides computed uniformly (3 messages, 3/3 phases → True).
+        assert mod._compute_decides(result) is True
         assert result.extra_metrics["wall_clock_bounded"] is False
         assert result.phases_completed == 3
 
@@ -457,6 +467,182 @@ class TestCliDryRun:
         assert (
             "--max-wall-seconds" in result.stdout
         ), "BO-4 regression: --max-wall-seconds CLI flag is missing."
+
+
+class TestComputeDecidesCA:
+    """Track CA #1529 — ``decides`` computed UNIFORMLY for every mode.
+
+    The BO-4 #1480 defect: ``ModeResult.decides`` defaulted to ``False`` and
+    each runner hand-set it on a different local criterion (conversational:
+    ``total_messages > 0``; hierarchical: a ``conclusion``; pipeline: never →
+    the misleading ``False`` default). Result: ``pipeline_standard`` with
+    15/15 phases and 51.2 % state fill was painted ``Decides —``. CA #1529
+    replaces this with ONE definition (:func:`_compute_decides`) applied in a
+    single ``run_all`` pass, and changes the default to ``None``.
+
+    These tests are deterministic and LLM/JVM-free — they build ``ModeResult``
+    instances directly and exercise the helper + the ``run_all`` normalization.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    def test_sterile_run_decides_false(self) -> None:
+        """Anti-pendule guard: a run that produced nothing stays False → `—`.
+        This is the non-regression test the coord emphasized — a fix that
+        turns every mode green is wrong."""
+        mod = self._harness()
+        sterile = mod.ModeResult(
+            mode="conversational",
+            corpus_id="corpus_A",
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,  # cut at the safety-net
+            error="Safety-net timeout (>=60s)",
+        )
+        assert mod._compute_decides(sterile) is False, (
+            "CA #1529 regression: a genuinely sterile run (0/0 phases, 0 % "
+            "fill, 0 messages) must decide False, not True."
+        )
+
+    def test_state_fill_decides_true(self) -> None:
+        mod = self._harness()
+        filled = mod.ModeResult(
+            mode="pipeline_standard",
+            corpus_id="corpus_A",
+            success=True,
+            state_fill_rate=0.512,
+        )
+        assert mod._compute_decides(filled) is True
+
+    def test_extracted_artifacts_decide_true(self) -> None:
+        mod = self._harness()
+        for kwargs in ({"argument_count": 3}, {"fallacy_count": 2}):
+            r = mod.ModeResult(mode="x", corpus_id="y", success=True, **kwargs)
+            assert mod._compute_decides(r) is True, (
+                f"CA #1529 regression: extracted artifacts ({kwargs}) must "
+                "count as deciding."
+            )
+
+    def test_agent_messages_decide_true(self) -> None:
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="conversational",
+            corpus_id="corpus_A",
+            success=True,
+            extra_metrics={"total_messages": 5},
+        )
+        assert mod._compute_decides(r) is True
+
+    def test_verdict_artifact_decides_true_without_fill(self) -> None:
+        """DoD-4 #1529: hierarchical_bridge emits a strategic ``conclusion``
+        without filling the shared state (0.0 % fill) — that is a LEGITIMATE
+        decide, documented via the uniform ``verdict_artifact`` channel."""
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="hierarchical_bridge",
+            corpus_id="corpus_A",
+            success=True,
+            state_fill_rate=0.0,
+            extra_metrics={"verdict_artifact": "strategic conclusion text"},
+        )
+        assert mod._compute_decides(r) is True, (
+            "CA #1529 regression: a mode-specific conclusion (verdict_artifact) "
+            "must count as deciding even at 0 % shared-state fill."
+        )
+
+    def test_phases_completed_decides_true(self) -> None:
+        """A completed workflow phase emits its phase's artifact by definition
+        — so ``phases_completed > 0`` decides True even at 0 % fill."""
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="x",
+            corpus_id="y",
+            success=True,
+            phases_completed=4,
+        )
+        assert mod._compute_decides(r) is True
+
+    def test_pipeline_bug_reproduction_now_decides_true(self) -> None:
+        """The coord's firsthand DoD-4 bug (R706): pipeline_standard completing
+        15/15 phases, 51.2 % fill, 14 capabilities was shown ``Decides —``
+        because run_pipeline_mode never set decides. The uniform helper must
+        now compute True."""
+        mod = self._harness()
+        pipeline_like = mod.ModeResult(
+            mode="pipeline_standard",
+            corpus_id="corpus_A",
+            success=True,
+            duration_seconds=320.75,
+            state_fill_rate=0.512,
+            phases_completed=15,
+            phases_total=15,
+            capabilities_used=[f"cap_{i}" for i in range(14)],
+        )
+        assert mod._compute_decides(pipeline_like) is True, (
+            "CA #1529 NOT-fixed: pipeline with 15/15 phases and 51.2 % fill "
+            "must decide True (the BO-4 false-negative the coord caught firsthand)."
+        )
+
+    def test_conversational_safety_net_stays_false(self) -> None:
+        """The coord's non-regression guard verbatim: the conversational run
+        cut at the safety-net (0/0 phases, 0 % fill) must HONESTLY stay False.
+        If CA turned it green, CA would be theater."""
+        mod = self._harness()
+        safety_net = mod.ModeResult(
+            mode="conversational",
+            corpus_id="corpus_A",
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            duration_seconds=60.01,
+            phases_completed=0,
+            phases_total=0,
+            state_fill_rate=0.0,
+            error="Safety-net timeout (>=30s)",
+            extra_metrics={"total_messages": 0},
+        )
+        assert mod._compute_decides(safety_net) is False
+
+    def test_run_all_computes_decides_uniformly(self) -> None:
+        """``run_all`` is the single point that computes ``decides`` for every
+        result via the uniform helper — regardless of what the runners return.
+        A deciding stub (phases>0) → True; a sterile stub → False; neither
+        hand-sets ``decides``."""
+        mod = self._harness()
+
+        async def stub_deciding(text, cid):
+            return mod.ModeResult(
+                mode="stub_deciding",
+                corpus_id=cid,
+                success=True,
+                phases_completed=2,
+            )
+
+        async def stub_sterile(text, cid):
+            return mod.ModeResult(mode="stub_sterile", corpus_id=cid, success=True)
+
+        real_runners = dict(mod.MODE_RUNNERS)
+        mod.MODE_RUNNERS.clear()
+        mod.MODE_RUNNERS["stub_deciding"] = stub_deciding
+        mod.MODE_RUNNERS["stub_sterile"] = stub_sterile
+        try:
+            results = asyncio.run(
+                mod.run_all(
+                    modes=["stub_deciding", "stub_sterile"], corpora=["corpus_A"]
+                )
+            )
+        finally:
+            mod.MODE_RUNNERS.clear()
+            mod.MODE_RUNNERS.update(real_runners)
+
+        by_mode = {r.mode: r for r in results}
+        assert (
+            by_mode["stub_deciding"].decides is True
+        ), "CA #1529: run_all did not compute decides=True for the deciding stub."
+        assert (
+            by_mode["stub_sterile"].decides is False
+        ), "CA #1529: run_all did not compute decides=False for the sterile stub."
 
 
 if __name__ == "__main__":
