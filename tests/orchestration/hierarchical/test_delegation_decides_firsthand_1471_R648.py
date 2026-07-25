@@ -137,6 +137,20 @@ class TestDelegationModeDecidesFirsthand:
                     "description": "Extraire segments pertinents",
                     "required_capabilities": ["text_extraction"],
                     "context": {},
+                    # CC #1531: le corpus voyage par ``text_extracts`` ; sans
+                    # lui l'exécuteur échoue en ``insufficient_input`` AVANT
+                    # d'invoquer. Le routage legacy→registry testé ici est
+                    # décidé en amont de cette garde : l'assertion est intacte.
+                    "text_extracts": [
+                        {
+                            "id": "x1",
+                            "content": (
+                                "Tous les experts le disent, donc c'est vrai. "
+                                "Et si vous n'êtes pas d'accord, c'est que vous "
+                                "ne comprenez rien au sujet."
+                            ),
+                        }
+                    ],
                 }
             )
         )
@@ -197,6 +211,12 @@ class TestDelegationModeDictStrSignatureBridge:
                 "description": "Le texte d'entrée est ici.",
                 "required_capabilities": ["spy_signature_bridge"],
                 "context": {"phase": "spy"},
+                # CC #1531: le corpus voyage par ``text_extracts``, et c'est
+                # LUI qui doit arriver en position 1 — pas la ``description``
+                # (un libellé de tâche). La garantie str-pas-dict de R648 est
+                # inchangée ; l'assertion ajoutée plus bas fixe l'identité du
+                # texte transmis.
+                "text_extracts": [{"id": "x1", "content": "CORPUS_MARK_spy_opaque"}],
             }
         )
 
@@ -204,6 +224,10 @@ class TestDelegationModeDictStrSignatureBridge:
         assert captured["input_text_type"] == "str", (
             f"provider received {captured['input_text_type']} — the "
             f"dict/str mismatch has regressed"
+        )
+        assert captured["input_text_value"] == "CORPUS_MARK_spy_opaque", (
+            f"provider received {captured['input_text_value']!r} at position 1 "
+            f"— the CORPUS must be analysed, not the task label (CC #1531)"
         )
         assert captured[
             "context_has_input_data"

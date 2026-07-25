@@ -138,9 +138,49 @@ class StrategicAdapter:
             metadata=message.metadata,
         )
 
-        self.logger.info(
-            f"Objective {objective_type} broadcasted to {len(recipients)} agents"
+        # CC #1531: ``publish`` ne retourne QUE les abonnés du topic. Le fan-out
+        # C2 #1500 vers les ``global_handlers`` du middleware livre réellement le
+        # broadcast sans jamais apparaître dans ce compteur — le lire seul
+        # SOUS-rapporte une livraison qui a bien eu lieu. On compte donc les deux
+        # chemins de livraison que ``publish`` emprunte effectivement.
+        #
+        # ⚠ ``initialize_protocols`` enregistre son propre
+        # ``_debug_message_handler`` comme handler global (middleware.py:525), et
+        # ``publish`` déclenche cette initialisation paresseuse : compter la
+        # liste brute donnerait TOUJOURS ≥1 et éteindrait définitivement
+        # l'alerte ci-dessous. On l'exclut — un handler de debug n'est pas un
+        # destinataire (anti-pendule : ne pas fabriquer l'évidence qui fait
+        # taire la mesure).
+        own_debug = getattr(self.middleware, "_debug_message_handler", None)
+        listeners = len(
+            [
+                handler
+                for handler in (getattr(self.middleware, "global_handlers", None) or [])
+                if handler != own_debug
+            ]
         )
+        if recipients or listeners:
+            self.logger.info(
+                f"Objective {objective_type} broadcasted to {len(recipients)} "
+                f"topic subscriber(s) + {listeners} global listener(s)"
+            )
+        else:
+            # CC #1531 (reclassé depuis le DoD-2 de l'Epic #1500) : publier sur
+            # un topic sans abonné est un no-op TOTAL — le ``message`` construit
+            # ci-dessus n'est jamais émis sur le canal, seul ``publish`` l'est.
+            # Aucun composant de production ne s'abonne à ``objectives.*``
+            # (le tier tactique s'abonne au canal HIERARCHICAL, pas à ces
+            # topics), donc l'appelant reçoit un message_id comme si quelque
+            # chose avait été délivré. Le signaler au lieu de l'enterrer en INFO.
+            #
+            # Anti-pendule : NE PAS inventer un abonné pour faire monter le
+            # compteur à 1, et NE PAS se mettre à émettre ``message`` sur le
+            # canal ici (ce serait changer la sémantique de livraison hors
+            # périmètre). C'est la VISIBILITÉ du no-op qui est en jeu.
+            self.logger.warning(
+                f"Objective {objective_type} published on topic {topic_id!r} with "
+                f"NO subscriber — nothing was delivered (no-op broadcast)."
+            )
         return message.id
 
     def receive_report(

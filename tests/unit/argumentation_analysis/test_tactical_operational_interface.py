@@ -209,23 +209,45 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.assertIn("fallacy_pattern_matching", technique_names)
 
     def test_determine_relevant_extracts(self):
-        """Teste la détermination des extraits de texte pertinents."""
-        # Définir une tâche fictive
+        """Teste la détermination des extraits de texte pertinents.
+
+        CC #1531 : ce test validait auparavant le comportement de STUB — la
+        méthode retournait un extrait codé en dur (``"Extrait à analyser..."``)
+        et l'assertion ``len(result) > 0`` passait sans qu'aucun texte source
+        n'existe. Le contrat est désormais : l'extrait porte le corpus réel,
+        propagé par ``TacticalState.raw_text``.
+        """
         task = {
             "description": "Extraire les segments de texte contenant des arguments potentiels",
             "objective_id": "obj-1",
         }
+        corpus = "CORPUS_MARK_opaque — texte source à analyser."
+        # L'état tactique est un ``MagicMock(spec=TacticalState)`` : appeler
+        # ``set_raw_text`` n'écrirait rien (méthode mockée), on pose donc
+        # directement l'attribut que l'interface lit.
+        self.interface.tactical_state.raw_text = corpus
 
-        # Appeler la méthode à tester
         result = self.interface._determine_relevant_extracts(task)
 
-        # Vérifier le résultat
         self.assertIsInstance(result, list)
         self.assertTrue(len(result) > 0)
         self.assertIn("id", result[0])
         self.assertIn("source", result[0])
         self.assertIn("content", result[0])
-        # La clé 'relevance' n'est plus garantie
+        # Le contenu est le corpus, pas un placeholder.
+        self.assertEqual(result[0]["content"], corpus)
+
+    def test_determine_relevant_extracts_without_source_text(self):
+        """Sans texte source, aucun extrait fabriqué (anti-#1019).
+
+        Retourner une liste vide fait échouer bruyamment le tier opérationnel
+        (``insufficient_input``) au lieu de lui faire analyser un placeholder.
+        """
+        task = {"description": "Analyser", "objective_id": "obj-1"}
+
+        result = self.interface._determine_relevant_extracts(task)
+
+        self.assertEqual(result, [])
 
     def test_determine_execution_parameters(self):
         """Teste la détermination des paramètres d'exécution."""

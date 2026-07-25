@@ -285,11 +285,33 @@ class TacticalOperationalInterface:
     def _determine_relevant_extracts(
         self, task: Dict[str, Any]
     ) -> List[Dict[str, Any]]:
+        """Retourne les extraits de texte que l'agent opérationnel doit analyser.
+
+        CC #1531: cette méthode retournait un extrait CODÉ EN DUR
+        (``"Extrait à analyser..."``). Les adaptateurs opérationnels lisent tous
+        ``task["text_extracts"]`` pour construire le texte qu'ils soumettent au
+        LLM — ils recevaient donc un placeholder au lieu du corpus, et l'agent
+        répondait honnêtement « aucun texte fourni » pendant que la chaîne
+        concluait au succès.
+
+        Le corpus descend maintenant par ``TacticalState.raw_text``. En son
+        absence on retourne une liste **vide** plutôt qu'un extrait fabriqué :
+        l'exécuteur opérationnel échoue alors bruyamment en
+        ``insufficient_input`` (anti-#1019 — pas de contenu inventé).
+        """
+        raw_text = getattr(self.tactical_state, "raw_text", None)
+        if not raw_text:
+            self.logger.warning(
+                "Aucun texte source au niveau tactique pour la tâche %s — "
+                "aucun extrait transmis (échec bruyant en aval).",
+                task.get("id", "unknown"),
+            )
+            return []
         return [
             {
                 "id": f"extract-{uuid.uuid4().hex[:8]}",
                 "source": "raw_text",
-                "content": "Extrait à analyser...",
+                "content": raw_text,
             }
         ]
 

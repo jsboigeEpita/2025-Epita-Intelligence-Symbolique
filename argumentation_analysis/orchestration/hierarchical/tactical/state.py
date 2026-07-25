@@ -23,6 +23,13 @@ class TacticalState:
         # Objectifs reçus du niveau stratégique
         self.assigned_objectives: List[Dict[str, Any]] = []
 
+        # Texte source à analyser, propagé depuis le niveau stratégique.
+        # CC #1531: le tier tactique n'avait aucun canal pour le corpus — seuls
+        # les objectifs descendaient. L'interface T→O fabriquait donc un extrait
+        # factice, et les agents opérationnels analysaient un libellé de tâche.
+        # Symétrique de ``StrategicState.raw_text`` (state.py:23).
+        self.raw_text: Optional[str] = None
+
         # Tâches décomposées
         self.tasks: Dict[str, List[Dict[str, Any]]] = {
             "pending": [],
@@ -70,6 +77,15 @@ class TacticalState:
 
         # Journal des actions tactiques
         self.tactical_actions_log: List[Dict[str, Any]] = []
+
+    def set_raw_text(self, text: str) -> None:
+        """
+        Définit le texte source à analyser au niveau tactique.
+
+        Args:
+            text: Le texte à analyser
+        """
+        self.raw_text = text
 
     def add_assigned_objective(self, objective: Dict[str, Any]) -> None:
         """
