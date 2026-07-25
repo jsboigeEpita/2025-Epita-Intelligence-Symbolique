@@ -24,6 +24,7 @@ import logging
 import os
 import re
 import time
+from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import semantic_kernel as sk
@@ -49,6 +50,41 @@ from argumentation_analysis.orchestration.trace_analyzer import (
 )
 
 logger = logging.getLogger("ConversationalOrchestrator")
+
+
+@dataclass
+class WallClockBudget:
+    """Wall-clock deadline for a conversational run (C1 #1500).
+
+    The turn-count cap (CONV-C #1334 ``max_total_turns``) bounds the NUMBER
+    of agent turns, but on a real LLM each turn is a slow round-trip — so a
+    turn-bounded run can still exceed 600s wall-clock (the R653 firsthand
+    finding that motivated this Epic). This budget bounds WALL-CLOCK time.
+
+    When exhausted, the run exits CLEANLY between turns: the partial state
+    accumulated so far IS the verdict. This is the anti-#1019 point — a real
+    bounded verdict at the bound, not a ``return None`` nor a coroutine
+    killed mid-flight by an external ``asyncio.wait_for`` (which would lose
+    the partial state and report ``decides=False``).
+    """
+
+    max_seconds: Optional[float]
+    start: float
+
+    @property
+    def active(self) -> bool:
+        """True iff a wall-clock bound was requested."""
+        return self.max_seconds is not None
+
+    @property
+    def deadline(self) -> Optional[float]:
+        """Absolute wall-clock deadline, or None when inactive."""
+        return (self.start + self.max_seconds) if self.active else None
+
+    def is_exhausted(self, now: float) -> bool:
+        """True iff the bound is active and ``now`` has reached the deadline."""
+        deadline = self.deadline
+        return deadline is not None and now >= deadline
 
 
 def _detect_language(text: str) -> str:
@@ -542,6 +578,7 @@ async def run_conversational_analysis(
     source_metadata: Optional[Dict[str, str]] = None,
     selector_context: Optional[Dict[str, Any]] = None,
     max_total_turns: Optional[int] = None,
+    max_wall_seconds: Optional[float] = None,
     render_restitution: bool = False,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
@@ -574,6 +611,14 @@ async def run_conversational_analysis(
             (not adjusted at runtime); hitting it appends a ``CapBreachRecord``
             and ends the run with status ``BUDGET_EXHAUSTED`` (#708 fail-loud).
             None defaults to the sum of the three macro-phase caps.
+        max_wall_seconds: C1 #1500 — wall-clock budget in seconds. When set,
+            the run checks elapsed time before each phase and before each agent
+            turn; on exhaustion it records a ``CapBreachRecord(cap_kind=
+            "wall_clock")`` and exits CLEANLY, returning the partial state as a
+            REAL verdict (status ``WALL_CLOCK_BOUNDED``) — anti-#1019: a vrai
+            verdict at the bound, not a killed coroutine / ``return None``.
+            None (default) leaves the run wall-clock-unbounded (turn-cap only),
+            preserving the prior behaviour for callers that do not opt in.
         render_restitution: CONV-D #1335 — if True, generate the 3-act
             restitution report from the completed state and attach it under
             ``result["restitution_report"]``. The conversational path does not
@@ -612,6 +657,7 @@ async def run_conversational_analysis(
             source_metadata=source_metadata,
             selector_context=selector_context,
             max_total_turns=max_total_turns,
+            max_wall_seconds=max_wall_seconds,
             render_restitution=render_restitution,
         )
 
@@ -723,10 +769,17 @@ async def _run_conversational_analysis_inner(
     source_metadata: Optional[Dict[str, str]] = None,
     selector_context: Optional[Dict[str, Any]] = None,
     max_total_turns: Optional[int] = None,
+    max_wall_seconds: Optional[float] = None,
     render_restitution: bool = False,
 ) -> Dict[str, Any]:
     """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
     start_time = time.time()
+
+    # C1 #1500: wall-clock budget. Checked before each phase (coarse) and
+    # threaded as an absolute deadline into _run_phase (per-turn, fine). On
+    # exhaustion the run exits cleanly and the partial state becomes the
+    # verdict — anti-#1019 (real bounded verdict, not a killed coroutine).
+    wall = WallClockBudget(max_seconds=max_wall_seconds, start=start_time)
 
     # CONV-C #1334 §6: pipeline-global tour cap. Default = sum of every phase
     # cap (3 macro + conditional Re-Analysis), derived from the per-phase config
@@ -743,6 +796,7 @@ async def _run_conversational_analysis_inner(
         )
     turns_used = 0
     budget_exhausted = False
+    wall_clock_bounded = False
 
     # 0b. Env var override for growth validation (#597)
     _env_growth = os.environ.get("ENABLE_GROWTH_VALIDATION", "").lower()
@@ -909,6 +963,30 @@ async def _run_conversational_analysis_inner(
             )
             break
 
+        # C1 #1500: wall-clock budget — stop once the deadline is reached.
+        # Distinct from the turn-count cap above: this bounds ELAPSED time so
+        # the mode terminates in a comparable timeframe on a real (slow) LLM.
+        # Breach is recorded (CapBreachRecord cap_kind="wall_clock") and the
+        # run ends with status WALL_CLOCK_BOUNDED; the partial state built
+        # after the loop IS the verdict (anti-#1019 — real, not faked/None).
+        if wall.is_exhausted(time.time()):
+            wall_clock_bounded = True
+            if hasattr(state, "record_cap_breach"):
+                state.record_cap_breach(
+                    cap_kind="wall_clock",
+                    turn=turns_used,
+                    detail=(
+                        f"wall-clock budget {max_wall_seconds:g}s atteint "
+                        f"avant phase '{phase_cfg['name']}'"
+                    ),
+                )
+            logger.warning(
+                f"[C1] Wall-clock budget atteint ({max_wall_seconds:g}s) — "
+                f"phase '{phase_cfg['name']}' et les suivantes sont sautées "
+                f"(verdict partiel honnête)."
+            )
+            break
+
         phase_name = phase_cfg["name"]
         phase_agent_names = phase_cfg["agents"]
         phase_agents = [
@@ -945,6 +1023,7 @@ async def _run_conversational_analysis_inner(
             enable_growth_validation=enable_growth_validation,
             growth_re_prompt_limit=growth_re_prompt_limit,
             reprompt_extractor=reprompt_extractor,
+            deadline=wall.deadline,
         )
         conversation_log.extend(phase_log)
 
@@ -1073,6 +1152,7 @@ async def _run_conversational_analysis_inner(
                         enable_growth_validation=enable_growth_validation,
                         growth_re_prompt_limit=growth_re_prompt_limit,
                         reprompt_extractor=reprompt_extractor,
+                        deadline=wall.deadline,
                     )
                     conversation_log.extend(phase_log)
 
@@ -1367,11 +1447,17 @@ async def _run_conversational_analysis_inner(
         "unified_state": state,
         "trace_report": trace_report,
         "reprompt_traces": reprompt_extractor.to_dict() if reprompt_extractor else None,
-        # CONV-C #1334 §6: pipeline-global budget accounting + fail-loud status.
+        # CONV-C #1334 §6 + C1 #1500: budget accounting + fail-loud status.
+        # wall_clock_bounded is surfaced so downstream readers (BO-4 harness,
+        # reports) can distinguish a real PARTIAL verdict reached at the
+        # wall-clock bound from a clean completion — both are successes (a
+        # verdict was produced), the flag is the honest nuance (anti-#1019).
         "budget": {
             "max_total_turns": max_total_turns,
             "turns_used": turns_used,
             "exhausted": budget_exhausted,
+            "max_wall_seconds": max_wall_seconds,
+            "wall_clock_bounded": wall_clock_bounded,
             "deliberation_turn_count": sum(
                 1
                 for r in getattr(state, "deliberation_trace", [])
@@ -1383,7 +1469,11 @@ async def _run_conversational_analysis_inner(
                 if r.get("record_type") == "cap_breach"
             ],
         },
-        "status": "BUDGET_EXHAUSTED" if budget_exhausted else "COMPLETED",
+        "status": (
+            "WALL_CLOCK_BOUNDED"
+            if wall_clock_bounded
+            else ("BUDGET_EXHAUSTED" if budget_exhausted else "COMPLETED")
+        ),
         "summary": {
             "completed": len(phase_configs),
             "failed": 0,
@@ -1665,6 +1755,7 @@ async def _run_phase(
     enable_growth_validation: bool = True,
     growth_re_prompt_limit: int = 2,
     reprompt_extractor=None,
+    deadline: Optional[float] = None,
 ) -> List[Dict[str, Any]]:
     """Run a single conversational phase with a set of agents.
 
@@ -1676,6 +1767,10 @@ async def _run_phase(
     compares a state fingerprint before/after.  If no growth occurred, the
     agent is re-prompted with explicit function-call feedback up to
     ``growth_re_prompt_limit`` times per turn.
+
+    ``deadline`` (C1 #1500) is an absolute wall-clock timestamp; when set, the
+    phase checks it before each agent turn and exits cleanly when passed, so a
+    wall-clock-bounded run preserves the partial state as the verdict.
     """
     messages: List[Dict[str, Any]] = []
     total_re_prompts = 0
@@ -1737,6 +1832,16 @@ async def _run_phase(
             if _check_convergence(state, phase_name, messages):
                 break
             if turn >= max_turns:
+                break
+
+            # C1 #1500: wall-clock deadline — exit cleanly between turns so the
+            # partial state accumulated so far is preserved as the verdict
+            # (anti-#1019: real bounded verdict, not a killed coroutine).
+            if deadline is not None and time.time() >= deadline:
+                logger.info(
+                    f"  [{phase_name}] Wall-clock deadline atteint au tour "
+                    f"{turn} — sortie propre (verdict partiel)."
+                )
                 break
 
             # Growth validation hook (AgentGroupChat path)
@@ -1816,6 +1921,15 @@ async def _run_phase(
     # Fallback: round-robin invocation with PM designation support
     # In SK 1.40, ChatCompletionAgent.invoke() returns an AsyncGenerator
     for turn in range(1, max_turns + 1):
+        # C1 #1500: wall-clock deadline — check before invoking the next agent
+        # so a bounded run exits cleanly between turns (partial state = verdict).
+        if deadline is not None and time.time() >= deadline:
+            logger.info(
+                f"  [{phase_name}] Wall-clock deadline atteint avant tour "
+                f"{turn} — sortie propre (verdict partiel)."
+            )
+            break
+
         agent = _select_next_agent(state, agents, turn)
         try:
             fp_before = _get_growth_fingerprint(state)
