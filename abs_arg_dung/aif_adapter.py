@@ -22,6 +22,30 @@ This adapter provides:
 * :func:`verify_aif_to_dung` — runs the projection through both backends
   (``backend_python`` and the Tweety-backed ``DungAgent``) and compares
   the resulting grounded / complete / stable labellings.
+* :func:`aif_labelling_trajectory` — the **sequential-arrival** layer (#1524):
+  arguments land one by one, and after each arrival the projected framework is
+  re-labelled and re-verified against both backends.
+
+Static verification vs trajectory
+---------------------------------
+:func:`verify_aif_to_dung` answers "do the backends agree on *this* framework?".
+:func:`aif_labelling_trajectory` answers "how does each argument's status
+*evolve* as the discourse delivers its arguments one at a time?" — an argument
+accepted early flips ``in -> out`` when its attacker lands later; a member of an
+undecided cycle is reinstated ``undec -> in`` when a defender arrives. Every
+step of that trajectory carries its own dual-backend verification.
+
+Relationship to :mod:`argumentation_analysis.orchestration.dung_labelling_trajectory`
+-------------------------------------------------------------------------------------
+That module (#1509) computes the same *concept* over a plain Dung AF. This one
+is deliberately **not** importing it: that package's ``__init__`` pulls in the
+full orchestration stack (LLM service, crypto, fetch service — measured ~12 s
+import), which would make this JVM-free adapter unusable as a lightweight
+building block. The two are independent islands with a **compatible output
+contract**: the same ``"in"`` / ``"out"`` / ``"undec"`` label vocabulary and the
+same ``as_map()`` shape, so a consumer (e.g. a notebook cell) can render either.
+No Dung semantics are reimplemented here — the grounded extension always comes
+from the backends.
 
 Why this lives here
 -------------------
@@ -41,7 +65,8 @@ reported verbatim. If a backend is unavailable (no JVM), the report carries
 
 from __future__ import annotations
 
-from typing import Any, Iterable, List, NamedTuple, Sequence, Tuple
+from dataclasses import dataclass
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Sequence, Tuple
 
 # Reuse the canonical Framework type used by the ICCMA parser.
 from .backends.generators import Attack, Framework
@@ -265,14 +290,330 @@ def verify_aif_to_dung(
     }
 
 
+# ---------------------------------------------------------------------------
+# Sequential-arrival trajectory (#1524)
+# ---------------------------------------------------------------------------
+
+# Label vocabulary — kept identical to
+# ``argumentation_analysis.orchestration.dung_labelling_trajectory`` so both
+# substrates render the same way downstream (compatible contract, no import).
+LABEL_IN = "in"
+LABEL_OUT = "out"
+LABEL_UNDEC = "undec"
+
+LabellingMap = Dict[str, str]  # arg_id -> "in" | "out" | "undec"
+
+
+@dataclass(frozen=True)
+class AIFLabelling:
+    """A grounded labelling of one projected (sub-)framework.
+
+    Attributes
+    ----------
+    arguments:
+        Arguments present in this sub-framework, in arrival order.
+    in_args:
+        Accepted arguments — the grounded extension **as returned by the
+        backend** (never recomputed here).
+    out_args:
+        Arguments attacked by some accepted argument.
+    undec_args:
+        The remainder — neither accepted nor rejected (typically cycles).
+    source_backend:
+        Which backend's grounded extension this labelling was derived from.
+        Recorded explicitly because, when the backends disagree, the labelling
+        is *one side of a disagreement* rather than a settled verdict — see
+        :class:`AIFTrajectoryStep.disagreements` (I5 / #1502).
+    """
+
+    arguments: Tuple[str, ...]
+    in_args: frozenset[str]
+    out_args: frozenset[str]
+    undec_args: frozenset[str]
+    source_backend: str
+
+    def as_map(self) -> LabellingMap:
+        """Return the labelling as ``{arg_id: "in"|"out"|"undec"}``."""
+        m: LabellingMap = {}
+        for a in self.in_args:
+            m[a] = LABEL_IN
+        for a in self.out_args:
+            m[a] = LABEL_OUT
+        for a in self.undec_args:
+            m[a] = LABEL_UNDEC
+        return m
+
+
+@dataclass(frozen=True)
+class AIFTrajectoryStep:
+    """The state of the discourse after ``step`` arguments have arrived.
+
+    Attributes
+    ----------
+    step:
+        1-based arrival index.
+    new_argument:
+        The argument that landed at this step.
+    arrived:
+        All arguments arrived so far, in arrival order.
+    activated_attacks:
+        AIF attacks that became *active* at this step — i.e. whose two
+        endpoints are now both present. An attack declared up front stays
+        dormant until its source (or target) arrives; that latency is exactly
+        what makes the trajectory non-trivial.
+    framework:
+        The projected Dung framework ``(arguments, attacks)`` at this step.
+    labelling:
+        The grounded labelling, or ``None`` when no backend produced a grounded
+        extension (degraded-honest: no fabricated verdict — anti-#1019).
+    agree:
+        ``True``/``False`` when both backends ran and were compared; ``None``
+        when the comparison is indeterminate (Tweety unavailable, or
+        ``verify=False``). ``None`` is *not* ``False``.
+    disagreements:
+        Backend disagreements for this step, **verbatim and never
+        reconciled** (I5 / #1502 invariant).
+    verification:
+        The full :func:`verify_aif_to_dung` result for this step, or ``None``
+        when ``verify=False``.
+    """
+
+    step: int
+    new_argument: str
+    arrived: Tuple[str, ...]
+    activated_attacks: Tuple[AIFAttack, ...]
+    framework: Framework
+    labelling: Optional[AIFLabelling]
+    agree: Optional[bool]
+    disagreements: Tuple[str, ...]
+    verification: Optional[VerifyResult]
+
+
+def _labelling_from_report(
+    arrived: Sequence[str],
+    attacks: Sequence[Attack],
+    report: BackendReport,
+    source_backend: str,
+) -> Optional[AIFLabelling]:
+    """Derive the in/out/undec partition from a backend's grounded extension.
+
+    The grounded extension is taken **as-is** from ``report`` — this function
+    runs no reasoner of its own. It only applies the definition of a labelling:
+    ``out`` is whatever an accepted argument attacks, ``undec`` is the rest.
+
+    Returns ``None`` when the report carries no grounded extension (backend
+    unavailable or failed): a missing extension yields no labelling rather than
+    an invented one.
+    """
+    extensions = report.get("extensions", {}).get("grounded")
+    if not extensions:
+        return None
+
+    grounded = set(extensions[0])
+    arrived_set = set(arrived)
+    out_args = {t for (s, t) in attacks if s in grounded} - grounded
+    undec_args = arrived_set - grounded - out_args
+    return AIFLabelling(
+        arguments=tuple(arrived),
+        in_args=frozenset(grounded),
+        out_args=frozenset(out_args),
+        undec_args=frozenset(undec_args),
+        source_backend=source_backend,
+    )
+
+
+def aif_labelling_trajectory(
+    arguments_stream: Sequence[str],
+    aif_attacks_stream: Iterable[AIFAttack],
+    *,
+    verify: bool = True,
+) -> List[AIFTrajectoryStep]:
+    """Compute the labelling trajectory of an AIF discourse under sequential arrival.
+
+    The discourse delivers its arguments one at a time, in the order given by
+    ``arguments_stream``. An AIF attack becomes active only once **both** of its
+    endpoints have arrived. After each arrival the adapter re-projects the
+    active subset onto a Dung framework (:func:`aif_attacks_to_dung_af`),
+    re-labels it, and — unless ``verify=False`` — re-verifies it against both
+    backends (:func:`verify_aif_to_dung`).
+
+    Parameters
+    ----------
+    arguments_stream:
+        Arrival order of the arguments. Must contain no duplicates (a repeated
+        argument would make "the state after step k" ambiguous).
+    aif_attacks_stream:
+        The AIF attacks of the whole discourse, declared up front. Every
+        endpoint must appear in ``arguments_stream``.
+    verify:
+        When ``True`` (default) each step is cross-checked against both
+        backends per the #1502 contract. When ``False`` only the pure-Python
+        backend runs: the trajectory is then **unverified**, and every step
+        reports ``agree=None`` — never a fabricated agreement.
+
+    Returns
+    -------
+    One :class:`AIFTrajectoryStep` per arrival, in order.
+
+    Raises
+    ------
+    ValueError
+        If ``arguments_stream`` contains duplicates, if an attack endpoint
+        never arrives, or if an attack carries an unknown AIF kind. All three
+        are raised up front: a half-computed trajectory silently missing an
+        attack would be worse than no trajectory at all.
+    """
+    arrival = list(arguments_stream)
+    if len(set(arrival)) != len(arrival):
+        duplicates = sorted({a for a in arrival if arrival.count(a) > 1})
+        raise ValueError(f"arguments_stream must not contain duplicates: {duplicates}")
+
+    attacks = list(aif_attacks_stream)
+    for aif in attacks:
+        _validate_kind(aif.kind)
+
+    arrival_set = set(arrival)
+    unknown = sorted(
+        {ep for aif in attacks for ep in (aif.source, aif.target)} - arrival_set
+    )
+    if unknown:
+        raise ValueError(
+            "every AIF attack endpoint must appear in arguments_stream; "
+            f"never arrive: {unknown}"
+        )
+
+    steps: List[AIFTrajectoryStep] = []
+    arrived: List[str] = []
+    active: List[AIFAttack] = []
+    activated_idx: set[int] = set()
+
+    for k, argument in enumerate(arrival, start=1):
+        arrived.append(argument)
+        arrived_so_far = set(arrived)
+
+        # An attack activates on the step where its *second* endpoint lands.
+        # Tracked by index, not by value, so exact-duplicate declarations each
+        # activate once instead of collapsing into the first occurrence.
+        newly: List[AIFAttack] = []
+        for i, aif in enumerate(attacks):
+            if i in activated_idx:
+                continue
+            if aif.source in arrived_so_far and aif.target in arrived_so_far:
+                activated_idx.add(i)
+                newly.append(aif)
+        newly_active = tuple(newly)
+        active.extend(newly_active)
+
+        framework = aif_attacks_to_dung_af(arrived, active)
+        args, atts = framework
+
+        verification: Optional[VerifyResult] = None
+        py_report: BackendReport
+        agree: Optional[bool]
+        disagreements: Tuple[str, ...]
+
+        if verify:
+            verification = verify_aif_to_dung(arrived, active)
+            py_report = verification["backend_python"]
+            agree = verification["agree"]
+            disagreements = tuple(verification["disagreements"])
+        else:
+            py_report = _run_python(args, atts)
+            agree = None  # unverified is indeterminate, never "agreed"
+            disagreements = ()
+
+        labelling = _labelling_from_report(arrived, atts, py_report, "backend_python")
+
+        steps.append(
+            AIFTrajectoryStep(
+                step=k,
+                new_argument=argument,
+                arrived=tuple(arrived),
+                activated_attacks=newly_active,
+                framework=framework,
+                labelling=labelling,
+                agree=agree,
+                disagreements=disagreements,
+                verification=verification,
+            )
+        )
+
+    return steps
+
+
+def aif_label_transitions(
+    trajectory: Sequence[AIFTrajectoryStep],
+) -> Dict[str, Tuple[str, ...]]:
+    """Per-argument label sequence, starting at the step where it arrives.
+
+    Returns ``{arg_id: (label_at_arrival, ..., label_at_final_step)}``. This is
+    where the dynamics become legible: a sequence like ``("in", "in", "out")``
+    is a refutation, ``("undec", "in")`` a reinstatement. Steps whose labelling
+    is unavailable (degraded) contribute no entry rather than a placeholder.
+    """
+    transitions: Dict[str, Tuple[str, ...]] = {}
+    for step in trajectory:
+        if step.labelling is None:
+            continue
+        label_map = step.labelling.as_map()
+        for argument in step.arrived:
+            label = label_map.get(argument)
+            if label is None:
+                continue
+            transitions[argument] = (*transitions.get(argument, ()), label)
+    return transitions
+
+
+def render_aif_trajectory(trajectory: Sequence[AIFTrajectoryStep]) -> str:
+    """Human-readable table of the trajectory (step | arrived | in/out/undec | agree).
+
+    Mirrors the rendering of the #1509 substrate so both can be shown
+    side-by-side, plus an ``agree`` column carrying the per-step dual-backend
+    verdict (``=`` agree, ``!`` disagree, ``?`` indeterminate).
+    """
+    rows: List[Tuple[str, str, str, str, str, str]] = []
+    for step in trajectory:
+        mark = "=" if step.agree is True else ("!" if step.agree is False else "?")
+        if step.labelling is None:
+            in_s = out_s = undec_s = "(degraded)"
+        else:
+            in_s = ",".join(sorted(step.labelling.in_args)) or "-"
+            out_s = ",".join(sorted(step.labelling.out_args)) or "-"
+            undec_s = ",".join(sorted(step.labelling.undec_args)) or "-"
+        rows.append(
+            (str(step.step), ",".join(step.arrived), in_s, out_s, undec_s, mark)
+        )
+
+    header = ("step", "arrived", "in", "out", "undec", "agree")
+    # Size every column to its widest cell so the table stays aligned whatever
+    # the argument ids look like (it is read as-is in a notebook cell).
+    widths = [
+        max(len(header[i]), max((len(r[i]) for r in rows), default=0))
+        for i in range(len(header))
+    ]
+    lines = [" | ".join(h.ljust(widths[i]) for i, h in enumerate(header))]
+    lines.append("-+-".join("-" * w for w in widths))
+    for row in rows:
+        lines.append(" | ".join(cell.ljust(widths[i]) for i, cell in enumerate(row)))
+    return "\n".join(lines)
+
+
 __all__ = [
     "AIFAttack",
     "AIF_KIND_UNDERCUT",
     "AIF_KIND_UNDERMINE",
     "AIF_KIND_REBUT",
     "AIF_KINDS",
+    "LABEL_IN",
+    "LABEL_OUT",
+    "LABEL_UNDEC",
+    "AIFLabelling",
+    "AIFTrajectoryStep",
     "aif_attacks_to_dung_af",
     "verify_aif_to_dung",
+    "aif_labelling_trajectory",
+    "aif_label_transitions",
+    "render_aif_trajectory",
     "Framework",
     "Attack",
 ]
