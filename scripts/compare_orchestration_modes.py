@@ -87,6 +87,25 @@ def _conversational_safety_net_timeout(max_wall_seconds: float) -> float:
     return max(max_wall_seconds * 1.2, max_wall_seconds + 30.0)
 
 
+def _count_pending_async_tasks() -> int:
+    """CB #1528 guard (b): count asyncio tasks still pending (not done).
+
+    A mode killed by ``asyncio.wait_for`` should leave its cancelled coroutine
+    fully cleaned up. If this returns >0 immediately after a breached mode, the
+    cancellation leaked dangling work (e.g. in-flight HTTP sessions spawned by
+    the LLM client) that may inflate the NEXT mode's measured wall-time —
+    cross-mode contamination. The count is MEASURED and REPORTED (logged +
+    stashed in ``extra_metrics["pending_tasks_after_breach"]``), never masked
+    by a convenient mode ordering (coord R709 directive: measure, don't hide).
+    """
+    try:
+        current = asyncio.current_task()
+        return sum(1 for t in asyncio.all_tasks() if t is not current and not t.done())
+    except RuntimeError:
+        # No running loop (called outside a coroutine) → nothing to measure.
+        return 0
+
+
 # ── Benchmark texts (opaque IDs, no raw content in reports) ──────────────
 
 BENCHMARK_TEXTS = {
@@ -383,23 +402,113 @@ def render_depth_parity_section() -> str:
 
 
 async def run_pipeline_mode(
-    text: str, corpus_id: str, workflow_name: str = "standard"
+    text: str,
+    corpus_id: str,
+    workflow_name: str = "standard",
+    max_wall_seconds: Optional[float] = None,
 ) -> ModeResult:
-    """Run UnifiedPipeline (modern workflow engine)."""
+    """Run UnifiedPipeline (modern workflow engine).
+
+    CB #1528: when ``max_wall_seconds`` is set, the bound is enforced by
+    ``asyncio.wait_for`` AROUND ``run_unified_analysis`` — but the analysis
+    state is created HERE and passed BY REFERENCE, so a level torn
+    mid-``asyncio.gather`` by the cancellation still leaves behind the
+    completed levels' artifacts. State writers run per-phase only AFTER each
+    level's gather completes (workflow_dsl.py:498 → :788), so the partial
+    state is exactly the verdict of the levels that finished — anti-#1019 (a
+    real bounded verdict, not a killed coroutine that lost everything). The
+    recording ``checkpoint_callback`` counts COMPLETED phases at each level; a
+    torn level never reaches its checkpoint, so ``phases_completed`` cannot be
+    inflated by a half-finished level (coord R709 guard a).
+
+    ``max_wall_seconds=None`` (default) = unbounded — the original pre-CB
+    path. Bounding is opt-in (anti-pendule: bornant ≠ désactiver).
+    """
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
 
+    scope = "UnifiedPipeline DAG workflow"
     start = time.time()
-    result = await run_unified_analysis(text=text, workflow_name=workflow_name)
+
+    # CB #1528: state-reference trick + recording checkpoint (bound only).
+    state = None
+    last_completed = [0]
+    checkpoint_callback = None
+    if max_wall_seconds is not None:
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState(text)
+
+        def _record_completed(results, _ctx):
+            # Recording only — never raises, so the executor's
+            # ``except Exception`` checkpoint swallow (workflow_dsl.py:507)
+            # cannot silence it. Fires after each fully-gathered level, so
+            # ``last_completed[0]`` = COMPLETED phases from FINISHED levels
+            # only — a level torn mid-gather never reaches here (guard a).
+            try:
+                last_completed[0] = sum(
+                    1
+                    for r in results.values()
+                    if getattr(getattr(r, "status", None), "name", "") == "COMPLETED"
+                )
+            except Exception:
+                pass  # recording must never disturb the pipeline
+
+        checkpoint_callback = _record_completed
+
+    try:
+        if max_wall_seconds is not None:
+            result = await asyncio.wait_for(
+                run_unified_analysis(
+                    text=text,
+                    workflow_name=workflow_name,
+                    state=state,
+                    checkpoint_callback=checkpoint_callback,
+                ),
+                timeout=max_wall_seconds,
+            )
+        else:
+            result = await run_unified_analysis(text=text, workflow_name=workflow_name)
+    except asyncio.TimeoutError:
+        duration = time.time() - start
+        logger.warning(
+            f"pipeline_{workflow_name} on {corpus_id} hit the "
+            f"{max_wall_seconds:g}s wall-clock budget after {duration:.2f}s "
+            f"— recovering partial state from the state reference "
+            f"(completed levels only; torn level not counted)."
+        )
+        snapshot: Dict[str, Any] = {}
+        try:
+            snapshot = state.get_state_snapshot() or {}
+        except Exception:
+            snapshot = {}
+        total_fields = len(snapshot) if snapshot else 1
+        non_empty = sum(
+            1 for v in snapshot.values() if v and v not in ([], {}, "", None, 0)
+        )
+        return ModeResult(
+            mode=f"pipeline_{workflow_name}",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            duration_seconds=round(duration, 2),
+            state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+            phases_completed=last_completed[0],
+            # `decides` left None → _compute_decides in run_all. A partial
+            # state (fill>0) or any completed phase ⇒ True (anti-#1019:
+            # the partial state IS the verdict).
+            scope_of_work=scope,
+        )
+
     duration = time.time() - start
-
     summary = result.get("summary", {})
-    state = result.get("state_snapshot", {})
+    snap = result.get("state_snapshot", {})
 
-    total_fields = len(state) if state else 1
+    total_fields = len(snap) if snap else 1
     non_empty = sum(
-        1 for v in (state or {}).values() if v and v not in ([], {}, "", None, 0)
+        1 for v in (snap or {}).values() if v and v not in ([], {}, "", None, 0)
     )
 
     return ModeResult(
@@ -414,6 +523,7 @@ async def run_pipeline_mode(
         phases_total=summary.get("total", 0),
         capabilities_used=result.get("capabilities_used", []),
         capabilities_missing=result.get("capabilities_missing", []),
+        scope_of_work=scope,
     )
 
 
@@ -534,8 +644,16 @@ async def run_conversational_mode(
     )
 
 
-async def run_conversation_deterministic_mode(text: str, corpus_id: str) -> ModeResult:
-    """Run ConversationOrchestrator in demo mode (SimulatedAgent, no LLM)."""
+async def run_conversation_deterministic_mode(
+    text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
+) -> ModeResult:
+    """Run ConversationOrchestrator in demo mode (SimulatedAgent, no LLM).
+
+    CB #1528: ``max_wall_seconds`` is accepted for signature uniformity with
+    the other runners (so ``run_all`` can thread it to every mode) but is
+    IGNORED — this runner is deterministic and LLM-free, so it always
+    completes in milliseconds; bounding it would be dead code.
+    """
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
@@ -567,7 +685,9 @@ async def run_conversation_deterministic_mode(text: str, corpus_id: str) -> Mode
     )
 
 
-async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
+async def run_hierarchical_bridge_mode(
+    text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
+) -> ModeResult:
     """Run hierarchical analysis via the bridge mode (M2 default).
 
     The bridge mode short-circuits the 3-tier chain via
@@ -577,6 +697,12 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
     populated ``CapabilityRegistry``, NOT the legacy ``HierarchicalOrchestrator().
     analyze()`` (which predates the registry and never distinguishes
     bridge vs delegation).
+
+    CB #1528: ``run_hierarchical_analysis`` exposes NO incremental state, so a
+    wall-clock breach cannot recover a partial verdict — the honest degrade is
+    a sterile ``terminated_by_budget=True`` result (``decides`` → False → ``—``
+    via ``_compute_decides``). This is the structural asymmetry with the
+    pipeline (state-reference trick): documented here, not papered over.
     """
     from argumentation_analysis.orchestration.hierarchical.orchestrator import (
         run_hierarchical_analysis,
@@ -585,13 +711,38 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
         setup_registry,
     )
 
+    scope = (
+        "Strategic planning -> objectives_to_workflow -> "
+        "WorkflowExecutor (Lego/DAG, 4 axes)"
+    )
     start = time.time()
     registry = setup_registry(include_optional=True)
+    coro = run_hierarchical_analysis(
+        text=text,
+        capability_registry=registry,
+        mode="bridge",
+    )
     try:
-        result = await run_hierarchical_analysis(
-            text=text,
-            capability_registry=registry,
-            mode="bridge",
+        if max_wall_seconds is not None:
+            result = await asyncio.wait_for(coro, timeout=max_wall_seconds)
+        else:
+            result = await coro
+    except asyncio.TimeoutError:
+        duration = time.time() - start
+        logger.warning(
+            f"hierarchical_bridge on {corpus_id} hit the "
+            f"{max_wall_seconds:g}s budget after {duration:.2f}s — honest "
+            f"degrade (no incremental state exposed → sterile partial)."
+        )
+        return ModeResult(
+            mode="hierarchical_bridge",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            duration_seconds=round(duration, 2),
+            error=f"Wall-clock budget (>={max_wall_seconds:g}s)",
+            scope_of_work=scope,
         )
     except Exception as exc:
         duration = time.time() - start
@@ -602,10 +753,7 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
             terminates=False,
             error=str(exc)[:200],
             duration_seconds=round(duration, 2),
-            scope_of_work=(
-                "Strategic planning -> objectives_to_workflow -> "
-                "WorkflowExecutor (Lego/DAG, 4 axes)"
-            ),
+            scope_of_work=scope,
         )
     duration = time.time() - start
 
@@ -656,13 +804,20 @@ async def run_hierarchical_bridge_mode(text: str, corpus_id: str) -> ModeResult:
     )
 
 
-async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeResult:
+async def run_hierarchical_delegation_mode(
+    text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
+) -> ModeResult:
     """Run hierarchical analysis via the delegation mode (M3, RA-10 #1069).
 
     True strategic -> tactical -> operational delegation driven by
     explicit sequential calls (5/5 tasks when the registry is fully
     populated, per R648+R649+R651+R652). Wired via
     ``run_hierarchical_analysis(..., mode="delegation")``.
+
+    CB #1528: same honest-degrade contract as bridge —
+    ``run_hierarchical_analysis`` exposes no incremental state, so a
+    wall-clock breach yields a sterile ``terminated_by_budget=True`` result
+    (``decides`` → False → ``—``).
     """
     from argumentation_analysis.orchestration.hierarchical.orchestrator import (
         run_hierarchical_analysis,
@@ -671,13 +826,38 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
         setup_registry,
     )
 
+    scope = (
+        "Strategic -> Tactical -> Operational (3-tier, "
+        "5 tasks via CapabilityRegistry)"
+    )
     start = time.time()
     registry = setup_registry(include_optional=True)
+    coro = run_hierarchical_analysis(
+        text=text,
+        capability_registry=registry,
+        mode="delegation",
+    )
     try:
-        result = await run_hierarchical_analysis(
-            text=text,
-            capability_registry=registry,
-            mode="delegation",
+        if max_wall_seconds is not None:
+            result = await asyncio.wait_for(coro, timeout=max_wall_seconds)
+        else:
+            result = await coro
+    except asyncio.TimeoutError:
+        duration = time.time() - start
+        logger.warning(
+            f"hierarchical_delegation on {corpus_id} hit the "
+            f"{max_wall_seconds:g}s budget after {duration:.2f}s — honest "
+            f"degrade (no incremental state exposed → sterile partial)."
+        )
+        return ModeResult(
+            mode="hierarchical_delegation",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            duration_seconds=round(duration, 2),
+            error=f"Wall-clock budget (>={max_wall_seconds:g}s)",
+            scope_of_work=scope,
         )
     except Exception as exc:
         duration = time.time() - start
@@ -688,10 +868,7 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
             terminates=False,
             error=str(exc)[:200],
             duration_seconds=round(duration, 2),
-            scope_of_work=(
-                "Strategic -> Tactical -> Operational (3-tier, "
-                "5 tasks via CapabilityRegistry)"
-            ),
+            scope_of_work=scope,
         )
     duration = time.time() - start
 
@@ -742,15 +919,18 @@ async def run_hierarchical_delegation_mode(text: str, corpus_id: str) -> ModeRes
 # TWO comparable sub-modes (bridge + delegation) — point the alias
 # at the bridge default for compatibility while documenting the
 # deprecation (the issue body of #1480 covers the full migration).
-async def run_hierarchical_mode(text: str, corpus_id: str) -> ModeResult:
+async def run_hierarchical_mode(
+    text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
+) -> ModeResult:
     """Deprecated alias for ``run_hierarchical_bridge_mode``.
 
     Kept so that ``--modes hierarchical`` on an old caller does not
     silently break; the alias routes to bridge (the historical default).
     New code should request ``hierarchical_bridge`` or
-    ``hierarchical_delegation`` explicitly.
+    ``hierarchical_delegation`` explicitly. Forwards ``max_wall_seconds``
+    (CB #1528).
     """
-    return await run_hierarchical_bridge_mode(text, corpus_id)
+    return await run_hierarchical_bridge_mode(text, corpus_id, max_wall_seconds)
 
 
 # ── Mode registry ────────────────────────────────────────────────────────
@@ -762,10 +942,16 @@ async def run_hierarchical_mode(text: str, corpus_id: str) -> ModeResult:
 # for the comparative trade-off — cluedo is a Sherlock-Watson game, not
 # an argumentation-analysis mode comparable to the others.
 
-MODE_RUNNERS: Dict[str, Callable[[str, str], Awaitable[ModeResult]]] = {
-    "pipeline": lambda text, cid: run_pipeline_mode(text, cid, "standard"),
-    "pipeline_light": lambda text, cid: run_pipeline_mode(text, cid, "light"),
-    "pipeline_full": lambda text, cid: run_pipeline_mode(text, cid, "full"),
+MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
+    "pipeline": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
+        text, cid, "standard", max_wall_seconds=max_wall_seconds
+    ),
+    "pipeline_light": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
+        text, cid, "light", max_wall_seconds=max_wall_seconds
+    ),
+    "pipeline_full": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
+        text, cid, "full", max_wall_seconds=max_wall_seconds
+    ),
     "conversational": run_conversational_mode,
     "conversation_deterministic": run_conversation_deterministic_mode,
     "hierarchical_bridge": run_hierarchical_bridge_mode,
@@ -820,6 +1006,11 @@ def generate_report(
       ⏱ terminates=True, terminated_by_budget=True (honest partial — safety-net
             timeout fired, no verdict produced)
       ❌ terminates=False (real failure / exception)
+
+    Decides column (CB #1528 folds-in): ``✅`` produced ≥1 verdict artifact,
+    ``—`` computed "no artifact" (e.g. a sterile safety-net cut), ``?``
+    indeterminate (a result that bypassed ``_compute_decides`` — should not
+    appear via ``run_all``, which normalizes every result).
     """
     lines = [
         f"# {title}",
@@ -850,7 +1041,18 @@ def generate_report(
             status = "✅"
         else:
             status = "❌"
-        decides = "✅" if r.decides else "—"
+        # CB #1528 folds-in: distinguish the 3 documented `decides` states.
+        # `run_all` normalizes every result via `_compute_decides` before
+        # reporting, so True/False are the common cases. A direct
+        # `generate_report` caller passing un-normalized results would have
+        # `decides=None` (indeterminate) — render `?`, NOT `—` (anti-#1019:
+        # "I didn't check" is not "I checked, nothing").
+        if r.decides is True:
+            decides = "✅"
+        elif r.decides is False:
+            decides = "—"
+        else:
+            decides = "?"
         scope = r.scope_of_work or MODE_SCOPE_DESCRIPTIONS.get(r.mode, "")
         lines.append(
             f"| {r.mode} | {r.corpus_id} | {status} | "
@@ -956,9 +1158,12 @@ async def run_all(
     """Run selected modes on selected corpora.
 
     Args:
-        max_wall_seconds: Wall-clock budget applied to the conversational
-            runner. Breach is recorded as a HONEST PARTIAL verdict
-            (``terminated_by_budget=True``) — never faked into success.
+        max_wall_seconds: Wall-clock budget (CB #1528) threaded to EVERY
+            runner — pipeline (state-reference trick → real partial verdict),
+            conversational (internal bound, C1 #1500), hierarchical (honest
+            degrade — no incremental state exposed → sterile ``—``). Breach is
+            recorded as a HONEST PARTIAL verdict (``terminated_by_budget=True``)
+            — never faked into success (anti-#1019).
     """
     if modes is None:
         modes = list(MODE_RUNNERS.keys())
@@ -972,7 +1177,7 @@ async def run_all(
             available = "available" if runner else "UNKNOWN"
             print(f"  {mode}: {available}")
         print(f"\nCorpora: {', '.join(corpora)}")
-        print(f"Conversational wall-time budget: {max_wall_seconds:g}s")
+        print(f"Wall-clock budget (all modes, CB #1528): {max_wall_seconds:g}s")
         return []
 
     # Load environment
@@ -999,15 +1204,28 @@ async def run_all(
 
             logger.info(f"Running {mode} on {corpus_id} ({len(text)} chars)...")
             try:
-                # The conversational runner needs the wall-time budget;
-                # pass it explicitly. All other runners ignore extra kwargs.
-                if mode == "conversational":
-                    result = await runner(text, corpus_id, max_wall_seconds)
-                else:
-                    result = await runner(text, corpus_id)
+                # CB #1528: the wall-clock budget is now threaded to EVERY
+                # runner (uniform signature ``runner(text, cid, max_wall_seconds=...)``).
+                # Pipeline applies the state-reference trick; conversational
+                # its internal bound (C1); hierarchical honest-degrades.
+                result = await runner(
+                    text, corpus_id, max_wall_seconds=max_wall_seconds
+                )
                 results.append(result)
                 if result.terminated_by_budget:
                     status = f"BUDGET BREACH ({result.duration_seconds:.2f}s)"
+                    # CB #1528 guard (b): measure cross-mode cancellation
+                    # contamination. A breached mode's `asyncio.wait_for`
+                    # cancels in-flight work; if it leaks dangling tasks they
+                    # can inflate the NEXT mode's wall-time. Measured +
+                    # reported, NOT masked by re-ordering (coord R709).
+                    pending = _count_pending_async_tasks()
+                    if pending:
+                        logger.warning(
+                            f"  → contamination risk: {pending} pending async "
+                            f"task(s) survived the {mode} breach on {corpus_id}"
+                        )
+                        result.extra_metrics["pending_tasks_after_breach"] = pending
                 elif result.success:
                     status = "OK"
                 else:

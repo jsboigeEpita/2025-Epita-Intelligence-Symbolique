@@ -33,6 +33,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -611,7 +612,10 @@ class TestComputeDecidesCA:
         hand-sets ``decides``."""
         mod = self._harness()
 
-        async def stub_deciding(text, cid):
+        # CB #1528: run_all now threads max_wall_seconds to EVERY runner, so
+        # the stubs accept (and ignore) the kwarg. Intent unchanged — this
+        # still verifies run_all computes `decides` uniformly.
+        async def stub_deciding(text, cid, max_wall_seconds=None):
             return mod.ModeResult(
                 mode="stub_deciding",
                 corpus_id=cid,
@@ -619,7 +623,7 @@ class TestComputeDecidesCA:
                 phases_completed=2,
             )
 
-        async def stub_sterile(text, cid):
+        async def stub_sterile(text, cid, max_wall_seconds=None):
             return mod.ModeResult(mode="stub_sterile", corpus_id=cid, success=True)
 
         real_runners = dict(mod.MODE_RUNNERS)
@@ -643,6 +647,315 @@ class TestComputeDecidesCA:
         assert (
             by_mode["stub_sterile"].decides is False
         ), "CA #1529: run_all did not compute decides=False for the sterile stub."
+
+
+class TestCBWallClockBudget1528:
+    """Track CB #1528 — mode-agnostic ``--max-wall-seconds``.
+
+    The bound is threaded to EVERY runner, not just conversational:
+    * pipeline applies the STATE-REFERENCE trick (``state=`` passed by
+      reference → completed levels survive ``asyncio.wait_for`` cancellation
+      → real partial verdict, anti-#1019);
+    * hierarchical honest-degrades (no incremental state exposed → sterile
+      ``terminated_by_budget=True`` → ``decides`` False → ``—``);
+    * conversational unchanged (C1 #1500 internal bound).
+
+    Coord R709 two guards: (a) a torn level must NOT inflate
+    ``phases_completed``; (b) cross-mode cancellation contamination is
+    MEASURED and reported, never masked by re-ordering.
+
+    Deterministic + LLM/JVM-free: the inner entry-points are patched.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    @staticmethod
+    def _phase(status_name: str) -> SimpleNamespace:
+        """A fake PhaseResult whose ``.status.name`` is ``status_name``."""
+        return SimpleNamespace(status=SimpleNamespace(name=status_name))
+
+    def test_pipeline_budget_breach_recovers_partial_state(self) -> None:
+        """CB #1528 anti-#1019: a pipeline killed at the bound leaves a REAL
+        partial verdict — completed levels' state survives via the
+        state-reference trick, so ``decides`` is True (not a killed coroutine
+        that lost everything)."""
+        mod = self._harness()
+
+        async def fake_run(**kwargs):
+            # Level 0 completes: writes an argument to the shared state AND
+            # fires the checkpoint with 2 COMPLETED phases.
+            state = kwargs.get("state")
+            if state is not None and hasattr(state, "add_argument"):
+                state.add_argument("partial_argument_from_completed_level")
+            cb = kwargs.get("checkpoint_callback")
+            if cb is not None:
+                cb(
+                    {
+                        "p_extract": self._phase("COMPLETED"),
+                        "p_detect": self._phase("COMPLETED"),
+                    },
+                    {},
+                )
+            # Level 1 torn — hangs past the tiny budget.
+            await asyncio.sleep(5)
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline"
+                ".run_unified_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_pipeline_mode(
+                    "text", "corpus_A", "standard", max_wall_seconds=0.5
+                )
+
+        result = asyncio.run(_drive())
+
+        assert result.terminated_by_budget is True
+        assert result.success is False
+        assert result.terminates is True
+        # Partial state survived the cancellation → fill_rate > 0.
+        assert result.state_fill_rate > 0
+        # phases_completed == checkpoint count (2), NOT inflated by the torn level.
+        assert result.phases_completed == 2
+        # The partial state IS the verdict (anti-#1019).
+        assert mod._compute_decides(result) is True
+
+    def test_pipeline_torn_level_not_inflated(self) -> None:
+        """Coord R709 guard (a): a level torn mid-gather by the budget must
+        NOT count toward ``phases_completed``. The checkpoint fires only after
+        a full gather, so the torn level's in-flight phase never reaches it."""
+        mod = self._harness()
+
+        async def fake_run(**kwargs):
+            cb = kwargs.get("checkpoint_callback")
+            # Level 0 fully gathered (2 COMPLETED) → checkpoint fires with 2.
+            if cb is not None:
+                cb({"p1": self._phase("COMPLETED"), "p2": self._phase("COMPLETED")}, {})
+            # Level 1 torn mid-gather (1 RUNNING, never completes) → hangs
+            # before its own checkpoint could fire.
+            await asyncio.sleep(5)
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline"
+                ".run_unified_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_pipeline_mode(
+                    "text", "corpus_A", "standard", max_wall_seconds=0.5
+                )
+
+        result = asyncio.run(_drive())
+        assert result.phases_completed == 2, (
+            "Guard (a) regression: the torn level's in-flight phase leaked into "
+            "phases_completed. The checkpoint must count only COMPLETED phases "
+            "from fully-gathered levels."
+        )
+
+    def test_pipeline_unbounded_path_unchanged(self) -> None:
+        """``max_wall_seconds=None`` = original pre-CB path (no state-ref, no
+        checkpoint, no wait_for). Regression guard."""
+        mod = self._harness()
+        fake_result = {
+            "summary": {"completed": 15, "total": 15},
+            "state_snapshot": {"identified_arguments": {"arg_1": "x"}},
+            "capabilities_used": ["fact_extraction"],
+            "capabilities_missing": [],
+            "extra_metrics": {"fallacy_count": 2, "argument_count": 1},
+        }
+        captured: dict = {}
+
+        async def fake_run(**kwargs):
+            captured["state"] = kwargs.get("state")
+            captured["checkpoint_callback"] = kwargs.get("checkpoint_callback")
+            return fake_result
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline"
+                ".run_unified_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_pipeline_mode("text", "corpus_A", "standard")
+
+        result = asyncio.run(_drive())
+        # Unbounded → no state-reference, no checkpoint (bound is opt-in).
+        assert captured["state"] is None
+        assert captured["checkpoint_callback"] is None
+        assert result.success is True
+        assert result.terminated_by_budget is False
+        assert result.phases_completed == 15
+
+    def test_hierarchical_bridge_budget_breach_honest_degrade(self) -> None:
+        """CB #1528: hierarchical exposes no incremental state → a budget
+        breach honestly degrades to a sterile ``terminated_by_budget=True``
+        result (decides False → ``—``), NOT a faked success."""
+        mod = self._harness()
+
+        async def fake_hang(**kwargs):
+            await asyncio.sleep(5)
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake_hang,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup" ".setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_bridge_mode(
+                    "text", "corpus_A", max_wall_seconds=0.5
+                )
+
+        result = asyncio.run(_drive())
+        assert result.terminated_by_budget is True
+        assert result.success is False
+        assert result.terminates is True
+        # No partial state exposed → sterile → honestly decides False.
+        assert mod._compute_decides(result) is False
+
+    def test_hierarchical_delegation_budget_breach_honest_degrade(self) -> None:
+        """Same honest-degrade contract as bridge, for the delegation mode."""
+        mod = self._harness()
+
+        async def fake_hang(**kwargs):
+            await asyncio.sleep(5)
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake_hang,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup" ".setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_delegation_mode(
+                    "text", "corpus_A", max_wall_seconds=0.5
+                )
+
+        result = asyncio.run(_drive())
+        assert result.terminated_by_budget is True
+        assert result.success is False
+        assert mod._compute_decides(result) is False
+
+    def test_count_pending_async_tasks_detects_leak(self) -> None:
+        """Coord R709 guard (b): the contamination detector must surface
+        dangling tasks left by a cancelled coroutine (would inflate the next
+        mode's wall-time). Measured, not masked."""
+        mod = self._harness()
+
+        async def _drive():
+            before = mod._count_pending_async_tasks()
+            # Spawn a task that outlives the measurement (a "leaked" session).
+            leak = asyncio.ensure_future(asyncio.sleep(50))
+            await asyncio.sleep(0)  # let the scheduler start it
+            after = mod._count_pending_async_tasks()
+            leak.cancel()
+            try:
+                await leak
+            except asyncio.CancelledError:
+                pass
+            return before, after
+
+        before, after = asyncio.run(_drive())
+        assert after > before, (
+            "Guard (b) regression: _count_pending_async_tasks did not detect "
+            f"the leaked task (before={before}, after={after})."
+        )
+
+    def test_run_all_threads_max_wall_seconds_to_all_runners(self) -> None:
+        """CB #1528: ``run_all`` threads ``max_wall_seconds`` to EVERY runner
+        (not just conversational) via the uniform dispatch call."""
+        mod = self._harness()
+        received: dict = {}
+
+        async def fake_pipeline(
+            text, cid, workflow_name="standard", max_wall_seconds=None
+        ):
+            received[f"pipeline_{workflow_name}"] = max_wall_seconds
+            return mod.ModeResult(
+                mode=f"pipeline_{workflow_name}", corpus_id=cid, success=True
+            )
+
+        async def fake_bridge(text, cid, max_wall_seconds=None):
+            received["hierarchical_bridge"] = max_wall_seconds
+            return mod.ModeResult(
+                mode="hierarchical_bridge", corpus_id=cid, success=True
+            )
+
+        async def fake_conv(text, cid, max_wall_seconds=180.0):
+            received["conversational"] = max_wall_seconds
+            return mod.ModeResult(mode="conversational", corpus_id=cid, success=True)
+
+        async def fake_det(text, cid, max_wall_seconds=None):
+            received["conversation_deterministic"] = max_wall_seconds
+            return mod.ModeResult(
+                mode="conversation_deterministic",
+                corpus_id=cid,
+                success=True,
+                phases_completed=3,
+            )
+
+        fake_runners = {
+            "pipeline": fake_pipeline,
+            "hierarchical_bridge": fake_bridge,
+            "conversational": fake_conv,
+            "conversation_deterministic": fake_det,
+        }
+
+        async def _drive():
+            with patch.object(mod, "MODE_RUNNERS", fake_runners), patch(
+                "argumentation_analysis.core.jvm_setup.initialize_jvm",
+                return_value=None,
+            ):
+                return await mod.run_all(
+                    modes=[
+                        "pipeline",
+                        "hierarchical_bridge",
+                        "conversational",
+                        "conversation_deterministic",
+                    ],
+                    corpora=["corpus_A"],
+                    max_wall_seconds=42.0,
+                )
+
+        asyncio.run(_drive())
+        assert received == {
+            "pipeline_standard": 42.0,
+            "hierarchical_bridge": 42.0,
+            "conversational": 42.0,
+            "conversation_deterministic": 42.0,
+        }, f"run_all did not thread max_wall_seconds to all runners: {received}"
+
+    def test_generate_report_renders_none_decides_as_question(self) -> None:
+        """CB #1528 folds-in: ``decides=None`` (indeterminate) renders ``?``,
+        NOT ``—`` (anti-#1019: 'I didn't check' ≠ 'I checked, nothing')."""
+        mod = self._harness()
+        none_result = mod.ModeResult(
+            mode="pipeline_standard", corpus_id="corpus_A", success=True
+        )
+        none_result.decides = None  # bypassed _compute_decides
+        report = mod.generate_report([none_result])
+        assert (
+            "| ? |" in report
+        ), "CB #1528 folds-in regression: decides=None must render '?', not '—'."
+
+    def test_generate_report_decides_true_false_distinct(self) -> None:
+        """True → ``✅``, False → ``—`` (the common run_all-normalized cases)."""
+        mod = self._harness()
+        yes = mod.ModeResult(
+            mode="pipeline_standard", corpus_id="corpus_A", success=True
+        )
+        yes.decides = True
+        no = mod.ModeResult(mode="conversational", corpus_id="corpus_B", success=False)
+        no.decides = False
+        report = mod.generate_report([yes, no])
+        assert "| ✅ |" in report
+        assert "| — |" in report
 
 
 if __name__ == "__main__":
