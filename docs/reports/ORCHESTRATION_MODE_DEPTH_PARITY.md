@@ -14,11 +14,13 @@ The 4 orchestration modes are **comparable in interface** (all produce a verdict
 | `pipeline_standard` | workflow phases (DAG) | 15 | breadth |
 | `pipeline_full` | workflow phases (DAG) | 17 | breadth |
 | `hierarchical_bridge` | strategic objectives (default axes) | 4 | delegation |
-| `hierarchical_delegation` | strategic objectives (LLM-derived) | variable | delegation (3-tier depth) |
+| `hierarchical_delegation` | strategic objectives (LLM-derived, measured) | 4–4 objectives → 5–5 tasks (n=3, corpus_A/B/C) | delegation (3-tier depth) |
 | `conversational` | dialogue macro-phases (multi-turn) | 3 | dialogue-depth |
 | `conversation_deterministic` | dialogue macro-phases (deterministic) | 3 | dialogue-depth (no LLM) |
 
 The pipeline breadth chiffres are **verified firsthand** by introspecting the real workflow builders (`build_light_workflow` / `build_standard_workflow` / `build_full_workflow` in [`argumentation_analysis/orchestration/workflows.py`](../../argumentation_analysis/orchestration/workflows.py)) — not hand-written constants. The hierarchical `4` is the documented M2-bridge default ([`delegation_orchestrator.py`](../../argumentation_analysis/orchestration/hierarchical/delegation_orchestrator.py) — "the M2 bridge would inject 4 default objectives"). The conversational `3` is the macro-phase count (informal → formal → synthesis).
+
+The `hierarchical_delegation` row is **not** a structural constant — its strategic tier is LLM-driven, so the objective/task count is a **firsthand-measured range** over ≥3 inputs (see [Delegation depth chiffrage](#delegation-depth-chiffrage-firsthand) below). It is injected into the deterministic render path as a constant + provenance (no LLM call at render time).
 
 ## Three depth dimensions, not one common scale
 
@@ -38,6 +40,20 @@ Two alignment strategies were considered and **rejected**:
 2. **Inflate hierarchical/conversational** to match pipeline's phase count (e.g. fabricate 15 "phases" inside the hierarchical chain). Rejected: this is exactly the theatre #1019 forbids — cosmetic phases that look comparable but do no genuine work (pendulum add).
 
 Both swings move the problem to the other extreme. The equilibrium is reached by **documenting the trade-off** (this doc + the `--depth-parity` report section), not by adding a counterweight.
+
+## Delegation depth chiffrage (firsthand)
+
+Unlike the pipeline's deterministic phase count (introspected statically), the delegation mode's strategic tier is **LLM-driven** — the objective/task count *could* vary per input. The chiffre is therefore a **measured range** over ≥3 benchmark corpora, not a structural constant. Firsthand R711 measurement (po-2023, env `projet-is`, post-CC #1531 corpus fix — so the operational tier received the real text):
+
+| Corpus | Objectives | Tasks | Completed | Failed | Success rate | Wall-time |
+|--------|-----------:|------:|----------:|-------:|-------------:|----------:|
+| `corpus_A` | 4 | 5 | 5 | 0 | 1.0 | 127.2s |
+| `corpus_B` | 4 | 5 | 5 | 0 | 1.0 | 109.5s |
+| `corpus_C` | 4 | 5 | 5 | 0 | 1.0 | 95.5s |
+
+**Result: a degenerate range `4–4` objectives → `5–5` tasks (n=3).** This is the honest finding, not a failed measurement: on these inputs the LLM-derived delegation tier goes **no deeper** than the 4 hardcoded bridge axes — it produced exactly them (obj-1 decomposes into 2 tasks, hence 5). The non-differentiation is itself the DoD-3 deliverable (the DoD allows "documented as a trade-off" over "aligned"). Written as the range `4–4` rather than the int `4` so a reader sees it is a *measured distribution* (that happens to be degenerate), not a structural constant disguised as a measurement.
+
+**Reader fold-in (coord R710 FINDING):** pre-C3, `run_hierarchical_delegation_mode` read `result["summary"]` and `result["capabilities_used"]` — two keys `DelegationOrchestrator.analyze` never emits — so the report line showed `0/0` phases and `0.0%` fill on a run where 5 tasks really executed. Those zeros were **unread fields, not measurements**. C3 reads the real keys (`tasks_created` → phase denominator; `operational_results[].status` → completed/failed numerator; `evaluation["overall_success_rate"]`), so the Phases column now reflects the work performed.
 
 ## Reproducing the chiffres
 
