@@ -110,13 +110,43 @@ class TestFixBBroadcastReachesListener:
         assert msg.content["objective_type"] == "analysis"
         assert msg.metadata.get("topic") == "objectives.analysis"
 
-    def test_broadcast_without_listener_is_honest_zero(self) -> None:
+    def test_broadcast_without_listener_is_honest_zero(
+        self, caplog: logging.Logger
+    ) -> None:
         # Anti-#1019: with no listener, the broadcast reaches nobody — nothing
         # fabricated, no crash. The path runs cleanly.
+        #
+        # CC #1531 (item reclassé depuis le DoD-2 de #1500): "reaches nobody"
+        # must be VISIBLE. Publishing on a topic with no subscriber is a total
+        # no-op — the ``Message`` built in ``broadcast_objective`` is never
+        # emitted on any channel — yet the caller still gets a message id back.
+        # That silence is what made a broken-looking "broadcasted to 0 agents"
+        # indistinguishable from a working bus. It is now a WARNING.
         mw = create_default_middleware()
-        StrategicAdapter("strategic_alpha", mw).broadcast_objective(
-            "analysis", {"goal": "opaque"}
+        with caplog.at_level(
+            logging.WARNING, logger="StrategicAdapter.strategic_alpha"
+        ):
+            StrategicAdapter("strategic_alpha", mw).broadcast_objective(
+                "analysis", {"goal": "opaque"}
+            )
+        assert "NO subscriber" in caplog.text, (
+            "a no-op broadcast must be surfaced, not buried in an INFO line "
+            f"— got: {caplog.text!r}"
         )
+
+    def test_broadcast_with_listener_emits_no_no_subscriber_warning(
+        self, caplog: logging.Logger
+    ) -> None:
+        """The CC #1531 warning must not become noise on the healthy path."""
+        mw = create_default_middleware()
+        mw.register_global_handler(lambda m: None)
+        with caplog.at_level(
+            logging.WARNING, logger="StrategicAdapter.strategic_alpha"
+        ):
+            StrategicAdapter("strategic_alpha", mw).broadcast_objective(
+                "analysis", {"goal": "opaque"}
+            )
+        assert "NO subscriber" not in caplog.text
 
 
 class TestNoChannelNotFoundOnBroadcastPath:

@@ -170,7 +170,30 @@ def make_registry_operational_executor(
         # text. Pass the textual payload (``description``) as the position the
         # signatures actually declare, and keep the structured fields in the
         # context so providers that need them can still find them.
-        textual_input = command.get("description", "") or ""
+        #
+        # CC #1531: ce qui est passé en position 1 doit être le CORPUS, pas le
+        # libellé de la tâche. ``description`` est une étiquette de ~30
+        # caractères ("Extraire les segments...") — les runs de délégation
+        # montraient ``source_length: 28`` et un agent répondant honnêtement
+        # « aucun texte fourni », pendant que la chaîne concluait au succès.
+        # Le corpus arrive par ``text_extracts`` (voir
+        # ``TacticalOperationalInterface._determine_relevant_extracts``).
+        corpus_text = "\n\n".join(
+            str(extract.get("content", "")).strip()
+            for extract in input_data["text_extracts"]
+            if isinstance(extract, dict) and str(extract.get("content", "")).strip()
+        )
+        if not corpus_text:
+            # Fail loud plutôt qu'analyser un libellé : sans corpus la tâche ne
+            # peut rien produire, et un ``completed`` ici remonterait en
+            # success_rate=1.0 puis en « performance globale élevée » (#1019).
+            return {
+                **base,
+                "status": "failed",
+                "reason": "insufficient_input",
+                "capability": chosen,
+            }
+        textual_input = corpus_text
         bridge_context = {
             **(command.get("context") or {}),
             "input_data": input_data,
@@ -294,6 +317,12 @@ class DelegationOrchestrator:
         self.logger.info("M3 strategic tier produced %d objective(s).", len(objectives))
 
         # --- T: tactical decomposition -------------------------------------
+        # CC #1531: propager le corpus S→T. La décomposition ne transporte que
+        # les objectifs; sans ce fil le tier tactique n'a AUCUN accès au texte
+        # et l'interface T→O fabriquait un extrait factice. C'est le côté
+        # écriture de la chaîne écriture→lecture consommée par
+        # ``TacticalOperationalInterface._determine_relevant_extracts``.
+        self.tactical_coordinator.state.set_raw_text(text)
         decomposition = self.tactical_coordinator.process_strategic_objectives(
             objectives
         )

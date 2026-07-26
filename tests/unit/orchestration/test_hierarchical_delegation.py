@@ -230,6 +230,7 @@ async def test_registry_executor_invokes_real_provider_with_intent():
 
     async def fake_invoke(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
         captured["input_text_type"] = type(input_text).__name__
+        captured["input_text"] = input_text
         captured["intent_in_input_data"] = (
             isinstance(context, dict)
             and "input_data" in context
@@ -249,6 +250,11 @@ async def test_registry_executor_invokes_real_provider_with_intent():
             "description": "Some tactical description for the provider.",
             "required_capabilities": ["fallacy_detection"],
             "strategic_objective_description": "INTENT_MARK_opaque",
+            # CC #1531: le corpus voyage par ``text_extracts``. Le fixture est
+            # antérieur à ce contrat (il ne portait qu'une ``description``), ce
+            # qui est exactement le défaut corrigé — les assertions R648
+            # ci-dessous sont conservées telles quelles.
+            "text_extracts": [{"id": "x1", "content": "CORPUS_MARK_opaque"}],
         }
     )
     assert result["status"] == "completed"
@@ -261,6 +267,10 @@ async def test_registry_executor_invokes_real_provider_with_intent():
         "intent_in_input_data"
     ], "strategic NL intent must reach the provider via context['input_data']"
     assert result["outputs"]["echo"] == "INTENT_MARK_opaque"
+    assert captured["input_text"] == "CORPUS_MARK_opaque", (
+        "the provider must receive the CORPUS at position 1, not the task label "
+        f"— got {captured['input_text']!r} (CC #1531)"
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -290,3 +300,118 @@ async def test_run_hierarchical_analysis_delegation_mode_dispatches():
             strategic_manager=_FakeStrategicManager(objectives),
             middleware=MagicMock(),
         )
+
+
+# ---------------------------------------------------------------------------
+# CC #1531 — le CORPUS doit atteindre le tier opérationnel
+# ---------------------------------------------------------------------------
+
+# Marqueur distinct de STRATEGIC_MARKER : celui-ci suit le *texte à analyser*,
+# pas l'intention stratégique. Les deux chaînes sont indépendantes et le test
+# ci-dessous échouerait si l'une était confondue avec l'autre.
+CORPUS_MARKER = "UNIQUE_CORPUS_omega77_opaque"
+
+
+async def test_corpus_reaches_the_operational_command():
+    """Chaîne écriture→lecture pour le TEXTE lui-même, pas seulement l'intention.
+
+    CC #1531 : le tier tactique n'avait aucun canal pour le corpus.
+    ``_determine_relevant_extracts`` retournait un extrait codé en dur et chaque
+    agent opérationnel analysait un libellé de tâche d'une trentaine de
+    caractères (``source_length: 28`` observé en run réel), pendant que la
+    chaîne concluait « performance globale élevée ».
+    """
+    objectives = [{"id": "obj-1", "description": STRATEGIC_MARKER, "priority": "high"}]
+    captured = []
+
+    async def stub_executor(command):
+        captured.append(command)
+        return {
+            "task_id": command.get("tactical_task_id"),
+            "objective_id": command.get("objective_id"),
+            "status": "completed",
+            "outputs": {"ok": True},
+        }
+
+    orchestrator = DelegationOrchestrator(
+        strategic_manager=_FakeStrategicManager(objectives),
+        operational_executor=stub_executor,
+        middleware=MagicMock(),
+    )
+    await orchestrator.analyze(CORPUS_MARKER)
+
+    assert captured, "aucune commande opérationnelle produite"
+    for command in captured:
+        contents = [
+            extract.get("content") for extract in command.get("text_extracts", [])
+        ]
+        assert CORPUS_MARKER in contents, (
+            f"le corpus n'a pas atteint la commande {command.get('id')} — "
+            f"extraits reçus : {contents!r}"
+        )
+        assert (
+            "Extrait à analyser..." not in contents
+        ), "le placeholder codé en dur est revenu (régression CC #1531)"
+
+
+async def test_executor_fails_loud_without_corpus():
+    """Sans corpus, l'exécuteur échoue honnêtement au lieu de valider du vide."""
+
+    async def fake_invoke(input_text, context):
+        raise AssertionError(
+            "le provider ne doit pas être invoqué sans corpus (CC #1531)"
+        )
+
+    registry = _FakeRegistry(
+        {"fallacy_detection": [_FakeProvider("informal_v1", fake_invoke)]}
+    )
+    executor = make_registry_operational_executor(registry)
+    result = await executor(
+        {
+            "tactical_task_id": "t1",
+            "objective_id": "obj-1",
+            "description": "Détecter les sophismes",  # libellé seul : insuffisant
+            "required_capabilities": ["fallacy_detection"],
+            "text_extracts": [],
+        }
+    )
+
+    assert result["status"] == "failed"
+    assert result["reason"] == "insufficient_input"
+
+
+async def test_starved_run_does_not_report_success_to_the_strategic_tier():
+    """L'ENTRÉE du verdict ne ment plus.
+
+    Anti-pendule : on ne touche ni ``_compute_decides`` ni
+    ``_formulate_conclusion``. On prouve que ce qui les alimente est honnête —
+    une chaîne privée de corpus remonte ``success_rate == 0.0``, et non 1.0.
+    Auparavant chaque tâche était comptée ``completed`` (le provider répondait
+    « aucun texte fourni ») ⇒ 1.0 ⇒ « performance globale élevée ».
+    """
+    objectives = [{"id": "obj-1", "description": STRATEGIC_MARKER, "priority": "high"}]
+
+    async def fake_invoke(input_text, context):
+        return {"unreachable": True}
+
+    registry = _FakeRegistry(
+        {
+            cap: [_FakeProvider(f"prov_{cap}", fake_invoke)]
+            for cap in ("fallacy_detection", "fact_extraction", "argument_parsing")
+        }
+    )
+    orchestrator = DelegationOrchestrator(
+        strategic_manager=_FakeStrategicManager(objectives),
+        operational_executor=make_registry_operational_executor(registry),
+        middleware=MagicMock(),
+    )
+    # Corpus vide : le tier tactique n'a rien à transmettre.
+    result = await orchestrator.analyze("")
+
+    assert all(
+        r["status"] == "failed" for r in result["operational_results"]
+    ), f"une tâche sans corpus a été comptée réussie : {result['operational_results']!r}"
+    eval_input = orchestrator.strategic_manager.eval_calls[0]
+    assert all(
+        v["success_rate"] == 0.0 for v in eval_input.values()
+    ), f"le tier stratégique a reçu un taux de succès fabriqué : {eval_input!r}"
