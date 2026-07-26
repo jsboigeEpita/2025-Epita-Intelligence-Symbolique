@@ -262,14 +262,34 @@ class TestInvokeCallables:
 
     @pytest.mark.asyncio
     async def test_invoke_fact_extraction(self):
+        # #1510 brother-3 — same hermeticity gap as test_invoke_fact_extraction_short_text
+        # below: _invoke_fact_extraction takes the LLM path whenever
+        # _get_openai_client() returns a client. When real API keys leak into
+        # os.environ (pytest-dotenv .env load, or a shell/fixture leak), this
+        # substantive text is routed to the LLM, whose claim_count is
+        # nondeterministic — occasionally 0 (the model emits an empty claims
+        # array), which spursiously fails the ``assert claim_count >= 1`` on
+        # unrelated PRs (observed on main CI at 742bfea8 after CG #1541, which
+        # does not touch this code). Force the no-client path by patching
+        # _get_openai_client so the test deterministically exercises the
+        # heuristic fallback under test (soustraction of the leaky env/client
+        # dependency, same fix as _short_text — not a retry/rerun). The
+        # heuristic deterministically yields >=1 claim for any text with a
+        # sentence > 20 chars (here: 2 sentences qualify), so the contract
+        # assertion stays meaningful. The LLM extraction quality itself is
+        # covered by the requires_api suite.
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fact_extraction,
         )
 
-        result = await _invoke_fact_extraction(
-            "This is a long claim about logic. Another important assertion here. A third point.",
-            {},
-        )
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, ""),
+        ):
+            result = await _invoke_fact_extraction(
+                "This is a long claim about logic. Another important assertion here. A third point.",
+                {},
+            )
         assert "claims" in result
         assert "claim_count" in result
         assert result["claim_count"] >= 1
