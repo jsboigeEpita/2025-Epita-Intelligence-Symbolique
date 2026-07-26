@@ -728,6 +728,10 @@ async def run_conversational_mode(
             "duration_seconds_raw": result.get("duration_seconds", 0),
             "wall_clock_bounded": wall_clock_bounded,
             "conversational_status": result.get("status"),
+            # CE #1537: which path actually ran. Defensive default is the
+            # fallback so an absent field never reads as "agent_group_chat"
+            # (anti-#1019 / leçon #1531: absent ≠ measured).
+            "execution_path": result.get("execution_path", "round_robin_fallback"),
         },
     )
 
@@ -1139,10 +1143,10 @@ def generate_report(
     lines.append("## Trade-off Summary")
     lines.append("")
     lines.append(
-        "| Mode | Corpus | Terminates | Wall-Time | Decides | Phases | Scope |"
+        "| Mode | Corpus | Terminates | Wall-Time | Decides | Phases | Exec Path | Scope |"
     )
     lines.append(
-        "|------|--------|------------|-----------|---------|--------|-------|"
+        "|------|--------|------------|-----------|---------|--------|-----------|-------|"
     )
 
     for r in sorted(results, key=lambda x: (x.mode, x.corpus_id)):
@@ -1167,10 +1171,21 @@ def generate_report(
         else:
             decides = "?"
         scope = r.scope_of_work or MODE_SCOPE_DESCRIPTIONS.get(r.mode, "")
+        # CE #1537: surface which execution path ran so a conversational line
+        # that silently fell back to round-robin cannot be read as a genuine
+        # AgentGroupChat run (the exact pre-CD #1534 failure mode). Only the
+        # conversational mode records execution_path today; other modes render "—".
+        exec_path = r.extra_metrics.get("execution_path")
+        if exec_path == "agent_group_chat":
+            exec_path_cell = "AgentGroupChat"
+        elif exec_path == "round_robin_fallback":
+            exec_path_cell = "round-robin ⚠"
+        else:
+            exec_path_cell = "—"
         lines.append(
             f"| {r.mode} | {r.corpus_id} | {status} | "
             f"{r.duration_seconds:.2f}s | {decides} | "
-            f"{r.phases_completed}/{r.phases_total} | {scope} |"
+            f"{r.phases_completed}/{r.phases_total} | {exec_path_cell} | {scope} |"
         )
 
     lines.append("")

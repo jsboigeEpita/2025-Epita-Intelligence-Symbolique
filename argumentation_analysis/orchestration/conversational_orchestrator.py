@@ -880,6 +880,11 @@ async def _run_conversational_analysis_inner(
 
     # 5. Run 3 macro-phases
     conversation_log = []
+    # CE #1537: accumulate each phase's execution_path (surfaced at the source
+    # by _run_phase) so the result can report whether the run was a genuine
+    # AgentGroupChat or a round-robin fallback. Read explicitly from the phase
+    # meta — never deduced from metrics (anti-#1019 / leçon #1531).
+    phase_execution_paths: List[str] = []
 
     extraction_prompt = (
         f"Analysez ce texte argumentatif. Identifiez les arguments, "
@@ -1024,6 +1029,7 @@ async def _run_conversational_analysis_inner(
             growth_re_prompt_limit=growth_re_prompt_limit,
             reprompt_extractor=reprompt_extractor,
             deadline=wall.deadline,
+            execution_path_recorder=phase_execution_paths,
         )
         conversation_log.extend(phase_log)
 
@@ -1153,6 +1159,7 @@ async def _run_conversational_analysis_inner(
                         growth_re_prompt_limit=growth_re_prompt_limit,
                         reprompt_extractor=reprompt_extractor,
                         deadline=wall.deadline,
+                        execution_path_recorder=phase_execution_paths,
                     )
                     conversation_log.extend(phase_log)
 
@@ -1434,6 +1441,18 @@ async def _run_conversational_analysis_inner(
         "mode": "conversational",
         "workflow_name": "spectacular_analysis" if spectacular else "conversational",
         "phases": [p["name"] for p in phase_configs],
+        # CE #1537: which execution path actually ran, aggregated from each
+        # phase's source-recorded meta (NOT deduced from metrics). "agent_group_chat"
+        # only if every phase ran the SK AgentGroupChat path; any fallback
+        # (construction failure, runtime error, or SK unavailable) downgrades to
+        # "round_robin_fallback" so the comparison harness cannot read a fallback
+        # run as a genuine group-chat run (anti-#1019).
+        "execution_path": (
+            "agent_group_chat"
+            if phase_execution_paths
+            and all(p == "agent_group_chat" for p in phase_execution_paths)
+            else "round_robin_fallback"
+        ),
         "conversation_log": conversation_log,
         "total_messages": len(conversation_log),
         "duration_seconds": duration,
@@ -1756,6 +1775,7 @@ async def _run_phase(
     growth_re_prompt_limit: int = 2,
     reprompt_extractor=None,
     deadline: Optional[float] = None,
+    execution_path_recorder: Optional[List[str]] = None,
 ) -> List[Dict[str, Any]]:
     """Run a single conversational phase with a set of agents.
 
@@ -1771,11 +1791,28 @@ async def _run_phase(
     ``deadline`` (C1 #1500) is an absolute wall-clock timestamp; when set, the
     phase checks it before each agent turn and exits cleanly when passed, so a
     wall-clock-bounded run preserves the partial state as the verdict.
+
+    ``execution_path_recorder`` (CE #1537): optional accumulator list. When
+    provided, the phase appends the path that actually ran
+    (``"agent_group_chat"`` or ``"round_robin_fallback"``) — recorded at the
+    source (here), never deduced from metrics. The path is NOT added to the
+    returned message list: polluting it would break C1 contracts that count on
+    its exact length/content (``test_deadline_in_past_breaks_before_first_turn``).
     """
     messages: List[Dict[str, Any]] = []
     total_re_prompts = 0
     chat_history = ChatHistory()
     chat_history.add_user_message(initial_prompt)
+
+    # CE #1537: track which execution path actually ran, surfaced at the source
+    # (here) so the comparison harness can distinguish a real AgentGroupChat run
+    # from a silent round-robin fallback (anti-#1019: "renseigné à la source,
+    # pas déduit"). Default is the fallback; only the AgentGroupChat path that
+    # completes without raising sets "agent_group_chat". A construction failure
+    # or a runtime invoke error falls through to round-robin and keeps the
+    # default — which is exactly the indistinguishable-from-success case CD
+    # #1534 made LOUD in logs; CE #1537 makes it visible in the RESULT too.
+    _executed_path = "round_robin_fallback"
 
     # Try SK native AgentGroupChat first
     try:
@@ -1883,6 +1920,13 @@ async def _run_phase(
                 }
             )
 
+        # CE #1537: the AgentGroupChat path completed without raising — record
+        # the real path at the source via the recorder (NOT in `messages`:
+        # polluting the message list would break C1 contracts that count on its
+        # exact length/content — test_deadline_in_past_breaks_before_first_turn).
+        _executed_path = "agent_group_chat"
+        if execution_path_recorder is not None:
+            execution_path_recorder.append(_executed_path)
         return messages
 
     except ImportError:
@@ -2044,6 +2088,12 @@ async def _run_phase(
             }
         )
 
+    # CE #1537: round-robin path — reached because AgentGroupChat is unavailable
+    # (ImportError) or raised (construction/runtime). _executed_path kept its
+    # "round_robin_fallback" default. Record at the source via the recorder so
+    # the harness can tell this apart from a genuine AgentGroupChat run.
+    if execution_path_recorder is not None:
+        execution_path_recorder.append(_executed_path)
     return messages
 
 

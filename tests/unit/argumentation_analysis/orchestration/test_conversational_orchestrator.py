@@ -604,6 +604,7 @@ class TestRunConversationalAnalysis:
             growth_re_prompt_limit=2,
             reprompt_extractor=None,
             deadline=None,
+            execution_path_recorder=None,
         ):
             phase_names_seen.append(phase_name)
             return [
