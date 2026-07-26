@@ -190,9 +190,19 @@ class ModeResult:
     success: bool
     error: Optional[str] = None
     duration_seconds: float = 0.0
-    state_fill_rate: float = 0.0
-    fallacy_count: int = 0
-    argument_count: int = 0
+    # Track CG #1540: these three are Optional with default None ("not
+    # written"), NOT a zero default ("measured empty"). Same treatment as
+    # `decides` (CA #1529): a runner that does not populate the shared
+    # analysis state (hierarchical_bridge / hierarchical_delegation decide by
+    # conclusion/verdict_artifact/phases_completed, not by state fill — see
+    # _compute_decides DoD-4 #1529) must render "—" in the report, NOT a
+    # falsifiable "0.0 % / 0 / 0" indistinguishable from a measured-empty run
+    # (leçon #1531 / #1500: a value read from an absent field is
+    # indistinguishable from a measured zero). JSON serializes None -> null;
+    # downstream readers must treat null as "not applicable", not 0.
+    state_fill_rate: Optional[float] = None
+    fallacy_count: Optional[int] = None
+    argument_count: Optional[int] = None
     phases_completed: int = 0
     phases_total: int = 0
     capabilities_used: List[str] = field(default_factory=list)
@@ -210,6 +220,21 @@ class ModeResult:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+def _fmt_fill(rate: Optional[float]) -> str:
+    """CG #1540: render state_fill_rate as "—" when not written (None).
+
+    A hierarchical mode that decides by conclusion (not shared state) leaves
+    state_fill_rate=None; rendering "—" (not "0.0%") distinguishes "not
+    applicable" from "measured empty" (leçon #1531).
+    """
+    return "—" if rate is None else f"{rate:.1%}"
+
+
+def _fmt_count(count: Optional[int]) -> str:
+    """CG #1540: render a count (fallacies/args) as "—" when not written."""
+    return "—" if count is None else str(count)
 
 
 def _compute_decides(result: ModeResult) -> bool:
@@ -239,10 +264,18 @@ def _compute_decides(result: ModeResult) -> bool:
     column's discriminating power. The non-regression test is that a genuinely
     sterile run (conversational cut at the safety-net: 0/0 phases, 0 % fill,
     0 messages) stays ``False`` → ``—``.
+
+    Track CG #1540: ``state_fill_rate`` / ``argument_count`` / ``fallacy_count``
+    are now Optional (None = "not written", e.g. hierarchical modes that decide
+    by conclusion). ``None`` is NOT an artifact of verdict and must not trigger
+    ``True`` (it would manufacture a decision from absence) NOR raise
+    (``None > 0`` is a TypeError in Py3). The ``or 0`` coercion makes the check
+    None-safe without changing the semantics for real measurements (0 stays 0,
+    >0 stays >0).
     """
-    if result.state_fill_rate > 0:
+    if (result.state_fill_rate or 0) > 0:
         return True
-    if result.argument_count > 0 or result.fallacy_count > 0:
+    if (result.argument_count or 0) > 0 or (result.fallacy_count or 0) > 0:
         return True
     if result.extra_metrics.get("total_messages", 0) > 0:
         return True
@@ -1211,8 +1244,8 @@ def generate_report(
         err = f" ({r.error})" if r.error and len(r.error) < 50 else ""
         lines.append(
             f"| {r.mode} | {r.corpus_id} | {status}{err} | "
-            f"{r.duration_seconds:.2f}s | {r.state_fill_rate:.1%} | "
-            f"{r.fallacy_count} | {r.argument_count} | "
+            f"{r.duration_seconds:.2f}s | {_fmt_fill(r.state_fill_rate)} | "
+            f"{_fmt_count(r.fallacy_count)} | {_fmt_count(r.argument_count)} | "
             f"{r.phases_completed}/{r.phases_total} |"
         )
 
@@ -1239,9 +1272,13 @@ def generate_report(
             lines.append(f"**Fastest mode**: `{fastest}` ({durations[fastest]:.2f}s)")
             lines.append("")
 
-        # Fill rate comparison
+        # Fill rate comparison — CG #1540: skip None (not written) as well as
+        # 0.0; a hierarchical mode that decides by conclusion must not appear
+        # here as a 0.0% fill (it would read as "measured empty" — leçon #1531).
         fills = {
-            r.mode: r.state_fill_rate for r in corpus_results if r.state_fill_rate > 0
+            r.mode: r.state_fill_rate
+            for r in corpus_results
+            if (r.state_fill_rate or 0) > 0
         }
         if fills:
             best_fill = max(fills, key=fills.get)
