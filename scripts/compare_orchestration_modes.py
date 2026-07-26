@@ -285,9 +285,43 @@ class DepthParityRow:
     depth_count: int
     nature: str
     verdict_dimension: str
+    # C3 #1500: when the depth axis is LLM-derived (delegation), the count is a
+    # MEASURED RANGE over ≥3 inputs, not a structural constant. ``measured_range``
+    # carries the "min–max (n=K, provenance)" string rendered in place of a bare
+    # int. ``depth_count`` holds a representative int (max of range) so any
+    # downstream logic that reads the count still gets a usable value.
+    measured_range: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+# C3 #1500 chiffrage — the delegation mode's strategic tier is LLM-driven, so
+# its objective/task count could in principle VARY per input (unlike the
+# pipeline's deterministic workflow phase count, which ``compute_depth_parity``
+# introspects statically). This constant holds the firsthand-MEASURED range over
+# ≥3 benchmark corpora. Injected as a constant + provenance so
+# ``render_depth_parity_section`` stays LLM-free at render time (coord R710
+# directive: inject a measured constant, do NOT call an LLM from the render
+# path). Re-measure after any change to the strategic/tactical tiers and update
+# the ranges; the depth-parity tests assert the SHAPE (a measured range with
+# provenance), not the exact digits.
+#
+# Firsthand result R711 (po-2023, env projet-is, post-CC #1531 corpus fix):
+# the range is DEGENERATE — all 3 corpora produced exactly 4 objectives
+# decomposed into 5 tasks (obj-1 splits into 2), 5/5 completed, rate 1.0. This
+# matches the coord's R709 datapoint and documents a NON-DIFFERENTIATION
+# finding: on these inputs the LLM-derived delegation tier goes NO DEEPER than
+# the 4 hardcoded bridge axes (it produced exactly them). Written as the range
+# ``4–4`` rather than the int ``4`` so a reader sees it is a measured
+# distribution (that happens to be degenerate), not a structural constant.
+DELEGATION_DEPTH_MEASURED = {
+    "objectives_range": "4–4",
+    "tasks_range": "5–5",
+    "n_runs": 3,
+    "inputs": "corpus_A/B/C",
+    "provenance": "firsthand R711, po-2023 projet-is",
+}
 
 
 def compute_depth_parity() -> List[DepthParityRow]:
@@ -334,10 +368,22 @@ def compute_depth_parity() -> List[DepthParityRow]:
     rows.append(
         DepthParityRow(
             mode="hierarchical_delegation",
-            depth_dimension="strategic objectives (LLM-derived)",
-            depth_count=0,  # variable: strategic tier produces N objectives per input
+            depth_dimension="strategic objectives (LLM-derived, measured)",
+            # Representative int (max of the measured objective range) so
+            # downstream logic reading depth_count gets a usable value; the
+            # honest per-input RANGE is carried by ``measured_range`` below.
+            depth_count=int(
+                DELEGATION_DEPTH_MEASURED["objectives_range"].split("–")[1]
+            ),
             nature="delegation (3-tier depth)",
             verdict_dimension="Strategic -> Tactical -> Operational chain",
+            measured_range=(
+                f"{DELEGATION_DEPTH_MEASURED['objectives_range']} objectives "
+                f"-> {DELEGATION_DEPTH_MEASURED['tasks_range']} tasks "
+                f"(n={DELEGATION_DEPTH_MEASURED['n_runs']}, "
+                f"{DELEGATION_DEPTH_MEASURED['inputs']}, "
+                f"{DELEGATION_DEPTH_MEASURED['provenance']})"
+            ),
         )
     )
     rows.append(
@@ -390,7 +436,12 @@ def render_depth_parity_section() -> str:
         "|------|-----------------|-------|--------|",
     ]
     for r in rows:
-        count = str(r.depth_count) if r.depth_count > 0 else "variable (LLM-derived)"
+        if r.measured_range:
+            count = r.measured_range
+        elif r.depth_count > 0:
+            count = str(r.depth_count)
+        else:
+            count = "variable (LLM-derived)"
         lines.append(f"| {r.mode} | {r.depth_dimension} | {count} | {r.nature} |")
     lines.append("")
     lines.append(_DEPTH_PARITY_TRADEOFF_VERDICT)
@@ -399,6 +450,36 @@ def render_depth_parity_section() -> str:
 
 
 # ── Mode runners ─────────────────────────────────────────────────────────
+
+
+def _planned_workflow_phase_count(workflow_name: str) -> int:
+    """C3 #1500: the PLANNED phase total for a workflow_name (deterministic).
+
+    Used at the pipeline budget-breach path so the Phases column reads
+    ``completed/planned`` (e.g. 8/15) instead of the nonsensical ``N/0`` the
+    pre-C3 breach path left. Same builders ``compute_depth_parity`` introspects
+    — read honestly, never fabricated. Returns 0 only if the builder is
+    unavailable (e.g. partial import), in which case the column falls back to
+    ``completed/0`` rather than inventing a number.
+    """
+    try:
+        from argumentation_analysis.orchestration.workflows import (
+            build_full_workflow,
+            build_light_workflow,
+            build_standard_workflow,
+        )
+
+        builders = {
+            "light": build_light_workflow,
+            "standard": build_standard_workflow,
+            "full": build_full_workflow,
+        }
+        builder = builders.get(workflow_name)
+        if builder is None:
+            return 0
+        return len(builder().phases)
+    except Exception:
+        return 0
 
 
 async def run_pipeline_mode(
@@ -487,6 +568,12 @@ async def run_pipeline_mode(
         non_empty = sum(
             1 for v in snapshot.values() if v and v not in ([], {}, "", None, 0)
         )
+        # C3 #1500 (coord R710 wart): set the PLANNED phase total at breach so
+        # the report's Phases column reads ``completed/planned`` (e.g. 8/15),
+        # not the nonsensical ``N/0`` left by the pre-C3 breach path. The
+        # planned total is deterministic for a given workflow_name (same builder
+        # ``compute_depth_parity`` introspects) — read honestly, not fabricated.
+        planned_total = _planned_workflow_phase_count(workflow_name)
         return ModeResult(
             mode=f"pipeline_{workflow_name}",
             corpus_id=corpus_id,
@@ -496,6 +583,7 @@ async def run_pipeline_mode(
             duration_seconds=round(duration, 2),
             state_fill_rate=round(non_empty / max(total_fields, 1), 3),
             phases_completed=last_completed[0],
+            phases_total=planned_total,
             # `decides` left None → _compute_decides in run_all. A partial
             # state (fill>0) or any completed phase ⇒ True (anti-#1019:
             # the partial state IS the verdict).
@@ -872,23 +960,50 @@ async def run_hierarchical_delegation_mode(
         )
     duration = time.time() - start
 
-    summary = result.get("summary", {}) if isinstance(result, dict) else {}
-    phases_completed = summary.get("completed", 0)
-    phases_total = summary.get("total", 0)
-    # Delegation mode DÉCIDE firsthand on hierarchical_fallacy (R648). Track CA
-    # #1529: `decides` is computed uniformly by run_all via `_compute_decides`
-    # — from phases_completed (above) and the stashed verdict artifact below.
+    # C3 #1500 fold-in (coord R710 FINDING): read the keys
+    # ``DelegationOrchestrator.analyze`` ACTUALLY emits (delegation_orchestrator.
+    # py:341-348) — ``objectives`` / ``tasks_created`` / ``operational_results``
+    # / ``evaluation`` / ``conclusion``. The previous reader read ``summary`` and
+    # ``capabilities_used``, two keys the mode NEVER emits, so the report line
+    # showed ``0/0`` phases + ``0.0%`` fill on a run where 5 tasks really
+    # executed. Those zeros were UNREAD FIELDS, not measurements. (Bridge mode
+    # IS correctly read — it emits ``summary`` via WorkflowExecutor,
+    # orchestrator.py:209.) Anti-pendule: the mode already has the data; we read
+    # it instead of fabricating a ``summary`` surface orchestrator-side.
+    objectives = result.get("objectives", []) if isinstance(result, dict) else []
+    tasks_created = result.get("tasks_created", 0) if isinstance(result, dict) else 0
+    operational_results = (
+        result.get("operational_results", []) if isinstance(result, dict) else []
+    )
+    evaluation = result.get("evaluation", {}) if isinstance(result, dict) else {}
+
+    # Phases column = the delegation depth axis DoD-3 asks for. Denominator =
+    # tactical task count (``tasks_created``); numerator = tasks that reached a
+    # completed state. Status values are ``completed`` / ``completed_with_issues``
+    # / ``failed`` (operational/adapters/rhetorical_tools_adapter.py:147 +
+    # delegation_orchestrator.py:213). ``completed_with_issues`` still produced
+    # output → counts as completed (anti-#1019: honest, not punitive).
+    def _count_status(results: List[Dict[str, Any]], prefix: str) -> int:
+        return sum(
+            1
+            for r in results
+            if isinstance(r, dict) and str(r.get("status", "")).startswith(prefix)
+        )
+
+    phases_total = tasks_created
+    phases_completed = _count_status(operational_results, "completed")
+    tasks_failed = _count_status(operational_results, "failed")
+
+    # Track CA #1529: ``decides`` is computed UNIFORMLY by run_all via
+    # ``_compute_decides``. Post-fold-in it keys on ``phases_completed > 0``
+    # (real completed operational tasks) — a genuine signal — in addition to
+    # the stashed verdict artifact (the strategic conclusion). NB (CC #1531):
+    # pre-CC-fix the conclusion was a false positive on starved input; post-CC
+    # (merged dd616d6f) the corpus reaches the operational tier, so the
+    # conclusion now reflects real work. ``_compute_decides`` is NOT touched.
     verdict_artifact = None
     if isinstance(result, dict):
-        verdict_artifact = (
-            result.get("conclusion")
-            or result.get("strategic_decision")
-            or (
-                "broadcasted_to_nonzero_agents"
-                if result.get("broadcasted_to_zero_agents") is False
-                else None
-            )
-        )
+        verdict_artifact = result.get("conclusion") or result.get("strategic_decision")
 
     return ModeResult(
         mode="hierarchical_delegation",
@@ -898,18 +1013,16 @@ async def run_hierarchical_delegation_mode(
         duration_seconds=round(duration, 2),
         phases_completed=phases_completed,
         phases_total=phases_total,
-        capabilities_used=(
-            result.get("capabilities_used", []) if isinstance(result, dict) else []
-        ),
-        scope_of_work=(
-            "Strategic -> Tactical -> Operational (3-tier, "
-            "5 tasks via CapabilityRegistry)"
-        ),
+        scope_of_work=scope,
         extra_metrics={
-            "objectives_count": (
-                len(result.get("objectives", [])) if isinstance(result, dict) else 0
-            ),
+            "objectives_count": len(objectives),
             "verdict_artifact": verdict_artifact,
+            # Honest signals (C3 #1500): the strategic tier's own evaluation of
+            # how much of the delegated work genuinely succeeded + the task
+            # status breakdown. Surfaced, not buried in a single 0/0.
+            "overall_success_rate": evaluation.get("overall_success_rate"),
+            "tasks_completed": phases_completed,
+            "tasks_failed": tasks_failed,
         },
     )
 

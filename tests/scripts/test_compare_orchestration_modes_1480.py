@@ -958,5 +958,169 @@ class TestCBWallClockBudget1528:
         assert "| — |" in report
 
 
+class TestC3DelegationDepthParity1500:
+    """Track C3 #1500 — delegation depth-parity chiffrage + reader fold-in.
+
+    Two coupled fixes (coord R710 FINDING + DISPATCH):
+
+    * **Reader fold-in**: ``run_hierarchical_delegation_mode`` reads the keys
+      ``DelegationOrchestrator.analyze`` ACTUALLY emits (``tasks_created`` /
+      ``operational_results[].status`` / ``evaluation``), not the phantom
+      ``summary`` / ``capabilities_used`` (never emitted → the report line
+      showed ``0/0`` phases on a run where 5 tasks executed). Those zeros were
+      unread fields, not measurements.
+    * **Depth chiffrage**: the delegation depth axis is LLM-derived, so its
+      count is a MEASURED RANGE over ≥3 inputs (injected as a constant +
+      provenance, NOT an LLM call at render time).
+
+    Deterministic + LLM/JVM-free: the inner entry-point is patched with a fake
+    delegation result carrying the real return shape.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    @staticmethod
+    def _fake_delegation_result():
+        """The real ``DelegationOrchestrator.analyze`` return shape (no
+        ``summary``, no ``capabilities_used`` — those are the phantom keys)."""
+        return {
+            "mode": "delegation",
+            "objectives": [
+                {"id": "obj-1"},
+                {"id": "obj-2"},
+                {"id": "obj-3"},
+                {"id": "obj-4"},
+            ],
+            "tasks_created": 5,
+            "operational_results": [
+                {
+                    "objective_id": "obj-1",
+                    "status": "completed",
+                    "outputs": {"arguments": ["a1"]},
+                },
+                {
+                    "objective_id": "obj-1",
+                    "status": "completed_with_issues",
+                    "outputs": {"fallacies": ["f1"]},
+                },
+                {"objective_id": "obj-2", "status": "completed", "outputs": {}},
+                {
+                    "objective_id": "obj-3",
+                    "status": "failed",
+                    "reason": "insufficient_input",
+                },
+                {"objective_id": "obj-4", "status": "completed", "outputs": {}},
+            ],
+            "evaluation": {"overall_success_rate": 0.8, "objectives_evaluated": 4},
+            "conclusion": "Analyse réussie.",
+        }
+
+    def test_delegation_reader_reads_real_keys(self) -> None:
+        """The reader maps ``tasks_created`` -> phases_total and counts
+        ``operational_results[].status`` -> phases_completed. A ``summary``
+        key is absent from the input; the counts must still be correct
+        (proving we do not rely on the phantom key)."""
+        mod = self._harness()
+        fake = self._fake_delegation_result()
+
+        async def fake_analyze(**kwargs):
+            return fake
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake_analyze,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup" ".setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_delegation_mode(
+                    "text", "corpus_A", max_wall_seconds=None
+                )
+
+        r = asyncio.run(_drive())
+        # phases_total <- tasks_created (5), NOT summary.total (absent).
+        assert r.phases_total == 5
+        # 4 completed (3 "completed" + 1 "completed_with_issues"), 1 failed.
+        assert r.phases_completed == 4
+        assert r.extra_metrics["tasks_failed"] == 1
+        # objectives_count is the DoD-3 depth axis (strategic tier).
+        assert r.extra_metrics["objectives_count"] == 4
+        # Honest evaluation signal surfaced, not buried.
+        assert r.extra_metrics["overall_success_rate"] == 0.8
+        # The verdict artifact (conclusion) is stashed for _compute_decides.
+        assert r.extra_metrics["verdict_artifact"] == "Analyse réussie."
+
+    def test_delegation_decides_from_real_completed_tasks(self) -> None:
+        """Post-fold-in, ``decides`` keys on ``phases_completed > 0`` (real
+        completed operational tasks), not just the conclusion. A run with
+        completed tasks decides True even before run_all normalizes it."""
+        mod = self._harness()
+        fake = self._fake_delegation_result()
+
+        async def fake_analyze(**kwargs):
+            return fake
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake_analyze,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup" ".setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_delegation_mode("text", "corpus_A")
+
+        r = asyncio.run(_drive())
+        # Direct runner call leaves decides=None (run_all computes it); verify
+        # via the uniform helper that the real signals => True.
+        assert r.decides is None
+        assert mod._compute_decides(r) is True
+
+    def test_depth_parity_delegation_row_carries_measured_range(self) -> None:
+        """The delegation depth-parity row carries a MEASURED RANGE with
+        provenance (not the old ``variable (LLM-derived)`` placeholder)."""
+        mod = self._harness()
+        rows = mod.compute_depth_parity()
+        delegation = next(r for r in rows if r.mode == "hierarchical_delegation")
+        assert delegation.measured_range is not None, (
+            "C3 regression: delegation row has no measured_range — the depth "
+            "axis must be a firsthand-measured range, not 'variable'."
+        )
+        # Provenance: range + n= + inputs, so a reader can audit the measure.
+        assert "objectives" in delegation.measured_range
+        assert "tasks" in delegation.measured_range
+        assert "n=" in delegation.measured_range
+        # depth_count is a usable int (max of the objective range).
+        assert delegation.depth_count > 0
+
+    def test_depth_parity_render_shows_range_not_variable(self) -> None:
+        """The rendered section shows the measured range, NOT the stale
+        ``variable (LLM-derived)`` string — and does so WITHOUT calling an
+        LLM (deterministic render from the injected constant)."""
+        mod = self._harness()
+        section = mod.render_depth_parity_section()
+        assert "variable (LLM-derived)" not in section, (
+            "C3 regression: the delegation cell still renders 'variable' — the "
+            "measured range must replace it."
+        )
+        delegation_line = next(
+            ln for ln in section.splitlines() if "hierarchical_delegation" in ln
+        )
+        assert "objectives" in delegation_line
+        assert "n=" in delegation_line
+
+    def test_depth_parity_render_is_deterministic(self) -> None:
+        """The render path is LLM-free — two calls produce identical output
+        (regression guard against accidental LLM/IO in the render)."""
+        mod = self._harness()
+        a = mod.render_depth_parity_section()
+        b = mod.render_depth_parity_section()
+        assert a == b
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
