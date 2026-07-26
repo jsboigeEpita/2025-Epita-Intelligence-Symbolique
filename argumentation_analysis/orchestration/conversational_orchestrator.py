@@ -1765,6 +1765,25 @@ def _select_next_agent(
     return agents[turn % len(agents)]
 
 
+def _find_agent_by_name(
+    agents: List["ChatCompletionAgent"], name: Optional[str]
+) -> Optional["ChatCompletionAgent"]:
+    """CF #1538: locate the agent that just spoke in an AgentGroupChat turn.
+
+    ``AgentGroupChat.invoke()`` yields ``ChatMessageContent`` whose ``.name``
+    identifies the speaking agent; this looks it up in the phase's ``agents``
+    list so the growth re-prompt targets the agent that produced the
+    zero-growth turn (not a round-robin pick). Returns None if the name is
+    missing/unknown — the caller skips the re-prompt (safe no-op).
+    """
+    if not name:
+        return None
+    for agent in agents:
+        if getattr(agent, "name", None) == name:
+            return agent
+    return None
+
+
 async def _run_phase(
     agents: List[ChatCompletionAgent],
     initial_prompt: str,
@@ -1863,6 +1882,10 @@ async def _run_phase(
             chat_history.messages[-1] if chat_history.messages else initial_prompt
         )
         turn = 0
+        # CF #1538: baseline the growth fingerprint before the first group-chat
+        # turn; each turn's delta is measured against the previous turn's state
+        # (mirrors the round-robin path's fp_before/fp_after pattern).
+        fp_before_tour = _get_growth_fingerprint(state)
         async for response in chat.invoke():
             _bump_sk_budget()
             turn += 1
@@ -1897,19 +1920,95 @@ async def _run_phase(
                 )
                 break
 
-            # CD #1534: the growth-validation re-prompt is INTENTIONALLY ABSENT
-            # on the AgentGroupChat path (it lives only on the round-robin path
-            # below). SK's AgentChat._is_active flag
-            # (semantic_kernel/agents/group_chat/agent_chat.py:41-46) forbids
-            # chat.add_chat_message() and a nested chat.invoke() while the outer
-            # chat.invoke() generator is suspended — doing either inside this
-            # loop raised "Unable to proceed while another agent is active."
-            # That bug was masked pre-CD (construction failed -> round-robin
-            # fallback, which never touched chat.invoke). Re-prompting an agent
-            # mid-group-chat would require agent.invoke(chat.history) directly
-            # (bypassing _is_active); that is a #597 follow-up, deliberately out
-            # of scope here. The group chat's own selection + termination
-            # strategies already drive multi-turn progression.
+            # CF #1538: growth validation on the AgentGroupChat path. CD #1534
+            # removed the previous block because it used chat.add_chat_message()
+            # + a nested chat.invoke() — both forbidden while AgentChat._is_active
+            # is set (agent_chat.py:41-46, "Unable to proceed while another agent
+            # is active."). CF #1538 re-establishes the validation by invoking
+            # the SPEAKING AGENT directly via agent.invoke(), which is a
+            # ChatCompletionAgent method and never touches AgentChat._is_active
+            # (the flag lives on the chat, not the agent — verified firsthand).
+            # The group-chat's own history is NOT mutated: a deep copy
+            # (chat.history.model_copy(deep=True)) + the re-prompt feedback is
+            # passed, so the selection/termination strategies read an undisturbed
+            # history. Mirrors the round-robin enable_growth_validation block,
+            # including the #609 reprompt_extractor trace. Placed after the
+            # convergence/max_turns/deadline breaks so a turn that is already
+            # exiting does not spend re-prompt budget.
+            fp_after = _get_growth_fingerprint(state)
+            if enable_growth_validation and not _validate_state_growth(
+                fp_before_tour, fp_after, phase_name
+            ):
+                speaking_agent = _find_agent_by_name(agents, msg_entry["agent"])
+                if speaking_agent is not None:
+                    for rp in range(growth_re_prompt_limit):
+                        logger.info(
+                            f"  [{phase_name}] Growth re-prompt {rp + 1}/"
+                            f"{growth_re_prompt_limit} (group-chat path)"
+                        )
+                        # Deep copy: isolate the group-chat history so neither
+                        # the feedback nor the agent response mutates it
+                        # (chat.add_chat_message is forbidden here, and a direct
+                        # mutation would desync selection/termination).
+                        re_history = chat.history.model_copy(deep=True)
+                        re_history.add_user_message(_RE_PROMPT_FEEDBACK)
+                        rp_content = ""
+                        _bump_sk_budget()
+                        try:
+                            async for rp_response in speaking_agent.invoke(re_history):
+                                if hasattr(rp_response, "content"):
+                                    chunk = str(rp_response.content)
+                                elif hasattr(rp_response, "value"):
+                                    chunk = str(rp_response.value)
+                                else:
+                                    chunk = str(rp_response)
+                                rp_content += chunk
+                        except Exception as rp_exc:
+                            logger.warning(
+                                f"  [{phase_name}] group-chat growth re-prompt "
+                                f"failed ({type(rp_exc).__name__}: {rp_exc}); "
+                                f"skipping remaining re-prompts for this turn."
+                            )
+                            break
+                        if rp_content:
+                            messages.append(
+                                {
+                                    "phase": phase_name,
+                                    "turn": turn,
+                                    "agent": speaking_agent.name,
+                                    "content": (
+                                        rp_content[:500] if rp_content else "(empty)"
+                                    ),
+                                    "re_prompt": rp + 1,
+                                    "path": "agent_group_chat",
+                                }
+                            )
+                        total_re_prompts += 1
+                        fp_after = _get_growth_fingerprint(state)
+                        if reprompt_extractor is not None:
+                            rp_outcome = (
+                                "ok"
+                                if _validate_state_growth(
+                                    fp_before_tour, fp_after, phase_name
+                                )
+                                else (
+                                    "reran"
+                                    if rp + 1 < growth_re_prompt_limit
+                                    else "gave_up"
+                                )
+                            )
+                            reprompt_extractor.record(
+                                phase_name=phase_name,
+                                turn=turn,
+                                attempt_idx=rp + 1,
+                                fingerprint_before=fp_before_tour,
+                                fingerprint_after=fp_after,
+                                outcome=rp_outcome,
+                                agent_name=speaking_agent.name,
+                            )
+                        if _validate_state_growth(fp_before_tour, fp_after, phase_name):
+                            break
+            fp_before_tour = fp_after
 
         if total_re_prompts > 0:
             messages.append(
