@@ -408,19 +408,29 @@ class TestCD1534AgentGroupChatConstruction:
         with pytest.raises(Exception):
             AgentGroupChat(agents=[], selection_strategy=FakeStubStrategy())
 
-    def test_run_phase_logs_loud_on_construction_failure(self, caplog):
-        """CD #1534 DoD #3: a construction failure must surface as an ERROR log
-        (loud), NOT a silent WARNING. We inject a raising AgentGroupChat at its
-        source; _run_phase must emit an ERROR naming the construction failure
-        (anti-#1019). It may still fall back to round-robin (preserving the
-        merged C1 contract that injects a failing AgentGroupChat to force the
-        round-robin path), but the ERROR must be visible — that visibility is
-        the "loud" of DoD #3. A hard raise was rejected as scope-creep.
+    def test_run_phase_logs_loud_on_construction_failure(self):
+        """CD #1534 DoD #3 (CE #1537 item 4): a construction failure must surface
+        as an ERROR log (loud), NOT a silent WARNING. We inject a raising
+        AgentGroupChat at its source; _run_phase must emit an ERROR naming the
+        construction failure (anti-#1019).
+
+        Capture strategy (CE #1537 item 4 — fix the order-dependent guard):
+        caplog installs its handler on the ROOT logger. The project logging
+        setup (run on the first import of the orchestrator) reinstalls root
+        handlers, which evicts caplog's handler — so under solo-file collection
+        the test sees nothing even though the ERROR IS emitted. We instead
+        attach a private handler directly to the orchestrator's NAMED logger
+        (``ConversationalOrchestrator``, conversational_orchestrator.py:52),
+        which survives any root-handler reset and is independent of import
+        ordering. (The behavior tested is correct; only the guard was fragile.)
         """
         import logging
         from unittest.mock import MagicMock, patch
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _run_phase,
+        )
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            logger as orch_logger,
         )
 
         fake_agent = MagicMock()
@@ -437,28 +447,37 @@ class TestCD1534AgentGroupChatConstruction:
                 enable_growth_validation=False,
             )
 
-        # Patch AgentGroupChat AT ITS SOURCE so the local
-        # `from ...agent_group_chat import AgentGroupChat` in _run_phase resolves
-        # to a mock whose construction raises. This is the construction-failure
-        # path that must surface LOUD (ERROR), not silently fall back.
-        with patch(
-            "semantic_kernel.agents.group_chat.agent_group_chat.AgentGroupChat",
-            side_effect=RuntimeError("construction boom (CD #1534 test)"),
-        ):
-            with caplog.at_level(
-                logging.ERROR,
-                logger="argumentation_analysis.orchestration.conversational_orchestrator",
+        # Attach a capture handler DIRECTLY to the named orchestrator logger so
+        # a root-handler reset (project logging setup) cannot evict it.
+        records = []
+
+        class _Capture(logging.Handler):
+            def emit(self, record):
+                records.append(record)
+
+        capture = _Capture()
+        capture.setLevel(logging.ERROR)
+        orch_logger.addHandler(capture)
+        prev_level = orch_logger.level
+        orch_logger.setLevel(logging.ERROR)
+        try:
+            with patch(
+                "semantic_kernel.agents.group_chat.agent_group_chat.AgentGroupChat",
+                side_effect=RuntimeError("construction boom (CD #1534 test)"),
             ):
                 try:
                     asyncio.run(run())
                 except Exception:
                     # The round-robin fallback may itself raise on the MagicMock
-                    # agent (no real invoke/get_response) — that is orthogonal to
-                    # the construction-failure ERROR we assert here. We care only
+                    # agent (no real invoke/get_response) — orthogonal to the
+                    # construction-failure ERROR we assert here. We care only
                     # that the ERROR was emitted BEFORE the fallback ran.
                     pass
+        finally:
+            orch_logger.removeHandler(capture)
+            orch_logger.setLevel(prev_level)
 
-        error_msgs = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
+        error_msgs = [r.getMessage() for r in records if r.levelno >= logging.ERROR]
         assert any(
             "CONSTRUCTION failed" in m and "CD #1534" in m for m in error_msgs
         ), f"Expected ERROR log naming construction failure, got: {error_msgs}"
