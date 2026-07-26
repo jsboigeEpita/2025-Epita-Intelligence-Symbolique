@@ -1779,6 +1779,9 @@ async def _run_phase(
 
     # Try SK native AgentGroupChat first
     try:
+        _chat_constructed = (
+            False  # CD #1534: distinguish construction vs invoke failure
+        )
         from semantic_kernel.agents.group_chat.agent_group_chat import (
             AgentGroupChat,
         )
@@ -1800,10 +1803,24 @@ async def _run_phase(
                     "DelegatingSelectionStrategy unavailable, using SK default selection"
                 )
 
+        # CD #1534 (anti-#1019): a failure on the AgentGroupChat path must be
+        # VISIBLE, never silent. Pre-CD, a construction failure logged WARNING
+        # and silently delivered round-robin — the mode advertised AgentGroupChat
+        # and shipped something else (the #1019 "fake success" failure).
+        # _chat_constructed distinguishes a construction failure (ERROR — the mode
+        # is fundamentally broken) from a runtime invoke error (WARNING — mid-
+        # execution degrade); both fall back to round-robin so a transient error
+        # does not abort the phase. A hard raise on construction failure was
+        # considered but rejected: it breaks the merged C1 contract
+        # (test_deadline_in_past_breaks_before_first_turn injects a raising
+        # AgentGroupChat to force round-robin) — migrating it is scope-creep
+        # beyond CD #1534. ERROR (not WARNING) makes a construction regression
+        # surface in log monitoring; that is the "loud" DoD #3 requires.
         chat = AgentGroupChat(
             agents=agents,
             selection_strategy=selection,
         )
+        _chat_constructed = True
         # Add initial prompt to the group chat
         await chat.add_chat_message(
             chat_history.messages[-1] if chat_history.messages else initial_prompt
@@ -1812,7 +1829,6 @@ async def _run_phase(
         async for response in chat.invoke():
             _bump_sk_budget()
             turn += 1
-            fp_before = _get_growth_fingerprint(state)
             msg_entry = {
                 "phase": phase_name,
                 "turn": turn,
@@ -1844,61 +1860,19 @@ async def _run_phase(
                 )
                 break
 
-            # Growth validation hook (AgentGroupChat path)
-            if enable_growth_validation:
-                fp_after = _get_growth_fingerprint(state)
-                if not _validate_state_growth(fp_before, fp_after, phase_name):
-                    for rp in range(growth_re_prompt_limit):
-                        logger.info(
-                            f"  [{phase_name}] Growth re-prompt {rp + 1}/{growth_re_prompt_limit}"
-                        )
-                        await chat.add_chat_message(_RE_PROMPT_FEEDBACK)
-                        async for rp_response in chat.invoke():
-                            _bump_sk_budget()
-                            msg_entry = {
-                                "phase": phase_name,
-                                "turn": turn,
-                                "agent": getattr(
-                                    rp_response,
-                                    "name",
-                                    getattr(rp_response, "role", "?"),
-                                ),
-                                "content": str(
-                                    getattr(rp_response, "content", rp_response)
-                                ),
-                                "re_prompt": rp + 1,
-                            }
-                            messages.append(msg_entry)
-                            total_re_prompts += 1
-                        fp_after = _get_growth_fingerprint(state)
-                        # Record re-prompt trace (#609)
-                        if reprompt_extractor is not None:
-                            rp_outcome = (
-                                "ok"
-                                if _validate_state_growth(
-                                    fp_before, fp_after, phase_name
-                                )
-                                else (
-                                    "reran"
-                                    if rp + 1 < growth_re_prompt_limit
-                                    else "gave_up"
-                                )
-                            )
-                            reprompt_extractor.record(
-                                phase_name=phase_name,
-                                turn=turn,
-                                attempt_idx=rp + 1,
-                                fingerprint_before=fp_before,
-                                fingerprint_after=fp_after,
-                                outcome=rp_outcome,
-                                agent_name=getattr(
-                                    rp_response,
-                                    "name",
-                                    getattr(rp_response, "role", "?"),
-                                ),
-                            )
-                        if _validate_state_growth(fp_before, fp_after, phase_name):
-                            break
+            # CD #1534: the growth-validation re-prompt is INTENTIONALLY ABSENT
+            # on the AgentGroupChat path (it lives only on the round-robin path
+            # below). SK's AgentChat._is_active flag
+            # (semantic_kernel/agents/group_chat/agent_chat.py:41-46) forbids
+            # chat.add_chat_message() and a nested chat.invoke() while the outer
+            # chat.invoke() generator is suspended — doing either inside this
+            # loop raised "Unable to proceed while another agent is active."
+            # That bug was masked pre-CD (construction failed -> round-robin
+            # fallback, which never touched chat.invoke). Re-prompting an agent
+            # mid-group-chat would require agent.invoke(chat.history) directly
+            # (bypassing _is_active); that is a #597 follow-up, deliberately out
+            # of scope here. The group chat's own selection + termination
+            # strategies already drive multi-turn progression.
 
         if total_re_prompts > 0:
             messages.append(
@@ -1912,11 +1886,24 @@ async def _run_phase(
         return messages
 
     except ImportError:
+        # SK not installed in this environment — round-robin is the legitimate
+        # degraded path (not a masked failure). INFO, not WARNING.
         logger.info("SK AgentGroupChat not importable, using round-robin fallback")
     except Exception as e:
-        logger.warning(
-            f"SK AgentGroupChat failed ({type(e).__name__}: {e}), using round-robin fallback"
-        )
+        # CD #1534 (anti-#1019): construction failure is LOUD (ERROR), runtime
+        # invoke error is a degrade (WARNING); both fall back to round-robin so
+        # a transient error does not abort the phase. See the pre-construction
+        # comment above for the raise-vs-log rationale.
+        if not _chat_constructed:
+            logger.error(
+                f"SK AgentGroupChat CONSTRUCTION failed ({type(e).__name__}: {e}); "
+                f"falling back to round-robin but surfacing LOUD (anti-#1019, CD #1534)."
+            )
+        else:
+            logger.warning(
+                f"SK AgentGroupChat runtime error ({type(e).__name__}: {e}), "
+                f"using round-robin fallback"
+            )
 
     # Fallback: round-robin invocation with PM designation support
     # In SK 1.40, ChatCompletionAgent.invoke() returns an AsyncGenerator

@@ -327,3 +327,141 @@ class TestRealStrategiesIntegration:
         assert turn == 8, "La conversation doit se terminer exactement au 8ème tour"
 
         print("[OK] INTÉGRATION COMPLÈTE : Toutes les stratégies fonctionnent ensemble")
+
+
+class TestCD1534AgentGroupChatConstruction:
+    """CD #1534 — AgentGroupChat must ACCEPT our strategy instances.
+
+    Pre-CD #1534, core/strategies.py imported SelectionStrategy/TerminationStrategy
+    from the LOCAL orchestration.base stub (BaseModel+ABC), not from Semantic Kernel.
+    AgentGroupChat.selection_strategy is type-annotated to SK's SelectionStrategy, so
+    Pydantic's model_type validator rejected our instances -> the conversational mode
+    caught the ValidationError, logged a WARNING, and silently fell back to round-robin
+    forever (anti-#1019 violation: a construction failure disguised as a working mode).
+
+    These tests lock the fix: our strategies MUST be real SK subclasses so
+    AgentGroupChat construction succeeds. If a future change re-points the import at
+    a non-SK base, these tests fail LOUD instead of the mode silently degrading.
+    """
+
+    def test_delegating_selection_is_real_sk_selection(
+        self, delegating_selection_fixture
+    ):
+        """DelegatingSelectionStrategy must inherit SK's real SelectionStrategy."""
+        from semantic_kernel.agents.strategies.selection.selection_strategy import (
+            SelectionStrategy as SKSelection,
+        )
+
+        strategy = delegating_selection_fixture["strategy"]
+        assert isinstance(
+            strategy, SKSelection
+        ), "DelegatingSelectionStrategy must be a real SK SelectionStrategy (CD #1534)"
+
+    def test_simple_termination_is_real_sk_termination(
+        self, simple_termination_fixture
+    ):
+        """SimpleTerminationStrategy must inherit SK's real TerminationStrategy."""
+        from semantic_kernel.agents.strategies.termination.termination_strategy import (
+            TerminationStrategy as SKTermination,
+        )
+
+        assert isinstance(
+            simple_termination_fixture["strategy"], SKTermination
+        ), "SimpleTerminationStrategy must be a real SK TerminationStrategy (CD #1534)"
+
+    def test_agent_group_chat_accepts_our_selection_strategy(
+        self, delegating_selection_fixture
+    ):
+        """AgentGroupChat(selection_strategy=<our instance>) must construct.
+
+        This is the exact gate that failed pre-CD #1534 (model_type ValidationError).
+        Empty agents list: we validate only the selection_strategy field, which is
+        the field that rejected our stub-subclass.
+        """
+        from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
+
+        strategy = delegating_selection_fixture["strategy"]
+        # Must NOT raise. Pre-CD #1534 this raised:
+        #   ValidationError: Input should be a valid dictionary or instance of SelectionStrategy
+        chat = AgentGroupChat(agents=[], selection_strategy=strategy)
+        assert chat is not None
+        print("[OK] AgentGroupChat accepte DelegatingSelectionStrategy (CD #1534)")
+
+    def test_agent_group_chat_rejects_stub_subclass(self):
+        """Regression guard: a non-SK subclass is still rejected.
+
+        Ensures the gate is real (not accidentally widened) — a stub BaseModel+ABC
+        subclass must STILL be rejected by AgentGroupChat's validator.
+        """
+        from abc import ABC
+        from pydantic import BaseModel
+        from semantic_kernel.agents.group_chat.agent_group_chat import AgentGroupChat
+
+        class StubSelection(BaseModel, ABC):
+            class Config:
+                arbitrary_types_allowed = True
+
+        class FakeStubStrategy(StubSelection):
+            async def next(self, agents, history):
+                return agents[0] if agents else None
+
+        with pytest.raises(Exception):
+            AgentGroupChat(agents=[], selection_strategy=FakeStubStrategy())
+
+    def test_run_phase_logs_loud_on_construction_failure(self, caplog):
+        """CD #1534 DoD #3: a construction failure must surface as an ERROR log
+        (loud), NOT a silent WARNING. We inject a raising AgentGroupChat at its
+        source; _run_phase must emit an ERROR naming the construction failure
+        (anti-#1019). It may still fall back to round-robin (preserving the
+        merged C1 contract that injects a failing AgentGroupChat to force the
+        round-robin path), but the ERROR must be visible — that visibility is
+        the "loud" of DoD #3. A hard raise was rejected as scope-creep.
+        """
+        import logging
+        from unittest.mock import MagicMock, patch
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _run_phase,
+        )
+
+        fake_agent = MagicMock()
+        fake_agent.name = "FakeAgent"
+        fake_state = MagicMock()
+
+        async def run():
+            await _run_phase(
+                [fake_agent],
+                "CD #1534 loud-failure probe",
+                max_turns=1,
+                phase_name="Extraction & Detection",
+                state=fake_state,
+                enable_growth_validation=False,
+            )
+
+        # Patch AgentGroupChat AT ITS SOURCE so the local
+        # `from ...agent_group_chat import AgentGroupChat` in _run_phase resolves
+        # to a mock whose construction raises. This is the construction-failure
+        # path that must surface LOUD (ERROR), not silently fall back.
+        with patch(
+            "semantic_kernel.agents.group_chat.agent_group_chat.AgentGroupChat",
+            side_effect=RuntimeError("construction boom (CD #1534 test)"),
+        ):
+            with caplog.at_level(
+                logging.ERROR,
+                logger="argumentation_analysis.orchestration.conversational_orchestrator",
+            ):
+                try:
+                    asyncio.run(run())
+                except Exception:
+                    # The round-robin fallback may itself raise on the MagicMock
+                    # agent (no real invoke/get_response) — that is orthogonal to
+                    # the construction-failure ERROR we assert here. We care only
+                    # that the ERROR was emitted BEFORE the fallback ran.
+                    pass
+
+        error_msgs = [r.message for r in caplog.records if r.levelno >= logging.ERROR]
+        assert any(
+            "CONSTRUCTION failed" in m and "CD #1534" in m for m in error_msgs
+        ), f"Expected ERROR log naming construction failure, got: {error_msgs}"
+        print(
+            "[OK] _run_phase logs ERROR loud on construction failure (CD #1534 DoD #3)"
+        )

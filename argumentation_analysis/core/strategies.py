@@ -1,5 +1,6 @@
 ﻿# core/strategies.py
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
+# CD #1534: inherit the REAL Semantic Kernel strategy bases so our strategy
+# instances are accepted by AgentGroupChat's Pydantic validator.
 from semantic_kernel.contents import ChatMessageContent
 
 # from semantic_kernel.contents import AuthorRole
@@ -7,15 +8,28 @@ from semantic_kernel.contents import ChatMessageContent
 from typing import List, Dict, TYPE_CHECKING, Optional  # Ajout de Optional
 import logging
 from pydantic import PrivateAttr
-from argumentation_analysis.orchestration.base import (
+
+# CD #1534 (anti-#1019): AgentGroupChat.selection_strategy is type-annotated to
+# SK's SelectionStrategy, so its Pydantic validator (model_type) only accepts
+# real SK subclasses. The previous import pointed at
+# argumentation_analysis.orchestration.base, whose SelectionStrategy /
+# TerminationStrategy are a LOCAL BaseModel+ABC stub with no link to SK — so SK
+# silently rejected our instances and the conversational mode fell back to
+# round-robin forever (the failure was logged as a WARNING, then masked).
+# SK's bases expose the SAME abstract signatures as the stub —
+#   SelectionStrategy.next(self, agents, history) -> Agent
+#   TerminationStrategy.should_terminate(self, agent, history) -> bool
+# — verified firsthand on SK 1.34.0 — so no method-body change is required, only
+# the base class. The cluedo strategies (CyclicSelectionStrategy /
+# OracleTerminationStrategy in orchestration/strategies.py) still use the local
+# stub; they are never passed to AgentGroupChat and are deliberately left
+# untouched (anti-pendule: the stub has other consumers).
+from semantic_kernel.agents.strategies.selection.selection_strategy import (
     SelectionStrategy,
+)
+from semantic_kernel.agents.strategies.termination.termination_strategy import (
     TerminationStrategy,
 )
-
-# L'import de 'argumentation_analysis.orchestration.base.SelectionStrategy' et
-# 'argumentation_analysis.orchestration.base.TerminationStrategy' est omis
-# car ces noms sont maintenant fournis par 'argumentation_analysis.utils.semantic_kernel_compatibility'.
-# Les classes de stratégies ci-dessous hériteront donc des versions du module de compatibilité.
 
 # Importer la classe d'état
 from .shared_state import RhetoricalAnalysisState
