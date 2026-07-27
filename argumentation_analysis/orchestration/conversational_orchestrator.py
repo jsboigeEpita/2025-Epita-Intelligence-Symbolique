@@ -1084,6 +1084,33 @@ async def _run_conversational_analysis_inner(
         except Exception:
             trace.end_phase(phase_name)
 
+    # CB #1528 item 3 (C1 #1500): ONE shared predicate for every stage that
+    # runs after the phase loop. Before this, ``wall_clock_bounded`` was set at
+    # the breach and then read ONLY to build the result dict — it gated
+    # nothing. The cap therefore behaved as a scheduling decision ("do not
+    # start the next PHASE") while the run kept issuing LLM round-trips for the
+    # conditional Re-Analysis phase and the five ``spectacular`` stages below,
+    # until an external safety-net cut the coroutine and discarded the state it
+    # had just populated (firsthand: arguments and counter-arguments written
+    # seconds before the cut, reported as an empty row).
+    #
+    # Anti-pendule: these stages are NOT removed — they carry the analytical
+    # value of the mode. They are SKIPPED once the budget is spent, which is
+    # what "verdict partiel honnête" already means everywhere else here. And
+    # no second budget mechanism is introduced: ``wall`` is the one authority.
+    def _budget_allows(stage: str) -> bool:
+        nonlocal wall_clock_bounded
+        if not wall.is_exhausted(time.time()):
+            return True
+        # The loop may have finished all phases and the deadline passed only
+        # during post-processing: record the bound so the result stays honest.
+        wall_clock_bounded = True
+        logger.info(
+            f"[C1] Wall-clock budget épuisé ({max_wall_seconds:g}s) — étage "
+            f"post-boucle '{stage}' sauté (verdict partiel honnête)."
+        )
+        return False
+
     # 5b. Conditional Phase 4: Re-Analysis (#305)
     # If the enrichment summary shows gaps (e.g., JTMS retracted beliefs not
     # re-evaluated, arguments missing fallacy analysis), add an extra phase
@@ -1091,7 +1118,14 @@ async def _run_conversational_analysis_inner(
     reanalysis_added = False
     # CONV-C #1334 §6: skip the conditional Re-Analysis phase if the
     # pipeline-global budget is already exhausted (the run ended fail-loud).
-    if not budget_exhausted and hasattr(state, "get_enrichment_summary"):
+    # CB #1528 item 3: ``budget_exhausted`` is the TURN-COUNT flag; the
+    # wall-clock bound is a distinct budget and was not consulted here, so a
+    # run stopped by the clock still ran a whole extra 4-agent phase.
+    if (
+        not budget_exhausted
+        and hasattr(state, "get_enrichment_summary")
+        and _budget_allows("Re-Analysis")
+    ):
         try:
             enrichment = state.get_enrichment_summary()
             needs_reanalysis = _should_add_reanalysis_phase(enrichment, state)
@@ -1194,6 +1228,14 @@ async def _run_conversational_analysis_inner(
     # 5b-2. Dung framework construction (#564)
     # Build Dung AF from identified_arguments + counter_arguments/fallacies
     # after all conversational phases have populated the state.
+    #
+    # CB #1528 item 3 — the next four stages (Dung, modal, ASPIC, belief
+    # revision) are deliberately NOT gated by ``_budget_allows``. They are
+    # synchronous (no ``await``, no kernel/agent/LLM call — checked by AST)
+    # and only re-read state the conversation has already populated, so they
+    # cost milliseconds and cannot push the run past its deadline. Gating them
+    # would strip content from an honest partial verdict for no time saved.
+    # What the budget must cut is what still SPENDS it: the awaited stages.
     dung_result = None
     if spectacular and hasattr(state, "dung_frameworks") and not state.dung_frameworks:
         try:
@@ -1273,7 +1315,12 @@ async def _run_conversational_analysis_inner(
     # collaborative path matches the sequential path's coverage.
     n_args = len(getattr(state, "identified_arguments", []) or [])
     n_cas = len(getattr(state, "counter_arguments", []) or [])
-    if spectacular and n_args and n_cas < n_args:
+    if (
+        spectacular
+        and n_args
+        and n_cas < n_args
+        and _budget_allows("counter_arguments")
+    ):
         try:
             from argumentation_analysis.orchestration.invoke_callables import (
                 _generate_counter_arguments_from_state,
@@ -1303,6 +1350,7 @@ async def _run_conversational_analysis_inner(
         and hasattr(state, "propositional_analysis_results")
         and not state.propositional_analysis_results
         and not getattr(state, "fol_analysis_results", None)
+        and _budget_allows("formal_logic_enrichment")
     ):
         try:
             from argumentation_analysis.orchestration.invoke_callables import (
@@ -1331,7 +1379,12 @@ async def _run_conversational_analysis_inner(
     # 9-virtue evaluator over every identified argument so the collaborative path
     # always has quality scores. Gated on under-production — fills gaps only.
     n_quality = len(getattr(state, "argument_quality_scores", {}) or {})
-    if spectacular and n_args and n_quality < n_args:
+    if (
+        spectacular
+        and n_args
+        and n_quality < n_args
+        and _budget_allows("quality_sweep")
+    ):
         try:
             from argumentation_analysis.orchestration.invoke_callables import (
                 _run_quality_sweep_from_state,
@@ -1350,7 +1403,7 @@ async def _run_conversational_analysis_inner(
             logger.warning(f"Quality sweep post-processing failed: {e}")
 
     # 5b-10. Stakes & Stakeholders extraction (Track TT #723)
-    if spectacular:
+    if spectacular and _budget_allows("stakes_extraction"):
         try:
             from argumentation_analysis.orchestration.invoke_callables import (
                 _invoke_stakes_extractor,
@@ -1385,7 +1438,7 @@ async def _run_conversational_analysis_inner(
     # Run DeepSynthesisAgent on the accumulated state to produce a 9-section
     # grounded markdown report. Appended as terminal step after all agents.
     deep_synthesis_result = None
-    if spectacular:
+    if spectacular and _budget_allows("deep_synthesis"):
         try:
             from argumentation_analysis.orchestration.invoke_callables import (
                 _invoke_deep_synthesis,
@@ -1447,11 +1500,20 @@ async def _run_conversational_analysis_inner(
         # (construction failure, runtime error, or SK unavailable) downgrades to
         # "round_robin_fallback" so the comparison harness cannot read a fallback
         # run as a genuine group-chat run (anti-#1019).
+        # CB #1528 item 3: when NO phase ran (the wall-clock deadline was
+        # already past at entry, e.g. a budget smaller than the agent setup),
+        # there is no path to report. Claiming "round_robin_fallback" here
+        # would assert a branch that never executed — the CE defect itself.
+        # ``None`` renders as "—" in the harness table, like every other mode
+        # that records no path.
         "execution_path": (
-            "agent_group_chat"
-            if phase_execution_paths
-            and all(p == "agent_group_chat" for p in phase_execution_paths)
-            else "round_robin_fallback"
+            None
+            if not phase_execution_paths
+            else (
+                "agent_group_chat"
+                if all(p == "agent_group_chat" for p in phase_execution_paths)
+                else "round_robin_fallback"
+            )
         ),
         "conversation_log": conversation_log,
         "total_messages": len(conversation_log),
@@ -1820,6 +1882,24 @@ async def _run_phase(
     """
     messages: List[Dict[str, Any]] = []
     total_re_prompts = 0
+
+    # C1 #1500 / CB #1528 item 3: check the deadline BEFORE entering either
+    # execution path. The round-robin loop already checks before invoking the
+    # next agent, but the AgentGroupChat path invoked ``chat.invoke()``
+    # unconditionally and only checked *after* the first response had come
+    # back — so a phase entered with an already-expired deadline still burned
+    # one full multi-agent turn. Since CD #1534 the group-chat path is the
+    # live one, and the existing regression test does NOT cover it: it injects
+    # a raising AgentGroupChat precisely to force the round-robin fallback.
+    # No path is recorded here on purpose: nothing ran, and asserting a path
+    # that did not execute is the CE #1537 residual defect.
+    if deadline is not None and time.time() >= deadline:
+        logger.info(
+            f"  [{phase_name}] Wall-clock deadline déjà atteint à l'entrée de "
+            f"la phase — aucun tour entamé (verdict partiel honnête)."
+        )
+        return messages
+
     chat_history = ChatHistory()
     chat_history.add_user_message(initial_prompt)
 
