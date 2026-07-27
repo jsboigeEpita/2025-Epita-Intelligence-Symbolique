@@ -2022,6 +2022,23 @@ async def _run_phase(
                 speaking_agent = _find_agent_by_name(agents, msg_entry["agent"])
                 if speaking_agent is not None:
                     for rp in range(growth_re_prompt_limit):
+                        # CB #1528 item 4: a re-prompt is a fresh LLM invocation
+                        # and the turn's first agent.invoke may have consumed the
+                        # whole budget already. Re-check the deadline BEFORE each
+                        # re-prompt (the entry-of-phase check at L1896 only guards
+                        # entering the phase; the group-chat path is the live one
+                        # since CD #1534, so this is an active post-cap LLM site).
+                        # The intra-invocation case (a single invoke that never
+                        # yields) is item 5, not item 4 — this guard catches the
+                        # inter-re-prompt case.
+                        if deadline is not None and time.time() >= deadline:
+                            logger.info(
+                                f"  [{phase_name}] Wall-clock deadline atteinte "
+                                f"avant le growth re-prompt {rp + 1}/"
+                                f"{growth_re_prompt_limit} (group-chat path) ; "
+                                f"re-prompts restants annulés."
+                            )
+                            break
                         logger.info(
                             f"  [{phase_name}] Growth re-prompt {rp + 1}/"
                             f"{growth_re_prompt_limit} (group-chat path)"
@@ -2185,6 +2202,19 @@ async def _run_phase(
                 fp_after = _get_growth_fingerprint(state)
                 if not _validate_state_growth(fp_before, fp_after, phase_name):
                     for rp in range(growth_re_prompt_limit):
+                        # CB #1528 item 4: same deadline guard as the group-chat
+                        # re-prompt loop above (symmetric). The round-robin path's
+                        # re-prompt is also a fresh LLM invocation that must not
+                        # fire after the wall-clock budget is exhausted. Mirrors
+                        # the entry-of-phase check (L1896) inside the loop.
+                        if deadline is not None and time.time() >= deadline:
+                            logger.info(
+                                f"  [{phase_name}] Wall-clock deadline atteinte "
+                                f"avant le growth re-prompt {rp + 1}/"
+                                f"{growth_re_prompt_limit} (round-robin path) ; "
+                                f"re-prompts restants annulés."
+                            )
+                            break
                         logger.info(
                             f"  [{phase_name}] Growth re-prompt {rp + 1}/{growth_re_prompt_limit}"
                         )
