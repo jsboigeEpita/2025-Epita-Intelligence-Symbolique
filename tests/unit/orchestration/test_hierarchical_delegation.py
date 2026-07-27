@@ -415,3 +415,177 @@ async def test_starved_run_does_not_report_success_to_the_strategic_tier():
     assert all(
         v["success_rate"] == 0.0 for v in eval_input.values()
     ), f"le tier stratégique a reçu un taux de succès fabriqué : {eval_input!r}"
+
+
+# ---------------------------------------------------------------------------
+# CC #1531 item 1 — le verdict fabriqué : le canal de RETOUR
+# ---------------------------------------------------------------------------
+#
+# L'item 2 (ci-dessus) a réparé le canal d'ENTRÉE : le corpus atteint le tier
+# opérationnel. Restait le canal de retour. ``success_rate`` comptait
+# ``status == "completed"`` — un taux d'EXÉCUTION portant le nom d'un taux de
+# PRODUCTION — pendant que les auto-déclarations du tier opérationnel
+# (``degraded``, ``status: unavailable``, ``extraction_status: failed:...``)
+# n'étaient lues par personne. Sonde R718 : deux tâches ``completed``, dont une
+# se déclarant ``degraded``, remontaient ``overall_rate: 1.0`` puis « Analyse
+# réussie avec une performance globale élevée ».
+#
+# Le discriminant est l'auto-déclaration, JAMAIS la vacuité de la sortie : un
+# corpus sans aucun sophisme est une analyse RÉUSSIE qui trouve zéro. Le test
+# ``test_empty_output_without_self_report_still_counts`` épingle ce garde-fou,
+# parce que l'erreur miroir (« tout vide = échec ») ferait mentir le verdict
+# dans l'autre sens.
+
+
+async def _run_with_task_results(*outputs):
+    """Exécute une délégation dont l'exécuteur renvoie ``outputs`` dans l'ordre.
+
+    Un objectif par sortie : le tier tactique produit une tâche par objectif, ce
+    qui permet de composer des runs partiellement dégradés.
+    """
+    objectives = [
+        {"id": f"obj-{i}", "description": STRATEGIC_MARKER, "priority": "high"}
+        for i in range(1, len(outputs) + 1)
+    ]
+    remaining = list(outputs)
+
+    async def stub_executor(command):
+        return {
+            "task_id": command.get("tactical_task_id"),
+            "objective_id": command.get("objective_id"),
+            "capability": "stub_capability",
+            **remaining.pop(0),
+        }
+
+    orchestrator = DelegationOrchestrator(
+        strategic_manager=_FakeStrategicManager(objectives),
+        operational_executor=stub_executor,
+        middleware=MagicMock(),
+    )
+    result = await orchestrator.analyze("corpus non vide à analyser")
+    return orchestrator, result
+
+
+@pytest.mark.parametrize(
+    "provider_output",
+    [
+        pytest.param({"degraded": True, "total_fallacies": 0}, id="degraded-flag"),
+        pytest.param({"status": "unavailable"}, id="status-unavailable"),
+        pytest.param(
+            {"extraction_status": "failed:no_llm"}, id="extraction-status-failed"
+        ),
+    ],
+)
+async def test_executor_surfaces_the_provider_self_report(provider_output):
+    """Les trois formes d'auto-déclaration réellement émises sont détectées.
+
+    Les clés testées sont celles que le code écrit vraiment (invoke_callables.py
+    et adapters/dung_student_provider.py) — pas des clés inventées. Lire une clé
+    que personne n'écrit fabriquerait un zéro aussi sûrement que ne pas lire
+    celle qui existe.
+
+    Le test attaque ``make_registry_operational_executor`` directement : c'est
+    la couture où la sortie du provider devient un résultat de tâche, donc le
+    seul endroit où l'auto-déclaration peut être remontée.
+    """
+
+    async def fake_invoke(input_text, context):
+        return provider_output
+
+    registry = _FakeRegistry(
+        {"fallacy_detection": [_FakeProvider("prov", fake_invoke)]}
+    )
+    executor = make_registry_operational_executor(registry)
+    result = await executor(
+        {
+            "tactical_task_id": "t1",
+            "objective_id": "obj-1",
+            "description": "Détecter les sophismes",
+            "required_capabilities": ["fallacy_detection"],
+            "text_extracts": [{"content": "corpus non vide à analyser"}],
+        }
+    )
+
+    assert result["status"] == "completed", "l'appel a bien abouti"
+    assert result.get("degraded") is True, f"auto-déclaration ignorée : {result!r}"
+    assert result.get("degradation_reasons"), "la cause n'est pas remontée"
+
+
+async def test_degraded_run_does_not_conclude_success():
+    """Le verdict reflète l'état, MÊME quand le tier stratégique dit l'inverse.
+
+    ``_FakeStrategicManager`` renvoie inconditionnellement ``stub-conclusion``
+    et ``overall_success_rate: 1.0`` — c'est exactement le cas hostile : la
+    couche au-dessus insiste sur le succès. La conclusion honnête doit gagner.
+
+    Anti-pendule du ticket : la conclusion **existe toujours**. On ne répare pas
+    en supprimant la sortie ; un mode muet mentirait dans l'autre sens.
+    """
+    orchestrator, result = await _run_with_task_results(
+        {"status": "completed", "degraded": True, "degradation_reasons": ["degraded"]}
+    )
+
+    eval_input = orchestrator.strategic_manager.eval_calls[0]
+    assert all(v["success_rate"] == 0.0 for v in eval_input.values()), (
+        "une non-analyse auto-déclarée a été comptée comme un succès : "
+        f"{eval_input!r}"
+    )
+    assert result["degraded"] is True
+    assert result["conclusion"], "la conclusion a été supprimée au lieu d'être honnête"
+    assert (
+        "dégradée" in result["conclusion"].lower()
+    ), f"conclusion non honnête : {result['conclusion']!r}"
+    assert result["degradation_reasons"], "les causes de dégradation ne sont pas dites"
+
+
+async def test_empty_output_without_self_report_still_counts():
+    """GARDE-FOU anti-pendule : une sortie vide n'est PAS une dégradation.
+
+    Un provider qui tourne normalement sur un corpus propre et trouve zéro
+    sophisme a réussi. Si ce test rougit, le fix a glissé de « lire les
+    auto-déclarations » vers « punir le vide », c'est-à-dire vers l'erreur
+    miroir de celle qu'il corrige.
+    """
+    orchestrator, result = await _run_with_task_results(
+        {
+            "status": "completed",
+            "outputs": {"arguments": [], "fallacies": [], "summary": "0 sophisme"},
+        }
+    )
+
+    assert result["degraded"] is False
+    assert not any(r.get("degraded") for r in result["operational_results"])
+    assert result["conclusion"] == "stub-conclusion", (
+        "la conclusion du tier stratégique a été écrasée alors qu'aucune "
+        "dégradation n'était déclarée"
+    )
+    eval_input = orchestrator.strategic_manager.eval_calls[0]
+    assert all(
+        v["success_rate"] == 1.0 for v in eval_input.values()
+    ), f"une réussite qui trouve zéro a été pénalisée : {eval_input!r}"
+
+
+async def test_partial_degradation_still_emits_a_verdict():
+    """Une dégradation partielle pénalise sa tâche sans annuler le verdict.
+
+    ``degraded`` au niveau du run veut dire « rien n'a été produit », pas
+    « quelqu'un s'est plaint ». Un run où une capacité est indisponible mais où
+    une autre produit doit continuer à conclure.
+    """
+    orchestrator, result = await _run_with_task_results(
+        {"status": "completed", "degraded": True, "degradation_reasons": ["degraded"]},
+        {"status": "completed", "outputs": {"arguments": [{"claim": "c"}]}},
+    )
+
+    degraded_count = sum(1 for r in result["operational_results"] if r.get("degraded"))
+    assert degraded_count == 1, f"cas partiel mal construit : {result!r}"
+    assert (
+        result["degraded"] is False
+    ), "un run partiellement productif a été déclaré sans verdict"
+    assert result["conclusion"] == "stub-conclusion"
+
+    eval_input = orchestrator.strategic_manager.eval_calls[0]
+    assert eval_input["obj-1"]["success_rate"] == 0.0, "la tâche dégradée compte encore"
+    assert (
+        eval_input["obj-2"]["success_rate"] == 1.0
+    ), "la tâche productive a été pénalisée par la dégradation d'une autre"

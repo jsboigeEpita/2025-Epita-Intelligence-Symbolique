@@ -1056,8 +1056,21 @@ async def run_hierarchical_delegation_mode(
         )
 
     phases_total = tasks_created
-    phases_completed = _count_status(operational_results, "completed")
     tasks_failed = _count_status(operational_results, "failed")
+    # CC #1531 item 1: a task whose provider declared itself degraded /
+    # unavailable ran, but produced nothing. It keeps ``status: "completed"``
+    # (the call did return) and carries ``degraded: True`` — set at the seam
+    # where the self-report is first visible (delegation_orchestrator.py).
+    # Counting it as a completed phase is what fed ``_compute_decides`` a ✅
+    # on a run that analysed nothing. NB the contrast with
+    # ``completed_with_issues`` above: that one produced output and still
+    # counts. The discriminator is the self-declared non-analysis, never the
+    # emptiness of the output — a clean corpus with zero fallacies is a
+    # success that found zero.
+    tasks_degraded = sum(
+        1 for r in operational_results if isinstance(r, dict) and r.get("degraded")
+    )
+    phases_completed = _count_status(operational_results, "completed") - tasks_degraded
 
     # Track CA #1529: ``decides`` is computed UNIFORMLY by run_all via
     # ``_compute_decides``. Post-fold-in it keys on ``phases_completed > 0``
@@ -1066,8 +1079,19 @@ async def run_hierarchical_delegation_mode(
     # pre-CC-fix the conclusion was a false positive on starved input; post-CC
     # (merged dd616d6f) the corpus reaches the operational tier, so the
     # conclusion now reflects real work. ``_compute_decides`` is NOT touched.
+    #
+    # CC #1531 item 1: when the mode reports itself degraded (no operational
+    # task produced anything), its conclusion is a degradation report, not a
+    # verdict on the argumentation — so it is NOT offered as a verdict
+    # artifact and the row scores ``—``. The conclusion still EXISTS and is
+    # still returned by the orchestrator; suppressing it would be the mirror
+    # lie the issue explicitly rules out. What changes is only whether it
+    # counts as "this mode decided something about the text", which is what
+    # the column claims to measure. ``_compute_decides`` itself is untouched:
+    # the helper was never wrong, its input was.
+    run_degraded = bool(result.get("degraded")) if isinstance(result, dict) else False
     verdict_artifact = None
-    if isinstance(result, dict):
+    if isinstance(result, dict) and not run_degraded:
         verdict_artifact = result.get("conclusion") or result.get("strategic_decision")
 
     return ModeResult(
@@ -1088,6 +1112,8 @@ async def run_hierarchical_delegation_mode(
             "overall_success_rate": evaluation.get("overall_success_rate"),
             "tasks_completed": phases_completed,
             "tasks_failed": tasks_failed,
+            "tasks_degraded": tasks_degraded,
+            "degraded": run_degraded,
         },
     )
 

@@ -1204,5 +1204,114 @@ class TestC3DelegationDepthParity1500:
         assert a == b
 
 
+class TestCC1531DegradedDelegationScoresDash:
+    """CC #1531 item 1 — un verdict dégradé ne compte pas comme une décision.
+
+    Sonde R718 : deux tâches ``completed``, dont une se déclarant
+    ``degraded: true``, remontaient ``overall_rate: 1.0`` puis « Analyse
+    réussie avec une performance globale élevée », et la ligne du tableau
+    affichait ``Decides ✅``.
+
+    Anti-pendule du ticket : ``_compute_decides`` n'est PAS touché — la
+    définition uniforme (CA #1529) est correcte, c'est son ENTRÉE qui mentait.
+    Ces tests vérifient donc l'entrée : ``verdict_artifact`` et
+    ``phases_completed``.
+    """
+
+    @staticmethod
+    def _harness():
+        return _load_harness_module()
+
+    @staticmethod
+    def _degraded_result():
+        """Forme réellement émise par ``DelegationOrchestrator.analyze`` quand
+        aucune tâche opérationnelle n'a produit (delegation_orchestrator.py)."""
+        return {
+            "mode": "delegation",
+            "objectives": [{"id": "obj-1"}, {"id": "obj-2"}],
+            "tasks_created": 2,
+            "operational_results": [
+                {
+                    "objective_id": "obj-1",
+                    "status": "completed",
+                    "degraded": True,
+                    "degradation_reasons": ["fallacy_detection: degraded"],
+                    "outputs": {"degraded": True, "total_fallacies": 0},
+                },
+                {
+                    "objective_id": "obj-2",
+                    "status": "completed",
+                    "degraded": True,
+                    "degradation_reasons": ["fact_extraction: status=unavailable"],
+                    "outputs": {"status": "unavailable"},
+                },
+            ],
+            "evaluation": {"overall_success_rate": 0.0, "objectives_evaluated": 2},
+            "conclusion": "Analyse dégradée : aucune des 2 tâche(s) ...",
+            "degraded": True,
+            "degradation_reasons": ["fallacy_detection: degraded"],
+        }
+
+    def _drive(self, mod, fake):
+        async def fake_analyze(**kwargs):
+            return fake
+
+        async def _run():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake_analyze,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup" ".setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_delegation_mode("text", "corpus_A")
+
+        return asyncio.run(_run())
+
+    def test_degraded_run_scores_decides_false(self) -> None:
+        """Le run dégradé tombe à ``—``, via son entrée et non via le helper."""
+        mod = self._harness()
+        r = self._drive(mod, self._degraded_result())
+
+        assert r.extra_metrics["degraded"] is True
+        assert r.extra_metrics["tasks_degraded"] == 2
+        assert r.extra_metrics["verdict_artifact"] is None, (
+            "un rapport de dégradation a été offert comme verdict sur "
+            "l'argumentation"
+        )
+        assert r.phases_completed == 0, (
+            "des tâches qui n'ont rien produit comptent encore comme des "
+            "phases complétées — c'est ce qui alimentait le ✅"
+        )
+        assert mod._compute_decides(r) is False
+
+    def test_degraded_conclusion_is_still_emitted_by_the_mode(self) -> None:
+        """Anti-pendule : la conclusion EXISTE toujours côté orchestrateur.
+
+        Le harness ne la compte pas comme un verdict, mais ne la supprime pas :
+        un mode qui n'émettrait plus rien mentirait dans l'autre sens.
+        """
+        fake = self._degraded_result()
+        assert fake["conclusion"], "le scénario de test doit garder la conclusion"
+        assert "dégradée" in fake["conclusion"].lower()
+
+    def test_healthy_run_still_decides_true(self) -> None:
+        """GARDE-FOU : le chemin sain n'est pas affecté.
+
+        Si ce test rougit, le fix a débordé de « ne pas compter une
+        non-analyse » vers « ne plus rien compter ».
+        """
+        mod = self._harness()
+        healthy = TestC3DelegationDepthParity1500._fake_delegation_result()
+        r = self._drive(mod, healthy)
+
+        assert r.extra_metrics["degraded"] is False
+        assert r.extra_metrics["tasks_degraded"] == 0
+        assert r.extra_metrics["verdict_artifact"] == "Analyse réussie."
+        assert r.phases_completed == 4
+        assert mod._compute_decides(r) is True
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
