@@ -636,13 +636,53 @@ class StrategicManager:
     def _formulate_conclusion(
         self, results: Dict[str, Any], evaluation: Dict[str, Any]
     ) -> str:
-        overall_rate = evaluation["overall_success_rate"]
+        # CC #1531 item 3: cite real elements, not a rate-keyed boilerplate.
+        # The three fixed phrases carried no finding, so a starved run
+        # (``success_rate=1.0`` on tasks that produced nothing) earned
+        # « Analyse réussie avec une performance globale élevée » (#1019).
+        # ``evaluation`` already carries the real measurements — per-objective
+        # production rates and the objective descriptions that crossed the
+        # strong (>=0.8) / weak (<=0.4) thresholds (see
+        # ``_evaluate_results_against_objectives``) — so cite them instead of a
+        # free-floating adjective. Anti-pendule: the conclusion REFLECTS what
+        # was measured; it does not invent counts, and a corpus that yields
+        # zero findings is a result reported as such, not a gap to mask.
+        overall_rate = evaluation.get("overall_success_rate", 0.0)
+        objectives_eval = evaluation.get("objectives_evaluation", {})
+        strengths = evaluation.get("strengths", [])
+        weaknesses = evaluation.get("weaknesses", [])
+
+        # Nothing measured → honest (zero objectives, not zero findings).
+        if not objectives_eval:
+            return (
+                "Analyse terminée : aucun objectif n'a été mesuré ; "
+                "aucune conclusion sur l'argumentation n'est émise."
+            )
+
+        produced = sum(
+            1 for v in objectives_eval.values() if v.get("success_rate", 0.0) > 0.0
+        )
+        total = len(objectives_eval)
+
+        parts: List[str] = [
+            f"{produced}/{total} objectif(s) opérationnel(s) productif(s)"
+        ]
+        # Cite the real objective descriptions that crossed a threshold.
+        if weaknesses:
+            parts.append("faiblesses : " + " ; ".join(weaknesses[:3]))
+        if strengths:
+            parts.append("points forts : " + " ; ".join(strengths[:3]))
+
+        # Qualify the overall rate, anchored in the production count above
+        # (not a detached adjective a starved-on-success run could earn).
         if overall_rate >= 0.7:
-            return "Analyse réussie avec une performance globale élevée."
+            parts.append("performance globale élevée")
         elif overall_rate >= 0.5:
-            return "Analyse satisfaisante avec quelques faiblesses."
+            parts.append("performance globale satisfaisante avec marges")
         else:
-            return "L'analyse a rencontré des difficultés significatives."
+            parts.append("difficultés significatives")
+
+        return "Analyse : " + ". ".join(parts) + "."
 
     def _log_decision(self, decision_type: str, description: str) -> None:
         decision = {

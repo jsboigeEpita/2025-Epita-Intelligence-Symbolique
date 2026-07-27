@@ -695,6 +695,14 @@ class StrategicAdapter:
         self.logger.info(
             f"Announcement {announcement_type} broadcasted to {len(recipients)} agents"
         )
+        # CC #1531 item 4: unlike ``issue_directive`` (which counts BOTH delivery
+        # paths and emits a named WARNING on a no-op broadcast), this method has
+        # ZERO callers across ``argumentation_analysis/``, ``api/``, ``scripts/``
+        # and ``tests/`` (verified firsthand). Symmetrizing it with the no-op
+        # guard would instrument a path nothing executes — exactly the trap this
+        # ticket documents (treating "0 subscribers" as a defect without checking
+        # a subscriber SHOULD exist). The inert path is recorded here rather than
+        # patched: if a caller is wired later, lift the guard at that point.
         return message.id
 
     def receive_guidance_request(
