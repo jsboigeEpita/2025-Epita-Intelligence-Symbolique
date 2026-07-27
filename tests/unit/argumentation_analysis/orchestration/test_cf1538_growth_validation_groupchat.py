@@ -30,6 +30,8 @@ see the PR body / dashboard [DONE].
 from __future__ import annotations
 
 import asyncio
+import time
+import logging
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -302,3 +304,111 @@ class TestCF1538NonRegression:
         assert _find_agent_by_name([a], "Unknown") is None
         assert _find_agent_by_name([a], None) is None
         assert _find_agent_by_name([], "Anybody") is None
+
+
+# ---------------------------------------------------------------------------
+# CB #1528 item 4 — deadline guard inside the group-chat re-prompt loop.
+# The coord's R717 comment on #1528 formally split the track: item 3
+# (``#1544``) guards the entry of the phase + the awaited spectacular stages;
+# item 4 is the control *inside* the two growth re-prompt loops (group-chat +
+# round-robin). The group-chat loop lives here (CF #1538); the round-robin
+# loop is covered in test_growth_validation_hook_597.py. A re-prompt is a
+# fresh ``speaking_agent.invoke`` LLM call — after the turn's first invoke
+# consumed budget, the deadline may have expired, so each re-prompt must
+# re-check ``deadline`` before firing (the entry-of-phase check at L1896 only
+# guards entering the phase). The intra-invocation case (a single invoke that
+# never yields) is item 5, not item 4.
+# ---------------------------------------------------------------------------
+
+
+class TestCB1528Item4GroupChatDeadlineGuard:
+    def test_reprompt_cancelled_when_deadline_expired(self, caplog):
+        """CB #1528 item 4 (group-chat path): when ``deadline`` has expired by
+        re-prompt time, the loop MUST ``break`` before invoking the speaking
+        agent — no post-cap LLM call. The group-chat path is the live one since
+        CD #1534, so this is an active post-cap LLM site, not dead code.
+
+        Isolating item 4 from the entry-of-phase check (L1896) requires the
+        clock to read ``< deadline`` at phase entry AND at the between-turn
+        check (L1996), but ``>= deadline`` at the re-prompt guard. The mocked
+        ``chat.invoke()`` is instant, so we advance a fake clock between those
+        sites: the first ``time.time()`` calls return ``entry_time`` (entry +
+        between-turn checks pass), subsequent calls return ``post_turn_time``
+        (the re-prompt guard fires). Asserts both the no-invoke contract and
+        the loud skip log.
+        """
+        agent = _make_speaking_agent()
+        state = _empty_growth_state()
+        fake_chat = _FakeGroupChat(agents=[agent])
+        entry_time = 1000.0
+        post_turn_time = entry_time + 10000.0
+        deadline = entry_time + 1.0  # future at entry, expired by re-prompt
+        call_count = [0]
+
+        def fake_time():
+            call_count[0] += 1
+            # Call order in _run_phase for one mocked turn: (1) entry check
+            # L1896, (2) one call during turn processing, (3) between-turn
+            # check L1996 — all three must see entry_time (< deadline) so the
+            # turn completes and reaches growth validation. The re-prompt guard
+            # L2025 is the next call → sees post_turn_time (>= deadline) → fires.
+            return entry_time if call_count[0] <= 3 else post_turn_time
+
+        with caplog.at_level(logging.INFO, logger="ConversationalOrchestrator"):
+            with patch(_GC_PATCH, return_value=fake_chat):
+                with patch(
+                    "argumentation_analysis.orchestration.conversational_orchestrator.time.time",
+                    side_effect=fake_time,
+                ):
+                    asyncio.run(
+                        _run_phase(
+                            agents=[agent],
+                            initial_prompt="extract",
+                            max_turns=2,
+                            phase_name="Extraction & Detection",
+                            state=state,
+                            enable_growth_validation=True,
+                            growth_re_prompt_limit=2,
+                            deadline=deadline,
+                        )
+                    )
+        assert len(agent.invoke_calls) == 0, (
+            "speaking_agent.invoke called despite the deadline being expired at "
+            "re-prompt time — the CB #1528 item 4 deadline guard did not fire on "
+            "the group-chat re-prompt path (a post-cap LLM call leaked through)"
+        )
+        # Loud skip: the cancellation is logged (anti-silent-fail, #1019).
+        assert any(
+            "deadline atteinte" in rec.message and "group-chat path" in rec.message
+            for rec in caplog.records
+        ), "no deadline-skip log emitted on the group-chat path (CB #1528 item 4)"
+
+    def test_reprompt_fires_when_deadline_in_future(self):
+        """Symmetric guard: a deadline comfortably in the future does NOT block
+        the re-prompt — the item-4 guard must not regress the CF #1538 re-prompt
+        contract (a zero-growth turn still triggers a re-prompt when budget
+        remains). Confirms the guard is conditional, not unconditional.
+        """
+        agent = _make_speaking_agent()
+        state = _empty_growth_state()
+        fake_chat = _FakeGroupChat(agents=[agent])
+        # deadline 1h in the future → guard does not fire.
+        future_deadline = time.time() + 3600.0
+        with patch(_GC_PATCH, return_value=fake_chat):
+            asyncio.run(
+                _run_phase(
+                    agents=[agent],
+                    initial_prompt="extract",
+                    max_turns=2,
+                    phase_name="Extraction & Detection",
+                    state=state,
+                    enable_growth_validation=True,
+                    growth_re_prompt_limit=2,
+                    deadline=future_deadline,
+                )
+            )
+        assert len(agent.invoke_calls) >= 1, (
+            "speaking_agent.invoke NOT called despite deadline being in the "
+            "future — the CB #1528 item 4 guard over-fired and cancelled a "
+            "legitimate re-prompt (regression of the CF #1538 contract)"
+        )
