@@ -152,7 +152,12 @@ class TestProofRuntimeContract:
         from api.proposal_service import ProposalStore
 
         store = ProposalStore()
-        payload = asyncio.run(proof_mod.run_democratech_flow(store))
+        # #1547 sibling: force_stub keeps this hermetic (no LLM call). This
+        # test asserts the PAYLOAD SHAPE (keys, provenance, opaque IDs,
+        # votes), none of which depend on the LLM verdict — so the stub path
+        # preserves the contract. Without force_stub it bills a real LLM run
+        # (3-4 min) with no requires_api marker, same leak as the CLI test.
+        payload = asyncio.run(proof_mod.run_democratech_flow(store, force_stub=True))
 
         # Required keys (consumed by the React dashboard).
         assert "proposal" in payload
@@ -185,7 +190,8 @@ class TestProofRuntimeContract:
         from api.proposal_service import ProposalStore
 
         store = ProposalStore()
-        payload = asyncio.run(proof_mod.run_democratech_flow(store))
+        # #1547 sibling: hermetic — see test_run_democratech_flow_produces_payload.
+        payload = asyncio.run(proof_mod.run_democratech_flow(store, force_stub=True))
         out = tmp_path / "dashboard_data.json"
         out.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
         reloaded = json.loads(out.read_text(encoding="utf-8"))
@@ -294,7 +300,25 @@ class TestRenderContract:
 
 @pytest.mark.slow
 def test_proof_script_cli_runs(tmp_path: pathlib.Path) -> None:
-    """`python scripts/proof_bo2b_dashboard_e2e.py --output <tmp>` exits 0."""
+    """`--no-llm --output <tmp>` exits 0 on the hermetic stub path.
+
+    #1547: previously this test ran the script WITHOUT ``--no-llm``, branching
+    on the real LLM client whenever a key was present (``load_dotenv`` re-reads
+    ``.env``, so removing the env var is not enough). The real path takes 3-4
+    min (LLM latency, measured firsthand) and blew the 120 s subprocess borne
+    — a red that CI did not surface (no ``requires_api`` marker). Same leak
+    family as #1510 (Floater Fact / pytest-dotenv).
+
+    Fix = subtract the dependency (anti-pendule), not raise the borne: route
+    the script to the offline stub that already existed (``_run_pipeline``
+    ImportError/Exception branches) and make it *demandable* via ``--no-llm``.
+    The stub short-circuits BEFORE ``run_unified_analysis`` is even imported,
+    so zero LLM call is made regardless of any key in env or ``.env``.
+
+    The borne is justified by measurement, not guessed: the stub path runs in
+    ~7-9 s locally (startup + imports + serialize + write); 60 s leaves a ~6x
+    margin for slower CI Windows runners (torch/transformers cold import).
+    """
     out_path = tmp_path / "data.json"
     result = subprocess.run(
         [
@@ -303,10 +327,11 @@ def test_proof_script_cli_runs(tmp_path: pathlib.Path) -> None:
             "--output",
             str(out_path),
             "--quiet",
+            "--no-llm",
         ],
         capture_output=True,
         text=True,
-        timeout=120,
+        timeout=60,
         cwd=str(REPO_ROOT),
     )
     assert result.returncode == 0, (
@@ -317,3 +342,53 @@ def test_proof_script_cli_runs(tmp_path: pathlib.Path) -> None:
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload["provenance"]["synthetic"] is True
     assert payload["proposal"]["author"].startswith("prop_")
+    # Fail-loud the hermeticity contract (anti-théâtre #1019): the stub marker
+    # proves the offline path was taken. If someone drops ``--no-llm`` from the
+    # command above, the real LLM path runs and this note is absent — the test
+    # turns red loud instead of silently billing LLM calls under the borne.
+    assert "force-stub" in payload["results"]["note"], (
+        "stub path not taken — `--no-llm` did not route to the offline stub; "
+        "the real LLM path may have run (hermeticity regression, #1547)"
+    )
+
+
+@pytest.mark.requires_api
+@pytest.mark.slow
+def test_proof_script_cli_real_llm_path(tmp_path: pathlib.Path) -> None:
+    """The real (non-stub) LLM path still exits 0 — kept for who has a key.
+
+    #1547 DoD #4: the hermetic test above covers the stub path; this test
+    guards the real path so it is not silently dropped. It is marked
+    ``requires_api`` (skipped without a key) AND ``slow`` (the real path takes
+    3-4 min, so it must not run in the default CI sweep). It does NOT assert
+    a specific verdict — the real path may DECIDED or DEGRADE honestly
+    depending on key quota / pipeline availability; we only assert it exits 0
+    and emits a payload of the expected shape.
+    """
+    out_path = tmp_path / "data.json"
+    # 300 s borne: the real path measures 178-259 s firsthand (#1547 body);
+    # 300 s leaves margin for LLM latency variance (±45 % measured between
+    # identical runs — network-shaped, not import-shaped).
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(PROOF_SCRIPT),
+            "--output",
+            str(out_path),
+            "--quiet",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        cwd=str(REPO_ROOT),
+    )
+    assert result.returncode == 0, (
+        f"proof script (real path) failed:\nSTDOUT:\n{result.stdout}\n"
+        f"STDERR:\n{result.stderr}"
+    )
+    assert out_path.exists()
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["provenance"]["synthetic"] is True
+    assert payload["proposal"]["author"].startswith("prop_")
+    # Real path: the force-stub note must be ABSENT (we did not pass --no-llm).
+    assert "force-stub" not in payload["results"].get("note", "")

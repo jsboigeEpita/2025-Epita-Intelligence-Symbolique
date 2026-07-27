@@ -105,13 +105,18 @@ def _serialize_deliberation(d) -> Dict[str, Any]:
     }
 
 
-async def run_democratech_flow(store: ProposalStore) -> Dict[str, Any]:
+async def run_democratech_flow(store: ProposalStore, force_stub: bool = False) -> Dict[str, Any]:
     """Execute one full proposal→deliberate→vote cycle on the in-memory store.
 
     Returns a JSON-safe payload suitable for the React dashboard's initial
     state (proposal + deliberation + vote + analysis results). Mirrors what
     ``GET /api/proposals/{id}`` + ``GET /api/deliberate/{id}/status`` would
     return after a successful run.
+
+    ``force_stub`` routes ``_run_pipeline`` to the offline stub (no LLM call)
+    — #1547: makes the hermetic path demandable rather than relying on a
+    broken env. The stub branch is captured honestly via the ``STUB`` status
+    line below, not masqueraded as a real verdict (anti-théâtre #1019).
     """
     # 1. Create proposal (synthetic chess-club).
     proposal_in = ProposalCreate(
@@ -155,7 +160,7 @@ async def run_democratech_flow(store: ProposalStore) -> Dict[str, Any]:
         delib_id=delib_id,
         proposal_text=PROPOSITION,
         workflow="democratech",
-        options={},
+        options={"force_stub": force_stub},
     )
 
     # 5. Re-fetch enriched state.
@@ -212,6 +217,17 @@ def main() -> int:
         action="store_true",
         help="Suppress INFO logs.",
     )
+    parser.add_argument(
+        "--no-llm",
+        action="store_true",
+        help=(
+            "Force the offline stub path (no LLM call). Makes the script "
+            "hermetic — independent of OPENAI_API_KEY in the env or .env "
+            "(#1547). The stub branch is the same one used when the pipeline "
+            "is unavailable; this flag just makes it demandable. Honest: the "
+            "output reports STUB, not a fabricated verdict."
+        ),
+    )
     args = parser.parse_args()
 
     if not args.quiet:
@@ -221,7 +237,7 @@ def main() -> int:
 
     store = ProposalStore()
     t0 = time.monotonic()
-    payload = asyncio.run(run_democratech_flow(store))
+    payload = asyncio.run(run_democratech_flow(store, force_stub=args.no_llm))
     elapsed = time.monotonic() - t0
 
     # Honest status line (anti-théâtre #1019 — degraded is a VALID outcome).

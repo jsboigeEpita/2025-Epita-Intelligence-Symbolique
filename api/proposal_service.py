@@ -291,6 +291,21 @@ async def _broadcast_ws_deliberation_result(
 
 async def _run_pipeline(text: str, workflow: str, options: Dict) -> Dict:
     """Run the unified pipeline for analysis."""
+    # #1547: an explicit ``force_stub`` option short-circuits to the offline
+    # stub BEFORE importing/calling ``run_unified_analysis`` (the only LLM
+    # site in this flow). The stub already existed (ImportError/Exception
+    # branches below) but was only *suffered*; this makes it *demandable*
+    # from a CLI flag, so a proof script can run hermetically — zero LLM
+    # calls, no matter what ``load_dotenv`` re-reads from ``.env`` (the #1510
+    # leak vector). Anti-pendule: route to the existing stub rather than
+    # patch the LLM client globally (which would break the live API).
+    if options.get("force_stub"):
+        logger.info("Force-stub requested via options — skipping LLM pipeline")
+        return {
+            "workflow": workflow,
+            "text_excerpt": text[:200],
+            "note": "Pipeline skipped — force-stub requested (offline path)",
+        }
     try:
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
