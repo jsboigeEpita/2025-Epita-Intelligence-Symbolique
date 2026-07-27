@@ -56,6 +56,47 @@ logger = logging.getLogger(__name__)
 # Type alias for the operational tier seam: a command dict in, a result dict out.
 OperationalExecutor = Callable[[Dict[str, Any]], Awaitable[Dict[str, Any]]]
 
+# CC #1531 item 1 — the operational tier ALREADY tells us, honestly, when it
+# could not analyse. Nobody was listening: the aggregation below counted
+# ``status == "completed"`` (a task RAN) and called it a success rate (a task
+# PRODUCED), so a provider announcing its own unavailability rolled up into
+# "performance globale élevée". That is the #1019 pattern in its canonical
+# form — a degradation flag with no consumer.
+#
+# The keys below are grounded in the actual writers, not invented (a flag read
+# from a key nobody writes fabricates a zero just as surely as one nobody
+# reads discards a truth):
+#   * ``degraded: True``                 — invoke_callables.py (many sites)
+#   * ``status: "unavailable"``          — adapters/dung_student_provider.py:205
+#   * ``extraction_status: "failed:..."`` — invoke_callables.py:5414
+_DEGRADED_OUTPUT_STATUSES = frozenset({"unavailable", "failed", "error", "degraded"})
+
+
+def _degradation_reasons(outputs: Any) -> List[str]:
+    """Collect the operational tier's own degradation self-reports.
+
+    Returns a (possibly empty) list of short reason strings. Empty means the
+    provider made no claim of degradation — **not** that it produced content.
+
+    That distinction is the whole point. A provider that ran fine over a clean
+    corpus and honestly found zero fallacies is a *success* that returns zero;
+    treating every empty output as a failure would be the mirror error, and
+    would make the verdict lie in the other direction. Only a self-declared
+    non-analysis is counted here.
+    """
+    if not isinstance(outputs, dict):
+        return []
+    reasons: List[str] = []
+    if outputs.get("degraded") is True:
+        reasons.append("degraded")
+    status = outputs.get("status")
+    if isinstance(status, str) and status.lower() in _DEGRADED_OUTPUT_STATUSES:
+        reasons.append(f"status={status}")
+    extraction_status = outputs.get("extraction_status")
+    if isinstance(extraction_status, str) and extraction_status.startswith("failed"):
+        reasons.append(f"extraction_status={extraction_status}")
+    return reasons
+
 
 class DelegationError(RuntimeError):
     """Raised when the 3-tier delegation chain cannot proceed honestly.
@@ -208,12 +249,22 @@ def make_registry_operational_executor(
                 "reason": "provider_returned_none",
                 "capability": chosen,
             }
-        return {
+        task_result = {
             **base,
             "status": "completed",
             "capability": chosen,
             "outputs": result,
         }
+        # CC #1531 item 1: surface the provider's own degradation self-report at
+        # the top level of the task result, where the aggregation can see it.
+        # ``status`` stays ``completed`` on purpose — the call DID return; what
+        # did not happen is production, and conflating the two would lose
+        # information rather than add it.
+        reasons = _degradation_reasons(result)
+        if reasons:
+            task_result["degraded"] = True
+            task_result["degradation_reasons"] = reasons
+        return task_result
 
     return _executor
 
@@ -367,13 +418,56 @@ class DelegationOrchestrator:
         )
         final = self.strategic_manager.evaluate_final_results(eval_input)
 
+        # --- CC #1531 item 1: an honest verdict ----------------------------
+        # ``degraded`` means "no operational task produced anything" — not
+        # "some task complained". A run where three tasks produced and one
+        # provider was unavailable still concludes, with a rate lowered by the
+        # aggregation above; punishing it would be the mirror error. But a run
+        # where NOTHING was produced has no analysis to report, and saying so
+        # is the only honest option: averaging self-declared non-analyses into
+        # a 0.5 and calling it "satisfaisante" is how the fabricated verdict
+        # was manufactured.
+        reasons: List[str] = []
+        for result in operational_results:
+            label = result.get("capability") or result.get("task_id") or "task"
+            if result.get("degraded"):
+                reasons.extend(
+                    f"{label}: {r}" for r in result.get("degradation_reasons", [])
+                )
+            elif result.get("status") == "failed":
+                reasons.append(f"{label}: {result.get('reason', 'failed')}")
+        produced_anything = any(
+            r.get("status") == "completed" and not r.get("degraded")
+            for r in operational_results
+        )
+        degraded = bool(operational_results) and not produced_anything
+
+        conclusion = final.get("conclusion")
+        if degraded:
+            self.logger.warning(
+                "M3 delegation produced no operational output on %d task(s); "
+                "emitting a degraded verdict instead of a success (CC #1531).",
+                len(operational_results),
+            )
+            conclusion = (
+                "Analyse dégradée : aucune des "
+                f"{len(operational_results)} tâche(s) opérationnelle(s) n'a "
+                "produit de résultat exploitable. Aucune conclusion sur "
+                "l'argumentation n'est émise."
+            )
+
         return {
             "mode": "delegation",
             "objectives": objectives,
             "tasks_created": decomposition.get("tasks_created", len(pending_tasks)),
             "operational_results": operational_results,
             "evaluation": final.get("evaluation"),
-            "conclusion": final.get("conclusion"),
+            "conclusion": conclusion,
+            # Read by scripts/compare_orchestration_modes.py so a degraded run
+            # scores ``decides`` False (``—``) without touching the uniform
+            # ``_compute_decides`` helper (CA #1529).
+            "degraded": degraded,
+            "degradation_reasons": reasons,
         }
 
     @staticmethod
@@ -386,6 +480,11 @@ class DelegationOrchestrator:
         Shapes the input expected by ``StrategicManager.evaluate_final_results``:
         ``{obj_id: {"success_rate": float}}``. The rate is the fraction of an
         objective's tasks that completed (failures count honestly against it).
+
+        CC #1531 item 1: a task that ran but whose provider declared itself
+        degraded / unavailable does **not** count toward the rate. Before this,
+        ``success_rate`` was an *execution* rate wearing the name of a
+        *production* rate, and the strategic tier read it as performance.
         """
         by_obj: Dict[str, List[Dict[str, Any]]] = {obj["id"]: [] for obj in objectives}
         for result in operational_results:
@@ -398,8 +497,12 @@ class DelegationOrchestrator:
             if not results:
                 success_rate = 0.0
             else:
-                completed = sum(1 for r in results if r.get("status") == "completed")
-                success_rate = completed / len(results)
+                productive = sum(
+                    1
+                    for r in results
+                    if r.get("status") == "completed" and not r.get("degraded")
+                )
+                success_rate = productive / len(results)
             eval_input[oid] = {"success_rate": success_rate}
         return eval_input
 
