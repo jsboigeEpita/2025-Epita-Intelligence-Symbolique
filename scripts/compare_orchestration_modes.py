@@ -20,7 +20,7 @@ Usage:
     python scripts/compare_orchestration_modes.py \\
         --modes pipeline hierarchical_bridge hierarchical_delegation
 
-    # Bound conversational wall-clock (default 180s)
+    # Bound the wall-clock of every mode (default 180s)
     python scripts/compare_orchestration_modes.py \\
         --modes conversational --max-wall-seconds 60
 
@@ -65,12 +65,17 @@ logger = logging.getLogger("orchestration_mode_harness")
 for _name in ("httpx", "openai", "semantic_kernel", "urllib3"):
     logging.getLogger(_name).setLevel(logging.WARNING)
 
-# Default conversational wall-time budget (seconds). Pre-R653, the
+# Default wall-time budget (seconds) for EVERY mode. Pre-R653, the
 # conversational mode was unbounded and ran >600s on 643-octet input;
 # 180s is a reasonable budget that lets a real run reach the Synthesis
 # phase on a short corpus without making the harness itself a CI
 # bottleneck. Overridable via --max-wall-seconds.
-DEFAULT_CONVERSATIONAL_WALL_SECONDS = 180.0
+#
+# CB #1528 item 3: the name used to carry a "conversational" qualifier and
+# the CLI help still said "for the conversational mode". That was drift:
+# since CB the budget is threaded to every runner (see ``run_comparison``),
+# and the conversational mode is simply the one that used to overshoot it.
+DEFAULT_WALL_SECONDS = 180.0
 
 
 def _conversational_safety_net_timeout(max_wall_seconds: float) -> float:
@@ -262,8 +267,10 @@ def _compute_decides(result: ModeResult) -> bool:
 
     Anti-#1019 / anti-pendule: returning ``True`` everywhere would destroy the
     column's discriminating power. The non-regression test is that a genuinely
-    sterile run (conversational cut at the safety-net: 0/0 phases, 0 % fill,
-    0 messages) stays ``False`` → ``—``.
+    sterile run stays ``False`` → ``—``: 0/0 phases, 0 messages, and NO state
+    written at all (``state_fill_rate is None`` since Track CG #1540 — the
+    safety-net branch builds its ``ModeResult`` without those fields, so the
+    old "0 % fill" wording here described a measurement that never happens).
 
     Track CG #1540: ``state_fill_rate`` / ``argument_count`` / ``fallacy_count``
     are now Optional (None = "not written", e.g. hierarchical modes that decide
@@ -651,7 +658,7 @@ async def run_pipeline_mode(
 async def run_conversational_mode(
     text: str,
     corpus_id: str,
-    max_wall_seconds: float = DEFAULT_CONVERSATIONAL_WALL_SECONDS,
+    max_wall_seconds: float = DEFAULT_WALL_SECONDS,
 ) -> ModeResult:
     """Run conversational orchestrator (AgentGroupChat multi-agent).
 
@@ -741,6 +748,26 @@ async def run_conversational_mode(
     }
     total_messages = result.get("total_messages", 0) if isinstance(result, dict) else 0
 
+    # CB #1528 item 3: the counts are MEASURED from the state snapshot the
+    # orchestrator returns. ``result["extra_metrics"]`` is a key it NEVER
+    # emits, so reading ``.get("extra_metrics", {}).get("fallacy_count", 0)``
+    # manufactured a 0 indistinguishable from an observed 0 (leçon #1531), and
+    # ``argument_count`` was not read at all — a populated state rendered "—"
+    # in the Args column. The snapshot is the non-summarized one (raw attribute
+    # names, ``identified_arguments`` / ``identified_fallacies``), NOT the
+    # summarized ``*_count`` shape. Absent key → None ("not written", Track CG
+    # #1540), never a fabricated 0.
+    snapshot = state if isinstance(state, dict) else {}
+
+    def _snapshot_count(key: str) -> Optional[int]:
+        value = snapshot.get(key)
+        if value is None:
+            return None
+        try:
+            return len(value)
+        except TypeError:
+            return None
+
     return ModeResult(
         mode="conversational",
         corpus_id=corpus_id,
@@ -748,7 +775,8 @@ async def run_conversational_mode(
         terminates=True,
         duration_seconds=round(duration, 2),
         state_fill_rate=round(non_empty / max(total_fields, 1), 3),
-        fallacy_count=result.get("extra_metrics", {}).get("fallacy_count", 0),
+        fallacy_count=_snapshot_count("identified_fallacies"),
+        argument_count=_snapshot_count("identified_arguments"),
         phases_completed=len(phases_ran),
         phases_total=len(planned_phases),
         capabilities_used=result.get("capabilities_used", []),
@@ -1318,7 +1346,7 @@ async def run_all(
     corpora: Optional[List[str]] = None,
     output_file: Optional[str] = None,
     dry_run: bool = False,
-    max_wall_seconds: float = DEFAULT_CONVERSATIONAL_WALL_SECONDS,
+    max_wall_seconds: float = DEFAULT_WALL_SECONDS,
 ) -> List[ModeResult]:
     """Run selected modes on selected corpora.
 
@@ -1412,8 +1440,8 @@ async def run_all(
     # common ModeResult fields — the single source of truth, so no runner can
     # hand-set it on a local criterion. A budget breach that still produced
     # partial artifacts honestly decides True (the partial state IS the
-    # verdict, anti-#1019); a genuinely sterile run (conversational cut at the
-    # safety-net: 0/0 phases, 0 % fill) stays False → `—`.
+    # verdict, anti-#1019); a genuinely sterile run (cut at the safety-net:
+    # 0/0 phases, no state written) stays False → `—`.
     for r in results:
         r.decides = _compute_decides(r)
 
@@ -1471,10 +1499,10 @@ def main():
     parser.add_argument(
         "--max-wall-seconds",
         type=float,
-        default=DEFAULT_CONVERSATIONAL_WALL_SECONDS,
+        default=DEFAULT_WALL_SECONDS,
         help=(
-            f"Wall-clock budget for the conversational mode in seconds "
-            f"(default {DEFAULT_CONVERSATIONAL_WALL_SECONDS:g}). "
+            f"Wall-clock budget in seconds, applied to EVERY mode "
+            f"(default {DEFAULT_WALL_SECONDS:g}). "
             f"On breach, the verdict is recorded as PARTIAL HONNÊTE "
             f"(terminated_by_budget=True), never as success=True."
         ),

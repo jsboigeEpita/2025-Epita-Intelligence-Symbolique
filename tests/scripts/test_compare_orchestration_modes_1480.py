@@ -370,6 +370,88 @@ class TestConversationalInternalBound:
         assert "✅⏱ bounded" in report
 
 
+class TestCB1528CountsComeFromTheSnapshot:
+    """CB #1528 item 3 — the Args/Fallacies columns must be MEASURED.
+
+    The runner read ``result["extra_metrics"]["fallacy_count"]``, a key the
+    conversational orchestrator never emits, so the default ``0`` was a
+    fabricated zero indistinguishable from an observed one (leçon #1531);
+    ``argument_count`` was not read at all, so a populated state rendered
+    ``—``. Both are measured from the state snapshot, which this runner
+    receives NON-summarized: raw attribute names (``identified_arguments``),
+    not the summarized ``*_count`` shape — the same shape the pre-existing
+    ``test_internal_bound_maps_to_real_partial_verdict`` fixture uses.
+    """
+
+    @staticmethod
+    def _fake_result(**snapshot_extra):
+        snapshot = {
+            "identified_arguments": {"arg_0": "a", "arg_1": "b", "arg_2": "c"},
+            "identified_fallacies": {"f_0": "x", "f_1": "y"},
+        }
+        snapshot.update(snapshot_extra)
+        return {
+            "phases": ["Extraction & Detection"],
+            "conversation_log": [
+                {"phase": "Extraction & Detection", "turn": 1, "content": "x"}
+            ],
+            "total_messages": 1,
+            "state_snapshot": snapshot,
+            "budget": {"wall_clock_bounded": True},
+            "status": "WALL_CLOCK_BOUNDED",
+            "duration_seconds": 30.0,
+        }
+
+    def _run(self, fake_result):
+        mod = _load_harness_module()
+
+        async def fake_run(**kwargs):
+            return fake_result
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.conversational_orchestrator"
+                ".run_conversational_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_conversational_mode(
+                    "text", "corpus_A", max_wall_seconds=30.0
+                )
+
+        return asyncio.run(_drive())
+
+    def test_counts_are_read_from_the_state_snapshot(self) -> None:
+        result = self._run(self._fake_result())
+        assert result.argument_count == 3, (
+            "CB #1528 item 3 regression: argument_count is not read from the "
+            f"state snapshot (got {result.argument_count!r}) — a populated "
+            "state renders '—' in the Args column."
+        )
+        assert result.fallacy_count == 2, (
+            "CB #1528 item 3 regression: fallacy_count is not read from the "
+            f"state snapshot (got {result.fallacy_count!r})."
+        )
+
+    def test_absent_counts_stay_none_never_a_fabricated_zero(self) -> None:
+        """Track CG #1540: absent ≠ measured. A snapshot without the keys must
+        leave the columns unwritten (``None`` → ``—``), not report ``0``."""
+        fake = self._fake_result()
+        fake["state_snapshot"] = {"some_other_field": 1}
+        result = self._run(fake)
+        assert result.argument_count is None
+        assert result.fallacy_count is None, (
+            "A snapshot with no fallacy_count must render '—', not a 0 that "
+            "reads as 'measured, none found'."
+        )
+
+    def test_measured_zero_stays_zero(self) -> None:
+        """Anti-pendule: a real 0 must survive as 0, not be turned into ``—``."""
+        fake = self._fake_result(identified_arguments={}, identified_fallacies={})
+        result = self._run(fake)
+        assert result.argument_count == 0
+        assert result.fallacy_count == 0
+
+
 class TestReportFormat:
     """The trade-off table is generated with the BO-4 columns."""
 
