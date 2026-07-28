@@ -60,14 +60,16 @@ class TestHierarchicalBridgeModeFirsthandDecision:
         assert "conclusion" in result, "Phase 4 strategic decision missing"
         assert isinstance(result["conclusion"], str)
         assert len(result["conclusion"]) > 0, "conclusion is empty"
-        # The conclusion string is one of the 3 graded verdicts in
-        # ``strategic/manager.py:_formulate_conclusion``. Any non-empty string
-        # proves Phase 4 reached end-of-line without an AttributeError.
-        assert result["conclusion"] in {
-            "Analyse réussie avec une performance globale élevée.",
-            "Analyse satisfaisante avec quelques faiblesses.",
-            "L'analyse a rencontré des difficultés significatives.",
-        }
+        # CC #1531 item 3: ``_formulate_conclusion`` now cites real elements
+        # (productive-objective count + strengths/weaknesses), not a fixed
+        # phrase. The contract here is the documented one (see comment below):
+        # any non-empty string proves Phase 4 reached end-of-line without an
+        # AttributeError. The conclusion starts with the "Analyse :" preamble
+        # emitted by ``_formulate_conclusion`` in every measured case.
+        assert result["conclusion"].startswith("Analyse"), (
+            f"conclusion {result['conclusion']!r} did not come from "
+            f"_formulate_conclusion (Phase 4 end-of-line regression)"
+        )
 
         # --- Bridge-mode is the default selection -----------------------
         assert result.get("workflow_name") == "hierarchical_analysis"

@@ -86,14 +86,20 @@ class TestDelegationModeDecidesFirsthand:
             )
 
         # --- Strategic decision reached + graded verdict --------------
+        # CC #1531 item 3: ``_formulate_conclusion`` now cites real elements
+        # (productive-objective count + strengths/weaknesses), not a fixed
+        # phrase. The R648 contract preserved here is "the verdict is a
+        # SUCCESS, not a degradation" — i.e. it carries the success qualifier
+        # and does NOT read "difficultés significatives" (the <0.5 branch).
         assert "conclusion" in result
-        assert result["conclusion"] in {
-            "Analyse réussie avec une performance globale élevée.",
-            "Analyse satisfaisante avec quelques faiblesses.",
-        }, (
-            f"conclusion {result['conclusion']!r} is degraded — R648 fix "
-            f"did not lift delegation mode out of 'difficultés'"
+        conclusion = result["conclusion"]
+        assert "difficultés" not in conclusion.lower(), (
+            f"conclusion {conclusion!r} is degraded — R648 fix did not lift "
+            f"delegation mode out of 'difficultés'"
         )
+        assert (
+            "élevée" in conclusion.lower() or "satisfaisante" in conclusion.lower()
+        ), f"conclusion {conclusion!r} carries no success qualifier (R648 regression)"
         eval_block = result.get("evaluation", {}).get("objectives_evaluation", {})
         assert eval_block.get("obj-2", {}).get("success_rate", 0) >= 0.5, (
             "obj-2 (Détecter les sophismes) must succeed — this is the "

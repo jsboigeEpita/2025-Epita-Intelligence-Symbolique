@@ -135,7 +135,14 @@ class TestHierarchicalFullStrategy(unittest.TestCase):
         self.assertIn("conclusion", result)
         self.assertIn("evaluation", result)
         self.assertAlmostEqual(result["evaluation"]["overall_success_rate"], 0.85)
-        self.assertIn("Analyse réussie", result["conclusion"])
+        # CC #1531 item 3: ``_formulate_conclusion`` now cites real elements
+        # (productive-objective count + named strengths) instead of a fixed
+        # phrase. The contract here is "a SUCCESS conclusion is rendered" —
+        # i.e. it starts with the ``Analyse`` preamble and carries the
+        # « élevée » success qualifier, not the « difficultés » degradation.
+        self.assertTrue(result["conclusion"].startswith("Analyse"))
+        self.assertIn("élevée", result["conclusion"])
+        self.assertNotIn("difficultés", result["conclusion"])
         self.assertIn("final_state", result)
 
 
