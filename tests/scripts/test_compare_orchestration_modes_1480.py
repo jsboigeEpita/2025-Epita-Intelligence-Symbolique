@@ -452,6 +452,125 @@ class TestCB1528CountsComeFromTheSnapshot:
         assert result.fallacy_count == 0
 
 
+class Test1560PipelineCountsComeFromTheSnapshot:
+    """#1560 — the SAME phantom-key defect, in the pipeline runner.
+
+    ``run_pipeline_mode`` read ``result["extra_metrics"]["fallacy_count"]``.
+    ``extra_metrics`` has no producer anywhere in the package, so the call
+    returned its literal default ``0`` on every run — a fabricated zero
+    indistinguishable from an observed one (leçon #1531). It went unnoticed
+    because the twin call-site was fixed (CB #1528 item 3, class above)
+    WITHOUT grepping the pattern: a phantom key copied between sibling
+    runners is a motif, not an accident.
+
+    ⚠ INVERSE polarity from the conversational fix. ``unified_pipeline``
+    returns ``get_state_snapshot(summarize=True)``, whose shape carries
+    ``fallacy_count`` / ``argument_count`` FLAT at top level — NOT the raw
+    ``identified_*`` collections the conversational runner reads. Copying
+    that fix verbatim yields ``None`` everywhere while looking correct;
+    ``test_counts_are_read_from_the_summarized_snapshot`` is what catches it.
+    """
+
+    @staticmethod
+    def _fake_result(snapshot=None, **extra):
+        result = {
+            "summary": {"completed": 15, "total": 15},
+            "state_snapshot": (
+                {"fallacy_count": 2, "argument_count": 3}
+                if snapshot is None
+                else snapshot
+            ),
+            "capabilities_used": ["fact_extraction"],
+            "capabilities_missing": [],
+        }
+        result.update(extra)
+        return result
+
+    def _run(self, fake_result):
+        mod = _load_harness_module()
+
+        async def fake_run(**kwargs):
+            return fake_result
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.unified_pipeline"
+                ".run_unified_analysis",
+                side_effect=fake_run,
+            ):
+                return await mod.run_pipeline_mode("text", "corpus_A", "standard")
+
+        return asyncio.run(_drive())
+
+    def test_counts_are_read_from_the_summarized_snapshot(self) -> None:
+        result = self._run(self._fake_result())
+        assert result.fallacy_count == 2, (
+            "#1560 regression: fallacy_count is not read from the summarized "
+            f"state snapshot (got {result.fallacy_count!r}). Reading the raw "
+            "``identified_*`` keys instead — the conversational shape — yields "
+            "None here."
+        )
+        assert result.argument_count == 3
+
+    def test_phantom_extra_metrics_is_never_consulted(self) -> None:
+        """The exact defect: a key with no producer must not drive the column.
+
+        If the reader still consults ``extra_metrics``, this returns 99 (or the
+        old fabricated 0). Only reading the snapshot gives ``None`` here.
+        """
+        fake = self._fake_result(
+            snapshot={"some_other_field": 1},
+            extra_metrics={"fallacy_count": 99, "argument_count": 99},
+        )
+        result = self._run(fake)
+        assert result.fallacy_count is None, (
+            "#1560 regression: the runner is still reading the phantom "
+            f"``extra_metrics`` key (got {result.fallacy_count!r})."
+        )
+        assert result.argument_count is None
+
+    def test_absent_counts_stay_none_never_a_fabricated_zero(self) -> None:
+        """Track CG #1540: absent ≠ measured. Unwritten renders ``—``, not 0."""
+        result = self._run(self._fake_result(snapshot={"some_other_field": 1}))
+        assert result.fallacy_count is None, (
+            "A snapshot with no fallacy_count must render '—', not a 0 that "
+            "reads as 'measured, none found'."
+        )
+        assert result.argument_count is None
+
+    def test_measured_zero_stays_zero(self) -> None:
+        """Anti-pendule: a real 0 must survive as 0, not be turned into ``—``."""
+        result = self._run(
+            self._fake_result(snapshot={"fallacy_count": 0, "argument_count": 0})
+        )
+        assert result.fallacy_count == 0
+        assert result.argument_count == 0
+
+    def test_null_snapshot_does_not_crash(self) -> None:
+        """``unified_pipeline`` sets ``state_snapshot = None`` when state
+        tracking is off — the key is PRESENT with a null value, so ``.get(...,
+        {})`` returns None, not the default. The reader must survive that."""
+        fake = self._fake_result()
+        fake["state_snapshot"] = None
+        result = self._run(fake)
+        assert result.fallacy_count is None
+        assert result.argument_count is None
+
+    def test_summarized_snapshot_really_carries_these_keys(self) -> None:
+        """Pin the CONSUMER-side contract this reader depends on.
+
+        The reader is correct only as long as ``get_state_snapshot(summarize=
+        True)`` exposes these two names at top level. If ``shared_state`` drifts,
+        the reader silently returns ``None`` and the columns go back to being
+        uninformative — so assert the contract rather than trust it.
+        """
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        snapshot = UnifiedAnalysisState("x").get_state_snapshot(summarize=True)
+        assert "fallacy_count" in snapshot
+        assert "argument_count" in snapshot
+
+
 class TestReportFormat:
     """The trade-off table is generated with the BO-4 columns."""
 
@@ -842,10 +961,12 @@ class TestCBWallClockBudget1528:
         mod = self._harness()
         fake_result = {
             "summary": {"completed": 15, "total": 15},
-            "state_snapshot": {"identified_arguments": {"arg_1": "x"}},
+            # #1560: the pipeline's snapshot is the SUMMARIZED shape. This
+            # fixture used to also carry an ``extra_metrics`` key — which no
+            # orchestrator emits — encoding the phantom key as if it were real.
+            "state_snapshot": {"argument_count": 1, "fallacy_count": 2},
             "capabilities_used": ["fact_extraction"],
             "capabilities_missing": [],
-            "extra_metrics": {"fallacy_count": 2, "argument_count": 1},
         }
         captured: dict = {}
 

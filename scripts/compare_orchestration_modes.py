@@ -639,14 +639,35 @@ async def run_pipeline_mode(
         1 for v in (snap or {}).values() if v and v not in ([], {}, "", None, 0)
     )
 
+    # #1560: the counts are MEASURED from the snapshot the pipeline returns.
+    # ``result["extra_metrics"]`` has NO producer anywhere in the package, so
+    # ``.get("extra_metrics", {}).get("fallacy_count", 0)`` returned its literal
+    # default on every run — a 0 indistinguishable from an observed 0 (leçon
+    # #1531). What gave it away was invariance: identical 0/0 before AND after
+    # #1553 changed the resolution the pipeline uses. Same phantom-key defect as
+    # the one already fixed for the conversational runner (CB #1528 item 3).
+    #
+    # ⚠ INVERSE polarity from that fix: ``unified_pipeline`` returns
+    # ``get_state_snapshot(summarize=True)``, whose shape carries ``fallacy_count``
+    # / ``argument_count`` FLAT at top level (shared_state.py:358-359) — NOT the
+    # raw ``identified_*`` collections the conversational runner reads. Copying
+    # that fix verbatim yields None everywhere while looking correct.
+    def _summarized_count(key: str) -> Optional[int]:
+        value = (snap or {}).get(key)
+        # Absent (or drifted to a non-count shape) → None → "—" (Track CG #1540).
+        # Never a fabricated 0.
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        return value
+
     return ModeResult(
         mode=f"pipeline_{workflow_name}",
         corpus_id=corpus_id,
         success=True,
         duration_seconds=round(duration, 2),
         state_fill_rate=round(non_empty / max(total_fields, 1), 3),
-        fallacy_count=result.get("extra_metrics", {}).get("fallacy_count", 0),
-        argument_count=result.get("extra_metrics", {}).get("argument_count", 0),
+        fallacy_count=_summarized_count("fallacy_count"),
+        argument_count=_summarized_count("argument_count"),
         phases_completed=summary.get("completed", 0),
         phases_total=summary.get("total", 0),
         capabilities_used=result.get("capabilities_used", []),
