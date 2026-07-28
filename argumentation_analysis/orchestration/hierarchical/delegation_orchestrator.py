@@ -98,6 +98,47 @@ def _degradation_reasons(outputs: Any) -> List[str]:
     return reasons
 
 
+def _task_productivity(result: Dict[str, Any]) -> float:
+    """Per-task productivity weight: 1.0 clean, 0.5 produced-but-partial, 0.0 none.
+
+    #1550 (mirror of CC #1531 item 1): item 1 made the rate count production
+       rather than execution — closing a real false positive (``success_rate``
+    1.0 on empty tasks). But its discriminant was binary: a task that produced a
+    REAL artifact AND honestly flagged a partial degradation (``degraded``) fell
+    in the same bucket as a task that produced nothing. The real production was
+    erased by the partial-degradation admission — a verdict of void on real
+    production, the mirror image of the original defect.
+
+    The discriminant here is the PRESENCE of a substantive artifact (a non-empty
+    list in ``outputs``) among self-declared degradation:
+
+    * not degraded → **1.0**. A clean run that honestly finds zero fallacies on
+      a clean corpus is a success that found nothing (``test_empty_output_
+      without_self_report_still_counts`` pins this — emptiness is not failure).
+    * degraded + a non-empty artifact → **0.5**. The task produced real analysis
+      AND admitted a partial gap; ``degraded`` is a discount, not a zero.
+    * degraded + no artifact (or no outputs) → **0.0**. A self-declared
+      non-analysis (item 1's ``status: unavailable`` / empty ``total_fallacies``
+      forms) stays closed.
+
+    Justification in one line (DoD #3): ``degraded`` discounts a task that
+    produced; only the ABSENCE of production zeroes it. The rejected alternative
+    — reading only ``outputs.status in _DEGRADED_OUTPUT_STATUSES`` — does not
+    survive the item-1 guard's task shape (a degraded result with no ``outputs``
+    field must still read 0.0, which a status-only check would miss).
+    """
+    if result.get("status") != "completed":
+        return 0.0
+    if not result.get("degraded"):
+        return 1.0
+    outputs = result.get("outputs")
+    if isinstance(outputs, dict) and any(
+        isinstance(v, list) and v for v in outputs.values()
+    ):
+        return 0.5
+    return 0.0
+
+
 class DelegationError(RuntimeError):
     """Raised when the 3-tier delegation chain cannot proceed honestly.
 
@@ -436,10 +477,13 @@ class DelegationOrchestrator:
                 )
             elif result.get("status") == "failed":
                 reasons.append(f"{label}: {result.get('reason', 'failed')}")
-        produced_anything = any(
-            r.get("status") == "completed" and not r.get("degraded")
-            for r in operational_results
-        )
+        # #1550: ``produced_anything`` uses the SAME productivity predicate as
+        # the per-objective rate above (``_task_productivity``), so a run where
+        # every task produced real analysis but each flagged a partial gap is
+        # still a verdict, not a degrade. The previous binary form
+        # (``completed and not degraded``) was the same mirror defect at the
+        # verdict level — coherent predicate, two consumers.
+        produced_anything = any(_task_productivity(r) > 0 for r in operational_results)
         degraded = bool(operational_results) and not produced_anything
 
         conclusion = final.get("conclusion")
@@ -497,11 +541,7 @@ class DelegationOrchestrator:
             if not results:
                 success_rate = 0.0
             else:
-                productive = sum(
-                    1
-                    for r in results
-                    if r.get("status") == "completed" and not r.get("degraded")
-                )
+                productive = sum(_task_productivity(r) for r in results)
                 success_rate = productive / len(results)
             eval_input[oid] = {"success_rate": success_rate}
         return eval_input

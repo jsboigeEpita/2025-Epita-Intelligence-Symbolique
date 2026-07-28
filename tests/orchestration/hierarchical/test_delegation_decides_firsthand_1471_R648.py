@@ -49,8 +49,15 @@ class TestDelegationModeDecidesFirsthand:
     """
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_api
     async def test_delegation_mode_decides_end_to_end_with_real_agents(self) -> None:
         """5/5 operational tasks complete; conclusion is a graded verdict.
+
+        #1550 (DoD #5): this test makes REAL LLM calls (≈184 s measured) — it
+        must declare that dependency. Declaring is NOT excluding: the real path
+        still runs when a key is present, and CI (``tests/unit/`` only) never
+        collected it regardless. The marker protects a future CI scope widening
+        and makes the LLM cost honest. A ``skip`` would satisfy none of that.
 
         Honnête-partiel: this assumes the test environment has a populated
         ``setup_registry()`` (i.e. ``include_optional=True``). The
