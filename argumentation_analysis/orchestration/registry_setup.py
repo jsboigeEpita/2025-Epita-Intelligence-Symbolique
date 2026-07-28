@@ -278,18 +278,39 @@ def setup_registry(
                 FallacyWorkflowPlugin,
             )
 
+            # #1553: this service is an ENRICHMENT sub-step, NOT a terminal
+            # detection provider. Its own contract (invoke_callables.py:4893-4922)
+            # states it runs AFTER the wide-net descent and that "the wide-net
+            # result is retained by the caller" — the complete path calls it
+            # directly at invoke_callables.py:4506 and merges via
+            # ``_merge_fallacy_results``. Declaring ``hierarchical_fallacy_detection``
+            # (or ``fallacy_detection``) here let it be RESOLVED as a terminal
+            # provider: with no caller, the wide-net result it assumes already
+            # ran is absent, and it returns ``fallacies: []`` + ``degraded`` —
+            # a silent loss. Because ``_capability_index`` is a ``Dict[str,
+            # Set[str]]`` and consumers take ``providers[0]`` believing it is
+            # "first registered" (hierarchy_bridge.py:67-73), the winner between
+            # this sub-step and ``hierarchical_fallacy_detector`` depended on
+            # ``hash()``, salted per-process — intermittent between runs (3/5),
+            # stable inside one. The fix is subtractive: the sub-step keeps its
+            # REAL capability (``per_argument_fallacy_detection``) and ceases to
+            # shadow the complete path. Not deleted — still invoked directly by
+            # the complete path; just no longer selectable as a terminal
+            # detection provider. Anti-pendule: tri the index was rejected (it
+            # would stabilize the winner on an arbitrary — alphabetic — order,
+            # i.e. work for a wrong reason).
             registry.register_service(
                 name="hierarchical_fallacy_per_argument",
                 service_class=FallacyWorkflowPlugin,
                 capabilities=[
-                    "hierarchical_fallacy_detection",
                     "per_argument_fallacy_detection",
-                    "fallacy_detection",
                 ],
                 metadata={
                     "description": (
                         "Parallel per-argument hierarchical fallacy detection. "
-                        "Runs FallacyWorkflowPlugin on each argument via asyncio.gather (#578 tier 3)"
+                        "Runs FallacyWorkflowPlugin on each argument via asyncio.gather (#578 tier 3). "
+                        "Enrichment sub-step of _invoke_hierarchical_fallacy (invoked directly, "
+                        "NOT a terminal detection provider — #1553)."
                     )
                 },
                 invoke=_invoke_hierarchical_fallacy_per_argument,
