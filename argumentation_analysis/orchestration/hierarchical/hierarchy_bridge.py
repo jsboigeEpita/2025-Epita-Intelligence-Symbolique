@@ -67,7 +67,18 @@ class RegistryBackedOperationalRegistry:
     def find_for_capability(self, capability: str) -> Optional[ComponentRegistration]:
         """Find the best component providing a capability.
 
-        Returns the first registered provider (any type) or None.
+        Returns a single provider (any type) or ``None`` if none is registered.
+
+        #1553: the underlying ``CapabilityRegistry`` indexes capabilities as a
+        ``Dict[str, Set[str]]`` and does NOT guarantee registration order — so
+        when several providers share a capability, ``providers[0]`` is
+        arbitrary (depends on ``hash()``, salted per-process). This bridge and
+        the DSL consume capabilities whose providers were curated to be unique
+        (e.g. ``hierarchical_fallacy_detection`` resolves to exactly one
+        complete path since #1553), which makes ``providers[0]`` deterministic
+        *for those*. Do NOT assume determinism for a capability with multiple
+        registered providers — register a deterministic selector or collapse
+        the providers first.
         """
         providers = self._registry.find_for_capability(capability)
         return providers[0] if providers else None
