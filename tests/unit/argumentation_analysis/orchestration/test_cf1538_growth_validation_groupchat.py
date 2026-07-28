@@ -348,11 +348,14 @@ class TestCB1528Item4GroupChatDeadlineGuard:
         def fake_time():
             call_count[0] += 1
             # Call order in _run_phase for one mocked turn: (1) entry check
-            # L1896, (2) one call during turn processing, (3) between-turn
-            # check L1996 — all three must see entry_time (< deadline) so the
-            # turn completes and reaches growth validation. The re-prompt guard
-            # L2025 is the next call → sees post_turn_time (>= deadline) → fires.
-            return entry_time if call_count[0] <= 3 else post_turn_time
+            # L1896, (2) the intra-invocation ``remaining`` read in
+            # ``_bounded_invoke`` (CB #1528 item 5 — added one time.time() per
+            # turn before the first __anext__), (3) one call during turn
+            # processing, (4) between-turn check L1996 — all four must see
+            # entry_time (< deadline) so the turn completes and reaches growth
+            # validation. The re-prompt guard L2025 is the next call → sees
+            # post_turn_time (>= deadline) → fires.
+            return entry_time if call_count[0] <= 4 else post_turn_time
 
         with caplog.at_level(logging.INFO, logger="ConversationalOrchestrator"):
             with patch(_GC_PATCH, return_value=fake_chat):

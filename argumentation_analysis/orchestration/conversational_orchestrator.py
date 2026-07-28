@@ -1846,6 +1846,87 @@ def _find_agent_by_name(
     return None
 
 
+async def _bounded_invoke(
+    async_gen: Any,
+    deadline: Optional[float],
+    phase_name: str,
+    path_label: str,
+) -> Any:
+    """CB #1528 item 5: yield from ``async_gen`` (an ``invoke()`` async
+    generator), bounding EACH ``__anext__`` to the remaining wall-clock budget.
+
+    Why this exists: the live AgentGroupChat path's first ``chat.invoke()``
+    drives a function-calling agent that chains ~12 LLM round-trips before
+    yielding a single response (measured R716/R717, published on #1528). Every
+    inter-turn deadline guard (item 3 #1544 / item 4 #1546) checks BETWEEN
+    turns — none can fire inside a turn that never ends, so a tight wall-clock
+    budget was blown by ONE invocation and the external net caught it,
+    throwing away a populated state. This checkpoint bounds the invocation
+    ITSELF: a single ``__anext__`` cannot consume the whole remaining budget.
+
+    On timeout, the in-flight response is lost — but the shared ``state``
+    object is NOT. Plugins write to it DURING the invocation; the
+    ``CancelledError`` ``asyncio.wait_for`` raises at the await point leaves
+    those writes intact, so the partial state becomes the honest partial
+    verdict (same observation as R715, viewed from the other end).
+
+    This is NOT the "coroutine killed mid-flight by an external
+    ``asyncio.wait_for``" the ``WallClockBudget`` docstring (L67-68) rejects:
+    that kills the WHOLE ``run_conversational_analysis`` and loses its return
+    dict (``decides=False``); this bounds a single ``__anext__`` INSIDE
+    ``_run_phase``, which then returns normally with the messages accumulated
+    so far — the verdict comes from the populated ``state``, not from a
+    constructed-but-lost return value.
+
+    Anti-pendule: a SINGLE mechanism, derived from the existing ``deadline``
+    (no second budget). When ``deadline`` is None the generator is yielded
+    unchanged (no-op for unbounded runs — the unbounded path is preserved
+    byte-for-byte, mutation-verified by the dedicated test).
+    """
+    agen = async_gen.__aiter__()
+    try:
+        while True:
+            if deadline is not None:
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    logger.info(
+                        f"  [{phase_name}] Wall-clock deadline atteinte avant "
+                        f"un tour ({path_label}, borne intra-invocation CB "
+                        f"#1528 item 5) ; invocation stoppée, état accumulé "
+                        f"préservé comme verdict partiel."
+                    )
+                    return
+                try:
+                    response = await asyncio.wait_for(
+                        agen.__anext__(), timeout=remaining
+                    )
+                except StopAsyncIteration:
+                    return
+                except asyncio.TimeoutError:
+                    logger.info(
+                        f"  [{phase_name}] Wall-clock deadline atteinte PENDANT "
+                        f"l'invocation ({path_label}, borne intra-invocation "
+                        f"CB #1528 item 5) ; réponse en vol perdue, état "
+                        f"accumulé préservé comme verdict partiel."
+                    )
+                    return
+            else:
+                try:
+                    response = await agen.__anext__()
+                except StopAsyncIteration:
+                    return
+            yield response
+    finally:
+        # Best-effort cleanup of the underlying generator. It may already be
+        # exhausted (normal completion) or cancelled mid-flight (timeout); in
+        # either case aclose is a safe no-op or a swallowable exception, never
+        # fatal to the bounded path.
+        try:
+            await agen.aclose()
+        except Exception:  # noqa: BLE001 — cleanup must never mask the bound
+            pass
+
+
 async def _run_phase(
     agents: List[ChatCompletionAgent],
     initial_prompt: str,
@@ -1966,7 +2047,18 @@ async def _run_phase(
         # turn; each turn's delta is measured against the previous turn's state
         # (mirrors the round-robin path's fp_before/fp_after pattern).
         fp_before_tour = _get_growth_fingerprint(state)
-        async for response in chat.invoke():
+        # CB #1528 item 5: bound EACH __anext__ of the invocation to the
+        # remaining budget. A function-calling agent chains ~12 LLM round-trips
+        # inside a single chat.invoke() before yielding (measured R716/R717) —
+        # so the first __anext__ can blow the whole budget and every inter-turn
+        # guard above (item 3/4) is powerless inside a turn that never ends.
+        # _bounded_invoke wraps the generator: on timeout it stops cleanly,
+        # preserving the populated `state` (plugins wrote to it during the
+        # aborted invocation) as the partial verdict. See its docstring for why
+        # this is not the "killed mid-flight" the WallClockBudget rejects.
+        async for response in _bounded_invoke(
+            chat.invoke(), deadline, phase_name, "group-chat path"
+        ):
             _bump_sk_budget()
             turn += 1
             msg_entry = {
@@ -2166,7 +2258,15 @@ async def _run_phase(
             # multiple streaming chunks per call — we count 1 LLM call = 1 bump,
             # regardless of chunk count (NanoClaw concern #1).
             _bump_sk_budget()
-            async for response in agent.invoke(chat_history):
+            # CB #1528 item 5: same intra-invocation bound as the group-chat
+            # path — a single agent.invoke() can also chain function-calling
+            # round-trips and blow the budget inside one turn. The inter-turn
+            # guard above (L2153) checks BEFORE the turn; this bounds the turn
+            # itself. Re-prompt loops below are pre-guarded by item 4 (check
+            # before each re-prompt) and kept out of scope here.
+            async for response in _bounded_invoke(
+                agent.invoke(chat_history), deadline, phase_name, "round-robin path"
+            ):
                 chunk = ""
                 if hasattr(response, "content"):
                     chunk = str(response.content)
