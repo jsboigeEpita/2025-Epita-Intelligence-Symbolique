@@ -46,8 +46,9 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, FrozenSet, List, Optional
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -240,6 +241,60 @@ def _fmt_fill(rate: Optional[float]) -> str:
 def _fmt_count(count: Optional[int]) -> str:
     """CG #1540: render a count (fallacies/args) as "—" when not written."""
     return "—" if count is None else str(count)
+
+
+# Sentinels that mean "this state field is empty" (mirrors the inline check the
+# 3 success-path sites used before #1566 — 0 counts as empty, matching the
+# existing behavior, so a numeric field legitimately at 0 is not a "fill").
+_STATE_EMPTY_SENTINELS = ([], {}, "", None, 0)
+
+
+def _is_state_value_filled(value: Any) -> bool:
+    """True if a snapshot field counts as populated."""
+    return bool(value) and value not in _STATE_EMPTY_SENTINELS
+
+
+@lru_cache(maxsize=2)
+def _construction_baseline_keys(summarize: bool) -> FrozenSet[str]:
+    """#1566 — keys a pristine ``UnifiedAnalysisState(text)`` fills at
+    construction, BEFORE any analysis phase runs.
+
+    Measured firsthand: ``raw_text`` + ``deanonymized`` + ``stakes_and_
+    stakeholders`` in the raw form (3/51 ≈ 5.9 %) and ``raw_text`` +
+    ``raw_text_snippet`` in the summarized form (2/41 ≈ 4.9 %). Counting these
+    in the fill rate inflated every success-path fill by ~5-6 pts and broke
+    comparability between two columns whose comparability is the harness's
+    reason for being.
+
+    The baseline is snapshotted in the SAME form (``summarize``) as the
+    measurement: a raw baseline subtracted from a summarized snapshot (or
+    vice-versa) would re-manufacture the very drift this helper removes. The
+    set of filled *keys* is independent of the probe text, so the result is
+    cached per form. Opaque synthetic probe text (privacy HARD).
+    """
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+    pristine = UnifiedAnalysisState("baseline_probe_opaque_synthetic")
+    snap = pristine.get_state_snapshot(summarize=summarize)
+    return frozenset(k for k, v in snap.items() if _is_state_value_filled(v))
+
+
+def _state_fill_rate(snapshot: Dict[str, Any], summarize: bool = False) -> float:
+    """#1566 — the single definition of state fill for every path that reports
+    a real field-fraction (pipeline breach/success, conversational success).
+
+    Fraction of NON-baseline state fields populated (0.0..1.0). The
+    construction baseline (``_construction_baseline_keys``) is excluded so a
+    run that produced nothing scores 0.0, not ~5 %, and the success paths
+    compare to the breach path on the same footing. Hierarchical modes leave
+    ``state_fill_rate=None`` (they decide by conclusion, not shared state —
+    CG #1540); this helper is never called for them.
+    """
+    baseline = _construction_baseline_keys(summarize)
+    measured = [(k, v) for k, v in snapshot.items() if k not in baseline]
+    total = len(measured)
+    non_empty = sum(1 for _, v in measured if _is_state_value_filled(v))
+    return round(non_empty / max(total, 1), 3)
 
 
 def _compute_decides(result: ModeResult) -> bool:
@@ -604,10 +659,6 @@ async def run_pipeline_mode(
             snapshot = state.get_state_snapshot() or {}
         except Exception:
             snapshot = {}
-        total_fields = len(snapshot) if snapshot else 1
-        non_empty = sum(
-            1 for v in snapshot.values() if v and v not in ([], {}, "", None, 0)
-        )
         # C3 #1500 (coord R710 wart): set the PLANNED phase total at breach so
         # the report's Phases column reads ``completed/planned`` (e.g. 8/15),
         # not the nonsensical ``N/0`` left by the pre-C3 breach path. The
@@ -621,7 +672,9 @@ async def run_pipeline_mode(
             terminates=True,
             terminated_by_budget=True,
             duration_seconds=round(duration, 2),
-            state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+            # #1566: breach fill excludes the construction baseline (raw form)
+            # so a breach that produced nothing scores 0.0, not ~6 %.
+            state_fill_rate=_state_fill_rate(snapshot, summarize=False),
             phases_completed=last_completed[0],
             phases_total=planned_total,
             # `decides` left None → _compute_decides in run_all. A partial
@@ -634,17 +687,15 @@ async def run_pipeline_mode(
     summary = result.get("summary", {})
     snap = result.get("state_snapshot", {})
 
-    total_fields = len(snap) if snap else 1
-    non_empty = sum(
-        1 for v in (snap or {}).values() if v and v not in ([], {}, "", None, 0)
-    )
-
     return ModeResult(
         mode=f"pipeline_{workflow_name}",
         corpus_id=corpus_id,
         success=True,
         duration_seconds=round(duration, 2),
-        state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+        # #1566: success-path fill excludes the construction baseline in the
+        # SAME summarized form the pipeline emits (unified_pipeline.py:344), so
+        # it is comparable to the breach fill on the same footing.
+        state_fill_rate=_state_fill_rate(snap, summarize=True),
         fallacy_count=result.get("extra_metrics", {}).get("fallacy_count", 0),
         argument_count=result.get("extra_metrics", {}).get("argument_count", 0),
         phases_completed=summary.get("completed", 0),
@@ -731,10 +782,6 @@ async def run_conversational_mode(
     wall_clock_bounded = bool(budget.get("wall_clock_bounded", False))
 
     state = result.get("state_snapshot", {})
-    total_fields = len(state) if state else 1
-    non_empty = sum(
-        1 for v in (state or {}).values() if v and v not in ([], {}, "", None, 0)
-    )
 
     planned_phases = result.get("phases", []) if isinstance(result, dict) else []
     conv_log = result.get("conversation_log", []) if isinstance(result, dict) else []
@@ -774,7 +821,9 @@ async def run_conversational_mode(
         success=True,
         terminates=True,
         duration_seconds=round(duration, 2),
-        state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+        # #1566: conversational success fill excludes the construction baseline
+        # (raw form — the snapshot is non-summarized, cf. comment above).
+        state_fill_rate=_state_fill_rate(snapshot, summarize=False),
         fallacy_count=_snapshot_count("identified_fallacies"),
         argument_count=_snapshot_count("identified_arguments"),
         phases_completed=len(phases_ran),
@@ -824,7 +873,17 @@ async def run_conversation_deterministic_mode(
         success=True,
         terminates=True,
         duration_seconds=round(duration, 3),
-        state_fill_rate=round(conv_state.get("state", {}).get("score", 0), 3),
+        # #1566: this mode runs a ConversationOrchestrator, not an
+        # UnifiedAnalysisState, so a field-fraction does not apply. The ``score``
+        # it used to publish here is a weighted quality grade
+        # (conversation_orchestrator.py: sophistication*0.4 + logical*0.3 +
+        # unified*0.3) — a DIFFERENT quantity that masqueraded as a fill rate
+        # under the same column name. Tranche (coord R730, branch A kept, B
+        # rejected): publish None (renders "—", CG #1540 — "not applicable", not
+        # "measured empty") and surface the quality grade in its own
+        # extra_metrics key. Branch B (invent a field-fraction for an
+        # orchestrator that exposes none) = fabrication, rejected.
+        state_fill_rate=None,
         fallacy_count=conv_state.get("state", {}).get("fallacies_detected", 0),
         phases_completed=3,  # informal + fol + synthesis
         phases_total=3,
@@ -834,6 +893,9 @@ async def run_conversation_deterministic_mode(
             "messages_count": conv_state.get("messages_count", 0),
             "tools_count": conv_state.get("tools_count", 0),
             "processing_time": conv_state.get("processing_time", 0),
+            # #1566: the quality grade keeps its own channel (not the State Fill
+            # column) so the table stays comparable across modes.
+            "quality_score": conv_state.get("state", {}).get("score", 0),
         },
     )
 
