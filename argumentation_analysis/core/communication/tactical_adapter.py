@@ -658,6 +658,50 @@ class TacticalAdapter:
         )
         return subscription_id
 
+    def subscribe_to_directives(
+        self,
+        callback: Callable[[Message], None],
+        topic_id: str = "objectives.strategic_decision",
+        filter_criteria: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        """S'abonne aux directives stratégiques diffusées par le manager.
+
+        #1555 (Track C2, Epic #1500) — la jonction publieur/abonné se fait sur
+        le **chemin topic** du middleware, pas sur le canal HIERARCHICAL. Le
+        manager stratégique émet via ``StrategicAdapter.broadcast_objective``
+        → ``middleware.publish(topic_id="objectives.<type>", ...)`` (topic
+        path). ``subscribe_to_operational_updates`` (le miroir obvious)
+        utilise ``get_channel(HIERARCHICAL).subscribe`` (channel path) — or
+        ``publish`` ne livre qu'aux topic subscribers + ``global_handlers``
+        (pub_sub.py:386/399, middleware.py:419-434), JAMAIS aux subscribers
+        d'un canal. Un miroir aveugle du canal laisserait le broadcast
+        atteindre 0 agent. On s'abonne donc au topic que le publieur utilise
+        vraiment (Option A du DoD item 4 de #1555).
+
+        Args:
+            callback: Fonction **synchrone** appelée à la réception —
+                ``Topic.publish_message`` invoque le callback sans ``await``
+                (pub_sub.py:121), un ``async def`` créerait une coroutine
+                jamais attendue et ne s'exécuterait jamais.
+            topic_id: Topic auquel s'abonner (``objectives.strategic_decision``
+                par défaut — le type émis par
+                ``StrategicManager.evaluate_final_results``).
+            filter_criteria: Critères de filtrage optionnels (``None`` =
+                accepte tous les messages du topic ; le nom du topic filtre
+                déjà par type d'objectif).
+
+        Returns:
+            Un identifiant d'abonnement.
+        """
+        subscription_id = self.middleware.subscribe(
+            topic_id=topic_id,
+            subscriber_id=self.agent_id,
+            callback=callback,
+            filter_criteria=filter_criteria,
+        )
+        self.logger.info(f"Subscribed to strategic directives on topic {topic_id!r}")
+        return subscription_id
+
     def send_status_update(
         self,
         update_type: str,

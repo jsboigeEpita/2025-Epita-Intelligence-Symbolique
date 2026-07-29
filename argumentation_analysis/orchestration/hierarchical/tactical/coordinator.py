@@ -10,7 +10,7 @@ import uuid
 from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
-from argumentation_analysis.paths import RESULTS_DIR
+from argumentation_analysis.paths import RESULTS_DIR, DATA_DIR
 from argumentation_analysis.core.communication.middleware import (
     MessageMiddleware,
     create_default_middleware,
@@ -248,20 +248,35 @@ class TaskCoordinator:
         self.logger.info(f"Action Tactique: {action_type} - {description}")
 
     def _subscribe_to_strategic_directives(self) -> None:
-        async def handle_directive(message: Message) -> None:
-            directive_type = message.content.get("directive_type")
-            self.logger.info(f"Directive stratégique reçue : {directive_type}")
-            if directive_type == "new_strategic_plan":
-                objectives = message.content.get("objectives", [])
-                self.process_strategic_objectives(objectives)
-            elif directive_type == "strategic_adjustment":
-                self._apply_strategic_adjustments(message.content)
+        # #1555 (Track C2, Epic #1500) — le handler est désormais enregistré
+        # pour de vrai (plus de commentaire + log menteur). La signature est
+        # synchrone : ``Topic.publish_message`` appelle le callback sans
+        # ``await`` (pub_sub.py:121), un ``async def`` n'aurait jamais tourné.
+        def handle_directive(message: Message) -> None:
+            # Le publieur (``StrategicAdapter.broadcast_objective``) écrit la
+            # clé ``objective_type`` (pas ``directive_type`` — celle-là vient
+            # du point-à-point ``issue_directive``, un autre chemin).
+            objective_type = message.content.get("objective_type")
+            self.logger.info(f"Directive stratégique reçue : {objective_type}")
+            if objective_type == "strategic_decision":
+                # Le payload (decision_type/conclusion/evaluation) est niché
+                # sous la clé ``DATA_DIR`` (un Path) — lu de la même façon
+                # qu'écrit par le publieur (strategic_adapter.py:122). Le type
+                # ignore reflète ce couplage : ``content`` est typé
+                # ``Dict[str, Any]`` mais le publieur utilise le Path comme
+                # clé (défaut latent pré-existant, hors périmètre #1555).
+                payload = message.content.get(DATA_DIR, {}) or {}  # type: ignore[call-overload]
+                self._log_action(
+                    "strategic_decision_received",
+                    (
+                        f"decision_type={payload.get('decision_type', 'unknown')}; "
+                        f"conclusion={payload.get('conclusion', '')}"
+                    ),
+                )
 
-        # self.adapter.subscribe_to_directives(handle_directive)
-        self.logger.warning(
-            "Subscription to directives is currently disabled due to API changes."
+        self._directive_subscription_id = self.adapter.subscribe_to_directives(
+            handle_directive
         )
-        self.logger.info("Abonné aux directives stratégiques.")
 
     def _determine_appropriate_agent(
         self, required_capabilities: List[str]

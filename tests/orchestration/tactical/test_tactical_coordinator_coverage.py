@@ -297,6 +297,18 @@ class AuthenticMiddlewareExtended:
             logger.info(f"Canal authentique créé automatiquement: {channel_type}")
         return self.channels[channel_type]
 
+    def subscribe(self, topic_id, subscriber_id, callback=None, filter_criteria=None):
+        """S'abonne à un topic — interface du middleware réel (#1555).
+
+        Le double authentique renvoie un id d'abonnement sans reproduire la
+        livraison topic (les tests de réception firsthand utilisent le vrai
+        ``create_default_middleware``). Présent pour que la construction d'un
+        ``TacticalCoordinator`` (qui appelle désormais
+        ``subscribe_to_directives``) ne lève pas.
+        """
+        logger.info(f"Abonnement authentique de {subscriber_id} au topic {topic_id}")
+        return f"sub-{subscriber_id}-{topic_id}"
+
     def publish(
         self, topic_id, sender, sender_level, content, priority=None, metadata=None
     ):
