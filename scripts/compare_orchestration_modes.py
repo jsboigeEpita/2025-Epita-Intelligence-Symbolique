@@ -47,7 +47,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -235,6 +235,110 @@ def _fmt_fill(rate: Optional[float]) -> str:
     applicable" from "measured empty" (leçon #1531).
     """
     return "—" if rate is None else f"{rate:.1%}"
+
+
+def _is_filled(value: Any) -> bool:
+    """A state field counts as filled iff it carries something."""
+    return bool(value) and value not in ([], {}, "", None, 0)
+
+
+def _state_fill_rate(state: Any) -> Optional[float]:
+    """Fraction of state fields THIS RUN filled in, or None if no state.
+
+    ONE definition for the two BREACH paths (pipeline + hierarchical bridge),
+    where the fill is not a statistic but the verdict signal itself: it is what
+    ``_compute_decides`` reads to decide whether a cut run produced anything.
+    Two copies of this arithmetic is how the counters in this file drifted
+    before (#1560); the twin call-site kept the defect the first fix removed.
+
+    ⚠ The SUCCESS paths (``run_pipeline_mode`` / ``run_conversational_mode``,
+    at their non-breach return) still compute their fill inline, from a
+    snapshot dict rather than a state object, and WITHOUT the baseline
+    subtraction below — so their reported percentages run ~5-6 points high
+    (that is where the 51.2 % / 15.7 % / 7.8 % figures on #1528 come from).
+    That is a reporting inaccuracy, not a fabricated verdict: on a success path
+    ``_compute_decides`` is already carried by ``phases_completed > 0``, so no
+    verdict flips. Recalibrating them changes every headline number in the
+    comparison and belongs to its own measured round — filed rather than
+    silently drifted, and NOT quietly folded into this bound.
+
+    ⚠ The construction baseline is SUBTRACTED. A freshly built
+    ``UnifiedAnalysisState(text)`` is not empty: it already carries
+    ``raw_text``, ``deanonymized`` and ``stakes_and_stakeholders`` — 3 of 51
+    fields, i.e. **5.9 %**, before a single phase has run. Counting those made
+    a run that produced NOTHING score ``fill > 0``, which ``_compute_decides``
+    reads as a verdict artifact. That is where the ``pipeline_standard | ⏱
+    budget | 45.01s | Decides ✅ | 0/15 phases | 5.9 %`` row measured firsthand
+    at R723 came from: 5.9 % IS the empty baseline, echoed back. The verdict
+    was manufactured by the constructor. Same family as #1560/#1019 — a number
+    that looks like a measurement and is an artifact of the instrument.
+
+    So the numerator counts only fields a pristine state of the same class
+    does NOT already fill, and the denominator is the fillable remainder.
+
+    ``None`` (no state instrumented) and ``0.0`` (state instrumented, measured
+    empty) are DIFFERENT answers and must stay so — CG #1540 / leçon #1531.
+    """
+    if state is None:
+        return None
+    try:
+        snapshot = state.get_state_snapshot() or {}
+    except Exception:
+        return None
+    if not snapshot:
+        return 0.0
+
+    baseline: set = set()
+    try:
+        pristine = type(state)(getattr(state, "raw_text", "") or "")
+        baseline = {
+            k for k, v in (pristine.get_state_snapshot() or {}).items() if _is_filled(v)
+        }
+    except Exception:
+        # Baseline unknown → fall back to the raw count rather than guessing.
+        # Loud in the sense that matters: it can only OVER-report, and the
+        # honest-degrade tests pin the sterile case.
+        baseline = set()
+
+    fillable = [k for k in snapshot if k not in baseline]
+    if not fillable:
+        return 0.0
+    non_empty = sum(1 for k in fillable if _is_filled(snapshot[k]))
+    return round(non_empty / len(fillable), 3)
+
+
+def _delegation_task_counts(
+    operational_results: List[Dict[str, Any]],
+) -> Tuple[int, int, int]:
+    """(productive, failed, degraded) task counts for the M3 delegation mode.
+
+    ONE definition shared by the completion path and the wall-clock breach
+    path, so a task counts the same way whether the run finished or was cut.
+
+    Status values are ``completed`` / ``completed_with_issues`` / ``failed``
+    (rhetorical_tools_adapter.py:147 + delegation_orchestrator.py:213).
+    ``completed_with_issues`` produced output ⇒ counts (anti-#1019: honest,
+    not punitive). A task carrying ``degraded: True`` ran but produced
+    nothing — it keeps ``status: "completed"`` (the call did return) and is
+    subtracted (CC #1531 item 1): counting it is what fed a ✅ to a run that
+    analysed nothing. The discriminator is the self-declared non-analysis,
+    never the emptiness of the output — a clean corpus with zero fallacies is
+    a success that found zero.
+    """
+    completed = sum(
+        1
+        for r in operational_results
+        if isinstance(r, dict) and str(r.get("status", "")).startswith("completed")
+    )
+    failed = sum(
+        1
+        for r in operational_results
+        if isinstance(r, dict) and str(r.get("status", "")).startswith("failed")
+    )
+    degraded = sum(
+        1 for r in operational_results if isinstance(r, dict) and r.get("degraded")
+    )
+    return completed - degraded, failed, degraded
 
 
 def _fmt_count(count: Optional[int]) -> str:
@@ -599,15 +703,6 @@ async def run_pipeline_mode(
             f"— recovering partial state from the state reference "
             f"(completed levels only; torn level not counted)."
         )
-        snapshot: Dict[str, Any] = {}
-        try:
-            snapshot = state.get_state_snapshot() or {}
-        except Exception:
-            snapshot = {}
-        total_fields = len(snapshot) if snapshot else 1
-        non_empty = sum(
-            1 for v in snapshot.values() if v and v not in ([], {}, "", None, 0)
-        )
         # C3 #1500 (coord R710 wart): set the PLANNED phase total at breach so
         # the report's Phases column reads ``completed/planned`` (e.g. 8/15),
         # not the nonsensical ``N/0`` left by the pre-C3 breach path. The
@@ -621,7 +716,9 @@ async def run_pipeline_mode(
             terminates=True,
             terminated_by_budget=True,
             duration_seconds=round(duration, 2),
-            state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+            # CB #1528 item 2: shared with the hierarchical bridge breach path
+            # (one definition, two call-sites).
+            state_fill_rate=_state_fill_rate(state),
             phases_completed=last_completed[0],
             phases_total=planned_total,
             # `decides` left None → _compute_decides in run_all. A partial
@@ -872,11 +969,19 @@ async def run_hierarchical_bridge_mode(
     analyze()`` (which predates the registry and never distinguishes
     bridge vs delegation).
 
-    CB #1528: ``run_hierarchical_analysis`` exposes NO incremental state, so a
-    wall-clock breach cannot recover a partial verdict — the honest degrade is
-    a sterile ``terminated_by_budget=True`` result (``decides`` → False → ``—``
-    via ``_compute_decides``). This is the structural asymmetry with the
-    pipeline (state-reference trick): documented here, not papered over.
+    CB #1528 item 2: when bounded, the runner passes an analysis state BY
+    REFERENCE plus a recording ``checkpoint_callback``, exactly as
+    ``run_pipeline_mode`` does. The bridge workflow is a strictly SEQUENTIAL
+    chain (``objectives_to_workflow`` makes every phase depend on the previous
+    one), so both fire once per completed phase — a breach therefore recovers
+    what the finished phases produced instead of losing everything with the
+    cancelled coroutine. The previous behaviour was documented here as "no
+    incremental state exposed → sterile partial"; that was true of the CALL,
+    not of the orchestrator, which already accepted the seam one layer down.
+
+    ``max_wall_seconds=None`` (default) = unbounded, unchanged: no state, no
+    callback, no writers (anti-pendule — the bound is opt-in and must not
+    alter the free-running path).
     """
     from argumentation_analysis.orchestration.hierarchical.orchestrator import (
         run_hierarchical_analysis,
@@ -891,10 +996,55 @@ async def run_hierarchical_bridge_mode(
     )
     start = time.time()
     registry = setup_registry(include_optional=True)
+
+    state = None
+    state_writers = None
+    checkpoint_callback = None
+    # ``planned`` stays None until a completed level reports it. Unlike the
+    # pipeline — whose planned total is a deterministic function of the
+    # workflow name (``_planned_workflow_phase_count``) — the bridge's phase
+    # count depends on the objectives the StrategicManager generates at
+    # runtime, so it can only be read off the built workflow, in the context.
+    # A breach BEFORE the first phase completes therefore leaves it unknown,
+    # and ``phases_total: int`` has no "unknown" value to render: the column
+    # shows 0/0. That is the field's pre-existing contract (leçon #1531 would
+    # want a "—" here; making that possible means turning phases_total
+    # Optional across all 8 runners + both report tables, which is a change to
+    # the report schema, not to this bound). Not silently papered over.
+    recorded: Dict[str, Any] = {"completed": 0, "planned": None}
+    if max_wall_seconds is not None:
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        state = UnifiedAnalysisState(text)
+        state_writers = CAPABILITY_STATE_WRITERS
+
+        def _record_completed(results, ctx):
+            # Recording only — never raises (the executor swallows callback
+            # errors, so a throw here would be silenced, not surfaced).
+            try:
+                recorded["completed"] = sum(
+                    1
+                    for r in results.values()
+                    if getattr(getattr(r, "status", None), "name", "") == "COMPLETED"
+                )
+                planned = (ctx or {}).get("hierarchical_planned_phases")
+                if isinstance(planned, int) and not isinstance(planned, bool):
+                    recorded["planned"] = planned
+            except Exception:
+                pass
+
+        checkpoint_callback = _record_completed
+
     coro = run_hierarchical_analysis(
         text=text,
         capability_registry=registry,
         mode="bridge",
+        state=state,
+        state_writers=state_writers,
+        checkpoint_callback=checkpoint_callback,
     )
     try:
         if max_wall_seconds is not None:
@@ -903,10 +1053,14 @@ async def run_hierarchical_bridge_mode(
             result = await coro
     except asyncio.TimeoutError:
         duration = time.time() - start
+        fill = _state_fill_rate(state)
         logger.warning(
             f"hierarchical_bridge on {corpus_id} hit the "
-            f"{max_wall_seconds:g}s budget after {duration:.2f}s — honest "
-            f"degrade (no incremental state exposed → sterile partial)."
+            f"{max_wall_seconds:g}s budget after {duration:.2f}s — recovering "
+            f"the partial verdict from the state reference "
+            f"({recorded['completed']} completed phase(s), fill="
+            f"{'—' if fill is None else f'{fill:.1%}'}; the torn phase is not "
+            f"counted)."
         )
         return ModeResult(
             mode="hierarchical_bridge",
@@ -915,7 +1069,13 @@ async def run_hierarchical_bridge_mode(
             terminates=True,
             terminated_by_budget=True,
             duration_seconds=round(duration, 2),
+            state_fill_rate=fill,
+            phases_completed=recorded["completed"],
+            phases_total=recorded["planned"] or 0,
             error=f"Wall-clock budget (>={max_wall_seconds:g}s)",
+            # `decides` left None → _compute_decides in run_all: a completed
+            # phase or a non-empty state IS the partial verdict; nothing
+            # recovered stays honestly sterile (— , not a manufactured ✅).
             scope_of_work=scope,
         )
     except Exception as exc:
@@ -988,10 +1148,13 @@ async def run_hierarchical_delegation_mode(
     populated, per R648+R649+R651+R652). Wired via
     ``run_hierarchical_analysis(..., mode="delegation")``.
 
-    CB #1528: same honest-degrade contract as bridge —
-    ``run_hierarchical_analysis`` exposes no incremental state, so a
-    wall-clock breach yields a sterile ``terminated_by_budget=True`` result
-    (``decides`` → False → ``—``).
+    CB #1528 item 2: when bounded, the runner passes a recording
+    ``checkpoint_callback`` fired after each completed operational task. The
+    T→O loop is strictly sequential, so a breach recovers exactly the tasks
+    that finished — the same "accumulated work IS the partial verdict" contract
+    as the pipeline, in the shape this mode has (task results, not a shared
+    state: it has no ``UnifiedAnalysisState`` surface to fill, which is why
+    ``state_fill_rate`` legitimately stays ``—`` here).
     """
     from argumentation_analysis.orchestration.hierarchical.orchestrator import (
         run_hierarchical_analysis,
@@ -1006,10 +1169,29 @@ async def run_hierarchical_delegation_mode(
     )
     start = time.time()
     registry = setup_registry(include_optional=True)
+
+    checkpoint_callback = None
+    recorded: Dict[str, Any] = {"results": [], "planned": None}
+    if max_wall_seconds is not None:
+
+        def _record_tasks(results, ctx):
+            # Recording only — never raises (the orchestrator guards the call,
+            # so a throw here would be swallowed rather than surfaced).
+            try:
+                recorded["results"] = list(results or [])
+                planned = (ctx or {}).get("planned_tasks")
+                if isinstance(planned, int) and not isinstance(planned, bool):
+                    recorded["planned"] = planned
+            except Exception:
+                pass
+
+        checkpoint_callback = _record_tasks
+
     coro = run_hierarchical_analysis(
         text=text,
         capability_registry=registry,
         mode="delegation",
+        checkpoint_callback=checkpoint_callback,
     )
     try:
         if max_wall_seconds is not None:
@@ -1018,10 +1200,14 @@ async def run_hierarchical_delegation_mode(
             result = await coro
     except asyncio.TimeoutError:
         duration = time.time() - start
+        partial = recorded["results"]
+        completed, failed, degraded = _delegation_task_counts(partial)
         logger.warning(
             f"hierarchical_delegation on {corpus_id} hit the "
-            f"{max_wall_seconds:g}s budget after {duration:.2f}s — honest "
-            f"degrade (no incremental state exposed → sterile partial)."
+            f"{max_wall_seconds:g}s budget after {duration:.2f}s — recovering "
+            f"the partial verdict from the checkpointed task results "
+            f"({completed} productive / {len(partial)} finished; the task in "
+            f"flight is not counted)."
         )
         return ModeResult(
             mode="hierarchical_delegation",
@@ -1030,8 +1216,20 @@ async def run_hierarchical_delegation_mode(
             terminates=True,
             terminated_by_budget=True,
             duration_seconds=round(duration, 2),
+            phases_completed=completed,
+            phases_total=recorded["planned"] or 0,
             error=f"Wall-clock budget (>={max_wall_seconds:g}s)",
+            # `decides` left None → _compute_decides in run_all. No verdict
+            # artifact exists at breach (the strategic conclusion is produced
+            # AFTER the loop), so the row decides on completed tasks alone —
+            # nothing finished ⇒ honestly sterile.
             scope_of_work=scope,
+            extra_metrics={
+                "tasks_completed": completed,
+                "tasks_failed": failed,
+                "tasks_degraded": degraded,
+                "tasks_finished_before_breach": len(partial),
+            },
         )
     except Exception as exc:
         duration = time.time() - start
@@ -1065,33 +1263,14 @@ async def run_hierarchical_delegation_mode(
 
     # Phases column = the delegation depth axis DoD-3 asks for. Denominator =
     # tactical task count (``tasks_created``); numerator = tasks that reached a
-    # completed state. Status values are ``completed`` / ``completed_with_issues``
-    # / ``failed`` (operational/adapters/rhetorical_tools_adapter.py:147 +
-    # delegation_orchestrator.py:213). ``completed_with_issues`` still produced
-    # output → counts as completed (anti-#1019: honest, not punitive).
-    def _count_status(results: List[Dict[str, Any]], prefix: str) -> int:
-        return sum(
-            1
-            for r in results
-            if isinstance(r, dict) and str(r.get("status", "")).startswith(prefix)
-        )
-
+    # completed state. CB #1528 item 2: the counting rules live in
+    # ``_delegation_task_counts`` so this path and the wall-clock breach path
+    # cannot drift apart (the failure mode of #1560 was exactly a twin
+    # call-site left behind).
     phases_total = tasks_created
-    tasks_failed = _count_status(operational_results, "failed")
-    # CC #1531 item 1: a task whose provider declared itself degraded /
-    # unavailable ran, but produced nothing. It keeps ``status: "completed"``
-    # (the call did return) and carries ``degraded: True`` — set at the seam
-    # where the self-report is first visible (delegation_orchestrator.py).
-    # Counting it as a completed phase is what fed ``_compute_decides`` a ✅
-    # on a run that analysed nothing. NB the contrast with
-    # ``completed_with_issues`` above: that one produced output and still
-    # counts. The discriminator is the self-declared non-analysis, never the
-    # emptiness of the output — a clean corpus with zero fallacies is a
-    # success that found zero.
-    tasks_degraded = sum(
-        1 for r in operational_results if isinstance(r, dict) and r.get("degraded")
+    phases_completed, tasks_failed, tasks_degraded = _delegation_task_counts(
+        operational_results
     )
-    phases_completed = _count_status(operational_results, "completed") - tasks_degraded
 
     # Track CA #1529: ``decides`` is computed UNIFORMLY by run_all via
     # ``_compute_decides``. Post-fold-in it keys on ``phases_completed > 0``
@@ -1225,11 +1404,18 @@ def generate_report(
 
     Status legend:
       ✅ terminates=True, success=True (clean completion)
-      ✅⏱ bounded — success on a wall-clock-bounded PARTIAL verdict (C1 #1500):
-            the conversational mode exited cleanly at the bound and the partial
-            state IS the verdict (real, comparable — not a killed coroutine).
-      ⏱ terminates=True, terminated_by_budget=True (honest partial — safety-net
-            timeout fired, no verdict produced)
+      ✅⏱ bounded — a wall-clock-bounded PARTIAL verdict that is REAL (C1 #1500
+            + CB #1528 item 2): the run stopped at the bound and left behind
+            artifacts the partial state / completed phases carry. Two ways to
+            get here, both meaning the same thing for a reader of the table:
+            the mode exited cleanly at its own bound (conversational,
+            ``extra_metrics["wall_clock_bounded"]``), or it was cut at the
+            budget but the accumulated work was recovered (``decides=True``).
+      ⏱ terminates=True, terminated_by_budget=True AND nothing recovered — a
+            STERILE cut: the budget fired and no verdict artifact survived.
+            The discriminator against ``✅⏱`` is ``decides``, i.e. measured
+            output — never the mere fact of having been bounded (anti-théâtre:
+            relabelling a sterile cut as "bounded" would be the mirror lie).
       ❌ terminates=False (real failure / exception)
 
     Decides column (CB #1528 folds-in): ``✅`` produced ≥1 verdict artifact,
@@ -1259,7 +1445,14 @@ def generate_report(
 
     for r in sorted(results, key=lambda x: (x.mode, x.corpus_id)):
         if r.terminated_by_budget:
-            status = "⏱ budget"
+            # CB #1528 item 2 (coord R723 "écart de rapport"): a budget cut
+            # that recovered a real partial verdict reads ``✅⏱ bounded`` —
+            # the legend's own definition of that marker. Before, EVERY budget
+            # cut rendered ``⏱ budget``, whose legend says "no verdict
+            # produced", so a pipeline row with decides=✅ contradicted its own
+            # marker. `decides` is normalised by run_all via _compute_decides
+            # (untouched here); `is True` keeps an un-normalised None sterile.
+            status = "✅⏱ bounded" if r.decides is True else "⏱ budget"
         elif r.extra_metrics.get("wall_clock_bounded"):
             status = "✅⏱ bounded"
         elif r.terminates and r.success:
@@ -1399,11 +1592,14 @@ async def run_all(
 
     Args:
         max_wall_seconds: Wall-clock budget (CB #1528) threaded to EVERY
-            runner — pipeline (state-reference trick → real partial verdict),
-            conversational (internal bound, C1 #1500), hierarchical (honest
-            degrade — no incremental state exposed → sterile ``—``). Breach is
-            recorded as a HONEST PARTIAL verdict (``terminated_by_budget=True``)
-            — never faked into success (anti-#1019).
+            runner, and every runner now recovers a REAL partial verdict at
+            breach (item 2) — pipeline and hierarchical bridge via a state
+            reference + recording checkpoint, hierarchical delegation via
+            checkpointed task results, conversational via its internal bound
+            (C1 #1500). Breach is recorded as a HONEST PARTIAL verdict
+            (``terminated_by_budget=True``) — never faked into success
+            (anti-#1019), and a cut that recovered nothing still renders
+            sterile (``—``) rather than borrowing the bounded marker.
     """
     if modes is None:
         modes = list(MODE_RUNNERS.keys())

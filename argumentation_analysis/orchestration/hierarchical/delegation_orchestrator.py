@@ -386,11 +386,27 @@ class DelegationOrchestrator:
         else:
             self.operational_executor = _absent_operational_executor
 
-    async def analyze(self, text: str) -> Dict[str, Any]:
+    async def analyze(
+        self,
+        text: str,
+        checkpoint_callback: Optional[Callable[..., None]] = None,
+    ) -> Dict[str, Any]:
         """Run the full S→T→O delegation chain on ``text``.
 
         Returns a dict with the objectives, task count, per-task operational
         results, and the strategic evaluation/conclusion.
+
+        Args:
+            text: The argument text to analyze.
+            checkpoint_callback: Optional ``(operational_results, ctx)``
+                callable fired after each operational task completes (CB #1528
+                item 2). The T→O loop is strictly sequential, so the caller
+                sees exactly the tasks that finished. It exists so a
+                wall-clock-bounded caller can recover a REAL partial verdict
+                after an external ``asyncio.wait_for`` cancels the chain:
+                without it, everything the finished tasks produced dies with
+                the coroutine. Recording only — never load-bearing for the
+                chain itself.
 
         Raises:
             DelegationError: if the strategic tier yields no objectives or the
@@ -452,6 +468,18 @@ class DelegationOrchestrator:
                     command.get("id"),
                     exc,
                 )
+
+            # CB #1528 item 2: hand the caller what has been produced so far.
+            # Guarded like the pipeline's ``_record_completed`` — a recording
+            # hook must never be able to break the run it observes.
+            if checkpoint_callback is not None:
+                try:
+                    checkpoint_callback(
+                        list(operational_results),
+                        {"planned_tasks": len(pending_tasks)},
+                    )
+                except Exception as cb_err:  # noqa: BLE001
+                    self.logger.warning("Checkpoint callback failed: %s", cb_err)
 
         # --- O→T→S: aggregate + strategic evaluation -----------------------
         eval_input = self._aggregate_results_by_objective(
@@ -553,6 +581,7 @@ async def run_delegation_analysis(
     strategic_manager: Optional[StrategicManager] = None,
     operational_executor: Optional[OperationalExecutor] = None,
     middleware: Any = None,
+    checkpoint_callback: Optional[Callable[..., None]] = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """Convenience entry point for M3 delegation analysis.
@@ -560,6 +589,10 @@ async def run_delegation_analysis(
     Mirrors ``run_hierarchical_analysis`` (M2) so the two modes are symmetric
     selectable axes. Extra ``kwargs`` are accepted and ignored for signature
     compatibility with the M2 convenience function.
+
+    ``checkpoint_callback`` (CB #1528 item 2) is forwarded, not ignored: it is
+    the seam a wall-clock-bounded caller uses to recover a real partial
+    verdict when the chain is cancelled mid-flight.
     """
     orchestrator = DelegationOrchestrator(
         strategic_manager=strategic_manager,
@@ -567,4 +600,4 @@ async def run_delegation_analysis(
         capability_registry=capability_registry,
         middleware=middleware,
     )
-    return await orchestrator.analyze(text)
+    return await orchestrator.analyze(text, checkpoint_callback=checkpoint_callback)
