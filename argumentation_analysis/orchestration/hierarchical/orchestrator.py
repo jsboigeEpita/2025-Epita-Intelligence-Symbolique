@@ -16,7 +16,7 @@ Created as part of Epic #208 / R311 — Hierarchical Mode Reactivation.
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Callable, Dict, Optional
 
 from argumentation_analysis.orchestration.hierarchical.strategic.manager import (
     StrategicManager,
@@ -73,12 +73,36 @@ class HierarchicalOrchestrator:
             logger.info("CapabilityRegistry created via setup_registry()")
         return self._registry
 
-    async def analyze(self, text: str, **kwargs: Any) -> Dict[str, Any]:
+    async def analyze(
+        self,
+        text: str,
+        state: Optional[Any] = None,
+        state_writers: Optional[Dict[str, Any]] = None,
+        checkpoint_callback: Optional[Callable[..., None]] = None,
+        **kwargs: Any,
+    ) -> Dict[str, Any]:
         """
         Run a full hierarchical analysis on the given text.
 
         Args:
             text: The argument text to analyze.
+            state: Optional analysis-state object passed BY REFERENCE to the
+                executor. CB #1528 item 2: the caller keeps the reference, so
+                a run torn by an external ``asyncio.wait_for`` still leaves
+                behind everything the completed phases wrote — the same
+                mechanism ``run_pipeline_mode`` already relies on. Without it
+                the breach yields a sterile result (state lost with the
+                cancelled coroutine).
+            state_writers: Capability-name → writer mapping (typically
+                ``CAPABILITY_STATE_WRITERS``). Only consulted when ``state``
+                is not None; each write is already guarded executor-side
+                (workflow_dsl.py:788).
+            checkpoint_callback: Optional ``(results, ctx)`` callable invoked
+                after each fully-gathered DAG level. The bridge workflow is a
+                strictly sequential chain (``objectives_to_workflow`` makes
+                every phase depend on the previous one), so this fires once
+                per completed phase — a torn phase never reaches it, so a
+                bounded caller cannot over-count.
             **kwargs: Additional context passed through to WorkflowExecutor.
 
         Returns:
@@ -141,11 +165,23 @@ class HierarchicalOrchestrator:
 
         # --- Phase 3: Execute via WorkflowExecutor ---
         logger.info("Phase 3: Executing workflow via WorkflowExecutor")
-        context = {"source": "hierarchical", **kwargs}
+        context = {
+            "source": "hierarchical",
+            # CB #1528 item 2: the PLANNED phase count travels in the context
+            # so a bounded caller's checkpoint callback can report
+            # ``completed/planned`` at breach instead of the nonsensical
+            # ``N/0`` (coord R710 wart). Read off the built WorkflowDefinition
+            # — measured, never fabricated.
+            "hierarchical_planned_phases": phase_count,
+            **kwargs,
+        }
         phase_results: Dict[str, PhaseResult] = await self._executor.execute(
             workflow,
             text,
             context=context,
+            state=state,
+            state_writers=state_writers,
+            checkpoint_callback=checkpoint_callback,
         )
 
         # Compute summary
@@ -225,6 +261,9 @@ async def run_hierarchical_analysis(
     text: str,
     capability_registry: Optional[CapabilityRegistry] = None,
     mode: str = "bridge",
+    state: Optional[Any] = None,
+    state_writers: Optional[Dict[str, Any]] = None,
+    checkpoint_callback: Optional[Callable[..., None]] = None,
     **kwargs: Any,
 ) -> Dict[str, Any]:
     """
@@ -240,6 +279,19 @@ async def run_hierarchical_analysis(
       on a degraded chain instead of falling back to hardcoded objectives.
 
     Used by ``run_orchestration.py --mode hierarchical --hierarchical-mode ...``.
+
+    CB #1528 item 2 — incremental-progress seam (opt-in, ``None`` = the
+    original behaviour): ``state`` / ``state_writers`` / ``checkpoint_callback``
+    let a wall-clock-bounded caller keep a reference to what the run produced
+    BEFORE it was cut. Both modes expose the seam, with the shape each one
+    actually has:
+
+    * ``bridge`` — all three, forwarded to ``WorkflowExecutor`` (DAG levels).
+    * ``delegation`` — ``checkpoint_callback`` only, fired per completed
+      operational task. This mode has no ``UnifiedAnalysisState`` surface, so
+      ``state`` / ``state_writers`` would have nothing to write into; they are
+      rejected rather than silently ignored (a caller that passes them is
+      expecting a fill rate it would never get).
     """
     if mode == "delegation":
         # Imported lazily to avoid a hard dependency cycle for the M2 path.
@@ -247,9 +299,17 @@ async def run_hierarchical_analysis(
             run_delegation_analysis,
         )
 
+        if state is not None or state_writers is not None:
+            raise ValueError(
+                "hierarchical mode='delegation' has no shared-state surface: "
+                "state/state_writers cannot be honoured. Use "
+                "checkpoint_callback (fired per completed operational task) "
+                "to observe incremental progress."
+            )
         return await run_delegation_analysis(
             text,
             capability_registry=capability_registry,
+            checkpoint_callback=checkpoint_callback,
             **kwargs,
         )
     if mode != "bridge":
@@ -260,4 +320,10 @@ async def run_hierarchical_analysis(
     orchestrator = HierarchicalOrchestrator(
         capability_registry=capability_registry,
     )
-    return await orchestrator.analyze(text, **kwargs)
+    return await orchestrator.analyze(
+        text,
+        state=state,
+        state_writers=state_writers,
+        checkpoint_callback=checkpoint_callback,
+        **kwargs,
+    )

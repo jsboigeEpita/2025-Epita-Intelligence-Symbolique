@@ -992,9 +992,14 @@ class TestCBWallClockBudget1528:
         assert result.phases_completed == 15
 
     def test_hierarchical_bridge_budget_breach_honest_degrade(self) -> None:
-        """CB #1528: hierarchical exposes no incremental state → a budget
-        breach honestly degrades to a sterile ``terminated_by_budget=True``
-        result (decides False → ``—``), NOT a faked success."""
+        """CB #1528 item 2 anti-pendule: a breach that recovered NOTHING must
+        stay sterile.
+
+        The fake hangs before any checkpoint fires, so no phase completed and
+        the state is measured empty. Post-item-2 the runner instruments the
+        run — but instrumenting is not producing: ``decides`` must remain
+        False → ``—``. This is the guard against "relabel every budget cut as
+        bounded", which would destroy the column's discriminating power."""
         mod = self._harness()
 
         async def fake_hang(**kwargs):
@@ -1017,11 +1022,13 @@ class TestCBWallClockBudget1528:
         assert result.terminated_by_budget is True
         assert result.success is False
         assert result.terminates is True
-        # No partial state exposed → sterile → honestly decides False.
+        assert result.phases_completed == 0
+        # Nothing recovered → sterile → honestly decides False.
         assert mod._compute_decides(result) is False
 
     def test_hierarchical_delegation_budget_breach_honest_degrade(self) -> None:
-        """Same honest-degrade contract as bridge, for the delegation mode."""
+        """Same anti-pendule guard for the delegation mode: no task finished
+        before the cut ⇒ nothing to recover ⇒ still ``—``."""
         mod = self._harness()
 
         async def fake_hang(**kwargs):
@@ -1043,6 +1050,7 @@ class TestCBWallClockBudget1528:
         result = asyncio.run(_drive())
         assert result.terminated_by_budget is True
         assert result.success is False
+        assert result.phases_completed == 0
         assert mod._compute_decides(result) is False
 
     def test_count_pending_async_tasks_detects_leak(self) -> None:
@@ -1432,6 +1440,373 @@ class TestCC1531DegradedDelegationScoresDash:
         assert r.extra_metrics["verdict_artifact"] == "Analyse réussie."
         assert r.phases_completed == 4
         assert mod._compute_decides(r) is True
+
+
+class TestCB1528Item2HierarchicalPartialVerdict:
+    """CB #1528 item 2 — a wall-clock breach on a HIERARCHICAL mode must
+    produce a REAL partial verdict, not a sterile hole.
+
+    Measured gap that motivated this (coord R723/R724, firsthand): at N=45 s
+    the two hierarchical modes were cut at ~45 % of their ~100-160 s
+    trajectory and rendered ``decides —`` / ``0/0``, while the pipeline —
+    cut at ~10 % of its trajectory, four times earlier in proportion — still
+    rendered a verdict with 5.9 % fill. Coupé deux fois plus loin, on rendait
+    quatre fois moins: the work was done and then thrown away by the
+    ``asyncio.wait_for`` that killed the coroutine.
+
+    The fix reuses the pipeline's mechanism rather than reimplementing it
+    (issue périmètre point 2): a state reference + a recording checkpoint for
+    the bridge (its DAG is a strictly sequential chain, so both fire once per
+    completed phase), checkpointed task results for delegation (its T→O loop
+    is sequential too).
+
+    Anti-pendule guards live next to the recovery tests, not apart from them:
+    a cut that recovered nothing stays sterile, and the unbounded path keeps
+    passing no state / no callback at all.
+
+    LLM-free and deterministic: the inner entry-points are patched.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    @staticmethod
+    def _phase(status_name: str) -> SimpleNamespace:
+        return SimpleNamespace(status=SimpleNamespace(name=status_name))
+
+    @staticmethod
+    def _drive_bridge(mod, fake, **kwargs):
+        async def _run():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup.setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_bridge_mode(
+                    "text", "corpus_A", **kwargs
+                )
+
+        return asyncio.run(_run())
+
+    @staticmethod
+    def _drive_delegation(mod, fake, **kwargs):
+        async def _run():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup.setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_delegation_mode(
+                    "text", "corpus_A", **kwargs
+                )
+
+        return asyncio.run(_run())
+
+    # ------------------------------------------------------------------
+    # Bridge
+    # ------------------------------------------------------------------
+
+    def test_bridge_breach_recovers_completed_phases_and_state(self) -> None:
+        """THE defect this item closes: work finished before the cut is
+        reported instead of dying with the cancelled coroutine."""
+        mod = self._harness()
+
+        async def fake(**kwargs):
+            state = kwargs.get("state")
+            if state is not None and hasattr(state, "add_argument"):
+                state.add_argument("argument_from_a_completed_phase")
+            cb = kwargs.get("checkpoint_callback")
+            if cb is not None:
+                cb(
+                    {"p1": self._phase("COMPLETED"), "p2": self._phase("COMPLETED")},
+                    {"hierarchical_planned_phases": 6},
+                )
+            await asyncio.sleep(5)  # next phase torn by the budget
+
+        result = self._drive_bridge(mod, fake, max_wall_seconds=0.5)
+
+        assert result.terminated_by_budget is True
+        assert result.success is False
+        assert result.phases_completed == 2
+        # Planned denominator read off the real WorkflowDefinition, so the
+        # Phases column reads 2/6 — not the nonsensical N/0 (coord R710 wart).
+        assert result.phases_total == 6
+        assert result.state_fill_rate is not None and result.state_fill_rate > 0
+        # The accumulated work IS the verdict (anti-#1019).
+        assert mod._compute_decides(result) is True
+
+    def test_bridge_breach_passes_the_recovery_seam(self) -> None:
+        """Mutation guard: if the runner ever stops passing state / writers /
+        checkpoint, recovery degrades SILENTLY back to the sterile result —
+        the row would just read ``—`` again with nothing to explain it."""
+        mod = self._harness()
+        seen = {}
+
+        async def fake(**kwargs):
+            seen.update(kwargs)
+            await asyncio.sleep(5)
+
+        self._drive_bridge(mod, fake, max_wall_seconds=0.5)
+
+        assert seen.get("state") is not None, "no state reference → nothing survives"
+        assert seen.get("checkpoint_callback") is not None
+        writers = seen.get("state_writers")
+        assert writers, "no writers → the state stays empty however far the run got"
+        from argumentation_analysis.orchestration.state_writers import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        assert writers is CAPABILITY_STATE_WRITERS, (
+            "the harness must reuse the canonical writers, not a private copy "
+            "(a second mapping is how call-sites drift apart — #1560)."
+        )
+
+    def test_bridge_torn_phase_is_not_counted(self) -> None:
+        """A phase still running when the budget fires must not inflate the
+        count. Only COMPLETED statuses are summed."""
+        mod = self._harness()
+
+        async def fake(**kwargs):
+            cb = kwargs.get("checkpoint_callback")
+            if cb is not None:
+                cb(
+                    {"p1": self._phase("COMPLETED"), "p2": self._phase("RUNNING")},
+                    {"hierarchical_planned_phases": 4},
+                )
+            await asyncio.sleep(5)
+
+        result = self._drive_bridge(mod, fake, max_wall_seconds=0.5)
+        assert result.phases_completed == 1
+
+    def test_bridge_unbounded_path_passes_no_instrumentation(self) -> None:
+        """``max_wall_seconds=None`` = the original free-running path.
+        Bounding is opt-in; it must not change how an unbounded run executes."""
+        mod = self._harness()
+        seen = {}
+
+        async def fake(**kwargs):
+            seen.update(kwargs)
+            return {"summary": {"completed": 4, "total": 4}, "conclusion": "ok"}
+
+        result = self._drive_bridge(mod, fake)
+        assert result.success is True
+        assert seen.get("state") is None
+        assert seen.get("state_writers") is None
+        assert seen.get("checkpoint_callback") is None
+
+    # ------------------------------------------------------------------
+    # Delegation
+    # ------------------------------------------------------------------
+
+    def test_delegation_breach_recovers_finished_tasks(self) -> None:
+        mod = self._harness()
+
+        async def fake(**kwargs):
+            cb = kwargs.get("checkpoint_callback")
+            if cb is not None:
+                cb(
+                    [
+                        {"status": "completed", "capability": "c1"},
+                        {"status": "completed_with_issues", "capability": "c2"},
+                    ],
+                    {"planned_tasks": 5},
+                )
+            await asyncio.sleep(5)
+
+        result = self._drive_delegation(mod, fake, max_wall_seconds=0.5)
+
+        assert result.terminated_by_budget is True
+        # ``completed_with_issues`` produced output → counts (anti-punitive).
+        assert result.phases_completed == 2
+        assert result.phases_total == 5
+        assert result.extra_metrics["tasks_finished_before_breach"] == 2
+        assert mod._compute_decides(result) is True
+
+    def test_delegation_breach_uses_the_same_counting_rules(self) -> None:
+        """CC #1531 item 1 must hold at breach exactly as it holds on the
+        completion path: a task that ran but self-declared it produced
+        nothing is NOT a completed phase. One predicate, both paths — the
+        twin-call-site drift of #1560 is what this pins."""
+        mod = self._harness()
+
+        async def fake(**kwargs):
+            cb = kwargs.get("checkpoint_callback")
+            if cb is not None:
+                cb(
+                    [
+                        {"status": "completed", "capability": "c1"},
+                        {"status": "completed", "capability": "c2", "degraded": True},
+                        {"status": "failed", "capability": "c3"},
+                    ],
+                    {"planned_tasks": 5},
+                )
+            await asyncio.sleep(5)
+
+        result = self._drive_delegation(mod, fake, max_wall_seconds=0.5)
+
+        assert result.phases_completed == 1, "the degraded task must be subtracted"
+        assert result.extra_metrics["tasks_degraded"] == 1
+        assert result.extra_metrics["tasks_failed"] == 1
+
+    def test_delegation_breach_with_only_degraded_tasks_stays_sterile(self) -> None:
+        """The pendulum in the other direction: recovering *something* is not
+        the same as producing something. Three tasks that all self-declared
+        non-analysis leave no verdict."""
+        mod = self._harness()
+
+        async def fake(**kwargs):
+            cb = kwargs.get("checkpoint_callback")
+            if cb is not None:
+                cb(
+                    [{"status": "completed", "degraded": True} for _ in range(3)],
+                    {"planned_tasks": 5},
+                )
+            await asyncio.sleep(5)
+
+        result = self._drive_delegation(mod, fake, max_wall_seconds=0.5)
+        assert result.phases_completed == 0
+        assert mod._compute_decides(result) is False
+
+    def test_delegation_unbounded_path_passes_no_callback(self) -> None:
+        mod = self._harness()
+        seen = {}
+
+        async def fake(**kwargs):
+            seen.update(kwargs)
+            return {
+                "mode": "delegation",
+                "objectives": [{"id": "o1"}],
+                "tasks_created": 1,
+                "operational_results": [{"status": "completed"}],
+                "evaluation": {},
+                "conclusion": "ok",
+            }
+
+        result = self._drive_delegation(mod, fake)
+        assert result.success is True
+        assert seen.get("checkpoint_callback") is None
+
+    # ------------------------------------------------------------------
+    # Report marker (coord R723 "écart de rapport")
+    # ------------------------------------------------------------------
+
+    def test_recovered_budget_cut_renders_bounded(self) -> None:
+        """A budget cut that produced a verdict must not carry the marker
+        whose legend says "no verdict produced"."""
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="hierarchical_bridge",
+            corpus_id="corpus_A",
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            phases_completed=2,
+            phases_total=6,
+            decides=True,
+        )
+        row = [
+            ln
+            for ln in mod.generate_report([r]).splitlines()
+            if ln.startswith("| hierarchical_bridge |")
+        ]
+        assert row and "✅⏱ bounded" in row[0], row
+
+    def test_sterile_budget_cut_keeps_the_plain_marker(self) -> None:
+        """Anti-théâtre: the marker tracks measured output, not the mere fact
+        of having been bounded."""
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="hierarchical_bridge",
+            corpus_id="corpus_A",
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            decides=False,
+        )
+        row = [
+            ln
+            for ln in mod.generate_report([r]).splitlines()
+            if ln.startswith("| hierarchical_bridge |")
+        ]
+        assert row and "✅⏱ bounded" not in row[0] and "⏱ budget" in row[0], row
+
+
+class TestFillRateExcludesConstructionBaseline:
+    """The fill rate must measure what the RUN produced, not the constructor.
+
+    Discovered while implementing CB #1528 item 2. A freshly built
+    ``UnifiedAnalysisState(text)`` is not empty — it already carries
+    ``raw_text``, ``deanonymized`` and a ``stakes_and_stakeholders`` scaffold:
+    3 non-empty fields out of 51, i.e. **5.9 %**, before a single phase runs.
+
+    Counting those made an empty run score ``fill > 0``, which
+    ``_compute_decides`` reads as "produced something". That is exactly the
+    ``pipeline_standard | 45.01s | Decides ✅ | 0/15 phases | 5.9 %`` row
+    measured firsthand at R723: the 5.9 % WAS the empty baseline echoed back,
+    and the ✅ was manufactured by the constructor. Same family as
+    #1560/#1019 — a number that looks like a measurement and is an artifact
+    of the instrument.
+
+    These guards pin the corrected definition at BOTH ends: an untouched
+    state scores 0.0, and real content still scores > 0.
+    """
+
+    @staticmethod
+    def _harness():
+        return _load_harness_module()
+
+    @staticmethod
+    def _state(text: str = "some argument text about a claim"):
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        return UnifiedAnalysisState(text)
+
+    def test_pristine_state_scores_zero_not_the_baseline(self) -> None:
+        """A state nobody wrote to has produced nothing → 0.0, not 5.9 %."""
+        mod = self._harness()
+        assert mod._state_fill_rate(self._state()) == 0.0
+
+    def test_pristine_state_alone_does_not_decide(self) -> None:
+        """The end-to-end consequence: constructing a state is not a verdict.
+
+        This is the defect as it was actually observed — the fill fed
+        ``_compute_decides``, so a run that completed 0 phases reported ✅.
+        """
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="hierarchical_bridge",
+            corpus_id="corpus_A",
+            success=False,
+            terminates=True,
+            terminated_by_budget=True,
+            phases_completed=0,
+            state_fill_rate=mod._state_fill_rate(self._state()),
+        )
+        assert mod._compute_decides(r) is False
+
+    def test_produced_content_still_scores_above_zero(self) -> None:
+        """Anti-pendule: subtracting the baseline must not zero out real work.
+
+        The failure mode of an over-corrected fix would be a state that DID
+        accumulate content still reporting 0.0 — trading a fabricated ✅ for a
+        fabricated ❌.
+        """
+        mod = self._harness()
+        state = self._state()
+        state.add_argument("corpus_A asserts a contested premise")
+        fill = mod._state_fill_rate(state)
+        assert fill is not None and fill > 0.0
+
+    def test_absent_state_still_reads_none_not_zero(self) -> None:
+        """CG #1540: "not instrumented" and "measured empty" stay distinct."""
+        mod = self._harness()
+        assert mod._state_fill_rate(None) is None
 
 
 if __name__ == "__main__":
