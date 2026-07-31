@@ -136,10 +136,19 @@ jobs:
           
           if (Test-Path pytest_report.xml) {
             [xml]$xml = Get-Content pytest_report.xml
-            $total = [int]$xml.testsuites.tests
-            $errors = [int]$xml.testsuites.errors
-            $failures = [int]$xml.testsuites.failures
-            $skipped = [int]$xml.testsuites.skipped
+            # #1556: pytest porte les compteurs sur <testsuite>, pas sur la
+            # racine <testsuites>. Lire la racine renvoyait '' donc 0 à TOUS les
+            # runs — d'où un "Passed: 0 / 0" affiché aussi bien sur 13161 tests
+            # passés que sur une suite entièrement sautée, ce qui a rendu le
+            # skip storm de fd07420f invisible.
+            $suites = @($xml.testsuites.testsuite)
+            $total = 0; $errors = 0; $failures = 0; $skipped = 0
+            foreach ($s in $suites) {
+              $total    += [int]$s.tests
+              $errors   += [int]$s.errors
+              $failures += [int]$s.failures
+              $skipped  += [int]$s.skipped
+            }
             $passed = $total - $errors - $failures - $skipped
             
             Write-Host "✅ Passed:  $passed / $total"
@@ -177,16 +186,31 @@ jobs:
             exit 0
           }
           [xml]$xml = Get-Content pytest_report.xml
-          $total = [int]$xml.testsuites.tests
+          # #1556: les compteurs sont sur <testsuite>, pas sur la racine
+          # <testsuites>. Lire la racine donnait $total = 0 à tous les runs, ce
+          # qui rendait la branche "exit 1" ci-dessous INATTEIGNABLE par
+          # construction : le run 30360430769 a compté 13202 skips JVM sur un
+          # total lu à 0, puis a imprimé son message de succès.
+          $total = 0
+          foreach ($s in @($xml.testsuites.testsuite)) { $total += [int]$s.tests }
           $content = Get-Content pytest_report.xml -Raw
           $jvmSignature = "JVM n'est pas réellement démarrée"
           # Count <skipped message="...signature..."> occurrences (scoped to
           # skip messages, so a signature mention in test names / stdout cannot
           # inflate the count).
           $jvmSkipCount = ([regex]::Matches($content, 'message="[^"]*' + [regex]::Escape($jvmSignature))).Count
-          $pct = if ($total -gt 0) { [math]::Round(100 * $jvmSkipCount / $total) } else { 0 }
+          # Un rapport présent dont le total est nul n'est pas un succès : soit
+          # la suite n'a rien exécuté, soit le parse est cassé. Les deux doivent
+          # être bruyants — c'est très exactement le trou par lequel #1556 est
+          # passé inaperçu (le garde se désarmait lui-même en silence).
+          if ($total -le 0) {
+            Write-Host "❌ FAIL-LOUD: pytest_report.xml présent mais total illisible ou nul ($total)."
+            Write-Host "   Le run n'a décidé de rien — un badge vert ici serait du théâtre (#1556, #1385, #1019)."
+            exit 1
+          }
+          $pct = [math]::Round(100 * $jvmSkipCount / $total)
           Write-Host "🔍 JVM-startup guard: $jvmSkipCount / $total tests ($pct%) skipped with JVM-not-started signature."
-          if ($total -gt 0 -and ($jvmSkipCount / $total) -gt 0.5) {
+          if (($jvmSkipCount / $total) -gt 0.5) {
             Write-Host "❌ FAIL-LOUD: $jvmSkipCount tests ($pct%) were skipped because the JVM did not start."
             Write-Host "   The run decided nothing — a green badge here would be theater (#1385, #1019)."
             Write-Host "   Likely cause: transient Temurin/JVM-setup flake on the runner. Re-run; if it persists, JVM init is broken on CI (urgent)."
