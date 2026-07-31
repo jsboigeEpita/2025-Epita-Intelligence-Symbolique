@@ -106,13 +106,27 @@ jobs:
 
       - name: Run automated tests
         if: env.API_KEYS_CONFIGURED == 'true'
-        # Gate scope (#1336/#1341): tests/unit only, LLM- and slow-marked tests
-        # excluded. The full suite cannot be a per-push gate: integration tests
-        # spawn a JVM subprocess or make real LLM calls (~1 test/min — the
-        # 2026-07-01 full run reached 2% of 14k tests in 6h before GitHub's job
-        # limit killed it), and tests/bench runs 15+ min LLM benchmarks by
-        # design. Integration/e2e/bench/LLM lanes need a scheduled or on-demand
-        # workflow, not this gate.
+        # Gate scope (#1336/#1341): tests/unit + tests/scripts, LLM- and
+        # slow-marked tests excluded. The full suite cannot be a per-push gate:
+        # integration tests spawn a JVM subprocess or make real LLM calls
+        # (~1 test/min — the 2026-07-01 full run reached 2% of 14k tests in 6h
+        # before GitHub's job limit killed it), and tests/bench runs 15+ min LLM
+        # benchmarks by design. Integration/e2e/bench/LLM lanes need a scheduled
+        # or on-demand workflow, not this gate.
+        #
+        # #1563: the gate ran tests/unit ONLY, so tests/scripts — which holds
+        # the orchestration-comparison harness suite, i.e. the tests guarding
+        # every number Epic #1500 reports — never executed in CI. A PR touching
+        # only the harness went green having run none of its own tests; the
+        # compensating control was a hand-cited local run, which is not a gate.
+        # Widened ONE directory at a time under a MEASURED budget, never to
+        # tests/ wholesale (#1341 was slowness, and re-including it in bulk is
+        # the pendulum). Measured on projet-is, same marker filter:
+        #   tests/scripts       → 129 passed, 2 deselected, 22.7s   → ADMITTED
+        #   tests/orchestration → still running at 10 min, killed   → EXCLUDED
+        # The next candidate directory needs its own measurement, not this
+        # precedent. The tally in the summary below is the proof the widening
+        # took effect: it must rise by ~129 on the first run after this change.
         # Backstop below the 6h GitHub job default; --timeout converts a hung
         # test into a failure with a stack dump of every thread (thread method
         # is the only one available on Windows; it aborts the run on fire, so
@@ -123,7 +137,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
         run: |
-          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()
