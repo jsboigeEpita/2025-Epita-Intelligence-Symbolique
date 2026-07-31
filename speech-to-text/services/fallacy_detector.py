@@ -7,13 +7,10 @@ Provides comprehensive fallacy detection with multiple detection methods
 """
 
 import sys
-import os
 import logging
 import time
-import asyncio
 from pathlib import Path
 from typing import Dict, Any, Optional, List
-from concurrent.futures import ThreadPoolExecutor
 
 # Add project root to path
 current_dir = Path(__file__).parent.parent.parent
@@ -23,92 +20,71 @@ if str(current_dir) not in sys.path:
 
 class FallacyDetectionService:
     """
-    Main fallacy detection service with three-tier fallback architecture:
-    1. Advanced Services (InformalAnalysisAgent)
-    2. Web API (when available)
-    3. Simple Pattern Matching (always available)
+    Main fallacy detection service with two-tier fallback architecture:
+    1. Web API (when available and healthy)
+    2. Simple Pattern Matching (always available)
+
+    #1567 — the former tier 1 ("Advanced Services", an InformalAnalysisAgent
+    bootstrapped via an ``AnalysisRunner`` import) was DEAD: the module
+    ``argumentation_analysis.orchestration.analysis_runner`` was removed in
+    ``d2fef7b4`` (obsolete analysis runners) and never replaced, the
+    ``AnalysisRunner`` class exists in NO module, and the assigned instance
+    was never read. Worse, the kernel was built with a FAKE key
+    (``api_key="mock_key"``), so repairing the import alone would have
+    flipped an honestly-OFF tier into a tier that LIES about being available
+    then fails on the first real call (motif #1019). The branch could not be
+    wired honestly without inventing a class for an unconsumed instance + a
+    real key + a reachability healthcheck — a feature, not a fix, never
+    requested (``SKIP_ADVANCED_SERVICES=true`` was already the config default).
+    Decision: REMOVE the tier (argumented); the rejected branch (wire it) is
+    documented above. Tiers web-API and pattern-matching are untouched.
     """
 
     def __init__(self):
         """Initialize the fallacy detection service"""
         self.logger = logging.getLogger(__name__)
         self.is_initialized = False
-        self.use_advanced_services = False
         self.use_web_api = False
-        self.informal_agent = None
-        self.analysis_runner = None
         self.web_api_detector = None
         self.api_base_url = "http://localhost:5000"
 
         self._initialize_services()
 
     def _initialize_services(self):
-        """Initialize services with fallback hierarchy"""
-        # Check if advanced services should be skipped
-        skip_advanced = os.environ.get("SKIP_ADVANCED_SERVICES", "").lower() == "true"
+        """Initialize services with fallback hierarchy (web API -> pattern)."""
+        # #1567: the dead "advanced services" tier (import to a removed module
+        # + fake key) is gone — no try/except ImportError can mask an
+        # unavailable tier here, because there is no such tier to mask. The
+        # web-API tier below reports its availability honestly via its own
+        # ``check_health`` (it only claims readiness when the endpoint answers).
+        try:
+            # Import web API detector if available
+            from .web_api_client import WebAPIClient
 
-        if skip_advanced:
-            self.logger.info("Skipping advanced services (SKIP_ADVANCED_SERVICES=true)")
-        else:
-            # Try advanced services first
-            try:
-                from argumentation_analysis.agents.core.informal.informal_agent import (
-                    InformalAnalysisAgent,
-                )
-                from argumentation_analysis.orchestration.analysis_runner import (
-                    AnalysisRunner,
-                )
-                import semantic_kernel as sk
-                from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+            self.web_api_detector = WebAPIClient(self.api_base_url)
 
-                kernel = sk.Kernel()
-                mock_llm_service = OpenAIChatCompletion(
-                    service_id="mock_openai",
-                    ai_model_id="gpt-3.5-turbo",
-                    api_key="mock_key",
-                )
-                kernel.add_service(mock_llm_service)
-
-                self.informal_agent = InformalAnalysisAgent(
-                    kernel=kernel, agent_name="fallacy_detection_service"
-                )
-                self.informal_agent.setup_agent_components(mock_llm_service.service_id)
-                self.analysis_runner = AnalysisRunner()
-
-                self.use_advanced_services = True
-                self.logger.info("Advanced services initialized successfully")
-
-            except ImportError as e:
-                self.logger.warning(f"Advanced services not available: {e}")
-
-            except Exception as e:
-                self.logger.warning(f"Error initializing advanced services: {e}")
-
-        # Try web API fallback
-        if not self.use_advanced_services:
-            try:
-                # Import web API detector if available
-                from .web_api_client import WebAPIClient
-
-                self.web_api_detector = WebAPIClient(self.api_base_url)
-
-                if self.web_api_detector.check_health():
-                    self.use_web_api = True
-                    self.logger.info("Web API fallback initialized")
-            except ImportError:
-                self.logger.info("Web API client not available")
-            except Exception as e:
-                self.logger.warning(f"Web API initialization failed: {e}")
+            if self.web_api_detector.check_health():
+                self.use_web_api = True
+                self.logger.info("Web API fallback initialized")
+        except ImportError:
+            self.logger.info("Web API client not available")
+        except Exception as e:
+            self.logger.warning(f"Web API initialization failed: {e}")
 
         self.is_initialized = True
         self.logger.info("Fallacy detection service initialized")
 
     def check_health(self) -> Dict[str, Any]:
-        """Check service health and return status"""
+        """Check service health and return status.
+
+        #1567: ``advanced_services`` is no longer reported — the dead tier was
+        removed, so check_health can no longer advertise a tier that would
+        fail on the first real call (DoD). ``web_api`` is reported honestly
+        (only True when the endpoint answered ``check_health`` at init).
+        """
         return {
             "service": "fallacy_detection",
             "status": "healthy" if self.is_initialized else "unhealthy",
-            "advanced_services": self.use_advanced_services,
             "web_api": self.use_web_api,
             "pattern_matching": True,  # Always available
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
@@ -140,18 +116,8 @@ class FallacyDetectionService:
         start_time = time.time()
 
         try:
-            # Method 1: Advanced Services
-            if self.use_advanced_services and self.informal_agent:
-                try:
-                    result = self._run_advanced_analysis(text)
-                    processing_time = time.time() - start_time
-                    return self._format_result(
-                        result, text, processing_time, "advanced_services", options
-                    )
-                except Exception as e:
-                    self.logger.error(f"Advanced analysis failed: {e}")
-
-            # Method 2: Web API
+            # Method 1: Web API (the advanced-services tier was removed in
+            # #1567 — it was dead since d2fef7b4 and could only have lied).
             if self.use_web_api and self.web_api_detector:
                 try:
                     result = self.web_api_detector.detect_fallacies(text, options)
@@ -173,75 +139,6 @@ class FallacyDetectionService:
             self.logger.error(f"All analysis methods failed: {e}")
             processing_time = time.time() - start_time
             return self._create_error_response(f"Analysis failed: {e}", processing_time)
-
-    def _run_advanced_analysis(self, text: str) -> Dict[str, Any]:
-        """Run analysis using advanced services with async handling"""
-        try:
-            # Handle async/await properly
-            try:
-                loop = asyncio.get_running_loop()
-                if loop.is_running():
-                    with ThreadPoolExecutor() as executor:
-                        future = executor.submit(
-                            asyncio.run, self._async_advanced_analysis(text)
-                        )
-                        return future.result(timeout=30)
-                else:
-                    return loop.run_until_complete(self._async_advanced_analysis(text))
-            except RuntimeError:
-                return asyncio.run(self._async_advanced_analysis(text))
-
-        except Exception as e:
-            self.logger.error(f"Advanced analysis error: {e}")
-            # Fallback to pattern matching
-            return self._pattern_matching_analysis(text)
-
-    async def _async_advanced_analysis(self, text: str) -> Dict[str, Any]:
-        """Async advanced analysis using InformalAnalysisAgent"""
-        try:
-            plugin = self.informal_agent.sk_kernel.plugins.get("InformalAnalyzer")
-            if not plugin:
-                return {"error": "InformalAnalyzer plugin not found"}
-
-            available_functions = list(plugin.functions.keys())
-            self.logger.info(f"Available functions: {available_functions}")
-
-            # Try semantic analysis first
-            if "semantic_AnalyzeFallacies" in available_functions:
-                try:
-                    from semantic_kernel.functions import KernelArguments
-
-                    arguments = KernelArguments(input=text)
-
-                    result = await self.informal_agent.sk_kernel.invoke(
-                        plugin_name="InformalAnalyzer",
-                        function_name="semantic_AnalyzeFallacies",
-                        arguments=arguments,
-                    )
-
-                    analysis_text = str(result.value) if result and result.value else ""
-                    fallacies = self._parse_semantic_analysis(analysis_text)
-
-                    return {
-                        "fallacies": fallacies,
-                        "analysis_method": "semantic_analysis",
-                        "raw_analysis": analysis_text,
-                    }
-
-                except Exception as e:
-                    self.logger.error(f"Semantic analysis failed: {e}")
-
-            # Fallback to pattern matching with advanced service context
-            fallacies = self._pattern_matching_analysis(text)["fallacies"]
-            return {
-                "fallacies": fallacies,
-                "analysis_method": "advanced_services_with_pattern_matching",
-                "taxonomy_available": True,
-            }
-
-        except Exception as e:
-            self.logger.error(f"Async analysis error: {e}")
-            return {"error": f"Analysis failed: {str(e)}"}
 
     def _pattern_matching_analysis(self, text: str) -> Dict[str, Any]:
         """Pattern-based fallacy detection (always available)"""
@@ -290,38 +187,6 @@ class FallacyDetectionService:
                     break
 
         return {"fallacies": fallacies, "analysis_method": "pattern_matching"}
-
-    def _parse_semantic_analysis(self, analysis_text: str) -> List[Dict[str, Any]]:
-        """Parse semantic analysis results"""
-        fallacies = []
-
-        if not analysis_text.strip():
-            return fallacies
-
-        lines = analysis_text.split("\n")
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
-
-            if any(
-                keyword in line.lower()
-                for keyword in ["fallacy", "sophisme", "erreur logique"]
-            ):
-                fallacies.append(
-                    {
-                        "type": "Semantic Detection",
-                        "name": "Detected Fallacy",
-                        "confidence": 0.75,
-                        "description": line,
-                        "start_position": 0,
-                        "end_position": 0,
-                        "context": "semantic analysis",
-                        "severity": "medium",
-                    }
-                )
-
-        return fallacies
 
     def _format_result(
         self,
