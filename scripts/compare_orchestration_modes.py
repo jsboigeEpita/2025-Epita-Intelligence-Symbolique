@@ -46,8 +46,9 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Awaitable, Callable, Dict, FrozenSet, List, Optional, Tuple
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -242,43 +243,97 @@ def _is_filled(value: Any) -> bool:
     return bool(value) and value not in ([], {}, "", None, 0)
 
 
-def _state_fill_rate(state: Any) -> Optional[float]:
+@lru_cache(maxsize=2)
+def _construction_baseline_keys(summarize: bool) -> FrozenSet[str]:
+    """Keys a pristine ``UnifiedAnalysisState(text)`` fills at CONSTRUCTION.
+
+    #1566: the success paths (``run_pipeline_mode`` / ``run_conversational_mode``)
+    hold only a snapshot **dict**, never the state object — so they cannot reuse
+    the object-form baseline (``type(state)(raw_text)``). This helper rebuilds
+    that baseline from the class, snapshotted in the SAME form as the
+    measurement: ``summarize=True`` → the 41-key summarized shape
+    (``raw_text`` + ``raw_text_snippet``); ``summarize=False`` → the 51-key raw
+    shape (``raw_text`` + ``deanonymized`` + ``stakes_and_stakeholders``).
+
+    A raw baseline subtracted from a summarized snapshot (or the reverse) would
+    re-manufacture the drift this helper exists to remove — the ``summarize``
+    arg is load-bearing, not decorative. Cached: the set depends only on the
+    form, not on any run's text, so it is computed once per form per process.
+
+    Opaque synthetic probe (privacy HARD — never a corpus string here).
+    """
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+    pristine = UnifiedAnalysisState("baseline_probe_opaque_synthetic")
+    snap = pristine.get_state_snapshot(summarize=summarize) or {}
+    return frozenset(k for k, v in snap.items() if _is_filled(v))
+
+
+def _state_fill_rate(
+    snapshot_or_state: Any,
+    summarize: Optional[bool] = None,
+) -> Optional[float]:
     """Fraction of state fields THIS RUN filled in, or None if no state.
 
-    ONE definition for the two BREACH paths (pipeline + hierarchical bridge),
-    where the fill is not a statistic but the verdict signal itself: it is what
-    ``_compute_decides`` reads to decide whether a cut run produced anything.
-    Two copies of this arithmetic is how the counters in this file drifted
-    before (#1560); the twin call-site kept the defect the first fix removed.
+    ONE definition, TWO call shapes — a second helper here is how the counters
+    in this file drifted before (#1560):
 
-    ⚠ The SUCCESS paths (``run_pipeline_mode`` / ``run_conversational_mode``,
-    at their non-breach return) still compute their fill inline, from a
-    snapshot dict rather than a state object, and WITHOUT the baseline
-    subtraction below — so their reported percentages run ~5-6 points high
-    (that is where the 51.2 % / 15.7 % / 7.8 % figures on #1528 come from).
-    That is a reporting inaccuracy, not a fabricated verdict: on a success path
-    ``_compute_decides`` is already carried by ``phases_completed > 0``, so no
-    verdict flips. Recalibrating them changes every headline number in the
-    comparison and belongs to its own measured round — filed rather than
-    silently drifted, and NOT quietly folded into this bound.
+    * **State-object form** (breach paths): ``_state_fill_rate(state)``. The
+      fill is not a statistic but the verdict signal itself — it is what
+      ``_compute_decides`` reads to decide whether a cut run produced anything.
+      The baseline is built from the class via ``type(state)(raw_text)``, so it
+      tracks whatever subclass the runner instrumented.
 
-    ⚠ The construction baseline is SUBTRACTED. A freshly built
+    * **Snapshot-dict form** (#1566 success paths): ``_state_fill_rate(snap,
+      summarize=...)``. The success returns hold only the snapshot dict the
+      runner emitted (``result["state_snapshot"]``), never the object, so the
+      object-form baseline is unreachable. ``summarize`` MUST match the shape
+      the runner snapshotted in (pipeline → ``True`` per
+      ``unified_pipeline.py``; conversational → ``False``, raw attribute names)
+      so the baseline is subtracted in the SAME form as the measurement.
+
+    The construction baseline is SUBTRACTED either way. A freshly built
     ``UnifiedAnalysisState(text)`` is not empty: it already carries
-    ``raw_text``, ``deanonymized`` and ``stakes_and_stakeholders`` — 3 of 51
-    fields, i.e. **5.9 %**, before a single phase has run. Counting those made
-    a run that produced NOTHING score ``fill > 0``, which ``_compute_decides``
-    reads as a verdict artifact. That is where the ``pipeline_standard | ⏱
-    budget | 45.01s | Decides ✅ | 0/15 phases | 5.9 %`` row measured firsthand
-    at R723 came from: 5.9 % IS the empty baseline, echoed back. The verdict
-    was manufactured by the constructor. Same family as #1560/#1019 — a number
-    that looks like a measurement and is an artifact of the instrument.
+    ``raw_text`` (and ``deanonymized`` / ``stakes_and_stakeholders`` raw, or
+    ``raw_text_snippet`` summarized) — ~5-6 % of fields before a phase runs.
+    Counting those made an empty run score ``fill > 0``, which on a breach path
+    ``_compute_decides`` read as a verdict artifact (the
+    ``pipeline_standard | 0/15 phases | 5.9 % | Decides ✅`` row measured at
+    R723 — 5.9 % WAS the empty baseline echoed back). On a success path no
+    verdict flips (``_compute_decides`` is already carried by
+    ``phases_completed > 0``), but the headline percentage was ~5-6 pts high
+    and the success/breach columns were not on the same footing. #1566 puts
+    them on the same footing. Same family as #1560/#1019 — a number that looks
+    like a measurement and is an artifact of the instrument.
 
-    So the numerator counts only fields a pristine state of the same class
-    does NOT already fill, and the denominator is the fillable remainder.
+    So the numerator counts only fields a pristine state of the same form does
+    NOT already fill, and the denominator is the fillable remainder.
 
     ``None`` (no state instrumented) and ``0.0`` (state instrumented, measured
     empty) are DIFFERENT answers and must stay so — CG #1540 / leçon #1531.
     """
+    # Dict form (#1566): snapshot already computed by the runner; ``summarize``
+    # selects the baseline form. A dict passed without ``summarize`` is a
+    # programming error (the form is ambiguous) → refuse rather than guess.
+    if isinstance(snapshot_or_state, dict):
+        snapshot = snapshot_or_state
+        if summarize is None:
+            raise ValueError(
+                "_state_fill_rate(dict, summarize=None): the snapshot form is "
+                "ambiguous — pass summarize=True (summarized) or False (raw) "
+                "so the baseline is subtracted in the same form."
+            )
+        if not snapshot:
+            return 0.0
+        baseline = _construction_baseline_keys(bool(summarize))
+        fillable = [k for k in snapshot if k not in baseline]
+        if not fillable:
+            return 0.0
+        non_empty = sum(1 for k in fillable if _is_filled(snapshot[k]))
+        return round(non_empty / len(fillable), 3)
+
+    # State-object form (breach paths): unchanged since #1565.
+    state = snapshot_or_state
     if state is None:
         return None
     try:
@@ -731,11 +786,11 @@ async def run_pipeline_mode(
     summary = result.get("summary", {})
     snap = result.get("state_snapshot", {})
 
-    total_fields = len(snap) if snap else 1
-    non_empty = sum(
-        1 for v in (snap or {}).values() if v and v not in ([], {}, "", None, 0)
-    )
-
+    # #1566: the fill is the SAME definition as the breach path (baseline
+    # subtracted), via the snapshot-dict form. ``unified_pipeline`` returns
+    # ``get_state_snapshot(summarize=True)`` (shared_state.py:358-359), so the
+    # baseline must be subtracted in the summarized form — the 41-key shape,
+    # not the 51-key raw one.
     # #1560: the counts are MEASURED from the snapshot the pipeline returns.
     # ``result["extra_metrics"]`` has NO producer anywhere in the package, so
     # ``.get("extra_metrics", {}).get("fallacy_count", 0)`` returned its literal
@@ -762,7 +817,7 @@ async def run_pipeline_mode(
         corpus_id=corpus_id,
         success=True,
         duration_seconds=round(duration, 2),
-        state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+        state_fill_rate=_state_fill_rate(snap, summarize=True),
         fallacy_count=_summarized_count("fallacy_count"),
         argument_count=_summarized_count("argument_count"),
         phases_completed=summary.get("completed", 0),
@@ -849,10 +904,11 @@ async def run_conversational_mode(
     wall_clock_bounded = bool(budget.get("wall_clock_bounded", False))
 
     state = result.get("state_snapshot", {})
-    total_fields = len(state) if state else 1
-    non_empty = sum(
-        1 for v in (state or {}).values() if v and v not in ([], {}, "", None, 0)
-    )
+    snapshot = state if isinstance(state, dict) else {}
+    # #1566: same fill definition as the breach path (baseline subtracted),
+    # via the snapshot-dict form. The conversational snapshot is the raw
+    # (non-summarized) one — 51-key shape, raw attribute names — so the
+    # baseline is subtracted in the raw form (summarize=False).
 
     planned_phases = result.get("phases", []) if isinstance(result, dict) else []
     conv_log = result.get("conversation_log", []) if isinstance(result, dict) else []
@@ -875,8 +931,6 @@ async def run_conversational_mode(
     # names, ``identified_arguments`` / ``identified_fallacies``), NOT the
     # summarized ``*_count`` shape. Absent key → None ("not written", Track CG
     # #1540), never a fabricated 0.
-    snapshot = state if isinstance(state, dict) else {}
-
     def _snapshot_count(key: str) -> Optional[int]:
         value = snapshot.get(key)
         if value is None:
@@ -892,7 +946,7 @@ async def run_conversational_mode(
         success=True,
         terminates=True,
         duration_seconds=round(duration, 2),
-        state_fill_rate=round(non_empty / max(total_fields, 1), 3),
+        state_fill_rate=_state_fill_rate(snapshot, summarize=False),
         fallacy_count=_snapshot_count("identified_fallacies"),
         argument_count=_snapshot_count("identified_arguments"),
         phases_completed=len(phases_ran),
@@ -935,6 +989,17 @@ async def run_conversation_deterministic_mode(
     duration = time.time() - start
 
     conv_state = orch.get_conversation_state()
+    # #1566 tranche (coord R730 left this 5th site open): the deterministic
+    # orchestrator exposes NO UnifiedAnalysisState — it publishes a weighted
+    # QUALITY grade (conversation_orchestrator.py:
+    # sophistication*0.4 + logical*0.3 + unified*0.3) in ``state.score``.
+    # Publishing that grade in the State Fill column put a different QUANTITY
+    # under the same name (the metric-named-beyond-its-calculation family).
+    # Branch A (kept): state_fill_rate=None (renders "—", CG #1540
+    # not-applicable, NOT measured-empty) and the grade moves to
+    # extra_metrics["quality_score"]. Branch B (invent a field-fraction for an
+    # orchestrator that exposes no UnifiedAnalysisState) = fabrication, rejected.
+    quality_score = conv_state.get("state", {}).get("score", 0)
 
     return ModeResult(
         mode="conversation_deterministic",
@@ -942,7 +1007,7 @@ async def run_conversation_deterministic_mode(
         success=True,
         terminates=True,
         duration_seconds=round(duration, 3),
-        state_fill_rate=round(conv_state.get("state", {}).get("score", 0), 3),
+        state_fill_rate=None,
         fallacy_count=conv_state.get("state", {}).get("fallacies_detected", 0),
         phases_completed=3,  # informal + fol + synthesis
         phases_total=3,
@@ -952,6 +1017,7 @@ async def run_conversation_deterministic_mode(
             "messages_count": conv_state.get("messages_count", 0),
             "tools_count": conv_state.get("tools_count", 0),
             "processing_time": conv_state.get("processing_time", 0),
+            "quality_score": quality_score,
         },
     )
 
