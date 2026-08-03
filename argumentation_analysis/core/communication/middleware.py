@@ -195,15 +195,25 @@ class MessageMiddleware:
         elif message.type == MessageType.RESPONSE:
             # Les réponses suivent généralement le même canal que la requête
             return ChannelType.HIERARCHICAL
-        elif message.type == MessageType.EVENT:
-            return ChannelType.FEEDBACK
-        elif message.type == MessageType.CONTROL:
-            return ChannelType.SYSTEM
         elif message.type == MessageType.PUBLICATION:
             return ChannelType.DATA
-        elif message.type == MessageType.SUBSCRIPTION:
-            return ChannelType.SYSTEM
 
+        # #1571: EVENT / CONTROL / SUBSCRIPTION no longer route to FEEDBACK /
+        # SYSTEM. Three of seven ``ChannelType`` members (NEGOTIATION, FEEDBACK,
+        # SYSTEM) have NO ``Channel`` implementation, so routing there was
+        # indeliverable by construction: ``send_message`` logged
+        # ``Channel not found: feedback|system`` and returned False, swallowed
+        # by callers — a routing table promising transports that do not exist
+        # (anti-#1019). Verified firsthand: zero production producers for these
+        # three message types (``SUBSCRIPTION`` emission removed from
+        # ``pub_sub.subscribe``; no ``CONTROL`` producer; ``EventMessage`` used
+        # only in its own unit test). The dead routes are subtracted rather
+        # than wired to empty channel classes (fabricating transport for
+        # messages with no consumer would be the #1019 theater). These types
+        # now fall through to the default bus below. A future
+        # FeedbackChannel / SystemChannel should be registered via
+        # ``create_default_middleware()`` and re-add the route here.
+        #
         # Canal par défaut
         return ChannelType.HIERARCHICAL
 

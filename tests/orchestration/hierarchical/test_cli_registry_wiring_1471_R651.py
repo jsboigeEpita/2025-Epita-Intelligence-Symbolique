@@ -62,6 +62,7 @@ def _run_cli(*extra_args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+@pytest.mark.slow
 class TestCLIRegistryWiring:
     """The real CLI must wire a CapabilityRegistry into the hierarchical
     orchestrator so delegation mode completes E2E. This is the R651 fix

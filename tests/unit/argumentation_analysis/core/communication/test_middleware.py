@@ -162,21 +162,30 @@ class TestDetermineChannel:
         msg = _make_msg(msg_type=MessageType.RESPONSE)
         assert middleware.determine_channel(msg) == ChannelType.HIERARCHICAL
 
-    def test_event_routes_to_feedback(self, middleware):
+    def test_event_falls_to_default_no_feedback_channel(self, middleware):
+        # #1571: EVENT used to route to FEEDBACK — a ChannelType member with NO
+        # Channel implementation, so the route was indeliverable. It now falls
+        # to the default HIERARCHICAL bus. Anti-regression guard: re-adding
+        # EVENT → FEEDBACK requires a FeedbackChannel registered first.
         msg = _make_msg(msg_type=MessageType.EVENT)
-        assert middleware.determine_channel(msg) == ChannelType.FEEDBACK
+        assert middleware.determine_channel(msg) == ChannelType.HIERARCHICAL
 
-    def test_control_routes_to_system(self, middleware):
+    def test_control_falls_to_default_no_system_channel(self, middleware):
+        # #1571: CONTROL used to route to SYSTEM (no implementation). Falls to
+        # the default HIERARCHICAL bus.
         msg = _make_msg(msg_type=MessageType.CONTROL)
-        assert middleware.determine_channel(msg) == ChannelType.SYSTEM
+        assert middleware.determine_channel(msg) == ChannelType.HIERARCHICAL
 
     def test_publication_routes_to_data(self, middleware):
         msg = _make_msg(msg_type=MessageType.PUBLICATION)
         assert middleware.determine_channel(msg) == ChannelType.DATA
 
-    def test_subscription_routes_to_system(self, middleware):
+    def test_subscription_falls_to_default_no_system_channel(self, middleware):
+        # #1571: SUBSCRIPTION used to route to SYSTEM (no implementation) — the
+        # dead ``pub_sub.subscribe`` emission hit exactly this and logged
+        # ``Channel not found: system``. Falls to the default HIERARCHICAL bus.
         msg = _make_msg(msg_type=MessageType.SUBSCRIPTION)
-        assert middleware.determine_channel(msg) == ChannelType.SYSTEM
+        assert middleware.determine_channel(msg) == ChannelType.HIERARCHICAL
 
 
 # ── send_message ──

@@ -70,6 +70,7 @@ def _run_cli(*extra_args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+@pytest.mark.slow
 class TestChannelRegistration:
     """The R652 fix wires HIERARCHICAL + DATA channels into the
     ``MessageMiddleware`` used by the hierarchical orchestrator, so
@@ -98,10 +99,15 @@ class TestChannelRegistration:
 
         occurrences = combined.count(CHANNEL_NOT_FOUND_MARKER)
         assert occurrences == 0, (
-            "R652 regression: 'Channel not found' still appears "
+            "'Channel not found' still appears "
             f"{occurrences} time(s) on the CLI delegation path. "
-            "The HIERARCHICAL+DATA channels are not registered on the "
-            "per-tier MessageMiddleware instances.\n"
+            "The HIERARCHICAL+DATA channels ARE registered (witnessed by the "
+            "sibling test), so this is NOT an R652 registration regression. "
+            "#1571: the likely cause is a message routed to a ChannelType with "
+            "no implementation (SYSTEM/FEEDBACK/NEGOTIATION) — e.g. a producer "
+            "of SUBSCRIPTION/EVENT/CONTROL, or an explicit message.channel to "
+            "an unregistered type. Inspect the 'Channel not found: <type>' line "
+            "below for the culprit channel.\n"
             f"--- STDOUT (tail) ---\n{result.stdout[-2000:]}\n"
             f"--- STDERR (tail) ---\n{result.stderr[-2000:]}"
         )

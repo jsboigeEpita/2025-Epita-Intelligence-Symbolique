@@ -34,6 +34,7 @@ SYNTHETIC_FALLACY_TEXT = (
 )
 
 
+@pytest.mark.slow
 class TestHierarchicalBridgeModeFirsthandDecision:
     """Bridge mode (M2 default) runs end-to-end with REAL agents and reaches
     a strategic decision. This is the DoD baseline for BO-1 #1471.
@@ -76,6 +77,7 @@ class TestHierarchicalBridgeModeFirsthandDecision:
         assert result.get("duration_seconds", 0) > 0
 
 
+@pytest.mark.slow
 class TestHierarchicalDelegationModeFailsLoud:
     """Delegation mode (M3 true 3-tier) FAILS LOUD on missing tier
     instead of fabricating a degraded result (anti-théâtre #1019).

@@ -425,21 +425,19 @@ class PublishSubscribeProtocol:
         # Ajouter l'abonné au topic
         subscription_id = topic.add_subscriber(subscriber_id, callback, filter_criteria)
 
-        # Créer un message d'abonnement
-        message = Message(
-            message_type=MessageType.SUBSCRIPTION,
-            sender=subscriber_id,
-            sender_level=AgentLevel.SYSTEM,  # À remplacer par le niveau réel de l'agent
-            content={"topic": topic_id, "filter": filter_criteria},
-            recipient=None,  # Pas de destinataire spécifique
-            channel=None,  # Le canal sera déterminé par le middleware
-            priority=MessagePriority.NORMAL,
-            metadata={"subscription_id": subscription_id},
-        )
-
-        # Envoyer le message d'abonnement via le middleware
-        self.middleware.send_message(message)
-
+        # #1571: subscribe NO LONGER emits a SUBSCRIPTION message. The
+        # subscription itself is done (``topic.add_subscriber`` above) — that is
+        # the work that delivers future publications to this subscriber. The
+        # message we used to build here routed to ``ChannelType.SYSTEM``
+        # (``determine_channel`` for SUBSCRIPTION), a channel with NO
+        # implementation, so ``send_message`` logged ``Channel not found: system``
+        # and returned False, swallowed. There was (and is) NO consumer of a
+        # SUBSCRIPTION message anywhere in the package (``grep -rn
+        # MessageType.SUBSCRIPTION`` → 1 producer, 1 router, 0 consumers), so the
+        # emission was theater: indeliverable, its failure hidden. Mirror of the
+        # C2 #1500 publish fix (publish fans out via ``_handle_message``; this
+        # removes the dead notify entirely). The CLI delegation run no longer
+        # emits the spurious ``Channel not found``.
         return subscription_id
 
     def unsubscribe(self, topic_id: str, subscription_id: str) -> bool:

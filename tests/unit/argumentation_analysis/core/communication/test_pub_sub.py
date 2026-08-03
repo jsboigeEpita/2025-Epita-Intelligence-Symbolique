@@ -374,13 +374,33 @@ class TestProtocolPublish:
         assert "agent_1" in recipients
         proto.shutdown()
 
+    def test_publish_delivers_to_subscriber_firsthand(self):
+        # DoD #1571 P1 — a test that asserts DELIVERY (the message reaches a
+        # subscriber's callback firsthand), not the routing decision. The unit
+        # suite used to assert only ``determine_channel`` return values, so a
+        # route to an unimplemented channel stayed green. Anti-#1019: genuine
+        # firsthand reception, not a cosmetic recipients-list flag.
+        mw = MagicMock()
+        proto = PublishSubscribeProtocol(mw)
+        received = []
+        proto.subscribe("t1", "agent_1", callback=lambda m: received.append(m))
+        proto.publish("t1", "sender", AgentLevel.OPERATIONAL, {"data": "opaque"})
+        assert len(received) == 1
+        assert received[0].content == {"data": "opaque"}
+        proto.shutdown()
+
     def test_subscribe_to_topic(self):
         mw = MagicMock()
         proto = PublishSubscribeProtocol(mw)
         sub_id = proto.subscribe("t1", "agent_1")
         assert sub_id.startswith("sub-")
-        # subscribe also sends a subscription message
-        mw.send_message.assert_called_once()
+        # #1571 (mirror of C2 #1500 publish fix): subscribe NO LONGER emits a
+        # SUBSCRIPTION message. The old emission routed to ChannelType.SYSTEM
+        # (no implementation), so ``send_message`` logged
+        # ``Channel not found: system`` and returned False, swallowed — theater.
+        # The subscription itself succeeds via ``topic.add_subscriber`` (the
+        # work that delivers future publications), so the dead notify is gone.
+        mw.send_message.assert_not_called()
         proto.shutdown()
 
     def test_unsubscribe(self):
