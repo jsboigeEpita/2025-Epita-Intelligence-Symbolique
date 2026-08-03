@@ -1808,6 +1808,113 @@ class TestFillRateExcludesConstructionBaseline:
         mod = self._harness()
         assert mod._state_fill_rate(None) is None
 
+    # --- #1566: the snapshot-dict form (success paths) ---------------------
+    # The success returns (``run_pipeline_mode`` / ``run_conversational_mode``)
+    # hold only a snapshot DICT, never the state object, so they call the dict
+    # form. Its baseline must be subtracted in the SAME shape the runner
+    # snapshotted in — a raw baseline on a summarized snapshot (or the reverse)
+    # would re-manufacture the very drift this class pins out.
+
+    @staticmethod
+    def _snap(
+        text: str = "some argument text about a claim", summarize: bool = False
+    ) -> dict:
+        """A snapshot dict in the requested form (what the runners hold)."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        return UnifiedAnalysisState(text).get_state_snapshot(summarize=summarize) or {}
+
+    def test_dict_form_pristine_scores_zero_both_shapes(self) -> None:
+        """A snapshot nobody wrote to → 0.0 in BOTH forms (raw + summarized)."""
+        mod = self._harness()
+        assert mod._state_fill_rate(self._snap(summarize=False), summarize=False) == 0.0
+        assert mod._state_fill_rate(self._snap(summarize=True), summarize=True) == 0.0
+
+    def test_dict_form_produced_content_scores_above_zero(self) -> None:
+        """Anti-pendule: baseline subtraction must not zero out real work."""
+        mod = self._harness()
+        state = self._state()
+        state.add_argument("corpus_A asserts a contested premise")
+        raw = state.get_state_snapshot(summarize=False) or {}
+        fill = mod._state_fill_rate(raw, summarize=False)
+        assert fill is not None and fill > 0.0
+
+    def test_dict_form_requires_explicit_summarize(self) -> None:
+        """A dict passed without ``summarize`` is ambiguous → refuse, do not guess.
+
+        Silent-defaulting to raw or summarized would be exactly the drift this
+        helper exists to remove; the form MUST be stated.
+        """
+        import pytest
+
+        mod = self._harness()
+        with pytest.raises(ValueError):
+            mod._state_fill_rate(self._snap(summarize=False))
+
+    def test_dict_form_baselines_differ_between_shapes(self) -> None:
+        """The raw baseline (51-key: raw_text + deanonymized + stakes) and the
+        summarized baseline (41-key: raw_text + raw_text_snippet) are DIFFERENT
+        sets — subtracting the wrong one re-manufactures the drift."""
+        mod = self._harness()
+        raw_base = mod._construction_baseline_keys(False)
+        sum_base = mod._construction_baseline_keys(True)
+        assert raw_base != sum_base
+        # Measured firsthand (R729 / coord R730): 3 raw, 2 summarized.
+        assert len(raw_base) == 3
+        assert len(sum_base) == 2
+
+    def test_dict_form_agrees_with_object_form(self) -> None:
+        """Object form and dict form give the SAME fill for the same state —
+        they are one definition, two call shapes, not two definitions."""
+        mod = self._harness()
+        state = self._state()
+        state.add_argument("corpus_A asserts a contested premise")
+        state.add_argument("corpus_A further develops the claim with evidence")
+        via_object = mod._state_fill_rate(state)
+        via_dict = mod._state_fill_rate(
+            state.get_state_snapshot(summarize=False) or {}, summarize=False
+        )
+        assert via_object is not None and via_dict is not None
+        assert via_object == via_dict
+
+
+class TestDeterministicFillTranche:
+    """#1566 tranche — the deterministic mode's 5th site (coord R730 left open).
+
+    ``run_conversation_deterministic_mode`` exposes NO ``UnifiedAnalysisState``;
+    it published a weighted QUALITY grade in the State Fill column. Branch A
+    (kept): ``state_fill_rate=None`` (renders "—", CG #1540 not-applicable) and
+    the grade moves to ``extra_metrics["quality_score"]``.
+    """
+
+    @staticmethod
+    def _harness():
+        return _load_harness_module()
+
+    def test_deterministic_publishes_none_fill_and_quality_score(self) -> None:
+        """The quality grade is NOT a fill rate — it lives in extra_metrics."""
+        mod = self._harness()
+        r = mod.ModeResult(
+            mode="conversation_deterministic",
+            corpus_id="corpus_A",
+            success=True,
+            terminates=True,
+            phases_completed=3,
+            state_fill_rate=None,  # branch A: not-applicable, not measured-empty
+            extra_metrics={
+                "messages_count": 6,
+                "tools_count": 3,
+                "processing_time": 1.2,
+                "quality_score": 0.74,
+            },
+        )
+        assert r.state_fill_rate is None
+        assert r.extra_metrics["quality_score"] == 0.74
+        # _fmt_fill renders None as "—" (CG #1540), never "0.0%".
+        assert mod._fmt_fill(r.state_fill_rate) == "—"
+        # `decides` still carries on phases_completed, unaffected by the tranche.
+        assert mod._compute_decides(r) is True
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
