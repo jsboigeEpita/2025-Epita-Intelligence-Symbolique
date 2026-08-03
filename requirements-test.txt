@@ -15,6 +15,6 @@ psutil
 unidecode
 pytest-playwright
 matplotlib
-mcp>=1.26,<2  # voir environment.yml : mcp 2.0.0 supprime `mcp.server.fastmcp`
+mcp>=2.0  # #1559 : migré vers l'API mcp 2.x (voir environment.yml)
 hypothesis
 pytest-timeout

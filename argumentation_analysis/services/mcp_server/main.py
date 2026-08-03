@@ -9,7 +9,7 @@ import sys
 print("Importation des modules...")
 
 from fastapi import Response
-from mcp.server.fastmcp import FastMCP
+from mcp.server import MCPServer
 from pydantic import ValidationError
 
 # Import des services Web API
@@ -95,7 +95,8 @@ class MCPService:
         """
         Initialise le service MCP avec les mêmes services que l'API Web.
         """
-        self.mcp = FastMCP(service_name, host="0.0.0.0", port=8000)
+        # mcp 2.x (#1559): host/port moved out of the constructor into run().
+        self.mcp = MCPServer(service_name)
         self.logger = logging.getLogger(__name__)
         self._initialized = False
         self.services = None
@@ -684,9 +685,20 @@ class MCPService:
         except Exception as e:
             self.logger.warning(f"V2 tools not registered: {e}")
 
-    def run(self, transport: str = "streamable-http"):
-        """Lance le serveur MCP."""
-        self.mcp.run(transport=transport)
+    def run(
+        self,
+        transport: str = "streamable-http",
+        host: str = "0.0.0.0",
+        port: int = 8000,
+    ):
+        """Lance le serveur MCP.
+
+        mcp 2.x (#1559): transport-specific params (host/port) are passed here,
+        not to the MCPServer constructor.
+        """
+        # transport is a runtime str; MCPServer.run's overloads are per-Literal,
+        # so mypy cannot narrow — stdio ignores host/port server-side (see #1559).
+        self.mcp.run(transport=transport, host=host, port=port)  # type: ignore[call-overload]
 
 
 # Point d'entrée principal

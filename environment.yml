@@ -82,7 +82,7 @@ dependencies:
     - tenacity
     - pybreaker
     - pytest-dotenv
-    - mcp>=1.26,<2  # PIN: mcp 2.0.0 (sorti le 2026-07-28) supprime `mcp.server.fastmcp`, importé par argumentation_analysis/services/mcp_server/main.py → 3 erreurs de COLLECTION dans tests/unit/services/test_mcp_server_v2/, qui avortent toute la suite. Non épinglé, la CI a résolu 2.0.0 le jour de sa sortie et a bloqué toutes les PRs. Migration vers l'API 2.x = ticket séparé.
+    - mcp>=2.0  # #1559 : migré vers l'API mcp 2.x (FastMCP renommé MCPServer, host/port déplacés du ctor vers run()). Le pin <2 de #1558 était un sursis le temps de la migration.
     - blis
     - JPype1>=1.5.0
     - pytest-benchmark
