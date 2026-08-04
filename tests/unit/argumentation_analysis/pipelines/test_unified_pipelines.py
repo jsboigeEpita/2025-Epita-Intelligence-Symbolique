@@ -1091,7 +1091,12 @@ class TestUnifiedTextAnalysisPipeline:
         assert (await p._perform_orchestration_analysis("t"))["status"] == "Skipped"
 
     async def test_orch_comprehensive(self):
-        p = self._make(orchestration_mode="real")
+        # #1578: orchestration_mode="real" bypasses self.orchestrator and calls
+        # the module-level run_unified_analysis (real pipeline -> real LLM). Use
+        # "pipeline" so the analyze_text_comprehensive branch below -- the one
+        # this test mocks -- is the path actually driven. Real mode is a
+        # deliberate production path (C2 #1500), not something to bend.
+        p = self._make(orchestration_mode="pipeline")
         mo = AsyncMock()
         mo.analyze_text_comprehensive = AsyncMock(
             return_value={
@@ -1102,6 +1107,9 @@ class TestUnifiedTextAnalysisPipeline:
         )
         p.orchestrator = mo
         assert (await p._perform_orchestration_analysis("t"))["status"] == "success"
+        # Structural bite (#1578): prove the orchestrator branch drove this, not
+        # the real pipeline. Reverting to mode="real" would skip this call.
+        mo.analyze_text_comprehensive.assert_awaited_once()
 
     async def test_orch_conversation(self):
         p = self._make(orchestration_mode="conversation")
@@ -1116,11 +1124,18 @@ class TestUnifiedTextAnalysisPipeline:
         assert (await p._perform_orchestration_analysis("t"))["status"] == "Failed"
 
     async def test_orch_error(self):
-        p = self._make(orchestration_mode="real")
+        # #1578: "real" mode ignores self.orchestrator (real pipeline path);
+        # use "pipeline" so the mocked analyze_text_comprehensive raising
+        # RuntimeError is what drives the status="Error" verdict (caught by the
+        # except clause in _perform_orchestration_analysis).
+        p = self._make(orchestration_mode="pipeline")
         mo = AsyncMock()
         mo.analyze_text_comprehensive = AsyncMock(side_effect=RuntimeError("E"))
         p.orchestrator = mo
         assert (await p._perform_orchestration_analysis("t"))["status"] == "Error"
+        # Structural bite (#1578): the raise must come from the mocked
+        # orchestrator, not the real pipeline.
+        mo.analyze_text_comprehensive.assert_awaited_once()
 
     async def test_analyze_unified_runs(self):
         p = self._make(analysis_modes=["informal"])
