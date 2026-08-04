@@ -139,8 +139,19 @@ class TestInvokeFOLWithExternalSolvers:
             result = asyncio.get_event_loop().run_until_complete(
                 invoke("test argument", {"fol_solver": "prover9"})
             )
-        # Should produce a result either way
-        assert isinstance(result, dict)
+        # #1588: the previous sole assertion was ``isinstance(result, dict)``,
+        # which no state of the code could falsify — every return path of
+        # ``_invoke_fol_reasoning`` returns a dict. Assert instead the property
+        # the name promises: the prover9 choice is routed away (fallback) and
+        # still terminates on a rendered FOL outcome rather than an arbitrary
+        # mapping. All four return paths carry ``fol_status``/``logic_type``,
+        # so this holds whichever backend the runner ends up using.
+        assert result["logic_type"] == "first_order"
+        assert result["fol_status"], "no FOL status rendered — routing did not complete"
+        assert "prover9" not in str(result.get("message", "")).lower(), (
+            "Prover9 reported as the engine that ran — the test is named for the "
+            "fallback; if Prover9 is now wired, rename it and assert the verdict."
+        )
 
 
 # ---------------------------------------------------------------------------

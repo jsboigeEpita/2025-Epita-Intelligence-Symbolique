@@ -542,12 +542,47 @@ class TestDebateCrossKB:
             },
         }
 
-        # #1583: family-(a) — verdict is local; patch ctor (mechanism M2).
+        # #1588: this test is named for the cross-KB read (#289), which lives
+        # inside ``if client:`` in ``_invoke_debate_analysis``. Killing the
+        # constructor (#1583) made the client falsy, so the run fell to the
+        # heuristic branch and the cross-KB code never executed — measured:
+        # dropping ``phase_quality_output`` or ``phase_jtms_output`` entirely
+        # left the output byte-identical. The old assertion could not catch it
+        # (neither ``argument_scores`` nor ``scores`` is ever a key of the
+        # result, so the trailing ``isinstance(result, dict)`` carried it and
+        # no state of the code could falsify it).
+        #
+        # Stay hermetic — no network — but with a *live* fake client, so the
+        # named path runs and the prompt it builds can be inspected.
+        captured = {}
+
+        async def _fake_create(**kwargs):
+            captured["user"] = kwargs["messages"][1]["content"]
+            response = MagicMock()
+            choice = MagicMock()
+            choice.message.content = '{"debate_quality": 3, "winner": "draw"}'
+            response.choices = [choice]
+            return response
+
+        fake_client = MagicMock()
+        fake_client.chat.completions.create = AsyncMock(side_effect=_fake_create)
+
+        import argumentation_analysis.orchestration.invoke_callables as _mod
+
         with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
-            result = await _invoke_debate_analysis("test", context)
-        # Basic structure check — LLM enrichment won't fire without API key
-        assert (
-            "argument_scores" in result
-            or "scores" in result
-            or isinstance(result, dict)
-        )
+            with patch.object(
+                _mod, "_get_openai_client", return_value=(fake_client, "fake-model")
+            ):
+                result = await _invoke_debate_analysis("test", context)
+
+        prompt = captured.get("user", "")
+        assert prompt, "the debate never reached the LLM path — cross-KB read skipped"
+        # Quality scores were read: note_finale and the fallacy penalty marker.
+        assert "QUALITY SCORES:" in prompt
+        assert "9.0/10" in prompt
+        assert "[PENALIZED by fallacy]" in prompt
+        # JTMS was read: the invalid belief is surfaced as retracted, and the
+        # formal_consistency=False flag raises the inconsistency warning.
+        assert "RETRACTED BELIEFS (JTMS): Argument with low quality" in prompt
+        assert "Formal inconsistency detected" in prompt
+        assert isinstance(result, dict)
