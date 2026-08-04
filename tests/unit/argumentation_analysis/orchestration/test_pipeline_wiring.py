@@ -157,6 +157,8 @@ class TestQualityFallacyCrossReference:
             "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
             new_callable=AsyncMock,
             return_value=None,
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             result = await _invoke_quality_evaluator("test", context)
 
@@ -191,6 +193,8 @@ class TestQualityFallacyCrossReference:
             "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
             new_callable=AsyncMock,
             return_value=None,
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             result = await _invoke_quality_evaluator("test", context)
 
@@ -222,6 +226,8 @@ class TestQualityFallacyCrossReference:
             "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
             new_callable=AsyncMock,
             return_value=None,
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             result = await _invoke_quality_evaluator("test", context)
 
@@ -388,8 +394,12 @@ class TestCounterArgumentCrossKB:
             },
         }
 
-        # Without LLM, result still contains quality_context
-        result = await _invoke_counter_argument("test", context)
+        # #1583: family-(a) — the verdict (quality_context read from the
+        # upstream phase) is local to the context, not model-gated. Patch the
+        # AsyncOpenAI ctor (mechanism M2) so a collateral extraction/enrichment
+        # call cannot leak; the assertions below still hold.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = await _invoke_counter_argument("test", context)
         assert "quality_context" in result
         assert result["quality_context"] is not None
 
@@ -409,7 +419,9 @@ class TestCounterArgumentCrossKB:
             "phase_quality_output": {},
         }
 
-        result = await _invoke_counter_argument("test", context)
+        # #1583: family-(a) — verdict is local; patch ctor (mechanism M2).
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = await _invoke_counter_argument("test", context)
         assert "parsed_argument" in result
 
 
@@ -445,7 +457,9 @@ class TestGovernanceCrossKB:
             "phase_jtms_output": {},
         }
 
-        result = await _invoke_governance("test", context)
+        # #1583: family-(a) — verdict is local; patch ctor (mechanism M2).
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = await _invoke_governance("test", context)
         assert "available_methods" in result
 
     async def test_governance_reads_quality_and_fallacies(self):
@@ -478,7 +492,9 @@ class TestGovernanceCrossKB:
             },
         }
 
-        result = await _invoke_governance("test", context)
+        # #1583: family-(a) — verdict is local; patch ctor (mechanism M2).
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = await _invoke_governance("test", context)
         assert "available_methods" in result
 
 
@@ -526,7 +542,9 @@ class TestDebateCrossKB:
             },
         }
 
-        result = await _invoke_debate_analysis("test", context)
+        # #1583: family-(a) — verdict is local; patch ctor (mechanism M2).
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = await _invoke_debate_analysis("test", context)
         # Basic structure check — LLM enrichment won't fire without API key
         assert (
             "argument_scores" in result

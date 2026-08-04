@@ -170,6 +170,8 @@ class TestGovernanceAutoVote:
         ), patch(
             "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
             return_value=(None, None),
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             context = {
                 "phase_extract_output": {
@@ -181,9 +183,27 @@ class TestGovernanceAutoVote:
                 },
                 "phase_quality_output": {
                     "per_argument_scores": {
-                        "arg_1": {"scores_par_vertu": {"clarte": 9.0, "pertinence": 4.0, "structure": 3.0}},
-                        "arg_2": {"scores_par_vertu": {"clarte": 5.0, "pertinence": 8.0, "structure": 7.0}},
-                        "arg_3": {"scores_par_vertu": {"clarte": 2.0, "pertinence": 6.0, "structure": 5.0}},
+                        "arg_1": {
+                            "scores_par_vertu": {
+                                "clarte": 9.0,
+                                "pertinence": 4.0,
+                                "structure": 3.0,
+                            }
+                        },
+                        "arg_2": {
+                            "scores_par_vertu": {
+                                "clarte": 5.0,
+                                "pertinence": 8.0,
+                                "structure": 7.0,
+                            }
+                        },
+                        "arg_3": {
+                            "scores_par_vertu": {
+                                "clarte": 2.0,
+                                "pertinence": 6.0,
+                                "structure": 5.0,
+                            }
+                        },
                     }
                 },
             }
@@ -215,6 +235,8 @@ class TestGovernanceAutoVote:
         ), patch(
             "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
             return_value=(None, None),
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             context = {
                 "phase_extract_output": {"arguments": [{"text": "Single arg"}]},
