@@ -28,6 +28,14 @@ def mock_conversational_deps():
         ".create_conversational_agents"
     ) as mock_create, patch.dict(
         "os.environ", {"OPENAI_API_KEY": "test-key", "OPENAI_CHAT_MODEL_ID": "test"}
+    ), patch(
+        # #1583: family-(a) — the orchestrator builds an AsyncOpenAI client at
+        # a dispersed site (not via the mocked sk kernel); patch the ctor
+        # (mechanism M2) so a collateral LLM call cannot leak. The verdict
+        # (workflow_name / unified_state type / capabilities) is decided by
+        # the mocked _run_phase, not the model.
+        "openai.AsyncOpenAI",
+        side_effect=RuntimeError("no-network-1583"),
     ):
         mock_kernel = MagicMock()
         mock_sk.Kernel.return_value = mock_kernel

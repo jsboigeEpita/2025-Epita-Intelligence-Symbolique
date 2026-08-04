@@ -110,7 +110,12 @@ class TestBipolarFailLoud:
         # Force the handler import to fail (JVM-unavailable scenario) — on a
         # JVM-available machine (CI/agent) the real handler would run and never
         # fail-loud, so we mock it to fail exactly as the file docstring says.
-        with patch.dict(
+        # #1583: family-(a) — a collateral LLM call leaks before the import
+        # fails; the verdict (RuntimeError) depends on the import, not the
+        # model. Patch the AsyncOpenAI ctor (mechanism M2).
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch.dict(
             sys.modules,
             {"argumentation_analysis.agents.core.logic.bipolar_handler": None},
         ):
@@ -120,7 +125,11 @@ class TestBipolarFailLoud:
 
 class TestABAFailLoud:
     def test_raises_runtime_error(self):
-        with patch.dict(
+        # #1583: family-(a) — collateral LLM leak before the import fails; the
+        # verdict (RuntimeError) depends on the import, not the model.
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch.dict(
             sys.modules,
             {"argumentation_analysis.agents.core.logic.aba_handler": None},
         ):
@@ -140,7 +149,11 @@ class TestADFFailLoud:
 
 class TestASPICFailLoud:
     def test_raises_runtime_error(self):
-        with patch.dict(
+        # #1583: family-(a) — collateral LLM leak before the import fails; the
+        # verdict (RuntimeError) depends on the import, not the model.
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch.dict(
             sys.modules,
             {"argumentation_analysis.agents.core.logic.aspic_handler": None},
         ):
@@ -327,8 +340,13 @@ class TestStateWriterGuard:
         )
 
         mock_state = MagicMock()
-        # Invoke raises RuntimeError (as it does now when JVM unavailable)
-        with patch.dict(
+        # Invoke raises RuntimeError (as it does now when JVM unavailable).
+        # #1583: family-(a) — a collateral LLM call leaks before the import
+        # fails; the verdict (RuntimeError) depends on the import, not the
+        # model. Patch the AsyncOpenAI ctor (mechanism M2).
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch.dict(
             sys.modules,
             {
                 "argumentation_analysis.agents.core.logic.aba_handler": None,

@@ -104,8 +104,13 @@ class TestPropositionalLogicNLWiring:
             },
         )
 
-        # Mock TweetyBridge since fallback path calls check_consistency
-        with patch(TWEETY_BRIDGE_PATH) as MockBridge:
+        # Mock TweetyBridge since fallback path calls check_consistency.
+        # #1583: family-(a) — the 2-pass NL→logic generator leaks a real LLM
+        # call; the verdict (logic_type/formulas) is template/bridge logic,
+        # not model-gated. Patch the AsyncOpenAI ctor (mechanism M2).
+        with patch(TWEETY_BRIDGE_PATH) as MockBridge, patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ):
             MockBridge.return_value.check_consistency.return_value = (
                 True,
                 "consistent",

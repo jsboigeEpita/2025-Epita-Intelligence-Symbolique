@@ -13,7 +13,6 @@ import json
 import pytest
 from unittest.mock import MagicMock, patch, AsyncMock
 
-
 # ---------------------------------------------------------------------------
 # Test: _invoke_asp_reasoning (Clingo/ASP)
 # ---------------------------------------------------------------------------
@@ -24,14 +23,13 @@ class TestInvokeASPReasoning:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_asp_reasoning,
         )
+
         return _invoke_asp_reasoning
 
     def test_fallback_when_no_jvm(self):
         """When no JVM is available, uses Python clingo or heuristic fallback."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("a :- b. b.", {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(invoke("a :- b. b.", {}))
         # Either clingo_python (if clingo package available) or heuristic
         assert result["solver"] in ("clingo_python", "clingo_jvm", "heuristic")
 
@@ -46,9 +44,7 @@ class TestInvokeASPReasoning:
     def test_empty_program(self):
         """Handles empty program gracefully."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("", {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(invoke("", {}))
         assert "solver" in result
 
     def test_comment_only_program(self):
@@ -64,9 +60,7 @@ class TestInvokeASPReasoning:
     def test_jvm_not_ready_falls_through(self, mock_jvm):
         """When JVM not ready, tries Python clingo then heuristic."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("a.", {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(invoke("a.", {}))
         # Either clingo_python or heuristic
         assert result["solver"] in ("clingo_python", "clingo_jvm", "heuristic")
 
@@ -81,14 +75,18 @@ class TestInvokeFOLWithExternalSolvers:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
         )
+
         return _invoke_fol_reasoning
 
     def test_default_tweety_routing(self):
         """Without fol_solver context, uses TweetyBridge or Python fallback."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("test argument", {})
-        )
+        # #1583: family-(a) — short input leaks a real NL→logic LLM call; the
+        # verdict (formulas/logic_type) is solver routing, not model-gated.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = asyncio.get_event_loop().run_until_complete(
+                invoke("test argument", {})
+            )
         assert "formulas" in result
         assert "logic_type" in result
         assert result["logic_type"] == "first_order"
@@ -101,16 +99,22 @@ class TestInvokeFOLWithExternalSolvers:
         """When fol_solver=eprover, routes to EProver."""
         # Mock the FOLHandler and its method
         mock_instance = MagicMock()
-        mock_instance._fol_check_consistency_with_eprover.return_value = (True, "Consistent")
+        mock_instance._fol_check_consistency_with_eprover.return_value = (
+            True,
+            "Consistent",
+        )
         mock_handler_cls.return_value = mock_instance
 
         # Patch the import within the function
         invoke = self._get_invoke()
-        with patch.dict("sys.modules", {
-            "argumentation_analysis.agents.core.logic.fol_handler": MagicMock(
-                FOLHandler=mock_handler_cls
-            ),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "argumentation_analysis.agents.core.logic.fol_handler": MagicMock(
+                    FOLHandler=mock_handler_cls
+                ),
+            },
+        ):
             result = asyncio.get_event_loop().run_until_complete(
                 invoke("test", {"fol_solver": "eprover", "formulas": ["P(X)"]})
             )
@@ -119,18 +123,22 @@ class TestInvokeFOLWithExternalSolvers:
     def test_eprover_fallback_on_import_error(self):
         """When EProver handler can't be imported, falls back to Tweety."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("test argument", {"fol_solver": "eprover"})
-        )
+        # #1583: family-(a) — verdict (fallback result) is local; patch ctor.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = asyncio.get_event_loop().run_until_complete(
+                invoke("test argument", {"fol_solver": "eprover"})
+            )
         # Should still produce a result (fallback to Tweety or Python)
         assert "formulas" in result or "error" in result
 
     def test_prover9_solver_choice_fallback(self):
         """When fol_solver=prover9 but Prover9 unavailable, falls back."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("test argument", {"fol_solver": "prover9"})
-        )
+        # #1583: family-(a) — verdict (fallback result) is local; patch ctor.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            result = asyncio.get_event_loop().run_until_complete(
+                invoke("test argument", {"fol_solver": "prover9"})
+            )
         # Should produce a result either way
         assert isinstance(result, dict)
 
@@ -145,6 +153,7 @@ class TestInvokeModalWithSPASS:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_modal_logic,
         )
+
         return _invoke_modal_logic
 
     # #1279 (2ccb1de3): a modal KB is supplied through ``context['formulas']``
@@ -209,6 +218,7 @@ class TestInvokeModalWithSPASS:
 class TestInvokeSAT:
     def _get_invoke(self):
         from argumentation_analysis.orchestration.invoke_callables import _invoke_sat
+
         return _invoke_sat
 
     def test_sat_solve(self):

@@ -48,9 +48,9 @@ class TestDagPlUnionsAndDoesNotShortCircuit:
             calls["client"] += 1
             return (None, None)  # client unavailable → 2-pass body is a no-op
 
-        with patch.object(
-            mod, "_get_openai_client", side_effect=_fake_client
-        ), patch(_BRIDGE, side_effect=RuntimeError("no JVM")):
+        with patch.object(mod, "_get_openai_client", side_effect=_fake_client), patch(
+            _BRIDGE, side_effect=RuntimeError("no JVM")
+        ):
             with pytest.raises(RuntimeError, match="Tweety solvers failed"):
                 await mod._invoke_propositional_logic(
                     _LONG_TEXT, {"formulas": ["a", "b"]}
@@ -84,9 +84,9 @@ class TestDagPlUnionsAndDoesNotShortCircuit:
             },
             "phase_extract_output": {"arguments": [{"text": "arg one"}]},
         }
-        with patch.object(
-            mod, "_get_openai_client", side_effect=_fake_client
-        ), patch(_BRIDGE, side_effect=RuntimeError("no JVM")):
+        with patch.object(mod, "_get_openai_client", side_effect=_fake_client), patch(
+            _BRIDGE, side_effect=RuntimeError("no JVM")
+        ):
             with pytest.raises(RuntimeError, match="Tweety solvers failed"):
                 await mod._invoke_propositional_logic(_LONG_TEXT, context)
 
@@ -109,9 +109,9 @@ class TestDagFolUnionsAndDoesNotShortCircuit:
             calls["client"] += 1
             return (None, None)
 
-        with patch.object(
-            mod, "_get_openai_client", side_effect=_fake_client
-        ), patch(_BRIDGE, side_effect=RuntimeError("no JVM")):
+        with patch.object(mod, "_get_openai_client", side_effect=_fake_client), patch(
+            _BRIDGE, side_effect=RuntimeError("no JVM")
+        ):
             out = await mod._invoke_fol_reasoning(
                 _LONG_TEXT, {"formulas": ["P(a)", "Q(b)"]}
             )
@@ -139,9 +139,9 @@ class TestConversationalPathUnchanged:
             calls["client"] += 1
             return (None, None)
 
-        with patch.object(
-            mod, "_get_openai_client", side_effect=_fake_client
-        ), patch(_BRIDGE, side_effect=RuntimeError("no JVM")):
+        with patch.object(mod, "_get_openai_client", side_effect=_fake_client), patch(
+            _BRIDGE, side_effect=RuntimeError("no JVM")
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             with pytest.raises(RuntimeError, match="Tweety solvers failed"):
                 await mod._invoke_propositional_logic(_LONG_TEXT, {})
 

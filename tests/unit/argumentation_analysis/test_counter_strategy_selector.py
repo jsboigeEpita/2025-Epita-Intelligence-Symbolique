@@ -12,7 +12,6 @@ import pytest
 import json
 from unittest.mock import patch, MagicMock
 
-
 # ---------------------------------------------------------------------------
 # CLI argument parsing
 # ---------------------------------------------------------------------------
@@ -126,6 +125,12 @@ class TestCounterStrategyConsumer:
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
+        ), patch(
+            # #1583: family-(a) — collateral LLM enrichment leaks; the verdict
+            # (suggested_strategy override from context) is local, not model-
+            # gated. Patch the AsyncOpenAI ctor (mechanism M2).
+            "openai.AsyncOpenAI",
+            side_effect=RuntimeError("no-network-1583"),
         ):
             result = await _invoke_counter_argument("Test argument", {})
 
@@ -151,6 +156,12 @@ class TestCounterStrategyConsumer:
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
+        ), patch(
+            # #1583: family-(a) — collateral LLM enrichment leaks; the verdict
+            # (suggested_strategy override from context) is local, not model-
+            # gated. Patch the AsyncOpenAI ctor (mechanism M2).
+            "openai.AsyncOpenAI",
+            side_effect=RuntimeError("no-network-1583"),
         ):
             result = await _invoke_counter_argument("Test argument", context)
 
@@ -176,6 +187,12 @@ class TestCounterStrategyConsumer:
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
+        ), patch(
+            # #1583: family-(a) — collateral LLM enrichment leaks; the verdict
+            # (suggested_strategy override from context) is local, not model-
+            # gated. Patch the AsyncOpenAI ctor (mechanism M2).
+            "openai.AsyncOpenAI",
+            side_effect=RuntimeError("no-network-1583"),
         ):
             result = await _invoke_counter_argument("Test argument", context)
 
@@ -200,6 +217,12 @@ class TestCounterStrategyConsumer:
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
+        ), patch(
+            # #1583: family-(a) — collateral LLM enrichment leaks; the verdict
+            # (suggested_strategy override from context) is local, not model-
+            # gated. Patch the AsyncOpenAI ctor (mechanism M2).
+            "openai.AsyncOpenAI",
+            side_effect=RuntimeError("no-network-1583"),
         ):
             result = await _invoke_counter_argument("Test argument", context)
 
