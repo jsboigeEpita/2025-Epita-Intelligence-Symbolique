@@ -31,7 +31,7 @@ class TestBackwardCompatibility:
     def test_v1_tools_registered(self):
         """Original 10 tools are registered even when v2 fails."""
         with patch(
-            "argumentation_analysis.services.mcp_server.main.FastMCP"
+            "argumentation_analysis.services.mcp_server.main.MCPServer"
         ) as mock_fast_mcp, patch(
             "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
         ), patch(
@@ -52,7 +52,7 @@ class TestListAvailableTools:
     async def test_list_includes_v2_tools(self):
         """list_available_tools includes both v1 and v2 tools."""
         with patch(
-            "argumentation_analysis.services.mcp_server.main.FastMCP"
+            "argumentation_analysis.services.mcp_server.main.MCPServer"
         ) as mock_fast_mcp, patch(
             "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
         ), patch(

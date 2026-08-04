@@ -348,7 +348,7 @@ class TestAppServices:
 def _make_mcp_service():
     """Create an MCPService with all heavy dependencies mocked."""
     with patch(
-        "argumentation_analysis.services.mcp_server.main.FastMCP"
+        "argumentation_analysis.services.mcp_server.main.MCPServer"
     ) as mock_fmcp, patch(
         "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
     ), patch(
@@ -383,7 +383,7 @@ class TestMCPServiceInit:
 
     def test_init_failure_raises_runtime_error(self):
         with patch(
-            "argumentation_analysis.services.mcp_server.main.FastMCP"
+            "argumentation_analysis.services.mcp_server.main.MCPServer"
         ) as mock_fmcp, patch(
             "argumentation_analysis.services.mcp_server.main.initialize_project_environment",
             side_effect=Exception("init failed"),
@@ -397,7 +397,7 @@ class TestMCPServiceInit:
     def test_v2_tools_failure_is_silent(self):
         """V2 tool registration failure should not crash init."""
         with patch(
-            "argumentation_analysis.services.mcp_server.main.FastMCP"
+            "argumentation_analysis.services.mcp_server.main.MCPServer"
         ) as mock_fmcp, patch(
             "argumentation_analysis.services.mcp_server.main.initialize_project_environment"
         ), patch(
@@ -717,7 +717,12 @@ class TestMCPServiceRun:
     def test_run_delegates_to_mcp(self):
         svc = _make_mcp_service()
         svc.run("stdio")
-        svc.mcp.run.assert_called_once_with(transport="stdio")
+        # mcp 2.x (#1559): host/port now flow through run() (moved out of the
+        # ctor). stdio ignores them server-side, but the delegation contract
+        # forwards them regardless of transport.
+        svc.mcp.run.assert_called_once_with(
+            transport="stdio", host="0.0.0.0", port=8000
+        )
 
 
 # ---------------------------------------------------------------------------
