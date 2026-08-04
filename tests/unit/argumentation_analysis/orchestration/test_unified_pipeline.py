@@ -384,7 +384,16 @@ class TestWorkflowExecution:
 
     @pytest.mark.asyncio
     async def test_execute_light_workflow(self):
-        """Light workflow executes with registered components."""
+        """Light workflow executes with registered components.
+
+        #1583: this exercises the real light workflow end-to-end. The quality
+        and counter invoke_callables leak collateral LLM calls (4 req / 46s),
+        but ``COMPLETED`` does not depend on the model — phases reach
+        ``COMPLETED`` via the honest-degraded path too. Patch the AsyncOpenAI
+        ctor (family a, mechanism M2) so the verdict is decided without
+        network; the ``COMPLETED`` assertions still hold, proving (biting) the
+        phase status never depended on the leaked calls.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
             build_light_workflow,
@@ -393,11 +402,13 @@ class TestWorkflowExecution:
         registry = setup_registry(include_optional=False)
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
-        results = await executor.execute(workflow, input_data="Test argument text")
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            results = await executor.execute(workflow, input_data="Test argument text")
         assert isinstance(results, dict)
         assert "quality" in results
         assert "counter" in results
-        # Quality and counter should complete (registered)
+        # Quality and counter complete (registered) even without any LLM —
+        # the status is honest-degraded, never model-gated.
         assert results["quality"].status == PhaseStatus.COMPLETED
         assert results["counter"].status == PhaseStatus.COMPLETED
 
@@ -735,16 +746,21 @@ class TestInvokeCallables:
         mock_plugin.suggest_strategy.return_value = (
             '{"strategy_name": "reductio", "confidence": 0.9}'
         )
+        # #1583: upstream extraction leaks a real LLM call. Patch the
+        # AsyncOpenAI ctor (family a, mechanism M2) so the verdict is decided
+        # by the mocked plugin, not a collateral network call.
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = await _invoke_counter_argument(
                 "Test", {"phase_quality_output": {"score": 5}}
             )
         assert result["parsed_argument"]["premise"] == "X"
         assert result["suggested_strategy"]["strategy_name"] == "reductio"
         assert result["quality_context"] == {"score": 5}
+        # Bite: the verdict transits the mocked plugin.
+        mock_plugin.parse_argument.assert_called()
 
     async def test_invoke_counter_argument_no_quality_context(self):
         """_invoke_counter_argument handles missing quality context."""
@@ -758,9 +774,10 @@ class TestInvokeCallables:
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = await _invoke_counter_argument("Test", {})
         assert result["quality_context"] is None
+        mock_plugin.parse_argument.assert_called()
 
     async def test_invoke_debate_analysis(self):
         """_invoke_debate_analysis calls DebatePlugin."""
@@ -908,15 +925,20 @@ class TestInvokeCallables:
         mock_plugin = MagicMock()
         mock_plugin.list_governance_methods.return_value = '["majority", "borda"]'
         mock_plugin.detect_conflicts_fn.return_value = "[]"
+        # #1583: upstream argument extraction leaks a real LLM call. Patch the
+        # AsyncOpenAI ctor (family a, mechanism M2) so the verdict comes from
+        # the mocked plugin, not a collateral network call.
         with patch(
             "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
             return_value=mock_plugin,
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = await _invoke_governance("text", {})
         assert result["available_methods"] == ["majority", "borda"]
         assert "conflicts" in result
         assert "extraction_method" in result
         assert result["conflict_count"] == 0
+        # Bite: the verdict transits the mocked plugin.
+        mock_plugin.list_governance_methods.assert_called()
 
     async def test_invoke_governance_emits_degraded_canon_when_verdict_empty_bo2_1472(
         self,
@@ -939,6 +961,8 @@ class TestInvokeCallables:
             ic,
             "_derive_governance_profile",
             return_value=([], [], [], False, "no_preferences_synthetic"),
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             result = await ic._invoke_governance("text", {})
         # The verdict is honestly degraded.
@@ -975,6 +999,8 @@ class TestInvokeCallables:
             ic,
             "_aggregate_governance_votes",
             return_value=fake_verdict,
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
         ):
             result = await ic._invoke_governance("text", {})
         assert result["degraded"] is False
@@ -1047,17 +1073,27 @@ class TestInvokeCallables:
         assert "audio_path" in result["note"]
 
     async def test_invoke_fact_extraction(self):
-        """_invoke_fact_extraction extracts claims from text (LLM or heuristic)."""
+        """_invoke_fact_extraction extracts claims from text (heuristic path)."""
+        # #1583 (family (a) of #1579): the assertion accepted ("llm","heuristic"),
+        # so in CI -- where pytest-dotenv leaks the real key into os.environ --
+        # the text routed to the LLM (2 billed calls) while the verdict did not
+        # depend on it. Same fix as the #1510 sibling
+        # (test_invoke_fact_extraction_empty): patch _get_openai_client so the
+        # heuristic path runs, and tighten the bite to =="heuristic" -- a revert
+        # to the LLM path flips this and fails the test.
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_fact_extraction,
         )
 
         text = "This is a very long claim sentence. Short. Another long enough claim for extraction."
-        result = await _invoke_fact_extraction(text, {})
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(None, ""),
+        ):
+            result = await _invoke_fact_extraction(text, {})
         assert result["claim_count"] >= 1
         assert result["source_length"] == len(text)
-        assert "extraction_method" in result
-        assert result["extraction_method"] in ("llm", "heuristic")
+        assert result["extraction_method"] == "heuristic"
         assert isinstance(result["claims"], list)
         assert isinstance(result.get("arguments", []), list)
         assert isinstance(result.get("fallacies", []), list)
@@ -1092,13 +1128,19 @@ class TestInvokeCallables:
 
         mock_bridge = MagicMock()
         mock_bridge.check_consistency.return_value = (True, "consistent")
+        # #1583: the NL→logic generator runs unconditionally and leaks a real
+        # LLM call for a short input. Patch the AsyncOpenAI ctor (family a,
+        # mechanism M2 — same as the router/conversational concentrateurs) so
+        # the verdict is decided by the mocked bridge alone.
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = await _invoke_propositional_logic("p => q", {})
         assert result["satisfiable"] is True
         assert result["logic_type"] == "propositional"
+        # Bite: the verdict transits the mocked bridge, no LLM path decides it.
+        mock_bridge.check_consistency.assert_called()
 
     async def test_invoke_propositional_logic_error(self):
         """_invoke_propositional_logic fails loud when Tweety unavailable (#1019, #1249).
@@ -1113,7 +1155,7 @@ class TestInvokeCallables:
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("JVM not started"),
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             with pytest.raises(RuntimeError, match="Propositional logic"):
                 await _invoke_propositional_logic("p", {})
 
@@ -1148,13 +1190,17 @@ class TestInvokeCallables:
 
         mock_bridge = MagicMock()
         mock_bridge.check_consistency.return_value = (True, "ok")
+        # #1583: patch the AsyncOpenAI ctor (family a, mechanism M2) — the
+        # NL→logic extraction leaks a real LLM call otherwise. The verdict is
+        # decided by the mocked bridge alone.
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = await _invoke_fol_reasoning("forall X: P(X)", {})
         assert result["consistent"] is True
         assert result["confidence"] == 0.8
+        mock_bridge.check_consistency.assert_called()
 
     async def test_invoke_fol_reasoning_inconsistent(self):
         """_invoke_fol_reasoning returns low confidence for inconsistency."""
@@ -1193,7 +1239,7 @@ class TestInvokeCallables:
         with patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=Exception("no JVM"),
-        ):
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = await _invoke_fol_reasoning("text", {})
         # Now uses Python fallback instead of error dict
         assert result["logic_type"] == "first_order"

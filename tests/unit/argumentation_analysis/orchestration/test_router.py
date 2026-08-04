@@ -514,7 +514,14 @@ class TestRouterIntegration:
 
         registry = setup_registry(include_optional=False)
 
+        # #1583: the standard fallback workflow drove real LLM calls (8 req,
+        # 47 s) that the verdict ("workflow_name == standard_analysis", a pure
+        # routing fallback) does not depend on. Patch the AsyncOpenAI ctor so
+        # the fallback phases run honest-degraded. Router mock kept: it is what
+        # triggers the fallback under test.
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch(
             "argumentation_analysis.orchestration.router.TextAnalysisRouter"
         ) as MockRouter:
             instance = MagicMock()
@@ -543,14 +550,27 @@ class TestRouterIntegration:
 
         registry = setup_registry(include_optional=False)
 
-        for name in ("light", "standard", "full"):
-            result = await run_unified_analysis(
-                "Test text.",
-                workflow_name=name,
-                registry=registry,
-                create_state=False,
-            )
-            assert "phases" in result
+        # #1583 (family (a) of #1579): without this patch each workflow drove
+        # the real pipeline end-to-end and billed 20 real LLM calls (122 s),
+        # while the verdict ("phases" present, name mapped) does not depend on
+        # the model. The pipeline builds its LLM clients at several dispersed
+        # sites (router, nl_to_logic, french_fallacy_adapter, plugins, debate)
+        # -- not only via invoke_callables._get_openai_client -- so patching the
+        # single creation point is insufficient. Patch the AsyncOpenAI ctor to
+        # raise: every component that builds a client takes its honest-degraded
+        # path, "phases" is still produced, and the workflow_name mapping (the
+        # in-test bite) is preserved. Network hermeticity is re-verified by the
+        # #1579 instrumentation.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+            for name in ("light", "standard", "full"):
+                result = await run_unified_analysis(
+                    "Test text.",
+                    workflow_name=name,
+                    registry=registry,
+                    create_state=False,
+                )
+                assert "phases" in result
+                assert result["workflow_name"] == f"{name}_analysis"
 
 
 # ============================================================

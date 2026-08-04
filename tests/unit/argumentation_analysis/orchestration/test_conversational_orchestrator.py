@@ -529,6 +529,8 @@ class TestRunConversationalAnalysis:
             return agent
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
             return_value=mock_kernel,
         ), patch(
@@ -622,6 +624,8 @@ class TestRunConversationalAnalysis:
             return agent
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
             return_value=mock_kernel,
         ), patch(
@@ -670,6 +674,8 @@ class TestRunConversationalAnalysis:
             return agent
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch(
             "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
             return_value=mock_kernel,
         ), patch(
