@@ -7,10 +7,13 @@ Covers:
   2. unified_text_analysis.py — UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig, helpers
   3. orchestration/config/enums.py — OrchestrationMode, AnalysisType enums
   4. orchestration/config/base_config.py — ExtendedOrchestrationConfig
-  5. orchestration/core/communication.py — initialize_communication_middleware
-  6. orchestration/analysis/post_processors.py — post_process_orchestration_results
-  7. orchestration/analysis/processors.py — execute_operational_tasks, synthesize_hierarchical_results
-  8. orchestration/analysis/traces.py — trace_orchestration, get_communication_log, save_orchestration_trace
+  5. orchestration/analysis/post_processors.py — post_process_orchestration_results
+  6. orchestration/analysis/processors.py — execute_operational_tasks, synthesize_hierarchical_results
+  7. orchestration/analysis/traces.py — trace_orchestration, get_communication_log, save_orchestration_trace
+
+NOTE: section 5 (orchestration/core/communication.py — initialize_communication_middleware)
+was removed in #1574: the function had zero production callers and its naked-middleware
+fallback branch was dead code pinned green by its own tests.
 
 NOTE: unified_text_analysis.py has a broken import (get_fallacy_detector) which
 cascades to all orchestration subpackages. We use sys.modules mocking to pre-inject
@@ -76,15 +79,6 @@ except ImportError:
     ORCH_CONFIG_AVAILABLE = False
 
 try:
-    from argumentation_analysis.pipelines.orchestration.core.communication import (
-        initialize_communication_middleware,
-    )
-
-    COMM_AVAILABLE = True
-except ImportError:
-    COMM_AVAILABLE = False
-
-try:
     from argumentation_analysis.pipelines.orchestration.analysis.post_processors import (
         post_process_orchestration_results,
     )
@@ -105,7 +99,6 @@ except ImportError:
 
 MODULE = "argumentation_analysis.pipelines.unified_pipeline"
 UTA_MODULE = "argumentation_analysis.pipelines.unified_text_analysis"
-COMM_MODULE = "argumentation_analysis.pipelines.orchestration.core.communication"
 
 
 # ============================================================================
@@ -1291,46 +1284,6 @@ class TestExtendedOrchestrationConfig:
 
     def test_trace_default(self):
         assert ExtendedOrchestrationConfig().save_orchestration_trace is True
-
-
-# ============================================================================
-# SECTION 5: orchestration/core/communication.py tests
-# ============================================================================
-
-
-@pytest.mark.skipif(not COMM_AVAILABLE, reason="communication import failed")
-class TestInitializeCommunicationMiddleware:
-    @patch(f"{COMM_MODULE}.MessageMiddleware", None)
-    def test_none_when_class_unavailable(self):
-        assert initialize_communication_middleware() is None
-
-    @patch(f"{COMM_MODULE}.MessageMiddleware")
-    def test_from_service_manager(self, mock_cls):
-        sm = MagicMock()
-        sm.middleware = MagicMock()
-        assert initialize_communication_middleware(service_manager=sm) is sm.middleware
-
-    @patch(f"{COMM_MODULE}.MessageMiddleware")
-    def test_creates_new(self, mock_cls):
-        mock_cls.return_value = MagicMock()
-        assert (
-            initialize_communication_middleware(enable_communication=True) is not None
-        )
-        mock_cls.assert_called_once()
-
-    @patch(f"{COMM_MODULE}.MessageMiddleware")
-    def test_none_when_disabled(self, mock_cls):
-        assert initialize_communication_middleware(enable_communication=False) is None
-
-    @patch(f"{COMM_MODULE}.MessageMiddleware")
-    def test_prefers_sm(self, mock_cls):
-        sm = MagicMock()
-        sm.middleware = MagicMock()
-        r = initialize_communication_middleware(
-            service_manager=sm, enable_communication=True
-        )
-        assert r is sm.middleware
-        mock_cls.assert_not_called()
 
 
 # ============================================================================

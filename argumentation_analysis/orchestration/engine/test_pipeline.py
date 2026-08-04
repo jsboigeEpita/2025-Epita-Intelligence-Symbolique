@@ -20,9 +20,8 @@ from argumentation_analysis.orchestration.hierarchical.tactical.coordinator impo
 from argumentation_analysis.orchestration.hierarchical.operational.manager import (
     OperationalManager,
 )
-from argumentation_analysis.core.communication.middleware import MessageMiddleware
-from argumentation_analysis.core.communication.hierarchical_channel import (
-    HierarchicalChannel,
+from argumentation_analysis.core.communication.middleware import (
+    create_default_middleware,
 )
 
 logging.basicConfig(
@@ -45,8 +44,11 @@ async def main():
     config = OrchestrationConfig()
     config.strategy = OrchestrationStrategy.HIERARCHICAL_FULL
 
-    shared_middleware = MessageMiddleware()
-    shared_middleware.register_channel(HierarchicalChannel("hierarchical_channel"))
+    # #1574 (R652 pattern): use the single source of truth wiring both
+    # HIERARCHICAL + DATA channels. A bare ``MessageMiddleware()`` registered
+    # with only a HierarchicalChannel reproduced the R652 ``Channel not found``
+    # symptom (PUBLICATION routed to the missing DATA channel).
+    shared_middleware = create_default_middleware()
 
     strategic_manager = StrategicManager(middleware=shared_middleware)
     tactical_coordinator = TacticalCoordinator(middleware=shared_middleware)
