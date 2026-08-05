@@ -19,7 +19,6 @@ from argumentation_analysis.core.shared_state import (
     UnifiedAnalysisState,
 )
 
-
 # ---------------------------------------------------------------------------
 # Test: _invoke_sat (SAT solving)
 # ---------------------------------------------------------------------------
@@ -34,6 +33,7 @@ class TestInvokeSAT:
 
     def _get_invoke(self):
         from argumentation_analysis.orchestration.invoke_callables import _invoke_sat
+
         return _invoke_sat
 
     @patch(
@@ -42,7 +42,11 @@ class TestInvokeSAT:
     def test_basic_sat_solve(self, MockSATHandler):
         """SAT handler returns satisfiable result for simple formula."""
         mock_instance = MagicMock()
-        mock_instance.solve_formulas.return_value = (True, {"p": True}, {"backend": "Z3"})
+        mock_instance.solve_formulas.return_value = (
+            True,
+            {"p": True},
+            {"backend": "Z3"},
+        )
         MockSATHandler.return_value = mock_instance
 
         invoke = self._get_invoke()
@@ -65,7 +69,10 @@ class TestInvokeSAT:
         result = asyncio.get_event_loop().run_until_complete(
             invoke("", {"formulas": []})
         )
-        assert isinstance(result, dict)
+        # #1593: ``isinstance(result, dict)`` passed even with _invoke_sat stubbed
+        # to {}. The name promises "handles empty input gracefully" → the SAT
+        # verdict structure is present (mirrors sibling test_basic_sat_solve).
+        assert "satisfiable" in result, f"expected SAT verdict structure, got {result}"
 
     @patch(
         "argumentation_analysis.agents.core.logic.sat_handler.SATHandler",
@@ -89,14 +96,23 @@ class TestInvokeSAT:
     def test_custom_solver(self, MockSATHandler):
         """SAT handler respects solver choice from context."""
         mock_instance = MagicMock()
-        mock_instance.solve_formulas.return_value = (True, {"p": True}, {"backend": "cadical195"})
+        mock_instance.solve_formulas.return_value = (
+            True,
+            {"p": True},
+            {"backend": "cadical195"},
+        )
         MockSATHandler.return_value = mock_instance
 
         invoke = self._get_invoke()
         result = asyncio.get_event_loop().run_until_complete(
             invoke("p", {"formulas": ["p"], "solver": "cadical195"})
         )
-        assert isinstance(result, dict)
+        # #1593: ``isinstance(result, dict)`` passed even with _invoke_sat stubbed
+        # to {}. The name promises "respects solver choice" → the chosen solver
+        # propagates to the statistics backend.
+        assert (
+            result.get("statistics", {}).get("backend") == "cadical195"
+        ), f"solver choice not reflected in stats, got {result}"
 
 
 # ---------------------------------------------------------------------------
@@ -111,14 +127,13 @@ class TestInvokeStakesExtractor:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_stakes_extractor,
         )
+
         return _invoke_stakes_extractor
 
     def test_no_state_returns_error(self):
         """When no state object in context, returns error dict."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("test text", {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(invoke("test text", {}))
         assert "error" in result
 
     @patch(
@@ -216,14 +231,13 @@ class TestInvokeDeepSynthesis:
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_deep_synthesis,
         )
+
         return _invoke_deep_synthesis
 
     def test_no_state_returns_error(self):
         """When no state object in context, returns error dict."""
         invoke = self._get_invoke()
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("test text", {})
-        )
+        result = asyncio.get_event_loop().run_until_complete(invoke("test text", {}))
         assert "error" in result
 
     def test_deep_synthesis_on_populated_state(self):
@@ -251,7 +265,13 @@ class TestInvokeDeepSynthesis:
         result = asyncio.get_event_loop().run_until_complete(
             invoke("", {"_state_object": state, "source_metadata": {}})
         )
-        assert isinstance(result, dict)
+        # #1593: ``isinstance(result, dict)`` passed even with _invoke_deep_synthesis
+        # stubbed to {}. The name promises "handles empty state without crash" →
+        # the result carries deep-synthesis's structure (error + artifact fields),
+        # not just any dict.
+        assert (
+            "populated_artifact_fields" in result
+        ), f"expected deep-synthesis structure on empty state, got {result}"
 
 
 # ---------------------------------------------------------------------------
@@ -266,12 +286,14 @@ class TestInvokeCollaborativeAnalysis:
         from argumentation_analysis.orchestration.collaborative_debate import (
             _invoke_collaborative_analysis,
         )
+
         return _invoke_collaborative_analysis
 
     @patch.dict("os.environ", {}, clear=False)
     def test_no_api_key_uses_fallback(self):
         """When no API key, falls back to heuristic analysis."""
         import os
+
         # Ensure OPENAI_API_KEY is empty
         original = os.environ.get("OPENAI_API_KEY")
         os.environ["OPENAI_API_KEY"] = ""
@@ -282,7 +304,9 @@ class TestInvokeCollaborativeAnalysis:
             )
             assert isinstance(result, dict)
             # Fallback path returns structured analysis with agent_outputs, etc.
-            assert "agent_outputs" in result or "summary" in result or "fallback" in result
+            assert (
+                "agent_outputs" in result or "summary" in result or "fallback" in result
+            )
         finally:
             if original:
                 os.environ["OPENAI_API_KEY"] = original
@@ -305,7 +329,13 @@ class TestInvokeCollaborativeAnalysis:
         result = asyncio.get_event_loop().run_until_complete(
             invoke("test input", context)
         )
-        assert isinstance(result, dict)
+        # #1593: ``isinstance(result, dict)`` passed even with
+        # _invoke_collaborative_analysis stubbed to {}. The name promises
+        # "fallback path uses extract/quality context" → a structured analysis
+        # is produced (mirrors sibling test_no_api_key_uses_fallback).
+        assert (
+            "agent_outputs" in result
+        ), f"expected structured fallback analysis, got {result}"
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +350,7 @@ class TestSATStateWriter:
         from argumentation_analysis.orchestration.state_writers import (
             _write_sat_to_state,
         )
+
         return _write_sat_to_state
 
     def test_write_sat_result_to_state(self):
@@ -355,6 +386,7 @@ class TestCollaborativeStateWriter:
         from argumentation_analysis.orchestration.state_writers import (
             _write_collaborative_analysis_to_state,
         )
+
         return _write_collaborative_analysis_to_state
 
     def test_write_collaborative_result_to_state(self):
