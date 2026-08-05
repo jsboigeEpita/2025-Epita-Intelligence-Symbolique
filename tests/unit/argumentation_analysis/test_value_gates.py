@@ -1377,6 +1377,7 @@ class TestFOLValueGate:
             f"FOL degraded message must state unavailability, got {message!r} (#1278)."
         )
 
+    @pytest.mark.requires_api
     async def test_fol_consistent_is_bool_when_tweety_available(self):
         """When Tweety path succeeds, 'consistent' must be a real bool.
 
@@ -1384,6 +1385,20 @@ class TestFOLValueGate:
         consistent as a proper boolean (not None, not missing), and
         formulas must be non-empty -- this is the regression guard
         against silently losing all verified formulas.
+
+        #1582 family-(b): the ``len(formulas) > 0`` verdict genuinely
+        depends on a real LLM response. FOL has NO template fallback (the
+        Asserted(argN) fabrication was removed in #1278), so the NL
+        translator is the ONLY source of formulas. Falsified by degenerate
+        substitution (#1589 method): under an empty model response this test
+        FAILS (formulas=[]), whereas all 9 sibling value_gates tests in the
+        #1582 perimeter PASS (their verdicts are structural / exception /
+        PL-template-fallback, model-independent → family (a), listed in the
+        PR). The test mocks ``_get_openai_client`` to ``(None, None)`` but a
+        dispersed direct ``AsyncOpenAI()`` construction bypasses it (#1583
+        M2) — that leaked call's output is what the assertion reads. Marking
+        ``requires_api`` removes this single family-(b) test from the gate;
+        it runs developer-local with a key (no CI lane runs requires_api).
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_fol_reasoning,
