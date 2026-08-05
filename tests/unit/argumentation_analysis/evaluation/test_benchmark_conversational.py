@@ -102,7 +102,30 @@ class TestRunUnifiedAnalysisConversational:
         assert result["workflow_name"] == "conversational"
 
     async def test_conversational_fallback_on_error(self):
-        """Conversational mode falls back to standard on import/runtime error."""
+        """Conversational mode falls back to standard on import/runtime error.
+
+        #1591 family-(a): the verdict is the conversational→standard ROUTING.
+        ``workflow_name`` in the result comes from ``workflow.name``
+        (unified_pipeline.py:324), i.e. from the workflow object the fallback
+        selects (``catalog["standard"]`` at line 175) — NOT from executing it.
+        The real standard pipeline running end-to-end billed ~94 LLM requests
+        (~35-40 % of the gate, measured #1579) while establishing nothing the
+        assertion reads: the routing property holds in a single string.
+
+        Hermétisé calqué sur #1578/#1581 (correct the path, add a structural
+        bite): the standard workflow's *execution* is short-circuited by
+        mocking ``WorkflowExecutor.execute``. The routing verdict is preserved
+        (``workflow.name`` is still "standard") AND a structural bite proves
+        the fallback drove it: ``execute`` is reached *only* on the fallback
+        path — a successful conversational branch returns early
+        (unified_pipeline.py:169) and never calls the executor. So if the
+        fallback stops triggering, ``mock_exec.assert_awaited_once()`` fails.
+
+        Non-vacuity (leçon #1588, contrôle DoD #1591): the test fails if the
+        routing does not happen — remove the ``side_effect=ImportError`` and
+        ``run_conversational_analysis`` succeeds, the early-return fires, the
+        executor is never awaited → bite fires. Measured: 94 req → 0 req.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
         )
@@ -111,15 +134,34 @@ class TestRunUnifiedAnalysisConversational:
             "argumentation_analysis.orchestration.conversational_orchestrator.run_conversational_analysis",
             new_callable=AsyncMock,
             side_effect=ImportError("Module not available"),
-        ):
+        ), patch(
+            "argumentation_analysis.orchestration.unified_pipeline.WorkflowExecutor.execute",
+            new_callable=AsyncMock,
+            return_value={},
+        ) as mock_exec:
             # Should fall back to standard workflow without raising
             result = await run_unified_analysis(
                 "test text", workflow_name="conversational"
             )
 
         assert result is not None
-        # Fell back to standard pipeline, workflow name from catalog
+        # Verdict preserved: the fallback routed to the standard workflow
+        # (workflow_name comes from workflow.name, not from execution).
         assert "standard" in result.get("workflow_name", "").lower()
+        # Structural bite (#1578/#1591): the executor is reached ONLY on the
+        # fallback path. A successful conversational branch returns early and
+        # never calls execute — so this proves the fallback fired. It also
+        # proves the standard workflow (not another) was what the fallback
+        # selected: execute's first positional arg is the workflow object.
+        mock_exec.assert_awaited_once()
+        # execute's first positional arg is the workflow object (self is not
+        # recorded: the AsyncMock patch replaces the class attribute without a
+        # binding descriptor). This pins WHICH workflow the fallback selected.
+        # NB: the catalogued "standard" workflow's .name is "standard_analysis"
+        # — same substring verdict as the result assertion above ("light" or
+        # "full" would not contain "standard", so the bite still discriminates).
+        selected_workflow = mock_exec.call_args.args[0]
+        assert "standard" in selected_workflow.name.lower()
 
     async def test_conversational_preserves_original_fields(self):
         """Normalization adds summary but preserves conversation_log etc."""
