@@ -568,6 +568,8 @@ class TestSetAFValueGate:
         )
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
@@ -598,6 +600,8 @@ class TestWeightedValueGate:
         )
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
@@ -669,6 +673,8 @@ class TestBipolarValueGate:
         )
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
@@ -1319,6 +1325,8 @@ class TestFOLValueGate:
         }
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("No JVM for test"),
         ), patch(
@@ -1361,6 +1369,8 @@ class TestFOLValueGate:
         context = {}
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("No JVM for test"),
         ), patch(
@@ -1473,6 +1483,8 @@ class TestPLValueGate:
         context = {}
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             side_effect=RuntimeError("No JVM for test"),
         ), patch(
@@ -1503,6 +1515,8 @@ class TestPLValueGate:
         mock_bridge.check_consistency.return_value = (True, "Satisfiable")
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ), patch(
@@ -1657,6 +1671,8 @@ class TestABAValueGate:
         )
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
@@ -1894,6 +1910,8 @@ class TestASPICValueGate:
         )
 
         with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+        ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
