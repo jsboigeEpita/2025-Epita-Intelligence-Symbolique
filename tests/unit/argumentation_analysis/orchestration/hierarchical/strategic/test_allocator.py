@@ -129,8 +129,21 @@ class TestAllocateInitialResources:
         assert abs(total - 1.0) < 0.01
 
     def test_empty_phases(self, allocator):
+        # #1593: ``isinstance(result, dict)`` alone could not fail — every
+        # return path of allocate_initial_resources returns a dict, so the
+        # test passed even with the method stubbed to ``{}``. The property the
+        # name promises is that an empty plan still produces a COMPLETE
+        # allocation over the known agents, not an empty one.
         result = allocator.allocate_initial_resources({"phases": [], "priorities": {}})
-        assert isinstance(result, dict)
+        assert set(result) == {
+            "agent_assignments",
+            "priority_levels",
+            "computational_budget",
+        }
+        assert result["computational_budget"], "no agent received any budget"
+        assert abs(sum(result["computational_budget"].values()) - 1.0) < 0.01
+        # No phase to assign ⇒ every agent's assignment list is empty.
+        assert all(v == [] for v in result["agent_assignments"].values())
 
     def test_updates_state(self, allocator, sample_plan):
         allocator.allocate_initial_resources(sample_plan)
@@ -393,21 +406,38 @@ class TestAdjustAllocation:
             "idle_resources": [{"agent_id": target_agent, "idle_level": "high"}],
         }
         result = alloc.adjust_allocation(feedback)
-        # Budget should be reduced (but may be normalized)
-        # At least the raw adjustment is applied
-        assert isinstance(result, dict)
+        # #1593: the comment said "budget should be reduced" but the assertion
+        # was ``isinstance(result, dict)`` — the named property was never
+        # checked. Measured: an idle agent goes 0.2 → 0.1.
+        assert result["computational_budget"][target_agent] < original_budget, (
+            "idle_resources did not reduce the agent's budget "
+            f"({original_budget} → {result['computational_budget'][target_agent]})"
+        )
 
     def test_empty_feedback(self, allocated_allocator):
+        # #1593: the property is that empty feedback is a NO-OP, not merely
+        # that something dict-shaped comes back.
+        before = dict(
+            allocated_allocator.state.resource_allocation["computational_budget"]
+        )
         result = allocated_allocator.adjust_allocation({})
-        assert isinstance(result, dict)
+        assert result["computational_budget"] == before
 
     def test_unknown_agent_in_feedback_ignored(self, allocated_allocator):
         feedback = {
             "bottlenecks": [{"agent_id": "nonexistent_agent", "severity": "high"}],
             "idle_resources": [],
         }
+        before = dict(
+            allocated_allocator.state.resource_allocation["computational_budget"]
+        )
         result = allocated_allocator.adjust_allocation(feedback)
-        assert isinstance(result, dict)
+        # #1593: "ignored" means two things, and neither was asserted — known
+        # agents keep their budget, and no phantom entry is fabricated for the
+        # unknown one (cf. the phantom-key pattern of #1019).
+        assert result["computational_budget"] == before
+        assert "nonexistent_agent" not in result["computational_budget"]
+        assert "nonexistent_agent" not in result["priority_levels"]
 
     def test_medium_severity_bottleneck(self, allocated_allocator):
         alloc = allocated_allocator
@@ -442,12 +472,21 @@ class TestOptimizeResourceUtilization:
             },
             "task_completion_rates": {},
         }
+        before = alloc.state.resource_allocation["computational_budget"][agents[0]]
         result = alloc.optimize_resource_utilization(metrics)
-        assert isinstance(result, dict)
+        # #1593: the name promises the budget is ADJUSTED from the efficiency
+        # metrics. Measured: a highly efficient agent goes 0.2 → ~0.6.
+        assert (
+            result["computational_budget"][agents[0]] != before
+        ), "efficiency metrics left the budget untouched — nothing was optimized"
 
     def test_empty_metrics(self, allocated_allocator):
+        # #1593: empty metrics must be a NO-OP, not merely dict-shaped.
+        before = dict(
+            allocated_allocator.state.resource_allocation["computational_budget"]
+        )
         result = allocated_allocator.optimize_resource_utilization({})
-        assert isinstance(result, dict)
+        assert result["computational_budget"] == before
 
     def test_unknown_agent_in_metrics_ignored(self, allocated_allocator):
         metrics = {
@@ -459,8 +498,14 @@ class TestOptimizeResourceUtilization:
                 },
             },
         }
+        before = dict(
+            allocated_allocator.state.resource_allocation["computational_budget"]
+        )
         result = allocated_allocator.optimize_resource_utilization(metrics)
-        assert isinstance(result, dict)
+        # #1593: same two-part "ignored" property as the feedback case — known
+        # agents untouched, and no phantom entry for the unknown agent.
+        assert result["computational_budget"] == before
+        assert "unknown_agent_xyz" not in result["computational_budget"]
 
     def test_high_efficiency_gets_more_budget(self, allocated_allocator):
         alloc = allocated_allocator
@@ -489,9 +534,19 @@ class TestOptimizeResourceUtilization:
             agents[1], 0
         )
         result = alloc.optimize_resource_utilization(metrics)
-        # After optimization, the more efficient agent should move toward more budget
-        # (progressive 50% movement toward ideal)
-        assert isinstance(result, dict)
+        # #1593: the comment already described the property — the more
+        # efficient agent moves toward MORE budget — but the assertion was
+        # ``isinstance(result, dict)``, which no state of the code could
+        # falsify. Measured on equal starting budgets (0.2 each): the
+        # efficient agent ends at ~0.56, the inefficient one at ~0.14.
+        after_0 = result["computational_budget"][agents[0]]
+        after_1 = result["computational_budget"][agents[1]]
+        assert after_0 > after_1, (
+            "the more efficient agent did not end up with more budget "
+            f"({agents[0]}: {before_0}→{after_0}, {agents[1]}: {before_1}→{after_1})"
+        )
+        assert after_0 > before_0, "the efficient agent gained nothing"
+        assert after_1 < before_1, "the inefficient agent lost nothing"
 
 
 # ============================================================
