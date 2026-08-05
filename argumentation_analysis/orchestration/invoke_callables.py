@@ -1167,6 +1167,16 @@ async def _invoke_counter_argument(
 
     # Enrich with LLM-generated counter-arguments for fallacious/weak arguments
     llm_counters = []
+    # #1597 — honest degradation flag. Set True only when the LLM enrichment
+    # was *attempted* but raised (network/key/parse). Mirrors the governance
+    # top-level ``degraded`` canon (BO-2 #1472): the phase still COMPLETED —
+    # parsed_argument/suggested_strategy come from the deterministic plugin —
+    # but the LLM enrichment was lost, and that loss must not be silent (a
+    # consumer reading ``llm_counter_arguments`` cannot otherwise tell "none
+    # needed" from "the LLM never ran" — the inverse of the #1019 phantom
+    # key). Surfaced via the pipeline rollup
+    # (unified_pipeline.run_unified_analysis → capabilities_degraded).
+    llm_enrichment_failed = False
     try:
         client, model_id = _get_openai_client()
         if client:
@@ -1222,6 +1232,7 @@ async def _invoke_counter_argument(
             )
     except Exception as e:
         logger.warning(f"LLM counter-argument enrichment failed: {e}")
+        llm_enrichment_failed = True
 
     # (#294) Auto-evaluate each LLM counter-argument
     if llm_counters:
@@ -1236,6 +1247,8 @@ async def _invoke_counter_argument(
         # Keep first as llm_counter_argument for backward compat
         result["llm_counter_argument"] = llm_counters[0] if llm_counters else None
         result["llm_counter_arguments"] = llm_counters
+    if llm_enrichment_failed:
+        result["degraded"] = True
     # Trace entry for counter-argument specialist (Track UU #724)
     _state = context.get("_state_object")
     if _state is not None and llm_counters:
