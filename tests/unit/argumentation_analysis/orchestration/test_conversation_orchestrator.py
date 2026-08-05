@@ -237,9 +237,15 @@ class TestConversationOrchestrator:
         assert len(orch.conv_logger.tool_calls) <= 6
 
     def test_run_orchestration_trace_no_print(self):
-        orch = ConversationOrchestrator(mode="trace")
-        report = orch.run_orchestration(SAMPLE_TEXT)
-        assert isinstance(report, str)
+        # #1593: the name promises trace mode does NOT print, but the old
+        # ``isinstance(report, str)`` never checked print at all and passed
+        # with run_orchestration stubbed to "". Measured: trace produces a
+        # non-empty report (print is exercised via the conv_logger, not stdout).
+        with patch("builtins.print") as mock_print:
+            orch = ConversationOrchestrator(mode="trace")
+            report = orch.run_orchestration(SAMPLE_TEXT)
+        assert report, "trace mode produced an empty report"
+        mock_print.assert_not_called()
 
     @patch("builtins.print")
     def test_generate_report_content(self, mock_print):
@@ -284,7 +290,10 @@ class TestConversationOrchestrator:
         orch.agents[0] = FailingAgent()
         # Should not raise — errors are caught
         report = orch.run_orchestration(SAMPLE_TEXT)
-        assert isinstance(report, str)
+        # #1593: vacuous ``isinstance(report, str)`` passed with run_orchestration
+        # stubbed to "". The named property is graceful handling: a non-empty
+        # report is still produced (measured: ~3.8k chars) despite the agent error.
+        assert report, "no report produced despite handled error"
 
     @patch("builtins.print")
     def test_report_contains_text_excerpt(self, mock_print):
@@ -305,18 +314,20 @@ class TestFactoryAndModes:
     @patch("builtins.print")
     def test_run_mode_micro(self, mock_print):
         report = run_mode_micro(SAMPLE_TEXT)
-        assert isinstance(report, str)
+        # #1593: vacuous ``isinstance(report, str)`` passed with run_mode_micro
+        # stubbed to "". The mode must produce a (non-empty) report.
+        assert report, "micro mode produced an empty report"
 
     @patch("builtins.print")
     def test_run_mode_demo(self, mock_print):
         report = run_mode_demo(SAMPLE_TEXT)
-        assert isinstance(report, str)
+        assert report, "demo mode produced an empty report"
 
     def test_run_mode_trace(self):
         report = run_mode_trace(SAMPLE_TEXT)
-        assert isinstance(report, str)
+        assert report, "trace mode produced an empty report"
 
     @patch("builtins.print")
     def test_run_mode_enhanced(self, mock_print):
         report = run_mode_enhanced(SAMPLE_TEXT)
-        assert isinstance(report, str)
+        assert report, "enhanced mode produced an empty report"

@@ -144,7 +144,9 @@ class TestIssueDirective:
     def test_send_failure_still_returns_id(self, strategic, mock_middleware):
         mock_middleware.send_message.return_value = False
         msg_id = strategic.issue_directive("a", {})
-        assert isinstance(msg_id, str)
+        # #1593: vacuous ``isinstance(msg_id, str)`` passed with issue_directive
+        # stubbed to "". The name promises an ID is STILL returned on send failure.
+        assert msg_id, "no id returned despite send failure"
 
 
 class TestBroadcastObjective:
@@ -152,7 +154,9 @@ class TestBroadcastObjective:
 
     def test_returns_message_id(self, strategic):
         msg_id = strategic.broadcast_objective("global_strategy", {"plan": "full"})
-        assert isinstance(msg_id, str)
+        # #1593: vacuous ``isinstance(msg_id, str)`` passed with broadcast_objective
+        # stubbed to "". broadcast_objective must return a (non-empty) message id.
+        assert msg_id, "broadcast_objective returned no id"
 
     def test_publishes_via_middleware(self, strategic, mock_middleware):
         strategic.broadcast_objective("perf_target", {"target": 95})
@@ -382,7 +386,9 @@ class TestAssignTask:
         msg_id = tactical.assign_task(
             "detect_fallacies", {"text": "sample"}, "operational_01"
         )
-        assert isinstance(msg_id, str)
+        # #1593: vacuous ``isinstance(msg_id, str)`` passed with assign_task
+        # stubbed to "". assign_task must return a (non-empty) message id.
+        assert msg_id, "assign_task returned no id"
 
     def test_sends_via_middleware(self, tactical, mock_middleware):
         tactical.assign_task("analyze", {"t": "x"}, "op_01")
@@ -404,7 +410,9 @@ class TestAssignTask:
     def test_send_failure(self, tactical, mock_middleware):
         mock_middleware.send_message.return_value = False
         msg_id = tactical.assign_task("t", {}, "op_01")
-        assert isinstance(msg_id, str)  # Still returns ID
+        # #1593: vacuous ``isinstance(msg_id, str)`` passed with assign_task
+        # stubbed to "". The name promises an ID is STILL returned on send failure.
+        assert msg_id, "no id returned despite send failure"
 
 
 class TestSendReport:
@@ -412,7 +420,9 @@ class TestSendReport:
 
     def test_returns_message_id(self, tactical):
         msg_id = tactical.send_report("status_update", {"done": True}, "strategic_01")
-        assert isinstance(msg_id, str)
+        # #1593: vacuous ``isinstance(msg_id, str)`` passed with send_report
+        # stubbed to "". send_report must return a (non-empty) message id.
+        assert msg_id, "send_report returned no id"
 
     def test_report_content(self, tactical, mock_middleware):
         tactical.send_report("analysis_complete", {"score": 0.9}, "s01")
