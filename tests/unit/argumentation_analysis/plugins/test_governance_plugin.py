@@ -25,7 +25,10 @@ class TestDetectConflicts:
     def test_no_conflicts(self, plugin):
         positions = {"agent_a": "agree", "agent_b": "agree"}
         result = json.loads(plugin.detect_conflicts_fn(json.dumps(positions)))
-        assert isinstance(result, list)
+        # #1593: ``isinstance(result, list)`` passed even with detect_conflicts_fn
+        # stubbed to report a fake conflict — it never checked emptiness. The name
+        # promises NO conflicts, i.e. an empty list.
+        assert result == [], f"expected no conflicts, got {result}"
 
     def test_opposing_positions(self, plugin):
         positions = {"agent_a": "pour", "agent_b": "contre"}
@@ -41,12 +44,20 @@ class TestDetectConflicts:
     def test_single_agent(self, plugin):
         positions = {"agent_a": "pour"}
         result = json.loads(plugin.detect_conflicts_fn(json.dumps(positions)))
-        assert isinstance(result, list)
+        # #1593: a single agent cannot conflict with itself; the name promises
+        # an empty list, not just a list. Stubbed to a fake conflict, the old
+        # ``isinstance`` assertion still passed.
+        assert result == [], f"expected no conflict for a single agent, got {result}"
 
     def test_three_agents_mixed(self, plugin):
         positions = {"a": "pour", "b": "contre", "c": "pour"}
         result = json.loads(plugin.detect_conflicts_fn(json.dumps(positions)))
-        assert isinstance(result, list)
+        # #1593: ``isinstance(result, list)`` passed even with detect_conflicts_fn
+        # stubbed to ``[]`` (no detection). The name "mixed" promises conflicts
+        # ARE detected — mirrors test_opposing_positions.
+        assert (
+            len(result) >= 1
+        ), f"expected conflicts among mixed positions, got {result}"
 
 
 # ============================================================
@@ -64,7 +75,10 @@ class TestResolveConflict:
         result = json.loads(
             plugin.resolve_conflict_fn(json.dumps(conflict), strategy="collaborative")
         )
-        assert isinstance(result, dict)
+        # #1593: ``isinstance(result, dict)`` passed with resolve_conflict_fn
+        # stubbed to a dict with no resolution fields. The name promises the
+        # collaborative STRATEGY is honored — measured: resolution_type == collaborative.
+        assert result.get("resolution_type") == "collaborative", result
 
     def test_competitive(self, plugin):
         conflict = {
@@ -75,7 +89,9 @@ class TestResolveConflict:
         result = json.loads(
             plugin.resolve_conflict_fn(json.dumps(conflict), strategy="competitive")
         )
-        assert isinstance(result, dict)
+        # #1593: vacuous ``isinstance(result, dict)``. Name promises the
+        # competitive strategy — measured: resolution_type == competitive.
+        assert result.get("resolution_type") == "competitive", result
 
     def test_arbitration(self, plugin):
         conflict = {
@@ -86,7 +102,12 @@ class TestResolveConflict:
         result = json.loads(
             plugin.resolve_conflict_fn(json.dumps(conflict), strategy="arbitration")
         )
-        assert isinstance(result, dict)
+        # #1593: vacuous ``isinstance(result, dict)``. NOTE: arbitration currently
+        # maps to the collaborative resolution in production (resolution_type ==
+        # "collaborative"), so we assert the real invariant the name still implies
+        # — the conflict's agents are carried through — rather than a strategy
+        # value the code does not produce. Flagged in PR #1593; prod untouched.
+        assert result.get("agents") == ["a", "b"], result
 
     def test_default_strategy(self, plugin):
         conflict = {
@@ -95,7 +116,10 @@ class TestResolveConflict:
             "conflict_level": "low",
         }
         result = json.loads(plugin.resolve_conflict_fn(json.dumps(conflict)))
-        assert isinstance(result, dict)
+        # #1593: vacuous ``isinstance(result, dict)``. The default strategy still
+        # resolves the conflict — the real invariant is the conflict's agents
+        # are preserved in the resolution (stubbed to a keyless dict, this fails).
+        assert result.get("agents") == ["a", "b"], result
 
 
 # ============================================================
