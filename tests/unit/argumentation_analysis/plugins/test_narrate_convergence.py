@@ -186,7 +186,10 @@ class TestNarrateConvergenceFallback:
         """Malformed JSON → parsed as empty state → template narrative."""
         plugin = NarrativeSynthesisPlugin(kernel=None)
         result = await plugin.narrate_convergence(state_json="not-json{{{")
-        assert isinstance(result, str)
+        # #1593: ``isinstance(result, str)`` passed even with narrate_convergence
+        # stubbed to "". The name promises a (non-empty) fallback narrative is
+        # produced despite the bad JSON — measured: ~284 chars.
+        assert result, "no fallback narrative produced on bad JSON"
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +260,10 @@ class TestNarrativeSynthesisPluginInit:
     def test_synthesize_still_works(self):
         plugin = NarrativeSynthesisPlugin()
         result = plugin.synthesize(state_json="{}")
-        assert isinstance(result, str)
+        # #1593: ``isinstance(result, str)`` passed even with synthesize stubbed
+        # to "". The name promises synthesize still produces a (non-empty)
+        # narrative — measured: ~134 chars.
+        assert result, "synthesize produced an empty result"
 
     def test_convergent_synthesize_still_works(self):
         plugin = NarrativeSynthesisPlugin()

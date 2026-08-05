@@ -442,7 +442,12 @@ class TestContextualFallacyAnalyzer:
             fallacies = analyzer.identify_contextual_fallacies(
                 "Le chat dort.", "général"
             )
-            assert isinstance(fallacies, list)
+            # #1593: ``isinstance(fallacies, list)`` passed even with the method
+            # stubbed to return a FAKE non-empty list. The name promises empty
+            # text yields no fallacies — measured: [].
+            assert (
+                fallacies == []
+            ), f"expected no fallacies on empty text, got {fallacies}"
 
     # --- get_contextual_fallacy_examples ---
 
@@ -732,7 +737,10 @@ class TestComplexFallacyAnalyzer:
     def test_fallacy_patterns_empty_text(self, analyzer, mock_contextual):
         mock_contextual.identify_contextual_fallacies.return_value = []
         result = analyzer.identify_fallacy_patterns("")
-        assert isinstance(result, list)
+        # #1593: ``isinstance(result, list)`` passed even with identify_fallacy_patterns
+        # stubbed to return a FAKE non-empty list. The name promises empty text
+        # yields no patterns — measured: [].
+        assert result == [], f"expected no patterns on empty text, got {result}"
 
     def test_fallacy_patterns_delegates_to_contextual(self, analyzer, mock_contextual):
         mock_contextual.identify_contextual_fallacies.return_value = []

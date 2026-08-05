@@ -244,7 +244,10 @@ class TestGenerateExampleFix:
         fix = analyzer._generate_example_fix(
             "syntax_error", "missing something before '.'", "rule(X) :- body"
         )
-        assert isinstance(fix, str)
+        # #1593: ``isinstance(fix, str)`` passed even with _generate_example_fix
+        # stubbed to "". The name promises a (non-empty) fix suggestion is
+        # produced even with a partial context — measured: ~53 chars.
+        assert fix, "no fix produced for syntax error with context"
 
     def test_no_entity_in_error(self, analyzer):
         fix = analyzer._generate_example_fix("atom_error", "atom not defined", None)
@@ -384,7 +387,10 @@ class TestAnalyzeTweetyError:
 
     def test_with_context(self):
         result = analyze_tweety_error("syntax error", context="rule(X).")
-        assert isinstance(result, str)
+        # #1593: ``isinstance(result, str)`` passed even with analyze_tweety_error
+        # stubbed to "". The name promises a (non-empty) feedback that uses the
+        # provided context — measured: ~725 chars.
+        assert result, "no feedback produced for error with context"
 
 
 # ============================================================
