@@ -265,16 +265,22 @@ class TestDetectContextualFallacies:
             "Selon l'expert, ce produit est sûr.", "commercial"
         )
         fallacies = result["detected_fallacies"]
-        # Should detect something with "expert" and "selon" markers
-        assert isinstance(fallacies, list)
+        # #1593: ``isinstance(fallacies, list)`` passed even with detection stubbed
+        # to return []. The name promises authority markers ARE detected here
+        # ("expert"/"selon") — measured: 1 fallacy on this input.
+        assert (
+            len(fallacies) >= 1
+        ), f"expected authority markers detected, got {fallacies}"
 
     def test_no_fallacies_in_clean_text(self, detector):
         result = detector.detect_contextual_fallacies(
             "La terre tourne autour du soleil.", "scientifique"
         )
-        # Simple factual statement — unlikely to trigger markers
-        # (depends on exact rules, just check structure)
-        assert isinstance(result["detected_fallacies"], list)
+        fallacies = result["detected_fallacies"]
+        # #1593: ``isinstance(fallacies, list)`` passed even with detection stubbed
+        # to report a FAKE fallacy. The name promises NO fallacies on a clean
+        # factual statement — measured: 0.
+        assert fallacies == [], f"expected no fallacies on clean text, got {fallacies}"
 
     def test_contextual_factors_inferred(self, detector):
         result = detector.detect_contextual_fallacies(
