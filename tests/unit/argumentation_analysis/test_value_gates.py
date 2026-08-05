@@ -538,6 +538,51 @@ class TestCounterArgValueGate:
                 f"Strategy {strat.name} returned empty output after #960 fix"
             )
 
+    async def test_counter_argument_marks_degraded_when_llm_enrichment_fails(self):
+        """#1597 — a phase that completed without its LLM must say so.
+
+        ``_invoke_counter_argument`` enriches the deterministic plugin output
+        (parsed_argument/suggested_strategy) with LLM-generated counter-arguments.
+        When that enrichment is attempted but raises, the result MUST carry
+        ``degraded=True`` (the codebase canon, BO-2 #1472), so the pipeline
+        rollup surfaces this phase in ``capabilities_degraded`` instead of
+        ``capabilities_used``. Without it, a consumer reading
+        ``llm_counter_arguments`` (absent rather than empty on failure) cannot
+        tell "none needed" from "the LLM never ran" — the inverse of the #1019
+        phantom key. The phase still COMPLETED (deterministic keys present):
+        fail-loud, not fail-hard.
+
+        Anti-vacuity: the verdict is the NEW ``degraded`` key. If the fix is
+        removed, ``result.get("degraded")`` is None → assertion fails. Nothing
+        else in the result asserts this (the deterministic keys are present
+        either way).
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_counter_argument,
+        )
+
+        ctx = {"phase_extract_output": {"arguments": [{"text": "claim needing rebuttal"}]}}
+        # Force the LLM path (client present) then make generation raise — the
+        # exact production failure mode (network/key/parse). CI-stable: no .env
+        # dependency (we mock the client provider, not the ctor).
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
+            return_value=(MagicMock(), "model-id"),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables._generate_counters_for_targets",
+            side_effect=RuntimeError("LLM enrichment failed"),
+        ):
+            result = await _invoke_counter_argument("claim needing rebuttal", ctx)
+
+        assert result.get("degraded") is True, (
+            "Counter-argument phase must surface degraded=True when its LLM "
+            "enrichment failed, so the rollup reports capabilities_degraded "
+            "(#1597, BO-2 #1472, anti-theatre #1019)."
+        )
+        # Deterministic plugin output still present (fail-loud, not fail-hard).
+        assert "parsed_argument" in result
+        assert "suggested_strategy" in result
+
 
 # =====================================================================
 # 7. Satellite handlers — honest unavailable, not fabricated data (#964)
