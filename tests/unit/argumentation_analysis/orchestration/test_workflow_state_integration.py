@@ -9,6 +9,7 @@ error handling, run_unified_analysis with state, JSON serialization.
 import asyncio
 import json
 import pytest
+from unittest.mock import patch
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.core.capability_registry import (
@@ -397,11 +398,15 @@ class TestRunUnifiedAnalysisWithState:
         )
 
         registry = setup_registry(include_optional=False)
-        result = await run_unified_analysis(
-            "Les vaccins sont efficaces.",
-            workflow_name="light",
-            registry=registry,
-        )
+        # Hermétisé #1591: ctor LLM lève. Le verdict porte sur la plomberie
+        # d'état (unified_state créé, snapshot dict) — structurel, posé par le
+        # runner quelle que soit la sortie des phases, modèle-indépendant.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = await run_unified_analysis(
+                "Les vaccins sont efficaces.",
+                workflow_name="light",
+                registry=registry,
+            )
 
         assert "unified_state" in result
         assert result["unified_state"] is not None
@@ -418,12 +423,15 @@ class TestRunUnifiedAnalysisWithState:
         )
 
         registry = setup_registry(include_optional=False)
-        result = await run_unified_analysis(
-            "Test text.",
-            workflow_name="light",
-            registry=registry,
-            create_state=False,
-        )
+        # Hermétisé #1591: create_state=False → pas d'état. Verdict = plomberie
+        # (absence d'unified_state), modèle-indépendant.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = await run_unified_analysis(
+                "Test text.",
+                workflow_name="light",
+                registry=registry,
+                create_state=False,
+            )
 
         assert "unified_state" not in result
 
@@ -436,11 +444,16 @@ class TestRunUnifiedAnalysisWithState:
         )
 
         registry = setup_registry(include_optional=False)
-        result = await run_unified_analysis(
-            "La peine de mort devrait être abolie car elle ne dissuade pas.",
-            workflow_name="light",
-            registry=registry,
-        )
+        # Hermétisé #1591: ctor LLM lève. Le verdict porte sur workflow_results
+        # peuplé + le garde `if status==COMPLETED` protège len(scores)>0. Sans
+        # LLM, quality peut tomber FAILED (garde saute l'assert scores) — le
+        # verdict structurel (`light_analysis in workflow_results`) reste tenu.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = await run_unified_analysis(
+                "La peine de mort devrait être abolie car elle ne dissuade pas.",
+                workflow_name="light",
+                registry=registry,
+            )
 
         state = result.get("unified_state")
         assert state is not None

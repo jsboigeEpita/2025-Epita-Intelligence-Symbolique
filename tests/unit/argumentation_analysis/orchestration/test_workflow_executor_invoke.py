@@ -8,6 +8,7 @@ downstream context chaining, timeout support, and integration with real componen
 
 import asyncio
 import pytest
+from unittest.mock import patch
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -477,9 +478,10 @@ class TestRealComponentIntegration:
             .build()
         )
         executor = WorkflowExecutor(registry)
-        results = await executor.execute(
-            workflow, "Les vaccins sont dangereux car un ami est tombé malade."
-        )
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            results = await executor.execute(
+                workflow, "Les vaccins sont dangereux car un ami est tombé malade."
+            )
 
         assert results["counter"].status == PhaseStatus.COMPLETED
         assert results["counter"].output is not None
@@ -497,10 +499,11 @@ class TestRealComponentIntegration:
         registry = setup_registry(include_optional=False)
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
-        results = await executor.execute(
-            workflow,
-            "La peine de mort devrait être abolie car elle ne dissuade pas le crime.",
-        )
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            results = await executor.execute(
+                workflow,
+                "La peine de mort devrait être abolie car elle ne dissuade pas le crime.",
+            )
 
         assert results["quality"].status == PhaseStatus.COMPLETED
         assert results["quality"].output is not None

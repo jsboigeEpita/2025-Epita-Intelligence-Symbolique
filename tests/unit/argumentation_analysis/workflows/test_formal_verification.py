@@ -324,8 +324,11 @@ class TestInvokeCallables:
             _invoke_propositional_logic,
         )
 
-        # Without JVM, should return error dict
-        result = await _invoke_propositional_logic("a && b", {})
+        # Without JVM, should return error dict. Hermétisé #1591: le ctor LLM lève
+        # → le code retourne l'error dict (logic_type posé avant l'appel modèle),
+        # verdict structurel préservé sans fuite réseau.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = await _invoke_propositional_logic("a && b", {})
         assert "logic_type" in result
         assert result["logic_type"] == "propositional"
 
@@ -335,7 +338,10 @@ class TestInvokeCallables:
             _invoke_fol_reasoning,
         )
 
-        result = await _invoke_fol_reasoning("forall x: P(x)", {})
+        # Hermétisé #1591: ctor LLM lève → code retourne error dict (logic_type
+        # structurel, posé avant l'appel modèle), verdict préservé sans fuite.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = await _invoke_fol_reasoning("forall x: P(x)", {})
         assert result["logic_type"] == "first_order"
 
     @pytest.mark.asyncio

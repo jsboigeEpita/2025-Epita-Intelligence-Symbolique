@@ -12,6 +12,7 @@ Tests cover:
 import asyncio
 import pytest
 import sys
+from unittest.mock import patch
 
 
 def _make_fake_invoke_pl(
@@ -118,9 +119,13 @@ class TestPLMetricsCountersPopulated:
         context = {
             "_state_object": None,
         }
-        result = asyncio.get_event_loop().run_until_complete(
-            fake_invoke("test text " * 20, context)
-        )
+        # Hermétisé #1591: ctor LLM lève → fallback template déterministe. Le
+        # verdict (clé "template" structurelle dans pl_metrics) est posé par le
+        # code quel que soit le chemin, modèle-indépendant.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = asyncio.get_event_loop().run_until_complete(
+                fake_invoke("test text " * 20, context)
+            )
         # Should fall through to template since no API key / no formulas
         assert "template" in result["pl_metrics"]
         assert result["pl_metrics"]["template"] >= 0
@@ -212,9 +217,13 @@ class TestFOLTemplateCounter:
         context = {
             "_state_object": None,
         }
-        result = asyncio.get_event_loop().run_until_complete(
-            fake_invoke("test text " * 20, context)
-        )
+        # Hermétisé #1591: ctor LLM lève → fol_metrics["template"] reste posé
+        # (clé structurelle, =0 sans template fallback depuis #1278). Verdict
+        # modèle-indépendant.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            result = asyncio.get_event_loop().run_until_complete(
+                fake_invoke("test text " * 20, context)
+            )
         assert "template" in result["fol_metrics"]
         assert result["fol_metrics"]["template"] >= 0
 

@@ -198,16 +198,21 @@ class TestVoting:
 
 class TestDeliberation:
     def test_start_deliberation(self, client):
-        create_resp = client.post(
-            "/api/propose",
-            json={"text": "Start deliberation on this proposal", "author": "alice"},
-        )
-        pid = create_resp.json()["id"]
+        # Hermétisé #1591: ctor LLM lève. /api/deliberate met en queue (async,
+        # retour 202 queued avant toute analyse). Le verdict (mise en file) est
+        # posé par le handler quelle que soit la sortie du background task,
+        # modèle-indépendant.
+        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
+            create_resp = client.post(
+                "/api/propose",
+                json={"text": "Start deliberation on this proposal", "author": "alice"},
+            )
+            pid = create_resp.json()["id"]
 
-        resp = client.post(
-            "/api/deliberate",
-            json={"proposal_id": pid, "workflow": "democratech"},
-        )
+            resp = client.post(
+                "/api/deliberate",
+                json={"proposal_id": pid, "workflow": "democratech"},
+            )
         assert resp.status_code == 202
         data = resp.json()
         assert data["status"] == "queued"
