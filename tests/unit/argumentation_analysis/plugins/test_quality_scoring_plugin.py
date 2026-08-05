@@ -56,7 +56,10 @@ class TestEvaluateArgumentQuality:
 
     def test_empty_text(self, plugin):
         result = json.loads(plugin.evaluate_argument_quality(""))
-        assert isinstance(result, dict)
+        # #1593: ``isinstance(result, dict)`` passed even with evaluate_argument_quality
+        # stubbed to "{}". The name promises empty text is scored (not crashed) →
+        # the result carries the quality structure (mirrors test_has_note_finale).
+        assert "note_finale" in result, f"expected quality structure, got {result}"
 
     def test_long_text(self, plugin):
         text = "Cet argument est bien construit. " * 20

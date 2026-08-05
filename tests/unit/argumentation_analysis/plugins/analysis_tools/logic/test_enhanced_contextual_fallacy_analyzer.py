@@ -539,7 +539,14 @@ class TestIdentifyContextualFallacies:
         # In political context, Ad hominem gets +0.3 -> 0.4 still below 0.5?
         # Actually: 0.1 + 0.3 = 0.4, filtered out (< 0.5)
         # But result depends on exact boosting
-        assert isinstance(result, list)
+        # #1593: ``isinstance(result, list)`` passed even when a fake-full list
+        # (fallacy NOT filtered) was returned — it cannot distinguish "filtered"
+        # from "passed through". The name promises low-confidence is filtered OUT
+        # → the result is empty (mirrors sibling test_high_confidence_passed_through
+        # which asserts len==1 for the kept fallacy). Real prod returns [] here.
+        assert (
+            result == []
+        ), f"expected low-confidence fallacy filtered out, got {result}"
 
     def test_high_confidence_passed_through(self, analyzer, mock_detector):
         mock_detector.detect_fallacies.return_value = [
