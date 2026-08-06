@@ -36,7 +36,7 @@ boundary stays at the caller via ``output_path``).
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from .act1_framing_plugin import LlmCallable, build_act1_framing
 from .act2_narrative_plugin import build_act2_narrative
@@ -117,7 +117,13 @@ async def generate_and_render_for_conversational_state(
     # plugin derives framing evidence from the state.
     try:
         act1 = await build_act1_framing(state, llm_callable=llm)
-        _persist_act(state, "act1_framing", act1.narrative, act1.status)
+        _persist_act(
+            state,
+            "act1_framing",
+            act1.narrative,
+            act1.status,
+            getattr(act1, "degraded", None),
+        )
     except Exception:  # noqa: BLE001 — one act failing must not abort the others
         logger.warning("Acte I framing failed (fail-loud, continuing): ", exc_info=True)
 
@@ -126,27 +132,63 @@ async def generate_and_render_for_conversational_state(
     # narrative can weave as "how the experts debated" material.
     try:
         act2 = await build_act2_narrative(state, llm_callable=llm)
-        _persist_act(state, "act2_narrative", act2.narrative, act2.status)
+        _persist_act(
+            state,
+            "act2_narrative",
+            act2.narrative,
+            act2.status,
+            getattr(act2, "degraded", None),
+        )
     except Exception:  # noqa: BLE001
-        logger.warning("Acte II narrative failed (fail-loud, continuing): ", exc_info=True)
+        logger.warning(
+            "Acte II narrative failed (fail-loud, continuing): ", exc_info=True
+        )
 
     # Acte III — actionable conclusion (gated verdict + balanced appréciations).
     try:
         act3 = await build_act3_conclusion(state, llm_callable=llm)
-        _persist_act(state, "act3_conclusion", act3.narrative, act3.status)
+        _persist_act(
+            state,
+            "act3_conclusion",
+            act3.narrative,
+            act3.status,
+            getattr(act3, "degraded", None),
+        )
     except Exception:  # noqa: BLE001
-        logger.warning("Acte III conclusion failed (fail-loud, continuing): ", exc_info=True)
+        logger.warning(
+            "Acte III conclusion failed (fail-loud, continuing): ", exc_info=True
+        )
 
     return render_spectacular_restitution(state, output_path=output_path)
 
 
-def _persist_act(state: Any, key: str, narrative: str, status: str) -> None:
-    """Write an act narrative onto the state if the state accepts the attribute.
+def _persist_act(
+    state: Any,
+    key: str,
+    narrative: str,
+    status: str,
+    degraded: Optional[Dict[str, str]] = None,
+) -> None:
+    """Write an act narrative — and its degradation motifs — onto the state.
 
     Skips silently when the state does not expose the attribute (defensive — the
     conversational state is a ``UnifiedAnalysisState`` which does, but the act
     generators are kept decoupled from the state class). Logs the act status so
     a fail-loud "unavailable" is traceable in the run log.
+
+    #1618 — the motifs used to be dropped here. This module is a deliberately
+    file-disjoint lane mirroring ``pipeline_adapter.py``, and that disjunction is
+    exactly how the twin drifted: the pipeline lane received the motif transport
+    (#1608) then its reader (#1614) while this one received neither, so
+    ``RestitutionActs.degraded`` was structurally always empty on a
+    conversational run — a reader with no writer. A report that cannot say it is
+    degraded reads as a healthier report, which biases any comparison between
+    the two orchestration modes.
+
+    **Twin**: ``state_writers._persist_act_degraded_reasons``. The semantics MUST
+    stay identical (same target field, same "only when non-empty" rule); the
+    agreement is pinned by ``test_both_lanes_agree_on_degraded`` rather than by
+    shared code, so it survives a refactor of either lane.
     """
     if not hasattr(state, key):
         logger.warning(
@@ -159,4 +201,22 @@ def _persist_act(state: Any, key: str, narrative: str, status: str) -> None:
         state[key] = narrative
     else:
         setattr(state, key, narrative)
-    logger.info("Restitution %s persisted (%d chars, status=%s)", key, len(narrative), status)
+    logger.info(
+        "Restitution %s persisted (%d chars, status=%s)", key, len(narrative), status
+    )
+
+    # Anti-pendule: an act that recorded no motif is never marked degraded by
+    # default — absence from the mapping is the honest state, not a gap to fill.
+    if not degraded:
+        return
+    rstd = getattr(state, "restitution_acts_degraded", None)
+    if not isinstance(rstd, dict):
+        logger.warning(
+            "State has no usable 'restitution_acts_degraded' mapping — %d "
+            "degradation motif(s) for '%s' dropped (fail-loud, #1618)",
+            len(degraded),
+            key,
+        )
+        return
+    rstd[key] = dict(degraded)
+    logger.info("Restitution %s degradation motifs persisted (%d)", key, len(degraded))
