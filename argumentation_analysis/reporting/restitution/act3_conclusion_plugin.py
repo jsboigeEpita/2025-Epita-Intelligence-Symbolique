@@ -1098,12 +1098,13 @@ async def build_act3_conclusion(
             "indisponible) — appréciations limitées aux faiblesses, fail-loud."
         )
     vm = evidence.virtuous_mode
+    # Positive outcome — reported by ``is_virtuous``, never filed under
+    # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned
+    # ``degraded`` into a verdict, so a virtue left here marked the act as
+    # degraded and stripped it from ``capabilities_used``. The branch below
+    # stays gated on NOT-virtuous, which is what the ``elif`` expressed.
     is_virtuous = vm is not None and vm.is_virtuous
-    if vm is not None and vm.is_virtuous:
-        degraded["act3_virtuous_mode"] = (
-            "Mode vertueux (spec §5) — titre sur les vertus. " + vm.reasoning
-        )
-    elif not evidence.weak_points:
+    if not is_virtuous and not evidence.weak_points:
         # Defensive: no weak points AND not flagged virtuous (an empty-ish run
         # that still passed G1). Honest note — not a positive virtuous claim,
         # since no non-trivial axis qualified the text as virtuous.

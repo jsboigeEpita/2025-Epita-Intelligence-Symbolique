@@ -414,6 +414,15 @@ class TestVirtuousMode:
         assert "MODE VIRTUEUX" not in build_act1_prompt(ev2)
 
     def test_virtuous_result_carries_positive_marker(self):
+        """The virtue is reported as a virtue — and NOT as a degradation.
+
+        This assertion was ``"act1_virtuous_mode" in result.degraded`` while
+        ``degraded`` doubled as a notes bag that nobody read. #1608 promoted it
+        to a verdict: the invoker publishes ``bool(degraded)`` and the collector
+        strips the capability out of ``capabilities_used``. Filing a virtue
+        there made the best-case act report as degraded, so the marker moves to
+        its own field — which this test already asserted.
+        """
         result = asyncio.get_event_loop().run_until_complete(
             build_act1_framing(
                 _virtuous_state(), llm_callable=_stub_llm(_WOVEN_FRAMING)  # type: ignore[arg-type]
@@ -421,4 +430,7 @@ class TestVirtuousMode:
         )
         assert result.is_virtuous is True
         assert result.status == "woven"
-        assert "act1_virtuous_mode" in result.degraded
+        assert "act1_virtuous_mode" not in result.degraded
+        # The predicate the consumer actually evaluates (#1608): a virtuous act
+        # must not raise it. Asserting the published bool, not just the key.
+        assert bool(result.degraded) is False
