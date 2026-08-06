@@ -1,27 +1,44 @@
-"""Tests for synthesis phase wiring in spectacular (#508)."""
+"""Tests for synthesis phase wiring in spectacular (#508).
+
+R759 / #1625: the L9 `analysis_synthesis` aggregation phase was retired —
+zero prod reader, zero LLM call. This file now covers the surviving
+synthesis path (L10 `deep_synthesis`) and the post-retrait invariant:
+the spectacular workflow MUST NOT contain a phase named `synthesis`.
+"""
 
 from unittest.mock import MagicMock
 
 
 class TestSynthesisSpectacularPhase:
-    """Verify synthesis phase exists in spectacular with correct DAG deps."""
+    """Verify the synthesis chain (deep_synthesis) is wired and that the
+    retired L9 `analysis_synthesis` aggregation phase stays absent."""
 
-    def test_spectacular_has_synthesis_phase(self):
+    def test_spectacular_no_synthesis_phase_after_retrait(self):
+        """#1625: L9 `analysis_synthesis` was removed. The phase name MUST
+        not reappear in the spectacular workflow — depend_on, registration,
+        and state writer were all cleaned up; a re-introduction would be a
+        regression against the anti-pendule decision."""
+        from argumentation_analysis.orchestration.workflows import (
+            build_spectacular_workflow,
+        )
+
+        wf = build_spectacular_workflow()
+        phase_names = {p.name for p in wf.phases}
+        assert "synthesis" not in phase_names
+
+    def test_spectacular_deep_synthesis_depends_on_belief_revision_and_stakes(self):
+        """#1625: L10 `deep_synthesis` lost its dependency on the removed L9
+        `synthesis`. It must now depend on `belief_revision` + `stakes` only.
+        Anti-pendule: depend_on must not name a phase that no longer exists."""
         from argumentation_analysis.orchestration.workflows import (
             build_spectacular_workflow,
         )
 
         wf = build_spectacular_workflow()
         phase = {p.name: p for p in wf.phases}
-        assert "synthesis" in phase
-        assert phase["synthesis"].capability == "analysis_synthesis"
-        deps = phase["synthesis"].depends_on
-        assert "quality" in deps
-        assert "counter" in deps
-        assert "debate" in deps
-        assert "governance" in deps
-        assert "formal_synthesis" in deps
-        assert phase["synthesis"].optional is True
+        assert "deep_synthesis" in phase
+        deps = set(phase["deep_synthesis"].depends_on)
+        assert deps == {"belief_revision", "stakes"}
 
     def test_spectacular_phase_count_with_synthesis(self):
         from argumentation_analysis.orchestration.workflows import (
@@ -31,13 +48,15 @@ class TestSynthesisSpectacularPhase:
         wf = build_spectacular_workflow()
         # The workflow grew from 21 to 31 phases over #504/#506/#507/#508/#534/
         # Epic #1134 (3 acts + deep_synthesis + stakes + kb pipeline + solvers).
-        # A fixed exact count is fragile test-debt; assert load-bearing invariants
-        # instead: the synthesis chain is present and the mandatory acts exist.
+        # #1625 (R759) removed the L9 `synthesis` phase, lowering the floor by
+        # one. A fixed exact count is fragile test-debt; assert load-bearing
+        # invariants instead: the surviving synthesis chain is present and the
+        # mandatory acts exist.
         phase_names = {p.name for p in wf.phases}
-        assert "synthesis" in phase_names
+        assert "synthesis" not in phase_names  # #1625 retrait
         assert "deep_synthesis" in phase_names
         assert {"act1_framing", "act2_narrative", "act3_conclusion"} <= phase_names
-        assert len(wf.phases) >= 21  # never regresses below the original floor
+        assert len(wf.phases) >= 20  # never regresses below the post-retrait floor
 
     def test_deep_synthesis_state_writer_registered(self):
         """D1b (#1167): the deep_synthesis phase must have a state writer, else
@@ -50,8 +69,7 @@ class TestSynthesisSpectacularPhase:
 
         assert "deep_synthesis" in CAPABILITY_STATE_WRITERS
         assert (
-            CAPABILITY_STATE_WRITERS["deep_synthesis"]
-            is _write_deep_synthesis_to_state
+            CAPABILITY_STATE_WRITERS["deep_synthesis"] is _write_deep_synthesis_to_state
         )
 
     def test_write_deep_synthesis_populates_narrative(self):
@@ -70,10 +88,7 @@ class TestSynthesisSpectacularPhase:
             state,
             {},
         )
-        assert (
-            state.narrative_synthesis
-            == "Synthèse ancrée avec [artifact:arg_1]."
-        )
+        assert state.narrative_synthesis == "Synthèse ancrée avec [artifact:arg_1]."
 
     def test_write_deep_synthesis_drops_empty_fail_loud(self):
         """D1b (#1167): empty/unavailable grounded_synthesis is left as the empty
@@ -89,37 +104,21 @@ class TestSynthesisSpectacularPhase:
         _write_deep_synthesis_to_state({}, state, {})
         assert state.narrative_synthesis == ""
 
-    def test_analysis_synthesis_state_writer_registered(self):
+    def test_analysis_synthesis_state_writer_absent_after_retrait(self):
+        """#1625: CAPABILITY_STATE_WRITERS must not carry the removed
+        `analysis_synthesis` entry — otherwise the registry would crash on
+        phase resolution at runtime."""
         from argumentation_analysis.orchestration.state_writers import (
             CAPABILITY_STATE_WRITERS,
         )
 
-        assert "analysis_synthesis" in CAPABILITY_STATE_WRITERS
+        assert "analysis_synthesis" not in CAPABILITY_STATE_WRITERS
 
-    def test_analysis_synthesis_service_in_registry(self):
+    def test_analysis_synthesis_capability_not_registered(self):
+        """#1625: the analysis_synthesis capability must not resolve to any
+        provider in the registry."""
         from argumentation_analysis.orchestration.registry_setup import setup_registry
 
         registry = setup_registry()
         providers = registry.find_for_capability("analysis_synthesis")
-        names = [p.name for p in providers]
-        assert "analysis_synthesis_service" in names
-        provider = next(p for p in providers if p.name == "analysis_synthesis_service")
-        assert provider.invoke is not None
-
-    def test_write_analysis_synthesis_to_state(self):
-        from argumentation_analysis.orchestration.state_writers import (
-            _write_analysis_synthesis_to_state,
-        )
-
-        state = MagicMock()
-        output = {
-            "synthesis": {
-                "quality": {"evaluated": 3},
-                "fallacies": {"count": 2},
-            },
-            "phase_count": 5,
-            "overall_completeness": 0.8,
-        }
-        _write_analysis_synthesis_to_state(output, state, {})
-        assert state.analysis_synthesis["phase_count"] == 5
-        assert state.analysis_synthesis["overall_completeness"] == 0.8
+        assert providers == []

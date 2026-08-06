@@ -996,25 +996,16 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             optional=True,
             timeout_seconds=180,
         )
-        # L9 — terminal synthesis aggregation (#508)
-        .add_phase(
-            "synthesis",
-            capability="analysis_synthesis",
-            depends_on=[
-                "quality",
-                "counter",
-                "debate",
-                "governance",
-                "formal_synthesis",
-            ],
-            optional=True,
-        )
-        # L10 — Deep synthesis: grounded 9-section markdown report (#534)
+        # L10 — Deep synthesis: grounded 9-section markdown report (#534).
+        # Depends on belief_revision + stakes (the meaningful predecessors).
+        # The previous L9 "analysis_synthesis" aggregation phase (#508) was
+        # removed in #1625 (R759): zero prod reader, zero LLM call, the cost
+        # was the orchestration step itself. Anti-pendule — depend_on must
+        # not reference a phase that no longer exists.
         .add_phase(
             "deep_synthesis",
             capability="deep_synthesis",
             depends_on=[
-                "synthesis",
                 "belief_revision",
                 "stakes",
             ],

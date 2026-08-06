@@ -68,7 +68,9 @@ class TestSpectacularWorkflowPhases:
         # the original 20) to 40. Sibling tests (test_spectacular_regression_suite,
         # test_belief_revision_spectacular, test_external_solver_spectacular,
         # test_spectacular_workflow_dag) already assert 40; this one was missed.
-        assert len(wf.phases) == 40
+        # #1625 (R759): L9 `analysis_synthesis` was retired (zero prod reader,
+        # no LLM call). Phase count drops from 40 to 39.
+        assert len(wf.phases) == 39
 
 
 class TestInvokeCallables:
