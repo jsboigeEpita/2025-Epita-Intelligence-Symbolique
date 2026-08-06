@@ -1105,3 +1105,40 @@ class TestUnsupportedClaimBlocked:
         assert "Le locuteur disqualifie l'adversaire" in result.narrative
         assert "Le raisonnement causal tient" in result.narrative
         assert result.status == "woven"
+
+    def test_emptied_section_does_not_leave_a_bare_heading(self) -> None:
+        """Removing the only sentence of a section must remove its heading too."""
+        conclusion = (
+            "### Ce que le discours dit\n\n"
+            "Le locuteur avance sa thèse avec des exemples concrets.\n\n"
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n\n"
+            "### Ce qui tient\n\n"
+            "Le raisonnement causal tient."
+        )
+        result = self._run(_rich_state(), conclusion)
+        assert "### Appui formel" not in result.narrative
+        assert "### Ce que le discours dit" in result.narrative
+        assert "### Ce qui tient" in result.narrative
+
+    def test_heading_is_kept_when_its_section_still_has_content(self) -> None:
+        """The bite proof for heading removal: a surviving sibling keeps it."""
+        conclusion = (
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n"
+            "Le solveur SAT établit la satisfiabilité de la thèse.\n"
+        )
+        result = self._run(_rich_state(), conclusion)
+        assert "### Appui formel" in result.narrative
+        assert "Le solveur SAT établit" in result.narrative
+        assert "La logique du premier ordre confirme" not in result.narrative
+
+    def test_wholly_unsupported_conclusion_says_so_rather_than_going_silent(
+        self,
+    ) -> None:
+        """If nothing survives, the emptiness must be declared, not implied."""
+        conclusion = "La logique du premier ordre confirme la cohérence du discours."
+        result = self._run(_rich_state(), conclusion)
+        assert "act3_claim_blocked_all" in result.degraded
+        assert "Affirmation retirée" in result.narrative
+        assert not result.narrative.startswith("\n")

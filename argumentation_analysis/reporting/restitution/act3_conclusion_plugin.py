@@ -1362,9 +1362,29 @@ def _gate_unsupported_claims(
 
     if not blocked:
         return narrative, []
-    # Removing sentences can leave runs of blank lines where a paragraph was.
-    gated = re.sub(r"\n{3,}", "\n\n", "\n".join(out_lines)).strip()
-    return gated, blocked
+    # Removing sentences can leave runs of blank lines where a paragraph was,
+    # and can empty a section outright — a bare heading with nothing under it
+    # is an artefact of the gate, not something the reader should receive.
+    return _drop_empty_headings("\n".join(out_lines)), blocked
+
+
+def _drop_empty_headings(text: str) -> str:
+    """Remove headings left with no content beneath them, and collapse gaps."""
+    lines = text.split("\n")
+    kept: List[str] = []
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("#"):
+            has_content = False
+            for nxt in lines[i + 1 :]:
+                if nxt.lstrip().startswith("#"):
+                    break
+                if nxt.strip():
+                    has_content = True
+                    break
+            if not has_content:
+                continue
+        kept.append(line)
+    return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
 
 
 def _blocked_claim_note(blocked: List[BlockedClaim]) -> str:
@@ -1514,7 +1534,10 @@ async def build_act3_conclusion(
             narrative, evidence.verdict.nontrivial_axes
         )
         if blocked:
-            narrative = narrative.rstrip() + "\n\n" + _blocked_claim_note(blocked)
+            survivor = narrative.rstrip()
+            narrative = (survivor + "\n\n" if survivor else "") + _blocked_claim_note(
+                blocked
+            )
             degraded["act3_claim_blocked"] = (
                 f"{len(blocked)} affirmation(s) retirée(s), sans support dans "
                 "l'état : "
@@ -1522,6 +1545,16 @@ async def build_act3_conclusion(
                     f"{b.label} — « {_truncate(b.sentence, 90)} »" for b in blocked
                 )
             )
+            if not survivor:
+                # Every sentence rested on an axis the analysis never produced.
+                # Emitting only the removal note is the honest outcome, but a
+                # consumer reading `status == "woven"` would otherwise have no
+                # way to tell an empty conclusion from a written one.
+                degraded["act3_claim_blocked_all"] = (
+                    "Aucune phrase de la conclusion n'a survécu au gate : toutes "
+                    "reposaient sur des dimensions sans résultat dans l'état. "
+                    "Le livrable ne porte que l'avis de retrait."
+                )
 
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()
