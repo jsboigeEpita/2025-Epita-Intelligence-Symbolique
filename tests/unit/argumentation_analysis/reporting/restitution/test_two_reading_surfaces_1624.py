@@ -123,9 +123,15 @@ PROSE_BASELINE = frozenset(
 # no claim and was removed. The appendix still attests it, which is why the key
 # lands here rather than disappearing: it is genuinely "attested but not
 # mobilised" — the exact divergence this module exists to keep visible.
+#
+# ``final_conclusion`` joined in the same change, from the other direction: it
+# was never projected at all, so the appendix could not see the synthesis the
+# conversational voie writes. It is carried now (``_STATE_KEYS``) and the prose
+# still does not read it — annexe-only by construction, not by attrition.
 ANNEXE_ONLY = frozenset(
     {
         "aspic_results",
+        "final_conclusion",
         "formal_synthesis_reports",
         "narrative_synthesis",
         "workflow_results",

@@ -30,6 +30,17 @@ _STATE_KEYS = (
     "aspic_results",
     "structured_arg_status",
     "narrative_synthesis",
+    # #1620 — not a spec §2 axis of its own. The *synthesis* axis has two
+    # writers: the pipeline files it under ``narrative_synthesis``, while on the
+    # conversational voie the PM is instructed (``pm/prompts.py`` l.95) to copy
+    # its synthèse into ``set_final_conclusion``. This projection is what the
+    # appendix reader receives, so a key absent here is invisible downstream no
+    # matter what the reader tries to resolve — the two-lane resolver in
+    # ``appendix._provenance_counts`` was inert until this key was carried.
+    # Kept under its own name rather than aliased onto ``narrative_synthesis``:
+    # the opt-in full-state dump renders mapped content verbatim, and filing one
+    # field's text under the other's name would misattribute it.
+    "final_conclusion",
     "formal_synthesis_reports",
     "stakes_and_stakeholders",
     "source_metadata",

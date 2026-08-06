@@ -251,6 +251,13 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     # Anti-pendule: this resolves at the *reader*, deliberately. The two state
     # fields keep their own histories and are NOT merged — a state migration
     # would be a much larger gesture for the same observable fix.
+    #
+    # This resolver is only live because ``state_adapter._STATE_KEYS`` carries
+    # ``final_conclusion``. ``state`` here is the *projection*, not the state:
+    # resolving a key the projection drops is inert in production while passing
+    # any unit test built on a raw dict — which is exactly how the first cut of
+    # this fix shipped green and dead. Both hops are pinned separately in
+    # ``test_synthesis_two_lane_1620.py``.
     counts["synthese_narrative"] = (
         "présente"
         if (_g("narrative_synthesis") or _g("final_conclusion"))
