@@ -1387,8 +1387,17 @@ def _drop_empty_headings(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
 
 
-def _blocked_claim_note(blocked: List[BlockedClaim]) -> str:
-    """The paragraph that replaces what was removed — the removal must be said."""
+def _blocked_claim_note(
+    blocked: List[BlockedClaim], *, nothing_survived: bool = False
+) -> str:
+    """The paragraph that replaces what was removed — the removal must be said.
+
+    ``nothing_survived`` is not cosmetic. The structured ``degraded`` dict does
+    NOT survive the state round-trip (``_write_act3_conclusion_to_state`` stores
+    only the narrative; see the provenance note in ``pipeline_adapter``), so the
+    narrative is the ONLY surface that reaches the reader. If every sentence was
+    removed, the emptiness has to be stated *here* or it is not stated at all.
+    """
     labels = sorted({b.label for b in blocked})
     if len(labels) == 1:
         listing = labels[0]
@@ -1396,6 +1405,15 @@ def _blocked_claim_note(blocked: List[BlockedClaim]) -> str:
     else:
         listing = ", ".join(labels[:-1]) + f" et {labels[-1]}"
         subject = "des dimensions que cette analyse n'a pas pu établir"
+    if nothing_survived:
+        return (
+            "### Aucune conclusion soutenable\n\n"
+            "**Il ne reste aucune conclusion.** L'intégralité de la conclusion "
+            f"conduite reposait sur {subject} : {listing}. Tout a été retiré : "
+            "il ne s'agit pas d'une conclusion écourtée mais d'une conclusion "
+            "dont aucune affirmation n'avait de support dans l'état de "
+            "l'analyse. Le lecteur ne doit rien en inférer."
+        )
     return (
         "### Affirmation retirée\n\n"
         f"La conclusion conduite s'appuyait sur {subject} : {listing}. "
@@ -1535,8 +1553,11 @@ async def build_act3_conclusion(
         )
         if blocked:
             survivor = narrative.rstrip()
+            # When nothing survives, the note IS the whole deliverable and must
+            # say so in the prose: the structured `degraded` dict below is
+            # dropped by the state round-trip, so it cannot carry that fact.
             narrative = (survivor + "\n\n" if survivor else "") + _blocked_claim_note(
-                blocked
+                blocked, nothing_survived=not survivor
             )
             degraded["act3_claim_blocked"] = (
                 f"{len(blocked)} affirmation(s) retirée(s), sans support dans "
@@ -1546,10 +1567,6 @@ async def build_act3_conclusion(
                 )
             )
             if not survivor:
-                # Every sentence rested on an axis the analysis never produced.
-                # Emitting only the removal note is the honest outcome, but a
-                # consumer reading `status == "woven"` would otherwise have no
-                # way to tell an empty conclusion from a written one.
                 degraded["act3_claim_blocked_all"] = (
                     "Aucune phrase de la conclusion n'a survécu au gate : toutes "
                     "reposaient sur des dimensions sans résultat dans l'état. "

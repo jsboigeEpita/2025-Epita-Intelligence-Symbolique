@@ -1133,12 +1133,25 @@ class TestUnsupportedClaimBlocked:
         assert "Le solveur SAT établit" in result.narrative
         assert "La logique du premier ordre confirme" not in result.narrative
 
-    def test_wholly_unsupported_conclusion_says_so_rather_than_going_silent(
+    def test_wholly_unsupported_conclusion_declares_it_in_the_narrative(
         self,
     ) -> None:
-        """If nothing survives, the emptiness must be declared, not implied."""
+        """If nothing survives, the NARRATIVE must say so — not just `degraded`.
+
+        The structured `degraded` dict does not survive the state round-trip
+        (``_write_act3_conclusion_to_state`` stores only the narrative), so a
+        fact carried solely there never reaches the reader.
+        """
         conclusion = "La logique du premier ordre confirme la cohérence du discours."
         result = self._run(_rich_state(), conclusion)
+        assert "Aucune conclusion soutenable" in result.narrative
+        assert "Il ne reste aucune conclusion" in result.narrative
         assert "act3_claim_blocked_all" in result.degraded
-        assert "Affirmation retirée" in result.narrative
         assert not result.narrative.startswith("\n")
+
+    def test_partial_removal_does_not_claim_the_conclusion_is_empty(self) -> None:
+        """The bite proof: surviving prose must NOT get the emptiness wording."""
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "Aucune conclusion soutenable" not in result.narrative
+        assert "act3_claim_blocked_all" not in result.degraded
+        assert "Affirmation retirée" in result.narrative
