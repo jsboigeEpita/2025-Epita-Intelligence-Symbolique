@@ -1,4 +1,5 @@
 """Tests for fact_claim_extractor lazy-import hardening (#882)."""
+
 import pytest
 
 
@@ -46,4 +47,10 @@ class TestFactClaimExtractorLazyImport:
         # Should not crash even without NLP model
         text = "Le prix a augmenté de 15% en 2024."
         result = extractor.extract_factual_claims(text)
-        assert isinstance(result, list)
+        # #1593: ``isinstance(result, list)`` passed even when extract returned
+        # []. The name promises "extraction still works (regex-based)" → at
+        # least one claim is extracted from a text with a clear numeric/date
+        # fact. Measured: 1 claim ("en 2024", historical).
+        assert (
+            len(result) >= 1
+        ), f"expected regex-based extraction to find claims, got {result}"

@@ -147,7 +147,10 @@ class TestApplyStrategy:
             arg,
             CounterArgumentType.DIRECT_REFUTATION,
         )
-        assert isinstance(result, str)
+        # #1593: ``isinstance(result, str)`` passed even when apply_strategy
+        # returned "". The name promises "uses fallback" → a counter-argument is
+        # produced (not just a str-typed value). Measured: 74 chars.
+        assert result, f"expected non-empty fallback counter-argument, got {result!r}"
 
 
 # ============================================================
