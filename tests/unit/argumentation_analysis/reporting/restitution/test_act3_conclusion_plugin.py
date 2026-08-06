@@ -27,6 +27,9 @@ import pytest
 
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     Act3Result,
+    _fol_verified,
+    _is_guest_formal_entry,
+    _pl_verified,
     build_act3_conclusion,
     build_act3_evidence,
     build_act3_prompt,
@@ -35,7 +38,6 @@ from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import 
 from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
-
 
 # --- state stubs -------------------------------------------------------------
 
@@ -283,7 +285,9 @@ class TestBuildEvidence:
     def test_governance_trivial_winner_is_none_sv(self):
         """SV fail-loud: a placeholder 'N/A' winner carries no verdict (#1019)."""
         state = _state(
-            governance_decisions=[{"method": "majority", "winner": "N/A", "scores": {}}],
+            governance_decisions=[
+                {"method": "majority", "winner": "N/A", "scores": {}}
+            ],
             debate_transcripts=[{"exchanges": [{"point": "", "rebuttal": ""}]}],
         )
         ev = build_act3_evidence(state)
@@ -393,10 +397,18 @@ class TestBuildEvidence:
             },
             argument_quality_scores={"arg_1": {"scores_par_vertu": {"clarte": 5.0}}},
             counter_arguments=[
-                {"target_arg_id": "arg_1", "strategy": "contre-exemple", "counter_content": "réponse"}
+                {
+                    "target_arg_id": "arg_1",
+                    "strategy": "contre-exemple",
+                    "counter_content": "réponse",
+                }
             ],
             dung_frameworks={
-                "fw_1": {"arguments": ["arg_1"], "extensions": {}, "semantics": "grounded"}
+                "fw_1": {
+                    "arguments": ["arg_1"],
+                    "extensions": {},
+                    "semantics": "grounded",
+                }
             },
         )
         ev = build_act3_evidence(state)
@@ -443,9 +455,7 @@ class TestBuildEvidence:
             _pl_verified,
         )
 
-        state = _state(
-            propositional_analysis_results=[{"satisfiable": True}]
-        )
+        state = _state(propositional_analysis_results=[{"satisfiable": True}])
         assert _pl_verified(state) == 1
         ev = build_act3_evidence(state)
         assert "formal_pl" in ev.verdict.nontrivial_axes
@@ -468,9 +478,7 @@ class TestBuildEvidence:
             _pl_verified,
         )
 
-        state = _state(
-            propositional_analysis_results=[{"satisfiable": None}]
-        )
+        state = _state(propositional_analysis_results=[{"satisfiable": None}])
         assert _pl_verified(state) == 0
 
 
@@ -493,7 +501,9 @@ class TestPrivacy:
         assert long_just not in prompt
         assert "[…]" in prompt
 
-    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    @pytest.mark.parametrize(
+        "deanonymized,expect_opaque", [(True, False), (False, True)]
+    )
     def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
         # Epic #1258 / Track 1 #1259 — opaque-ID directive present only when
         # NOT deanonymized; weaving rule + fail-loud always present.
@@ -693,7 +703,10 @@ class TestConsumedByRenderer:
         # The woven act3 conclusion is rendered into the body verbatim.
         assert _WOVEN_CONCLUSION.splitlines()[0] in report.markdown
         # act1/act2 are reported as missing (fail-loud), not silently dropped.
-        assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+        assert (
+            "indisponible" in report.markdown.lower()
+            or "acte" in report.markdown.lower()
+        )
 
 
 # ============================================================================
@@ -787,3 +800,444 @@ class TestVirtuousMode:
         prompt = build_act3_prompt(ev)
         assert "fabrique" in prompt.lower() or "ne fabrique" in prompt.lower()
         assert ev.weak_points == []
+
+
+# --- #1605: the conclusion must carry what the run failed to evaluate --------
+
+
+def _ledger(*capabilities: str) -> dict:
+    """A ``structured_arg_status`` ledger marking ``capabilities`` degraded.
+
+    Mirrors the shape written by ``state_writers._record_structured_arg_status``.
+    """
+    return {
+        cap: {
+            "capability": cap,
+            "status": "absent_no_translator",
+            "degraded": True,
+            "reason": f"{cap} not genuinely evaluated: no translator wired.",
+            "extension_count": 1,
+        }
+        for cap in capabilities
+    }
+
+
+_SILENT_CONCLUSION = (
+    "### Ce que le discours dit vraiment\n\n"
+    "Le locuteur défend sa position en disqualifiant son contradicteur.\n\n"
+    "### Ce qui tient et ce qui ne tient pas\n\n"
+    "L'analyse formelle confirme la cohérence d'une partie du raisonnement.\n\n"
+    "### Comment se faire son avis\n\n"
+    "Recevoir avec prudence l'attaque personnelle, retenir l'argument causal."
+)
+
+
+class TestAbsentDimensionsCollected:
+    """``structured_arg_status`` reaches the evidence (it reached nothing before)."""
+
+    def test_no_ledger_yields_no_absence(self):
+        ev = build_act3_evidence(_rich_state())
+        assert ev.absent_dimensions == []
+
+    def test_evaluated_capability_is_not_an_absence(self):
+        state = _rich_state()
+        state.structured_arg_status = {
+            "setaf_reasoning": {
+                "capability": "setaf_reasoning",
+                "status": "evaluated",
+                "degraded": False,
+                "reason": "Genuine structured input supplied via context.",
+                "extension_count": 3,
+            }
+        }
+        ev = build_act3_evidence(state)
+        assert ev.absent_dimensions == []
+
+    def test_degraded_capabilities_are_collected(self):
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aspic_plus_reasoning", "setaf_reasoning")
+        ev = build_act3_evidence(state)
+        assert {d.capability for d in ev.absent_dimensions} == {
+            "aspic_plus_reasoning",
+            "setaf_reasoning",
+        }
+
+    def test_label_is_reader_facing_not_snake_case(self):
+        # The prose forbids raw identifiers; a capability key must never reach
+        # the narrative as-is.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("weighted_argumentation")
+        ev = build_act3_evidence(state)
+        (dim,) = ev.absent_dimensions
+        assert "_" not in dim.label
+        assert dim.label != dim.capability
+
+    def test_unknown_capability_is_still_surfaced(self):
+        # An absence we have no French label for must still be said, not dropped.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("some_future_formalism")
+        ev = build_act3_evidence(state)
+        assert len(ev.absent_dimensions) == 1
+        assert "_" not in ev.absent_dimensions[0].label
+
+
+class TestAbsencePromptBlock:
+    """The prompt states the absence in BOTH directions (present / none)."""
+
+    def test_block_lists_the_lost_axes(self):
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aba_reasoning")
+        prompt = build_act3_prompt(build_act3_evidence(state))
+        assert "[DIMENSIONS NON ÉVALUÉES" in prompt
+        assert "hypothèses et contraires" in prompt
+
+    def test_block_says_explicitly_when_nothing_was_lost(self):
+        # An absent section would be ambiguous; the healthy run says so.
+        prompt = build_act3_prompt(build_act3_evidence(_rich_state()))
+        assert "aucune dimension perdue" in prompt
+
+
+class TestConclusionCarriesTheAbsence:
+    """The guarantee is deterministic — it does not depend on the LLM complying."""
+
+    def _run(self, state, completion):
+        return asyncio.get_event_loop().run_until_complete(
+            build_act3_conclusion(state, llm_callable=_stub_llm(completion))  # type: ignore[arg-type]
+        )
+
+    def test_silent_prose_gets_the_scope_note_appended(self):
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aspic_plus_reasoning")
+        result = self._run(state, _SILENT_CONCLUSION)
+        assert "Portée de cette analyse" in result.narrative
+        assert "act3_scope_note_appended" in result.degraded
+
+    def test_compliant_prose_is_not_duplicated(self):
+        # The detector must be able to return True — otherwise the append is
+        # unconditional and the check measures nothing.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aspic_plus_reasoning")
+        compliant = _SILENT_CONCLUSION + (
+            "\n\nL'examen du raisonnement défaisable n'a pas abouti sur ce texte."
+        )
+        result = self._run(state, compliant)
+        assert "Portée de cette analyse" not in result.narrative
+        assert "act3_scope_note_appended" not in result.degraded
+        assert "act3_absent_dimensions" in result.degraded
+
+    def test_generic_hedge_does_not_count_as_naming_the_absence(self):
+        # "certaines analyses n'ont pas abouti" leaves the reader unable to know
+        # WHICH angle is missing — the note must still be appended.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("setaf_reasoning")
+        hedged = _SILENT_CONCLUSION + (
+            "\n\nCertaines analyses n'ont pas abouti sur ce texte."
+        )
+        result = self._run(state, hedged)
+        assert "Portée de cette analyse" in result.narrative
+
+    def test_healthy_run_gets_no_scope_note(self):
+        result = self._run(_rich_state(), _SILENT_CONCLUSION)
+        assert "Portée de cette analyse" not in result.narrative
+        assert result.degraded.get("act3_absent_dimensions") is None
+
+    def test_conclusion_discriminates_three_run_states(self):
+        """The falsifiable control: 0 / 2 / 4 lost axes → three distinct outputs.
+
+        Measured on three real corpora (#1605): before this wiring, the three
+        conclusions were 3447 / 3742 / 3560 chars and none mentioned anything —
+        a reader could not tell the amputated run from the healthy one.
+        """
+        healthy = _rich_state()
+        two_lost = _rich_state()
+        two_lost.structured_arg_status = _ledger(
+            "setaf_reasoning", "weighted_argumentation"
+        )
+        four_lost = _rich_state()
+        four_lost.structured_arg_status = _ledger(
+            "setaf_reasoning",
+            "weighted_argumentation",
+            "aba_reasoning",
+            "aspic_plus_reasoning",
+        )
+
+        counts = [
+            len(build_act3_evidence(s).absent_dimensions)
+            for s in (healthy, two_lost, four_lost)
+        ]
+        assert counts == [0, 2, 4]
+
+        narratives = [
+            self._run(s, _SILENT_CONCLUSION).narrative
+            for s in (healthy, two_lost, four_lost)
+        ]
+        # Three genuinely different run states must yield three different texts.
+        assert len(set(narratives)) == 3
+        assert "Portée de cette analyse" not in narratives[0]
+        assert "attaques collectives" in narratives[1]
+        assert "hypothèses et contraires" in narratives[2]
+
+
+# --- #1605: guest formalisms must not credit the host axis -------------------
+
+
+def _dl_entry() -> dict:
+    """The shape ``state_writers._write_dl_to_state`` really writes (measured)."""
+    return {
+        "id": "fol_1",
+        "formulas": ["DL: Knowledge base is consistent."],
+        "consistent": True,
+        "inferences": [],
+        "confidence": 1.0,
+    }
+
+
+def _real_fol_entry(consistent: bool = False) -> dict:
+    """A genuine first-order theory decided by a first-order prover."""
+    return {
+        "id": "fol_2",
+        "formulas": ["forall X: (humain(X) => mortel(X))", "humain(socrate)"],
+        "consistent": consistent,
+        "inferences": [],
+        "confidence": 1.0,
+    }
+
+
+class TestGuestFormalEntriesDoNotCreditHostAxis:
+    """A formalism writing into another's container must not earn its axis.
+
+    Measured on the real runs: ``fol_analysis_results`` also receives
+    Description Logic verdicts, and on 2 of 3 corpora the ``formal_fol`` axis was
+    carried *solely* by such an entry — on runs where the real FOL theory failed
+    to parse. The conclusion was granted first-order support that no first-order
+    prover ever produced.
+    """
+
+    def test_dl_entry_is_recognised_as_guest(self) -> None:
+        assert _is_guest_formal_entry(_dl_entry()) is True
+
+    def test_real_fol_entry_is_not_guest(self) -> None:
+        assert _is_guest_formal_entry(_real_fol_entry()) is False
+
+    def test_entry_mixing_real_and_marker_formulas_keeps_credit(self) -> None:
+        """Conservative by design: only an ALL-marker entry is a guest."""
+        mixed = {
+            "formulas": ["DL: Knowledge base is consistent.", "humain(socrate)"],
+            "consistent": True,
+        }
+        assert _is_guest_formal_entry(mixed) is False
+
+    def test_entry_without_formulas_is_not_guest(self) -> None:
+        """``all([])`` is True — the empty case must not be swept in silently."""
+        assert _is_guest_formal_entry({"consistent": True}) is False
+        assert _is_guest_formal_entry({"formulas": [], "consistent": True}) is False
+
+    def test_dl_only_state_loses_the_fol_axis(self) -> None:
+        state = _state(fol_analysis_results=[_dl_entry()])
+        assert _fol_verified(state) == 0
+        axes = build_act3_evidence(state).verdict.nontrivial_axes
+        assert "formal_fol" not in axes
+
+    def test_real_fol_verdict_keeps_the_fol_axis(self) -> None:
+        """The bite-proving negative: the filter removes guests, not the axis."""
+        state = _state(fol_analysis_results=[_dl_entry(), _real_fol_entry()])
+        assert _fol_verified(state) == 1
+        axes = build_act3_evidence(state).verdict.nontrivial_axes
+        assert "formal_fol" in axes
+
+    def test_guest_cl_and_qbf_do_not_credit_the_pl_axis(self) -> None:
+        """CL and QBF write into the propositional container the same way."""
+        guests_only = _state(
+            propositional_analysis_results=[
+                {
+                    "formulas": ["CL(0 conditionals): No query specified."],
+                    "satisfiable": True,
+                },
+                {"formulas": ["QBF: <texte brut du document>"], "satisfiable": True},
+            ]
+        )
+        assert _pl_verified(guests_only) == 0
+        assert (
+            "formal_pl" not in build_act3_evidence(guests_only).verdict.nontrivial_axes
+        )
+
+        with_host = _state(
+            propositional_analysis_results=[
+                {
+                    "formulas": ["CL(0 conditionals): No query specified."],
+                    "satisfiable": True,
+                },
+                {"formulas": ["p && q"], "satisfiable": True},
+            ]
+        )
+        assert _pl_verified(with_host) == 1
+        assert "formal_pl" in build_act3_evidence(with_host).verdict.nontrivial_axes
+
+
+# --- #1605: the blocking half of the conclusion gate -------------------------
+
+
+# A conclusion asserting first-order support. ``_rich_state`` has no formal_fol
+# axis, so this claim rests on nothing.
+_CLAIM_ON_ABSENT_AXIS = (
+    "### Ce que le discours dit\n\n"
+    "Le locuteur disqualifie l'adversaire avant de défendre sa thèse sur le "
+    "fond. La logique du premier ordre confirme que la structure profonde du "
+    "discours est cohérente. Le lecteur peut donc suivre le second mouvement "
+    "sans réserve.\n\n"
+    "### Ce qui tient\n\n"
+    "Le raisonnement causal tient et reste lisible pour qui suit le débat."
+)
+
+
+class TestUnsupportedClaimBlocked:
+    """The DoD's blocking half: an affirmation refused for lack of a dimension.
+
+    ``_band_claim_ceiling`` *instructs* the LLM about how strongly it may
+    characterise the discourse. Nothing verified the produced prose afterwards.
+    This gate is that verification, per axis — the band cannot do it, because
+    losing an entire formalism moves 6 axes to 5 and keeps the same band.
+    """
+
+    def _run(self, state: object, conclusion: str) -> Act3Result:
+        return asyncio.run(build_act3_conclusion(state, _stub_llm(conclusion)))
+
+    def test_claim_on_absent_axis_is_removed_from_the_narrative(self) -> None:
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "La logique du premier ordre confirme" not in result.narrative
+
+    def test_removal_is_reported_in_degraded(self) -> None:
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "act3_claim_blocked" in result.degraded
+        assert "premier ordre" in result.degraded["act3_claim_blocked"]
+
+    def test_removal_note_names_the_axis_for_the_reader(self) -> None:
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "Affirmation retirée" in result.narrative
+        assert "la logique du premier ordre" in result.narrative
+
+    def test_same_claim_survives_when_the_axis_is_present(self) -> None:
+        """The bite proof: identical prose, one axis added, no removal."""
+        supported = _rich_state()
+        supported.fol_analysis_results = [_real_fol_entry(consistent=True)]
+        result = self._run(supported, _CLAIM_ON_ABSENT_AXIS)
+        assert "La logique du premier ordre confirme" in result.narrative
+        assert "act3_claim_blocked" not in result.degraded
+        assert "Affirmation retirée" not in result.narrative
+
+    def test_honest_absence_statement_is_not_blocked(self) -> None:
+        """Naming an absent axis to SAY it is absent is what #1609 asks for."""
+        honest = _CLAIM_ON_ABSENT_AXIS.replace(
+            "La logique du premier ordre confirme que la structure profonde du "
+            "discours est cohérente.",
+            "La logique du premier ordre n'a pas abouti sur ce texte.",
+        )
+        result = self._run(_rich_state(), honest)
+        assert "n'a pas abouti sur ce texte" in result.narrative
+        assert "act3_claim_blocked" not in result.degraded
+
+    def test_conclusion_making_no_unsupported_claim_is_untouched(self) -> None:
+        result = self._run(_rich_state(), _WOVEN_CONCLUSION)
+        assert "act3_claim_blocked" not in result.degraded
+        assert "Affirmation retirée" not in result.narrative
+
+    def test_gate_preserves_the_rest_of_the_conclusion(self) -> None:
+        """Fail loud, not fail hard: one sentence goes, the conclusion stays."""
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "Le locuteur disqualifie l'adversaire" in result.narrative
+        assert "Le raisonnement causal tient" in result.narrative
+        assert result.status == "woven"
+
+    def test_emptied_section_does_not_leave_a_bare_heading(self) -> None:
+        """Removing the only sentence of a section must remove its heading too."""
+        conclusion = (
+            "### Ce que le discours dit\n\n"
+            "Le locuteur avance sa thèse avec des exemples concrets.\n\n"
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n\n"
+            "### Ce qui tient\n\n"
+            "Le raisonnement causal tient."
+        )
+        result = self._run(_rich_state(), conclusion)
+        assert "### Appui formel" not in result.narrative
+        assert "### Ce que le discours dit" in result.narrative
+        assert "### Ce qui tient" in result.narrative
+
+    def test_heading_is_kept_when_its_section_still_has_content(self) -> None:
+        """The bite proof for heading removal: a surviving sibling keeps it."""
+        conclusion = (
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n"
+            "Le solveur SAT établit la satisfiabilité de la thèse.\n"
+        )
+        result = self._run(_rich_state(), conclusion)
+        assert "### Appui formel" in result.narrative
+        assert "Le solveur SAT établit" in result.narrative
+        assert "La logique du premier ordre confirme" not in result.narrative
+
+    def test_wholly_unsupported_conclusion_declares_it_in_the_narrative(
+        self,
+    ) -> None:
+        """If nothing survives, the NARRATIVE must say so — not just `degraded`.
+
+        The structured `degraded` dict does not survive the state round-trip
+        (``_write_act3_conclusion_to_state`` stores only the narrative), so a
+        fact carried solely there never reaches the reader.
+        """
+        conclusion = "La logique du premier ordre confirme la cohérence du discours."
+        result = self._run(_rich_state(), conclusion)
+        assert "Aucune conclusion soutenable" in result.narrative
+        assert "Il ne reste aucune conclusion" in result.narrative
+        assert "act3_claim_blocked_all" in result.degraded
+        assert not result.narrative.startswith("\n")
+
+    def test_partial_removal_does_not_claim_the_conclusion_is_empty(self) -> None:
+        """The bite proof: surviving prose must NOT get the emptiness wording."""
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "Aucune conclusion soutenable" not in result.narrative
+        assert "act3_claim_blocked_all" not in result.degraded
+        assert "Affirmation retirée" in result.narrative
+
+    def test_parent_heading_survives_when_its_subsections_carry_the_content(
+        self,
+    ) -> None:
+        """A heading is empty only if its whole SUBTREE is.
+
+        The narrative is free-form markdown conducted by the LLM, so a section
+        that holds its content in subsections is ordinary input. Judging
+        emptiness on the lines immediately below would delete the parent while
+        keeping its children — mangling a hierarchy the gate never touched.
+        """
+        conclusion = (
+            "## Ce que l'analyse établit\n\n"
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n\n"
+            "### Ce qui tient\n\n"
+            "Le raisonnement causal tient et les prémisses sont explicites.\n"
+        )
+        result = self._run(_rich_state(), conclusion)
+        # The blocked claim took `### Appui formel` with it...
+        assert "### Appui formel" not in result.narrative
+        # ...but the parent keeps its surviving subsection, and both remain.
+        assert "## Ce que l'analyse établit" in result.narrative
+        assert "### Ce qui tient" in result.narrative
+        assert "Le raisonnement causal tient" in result.narrative
+
+    def test_parent_heading_falls_when_its_whole_subtree_is_emptied(self) -> None:
+        """The bite proof for the subtree rule: an emptied subtree takes the parent.
+
+        Without this, "keep a parent whose descendants survived" could degrade
+        into "always keep parents", which is the symmetrical error.
+        """
+        conclusion = (
+            "## Ce que l'analyse établit\n\n"
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n\n"
+            "## Ce qui tient\n\n"
+            "Le raisonnement causal tient et les prémisses sont explicites.\n"
+        )
+        result = self._run(_rich_state(), conclusion)
+        assert "### Appui formel" not in result.narrative
+        assert "## Ce que l'analyse établit" not in result.narrative
+        assert "## Ce qui tient" in result.narrative
+        assert "Le raisonnement causal tient" in result.narrative
