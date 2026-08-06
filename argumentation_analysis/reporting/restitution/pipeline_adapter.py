@@ -26,14 +26,16 @@ Design (anti-pendule, file-disjoint lane per dispatch R433):
     this on a non-spectacular state (act strings empty) yields an honest
     "acte indisponible" report rather than a crash or silent omission.
 
-Provenance note: the act invoke-callables return a ``degraded`` dict per act,
-but the state-writers store only the narrative string (the structured
-``degraded`` is not carried on state). This is acceptable — the act narratives
-themselves already carry the honest degradation wording inline (the plugins
-append caveats / §4 self-check notes into the text), so the report stays honest
-without a state-schema change. Surfacing structured per-act ``degraded`` would
-require touching ``state_writers.py`` / ``shared_state.py`` (out of this lane's
-scope; the narrative carries the honesty).
+Provenance note (superseded — #1608): this module used to record that the act
+invoke-callables returned a per-act ``degraded`` dict which the state-writers
+dropped, and that carrying it would require touching ``state_writers.py`` /
+``shared_state.py`` "out of this lane's scope". That work has since been done:
+``shared_state`` carries ``restitution_acts_degraded`` and the act state-writers
+persist the motifs into it. The note is kept, corrected, because the reasoning it
+recorded was the actual defect — the structured motifs were declared in seven
+places and read in none, and the narrative-carries-the-honesty argument is what
+made that look acceptable. ``_read_act_degraded`` below is the hop that finally
+gives those motifs a reader.
 
 Privacy HARD: ``source_id`` must be opaque (``doc_A``, never a speaker name /
 title / date). The appendix layer strips ``raw_text`` defensively regardless.
@@ -43,7 +45,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from .acts import RestitutionActs
 from .renderer import RenderedReport, render_restitution_report
@@ -73,6 +75,60 @@ def _derive_source_id(state: Any, source_id: Optional[str]) -> str:
     return _SOURCE_ID_FALLBACK
 
 
+def _read_act_degraded(state: Any) -> Dict[str, str]:
+    """Flatten ``state.restitution_acts_degraded`` into ``RestitutionActs.degraded``.
+
+    This is the last hop of the #1608 chain. The two ends already agreed on the
+    *key* — the state writers file motifs under ``act1_framing`` /
+    ``act2_narrative`` / ``act3_conclusion``, which is exactly what
+    ``RestitutionActs.act_key`` returns — but not on the *value*: the state holds
+    ``{motif_key -> text}`` (every motif preserved; #1608 deliberately refused to
+    throw them away behind a ``bool()``), while the renderer prints a single line
+    per act. The join happens here, at the boundary, so neither end has to
+    compromise its own shape.
+
+    Motifs are joined sorted by motif key: a rendered report must not depend on
+    the order in which a plugin happened to insert them.
+
+    Anti-pendule: an act with no motif stays absent from the mapping — nothing is
+    degraded by default. An unexpected shape is *reported*, not silently dropped:
+    losing a degradation motif in silence is the exact failure this chain exists
+    to remove.
+    """
+    if isinstance(state, dict):
+        raw = state.get("restitution_acts_degraded")
+    else:
+        raw = getattr(state, "restitution_acts_degraded", None)
+    if not isinstance(raw, dict):
+        return {}
+
+    valid_keys = {RestitutionActs.act_key(n) for n in (1, 2, 3)}
+    flattened: Dict[str, str] = {}
+    for key, motifs in raw.items():
+        if key not in valid_keys:
+            logger.warning(
+                "Ignoring degradation motifs filed under unknown act key %r "
+                "(fail-loud): expected one of %s",
+                key,
+                sorted(valid_keys),
+            )
+            continue
+        if not isinstance(motifs, dict):
+            logger.warning(
+                "Degradation motifs for %r have an unexpected shape %s "
+                "(fail-loud): expected a {motif_key: text} mapping",
+                key,
+                type(motifs).__name__,
+            )
+            continue
+        text = "; ".join(
+            str(motifs[k]).strip() for k in sorted(motifs) if str(motifs[k]).strip()
+        )
+        if text:
+            flattened[key] = text
+    return flattened
+
+
 def build_restitution_acts(state: Any, source_id: Optional[str] = None) -> RestitutionActs:
     """Build a ``RestitutionActs`` from a completed spectacular shared-state.
 
@@ -81,6 +137,13 @@ def build_restitution_acts(state: Any, source_id: Optional[str] = None) -> Resti
     defaults — works on a dataclass, a dict, or any object exposing the named
     attributes. Missing/empty acts are left empty so the renderer reports them
     honestly ("acte indisponible"), never fabricated (anti-pendule #1019/#369).
+
+    Degradation motifs persisted by the act state writers (#1608) are read here
+    too — see ``_read_act_degraded``. Known boundary: the renderer only prints a
+    degradation note for an act that HAS text (its degraded branch sits below the
+    missing-act ``continue``), so a motif explaining a *missing* act does not
+    reach the reader. Recorded rather than fixed here — widening the renderer is
+    a separate change with its own test.
     """
     def _read(key: str) -> str:
         if isinstance(state, dict):
@@ -94,6 +157,7 @@ def build_restitution_acts(state: Any, source_id: Optional[str] = None) -> Resti
         act2_narrative=_read("act2_narrative"),
         act3_conclusion=_read("act3_conclusion"),
         source_id=_derive_source_id(state, source_id),
+        degraded=_read_act_degraded(state),
     )
 
 
