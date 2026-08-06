@@ -1368,22 +1368,54 @@ def _gate_unsupported_claims(
     return _drop_empty_headings("\n".join(out_lines)), blocked
 
 
+def _heading_depth(line: str) -> int:
+    """Markdown depth of a heading line, or 0 when the line is not a heading."""
+    stripped = line.lstrip()
+    if not stripped.startswith("#"):
+        return 0
+    return len(stripped) - len(stripped.lstrip("#"))
+
+
 def _drop_empty_headings(text: str) -> str:
-    """Remove headings left with no content beneath them, and collapse gaps."""
+    """Remove headings whose whole subtree is empty, and collapse the gaps.
+
+    Emptiness is a property of the SUBTREE, not of the lines immediately
+    below. A heading that carries its content in subsections has nothing
+    directly under it, and a rule that only looked ahead to the next heading
+    would delete it while keeping its children — mangling the hierarchy of a
+    document the gate never touched. The narrative here is free-form markdown
+    conducted by the LLM (``weave_act3_conclusion``), so nested headings are
+    ordinary input, not a corner case.
+
+    Walks backwards so children are decided before their parents: a heading
+    survives if it has own content OR if any of its descendants survived.
+    """
     lines = text.split("\n")
-    kept: List[str] = []
-    for i, line in enumerate(lines):
-        if line.lstrip().startswith("#"):
-            has_content = False
-            for nxt in lines[i + 1 :]:
-                if nxt.lstrip().startswith("#"):
-                    break
-                if nxt.strip():
-                    has_content = True
-                    break
-            if not has_content:
-                continue
-        kept.append(line)
+    dropped: set[int] = set()
+    # Depths of surviving headings already decided BELOW the current line and
+    # not yet absorbed by a shallower heading — i.e. the current candidate's
+    # descendants once we reach it.
+    surviving_below: List[int] = []
+    for i in range(len(lines) - 1, -1, -1):
+        depth = _heading_depth(lines[i])
+        if depth == 0:
+            continue
+        has_own_content = False
+        for nxt in lines[i + 1 :]:
+            if _heading_depth(nxt):
+                break
+            if nxt.strip():
+                has_own_content = True
+                break
+        has_surviving_descendant = any(d > depth for d in surviving_below)
+        # Everything deeper than this heading belongs to its subtree; it is
+        # now accounted for and must not count for anything further up.
+        surviving_below = [d for d in surviving_below if d <= depth]
+        if has_own_content or has_surviving_descendant:
+            surviving_below.append(depth)
+        else:
+            dropped.add(i)
+    kept = [line for i, line in enumerate(lines) if i not in dropped]
     return re.sub(r"\n{3,}", "\n\n", "\n".join(kept)).strip()
 
 

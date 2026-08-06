@@ -1155,3 +1155,47 @@ class TestUnsupportedClaimBlocked:
         assert "Aucune conclusion soutenable" not in result.narrative
         assert "act3_claim_blocked_all" not in result.degraded
         assert "Affirmation retirée" in result.narrative
+
+    def test_parent_heading_survives_when_its_subsections_carry_the_content(
+        self,
+    ) -> None:
+        """A heading is empty only if its whole SUBTREE is.
+
+        The narrative is free-form markdown conducted by the LLM, so a section
+        that holds its content in subsections is ordinary input. Judging
+        emptiness on the lines immediately below would delete the parent while
+        keeping its children — mangling a hierarchy the gate never touched.
+        """
+        conclusion = (
+            "## Ce que l'analyse établit\n\n"
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n\n"
+            "### Ce qui tient\n\n"
+            "Le raisonnement causal tient et les prémisses sont explicites.\n"
+        )
+        result = self._run(_rich_state(), conclusion)
+        # The blocked claim took `### Appui formel` with it...
+        assert "### Appui formel" not in result.narrative
+        # ...but the parent keeps its surviving subsection, and both remain.
+        assert "## Ce que l'analyse établit" in result.narrative
+        assert "### Ce qui tient" in result.narrative
+        assert "Le raisonnement causal tient" in result.narrative
+
+    def test_parent_heading_falls_when_its_whole_subtree_is_emptied(self) -> None:
+        """The bite proof for the subtree rule: an emptied subtree takes the parent.
+
+        Without this, "keep a parent whose descendants survived" could degrade
+        into "always keep parents", which is the symmetrical error.
+        """
+        conclusion = (
+            "## Ce que l'analyse établit\n\n"
+            "### Appui formel\n\n"
+            "La logique du premier ordre confirme la structure du discours.\n\n"
+            "## Ce qui tient\n\n"
+            "Le raisonnement causal tient et les prémisses sont explicites.\n"
+        )
+        result = self._run(_rich_state(), conclusion)
+        assert "### Appui formel" not in result.narrative
+        assert "## Ce que l'analyse établit" not in result.narrative
+        assert "## Ce qui tient" in result.narrative
+        assert "Le raisonnement causal tient" in result.narrative
