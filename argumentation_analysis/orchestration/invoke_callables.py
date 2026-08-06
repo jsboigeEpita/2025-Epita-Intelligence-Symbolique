@@ -5802,14 +5802,20 @@ async def _invoke_propositional_logic(
             formulas = list(prop_vars)
             pl_metrics["template"] = len(prop_vars)
             argument_mapping = {prop_vars[i]: a[:60] for i, a in enumerate(args)}
-            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-            fallacies = (
-                fallacy_output.get("fallacies", [])
-                if isinstance(fallacy_output, dict)
-                else []
-            )
-            if fallacies and len(prop_vars) >= 2:
-                formulas.append(f"!{prop_vars[-1]}")
+            # #1637: the belief set is built from the source arguments ONLY.
+            # This fallback used to append `!{prop_vars[-1]}` whenever the
+            # upstream fallacy axis had detected anything — planting a
+            # contradiction on the LAST atom (unrelated to whatever argument the
+            # fallacy actually targeted) and turning `satisfiable` into False.
+            # That made the SAT verdict a function of the fallacy axis rather
+            # than of the propositional structure, and it fired exactly on the
+            # path where NL→PL translation had produced nothing, i.e. where the
+            # axis has nothing to say. Same family as the FOL template
+            # fabrication removed in #1278 (see the note in
+            # _invoke_fol_reasoning); this PL one was one line, so the sweep
+            # missed it. A fallacy is a rhetorical defect, not a propositional
+            # contradiction: re-aiming the negation at the targeted argument
+            # would be a better-aimed fabrication, not a fix (#1019 fail-loud).
 
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
@@ -6211,17 +6217,22 @@ async def _invoke_fol_reasoning(
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
 
-    inferences = []
-    # Derive inferences from the structure
-    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-    fallacies = (
-        fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
-    )
-    for f in fallacies:
-        if isinstance(f, dict):
-            inferences.append(
-                f"Argument undermined by {f.get('type', f.get('fallacy_type', 'unknown'))} fallacy"
-            )
+    # #1631: `inferences` carries what the FOL reasoning produced — nothing
+    # else. It used to be filled, BEFORE any formula reached Tweety, with one
+    # "Argument undermined by <type> fallacy" line per fallacy detected by the
+    # upstream hierarchical axis, and returned on every exit path including the
+    # ones where the prover decided nothing. Three things were wrong with it:
+    # none of those lines is an inference (no derivation from the KB, a purely
+    # lexical restatement); none names the argument concerned, so it was a
+    # LOSSY copy of the fallacy axis (the source record carries a target id);
+    # and it survived prover failure, so an artefact could carry
+    # `consistent: None` + "Degraded: no verdict" alongside a list of claims
+    # rendered under a heading announcing a Tweety verification.
+    # Reader census before removal (DoD item 1, #1631): zero readers, by name
+    # or by whole-dict serialization — the removal cannot change the deliverable.
+    # Tweety can do deduction; wiring it is a separate question. Until then the
+    # honest value is the empty list, and the field marks the place.
+    inferences: List[str] = []
 
     # Track B #1278: gate fol_handler.py:830 from the caller. When NO real FOL
     # formula was translated from the source arguments, do NOT hand an empty
