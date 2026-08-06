@@ -77,8 +77,13 @@ class TestInvokeDungExtensions:
             "phase_hierarchical_fallacy_output": {
                 "fallacies": [
                     {
+                        # #1629: the phase emits an ``arg_N`` identifier under
+                        # ``target_argument``. The former ``target_text`` here
+                        # was a fixture-only key no producer ever wrote, so this
+                        # test passed through the index fallback rather than
+                        # through the targeting it claims to exercise.
                         "type": "Appel a l'autorite",
-                        "target_text": "Ce regime est le meilleur car le professeur le dit",
+                        "target_argument": "arg_1",
                     }
                 ]
             },
@@ -498,10 +503,17 @@ class TestDungStateWriter:
 
 
 class TestCrossKBFallacyAttacks:
-    """Test _generate_attacks_from_args with text-based fallacy matching."""
+    """Test _generate_attacks_from_args target resolution (#1629).
 
-    def test_matches_by_text_overlap(self):
-        """Fallacies matched to arguments by text content, not just index."""
+    These tests used to exercise a word-overlap match keyed on ``target_text``.
+    No producer writes that key: the fixtures supplied it themselves, so the
+    tests were green while the mechanism was inert on every real payload, and
+    the code silently paired fallacies to arguments by enumeration index. The
+    lexical strategy is removed by subtraction; resolution is by identifier.
+    """
+
+    def test_matches_by_target_identifier(self):
+        """Fallacies target the argument their identifier names, not their rank."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _generate_attacks_from_args,
         )
@@ -513,21 +525,18 @@ class TestCrossKBFallacyAttacks:
         context = {
             "phase_hierarchical_fallacy_output": {
                 "fallacies": [
-                    {
-                        "type": "Appel a l'autorite",
-                        "target_text": "Le professeur Dupont affirme que ce regime",
-                    }
+                    {"type": "Appel a l'autorite", "target_argument": "arg_2"}
                 ]
             }
         }
 
         attacks = _generate_attacks_from_args(arguments, context)
 
-        assert len(attacks) > 0
-        # The fallacy should target the first argument (text overlap)
-        assert any(
-            "professeur" in a[1].lower() or "dupont" in a[1].lower() for a in attacks
-        )
+        # arg_2 -> the SECOND argument. Under the index pairing this lone
+        # fallacy (enumeration index 0) attacked the first one, so the choice
+        # of arg_2 is what makes the assertion able to fail.
+        assert len(attacks) == 1
+        assert attacks[0][1] == arguments[1]
 
     def test_fallacy_label_in_attack(self):
         """Attack labels include fallacy type."""
@@ -539,7 +548,7 @@ class TestCrossKBFallacyAttacks:
         context = {
             "phase_hierarchical_fallacy_output": {
                 "fallacies": [
-                    {"type": "Appel a l'autorite", "target_text": "appel a l'autorite"}
+                    {"type": "Appel a l'autorite", "target_argument": "arg_1"}
                 ]
             }
         }
@@ -573,15 +582,21 @@ class TestCrossKBFallacyAttacks:
         assert len(attacks) > 0
         assert any("CA" in a[0] for a in attacks)
 
-    def test_fallback_heuristic(self):
-        """Sparse heuristic used when no upstream data."""
+    def test_no_upstream_data_fabricates_no_graph(self):
+        """#1629: the sparse ``(i + j) % 3`` heuristic is removed, not replaced.
+
+        It invented an attack graph over the argument list whenever nothing
+        else fired, and the Dung family then reported extensions over that
+        shape as if it came from the corpus. With no derivable relation the
+        graph is empty — every argument stands, because none was shown to be
+        attacked. This assertion is the inverse of the one it replaces.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _generate_attacks_from_args,
         )
 
         arguments = ["arg1", "arg2", "arg3"]
-        attacks = _generate_attacks_from_args(arguments, None)
-        assert len(attacks) > 0  # Should generate some attacks
+        assert _generate_attacks_from_args(arguments, None) == []
 
 
 # ============================================================

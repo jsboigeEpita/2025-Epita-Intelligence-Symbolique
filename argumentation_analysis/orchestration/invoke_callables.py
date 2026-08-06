@@ -3057,17 +3057,66 @@ def _extract_arguments_from_context(
     return [input_text[:200] if len(input_text) > 10 else "argument_placeholder"]
 
 
+# #1629: fallacy records name their target by *identifier* — ``arg_1``,
+# ``arg_2``, … — minted by ``shared_state._generate_id`` as
+# ``f"{prefix}_{index + 1}"`` over an insertion-ordered dict. Resolution is that
+# generation's inverse.
+_ARG_ID_RE = re.compile(r"^\s*arg_(\d+)\s*$")
+
+
+def _resolve_target_argument_id(raw_target: Any, arguments: List[str]) -> Optional[str]:
+    """Resolve an upstream ``arg_N`` reference to its entry in ``arguments``.
+
+    Indexing back into the caller's own list (rather than returning the
+    producer's stored description) guarantees every attack endpoint is a member
+    of the argument set the graph is built over; a resolved text absent from
+    that set would corrupt the graph just as surely as a wrong target.
+
+    Returns ``None`` when the reference is absent, malformed, or out of range.
+    The caller must NOT invent a target in that case (#1019): an attack we
+    cannot ground is an attack we do not assert.
+    """
+    if not raw_target:
+        return None
+    match = _ARG_ID_RE.match(str(raw_target))
+    if not match:
+        return None
+    index = int(match.group(1)) - 1  # IDs are 1-based
+    if 0 <= index < len(arguments):
+        return arguments[index]
+    return None
+
+
 def _generate_attacks_from_args(
     arguments: List[str], context: Optional[Dict[str, Any]] = None
 ) -> List[List[str]]:
-    """Generate attack relations between arguments based on detected fallacies.
+    """Generate attack relations between arguments from upstream detections.
 
-    Uses upstream fallacy detections to create meaningful attacks:
-    - A fallacy undermines the argument it targets
-    - Counter-arguments attack the arguments they rebut
-    Falls back to sparse heuristic if no upstream data available.
+    - A fallacy attacks the argument it targets, resolved by identifier.
+    - Counter-arguments attack the arguments they rebut, matched by text.
+
+    #1629: the fallacy branch used to read ``target_text`` / ``argument`` /
+    ``text``. No producer writes any of those. The hierarchical fallacy phase
+    writes ``target_argument`` (an ``arg_N`` identifier) and ``shared_state``
+    entries write ``target_argument_id``. Every lookup therefore missed and
+    fell through to an enumeration-index pairing — ``fallacy_0`` -> ``arg_1``,
+    ``fallacy_1`` -> ``arg_2``, … — which spreads one attack per argument
+    regardless of what was detected. Real targeting *concentrates* (measured on
+    a real corpus: six fallacies on the first argument, six on the second),
+    so the two graphs differ in topology, not in detail. Since extensions are a
+    function of topology, every downstream reasoner (Dung, ranking, SETAF,
+    bipolar, weighted, ABA, DeLP) computed correct answers about a graph that
+    was never the corpus'. Reading the right key alone would not have fixed it:
+    the old strategy fed its value to a word-overlap match, and ``"arg_1"``
+    shares no words with argument prose, so it would have missed too.
+
+    NOTE: ``target_argument`` carries an *identifier* in the fallacy payload
+    and *free text* in ``phase_counter_output``. Same name, two meanings — do
+    not unify the two branches.
     """
-    attacks = []
+    attacks: List[List[str]] = []
+    resolved_targets = 0
+    unresolved_targets = 0
 
     if context:
         # Use fallacies to generate attacks: fallacious arg attacks its target
@@ -3081,32 +3130,27 @@ def _generate_attacks_from_args(
             if not isinstance(f, dict):
                 continue
             fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
-            # Try to match fallacy to argument by text content
-            target_text = str(
-                f.get("target_text", f.get("argument", f.get("text", "")))
-            ).lower()[:60]
-            target_arg = None
-            # Strategy 1: exact text overlap between fallacy target and argument
-            if target_text:
-                best_overlap = 0
-                for arg in arguments:
-                    overlap = len(set(target_text.split()) & set(arg.lower().split()))
-                    if overlap > best_overlap:
-                        best_overlap = overlap
-                        target_arg = arg
-                # Require at least 2 words overlap for a meaningful match
-                if best_overlap < 2:
-                    target_arg = None
-            # Strategy 2: index-based fallback
-            if target_arg is None and arguments:
-                target_idx = min(i, len(arguments) - 1)
-                target_arg = arguments[target_idx]
+            # Explicit loop rather than chained ``get`` defaults: producers emit
+            # the key with a ``None`` value when a detection has no target, and
+            # ``get(k, default)`` returns that ``None`` instead of the default.
+            raw_target = None
+            for key in ("target_argument", "target_argument_id", "target_arg_id"):
+                value = f.get(key)
+                if value:
+                    raw_target = value
+                    break
+            target_arg = _resolve_target_argument_id(raw_target, arguments)
+            if target_arg is None:
+                # Non-taxonomic detections carry no target at all. Pairing them
+                # by position is what this fix removes; skip and count instead.
+                unresolved_targets += 1
+                continue
+            # The fallacious argument attacks the argument it undermines
+            attacks.append([f"fallacy_{i}_{fallacy_label}", target_arg])
+            resolved_targets += 1
 
-            if target_arg:
-                # The fallacious argument attacks the argument it undermines
-                attacks.append([f"fallacy_{i}_{fallacy_label}", target_arg])
-
-        # Use counter-arguments to generate attacks
+        # Use counter-arguments to generate attacks. Here ``target_argument`` is
+        # free text, so a text match is the right kind of resolution (#1629).
         ca_output = context.get("phase_counter_output", {})
         if isinstance(ca_output, dict):
             cas = ca_output.get("llm_counter_arguments", [])
@@ -3123,12 +3167,21 @@ def _generate_attacks_from_args(
                             )
                             break
 
-    # Fallback: sparse heuristic if no meaningful attacks generated
-    if not attacks:
-        for i in range(len(arguments)):
-            for j in range(i + 1, len(arguments)):
-                if (i + j) % 3 == 0:
-                    attacks.append([arguments[i], arguments[j]])
+    # #1629: the ``(i + j) % 3 == 0`` fallback that stood here is REMOVED by
+    # subtraction (anti-pendulum), not replaced. It built a modulo graph over
+    # the arguments whenever nothing else fired — a shape with no relation to
+    # the corpus, handed to solvers that then reported extensions over it. An
+    # attack graph we cannot derive is empty, and an empty graph is a truthful
+    # input: every argument stands, because none was shown to be attacked.
+    if unresolved_targets:
+        logger.info(
+            "Attack graph: %d edge(s) total, %d from resolved fallacy targets; "
+            "%d detection(s) carried no resolvable target and were skipped "
+            "(no positional pairing, #1629).",
+            len(attacks),
+            resolved_targets,
+            unresolved_targets,
+        )
 
     return attacks
 

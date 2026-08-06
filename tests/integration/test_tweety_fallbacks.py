@@ -96,19 +96,96 @@ class TestExtractArgumentsFromContext:
 
 
 class TestGenerateAttacksFromArgs:
+    """#1629: targets are resolved by identifier, never by enumeration index.
+
+    ``TARGETED_ARGS`` deliberately does NOT reuse ``arg_N`` as argument *text*:
+    with ``SAMPLE_ARGS`` the resolution ``arg_1 -> arguments[0]`` is the
+    identity, which would make a wrong resolution indistinguishable from a
+    right one.
+    """
+
+    TARGETED_ARGS = ["first claim", "second claim", "third claim"]
+
+    @staticmethod
+    def _ctx(targets, key="target_argument"):
+        """Build a hierarchical-fallacy context from a list of target IDs."""
+        return {
+            "phase_hierarchical_fallacy_output": {
+                "fallacies": [
+                    {"fallacy_type": f"type_{n}", key: t} for n, t in enumerate(targets)
+                ]
+            }
+        }
+
     def test_returns_list(self):
         result = _generate_attacks_from_args(SAMPLE_ARGS)
         assert isinstance(result, list)
 
     def test_attacks_reference_valid_args(self):
-        result = _generate_attacks_from_args(SAMPLE_ARGS)
+        ctx = self._ctx(["arg_1", "arg_2", "arg_3"])
+        result = _generate_attacks_from_args(self.TARGETED_ARGS, ctx)
+        assert len(result) == 3
         for src, tgt in result:
-            assert src in SAMPLE_ARGS
-            assert tgt in SAMPLE_ARGS
+            assert tgt in self.TARGETED_ARGS
+            assert src.startswith("fallacy_")
 
     def test_empty_args_returns_empty(self):
         result = _generate_attacks_from_args([])
         assert result == []
+
+    def test_no_upstream_data_yields_no_fabricated_graph(self):
+        """The ``(i + j) % 3`` modulo graph is removed, not replaced (#1629).
+
+        A graph we cannot derive is empty; it is not a shape invented over the
+        argument list and handed to solvers as if it came from the corpus.
+        """
+        assert _generate_attacks_from_args(SAMPLE_ARGS) == []
+        assert _generate_attacks_from_args(SAMPLE_ARGS, {}) == []
+
+    def test_two_targetings_produce_two_graphs(self):
+        """The discriminating control: the output must depend on the targets.
+
+        Under the pre-#1629 index pairing both contexts yielded the very same
+        edges (fallacy 0 -> args[0], fallacy 1 -> args[1], ...), so no
+        assertion over one of them alone could detect the defect.
+        """
+        spread = _generate_attacks_from_args(
+            self.TARGETED_ARGS, self._ctx(["arg_1", "arg_2", "arg_3"])
+        )
+        concentrated = _generate_attacks_from_args(
+            self.TARGETED_ARGS, self._ctx(["arg_1", "arg_1", "arg_1"])
+        )
+        assert [t for _, t in spread] == self.TARGETED_ARGS
+        assert [t for _, t in concentrated] == [self.TARGETED_ARGS[0]] * 3
+        assert spread != concentrated
+
+    def test_target_is_not_the_enumeration_index(self):
+        """Reversed targeting must reverse the graph, not reproduce 0,1,2."""
+        result = _generate_attacks_from_args(
+            self.TARGETED_ARGS, self._ctx(["arg_3", "arg_2", "arg_1"])
+        )
+        assert [t for _, t in result] == list(reversed(self.TARGETED_ARGS))
+
+    def test_detection_without_target_is_skipped(self):
+        """Non-taxonomic detections carry no target — and get no attack.
+
+        The producer emits the key with a ``None`` value, which is why the
+        resolution cannot rely on ``dict.get(key, default)``.
+        """
+        ctx = self._ctx(["arg_2", None, "arg_3"])
+        result = _generate_attacks_from_args(self.TARGETED_ARGS, ctx)
+        assert [t for _, t in result] == ["second claim", "third claim"]
+
+    def test_out_of_range_or_malformed_target_is_skipped(self):
+        ctx = self._ctx(["arg_99", "not_an_id", "arg_0", "arg_2"])
+        result = _generate_attacks_from_args(self.TARGETED_ARGS, ctx)
+        assert [t for _, t in result] == ["second claim"]
+
+    def test_shared_state_key_convention_also_resolves(self):
+        """``shared_state`` entries name the target ``target_argument_id``."""
+        ctx = self._ctx(["arg_2"], key="target_argument_id")
+        result = _generate_attacks_from_args(self.TARGETED_ARGS, ctx)
+        assert [t for _, t in result] == ["second claim"]
 
 
 # ---------------------------------------------------------------------------
