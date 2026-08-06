@@ -33,9 +33,13 @@ Verdict band — honest adaptation of #1008 §2 to the restitution context:
 
 Privacy HARD: opaque IDs only (``arg_N``, fallacy families are taxonomy
 constants). The prompt carries the OPAQUE_ID_DIRECTIVE (FB-34). Corpus-derived
-fields (fallacy justifications, counter-content, synthesis snippets) are
-**truncated** before entering the prompt; the LLM is told to paraphrase, never
-echo verbatim — the final R6 scrub (spec §6) is the downstream guard.
+fields (fallacy justifications, counter-content) are **truncated** before
+entering the prompt; the LLM is told to paraphrase, never echo verbatim — the
+final R6 scrub (spec §6) is the downstream guard. (#1620: "synthesis snippets"
+used to be listed here and never were one — no synthesis text has ever entered
+this prompt; the ``_SYNTHESIS_CAP`` that would have capped it was declared in
+the same commit as the claim and never used. Both removed rather than
+implemented, since nothing in the prose needs them.)
 
 Testability: ``build_act3_evidence`` is deterministic (no LLM/JVM/API); the LLM
 is an injectable async callable ``Callable[[str], Awaitable[str]]`` (FB-29/38
@@ -64,7 +68,6 @@ LlmCallable = Callable[[str], Awaitable[str]]
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
 _JUSTIFICATION_CAP = 200
 _COUNTER_CAP = 200
-_SYNTHESIS_CAP = 400
 # SV (#1182): caps for governance/debate evidence (privacy + prompt budget).
 _DEBATE_CAP = 200
 _DEBATE_MAX_EXCHANGES = 4
@@ -336,7 +339,6 @@ class Act3Evidence:
     weak_points: List[StructuringWeakPoint] = field(default_factory=list)
     counter_strategies: List[CounterStrategy] = field(default_factory=list)
     verdict: Optional[VerdictBand] = None
-    narrative_synthesis_available: bool = False
     gates: Dict[str, bool] = field(default_factory=dict)
     # SV (#1182): governance verdict + debate exchanges, surfaced so the
     # conclusion can cite collective deliberation. None/empty when the phases
@@ -877,12 +879,18 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
 
     quality_strengths = _collect_quality_strengths(quality)
 
-    narrative_synthesis = getattr(state, "narrative_synthesis", None)
-    narrative_synthesis_available = bool(
-        narrative_synthesis
-        and isinstance(narrative_synthesis, str)
-        and narrative_synthesis.strip()
-    )
+    # #1620 — ``narrative_synthesis_available`` was read here and dropped. It is
+    # gone by subtraction, not relocated: measured on three real artifacts, the
+    # Acte III prose asserts *nothing* about a narrative synthesis (0 mentions
+    # in 3447 / 3742 / 3560 chars of conclusion) even where the state carries a
+    # 5053-char one, so the flag guarded no claim. The availability signal the
+    # reader does get comes from ``appendix.py`` (``synthese_narrative``), which
+    # computes it from the state directly — a working reader, not this one.
+    #
+    # Anti-pendule: do NOT reintroduce it as "evidence the prompt might use one
+    # day". A flag that changes no verdict is not a reader (#1019). If Acte III
+    # should ever *use the synthesis content*, that is a different gesture —
+    # passing the text, not a boolean — and it needs its own issue.
 
     # SV (#1182): surface governance verdict + debate exchanges (debranched
     # capabilities — same fix shape as G6 for counter-arg validity).
@@ -921,7 +929,6 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         weak_points=weak_points,
         counter_strategies=counter_strategies,
         verdict=verdict,
-        narrative_synthesis_available=narrative_synthesis_available,
         gates=gates,
         virtuous_mode=virtuous_mode,
         governance_verdict=governance_verdict,

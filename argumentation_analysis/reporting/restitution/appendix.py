@@ -239,8 +239,29 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     else:
         counts["arg_structuree"] = "indisponible"
 
+    # #1620 — two-lane resolver. The two voies file the *same* thing under two
+    # keys: the pipeline writers put the narrative synthesis in
+    # ``narrative_synthesis``, while on the conversational voie the PM is told
+    # (``pm/prompts.py`` l.95) to call ``set_final_conclusion`` with its
+    # synthèse, which lands in ``final_conclusion``. Reading only the first key
+    # reported "absente" for every conversational run that *did* synthesise —
+    # and a report that looks quieter reads as a healthier report, which biases
+    # any pipeline-vs-conversational comparison in favour of the louder voie.
+    #
+    # Anti-pendule: this resolves at the *reader*, deliberately. The two state
+    # fields keep their own histories and are NOT merged — a state migration
+    # would be a much larger gesture for the same observable fix.
+    #
+    # This resolver is only live because ``state_adapter._STATE_KEYS`` carries
+    # ``final_conclusion``. ``state`` here is the *projection*, not the state:
+    # resolving a key the projection drops is inert in production while passing
+    # any unit test built on a raw dict — which is exactly how the first cut of
+    # this fix shipped green and dead. Both hops are pinned separately in
+    # ``test_synthesis_two_lane_1620.py``.
     counts["synthese_narrative"] = (
-        "présente" if _g("narrative_synthesis") else "absente"
+        "présente"
+        if (_g("narrative_synthesis") or _g("final_conclusion"))
+        else "absente"
     )
     counts["synthese_formelle"] = (
         "présente" if _g("formal_synthesis_reports") else "absente"

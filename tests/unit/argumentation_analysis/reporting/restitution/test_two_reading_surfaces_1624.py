@@ -104,7 +104,6 @@ PROSE_BASELINE = frozenset(
         "identified_arguments",
         "identified_fallacies",
         "modal_analysis_results",
-        "narrative_synthesis",
         "propositional_analysis_results",
         "source_metadata",
         "stakes_and_stakeholders",
@@ -115,10 +114,26 @@ PROSE_BASELINE = frozenset(
 # Axes the ANNEXE attests (``state_adapter._STATE_KEYS``) that the PROSE never
 # reads — declared "disponible" in the appendix table but absent from the
 # conclusion's conducted prompt.
+#
+# ``narrative_synthesis`` joined this set in #1620. It used to sit in the
+# intersection: ``build_act3_evidence`` read it — and reduced it to a boolean
+# (``narrative_synthesis_available``) that no code ever consumed. Measured on
+# three real artifacts, the Acte III prose asserts nothing about a narrative
+# synthesis even where the state carries a 5053-char one, so the read guarded
+# no claim and was removed. The appendix still attests it, which is why the key
+# lands here rather than disappearing: it is genuinely "attested but not
+# mobilised" — the exact divergence this module exists to keep visible.
+#
+# ``final_conclusion`` joined in the same change, from the other direction: it
+# was never projected at all, so the appendix could not see the synthesis the
+# conversational voie writes. It is carried now (``_STATE_KEYS``) and the prose
+# still does not read it — annexe-only by construction, not by attrition.
 ANNEXE_ONLY = frozenset(
     {
         "aspic_results",
+        "final_conclusion",
         "formal_synthesis_reports",
+        "narrative_synthesis",
         "workflow_results",
     }
 )
