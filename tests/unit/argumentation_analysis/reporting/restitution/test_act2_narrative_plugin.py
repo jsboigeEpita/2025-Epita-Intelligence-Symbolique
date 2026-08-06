@@ -787,7 +787,11 @@ class TestVirtuousMode:
         )
         assert result.is_virtuous is True
         assert result.status == "woven"
-        assert "act2_virtuous_mode" in result.degraded
+        # The virtue is reported as a virtue, not as a degradation: #1608 made
+        # ``degraded`` a verdict (the invoker publishes ``bool(degraded)``), so
+        # a virtue filed there marked the best-case act as degraded.
+        assert "act2_virtuous_mode" not in result.degraded
+        assert bool(result.degraded) is False
 
 
 class TestTweetyInconsistanceGapRegression:

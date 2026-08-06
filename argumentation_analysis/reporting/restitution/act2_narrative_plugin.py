@@ -1315,12 +1315,11 @@ async def build_act2_narrative(
             "indisponible) — vertus tues, fail-loud."
         )
     vm = evidence.virtuous_mode
+    # Positive outcome — reported by ``is_virtuous``, never filed under
+    # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned
+    # ``degraded`` into a verdict, so a virtue left here marked the act as
+    # degraded and stripped it from ``capabilities_used``.
     is_virtuous = vm is not None and vm.is_virtuous
-    if vm is not None and vm.is_virtuous:
-        degraded["act2_virtuous_mode"] = (
-            "Mode vertueux (spec §5) — récit mené par pourquoi ça tient. "
-            + vm.reasoning
-        )
 
     return Act2Result(
         narrative=narrative,
