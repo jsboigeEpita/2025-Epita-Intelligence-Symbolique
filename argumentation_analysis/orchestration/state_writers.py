@@ -30,47 +30,123 @@ _STRUCTURED_ARG_INPUT_KEYS: Dict[str, Tuple[str, ...]] = {
     "bipolar_argumentation": ("supports",),
 }
 
-# Per-formalism reason string explaining what extraction is missing. Kept in the
-# state so a reader sees *why* the axis is absent, not just that it is.
+# Per-formalism display name (used to build the discriminated reason strings).
+_STRUCTURED_ARG_FORMALISM_NAME: Dict[str, str] = {
+    "aspic_plus_reasoning": "ASPIC+",
+    "aba_reasoning": "ABA",
+    "setaf_reasoning": "SetAF",
+    "weighted_argumentation": "Weighted AF",
+    "bipolar_argumentation": "Bipolar AF",
+}
+
+# Per-formalism reason string for the ``absent_no_translator`` fallback (#1608).
+# Reformulated to describe what was *observed* (ran on auto-shaped synthetic
+# input) rather than the #1236-era claim "no translator extracts …" — which was
+# falsified once ``structured_arg_translator`` existed and a translator could
+# raise, run empty, or skip for want of a key. The discriminated statuses
+# (``translator_failed`` / ``no_genuine_relations`` / ``translator_unconfigured``)
+# now carry the precise cause; this string only backs the rare legacy path where
+# no cause was recorded (nothing wired).
 _STRUCTURED_ARG_ABSENT_REASON: Dict[str, str] = {
     "aspic_plus_reasoning": (
-        "ASPIC+ not genuinely evaluated: no translator extracts defeasible/"
-        "strict rules + preferences from the source. Ran on auto-shaped "
-        "synthetic rules — not fabricated, but not a genuine ASPIC+ analysis "
-        "of the text."
+        "ASPIC+ ran on auto-shaped synthetic rules: no genuine defeasible/"
+        "strict rules + preferences were supplied from the source. Not "
+        "fabricated, but not a genuine ASPIC+ analysis of the text."
     ),
     "aba_reasoning": (
-        "ABA not genuinely evaluated: no translator extracts assumptions + "
-        "their contraries from the source. Ran on auto-shaped synthetic rules "
-        "without genuine contraries."
+        "ABA ran on auto-shaped synthetic rules: no genuine assumptions + "
+        "their contraries were supplied from the source."
     ),
     "setaf_reasoning": (
-        "SetAF not genuinely evaluated: no translator extracts collective "
-        "(joint) attacks from the source. Ran on auto-shaped synthetic "
-        "pairwise attacks lifted to singletons."
+        "SetAF ran on auto-shaped synthetic pairwise attacks lifted to "
+        "singletons: no genuine collective (joint) attacks were supplied "
+        "from the source."
     ),
     "weighted_argumentation": (
-        "Weighted AF not genuinely evaluated: no translator extracts attack "
-        "weights from the source. Ran on auto-shaped synthetic attacks with "
-        "neutral placeholder weights."
+        "Weighted AF ran on auto-shaped synthetic attacks with neutral "
+        "placeholder weights: no genuine attack weights were supplied from "
+        "the source."
     ),
     "bipolar_argumentation": (
-        "Bipolar AF not genuinely evaluated: no translator extracts support "
-        "relations from the source. Ran on auto-shaped synthetic attacks with "
-        "no genuine supports."
+        "Bipolar AF ran on auto-shaped synthetic attacks with no genuine "
+        "supports: no genuine support relations were supplied from the source."
     ),
 }
+
+
+def _translation_cause_key(capability: str) -> str:
+    """Context key carrying the discriminated translation cause (#1608).
+
+    The invoke callable that ran the translator writes the cause here; the
+    recorder reads it. Namespaced by capability so the five translators do not
+    overwrite each other in the shared pipeline context.
+    """
+    return f"_structured_arg_cause:{capability}"
+
+
+def _translation_error_key(capability: str) -> str:
+    """Context key carrying the exception type for a ``translator_failed`` cause."""
+    return f"_structured_arg_error:{capability}"
+
+
+def _resolve_absent_status(
+    capability: str, cause: Optional[str], error: str
+) -> tuple[str, bool, str]:
+    """Map a translation cause to ``(status, degraded, reason)`` (#1608).
+
+    Used when no genuine structured input was supplied. Anti-pendule: cause 3
+    (``no_genuine_relations`` — the translator ran and found nothing) is an
+    analytical RESULT, not a failure; it must NOT be marked ``degraded``.
+    Making it red would be the symmetrical error of the current bug.
+    """
+    formalism = _STRUCTURED_ARG_FORMALISM_NAME.get(capability, capability)
+    synthetic = "The framework ran on auto-shaped synthetic input."
+    if cause == "translator_failed":
+        return (
+            "translator_failed",
+            True,
+            f"{formalism} translator raised {error or 'an exception'} — genuine "
+            f"structured input could not be obtained. {synthetic}",
+        )
+    if cause == "no_genuine_relations":
+        return (
+            "no_genuine_relations",
+            False,
+            f"{formalism} translator ran and found no genuine structured "
+            f"relations in the source — an analytical result, not a failure. "
+            f"{synthetic}",
+        )
+    if cause == "translator_unconfigured":
+        return (
+            "translator_unconfigured",
+            True,
+            f"{formalism} translator could not run: no LLM API key configured. "
+            f"{synthetic}",
+        )
+    # No cause recorded (nothing wired / legacy path) — honest-absent #1236.
+    return (
+        "absent_no_translator",
+        True,
+        _STRUCTURED_ARG_ABSENT_REASON.get(
+            capability,
+            "No text→structured translator wired; ran on auto-shaped synthetic "
+            "input (translation-gap FP-4 #1201).",
+        ),
+    )
 
 
 def _record_structured_arg_status(
     state: Any, capability: str, output: Any, ctx: dict[str, Any]
 ) -> None:
-    """Surface the honest-absent status of a structured-arg capability (FP-17 #1236).
+    """Surface the honest status of a structured-arg capability (#1236 / #1608).
 
-    Records ``status="absent_no_translator"`` (+ ``degraded=True``) when the
-    context carried no genuine formalism-specific structured input — the
-    translation-gap reality (FP-4 #1201) — or ``status="evaluated"`` when it
-    did. Only labels what happened; never fabricates extensions (#1019).
+    Records ``status="evaluated"`` when the context carried genuine
+    formalism-specific structured input. Otherwise discriminates the cause via
+    :func:`_resolve_absent_status` — reading the cause the invoke callable wrote
+    into ``ctx`` — so the axis is labelled ``translator_failed`` /
+    ``no_genuine_relations`` / ``translator_unconfigured`` rather than the
+    #1236-era ``absent_no_translator`` catch-all that asserted a cause it had
+    not observed. Only labels what happened; never fabricates extensions (#1019).
     No-op on states that predate ``add_structured_arg_status`` (defensive).
     """
     recorder = getattr(state, "add_structured_arg_status", None)
@@ -95,18 +171,15 @@ def _record_structured_arg_status(
             "evaluated on real structured artifacts.",
             ext_count,
         )
-    else:
-        recorder(
-            capability,
-            "absent_no_translator",
-            True,
-            _STRUCTURED_ARG_ABSENT_REASON.get(
-                capability,
-                "No text→structured translator wired; ran on auto-shaped "
-                "synthetic input (translation-gap FP-4 #1201).",
-            ),
-            ext_count,
-        )
+        return
+    # No genuine input — discriminate the cause (#1608). The invoke callable
+    # that ran the translator wrote the cause into ctx. Falls back to
+    # absent_no_translator only when no cause was recorded (nothing wired /
+    # legacy paths), preserving the #1236 honest-absent label.
+    cause = ctx.get(_translation_cause_key(capability))
+    error = ctx.get(_translation_error_key(capability), "") or ""
+    status, degraded, reason = _resolve_absent_status(capability, cause, error)
+    recorder(capability, status, degraded, reason, ext_count)
 
 
 __all__ = [
@@ -1262,6 +1335,27 @@ def _write_act2_narrative_to_state(
     narrative = output.get("act2_narrative", "")
     if isinstance(narrative, str) and narrative:
         state.act2_narrative = narrative
+    # #1608 — persist the degradation motifs so they reach the state instead
+    # of dying in the return value (the acts return ``degraded`` as a dict;
+    # the invoker surfaces it as ``degraded_reasons``).
+    _persist_act_degraded_reasons(state, "act2_narrative", output)
+
+
+def _persist_act_degraded_reasons(state: Any, capability: str, output: Any) -> None:
+    """Persist an act's degradation motifs into ``restitution_acts_degraded``.
+
+    Anti-pendule (#1608): only populated when the act genuinely recorded
+    motifs (non-empty dict) — an act that succeeded is never marked degraded
+    by default. No-op on states that predate the field (defensive).
+    """
+    if not isinstance(output, dict):
+        return
+    reasons = output.get("degraded_reasons")
+    if not isinstance(reasons, dict) or not reasons:
+        return
+    rstd = getattr(state, "restitution_acts_degraded", None)
+    if isinstance(rstd, dict):
+        rstd[capability] = dict(reasons)
 
 
 def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1277,6 +1371,7 @@ def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
     narrative = output.get("act1_framing", "")
     if isinstance(narrative, str) and narrative:
         state.act1_framing = narrative
+    _persist_act_degraded_reasons(state, "act1_framing", output)  # #1608 motifs
 
 
 def _write_act3_conclusion_to_state(
@@ -1294,6 +1389,7 @@ def _write_act3_conclusion_to_state(
     narrative = output.get("act3_conclusion", "")
     if isinstance(narrative, str) and narrative:
         state.act3_conclusion = narrative
+    _persist_act_degraded_reasons(state, "act3_conclusion", output)  # #1608 motifs
 
 
 def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
