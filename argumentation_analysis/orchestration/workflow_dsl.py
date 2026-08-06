@@ -517,19 +517,24 @@ class WorkflowExecutor:
         # exhausted retry and stayed FAILED on an optional slot. The
         # consumer (CLI summary, API summary, dashboard) MUST surface
         # this — anti-theater #1019.
-        degraded_phases = sorted(
-            name for name, r in results.items() if r.degraded
+        degraded, degraded_phases, structured_degraded_caps = (
+            self._compute_workflow_degraded(results, state)
         )
-        degraded = len(degraded_phases) > 0
         slog.info(
             f"Workflow '{workflow.name}' finished: "
             f"{completed} completed, {failed} failed, {skipped} skipped, "
-            f"{len(degraded_phases)} degraded",
+            f"{len(degraded_phases)} degraded"
+            + (
+                f", {len(structured_degraded_caps)} structured-arg degraded"
+                if structured_degraded_caps
+                else ""
+            ),
             extra={
                 "workflow": workflow.name,
                 "phases_completed": completed,
                 "phases_total": len(results),
                 "phases_degraded": degraded_phases,
+                "structured_arg_degraded": structured_degraded_caps,
             },
         )
 
@@ -543,6 +548,7 @@ class WorkflowExecutor:
                         "skipped": skipped,
                         "degraded": degraded,
                         "degraded_phases": degraded_phases,
+                        "structured_arg_degraded": structured_degraded_caps,
                         "phases": {name: r.status.value for name, r in results.items()},
                     },
                 )
@@ -741,12 +747,19 @@ class WorkflowExecutor:
             # non-retryable errors (no retry attempted), retry_cfg.max_attempts
             # for retry-exhausted transient failures.
             retry_cfg = phase.retry_config
-            if retry_cfg is None or not isinstance(
-                e, retry_cfg.retryable_exceptions
-            ):
+            if retry_cfg is None or not isinstance(e, retry_cfg.retryable_exceptions):
                 attempts_used = 1
             else:
                 attempts_used = retry_cfg.max_attempts
+            # #1608 — an error must not be empty. ``str(asyncio.TimeoutError())``
+            # is ``""`` (and other bare exceptions can be too), which left the
+            # error registry with ``{"message": "", "timestamp": null}`` — an
+            # error that records nothing. ``_build_phase_error_message`` surfaces
+            # the exception type, the phase, and (for timeouts) the budget that
+            # was exceeded, so the failure is attributable rather than silent.
+            error_msg = self._build_phase_error_message(
+                e, phase_name, phase.timeout_seconds
+            )
             return (
                 phase_name,
                 PhaseResult(
@@ -754,13 +767,76 @@ class WorkflowExecutor:
                     status=PhaseStatus.FAILED,
                     capability=phase.capability,
                     component_used=provider.name,
-                    error=str(e),
+                    error=error_msg,
                     duration_seconds=duration,
                     degraded=phase.optional,
                     attempts=attempts_used,
                 ),
                 None,
             )
+
+    def _compute_workflow_degraded(
+        self,
+        results: Dict[str, PhaseResult],
+        state: Any,
+    ) -> Tuple[bool, List[str], List[str]]:
+        """Compute the workflow-level ``degraded`` flag (#1608).
+
+        Reconciles two independent degradation sources so the flag stops being
+        invariant across distinct analysis states (it stayed ``False`` on
+        corpus A/B/C in the #1608 measure):
+
+        * phase-level — optional slots that exhausted retry and stayed FAILED
+          (``PhaseResult.degraded``, set in :meth:`_execute_phase`);
+        * structured-arg — translators that raised mid-phase while the phase
+          still COMPLETED (the handler ran on auto-shaped input), recorded in
+          ``state.structured_arg_status`` with ``degraded=True``.
+
+        Anti-pendule: ``no_genuine_relations`` is an analytical RESULT and
+        carries ``degraded=False``, so a corpus genuinely lacking joint attacks
+        is NOT marked degraded here — only ``translator_failed`` /
+        ``translator_unconfigured`` / the legacy ``absent_no_translator`` flip
+        the flag. This is an honest OR over the registries, never a composite
+        that averages them.
+
+        Returns ``(degraded, degraded_phases, structured_degraded_caps)``.
+        """
+        degraded_phases = sorted(name for name, r in results.items() if r.degraded)
+        degraded = len(degraded_phases) > 0
+        structured_degraded_caps: List[str] = []
+        if state is not None:
+            sas = getattr(state, "structured_arg_status", None) or {}
+            for cap, info in sas.items():
+                if isinstance(info, dict) and info.get("degraded") is True:
+                    structured_degraded_caps.append(cap)
+            structured_degraded_caps.sort()
+            if structured_degraded_caps:
+                degraded = True
+        return degraded, degraded_phases, structured_degraded_caps
+
+    @staticmethod
+    def _build_phase_error_message(
+        exc: BaseException,
+        phase_name: str,
+        timeout_seconds: Optional[float],
+    ) -> str:
+        """Build a non-empty, descriptive phase-error message (#1608).
+
+        ``str(asyncio.TimeoutError())`` is ``""`` (and other bare exceptions can
+        be too), which left the error registry with ``{"message": "", ...}`` —
+        an error that records nothing. Surface the exception type, the phase,
+        and (for timeouts) the budget that was exceeded, so the failure is
+        attributable rather than silent.
+        """
+        msg = str(exc)
+        if msg:
+            return msg
+        if isinstance(exc, asyncio.TimeoutError) and timeout_seconds:
+            return (
+                f"{type(exc).__name__}: phase '{phase_name}' exceeded its "
+                f"{timeout_seconds}s budget"
+            )
+        return type(exc).__name__ or "UnknownError"
 
     def _store_phase_result(
         self,

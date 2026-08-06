@@ -3419,6 +3419,25 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict[str,
         return _enrich_ranking_with_justification(result, args, attacks, context)
 
 
+def _propagate_structured_arg_cause(
+    context: Dict[str, Any], capability: str, cause: str, error: str = ""
+) -> None:
+    """Write the discriminated translation cause into the pipeline context (#1608).
+
+    The recorder ``state_writers._record_structured_arg_status`` reads these
+    keys (namespaced per capability) to label the axis with its true status
+    (``translator_failed`` / ``no_genuine_relations`` / ``translator_unconfigured``)
+    instead of the #1236-era ``absent_no_translator`` catch-all.
+    """
+    from argumentation_analysis.orchestration.state_writers import (
+        _translation_cause_key,
+        _translation_error_key,
+    )
+
+    context[_translation_cause_key(capability)] = cause
+    context[_translation_error_key(capability)] = error
+
+
 async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke bipolar argumentation handler with JVM fallback."""
     args = context.get("arguments") or _extract_arguments_from_context(
@@ -3439,11 +3458,18 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 translate_to_bipolar_supports,
             )
 
-            supports = await translate_to_bipolar_supports(input_text, args)
+            outcome = await translate_to_bipolar_supports(input_text, args)
+            supports = outcome.relations
             if supports:
                 context["supports"] = supports
+            _propagate_structured_arg_cause(
+                context, "bipolar_argumentation", outcome.cause, outcome.error
+            )
         except Exception as e:
-            logger.info("Bipolar translator unavailable (%s); absent_no_translator.", e)
+            logger.warning("Bipolar translator unavailable (%s); translator_failed.", e)
+            _propagate_structured_arg_cause(
+                context, "bipolar_argumentation", "translator_failed", type(e).__name__
+            )
 
     try:
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
@@ -3485,11 +3511,18 @@ async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
                 translate_to_aba_contraries,
             )
 
-            contraries = await translate_to_aba_contraries(input_text, args)
+            outcome = await translate_to_aba_contraries(input_text, args)
+            contraries = outcome.relations
             if contraries:
                 context["contraries"] = contraries
+            _propagate_structured_arg_cause(
+                context, "aba_reasoning", outcome.cause, outcome.error
+            )
         except Exception as e:
-            logger.info("ABA translator unavailable (%s); absent_no_translator.", e)
+            logger.warning("ABA translator unavailable (%s); translator_failed.", e)
+            _propagate_structured_arg_cause(
+                context, "aba_reasoning", "translator_failed", type(e).__name__
+            )
 
     try:
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
@@ -3596,11 +3629,18 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                 translate_to_aspic_rules,
             )
 
-            derived_rules = await translate_to_aspic_rules(input_text, args)
+            outcome = await translate_to_aspic_rules(input_text, args)
+            derived_rules = outcome.relations
             if derived_rules:
                 context["defeasible_rules"] = derived_rules
+            _propagate_structured_arg_cause(
+                context, "aspic_plus_reasoning", outcome.cause, outcome.error
+            )
         except Exception as e:
-            logger.info("ASPIC+ translator unavailable (%s); absent_no_translator.", e)
+            logger.warning("ASPIC+ translator unavailable (%s); translator_failed.", e)
+            _propagate_structured_arg_cause(
+                context, "aspic_plus_reasoning", "translator_failed", type(e).__name__
+            )
 
     # Build meaningful rules from upstream data
     fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
@@ -3990,11 +4030,18 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
                 translate_to_setaf_attacks,
             )
 
-            derived_attacks = await translate_to_setaf_attacks(input_text, args)
+            outcome = await translate_to_setaf_attacks(input_text, args)
+            derived_attacks = outcome.relations
             if derived_attacks:
                 context["set_attacks"] = derived_attacks
+            _propagate_structured_arg_cause(
+                context, "setaf_reasoning", outcome.cause, outcome.error
+            )
         except Exception as e:
-            logger.info("SetAF translator unavailable (%s); absent_no_translator.", e)
+            logger.warning("SetAF translator unavailable (%s); translator_failed.", e)
+            _propagate_structured_arg_cause(
+                context, "setaf_reasoning", "translator_failed", type(e).__name__
+            )
     # SetAF attacks come as {attackers, target} dicts. Upstream may provide
     # them directly, else shape from the canonical pairwise attack graph.
     raw_attacks = context.get("set_attacks")
@@ -4040,12 +4087,19 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
                 translate_to_weighted_attacks,
             )
 
-            derived_attacks = await translate_to_weighted_attacks(input_text, args)
+            outcome = await translate_to_weighted_attacks(input_text, args)
+            derived_attacks = outcome.relations
             if derived_attacks:
                 context["weighted_attacks"] = derived_attacks
+            _propagate_structured_arg_cause(
+                context, "weighted_argumentation", outcome.cause, outcome.error
+            )
         except Exception as e:
-            logger.info(
-                "Weighted translator unavailable (%s); absent_no_translator.", e
+            logger.warning(
+                "Weighted translator unavailable (%s); translator_failed.", e
+            )
+            _propagate_structured_arg_cause(
+                context, "weighted_argumentation", "translator_failed", type(e).__name__
             )
     # Weighted attacks come as (source, target, weight) triples. Upstream may
     # provide them directly, else shape from the canonical pairwise graph with

@@ -599,9 +599,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "argument_count": len(self.identified_arguments),
             "fallacy_count": len(self.identified_fallacies),
             "belief_set_count": len(self.belief_sets),
-            "counter_argument_count": len(
-                getattr(self, "counter_arguments", [])
-            ),
+            "counter_argument_count": len(getattr(self, "counter_arguments", [])),
             "jtms_belief_count": len(getattr(self, "jtms_beliefs", {})),
             "conclusion_present": self.final_conclusion is not None,
         }
@@ -654,9 +652,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             if delta:
                 sign = "+" if delta > 0 else ""
                 parts.append(f"{key.removesuffix('_count')}{sign}{delta}")
-        if after.get("conclusion_present") and not before.get(
-            "conclusion_present"
-        ):
+        if after.get("conclusion_present") and not before.get("conclusion_present"):
             parts.append("conclusion_set")
         return ", ".join(parts) if parts else "no_growth"
 
@@ -1036,13 +1032,22 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
 
         ``status`` is one of:
 
-        - ``"absent_no_translator"`` — the capability ran on auto-shaped
-          synthetic input because no text→structured translator is wired
-          (translation-gap FP-4 #1201). Its empty/degenerate extension list is
-          **not** a genuine evaluation of the source. ``degraded`` is ``True``.
         - ``"evaluated"`` — genuine structured input (defeasible rules,
           assumptions+contraries, collective attacks, weights, supports) was
           supplied via context, so the framework reflects real structure.
+          ``degraded`` is ``False``.
+        - ``"translator_failed"`` (#1608) — the text→structured translator
+          raised; the framework fell back to auto-shaped synthetic input.
+          ``degraded`` is ``True`` (the axis could not be obtained genuinely).
+        - ``"no_genuine_relations"`` (#1608) — the translator ran and found no
+          genuine structured relations in the source. This is an analytical
+          RESULT, not a failure: the source genuinely lacks such relations.
+          ``degraded`` is ``False`` (anti-pendule: not red).
+        - ``"translator_unconfigured"`` (#1608) — the translator could not run:
+          no LLM API key configured. ``degraded`` is ``True``.
+        - ``"absent_no_translator"`` — legacy/#1236 honest-absent label for the
+          rare path where no cause was recorded (nothing wired). The capability
+          ran on auto-shaped synthetic input. ``degraded`` is ``True``.
 
         This only *labels* what happened; it never fabricates extensions
         (#1019). Keyed by ``capability`` (last write wins — one status per
