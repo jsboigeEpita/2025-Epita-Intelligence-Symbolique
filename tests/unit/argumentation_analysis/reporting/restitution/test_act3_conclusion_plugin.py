@@ -36,7 +36,6 @@ from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
 
-
 # --- state stubs -------------------------------------------------------------
 
 
@@ -283,7 +282,9 @@ class TestBuildEvidence:
     def test_governance_trivial_winner_is_none_sv(self):
         """SV fail-loud: a placeholder 'N/A' winner carries no verdict (#1019)."""
         state = _state(
-            governance_decisions=[{"method": "majority", "winner": "N/A", "scores": {}}],
+            governance_decisions=[
+                {"method": "majority", "winner": "N/A", "scores": {}}
+            ],
             debate_transcripts=[{"exchanges": [{"point": "", "rebuttal": ""}]}],
         )
         ev = build_act3_evidence(state)
@@ -393,10 +394,18 @@ class TestBuildEvidence:
             },
             argument_quality_scores={"arg_1": {"scores_par_vertu": {"clarte": 5.0}}},
             counter_arguments=[
-                {"target_arg_id": "arg_1", "strategy": "contre-exemple", "counter_content": "réponse"}
+                {
+                    "target_arg_id": "arg_1",
+                    "strategy": "contre-exemple",
+                    "counter_content": "réponse",
+                }
             ],
             dung_frameworks={
-                "fw_1": {"arguments": ["arg_1"], "extensions": {}, "semantics": "grounded"}
+                "fw_1": {
+                    "arguments": ["arg_1"],
+                    "extensions": {},
+                    "semantics": "grounded",
+                }
             },
         )
         ev = build_act3_evidence(state)
@@ -443,9 +452,7 @@ class TestBuildEvidence:
             _pl_verified,
         )
 
-        state = _state(
-            propositional_analysis_results=[{"satisfiable": True}]
-        )
+        state = _state(propositional_analysis_results=[{"satisfiable": True}])
         assert _pl_verified(state) == 1
         ev = build_act3_evidence(state)
         assert "formal_pl" in ev.verdict.nontrivial_axes
@@ -468,9 +475,7 @@ class TestBuildEvidence:
             _pl_verified,
         )
 
-        state = _state(
-            propositional_analysis_results=[{"satisfiable": None}]
-        )
+        state = _state(propositional_analysis_results=[{"satisfiable": None}])
         assert _pl_verified(state) == 0
 
 
@@ -493,7 +498,9 @@ class TestPrivacy:
         assert long_just not in prompt
         assert "[…]" in prompt
 
-    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    @pytest.mark.parametrize(
+        "deanonymized,expect_opaque", [(True, False), (False, True)]
+    )
     def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
         # Epic #1258 / Track 1 #1259 — opaque-ID directive present only when
         # NOT deanonymized; weaving rule + fail-loud always present.
@@ -662,7 +669,10 @@ class TestConsumedByRenderer:
         # The woven act3 conclusion is rendered into the body verbatim.
         assert _WOVEN_CONCLUSION.splitlines()[0] in report.markdown
         # act1/act2 are reported as missing (fail-loud), not silently dropped.
-        assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+        assert (
+            "indisponible" in report.markdown.lower()
+            or "acte" in report.markdown.lower()
+        )
 
 
 # ============================================================================
@@ -745,3 +755,179 @@ class TestVirtuousMode:
         prompt = build_act3_prompt(ev)
         assert "fabrique" in prompt.lower() or "ne fabrique" in prompt.lower()
         assert ev.weak_points == []
+
+
+# --- #1605: the conclusion must carry what the run failed to evaluate --------
+
+
+def _ledger(*capabilities: str) -> dict:
+    """A ``structured_arg_status`` ledger marking ``capabilities`` degraded.
+
+    Mirrors the shape written by ``state_writers._record_structured_arg_status``.
+    """
+    return {
+        cap: {
+            "capability": cap,
+            "status": "absent_no_translator",
+            "degraded": True,
+            "reason": f"{cap} not genuinely evaluated: no translator wired.",
+            "extension_count": 1,
+        }
+        for cap in capabilities
+    }
+
+
+_SILENT_CONCLUSION = (
+    "### Ce que le discours dit vraiment\n\n"
+    "Le locuteur défend sa position en disqualifiant son contradicteur.\n\n"
+    "### Ce qui tient et ce qui ne tient pas\n\n"
+    "L'analyse formelle confirme la cohérence d'une partie du raisonnement.\n\n"
+    "### Comment se faire son avis\n\n"
+    "Recevoir avec prudence l'attaque personnelle, retenir l'argument causal."
+)
+
+
+class TestAbsentDimensionsCollected:
+    """``structured_arg_status`` reaches the evidence (it reached nothing before)."""
+
+    def test_no_ledger_yields_no_absence(self):
+        ev = build_act3_evidence(_rich_state())
+        assert ev.absent_dimensions == []
+
+    def test_evaluated_capability_is_not_an_absence(self):
+        state = _rich_state()
+        state.structured_arg_status = {
+            "setaf_reasoning": {
+                "capability": "setaf_reasoning",
+                "status": "evaluated",
+                "degraded": False,
+                "reason": "Genuine structured input supplied via context.",
+                "extension_count": 3,
+            }
+        }
+        ev = build_act3_evidence(state)
+        assert ev.absent_dimensions == []
+
+    def test_degraded_capabilities_are_collected(self):
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aspic_plus_reasoning", "setaf_reasoning")
+        ev = build_act3_evidence(state)
+        assert {d.capability for d in ev.absent_dimensions} == {
+            "aspic_plus_reasoning",
+            "setaf_reasoning",
+        }
+
+    def test_label_is_reader_facing_not_snake_case(self):
+        # The prose forbids raw identifiers; a capability key must never reach
+        # the narrative as-is.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("weighted_argumentation")
+        ev = build_act3_evidence(state)
+        (dim,) = ev.absent_dimensions
+        assert "_" not in dim.label
+        assert dim.label != dim.capability
+
+    def test_unknown_capability_is_still_surfaced(self):
+        # An absence we have no French label for must still be said, not dropped.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("some_future_formalism")
+        ev = build_act3_evidence(state)
+        assert len(ev.absent_dimensions) == 1
+        assert "_" not in ev.absent_dimensions[0].label
+
+
+class TestAbsencePromptBlock:
+    """The prompt states the absence in BOTH directions (present / none)."""
+
+    def test_block_lists_the_lost_axes(self):
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aba_reasoning")
+        prompt = build_act3_prompt(build_act3_evidence(state))
+        assert "[DIMENSIONS NON ÉVALUÉES" in prompt
+        assert "hypothèses et contraires" in prompt
+
+    def test_block_says_explicitly_when_nothing_was_lost(self):
+        # An absent section would be ambiguous; the healthy run says so.
+        prompt = build_act3_prompt(build_act3_evidence(_rich_state()))
+        assert "aucune dimension perdue" in prompt
+
+
+class TestConclusionCarriesTheAbsence:
+    """The guarantee is deterministic — it does not depend on the LLM complying."""
+
+    def _run(self, state, completion):
+        return asyncio.get_event_loop().run_until_complete(
+            build_act3_conclusion(state, llm_callable=_stub_llm(completion))  # type: ignore[arg-type]
+        )
+
+    def test_silent_prose_gets_the_scope_note_appended(self):
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aspic_plus_reasoning")
+        result = self._run(state, _SILENT_CONCLUSION)
+        assert "Portée de cette analyse" in result.narrative
+        assert "act3_scope_note_appended" in result.degraded
+
+    def test_compliant_prose_is_not_duplicated(self):
+        # The detector must be able to return True — otherwise the append is
+        # unconditional and the check measures nothing.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("aspic_plus_reasoning")
+        compliant = _SILENT_CONCLUSION + (
+            "\n\nL'examen du raisonnement défaisable n'a pas abouti sur ce texte."
+        )
+        result = self._run(state, compliant)
+        assert "Portée de cette analyse" not in result.narrative
+        assert "act3_scope_note_appended" not in result.degraded
+        assert "act3_absent_dimensions" in result.degraded
+
+    def test_generic_hedge_does_not_count_as_naming_the_absence(self):
+        # "certaines analyses n'ont pas abouti" leaves the reader unable to know
+        # WHICH angle is missing — the note must still be appended.
+        state = _rich_state()
+        state.structured_arg_status = _ledger("setaf_reasoning")
+        hedged = _SILENT_CONCLUSION + (
+            "\n\nCertaines analyses n'ont pas abouti sur ce texte."
+        )
+        result = self._run(state, hedged)
+        assert "Portée de cette analyse" in result.narrative
+
+    def test_healthy_run_gets_no_scope_note(self):
+        result = self._run(_rich_state(), _SILENT_CONCLUSION)
+        assert "Portée de cette analyse" not in result.narrative
+        assert result.degraded.get("act3_absent_dimensions") is None
+
+    def test_conclusion_discriminates_three_run_states(self):
+        """The falsifiable control: 0 / 2 / 4 lost axes → three distinct outputs.
+
+        Measured on three real corpora (#1605): before this wiring, the three
+        conclusions were 3447 / 3742 / 3560 chars and none mentioned anything —
+        a reader could not tell the amputated run from the healthy one.
+        """
+        healthy = _rich_state()
+        two_lost = _rich_state()
+        two_lost.structured_arg_status = _ledger(
+            "setaf_reasoning", "weighted_argumentation"
+        )
+        four_lost = _rich_state()
+        four_lost.structured_arg_status = _ledger(
+            "setaf_reasoning",
+            "weighted_argumentation",
+            "aba_reasoning",
+            "aspic_plus_reasoning",
+        )
+
+        counts = [
+            len(build_act3_evidence(s).absent_dimensions)
+            for s in (healthy, two_lost, four_lost)
+        ]
+        assert counts == [0, 2, 4]
+
+        narratives = [
+            self._run(s, _SILENT_CONCLUSION).narrative
+            for s in (healthy, two_lost, four_lost)
+        ]
+        # Three genuinely different run states must yield three different texts.
+        assert len(set(narratives)) == 3
+        assert "Portée de cette analyse" not in narratives[0]
+        assert "attaques collectives" in narratives[1]
+        assert "hypothèses et contraires" in narratives[2]

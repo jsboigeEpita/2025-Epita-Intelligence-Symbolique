@@ -49,7 +49,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -72,6 +72,24 @@ _DEBATE_MAX_EXCHANGES = 4
 # not all; each is truncated (privacy HARD + prompt budget).
 _CLAIM_EXCERPT_CAP = 240
 _MAX_CLAIM_EXCERPTS = 5
+# #1605 — the honest-absence ledger entering the prompt. The reason strings are
+# code-authored (no corpus content), but they are capped like everything else so
+# a future longer wording cannot silently eat the prompt budget.
+_ABSENCE_REASON_CAP = 300
+
+# #1605 — reader-facing French names for the structured-argumentation axes. The
+# prose forbids raw snake_case identifiers (they are opaque to the non-technical
+# reader this narrative addresses), so a capability key never reaches the
+# narrative as-is. A capability absent from this map degrades to its
+# underscore-stripped key rather than being dropped: an unnamed absence must
+# still be said.
+_ABSENT_DIMENSION_LABELS: Dict[str, str] = {
+    "aspic_plus_reasoning": "l'argumentation défaisable (règles strictes et révisables)",
+    "aba_reasoning": "l'argumentation par hypothèses et contraires",
+    "setaf_reasoning": "les attaques collectives (plusieurs arguments attaquant ensemble)",
+    "weighted_argumentation": "la force pondérée des attaques",
+    "bipolar_argumentation": "les relations de soutien entre arguments",
+}
 
 # Verdict bands (adapted from #1008 §2.1 to the restitution coverage model).
 _BAND_EXCEEDED = "EXCEEDED"
@@ -164,6 +182,25 @@ class QualityStrength:
 
 
 @dataclass
+class AbsentDimension:
+    """An analytical dimension the run did NOT genuinely evaluate (#1605).
+
+    Built from ``state.structured_arg_status`` — the honest-absence ledger that
+    #1236 populates and that, until now, no restitution module read. A run may
+    complete all its phases and still have lost an axis (the translator raised,
+    or found nothing genuine); the conclusion must be able to say so.
+
+    ``label`` is the reader-facing French name: the prose forbids raw snake_case
+    identifiers, so the capability key never reaches the narrative as-is.
+    """
+
+    capability: str
+    label: str
+    status: str
+    reason: str
+
+
+@dataclass
 class VerdictBand:
     """The computed verdict band + the honest coverage that earned it.
 
@@ -213,6 +250,11 @@ class Act3Evidence:
     # Reader-oriented conclusion needs the real claim excerpts to let a reader
     # re-link the verdict to the discourse. Privacy: truncated via _truncate.
     claim_excerpts: List[str] = field(default_factory=list)
+    # #1605 — dimensions the run did NOT genuinely evaluate, read from
+    # ``state.structured_arg_status``. Empty on a healthy run. Non-empty here is
+    # not a defect of the pipeline: it is the one thing the conclusion was
+    # structurally unable to say before this field existed.
+    absent_dimensions: List[AbsentDimension] = field(default_factory=list)
 
 
 @dataclass
@@ -287,9 +329,7 @@ def _pl_verified(state: Any) -> int:
     pl = getattr(state, "propositional_analysis_results", None)
     if not isinstance(pl, list):
         return 0
-    return sum(
-        1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is not None
-    )
+    return sum(1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is not None)
 
 
 def _fol_inconsistent(state: Any) -> int:
@@ -297,11 +337,7 @@ def _fol_inconsistent(state: Any) -> int:
     fol = getattr(state, "fol_analysis_results", None)
     if not isinstance(fol, list):
         return 0
-    return sum(
-        1
-        for r in fol
-        if isinstance(r, dict) and r.get("consistent") is False
-    )
+    return sum(1 for r in fol if isinstance(r, dict) and r.get("consistent") is False)
 
 
 def _fol_verified(state: Any) -> int:
@@ -482,6 +518,38 @@ def _collect_governance(state: Any) -> Optional[GovernanceVerdict]:
     return chosen
 
 
+def _collect_absent_dimensions(state: Any) -> List[AbsentDimension]:
+    """Collect the dimensions the run did not genuinely evaluate (#1605).
+
+    Reads ``state.structured_arg_status``, the honest-absence ledger written by
+    ``state_writers._record_structured_arg_status``. Measured on three real
+    corpora: A lost 4 axes of 5, B lost none, C lost 2 — and the conclusion read
+    identically in all three, because nothing here reached the restitution.
+
+    Only genuinely-degraded entries are surfaced. An ``evaluated`` capability is
+    not an absence, and an axis that simply found nothing to report is NOT a
+    degradation (anti-pendule: an honest absence correctly labelled is a success
+    of the matrix, not a failure of the pipeline).
+    """
+    ledger = getattr(state, "structured_arg_status", None) or {}
+    if not isinstance(ledger, dict):
+        return []
+    out: List[AbsentDimension] = []
+    for capability, info in ledger.items():
+        if not isinstance(info, dict) or not info.get("degraded"):
+            continue
+        cap = str(capability)
+        out.append(
+            AbsentDimension(
+                capability=cap,
+                label=_ABSENT_DIMENSION_LABELS.get(cap, cap.replace("_", " ")),
+                status=str(info.get("status", "")).strip(),
+                reason=_truncate(info.get("reason", ""), _ABSENCE_REASON_CAP),
+            )
+        )
+    return sorted(out, key=lambda d: d.label)
+
+
 def _collect_debate(state: Any) -> List[DebateExchange]:
     """Collect adversarial-debate exchanges (SV #1182). Gap β G8: can be sparse.
 
@@ -507,7 +575,11 @@ def _collect_debate(state: Any) -> List[DebateExchange]:
                 continue
             # G8 (#1184): carry scheme grounding (None when no match — honest).
             scheme_raw = ex.get("scheme")
-            scheme = str(scheme_raw).strip() if isinstance(scheme_raw, str) and scheme_raw.strip() else None
+            scheme = (
+                str(scheme_raw).strip()
+                if isinstance(scheme_raw, str) and scheme_raw.strip()
+                else None
+            )
             cq_raw = ex.get("critical_question")
             critical_question = (
                 str(cq_raw).strip()
@@ -595,9 +667,17 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         counters = []
 
     args_total = len(args)
-    fallacies_total = sum(1 for _f, d in fallacies.items() if isinstance(d, dict) and (d.get("target_argument_id") or ""))
+    fallacies_total = sum(
+        1
+        for _f, d in fallacies.items()
+        if isinstance(d, dict) and (d.get("target_argument_id") or "")
+    )
     quality_axis_available = bool(quality)
-    counters_total = sum(1 for c in counters if isinstance(c, dict) and (c.get("target_arg_id") or c.get("counter_content")))
+    counters_total = sum(
+        1
+        for c in counters
+        if isinstance(c, dict) and (c.get("target_arg_id") or c.get("counter_content"))
+    )
     pl_inc = _pl_inconsistent(state)
     fol_inc = _fol_inconsistent(state)
     # D1c (#1167): a verified-consistent theory is a real formal result too —
@@ -656,7 +736,9 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
 
     narrative_synthesis = getattr(state, "narrative_synthesis", None)
     narrative_synthesis_available = bool(
-        narrative_synthesis and isinstance(narrative_synthesis, str) and narrative_synthesis.strip()
+        narrative_synthesis
+        and isinstance(narrative_synthesis, str)
+        and narrative_synthesis.strip()
     )
 
     # SV (#1182): surface governance verdict + debate exchanges (debranched
@@ -703,6 +785,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
+        absent_dimensions=_collect_absent_dimensions(state),
     )
 
 
@@ -866,7 +949,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
     target_lines = (
         "\n".join(
             f"  - {wp.label} sur {wp.target_arg_id} (ancre : {wp.source})"
-            for wp in evidence.weak_points if wp.source in ("fallacy", "pl", "fol", "dung")
+            for wp in evidence.weak_points
+            if wp.source in ("fallacy", "pl", "fol", "dung")
         )
         or "  (aucun point faible structurel localisé)"
     )
@@ -921,6 +1005,22 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         else "  (aucune délibération governance/débat non-triviale — ne la fabrique pas)"
     )
 
+    # #1605 — what the run did NOT genuinely evaluate. Measured on three real
+    # corpora: the conclusion read the same whether 0, 2 or 4 axes of 5 had been
+    # lost, because this ledger reached no restitution module. The block is
+    # rendered in both states (present / empty) so the LLM sees an explicit
+    # "nothing was lost" rather than the ambiguity of a missing section.
+    if evidence.absent_dimensions:
+        absence_block = "\n".join(
+            f"  - {d.label} : NON ÉVALUÉE ({d.status}). {d.reason}"
+            for d in evidence.absent_dimensions
+        )
+    else:
+        absence_block = (
+            "  (aucune dimension perdue — toutes les analyses structurées ont "
+            "abouti sur ce corpus)"
+        )
+
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
     return (
@@ -952,6 +1052,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[CONTRE-POINTS — ce qui affaiblit les revendications]\n{counters_lines}\n\n"
         f"[POINTS DE PRUDENCE — ancrages structurels]\n{target_lines}\n\n"
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
+        f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         f"{consigne_virtue}"
@@ -978,7 +1079,87 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  déanonymise aucune source.\n"
         "- La conclusion doit VARIER selon le contenu réel ci-dessus : pas de\n"
         "  prose générique recyclable.\n"
+        "- Si le bloc DIMENSIONS NON ÉVALUÉES en liste, DIS-LE au lecteur dans le\n"
+        "  troisième battement, en une phrase et en français courant : quel angle\n"
+        "  d'analyse n'a pas abouti sur ce texte, et donc ce que ce verdict ne\n"
+        "  couvre pas. Le lecteur doit pouvoir situer la portée de ce qu'il lit.\n"
+        "  N'en fais ni un titre ni un paragraphe : une absence dite est une\n"
+        "  précision honnête, pas un aveu de faiblesse — et l'analyse conduite\n"
+        "  garde toute sa valeur. Si le bloc dit qu'aucune dimension n'a été\n"
+        "  perdue, n'invente aucune réserve.\n"
         "- Rédige en français, markdown léger. 300-600 mots selon la richesse.\n"
+    )
+
+
+# --- #1605: the scope limitation the narrative must carry --------------------
+
+# Distinctive French words tying a prose sentence to a specific lost axis. A
+# generic hedge ("certaines analyses n'ont pas abouti") must NOT count as having
+# named the absence — the reader has to know WHICH angle is missing.
+_ABSENCE_KEYWORDS: Dict[str, Tuple[str, ...]] = {
+    "aspic_plus_reasoning": ("défaisable", "revisable", "révisable", "règles strictes"),
+    "aba_reasoning": ("hypothès", "contraire"),
+    "setaf_reasoning": ("collectiv", "conjoint", "ensemble"),
+    "weighted_argumentation": ("pondér", "poids", "force des attaques"),
+    "bipolar_argumentation": ("soutien", "appui mutuel"),
+}
+
+# Phrases that mark a scope limitation being stated. Presence is necessary but
+# NOT sufficient: it must co-occur with a keyword of an actually-lost axis.
+_SCOPE_LIMIT_MARKERS: Tuple[str, ...] = (
+    "n'a pas abouti",
+    "n'a pas pu",
+    "n'a pas permis",
+    "non évalué",
+    "pas été évalué",
+    "pas été conduite",
+    "pas été menée",
+    "ne couvre pas",
+    "hors de portée",
+    "faute de",
+)
+
+
+def _narrative_states_scope_limit(
+    narrative: str, absent: List[AbsentDimension]
+) -> bool:
+    """True only when the narrative visibly ties a limitation to a lost axis.
+
+    Deliberately strict, and biased toward returning ``False``: a false negative
+    costs a redundant sentence, a false positive costs exactly the defect this
+    guards against — a conclusion that reads identically whether the run lost 0
+    or 4 analytical axes (measured on three real corpora, #1605).
+    """
+    low = narrative.lower()
+    if not any(m in low for m in _SCOPE_LIMIT_MARKERS):
+        return False
+    for dim in absent:
+        if any(w in low for w in _ABSENCE_KEYWORDS.get(dim.capability, ())):
+            return True
+    return False
+
+
+def _scope_note(absent: List[AbsentDimension]) -> str:
+    """The deterministic scope paragraph appended when the LLM stayed silent.
+
+    Not a fallback template for the conclusion (#1108 forbids that): the
+    conclusion itself is LLM-conducted or absent. This is the one factual
+    sentence the run *knows* and the reader cannot infer — appended, never
+    substituted.
+    """
+    labels = [d.label for d in absent]
+    if len(labels) == 1:
+        listing = labels[0]
+        opening = "Un angle d'analyse n'a pas abouti sur ce texte"
+        coverage = "cette dimension"
+    else:
+        listing = ", ".join(labels[:-1]) + f" et {labels[-1]}"
+        opening = "Plusieurs angles d'analyse n'ont pas abouti sur ce texte"
+        coverage = "ces dimensions"
+    return (
+        "### Portée de cette analyse\n\n"
+        f"{opening} : {listing}. Ce verdict ne couvre donc pas {coverage} — ce "
+        "qui précède garde sa valeur sur les angles effectivement conduits."
     )
 
 
@@ -1082,10 +1263,30 @@ async def build_act3_conclusion(
             },
         )
 
+    # #1605 — the conclusion must carry what the run failed to evaluate. The
+    # ledger is recorded unconditionally (it is a fact about the run), and the
+    # scope paragraph is appended when the woven prose did not tie a limitation
+    # to a lost axis. Deterministic on purpose: the guarantee cannot depend on
+    # the LLM having complied with the prompt directive.
+    degraded: Dict[str, str] = {}
+    if evidence.absent_dimensions:
+        labels = ", ".join(d.label for d in evidence.absent_dimensions)
+        degraded["act3_absent_dimensions"] = (
+            f"{len(evidence.absent_dimensions)} dimension(s) non évaluée(s) sur "
+            f"ce corpus : {labels}."
+        )
+        if not _narrative_states_scope_limit(narrative, evidence.absent_dimensions):
+            narrative = (
+                narrative.rstrip() + "\n\n" + _scope_note(evidence.absent_dimensions)
+            )
+            degraded["act3_scope_note_appended"] = (
+                "La prose conduite ne rattachait aucune limitation aux axes "
+                "perdus — paragraphe de portée ajouté de façon déterministe."
+            )
+
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)
-    degraded: Dict[str, str] = {}
     if verdict.band != "PASS":
         degraded["act3_conclusion_gate"] = (
             f"Self-check §4 = {verdict.band}: " + "; ".join(verdict.reasons[:3])
