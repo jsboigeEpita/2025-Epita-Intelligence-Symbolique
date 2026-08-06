@@ -153,10 +153,17 @@ class TestCassetteReplayHitsCache:
         monkeypatch.setenv("LLM_CACHE_MODE", "replay")
         monkeypatch.setenv("LLM_CACHE_DIR", str(replay_db))
 
-        # Reload llm_cache + llm_service so the env vars take effect.
-        import importlib
+        # CACHE_DIR is computed at llm_cache import time (line 29: `CACHE_DIR =
+        # Path(os.getenv("LLM_CACHE_DIR", ".cache/llm_responses"))`) and used as
+        # the fallback by CachedChatCompletion.__init__ — it does NOT re-read
+        # the env var. When llm_cache is imported for the FIRST time during a
+        # prior test (no env var set), CACHE_DIR is frozen to the default and
+        # later monkeypatch.setenv has no effect on the wrap's cache_dir.
+        # Patch the module attribute too so the CachedChatCompletion wrap opens
+        # the populated replay_db, not an empty default.
         import argumentation_analysis.services.llm_cache as llm_cache_mod
-        importlib.reload(llm_cache_mod)
+        monkeypatch.setattr(llm_cache_mod, "CACHE_DIR", replay_db)
+        llm_cache_mod.reset_raw_cache()
 
         assert llm_cache_mod.get_cache_mode() == "replay"
         llm_cache_mod.reset_cache_stats()
