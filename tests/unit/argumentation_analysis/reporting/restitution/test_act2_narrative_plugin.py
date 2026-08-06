@@ -787,7 +787,11 @@ class TestVirtuousMode:
         )
         assert result.is_virtuous is True
         assert result.status == "woven"
-        assert "act2_virtuous_mode" in result.degraded
+        # The virtue is reported as a virtue, not as a degradation: #1608 made
+        # ``degraded`` a verdict (the invoker publishes ``bool(degraded)``), so
+        # a virtue filed there marked the best-case act as degraded.
+        assert "act2_virtuous_mode" not in result.degraded
+        assert bool(result.degraded) is False
 
 
 class TestTweetyInconsistanceGapRegression:
@@ -1027,3 +1031,106 @@ class TestAtt3RestitutionPolish1421:
         # The honest framing is preserved.
         assert "oracle externe" in dung.detail.lower()
 
+
+def _state_with_unattributed(n_unattributed: int) -> SimpleNamespace:
+    """One attributed fallacy, plus ``n_unattributed`` with no resolvable target.
+
+    The attributed one is held constant so the ONLY difference between two
+    states built here is the number of unattributed detections.
+    """
+    fallacies = {
+        "fl_att": {
+            "target_argument_id": "arg_1",
+            "family": "ad hominem",
+            "type": "ad hominem",
+            "justification": "attaque la personne",
+        }
+    }
+    for i in range(n_unattributed):
+        fallacies[f"fl_orphan_{i}"] = {
+            "target_argument_id": "",
+            "family": "fuite",
+            "type": "fuite en avant",
+            "justification": "sans cible résolvable",
+        }
+    return _state(
+        identified_arguments={"arg_1": "Claim."},
+        identified_fallacies=fallacies,
+    )
+
+
+class TestUnattributedFallaciesReachTheReader:
+    """#1621 — the field added to fix #1019 was itself an instance of it.
+
+    ``unattributed_fallacies`` was computed, stored, and never read. Its comment
+    promised the report would surface these detections as "non rattaché(s) à un
+    argument identifié"; that string existed only in the comment that promised
+    it.
+
+    These tests pin the *difference* rather than the computation. The pre-#1621
+    test (``test_note_a_unattributed_fallacies_traced``) asserts
+    ``ev.unattributed_fallacies == 1`` — true both before and after the defect
+    was introduced, which is exactly why it survived. An assertion on the
+    evidence object cannot see whether anything downstream consumes it.
+    """
+
+    def test_the_count_reaches_the_prompt(self):
+        ev = build_act2_evidence(_state_with_unattributed(2))
+        prompt = build_act2_prompt(ev)
+        assert "NON RATTACHÉES" in prompt
+        assert "2 sophisme(s)" in prompt
+        # The honest wording the comment promised, now actually emitted.
+        assert "non rattaché(s) à un argument identifié" in prompt
+
+    def test_silent_when_every_fallacy_is_attributed(self):
+        """Anti-pendule: absence of unattributed detections is not a gap to fill.
+
+        A systematic mention would be a false alarm on every clean run — the
+        pendulum swing (replacing a missing line with an always-present one).
+        """
+        ev = build_act2_evidence(_state_with_unattributed(0))
+        assert ev.unattributed_fallacies == 0
+        prompt = build_act2_prompt(ev)
+        assert "NON RATTACHÉES" not in prompt
+        assert "non rattaché" not in prompt
+
+    def test_prompts_differ_on_one_unattributed_detection(self):
+        """THE item of #1621: the same state ± one orphan fallacy ⇒ two prompts.
+
+        This is the property the wiring exists for. It fails if the count is
+        computed but not consumed — no matter how correct the computation is.
+        """
+        p0 = build_act2_prompt(build_act2_evidence(_state_with_unattributed(0)))
+        p1 = build_act2_prompt(build_act2_evidence(_state_with_unattributed(1)))
+        assert p0 != p1
+        # Guard against a vacuous pass: the difference must be the orphan line,
+        # not incidental noise elsewhere in the prompt.
+        assert "NON RATTACHÉES" in p1 and "NON RATTACHÉES" not in p0
+
+    def test_the_movement_enumeration_cannot_carry_them(self):
+        """Why the line is not redundant with the movements block.
+
+        The orphan is excluded from every movement by construction (the
+        ``continue`` fires before the insertion into ``fallacy_by_arg``) AND
+        excluded from ``fallacies_total`` (incremented after it). If a later
+        change ever attached orphans to an argument by heuristic — which G4 and
+        #1019 forbid, since no anchor exists — this test fails and says so.
+        """
+        ev = build_act2_evidence(_state_with_unattributed(3))
+        assert ev.unattributed_fallacies == 3
+        assert ev.fallacies_total == 1  # the attributed one only
+        enumerated = [
+            fl.type for mvt in ev.movements for a in mvt.arguments for fl in a.fallacies
+        ]
+        assert "fuite en avant" not in enumerated
+        assert enumerated == ["ad hominem"]
+
+    def test_count_is_not_folded_into_fallacies_total(self):
+        """``fallacies_total`` means "attributed" and is read as such elsewhere.
+
+        Folding the orphans in would put two meanings behind one key — the
+        defect #1615/#1616 just cost us on the act III side.
+        """
+        ev = build_act2_evidence(_state_with_unattributed(5))
+        assert ev.fallacies_total == 1
+        assert ev.unattributed_fallacies == 5

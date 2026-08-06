@@ -609,12 +609,14 @@ async def build_act1_framing(
             "l'Acte II sans filet d'attente."
         )
     vm = evidence.virtuous_mode
+    # The virtuous shift (spec §5) is a POSITIVE outcome and is reported by
+    # ``is_virtuous`` below — it is deliberately NOT filed under ``degraded``.
+    # ``degraded`` used to double as a notes bag, which was harmless while
+    # nobody read it; #1608 promoted it to a verdict (the invoker publishes
+    # ``bool(degraded)`` and the collector strips the capability out of
+    # ``capabilities_used``). A virtue left in here made the BEST-case act
+    # report as degraded.
     is_virtuous = vm is not None and vm.is_virtuous
-    if vm is not None and vm.is_virtuous:
-        degraded["act1_virtuous_mode"] = (
-            "Mode vertueux (spec §5) — spectre lu comme anticipation qui ne "
-            "dérape pas. " + vm.reasoning
-        )
 
     return Act1Result(
         narrative=narrative,

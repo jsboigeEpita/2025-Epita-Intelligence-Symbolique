@@ -20,11 +20,16 @@ Relations returned by the LLM are **validated against the real argument
 inventory**. The arguments are handed to the LLM as an enumerated list
 (``arg1``..``argN``) and it must cite relations *by id*. Any relation that
 references an id not in the inventory, or is otherwise malformed, is dropped.
-If after validation nothing remains, the formalism stays
-``absent_no_translator`` — an honest absence, never a fabricated evaluation
-("soustraire le gap, pas contourner le garde"). The honest-absent gate in
-``_record_structured_arg_status`` is never modified: this module only feeds it
-genuine input.
+If after validation nothing remains, the translator returns a
+``TranslationResult`` whose ``cause`` discriminates *why* (the LLM ran and
+found no genuine relations · no API key configured · the call raised) — never a
+fabricated evaluation ("soustraire le gap, pas contourner le garde"). The
+caller propagates ``cause`` into the context so
+``_record_structured_arg_status`` labels the axis with its true status
+(``no_genuine_relations`` / ``translator_unconfigured`` / ``translator_failed``)
+instead of the #1236-era ``absent_no_translator`` catch-all (#1608). The
+honest-absent gate itself is never modified: this module only feeds it genuine
+input + a discriminated cause.
 
 Privacy HARD
 ------------
@@ -36,9 +41,49 @@ gitignored state artifacts.
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
+
+
+class TranslatorUnconfigured(RuntimeError):
+    """No LLM API key configured (#1608).
+
+    Distinct from a runtime failure: the translator could not even attempt
+    the work. Raised inside ``_llm_extract_relations`` and caught by each
+    translator, which labels the axis ``translator_unconfigured`` rather than
+    collapsing onto ``absent_no_translator``.
+    """
+
+
+# Discriminated causes for a structured-arg translation (#1608). The four
+# values map 1:1 to the four statuses the recorder emits — a translator must
+# never silently return an empty result without one of them.
+CAUSE_EVALUATED = "evaluated"
+CAUSE_TRANSLATOR_FAILED = "translator_failed"
+CAUSE_NO_GENUINE_RELATIONS = "no_genuine_relations"
+CAUSE_TRANSLATOR_UNCONFIGURED = "translator_unconfigured"
+
+
+@dataclass
+class TranslationResult:
+    """Outcome of a structured-arg translation, carrying the discriminated cause.
+
+    Replaces the bare ``[]`` / ``{}`` return that collapsed four distinct
+    causes (translator raised · translator ran and found nothing · no API key
+    · empty inventory) onto a single ``absent_no_translator`` label. The
+    caller propagates ``cause`` into the pipeline context so
+    :func:`state_writers._record_structured_arg_status` can label the axis
+    honestly — *fail loud, not fail hard* (#1597): the run still completes,
+    but the reason it ran degraded is now visible and attributed to its true
+    cause, not the #1236-era "no translator" story.
+    """
+
+    relations: Any  # list | dict — the validated relations (empty when none)
+    cause: str  # one of the CAUSE_* constants above
+    error: str = ""  # exception type name, only when cause == translator_failed
+
 
 # Cap the argument inventory handed to the LLM so prompt + response stay bounded
 # (mirrors the [:40] cap in _extract_arguments_from_context, #708). Bipolar/ABA
@@ -47,7 +92,9 @@ logger = logging.getLogger("UnifiedPipeline")
 _MAX_INVENTORY = 20
 
 
-def _build_inventory(arguments: List[str]) -> Tuple[Dict[str, str], List[Dict[str, str]]]:
+def _build_inventory(
+    arguments: List[str],
+) -> Tuple[Dict[str, str], List[Dict[str, str]]]:
     """Enumerate the real arguments as ``{id: text}`` + the LLM-facing list.
 
     Skips empty/whitespace entries. Returns ``(arg_by_id, listed)`` where
@@ -94,10 +141,10 @@ async def _llm_extract_relations(
     client, model_id = _get_openai_client()
     if client is None:
         logger.info(
-            "%s translator: no LLM API key configured — staying absent_no_translator.",
+            "%s translator: no LLM API key configured — cannot translate.",
             relation_kind,
         )
-        return {}
+        raise TranslatorUnconfigured("no LLM API key configured")
 
     inventory_json = ", ".join(
         f'{{"id":"{a["id"]}","text":"{a["text"][:140]}"}}' for a in listed
@@ -177,8 +224,7 @@ async def _llm_extract_relations(
         + task
         + " If no genuine relations of this kind exist in the text, return an empty "
         "list — do NOT invent relations. "
-        "Respond with ONLY a JSON object of this shape:\n"
-        + shape
+        "Respond with ONLY a JSON object of this shape:\n" + shape
     )
     user_content = (
         f"Source text (excerpt):\n{input_text[:3000]}\n\n"
@@ -423,72 +469,87 @@ def _validate_weighted_attacks(
 
 async def translate_to_bipolar_supports(
     input_text: str, arguments: List[str]
-) -> List[List[str]]:
+) -> TranslationResult:
     """Derive genuine bipolar support relations from the text + arguments.
 
-    Returns a list of ``[source, target]`` pairs (canonical argument texts),
-    validated against the real inventory. Empty list when the LLM finds no
-    genuine supports OR no API key is configured — the caller then stays
-    ``absent_no_translator`` (honest absence, anti-théâtre #1019).
+    Returns a ``TranslationResult`` whose ``relations`` is a list of
+    ``[source, target]`` pairs (canonical argument texts), validated against
+    the real inventory. The ``cause`` discriminates why the axis is absent
+    when ``relations`` is empty: ``no_genuine_relations`` (ran, found none —
+    an analytical result), ``translator_unconfigured`` (no API key), or
+    ``translator_failed`` (the call raised — ``error`` carries the type).
+    Anti-théâtre #1019 / #1608: the caller labels the axis from ``cause``,
+    never fabricating supports.
     """
     arg_by_id, _ = _build_inventory(arguments)
     if not arg_by_id:
-        return []
+        return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
     try:
         data = await _llm_extract_relations(input_text, arguments, "supports")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations=[], cause=CAUSE_TRANSLATOR_UNCONFIGURED)
     except Exception as e:  # network / parse / budget — never fatal to the run
-        logger.info(
-            "Bipolar supports translator failed (%s) — staying absent_no_translator.",
-            e,
+        logger.warning(
+            "Bipolar supports translator failed (%s) — staying absent.",
+            type(e).__name__,
         )
-        return []
+        return TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
     supports = _validate_supports(data, arg_by_id)
     if supports:
         logger.info(
             "Bipolar translator: derived %d genuine support relation(s) from text.",
             len(supports),
         )
-    return supports
+        return TranslationResult(relations=supports, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
 async def translate_to_aba_contraries(
     input_text: str, arguments: List[str]
-) -> Dict[str, str]:
+) -> TranslationResult:
     """Derive genuine ABA assumption↔contrary pairs from the text + arguments.
 
-    Returns ``{assumption_text: contrary_sentence}`` validated against the real
-    inventory. Empty dict when the LLM finds no genuine contraries OR no API key
-    is configured — the caller then stays ``absent_no_translator``.
+    Returns a ``TranslationResult`` whose ``relations`` is an
+    ``{assumption_text: contrary_sentence}`` dict validated against the real
+    inventory. See :func:`translate_to_bipolar_supports` for the ``cause``
+    contract (#1608).
     """
     arg_by_id, _ = _build_inventory(arguments)
     if not arg_by_id:
-        return {}
+        return TranslationResult(relations={}, cause=CAUSE_NO_GENUINE_RELATIONS)
     try:
         data = await _llm_extract_relations(input_text, arguments, "contraries")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations={}, cause=CAUSE_TRANSLATOR_UNCONFIGURED)
     except Exception as e:  # network / parse / budget — never fatal to the run
-        logger.info(
-            "ABA contraries translator failed (%s) — staying absent_no_translator.",
-            e,
+        logger.warning(
+            "ABA contraries translator failed (%s) — staying absent.",
+            type(e).__name__,
         )
-        return {}
+        return TranslationResult(
+            relations={}, cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
     contraries = _validate_contraries(data, arg_by_id)
     if contraries:
         logger.info(
             "ABA translator: derived %d genuine contrary pair(s) from text.",
             len(contraries),
         )
-    return contraries
+        return TranslationResult(relations=contraries, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations={}, cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
 async def translate_to_aspic_rules(
     input_text: str, arguments: List[str]
-) -> List[Dict[str, Any]]:
+) -> TranslationResult:
     """Derive genuine ASPIC+ defeasible inference rules from the text + arguments.
 
-    Returns a list of handler-shaped ``{head, body, name}`` rule dicts with
-    PL-atom heads/bodies, validated against the real inventory. Empty list when
-    the LLM finds no genuine rules OR no API key is configured — the caller then
-    stays ``absent_no_translator`` (honest absence, anti-théâtre #1019).
+    Returns a ``TranslationResult`` whose ``relations`` is a list of
+    handler-shaped ``{head, body, name}`` rule dicts with PL-atom
+    heads/bodies, validated against the real inventory. See
+    :func:`translate_to_bipolar_supports` for the ``cause`` contract (#1608).
 
     Only **defeasible** rules are derived: natural-language argumentation is
     defeasible, and strict rules / preference orderings are not reliably
@@ -500,15 +561,19 @@ async def translate_to_aspic_rules(
     """
     arg_by_id, _ = _build_inventory(arguments)
     if not arg_by_id:
-        return []
+        return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
     try:
         data = await _llm_extract_relations(input_text, arguments, "aspic_rules")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations=[], cause=CAUSE_TRANSLATOR_UNCONFIGURED)
     except Exception as e:  # network / parse / budget — never fatal to the run
-        logger.info(
-            "ASPIC+ rules translator failed (%s) — staying absent_no_translator.",
-            e,
+        logger.warning(
+            "ASPIC+ rules translator failed (%s) — staying absent.",
+            type(e).__name__,
         )
-        return []
+        return TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
     # _pl_atom lives in invoke_callables (lazy import — no module-load cycle).
     from argumentation_analysis.orchestration.invoke_callables import _pl_atom
 
@@ -518,72 +583,82 @@ async def translate_to_aspic_rules(
             "ASPIC+ translator: derived %d genuine defeasible rule(s) from text.",
             len(rules),
         )
-    return rules
+        return TranslationResult(relations=rules, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
 async def translate_to_setaf_attacks(
     input_text: str, arguments: List[str]
-) -> List[Dict[str, Any]]:
+) -> TranslationResult:
     """Derive genuine SetAF joint attacks from the text + arguments.
 
-    Returns a list of handler-shaped ``{attackers, target}`` joint-attack dicts
-    (canonical argument texts), validated against the real inventory. Empty list
-    when the LLM finds no genuine joint attacks OR no API key is configured — the
-    caller then stays ``absent_no_translator`` (honest absence, anti-théâtre
-    #1019). The gate ``_STRUCTURED_ARG_INPUT_KEYS['setaf_reasoning']`` accepts
+    Returns a ``TranslationResult`` whose ``relations`` is a list of
+    handler-shaped ``{attackers, target}`` joint-attack dicts (canonical
+    argument texts), validated against the real inventory. See
+    :func:`translate_to_bipolar_supports` for the ``cause`` contract (#1608).
+    The gate ``_STRUCTURED_ARG_INPUT_KEYS['setaf_reasoning']`` accepts
     ``set_attacks``; the gate itself is never modified.
     """
     arg_by_id, _ = _build_inventory(arguments)
     if not arg_by_id:
-        return []
+        return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
     try:
         data = await _llm_extract_relations(input_text, arguments, "setaf_attacks")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations=[], cause=CAUSE_TRANSLATOR_UNCONFIGURED)
     except Exception as e:  # network / parse / budget — never fatal to the run
-        logger.info(
-            "SetAF attacks translator failed (%s) — staying absent_no_translator.",
-            e,
+        logger.warning(
+            "SetAF attacks translator failed (%s) — staying absent.",
+            type(e).__name__,
         )
-        return []
+        return TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
     attacks = _validate_setaf_attacks(data, arg_by_id)
     if attacks:
         logger.info(
             "SetAF translator: derived %d genuine joint attack(s) from text.",
             len(attacks),
         )
-    return attacks
+        return TranslationResult(relations=attacks, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
 async def translate_to_weighted_attacks(
     input_text: str, arguments: List[str]
-) -> List[Tuple[str, str, float]]:
+) -> TranslationResult:
     """Derive genuine weighted attacks from the text + arguments.
 
-    Returns a list of ``(source, target, weight)`` triples (canonical argument
-    texts, weight clamped to ``[0, 1]``), validated against the real inventory.
-    Empty list when the LLM finds no genuine weighted attacks OR no API key is
-    configured — the caller then stays ``absent_no_translator`` (honest absence,
-    anti-théâtre #1019). The gate ``_STRUCTURED_ARG_INPUT_KEYS[
-    'weighted_argumentation']`` accepts ``weighted_attacks``; the gate itself is
-    never modified.
+    Returns a ``TranslationResult`` whose ``relations`` is a list of
+    ``(source, target, weight)`` triples (canonical argument texts, weight
+    clamped to ``[0, 1]``), validated against the real inventory. See
+    :func:`translate_to_bipolar_supports` for the ``cause`` contract (#1608).
+    The gate ``_STRUCTURED_ARG_INPUT_KEYS['weighted_argumentation']`` accepts
+    ``weighted_attacks``; the gate itself is never modified.
     """
     arg_by_id, _ = _build_inventory(arguments)
     if not arg_by_id:
-        return []
+        return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
     try:
         data = await _llm_extract_relations(input_text, arguments, "weighted_attacks")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations=[], cause=CAUSE_TRANSLATOR_UNCONFIGURED)
     except Exception as e:  # network / parse / budget — never fatal to the run
-        logger.info(
-            "Weighted attacks translator failed (%s) — staying absent_no_translator.",
-            e,
+        logger.warning(
+            "Weighted attacks translator failed (%s) — staying absent.",
+            type(e).__name__,
         )
-        return []
+        return TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
     attacks = _validate_weighted_attacks(data, arg_by_id)
     if attacks:
         logger.info(
             "Weighted translator: derived %d genuine weighted attack(s) from text.",
             len(attacks),
         )
-    return attacks
+        return TranslationResult(relations=attacks, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
 __all__ = [
@@ -592,6 +667,12 @@ __all__ = [
     "translate_to_aspic_rules",
     "translate_to_setaf_attacks",
     "translate_to_weighted_attacks",
+    "TranslationResult",
+    "TranslatorUnconfigured",
+    "CAUSE_EVALUATED",
+    "CAUSE_TRANSLATOR_FAILED",
+    "CAUSE_NO_GENUINE_RELATIONS",
+    "CAUSE_TRANSLATOR_UNCONFIGURED",
     "_build_inventory",
     "_validate_supports",
     "_validate_contraries",

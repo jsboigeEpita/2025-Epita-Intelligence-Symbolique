@@ -1,10 +1,12 @@
 """TR-1 #1419 / FP-17 #1236 — text→structured translator (bipolar/ABA) unit tests.
 
-Validates the anti-théâtre contract (#1019):
+Validates the anti-théâtre contract (#1019 / #1608):
 - Relations returned by the LLM are validated against the REAL argument
   inventory; fabricated pairs referencing unknown ids are DROPPED.
-- An empty / failed LLM extraction yields an empty result, so the formalism
-  stays ``absent_no_translator`` (honest absence) — never a fabricated evaluation.
+- An empty / failed LLM extraction yields a ``TranslationResult`` whose ``cause``
+  discriminates *why* the axis is absent — ``no_genuine_relations`` (ran, found
+  none — an analytical result) or ``translator_failed`` (the call raised) — so the
+  formalism is labelled honestly, never by a fabricated evaluation.
 - The handler wiring persists genuine relations into ``context``, which lets
   ``_record_structured_arg_status`` label the axis ``evaluated``.
 
@@ -20,6 +22,9 @@ from typing import Any, Dict, List, Tuple
 import pytest
 
 from argumentation_analysis.orchestration.structured_arg_translator import (
+    CAUSE_EVALUATED,
+    CAUSE_NO_GENUINE_RELATIONS,
+    TranslationResult,
     _build_inventory,
     _validate_aspic_rules,
     _validate_contraries,
@@ -69,20 +74,24 @@ class TestBuildInventory:
 class TestValidateSupports:
     def test_keeps_valid_pairs_mapped_to_canonical_text(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
-        data = {"supports": [
-            {"source": "arg1", "target": "arg2", "rationale": "r"},
-            {"source": "arg3", "target": "arg1", "rationale": "r"},
-        ]}
+        data = {
+            "supports": [
+                {"source": "arg1", "target": "arg2", "rationale": "r"},
+                {"source": "arg3", "target": "arg1", "rationale": "r"},
+            ]
+        }
         out = _validate_supports(data, arg_by_id)
         assert out == [["Alpha", "Beta"], ["Gamma", "Alpha"]]
 
     def test_drops_pairs_referencing_unknown_ids(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"supports": [
-            {"source": "arg1", "target": "arg9"},   # unknown target → dropped
-            {"source": "argX", "target": "arg2"},   # unknown source → dropped
-            {"source": "arg1", "target": "arg2"},   # valid → kept
-        ]}
+        data = {
+            "supports": [
+                {"source": "arg1", "target": "arg9"},  # unknown target → dropped
+                {"source": "argX", "target": "arg2"},  # unknown source → dropped
+                {"source": "arg1", "target": "arg2"},  # valid → kept
+            ]
+        }
         out = _validate_supports(data, arg_by_id)
         assert out == [["Alpha", "Beta"]]
 
@@ -95,10 +104,12 @@ class TestValidateSupports:
 
     def test_dedups_identical_pairs(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"supports": [
-            {"source": "arg1", "target": "arg2"},
-            {"source": "arg1", "target": "arg2"},
-        ]}
+        data = {
+            "supports": [
+                {"source": "arg1", "target": "arg2"},
+                {"source": "arg1", "target": "arg2"},
+            ]
+        }
         out = _validate_supports(data, arg_by_id)
         assert out == [["Alpha", "Beta"]]
 
@@ -107,26 +118,33 @@ class TestValidateSupports:
         assert _validate_supports({}, arg_by_id) == []
         assert _validate_supports({"supports": []}, arg_by_id) == []
         assert _validate_supports({"supports": "not-a-list"}, arg_by_id) == []
-        assert _validate_supports(
-            {"supports": [{"source": 1}]}, arg_by_id  # type: ignore[list-item]
-        ) == []
+        assert (
+            _validate_supports(
+                {"supports": [{"source": 1}]}, arg_by_id  # type: ignore[list-item]
+            )
+            == []
+        )
 
 
 class TestValidateContraries:
     def test_keeps_valid_pairs_mapped_to_canonical_text(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"contraries": [
-            {"assumption": "arg1", "contrary": "not Alpha", "rationale": "r"},
-        ]}
+        data = {
+            "contraries": [
+                {"assumption": "arg1", "contrary": "not Alpha", "rationale": "r"},
+            ]
+        }
         out = _validate_contraries(data, arg_by_id)
         assert out == {"Alpha": "not Alpha"}
 
     def test_drops_unknown_assumption_ids(self):
         arg_by_id = {"arg1": "Alpha"}
-        data = {"contraries": [
-            {"assumption": "arg9", "contrary": "x"},   # unknown → dropped
-            {"assumption": "arg1", "contrary": "y"},   # valid → kept
-        ]}
+        data = {
+            "contraries": [
+                {"assumption": "arg9", "contrary": "x"},  # unknown → dropped
+                {"assumption": "arg1", "contrary": "y"},  # valid → kept
+            ]
+        }
         out = _validate_contraries(data, arg_by_id)
         assert out == {"Alpha": "y"}
 
@@ -139,10 +157,12 @@ class TestValidateContraries:
 
     def test_last_write_wins_on_duplicate_assumption(self):
         arg_by_id = {"arg1": "Alpha"}
-        data = {"contraries": [
-            {"assumption": "arg1", "contrary": "first"},
-            {"assumption": "arg1", "contrary": "second"},
-        ]}
+        data = {
+            "contraries": [
+                {"assumption": "arg1", "contrary": "first"},
+                {"assumption": "arg1", "contrary": "second"},
+            ]
+        }
         assert _validate_contraries(data, arg_by_id) == {"Alpha": "second"}
 
 
@@ -163,60 +183,87 @@ def _patch_llm(monkeypatch, payload: Dict[str, Any]) -> None:
 
 
 class TestTranslatorEmptyStaysHonest:
-    """Empty / failed LLM extraction → empty result → formalism stays
-    absent_no_translator (anti-théâtre #1019)."""
+    """Empty / failed LLM extraction → empty relations with cause
+    ``no_genuine_relations`` (anti-théâtre #1019 / #1608). The cause is the
+    discriminated signal the recorder needs; an empty list alone is not enough."""
 
     async def test_bipolar_empty_llm_output_returns_empty(self, monkeypatch):
         _patch_llm(monkeypatch, {"supports": []})
         out = await translate_to_bipolar_supports("some text", ["a", "b"])
-        assert out == []
+        assert isinstance(out, TranslationResult)
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_bipolar_no_inventory_returns_empty(self, monkeypatch):
         _patch_llm(monkeypatch, {"supports": [{"source": "arg1", "target": "arg2"}]})
         out = await translate_to_bipolar_supports("text", [])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_aba_empty_llm_output_returns_empty(self, monkeypatch):
         _patch_llm(monkeypatch, {"contraries": []})
         out = await translate_to_aba_contraries("some text", ["a", "b"])
-        assert out == {}
+        assert out.relations == {}
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_bipolar_only_fabricated_relations_dropped(self, monkeypatch):
         # Every pair references ids absent from the inventory → all dropped.
-        _patch_llm(monkeypatch, {"supports": [
-            {"source": "arg9", "target": "arg8"},
-            {"source": "phantom", "target": "ghost"},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "supports": [
+                    {"source": "arg9", "target": "arg8"},
+                    {"source": "phantom", "target": "ghost"},
+                ]
+            },
+        )
         out = await translate_to_bipolar_supports("text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_aba_only_fabricated_assumptions_dropped(self, monkeypatch):
-        _patch_llm(monkeypatch, {"contraries": [
-            {"assumption": "arg9", "contrary": "x"},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "contraries": [
+                    {"assumption": "arg9", "contrary": "x"},
+                ]
+            },
+        )
         out = await translate_to_aba_contraries("text", ["a", "b"])
-        assert out == {}
+        assert out.relations == {}
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
 
 class TestTranslatorReturnsValidatedRelations:
     async def test_bipolar_returns_validated_supports(self, monkeypatch):
-        _patch_llm(monkeypatch, {"supports": [
-            {"source": "arg1", "target": "arg2", "rationale": "r"},
-            {"source": "arg2", "target": "arg3", "rationale": "r"},
-            {"source": "arg1", "target": "arg9"},  # dropped (unknown)
-        ]})
-        out = await translate_to_bipolar_supports(
-            "text", ["Alpha", "Beta", "Gamma"]
+        _patch_llm(
+            monkeypatch,
+            {
+                "supports": [
+                    {"source": "arg1", "target": "arg2", "rationale": "r"},
+                    {"source": "arg2", "target": "arg3", "rationale": "r"},
+                    {"source": "arg1", "target": "arg9"},  # dropped (unknown)
+                ]
+            },
         )
-        assert out == [["Alpha", "Beta"], ["Beta", "Gamma"]]
+        out = await translate_to_bipolar_supports("text", ["Alpha", "Beta", "Gamma"])
+        assert out.relations == [["Alpha", "Beta"], ["Beta", "Gamma"]]
+        assert out.cause == CAUSE_EVALUATED
 
     async def test_aba_returns_validated_contraries(self, monkeypatch):
-        _patch_llm(monkeypatch, {"contraries": [
-            {"assumption": "arg1", "contrary": "not Alpha"},
-            {"assumption": "argX", "contrary": "dropped"},  # dropped
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "contraries": [
+                    {"assumption": "arg1", "contrary": "not Alpha"},
+                    {"assumption": "argX", "contrary": "dropped"},  # dropped
+                ]
+            },
+        )
         out = await translate_to_aba_contraries("text", ["Alpha", "Beta"])
-        assert out == {"Alpha": "not Alpha"}
+        assert out.relations == {"Alpha": "not Alpha"}
+        assert out.cause == CAUSE_EVALUATED
 
 
 # -- handler wiring: context persists (no JVM) -------------------------------
@@ -225,7 +272,9 @@ class TestTranslatorReturnsValidatedRelations:
 def _inject_fake_logic_modules(monkeypatch, bipolar_payload, aba_payload):
     """Inject fake BipolarHandler / ABAHandler modules so the handlers run
     without a JVM, returning canned reasoner output."""
-    fake_bipolar = types.ModuleType("argumentation_analysis.agents.core.logic.bipolar_handler")
+    fake_bipolar = types.ModuleType(
+        "argumentation_analysis.agents.core.logic.bipolar_handler"
+    )
 
     class _FakeBipolarHandler:
         def analyze_bipolar_framework(self, args, attacks, supports, fw_type):
@@ -263,7 +312,9 @@ class TestHandlerWiringPersistsToContext:
         )
 
         async def _fake_supports(text, args):
-            return [["Alpha", "Beta"]]
+            return TranslationResult(
+                relations=[["Alpha", "Beta"]], cause=CAUSE_EVALUATED
+            )
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -278,14 +329,18 @@ class TestHandlerWiringPersistsToContext:
         await _invoke_bipolar("source text", ctx)
         assert ctx.get("supports") == [["Alpha", "Beta"]]
 
-    async def test_bipolar_does_not_override_caller_supplied_supports(self, monkeypatch):
+    async def test_bipolar_does_not_override_caller_supplied_supports(
+        self, monkeypatch
+    ):
         # If the caller already supplied genuine supports, the translator must
         # NOT run / NOT override them.
         called = {"n": 0}
 
         async def _fake_supports(text, args):
             called["n"] += 1
-            return [["should", "not", "be", "used"]]
+            return TranslationResult(
+                relations=[["should", "not", "be", "used"]], cause=CAUSE_EVALUATED
+            )
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -313,7 +368,9 @@ class TestHandlerWiringPersistsToContext:
         )
 
         async def _fake_contraries(text, args):
-            return {"Alpha": "not Alpha"}
+            return TranslationResult(
+                relations={"Alpha": "not Alpha"}, cause=CAUSE_EVALUATED
+            )
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -328,9 +385,11 @@ class TestHandlerWiringPersistsToContext:
         await _invoke_aba("source text", ctx)
         assert ctx.get("contraries") == {"Alpha": "not Alpha"}
 
-    async def test_bipolar_honest_absent_when_translator_returns_empty(self, monkeypatch):
-        # Translator yields nothing → context["supports"] is NOT set → the gate
-        # keeps absent_no_translator.
+    async def test_bipolar_honest_absent_when_translator_returns_empty(
+        self, monkeypatch
+    ):
+        # Translator yields nothing (cause no_genuine_relations) → context["supports"]
+        # is NOT set → the axis stays honestly absent with its true cause propagated.
         _inject_fake_logic_modules(
             monkeypatch,
             bipolar_payload={"framework_type": "necessity", "supports": []},
@@ -338,7 +397,7 @@ class TestHandlerWiringPersistsToContext:
         )
 
         async def _fake_supports(text, args):
-            return []
+            return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -360,9 +419,11 @@ class TestHandlerWiringPersistsToContext:
 class TestValidateAspicRules:
     def test_keeps_valid_rule_mapped_to_atoms(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
-        data = {"rules": [
-            {"premises": ["arg1", "arg2"], "conclusion": "arg3", "rationale": "r"},
-        ]}
+        data = {
+            "rules": [
+                {"premises": ["arg1", "arg2"], "conclusion": "arg3", "rationale": "r"},
+            ]
+        }
         out = _validate_aspic_rules(data, arg_by_id, _atom)
         assert out == [
             {
@@ -374,16 +435,20 @@ class TestValidateAspicRules:
 
     def test_drops_rule_with_unknown_premise(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"rules": [
-            {"premises": ["arg1", "arg9"], "conclusion": "arg2"},  # arg9 unknown
-        ]}
+        data = {
+            "rules": [
+                {"premises": ["arg1", "arg9"], "conclusion": "arg2"},  # arg9 unknown
+            ]
+        }
         assert _validate_aspic_rules(data, arg_by_id, _atom) == []
 
     def test_drops_rule_with_unknown_conclusion(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"rules": [
-            {"premises": ["arg1"], "conclusion": "arg9"},  # unknown conclusion
-        ]}
+        data = {
+            "rules": [
+                {"premises": ["arg1"], "conclusion": "arg9"},  # unknown conclusion
+            ]
+        }
         assert _validate_aspic_rules(data, arg_by_id, _atom) == []
 
     def test_drops_rule_with_no_premises(self):
@@ -393,9 +458,11 @@ class TestValidateAspicRules:
 
     def test_removes_conclusion_from_premises_keeps_rest(self):
         arg_by_id = {"arg1": "Alpha", "arg3": "Gamma"}
-        data = {"rules": [
-            {"premises": ["arg1", "arg3"], "conclusion": "arg3"},  # arg3 dropped
-        ]}
+        data = {
+            "rules": [
+                {"premises": ["arg1", "arg3"], "conclusion": "arg3"},  # arg3 dropped
+            ]
+        }
         out = _validate_aspic_rules(data, arg_by_id, _atom)
         assert out == [
             {"head": "arg:Gamma", "body": ["arg:Alpha"], "name": "def_rule_1"}
@@ -408,10 +475,12 @@ class TestValidateAspicRules:
 
     def test_dedups_identical_rules(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"rules": [
-            {"premises": ["arg1"], "conclusion": "arg2"},
-            {"premises": ["arg1"], "conclusion": "arg2"},
-        ]}
+        data = {
+            "rules": [
+                {"premises": ["arg1"], "conclusion": "arg2"},
+                {"premises": ["arg1"], "conclusion": "arg2"},
+            ]
+        }
         out = _validate_aspic_rules(data, arg_by_id, _atom)
         assert out == [
             {"head": "arg:Beta", "body": ["arg:Alpha"], "name": "def_rule_1"}
@@ -419,9 +488,11 @@ class TestValidateAspicRules:
 
     def test_dedups_repeated_body_atoms(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"rules": [
-            {"premises": ["arg1", "arg1"], "conclusion": "arg2"},
-        ]}
+        data = {
+            "rules": [
+                {"premises": ["arg1", "arg1"], "conclusion": "arg2"},
+            ]
+        }
         out = _validate_aspic_rules(data, arg_by_id, _atom)
         assert out[0]["body"] == ["arg:Alpha"]
 
@@ -438,51 +509,73 @@ class TestValidateAspicRules:
         assert _validate_aspic_rules({}, arg_by_id, _atom) == []
         assert _validate_aspic_rules({"rules": []}, arg_by_id, _atom) == []
         assert _validate_aspic_rules({"rules": "nope"}, arg_by_id, _atom) == []
-        assert _validate_aspic_rules(
-            {"rules": [{"premises": 1, "conclusion": "arg1"}]},  # type: ignore[dict-item]
-            arg_by_id,
-            _atom,
-        ) == []
+        assert (
+            _validate_aspic_rules(
+                {"rules": [{"premises": 1, "conclusion": "arg1"}]},  # type: ignore[dict-item]
+                arg_by_id,
+                _atom,
+            )
+            == []
+        )
 
 
 class TestAspicTranslator:
     async def test_empty_llm_output_returns_empty(self, monkeypatch):
         _patch_llm(monkeypatch, {"rules": []})
         out = await translate_to_aspic_rules("some text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_no_inventory_returns_empty(self, monkeypatch):
-        _patch_llm(monkeypatch, {"rules": [
-            {"premises": ["arg1"], "conclusion": "arg2"},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "rules": [
+                    {"premises": ["arg1"], "conclusion": "arg2"},
+                ]
+            },
+        )
         out = await translate_to_aspic_rules("text", [])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_only_fabricated_rules_dropped(self, monkeypatch):
-        _patch_llm(monkeypatch, {"rules": [
-            {"premises": ["arg8"], "conclusion": "arg9"},   # unknown ids
-            {"premises": ["phantom"], "conclusion": "ghost"},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "rules": [
+                    {"premises": ["arg8"], "conclusion": "arg9"},  # unknown ids
+                    {"premises": ["phantom"], "conclusion": "ghost"},
+                ]
+            },
+        )
         out = await translate_to_aspic_rules("text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_returns_validated_rules_with_real_atoms(self, monkeypatch):
         # Uses the real _pl_atom; assert head/body are the deterministic atoms
         # for the cited canonical argument texts.
         from argumentation_analysis.orchestration.invoke_callables import _pl_atom
 
-        _patch_llm(monkeypatch, {"rules": [
-            {"premises": ["arg1", "arg2"], "conclusion": "arg3"},
-            {"premises": ["arg1"], "conclusion": "arg9"},  # dropped (unknown)
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "rules": [
+                    {"premises": ["arg1", "arg2"], "conclusion": "arg3"},
+                    {"premises": ["arg1"], "conclusion": "arg9"},  # dropped (unknown)
+                ]
+            },
+        )
         out = await translate_to_aspic_rules("text", ["Alpha", "Beta", "Gamma"])
-        assert len(out) == 1
-        assert out[0]["head"] == _pl_atom("Gamma", prefix="arg")
-        assert out[0]["body"] == [
+        assert out.cause == CAUSE_EVALUATED
+        assert len(out.relations) == 1
+        assert out.relations[0]["head"] == _pl_atom("Gamma", prefix="arg")
+        assert out.relations[0]["body"] == [
             _pl_atom("Alpha", prefix="arg"),
             _pl_atom("Beta", prefix="arg"),
         ]
-        assert out[0]["name"] == "def_rule_1"
+        assert out.relations[0]["name"] == "def_rule_1"
 
 
 def _inject_fake_aspic_module(monkeypatch, payload):
@@ -511,7 +604,7 @@ class TestAspicHandlerWiring:
         genuine = [{"head": "arg:h", "body": ["arg:b"], "name": "def_rule_1"}]
 
         async def _fake_rules(text, args):
-            return genuine
+            return TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -520,9 +613,7 @@ class TestAspicHandlerWiring:
         )
         from argumentation_analysis.orchestration.invoke_callables import _invoke_aspic
 
-        ctx: Dict[str, Any] = {
-            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
-        }
+        ctx: Dict[str, Any] = {"phase_extract_output": {"arguments": ["Alpha", "Beta"]}}
         await _invoke_aspic("source text", ctx)
         assert ctx.get("defeasible_rules") == genuine
 
@@ -531,7 +622,12 @@ class TestAspicHandlerWiring:
 
         async def _fake_rules(text, args):
             called["n"] += 1
-            return [{"head": "arg:x", "body": ["arg:y"], "name": "should_not_be_used"}]
+            return TranslationResult(
+                relations=[
+                    {"head": "arg:x", "body": ["arg:y"], "name": "should_not_be_used"}
+                ],
+                cause=CAUSE_EVALUATED,
+            )
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -554,7 +650,7 @@ class TestAspicHandlerWiring:
         _inject_fake_aspic_module(monkeypatch, {"extensions": []})
 
         async def _fake_rules(text, args):
-            return []
+            return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -563,9 +659,7 @@ class TestAspicHandlerWiring:
         )
         from argumentation_analysis.orchestration.invoke_callables import _invoke_aspic
 
-        ctx: Dict[str, Any] = {
-            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
-        }
+        ctx: Dict[str, Any] = {"phase_extract_output": {"arguments": ["Alpha", "Beta"]}}
         await _invoke_aspic("text", ctx)
         # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
         assert "defeasible_rules" not in ctx
@@ -577,24 +671,30 @@ class TestAspicHandlerWiring:
 class TestValidateSetafAttacks:
     def test_keeps_valid_joint_attack_mapped_to_text(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
-        data = {"attacks": [
-            {"attackers": ["arg1", "arg2"], "target": "arg3", "rationale": "r"},
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1", "arg2"], "target": "arg3", "rationale": "r"},
+            ]
+        }
         out = _validate_setaf_attacks(data, arg_by_id)
         assert out == [{"attackers": ["Alpha", "Beta"], "target": "Gamma"}]
 
     def test_drops_attack_with_unknown_attacker(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"attackers": ["arg1", "arg9"], "target": "arg2"},  # arg9 unknown
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1", "arg9"], "target": "arg2"},  # arg9 unknown
+            ]
+        }
         assert _validate_setaf_attacks(data, arg_by_id) == []
 
     def test_drops_attack_with_unknown_target(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"attackers": ["arg1"], "target": "arg9"},  # unknown target
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1"], "target": "arg9"},  # unknown target
+            ]
+        }
         assert _validate_setaf_attacks(data, arg_by_id) == []
 
     def test_drops_attack_with_no_attackers(self):
@@ -604,9 +704,11 @@ class TestValidateSetafAttacks:
 
     def test_removes_target_from_attackers_keeps_rest(self):
         arg_by_id = {"arg1": "Alpha", "arg3": "Gamma"}
-        data = {"attacks": [
-            {"attackers": ["arg1", "arg3"], "target": "arg3"},  # arg3 removed
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1", "arg3"], "target": "arg3"},  # arg3 removed
+            ]
+        }
         out = _validate_setaf_attacks(data, arg_by_id)
         assert out == [{"attackers": ["Alpha"], "target": "Gamma"}]
 
@@ -617,28 +719,34 @@ class TestValidateSetafAttacks:
 
     def test_dedups_identical_attacks(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"attackers": ["arg1"], "target": "arg2"},
-            {"attackers": ["arg1"], "target": "arg2"},
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1"], "target": "arg2"},
+                {"attackers": ["arg1"], "target": "arg2"},
+            ]
+        }
         out = _validate_setaf_attacks(data, arg_by_id)
         assert out == [{"attackers": ["Alpha"], "target": "Beta"}]
 
     def test_dedups_repeated_attackers(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"attackers": ["arg1", "arg1"], "target": "arg2"},
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1", "arg1"], "target": "arg2"},
+            ]
+        }
         out = _validate_setaf_attacks(data, arg_by_id)
         assert out[0]["attackers"] == ["Alpha"]
 
     def test_dedups_attacker_order_independence(self):
         # SetAF attacker set is a SET: {arg1,arg2} == {arg2,arg1} → one attack.
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta", "arg3": "Gamma"}
-        data = {"attacks": [
-            {"attackers": ["arg1", "arg2"], "target": "arg3"},
-            {"attackers": ["arg2", "arg1"], "target": "arg3"},
-        ]}
+        data = {
+            "attacks": [
+                {"attackers": ["arg1", "arg2"], "target": "arg3"},
+                {"attackers": ["arg2", "arg1"], "target": "arg3"},
+            ]
+        }
         out = _validate_setaf_attacks(data, arg_by_id)
         assert len(out) == 1
 
@@ -653,41 +761,63 @@ class TestValidateSetafAttacks:
         assert _validate_setaf_attacks({}, arg_by_id) == []
         assert _validate_setaf_attacks({"attacks": []}, arg_by_id) == []
         assert _validate_setaf_attacks({"attacks": "nope"}, arg_by_id) == []
-        assert _validate_setaf_attacks(
-            {"attacks": [{"attackers": 1, "target": "arg1"}]},  # type: ignore[dict-item]
-            arg_by_id,
-        ) == []
+        assert (
+            _validate_setaf_attacks(
+                {"attacks": [{"attackers": 1, "target": "arg1"}]},  # type: ignore[dict-item]
+                arg_by_id,
+            )
+            == []
+        )
 
 
 class TestSetafTranslator:
     async def test_empty_llm_output_returns_empty(self, monkeypatch):
         _patch_llm(monkeypatch, {"attacks": []})
         out = await translate_to_setaf_attacks("some text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_no_inventory_returns_empty(self, monkeypatch):
-        _patch_llm(monkeypatch, {"attacks": [
-            {"attackers": ["arg1"], "target": "arg2"},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "attacks": [
+                    {"attackers": ["arg1"], "target": "arg2"},
+                ]
+            },
+        )
         out = await translate_to_setaf_attacks("text", [])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_only_fabricated_attacks_dropped(self, monkeypatch):
-        _patch_llm(monkeypatch, {"attacks": [
-            {"attackers": ["arg8"], "target": "arg9"},   # unknown ids
-            {"attackers": ["phantom"], "target": "ghost"},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "attacks": [
+                    {"attackers": ["arg8"], "target": "arg9"},  # unknown ids
+                    {"attackers": ["phantom"], "target": "ghost"},
+                ]
+            },
+        )
         out = await translate_to_setaf_attacks("text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_returns_validated_attacks_with_real_texts(self, monkeypatch):
         # SetAF attacks use canonical argument TEXTS (no PL-atom mapping).
-        _patch_llm(monkeypatch, {"attacks": [
-            {"attackers": ["arg1", "arg2"], "target": "arg3"},
-            {"attackers": ["arg1"], "target": "arg9"},  # dropped (unknown)
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "attacks": [
+                    {"attackers": ["arg1", "arg2"], "target": "arg3"},
+                    {"attackers": ["arg1"], "target": "arg9"},  # dropped (unknown)
+                ]
+            },
+        )
         out = await translate_to_setaf_attacks("text", ["Alpha", "Beta", "Gamma"])
-        assert out == [{"attackers": ["Alpha", "Beta"], "target": "Gamma"}]
+        assert out.relations == [{"attackers": ["Alpha", "Beta"], "target": "Gamma"}]
+        assert out.cause == CAUSE_EVALUATED
 
 
 def _inject_fake_setaf_module(monkeypatch, payload):
@@ -735,7 +865,7 @@ class TestSetafHandlerWiring:
         genuine = [{"attackers": ["Alpha"], "target": "Beta"}]
 
         async def _fake_attacks(text, args):
-            return genuine
+            return TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -744,9 +874,7 @@ class TestSetafHandlerWiring:
         )
         from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
 
-        ctx: Dict[str, Any] = {
-            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
-        }
+        ctx: Dict[str, Any] = {"phase_extract_output": {"arguments": ["Alpha", "Beta"]}}
         await _invoke_setaf("source text", ctx)
         assert ctx.get("set_attacks") == genuine
 
@@ -755,7 +883,10 @@ class TestSetafHandlerWiring:
 
         async def _fake_attacks(text, args):
             called["n"] += 1
-            return [{"attackers": ["x"], "target": "should_not_be_used"}]
+            return TranslationResult(
+                relations=[{"attackers": ["x"], "target": "should_not_be_used"}],
+                cause=CAUSE_EVALUATED,
+            )
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -778,7 +909,7 @@ class TestSetafHandlerWiring:
         _inject_fake_setaf_module(monkeypatch, {"extensions": []})
 
         async def _fake_attacks(text, args):
-            return []
+            return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -787,11 +918,9 @@ class TestSetafHandlerWiring:
         )
         from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
 
-        ctx: Dict[str, Any] = {
-            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
-        }
+        ctx: Dict[str, Any] = {"phase_extract_output": {"arguments": ["Alpha", "Beta"]}}
         await _invoke_setaf("text", ctx)
-        # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
+        # Nothing genuine → context key stays unset → axis stays honestly absent.
         assert "set_attacks" not in ctx
 
 
@@ -801,9 +930,11 @@ class TestSetafHandlerWiring:
 class TestValidateWeightedAttacks:
     def test_keeps_valid_attack_with_weight(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"source": "arg1", "target": "arg2", "weight": 0.8, "rationale": "r"},
-        ]}
+        data = {
+            "attacks": [
+                {"source": "arg1", "target": "arg2", "weight": 0.8, "rationale": "r"},
+            ]
+        }
         out = _validate_weighted_attacks(data, arg_by_id)
         assert out == [("Alpha", "Beta", 0.8)]
 
@@ -836,17 +967,21 @@ class TestValidateWeightedAttacks:
 
     def test_drops_non_numeric_weight(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"source": "arg1", "target": "arg2", "weight": "high"},  # non-numeric
-        ]}
+        data = {
+            "attacks": [
+                {"source": "arg1", "target": "arg2", "weight": "high"},  # non-numeric
+            ]
+        }
         assert _validate_weighted_attacks(data, arg_by_id) == []
 
     def test_dedups_identical_attacks_keeps_first_weight(self):
         arg_by_id = {"arg1": "Alpha", "arg2": "Beta"}
-        data = {"attacks": [
-            {"source": "arg1", "target": "arg2", "weight": 0.9},
-            {"source": "arg1", "target": "arg2", "weight": 0.1},  # dup → dropped
-        ]}
+        data = {
+            "attacks": [
+                {"source": "arg1", "target": "arg2", "weight": 0.9},
+                {"source": "arg1", "target": "arg2", "weight": 0.1},  # dup → dropped
+            ]
+        }
         out = _validate_weighted_attacks(data, arg_by_id)
         assert out == [("Alpha", "Beta", 0.9)]
 
@@ -855,40 +990,70 @@ class TestValidateWeightedAttacks:
         assert _validate_weighted_attacks({}, arg_by_id) == []
         assert _validate_weighted_attacks({"attacks": []}, arg_by_id) == []
         assert _validate_weighted_attacks({"attacks": "nope"}, arg_by_id) == []
-        assert _validate_weighted_attacks(
-            {"attacks": [{"source": 1, "target": "arg1", "weight": 0.5}]},  # type: ignore[dict-item]
-            arg_by_id,
-        ) == []
+        assert (
+            _validate_weighted_attacks(
+                {"attacks": [{"source": 1, "target": "arg1", "weight": 0.5}]},  # type: ignore[dict-item]
+                arg_by_id,
+            )
+            == []
+        )
 
 
 class TestWeightedTranslator:
     async def test_empty_llm_output_returns_empty(self, monkeypatch):
         _patch_llm(monkeypatch, {"attacks": []})
         out = await translate_to_weighted_attacks("some text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_no_inventory_returns_empty(self, monkeypatch):
-        _patch_llm(monkeypatch, {"attacks": [
-            {"source": "arg1", "target": "arg2", "weight": 0.5},
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "attacks": [
+                    {"source": "arg1", "target": "arg2", "weight": 0.5},
+                ]
+            },
+        )
         out = await translate_to_weighted_attacks("text", [])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_only_fabricated_attacks_dropped(self, monkeypatch):
-        _patch_llm(monkeypatch, {"attacks": [
-            {"source": "arg8", "target": "arg9", "weight": 0.5},  # unknown ids
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "attacks": [
+                    {"source": "arg8", "target": "arg9", "weight": 0.5},  # unknown ids
+                ]
+            },
+        )
         out = await translate_to_weighted_attacks("text", ["a", "b"])
-        assert out == []
+        assert out.relations == []
+        assert out.cause == CAUSE_NO_GENUINE_RELATIONS
 
     async def test_returns_validated_triples_with_real_weights(self, monkeypatch):
-        _patch_llm(monkeypatch, {"attacks": [
-            {"source": "arg1", "target": "arg2", "weight": 0.7},
-            {"source": "arg1", "target": "arg9", "weight": 0.5},  # dropped (unknown)
-            {"source": "arg2", "target": "arg1", "weight": 2.0},  # clamped to 1.0
-        ]})
+        _patch_llm(
+            monkeypatch,
+            {
+                "attacks": [
+                    {"source": "arg1", "target": "arg2", "weight": 0.7},
+                    {
+                        "source": "arg1",
+                        "target": "arg9",
+                        "weight": 0.5,
+                    },  # dropped (unknown)
+                    {
+                        "source": "arg2",
+                        "target": "arg1",
+                        "weight": 2.0,
+                    },  # clamped to 1.0
+                ]
+            },
+        )
         out = await translate_to_weighted_attacks("text", ["Alpha", "Beta"])
-        assert out == [("Alpha", "Beta", 0.7), ("Beta", "Alpha", 1.0)]
+        assert out.relations == [("Alpha", "Beta", 0.7), ("Beta", "Alpha", 1.0)]
+        assert out.cause == CAUSE_EVALUATED
 
 
 def _inject_fake_weighted_module(monkeypatch, payload):
@@ -936,7 +1101,7 @@ class TestWeightedHandlerWiring:
         genuine: List[Tuple[str, str, float]] = [("Alpha", "Beta", 0.8)]
 
         async def _fake_attacks(text, args):
-            return genuine
+            return TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -947,9 +1112,7 @@ class TestWeightedHandlerWiring:
             _invoke_weighted,
         )
 
-        ctx: Dict[str, Any] = {
-            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
-        }
+        ctx: Dict[str, Any] = {"phase_extract_output": {"arguments": ["Alpha", "Beta"]}}
         await _invoke_weighted("source text", ctx)
         assert ctx.get("weighted_attacks") == genuine
 
@@ -958,7 +1121,7 @@ class TestWeightedHandlerWiring:
 
         async def _fake_attacks(text, args):
             called["n"] += 1
-            return [("x", "y", 0.5)]
+            return TranslationResult(relations=[("x", "y", 0.5)], cause=CAUSE_EVALUATED)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -983,7 +1146,7 @@ class TestWeightedHandlerWiring:
         _inject_fake_weighted_module(monkeypatch, {"extensions": []})
 
         async def _fake_attacks(text, args):
-            return []
+            return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
         monkeypatch.setattr(
             "argumentation_analysis.orchestration.structured_arg_translator."
@@ -994,9 +1157,7 @@ class TestWeightedHandlerWiring:
             _invoke_weighted,
         )
 
-        ctx: Dict[str, Any] = {
-            "phase_extract_output": {"arguments": ["Alpha", "Beta"]}
-        }
+        ctx: Dict[str, Any] = {"phase_extract_output": {"arguments": ["Alpha", "Beta"]}}
         await _invoke_weighted("text", ctx)
         # Nothing genuine → context key stays unset → gate keeps absent_no_translator.
         assert "weighted_attacks" not in ctx

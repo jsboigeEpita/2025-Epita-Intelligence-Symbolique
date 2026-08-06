@@ -17,7 +17,7 @@ backward compatibility.
 """
 
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, List, Optional, Tuple
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -50,6 +50,54 @@ from argumentation_analysis.orchestration.registry_setup import (  # noqa: F401
 from argumentation_analysis.orchestration.workflows import *  # noqa: F401,F403
 
 logger = logging.getLogger("UnifiedPipeline")
+
+
+def _collect_degraded_capabilities(
+    phase_results: Dict[str, Any],
+    state: Any,
+    capabilities_used: List[str],
+) -> Tuple[List[str], List[str]]:
+    """Collect capabilities that ran degraded (#1355 / #1608).
+
+    Two independent sources, reconciled into ``capabilities_degraded``:
+
+    * the honest ``structured_arg_status`` registry — formal/logic axes
+      (ASPIC+/SetAF/weighted/Dung) whose translator raised, was unconfigured,
+      or stayed honestly absent (populated by ``_record_structured_arg_status``
+      with ``degraded=True``);
+    * the phase-output ``degraded`` canon — non-formal phases (governance,
+      external solvers, and the three restitution acts) that mark
+      ``output["degraded"] = True`` (BO-2 #1472 / GE-4 #1462).
+
+    #1608 — the restitution acts return ``degraded`` as a *dict of motifs*
+    (``ActNResult.degraded``), so the act invokers now surface it as a BOOL
+    ``output["degraded"]`` (feeds this ``is True`` predicate) AND a
+    ``degraded_reasons`` dict (persisted to state by the act writers). A dict
+    is never ``is True`` — before the raccord the acts structurally could not
+    feed this list (7 declaration sites, 0 readers).
+
+    Returns ``(capabilities_degraded, capabilities_used)`` with degraded caps
+    removed from ``capabilities_used`` so a degraded capability surfaces as
+    degraded, NOT as ``used`` (anti-theater #1019). Additive: phases/axes
+    without a degraded marker are unaffected.
+    """
+    degraded_caps: set[str] = set()
+    if state is not None:
+        structured = getattr(state, "structured_arg_status", None) or {}
+        degraded_caps = {
+            cap
+            for cap, info in structured.items()
+            if isinstance(info, dict) and info.get("degraded")
+        }
+    for pr in phase_results.values():
+        if pr.status != PhaseStatus.COMPLETED:
+            continue
+        out = getattr(pr, "output", None)
+        if isinstance(out, dict) and out.get("degraded") is True:
+            degraded_caps.add(pr.capability)
+    capabilities_degraded = sorted(degraded_caps)
+    capabilities_used = [c for c in capabilities_used if c not in degraded_caps]
+    return capabilities_degraded, capabilities_used
 
 
 async def run_unified_analysis(
@@ -185,7 +233,9 @@ async def run_unified_analysis(
     # #905: Apply formal extension filter before execution
     formal_filter = context.get("formal_extension_filter", "all") if context else "all"
     if formal_filter != "all":
-        from argumentation_analysis.orchestration.workflows import filter_formal_extensions
+        from argumentation_analysis.orchestration.workflows import (
+            filter_formal_extensions,
+        )
 
         workflow = filter_formal_extensions(workflow, formal_filter)
 
@@ -287,38 +337,9 @@ async def run_unified_analysis(
     # degraded capability surfaces via capabilities_degraded, NOT as ``used``.
     # Mirrors the conversational_orchestrator fix (#1446). Additive key: zero
     # blast radius on consumers (all read capabilities_used via .get(..., [])).
-    capabilities_degraded: list[str] = []
-    degraded_caps: set[str] = set()
-    if state is not None:
-        structured = getattr(state, "structured_arg_status", None) or {}
-        degraded_caps = {
-            cap
-            for cap, info in structured.items()
-            if isinstance(info, dict) and info.get("degraded")
-        }
-
-    # BO-2 #1472 — ``structured_arg_status`` only covers the formal/logic
-    # axes (ASPIC+/SetAF/weighted/Dung). Non-formal workflows (e.g.
-    # ``democratech``) carry their honest-degraded verdict in the phase
-    # output itself, via the codebase's standard ``output["degraded"] = True``
-    # canon (state_writers._write_external_*_solver, fallacy_detection,
-    # governance per GE-4 #1462). Without this cross-check, a 9-phase
-    # deliberation whose governance verdict is empty (no derivable
-    # preferences — no LLM key, sparse upstream) reports as 9/9 success —
-    # exactly the theatre #1019 forbids. Surface phase-level degraded
-    # markers here too. Additive: phases without the marker are unaffected.
-    for pr in phase_results.values():
-        if pr.status != PhaseStatus.COMPLETED:
-            continue
-        out = getattr(pr, "output", None)
-        if isinstance(out, dict) and out.get("degraded") is True:
-            degraded_caps.add(pr.capability)
-
-    if degraded_caps:
-        capabilities_degraded = sorted(degraded_caps)
-        capabilities_used = [
-            c for c in capabilities_used if c not in degraded_caps
-        ]
+    capabilities_degraded, capabilities_used = _collect_degraded_capabilities(
+        phase_results, state, capabilities_used
+    )
 
     result = {
         "workflow_name": workflow.name,

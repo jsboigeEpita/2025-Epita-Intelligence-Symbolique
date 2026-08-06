@@ -1100,6 +1100,31 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 )
         blocks.append("\n".join(lines))
 
+    # --- #1621: detections the movement enumeration structurally cannot carry ---
+    # Note (a) (#1153) added ``unattributed_fallacies`` so these would be
+    # "surfaced honestly rather than silently dropped (#1019)" — and then nothing
+    # read it. The promise lived only in the comment that made it.
+    #
+    # Why the enumeration above cannot stand in for this line: in
+    # ``build_act2_evidence`` the ``continue`` fires BEFORE the insertion into
+    # ``fallacy_by_arg``, so a fallacy with no resolvable target joins no
+    # movement; and ``fallacies_total`` increments AFTER it, so it is absent from
+    # the count too. Neither enumerated nor counted nor flagged — the exact
+    # definition of the silent drop the field was created to prevent. Contrast
+    # ``fallacies_total``, which IS recoverable here (the movement enumeration is
+    # uncapped) and is therefore deliberately left unwired: transport where the
+    # information already flows is #1019 read backwards.
+    unattributed_block = ""
+    if evidence.unattributed_fallacies:
+        unattributed_block = (
+            f"DÉTECTIONS NON RATTACHÉES : {evidence.unattributed_fallacies} "
+            f"sophisme(s) détecté(s) sans argument cible résolvable. Ils ne "
+            f"figurent dans AUCUN mouvement ci-dessus et ne sont pas comptés "
+            f"dans les dérapages localisés. Si tu les évoques, dis-le "
+            f"honnêtement — « non rattaché(s) à un argument identifié » — et "
+            f"ne leur invente NI cible NI mouvement d'accueil.\n\n"
+        )
+
     # --- formal anchors (verified-in-state) ---
     formal_block = "AUCUN verdict formel vérifié dans le state."
     if evidence.formal_findings:
@@ -1185,6 +1210,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{virtuous_section}"
         "DONNÉES VERIFIÉES DANS LE STATE (ne citer que celles-ci) :\n\n"
         f"{chr(10).join(blocks)}\n\n"
+        f"{unattributed_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
         f"{formal_block}\n\n"
         f"DÉLIBÉRATION COLLECTIVE (governance + débat, à tisser dans le récit — "
@@ -1315,12 +1341,11 @@ async def build_act2_narrative(
             "indisponible) — vertus tues, fail-loud."
         )
     vm = evidence.virtuous_mode
+    # Positive outcome — reported by ``is_virtuous``, never filed under
+    # ``degraded`` (see the note in ``act1_framing_plugin``): #1608 turned
+    # ``degraded`` into a verdict, so a virtue left here marked the act as
+    # degraded and stripped it from ``capabilities_used``.
     is_virtuous = vm is not None and vm.is_virtuous
-    if vm is not None and vm.is_virtuous:
-        degraded["act2_virtuous_mode"] = (
-            "Mode vertueux (spec §5) — récit mené par pourquoi ça tient. "
-            + vm.reasoning
-        )
 
     return Act2Result(
         narrative=narrative,

@@ -617,6 +617,37 @@ class TestBuildConclusion:
             for v in result.degraded.values()
         )
 
+    def test_thin_run_keeps_both_motifs_instead_of_overwriting(self):
+        """#1615 — the precise motif must survive the generic one.
+
+        On a thin run the quality axis is unavailable AND there are no weak
+        points, so both degradation branches fire. They used to write the same
+        ``act3_conclusion`` key, and the generic "aucun point faible" motif
+        silently replaced the precise "axe qualité non concluable" one — the
+        reader was told the wrong reason for the degradation.
+
+        Measured through the real builder before the fix: ``degraded`` held
+        ``act3_conclusion`` carrying the GENERIC text, the precise one gone.
+        Restoring the single key kills this test (and only this one).
+        """
+        state = _state(
+            identified_arguments={
+                "arg_1": "Une revendication défendue par un raisonnement causal étayé.",
+                "arg_2": "Une seconde revendication appuyée sur un précédent documenté.",
+            },
+            argument_quality_scores={},  # axe qualité indisponible
+        )
+        result = asyncio.get_event_loop().run_until_complete(
+            build_act3_conclusion(
+                state, llm_callable=_stub_llm(_WOVEN_CONCLUSION)  # type: ignore[arg-type]
+            )
+        )
+        # Both motifs present, each under its own key.
+        assert "act3_conclusion" in result.degraded
+        assert "qualit" in result.degraded["act3_conclusion"].lower()
+        assert "act3_conclusion_thin" in result.degraded
+        assert "point faible" in result.degraded["act3_conclusion_thin"].lower()
+
     def test_g2_failure_flags_gate_note(self):
         """G2 fails when no axis is non-trivial but args exist (vacuous)."""
         state = _state(identified_arguments={"arg_1": "un argument sans analyse"})
@@ -741,16 +772,27 @@ class TestVirtuousMode:
         )
         assert result.is_virtuous is True
         assert result.status == "woven"
-        assert "act3_virtuous_mode" in result.degraded
+        # The virtue is reported as a virtue, not as a degradation: #1608 made
+        # ``degraded`` a verdict (the invoker publishes ``bool(degraded)``), so
+        # a virtue filed there marked the best-case act as degraded.
+        assert "act3_virtuous_mode" not in result.degraded
+        assert bool(result.degraded) is False
 
     def test_non_virtuous_result_no_virtuous_marker(self):
+        """A non-virtuous state must not claim the virtuous shift.
+
+        The former companion assertion (``"act3_virtuous_mode" not in
+        result.degraded``) is dropped rather than kept: the key no longer
+        exists in any branch, so it could not fail under any implementation —
+        a passing assertion that measures nothing. ``is_virtuous`` is the flag
+        that still discriminates, and it is the one asserted.
+        """
         result = asyncio.get_event_loop().run_until_complete(
             build_act3_conclusion(
                 _rich_state(), llm_callable=_stub_llm(_WOVEN_CONCLUSION)  # type: ignore[arg-type]
             )
         )
         assert result.is_virtuous is False
-        assert "act3_virtuous_mode" not in result.degraded
 
     def test_no_fabricated_fallacy_in_virtuous_prompt(self):
         # the virtuous prompt must NOT invent a weak point to fill a beat
