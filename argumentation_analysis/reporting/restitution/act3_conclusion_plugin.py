@@ -1108,7 +1108,14 @@ async def build_act3_conclusion(
         # Defensive: no weak points AND not flagged virtuous (an empty-ish run
         # that still passed G1). Honest note — not a positive virtuous claim,
         # since no non-trivial axis qualified the text as virtuous.
-        degraded["act3_conclusion"] = (
+        #
+        # Key is ``act3_conclusion_thin``, NOT ``act3_conclusion`` (#1615): the
+        # latter is already written above when the quality axis is unavailable,
+        # and both conditions hold together on a thin run — measured through the
+        # real builder, the generic motif here silently replaced the precise
+        # "axe qualité non concluable" one, so the reader was told the wrong
+        # reason for the degradation. Distinct keys, both motifs survive.
+        degraded["act3_conclusion_thin"] = (
             "Aucun point faible localisé et aucun axe vertueux non-trivial — "
             "la conclusion titre sur les forces disponibles sans claim vertueux "
             "non dérivé (fail-loud)."
