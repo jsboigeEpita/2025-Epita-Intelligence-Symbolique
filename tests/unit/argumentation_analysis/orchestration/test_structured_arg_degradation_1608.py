@@ -48,6 +48,9 @@ class _FakeState:
 
     def __init__(self) -> None:
         self.structured_arg_status: Dict[str, Dict[str, Any]] = {}
+        # #1608 act-raccord: per-act degradation motifs (mirrors the real
+        # UnifiedAnalysisState field populated by the act state writers).
+        self.restitution_acts_degraded: Dict[str, Dict[str, Any]] = {}
 
     def add_structured_arg_status(
         self,
@@ -283,3 +286,129 @@ class TestPhaseErrorIsNeverEmpty:
         msg = self._msg(asyncio.TimeoutError(), "p", None)
         assert msg == "TimeoutError"
         assert msg != ""
+
+
+# =============================================================================
+# Défaut 2 (act raccord, R752) — the restitution acts' degraded dict must feed
+# capabilities_degraded, and its motifs must reach the state
+# =============================================================================
+
+
+class TestActDegradedFeedsCapabilities:
+    """#1608 R752 — the three restitution acts return ``degraded`` as a DICT of
+    motifs, but the only consumer tested ``out.get("degraded") is True`` (a dict
+    is never ``is True``), so the acts structurally could not feed
+    ``capabilities_degraded`` (7 declaration sites, 0 readers). The invokers now
+    surface ``degraded`` as a BOOL + ``degraded_reasons`` dict; this proves the
+    raccord via the extracted consumer ``_collect_degraded_capabilities``."""
+
+    @staticmethod
+    def _collect(phase_results, state, used):
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _collect_degraded_capabilities,
+        )
+
+        return _collect_degraded_capabilities(phase_results, state, used)
+
+    def test_act_with_bool_degraded_feeds_capabilities_degraded(self):
+        # Post-raccord: the invoker surfaces ``degraded`` as a BOOL, so the
+        # ``is True`` predicate matches and the act feeds capabilities_degraded.
+        pr = {
+            "act3": PhaseResult(
+                "act3",
+                PhaseStatus.COMPLETED,
+                "act3_conclusion",
+                output={
+                    "act3_conclusion": "x",
+                    "degraded": True,
+                    "degraded_reasons": {"act3_conclusion_gate": "G2"},
+                },
+            )
+        }
+        degraded, used = self._collect(pr, None, ["act3_conclusion"])
+        assert "act3_conclusion" in degraded
+        assert "act3_conclusion" not in used
+
+    def test_act_with_dict_degraded_does_not_feed(self):
+        # THE FALSIFIABILITY TEST. Pre-raccord the invoker returned the dict
+        # as-is; ``out.get("degraded") is True`` is False on a dict → the act
+        # never fed capabilities_degraded (it stayed "used"). Revert the
+        # invoker to return the raw dict and this assertion flips.
+        pr = {
+            "act3": PhaseResult(
+                "act3",
+                PhaseStatus.COMPLETED,
+                "act3_conclusion",
+                output={
+                    "act3_conclusion": "x",
+                    "degraded": {"act3_conclusion_gate": "G2"},  # dict, not bool
+                },
+            )
+        }
+        degraded, used = self._collect(pr, None, ["act3_conclusion"])
+        assert "act3_conclusion" not in degraded
+        assert "act3_conclusion" in used  # stayed "used" — the bug
+
+    def test_structured_registry_axis_also_feeds(self):
+        state = _FakeState()
+        state.add_structured_arg_status(
+            "setaf_reasoning", "translator_failed", True, "raised", 0
+        )
+        degraded, _ = self._collect({}, state, [])
+        assert "setaf_reasoning" in degraded
+
+    def test_clean_act_unaffected(self):
+        pr = {
+            "act3": PhaseResult(
+                "act3",
+                PhaseStatus.COMPLETED,
+                "act3_conclusion",
+                output={"act3_conclusion": "x"},
+            )
+        }
+        degraded, used = self._collect(pr, None, ["act3_conclusion"])
+        assert degraded == []
+        assert "act3_conclusion" in used
+
+
+class TestActDegradedMotifsReachState:
+    """#1608 'Faire atteindre l'état aux motifs' — the act state writers persist
+    ``degraded_reasons`` into ``state.restitution_acts_degraded`` so the motifs
+    no longer die in the return value. Anti-pendule: an act that succeeded
+    (empty / absent motifs) is NOT marked degraded."""
+
+    @staticmethod
+    def _write_act3(output, state):
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_act3_conclusion_to_state,
+        )
+
+        _write_act3_conclusion_to_state(output, state, {})
+
+    def test_motifs_persisted_for_degraded_act(self):
+        state = _FakeState()
+        state.act3_conclusion = ""
+        self._write_act3(
+            {
+                "act3_conclusion": "concl",
+                "degraded_reasons": {"act3_conclusion_gate": "G2 partielle"},
+            },
+            state,
+        )
+        assert state.restitution_acts_degraded == {
+            "act3_conclusion": {"act3_conclusion_gate": "G2 partielle"}
+        }
+
+    def test_clean_act_not_marked_degraded(self):
+        # No degraded_reasons → the field stays empty (anti-pendule: an act
+        # that succeeded is never degraded by default).
+        state = _FakeState()
+        state.act3_conclusion = ""
+        self._write_act3({"act3_conclusion": "concl"}, state)
+        assert state.restitution_acts_degraded == {}
+
+    def test_empty_motifs_not_persisted(self):
+        state = _FakeState()
+        state.act3_conclusion = ""
+        self._write_act3({"act3_conclusion": "concl", "degraded_reasons": {}}, state)
+        assert state.restitution_acts_degraded == {}

@@ -8247,7 +8247,8 @@ async def _invoke_act2_narrative(
         "act2_narrative": result.narrative,
         "status": result.status,
         "gate_band": gate_band,
-        "degraded": result.degraded,
+        "degraded": bool(result.degraded),
+        "degraded_reasons": dict(result.degraded),
     }
 
 
@@ -8346,7 +8347,8 @@ async def _invoke_act1_framing(
         "act1_framing": result.narrative,
         "status": result.status,
         "gate_band": gate_band,
-        "degraded": result.degraded,
+        "degraded": bool(result.degraded),
+        "degraded_reasons": dict(result.degraded),
     }
 
 
@@ -8446,7 +8448,8 @@ async def _invoke_act3_conclusion(
         "act3_conclusion": result.narrative,
         "status": result.status,
         "gate_band": gate_band,
-        "degraded": result.degraded,
+        "degraded": bool(result.degraded),
+        "degraded_reasons": dict(result.degraded),
     }
 
 

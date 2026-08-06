@@ -1335,6 +1335,27 @@ def _write_act2_narrative_to_state(
     narrative = output.get("act2_narrative", "")
     if isinstance(narrative, str) and narrative:
         state.act2_narrative = narrative
+    # #1608 — persist the degradation motifs so they reach the state instead
+    # of dying in the return value (the acts return ``degraded`` as a dict;
+    # the invoker surfaces it as ``degraded_reasons``).
+    _persist_act_degraded_reasons(state, "act2_narrative", output)
+
+
+def _persist_act_degraded_reasons(state: Any, capability: str, output: Any) -> None:
+    """Persist an act's degradation motifs into ``restitution_acts_degraded``.
+
+    Anti-pendule (#1608): only populated when the act genuinely recorded
+    motifs (non-empty dict) — an act that succeeded is never marked degraded
+    by default. No-op on states that predate the field (defensive).
+    """
+    if not isinstance(output, dict):
+        return
+    reasons = output.get("degraded_reasons")
+    if not isinstance(reasons, dict) or not reasons:
+        return
+    rstd = getattr(state, "restitution_acts_degraded", None)
+    if isinstance(rstd, dict):
+        rstd[capability] = dict(reasons)
 
 
 def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1350,6 +1371,7 @@ def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
     narrative = output.get("act1_framing", "")
     if isinstance(narrative, str) and narrative:
         state.act1_framing = narrative
+    _persist_act_degraded_reasons(state, "act1_framing", output)  # #1608 motifs
 
 
 def _write_act3_conclusion_to_state(
@@ -1367,6 +1389,7 @@ def _write_act3_conclusion_to_state(
     narrative = output.get("act3_conclusion", "")
     if isinstance(narrative, str) and narrative:
         state.act3_conclusion = narrative
+    _persist_act_degraded_reasons(state, "act3_conclusion", output)  # #1608 motifs
 
 
 def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

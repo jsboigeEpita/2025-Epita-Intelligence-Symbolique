@@ -501,6 +501,17 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # Empty until the act3_conclusion phase runs; the renderer reports the gap
         # honestly.
         self.act3_conclusion: str = ""
+        # #1608 — per-act degradation motifs (the *why* an act ran degraded:
+        # readability-gate band, virtuous-mode shift, etc.). The acts return
+        # ``degraded`` as a dict of motifs (``ActNResult.degraded``); the act
+        # invokers surface it as ``output["degraded_reasons"]`` and the act
+        # state writers persist it here, keyed by capability. Surfacing the
+        # motifs in the state (rather than letting them die in the return
+        # value) lets the renderer attribute a degraded act to its true cause
+        # — fail-loud, not fail-hard (#1019). Anti-pendule: only populated
+        # when an act genuinely recorded motifs; an act that succeeded stays
+        # empty (never marked degraded by default).
+        self.restitution_acts_degraded: Dict[str, Dict[str, str]] = {}
         # PP #715: source-level metadata for qualitative synthesis
         self.source_metadata: Dict[str, str] = {}
         # Epic #1258 / Track 1 #1259 — déanonymisation du pipeline de travail.
