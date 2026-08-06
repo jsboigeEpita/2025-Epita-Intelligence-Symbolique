@@ -27,6 +27,9 @@ import pytest
 
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     Act3Result,
+    _fol_verified,
+    _is_guest_formal_entry,
+    _pl_verified,
     build_act3_conclusion,
     build_act3_evidence,
     build_act3_prompt,
@@ -931,3 +934,174 @@ class TestConclusionCarriesTheAbsence:
         assert "Portée de cette analyse" not in narratives[0]
         assert "attaques collectives" in narratives[1]
         assert "hypothèses et contraires" in narratives[2]
+
+
+# --- #1605: guest formalisms must not credit the host axis -------------------
+
+
+def _dl_entry() -> dict:
+    """The shape ``state_writers._write_dl_to_state`` really writes (measured)."""
+    return {
+        "id": "fol_1",
+        "formulas": ["DL: Knowledge base is consistent."],
+        "consistent": True,
+        "inferences": [],
+        "confidence": 1.0,
+    }
+
+
+def _real_fol_entry(consistent: bool = False) -> dict:
+    """A genuine first-order theory decided by a first-order prover."""
+    return {
+        "id": "fol_2",
+        "formulas": ["forall X: (humain(X) => mortel(X))", "humain(socrate)"],
+        "consistent": consistent,
+        "inferences": [],
+        "confidence": 1.0,
+    }
+
+
+class TestGuestFormalEntriesDoNotCreditHostAxis:
+    """A formalism writing into another's container must not earn its axis.
+
+    Measured on the real runs: ``fol_analysis_results`` also receives
+    Description Logic verdicts, and on 2 of 3 corpora the ``formal_fol`` axis was
+    carried *solely* by such an entry — on runs where the real FOL theory failed
+    to parse. The conclusion was granted first-order support that no first-order
+    prover ever produced.
+    """
+
+    def test_dl_entry_is_recognised_as_guest(self) -> None:
+        assert _is_guest_formal_entry(_dl_entry()) is True
+
+    def test_real_fol_entry_is_not_guest(self) -> None:
+        assert _is_guest_formal_entry(_real_fol_entry()) is False
+
+    def test_entry_mixing_real_and_marker_formulas_keeps_credit(self) -> None:
+        """Conservative by design: only an ALL-marker entry is a guest."""
+        mixed = {
+            "formulas": ["DL: Knowledge base is consistent.", "humain(socrate)"],
+            "consistent": True,
+        }
+        assert _is_guest_formal_entry(mixed) is False
+
+    def test_entry_without_formulas_is_not_guest(self) -> None:
+        """``all([])`` is True — the empty case must not be swept in silently."""
+        assert _is_guest_formal_entry({"consistent": True}) is False
+        assert _is_guest_formal_entry({"formulas": [], "consistent": True}) is False
+
+    def test_dl_only_state_loses_the_fol_axis(self) -> None:
+        state = _state(fol_analysis_results=[_dl_entry()])
+        assert _fol_verified(state) == 0
+        axes = build_act3_evidence(state).verdict.nontrivial_axes
+        assert "formal_fol" not in axes
+
+    def test_real_fol_verdict_keeps_the_fol_axis(self) -> None:
+        """The bite-proving negative: the filter removes guests, not the axis."""
+        state = _state(fol_analysis_results=[_dl_entry(), _real_fol_entry()])
+        assert _fol_verified(state) == 1
+        axes = build_act3_evidence(state).verdict.nontrivial_axes
+        assert "formal_fol" in axes
+
+    def test_guest_cl_and_qbf_do_not_credit_the_pl_axis(self) -> None:
+        """CL and QBF write into the propositional container the same way."""
+        guests_only = _state(
+            propositional_analysis_results=[
+                {
+                    "formulas": ["CL(0 conditionals): No query specified."],
+                    "satisfiable": True,
+                },
+                {"formulas": ["QBF: <texte brut du document>"], "satisfiable": True},
+            ]
+        )
+        assert _pl_verified(guests_only) == 0
+        assert (
+            "formal_pl" not in build_act3_evidence(guests_only).verdict.nontrivial_axes
+        )
+
+        with_host = _state(
+            propositional_analysis_results=[
+                {
+                    "formulas": ["CL(0 conditionals): No query specified."],
+                    "satisfiable": True,
+                },
+                {"formulas": ["p && q"], "satisfiable": True},
+            ]
+        )
+        assert _pl_verified(with_host) == 1
+        assert "formal_pl" in build_act3_evidence(with_host).verdict.nontrivial_axes
+
+
+# --- #1605: the blocking half of the conclusion gate -------------------------
+
+
+# A conclusion asserting first-order support. ``_rich_state`` has no formal_fol
+# axis, so this claim rests on nothing.
+_CLAIM_ON_ABSENT_AXIS = (
+    "### Ce que le discours dit\n\n"
+    "Le locuteur disqualifie l'adversaire avant de défendre sa thèse sur le "
+    "fond. La logique du premier ordre confirme que la structure profonde du "
+    "discours est cohérente. Le lecteur peut donc suivre le second mouvement "
+    "sans réserve.\n\n"
+    "### Ce qui tient\n\n"
+    "Le raisonnement causal tient et reste lisible pour qui suit le débat."
+)
+
+
+class TestUnsupportedClaimBlocked:
+    """The DoD's blocking half: an affirmation refused for lack of a dimension.
+
+    ``_band_claim_ceiling`` *instructs* the LLM about how strongly it may
+    characterise the discourse. Nothing verified the produced prose afterwards.
+    This gate is that verification, per axis — the band cannot do it, because
+    losing an entire formalism moves 6 axes to 5 and keeps the same band.
+    """
+
+    def _run(self, state: object, conclusion: str) -> Act3Result:
+        return asyncio.run(build_act3_conclusion(state, _stub_llm(conclusion)))
+
+    def test_claim_on_absent_axis_is_removed_from_the_narrative(self) -> None:
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "La logique du premier ordre confirme" not in result.narrative
+
+    def test_removal_is_reported_in_degraded(self) -> None:
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "act3_claim_blocked" in result.degraded
+        assert "premier ordre" in result.degraded["act3_claim_blocked"]
+
+    def test_removal_note_names_the_axis_for_the_reader(self) -> None:
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "Affirmation retirée" in result.narrative
+        assert "la logique du premier ordre" in result.narrative
+
+    def test_same_claim_survives_when_the_axis_is_present(self) -> None:
+        """The bite proof: identical prose, one axis added, no removal."""
+        supported = _rich_state()
+        supported.fol_analysis_results = [_real_fol_entry(consistent=True)]
+        result = self._run(supported, _CLAIM_ON_ABSENT_AXIS)
+        assert "La logique du premier ordre confirme" in result.narrative
+        assert "act3_claim_blocked" not in result.degraded
+        assert "Affirmation retirée" not in result.narrative
+
+    def test_honest_absence_statement_is_not_blocked(self) -> None:
+        """Naming an absent axis to SAY it is absent is what #1609 asks for."""
+        honest = _CLAIM_ON_ABSENT_AXIS.replace(
+            "La logique du premier ordre confirme que la structure profonde du "
+            "discours est cohérente.",
+            "La logique du premier ordre n'a pas abouti sur ce texte.",
+        )
+        result = self._run(_rich_state(), honest)
+        assert "n'a pas abouti sur ce texte" in result.narrative
+        assert "act3_claim_blocked" not in result.degraded
+
+    def test_conclusion_making_no_unsupported_claim_is_untouched(self) -> None:
+        result = self._run(_rich_state(), _WOVEN_CONCLUSION)
+        assert "act3_claim_blocked" not in result.degraded
+        assert "Affirmation retirée" not in result.narrative
+
+    def test_gate_preserves_the_rest_of_the_conclusion(self) -> None:
+        """Fail loud, not fail hard: one sentence goes, the conclusion stays."""
+        result = self._run(_rich_state(), _CLAIM_ON_ABSENT_AXIS)
+        assert "Le locuteur disqualifie l'adversaire" in result.narrative
+        assert "Le raisonnement causal tient" in result.narrative
+        assert result.status == "woven"

@@ -48,6 +48,7 @@ files, append-only.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
@@ -112,6 +113,97 @@ _AXIS_DUNG = "dung"
 _EXCEEDED_MIN_AXES = 5
 _MATCH_MIN_AXES = 4
 _PARTIAL_MIN_AXES = 2
+
+# Single definition of the axis set, shared by the band computation and the
+# claim gate below. Two lists would drift, and the gate's whole job is to be
+# exactly as wide as the band's notion of coverage.
+_ALL_AXES: Tuple[str, ...] = (
+    _AXIS_FALLACIES,
+    _AXIS_QUALITY,
+    _AXIS_COUNTERS,
+    _AXIS_FORMAL_PL,
+    _AXIS_FORMAL_FOL,
+    _AXIS_DUNG,
+)
+
+# Formula prefixes written by a formalism into ANOTHER formalism's container
+# (#1605). See _is_guest_formal_entry for why the host axis must not credit them.
+_GUEST_FORMULA_MARKERS: Tuple[str, ...] = ("dl:", "cl(", "qbf:")
+
+# --- #1605: the blocking half of the conclusion gate -------------------------
+#
+# _band_claim_ceiling tells the LLM how strongly it may characterise the
+# discourse. That is a *prompt* instruction, and nothing verified afterwards
+# that the produced prose respected it. This gate is the deterministic half:
+# after the conclusion is woven, an assertion resting on an axis that produced
+# nothing is removed and the removal is said out loud.
+#
+# Per-axis, deliberately, and NOT band-based: the band counts axes against fixed
+# thresholds, so a run can lose an entire formalism and keep the same band
+# (measured — losing formal_fol takes 6 axes to 5, still EXCEEDED). A count
+# cannot express "this particular claim has no support".
+
+_AXIS_LABELS_FR: Dict[str, str] = {
+    _AXIS_FALLACIES: "les sophismes",
+    _AXIS_QUALITY: "la qualité argumentative",
+    _AXIS_COUNTERS: "les contre-arguments",
+    _AXIS_FORMAL_PL: "la logique propositionnelle",
+    _AXIS_FORMAL_FOL: "la logique du premier ordre",
+    _AXIS_DUNG: "l'argumentation abstraite (Dung)",
+}
+
+# Phrases by which a French conclusion asserts an axis. Kept narrow: a marker
+# that also occurs in ordinary prose would block honest sentences.
+_AXIS_CLAIM_MARKERS: Dict[str, Tuple[str, ...]] = {
+    _AXIS_FALLACIES: ("sophisme", "fallacieu", "paralogisme"),
+    _AXIS_QUALITY: ("qualité argumentative", "score de qualité", "vertu argumentative"),
+    _AXIS_COUNTERS: ("contre-argument", "contre-argumentation"),
+    _AXIS_FORMAL_PL: (
+        "logique propositionnelle",
+        "satisfiabilité",
+        "solveur sat",
+    ),
+    _AXIS_FORMAL_FOL: (
+        "logique du premier ordre",
+        "premier ordre",
+        "eprover",
+        "prover9",
+        "quantificateur",
+    ),
+    _AXIS_DUNG: (
+        "sémantique de dung",
+        "argumentation abstraite",
+        "extension fondée",
+        "extension admissible",
+        "extension préférée",
+    ),
+}
+
+# A sentence carrying one of these is *stating the absence*, not claiming the
+# axis — exactly what #1609 asks the conclusion to do. Blocking it would punish
+# the honest wording. The gate is biased toward NOT blocking.
+_ABSENCE_MARKERS: Tuple[str, ...] = (
+    "aucun",
+    "aucune",
+    "n'a pas",
+    "n'ont pas",
+    "ne permet",
+    "ne peut",
+    "n'est pas",
+    "ne sont pas",
+    "faute de",
+    "absence",
+    "non évalu",
+    "pas de ",
+    "sans ",
+    "indisponible",
+    "n'a produit",
+    "hors de portée",
+)
+
+# Sentence splitter that preserves each chunk's leading whitespace, so removing
+# a sentence leaves the rest of the line spaced as the LLM wrote it.
+_SENTENCE_RE = re.compile(r"\s*[^.!?\n]+[.!?]*")
 
 
 # --- evidence dataclasses ----------------------------------------------------
@@ -198,6 +290,20 @@ class AbsentDimension:
     label: str
     status: str
     reason: str
+
+
+@dataclass(frozen=True)
+class BlockedClaim:
+    """A sentence the gate removed because its axis produced nothing (#1605).
+
+    Carries the offending sentence so a reviewer can audit what was withheld —
+    a gate whose decisions are not inspectable is indistinguishable from prose
+    that simply never made the claim.
+    """
+
+    axis: str
+    label: str
+    sentence: str
 
 
 @dataclass
@@ -303,6 +409,32 @@ def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
     return sat if isinstance(sat, bool) else None
 
 
+def _is_guest_formal_entry(result: Dict[str, Any]) -> bool:
+    """True when a record in a formal container was written by ANOTHER formalism.
+
+    #1605: the formal containers are shared. ``fol_analysis_results`` also
+    receives Description Logic verdicts (``state_writers._write_dl_to_state``
+    renders them as ``formulas=["DL: <message>"]``), and
+    ``propositional_analysis_results`` receives Conditional-Logic (``CL(...)``)
+    and QBF ones. Sharing a container is a storage decision and is fine; letting
+    a GUEST verdict credit the HOST axis is not — measured on 2 of 3 real
+    corpora, the ``formal_fol`` axis was carried solely by a DL prose entry on
+    runs where the real FOL theory failed to parse, so the conclusion was
+    granted first-order support that no first-order solver ever produced.
+
+    Conservative on purpose: only an entry whose formulas are *all* guest
+    markers is treated as a guest, so a real theory that happens to mention a
+    marker keeps its credit.
+    """
+    formulas = result.get("formulas")
+    if not isinstance(formulas, list) or not formulas:
+        return False
+    return all(
+        isinstance(f, str) and f.strip().lower().startswith(_GUEST_FORMULA_MARKERS)
+        for f in formulas
+    )
+
+
 def _pl_inconsistent(state: Any) -> int:
     """Count PL inferences the Tweety solver found inconsistent (real-in-state).
 
@@ -312,7 +444,13 @@ def _pl_inconsistent(state: Any) -> int:
     pl = getattr(state, "propositional_analysis_results", None)
     if not isinstance(pl, list):
         return 0
-    return sum(1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is False)
+    return sum(
+        1
+        for r in pl
+        if isinstance(r, dict)
+        and not _is_guest_formal_entry(r)
+        and _pl_verdict(r) is False
+    )
 
 
 def _pl_verified(state: Any) -> int:
@@ -329,7 +467,13 @@ def _pl_verified(state: Any) -> int:
     pl = getattr(state, "propositional_analysis_results", None)
     if not isinstance(pl, list):
         return 0
-    return sum(1 for r in pl if isinstance(r, dict) and _pl_verdict(r) is not None)
+    return sum(
+        1
+        for r in pl
+        if isinstance(r, dict)
+        and not _is_guest_formal_entry(r)
+        and _pl_verdict(r) is not None
+    )
 
 
 def _fol_inconsistent(state: Any) -> int:
@@ -337,7 +481,13 @@ def _fol_inconsistent(state: Any) -> int:
     fol = getattr(state, "fol_analysis_results", None)
     if not isinstance(fol, list):
         return 0
-    return sum(1 for r in fol if isinstance(r, dict) and r.get("consistent") is False)
+    return sum(
+        1
+        for r in fol
+        if isinstance(r, dict)
+        and not _is_guest_formal_entry(r)
+        and r.get("consistent") is False
+    )
 
 
 def _fol_verified(state: Any) -> int:
@@ -354,6 +504,7 @@ def _fol_verified(state: Any) -> int:
         1
         for r in fol
         if isinstance(r, dict)
+        and not _is_guest_formal_entry(r)
         and (r.get("consistent") is True or r.get("consistent") is False)
     )
 
@@ -613,16 +764,8 @@ def _compute_verdict_band(
     characterised discourse) on top of broad coverage — the "depth surpassing"
     spirit of #1008 §2.1, read as analytical depth rather than comparison.
     """
-    all_axes = [
-        _AXIS_FALLACIES,
-        _AXIS_QUALITY,
-        _AXIS_COUNTERS,
-        _AXIS_FORMAL_PL,
-        _AXIS_FORMAL_FOL,
-        _AXIS_DUNG,
-    ]
     present = set(axes_nontrivial)
-    missing = [a for a in all_axes if a not in present]
+    missing = [a for a in _ALL_AXES if a not in present]
     n = len(axes_nontrivial)
     has_formal_depth = _AXIS_FORMAL_PL in present or _AXIS_FORMAL_FOL in present
     has_quality = _AXIS_QUALITY in present
@@ -1163,6 +1306,85 @@ def _scope_note(absent: List[AbsentDimension]) -> str:
     )
 
 
+def _states_absence(lowered_sentence: str) -> bool:
+    """True when the sentence names the axis in order to say it produced nothing."""
+    return any(m in lowered_sentence for m in _ABSENCE_MARKERS)
+
+
+def _gate_unsupported_claims(
+    narrative: str, nontrivial_axes: List[str]
+) -> Tuple[str, List[BlockedClaim]]:
+    """Remove assertions resting on an axis that produced nothing.
+
+    The blocking half of the #1605 conclusion gate. ``_band_claim_ceiling``
+    *instructs* the LLM; this *enforces*, after the fact, on the produced prose.
+    A sentence is blocked when it names an absent axis without stating that the
+    axis is absent — the honest wording (#1609) must survive untouched, so the
+    absence markers act as an exemption rather than the claim markers acting as
+    a trigger on their own.
+
+    Fail loud, not fail hard: the offending sentence is dropped and the drop is
+    reported through ``degraded``; the rest of the conclusion is preserved. A
+    reader must never receive an unsupported claim, and must never silently lose
+    a whole conclusion either.
+    """
+    absent = [a for a in _ALL_AXES if a not in set(nontrivial_axes)]
+    if not absent or not narrative:
+        return narrative, []
+
+    blocked: List[BlockedClaim] = []
+    out_lines: List[str] = []
+    for line in narrative.splitlines():
+        chunks = _SENTENCE_RE.findall(line)
+        if not chunks:
+            out_lines.append(line)
+            continue
+        kept: List[str] = []
+        for chunk in chunks:
+            lowered = chunk.lower()
+            hit = next(
+                (
+                    axis
+                    for axis in absent
+                    if any(m in lowered for m in _AXIS_CLAIM_MARKERS[axis])
+                ),
+                None,
+            )
+            if hit is not None and not _states_absence(lowered):
+                blocked.append(
+                    BlockedClaim(
+                        axis=hit, label=_AXIS_LABELS_FR[hit], sentence=chunk.strip()
+                    )
+                )
+                continue
+            kept.append(chunk)
+        out_lines.append("".join(kept).rstrip())
+
+    if not blocked:
+        return narrative, []
+    # Removing sentences can leave runs of blank lines where a paragraph was.
+    gated = re.sub(r"\n{3,}", "\n\n", "\n".join(out_lines)).strip()
+    return gated, blocked
+
+
+def _blocked_claim_note(blocked: List[BlockedClaim]) -> str:
+    """The paragraph that replaces what was removed — the removal must be said."""
+    labels = sorted({b.label for b in blocked})
+    if len(labels) == 1:
+        listing = labels[0]
+        subject = "une dimension que cette analyse n'a pas pu établir"
+    else:
+        listing = ", ".join(labels[:-1]) + f" et {labels[-1]}"
+        subject = "des dimensions que cette analyse n'a pas pu établir"
+    return (
+        "### Affirmation retirée\n\n"
+        f"La conclusion conduite s'appuyait sur {subject} : {listing}. "
+        f"{'Cette phrase a été retirée' if len(blocked) == 1 else 'Ces phrases ont été retirées'} "
+        "plutôt que nuancée : sans résultat dans l'état, l'affirmation n'avait "
+        "aucun support à nuancer."
+    )
+
+
 # --- LLM-conducted weaving (fail-loud) ---------------------------------------
 
 
@@ -1282,6 +1504,23 @@ async def build_act3_conclusion(
             degraded["act3_scope_note_appended"] = (
                 "La prose conduite ne rattachait aucune limitation aux axes "
                 "perdus — paragraphe de portée ajouté de façon déterministe."
+            )
+
+    # #1605 — the blocking half. Runs BEFORE the §4 self-check so the gate reads
+    # the text the reader will actually receive. The band's claim ceiling is a
+    # prompt instruction; this is the enforcement.
+    if evidence.verdict is not None:
+        narrative, blocked = _gate_unsupported_claims(
+            narrative, evidence.verdict.nontrivial_axes
+        )
+        if blocked:
+            narrative = narrative.rstrip() + "\n\n" + _blocked_claim_note(blocked)
+            degraded["act3_claim_blocked"] = (
+                f"{len(blocked)} affirmation(s) retirée(s), sans support dans "
+                "l'état : "
+                + "; ".join(
+                    f"{b.label} — « {_truncate(b.sentence, 90)} »" for b in blocked
+                )
             )
 
     # §4 self-check (honest, never grades on a curve).
