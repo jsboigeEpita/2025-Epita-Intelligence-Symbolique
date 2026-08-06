@@ -39,19 +39,31 @@ from .readability_gate import GateVerdict, ReadabilityGate
 # this comfortably.
 _MIN_ACT_CHARS = 120
 
+# Generic fallback for a missing act. Honest by construction: it names the
+# missing act and what the reader loses, but it does NOT name a cause — the
+# cause is only known from the precise motif filed in ``acts.degraded`` (when
+# the generator ran far enough to record one). ``_MISSING_ACT_LEAD`` is the
+# short form used when a motif *is* available and this wording cedes the floor
+# to it (#1617).
+_MISSING_ACT_LEAD = {
+    1: "Acte I indisponible",
+    2: "Acte II indisponible",
+    3: "Acte III indisponible",
+}
+
 _MISSING_ACT_WORDING = {
     1: (
         "Acte I indisponible — le générateur de mise en situation n'a pas "
-        "produit de cadre (non câblé ou en échec). Le rapport entre directement "
-        "dans l'analyse sans filet de cadrage."
+        "produit de cadre. Le rapport entre directement dans l'analyse sans "
+        "filet de cadrage."
     ),
     2: (
-        "Acte II indisponible — le récit dialectique n'a pas pu être généré "
-        "(cœur narratif absent). Le rapport n'a pas de substance narrative."
+        "Acte II indisponible — le récit dialectique n'a pas pu être généré. "
+        "Le rapport n'a pas de substance narrative."
     ),
     3: (
-        "Acte III indisponible — la conclusion actionnable n'a pas été générée "
-        "(portes G1–G4 non évaluées). Le rapport s'arrête sans synthèse."
+        "Acte III indisponible — la conclusion actionnable n'a pas été générée. "
+        "Le rapport s'arrête sans synthèse."
     ),
 }
 
@@ -106,9 +118,25 @@ class RestitutionReportRenderer:
             body_parts.append("")
 
             if acts.is_missing(n):
-                # fail-loud: name the missing act, never omit
-                body_parts.append(f"_{_MISSING_ACT_WORDING[n]}_")
-                body_parts.append("")
+                # fail-loud: name the missing act, never omit. But a missing
+                # act may carry the *precise* reason it is missing in
+                # ``acts.degraded`` (e.g. no LLM injected, LLM produced nothing,
+                # no substrate). When such a motif exists, the generic wording
+                # cedes the floor to it — the wording stays only when no motif
+                # was recorded (#1617). The ``continue`` is deliberate: a
+                # missing act must NOT also fall through to the degraded branch
+                # *or* the "thin act" check (``min_act_chars``) below, which
+                # would count 0 chars and add misleading noise.
+                key = RestitutionActs.act_key(n)
+                motif = acts.degraded.get(key)
+                if motif:
+                    body_parts.append(f"_{_MISSING_ACT_LEAD[n]}._")
+                    body_parts.append("")
+                    body_parts.append(f"> ⚠️ **Acte dégradé** — {motif}")
+                    body_parts.append("")
+                else:
+                    body_parts.append(f"_{_MISSING_ACT_WORDING[n]}_")
+                    body_parts.append("")
                 continue
 
             body_parts.append(text)
