@@ -107,6 +107,115 @@ class TestBuildRestitutionActs:
 
 
 # ============================================================================
+# #1608 last hop — degradation motifs must reach the READER
+# ============================================================================
+
+
+class TestActDegradationReachesTheReader:
+    """The motifs persisted by the act state writers must change the report.
+
+    The load-bearing property is stated end-to-end and as a *difference*:
+    mutating ``state.restitution_acts_degraded`` MUST change the rendered
+    markdown. Asserting only that ``build_restitution_acts`` returns the right
+    mapping would pass even with a renderer that never printed it — which is
+    exactly the situation this hop closes (the motifs reached the state, the
+    renderer had the branch, and nothing joined the two).
+    """
+
+    @staticmethod
+    def _rendered(**degraded: object) -> str:
+        state = _stub_state(
+            act1_framing=_ACT1,
+            act2_narrative=_ACT2,
+            act3_conclusion=_ACT3,
+            restitution_acts_degraded=dict(degraded),
+        )
+        return render_spectacular_restitution(state).markdown
+
+    def test_mutating_the_state_changes_the_rendered_report(self):
+        clean = self._rendered()
+        degraded = self._rendered(
+            act3_conclusion={"act3_conclusion_gate": "G2 partiellement satisfaite"}
+        )
+        # The difference IS the property under test — not the presence alone.
+        assert clean != degraded
+        assert "G2 partiellement satisfaite" not in clean
+        assert "G2 partiellement satisfaite" in degraded
+        assert "Acte dégradé" in degraded
+
+    def test_motifs_joined_sorted_by_motif_key(self):
+        # Sorted, so the report never depends on a plugin's insertion order.
+        acts = build_restitution_acts(
+            _stub_state(
+                act3_conclusion=_ACT3,
+                restitution_acts_degraded={
+                    "act3_conclusion": {"z_motif": "dernier", "a_motif": "premier"}
+                },
+            )
+        )
+        assert acts.degraded["act3_conclusion"] == "premier; dernier"
+
+    def test_clean_act_is_absent_from_the_mapping(self):
+        # Anti-pendule: nothing is degraded by default.
+        acts = build_restitution_acts(
+            _stub_state(act1_framing=_ACT1, restitution_acts_degraded={})
+        )
+        assert acts.degraded == {}
+
+    def test_state_without_the_field_yields_no_degradation(self):
+        # Backward compatibility with states predating #1608.
+        assert build_restitution_acts(_stub_state(act1_framing=_ACT1)).degraded == {}
+
+    def test_empty_motif_texts_do_not_fabricate_a_note(self):
+        acts = build_restitution_acts(
+            _stub_state(
+                act1_framing=_ACT1,
+                restitution_acts_degraded={"act1_framing": {"motif": "   "}},
+            )
+        )
+        assert acts.degraded == {}
+
+    def test_unknown_act_key_is_dropped_and_reported(self, monkeypatch):
+        # Losing a motif in silence is the failure this chain exists to remove,
+        # so the drop must be audible. The module logger is doubled rather than
+        # relying on caplog, whose records this repo's logging setup can wipe.
+        warnings: List[str] = []
+        monkeypatch.setattr(
+            "argumentation_analysis.reporting.restitution.pipeline_adapter.logger",
+            SimpleNamespace(
+                warning=lambda msg, *a: warnings.append(msg % a if a else msg),
+                info=lambda *a, **k: None,
+            ),
+        )
+        acts = build_restitution_acts(
+            _stub_state(
+                act1_framing=_ACT1,
+                restitution_acts_degraded={"act9_imaginaire": {"m": "texte"}},
+            )
+        )
+        assert acts.degraded == {}
+        assert warnings and "act9_imaginaire" in warnings[0]
+
+    def test_non_mapping_motifs_are_dropped_and_reported(self, monkeypatch):
+        warnings: List[str] = []
+        monkeypatch.setattr(
+            "argumentation_analysis.reporting.restitution.pipeline_adapter.logger",
+            SimpleNamespace(
+                warning=lambda msg, *a: warnings.append(msg % a if a else msg),
+                info=lambda *a, **k: None,
+            ),
+        )
+        acts = build_restitution_acts(
+            _stub_state(
+                act1_framing=_ACT1,
+                restitution_acts_degraded={"act1_framing": "une chaîne, pas un dict"},
+            )
+        )
+        assert acts.degraded == {}
+        assert warnings and "act1_framing" in warnings[0]
+
+
+# ============================================================================
 # source_id derivation (opaque, privacy HARD)
 # ============================================================================
 
