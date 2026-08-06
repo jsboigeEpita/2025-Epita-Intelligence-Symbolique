@@ -20,12 +20,15 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from argumentation_analysis.reporting.restitution.act1_framing_plugin import Act1Result
-from argumentation_analysis.reporting.restitution.act2_narrative_plugin import Act2Result
-from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import Act3Result
+from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+    Act2Result,
+)
+from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+    Act3Result,
+)
 from argumentation_analysis.reporting.restitution.conversational_adapter import (
     generate_and_render_for_conversational_state,
 )
-
 
 # --- state stub (mirrors test_pipeline_adapter) ------------------------------
 
@@ -113,7 +116,9 @@ class TestGenerateAndRender:
         llm = AsyncMock(return_value="conducted narrative")
         p1, p2, p3 = _patched_act_builders()
         with p1 as m1, p2 as m2, p3 as m3:
-            await generate_and_render_for_conversational_state(state, "t", llm_callable=llm)
+            await generate_and_render_for_conversational_state(
+                state, "t", llm_callable=llm
+            )
             # each builder received the SAME injected llm_callable
             assert m1.call_args.kwargs.get("llm_callable") is llm
             assert m2.call_args.kwargs.get("llm_callable") is llm
@@ -237,3 +242,193 @@ class TestConversationalWiringContract:
         doc = run_conversational_analysis.__doc__ or ""
         assert "render_restitution" in doc
         assert "restitution_report" in doc
+
+
+# ============================================================================
+# #1618 — degradation motifs on the conversational lane
+#
+# #1608 gave the motifs a transport (state.restitution_acts_degraded) and #1614
+# gave them a reader (_read_act_degraded → RestitutionActs.degraded). Both hops
+# landed on the *pipeline* lane only. This module is a deliberately file-disjoint
+# lane, and that disjunction is exactly how the twin drifted: the conversational
+# adapter dropped ``ActNResult.degraded`` on the floor, so its report was
+# structurally incapable of saying it was degraded — a reader with no writer, on
+# one lane of two. A quieter report reads as a healthier report, which biases any
+# comparison of the two orchestration modes.
+#
+# The pinning below is therefore NOT "the writer exists" but "the two lanes agree"
+# — a property that survives a refactor of either lane, which shared code would
+# not. The degenerate substitutions that kill these tests are in the PR body.
+# ============================================================================
+
+
+_MOTIF1 = {
+    "act1_framing": "Enjeux non extraits (stakes vide) — cadrage limité, fail-loud."
+}
+_MOTIF2 = {"act2_narrative": "Axe qualité non concluable ici — vertus tues, fail-loud."}
+_MOTIF3 = {
+    "act3_conclusion_gates": "Gates G1–G4 : G2 non passé — wording de repli honnête.",
+    "act3_conclusion": "Axe qualité non concluable ici — appréciations limitées.",
+    "act3_conclusion_thin": "Aucun point faible localisé — pas de claim vertueux non dérivé.",
+}
+
+
+def _stub_state_with_degraded_map(**fields: object) -> SimpleNamespace:
+    """A stub state carrying the #1608 motif mapping (UnifiedAnalysisState has it)."""
+    state = _stub_state(**fields)
+    state.restitution_acts_degraded = {}
+    return state
+
+
+def _degraded_act_builders():
+    """Patch the 3 builders so each returns a narrative AND degradation motifs."""
+    return (
+        patch(
+            "argumentation_analysis.reporting.restitution.conversational_adapter."
+            "build_act1_framing",
+            new=AsyncMock(
+                return_value=Act1Result(
+                    narrative=_ACT1, status="woven", degraded=dict(_MOTIF1)
+                )
+            ),
+        ),
+        patch(
+            "argumentation_analysis.reporting.restitution.conversational_adapter."
+            "build_act2_narrative",
+            new=AsyncMock(
+                return_value=Act2Result(
+                    narrative=_ACT2, status="woven", degraded=dict(_MOTIF2)
+                )
+            ),
+        ),
+        patch(
+            "argumentation_analysis.reporting.restitution.conversational_adapter."
+            "build_act3_conclusion",
+            new=AsyncMock(
+                return_value=Act3Result(
+                    narrative=_ACT3, status="woven", degraded=dict(_MOTIF3)
+                )
+            ),
+        ),
+    )
+
+
+def _drive_pipeline_lane(state: SimpleNamespace) -> None:
+    """Feed the SAME motifs through the pipeline lane's state writers.
+
+    Mirrors what ``_invoke_actN_*`` hand to ``_write_actN_*_to_state``: the
+    narrative under the capability key, plus ``degraded_reasons``.
+    """
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_act1_framing_to_state,
+        _write_act2_narrative_to_state,
+        _write_act3_conclusion_to_state,
+    )
+
+    for key, narrative, motifs, writer in (
+        ("act1_framing", _ACT1, _MOTIF1, _write_act1_framing_to_state),
+        ("act2_narrative", _ACT2, _MOTIF2, _write_act2_narrative_to_state),
+        ("act3_conclusion", _ACT3, _MOTIF3, _write_act3_conclusion_to_state),
+    ):
+        writer(
+            {key: narrative, "status": "woven", "degraded_reasons": dict(motifs)},
+            state,
+            {},
+        )
+
+
+class TestConversationalLaneDegradedMotifs:
+    async def test_persists_motifs_for_the_three_acts(self):
+        """The direct regression: the motifs must reach the state, not the floor."""
+        state = _stub_state_with_degraded_map()
+        p1, p2, p3 = _degraded_act_builders()
+        with p1, p2, p3:
+            await generate_and_render_for_conversational_state(
+                state, "t", llm_callable=AsyncMock()
+            )
+        assert state.restitution_acts_degraded == {
+            "act1_framing": _MOTIF1,
+            "act2_narrative": _MOTIF2,
+            "act3_conclusion": _MOTIF3,
+        }
+
+    async def test_report_names_the_degradation(self):
+        """End-to-end: a motif recorded upstream is visible to the reader."""
+        state = _stub_state_with_degraded_map()
+        p1, p2, p3 = _degraded_act_builders()
+        with p1, p2, p3:
+            report = await generate_and_render_for_conversational_state(
+                state, "t", llm_callable=AsyncMock()
+            )
+        assert "Acte dégradé" in report.markdown
+        # the motif TEXT reaches the page, not just the marker
+        assert "vertus tues" in report.markdown
+
+    async def test_act_without_motifs_stays_absent_from_the_map(self):
+        """Anti-pendule: a successful act is never marked degraded by default.
+
+        Absence from the mapping is the honest state, not a gap to fill. This is
+        the guard that must SURVIVE the fix — a writer that files an empty dict
+        per act would make every report look degraded.
+        """
+        state = _stub_state_with_degraded_map()
+        p1, p2, p3 = _patched_act_builders()  # builders return degraded={} by default
+        with p1, p2, p3:
+            report = await generate_and_render_for_conversational_state(
+                state, "t", llm_callable=AsyncMock()
+            )
+        assert state.restitution_acts_degraded == {}
+        assert "Acte dégradé" not in report.markdown
+
+    async def test_state_without_the_mapping_does_not_crash(self):
+        """Defensive: a state predating #1608 loses the motifs, never the run.
+
+        The narratives must still land — reporting never fails the analysis
+        (#1019/#369).
+        """
+        state = _stub_state()  # no restitution_acts_degraded attribute
+        p1, p2, p3 = _degraded_act_builders()
+        with p1, p2, p3:
+            report = await generate_and_render_for_conversational_state(
+                state, "t", llm_callable=AsyncMock()
+            )
+        assert state.act1_framing == _ACT1
+        assert state.act3_conclusion == _ACT3
+        assert "Acte I" in report.markdown
+
+    async def test_both_lanes_agree_on_degraded(self):
+        """THE item of #1618: same motifs in ⇒ same ``RestitutionActs.degraded`` out.
+
+        Pins the *property* rather than the implementation. The two lanes are
+        deliberately file-disjoint (one LLM resolution for three acts vs. three
+        kernels); merging them to share six lines of guard would be a pendulum.
+        What must not diverge is the observable: the target field, the per-act
+        key, and the join the renderer consumes. This test fails if either lane
+        drops the motifs, files them under a different key, or joins them
+        differently — including if only ONE lane is refactored.
+        """
+        from argumentation_analysis.reporting.restitution.pipeline_adapter import (
+            build_restitution_acts,
+        )
+
+        conv = _stub_state_with_degraded_map()
+        p1, p2, p3 = _degraded_act_builders()
+        with p1, p2, p3:
+            await generate_and_render_for_conversational_state(
+                conv, "t", llm_callable=AsyncMock()
+            )
+
+        pipe = _stub_state_with_degraded_map()
+        _drive_pipeline_lane(pipe)
+
+        # agreement at the transport…
+        assert conv.restitution_acts_degraded == pipe.restitution_acts_degraded
+        # …and at the shape the renderer actually consumes (key, sort, join)
+        assert (
+            build_restitution_acts(conv).degraded
+            == build_restitution_acts(pipe).degraded
+        )
+        # guard against a vacuous pass: both lanes agreeing on EMPTY proves nothing
+        assert build_restitution_acts(
+            conv
+        ).degraded, "sonde vide — les motifs n'ont pas circulé"
