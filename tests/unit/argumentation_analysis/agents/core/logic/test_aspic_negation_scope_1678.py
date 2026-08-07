@@ -167,3 +167,31 @@ class TestAspicNegationProducesAttacks:
         assert {"rebut", "undermine", "undercut"}.issubset(
             scopes
         ), f"the three scopes must coexist and be distinguished, got {scopes}"
+
+
+class TestExtCountStaysDescriptive:
+    """DoD item 4 (#1671/#1674) — ext_count describes, no label derives from it.
+
+    An undercut yields ONE extension yet a real attack. ``ext_count==1`` must
+    not read as 'uncontested'; the attack set, decoupled from ext_count, carries
+    the arbitration signal.
+    """
+
+    def test_undercut_one_extension_yet_a_real_attack(self):
+        out = _handler().analyze_aspic_framework(
+            strict_rules=[],
+            defeasible_rules=[
+                {"head": "concl_x", "body": ["arg_a"], "name": "d_main"},
+                {
+                    "head": "d_main",
+                    "body": ["arg_d"],
+                    "name": "d_undercut",
+                    "head_negated": True,
+                },
+            ],
+            axioms=["arg_a", "arg_d"],
+        )
+        scopes = [a["scope"] for a in out["attacks"]]
+        assert "undercut" in scopes, out
+        # The arbitration signal is the attack set, decoupled from ext_count.
+        assert out["statistics"]["attacks_count"] >= 1
