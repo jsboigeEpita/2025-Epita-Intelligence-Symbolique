@@ -510,3 +510,95 @@ class TestVector5DAGArgumentsDescription:
         """Pass 2 (identified_arguments) should still work alongside Pass 12."""
         result = _scrub_state_for_export(self._make_dag_state())
         assert result["identified_arguments"]["arg_1"]["confidence"] == 0.8
+
+
+# ---------------------------------------------------------------------------
+# Vector 6 (#1662) — the DAG pass must reach the shape the WRITERS produce
+# ---------------------------------------------------------------------------
+
+class TestVector6RealWriterShapes:
+    """Pass 12 must scrub every container it declares, not just the dict-shaped one.
+
+    ``TestVector5DAGArgumentsDescription`` above builds its four containers as
+    dict-of-id -> entry. Only ONE of them is stored that way: ``dung_frameworks``
+    is a ``Dict[str, Dict]`` (shared_state.py:442, filled by ``[df_id] = {...}``),
+    while ``ranking_results`` / ``probabilistic_results`` / ``bipolar_results``
+    are ``List[Dict]`` (l.454/458/459, filled by ``.append(entry)``). Pass 12 was
+    gated on ``isinstance(dim, dict)``, so it ran on the one and silently skipped
+    the three — and the Vector-5 tests stayed green, because their fixture built
+    the shape the guard expected instead of the shape a writer emits.
+
+    That is why these tests drive the REAL writers and serialize through the REAL
+    ``get_state_snapshot()`` rather than hand-rolling a dict: a fixture that
+    invents its own producer can only prove the test agrees with itself.
+
+    Entity names are deliberately absent from the NL below so the final
+    ``_global_entity_scrub`` (a fixed ~30-name allowlist) cannot mask a Pass 12
+    failure — these assertions must be armed by the shape-based scrub alone.
+    """
+
+    _LONG_NL = (
+        "The speaker asserts that the proposed reform is the only viable path forward"
+    )
+
+    def _snapshot_from_real_writers(self):
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState("initial text for the analysis")
+        state.add_dung_framework(
+            name="A framework carrying a long descriptive name in natural language",
+            arguments=[self._LONG_NL, "short"],
+            attacks=[["arg_1", "arg_2"]],
+        )
+        state.add_ranking_result(
+            method="burden", arguments=[self._LONG_NL], comparisons=[]
+        )
+        state.add_probabilistic_result(
+            arguments=[self._LONG_NL], acceptance_probs={"arg_1": 0.7}
+        )
+        state.add_bipolar_result(
+            framework_type="bipolar", arguments=[self._LONG_NL], supports=[]
+        )
+        return state.get_state_snapshot()
+
+    def test_writers_emit_list_shaped_containers(self):
+        """Guard on the premise itself: three of the four are lists, one is a dict.
+
+        If a future refactor unifies the shapes, this test fails first and says so,
+        instead of the scrub silently going back to covering only part of them.
+        """
+        snapshot = self._snapshot_from_real_writers()
+        assert isinstance(snapshot["dung_frameworks"], dict)
+        for key in ("ranking_results", "probabilistic_results", "bipolar_results"):
+            assert isinstance(snapshot[key], list), f"{key} is no longer a list"
+            assert snapshot[key], f"{key} was not populated by its writer"
+
+    @pytest.mark.parametrize(
+        "dim_key", ["ranking_results", "probabilistic_results", "bipolar_results"]
+    )
+    def test_list_shaped_dimension_arguments_scrubbed(self, dim_key):
+        """The canary: pre-fix these three were skipped by the isinstance(dict) gate."""
+        result = _scrub_state_for_export(self._snapshot_from_real_writers())
+        entries = result[dim_key]
+        assert entries, f"{dim_key} empty — the assertion would be vacuous"
+        for entry in entries:
+            assert entry["arguments"] == ["<scrubbed>"], (
+                f"{dim_key} carried raw NL through the export scrub"
+            )
+
+    def test_dict_shaped_dimension_still_scrubbed(self):
+        """No-regression: dung_frameworks was the one container the gate reached."""
+        result = _scrub_state_for_export(self._snapshot_from_real_writers())
+        for entry in result["dung_frameworks"].values():
+            assert entry["arguments"][0] == "<scrubbed>"
+            assert entry["arguments"][1] == "short"  # short strings preserved
+            assert entry["name"] == "<scrubbed>"
+
+    def test_no_long_nl_survives_anywhere_in_snapshot(self):
+        """End-to-end: the planted sentence must not appear in the exported JSON.
+
+        Deliberately free of allowlisted entity names, so a pass is attributable
+        to Pass 12 and not to the final entity regex.
+        """
+        result = _scrub_state_for_export(self._snapshot_from_real_writers())
+        assert self._LONG_NL not in json.dumps(result)
