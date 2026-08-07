@@ -68,6 +68,13 @@ LlmCallable = Callable[[str], Awaitable[str]]
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
 _JUSTIFICATION_CAP = 200
 _COUNTER_CAP = 200
+# #1622 — how many counter-strategies the prompt ENUMERATES. Distinct from
+# ``_COUNTER_CAP`` above (that one truncates each snippet's *text*). Named so the
+# truncation notice below is computed from the same constant that produces the
+# truncation: a literal ``[:8]`` and a hard-coded "8" in the notice can drift
+# apart silently. Do NOT raise it — 16 would have the identical defect at 17;
+# the fix is to *say* the list is partial, not to show more of it.
+_COUNTER_LIST_CAP = 8
 # SV (#1182): caps for governance/debate evidence (privacy + prompt budget).
 _DEBATE_CAP = 200
 _DEBATE_MAX_EXCHANGES = 4
@@ -1088,13 +1095,31 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         )
 
     # --- Que faire (actionnable) ---
-    if evidence.counter_strategies:
+    shown_counters = evidence.counter_strategies[:_COUNTER_LIST_CAP]
+    if shown_counters:
         counters_lines = "\n".join(
             f"  - Pour contrer {cs.target_arg_id} ({cs.strategy}) : {cs.snippet}"
-            for cs in evidence.counter_strategies[:8]
+            for cs in shown_counters
         )
     else:
         counters_lines = "  (aucun contre-argument généré — recommandations de contre limitées aux exceptions de scheme)"
+    # #1622 — the enumeration above is capped, and it is the ONLY place the
+    # prompt lists counter-arguments. Measured on 8 real artifacts, 8/8 carried
+    # more than the cap (11 to 56), so the conclusion routinely wrote its
+    # actionable section from as little as 14 % of the material while nothing
+    # told it a remainder existed. ``counters_total`` already reached the
+    # evidence bundle; only its *magnitude* had no reader (the boolean did, at
+    # the axis test). The notice fires from the gap between what is shown and
+    # what exists — not from the cap alone — so it stays honest if the two ever
+    # diverge, and stays silent (no false alarm) on a run below the cap.
+    _omitted_counters = evidence.counters_total - len(shown_counters)
+    if _omitted_counters > 0:
+        counters_lines += (
+            f"\n  (liste tronquée : {len(shown_counters)} contre-arguments "
+            f"listés sur {evidence.counters_total} au total, "
+            f"{_omitted_counters} non énumérés ici. N'écris pas, et ne laisse "
+            f"pas entendre, que cette liste est exhaustive.)"
+        )
 
     target_lines = (
         "\n".join(
