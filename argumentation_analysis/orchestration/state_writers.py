@@ -135,6 +135,30 @@ def _resolve_absent_status(
     )
 
 
+def _structured_arg_substantive_members(output: Any) -> int:
+    """Count the NON-EMPTY result sets a structured-arg handler returned (#1671).
+
+    ``extension_count`` answers "how many result sets came back", and ``[[]]``
+    genuinely *is* one extension — so that field is correct as it stands. What it
+    cannot do is decide anything: a framework returning a single EMPTY extension
+    has accepted nothing, excluded nothing and arbitrated nothing. Measured on
+    real state artefacts, four of the five axes come back as ``[[]]`` — one
+    result set, empty — which ``len()`` reports as ``1``.
+
+    This counts what the members *contain* rather than how many there are, and
+    is used only to decide the status label, never recorded as a metric of its
+    own (counting is not deciding).
+    """
+    if not isinstance(output, dict):
+        return 0
+    members = output.get("extensions")
+    if members is None:
+        members = output.get("supports")
+    if not isinstance(members, list):
+        return 0
+    return sum(1 for member in members if member)
+
+
 def _record_structured_arg_status(
     state: Any, capability: str, output: Any, ctx: dict[str, Any]
 ) -> None:
@@ -148,6 +172,26 @@ def _record_structured_arg_status(
     #1236-era ``absent_no_translator`` catch-all that asserted a cause it had
     not observed. Only labels what happened; never fabricates extensions (#1019).
     No-op on states that predate ``add_structured_arg_status`` (defensive).
+
+    #1671 — the ``has_genuine_input`` branch used to be the mirror image of the
+    defect #1608 fixed on the other branch: it asserted *"framework evaluated on
+    real structured artifacts"* while observing only that an INPUT key was
+    present. Nothing in it looked at what came back. Measured on real state
+    artefacts, four of the five axes reached that branch with
+    ``extensions == [[]]`` — the handler had not failed, it had *succeeded on an
+    empty theory* — and were filed ``evaluated / degraded=False``. Such an axis
+    is then invisible in both directions: the absence ledger skips it (it is not
+    degraded) and the presence channel finds nothing to project. The branch now
+    reads the output and splits into ``evaluated`` (a non-empty result set came
+    back) and ``evaluated_empty`` (the handler ran and returned nothing
+    substantive, or reported itself degraded).
+
+    Anti-pendulum: ``evaluated_empty`` is deliberately NOT the same thing as
+    ``no_genuine_relations``. The latter is a statement about the *source* — the
+    translator looked and found no such relations, an analytical result, hence
+    ``degraded=False``. This one is a statement about the *reasoning step*: the
+    translator did supply relations and the framework still produced nothing, so
+    the axis contributed no analysis and must not be counted as used.
     """
     recorder = getattr(state, "add_structured_arg_status", None)
     if not callable(recorder):
@@ -163,14 +207,33 @@ def _record_structured_arg_status(
         if isinstance(exts, list):
             ext_count = len(exts)
     if has_genuine_input:
-        recorder(
-            capability,
-            "evaluated",
-            False,
-            "Genuine structured input supplied via context; framework "
-            "evaluated on real structured artifacts.",
-            ext_count,
-        )
+        handler_degraded = bool(isinstance(output, dict) and output.get("degraded"))
+        substantive = _structured_arg_substantive_members(output)
+        if not handler_degraded and substantive:
+            recorder(
+                capability,
+                "evaluated",
+                False,
+                "Genuine structured input supplied via context; the framework "
+                f"returned {substantive} non-empty result set(s).",
+                ext_count,
+            )
+            return
+        formalism = _STRUCTURED_ARG_FORMALISM_NAME.get(capability, capability)
+        if handler_degraded:
+            reason = (
+                f"Genuine structured input was supplied, but the {formalism} "
+                "handler reported a degraded result — no reasoning was performed "
+                "on that input."
+            )
+        else:
+            reason = (
+                f"Genuine structured input was supplied, but the {formalism} "
+                f"framework returned no non-empty result set ({ext_count} "
+                "returned, all empty) — nothing was accepted, excluded or "
+                "arbitrated."
+            )
+        recorder(capability, "evaluated_empty", True, reason, ext_count)
         return
     # No genuine input — discriminate the cause (#1608). The invoke callable
     # that ran the translator wrote the cause into ctx. Falls back to

@@ -1059,6 +1059,19 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         - ``"absent_no_translator"`` — legacy/#1236 honest-absent label for the
           rare path where no cause was recorded (nothing wired). The capability
           ran on auto-shaped synthetic input. ``degraded`` is ``True``.
+        - ``"evaluated_empty"`` (#1671) — genuine structured input WAS supplied
+          and the framework ran, but it came back with no non-empty result set
+          (or reported itself degraded). ``degraded`` is ``True``: the axis
+          accepted, excluded and arbitrated nothing, so it contributed no
+          analysis and must not be counted among the capabilities used.
+          Distinct from ``no_genuine_relations``, which is a statement about the
+          *source* (the translator found nothing to translate); this one is a
+          statement about the *reasoning step* on input that did exist.
+
+        ``extension_count`` is how many result sets came back, not how much they
+        contain: ``[[]]`` is one extension and is reported as ``1``. It is a
+        description, never a verdict — the ``evaluated`` / ``evaluated_empty``
+        split is decided by the members' contents, not by this number.
 
         This only *labels* what happened; it never fabricates extensions
         (#1019). Keyed by ``capability`` (last write wins — one status per

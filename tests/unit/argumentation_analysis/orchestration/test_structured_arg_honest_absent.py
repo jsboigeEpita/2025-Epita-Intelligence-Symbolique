@@ -43,7 +43,10 @@ _WRITERS = [
 ]
 
 # A genuine-structured-input context per capability (a future translator would
-# populate these keys). Presence of any flips the status to "evaluated".
+# populate these keys). Presence of any takes the writer down the
+# ``has_genuine_input`` branch; since #1671 the label on that branch is decided
+# by what the handler returned, so these fixtures pair the context with a
+# non-empty result set to land on "evaluated".
 _GENUINE_CTX: Dict[str, Dict[str, Any]] = {
     "aspic_plus_reasoning": {"strict_rules": [{"head": "h", "body": ["b"]}]},
     "aba_reasoning": {"contraries": {"a": "not_a"}},
