@@ -12,6 +12,30 @@ git, a dashboard, a PR, or an API: it is where nominative content is scrubbed
 at the boundary. Anti-penduple: this is the *only* scrubber — the scattered
 ones (``generate_spectacular_bundle._scrub_state_for_export``,
 ``appendix._strip_leak_keys``) are consolidation targets, not siblings.
+
+Coverage is ALLOWLIST-DRIVEN, and that is a deliberate design: a catch-all
+"scrub every long string" pass would erase the structural aggregates
+(identifiers, methods, framework types, extension topologies) this function
+promises to preserve. The consequence is equally deliberate to state: a
+container absent from every table below traverses this function **intact**.
+Adding a state container is therefore not neutral — it must be classified
+here, and "it carries no natural language" is a claim to be verified against
+its producer, not assumed from its name. #1664 measured the cost of leaving
+that implicit: ``dung_frameworks`` was covered (#1265, #1271) while six
+sibling containers carrying the *same* claim text under the *same* sub-key
+were not, for the simple reason that they are declared ``List[Dict]`` and the
+passes written for Dung gate on ``isinstance(..., dict)``.
+
+Known and deliberately NOT covered, each for a stated reason:
+  * ``workflow_results`` — a free-form dict with no imposed schema; scrubbing
+    it needs a policy, not a table entry.
+  * ``formal_synthesis_reports[*].phase_results.*.formulas`` — symbolic, but
+    Track 2 makes symbols readable (which is why ``variables`` IS opacified);
+    the producer has to be read before deciding.
+  * ``extracts[*].name``, ``semantic_index_refs[*].document_id`` — declared as
+    names, yet structural in every artefact measured so far, and used as join
+    keys downstream. Opacifying them on suspicion would trade a hypothetical
+    leak for a certain breakage.
 """
 
 from __future__ import annotations
@@ -110,6 +134,65 @@ _TEXT_STRIP_LISTS = {
     "nl_to_logic_translations": {"original_text"},
     "semantic_index_refs": {"query", "snippet"},
     "formal_synthesis_reports": {"summary"},
+}
+
+# LIST-of-dicts fields whose sub-keys carry the same nominative claim text that
+# 4b/4c opacify for ``dung_frameworks`` (#1664): top-level field -> {sub_key}.
+# Each sub-key is passed through ``_opacify_list_values``, which handles a bare
+# string, a flat list and a nested list alike — so arity and topology survive
+# and only the content is opacified, exactly as in 4b.
+#
+# Why these fields, measured rather than assumed: ``_extract_arguments_from_
+# context`` (invoke_callables.py:3036) is the helper the 4b comment already
+# cites as the one that "puts the real claim text into ``arguments``". It feeds
+# 17 callables, not just Dung — ranking, probabilistic, bipolar, ASPIC+, belief
+# revision and dialogue among them. Their writers store that list verbatim
+# (shared_state.py:941-1032), so these carry claim text *by construction*:
+#   bipolar_results[*].supports      = [[text_a, text_b], ...]  (cf. Dung attacks)
+#   aspic_results[*].extensions      = [[text, ...], ...]       (cf. Dung extensions)
+#   belief_revision_results[*].original/.revised = [text, ...]
+#   dialogue_results[*].topic        = a claim text (the writer logs topic[:50])
+#
+# Anti-pendulum, also measured: the sibling label fields are NOT here.
+# ``ranking_results.method``, ``aspic_results.reasoner_type``,
+# ``bipolar_results.framework_type``, ``belief_revision_results.method`` are
+# closed vocabularies at every producer, and the contract promises to preserve
+# structural aggregates. Same verdict for ``dung_frameworks.name``: all ten
+# call sites build it from a fixed vocabulary (``aba_preferred``,
+# ``setaf_grounded``, ``social_af``, ``dung_arbitration``…), which confirms the
+# #1271 firsthand reading — it stays untouched.
+_OPAQUE_LIST_OF_DICTS_SUBKEYS = {
+    "ranking_results": {"arguments"},
+    "probabilistic_results": {"arguments"},
+    "bipolar_results": {"arguments", "supports"},
+    "aspic_results": {"extensions"},
+    "belief_revision_results": {"original", "revised"},
+    "dialogue_results": {"topic"},
+}
+
+# List-of-dicts fields with a dict sub-key whose *KEYS* are claim texts
+# (#1664): top-level field -> {sub_key}. ``_invoke_probabilistic`` builds
+# ``probs = {a: 0.5 for a in args}`` (invoke_callables.py:3896), so the
+# acceptance map is indexed by the argument text itself. The keys are
+# opacified and the numeric values kept, so the distribution survives intact.
+_OPAQUE_LIST_OF_DICTS_MAPPING_KEYS = {
+    "probabilistic_results": {"acceptance_probabilities"},
+}
+
+# List-of-dicts fields whose sub-key is ITSELF a list of dicts carrying
+# nominative leaves (#1664): top-level field -> {sub_key -> {leaf_subkeys}}.
+# One level deeper than pass 5.
+#   dialogue_results[*].trace[*]      = {round, speaker, action, argument, target}
+#       ``argument``/``target`` are claim texts (dialogue_handler.py:100-130);
+#       ``speaker``/``action`` are closed vocabularies and survive.
+#   debate_transcripts[*].exchanges[*] = {proponent_move, opponent_move, ...}
+#       ``_TEXT_STRIP_LISTS`` already declares those two sub-keys, but the real
+#       writer nests them one level down inside ``exchanges``
+#       (shared_state.py:860-872), so the declaration never had a target. This
+#       completes an intent already recorded rather than adding a new one.
+_OPAQUE_NESTED_ITEM_SUBKEYS = {
+    "dialogue_results": {"trace": {"argument", "target"}},
+    "debate_transcripts": {"exchanges": {"proponent_move", "opponent_move"}},
 }
 
 # List-of-dicts fields carrying a symbol-mapping sub-key: a ``Dict[str, str]``
@@ -305,6 +388,56 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
     for field, text_keys in _TEXT_STRIP_LISTS.items():
         if field in data and isinstance(data[field], list) and text_keys:
             data[field] = _strip_text_from_list(data[field], text_keys)
+
+    # 5b. Opacify the nominative sub-keys of LIST-of-dicts fields — the same
+    #     claim text 4b opacifies for the dict-shaped ``dung_frameworks``
+    #     (#1664). Four of the five formal-argumentation containers are
+    #     declared ``List[Dict]`` and filled by ``append()``, so 4b's
+    #     ``isinstance(data[field], dict)`` gate could never reach them.
+    for field, subkeys in _OPAQUE_LIST_OF_DICTS_SUBKEYS.items():
+        if field in data and isinstance(data[field], list):
+            for item in data[field]:
+                if not isinstance(item, dict):
+                    continue
+                for sk in subkeys:
+                    if sk in item:
+                        item[sk] = _opacify_list_values(item[sk])
+
+    # 5c. Opacify the *keys* of mapping sub-keys inside list-of-dicts fields
+    #     (probabilistic_results[*].acceptance_probabilities is indexed by the
+    #     argument text). Values are numeric and survive, so the distribution
+    #     is unaffected.
+    for field, subkeys in _OPAQUE_LIST_OF_DICTS_MAPPING_KEYS.items():
+        if field in data and isinstance(data[field], list):
+            for item in data[field]:
+                if not isinstance(item, dict):
+                    continue
+                for sk in subkeys:
+                    mapping = item.get(sk)
+                    if isinstance(mapping, dict):
+                        item[sk] = {
+                            (opaque_id(k) if isinstance(k, str) and k else k): v
+                            for k, v in mapping.items()
+                        }
+
+    # 5d. Opacify nominative leaves one level deeper: a list-of-dicts field
+    #     whose sub-key is itself a list of dicts (dialogue traces, debate
+    #     exchanges). Entry count and turn structure survive.
+    for field, nested_spec in _OPAQUE_NESTED_ITEM_SUBKEYS.items():
+        if field in data and isinstance(data[field], list):
+            for item in data[field]:
+                if not isinstance(item, dict):
+                    continue
+                for subtree_key, leaf_subkeys in nested_spec.items():
+                    subtree = item.get(subtree_key)
+                    if not isinstance(subtree, list):
+                        continue
+                    for leaf_item in subtree:
+                        if not isinstance(leaf_item, dict):
+                            continue
+                        for leaf in leaf_subkeys:
+                            if leaf in leaf_item:
+                                leaf_item[leaf] = _opacify_list_values(leaf_item[leaf])
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).
