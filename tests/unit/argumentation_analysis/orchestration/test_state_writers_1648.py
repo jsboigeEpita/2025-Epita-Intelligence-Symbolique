@@ -51,7 +51,7 @@ class TestAbaFlattening1648:
     hard-codes ``attacks=[]`` (state_writers.py:843). A reader aggregating
     attacks sees zero — and ABA cannot refute anything via this projection.
 
-    Today's expected failure: ``state.dung_frameworks["aba_preferred"]["attacks"]``
+    Today's expected failure: ``state.dung_frameworks[<generated_id>]["attacks"]``
     is ``[]`` even though ``context["contraries"]`` was non-empty.
     """
 
@@ -68,14 +68,21 @@ class TestAbaFlattening1648:
             },
         }
 
-    def test_aba_writer_preserves_contraries_or_derived_attacks(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (ABA). Handler drops contraries; "
+        "writer drops attacks. Wave-2 fix expected to flip this to PASS.",
+    )
+    def test_aba_writer_preserves_contraries_or_derived_attacks(self) -> None:
         state = _new_state()
         output = self._stub_handler_output()
         ctx = {"contraries": {"a": "b", "b": "a", "c": "a"}}
 
         _write_aba_to_state(output, state, ctx)
 
-        entry = state.dung_frameworks["aba_preferred"]
+        # The frame is keyed by a generated id (df_001), not by the 'name' field.
+        # Fetch the entry the same way the rest of the inventory does.
+        entry = next(iter(state.dung_frameworks.values()))
         # The diagnostic: writer stored no attacks despite contraries being
         # genuine structured input. Today: FAILS (entry["attacks"] == []).
         attacks: List[List[str]] = entry.get("attacks", [])
@@ -85,7 +92,12 @@ class TestAbaFlattening1648:
             "non-empty binary attack relations."
         )
 
-    def test_aba_writer_or_sidecar_carries_contraries(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (ABA sidecar). Contraries never "
+        "reach the state. Wave-2 fix expected to flip this to PASS.",
+    )
+    def test_aba_writer_or_sidecar_carries_contraries(self) -> None:
         """Stretch assertion: even if `attacks` stays empty, the contraries
         themselves must reach the state (via extensions or a sidecar)."""
         state = _new_state()
@@ -94,7 +106,7 @@ class TestAbaFlattening1648:
 
         _write_aba_to_state(output, state, ctx)
 
-        entry = state.dung_frameworks["aba_preferred"]
+        entry = next(iter(state.dung_frameworks.values()))
         # Look for contraries anywhere the state carries them today or
         # in a future formalism-specific sidecar.
         extensions = entry.get("extensions", {})
@@ -140,7 +152,12 @@ class TestSetafFlattening1648:
             "statistics": {"arguments_count": 3, "attacks_count": 2},
         }
 
-    def test_setaf_writer_preserves_set_attacks(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (SetAF). Handler returns joint "
+        "attacks, writer drops them at state_writers.py:1199-1209. Wave-2 fix.",
+    )
+    def test_setaf_writer_preserves_set_attacks(self) -> None:
         state = _new_state()
         output = self._stub_handler_output()
 
@@ -177,7 +194,7 @@ class TestAdfFlattening1648:
     future refactor that tries to "fix" ADF attacks breaks it visibly.
     """
 
-    def test_adf_attacks_stay_empty_and_acceptance_conditions_acknowledged(self):
+    def test_adf_attacks_stay_empty_and_acceptance_conditions_acknowledged(self) -> None:
         state = _new_state()
         output = {
             "semantics": "grounded",
@@ -213,7 +230,12 @@ class TestWeightedFlattening1648:
     pairs only. The weight is invisible to readers.
     """
 
-    def test_weighted_writer_preserves_attack_weights(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (Weighted). Handler returns "
+        "weights, writer projects to [src, tgt] only. Wave-2 fix.",
+    )
+    def test_weighted_writer_preserves_attack_weights(self) -> None:
         state = _new_state()
         output = {
             "semantics": "grounded",
@@ -253,7 +275,7 @@ class TestWeightedFlattening1648:
 class TestSocialFlattening1648:
     """Social writer carries scores/votes in extensions — pin the contract."""
 
-    def test_social_writer_preserves_scores_and_votes(self):
+    def test_social_writer_preserves_scores_and_votes(self) -> None:
         state = _new_state()
         output = {
             "ranking": ["a", "b"],
@@ -281,7 +303,12 @@ class TestSocialFlattening1648:
 class TestEafFlattening1648:
     """EAF writer drops per-agent epistemic beliefs."""
 
-    def test_eaf_writer_preserves_epistemic_beliefs(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (EAF). Writer drops per-agent "
+        "epistemic beliefs. Wave-2 fix.",
+    )
+    def test_eaf_writer_preserves_epistemic_beliefs(self) -> None:
         state = _new_state()
         output = {
             "semantics": "grounded",
@@ -319,7 +346,12 @@ class TestDelpFlattening1648:
     gone. This is the deepest flattening in the inventory.
     """
 
-    def test_delp_writer_preserves_argument_graph_or_defeat_relations(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (DeLP). Program + defeat "
+        "relations flattened away. Wave-2 fix.",
+    )
+    def test_delp_writer_preserves_argument_graph_or_defeat_relations(self) -> None:
         state = _new_state()
         output = {
             "program": [{"head": "a", "body": []}],
@@ -362,7 +394,12 @@ class TestDlFlattening1648:
     TBox, ABox, subsumptions are all gone (counted at invoke but never written).
     """
 
-    def test_dl_writer_preserves_ontology_structure(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (DL). TBox/ABox/subsumptions "
+        "dropped. Wave-2 fix.",
+    )
+    def test_dl_writer_preserves_ontology_structure(self) -> None:
         state = _new_state()
         output = {
             "consistent": True,
@@ -400,7 +437,12 @@ class TestDlFlattening1648:
 class TestClFlattening1648:
     """CL writer stores only ``[f"CL(N): {msg}"]`` as formulas."""
 
-    def test_cl_writer_preserves_conditionals(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (CL). Conditionals dropped. "
+        "Wave-2 fix.",
+    )
+    def test_cl_writer_preserves_conditionals(self) -> None:
         state = _new_state()
         output = {
             "entailed": True,
@@ -437,7 +479,12 @@ class TestClFlattening1648:
 class TestQbfFlattening1648:
     """QBF writer drops the alternating quantifier structure."""
 
-    def test_qbf_writer_preserves_quantifiers(self):
+    @pytest.mark.xfail(
+        strict=True,
+        reason="Pinning #1648 Wave-1 known loss (QBF). Quantifier structure "
+        "dropped. Wave-2 fix.",
+    )
+    def test_qbf_writer_preserves_quantifiers(self) -> None:
         state = _new_state()
         output = {
             "valid": True,
