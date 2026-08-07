@@ -698,3 +698,156 @@ class TestSanitizeDungExtensions:
         state = {"dung_frameworks": {"df_1": {"name": "fw", "arguments": ["a"]}}}
         result = sanitize_state(state)
         assert "extensions" not in result["dung_frameworks"]["df_1"]
+
+
+class TestListShapedContainers1664:
+    """#1664 — the six list-shaped containers carrying the same claim text.
+
+    Every state here is built by the REAL writers and serialized by the REAL
+    ``get_state_snapshot()``. A literal fixture cannot prove anything about
+    this defect: the passes written for ``dung_frameworks`` gate on
+    ``isinstance(..., dict)``, so a fixture that builds these containers as
+    dicts hands the guard the one shape no writer emits, and the test agrees
+    with itself while the mechanism is dead.
+
+    The planted string carries NO name from the fixed entity allowlist, so the
+    protection under measurement is the SHAPE-based one, not the name-based
+    final pass.
+    """
+
+    NL = "The speaker asserts that the proposed reform is the only viable path forward"
+    OTHER_NL = "A second claim contending that the timetable was never realistic"
+
+    def _snapshot(self):
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState("initial")
+        state.add_ranking_result("burden", [self.NL], [{"rank": 1}])
+        state.add_probabilistic_result([self.NL], {self.NL: 0.75})
+        state.add_bipolar_result("necessity", [self.NL], [[self.NL, self.OTHER_NL]])
+        state.add_aspic_result(
+            "simple", [[self.NL], [self.NL, self.OTHER_NL]], {"n": 2}
+        )
+        state.add_belief_revision_result("dalal", [self.NL], [self.OTHER_NL])
+        state.add_dialogue_result(
+            self.NL,
+            "accepted",
+            [
+                {
+                    "round": 1,
+                    "speaker": "opponent",
+                    "action": "attack",
+                    "argument": self.OTHER_NL,
+                    "target": self.NL,
+                }
+            ],
+        )
+        state.add_debate_transcript(
+            self.NL,
+            [{"proponent_move": self.NL, "opponent_move": self.OTHER_NL}],
+            "proponent",
+        )
+        return state.get_state_snapshot()
+
+    # --- premise guard: must SURVIVE the fix ---------------------------------
+
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "ranking_results",
+            "probabilistic_results",
+            "bipolar_results",
+            "aspic_results",
+            "belief_revision_results",
+            "dialogue_results",
+            "debate_transcripts",
+        ],
+    )
+    def test_writers_emit_list_shaped_containers(self, field):
+        # Pins the premise of the whole defect: these are lists, so any pass
+        # gated on isinstance(container, dict) is unreachable for them. If a
+        # future refactor unifies the shapes, this fails FIRST and says why,
+        # instead of letting a dict-gated pass silently re-cover half of them.
+        snap = self._snapshot()
+        assert isinstance(snap[field], list), f"{field} is no longer list-shaped"
+        assert isinstance(snap["dung_frameworks"], dict)
+
+    # --- the defect: must DIE when the fix is reverted ------------------------
+
+    @pytest.mark.parametrize(
+        "field,subkey",
+        [
+            ("ranking_results", "arguments"),
+            ("probabilistic_results", "arguments"),
+            ("bipolar_results", "arguments"),
+            ("bipolar_results", "supports"),
+            ("aspic_results", "extensions"),
+            ("belief_revision_results", "original"),
+            ("belief_revision_results", "revised"),
+        ],
+    )
+    def test_claim_text_subkeys_are_opacified(self, field, subkey):
+        result = sanitize_state(self._snapshot())
+        assert self.NL not in json.dumps(
+            result[field]
+        ), f"{field}[*].{subkey}: claim text survived sanitize_state"
+        assert self.OTHER_NL not in json.dumps(result[field])
+
+    def test_probabilistic_acceptance_map_keys_opacified_values_kept(self):
+        # The map is built as {arg_text: prob} by the producer, so the KEYS
+        # carry the payload. The distribution itself must survive intact.
+        result = sanitize_state(self._snapshot())
+        probs = result["probabilistic_results"][0]["acceptance_probabilities"]
+        assert self.NL not in probs
+        assert len(probs) == 1
+        assert list(probs.values()) == [0.75]
+
+    def test_dialogue_trace_leaves_opacified_vocabulary_kept(self):
+        result = sanitize_state(self._snapshot())
+        move = result["dialogue_results"][0]["trace"][0]
+        assert self.NL not in json.dumps(move)
+        assert self.OTHER_NL not in json.dumps(move)
+        # Closed vocabularies and turn structure survive.
+        assert move["speaker"] == "opponent"
+        assert move["action"] == "attack"
+        assert move["round"] == 1
+
+    def test_debate_exchanges_moves_opacified(self):
+        # _TEXT_STRIP_LISTS already declared proponent_move/opponent_move, but
+        # the real writer nests them inside `exchanges` — the declaration had
+        # no target until this pass.
+        result = sanitize_state(self._snapshot())
+        exchange = result["debate_transcripts"][0]["exchanges"][0]
+        assert self.NL not in json.dumps(exchange)
+        assert self.OTHER_NL not in json.dumps(exchange)
+
+    def test_bipolar_support_topology_preserved(self):
+        # Arity and the identity relation must survive: the support pair still
+        # links the SAME two opaque ids that appear in `arguments`.
+        result = sanitize_state(self._snapshot())
+        entry = result["bipolar_results"][0]
+        assert len(entry["supports"]) == 1
+        assert len(entry["supports"][0]) == 2
+        # Non-vacuity: on unscrubbed input both sides are the raw claim text,
+        # so the identity below would hold trivially. Pin that the values are
+        # opacified FIRST, then that the relation between them survived.
+        assert entry["arguments"][0] != self.NL
+        assert entry["supports"][0][0] == entry["arguments"][0]
+
+    def test_no_planted_claim_text_survives_anywhere(self):
+        blob = json.dumps(sanitize_state(self._snapshot()))
+        assert self.NL not in blob
+        assert self.OTHER_NL not in blob
+
+    # --- anti-pendulum: structural aggregates must SURVIVE the fix -----------
+
+    def test_structural_labels_not_over_scrubbed(self):
+        # Measured at every producer: these are closed vocabularies, and the
+        # contract promises to preserve structural aggregates. Scrubbing them
+        # would be the pendulum swing.
+        result = sanitize_state(self._snapshot())
+        assert result["ranking_results"][0]["method"] == "burden"
+        assert result["bipolar_results"][0]["framework_type"] == "necessity"
+        assert result["aspic_results"][0]["reasoner_type"] == "simple"
+        assert result["belief_revision_results"][0]["method"] == "dalal"
+        assert result["dialogue_results"][0]["outcome"] == "accepted"
