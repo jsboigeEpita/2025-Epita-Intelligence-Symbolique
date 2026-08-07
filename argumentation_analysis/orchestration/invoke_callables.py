@@ -3584,9 +3584,22 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     # ImportError from a jpype-less environment mask the original cause — in the
     # exact environment the honest-absent path targets. Reuses the helper already
     # used at l.4490 instead of touching jpype directly. (coordinator point 3)
-    from argumentation_analysis.core.jvm_setup import is_jvm_started
+    #
+    # #1677: the resolution itself must be survivable. ``jvm_setup`` imports
+    # ``jpype`` at module level, so in a jpype-less environment the line
+    # ``from ...jvm_setup import is_jvm_started`` raises ImportError HERE —
+    # outside the try below — and the honest-absent branch (the exact env it
+    # targets) becomes unreachable (the whole promise of #1670's honest-absent
+    # contract). Treat a missing jpype/jvm_setup as "JVM not available":
+    # ``jvm_up = False``, so the try's ``bipolar_handler`` import raises the
+    # same ImportError, is caught by the except, and the honest-absent dict
+    # fires. Mirrors the solver-absence boundary at _invoke_sat.
+    try:
+        from argumentation_analysis.core.jvm_setup import is_jvm_started
 
-    jvm_up = is_jvm_started()
+        jvm_up = is_jvm_started()
+    except ImportError:
+        jvm_up = False
 
     try:
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
