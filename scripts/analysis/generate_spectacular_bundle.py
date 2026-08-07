@@ -197,20 +197,20 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
                 scrubbed_bs[bs_id] = bs_val
         cleaned["belief_sets"] = scrubbed_bs
 
-    # Eighth pass: scrub extracts
-    extracts = cleaned.get("extracts", {})
-    if isinstance(extracts, dict):
-        scrubbed_extracts = {}
-        for e_id, e_val in extracts.items():
-            if isinstance(e_val, str) and len(e_val) > 20:
-                scrubbed_extracts[e_id] = "<scrubbed>"
-            elif isinstance(e_val, dict):
-                scrubbed_extracts[e_id] = {
+    # Eighth pass: scrub extracts (List[Dict[str, Any]] in prod via add_extract)
+    extracts = cleaned.get("extracts", [])
+    if isinstance(extracts, list):
+        scrubbed_extracts = []
+        for entry in extracts:
+            if isinstance(entry, dict):
+                scrubbed_extracts.append({
                     k: ("<scrubbed>" if isinstance(v, str) and len(v) > 20 else v)
-                    for k, v in e_val.items()
-                }
+                    for k, v in entry.items()
+                })
+            elif isinstance(entry, str) and len(entry) > 20:
+                scrubbed_extracts.append("<scrubbed>")
             else:
-                scrubbed_extracts[e_id] = e_val
+                scrubbed_extracts.append(entry)
         cleaned["extracts"] = scrubbed_extracts
 
     # Ninth pass: scrub analysis_tasks (may contain NL instructions)
@@ -255,17 +255,14 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
         cleaned["nl_to_logic_translations"] = scrubbed_nl
 
     # Twelfth pass: scrub nested structures containing argument descriptions
-    # (dung_frameworks, ranking_results, probabilistic_results, bipolar_results)
-    # These store List[str] under key "arguments" with raw NL descriptions
+    # (dung_frameworks, ranking_results, probabilistic_results, bipolar_results).
+    # Each entry stores List[str] under key "arguments" with raw NL descriptions
     # that bypass the identified_arguments scrub (Pass 2).
-    #
-    # #1662: the four containers do NOT share a shape. `dung_frameworks` is a
-    # Dict[str, Dict] (shared_state.py:442, filled by `[df_id] = {...}`), while
-    # `ranking_results` / `probabilistic_results` / `bipolar_results` are
-    # List[Dict] (l.454/458/459, filled by `.append(entry)`). Gating this pass on
-    # `isinstance(dim, dict)` therefore ran it on ONE of its four declared
-    # targets and silently skipped the other three. Iterate the entries whatever
-    # the container shape instead of testing the container's type.
+    # Note: container shapes differ — see core/shared_state.py:
+    #   dung_frameworks:    Dict[str, Dict[str, Any]] (keyed by framework id)
+    #   ranking_results:    List[Dict[str, Any]] (append-ordered)
+    #   probabilistic_results: List[Dict[str, Any]] (append-ordered)
+    #   bipolar_results:    List[Dict[str, Any]] (append-ordered)
     for dim_key in ("dung_frameworks", "ranking_results", "probabilistic_results", "bipolar_results"):
         for item_val in _iter_dimension_entries(cleaned.get(dim_key)):
             args_list = item_val.get("arguments")
