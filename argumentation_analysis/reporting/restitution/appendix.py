@@ -66,8 +66,14 @@ def _fol_axis_status(fol: Any) -> Any:
     collapse to ``False`` (#1019/#1278).
     """
     if isinstance(fol, Mapping):
+        # #1634: this is the branch the docstring above says does NOT use
+        # ``bool(consistent)`` — and it did. The list branch below is tri-state
+        # honest; this legacy Mapping branch rendered a degraded ``None`` as a
+        # decided ``False``, i.e. the annex asserted "inconsistent" about a
+        # theory the reasoner never read.
+        raw = fol.get("consistent")
         return {
-            "consistent": bool(fol.get("consistent")),
+            "consistent": raw if raw in (True, False) else None,
             "formules": _safe_len(fol.get("formulas")),
         }
     if isinstance(fol, list) and fol:

@@ -9021,8 +9021,16 @@ async def _invoke_external_fol_solver(
     EFOLReasoner first, then Prover9 subprocess. Falls back to TweetyBridge
     (the default FOL path) when neither external solver is available.
 
-    #1019: No degraded flag. TweetyBridge is a genuine FOL reasoner.
-    External solvers are optional performance enhancers, not prerequisites.
+    #1019: falling back to TweetyBridge is NOT degradation. TweetyBridge is a
+    genuine FOL reasoner; external solvers are optional performance enhancers,
+    not prerequisites. So ``degraded`` never means "we used the fallback".
+
+    #1634: it means "no verdict was reached" — the belief set would not parse,
+    or no reasoner was reachable. It used to be hardcoded ``False`` on every
+    branch (an inert field), while ``consistent`` was flattened through
+    ``bool()``, so a parse failure was published as a decided *inconsistent*.
+    Both now track the tri-state: ``consistent`` is ``True``/``False``/``None``
+    and ``degraded`` is exactly ``consistent is None``.
     """
     _preflight_solver_check()
 
@@ -9067,9 +9075,12 @@ async def _invoke_external_fol_solver(
             )
             return {
                 "formulas": formulas,
-                "consistent": bool(is_consistent),
+                # #1634: pass the handler's tri-state through. It answers
+                # ``(None, "Degraded: …")`` when the belief set will not parse;
+                # ``bool(None)`` turned that into a decided "inconsistent".
+                "consistent": is_consistent,
                 "solver": "eprover",
-                "degraded": False,
+                "degraded": is_consistent is None,
                 "message": msg,
                 "logic_type": "first_order",
             }
@@ -9097,12 +9108,29 @@ async def _invoke_external_fol_solver(
                 )
                 prover9_input = f"formulas(sos).\n{belief_set_str}\nend_of_list.\n"
                 result = await asyncio.to_thread(run_prover9, prover9_input)
-                proved = "THEOREM PROVED" in result or "Proof found" in result
+                # #1634: report what Prover9 actually said, and only that.
+                #
+                # The input above is a bare SOS list with NO goal, so a proof
+                # here IS the derivation of the empty clause: "THEOREM PROVED"
+                # means the KB is INCONSISTENT and "SEARCH FAILED" means it is
+                # consistent (the runner's own docstring says so — exit 2 =
+                # SEARCH FAILED on a consistent KB). The previous expression
+                # stored ``consistent = proved``, i.e. exactly backwards.
+                # Measured against the bundled binary: ``P(a). -P(a).`` →
+                # THEOREM PROVED (was stored as consistent=True), and
+                # ``P(a). Q(b).`` → SEARCH FAILED (was stored as False).
+                #
+                # And when NEITHER marker is present, Prover9 decided nothing —
+                # that is the #1634 motif proper, so it yields None rather than
+                # a boolean picked by default.
+                refuted = "THEOREM PROVED" in result or "Proof found" in result
+                exhausted = "SEARCH FAILED" in result
+                consistent = False if refuted else (True if exhausted else None)
                 return {
                     "formulas": formulas,
-                    "consistent": proved,
+                    "consistent": consistent,
                     "solver": "prover9",
-                    "degraded": False,
+                    "degraded": consistent is None,
                     "raw_output": result[:500],
                     "logic_type": "first_order",
                 }
@@ -9131,8 +9159,13 @@ async def _invoke_external_fol_solver(
         )
         return {
             "formulas": formulas,
-            "consistent": bool(is_consistent),
+            # #1634: same tri-state pass-through as the EProver branch above.
+            # This is the branch actually taken when ``eprover`` is not on PATH,
+            # so it is where real corpora had their parse failures rendered as
+            # a decided ``consistent: False``.
+            "consistent": is_consistent,
             "solver": "tweety",
+            "degraded": is_consistent is None,
             "message": msg,
             "logic_type": "first_order",
         }
@@ -9155,8 +9188,13 @@ async def _invoke_external_modal_solver(
     SPASSMlReasoner first. Falls back to TweetyBridge when SPASS is
     not available.
 
-    #1019: No degraded flag. TweetyBridge is a genuine modal reasoner.
-    External solvers are optional performance enhancers, not prerequisites.
+    #1019: falling back to TweetyBridge is NOT degradation. TweetyBridge is a
+    genuine modal reasoner; external solvers are optional performance
+    enhancers, not prerequisites.
+
+    #1634: ``degraded`` means "no verdict was reached" — the belief set would
+    not parse (``FUNC_ERROR``), or no reasoner was reachable. It tracks
+    ``valid is None``, which the wrapper can now actually produce.
     """
     _preflight_solver_check()
     modal_output = context.get("phase_modal_output", {})
@@ -9192,10 +9230,15 @@ async def _invoke_external_modal_solver(
             )
             return {
                 "formulas": formulas,
-                "valid": bool(is_consistent),
+                # #1634: ``is_modal_kb_consistent`` is tri-state — the sibling
+                # phase (``_invoke_modal_logic``) already passes it through
+                # unflattened. This branch wrapped it in ``bool()``, so the
+                # external-solver lane reported a decided verdict where the
+                # reasoning lane reported none, for the very same KB.
+                "valid": is_consistent,
                 "modalities": modalities,
                 "solver": "spass",
-                "degraded": False,
+                "degraded": is_consistent is None,
                 "message": msg,
                 "logic_type": "modal",
             }
@@ -9223,9 +9266,13 @@ async def _invoke_external_modal_solver(
         )
         return {
             "formulas": formulas,
+            # #1634: ``accepted`` is now tri-state (the wrapper stopped turning
+            # FUNC_ERROR into False), so a refused belief set reaches the state
+            # writer as "no verdict" instead of "invalid".
             "valid": accepted,
             "modalities": modalities,
             "solver": "tweety",
+            "degraded": accepted is None,
             "message": msg,
             "logic_type": "modal",
         }

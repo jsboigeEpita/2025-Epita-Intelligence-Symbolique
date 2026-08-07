@@ -263,7 +263,7 @@ class TweetyBridge:
 
     def execute_modal_query(
         self, belief_set: str, query: str, logic_type: str = "K"
-    ) -> Tuple[bool, str]:
+    ) -> Tuple[Optional[bool], str]:
         """Backward compatibility wrapper for execute_modal_query.
 
         #1192: the underlying ``ModalHandler.execute_modal_query`` takes only
@@ -272,6 +272,19 @@ class TweetyBridge:
         ``logic_type`` as a third positional arg → ``TypeError`` on every
         modal query. Drop it here rather than adding an unused parameter to
         the handler (anti-pendule: subtract the mismatch).
+
+        #1634: the verdict is TRI-state. ``FUNC_ERROR`` (the parser refused the
+        belief set, the reasoner crashed) is *not* a negative answer, and this
+        wrapper used to return ``False`` for it — making "Tweety could not read
+        this" indistinguishable from "the query does not follow", always toward
+        the negative. Measured: a REJECTED query and an unparsable belief set
+        both came back ``False``.
+
+        Nothing downstream needed to be added to consume the third state — it
+        was already written and simply never fed. ``_invoke_modal_logic``
+        computes ``modal_status = "decided" if accepted in (True, False) else
+        "unverified"``, so its ``"unverified"`` branch was unreachable on this
+        lane; the state writer already passes ``valid`` through unflattened.
         """
         _ = logic_type  # accepted for API compatibility; handler is reasoner-global
         result_str = self.modal_handler.execute_modal_query(belief_set, query)
@@ -281,18 +294,28 @@ class TweetyBridge:
                 return True, result_str
             if "REJECTED" in result_str:
                 return False, result_str
-            return False, result_str  # FUNC_ERROR or unexpected
+            # FUNC_ERROR or unexpected → no verdict (#1634). Not ``False``:
+            # the answer to "did it fail?" is not the other boolean.
+            return None, result_str
+        if result_str is None:
+            return None, "FUNC_ERROR: modal handler returned no result"
         return bool(result_str), str(result_str)
 
     def check_consistency(
         self, belief_set: str, logic_type: str = "propositional"
-    ) -> Tuple[bool, str]:
+    ) -> Tuple[Optional[bool], str]:
         """Backward compatibility wrapper for check_consistency.
 
         #1192: ``ModalHandler`` exposes ``is_modal_kb_consistent`` (not
         ``check_consistency``); the previous dispatch raised
         ``AttributeError`` for K/T/S4/S5. Route modal consistency to the
         existing method.
+
+        #1634: the return type is tri-state — ``FOLHandler.check_consistency``
+        already answers ``(None, "Degraded: …")`` when the reasoner is absent or
+        the belief set will not parse. The annotation said ``bool`` and lied
+        about it, which is how callers ended up wrapping the result in
+        ``bool()``.
         """
         if logic_type == "propositional":
             return self.pl_handler.check_consistency(belief_set)
@@ -301,7 +324,11 @@ class TweetyBridge:
         elif logic_type in ["K", "T", "S4", "S5"]:
             return self.modal_handler.is_modal_kb_consistent(belief_set)
         else:
-            return False, f"Unknown logic type: {logic_type}"
+            # #1634: an unroutable logic type means nothing was checked. Three
+            # call sites in logic_agent_plugin already call the old ``False``
+            # here "a fabricated (False, 'Unknown logic type: …')" and guard
+            # against reaching it; stop fabricating at the source.
+            return None, f"Unknown logic type: {logic_type}"
 
     def check_consistency_detailed(
         self, belief_set: str, logic_type: str = "propositional"

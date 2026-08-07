@@ -147,6 +147,23 @@ class TestFolAxisStatusListShape:
         status = _fol_axis_status({"consistent": True, "formulas": ["a", "b"]})
         assert status == {"consistent": True, "formules": 2}
 
+    def test_legacy_mapping_shape_does_not_decide_for_a_degraded_axis(self):
+        """#1634: the Mapping branch used ``bool(consistent)`` — the exact call
+        this function's own docstring says it does not make.
+
+        The list branch three lines below is tri-state honest; this one turned
+        a degraded ``None`` into a decided ``False``, so the annex asserted
+        "inconsistent" about a theory no reasoner had read. The decided cases
+        must be untouched, which is why they are asserted alongside.
+        """
+        degraded = _fol_axis_status({"consistent": None, "formulas": ["a"]})
+        inconsistent = _fol_axis_status({"consistent": False, "formulas": ["a"]})
+        assert degraded == {"consistent": None, "formules": 1}
+        assert inconsistent == {"consistent": False, "formules": 1}
+        assert degraded["consistent"] is not inconsistent["consistent"], (
+            "a degraded axis reads as a decided inconsistency again (#1634)"
+        )
+
 
 class TestModalAxisStatus:
     """#1276 (po-2023 R487): the modal axis was reduced to a binary presence flag
