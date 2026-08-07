@@ -3874,10 +3874,30 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     if axioms_raw:
         axioms = [_pl_atom(a, prefix="ax") for a in axioms_raw if isinstance(a, str)]
 
+    # #1678 (manque 1): no orchestration site writes ``context["axioms"]``, so
+    # without derivation the theory has zero ordinary premises → zero derivable
+    # argument → ``extensions: [[]]`` (the vacuous-evaluated trap). The natural
+    # ordinary premises are the LEAF atoms: body atoms no rule's (non-negated)
+    # head produces. Without them as ordinary premises, no rule chain fires.
+    # Measured firsthand (coordinator #1678): axioms=None ⇒ 0 argument.
+    all_rules = list(strict or []) + list(defeasible or [])
+    head_atoms = {
+        str(r.get("head"))
+        for r in all_rules
+        if r.get("head") and not r.get("head_negated")
+    }
+    body_atoms: set[str] = set()
+    for r in all_rules:
+        for b in r.get("body", []) or []:
+            body_atoms.add(str(b))
+    leaf_atoms = sorted(body_atoms - head_atoms)
+    if leaf_atoms:
+        axioms = list(axioms or []) + leaf_atoms
+
     try:
         from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
 
-        handler = ASPICHandler()  # type: ignore[no-untyped-call]
+        handler = ASPICHandler()
         return await asyncio.to_thread(
             handler.analyze_aspic_framework, strict, defeasible, axioms
         )

@@ -175,15 +175,28 @@ async def _llm_extract_relations(
         )
     elif relation_kind == "aspic_rules":
         task = (
-            "Identify DEFEASIBLE INFERENCE rules among these arguments: a rule is "
-            "(premises, conclusion) where the premise argument(s) defeasibly lead "
-            "to — justify — the conclusion argument. Cite premises AND conclusion "
-            "by id; every id must be present in the inventory. Report a rule ONLY "
-            "when the text genuinely presents the premises as reasons for the "
-            "conclusion — do NOT connect unrelated arguments."
+            "Identify DEFEASIBLE INFERENCE rules, CONTRADICTIONS, and UNDERCUTS "
+            "among these arguments:\n"
+            "- A RULE is (premises, conclusion) where the premise argument(s) "
+            "defeasibly lead to — justify — the conclusion argument. Give each "
+            "rule a short stable `name` so an undercut can reference it.\n"
+            "- A CONTRADICTION is (attacker, target): the attacker argument "
+            "gives a reason AGAINST the target argument (rebuts its conclusion "
+            "or undermines its premise). Cite both by id.\n"
+            "- An UNDERCUT is (attacker, target_rule): the attacker contests the "
+            "RIGHT TO INFER of a rule you named above (not its premise or "
+            "conclusion, but the inference itself). `target_rule` must be a name "
+            "you gave to a rule in this same response.\n"
+            "Cite every attacker/target/premise/conclusion by id present in the "
+            "inventory. Report a relation ONLY when the text genuinely supports "
+            "it — do NOT connect unrelated arguments."
         )
         shape = (
             '{"rules": [{"premises": ["argN"], "conclusion": "argM", '
+            '"name": "rule_id", "rationale": "one short sentence"}], '
+            '"contradictions": [{"attacker": "argN", "target": "argM", '
+            '"rationale": "one short sentence"}], '
+            '"undercuts": [{"attacker": "argN", "target_rule": "rule_id", '
             '"rationale": "one short sentence"}]}'
         )
     elif relation_kind == "setaf_attacks":
@@ -305,6 +318,22 @@ def _validate_contraries(
     return out
 
 
+def _sanitize_rule_name(raw: Any) -> str:
+    """Reduce a free-form rule name to a stable, collision-safe identifier.
+
+    Rule names are Tweety ``Proposition`` names when negated (the undercut path,
+    #1678) — they must be ``[A-Za-z0-9_]``. We prefix ``def_`` so a rule name
+    never collides with an argument atom (``arg_*``) or a strict-rule head. The
+    mapping is lossy by design: PL labels are opaque.
+    """
+    import re as _re
+
+    cleaned = _re.sub(r"[^A-Za-z0-9_]+", "_", str(raw)).strip("_").lower()
+    if not cleaned:
+        return "def_rule"
+    return f"def_{cleaned}"[:48]
+
+
 def _validate_aspic_rules(
     data: Dict[str, Any],
     arg_by_id: Dict[str, str],
@@ -323,11 +352,16 @@ def _validate_aspic_rules(
     used as a conclusion of one rule and as a premise of another maps to the SAME
     atom — genuine ASPIC+ rule chaining. Returns handler-shaped
     ``{head, body, name}`` dicts. Dedup on ``(head, frozenset(body))``.
+
+    A caller-supplied ``name`` (#1678) is preserved (sanitized) so the LLM can
+    target a rule by its own name in an undercut; otherwise a stable
+    ``def_rule_N`` is assigned. Names are guaranteed unique.
     """
     raw = data.get("rules", []) if isinstance(data, dict) else []
     if not isinstance(raw, list):
         return []
     seen: set[Tuple[str, frozenset[str]]] = set()
+    used_names: set[str] = set()
     out: List[Dict[str, Any]] = []
     for item in raw:
         if not isinstance(item, dict):
@@ -360,8 +394,121 @@ def _validate_aspic_rules(
         if key in seen:
             continue
         seen.add(key)
+        # #1678: preserve a caller-supplied name (sanitized + unique) so an
+        # undercut can target it; else a stable positional name.
+        name = _unique_rule_name(
+            (
+                _sanitize_rule_name(item.get("name"))
+                if item.get("name")
+                else f"def_rule_{len(out) + 1}"
+            ),
+            used_names,
+        )
+        used_names.add(name)
+        out.append({"head": head_atom, "body": body_atoms, "name": name})
+    return out
+
+
+def _unique_rule_name(base: str, used: set[str]) -> str:
+    """Return ``base`` made unique against ``used`` (suffix _2, _3, …)."""
+    if base not in used:
+        return base
+    i = 2
+    while f"{base}_{i}" in used:
+        i += 1
+    return f"{base}_{i}"
+
+
+def _validate_aspic_contradictions(
+    data: Dict[str, Any],
+    arg_by_id: Dict[str, str],
+    atom_fn: Callable[..., str],
+    used_names: set[str],
+) -> List[Dict[str, Any]]:
+    """Validate LLM contradiction proposals into negated-head defeasible rules.
+
+    #1678: a contradiction ``{attacker, target}`` says *the attacker argument
+    provides a reason against the target argument*. It is rendered as a
+    defeasible rule whose conclusion is ``Negation(atome(target))`` and whose
+    body is ``[atome(attacker)]``. The handler qualifies the scope (rebut if the
+    negated atom is a conclusion elsewhere, undermine if it is a premise)
+    structurally — never from keywords.
+
+    Both ids must be in the inventory; any absent id drops the whole relation
+    (anti-théâtre #1019). A self-contradiction (attacker == target) is vacuous
+    and dropped.
+    """
+    raw = data.get("contradictions", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    out: List[Dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        atk_id = str(item.get("attacker", "")).strip()
+        tgt_id = str(item.get("target", "")).strip()
+        if atk_id not in arg_by_id or tgt_id not in arg_by_id:
+            continue  # fabricated id → dropped
+        if atk_id == tgt_id:
+            continue  # self-contradiction → vacuous
+        head_atom = atom_fn(arg_by_id[tgt_id], prefix="arg")
+        body_atom = atom_fn(arg_by_id[atk_id], prefix="arg")
+        name = _unique_rule_name("def_con", used_names)
+        used_names.add(name)
         out.append(
-            {"head": head_atom, "body": body_atoms, "name": f"def_rule_{len(out) + 1}"}
+            {
+                "head": head_atom,
+                "body": [body_atom],
+                "name": name,
+                "head_negated": True,
+            }
+        )
+    return out
+
+
+def _validate_aspic_undercuts(
+    data: Dict[str, Any],
+    arg_by_id: Dict[str, str],
+    atom_fn: Callable[..., str],
+    valid_rule_names: set[str],
+    used_names: set[str],
+) -> List[Dict[str, Any]]:
+    """Validate LLM undercut proposals into negated-rule-name defeasible rules.
+
+    #1678: an undercut ``{attacker, target_rule}`` contests the RIGHT TO INFER
+    of a rule (the asymmetric attack unique to ASPIC+). It is rendered as a
+    defeasible rule whose conclusion is ``Negation(Proposition(target_rule))``
+    and whose body is ``[atome(attacker)]``. ``target_rule`` must be the name of
+    a rule the LLM itself supplied and that survived validation (sanitized
+    identically on both sides so the match is exact); any other name drops the
+    relation (anti-théâtre #1019).
+    """
+    raw = data.get("undercuts", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    out: List[Dict[str, Any]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        atk_id = str(item.get("attacker", "")).strip()
+        tgt_rule = str(item.get("target_rule", "")).strip()
+        if atk_id not in arg_by_id:
+            continue
+        # The target must be a rule the LLM named AND that survived validation.
+        # Sanitize identically to _validate_aspic_rules so the names match.
+        sanitized = _sanitize_rule_name(tgt_rule) if tgt_rule else ""
+        if not sanitized or sanitized not in valid_rule_names:
+            continue  # references a rule that does not exist → dropped
+        body_atom = atom_fn(arg_by_id[atk_id], prefix="arg")
+        name = _unique_rule_name("def_unc", used_names)
+        used_names.add(name)
+        out.append(
+            {
+                "head": sanitized,
+                "body": [body_atom],
+                "name": name,
+                "head_negated": True,
+            }
         )
     return out
 
@@ -578,12 +725,29 @@ async def translate_to_aspic_rules(
     from argumentation_analysis.orchestration.invoke_callables import _pl_atom
 
     rules = _validate_aspic_rules(data, arg_by_id, _pl_atom)
-    if rules:
+    # #1678: the contradictions + undercuts channels. Contradictions render as
+    # negated-head rules (rebut/undermine, qualified structurally by the
+    # handler); undercuts render as negated-rule-name rules. Undercuts may only
+    # target rules that survived validation (ids/names validated identically),
+    # so they run AFTER rules. All three share the used-names namespace.
+    used_names = {r["name"] for r in rules}
+    contradictions = _validate_aspic_contradictions(
+        data, arg_by_id, _pl_atom, used_names
+    )
+    undercuts = _validate_aspic_undercuts(
+        data, arg_by_id, _pl_atom, set(used_names), used_names
+    )
+    relations = rules + contradictions + undercuts
+    if relations:
         logger.info(
-            "ASPIC+ translator: derived %d genuine defeasible rule(s) from text.",
+            "ASPIC+ translator: derived %d rule(s) (%d base, %d contradiction(s), "
+            "%d undercut(s)) from text.",
+            len(relations),
             len(rules),
+            len(contradictions),
+            len(undercuts),
         )
-        return TranslationResult(relations=rules, cause=CAUSE_EVALUATED)
+        return TranslationResult(relations=relations, cause=CAUSE_EVALUATED)
     return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
@@ -677,6 +841,10 @@ __all__ = [
     "_validate_supports",
     "_validate_contraries",
     "_validate_aspic_rules",
+    "_validate_aspic_contradictions",
+    "_validate_aspic_undercuts",
+    "_sanitize_rule_name",
+    "_unique_rule_name",
     "_validate_setaf_attacks",
     "_validate_weighted_attacks",
 ]
