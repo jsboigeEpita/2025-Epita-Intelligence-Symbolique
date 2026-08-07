@@ -477,42 +477,92 @@ class DeepSynthesisAgent(BaseAgent):
         return entries
 
     @staticmethod
+    def _verdict_label_pl(r: Dict[str, Any]) -> str:
+        """#1636: tri-state verdict label for PL entries.
+
+        ``satisfiable`` is None (unverified) vs True vs False; conflating
+        them with a falsy default would smuggle "no answer" into "UNSAT"
+        (#1019, same family as #1278/#1279).
+        """
+        sat = r.get("satisfiable")
+        if sat is True:
+            return "SAT"
+        if sat is False:
+            return "UNSAT"
+        return ""
+
+    @staticmethod
+    def _verdict_label_fol(r: Dict[str, Any]) -> str:
+        """#1636: tri-state verdict label for FOL entries. See #1278."""
+        c = r.get("consistent")
+        if c is True:
+            return "consistent"
+        if c is False:
+            return "inconsistent"
+        return ""
+
+    @staticmethod
+    def _verdict_label_modal(r: Dict[str, Any]) -> str:
+        """#1636: tri-state verdict label for Modal entries. See #1279."""
+        v = r.get("valid")
+        if v is True:
+            return "valid"
+        if v is False:
+            return "invalid"
+        return ""
+
+    @staticmethod
     def _build_formal_findings(state: Any) -> List[FormalFinding]:
         findings = []
-        # PL results
+        # PL results — #1636: only the keys that the real PL writer actually
+        # stores (``formulas``, ``satisfiable``, ``model``, ``axiom_count``,
+        # ``query_count``, ``message``) are read. The former keys
+        # (``axioms``/``queries``/``results``/``inconsistency_measures``/
+        # ``linked_args``) had no producer, so each finding shipped as
+        # ``axioms=0 results=`` and the formal channel went silent (#1019).
+        # ``formulas`` is the actual asserted formula text — the legitimate
+        # content of "axioms" here. ``satisfiable`` is the tri-state verdict.
         for r in getattr(state, "propositional_analysis_results", []):
+            verdict = DeepSynthesisAgent._verdict_label_pl(r)
             findings.append(
                 FormalFinding(
                     logic_type="PL",
-                    axioms=r.get("axioms", []),
-                    queries=r.get("queries", []),
-                    results=r.get("results", []),
-                    inconsistency_measures=r.get("inconsistency_measures", {}),
-                    linked_args=r.get("linked_args", []),
+                    axioms=list(r.get("formulas", []) or []),
+                    queries=[],
+                    results=[verdict] if verdict else [],
+                    inconsistency_measures={},
+                    linked_args=[],
                 )
             )
-        # FOL results
+        # FOL results — #1636: the real FOL writer stores ``formulas``,
+        # ``consistent`` (None|True|False), ``inferences``, ``confidence``,
+        # ``message``. We map ``formulas`` → axioms and ``consistent`` → a
+        # tri-state verdict label preserving None vs True vs False.
         for r in getattr(state, "fol_analysis_results", []):
+            verdict = DeepSynthesisAgent._verdict_label_fol(r)
             findings.append(
                 FormalFinding(
                     logic_type="FOL",
-                    axioms=r.get("axioms", []),
-                    queries=r.get("queries", []),
-                    results=r.get("results", []),
-                    inconsistency_measures=r.get("inconsistency_measures", {}),
-                    linked_args=r.get("linked_args", []),
+                    axioms=list(r.get("formulas", []) or []),
+                    queries=[],
+                    results=[verdict] if verdict else [],
+                    inconsistency_measures={},
+                    linked_args=[],
                 )
             )
-        # Modal results
+        # Modal results — #1636: the real Modal writer stores ``formulas``,
+        # ``valid`` (None|True|False), ``modalities``, ``message``. Same
+        # mapping discipline as PL/FOL.
         for r in getattr(state, "modal_analysis_results", []):
+            verdict = DeepSynthesisAgent._verdict_label_modal(r)
             findings.append(
                 FormalFinding(
                     logic_type="Modal",
-                    axioms=r.get("axioms", []),
-                    queries=r.get("queries", []),
-                    results=r.get("results", []),
-                    inconsistency_measures=r.get("inconsistency_measures", {}),
-                    linked_args=r.get("linked_args", []),
+                    axioms=list(r.get("formulas", []) or []),
+                    queries=[],
+                    results=[verdict] if verdict else [],
+                    inconsistency_measures={},
+                    linked_args=[],
                 )
             )
         # Belief sets + query log
@@ -1178,31 +1228,40 @@ class DeepSynthesisAgent(BaseAgent):
                 :max_items_per_field
             ]
         ):
+            # #1636: read the keys the real PL writer actually stores.
+            # ``formulas`` (the asserted theory) replaces the phantom
+            # ``axioms`` key; ``satisfiable`` tri-state replaces the
+            # phantom ``results`` list. A blank verdict token means the
+            # entry exists but the solver returned no decision — distinguish
+            # that from a decided verdict.
+            verdict = DeepSynthesisAgent._verdict_label_pl(r)
+            formulas = r.get("formulas") or []
             _add(
                 "propositional_analysis_results",
                 i,
-                f"axioms={len(r.get('axioms', []))} "
-                f"queries={len(r.get('queries', []))} "
-                f"results={'; '.join(map(str, r.get('results', [])[:3]))}",
+                f"formulas={len(formulas)} verdict={verdict or 'absent'}",
             )
 
         for i, r in enumerate(
             (getattr(state, "fol_analysis_results", []) or [])[:max_items_per_field]
         ):
+            verdict = DeepSynthesisAgent._verdict_label_fol(r)
+            formulas = r.get("formulas") or []
             _add(
                 "fol_analysis_results",
                 i,
-                f"axioms={len(r.get('axioms', []))} "
-                f"results={'; '.join(map(str, r.get('results', [])[:3]))}",
+                f"formulas={len(formulas)} verdict={verdict or 'absent'}",
             )
 
         for i, r in enumerate(
             (getattr(state, "modal_analysis_results", []) or [])[:max_items_per_field]
         ):
+            verdict = DeepSynthesisAgent._verdict_label_modal(r)
+            formulas = r.get("formulas") or []
             _add(
                 "modal_analysis_results",
                 i,
-                f"results={'; '.join(map(str, r.get('results', [])[:3]))}",
+                f"formulas={len(formulas)} verdict={verdict or 'absent'}",
             )
 
         dung = getattr(state, "dung_frameworks", {}) or {}

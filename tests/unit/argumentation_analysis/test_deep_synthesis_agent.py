@@ -68,15 +68,16 @@ def _make_fixture_state() -> UnifiedAnalysisState:
         }
     )
 
-    # Propositional analysis (Section 4)
-    state.propositional_analysis_results.append(
-        {
-            "axioms": ["p => q", "p"],
-            "queries": ["q"],
-            "results": ["q is entailed"],
-            "inconsistency_measures": {"drastic": 0},
-            "linked_args": ["arg_1"],
-        }
+    # Propositional analysis (Section 4) — #1636: build via the real writer
+    # so the test exercises the same key shape the production code reads.
+    # ``axioms``/``queries``/``results`` were phantom keys (no producer) and
+    # the dict literal masked the bug. The real writer stores ``formulas``
+    # + ``satisfiable``; downstream _build_formal_findings maps those into
+    # the FormalFinding fields.
+    state.add_propositional_analysis_result(
+        formulas=["p => q", "p"],
+        satisfiable=True,
+        model={"p": True, "q": True},
     )
 
     # Dung framework (Section 5)
@@ -330,6 +331,154 @@ class TestSectionBuilders:
         d = report.to_dict()
         assert "final_synthesis_status" in d
         assert d["final_synthesis_status"] == "unavailable"
+
+
+# =========================================================================
+# Test: #1636 — _build_formal_findings maps real producer keys
+# =========================================================================
+
+
+class TestFormalFindingsMapping1636:
+    """#1636: deep_synthesis used to read phantom keys (``axioms``,
+    ``queries``, ``results``, ``inconsistency_measures``, ``linked_args``)
+    that no writer produced for PL/FOL/Modal — every FormalFinding shipped
+    as ``axioms=0 results=``. These tests build state via the real
+    ``add_*_analysis_result`` writers and assert the formal channel now
+    reflects the real verdict and formula count."""
+
+    def test_pl_satisfiable_true_propagates_as_SAT_verdict(self):
+        state = UnifiedAnalysisState("test text")
+        state.add_propositional_analysis_result(
+            formulas=["p => q", "p"],
+            satisfiable=True,
+            model={"p": True, "q": True},
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        pl = [f for f in findings if f.logic_type == "PL"]
+        assert len(pl) == 1
+        assert pl[0].axioms == ["p => q", "p"]
+        assert pl[0].results == ["SAT"]
+
+    def test_pl_satisfiable_false_propagates_as_UNSAT_verdict(self):
+        state = UnifiedAnalysisState("test text")
+        state.add_propositional_analysis_result(
+            formulas=["p AND NOT p"],
+            satisfiable=False,
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        pl = [f for f in findings if f.logic_type == "PL"]
+        assert pl[0].results == ["UNSAT"]
+
+    def test_pl_unverified_does_not_fabricate_verdict(self):
+        """Anti-#1019: satisfiable=None must NOT collapse to a verdict. The
+        pre-fix code didn't have this code path; the dict-literal test fixture
+        masked the bug by always providing a verdict."""
+        state = UnifiedAnalysisState("test text")
+        state.add_propositional_analysis_result(
+            formulas=["p"],
+            satisfiable=None,
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        pl = [f for f in findings if f.logic_type == "PL"]
+        # No verdict → results stays empty (the honest "I don't know" signal).
+        assert pl[0].results == []
+        assert pl[0].axioms == ["p"]
+
+    def test_fol_consistent_true_propagates(self):
+        state = UnifiedAnalysisState("test text")
+        state.add_fol_analysis_result(
+            formulas=["forall x. P(x) => P(x)"],
+            consistent=True,
+            inferences=[],
+            confidence=1.0,
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        fol = [f for f in findings if f.logic_type == "FOL"]
+        assert len(fol) == 1
+        assert fol[0].axioms == ["forall x. P(x) => P(x)"]
+        assert fol[0].results == ["consistent"]
+
+    def test_fol_unverified_does_not_fabricate(self):
+        state = UnifiedAnalysisState("test text")
+        state.add_fol_analysis_result(
+            formulas=["P(a)"],
+            consistent=None,
+            inferences=[],
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        fol = [f for f in findings if f.logic_type == "FOL"]
+        assert fol[0].results == []
+
+    def test_modal_valid_true_propagates(self):
+        state = UnifiedAnalysisState("test text")
+        state.add_modal_analysis_result(
+            formulas=["[]p"],
+            valid=True,
+            modalities=[],
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        modal = [f for f in findings if f.logic_type == "Modal"]
+        assert modal[0].results == ["valid"]
+
+    def test_modal_unverified_does_not_fabricate(self):
+        state = UnifiedAnalysisState("test text")
+        state.add_modal_analysis_result(
+            formulas=["<>p"],
+            valid=None,
+            modalities=[],
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        modal = [f for f in findings if f.logic_type == "Modal"]
+        assert modal[0].results == []
+
+    def test_phantom_fields_default_to_empty(self):
+        """#1636 anti-pendule: queries / inconsistency_measures / linked_args
+        have no producer for solver-produced PL/FOL/Modal entries. They are
+        set to empty defaults, NOT mapped from ``axiom_count`` or fabricated.
+        The belief_sets branch (separate producer) is the only legitimate
+        source for those fields; this test scopes to the solver branch."""
+        state = UnifiedAnalysisState("test text")
+        state.add_propositional_analysis_result(
+            formulas=["p"],
+            satisfiable=True,
+            axiom_count=3,
+            query_count=2,
+        )
+        findings = DeepSynthesisAgent._build_formal_findings(state)
+        pl = [f for f in findings if f.logic_type == "PL"]
+        assert pl[0].queries == []
+        assert pl[0].inconsistency_measures == {}
+        assert pl[0].linked_args == []
+        # axiom_count / query_count are provenance for the writer, NOT for
+        # the FormalFinding (they're counts, not formula/result content).
+        assert pl[0].axioms == ["p"]
+
+    def test_artifact_fields_distinguishes_decided_from_absent(self):
+        """#1636: ARTIFACT_FIELDS line for PL must NOT emit ``axioms=0
+        results=`` (the old silent-failure signature) when the entry
+        actually carries a verdict. A "decided" entry must say so."""
+        state = UnifiedAnalysisState("test text")
+        state.add_propositional_analysis_result(
+            formulas=["p => q", "p"],
+            satisfiable=True,
+        )
+        rendered = DeepSynthesisAgent.build_artifact_briefing(state)
+        assert "formulas=2" in rendered, rendered
+        assert "verdict=SAT" in rendered, rendered
+        # Anti-#1019: never the broken "axioms=0 results=" signature.
+        assert "axioms=0" not in rendered
+        assert "results=" not in rendered
+
+    def test_artifact_fields_marks_absent_verdict_honestly(self):
+        """#1636: an entry with satisfiable=None must be visibly distinct
+        from a decided entry — the old silent ``0`` would have masked this."""
+        state = UnifiedAnalysisState("test text")
+        state.add_propositional_analysis_result(
+            formulas=["p"],
+            satisfiable=None,
+        )
+        rendered = DeepSynthesisAgent.build_artifact_briefing(state)
+        assert "verdict=absent" in rendered, rendered
 
 
 # =========================================================================
