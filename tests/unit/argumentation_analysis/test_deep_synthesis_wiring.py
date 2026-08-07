@@ -80,7 +80,7 @@ class TestDAGOrdering:
         ), f"deep_synthesis not in spectacular phases: {phase_names}"
 
     def test_deep_synthesis_depends_on_correct_phases(self):
-        """deep_synthesis should depend on synthesis, narrative_synthesis, belief_revision."""
+        """deep_synthesis should depend on belief_revision and stakes."""
         from argumentation_analysis.orchestration.workflows import (
             build_spectacular_workflow,
         )
@@ -89,26 +89,41 @@ class TestDAGOrdering:
         ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
         # The spectacular workflow has no ``narrative_synthesis`` phase — its
         # narrative output is produced via the ``act1_framing`` /
-        # ``act2_narrative`` / ``act3_conclusion`` phases. deep_synthesis
-        # depends on synthesis + belief_revision + stakes (the validated DAG
-        # edges; all three exist as spectacular phases).
+        # ``act2_narrative`` / ``act3_conclusion`` phases. The L9
+        # ``synthesis`` aggregation phase was retired in #1625 (R759): zero
+        # prod reader, zero LLM call. deep_synthesis now depends on
+        # belief_revision + stakes (the validated DAG edges; both exist as
+        # spectacular phases).
         assert set(ds_phase.depends_on) == {
-            "synthesis",
             "belief_revision",
             "stakes",
         }
 
-    def test_deep_synthesis_is_after_synthesis(self):
-        """deep_synthesis must come after synthesis in the phase list."""
+    def test_deep_synthesis_is_after_all_its_predecessors(self):
+        """deep_synthesis must come after every phase it declares a dep on.
+
+        Stated against ``depends_on`` rather than against a hardcoded phase
+        name: the previous form pinned ``synthesis``, and went stale the day
+        that phase was retired (#1625) without the DAG property itself
+        changing. This form survives the next edge change and still fails if
+        a predecessor is ever declared downstream of its consumer.
+        """
         from argumentation_analysis.orchestration.workflows import (
             build_spectacular_workflow,
         )
 
         wf = build_spectacular_workflow()
         phase_names = [p.name for p in wf.phases]
-        synthesis_idx = phase_names.index("synthesis")
+        ds_phase = next(p for p in wf.phases if p.name == "deep_synthesis")
+        # Guard against a vacuous pass: an empty depends_on would satisfy the
+        # loop below without asserting anything.
+        assert ds_phase.depends_on, "deep_synthesis declares no predecessor"
         ds_idx = phase_names.index("deep_synthesis")
-        assert ds_idx > synthesis_idx
+        for dep in ds_phase.depends_on:
+            assert dep in phase_names, f"declared dep {dep!r} is not a phase"
+            assert (
+                phase_names.index(dep) < ds_idx
+            ), f"{dep!r} is declared after deep_synthesis"
 
     def test_deep_synthesis_not_optional_in_spectacular(self):
         """deep_synthesis should be non-optional in the spectacular workflow."""
