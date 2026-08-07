@@ -31,9 +31,9 @@ class TestInformalAgentInstructions:
             "Obstruction",
         ]
         for family in expected_families:
-            assert family in INFORMAL_AGENT_INSTRUCTIONS, (
-                f"Family '{family}' missing from INFORMAL_AGENT_INSTRUCTIONS"
-            )
+            assert (
+                family in INFORMAL_AGENT_INSTRUCTIONS
+            ), f"Family '{family}' missing from INFORMAL_AGENT_INSTRUCTIONS"
 
     def test_instructions_contain_english_family_names(self):
         """INFORMAL_AGENT_INSTRUCTIONS must include English family names."""
@@ -51,9 +51,9 @@ class TestInformalAgentInstructions:
             "Obstruction",
         ]
         for name in expected_en:
-            assert name in INFORMAL_AGENT_INSTRUCTIONS, (
-                f"English name '{name}' missing from INFORMAL_AGENT_INSTRUCTIONS"
-            )
+            assert (
+                name in INFORMAL_AGENT_INSTRUCTIONS
+            ), f"English name '{name}' missing from INFORMAL_AGENT_INSTRUCTIONS"
 
     def test_instructions_contain_systematic_traversal_section(self):
         """INFORMAL_AGENT_INSTRUCTIONS must have systematic traversal section."""
@@ -71,7 +71,10 @@ class TestInformalAgentInstructions:
             INFORMAL_AGENT_INSTRUCTIONS,
         )
 
-        assert "multilingue" in INFORMAL_AGENT_INSTRUCTIONS.lower() or "allemand" in INFORMAL_AGENT_INSTRUCTIONS.lower()
+        assert (
+            "multilingue" in INFORMAL_AGENT_INSTRUCTIONS.lower()
+            or "allemand" in INFORMAL_AGENT_INSTRUCTIONS.lower()
+        )
         assert "traduisez mentalement" in INFORMAL_AGENT_INSTRUCTIONS.lower()
 
     def test_instructions_still_has_gold_rule(self):
@@ -127,7 +130,9 @@ class TestGermanKeywordCoverage:
         roots_index = {
             "false dilemma": "PK_dilemma",
         }
-        result = plugin._map_fallacy_to_root_pk("Entweder-Oder Fehlschluss", roots_index)
+        result = plugin._map_fallacy_to_root_pk(
+            "Entweder-Oder Fehlschluss", roots_index
+        )
         assert result == "PK_dilemma"
 
     def test_german_circular_reasoning(self, plugin):
@@ -180,8 +185,12 @@ class TestGermanKeywordCoverage:
             "appel à l'émotion": "PK_emo",
             "faux dilemme": "PK_dilemma",
         }
-        assert plugin._map_fallacy_to_root_pk("Appel à l'émotion", roots_index) == "PK_emo"
-        assert plugin._map_fallacy_to_root_pk("Faux dilemme", roots_index) == "PK_dilemma"
+        assert (
+            plugin._map_fallacy_to_root_pk("Appel à l'émotion", roots_index) == "PK_emo"
+        )
+        assert (
+            plugin._map_fallacy_to_root_pk("Faux dilemme", roots_index) == "PK_dilemma"
+        )
 
     def test_english_keywords_still_work(self, plugin):
         """Existing English keywords must still work."""
@@ -190,9 +199,16 @@ class TestGermanKeywordCoverage:
             "ad hominem": "PK_adh",
             "slippery slope": "PK_slip",
         }
-        assert plugin._map_fallacy_to_root_pk("Appeal to authority", roots_index) == "PK_auth"
-        assert plugin._map_fallacy_to_root_pk("Ad hominem attack", roots_index) == "PK_adh"
-        assert plugin._map_fallacy_to_root_pk("Slippery slope", roots_index) == "PK_slip"
+        assert (
+            plugin._map_fallacy_to_root_pk("Appeal to authority", roots_index)
+            == "PK_auth"
+        )
+        assert (
+            plugin._map_fallacy_to_root_pk("Ad hominem attack", roots_index) == "PK_adh"
+        )
+        assert (
+            plugin._map_fallacy_to_root_pk("Slippery slope", roots_index) == "PK_slip"
+        )
 
 
 class TestParentHarnessFallback:
@@ -211,7 +227,10 @@ class TestParentHarnessFallback:
             "argumentation_analysis.orchestration.invoke_callables."
             "_invoke_hierarchical_fallacy_per_argument",
             new_callable=AsyncMock,
-            return_value={"fallacies": [], "exploration_method": "per_argument_parallel"},
+            return_value={
+                "fallacies": [],
+                "exploration_method": "per_argument_parallel",
+            },
         ):
             result = await _run_parent_harness_fallback("short text", mock_state)
             assert result is None
@@ -225,6 +244,13 @@ class TestParentHarnessFallback:
         ``add_identified_fallacy``) auto-exists — so it passed while the harness
         silently dropped every fallacy on the real state. Use the real state so
         the registration path is actually exercised end-to-end.
+
+        #1633 site 3: the fixture used to name ``arg-1``/``arg-2`` on a state
+        holding **zero** arguments, so the grounded link it asserted was a
+        dangling reference nothing could resolve — and the hyphenated ids are
+        not a format any producer mints (``add_argument`` mints ``arg_1``).
+        The arguments now exist and carry their real ids, so the assertion
+        below pins a link that is actually grounded.
         """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _run_parent_harness_fallback,
@@ -236,18 +262,22 @@ class TestParentHarnessFallback:
         assert not hasattr(state, "add_identified_fallacy")
         assert hasattr(state, "add_fallacy")
 
+        arg_1 = state.add_argument("Le premier argument mis en cause.")
+        arg_2 = state.add_argument("Le second argument mis en cause.")
+        assert (arg_1, arg_2) == ("arg_1", "arg_2")  # the real minting format
+
         fake_fallacies = [
             {
                 "fallacy_type": "straw_man",
                 "justification": "Detected by parent harness",
                 "confidence": 0.85,
-                "source_arg_id": "arg-1",
+                "source_arg_id": arg_1,
             },
             {
                 "fallacy_type": "ad_hominem",
                 "justification": "Also detected",
                 "confidence": 0.72,
-                "source_arg_id": "arg-2",
+                "source_arg_id": arg_2,
             },
         ]
 
@@ -277,7 +307,7 @@ class TestParentHarnessFallback:
             targets = {
                 f.get("target_argument_id") for f in state.identified_fallacies.values()
             }
-            assert targets == {"arg-1", "arg-2"}
+            assert targets == {arg_1, arg_2}
 
     @pytest.mark.asyncio
     async def test_harness_singular_method_fallback(self):
@@ -415,8 +445,11 @@ class TestTaxonomyFamilyCoverage:
 
         df = pd.read_csv(csv_path)
         de_lang_cols = [
-            c for c in df.columns
-            if c.startswith(("text_de", "desc_de", "example_de", "link_de", "Family_de"))
+            c
+            for c in df.columns
+            if c.startswith(
+                ("text_de", "desc_de", "example_de", "link_de", "Family_de")
+            )
         ]
         # When DE enrichment is added, this test should be updated.
         assert len(de_lang_cols) == 0, f"Unexpected DE language columns: {de_lang_cols}"

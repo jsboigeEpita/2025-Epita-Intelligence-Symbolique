@@ -279,6 +279,19 @@ def _write_quality_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         )
 
 
+def _identified_arguments(state: Any) -> Dict[str, Any]:
+    """The state's identified arguments, or ``{}`` on states that carry none.
+
+    Shared by both fallacy-target resolvers (#1633 site 3). The conversational
+    lane also runs against states exposing only ``add_identified_fallacy``
+    (PhaseScopedState and friends), which have no ``identified_arguments`` at
+    all — reaching for it directly there raises, and the harness's outer
+    ``except`` turns that into a silent "no fallacies registered".
+    """
+    args = getattr(state, "identified_arguments", None)
+    return args if isinstance(args, dict) else {}
+
+
 def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
     """Resolve target text to an arg_id from identified_arguments.
 
@@ -287,11 +300,12 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
     """
     if not target_text:
         return None
+    arguments = _identified_arguments(state)
     # Direct ID match
-    if target_text in state.identified_arguments:
+    if target_text in arguments:
         return str(target_text)
     # Text-based matching (same heuristic as get_enrichment_summary)
-    for arg_id, desc in state.identified_arguments.items():
+    for arg_id, desc in arguments.items():
         if not desc:
             continue
         match_prefix = desc[:60]
@@ -303,6 +317,44 @@ def _resolve_target_arg_id(state: Any, target_text: str) -> Optional[str]:
         ):
             return str(arg_id)
     return None
+
+
+def resolve_fallacy_target_arg_id(state: Any, fallacy: Dict[str, Any]) -> Optional[str]:
+    """Resolve which identified argument a fallacy record attacks.
+
+    Single resolution used by **both** lanes that register fallacies into state
+    (#1633 site 3). It used to exist only here, in the pipeline writer; the
+    conversational lane carried a one-line ``source_arg_id or
+    target_argument_id`` that inverted the precedence and skipped the
+    membership guard, so the two lanes assigned *different* targets to the same
+    payload and produced different ASPIC survivor/defeated partitions.
+
+    Resolution order (D1a #1167 — surface what the per-argument descent already
+    grounded, do NOT invent a link):
+
+    1. ``target_argument_id`` — an explicit arg_id carried by the plugin. It
+       states which argument is *attacked*, so it outranks the id of whatever
+       argument happened to be under analysis.
+    2. ``source_arg_id`` — set by the per-argument harness to the arg_id the
+       descent analyzed this fallacy against, **only when it names a real
+       argument**. The wide-net whole-text pass stamps the sentinel
+       ``"whole_text"`` here; accepting it would store a dangling reference
+       that matches no argument and silently undermines nothing.
+    3. text-match fallbacks (``target_argument`` / ``problematic_quote`` /
+       ``explanation``) for wide-net fallacies with no grounded id.
+
+    Returns ``None`` when nothing resolves — the caller must not guess (#1019).
+    """
+    target_arg_id = fallacy.get("target_argument_id")
+    if not target_arg_id:
+        source_arg_id = str(fallacy.get("source_arg_id") or "")
+        if source_arg_id and source_arg_id in _identified_arguments(state):
+            target_arg_id = source_arg_id
+    for key in ("target_argument", "problematic_quote", "explanation"):
+        if target_arg_id:
+            break
+        target_arg_id = _resolve_target_arg_id(state, fallacy.get(key, ""))
+    return target_arg_id
 
 
 def _write_counter_argument_to_state(
@@ -622,30 +674,10 @@ def _write_hierarchical_fallacy_to_state(
             full_justification += f" [confidence:{confidence:.2f}]"
         if trace:
             full_justification += f" [trace:{'>'.join(trace)}]"
-        # Resolve target argument. Resolution order (D1a #1167 — surface what
-        # the per-argument descent already grounded, do NOT invent a link):
-        #   1. ``target_argument_id`` — an explicit arg_id carried by the plugin.
-        #   2. ``source_arg_id`` — set by the per-argument harness
-        #      (_invoke_hierarchical_fallacy_per_argument) to the arg_id the
-        #      descent analyzed this fallacy against. It IS a real arg_id from
-        #      state.identified_arguments (or "arg_N" from the extract phase),
-        #      so it is the most reliable grounded link — the wide-net fallacies
-        #      arrive with no quote/target and were orphaned without this.
-        #   3. text-match fallbacks (target_argument / problematic_quote /
-        #      explanation) for wide-net fallacies without a source_arg_id.
-        target_arg_id = f.get("target_argument_id")
-        if not target_arg_id:
-            _source_arg_id = str(f.get("source_arg_id") or "")
-            if _source_arg_id and _source_arg_id in state.identified_arguments:
-                target_arg_id = _source_arg_id
-        if not target_arg_id:
-            target_arg_id = _resolve_target_arg_id(state, f.get("target_argument", ""))
-        if not target_arg_id:
-            target_arg_id = _resolve_target_arg_id(
-                state, f.get("problematic_quote", "")
-            )
-        if not target_arg_id:
-            target_arg_id = _resolve_target_arg_id(state, f.get("explanation", ""))
+        # Resolve target argument through the resolution shared with the
+        # conversational lane (#1633 site 3) — see
+        # ``resolve_fallacy_target_arg_id`` for the order and its rationale.
+        target_arg_id = resolve_fallacy_target_arg_id(state, f)
         state.add_fallacy(
             fallacy_type=fallacy_type,
             justification=full_justification,
