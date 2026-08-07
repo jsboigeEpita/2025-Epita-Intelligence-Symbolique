@@ -509,22 +509,48 @@ async def _invoke_quality_evaluator(
     detected_fallacies = (
         fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
     )
-    # Build a map: arg_index → list of fallacy types targeting that argument
+    # Build a map: arg_index → list of fallacy types targeting that argument.
+    #
+    # #1633 site 2: this read ``target_argument`` into a variable named
+    # ``target_text`` and fed it to a substring match. The field carries an
+    # *identifier* — ``_enrich_fallacies`` writes ``f["target_argument"] =
+    # arg_id`` and no producer of this phase writes prose there — so
+    # ``"arg_1" in <prose>`` and ``<prose>[:40] in "arg_1"`` were both false and
+    # ``fallacy_targets`` stayed empty: the #289 penalty never applied.
+    # Measured on the real producer shape, 0 of 3 arguments were penalized where
+    # 3 of 3 should have been (the pre-existing test passed only because its
+    # fixture supplied full argument text, a value no producer emits).
+    # The defect was invisible because "no argument penalized" looks exactly
+    # like "no fallacy targeted an argument".
+    #
+    # Resolution is now by identifier, shared with ``_generate_attacks_from_args``
+    # (#1629/#1632) — same field, same meaning, one mechanism. ``arg_N`` indexes
+    # the extract phase's argument list 1-based, which is the very list
+    # ``raw_args`` holds, so the inverse is arithmetic. Unresolvable references
+    # (absent, or the ``paragraph_N`` ids the heuristic fallback mints) are
+    # counted and logged, never guessed (#1019).
     fallacy_targets: Dict[int, list[str]] = {}
+    unresolved_fallacy_targets = 0
     for f in detected_fallacies:
         if not isinstance(f, dict):
             continue
-        target_text = f.get("target_argument", "")
         fallacy_type = f.get("type", f.get("fallacy_type", "unknown"))
-        if target_text and raw_args:
-            target_lower = target_text.lower()[:80]
-            for idx, a in enumerate(raw_args[:8]):
-                a_text = (
-                    a.get("text", str(a)) if isinstance(a, dict) else str(a)
-                ).lower()
-                if target_lower in a_text or a_text[:40] in target_lower:
-                    fallacy_targets.setdefault(idx, []).append(str(fallacy_type))
-                    break
+        idx = _resolve_target_argument_index(
+            _read_fallacy_target(f), min(len(raw_args), 8)
+        )
+        if idx is None:
+            unresolved_fallacy_targets += 1
+            continue
+        fallacy_targets.setdefault(idx, []).append(str(fallacy_type))
+    if detected_fallacies:
+        logger.info(
+            "(#289) fallacy→argument targeting: %d resolved onto %d argument(s), "
+            "%d unresolved (of %d detections)",
+            len(detected_fallacies) - unresolved_fallacy_targets,
+            len(fallacy_targets),
+            unresolved_fallacy_targets,
+            len(detected_fallacies),
+        )
 
     if raw_args:
         results = {}
@@ -809,6 +835,12 @@ async def _generate_counters_for_targets(
             f"Total = {k} × (number of items). Each CA must target the same "
             f"item but via a different rhetorical move."
         )
+    # #1633 — TRAP: the ``target_argument`` this prompt asks for is FREE TEXT
+    # (the LLM echoes the argument it rebuts). The identically-named field in
+    # ``phase_hierarchical_fallacy_output`` is an ``arg_N`` IDENTIFIER. Same
+    # name, two meanings — a consumer must know which payload it is reading.
+    # Text-matching is correct HERE and wrong there; identifier resolution is
+    # correct there and wrong here. Do not unify the two branches.
     system_prompt = (
         "You are an expert in argumentation and counter-argument generation. "
         + prompt_count_clause
@@ -3063,6 +3095,44 @@ def _extract_arguments_from_context(
 _ARG_ID_RE = re.compile(r"^\s*arg_(\d+)\s*$")
 
 
+# #1633 — the three key conventions a fallacy record may name its target by.
+# Ordered most-specific first. An explicit loop rather than a chained ``get``
+# default: producers emit the key with a ``None`` value when a detection has no
+# target, and ``get(k, default)`` returns that ``None`` instead of the default.
+_FALLACY_TARGET_KEYS = ("target_argument", "target_argument_id", "target_arg_id")
+
+
+def _read_fallacy_target(fallacy: Dict[str, Any]) -> Any:
+    """First non-empty target reference a fallacy record carries, or ``None``."""
+    for key in _FALLACY_TARGET_KEYS:
+        value = fallacy.get(key)
+        if value:
+            return value
+    return None
+
+
+def _resolve_target_argument_index(raw_target: Any, count: int) -> Optional[int]:
+    """Resolve an upstream ``arg_N`` reference to a 0-based index below ``count``.
+
+    ``arg_1``, ``arg_2``, … are minted by ``shared_state._generate_id`` as
+    ``f"{prefix}_{index + 1}"`` over an insertion-ordered dict, and by
+    ``_extract_arguments_for_parallel`` as ``f"arg_{i+1}"`` over the extract
+    phase's argument list — the same 1-based enumeration in both cases, so the
+    inverse is arithmetic, not matching.
+
+    Returns ``None`` when the reference is absent, malformed (e.g. the
+    ``paragraph_N`` ids the heuristic fallback mints), or out of range. The
+    caller must NOT guess in that case (#1019).
+    """
+    if not raw_target:
+        return None
+    match = _ARG_ID_RE.match(str(raw_target))
+    if not match:
+        return None
+    index = int(match.group(1)) - 1  # IDs are 1-based
+    return index if 0 <= index < count else None
+
+
 def _resolve_target_argument_id(raw_target: Any, arguments: List[str]) -> Optional[str]:
     """Resolve an upstream ``arg_N`` reference to its entry in ``arguments``.
 
@@ -3075,15 +3145,8 @@ def _resolve_target_argument_id(raw_target: Any, arguments: List[str]) -> Option
     The caller must NOT invent a target in that case (#1019): an attack we
     cannot ground is an attack we do not assert.
     """
-    if not raw_target:
-        return None
-    match = _ARG_ID_RE.match(str(raw_target))
-    if not match:
-        return None
-    index = int(match.group(1)) - 1  # IDs are 1-based
-    if 0 <= index < len(arguments):
-        return arguments[index]
-    return None
+    index = _resolve_target_argument_index(raw_target, len(arguments))
+    return None if index is None else arguments[index]
 
 
 def _generate_attacks_from_args(
@@ -3129,16 +3192,9 @@ def _generate_attacks_from_args(
             if not isinstance(f, dict):
                 continue
             fallacy_label = f.get("type", f.get("fallacy_type", f"fallacy_{i}"))
-            # Explicit loop rather than chained ``get`` defaults: producers emit
-            # the key with a ``None`` value when a detection has no target, and
-            # ``get(k, default)`` returns that ``None`` instead of the default.
-            raw_target = None
-            for key in ("target_argument", "target_argument_id", "target_arg_id"):
-                value = f.get(key)
-                if value:
-                    raw_target = value
-                    break
-            target_arg = _resolve_target_argument_id(raw_target, arguments)
+            # #1633: key reading and id resolution are shared with the #289
+            # quality penalty, which read the same field with a text match.
+            target_arg = _resolve_target_argument_id(_read_fallacy_target(f), arguments)
             if target_arg is None:
                 # Non-taxonomic detections carry no target at all. Pairing them
                 # by position is what this fix removes; skip and count instead.
@@ -5081,6 +5137,18 @@ async def _invoke_hierarchical_fallacy_per_argument(
                 are gitignored) — the writer's text-match fallback anchor.
             This surfaces what the descent already grounded (which argument
             it analyzed) — it does NOT fabricate family/target (anti-pendule).
+
+            #1633 — TRAP, read before adding a consumer of this field: the
+            ``target_argument`` written here is an IDENTIFIER, while the
+            ``target_argument`` of ``phase_counter_output`` is FREE TEXT (see
+            the counter-argument system prompt: ``"target_argument": "which
+            argument"``). Same name, two meanings, two payloads. A consumer that
+            feeds this value to a substring match silently matches nothing —
+            that is exactly how the #289 quality penalty went unapplied from its
+            introduction until #1633, and how the Dung attack graph was built by
+            positional pairing until #1629. Resolve it with
+            ``_resolve_target_argument_index`` / ``_resolve_target_argument_id``;
+            do not text-match it.
             """
 
             def _enrich_fallacies(res: Dict[str, Any]) -> None:

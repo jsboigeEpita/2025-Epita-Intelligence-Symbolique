@@ -127,7 +127,17 @@ class TestQualityFallacyCrossReference:
         return mock
 
     async def test_quality_penalizes_fallacy_target(self, mock_evaluator):
-        """Quality score is reduced when argument is targeted by a fallacy."""
+        """Quality score is reduced when argument is targeted by a fallacy.
+
+        #1633 site 2 — this fixture used to supply the full argument TEXT as
+        ``target_argument``, a value no producer of this phase ever writes:
+        ``_enrich_fallacies`` writes ``f["target_argument"] = arg_id`` and the
+        fallacy plugin emits the key not at all. The test therefore passed while
+        the penalty was structurally unable to fire in production (measured: 0
+        of 3 arguments penalized on the producer shape, 3 of 3 on this fixture's
+        shape — an exact inversion). The fixture now carries what the producer
+        carries.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_quality_evaluator,
         )
@@ -143,7 +153,7 @@ class TestQualityFallacyCrossReference:
                 "fallacies": [
                     {
                         "fallacy_type": "appeal_to_authority",
-                        "target_argument": "Elon Musk says AI is dangerous",
+                        "target_argument": "arg_1",
                         "confidence": 0.9,
                     },
                 ],
@@ -233,6 +243,89 @@ class TestQualityFallacyCrossReference:
 
         assert "fallacy_cross_reference" in result
         assert result["fallacy_cross_reference"]["fallacies_found"] == 1
+
+    async def _penalized(self, mock_evaluator, fallacies):
+        """Ids of the arguments the #289 penalty actually reduced."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _invoke_quality_evaluator,
+        )
+
+        context = {
+            "phase_extract_output": {
+                "arguments": [
+                    {"text": "Elon Musk says AI is dangerous"},
+                    {"text": "Studies show AI risks are real"},
+                ],
+            },
+            "phase_hierarchical_fallacy_output": {"fallacies": fallacies},
+        }
+        with patch(
+            "argumentation_analysis.agents.core.quality.quality_evaluator."
+            "ArgumentQualityEvaluator",
+            return_value=mock_evaluator,
+        ), patch(
+            "argumentation_analysis.orchestration.unified_pipeline._llm_enrich_quality",
+            new_callable=AsyncMock,
+            return_value=None,
+        ), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ):
+            result = await _invoke_quality_evaluator("test", context)
+        scores = result["per_argument_scores"]
+        # Guard the fixture: an empty score set would make every assertion below
+        # vacuously true.
+        assert scores, "no argument was evaluated"
+        return {
+            aid
+            for aid, s in scores.items()
+            if s.get("fallacy_penalty", {}).get("applied")
+        }
+
+    async def test_penalty_resolves_the_target_by_identifier(self, mock_evaluator):
+        """#1633 site 2 — ``arg_2`` must penalize the SECOND argument.
+
+        The bite proof the previous suite could not give: it only ever asserted
+        that arg_1 (the first) was penalized, which an off-by-one or a
+        position-based pairing would satisfy just as well.
+        """
+        hit = await self._penalized(
+            mock_evaluator, [{"fallacy_type": "straw_man", "target_argument": "arg_2"}]
+        )
+        assert hit == {"arg_2"}
+
+    async def test_penalty_accepts_the_state_key_convention(self, mock_evaluator):
+        """The same field is named ``target_argument_id`` on state-sourced
+        records (``shared_state.add_fallacy``) and ``target_arg_id`` on
+        counter-argument records. One resolver reads all three (#1633)."""
+        for key in ("target_argument", "target_argument_id", "target_arg_id"):
+            hit = await self._penalized(
+                mock_evaluator, [{"fallacy_type": "straw_man", key: "arg_1"}]
+            )
+            assert hit == {"arg_1"}, f"convention {key!r} did not resolve"
+
+    async def test_penalty_does_not_fire_on_an_ungroundable_target(
+        self, mock_evaluator
+    ):
+        """Anti-pendule: do NOT restore a text match to "catch more".
+
+        A target we cannot ground is a penalty we do not apply (#1019). Prose,
+        an out-of-range id, and the ``paragraph_N`` ids the heuristic fallback
+        mints must all resolve to nothing rather than to a plausible guess —
+        this is the failure mode #1629 documented, where feeding an identifier
+        to a substring match silently paired the wrong arguments.
+        """
+        for bogus in (
+            "Elon Musk says AI is dangerous",  # prose: the old fixture's shape
+            "arg_9",  # in-convention but out of range
+            "paragraph_1",  # heuristic-fallback id, not an argument id
+            "",
+            None,
+        ):
+            hit = await self._penalized(
+                mock_evaluator,
+                [{"fallacy_type": "straw_man", "target_argument": bogus}],
+            )
+            assert hit == set(), f"{bogus!r} was grounded onto {hit}"
 
 
 # ============================================================
