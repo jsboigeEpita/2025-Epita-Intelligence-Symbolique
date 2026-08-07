@@ -31,14 +31,17 @@ class TestSpectacularWorkflowDAG:
         # #1115: the template `narrative_synthesis` phase was REMOVED from the
         # spectacular workflow (determinization residue per #1109 §5). The count
         # reflects the real phase set (#504 solvers, #506 KB/tweety, #507
-        # belief_revision, #508 synthesis, #534 deep_synthesis, ...) PLUS the
-        # three restitution acts wired onto the spectacular DAG: act1_framing
+        # belief_revision, #534 deep_synthesis, ...) PLUS the three
+        # restitution acts wired onto the spectacular DAG: act1_framing
         # (R2 #1136), act2_narrative (R3 #1137) and act3_conclusion (R4 #1138)
         # — the 3-act narrative.
+        # #1625 (R759): the L9 `analysis_synthesis` (#508 terminal aggregation)
+        # was retired (zero prod reader). Phase count drops from 40 to 39.
         wf = build_spectacular_workflow()
-        # 40 = 31 (E1b base) + 5 W1 reasoners (#1169: setaf/aba/delp/dl/dialogue)
-        # + 4 #1178 reasoners (weighted/social/qbf/cl).
-        assert len(wf.phases) == 40
+        # 39 = 31 (E1b base, was 30 post-#1625) + 5 W1 reasoners (#1169:
+        # setaf/aba/delp/dl/dialogue) + 4 #1178 reasoners (weighted/social/
+        # qbf/cl). -1 vs pre-#1625 because the L9 `synthesis` phase is gone.
+        assert len(wf.phases) == 39
 
     def test_all_expected_phases_present(self):
         wf = build_spectacular_workflow()
@@ -75,7 +78,6 @@ class TestSpectacularWorkflowDAG:
             "kb_to_tweety",
             "tweety_interpretation",
             "belief_revision",
-            "synthesis",
             "deep_synthesis",
             # Restitution acts (Epic #1134): R2 framing + R3 narrative + R4 conclusion.
             "act1_framing",
