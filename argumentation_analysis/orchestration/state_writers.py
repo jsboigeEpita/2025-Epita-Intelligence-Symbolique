@@ -821,18 +821,39 @@ def _write_ranking_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
 
 
 def _write_aspic_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write ASPIC+ analysis results to UnifiedAnalysisState."""
+    """Write ASPIC+ analysis results to UnifiedAnalysisState.
+
+    #1649 (#1678 #1679): the handler now produces a qualified ``attacks``
+    list (undercut / rebut / undermine / unresolved, scoped structurally on
+    the rule inputs). Pre-fix the writer dropped it on the floor — ASPIC+
+    rendered as a Dung copy and the axis lost its singular contribution.
+    We surface ``attacks`` as a top-level entry field (peer of ``extensions``
+    and ``statistics``), NOT via a ``formalism_specific`` sidecar: the
+    ABA writer (site 1 of #1648 Wave-2) uses the sidecar pattern because
+    ``dung_frameworks`` has a constrained projection, but ``aspic_results``
+    is a flat list with explicit peer fields and ``attacks`` is a peer —
+    the top-level shape is the natural one. The 11 readers of
+    ``aspic_results`` (sanitize_state, restitution, deep_synthesis, …) are
+    not migrated: a reader that wants the field reads
+    ``entry["attacks"]``. Anti-pendule: additif, single site, no reader
+    migration. Privacy: synthetic atoms only in tests; the LLM-named rules
+    that survive validation in production may carry corpus tokens — see the
+    sanitize_state update tracked separately.
+    """
     _record_structured_arg_status(state, "aspic_plus_reasoning", output, ctx)
     if not output or not isinstance(output, dict):
         return
     reasoner_type = str(output.get("reasoner_type", "simple"))
     extensions = output.get("extensions", [])
     statistics = output.get("statistics", {})
+    attacks = output.get("attacks")
     if not isinstance(extensions, list):
         extensions = []
     if not isinstance(statistics, dict):
         statistics = {}
-    state.add_aspic_result(reasoner_type, extensions, statistics)
+    if not isinstance(attacks, list):
+        attacks = None
+    state.add_aspic_result(reasoner_type, extensions, statistics, attacks=attacks)
 
 
 def _write_belief_revision_to_state(
