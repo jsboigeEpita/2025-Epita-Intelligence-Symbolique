@@ -129,7 +129,9 @@ def _read_act_degraded(state: Any) -> Dict[str, str]:
     return flattened
 
 
-def build_restitution_acts(state: Any, source_id: Optional[str] = None) -> RestitutionActs:
+def build_restitution_acts(
+    state: Any, source_id: Optional[str] = None
+) -> RestitutionActs:
     """Build a ``RestitutionActs`` from a completed spectacular shared-state.
 
     Reads the three act strings (populated by the ``act1_framing`` /
@@ -139,12 +141,12 @@ def build_restitution_acts(state: Any, source_id: Optional[str] = None) -> Resti
     honestly ("acte indisponible"), never fabricated (anti-pendule #1019/#369).
 
     Degradation motifs persisted by the act state writers (#1608) are read here
-    too — see ``_read_act_degraded``. Known boundary: the renderer only prints a
-    degradation note for an act that HAS text (its degraded branch sits below the
-    missing-act ``continue``), so a motif explaining a *missing* act does not
-    reach the reader. Recorded rather than fixed here — widening the renderer is
-    a separate change with its own test.
+    too — see ``_read_act_degraded``. The renderer prints a degradation note for
+    a missing act too: when the motif is present it *cedes the floor* to it, so
+    the precise reason an act is missing reaches the reader instead of a
+    hard-coded (and, for Acte III, false) cause (#1617).
     """
+
     def _read(key: str) -> str:
         if isinstance(state, dict):
             val = state.get(key, "")
