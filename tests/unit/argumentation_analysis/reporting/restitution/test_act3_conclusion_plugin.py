@@ -27,6 +27,7 @@ import pytest
 
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     Act3Result,
+    _COUNTER_LIST_CAP,
     _fol_verified,
     _is_guest_formal_entry,
     _pl_verified,
@@ -1241,3 +1242,90 @@ class TestUnsupportedClaimBlocked:
         assert "## Ce que l'analyse établit" not in result.narrative
         assert "## Ce qui tient" in result.narrative
         assert "Le raisonnement causal tient" in result.narrative
+
+
+# --- #1622 : la magnitude des contre-arguments circule ------------------------
+
+
+def _counters(n: int) -> List[dict]:
+    """``n`` distinct, well-formed counter-arguments (each passes the filter)."""
+    return [
+        {
+            "target_arg_id": f"arg_{i + 1}",
+            "strategy": "contre-exemple",
+            "counter_content": (
+                f"Contre-argument {i + 1} : la revendication ne tient pas si "
+                "l'on considère un cas où la relation causale s'inverse."
+            ),
+        }
+        for i in range(n)
+    ]
+
+
+def _prompt_with_counters(n: int) -> str:
+    """Prompt built from a state carrying exactly ``n`` counter-arguments."""
+    state = _state(
+        identified_arguments={f"arg_{i + 1}": f"Thèse {i + 1}." for i in range(n or 1)},
+        counter_arguments=_counters(n),
+    )
+    evidence = build_act3_evidence(state)
+    # Guard the fixture itself: the prompt assertions below are only meaningful
+    # if the state really produced ``n`` counter-arguments in the bundle.
+    assert evidence.counters_total == n
+    return build_act3_prompt(evidence)
+
+
+class TestCounterTruncationIsAnnounced:
+    """#1622 — the Acte III prompt enumerates at most ``_COUNTER_LIST_CAP``
+    counter-arguments, and that enumeration is the ONLY place it lists them.
+
+    Measured on 8 real artifacts, 8/8 carried more than the cap (11 to 56), so
+    writing the actionable section from a fraction of the material is the
+    nominal regime, not an edge case. ``counters_total`` reached the evidence
+    bundle but only its *truthiness* had a reader (the axis test); the magnitude
+    had none, so nothing could tell the conclusion a remainder existed.
+    """
+
+    def test_above_the_cap_the_prompt_states_the_true_total(self) -> None:
+        n = _COUNTER_LIST_CAP + 7
+        prompt = _prompt_with_counters(n)
+        # The true total and the omitted count both reach the prompt — not just
+        # "this list is partial", which would leave the magnitude unknown.
+        assert str(n) in prompt
+        assert str(n - _COUNTER_LIST_CAP) in prompt
+        assert "tronquée" in prompt
+
+    def test_at_or_below_the_cap_no_truncation_is_claimed(self) -> None:
+        """Anti-pendule: a systematic notice would be a false alarm.
+
+        A run that fits under the cap loses nothing; saying otherwise would tell
+        the LLM to hedge a complete list.
+        """
+        for n in (0, 1, _COUNTER_LIST_CAP - 1, _COUNTER_LIST_CAP):
+            prompt = _prompt_with_counters(n)
+            assert "tronquée" not in prompt, f"false truncation notice at n={n}"
+            assert "non énumérés" not in prompt, f"false omission notice at n={n}"
+
+    def test_two_states_differing_only_in_count_yield_different_prompts(self) -> None:
+        """The bite proof, and the one the previous test suite could not give.
+
+        ``test_evidence_counts_counter_arguments`` asserts the *field* is
+        computed; it passes identically whether or not anything reads the field.
+        This pins the observable consequence: crossing the cap must change the
+        prompt. Below vs. above, everything else about the two states is equal.
+        """
+        below = _prompt_with_counters(_COUNTER_LIST_CAP)
+        above = _prompt_with_counters(_COUNTER_LIST_CAP + 1)
+        assert below != above
+
+    def test_the_enumeration_itself_stays_capped(self) -> None:
+        """Anti-pendule: the remedy is to *say* the list is partial, not to show
+        more of it. Removing the cap would blow the prompt budget on a corpus
+        with 56 counter-arguments — replacing one line by its opposite.
+        """
+        n = _COUNTER_LIST_CAP + 20
+        prompt = _prompt_with_counters(n)
+        listed = prompt.count("  - Pour contrer ")
+        assert (
+            listed == _COUNTER_LIST_CAP
+        ), f"enumerated {listed}, cap is {_COUNTER_LIST_CAP}"
