@@ -28,6 +28,22 @@ _STATE_KEYS = (
     "modal_analysis_results",
     "dung_frameworks",
     "aspic_results",
+    # #1624 — three axes the PROSE mobilises that the appendix could not attest
+    # at all, not even as "indisponible": a report whose conclusion rests on the
+    # deliberation, on the governance vote and on the bipolar support relation
+    # carried no trace of any of them in its own coverage table. Carried here so
+    # the table can name them; the omission was the asymmetry, not a choice.
+    # ``bipolar_results`` reached the prose in #1667 (act3 presence channel) and
+    # was flagged there as owed to this issue.
+    "bipolar_results",
+    "debate_transcripts",
+    "governance_decisions",
+    # Deliberately NOT carried: ``deanonymized``. The prose reads it in all three
+    # acts, so it is on the prose surface — but it is a rendering *flag* (are
+    # entity names shown in clear?), not an analytical dimension. The appendix
+    # table attests what backs the narrative; a boolean about how names are
+    # printed has no "disponible / mobilisée" reading. Its absence from this
+    # tuple is the justification required by #1624 item 3, recorded at the site.
     "structured_arg_status",
     "narrative_synthesis",
     # #1620 — not a spec §2 axis of its own. The *synthesis* axis has two
