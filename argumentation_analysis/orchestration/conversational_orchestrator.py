@@ -2463,6 +2463,9 @@ async def _run_parent_harness_fallback(
             _invoke_hierarchical_fallacy_per_argument,
             _invoke_hierarchical_fallacy,
         )
+        from argumentation_analysis.orchestration.state_writers import (
+            resolve_fallacy_target_arg_id,
+        )
 
         context = {"_state_object": state}
         # Merge selector context from API (#920)
@@ -2532,7 +2535,13 @@ async def _run_parent_harness_fallback(
                 or f.get("explanation")
                 or f"Detected by parent harness (confidence: {f.get('confidence', 'N/A')})"
             )
-            target_arg_id = f.get("source_arg_id") or f.get("target_argument_id")
+            # #1633 site 3: resolve through the same ladder the pipeline lane
+            # uses. This used to read ``source_arg_id or target_argument_id``,
+            # which inverted the precedence AND skipped the membership guard —
+            # so the sentinel ``"whole_text"`` stamped above was stored as a
+            # target that matches no argument, and the two lanes disagreed on
+            # the ASPIC survivor/defeated partition for identical input.
+            target_arg_id = resolve_fallacy_target_arg_id(state, f)
             try:
                 if hasattr(state, "add_fallacy"):
                     state.add_fallacy(
