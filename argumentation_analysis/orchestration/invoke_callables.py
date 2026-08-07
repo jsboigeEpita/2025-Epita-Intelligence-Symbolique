@@ -8588,58 +8588,200 @@ async def _invoke_text_to_kb(
 async def _invoke_kb_to_tweety(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Translate KB entries to Tweety formulas via KBToTweetyPlugin (#475).
+    """Translate KB entries to Tweety formulas via KBToTweetyPlugin (#475, #1643).
 
-    Reads upstream text_to_kb output from context and translates each
-    belief candidate into a Tweety-compatible formula.
+    Reads upstream text_to_kb output from ``context["phase_text_to_kb_output"]``
+    and translates each belief candidate into a Tweety-compatible formula.
+
+    Three defects repaired (#1643, R761):
+    1. The function previously never read ``context`` — it parsed ``input_text``
+       (raw prose) as JSON, which always failed silently and dropped the upstream
+       KB output that was sitting in context.
+    2. Phantom key: it read ``"results"`` while the plugin writes ``"translations"``
+       (kb_to_tweety_plugin.py:328-333) — formulas was always [].
+    3. The Dung/ASPIC methods return ``{"error": ...}`` (a non-empty dict, hence
+       truthy) on bad input. ``if dung_result:`` passed that error dict through
+       and stored it under ``dung_framework`` / ``aspic_system`` — same family as
+       #1634 (an error serialized in the domain vocabulary).
+
+    Anti-pendule #1643: correcting only one of these three is a false-fix —
+    the entry remains prose, ``json.loads`` still raises, and the phantom key
+    is still absent. They are fixed together or not at all.
     """
     if not input_text or not input_text.strip():
         return {"error": "empty input", "formulas": []}
+
+    # Defect 1 — consume the upstream KB. Without it, the plugin cannot be
+    # called correctly (it expects a structured JSON payload, not raw prose).
+    text_to_kb_output = context.get("phase_text_to_kb_output") if context else None
+    if not isinstance(text_to_kb_output, dict) or not text_to_kb_output:
+        return {
+            "error": "missing_text_to_kb_output",
+            "formulas": [],
+            "formula_count": 0,
+            "status": "input_error",
+            "reason": (
+                "kb_to_tweety requires phase_text_to_kb_output in context "
+                "(set by L1b text_to_kb). Without it, only prose is available, "
+                "which the Tweety plugin rejects as non-JSON."
+            ),
+        }
+
+    arguments = text_to_kb_output.get("arguments") or []
+    belief_candidates = text_to_kb_output.get("belief_candidates") or []
+    fol_signature = text_to_kb_output.get("fol_signature")
+
+    if not belief_candidates and not arguments:
+        return {
+            "error": "empty_kb",
+            "formulas": [],
+            "formula_count": 0,
+            "status": "input_error",
+            "reason": "phase_text_to_kb_output carries no arguments or beliefs",
+        }
 
     try:
         from argumentation_analysis.plugins.kb_to_tweety_plugin import KBToTweetyPlugin
 
         plugin = KBToTweetyPlugin()
 
-        # Try batch translation first (more efficient)
-        batch_json = await plugin.translate_batch_to_tweety(input_text)
+        # Build the structured payloads each plugin method expects. The plugin
+        # validates each as JSON at the top — passing prose (the old behavior)
+        # made every call return {"error": "Invalid JSON input"}.
+        beliefs_payload = json.dumps(
+            {
+                "beliefs": list(belief_candidates),
+                "logic_type": "fol",
+                "signature": fol_signature,
+            }
+        )
+        dung_payload = json.dumps(
+            {
+                "arguments": [
+                    a.get("text", "") if isinstance(a, dict) else str(a)
+                    for a in arguments
+                ],
+                "attacks": [],  # upstream KB has no attack edges (#1643 scope: produce, don't invent)
+            }
+        )
+        aspic_payload = json.dumps(
+            {
+                # No rule structure in text_to_kb output — only candidate beliefs
+                # and arguments. ASPIC+ is conditional on the KB exposing rules,
+                # which it currently does not. We still call the plugin with empty
+                # rules so the contract is exercised and the error path is visible.
+                "strict_rules": [],
+                "defeasible_rules": list(belief_candidates),
+                "ordinary_premises": [
+                    a.get("text", "") if isinstance(a, dict) else str(a)
+                    for a in arguments
+                ],
+            }
+        )
+
+        # --- batch translation (Tweety formulas) ---
+        batch_json = await plugin.translate_batch_to_tweety(beliefs_payload)
         batch_result = (
             json.loads(batch_json) if isinstance(batch_json, str) else batch_json
         )
 
-        formulas = batch_result.get("results", [])
+        # Defect 2 — the plugin writes "translations", not "results".
+        raw_translations = (
+            batch_result.get("translations", [])
+            if isinstance(batch_result, dict)
+            else []
+        )
+        batch_error = (
+            batch_result.get("error") if isinstance(batch_result, dict) else None
+        )
+        # Anti-#1019 / defect 3 (extended): the plugin may pack a per-item
+        # error dict ({"error": "...", "validation_message": "..."}) into the
+        # translations list when Tweety validation fails. Storing those
+        # would re-introduce defect 3 in a different container: a writer
+        # calling add_belief_set on {"error": "..."} would store an error
+        # string as a belief. We surface them under batch_error too — and
+        # only keep items that carry a real formula string.
+        batch_item_errors: List[str] = []
+        formulas: List[Dict[str, Any]] = []
+        if isinstance(raw_translations, list):
+            for item in raw_translations:
+                if not isinstance(item, dict):
+                    continue
+                if "error" in item:
+                    batch_item_errors.append(
+                        item.get("error") or item.get("validation_message") or "unknown"
+                    )
+                    continue
+                if not item.get("formula"):
+                    continue
+                formulas.append(item)
 
-        # Also try Dung and ASPIC if the input looks like it has structure
-        dung_result = None
-        aspic_result = None
+        # --- Dung framework ---
+        dung_framework = None
+        dung_error = None
         try:
-            dung_json = await plugin.translate_dung(input_text)
-            dung_result = (
+            dung_json = await plugin.translate_dung(dung_payload)
+            dung_parsed = (
                 json.loads(dung_json) if isinstance(dung_json, str) else dung_json
             )
-        except Exception:
-            pass
+            if isinstance(dung_parsed, dict) and "error" not in dung_parsed:
+                # Defect 3 — three states, not two. We only store the framework
+                # when the plugin succeeded; otherwise we keep the error reason
+                # explicit and DO NOT pollute `dung_framework` with an error dict.
+                dung_framework = dung_parsed
+            elif isinstance(dung_parsed, dict):
+                dung_error = dung_parsed.get("error")
+        except Exception as dung_exc:
+            dung_error = f"exception: {dung_exc}"
+
+        # --- ASPIC+ system ---
+        aspic_system = None
+        aspic_error = None
         try:
-            aspic_json = await plugin.translate_aspic(input_text)
-            aspic_result = (
+            aspic_json = await plugin.translate_aspic(aspic_payload)
+            aspic_parsed = (
                 json.loads(aspic_json) if isinstance(aspic_json, str) else aspic_json
             )
-        except Exception:
-            pass
+            if isinstance(aspic_parsed, dict) and "error" not in aspic_parsed:
+                aspic_system = aspic_parsed
+            elif isinstance(aspic_parsed, dict):
+                aspic_error = aspic_parsed.get("error")
+        except Exception as aspic_exc:
+            aspic_error = f"exception: {aspic_exc}"
 
-        result = {
+        result: Dict[str, Any] = {
             "formulas": formulas,
-            "formula_count": len(formulas),
+            "formula_count": len(formulas) if isinstance(formulas, list) else 0,
+            "status": "ok",
+            "kb_source": {
+                "argument_count": len(arguments) if isinstance(arguments, list) else 0,
+                "belief_count": (
+                    len(belief_candidates) if isinstance(belief_candidates, list) else 0
+                ),
+            },
         }
-        if dung_result:
-            result["dung_framework"] = dung_result
-        if aspic_result:
-            result["aspic_system"] = aspic_result
+        if batch_error:
+            result["batch_error"] = batch_error
+        if batch_item_errors:
+            result["batch_item_errors"] = batch_item_errors
+        if dung_framework is not None:
+            result["dung_framework"] = dung_framework
+        elif dung_error:
+            result["dung_error"] = dung_error
+        if aspic_system is not None:
+            result["aspic_system"] = aspic_system
+        elif aspic_error:
+            result["aspic_error"] = aspic_error
 
         return result
     except Exception as e:
         logger.warning(f"KBToTweety translation failed: {e}")
-        return {"error": str(e), "formulas": []}
+        return {
+            "error": str(e),
+            "formulas": [],
+            "formula_count": 0,
+            "status": "exception",
+        }
 
 
 async def _invoke_tweety_interpretation(

@@ -1426,11 +1426,29 @@ def _write_text_to_kb_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> 
 
 
 def _write_kb_to_tweety_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write KBToTweety translation results to UnifiedAnalysisState (#506)."""
+    """Write KBToTweety translation results to UnifiedAnalysisState (#506, #1643).
+
+    The previous version (#506) silently stored whatever ``dung_framework`` and
+    ``aspic_system`` it found in the callable output — which, on every real run,
+    was the plugin's ``{"error": "Invalid JSON input"}`` dict (#1643 R761,
+    defect 3). Errors serialized in the domain vocabulary are
+    indistinguishable from real frameworks downstream; that is the same family
+    as #1634, and the writer participated in the failure by storing them.
+
+    New contract (#1643): the callable emits a ``status`` field. We only write
+    ``dung_framework`` / ``aspic_system`` into state when the callable returned
+    a real framework (``status == "ok"`` and the field is not an error dict).
+    Errors are surfaced under ``_*_error`` keys, and the writer preserves
+    that distinction instead of folding it into the success path.
+    """
     if not output or not isinstance(output, dict):
         return
 
+    status = output.get("status")
     formulas = output.get("formulas", [])
+
+    # Belief-set population is safe — formula dicts are validated by the plugin
+    # upstream, so we only need the shape check.
     add_bs = getattr(state, "add_belief_set", None)
     if callable(add_bs):
         for f in formulas:
@@ -1443,13 +1461,45 @@ def _write_kb_to_tweety_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
             if formula:
                 add_bs(logic_type, formula)
 
-    if hasattr(state, "tweety_formulas_from_kb"):
-        state.tweety_formulas_from_kb = {
-            "formulas": formulas,
-            "formula_count": output.get("formula_count", len(formulas)),
-            "dung_framework": output.get("dung_framework"),
-            "aspic_system": output.get("aspic_system"),
-        }
+    if not hasattr(state, "tweety_formulas_from_kb"):
+        return
+
+    # Defect-3 fix: refuse to store error dicts in domain-vocabulary fields.
+    # Anything coming back as {"error": ...} or absent on a non-ok status is
+    # surfaced explicitly via *_error keys, NOT folded into dung_framework /
+    # aspic_system.
+    is_ok = status == "ok"
+    dung_raw = output.get("dung_framework") if is_ok else None
+    aspic_raw = output.get("aspic_system") if is_ok else None
+    dung_framework = (
+        dung_raw if isinstance(dung_raw, dict) and "error" not in dung_raw else None
+    )
+    aspic_system = (
+        aspic_raw if isinstance(aspic_raw, dict) and "error" not in aspic_raw else None
+    )
+
+    payload: Dict[str, Any] = {
+        "formulas": formulas,
+        "formula_count": output.get("formula_count", len(formulas)),
+        "status": status,
+    }
+    if dung_framework is not None:
+        payload["dung_framework"] = dung_framework
+    else:
+        dung_error = output.get("dung_error")
+        if dung_error:
+            payload["dung_error"] = dung_error
+    if aspic_system is not None:
+        payload["aspic_system"] = aspic_system
+    else:
+        aspic_error = output.get("aspic_error")
+        if aspic_error:
+            payload["aspic_error"] = aspic_error
+    batch_error = output.get("batch_error")
+    if batch_error:
+        payload["batch_error"] = batch_error
+
+    state.tweety_formulas_from_kb = payload
 
 
 def _write_tweety_interpretation_to_state(
