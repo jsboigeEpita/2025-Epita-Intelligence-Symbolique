@@ -384,6 +384,79 @@ class TestTweetyBridgeModalDispatch:
         mock_modal.is_modal_kb_consistent.assert_called_once_with("kb")
         assert result == (True, "ok")
 
+    def _modal_verdict(self, handler_reply):
+        """Drive the real wrapper over one handler reply, return its verdict."""
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        mock_modal = MagicMock()
+        mock_modal.execute_modal_query.return_value = handler_reply
+        with patch.object(
+            TweetyBridge,
+            "modal_handler",
+            new_callable=lambda: property(lambda self: mock_modal),
+        ):
+            bridge = TweetyBridge.__new__(TweetyBridge)
+            verdict, _msg = bridge.execute_modal_query("kb", "p", logic_type="K")
+        return verdict
+
+    def test_modal_crash_is_not_the_same_answer_as_a_rejection(self):
+        """#1634: a refused belief set must not read as a decided negative.
+
+        Measured before the fix, on a real JVM: querying ``!Wet`` against a
+        well-formed KB (a genuine REJECTED) and querying anything against
+        ``!!! illegal sort ::: @@@`` (the parser refuses, FUNC_ERROR) both
+        returned ``False``. Two opposite situations, one value, and always the
+        negative one — so every downstream reader counted a crash as evidence.
+
+        The assertion is on the DISTINCTION, not on the sentinel: asserting
+        ``crash is None`` alone would still pass if REJECTED also became None.
+        """
+        rejected = self._modal_verdict(
+            "Tweety Result (SimpleMlReasoner): Modal Query 'p' is REJECTED (False)."
+        )
+        crashed = self._modal_verdict(
+            "FUNC_ERROR: Error executing modal query: "
+            "org.tweetyproject.commons.ParserException: Predicate 'x' has not "
+            "been declared."
+        )
+        assert rejected is False, "a REJECTED query is a real, decided negative"
+        assert crashed is None, "a parser refusal decided nothing"
+        assert rejected is not crashed, (
+            "a crash and a rejection are indistinguishable again — the whole "
+            "point of #1634 is that these two must not share a value"
+        )
+
+    def test_modal_accepted_still_decides(self):
+        """The fix must not cost the decided cases (anti-pendule #1634)."""
+        assert (
+            self._modal_verdict(
+                "Tweety Result (SimpleMlReasoner): Modal Query 'p' is ACCEPTED (True)."
+            )
+            is True
+        )
+
+    def test_modal_handler_returning_nothing_decides_nothing(self):
+        """A non-string handler reply is not a verdict either (#1634)."""
+        assert self._modal_verdict(None) is None
+
+    def test_unroutable_logic_type_decides_nothing(self):
+        """#1634: ``check_consistency`` on an unknown logic ran no reasoner.
+
+        Three call sites in ``logic_agent_plugin`` already describe the old
+        return as "a fabricated (False, 'Unknown logic type: fol')" and guard
+        against reaching it. Stop fabricating at the source.
+        """
+        from argumentation_analysis.agents.core.logic.tweety_bridge import (
+            TweetyBridge,
+        )
+
+        bridge = TweetyBridge.__new__(TweetyBridge)
+        verdict, msg = bridge.check_consistency("kb", "hyperintensional")
+        assert verdict is None
+        assert "Unknown logic type" in msg
+
 
 # ──── #1204 anti-théâtre: EProver delivery-contract sentinel guard ────
 

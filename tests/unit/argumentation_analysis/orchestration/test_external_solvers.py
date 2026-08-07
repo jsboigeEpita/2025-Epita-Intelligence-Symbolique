@@ -330,3 +330,168 @@ class TestSafeFloatEnv:
         # the test asserts the MISSING key still falls back to default.
         with self._patch_mod_env_get({"_TEST_FLOAT": "irrelevant"}):
             assert mod._safe_float_env("_TEST_FLOAT_MISSING", 99.0) == 99.0
+
+
+# ---------------------------------------------------------------------------
+# #1634: a Tweety parse failure must not be serialized as a decided verdict
+# ---------------------------------------------------------------------------
+
+
+class TestParseFailureIsNotAVerdict:
+    """A refused belief set decided nothing, and must say so.
+
+    Measured on a real JVM before the fix, driving the production callable with
+    an unparsable FOL belief set: ``consistent=False`` — the *same* value a
+    genuinely inconsistent theory produces — while the accompanying message
+    read ``"Degraded: FOL consistency check error (Erreur de parsing Tweety
+    …)"``. The message was honest; the field a reader actually consumes was
+    not, and it always erred toward the negative.
+
+    Each test below asserts the CONTRAST (undecided vs decided), not just the
+    sentinel: asserting ``is None`` alone would survive a change that made
+    every outcome None.
+    """
+
+    @staticmethod
+    def _run(coro):
+        return asyncio.get_event_loop().run_until_complete(coro)
+
+    def _fol_with_handler_reply(self, reply, solver="eprover", eprover=True):
+        """Drive the real external-FOL callable over one bridge reply."""
+        import argumentation_analysis.orchestration.invoke_callables as mod
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_external_fol_solver,
+        )
+
+        bridge = MagicMock()
+        bridge.check_consistency.return_value = reply
+        fake_mod = MagicMock()
+        fake_mod.TweetyBridge.return_value = bridge
+        with patch.dict(
+            "sys.modules",
+            {"argumentation_analysis.agents.core.logic.tweety_bridge": fake_mod},
+        ), patch.object(
+            mod.shutil, "which", side_effect=lambda b: "/x" if eprover else None
+        ):
+            return self._run(
+                _invoke_external_fol_solver(
+                    "probe",
+                    {
+                        "fol_solver": solver,
+                        "phase_fol_output": {"formulas": ["P(a)"]},
+                    },
+                )
+            )
+
+    @pytest.mark.parametrize("eprover", [True, False], ids=["eprover", "tweety"])
+    def test_fol_parse_failure_is_undecided_on_both_branches(self, eprover):
+        """Both FOL return paths flattened the handler's ``None`` (#1634).
+
+        The EProver branch and the TweetyBridge fallback carried the same
+        ``bool(is_consistent)``; the fallback is the one real corpora take,
+        since ``eprover`` is usually not on PATH.
+        """
+        degraded = self._fol_with_handler_reply(
+            (None, "Degraded: FOL consistency check error (parse)"), eprover=eprover
+        )
+        decided = self._fol_with_handler_reply(
+            (False, "FOL consistency check (EProver): inconsistent"), eprover=eprover
+        )
+        assert decided["consistent"] is False, "a real inconsistency still decides"
+        assert degraded["consistent"] is None, "a parse failure decided nothing"
+        assert degraded["consistent"] is not decided["consistent"], (
+            "a parse failure is indistinguishable from a decided inconsistency "
+            "again — that conflation is #1634"
+        )
+
+    def test_fol_degraded_flag_tracks_the_verdict_rather_than_the_solver(self):
+        """``degraded`` was hardcoded False on every branch — an inert field.
+
+        It never meant "we fell back to Tweety" (#1019 settled that Tweety is a
+        genuine reasoner); it now means "no verdict was reached", which is the
+        one thing it can usefully tell the state writer.
+        """
+        degraded = self._fol_with_handler_reply((None, "Degraded: parse"))
+        decided = self._fol_with_handler_reply((True, "consistent"))
+        assert degraded["degraded"] is True
+        assert decided["degraded"] is False
+
+    def test_modal_parse_failure_is_undecided(self):
+        """The modal external phase inherited the wrapper's flattening (#1634)."""
+        import argumentation_analysis.orchestration.invoke_callables as mod
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_external_modal_solver,
+        )
+
+        def run(verdict):
+            bridge = MagicMock()
+            bridge.execute_modal_query.return_value = (verdict, "msg")
+            fake_mod = MagicMock()
+            fake_mod.TweetyBridge.return_value = bridge
+            with patch.dict(
+                "sys.modules",
+                {"argumentation_analysis.agents.core.logic.tweety_bridge": fake_mod},
+            ), patch.object(mod.shutil, "which", return_value=None):
+                return self._run(
+                    _invoke_external_modal_solver(
+                        "probe",
+                        {
+                            "phase_modal_output": {
+                                "formulas": ["[](p)"],
+                                "modalities": ["necessity"],
+                            }
+                        },
+                    )
+                )
+
+        assert run(False)["valid"] is False, "a decided negative stays decided"
+        assert run(None)["valid"] is None, "a refused belief set decided nothing"
+
+    def test_prover9_reports_what_the_binary_actually_said(self):
+        """#1634 + a polarity inversion found at the same line.
+
+        The Prover9 input is a bare SOS list with **no goal**, so a proof is the
+        derivation of the empty clause: ``THEOREM PROVED`` ⇒ the KB is
+        INCONSISTENT, ``SEARCH FAILED`` ⇒ consistent. The old expression stored
+        ``consistent = proved``, exactly backwards — measured against the
+        bundled binary, ``P(a). -P(a).`` yielded THEOREM PROVED and was stored
+        ``consistent=True``.
+
+        And with neither marker present, nothing was decided at all.
+        """
+        import argumentation_analysis.orchestration.invoke_callables as mod
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_external_fol_solver,
+        )
+
+        def run(prover9_stdout):
+            fake_runner = MagicMock()
+            fake_runner.run_prover9.return_value = prover9_stdout
+            with patch.dict(
+                "sys.modules",
+                {"argumentation_analysis.core.prover9_runner": fake_runner},
+            ), patch.object(mod.shutil, "which", return_value=None), patch(
+                "pathlib.Path.is_file", return_value=True
+            ):
+                return self._run(
+                    _invoke_external_fol_solver(
+                        "probe",
+                        {
+                            "fol_solver": "prover9",
+                            "phase_fol_output": {"formulas": ["P(a)"]},
+                        },
+                    )
+                )
+
+        refuted = run("... THEOREM PROVED ...")
+        exhausted = run("... SEARCH FAILED ...")
+        silent = run("... nothing conclusive here ...")
+
+        assert refuted["solver"] == "prover9", "the prover9 branch was not taken"
+        assert refuted["consistent"] is False, (
+            "Prover9 derived the empty clause from the SOS list — that is an "
+            "INCONSISTENT KB, not a consistent one"
+        )
+        assert exhausted["consistent"] is True
+        assert silent["consistent"] is None
+        assert silent["degraded"] is True
