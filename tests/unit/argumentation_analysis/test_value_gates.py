@@ -697,34 +697,87 @@ class TestDeLPValueGate:
 
 
 class TestBipolarValueGate:
-    """Assert Bipolar fallback does not return fabricated args[:2] extensions.
+    """Assert Bipolar fallback discriminates TWO failure states, never conflates them.
 
-    The fallback used to return ``[args[:2]]`` as a fake extension — it could
-    not compute real bipolar argumentation semantics. After #964, it reports
-    honest unavailability (extensions=None, solver='unavailable').
+    Contract evolution (the anti-pendule trail — do not collapse it back to one
+    branch):
+      - #964: the fallback returned an honest-unavailable *dict*
+        (extensions=None, solver='unavailable').
+      - #1252/#1019: hardened to RAISE RuntimeError, so a solver failure could
+        never enter state — fabricated OR silently-degraded alike.
+      - #1645: the single ``except`` relabeled EVERY failure as
+        "JVM/Tweety required" (the #1634 fabrication), so "no JVM", "handler
+        broken", and "analysis failed" were indistinguishable downstream. The
+        fix restores the discrimination: JVM-absent ⇒ honest-absent dict (phase
+        continues, supports echoed), handler/analysis failure WITH the JVM up ⇒
+        fail loud with the REAL cause. Three states, never two.
+
+    #1645 is NOT a return to the #964 dict — it is the discrimination of the two
+    failure states the #1252 raise had merged. Do not "correct" it back toward
+    either single extreme.
     """
 
-    async def test_bipolar_fallback_raises_fail_loud(self):
-        """Bipolar AF must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+    async def test_jvm_absent_returns_honest_absent_dict(self):
+        """State 1 — JVM not started ⇒ honest-absent dict (the phase continues).
 
-        Contract evolution: the earlier #964 guard asserted an honest-unavailable
-        *dict* (extensions=None, solver='unavailable'). Post-#1252/#1019 the
-        except block was hardened to RAISE RuntimeError, so a solver failure can
-        never enter state — fabricated OR silently-degraded extensions alike.
-        STRICTER than the old None-dict. Triage #1336.
+        The handler is patched to raise (it would, with no JVM) and is_jvm_started
+        is forced False. The phase MUST continue: a degraded dict with
+        extensions=None (tri-state, never a fabricated verdict), NOT a raise. The
+        supports the caller supplied are echoed — the relation was established
+        before the handler ran; only the Dung reasoning on top did not compute.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_bipolar,
         )
 
+        ctx = {"arguments": ["a", "b", "c"], "supports": [("a", "b"), ("b", "c")]}
         with patch(
-            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")
+            "argumentation_analysis.core.jvm_setup.is_jvm_started",
+            return_value=False,
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            side_effect=RuntimeError("No JVM for test"),
+            side_effect=RuntimeError("handler exploded"),
         ):
-            with pytest.raises(RuntimeError, match="Bipolar analysis .* unavailable"):
+            result = await _invoke_bipolar("test", ctx)
+
+        assert isinstance(result, dict)
+        assert result.get("degraded") is True
+        assert result.get("absent_reason") == "jvm_not_started"
+        assert result.get("extensions") is None  # tri-state, not a verdict
+        # The caller's supports survive the degraded branch (not zeroed to []).
+        assert result.get("supports") == [["a", "b"], ["b", "c"]]
+
+    async def test_jvm_present_handler_failure_raises_real_cause(self):
+        """State 2 — JVM up + handler raises ⇒ fail loud with the REAL cause.
+
+        The JVM runs (is_jvm_started True), the handler raises. The failure is
+        ours, not the environment's: it MUST surface as a RuntimeError naming the
+        real cause and MUST NOT be relabeled "JVM/Tweety required" (that
+        fabrication was the #1634 defect the whole family shares). The regex is
+        NOT relaxed — the test asserts something specific (the real cause named,
+        the fabrication absent) and so keeps its power to discriminate.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_bipolar,
+        )
+
+        real_cause = RuntimeError("handler exploded")
+        with patch(
+            "argumentation_analysis.core.jvm_setup.is_jvm_started",
+            return_value=True,
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=real_cause,
+        ):
+            with pytest.raises(RuntimeError) as exc_info:
                 await _invoke_bipolar("test", {"arguments": ["a", "b", "c"]})
+
+        msg = str(exc_info.value)
+        assert "handler exploded" in msg
+        assert "RuntimeError" in msg
+        assert "JVM/Tweety required" not in msg
+        assert "Install JVM" not in msg
+        assert exc_info.value.__cause__ is real_cause
 
 
 # ============================================================

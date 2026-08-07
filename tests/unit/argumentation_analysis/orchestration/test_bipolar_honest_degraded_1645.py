@@ -31,7 +31,7 @@ other.
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -157,3 +157,80 @@ class TestJvmUpHandlerFailureFailsLoudRealCause:
         assert "Tweety rejected the support relation" in str(exc_info.value)
         # Crucially, it must NOT tell the user to install a JVM — the JVM is up.
         assert _INSTALL_HINT not in str(exc_info.value)
+
+
+# ---------------------------------------------------------------------------
+# Relation — translator's supports must survive the degraded branch to the writer
+# ---------------------------------------------------------------------------
+
+
+class TestTranslatorWorkSurvivesDegradedState:
+    """When the translator produced supports but the JVM is absent, the degraded
+    dict MUST echo those supports so ``_write_bipolar_to_state`` persists them.
+
+    Pre-fix the degraded branch returned ``"supports": []`` — the relation the
+    translator had just established (translation needs NO JVM) was erased at the
+    exact moment of writing. ``supports`` is the ONLY non-empty payload of the
+    two mode-3 axes on the 8 real artefacts, and it is exactly what
+    ``_write_bipolar_to_state`` (state_writers.py l.823) and the #1667 presence
+    channel read FROM the result dict. This test pins the relation
+    translator → handler-skip → writer so the echo cannot silently re-regress.
+    """
+
+    def test_writer_persists_translator_supports_not_empty(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_bipolar,
+        )
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_bipolar_to_state,
+        )
+
+        # The translator runs BEFORE the try (no JVM needed) and produces 2
+        # genuine support pairs.
+        translator_outcome = MagicMock()
+        translator_outcome.relations = [
+            ("corpus_A", "prop_1"),
+            ("corpus_B", "prop_2"),
+        ]
+        translator_outcome.cause = "ok"
+        translator_outcome.error = ""
+
+        # ctx WITHOUT supports ⇒ _invoke_bipolar calls the translator itself.
+        ctx = {"arguments": ["corpus_A", "corpus_B"]}
+
+        with patch(
+            "argumentation_analysis.orchestration.structured_arg_translator.translate_to_bipolar_supports",
+            new=AsyncMock(return_value=translator_outcome),
+        ), patch(
+            "argumentation_analysis.core.jvm_setup.is_jvm_started",
+            return_value=False,
+        ), patch(
+            _BRIDGE_BIPOLAR,
+            side_effect=RuntimeError("JVM absent: BipolarHandler ctor failed"),
+        ):
+            output = _run(_invoke_bipolar("opaque text", ctx))
+
+        # Degraded dict, supports echoed as 2 pairs — NOT zeroed to [].
+        assert output["degraded"] is True
+        assert output["extensions"] is None  # tri-state, Dung reasoning skipped
+        assert output["supports"] == [
+            ["corpus_A", "prop_1"],
+            ["corpus_B", "prop_2"],
+        ]
+
+        # The writer reads supports FROM the dict → it must persist the 2 pairs.
+        state = MagicMock()
+        with patch(
+            "argumentation_analysis.orchestration.state_writers._record_structured_arg_status"
+        ):
+            _write_bipolar_to_state(output, state, ctx)
+
+        state.add_bipolar_result.assert_called_once()
+        call_args = state.add_bipolar_result.call_args.args
+        # signature: add_bipolar_result(fw_type, arguments, supports)
+        persisted_supports = call_args[2]
+        assert persisted_supports == [
+            ["corpus_A", "prop_1"],
+            ["corpus_B", "prop_2"],
+        ], "writer must persist the translator's supports, not []"
+

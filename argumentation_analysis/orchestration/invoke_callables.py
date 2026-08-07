@@ -3579,6 +3579,15 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 context, "bipolar_argumentation", "translator_failed", type(e).__name__
             )
 
+    # #1645: resolve the JVM state ONCE, before the try. Resolving it inside the
+    # except (the earlier ``import jpype; jpype.isJVMStarted()``) would let an
+    # ImportError from a jpype-less environment mask the original cause — in the
+    # exact environment the honest-absent path targets. Reuses the helper already
+    # used at l.4490 instead of touching jpype directly. (coordinator point 3)
+    from argumentation_analysis.core.jvm_setup import is_jvm_started
+
+    jvm_up = is_jvm_started()
+
     try:
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
             BipolarHandler,
@@ -3606,9 +3615,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
         # cause, preserved via `from e`, never relabeled as an environment gap).
         # Anti-pendule: do NOT swap the raise for a silent `return {}` — that
         # would trade this defect for its mirror (#1019).
-        import jpype
-
-        if not jpype.isJVMStarted():
+        if not jvm_up:
             logger.warning(
                 "Bipolar analysis unavailable: JVM not started (honest-absent, "
                 "the phase continues degraded). Underlying signal: %s",
@@ -3617,7 +3624,14 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             return {
                 "framework_type": fw_type,
                 "arguments": list(args),
-                "supports": [],
+                # Echo the supports the translator established BEFORE this try
+                # (translation needs no JVM). supports is the ONLY non-empty
+                # payload of the two mode-3 axes on the 8 real artefacts; zeroing
+                # it would erase the relation the translator produced — which is
+                # exactly what _write_bipolar_to_state (l.823) and the #1667
+                # presence channel read from this dict. Mirrors the handler's own
+                # echo at bipolar_handler.py:105. extensions: None = not computed.
+                "supports": [[s, t] for s, t in supports],
                 "attacks": list(attacks),
                 # tri-state None = not computed (JVM absent), never a fabricated
                 # empty extension set that would read as "consistent sur vide".
