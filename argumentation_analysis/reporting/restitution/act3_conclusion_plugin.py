@@ -88,6 +88,16 @@ _MAX_CLAIM_EXCERPTS = 5
 # a future longer wording cannot silently eat the prompt budget.
 _ABSENCE_REASON_CAP = 300
 
+# #1667 — the PRESENCE side of the same axes. Before this, a structured-argu-
+# mentation axis reached the conclusion ONLY through the absence ledger above:
+# the prose had a vocabulary for the axis that FAILED and none for the axis that
+# SUCCEEDED. Reanimating a module therefore REMOVED its single trace from the
+# narrative. These caps bound what a successful axis may spend of the prompt.
+_SUPPORT_NODE_CAP = 140
+_SUPPORT_PAIR_CAP = 3
+_ASPIC_MEMBER_CAP = 120
+_ASPIC_MEMBERS_SHOWN = 4
+
 # #1605 — reader-facing French names for the structured-argumentation axes. The
 # prose forbids raw snake_case identifiers (they are opaque to the non-technical
 # reader this narrative addresses), so a capability key never reaches the
@@ -303,6 +313,23 @@ class AbsentDimension:
 
 
 @dataclass(frozen=True)
+class StructuredArgFinding:
+    """What a structured-argumentation axis ESTABLISHED, when it succeeded (#1667).
+
+    The symmetric counterpart of :class:`AbsentDimension`. ``statement`` is not a
+    count and not a status word: it is what THIS formalism says and no other axis
+    says — the support relation for bipolar, the surviving rule-derivations for
+    ASPIC+. A count here would reproduce ``appendix.py``'s ``"disponible"`` one
+    hop further along: the witness moved, no decider created (anti-pendule
+    #1667).
+    """
+
+    capability: str
+    label: str
+    statement: str
+
+
+@dataclass(frozen=True)
 class BlockedClaim:
     """A sentence the gate removed because its axis produced nothing (#1605).
 
@@ -370,6 +397,12 @@ class Act3Evidence:
     # not a defect of the pipeline: it is the one thing the conclusion was
     # structurally unable to say before this field existed.
     absent_dimensions: List[AbsentDimension] = field(default_factory=list)
+    # #1667 — the symmetric PRESENCE channel. ``absent_dimensions`` above was the
+    # ONLY path from a structured-argumentation axis to this conclusion, and it
+    # opens on failure. An axis that worked was therefore mute here, and making a
+    # module work again removed its single trace from the prose. Empty when no
+    # axis established anything — never a status word, never a count.
+    structured_findings: List[StructuredArgFinding] = field(default_factory=list)
 
 
 @dataclass
@@ -710,6 +743,128 @@ def _collect_absent_dimensions(state: Any) -> List[AbsentDimension]:
     return sorted(out, key=lambda d: d.label)
 
 
+def _axis_label(capability: str) -> str:
+    """Reader-facing French name of a structured-argumentation axis.
+
+    Shares :data:`_ABSENT_DIMENSION_LABELS` with the absence ledger on purpose:
+    the French name of an axis does not depend on whether it succeeded. Only the
+    sentence built around it does.
+    """
+    return _ABSENT_DIMENSION_LABELS.get(capability, capability.replace("_", " "))
+
+
+def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the SUPPORT relation — what bipolar argumentation alone says.
+
+    Dung frameworks carry attacks only; ``supports`` is the relation no other
+    axis in the pipeline computes. Measured on 8 real state artifacts: 4 to 9
+    support pairs each, varying with the argument inventory — genuine payload,
+    not a constant.
+
+    Returns ``None`` when no well-formed pair exists (fail-loud #1019: an empty
+    support set is an honest absence, never a fabricated sentence).
+    """
+    entries = getattr(state, "bipolar_results", None) or []
+    if not isinstance(entries, list):
+        return None
+    pairs: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        supports = entry.get("supports") or []
+        if not isinstance(supports, list):
+            continue
+        for pair in supports:
+            if not isinstance(pair, (list, tuple)) or len(pair) != 2:
+                continue
+            source = _truncate(str(pair[0]).strip(), _SUPPORT_NODE_CAP)
+            target = _truncate(str(pair[1]).strip(), _SUPPORT_NODE_CAP)
+            if not source or not target:
+                continue
+            pairs.append(f"« {source} » appuie « {target} »")
+            if len(pairs) >= _SUPPORT_PAIR_CAP:
+                break
+        if len(pairs) >= _SUPPORT_PAIR_CAP:
+            break
+    if not pairs:
+        return None
+    return StructuredArgFinding(
+        capability="bipolar_argumentation",
+        label=_axis_label("bipolar_argumentation"),
+        statement="; ".join(pairs),
+    )
+
+
+def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the surviving rule-derivations — what ASPIC+ alone says.
+
+    ASPIC+ arguments are derivations through strict/defeasible rules, so a
+    surviving extension names WHICH chains of reasoning withstand defeat, not
+    merely which atomic claims do.
+
+    Returns ``None`` when every extension is empty. That is the measured state
+    of the pipeline today: all 8 real artifacts carry ``extensions: [[]]`` with
+    ``axioms_count: 0``, because ``_invoke_aspic`` reads ``context["axioms"]``
+    and nothing in the orchestration ever writes that key — with no ordinary
+    premise, ASPIC+ builds no argument at all. Emitting anything here would
+    dress an argument-free theory as a result (#1019). This guard is the
+    regression sentinel for the day the producer is repaired.
+    """
+    entries = getattr(state, "aspic_results", None) or []
+    if not isinstance(entries, list):
+        return None
+    best: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        extensions = entry.get("extensions") or []
+        if not isinstance(extensions, list):
+            continue
+        for ext in extensions:
+            if not isinstance(ext, (list, tuple)):
+                continue
+            members = [
+                _truncate(str(m).strip(), _ASPIC_MEMBER_CAP)
+                for m in ext
+                if str(m).strip()
+            ]
+            if len(members) > len(best):
+                best = members
+    if not best:
+        return None
+    shown = best[:_ASPIC_MEMBERS_SHOWN]
+    tail = (
+        ""
+        if len(best) <= _ASPIC_MEMBERS_SHOWN
+        else f" (et {len(best) - len(shown)} autre(s))"
+    )
+    return StructuredArgFinding(
+        capability="aspic_plus_reasoning",
+        label=_axis_label("aspic_plus_reasoning"),
+        statement=(
+            "les enchaînements de règles qui résistent à la défaite : "
+            + " | ".join(shown)
+            + tail
+        ),
+    )
+
+
+def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
+    """Collect the structured-argumentation axes that produced something (#1667).
+
+    One channel, not one reader per axis (the eight-half-fixes lesson of #1633).
+    Each projector decides on its own whether its axis has a singular statement
+    to make; an axis with nothing to say produces nothing rather than a status
+    word.
+    """
+    out: List[StructuredArgFinding] = []
+    for projector in (_aspic_finding, _bipolar_finding):
+        finding = projector(state)
+        if finding is not None:
+            out.append(finding)
+    return sorted(out, key=lambda f: f.label)
+
+
 def _collect_debate(state: Any) -> List[DebateExchange]:
     """Collect adversarial-debate exchanges (SV #1182). Gap β G8: can be sparse.
 
@@ -943,6 +1098,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
         absent_dimensions=_collect_absent_dimensions(state),
+        structured_findings=_collect_structured_arg_findings(state),
     )
 
 
@@ -1196,6 +1352,20 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             "abouti sur ce corpus)"
         )
 
+    # #1667 — the symmetric presence side. Rendered in both states, exactly like
+    # the absence block above: an empty section and a missing section read the
+    # same to the LLM, and this channel exists precisely because a silence was
+    # being read as a verdict.
+    if evidence.structured_findings:
+        presence_block = "\n".join(
+            f"  - {f.label} : {f.statement}" for f in evidence.structured_findings
+        )
+    else:
+        presence_block = (
+            "  (aucun cadre d'argumentation structurée n'a établi de relation "
+            "exploitable sur ce corpus — ne fabrique aucun résultat formel)"
+        )
+
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
     return (
@@ -1227,6 +1397,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[CONTRE-POINTS — ce qui affaiblit les revendications]\n{counters_lines}\n\n"
         f"[POINTS DE PRUDENCE — ancrages structurels]\n{target_lines}\n\n"
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
+        f"[CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT]\n{presence_block}\n\n"
         f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
@@ -1254,6 +1425,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  déanonymise aucune source.\n"
         "- La conclusion doit VARIER selon le contenu réel ci-dessus : pas de\n"
         "  prose générique recyclable.\n"
+        "- Si le bloc CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT porte une relation,\n"
+        "  SERS-T'EN dans le deuxième battement : elle dit comment les propos du\n"
+        "  locuteur se tiennent ENTRE EUX (ce qui s'appuie sur quoi, quel\n"
+        "  enchaînement résiste), ce qu'aucune autre analyse du rapport ne dit.\n"
+        "  Rends-la en français courant, au service du jugement du lecteur, sans\n"
+        "  la nommer par son formalisme et sans en faire un titre. Si le bloc dit\n"
+        "  qu'aucun cadre n'a rien établi, n'invente aucun résultat formel : cette\n"
+        "  absence-là se tait, elle relève du bloc suivant.\n"
         "- Si le bloc DIMENSIONS NON ÉVALUÉES en liste, DIS-LE au lecteur dans le\n"
         "  troisième battement, en une phrase et en français courant : quel angle\n"
         "  d'analyse n'a pas abouti sur ce texte, et donc ce que ce verdict ne\n"

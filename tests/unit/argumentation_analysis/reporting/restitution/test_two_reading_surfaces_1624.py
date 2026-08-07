@@ -22,9 +22,10 @@ accord between them (same shape as the #1619 corrective).
 Falsifiability — two degenerate substitutions with disjoint kill-sets:
 
 * **Sub A** — remove ``"aspic_results"`` from ``state_adapter._STATE_KEYS``:
-  ``annexe - prose`` loses that key, so ``test_annexe_prose_relation_is_pinned``
-  fails (``ANNEXE_ONLY`` still contains it). ``test_ast_prose_matches_baseline``
-  survives (it does not read ``_STATE_KEYS``). Kill-set = {relation}.
+  the key sits in the intersection since #1667, so ``prose - annexe`` GAINS it
+  and ``test_annexe_prose_relation_is_pinned`` fails (``PROSE_ONLY`` does not
+  list it). ``test_ast_prose_matches_baseline`` survives (it does not read
+  ``_STATE_KEYS``). Kill-set = {relation}.
 * **Sub B** — delete the ``getattr(state, "deanonymized", ...)`` call in
   ``act1_framing_plugin.build_act1_evidence``: the AST extraction loses
   ``deanonymized``, so ``test_ast_prose_matches_baseline`` fails
@@ -92,9 +93,21 @@ def _prose_keys_read_from_state() -> set[str]:
 # Note: ``structured_arg_status`` IS read by the prose (act3 conclusion,
 # ``build_act3_evidence`` → the honest-absence ledger at l.685), so it is NOT
 # annexe-only despite living in ``_STATE_KEYS`` — it sits in the intersection.
+#
+# ``aspic_results`` and ``bipolar_results`` joined in #1667, and the move is the
+# measurable outcome of that issue rather than bookkeeping. Until then the ONLY
+# path from a structured-argumentation axis to the conclusion was
+# ``structured_arg_status``, whose collector opens on ``degraded=True``: the
+# prose had a vocabulary for the axis that FAILED and none for the axis that
+# SUCCEEDED. ``aspic_results`` therefore leaves ANNEXE_ONLY for the
+# intersection — the appendix attested "disponible" for an axis the conclusion
+# had no way to mobilise, which is precisely the divergence this module exists
+# to keep visible.
 PROSE_BASELINE = frozenset(
     {
         "argument_quality_scores",
+        "aspic_results",
+        "bipolar_results",
         "counter_arguments",
         "deanonymized",
         "debate_transcripts",
@@ -130,7 +143,6 @@ PROSE_BASELINE = frozenset(
 # still does not read it — annexe-only by construction, not by attrition.
 ANNEXE_ONLY = frozenset(
     {
-        "aspic_results",
         "final_conclusion",
         "formal_synthesis_reports",
         "narrative_synthesis",
@@ -140,8 +152,16 @@ ANNEXE_ONLY = frozenset(
 
 # Axes the PROSE reads that the ANNEXE never attests — mobilised by the
 # conclusion but invisible to the appendix provenance table.
+#
+# ``bipolar_results`` joined in #1667 from the prose side only: the presence
+# channel projects its support relation into the Acte III prompt, but the key is
+# absent from ``_STATE_KEYS``, so the appendix cannot attest the axis at all —
+# not even as "indisponible". That asymmetry is a finding for #1624 (the annexe
+# side), deliberately NOT patched here: adding the key to ``_STATE_KEYS`` is a
+# change to the other surface and belongs to the issue that owns it.
 PROSE_ONLY = frozenset(
     {
+        "bipolar_results",
         "deanonymized",
         "debate_transcripts",
         "governance_decisions",

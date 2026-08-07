@@ -28,6 +28,8 @@ import pytest
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     Act3Result,
     _COUNTER_LIST_CAP,
+    _SUPPORT_NODE_CAP,
+    _SUPPORT_PAIR_CAP,
     _fol_verified,
     _is_guest_formal_entry,
     _pl_verified,
@@ -1329,3 +1331,182 @@ class TestCounterTruncationIsAnnounced:
         assert (
             listed == _COUNTER_LIST_CAP
         ), f"enumerated {listed}, cap is {_COUNTER_LIST_CAP}"
+
+
+# --- #1667: the PRESENCE channel for structured-argumentation axes -----------
+#
+# Before this channel, `absent_dimensions` was the ONLY path from a structured
+# axis to the Acte III conclusion, and it opens on `degraded=True`. The prose
+# had a vocabulary for the axis that FAILED and none for the axis that
+# SUCCEEDED — so repairing a module REMOVED its single trace from the
+# narrative, and any "does the conclusion mention this axis?" metric read
+# exactly backwards. These tests pin the symmetric path.
+
+
+def _bipolar_state(supports: object, **extra: object) -> SimpleNamespace:
+    state = _rich_state()
+    state.bipolar_results = [
+        {
+            "id": "bipolar_1",
+            "framework_type": "necessity",
+            "arguments": ["A", "B"],
+            "supports": supports,
+        }
+    ]
+    for k, v in extra.items():
+        setattr(state, k, v)
+    return state
+
+
+def _aspic_state(extensions: object) -> SimpleNamespace:
+    state = _rich_state()
+    state.aspic_results = [
+        {
+            "id": "aspic_1",
+            "reasoner_type": "simple",
+            "extensions": extensions,
+            "statistics": {"extensions_count": 1},
+        }
+    ]
+    return state
+
+
+class TestStructuredArgPresenceChannel:
+    """A structured axis that SUCCEEDS must reach the conclusion (#1667)."""
+
+    def test_baseline_state_yields_no_finding(self) -> None:
+        """Non-vacuity floor: nothing in state ⇒ nothing fabricated."""
+        ev = build_act3_evidence(_rich_state())
+        assert ev.structured_findings == []
+
+    def test_empty_containers_leave_the_prompt_free_of_formal_claims(self) -> None:
+        state = _bipolar_state([])
+        state.aspic_results = []
+        prompt = build_act3_prompt(build_act3_evidence(state))
+        assert "aucun cadre d'argumentation structurée n'a établi" in prompt
+        # The support-sentence marker specifically — the bare word "appuie"
+        # already occurs in the static weaving rule ("le verdict formel appuie
+        # un battement narratif"), so asserting on it would pass vacuously.
+        assert "» appuie «" not in prompt
+
+    def test_bipolar_support_relation_becomes_a_finding(self) -> None:
+        state = _bipolar_state(
+            [["La croissance a repris", "La politique menée est bonne"]]
+        )
+        ev = build_act3_evidence(state)
+        (finding,) = ev.structured_findings
+        assert finding.capability == "bipolar_argumentation"
+        assert "La croissance a repris" in finding.statement
+        assert "La politique menée est bonne" in finding.statement
+
+    def test_finding_is_not_a_count(self) -> None:
+        """Anti-pendule of this issue: "1 résultat bipolaire" would reproduce
+        ``appendix.py``'s ``"disponible"`` one hop further along — the witness
+        moved, no decider created. The statement must carry the relation.
+        """
+        pair = ["Le chômage recule", "La réforme fonctionne"]
+        (finding,) = build_act3_evidence(_bipolar_state([pair])).structured_findings
+        assert all(node in finding.statement for node in pair)
+        assert finding.statement.strip() not in {"1", "1 relation", "disponible"}
+
+    def test_label_is_reader_facing_not_snake_case(self) -> None:
+        (finding,) = build_act3_evidence(
+            _bipolar_state([["x", "y"]])
+        ).structured_findings
+        assert "_" not in finding.label
+        assert finding.label != finding.capability
+
+    @pytest.mark.parametrize(
+        "supports",
+        [
+            [],
+            [["", ""]],
+            [["only-one-node"]],
+            [["a", "b", "c"]],
+            ["not-a-pair"],
+            "not-a-list",
+        ],
+        ids=["empty", "blank-nodes", "arity-1", "arity-3", "scalar-item", "scalar"],
+    )
+    def test_malformed_or_empty_supports_produce_nothing(self, supports) -> None:
+        """Fail-loud (#1019): a channel open onto emptiness is worse than a
+        closed one — the axis would count as "evaluated" while saying nothing.
+        """
+        assert build_act3_evidence(_bipolar_state(supports)).structured_findings == []
+
+    def test_support_pairs_are_capped(self) -> None:
+        pairs = [[f"source {i}", f"target {i}"] for i in range(_SUPPORT_PAIR_CAP + 5)]
+        (finding,) = build_act3_evidence(_bipolar_state(pairs)).structured_findings
+        assert finding.statement.count(" appuie ") == _SUPPORT_PAIR_CAP
+
+    def test_long_support_nodes_are_truncated(self) -> None:
+        long_node = "m" * (_SUPPORT_NODE_CAP + 200)
+        (finding,) = build_act3_evidence(
+            _bipolar_state([[long_node, "court"]])
+        ).structured_findings
+        assert long_node not in finding.statement
+        assert "[…]" in finding.statement
+
+    def test_aspic_empty_extension_produces_nothing(self) -> None:
+        """The measured production shape, unanimous on 8 real state artifacts:
+        ``extensions: [[]]`` with ``axioms_count: 0``. ``_invoke_aspic`` reads
+        ``context["axioms"]``, a key no producer in the orchestration writes, so
+        ASPIC+ builds no argument at all and its single extension is empty.
+        Emitting here would dress an argument-free theory as a result. This is
+        the regression sentinel for the day that producer is repaired.
+        """
+        assert build_act3_evidence(_aspic_state([[]])).structured_findings == []
+
+    def test_aspic_non_empty_extension_becomes_a_finding(self) -> None:
+        state = _aspic_state([[], ["def_arg_1: prémisse => conclusion_plausible"]])
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert finding.capability == "aspic_plus_reasoning"
+        assert "def_arg_1: prémisse => conclusion_plausible" in finding.statement
+
+    def test_both_axes_are_carried_by_one_channel(self) -> None:
+        """One channel, not one reader per axis (the eight-half-fixes lesson)."""
+        state = _bipolar_state([["s", "t"]])
+        state.aspic_results = [
+            {"extensions": [["derivation_1"]], "statistics": {}},
+        ]
+        ev = build_act3_evidence(state)
+        assert {f.capability for f in ev.structured_findings} == {
+            "aspic_plus_reasoning",
+            "bipolar_argumentation",
+        }
+
+    @pytest.mark.parametrize(
+        "state_factory, payload",
+        [
+            (
+                lambda: _bipolar_state([["la reprise est réelle", "le cap est bon"]]),
+                "la reprise est réelle",
+            ),
+            (lambda: _aspic_state([["chaine_defaisable_7"]]), "chaine_defaisable_7"),
+        ],
+        ids=["bipolar", "aspic"],
+    )
+    def test_a_present_non_trivial_axis_reaches_the_prompt(
+        self, state_factory, payload
+    ) -> None:
+        """The contract this issue exists to pin: it FAILS if a non-trivial axis
+        stops before the Acte III prompt — which is where all of them stopped.
+        """
+        prompt = build_act3_prompt(build_act3_evidence(state_factory()))
+        assert payload in prompt
+        assert "CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT" in prompt
+
+    def test_presence_and_absence_are_additive_not_substitutive(self) -> None:
+        """Anti-pendule: the absence ledger stays correct and useful. An axis
+        that really degraded must keep being named; we ADD the presence lane.
+        """
+        state = _bipolar_state([["s", "t"]])
+        state.structured_arg_status = _ledger("setaf_reasoning")
+        ev = build_act3_evidence(state)
+        assert [d.capability for d in ev.absent_dimensions] == ["setaf_reasoning"]
+        assert [f.capability for f in ev.structured_findings] == [
+            "bipolar_argumentation"
+        ]
+        prompt = build_act3_prompt(ev)
+        assert "DIMENSIONS NON ÉVALUÉES" in prompt
+        assert "CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT" in prompt
