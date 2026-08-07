@@ -3579,6 +3579,15 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 context, "bipolar_argumentation", "translator_failed", type(e).__name__
             )
 
+    # #1645: resolve the JVM state ONCE, before the try. Resolving it inside the
+    # except (the earlier ``import jpype; jpype.isJVMStarted()``) would let an
+    # ImportError from a jpype-less environment mask the original cause — in the
+    # exact environment the honest-absent path targets. Reuses the helper already
+    # used at l.4490 instead of touching jpype directly. (coordinator point 3)
+    from argumentation_analysis.core.jvm_setup import is_jvm_started
+
+    jvm_up = is_jvm_started()
+
     try:
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
             BipolarHandler,
@@ -3589,15 +3598,69 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             handler.analyze_bipolar_framework, args, attacks, supports, fw_type
         )
     except Exception as e:
+        # #1645: three states, never two (coordinator review). Pre-fix this block
+        # had TWO defects of the #1634 family:
+        #   (1) diagnostic FABRICATED — every failure (ImportError, TypeError, a
+        #       real Tweety reasoning error, OR the JVM simply being absent) was
+        #       relabeled "JVM/Tweety required, install JVM". The cause was
+        #       rewritten toward the most reassuring reading ("environment"), so
+        #       three genuinely different situations (no JVM / handler broken /
+        #       analysis failed) were indistinguishable downstream.
+        #   (2) the message CONTRADICTED the flow — it announced "Reporting
+        #       unverified status" (i.e. "I continue and signal") and the very
+        #       next line raised. The message documented an intent it abandoned.
+        # Fix: distinguish JVM-absent (honest-absent, the phase continues
+        # degraded — mirrors _invoke_sat's solver-absence boundary at l.4045)
+        # from handler/analysis failure WITH the JVM up (fail loud with the REAL
+        # cause, preserved via `from e`, never relabeled as an environment gap).
+        # Anti-pendule: do NOT swap the raise for a silent `return {}` — that
+        # would trade this defect for its mirror (#1019).
+        if not jvm_up:
+            logger.warning(
+                "Bipolar analysis unavailable: JVM not started (honest-absent, "
+                "the phase continues degraded). Underlying signal: %s",
+                e,
+            )
+            return {
+                "framework_type": fw_type,
+                "arguments": list(args),
+                # Echo the supports the translator established BEFORE this try
+                # (translation needs no JVM). supports is the ONLY non-empty
+                # payload of the two mode-3 axes on the 8 real artefacts; zeroing
+                # it would erase the relation the translator produced — which is
+                # exactly what _write_bipolar_to_state (l.823) and the #1667
+                # presence channel read from this dict. Mirrors the handler's own
+                # echo at bipolar_handler.py:105. extensions: None = not computed.
+                "supports": [[s, t] for s, t in supports],
+                "attacks": list(attacks),
+                # tri-state None = not computed (JVM absent), never a fabricated
+                # empty extension set that would read as "consistent sur vide".
+                "extensions": None,
+                "statistics": {
+                    "handler": "BipolarHandler",
+                    "backend": "jvm-unavailable",
+                },
+                "degraded": True,
+                "absent_reason": "jvm_not_started",
+                "message": (
+                    "bipolar analysis unavailable: JVM not started (honest-absent)"
+                ),
+                "error": f"{type(e).__name__}: {e}",
+            }
+        # JVM is up — the failure is in OUR handler or analysis, not the
+        # environment. Fail loud with the real cause; do not relabel it
+        # "JVM/Tweety required" (that fabrication was the #1634 defect).
         logger.warning(
-            "Bipolar analysis unavailable: no JVM/Tweety handler could be loaded. "
-            "Reporting unverified status. (%s)",
+            "Bipolar analysis FAILED with JVM running (real cause, not an "
+            "environment gap): %s",
             e,
         )
         raise RuntimeError(
-            f"Bipolar analysis ({fw_type}) unavailable: JVM/Tweety required. "
-            "Install JVM and ensure Tweety JARs are on the classpath."
-        )
+            f"Bipolar analysis ({fw_type}) failed with JVM running: "
+            f"{type(e).__name__}: {e}. "
+            "This is a handler/analysis failure, not a missing-JVM gap — "
+            "see the original exception above."
+        ) from e
 
 
 async def _invoke_aba(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
