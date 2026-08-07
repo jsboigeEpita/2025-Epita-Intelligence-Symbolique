@@ -535,7 +535,6 @@ RÉPONDS EN FORMAT JSON :
 
         predicates: Dict[str, int] = {}  # name -> arity
         constants: Set[str] = set()
-        variables: Set[str] = set()
 
         # Extended regex: handle accented chars, digits, and underscores in names.
         # Matches both predicate (CamelCase) and function (lowercase) applications.
@@ -554,11 +553,13 @@ RÉPONDS EN FORMAT JSON :
                 if pred_name not in predicates or predicates[pred_name] < arity:
                     predicates[pred_name] = arity
                 for arg in args:
-                    # Variable: starts with uppercase letter (X, Y, Z)
-                    # Constant: starts with lowercase or digit (socrates, c1, 42)
-                    if arg[0].isupper():
-                        variables.add(arg)
-                    else:
+                    # Constant: starts with lowercase or digit (socrates, c1, 42).
+                    # Uppercase-starting identifiers (X, Y, Z) are FOL variables;
+                    # they are NOT declared in the Tweety signature (implicitly of
+                    # sort `thing`). #1630 retired the collected-but-prod-unread
+                    # `variables` set (#1019: a produced-but-never-read field is
+                    # decided, not kept).
+                    if not arg[0].isupper():
                         constants.add(arg)
 
         # Also scan for standalone lowercase identifiers not inside predicates
@@ -637,7 +638,6 @@ RÉPONDS EN FORMAT JSON :
             "sorts": sorts,
             "predicates": sanitized_predicates,
             "constants": sanitized_constants,
-            "variables": variables,
             "signature_lines": signature_lines,
             "constant_map": constant_map,
             "predicate_map": predicate_map,

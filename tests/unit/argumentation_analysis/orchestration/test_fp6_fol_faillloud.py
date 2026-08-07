@@ -92,8 +92,16 @@ class TestFolFailLoudTriState:
         combined consistency check — not hardcode ``consistent: True`` from parse-success.
 
         Here the first batch ``check_consistency`` raises (forcing the isolation
-        branch); per-formula parse checks succeed; the combined re-check returns the
-        degraded ``None``. Output must be ``consistent=None``, never the old ``True``.
+        branch); each per-formula check returns a definite ``True`` verdict (the
+        formula parses and is individually consistent, so it SURVIVES isolation);
+        the combined re-check on the survivors then returns the degraded ``None``.
+        Output must be ``consistent=None``, never the old ``True``.
+
+        (#1630 contract: the per-formula triage now keys on the RETURNED verdict —
+        a ``None`` would REJECT the formula as the poison. The per-formula checks
+        here therefore return ``True``, keeping this test focused on the FP-6 point
+        — the survivors' combined re-check must not fabricate ``True`` from the fact
+        that each formula parsed.)
         """
         bridge = MagicMock()
         calls = {"n": 0}
@@ -103,9 +111,13 @@ class TestFolFailLoudTriState:
             if calls["n"] == 1:
                 # First (batch) call raises → drives the except-isolation branch.
                 raise RuntimeError("batch parse failed")
-            # Per-formula parse checks + final combined re-check.
-            # Return the degraded tri-state for the combined re-check.
-            return (None, "combined degraded")
+            # Combined re-check on the survivors (both formulas in the belief set)
+            # → degraded None: the reasoner could not compute on the combined KB.
+            if "Human" in belief_set and "Mortal" in belief_set:
+                return (None, "combined degraded")
+            # Per-formula check → the formula parses and is individually consistent
+            # (True verdict) ⇒ it SURVIVES isolation. (#1630: a None would reject.)
+            return (True, "parses individually")
 
         bridge.check_consistency.side_effect = _check
 

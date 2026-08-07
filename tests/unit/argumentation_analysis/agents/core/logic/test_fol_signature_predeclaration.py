@@ -29,7 +29,6 @@ class TestExtractFolMetadata:
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
         assert "Homme" in meta["predicates"]
         assert "Mortel" in meta["predicates"]
-        assert "X" in meta["variables"]
         assert meta["predicates"]["Homme"] == 1
         assert meta["predicates"]["Mortel"] == 1
 

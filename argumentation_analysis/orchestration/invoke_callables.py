@@ -6102,7 +6102,10 @@ async def _invoke_fol_reasoning(
     state_obj = context.get("_state_object")
 
     # Track FOL formula pipeline metrics (#655 Track MM)
-    fol_metrics: Dict[str, int] = {
+    # #1630: widened from Dict[str, int] to carry the rejected-formula NAMES
+    # (isolation_rejected_count stays int; rejected_formulas is List[str]) so a
+    # parse-poison is diagnosable from the artefact without a re-run (DoD item 4).
+    fol_metrics: Dict[str, Any] = {
         "upstream_nl": 0,
         "pass1_sorts": 0,
         "pass1_predicates": 0,
@@ -6392,6 +6395,127 @@ async def _invoke_fol_reasoning(
     # Bind bridge outside the try so the except isolation loop can reference it
     # even if TweetyBridge import/construction itself raises (#697 Track HH).
     bridge = None
+
+    # #1630: per-formula isolation net. Two defects made it dead code:
+    #   (1) the handler (fol_handler.check_consistency, FP-3 #1192) signals a
+    #       parse/reasoner failure by RETURNING (None, "Degraded ..."), not by
+    #       raising. So the combined check completes without exception and the
+    #       except below never armed — the net was unreachable on the very
+    #       failure mode it was built for.
+    #   (2) the per-formula loop triaged on absence-of-exception, which accepted
+    #       every formula under the None-return mode (handler returns, doesn't
+    #       raise) → valid_formulas == formulas → the net was empty even when it
+    #       ran.
+    # The fix: trigger the net on the combined-check None-verdict too (wired
+    # after the combined check), and triage on the RETURNED verdict — None ⇒ the
+    # formula did not parse / could not be reasoned about in isolation ⇒ the
+    # poison, rejected; True/False ⇒ it parses (decidable on its own) ⇒ kept.
+    # FP-6 #1197 still holds for the survivors combined check: parse ≠ decide,
+    # the tri-state passes through; never fabricate True from parse-success.
+    async def _attempt_isolation(trigger: str) -> Optional[Dict[str, Any]]:
+        """Return the survivor-result dict, or None when no formula survives.
+
+        Never raises: per-formula and combined failures are caught internally so
+        the caller can fall through to its own honest degraded return.
+        """
+        # formulas is non-None at every call site (assigned in the try before
+        # either branch calls this), but the closure captures the declared
+        # Optional type — guard once to narrow it for the whole body.
+        if formulas is None:
+            return None
+        valid_formulas: List[str] = []
+        rejected_formulas: List[str] = []
+        if bridge is not None:
+            for formula in formulas:
+                try:
+                    single_meta = FOLLogicAgent.extract_fol_metadata([formula])
+                    single_sig = single_meta.get("signature_lines", [])
+                    single_bs = "\n".join(str(f) for f in single_sig + [""] + [formula])
+                    f_verdict, _f_msg = await asyncio.to_thread(
+                        bridge.check_consistency, single_bs, "first_order"
+                    )
+                except Exception as single_err:
+                    logger.debug(
+                        "FOL formula rejected by Tweety (exception): %s — %s",
+                        formula,
+                        single_err,
+                    )
+                    rejected_formulas.append(formula)
+                    continue
+                # None ⇒ did not parse / could not reason about the formula in
+                # isolation ⇒ the poison. True/False ⇒ it parses (decidable on
+                # its own) ⇒ keep. (#1630 triage on verdict, not on absence of
+                # exception; FP-3 #1192 tri-state.)
+                if f_verdict is None:
+                    logger.debug(
+                        "FOL formula rejected by Tweety (None verdict): %s",
+                        formula,
+                    )
+                    rejected_formulas.append(formula)
+                else:
+                    valid_formulas.append(formula)
+        fol_metrics["isolation_survivors"] = len(valid_formulas)
+        # DoD item 4: the rejected formulas are NAMED in the metrics artefact,
+        # not only logged at debug — diagnosable without a re-run.
+        fol_metrics["isolation_rejected_count"] = len(rejected_formulas)
+        fol_metrics["rejected_formulas"] = rejected_formulas
+        if not valid_formulas:
+            logger.info(
+                "FOL per-formula isolation (%s): 0/%d survived.",
+                trigger,
+                len(formulas),
+            )
+            return None
+        logger.info(
+            "FOL per-formula isolation (%s): %d/%d formulas accepted by Tweety.",
+            trigger,
+            len(valid_formulas),
+            len(formulas),
+        )
+        surv_meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
+        surv_signature = surv_meta.get("signature_lines", [])
+        iso_consistent: Optional[bool] = None
+        iso_msg = "combined consistency unverified"
+        if bridge is not None:
+            try:
+                combined_bs = "\n".join(
+                    str(f) for f in surv_signature + [""] + valid_formulas
+                )
+                iso_consistent, iso_msg = await asyncio.to_thread(
+                    bridge.check_consistency, combined_bs, "first_order"
+                )
+            except Exception as iso_err:
+                logger.warning(
+                    "FOL isolation: combined consistency check failed (%s) — "
+                    "reporting unverified (None), not fabricated True.",
+                    iso_err,
+                )
+                iso_consistent = None
+        return {
+            "formulas": valid_formulas,
+            "fol_signature": surv_signature,
+            "fol_metadata": surv_meta,
+            "consistent": iso_consistent,
+            "inferences": inferences,
+            "confidence": (
+                0.6
+                if iso_consistent is True
+                else (0.0 if iso_consistent is None else 0.4)
+            ),
+            "message": iso_msg,
+            # Track B #1278: real formulas survived per-formula isolation;
+            # "decided" only on a definite prover verdict (#1019).
+            "fol_status": (
+                "decided" if iso_consistent in (True, False) else "unverified"
+            ),
+            "logic_type": "first_order",
+            "argument_count": len(args),
+            "isolation_retry": True,
+            "rejected_count": len(rejected_formulas),
+            "fol_metrics": fol_metrics,
+            **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
+        }
+
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
         from argumentation_analysis.agents.core.logic.fol_logic_agent import (
@@ -6435,6 +6559,18 @@ async def _invoke_fol_reasoning(
             bridge.check_consistency, belief_set_str, "first_order"
         )
         fol_metrics["post_tweety"] = len(formulas)
+        # #1630: the handler returns (None, "Degraded ...") on parse failure since
+        # FP-3 #1192 — the combined check completes WITHOUT raising, so the except
+        # below never arms on this failure mode. Trigger the per-formula net here
+        # on the None-verdict so isolation is reachable (DoD item 1). If isolation
+        # yields no survivors, fall through to the honest None-return below (the
+        # combined check's own None stays unverified — never fabricated, #1019).
+        if is_consistent is None:
+            _iso = await _attempt_isolation(
+                "degraded: combined KB returned None verdict (#1192)"
+            )
+            if _iso is not None:
+                return _iso
         # FP-19 #1243: opt-in multi-prover cross-validation. ADDITIVE — only runs
         # when the caller passes context["compare_backends"], leaving the default
         # path (single configured solver) untouched. Surfaces every available FOL
@@ -6495,85 +6631,17 @@ async def _invoke_fol_reasoning(
             f"FOL Tweety parse failed ({tweety_err}). "
             f"Attempting per-formula isolation with {len(formulas)} formulas."
         )
-        # Retry: isolate valid formulas by parsing each individually.
-        # This handles the case where one bad formula causes the entire
-        # batch to fail in Tweety's parser.
-        valid_formulas = []
-        if bridge is not None:
-            for formula in formulas:
-                try:
-                    single_meta = FOLLogicAgent.extract_fol_metadata([formula])
-                    single_sig = single_meta.get("signature_lines", [])
-                    single_bs = "\n".join(str(f) for f in single_sig + [""] + [formula])
-                    await asyncio.to_thread(
-                        bridge.check_consistency, single_bs, "first_order"
-                    )
-                    valid_formulas.append(formula)
-                except Exception:
-                    logger.debug(f"FOL formula rejected by Tweety: {formula}")
-
-        if valid_formulas:
-            meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
-            fol_signature = meta.get("signature_lines", [])
-            fol_metrics["isolation_survivors"] = len(valid_formulas)
-            logger.info(
-                f"FOL per-formula isolation: {len(valid_formulas)}/{len(formulas)} "
-                f"formulas accepted by Tweety"
-            )
-            # FP-6 #1197: the per-formula loop only proved each formula PARSES — it
-            # discarded the consistency verdicts. Hardcoding `consistent: True` here
-            # fabricated a consistency verdict out of parse-success (théâtre, R405 /
-            # #1019). Run a real combined consistency check on the survivors and pass
-            # the tri-state through; if the combined check itself fails/OOMs, that is
-            # `None` (unverified), never a fabricated True.
-            iso_consistent: Optional[bool] = None
-            iso_msg = "combined consistency unverified"
-            # bridge is non-None whenever valid_formulas is non-empty (the loop
-            # above is guarded by `if bridge is not None`), but narrow explicitly
-            # for the type checker; None ⇒ stay unverified (never fabricate True).
-            if bridge is not None:
-                try:
-                    combined_bs = "\n".join(
-                        str(f) for f in fol_signature + [""] + valid_formulas
-                    )
-                    iso_consistent, iso_msg = await asyncio.to_thread(
-                        bridge.check_consistency, combined_bs, "first_order"
-                    )
-                except Exception as iso_err:  # combined check failed → unverified
-                    logger.warning(
-                        "FOL isolation: combined consistency check failed (%s) — "
-                        "reporting unverified (None), not fabricated True.",
-                        iso_err,
-                    )
-                    iso_consistent = None
-            return {
-                "formulas": valid_formulas,
-                "fol_signature": fol_signature,
-                "fol_metadata": meta,
-                "consistent": iso_consistent,
-                "inferences": inferences,
-                "confidence": (
-                    0.6
-                    if iso_consistent is True
-                    else (0.0 if iso_consistent is None else 0.4)
-                ),
-                "message": iso_msg,
-                # Track B #1278: real formulas survived per-formula isolation;
-                # "decided" only on a definite prover verdict (#1019).
-                "fol_status": (
-                    "decided" if iso_consistent in (True, False) else "unverified"
-                ),
-                "logic_type": "first_order",
-                "argument_count": len(args),
-                "isolation_retry": True,
-                "rejected_count": len(formulas) - len(valid_formulas),
-                "fol_metrics": fol_metrics,
-                **(
-                    {"strategic_objective_ids": _strat_ids_fol}
-                    if _strat_ids_fol
-                    else {}
-                ),
-            }
+        # #1630: this branch reaches isolation on a genuine RAISE (Track HH
+        # import/construction failure, or a true Tweety exception). The same
+        # _attempt_isolation helper is ALSO reached on the None-verdict path
+        # above — both modes coexist, the except is NOT removed (DoD item 2).
+        # The helper triages on the RETURNED verdict (None ⇒ rejected), not on
+        # absence-of-exception, so the net is non-empty under the #1192
+        # None-return mode (DoD item 1). If no formula survives, fall through to
+        # the honest all-failed return below.
+        _iso = await _attempt_isolation(f"exception: {tweety_err}")
+        if _iso is not None:
+            return _iso
 
         # All formulas failed — no heuristic fallback (#1019)
         # Tweety is the solver; if it cannot parse the formulas, report

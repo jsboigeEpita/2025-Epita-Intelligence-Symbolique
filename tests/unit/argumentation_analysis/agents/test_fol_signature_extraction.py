@@ -53,15 +53,6 @@ class TestExtractFolMetadataExtended:
 
         assert meta["predicates"]["P"] == 3
 
-    def test_variables_detected(self):
-        """Uppercase identifiers in args should be classified as variables."""
-        formulas = ["forall X: (Human(X) => Mortal(X))"]
-        meta = FOLLogicAgent.extract_fol_metadata(formulas)
-
-        assert "X" in meta["variables"]
-        assert "Human" in meta["predicates"]
-        assert "Mortal" in meta["predicates"]
-
     def test_signature_lines_format(self):
         """Signature lines should follow Tweety BNF format."""
         formulas = ["P(a)", "Q(a, b)"]
@@ -80,7 +71,6 @@ class TestExtractFolMetadataExtended:
 
         assert meta["predicates"] == {}
         assert meta["constants"] == set()
-        assert meta["variables"] == set()
         assert meta["signature_lines"] == ["thing = {}"]
 
     def test_quantified_formula_with_implication(self):
@@ -90,7 +80,6 @@ class TestExtractFolMetadataExtended:
 
         assert "Fallacious" in meta["predicates"]
         assert "FullySupported" in meta["predicates"]
-        assert "X" in meta["variables"]
         assert len(meta["constants"]) == 0  # No lowercase args
 
     def test_mixed_formulas_batch(self):
@@ -106,7 +95,6 @@ class TestExtractFolMetadataExtended:
         assert len(meta["predicates"]) >= 4
         assert "arg1" in meta["constants"]
         assert "fallacy1" in meta["constants"]
-        assert "X" in meta["variables"]
 
     def test_predicate_with_underscore(self):
         """Predicates and constants with underscores should be captured."""
