@@ -1301,16 +1301,52 @@ def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 
 def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write SetAF results to UnifiedAnalysisState (#87)."""
+    """Write SetAF results to UnifiedAnalysisState (#87).
+
+    #1648 Wave-2 site 2: SetAF's distinctive piece of data is the
+    *joint* attack list (``List[{attackers: List[str], target: str}]``) that
+    the handler computes and the writer used to drop on the floor
+    (handler at ``setaf_handler.py:120-131`` returns it; writer at
+    ``state_writers.py:1303-1313`` discarded it with the comment "set
+    attacks don't map to binary attacks"). The native Dung projection
+    cannot store joint attacks in its binary ``attacks`` field, so we
+    attach a strictly-additive ``formalism_specific`` sidecar to the
+    entry dict without touching the ``attacks`` / ``extensions`` /
+    ``arguments`` projections. The 12 readers of ``dung_frameworks``
+    (pattern_mining, deep_synthesis_agent, act2/3 restitution,
+    visualization, …) are not migrated: a downstream reader that wants
+    the joint attacks reads
+    ``entry["formalism_specific"]["set_attacks"]``.
+    """
     _record_structured_arg_status(state, "setaf_reasoning", output, ctx)
     if not output or not isinstance(output, dict):
         return
-    state.add_dung_framework(
+    df_id = state.add_dung_framework(
         name=f"setaf_{output.get('semantics', 'grounded')}",
         arguments=output.get("arguments", []),
         attacks=[],  # set attacks don't map to binary attacks
         extensions={"setaf_extensions": output.get("extensions", [])},
     )
+    # #1648 Wave-2 sidecar: preserve the joint attacks the handler
+    # returns under ``output["attacks"]``. Empty list ⇒ sidecar stays
+    # absent (no ``formalism_specific`` key — empty handler output is
+    # indistinguishable from a handler that never ran, so we don't
+    # synthesize a key).
+    set_attacks = output.get("attacks")
+    if isinstance(set_attacks, list) and set_attacks:
+        # Defensive: each entry must be a dict with ``attackers`` and
+        # ``target`` keys; drop malformed entries rather than crash the
+        # writer boundary.
+        sanitised = [
+            dict(a) for a in set_attacks
+            if isinstance(a, dict)
+            and isinstance(a.get("attackers"), list)
+            and isinstance(a.get("target"), str)
+        ]
+        if sanitised:
+            state.dung_frameworks[df_id]["formalism_specific"] = {
+                "set_attacks": sanitised,
+            }
 
 
 def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

@@ -212,14 +212,28 @@ class TestSetafFlattening1648:
 
     Section 2.3: ``handler.analyze_setaf`` returns ``attacks`` at
     ``setaf_handler.py:123`` as ``List[{attackers: List[str], target: str}]``.
-    Writer at ``state_writers.py:1199-1209`` ignores them with the comment
-    "set attacks don't map to binary attacks".
+    Writer at ``state_writers.py:1303-1341`` attaches them to a strictly
+    additive ``formalism_specific`` sidecar (joint attacks don't fit the
+    binary ``attacks`` projection).
 
-    Today's expected failure: ``state.dung_frameworks[<id>]["attacks"]`` is
-    ``[]`` and the joint-attack list is not in ``extensions`` either.
+    #1648 Wave-2 site 2 (this PR): the writer now mirrors the joint
+    attacks into ``entry["formalism_specific"]["set_attacks"]``. The 12
+    readers of ``dung_frameworks`` see the same ``attacks=[]`` and
+    ``extensions={"setaf_extensions": [...]}`` as before — only readers
+    that look for ``formalism_specific["set_attacks"]`` pick up the
+    joint attacks. SetAF still cannot refute anything via the binary Dung
+    projection, but it can be refuted via its own joint attacks in the
+    sidecar.
+
+    Pin: today's expected behaviour on the test stub is that the joint
+    attacks that the *real* handler returns now reach the state via the
+    sidecar. The xfail marker from #1672 R767 is removed (the
+    strict=True contract would flip the test to a strict failure as
+    soon as it passed).
     """
 
     def _stub_handler_output(self) -> Dict[str, Any]:
+        """Mimic the post-#1679 handler output (returns ``attacks`` already)."""
         return {
             "semantics": "grounded",
             "arguments": ["a", "b", "c"],
@@ -232,29 +246,84 @@ class TestSetafFlattening1648:
             "statistics": {"arguments_count": 3, "attacks_count": 2},
         }
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (SetAF). Handler returns joint "
-        "attacks, writer drops them at state_writers.py:1199-1209. Wave-2 fix.",
-    )
-    def test_setaf_writer_preserves_set_attacks(self) -> None:
+    def test_setaf_writer_attaches_set_attacks_sidecar(self) -> None:
+        """Joint attacks survive in ``formalism_specific``.
+
+        Pre-fix the writer dropped ``output["attacks"]`` on the floor:
+        ``entry["attacks"]`` was ``[]`` (binary field — joint attacks
+        don't fit) and the joint list was lost. Post-fix the writer
+        attaches ``entry["formalism_specific"]["set_attacks"]`` mirroring
+        the handler's output verbatim.
+        """
         state = _new_state()
         output = self._stub_handler_output()
 
         _write_setaf_to_state(output, state, {})
 
         entry = next(iter(state.dung_frameworks.values()))
-        extensions = entry.get("extensions", {})
-        formalism_specific = entry.get("formalism_specific", {})
-        # The joint-attack list must survive somewhere.
-        has_set_attacks = (
-            extensions.get("set_attacks") == output["attacks"]
-            or "set_attacks" in extensions
-            or formalism_specific.get("set_attacks") == output["attacks"]
+        # Binary projection stays untouched — the Dung projection has
+        # no slot for joint attacks, and the readers expect it empty.
+        assert entry["attacks"] == [], (
+            "SetAF writer must keep ``attacks=[]`` for the binary Dung "
+            f"projection — the sidecar carries the joint attacks. "
+            f"Got non-empty: {entry['attacks']!r}"
         )
-        assert has_set_attacks, (
-            "SetAF writer dropped joint attacks (handler returned them): "
-            f"extensions={extensions!r}, formalism_specific={formalism_specific!r}"
+        # The sidecar is present and carries the joint attacks verbatim.
+        formalism_specific = entry.get("formalism_specific", {})
+        assert formalism_specific.get("set_attacks") == output["attacks"], (
+            "SetAF writer did not mirror the handler's joint attacks into "
+            f"``formalism_specific.set_attacks``: got {formalism_specific!r}, "
+            f"expected set_attacks={output['attacks']!r}"
+        )
+
+    def test_setaf_writer_omits_sidecar_when_handler_returns_empty_attacks(
+        self,
+    ) -> None:
+        """An empty ``attacks`` list ⇒ no ``formalism_specific`` key.
+
+        We don't synthesize a sidecar for empty input: an empty handler
+        output is indistinguishable from a handler that never ran, and
+        downstream readers should not see a phantom key.
+        """
+        state = _new_state()
+        output = self._stub_handler_output()
+        output["attacks"] = []
+        output["statistics"]["attacks_count"] = 0
+
+        _write_setaf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "formalism_specific" not in entry, (
+            "SetAF writer must NOT attach ``formalism_specific`` when the "
+            "handler returned no joint attacks — synthesising a sidecar "
+            f"for empty input would mislead downstream readers. Got: {entry!r}"
+        )
+
+    def test_setaf_writer_drops_malformed_set_attack_entries(self) -> None:
+        """Defensive: a malformed joint-attack entry (no ``attackers`` key
+        or non-list ``attackers``) is dropped rather than crashing the
+        writer boundary. Valid entries still pass through."""
+        state = _new_state()
+        output = self._stub_handler_output()
+        output["attacks"] = [
+            {"attackers": ["a", "b"], "target": "c"},     # valid
+            {"target": "b"},                              # missing attackers
+            {"attackers": "not-a-list", "target": "d"},   # wrong shape
+            {"attackers": [], "target": "e"},             # empty set (valid)
+        ]
+
+        _write_setaf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        formalism_specific = entry.get("formalism_specific", {})
+        sanitised = formalism_specific.get("set_attacks", [])
+        # Only the well-formed entries survive (the valid + the empty set).
+        assert sanitised == [
+            {"attackers": ["a", "b"], "target": "c"},
+            {"attackers": [], "target": "e"},
+        ], (
+            "SetAF writer must drop malformed joint-attack entries "
+            f"instead of crashing — got {sanitised!r}"
         )
 
 
