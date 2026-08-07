@@ -2,8 +2,8 @@
 
 ``_invoke_bipolar`` gained an honest-absent branch in #1670 (PR #1670): *« JVM
 absente ⇒ dict dégradé, la phase continue »*. The coordinator measured
-firsthand (#1677) that this branch was **unreachable** in a jpype-less
-environment: ``jvm_setup`` imports ``jpype`` at module level, and the line
+firsthand (#1677) that this branch was **unreachable in a jpype-less
+environment**: ``jvm_setup`` imports ``jpype`` at module level, and the line
 ``from ...jvm_setup import is_jvm_started`` sat *before* the ``try`` — so in a
 jpype-less env that very import raised ``ImportError`` uncaught, and the
 degraded branch (the exact env it targets) never fired.
@@ -13,91 +13,104 @@ ImportError`` so a missing jpype/jvm_setup resolves to ``jvm_up = False``; the
 ``try``'s ``bipolar_handler`` import then raises the same ``ImportError``, is
 caught, and the honest-absent dict fires.
 
-This test reproduces the jpype-less environment faithfully (a ``sys.meta_path``
-finder that refuses ``jpype``) and asserts the contract: the degraded dict is
-returned, not an uncaught ``ImportError``. **Differential**: revert the guard
-and this test fails with ``ModuleNotFoundError`` instead of asserting the dict.
+**Why a subprocess, not a ``sys.modules`` fixture**: the only faithful way to
+simulate "jpype not importable" is a ``sys.meta_path`` finder that refuses
+``jpype``. Doing that inside the main pytest session corrupts the shared
+``agents.core.logic`` / ``jvm_setup`` module objects and makes *later,
+unrelated* tests fail (AttributeError in ``__init__.py``) — the exact CI
+regression this test caused in its first revision (8 downstream failures in
+``test_dung_aspic_wiring``). A subprocess isolates the meta_path manipulation
+completely: it starts clean, the blocker never touches the main session, and
+teardown is "the process exits".
 
 Privacy: synthetic atoms only (``prop_1``, ``prop_2``) — no corpus content.
 """
 
 from __future__ import annotations
 
+import subprocess
 import sys
+import textwrap
 
-import pytest
-
-import argumentation_analysis.orchestration.invoke_callables as mod
-
-_LONG_TEXT = "A sufficiently long synthetic source text for the phases. " * 6
-
-
-class _JpypeBlocker:
-    """A sys.meta_path finder that refuses to import ``jpype``.
-
-    Simulates a jpype-less environment for the duration of one call. Inserted
-    at ``meta_path[0]`` so it wins over the real finders.
-    """
-
-    def find_spec(self, name, path=None, target=None):  # noqa: D401, ANN001
-        if name == "jpype" or name.startswith("jpype."):
-            raise ModuleNotFoundError(
-                f"No module named '{name}' (simulated jpype-less env, #1677)"
-            )
-        return None
+# A self-contained probe that simulates a jpype-less environment. It installs
+# a ``sys.meta_path`` finder refusing ``jpype`` BEFORE importing anything from
+# the project, then calls ``_invoke_bipolar`` with one synthetic support pair
+# and prints a single machine-parseable marker line describing the outcome.
+# ``RETURNED <json-ish>`` on the degraded dict, ``RAISED <type>: <msg>`` if the
+# unguarded import leaked through. The main session asserts on that marker.
+_PROBE = textwrap.dedent("""
+    import asyncio, json, sys
 
 
-@pytest.fixture
-def jpype_absent():
-    """Block jpype and evict the modules that import it, for one test.
-
-    Snapshots every evicted module and restores them in teardown so the rest
-    of the session sees the real jpype/jvm_setup/bipolar_handler again.
-    """
-    blocker = _JpypeBlocker()
-    evicted: dict[str, object] = {}
-    for mname in list(sys.modules):
-        if (
-            mname == "jpype"
-            or mname.startswith("jpype.")
-            or mname.endswith("jvm_setup")
-            or mname.endswith("bipolar_handler")
-            or mname.endswith("agents.core.logic")
-        ):
-            evicted[mname] = sys.modules.pop(mname)
-    sys.meta_path.insert(0, blocker)
-    try:
-        yield
-    finally:
-        if blocker in sys.meta_path:
-            sys.meta_path.remove(blocker)
-        # Restore the exact module objects the session had before, so later
-        # tests re-acquire the real (already-imported) jpype-backed modules.
-        sys.modules.update(evicted)
+    class _Blocker:
+        def find_spec(self, name, path=None, target=None):
+            if name == "jpype" or name.startswith("jpype."):
+                raise ModuleNotFoundError("No module named '%s' (simulated jpype-less env, #1677)" % name)
+            return None
 
 
-def test_honest_absent_reachable_without_jpype(jpype_absent) -> None:
-    """A jpype-less env reaches the honest-absent dict, never an uncaught raise.
+    sys.meta_path.insert(0, _Blocker())
 
-    Mirrors the coordinator's firsthand probe (#1677): 1 synthetic support
-    pair, jpype blocked on meta_path. Pre-fix this raised ModuleNotFoundError
-    from the unguarded ``from ...jvm_setup import is_jvm_started``; post-fix
-    the guard routes it to ``jvm_up = False`` and the honest-absent dict fires.
-    """
-    import asyncio
+    import argumentation_analysis.orchestration.invoke_callables as mod
 
     ctx = {
         "arguments": ["prop_1", "prop_2"],
         "supports": [["prop_1", "prop_2"]],
         "attacks": [],
     }
-    out = asyncio.new_event_loop().run_until_complete(
-        mod._invoke_bipolar(_LONG_TEXT, ctx)
+    try:
+        out = asyncio.new_event_loop().run_until_complete(
+            mod._invoke_bipolar("synthetic probe text", ctx)
+        )
+        print("RETURNED " + json.dumps({
+            "degraded": out.get("degraded"),
+            "absent_reason": out.get("absent_reason"),
+            "extensions": out.get("extensions"),
+            "supports": out.get("supports"),
+            "backend": out.get("statistics", {}).get("backend"),
+        }))
+    except Exception as e:
+        print("RAISED %s: %s" % (type(e).__name__, e))
+    """)
+
+
+def _run_probe() -> str:
+    """Run the jpype-less probe in a clean subprocess; return its last stdout line."""
+    result = subprocess.run(
+        [sys.executable, "-c", _PROBE],
+        capture_output=True,
+        text=True,
+        timeout=180,
     )
-    assert out["degraded"] is True
-    assert out["absent_reason"] == "jvm_not_started"
+    lines = [ln.strip() for ln in result.stdout.splitlines() if ln.strip()]
+    if not lines:
+        # No marker line means the probe crashed before printing one.
+        raise AssertionError(
+            "probe produced no marker line.\\nstderr:\\n" + result.stderr[-2000:]
+        )
+    return lines[-1]
+
+
+def test_honest_absent_reachable_without_jpype() -> None:
+    """A jpype-less env reaches the honest-absent dict, never an uncaught raise.
+
+    Pre-fix this raised ``ModuleNotFoundError`` from the unguarded
+    ``from ...jvm_setup import is_jvm_started``; post-fix the guard routes it
+    to ``jvm_up = False`` and the honest-absent dict fires. Run in a subprocess
+    so the meta_path blocker never pollutes the main pytest session.
+    """
+    marker = _run_probe()
+    assert marker.startswith("RETURNED "), (
+        "expected the honest-absent dict, but the probe " + marker
+    )
+    # The marker's payload follows the word RETURNED; re-parse the JSON object.
+    import json
+
+    payload = json.loads(marker[len("RETURNED ") :])
+    assert payload["degraded"] is True
+    assert payload["absent_reason"] == "jvm_not_started"
     # tri-state: None = not computed (JVM absent), never a fabricated empty set
-    assert out["extensions"] is None
+    assert payload["extensions"] is None
     # the translator-established support is echoed, not zeroed
-    assert out["supports"] == [["prop_1", "prop_2"]]
-    assert out["statistics"]["backend"] == "jvm-unavailable"
+    assert payload["supports"] == [["prop_1", "prop_2"]]
+    assert payload["backend"] == "jvm-unavailable"
