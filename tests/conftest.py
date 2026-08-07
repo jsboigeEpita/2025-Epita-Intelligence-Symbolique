@@ -423,12 +423,46 @@ def pytest_sessionstart(session):
         session.config.cache.set("jvm_started", False)
         return
 
+    # #1641 (B): pytest captures logs per-test and only releases them on a test
+    # FAILURE. pytest_sessionstart runs before any test, so on a green or skip-
+    # heavy run its logs (and jvm_setup's logger.critical failure causes) are
+    # swallowed — the diagnostic is lost EXACTLY when the CI guard #1385 trips
+    # on a mass-skip storm. Route the JVM-init diagnostics to stdout for the
+    # duration of the init attempt, bypassing pytest's capture, so the next
+    # storm arrives with its cause in the CI log. Scoped to the call (handler
+    # removed in finally); attached to the ROOT logger so jvm_setup's critical
+    # lines (different logger) propagate through.
+    _diag_handler = logging.StreamHandler(sys.stdout)
+    _diag_handler.setLevel(logging.INFO)
+    _diag_handler.set_name("jvm_sessionstart_diag_1641")
+    logging.getLogger().addHandler(_diag_handler)
     try:
         from argumentation_analysis.core.jvm_setup import initialize_jvm
 
-        initialize_jvm(session_fixture_owns_jvm=True)
-        session.config.cache.set("jvm_started", True)
-        logger.info("JVM initialisée avec succès depuis pytest_sessionstart.")
+        # #1641: honor the bool return. initialize_jvm signals a DECIDED failure
+        # (no Java / no JARs / post-shutdown re-init) by RETURNING False, not by
+        # raising — 5 reachable return-False paths (jvm_setup.py l.773/781/791/…).
+        # Discarding the return and forcing jvm_started=True recorded that decided
+        # failure as "started": the l.513 guard then never fired, the skip fell
+        # through to the l.522 jpype double-check, whose message ("JVM pas
+        # réellement démarrée") reads as a transient native crash — so the CI
+        # guard #1385 says "re-run" where the real fix is a config correction. A
+        # decided failure rendered as an alea (#1019 family, same shape as #1634).
+        # Propagating the return makes the l.513 guard fire and the skip carry the
+        # honest "l'initialisation a échoué" message. The except below still covers
+        # a genuine raise; the l.522 double-check still covers a real post-start
+        # crash — three distinct causes, three distinct messages, all kept.
+        _jvm_ok = initialize_jvm(session_fixture_owns_jvm=True)
+        session.config.cache.set("jvm_started", bool(_jvm_ok))
+        if _jvm_ok:
+            logger.info("JVM initialisée avec succès depuis pytest_sessionstart.")
+        else:
+            logger.error(
+                "initialize_jvm() a retourné False — échec d'initialisation DÉCIDÉ "
+                "(voir les logger.critical ci-dessus : pas de Java / JARs manquants / "
+                "ré-init après arrêt). Le garde jvm_session sautera les tests JVM avec "
+                "le message d'échec d'init, pas le message de crash transitoire (#1641)."
+            )
     except Exception as e:
         logger.error(
             f"ÉCHEC CRITIQUE de l'initialisation de la JVM dans pytest_sessionstart: {e}"
@@ -436,6 +470,8 @@ def pytest_sessionstart(session):
         session.config.cache.set("jvm_started", False)
         # On ne lance pas pytest.exit ici pour laisser les tests non-JVM s'exécuter
         # Mais on pourrait le faire si la JVM est absolument critique pour toute la suite.
+    finally:
+        logging.getLogger().removeHandler(_diag_handler)
 
 
 def pytest_sessionfinish(session):
