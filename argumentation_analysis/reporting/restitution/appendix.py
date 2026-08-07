@@ -34,6 +34,77 @@ _LEAK_KEYS = (
 )
 
 
+# #1624 — the appendix attests *availability*; the conducted prose is built from
+# a DIFFERENT reading list (``build_act{1,2,3}_evidence``). A row saying only
+# "disponible" therefore reads as "this backed the conclusion", which is the
+# inverse of the truth for the rows the prose never opens: the report looks
+# better informed than it is. Each rendered dimension declares here whether the
+# prose reads its state key, and by which act.
+#
+# Three kinds, giving the three states of #1624 once composed with the value
+# column (absent / present-and-mobilised / present-not-mobilised):
+#
+# * ``prose`` — the conclusion reads this key when it carries something.
+# * ``failure_only`` — the key reaches the prose through ONE branch, the one that
+#   reports the axis as lost. A run where the axis works is mute in the
+#   conclusion; a run where it degrades gains a sentence. Attesting that as plain
+#   "mobilisée" would read exactly backwards.
+# * ``none`` — attested by the appendix, never read by the prose.
+#
+# Anti-pendule: this literal is NOT imported from the act plugins, and they do
+# not import it. The file-disjoint wiring is deliberate (``state_adapter.py``
+# l.6-8) and mutualising a constant would recreate the coupling the adapter
+# exists to avoid. The accord between this declaration and what the prose
+# actually reads is carried by ``test_two_reading_surfaces_1624.py``, which
+# checks it against an AST sweep of the three act modules — same shape as the
+# #1619 corrective.
+_MOBILISATION: Dict[str, tuple] = {
+    # dimension              state key(s)                        kind         site
+    "arguments_extraits": (("identified_arguments",), "prose", "actes I–III"),
+    "sophismes_localises": (("identified_fallacies",), "prose", "actes II–III"),
+    "contre_arguments": (("counter_arguments",), "prose", "actes II–III"),
+    "scores_qualite": (("argument_quality_scores",), "prose", "actes II–III"),
+    "axe_fol": (("fol_analysis_results",), "prose", "actes II–III"),
+    "axe_pl": (("propositional_analysis_results",), "prose", "actes II–III"),
+    "axe_modale": (("modal_analysis_results",), "prose", "acte II"),
+    "axe_dung": (("dung_frameworks",), "prose", "actes II–III"),
+    "axe_aspic": (("aspic_results",), "prose", "acte III"),
+    "axe_bipolaire": (("bipolar_results",), "prose", "acte III"),
+    "deliberation": (("debate_transcripts",), "prose", "actes II–III"),
+    "gouvernance": (("governance_decisions",), "prose", "actes II–III"),
+    "arg_structuree": (("structured_arg_status",), "failure_only", "acte III"),
+    "synthese_narrative": (("narrative_synthesis", "final_conclusion"), "none", ""),
+    "synthese_formelle": (("formal_synthesis_reports",), "none", ""),
+}
+
+_MOBILISATION_LABEL = {
+    "prose": "mobilisée ({site})",
+    "failure_only": "mobilisée par l'{site} seulement si l'axe échoue",
+    "none": "**non mobilisée** — attestée ici, jamais lue par la conclusion",
+}
+
+
+def _mobilisation_notes(state: Mapping[str, Any]) -> Dict[str, str]:
+    """Per-dimension mobilisation cell for the appendix table (#1624).
+
+    Returns one entry per key of :data:`_MOBILISATION`. A dimension carrying
+    nothing gets ``"—"``: mobilisation of an absent axis is not a fact about the
+    report, and asserting either way there would be the same over-claim this
+    column exists to remove.
+
+    Kept out of :func:`_provenance_counts` on purpose — that function's return
+    shape is consumed by callers and tests that want the value alone.
+    """
+    notes: Dict[str, str] = {}
+    for dimension, (keys, kind, site) in _MOBILISATION.items():
+        present = any(state.get(key) for key in keys)
+        if not present:
+            notes[dimension] = "—"
+            continue
+        notes[dimension] = _MOBILISATION_LABEL[kind].format(site=site)
+    return notes
+
+
 def _strip_leak_keys(state: Mapping[str, Any]) -> Dict[str, Any]:
     """Return a copy of ``state`` with leak-capable top-level keys removed."""
     out: Dict[str, Any] = {}
@@ -136,9 +207,7 @@ def _modal_axis_status(modal: Any) -> Any:
         decided = [
             r for r in modal if isinstance(r, dict) and r.get("valid") in (True, False)
         ]
-        degraded = [
-            r for r in modal if isinstance(r, dict) and r.get("valid") is None
-        ]
+        degraded = [r for r in modal if isinstance(r, dict) and r.get("valid") is None]
         if decided:
             status: Dict[str, Any] = {
                 "verdict": "décidé",
@@ -182,9 +251,7 @@ def _pl_axis_status(pl: Any) -> Any:
         return "disponible" if pl else "indisponible"
     if isinstance(pl, list) and pl:
         decided = [r for r in pl if _pl_verdict_of(r) in (True, False)]
-        degraded = [
-            r for r in pl if isinstance(r, dict) and _pl_verdict_of(r) is None
-        ]
+        degraded = [r for r in pl if isinstance(r, dict) and _pl_verdict_of(r) is None]
         if decided:
             status: Dict[str, Any] = {
                 "verdict": "décidé",
@@ -223,6 +290,14 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     counts["axe_modale"] = _modal_axis_status(_g("modal_analysis_results"))
     counts["axe_dung"] = "disponible" if _g("dung_frameworks") else "indisponible"
     counts["axe_aspic"] = "disponible" if _g("aspic_results") else "indisponible"
+    counts["axe_bipolaire"] = "disponible" if _g("bipolar_results") else "indisponible"
+
+    # #1624 item 3 — two axes the Actes II and III genuinely mobilise and that
+    # this table did not name at all. A coverage table that omits the
+    # deliberation and the governance vote understates precisely the material
+    # the conclusion leans on hardest.
+    counts["deliberation"] = _safe_len(_g("debate_transcripts", []))
+    counts["gouvernance"] = _safe_len(_g("governance_decisions", []))
 
     # Structured-argumentation honesty (FP-17 #1236). ASPIC+/ABA/SETAF/weighted/
     # bipolar have no text→structured translator wired (translation-gap FP-4
@@ -304,17 +379,30 @@ def render_appendix(
         )
 
     counts = _provenance_counts(state)
+    mobilisation = _mobilisation_notes(state)
     lines = [
         "\n<details>",
         "<summary>Annexe — provenance dimensionnelle ( repliée par défaut)</summary>",
         "",
         "Agrégats de traçabilité uniquement — pas de contenu de corpus.",
         "",
-        "| Dimension | Valeur |",
-        "|---|---|",
+        "La colonne *Mobilisation* dit si la conclusion a lu la dimension. Une "
+        "dimension disponible n'est pas nécessairement une dimension qui a nourri "
+        "le raisonnement : les deux surfaces de lecture de l'état sont distinctes "
+        "(#1624).",
+        "",
+        "| Dimension | Valeur | Mobilisation |",
+        "|---|---|---|",
     ]
     for label, value in counts.items():
-        lines.append(f"| {label} | {value} |")
+        # A dimension with no declaration is rendered "non déclarée" rather than
+        # blank: a silent empty cell reads as "nothing to say", which is the
+        # over-claim this column exists to remove. The test module pins the
+        # declaration table against the rendered rows, so the case is a guard,
+        # not an expected state.
+        lines.append(
+            f"| {label} | {value} | {mobilisation.get(label, 'non déclarée')} |"
+        )
     lines.append("")
 
     if include_full_state_json:
