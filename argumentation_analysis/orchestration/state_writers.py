@@ -892,7 +892,18 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
 
 
 def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write ABA reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
+    """Write ABA reasoning results to UnifiedAnalysisState (stored as Dung framework).
+
+    #1648 Wave-2 site 1: ABA has a distinctive piece of data — the
+    ``contraries`` mapping (assumption → its contrary) — that the handler
+    computes and the writer used to drop on the floor. The native Dung
+    projection has no slot for it, so we attach a strictly-additive
+    ``formalism_specific`` sidecar to the entry dict without touching the
+    ``attacks`` / ``extensions`` / ``arguments`` projections. The 12 readers
+    of ``dung_frameworks`` (pattern_mining, deep_synthesis_agent, act2/3
+    restitution, visualization, …) are not migrated: a downstream reader
+    that wants the contraries reads ``entry["formalism_specific"]["contraries"]``.
+    """
     _record_structured_arg_status(state, "aba_reasoning", output, ctx)
     if not output or not isinstance(output, dict):
         return
@@ -900,12 +911,21 @@ def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     extensions = output.get("extensions", [])
     if not isinstance(assumptions, list):
         assumptions = []
-    state.add_dung_framework(
+    df_id = state.add_dung_framework(
         name=f"aba_{output.get('semantics', 'preferred')}",
         arguments=assumptions,
         attacks=[],
         extensions={"aba_extensions": extensions},
     )
+    # #1648 Wave-2 sidecar: preserve the contraries the handler echoes
+    # under ``output["contraries"]``. Empty mapping ⇒ sidecar still present
+    # but with empty dict (so readers can detect "handler ran, contraries
+    # not supplied" vs. "writer dropped the field").
+    contraries = output.get("contraries")
+    if isinstance(contraries, dict) and contraries:
+        state.dung_frameworks[df_id]["formalism_specific"] = {
+            "contraries": dict(contraries),
+        }
 
 
 def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

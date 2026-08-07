@@ -117,6 +117,13 @@ class ABAHandler:
                 "extensions": sorted(ext_list),
                 "assumptions": sorted(assumptions),
                 "rules_count": len(rules),
+                # #1648 Wave-2 site 1: echo the contraries so the writer can
+                # preserve them in a ``formalism_specific`` sidecar. The
+                # handler consumes them at l.86-92 to build the AbaTheory but
+                # used to drop them on exit — the inventory called this a
+                # "real loss at the handler level, not the writer's fault".
+                # Echo-only: we do not derive anything from them here.
+                "contraries": dict(contraries) if contraries else {},
                 "statistics": {
                     "assumptions_count": len(assumptions),
                     "rules_count": len(rules),

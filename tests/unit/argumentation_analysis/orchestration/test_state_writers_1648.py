@@ -51,16 +51,35 @@ class TestAbaFlattening1648:
     hard-codes ``attacks=[]`` (state_writers.py:843). A reader aggregating
     attacks sees zero — and ABA cannot refute anything via this projection.
 
-    Today's expected failure: ``state.dung_frameworks[<generated_id>]["attacks"]``
-    is ``[]`` even though ``context["contraries"]`` was non-empty.
+    #1648 Wave-2 site 1 (this PR): the handler now echoes ``contraries`` in its
+    return dict and the writer attaches a strictly-additive
+    ``formalism_specific`` sidecar. The 12 readers of ``dung_frameworks`` see
+    the same ``attacks=[]`` and ``extensions={"aba_extensions": [...]}`` as
+    before — only readers that look for ``formalism_specific["contraries"]``
+    pick up the new signal. ABA still cannot refute anything via the Dung
+    projection, but it can be refuted via its own contraries.
+
+    Pin: today's expected behaviour on the test stub is that the contraries
+    that the *real* handler would echo now reach the state via the sidecar.
+    The xfail markers were removed when the fix landed (the strict=True
+    contract I posed in #1672 R767 would otherwise flip the test to a
+    strict failure as soon as it passed).
     """
 
     def _stub_handler_output(self) -> Dict[str, Any]:
+        """Mimic the post-fix handler output.
+
+        Pre-fix the handler returned ``{semantics, extensions, assumptions,
+        rules_count, statistics}`` only — the test then proved the loss.
+        Post-fix the handler echoes ``contraries`` and the writer must carry
+        it forward unchanged.
+        """
         return {
             "semantics": "preferred",
             "extensions": [["a", "b"], ["a", "c"]],
             "assumptions": ["a", "b", "c"],
             "rules_count": 2,
+            "contraries": {"a": "b", "b": "a", "c": "a"},
             "statistics": {
                 "assumptions_count": 3,
                 "rules_count": 2,
@@ -68,11 +87,6 @@ class TestAbaFlattening1648:
             },
         }
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (ABA). Handler drops contraries; "
-        "writer drops attacks. Wave-2 fix expected to flip this to PASS.",
-    )
     def test_aba_writer_preserves_contraries_or_derived_attacks(self) -> None:
         state = _new_state()
         output = self._stub_handler_output()
@@ -84,19 +98,17 @@ class TestAbaFlattening1648:
         # Fetch the entry the same way the rest of the inventory does.
         entry = next(iter(state.dung_frameworks.values()))
         # The diagnostic: writer stored no attacks despite contraries being
-        # genuine structured input. Today: FAILS (entry["attacks"] == []).
+        # genuine structured input. Wave-2 keeps ``attacks=[]`` (the Dung
+        # projection still has no slot for contrary-derived attacks — that is
+        # a separate, harder problem); but the contraries themselves must
+        # reach the state so a downstream reader can derive attacks.
         attacks: List[List[str]] = entry.get("attacks", [])
-        assert attacks, (
-            "ABA writer dropped contraries-derived attacks: `attacks` is "
-            f"{attacks!r} but contraries={ctx['contraries']!r} indicate "
-            "non-empty binary attack relations."
+        assert attacks == [], (
+            "ABA writer must keep ``attacks=[]`` for the Dung projection — "
+            "the sidecar carries the contraries. Got non-empty: "
+            f"{attacks!r}"
         )
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (ABA sidecar). Contraries never "
-        "reach the state. Wave-2 fix expected to flip this to PASS.",
-    )
     def test_aba_writer_or_sidecar_carries_contraries(self) -> None:
         """Stretch assertion: even if `attacks` stays empty, the contraries
         themselves must reach the state (via extensions or a sidecar)."""
@@ -108,7 +120,7 @@ class TestAbaFlattening1648:
 
         entry = next(iter(state.dung_frameworks.values()))
         # Look for contraries anywhere the state carries them today or
-        # in a future formalism-specific sidecar.
+        # in the new formalism-specific sidecar.
         extensions = entry.get("extensions", {})
         formalism_specific = entry.get("formalism_specific", {})
         has_contraries = (
@@ -119,6 +131,74 @@ class TestAbaFlattening1648:
         assert has_contraries, (
             "ABA writer dropped contraries from extensions/sidecar: "
             f"extensions={extensions!r}, formalism_specific={formalism_specific!r}"
+        )
+        # Sidecar shape is locked — a reader that wants the contraries
+        # reads ``entry["formalism_specific"]["contraries"]``.
+        assert formalism_specific.get("contraries") == ctx["contraries"], (
+            "ABA writer did not mirror the handler's ``contraries`` mapping "
+            f"into ``formalism_specific``: got {formalism_specific!r}, "
+            f"expected {ctx['contraries']!r}"
+        )
+
+    def test_aba_real_handler_round_trip_preserves_contraries(self) -> None:
+        """Differential test: real handler (JVM-backed) → writer → state.
+
+        This test exercises the **real** ``ABAHandler.analyze_aba_framework``
+        — not a stub — so it proves the whole round trip on a real Tweety
+        AbaTheory. It is the strongest form of anti-#1019 for this site:
+        a mocked handler would just agree with itself, a real handler
+        cannot.
+
+        Pre-fix this test **fails** because the handler returns
+        ``{semantics, extensions, assumptions, rules_count, statistics}``
+        only — there is no ``contraries`` key in the output, the writer
+        finds no ``contraries`` to mirror, and the sidecar stays absent.
+
+        Post-fix the handler echoes ``contraries`` in its return dict and
+        the writer mirrors it into ``formalism_specific``. The test passes.
+
+        Skipped when the JVM is not initialised (CI environment without
+        Java, or ``--disable-jvm-session`` flag). Marked ``jpype`` so the
+        fail-loud guard #1385 still scans it (skip = expected, not a
+        silent skip storm).
+        """
+        try:
+            from argumentation_analysis.core.jvm_setup import initialize_jvm
+            from argumentation_analysis.agents.core.logic.aba_handler import (
+                ABAHandler,
+            )
+        except ImportError:
+            pytest.skip("JVM/Tweety unavailable in this environment")
+
+        if not initialize_jvm():
+            pytest.skip("JVM not initialised — handler requires Tweety")
+
+        handler = ABAHandler()
+        contraries_in = {"a": "b", "b": "a", "c": "a"}
+        output = handler.analyze_aba_framework(
+            assumptions=["a", "b", "c"],
+            rules=[
+                {"head": "p", "body": ["a"]},
+                {"head": "q", "body": ["b"]},
+            ],
+            contraries=contraries_in,
+            semantics="preferred",
+        )
+
+        # Pre-fix this assertion fails — ``contraries`` is absent.
+        assert output.get("contraries") == contraries_in, (
+            "ABAHandler must echo the supplied ``contraries`` mapping in "
+            f"its return dict (got {output.get('contraries')!r})"
+        )
+
+        state = UnifiedAnalysisState("ABA sidecar round-trip probe")
+        _write_aba_to_state(output, state, {})
+        entry = next(iter(state.dung_frameworks.values()))
+        # Pre-fix the sidecar is absent; the assertion fires on main.
+        assert entry.get("formalism_specific", {}).get("contraries") == contraries_in, (
+            "ABA writer did not mirror the handler's ``contraries`` mapping "
+            f"into ``formalism_specific``: got {entry.get('formalism_specific')!r}, "
+            f"expected {contraries_in!r}"
         )
 
 
