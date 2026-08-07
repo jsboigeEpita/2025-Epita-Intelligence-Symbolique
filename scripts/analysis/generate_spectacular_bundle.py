@@ -17,7 +17,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Iterable, Iterator, Optional
 
 # ── Project root ──────────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent.parent
@@ -88,6 +88,30 @@ def _strip_privacy(data: Any, depth: int = 0) -> Any:
         # Top-level string values in dicts (e.g. arg values that are raw strings)
         return "<scrubbed>"
     return data
+
+
+def _iter_dimension_entries(dim: Any) -> Iterator[Dict[str, Any]]:
+    """Yield the mutable entry dicts of an analysis dimension, whatever its shape.
+
+    #1662: analysis dimensions are stored under two different shapes in
+    ``UnifiedAnalysisState`` — a mapping of generated id -> entry
+    (``dung_frameworks``) or a plain list of entries (``ranking_results``,
+    ``probabilistic_results``, ``bipolar_results``). A scrub keyed on the
+    *container's* type only ever reaches one of them. The entries themselves are
+    dicts in both cases, so iterate those and let the caller work on the shape
+    that is actually stable.
+
+    Entries are yielded by reference: mutating them mutates the exported state.
+    """
+    if isinstance(dim, dict):
+        values: Iterable[Any] = dim.values()
+    elif isinstance(dim, list):
+        values = dim
+    else:
+        return
+    for item_val in values:
+        if isinstance(item_val, dict):
+            yield item_val
 
 
 def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -234,13 +258,16 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
     # (dung_frameworks, ranking_results, probabilistic_results, bipolar_results)
     # These store List[str] under key "arguments" with raw NL descriptions
     # that bypass the identified_arguments scrub (Pass 2).
+    #
+    # #1662: the four containers do NOT share a shape. `dung_frameworks` is a
+    # Dict[str, Dict] (shared_state.py:442, filled by `[df_id] = {...}`), while
+    # `ranking_results` / `probabilistic_results` / `bipolar_results` are
+    # List[Dict] (l.454/458/459, filled by `.append(entry)`). Gating this pass on
+    # `isinstance(dim, dict)` therefore ran it on ONE of its four declared
+    # targets and silently skipped the other three. Iterate the entries whatever
+    # the container shape instead of testing the container's type.
     for dim_key in ("dung_frameworks", "ranking_results", "probabilistic_results", "bipolar_results"):
-        dim = cleaned.get(dim_key)
-        if not isinstance(dim, dict):
-            continue
-        for item_id, item_val in dim.items():
-            if not isinstance(item_val, dict):
-                continue
+        for item_val in _iter_dimension_entries(cleaned.get(dim_key)):
             args_list = item_val.get("arguments")
             if isinstance(args_list, list):
                 item_val["arguments"] = [
