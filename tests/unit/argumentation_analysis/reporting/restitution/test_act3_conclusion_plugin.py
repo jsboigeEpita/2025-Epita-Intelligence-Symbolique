@@ -1457,17 +1457,59 @@ class TestStructuredArgPresenceChannel:
         """
         assert build_act3_evidence(_aspic_state([[]])).structured_findings == []
 
-    def test_aspic_non_empty_extension_becomes_a_finding(self) -> None:
-        state = _aspic_state([[], ["def_arg_1: prémisse => conclusion_plausible"]])
+    def test_aspic_single_all_inclusive_extension_produces_nothing(self) -> None:
+        """The state one hop after the premises are repaired — measured, not
+        hypothesised (JVM probe, R766): supplying ordinary premises yields 11
+        arguments, **0 attacks**, and ONE extension holding all 11.
+
+        Zero attacks because ``ASPICHandler`` only ever builds
+        ``Proposition(head)``, never a ``Negation``: a head string of ``"!x"``
+        becomes a proposition *named* ``!x``, conflicting with nothing. An
+        extension that excludes no argument arbitrated nothing, and emitting it
+        would hand the conclusion a formally-authorised statement with no
+        discriminating content (#1631). Fixing premises alone must NOT open this
+        channel.
+        """
+        state = _aspic_state([["def_arg_1: p => c", "def_arg_2: q => d"]])
+        assert build_act3_evidence(state).structured_findings == []
+
+    def test_aspic_competing_extensions_become_a_finding(self) -> None:
+        """Two extensions that disagree ⇒ a real arbitration happened. The
+        finding is the CONTESTED set (union − intersection), because what ASPIC+
+        brings that no other axis does is naming which derivations cannot be
+        held together — not which ones survived.
+        """
+        state = _aspic_state(
+            [
+                ["socle_partagé", "def_arg_1: prémisse => conclusion_plausible"],
+                ["socle_partagé", "rebuttal_1: sophisme => conclusion_contraire"],
+            ]
+        )
         (finding,) = build_act3_evidence(state).structured_findings
         assert finding.capability == "aspic_plus_reasoning"
         assert "def_arg_1: prémisse => conclusion_plausible" in finding.statement
+        assert "rebuttal_1: sophisme => conclusion_contraire" in finding.statement
+        # The uncontested member is not the finding — it is what both sides keep.
+        assert "socle_partagé" not in finding.statement
+
+    def test_aspic_duplicate_extensions_are_not_a_disagreement(self) -> None:
+        """Two entries carrying the SAME extension arbitrate nothing. Guards the
+        cheap reading of the rule above ("len(extensions) >= 2").
+        """
+        ext = ["def_arg_1: p => c"]
+        assert (
+            build_act3_evidence(_aspic_state([ext, list(ext)])).structured_findings
+            == []
+        )
 
     def test_both_axes_are_carried_by_one_channel(self) -> None:
         """One channel, not one reader per axis (the eight-half-fixes lesson)."""
         state = _bipolar_state([["s", "t"]])
         state.aspic_results = [
-            {"extensions": [["derivation_1"]], "statistics": {}},
+            {
+                "extensions": [["socle", "derivation_1"], ["socle", "derivation_2"]],
+                "statistics": {},
+            },
         ]
         ev = build_act3_evidence(state)
         assert {f.capability for f in ev.structured_findings} == {
@@ -1482,7 +1524,12 @@ class TestStructuredArgPresenceChannel:
                 lambda: _bipolar_state([["la reprise est réelle", "le cap est bon"]]),
                 "la reprise est réelle",
             ),
-            (lambda: _aspic_state([["chaine_defaisable_7"]]), "chaine_defaisable_7"),
+            (
+                lambda: _aspic_state(
+                    [["socle", "chaine_defaisable_7"], ["socle", "chaine_rivale_2"]]
+                ),
+                "chaine_defaisable_7",
+            ),
         ],
         ids=["bipolar", "aspic"],
     )

@@ -796,53 +796,75 @@ def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
 
 
 def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
-    """Project the surviving rule-derivations — what ASPIC+ alone says.
+    """Project what ASPIC+ alone establishes: derivations that exclude each other.
 
-    ASPIC+ arguments are derivations through strict/defeasible rules, so a
-    surviving extension names WHICH chains of reasoning withstand defeat, not
-    merely which atomic claims do.
+    An ASPIC+ argument is a derivation *through rules*, so what this axis brings
+    that no other does is naming WHICH chains of reasoning cannot be held
+    together. That — not "which claims survived" — is the finding.
 
-    Returns ``None`` when every extension is empty. That is the measured state
-    of the pipeline today: all 8 real artifacts carry ``extensions: [[]]`` with
-    ``axioms_count: 0``, because ``_invoke_aspic`` reads ``context["axioms"]``
-    and nothing in the orchestration ever writes that key — with no ordinary
-    premise, ASPIC+ builds no argument at all. Emitting anything here would
-    dress an argument-free theory as a result (#1019). This guard is the
-    regression sentinel for the day the producer is repaired.
+    Two conditions gate emission. Both are measured firsthand (JVM probes,
+    R766), not assumed:
+
+    1. **At least one non-empty extension.** All 8 real artifacts carry
+       ``extensions: [[]]``: ``_invoke_aspic`` reads ``context["axioms"]`` and
+       nothing in the orchestration writes it, and ``addOrdinaryPremise`` is
+       gated on ``if axioms:``. With no ordinary premise ASPIC+ builds no
+       argument at all — 0 arguments, empty framework, single empty extension.
+    2. **At least two distinct non-empty extensions.** Supplying premises is not
+       sufficient: the handler only ever builds ``Proposition(head)``, never a
+       ``Negation``, so no two rule heads can contradict — a head string of
+       ``"!x"`` yields a proposition *named* ``!x``, which conflicts with
+       nothing. Measured on the premises-supplied shape: 11 arguments, **0
+       attacks**, one extension holding all 11. A single all-inclusive extension
+       decided nothing; reporting it would hand the conclusion a
+       formally-authorised statement with no discriminating content (#1631).
+
+    So the finding is the *contested* set — what some extensions keep and others
+    drop — never a count, and never "everything survived".
     """
     entries = getattr(state, "aspic_results", None) or []
     if not isinstance(entries, list):
         return None
-    best: List[str] = []
+    contested: List[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
             continue
         extensions = entry.get("extensions") or []
         if not isinstance(extensions, list):
             continue
+        distinct: List[frozenset] = []
         for ext in extensions:
             if not isinstance(ext, (list, tuple)):
                 continue
-            members = [
+            members = frozenset(
                 _truncate(str(m).strip(), _ASPIC_MEMBER_CAP)
                 for m in ext
                 if str(m).strip()
-            ]
-            if len(members) > len(best):
-                best = members
-    if not best:
+            )
+            if members and members not in distinct:
+                distinct.append(members)
+        # One extension (or one repeated) = nothing was arbitrated.
+        if len(distinct) < 2:
+            continue
+        union = frozenset().union(*distinct)
+        intersection = frozenset.intersection(*distinct)
+        entry_contested = sorted(union - intersection)
+        if len(entry_contested) > len(contested):
+            contested = entry_contested
+    if not contested:
         return None
-    shown = best[:_ASPIC_MEMBERS_SHOWN]
+    shown = contested[:_ASPIC_MEMBERS_SHOWN]
     tail = (
         ""
-        if len(best) <= _ASPIC_MEMBERS_SHOWN
-        else f" (et {len(best) - len(shown)} autre(s))"
+        if len(contested) <= _ASPIC_MEMBERS_SHOWN
+        else f" (et {len(contested) - len(shown)} autre(s))"
     )
     return StructuredArgFinding(
         capability="aspic_plus_reasoning",
         label=_axis_label("aspic_plus_reasoning"),
         statement=(
-            "les enchaînements de règles qui résistent à la défaite : "
+            "des enchaînements de raisonnement s'excluent mutuellement — "
+            "le corpus ne permet pas de les tenir tous ensemble : "
             + " | ".join(shown)
             + tail
         ),
