@@ -954,15 +954,35 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return rk_id
 
     def add_aspic_result(
-        self, reasoner_type: str, extensions: List[Any], statistics: Dict[str, Any]
+        self,
+        reasoner_type: str,
+        extensions: List[Any],
+        statistics: Dict[str, Any],
+        attacks: Optional[List[Dict[str, Any]]] = None,
     ) -> str:
-        """Add an ASPIC+ analysis result."""
+        """Add an ASPIC+ analysis result.
+
+        #1649 (#1678 #1679): ``attacks`` carries the qualified attack list
+        produced by ``ASPICHandler.analyze_aspic_framework`` — a list of dicts
+        shaped ``{attacker_rule, attacker_premises, target, scope}`` with
+        ``scope`` in ``{undercut, rebut, undermine, unresolved}``. The field
+        is the singular contribution of ASPIC+ (#1649): without it the
+        projection is a Dung copy and the axis loses its only reason to
+        exist. ``attacks`` defaults to ``None`` so all 3-arg callers
+        (SK plugin wrappers, tests, fixtures) stay backward compatible;
+        ``None`` is serialized as the empty list so readers never see the
+        distinction. The Semantic Kernel plugin wrappers
+        (``state_manager_plugin.py``, ``phase_scoped_state.py``) keep the
+        3-arg signature by design — the LLM does not write attacks, the
+        writer does, post-handler.
+        """
         as_id = self._generate_id("aspic", self.aspic_results)
         entry = {
             "id": as_id,
             "reasoner_type": reasoner_type,
             "extensions": extensions,
             "statistics": statistics,
+            "attacks": list(attacks) if attacks is not None else [],
         }
         self.aspic_results.append(entry)
         state_logger.info(f"ASPIC+ result added: {as_id} (reasoner: {reasoner_type})")
