@@ -1350,11 +1350,26 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 
 def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write Weighted AF results to UnifiedAnalysisState (#87)."""
+    """Write Weighted AF results to UnifiedAnalysisState (#87).
+
+    #1648 Wave-2 site 3: Weighted AF's distinctive piece of data is the
+    *numeric weight* on each attack (``List[{source, target, weight}]``,
+    plus ``weight_statistics: {min, max, avg}``) that the handler computes
+    at ``weighted_handler.py:139-144`` and the writer used to drop on the
+    floor by projecting to ``[src, tgt]`` pairs only. The native Dung
+    projection carries the binary attack but has no slot for the weight,
+    so we attach a strictly-additive ``formalism_specific`` sidecar to
+    the entry dict without touching the ``attacks`` / ``extensions`` /
+    ``arguments`` projections. The 12 readers of ``dung_frameworks``
+    (pattern_mining, deep_synthesis_agent, act2/3 restitution,
+    visualization, …) are not migrated: a downstream reader that wants
+    the weights reads ``entry["formalism_specific"]["attack_weights"]``
+    (and optionally ``entry["formalism_specific"]["weight_statistics"]``).
+    """
     _record_structured_arg_status(state, "weighted_argumentation", output, ctx)
     if not output or not isinstance(output, dict):
         return
-    state.add_dung_framework(
+    df_id = state.add_dung_framework(
         name=f"weighted_{output.get('semantics', 'grounded')}",
         arguments=output.get("arguments", []),
         attacks=[
@@ -1364,6 +1379,40 @@ def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
         ],
         extensions={"weighted_extensions": output.get("extensions", [])},
     )
+    # #1648 Wave-2 sidecar: preserve the per-attack weight the handler
+    # returns under ``output["attacks"]`` (and the aggregate statistics
+    # of those weights). Empty list ⇒ sidecar stays absent (no
+    # ``formalism_specific`` key — empty handler output is
+    # indistinguishable from a handler that never ran, so we don't
+    # synthesize a key).
+    weighted_attacks = output.get("attacks")
+    sidecar: dict[str, Any] = {}
+    if isinstance(weighted_attacks, list) and weighted_attacks:
+        # Defensive: each entry must be a dict with ``source`` (str)
+        # and ``target`` (str) and a numeric ``weight``; drop malformed
+        # entries rather than crash the writer boundary.
+        sanitised = [
+            {"source": a["source"], "target": a["target"], "weight": float(a["weight"])}
+            for a in weighted_attacks
+            if isinstance(a, dict)
+            and isinstance(a.get("source"), str)
+            and isinstance(a.get("target"), str)
+            and isinstance(a.get("weight"), (int, float))
+        ]
+        if sanitised:
+            sidecar["attack_weights"] = sanitised
+    weight_stats = output.get("weight_statistics")
+    if isinstance(weight_stats, dict) and weight_stats:
+        # Sanitise: keep only numeric min/max/avg if present.
+        stats_clean: dict[str, float] = {}
+        for key in ("min_weight", "max_weight", "avg_weight"):
+            val = weight_stats.get(key)
+            if isinstance(val, (int, float)):
+                stats_clean[key] = float(val)
+        if stats_clean:
+            sidecar["weight_statistics"] = stats_clean
+    if sidecar:
+        state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
 def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
