@@ -6,8 +6,9 @@ relation, which makes two properties computable that no attack-only framework
 
 1. support cycles — circular authority: A backs B which backs A, with no anchor
    outside the loop;
-2. articulation points (future work) — removing one argument collapses the
-   support of others.
+2. articulation points — an argument that is the SOLE support of at least one
+   other: removing it collapses that argument's support entirely (the "remark
+   presented as incidental that structurally carries the weight").
 
 These are pure graph properties of the ``supports`` edge list. They require NO
 JVM and NO Tweety reasoner — the framework object ``BipolarHandler`` builds is
@@ -140,3 +141,87 @@ def detect_support_cycles(supports: Sequence[SupportEdge]) -> List[List[str]]:
                 lowlink[parent] = min(lowlink[parent], lowlink[v])
     result.sort()
     return result
+
+
+def _build_supporters(supports: Sequence[SupportEdge]) -> Dict[str, List[str]]:
+    """Reverse adjacency (target -> its direct supporters) from [src, tgt] edges.
+
+    Every node mentioned gets a key. Malformed edges are dropped (mirrors
+    :func:`_build_adjacency`).
+    """
+    supporters: Dict[str, List[str]] = {}
+    for edge in supports:
+        if len(edge) != 2:
+            continue
+        src = str(edge[0]).strip()
+        tgt = str(edge[1]).strip()
+        if not src or not tgt:
+            continue
+        supporters.setdefault(tgt, []).append(src)
+        supporters.setdefault(src, [])
+    return supporters
+
+
+def detect_support_articulation_points(
+    supports: Sequence[SupportEdge],
+) -> List[Dict[str, object]]:
+    """Arguments that are the SOLE support of at least one other (#1645 B-insight-3).
+
+    A **support articulation point** is an argument whose removal would leave at
+    least one other argument with no support at all — it is that argument's only
+    backer. This is the digraph analogue of a graph articulation point and the
+    structural signature the issue names: *"retirer le seul argument A fait
+    tomber le support de plusieurs autres — alors que le texte le présente
+    comme une remarque incidente"*. Like the cycle insight it is invisible to
+    attack-only frameworks (the unbacked argument is still unattacked, so Dung
+    accepts it) and to LLM fallacy detection.
+
+    Pure graph theory over the ``supports`` edges — no JVM, no reasoner, no
+    recursion. Deterministic: each articulation node is reported once with its
+    sorted dependents, and the list is sorted by node.
+
+    Returns one dict ``{"node": str, "dependents": [str, ...]}`` per
+    articulation point, where ``dependents`` are the arguments that lose all
+    support if ``node`` is removed. An argument is only an articulation point
+    when it backs at least one target that it backs ALONE.
+
+    Examples:
+        >>> detect_support_articulation_points([["a", "b"]])
+        [{'node': 'a', 'dependents': ['b']}]
+        >>> detect_support_articulation_points([["a", "b"], ["c", "b"]])
+        []
+        >>> detect_support_articulation_points([["a", "b"], ["a", "c"]])
+        [{'node': 'a', 'dependents': ['b', 'c']}]
+        >>> detect_support_articulation_points([])
+        []
+    """
+    supporters = _build_supporters(supports)
+    result: List[Dict[str, object]] = []
+    for target, srcs in supporters.items():
+        # A target with exactly one direct supporter is solely backed by it.
+        # That supporter is an articulation point for this target.
+        if len(srcs) == 1:
+            sole_backer = srcs[0]
+            # Skip self-support: a self-loop is a cycle (detect_support_cycles),
+            # not an articulation point — removing it does not "drop" an
+            # independent argument.
+            if sole_backer == target:
+                continue
+            _merge_dependent(result, sole_backer, target)
+    result.sort(key=lambda d: str(d["node"]))
+    return result
+
+
+def _merge_dependent(
+    result: List[Dict[str, object]], node: str, dependent: str
+) -> None:
+    """Record that ``node`` is the sole backer of ``dependent`` (in place)."""
+    for entry in result:
+        if entry["node"] == node:
+            deps = entry["dependents"]
+            assert isinstance(deps, list)
+            if dependent not in deps:
+                deps.append(dependent)
+                deps.sort()
+            return
+    result.append({"node": node, "dependents": [dependent]})

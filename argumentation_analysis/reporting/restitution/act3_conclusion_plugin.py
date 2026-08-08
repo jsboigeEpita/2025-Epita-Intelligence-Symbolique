@@ -99,6 +99,8 @@ _SUPPORT_PAIR_CAP = 3
 # most this many named groups in the prose. Smaller than _SUPPORT_PAIR_CAP: a
 # cycle is a stronger, more specific statement than a support pair.
 _SUPPORT_CYCLE_CAP = 2
+# #1645 PR2 — articulation points (sole-supporter) cap, same rationale.
+_ARTICULATION_CAP = 2
 _ASPIC_MEMBER_CAP = 120
 _ASPIC_MEMBERS_SHOWN = 4
 
@@ -782,21 +784,46 @@ def _cycle_phrase(nodes: List[str]) -> str:
     return f"{joined} forment un cycle de soutien sans ancrage externe (autorité circulaire)"
 
 
+def _articulation_phrase(node: str, dependents: List[str]) -> str:
+    """French prose naming a sole-supporter articulation point (#1645 PR2).
+
+    The figure: an argument that is the ONLY backer of one or more others, so
+    removing it would collapse their support — the "remark presented as
+    incidental that structurally carries the weight" (issue B-insight-3).
+    Naming the figure (``point d'articulation``) is the projection no other
+    axis produces; the dependent count conveys how much rests on it.
+    """
+    node_t = _truncate(node, _SUPPORT_NODE_CAP)
+    deps_t = [_truncate(d, _SUPPORT_NODE_CAP) for d in dependents if d]
+    if len(deps_t) == 1:
+        return (
+            f"« {node_t} » est le seul appui de « {deps_t[0]} » : le retirer "
+            f"lui ferait perdre tout soutien (point d'articulation)"
+        )
+    listed = ", ".join(f"« {d} »" for d in deps_t)
+    return (
+        f"« {node_t} » est le seul appui de {len(deps_t)} arguments ({listed}) : "
+        f"le retirer ferait s'effondrer leur soutien (point d'articulation)"
+    )
+
+
 def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project the SUPPORT relation — what bipolar argumentation alone says.
 
     Dung frameworks carry attacks only; ``supports`` is the relation no other
-    axis in the pipeline computes. Its most distinctive structural property is a
-    **support cycle** (circular authority: arguments that back each other with
-    no external anchor) — invisible to attack-only frameworks and to LLM fallacy
-    detection. When ``support_cycles`` is populated (#1645), that insight is
-    NAMED here (not recopied): the prose states the circular-authority structure
-    the text does not name itself. When no cycle is present, the support pairs
-    are projected descriptively as a fallback.
+    axis in the pipeline computes. Its two distinctive structural properties,
+    both NAMED here (not recopied) when populated (#1645):
+    1. **support cycles** (circular authority) — arguments backing each other
+       with no external anchor;
+    2. **articulation points** — an argument that is the SOLE support of one or
+       more others, so removing it collapses their support.
+    Both are invisible to attack-only frameworks and to LLM fallacy detection.
+    When neither is present, the support pairs are projected descriptively as a
+    fallback.
 
-    Returns ``None`` when no well-formed pair AND no cycle exists (fail-loud
-    #1019: an empty support set is an honest absence, never a fabricated
-    sentence).
+    Returns ``None`` when no well-formed pair AND no cycle/articulation exists
+    (fail-loud #1019: an empty support set is an honest absence, never a
+    fabricated sentence).
     """
     entries = getattr(state, "bipolar_results", None) or []
     if not isinstance(entries, list):
@@ -831,7 +858,35 @@ def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
             statement=" ; ".join(cycle_parts),
         )
 
-    # Fallback (no cycle): descriptive projection of the support pairs.
+    # Second insight (#1645 PR2, B-insight-3): articulation points = sole
+    # supporter. NAME the figure ("point d'articulation") — the gap between
+    # structural weight and displayed importance. Same anti-recopy rationale.
+    articulation_parts: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        for ap in entry.get("articulation_points") or []:
+            if not isinstance(ap, dict):
+                continue
+            node = str(ap.get("node", "")).strip()
+            if not node:
+                continue
+            deps_raw = ap.get("dependents") or []
+            deps = [str(d).strip() for d in deps_raw if str(d).strip()]
+            if deps:
+                articulation_parts.append(_articulation_phrase(node, deps))
+                if len(articulation_parts) >= _ARTICULATION_CAP:
+                    break
+        if len(articulation_parts) >= _ARTICULATION_CAP:
+            break
+    if articulation_parts:
+        return StructuredArgFinding(
+            capability="bipolar_argumentation",
+            label=_axis_label("bipolar_argumentation"),
+            statement=" ; ".join(articulation_parts),
+        )
+
+    # Fallback (no cycle, no articulation): descriptive projection of the pairs.
     pairs: List[str] = []
     for entry in entries:
         if not isinstance(entry, dict):

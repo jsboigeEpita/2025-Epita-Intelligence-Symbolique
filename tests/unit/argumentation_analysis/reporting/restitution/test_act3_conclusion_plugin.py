@@ -1344,7 +1344,10 @@ class TestCounterTruncationIsAnnounced:
 
 
 def _bipolar_state(
-    supports: object, support_cycles: object = None, **extra: object
+    supports: object,
+    support_cycles: object = None,
+    articulation_points: object = None,
+    **extra: object,
 ) -> SimpleNamespace:
     state = _rich_state()
     entry: dict = {
@@ -1355,6 +1358,8 @@ def _bipolar_state(
     }
     if support_cycles is not None:
         entry["support_cycles"] = support_cycles
+    if articulation_points is not None:
+        entry["articulation_points"] = articulation_points
     state.bipolar_results = [entry]
     for k, v in extra.items():
         setattr(state, k, v)
@@ -1645,3 +1650,123 @@ class TestBipolarSupportCycleInsight:
             )
         )
         assert "autorité circulaire" in prompt
+
+
+class TestBipolarArticulationPointInsight:
+    """#1645 PR2 — the second distinctive insight (B-insight-3): the support
+    articulation point. An argument that is the SOLE backer of one or more others
+    structurally carries a weight the text does not flag — removing it collapses
+    its dependents' support. The reader must NAME it ('point d'articulation'),
+    not recopy it as innocuous pairs. Invisible to attack-only frameworks and to
+    LLM fallacy detection, same as the cycle (section A).
+    """
+
+    def test_articulation_point_is_named_not_recopied(self) -> None:
+        """The singular figure: a sole supporter. Must be NAMED ('point
+        d'articulation'), never rendered as an 'appuie' pair.
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state(
+                [["sole_backer", "dependent_a"]],
+                articulation_points=[
+                    {"node": "sole_backer", "dependents": ["dependent_a"]}
+                ],
+            )
+        ).structured_findings
+        assert "point d'articulation" in finding.statement
+        assert "sole_backer" in finding.statement
+        assert "dependent_a" in finding.statement
+        # Named, not recopied.
+        assert " appuie " not in finding.statement
+
+    def test_articulation_takes_priority_over_acyclic_recopy(self) -> None:
+        """An articulation sitting alongside ordinary supports IS the finding —
+        the descriptive recopy must not dilute the named figure.
+        """
+        supports = [
+            ["sole_backer", "dependent_a"],
+            ["prop_gamma", "prop_concl"],
+        ]
+        (finding,) = build_act3_evidence(
+            _bipolar_state(
+                supports,
+                articulation_points=[
+                    {"node": "sole_backer", "dependents": ["dependent_a"]}
+                ],
+            )
+        ).structured_findings
+        assert "point d'articulation" in finding.statement
+        # The ordinary acyclic pair is dropped when the articulation is named.
+        assert "prop_concl" not in finding.statement
+
+    def test_cycle_takes_priority_over_articulation(self) -> None:
+        """Priority order: cycle > articulation > recopy. When both a cycle and
+        an articulation are present, the cycle (the stronger, more specific
+        statement) wins and is the sole finding.
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state(
+                [["prop_a", "prop_b"], ["prop_b", "prop_a"]],
+                support_cycles=[["prop_a", "prop_b"]],
+                articulation_points=[{"node": "prop_a", "dependents": ["prop_b"]}],
+            )
+        ).structured_findings
+        assert "autorité circulaire" in finding.statement
+        # The articulation wording does not co-occur with the cycle.
+        assert "point d'articulation" not in finding.statement
+
+    def test_no_articulation_falls_back_to_recopy(self) -> None:
+        """Backward-compat: without an articulation point the reader recopies
+        pairs. The articulation path is strictly additive.
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state([["prop_alpha", "prop_beta"]])
+        ).structured_findings
+        assert " appuie " in finding.statement
+        assert "point d'articulation" not in finding.statement
+
+    def test_shared_backer_is_not_an_articulation_point(self) -> None:
+        """Anti-pendule / anti-over-detection: an argument backed by TWO
+        supporters is NOT solely backed — removing either leaves the other, so
+        neither is an articulation point. The reader recopies, never fabricates
+        a 'sole appui' figure that does not hold (fail-loud #1019).
+        """
+        supports = [["backer_one", "shared_target"], ["backer_two", "shared_target"]]
+        (finding,) = build_act3_evidence(
+            # No articulation point: the producer (detect_support_articulation_points)
+            # returns [] for a shared backer — modelled here by omission.
+            _bipolar_state(supports)
+        ).structured_findings
+        assert "point d'articulation" not in finding.statement
+        assert " appuie " in finding.statement
+
+    def test_multi_dependent_articulation_names_the_count(self) -> None:
+        """A sole backer of several arguments names the dependent count, so the
+        structural weight ('how much rests on it') reaches the reader.
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state(
+                [["sole_backer", "dep_a"], ["sole_backer", "dep_b"]],
+                articulation_points=[
+                    {"node": "sole_backer", "dependents": ["dep_a", "dep_b"]}
+                ],
+            )
+        ).structured_findings
+        assert "point d'articulation" in finding.statement
+        assert "2 arguments" in finding.statement
+
+    def test_articulation_reaches_the_act3_prompt(self) -> None:
+        """DoD item 3: the insight must reach a reader that states it in the
+        prose — not only the appendix.
+        """
+        prompt = build_act3_prompt(
+            build_act3_evidence(
+                _bipolar_state(
+                    [["sole_backer", "dependent_a"]],
+                    articulation_points=[
+                        {"node": "sole_backer", "dependents": ["dependent_a"]}
+                    ],
+                )
+            )
+        )
+        assert "point d'articulation" in prompt
