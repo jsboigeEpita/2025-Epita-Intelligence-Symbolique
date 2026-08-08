@@ -3588,11 +3588,23 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     # Measured firsthand (E pass 1): without this, a planted cycle was rendered
     # by ``_bipolar_finding`` as two innocuous "appuie" pairs — structurally
     # present in the input, invisible in the prose (anti-théâtre #1019).
-    from argumentation_analysis.agents.core.logic.bipolar_insight import (
-        detect_support_cycles,
-    )
+    #
+    # The import is guarded: ``agents.core.logic.__init__`` eagerly imports the
+    # logic agents (propositional/fol/modal) which pull ``TweetyBridge`` →
+    # ``import jpype`` at module level. In a jpype-less environment (#1677
+    # probe, or jpype genuinely uninstalled) importing the package raises
+    # ImportError HERE — outside the JVM try below — which would crash
+    # _invoke_bipolar and defeat the #1670/#1677 honest-absent contract (the
+    # probe regressed from RETURNED to RAISED). Degrade the INSIGHT honestly
+    # (no cycles computable without the import) rather than the pipeline.
+    try:
+        from argumentation_analysis.agents.core.logic.bipolar_insight import (
+            detect_support_cycles,
+        )
 
-    support_cycles = detect_support_cycles(supports)
+        support_cycles = detect_support_cycles(supports)
+    except ImportError:
+        support_cycles = []
 
     # #1645: resolve the JVM state ONCE, before the try. Resolving it inside the
     # except (the earlier ``import jpype; jpype.isJVMStarted()``) would let an
