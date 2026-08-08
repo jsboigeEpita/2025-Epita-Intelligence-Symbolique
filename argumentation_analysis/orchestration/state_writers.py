@@ -1437,15 +1437,47 @@ def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
 
 
 def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write EAF results to UnifiedAnalysisState (#88)."""
+    """Write EAF results to UnifiedAnalysisState (#88).
+
+    #1648 Wave-2 site 4: EAF's distinctive piece of data is the
+    *per-agent epistemic beliefs* dict (``Dict[agent_name, List[arg_name]]``)
+    that the handler computes at ``eaf_handler.py:118`` and the writer
+    used to drop on the floor. The native Dung projection carries the
+    binary attack graph but has no slot for the multi-agent belief map,
+    so we attach a strictly-additive ``formalism_specific`` sidecar to
+    the entry dict without touching the ``attacks`` / ``extensions`` /
+    ``arguments`` projections. The 12 readers of ``dung_frameworks``
+    (pattern_mining, deep_synthesis_agent, act2/3 restitution,
+    visualization, …) are not migrated: a downstream reader that wants
+    the per-agent beliefs reads
+    ``entry["formalism_specific"]["epistemic_beliefs"]``.
+    """
     if not output or not isinstance(output, dict):
         return
-    state.add_dung_framework(
+    df_id = state.add_dung_framework(
         name=f"eaf_{output.get('semantics', 'grounded')}",
         arguments=output.get("arguments", []),
         attacks=[a for a in output.get("attacks", []) if isinstance(a, list)],
         extensions={"eaf_extensions": output.get("extensions", [])},
     )
+    # #1648 Wave-2 sidecar: preserve the per-agent epistemic beliefs the
+    # handler returns under ``output["epistemic_beliefs"]``. Empty dict
+    # ⇒ sidecar stays absent (no ``formalism_specific`` key — empty
+    # handler output is indistinguishable from a handler that never ran,
+    # so we don't synthesize a key).
+    beliefs = output.get("epistemic_beliefs")
+    if isinstance(beliefs, dict) and beliefs:
+        # Defensive: each value must be a list of strings; drop
+        # malformed entries rather than crash the writer boundary.
+        sanitised: dict[str, list[str]] = {
+            str(agent): [arg for arg in args if isinstance(arg, str)]
+            for agent, args in beliefs.items()
+            if isinstance(args, list)
+        }
+        if sanitised:
+            state.dung_frameworks[df_id]["formalism_specific"] = {
+                "epistemic_beliefs": sanitised,
+            }
 
 
 def _write_delp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
