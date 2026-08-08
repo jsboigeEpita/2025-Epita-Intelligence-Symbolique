@@ -1037,15 +1037,27 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return pr_id
 
     def add_bipolar_result(
-        self, framework_type: str, arguments: List[str], supports: List[List[str]]
+        self,
+        framework_type: str,
+        arguments: List[str],
+        supports: List[List[str]],
+        support_cycles: Optional[List[List[str]]] = None,
     ) -> str:
-        """Add a bipolar argumentation framework result."""
+        """Add a bipolar argumentation framework result.
+
+        ``support_cycles`` (#1645) carries the axis's distinctive structural
+        insight — groups of arguments locked in a mutual-support cycle (circular
+        authority). Computed JVM-free over the ``supports`` edges, so it is
+        populated even on the honest-degraded path. Defaults to an empty list so
+        callers that pre-date the insight store an honest "no cycle detected".
+        """
         bp_id = self._generate_id("bipolar", self.bipolar_results)
         entry = {
             "id": bp_id,
             "framework_type": framework_type,
             "arguments": arguments,
             "supports": supports,
+            "support_cycles": support_cycles or [],
         }
         self.bipolar_results.append(entry)
         state_logger.info(f"Bipolar result added: {bp_id} (type: {framework_type})")

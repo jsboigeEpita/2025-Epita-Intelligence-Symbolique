@@ -1343,16 +1343,19 @@ class TestCounterTruncationIsAnnounced:
 # exactly backwards. These tests pin the symmetric path.
 
 
-def _bipolar_state(supports: object, **extra: object) -> SimpleNamespace:
+def _bipolar_state(
+    supports: object, support_cycles: object = None, **extra: object
+) -> SimpleNamespace:
     state = _rich_state()
-    state.bipolar_results = [
-        {
-            "id": "bipolar_1",
-            "framework_type": "necessity",
-            "arguments": ["A", "B"],
-            "supports": supports,
-        }
-    ]
+    entry: dict = {
+        "id": "bipolar_1",
+        "framework_type": "necessity",
+        "arguments": ["A", "B"],
+        "supports": supports,
+    }
+    if support_cycles is not None:
+        entry["support_cycles"] = support_cycles
+    state.bipolar_results = [entry]
     for k, v in extra.items():
         setattr(state, k, v)
     return state
@@ -1557,3 +1560,88 @@ class TestStructuredArgPresenceChannel:
         prompt = build_act3_prompt(ev)
         assert "DIMENSIONS NON ÉVALUÉES" in prompt
         assert "CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT" in prompt
+
+
+class TestBipolarSupportCycleInsight:
+    """#1645 — the bipolar axis's distinctive insight is the support cycle
+    (circular authority). The reader must NAME it, not recopy it as innocuous
+    pairs. Measured firsthand (E pass 1): before wiring, a planted cycle
+    ``prop_alpha <-> prop_beta`` was rendered byte-for-byte identically to an
+    acyclic control pair — structurally present in the input, invisible in the
+    prose (anti-théâtre #1019).
+    """
+
+    def test_support_cycle_is_named_not_recopied(self) -> None:
+        """DoD #1501-style differentiation: the singular insight (#1645 section
+        A) — two arguments backing each other with no external anchor — must be
+        NAMED ('autorité circulaire'), never rendered as two 'appuie' pairs.
+        """
+        cycle = [["prop_alpha", "prop_beta"], ["prop_beta", "prop_alpha"]]
+        (finding,) = build_act3_evidence(
+            _bipolar_state(cycle, support_cycles=[["prop_alpha", "prop_beta"]])
+        ).structured_findings
+        assert "autorité circulaire" in finding.statement
+        assert "prop_alpha" in finding.statement
+        assert "prop_beta" in finding.statement
+        # Named, not recopied: the cycle marker is gone.
+        assert " appuie " not in finding.statement
+
+    def test_cycle_takes_priority_over_acyclic_recopy(self) -> None:
+        """When a cycle sits alongside ordinary supports, the cycle IS the
+        finding — the descriptive recopy must not dilute the named insight.
+        """
+        supports = [
+            ["prop_alpha", "prop_beta"],
+            ["prop_beta", "prop_alpha"],
+            ["prop_gamma", "prop_concl"],
+        ]
+        (finding,) = build_act3_evidence(
+            _bipolar_state(supports, support_cycles=[["prop_alpha", "prop_beta"]])
+        ).structured_findings
+        assert "autorité circulaire" in finding.statement
+        # The acyclic control pair is dropped when the cycle is named.
+        assert "prop_concl" not in finding.statement
+
+    def test_no_cycle_falls_back_to_descriptive_recopy(self) -> None:
+        """Backward-compat (#1667): without a cycle the reader recopies pairs.
+        The cycle path is strictly additive.
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state([["prop_alpha", "prop_beta"]])
+        ).structured_findings
+        assert " appuie " in finding.statement
+        assert "autorité circulaire" not in finding.statement
+
+    def test_empty_cycle_list_falls_back_to_recopy(self) -> None:
+        """An explicit empty ``support_cycles`` is an honest 'no cycle detected'
+        — the reader recopies, never fabricates a cycle (fail-loud #1019).
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state([["prop_a", "prop_b"]], support_cycles=[])
+        ).structured_findings
+        assert " appuie " in finding.statement
+        assert "autorité circulaire" not in finding.statement
+
+    def test_three_node_cycle_is_named(self) -> None:
+        """A longer cycle (A->B->C->A) is named 'forment un cycle ... autorité
+        circulaire'.
+        """
+        (finding,) = build_act3_evidence(
+            _bipolar_state([], support_cycles=[["prop_a", "prop_b", "prop_c"]])
+        ).structured_findings
+        assert "forment un cycle" in finding.statement
+        assert "autorité circulaire" in finding.statement
+
+    def test_cycle_reaches_the_act3_prompt(self) -> None:
+        """DoD item 3: the insight must reach a reader that states it in the
+        prose — not only the appendix.
+        """
+        prompt = build_act3_prompt(
+            build_act3_evidence(
+                _bipolar_state(
+                    [["prop_alpha", "prop_beta"], ["prop_beta", "prop_alpha"]],
+                    support_cycles=[["prop_alpha", "prop_beta"]],
+                )
+            )
+        )
+        assert "autorité circulaire" in prompt

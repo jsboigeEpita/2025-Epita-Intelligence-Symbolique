@@ -909,7 +909,14 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
         arguments = []
     if not isinstance(supports, list):
         supports = []
-    state.add_bipolar_result(fw_type, arguments, supports)
+    # #1645: persist the distinctive structural insight (support cycles =
+    # circular authority). Computed JVM-free by _invoke_bipolar, so it is
+    # present even on the honest-degraded path. The reader names it when
+    # non-empty; an empty list is an honest "no cycle detected".
+    support_cycles = output.get("support_cycles", [])
+    if not isinstance(support_cycles, list):
+        support_cycles = []
+    state.add_bipolar_result(fw_type, arguments, supports, support_cycles)
 
 
 def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

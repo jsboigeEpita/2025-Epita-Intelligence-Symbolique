@@ -3579,6 +3579,21 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 context, "bipolar_argumentation", "translator_failed", type(e).__name__
             )
 
+    # #1645 section A: the bipolar axis's singular contribution is the SUPPORT
+    # relation. Its most distinctive structural property — a support cycle
+    # (circular authority: A backs B which backs A, no external anchor) — is
+    # pure graph theory over the ``supports`` edges: no JVM, no Tweety reasoner.
+    # Computing it here (not inside the JVM-bound handler) keeps the insight
+    # available on the honest-degraded path below, where the handler never runs.
+    # Measured firsthand (E pass 1): without this, a planted cycle was rendered
+    # by ``_bipolar_finding`` as two innocuous "appuie" pairs — structurally
+    # present in the input, invisible in the prose (anti-théâtre #1019).
+    from argumentation_analysis.agents.core.logic.bipolar_insight import (
+        detect_support_cycles,
+    )
+
+    support_cycles = detect_support_cycles(supports)
+
     # #1645: resolve the JVM state ONCE, before the try. Resolving it inside the
     # except (the earlier ``import jpype; jpype.isJVMStarted()``) would let an
     # ImportError from a jpype-less environment mask the original cause — in the
@@ -3607,9 +3622,11 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
         )
 
         handler = BipolarHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             handler.analyze_bipolar_framework, args, attacks, supports, fw_type
         )
+        result["support_cycles"] = support_cycles
+        return result
     except Exception as e:
         # #1645: three states, never two (coordinator review). Pre-fix this block
         # had TWO defects of the #1634 family:
@@ -3645,6 +3662,10 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 # presence channel read from this dict. Mirrors the handler's own
                 # echo at bipolar_handler.py:105. extensions: None = not computed.
                 "supports": [[s, t] for s, t in supports],
+                # #1645: structural insight (support cycles) computed JVM-free
+                # above — survives the honest-degraded path so the reader can
+                # name "autorité circulaire" even when the handler never ran.
+                "support_cycles": [list(c) for c in support_cycles],
                 "attacks": list(attacks),
                 # tri-state None = not computed (JVM absent), never a fabricated
                 # empty extension set that would read as "consistent sur vide".
