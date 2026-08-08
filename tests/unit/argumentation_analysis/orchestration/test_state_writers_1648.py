@@ -493,13 +493,15 @@ class TestSocialFlattening1648:
 
 
 class TestEafFlattening1648:
-    """EAF writer drops per-agent epistemic beliefs."""
+    """EAF writer carries per-agent epistemic beliefs via the sidecar (Wave-2 site 4).
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (EAF). Writer drops per-agent "
-        "epistemic beliefs. Wave-2 fix.",
-    )
+    The handler returns ``output["epistemic_beliefs"]`` as
+    ``Dict[agent_name, List[arg_name]]`` at ``eaf_handler.py:118``. The writer
+    at ``state_writers.py:1432-1480`` projects the binary attack graph
+    (preserved) and attaches the dropped belief map to the strictly additive
+    ``formalism_specific`` sidecar.
+    """
+
     def test_eaf_writer_preserves_epistemic_beliefs(self) -> None:
         state = _new_state()
         output = {
@@ -513,17 +515,54 @@ class TestEafFlattening1648:
         _write_eaf_to_state(output, state, {})
 
         entry = next(iter(state.dung_frameworks.values()))
-        extensions = entry.get("extensions", {})
-        formalism_specific = entry.get("formalism_specific", {})
-        has_beliefs = (
-            "epistemic_beliefs" in extensions
-            or "epistemic_beliefs" in formalism_specific
-            or extensions.get("eaf_beliefs") == output["epistemic_beliefs"]
-        )
-        assert has_beliefs, (
-            f"EAF writer dropped epistemic beliefs: extensions={extensions!r}, "
-            f"formalism_specific={formalism_specific!r}"
-        )
+        # Binary Dung projection untouched: attacks carry [src, tgt] pairs.
+        assert entry["attacks"] == [["a", "b"]], entry["attacks"]
+        # Sidecar carries the per-agent beliefs.
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("epistemic_beliefs") == {
+            "agent1": ["a"],
+            "agent2": ["b"],
+        }, sidecar
+
+    def test_eaf_writer_omits_sidecar_when_beliefs_empty(self) -> None:
+        """Empty beliefs ⇒ no ``formalism_specific`` key (no phantom sidecar)."""
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [["a", "b"]],
+            "extensions": [["a"]],
+            "epistemic_beliefs": {},
+        }
+
+        _write_eaf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "formalism_specific" not in entry, entry
+
+    def test_eaf_writer_drops_malformed_belief_entries(self) -> None:
+        """Defensive: malformed entries are dropped, well-formed ones pass."""
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b", "c"],
+            "attacks": [["a", "b"]],
+            "extensions": [],
+            "epistemic_beliefs": {
+                "agent1": ["a", "b"],  # OK
+                "agent2": "not a list",  # malformed: value not a list
+                "agent3": ["c", 42, None],  # mixed: keep strings, drop non-strings
+            },
+        }
+
+        _write_eaf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("epistemic_beliefs") == {
+            "agent1": ["a", "b"],
+            "agent3": ["c"],
+        }, sidecar
 
 
 # ─────────────────────────────────────────────────────────────────────────────
