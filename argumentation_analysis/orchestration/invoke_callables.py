@@ -3599,12 +3599,15 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
     # (no cycles computable without the import) rather than the pipeline.
     try:
         from argumentation_analysis.agents.core.logic.bipolar_insight import (
+            detect_support_articulation_points,
             detect_support_cycles,
         )
 
         support_cycles = detect_support_cycles(supports)
+        articulation_points = detect_support_articulation_points(supports)
     except ImportError:
         support_cycles = []
+        articulation_points = []
 
     # #1645: resolve the JVM state ONCE, before the try. Resolving it inside the
     # except (the earlier ``import jpype; jpype.isJVMStarted()``) would let an
@@ -3638,6 +3641,7 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
             handler.analyze_bipolar_framework, args, attacks, supports, fw_type
         )
         result["support_cycles"] = support_cycles
+        result["articulation_points"] = articulation_points
         return result
     except Exception as e:
         # #1645: three states, never two (coordinator review). Pre-fix this block
@@ -3678,6 +3682,9 @@ async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str,
                 # above — survives the honest-degraded path so the reader can
                 # name "autorité circulaire" even when the handler never ran.
                 "support_cycles": [list(c) for c in support_cycles],
+                # #1645 PR2: articulation points (sole-supporter) — same JVM-free
+                # structural insight, survives the degraded path.
+                "articulation_points": [dict(ap) for ap in articulation_points],
                 "attacks": list(attacks),
                 # tri-state None = not computed (JVM absent), never a fabricated
                 # empty extension set that would read as "consistent sur vide".

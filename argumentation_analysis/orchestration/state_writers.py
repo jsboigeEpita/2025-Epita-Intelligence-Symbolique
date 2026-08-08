@@ -916,7 +916,14 @@ def _write_bipolar_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> Non
     support_cycles = output.get("support_cycles", [])
     if not isinstance(support_cycles, list):
         support_cycles = []
-    state.add_bipolar_result(fw_type, arguments, supports, support_cycles)
+    # #1645 PR2: articulation points (sole-supporter) — same JVM-free structural
+    # insight, persisted alongside the cycles.
+    articulation_points = output.get("articulation_points", [])
+    if not isinstance(articulation_points, list):
+        articulation_points = []
+    state.add_bipolar_result(
+        fw_type, arguments, supports, support_cycles, articulation_points
+    )
 
 
 def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
