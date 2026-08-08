@@ -95,6 +95,10 @@ _ABSENCE_REASON_CAP = 300
 # narrative. These caps bound what a successful axis may spend of the prompt.
 _SUPPORT_NODE_CAP = 140
 _SUPPORT_PAIR_CAP = 3
+# #1645 — the distinctive insight (support cycle = circular authority) gets at
+# most this many named groups in the prose. Smaller than _SUPPORT_PAIR_CAP: a
+# cycle is a stronger, more specific statement than a support pair.
+_SUPPORT_CYCLE_CAP = 2
 _ASPIC_MEMBER_CAP = 120
 _ASPIC_MEMBERS_SHOWN = 4
 
@@ -753,20 +757,81 @@ def _axis_label(capability: str) -> str:
     return _ABSENT_DIMENSION_LABELS.get(capability, capability.replace("_", " "))
 
 
+def _cycle_phrase(nodes: List[str]) -> str:
+    """French prose naming a support-cycle group as circular authority (#1645).
+
+    ``nodes`` is a sorted list of opaque argument identifiers locked in a
+    mutual-support cycle (a non-trivial SCC of the support digraph). The
+    phrasing distinguishes the 2-cycle (the canonical « se soutiennent
+    mutuellement »), longer cycles, and the degenerate self-support. The verdict
+    « autorité circulaire » is appended so the structural figure is NAMED, not
+    merely described — this is the projection no attack-only axis or LLM fallacy
+    detector can produce.
+    """
+    if len(nodes) == 1:
+        return (
+            f"« {nodes[0]} » se soutient lui-même, sans ancrage externe "
+            f"(autorité circulaire)"
+        )
+    if len(nodes) == 2:
+        return (
+            f"« {nodes[0]} » et « {nodes[1]} » se soutiennent mutuellement, "
+            f"sans ancrage externe (autorité circulaire)"
+        )
+    joined = ", ".join(f"« {n} »" for n in nodes)
+    return f"{joined} forment un cycle de soutien sans ancrage externe (autorité circulaire)"
+
+
 def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project the SUPPORT relation — what bipolar argumentation alone says.
 
     Dung frameworks carry attacks only; ``supports`` is the relation no other
-    axis in the pipeline computes. Measured on 8 real state artifacts: 4 to 9
-    support pairs each, varying with the argument inventory — genuine payload,
-    not a constant.
+    axis in the pipeline computes. Its most distinctive structural property is a
+    **support cycle** (circular authority: arguments that back each other with
+    no external anchor) — invisible to attack-only frameworks and to LLM fallacy
+    detection. When ``support_cycles`` is populated (#1645), that insight is
+    NAMED here (not recopied): the prose states the circular-authority structure
+    the text does not name itself. When no cycle is present, the support pairs
+    are projected descriptively as a fallback.
 
-    Returns ``None`` when no well-formed pair exists (fail-loud #1019: an empty
-    support set is an honest absence, never a fabricated sentence).
+    Returns ``None`` when no well-formed pair AND no cycle exists (fail-loud
+    #1019: an empty support set is an honest absence, never a fabricated
+    sentence).
     """
     entries = getattr(state, "bipolar_results", None) or []
     if not isinstance(entries, list):
         return None
+
+    # Priority insight (#1645 section A): support cycles = circular authority.
+    # NAME it — this is the projection no other axis can produce. A cycle is a
+    # structural fact the text does not contain, so naming it is not a recopy
+    # (anti-pendule C: "si le texte le dit, on mesure une recopie").
+    cycle_parts: List[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        for group in entry.get("support_cycles") or []:
+            if not isinstance(group, list):
+                continue
+            nodes = [
+                _truncate(str(n).strip(), _SUPPORT_NODE_CAP)
+                for n in group
+                if str(n).strip()
+            ]
+            if nodes:
+                cycle_parts.append(_cycle_phrase(nodes))
+                if len(cycle_parts) >= _SUPPORT_CYCLE_CAP:
+                    break
+        if len(cycle_parts) >= _SUPPORT_CYCLE_CAP:
+            break
+    if cycle_parts:
+        return StructuredArgFinding(
+            capability="bipolar_argumentation",
+            label=_axis_label("bipolar_argumentation"),
+            statement=" ; ".join(cycle_parts),
+        )
+
+    # Fallback (no cycle): descriptive projection of the support pairs.
     pairs: List[str] = []
     for entry in entries:
         if not isinstance(entry, dict):
