@@ -372,18 +372,15 @@ class TestAdfFlattening1648:
 
 
 class TestWeightedFlattening1648:
-    """Weighted writer extracts only ``[src, tgt]`` from each attack dict.
+    """Weighted writer carries attack weights via the sidecar (Wave-2 site 3).
 
     The handler returns ``output["attacks"]`` as ``List[{source, target, weight}]``
-    but the writer at ``state_writers.py:1212-1226`` projects to ``[src, tgt]``
-    pairs only. The weight is invisible to readers.
+    plus ``weight_statistics: {min, max, avg}``. The writer at
+    ``state_writers.py:1352-1428`` projects the binary attacks to ``[src, tgt]``
+    pairs (preserved) and attaches the dropped weight list to the strictly
+    additive ``formalism_specific`` sidecar.
     """
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (Weighted). Handler returns "
-        "weights, writer projects to [src, tgt] only. Wave-2 fix.",
-    )
     def test_weighted_writer_preserves_attack_weights(self) -> None:
         state = _new_state()
         output = {
@@ -394,23 +391,69 @@ class TestWeightedFlattening1648:
                 {"source": "b", "target": "c", "weight": 0.5},
             ],
             "extensions": [["a", "c"]],
+            "weight_statistics": {
+                "min_weight": 0.5,
+                "max_weight": 0.9,
+                "avg_weight": 0.7,
+            },
         }
 
         _write_weighted_to_state(output, state, {})
 
         entry = next(iter(state.dung_frameworks.values()))
-        extensions = entry.get("extensions", {})
-        formalism_specific = entry.get("formalism_specific", {})
-        has_weights = (
-            extensions.get("weights") is not None
-            or "weights" in extensions
-            or "weights" in formalism_specific
-            or any(len(pair) > 2 for pair in entry["attacks"])  # weight in pair
-        )
-        assert has_weights, (
-            f"Weighted writer dropped attack weights: attacks={entry['attacks']!r}, "
-            f"extensions={extensions!r}, formalism_specific={formalism_specific!r}"
-        )
+        # Binary Dung projection untouched: attacks carry [src, tgt] pairs.
+        assert entry["attacks"] == [["a", "b"], ["b", "c"]], entry["attacks"]
+        # Sidecar carries the weights.
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("attack_weights") == [
+            {"source": "a", "target": "b", "weight": 0.9},
+            {"source": "b", "target": "c", "weight": 0.5},
+        ], sidecar
+        assert sidecar.get("weight_statistics") == {
+            "min_weight": 0.5,
+            "max_weight": 0.9,
+            "avg_weight": 0.7,
+        }, sidecar
+
+    def test_weighted_writer_omits_sidecar_when_attacks_empty(self) -> None:
+        """Empty attacks ⇒ no ``formalism_specific`` key (no phantom sidecar)."""
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [],
+            "extensions": [["a", "b"]],
+        }
+
+        _write_weighted_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "formalism_specific" not in entry, entry
+
+    def test_weighted_writer_drops_malformed_attack_entries(self) -> None:
+        """Defensive: malformed entries are dropped, well-formed ones pass."""
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b", "c"],
+            "attacks": [
+                {"source": "a", "target": "b", "weight": 0.9},  # OK
+                {"source": "b"},  # missing target + weight
+                {"source": "c", "target": "d", "weight": "bad"},  # weight not numeric
+                {"source": "x", "target": "y", "weight": 0.3},  # OK
+            ],
+            "extensions": [],
+        }
+
+        _write_weighted_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("attack_weights") == [
+            {"source": "a", "target": "b", "weight": 0.9},
+            {"source": "x", "target": "y", "weight": 0.3},
+        ], sidecar
+        # weight_statistics absent because none was provided.
 
 
 # ─────────────────────────────────────────────────────────────────────────────
