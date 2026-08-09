@@ -1488,16 +1488,50 @@ def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 
 def _write_delp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write DeLP results to UnifiedAnalysisState (#89)."""
+    """Write DeLP results to UnifiedAnalysisState (#89).
+
+    #1648 Wave-2 site 5: DeLP's distinctive pieces of data are the
+    *defeasible program* (``output["program"]`` — the rule source the
+    handler parsed at ``delp_handler.py:134``), its size
+    (``output["program_size"]``), and the *comparison criterion* used for
+    dialectical reasoning (``output["criterion"]`` — e.g.
+    ``generalized_specificity``, ``delp_handler.py:121``). The writer used
+    to keep only ``query_results`` (the YES/NO/UNDECIDED verdicts) and drop
+    the program + criterion entirely — the deepest flattening in the
+    inventory (Section 2.4): the whole formalism reduced to query verdicts,
+    with no trace of what was reasoned over or how. The native Dung
+    projection has no slot for a defeasible program or a comparison
+    criterion, so we attach a strictly-additive ``formalism_specific``
+    sidecar to the entry dict without touching the ``attacks`` /
+    ``extensions`` / ``arguments`` projections.
+    """
     if not output or not isinstance(output, dict):
         return
     query_results = output.get("query_results", [])
-    state.add_dung_framework(
+    df_id = state.add_dung_framework(
         name="delp_analysis",
         arguments=[],
         attacks=[],
         extensions={"delp_query_results": query_results},
     )
+    # #1648 Wave-2 sidecar: preserve the defeasible program + comparison
+    # criterion the handler returns. Absent program AND criterion ⇒ sidecar
+    # stays absent (no ``formalism_specific`` key — empty handler output is
+    # indistinguishable from a handler that never ran, so we don't
+    # synthesize a key). Each field is carried independently so partial
+    # output never produces phantom-None keys (anti-#1019).
+    program = output.get("program")
+    criterion = output.get("criterion")
+    sidecar: dict[str, Any] = {}
+    if program:
+        sidecar["delp_arguments"] = program
+        size = output.get("program_size")
+        if isinstance(size, int):
+            sidecar["program_size"] = size
+    if criterion:
+        sidecar["criterion"] = criterion
+    if sidecar:
+        state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
 def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:

@@ -571,47 +571,86 @@ class TestEafFlattening1648:
 
 
 class TestDelpFlattening1648:
-    """DeLP writer produces empty arguments/attacks; only query_results survive.
+    """DeLP writer carries the defeasible program + criterion via the sidecar (Wave-2 site 5).
 
-    The dialectical tree, defeat relations, and comparison criterion are all
-    gone. This is the deepest flattening in the inventory.
+    The handler returns ``output["program"]`` (the rule source),
+    ``output["program_size"]`` and ``output["criterion"]`` (e.g.
+    ``generalized_specificity``) at ``delp_handler.py:149-157``. The writer
+    at ``state_writers.py:_write_delp_to_state`` keeps the query verdicts in
+    ``extensions`` (preserved) and attaches the dropped program + criterion
+    to the strictly additive ``formalism_specific`` sidecar. This was the
+    deepest flattening in the inventory (Section 2.4): the whole formalism
+    reduced to YES/NO/UNDECIDED verdicts. The xfail marker from #1672 R767
+    is removed (the strict-XPASS is the signal the Wave-2 fix landed).
     """
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (DeLP). Program + defeat "
-        "relations flattened away. Wave-2 fix.",
-    )
-    def test_delp_writer_preserves_argument_graph_or_defeat_relations(self) -> None:
+    def test_delp_writer_preserves_program_and_criterion(self) -> None:
         state = _new_state()
         output = {
-            "program": [{"head": "a", "body": []}],
-            "program_size": 1,
-            "criterion": "specificity",
+            "program": "birds <- penguin\nflies <- birds",
+            "program_size": 2,
+            "criterion": "generalized_specificity",
             "query_results": [
-                {"query": "a", "answer": "warranted", "message": "ok"}
+                {"query": "flies", "answer": "UNDECIDED", "message": "ok"}
             ],
         }
 
         _write_delp_to_state(output, state, {})
 
         entry = next(iter(state.dung_frameworks.values()))
-        extensions = entry.get("extensions", {})
-        formalism_specific = entry.get("formalism_specific", {})
-        # Either the dialectical tree reaches the state, or at least the
-        # defeat relations are preserved. Today: NEITHER — assertion fails.
-        has_structure = (
-            extensions.get("delp_arguments") == output["program"]
-            or extensions.get("defeat_relations") is not None
-            or "delp_arguments" in extensions
-            or "delp_arguments" in formalism_specific
-            or "defeat_relations" in formalism_specific
-        )
-        assert has_structure, (
-            f"DeLP writer flattened away the argument graph and defeat "
-            f"relations: extensions={extensions!r}, "
-            f"formalism_specific={formalism_specific!r}"
-        )
+        # Native Dung projection stays empty (DeLP has no binary attack
+        # graph at this layer) — query verdicts ride in extensions.
+        assert entry["arguments"] == [], entry["arguments"]
+        assert entry["attacks"] == [], entry["attacks"]
+        assert entry["extensions"] == {
+            "delp_query_results": output["query_results"]
+        }, entry["extensions"]
+        # Sidecar carries the program + criterion the writer used to drop.
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("delp_arguments") == output["program"], sidecar
+        assert sidecar.get("program_size") == 2, sidecar
+        assert sidecar.get("criterion") == "generalized_specificity", sidecar
+
+    def test_delp_writer_omits_sidecar_when_program_and_criterion_absent(
+        self,
+    ) -> None:
+        """No program AND no criterion ⇒ no ``formalism_specific`` key."""
+        state = _new_state()
+        output = {
+            "program": "",
+            "query_results": [],
+        }
+
+        _write_delp_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "formalism_specific" not in entry, entry
+
+    def test_delp_writer_carries_partial_output_without_phantom_keys(
+        self,
+    ) -> None:
+        """Program present but criterion absent ⇒ no phantom ``criterion`` key.
+
+        Anti-#1019: each sidecar field is carried independently so partial
+        handler output never synthesises a ``None``/empty placeholder that a
+        reader would mistake for a real (empty) value.
+        """
+        state = _new_state()
+        output = {
+            "program": "a <- b",
+            "program_size": 1,
+            # criterion intentionally absent
+            "query_results": [],
+        }
+
+        _write_delp_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("delp_arguments") == "a <- b", sidecar
+        assert sidecar.get("program_size") == 1, sidecar
+        # No phantom criterion key synthesised from absence.
+        assert "criterion" not in sidecar, sidecar
 
 
 # ─────────────────────────────────────────────────────────────────────────────
