@@ -42,7 +42,7 @@ never appear in any retraction option.
 
 from __future__ import annotations
 
-from typing import List, Tuple
+from typing import List, Sequence, Tuple
 
 # A belief, here, is one CNF clause: a list of signed integer literals.
 #   [1]       = positive belief in atom 1
@@ -136,3 +136,84 @@ def minimal_retractions(belief_base: BeliefBase) -> Tuple[int, List[Tuple[int, .
         if winners:
             return (k, winners)
     return (-1, [])
+
+
+def build_belief_base(
+    arguments: Sequence[str],
+    negated_indices: Sequence[int],
+) -> Tuple[BeliefBase, List[str]]:
+    """Build a CNF belief base where fallacies introduce real contradictions.
+
+    This is the **base construction** for ``minimal_retractions`` (#1646, coord
+    ruling R779 ruling 2 — "derive ¬arg from fallacies"). It turns the pipeline's
+    extracted arguments + the fallacies that undermine them into a belief base
+    that is *genuinely inconsistent*, which is the precondition for the
+    minimal-retraction insight to bite (without it, ``_pl_atom`` sanitizes every
+    belief to a positive atom and the base is trivially consistent — the D-forensic
+    verdict, 3 locks).
+
+    **Derivation convention** (documented per the coord's guard): a detected
+    fallacy targeting argument X establishes that belief X is **not tenable**.
+    Argument X is the positive unit clause ``[x]`` (the belief as the speaker
+    advanced it); the fallacy adds the negation ``[-x]``. The base
+    ``{[x], [-x]}`` is a real clash, and ``minimal_retractions`` isolates it —
+    naming which belief must be given up. This mirrors the conversational path's
+    ``fallacy_contraction`` (which *removes* the targeted belief; here we *negate*
+    it, creating the clash the retraction computation resolves) and the pipeline's
+    own ``new_belief = NOT(target)`` counter-argument intent (l.3982), which
+    ``_pl_atom`` was silently laundering back to a positive atom.
+
+    The fallacy must undermine the *tenability* of the belief it targets for the
+    negation to be honest. All targeted fallacies in this repo's taxonomy
+    (ad hominem, petitio principii, false cause, …) attack tenability — that is
+    precisely the ``fallacy_contraction`` contract. A per-type granularity (which
+    fallacy *negates* vs merely *weakens*) is a documented follow-up, not a
+    precondition; the convention here matches the existing contraction path
+    rather than inventing a new taxonomy call.
+
+    Atom ``i+1`` ↔ ``arguments[i]`` (the 1-based signed-int convention of this
+    module). Indices out of range are **ignored** (#1019: an ungrounded target is
+    not asserted — we do not invent a clash where the upstream did not ground one).
+
+    Args:
+        arguments: the belief labels, in order. Each becomes a positive unit
+            clause; the label names the point of rupture for the reader.
+        negated_indices: 0-based indices into ``arguments`` of the beliefs a
+            fallacy negates (already resolved from ``arg_N`` identifiers by the
+            producer — see ``_resolve_target_argument_index``).
+
+    Returns:
+        ``(base, names)`` where ``base[i]`` is clause ``i`` and ``names[i]`` is
+        its label (the argument, or ``"¬arg"`` for a fallacy-negation clause).
+
+    Examples (opaque synthetic atoms):
+
+        No fallacy ⇒ consistent base (cardinal 0, the D-forensic baseline)::
+
+            >>> base, names = build_belief_base(["x", "y", "z"], [])
+            >>> base
+            [[1], [2], [3]]
+            >>> minimal_retractions(base)[0]
+            0
+
+        One fallacy on the first argument ⇒ a real clash (cardinal 1)::
+
+            >>> base, names = build_belief_base(["x", "y"], [0])
+            >>> base
+            [[1], [2], [-1]]
+            >>> card, opts = minimal_retractions(base)
+            >>> card
+            1
+            >>> all(names[i] in ("x", "¬x") for opt in opts for i in opt)
+            True
+    """
+    n = len(arguments)
+    base: BeliefBase = [[i + 1] for i in range(n)]
+    names: List[str] = list(arguments)
+    seen: set[int] = set()
+    for idx in negated_indices:
+        if isinstance(idx, int) and 0 <= idx < n and idx not in seen:
+            seen.add(idx)
+            base.append([-(idx + 1)])
+            names.append(f"¬{arguments[idx]}")
+    return base, names
