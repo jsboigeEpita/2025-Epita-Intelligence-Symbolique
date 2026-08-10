@@ -1535,7 +1535,26 @@ def _write_delp_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 
 def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write QBF results to UnifiedAnalysisState (#90)."""
+    """Write QBF results to UnifiedAnalysisState (#90).
+
+    #1648 Wave-2 site 8: QBF's distinctive piece of data is the *alternating
+    quantifier prefix* (``output["quantifiers"]`` —
+    ``List[{"type": "forall"|"exists", "vars": [...]}]``) that the handler
+    returns at ``qbf_handler.py:167-174`` and ``_invoke_qbf`` passes through
+    unchanged (``invoke_callables.py:4536``). The writer used to keep only
+    ``f"QBF: {formula}"`` + the boolean ``valid`` and drop the quantifier
+    structure entirely — flattening a PSPACE-hard alternating-quantifier
+    problem to a single SAT boolean. The native propositional projection
+    (``formulas`` / ``satisfiable`` / ``model``) has no slot for the prefix,
+    so we attach a strictly-additive ``formalism_specific`` sidecar to the
+    entry dict without touching those projections.
+
+    Privacy: QBF quantifiers are formal logical symbols (a quantifier type
+    + variable names like ``x``/``y``), not source-derived prose, so the
+    sidecar is opaque even though ``propositional_analysis_results`` is not
+    a ``sanitize_state`` scrub target (the formula string already rides in
+    ``formulas`` regardless of this sidecar).
+    """
     if not output or not isinstance(output, dict):
         return
     state.add_propositional_analysis_result(
@@ -1543,6 +1562,30 @@ def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         satisfiable=output.get("valid", False),
         model={},
     )
+    # #1648 Wave-2 sidecar: preserve the quantifier prefix the handler
+    # returns under ``output["quantifiers"]``. Absent/empty ⇒ sidecar stays
+    # absent (no ``formalism_specific`` key — empty handler output is
+    # indistinguishable from a handler that never ran, so we don't
+    # synthesize a key).
+    quantifiers = output.get("quantifiers")
+    if isinstance(quantifiers, list) and quantifiers:
+        # Defensive: each entry must be a dict with a str ``type`` and a
+        # list ``vars``; drop malformed entries rather than crash the
+        # writer boundary.
+        sanitised = [
+            {
+                "type": str(q["type"]),
+                "vars": [v for v in q["vars"] if isinstance(v, str)],
+            }
+            for q in quantifiers
+            if isinstance(q, dict)
+            and isinstance(q.get("type"), str)
+            and isinstance(q.get("vars"), list)
+        ]
+        if sanitised:
+            state.propositional_analysis_results[-1]["formalism_specific"] = {
+                "qbf_quantifiers": sanitised,
+            }
 
 
 def _write_collaborative_analysis_to_state(

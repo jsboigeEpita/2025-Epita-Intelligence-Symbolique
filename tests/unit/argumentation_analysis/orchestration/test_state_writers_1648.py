@@ -747,13 +747,19 @@ class TestClFlattening1648:
 
 
 class TestQbfFlattening1648:
-    """QBF writer drops the alternating quantifier structure."""
+    """QBF writer carries the alternating quantifier prefix via the sidecar (Wave-2 site 8).
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason="Pinning #1648 Wave-1 known loss (QBF). Quantifier structure "
-        "dropped. Wave-2 fix.",
-    )
+    The handler returns ``output["quantifiers"]`` as
+    ``List[{"type": "forall"|"exists", "vars": [...]}]`` at
+    ``qbf_handler.py:167-174``, and ``_invoke_qbf`` passes it through
+    unchanged (``invoke_callables.py:4536``). The writer at
+    ``state_writers.py:_write_qbf_to_state`` keeps the formula + validity
+    boolean in the propositional projection (preserved) and attaches the
+    dropped quantifier prefix to the strictly additive ``formalism_specific``
+    sidecar. The xfail marker from #1672 R767 is removed (the strict-XPASS
+    is the signal the Wave-2 fix landed).
+    """
+
     def test_qbf_writer_preserves_quantifiers(self) -> None:
         state = _new_state()
         output = {
@@ -770,14 +776,49 @@ class TestQbfFlattening1648:
         pl = state.propositional_analysis_results
         assert pl, "QBF writer produced no entry"
         entry = pl[0]
-        extensions = entry.get("extensions", {})
-        formalism_specific = entry.get("formalism_specific", {})
-        has_quantifiers = (
-            "quantifiers" in extensions
-            or "quantifiers" in formalism_specific
-            or extensions.get("qbf_quantifiers") == output["quantifiers"]
-        )
-        assert has_quantifiers, (
-            f"QBF writer dropped quantifier structure: extensions={extensions!r}, "
-            f"formalism_specific={formalism_specific!r}"
-        )
+        # Native propositional projection untouched: formula rides in
+        # formulas, validity boolean in satisfiable.
+        assert entry["formulas"] == ["QBF: exists x. forall y. P(x,y)"], entry
+        assert entry["satisfiable"] is True, entry
+        # Sidecar carries the alternating quantifier prefix.
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("qbf_quantifiers") == output["quantifiers"], sidecar
+
+    def test_qbf_writer_omits_sidecar_when_quantifiers_absent(self) -> None:
+        """No quantifiers ⇒ no ``formalism_specific`` key (no phantom sidecar)."""
+        state = _new_state()
+        output = {
+            "valid": False,
+            "formula": "P(x)",
+            "quantifiers": [],
+        }
+
+        _write_qbf_to_state(output, state, {})
+
+        entry = state.propositional_analysis_results[0]
+        assert "formalism_specific" not in entry, entry
+
+    def test_qbf_writer_drops_malformed_quantifier_entries(self) -> None:
+        """Defensive: malformed quantifier dicts are dropped, well-formed pass."""
+        state = _new_state()
+        output = {
+            "valid": True,
+            "formula": "P(x)",
+            "quantifiers": [
+                {"type": "exists", "vars": ["x", "y"]},  # OK
+                {"type": "forall"},  # missing vars
+                {"vars": ["z"]},  # missing type
+                {"type": 42, "vars": ["w"]},  # non-str type
+                {"type": "exists", "vars": "not-a-list"},  # vars not a list
+                "not-a-dict",  # not a dict at all
+            ],
+        }
+
+        _write_qbf_to_state(output, state, {})
+
+        entry = state.propositional_analysis_results[0]
+        sidecar = entry.get("formalism_specific", {})
+        # Only the first, well-formed entry survives.
+        assert sidecar.get("qbf_quantifiers") == [
+            {"type": "exists", "vars": ["x", "y"]},
+        ], sidecar
