@@ -737,6 +737,39 @@ async def translate_to_aspic_rules(
     undercuts = _validate_aspic_undercuts(
         data, arg_by_id, _pl_atom, set(used_names), used_names
     )
+    # #1649 diagnostics (coord R783): on real corpus the handler emits 0 attack
+    # even though this translator ran (status "evaluated", axioms_count>0 ⇒
+    # #1679 leaf-atom derivation fired). The axis is alive end-to-end but
+    # produces no attack because no ``head_negated`` rule reaches the handler.
+    # This counter distinguishes the two remaining hypotheses WITHOUT further
+    # code — a corpus run's log answers it:
+    #   - raw>0, kept=0  ⇒ the LLM DID emit contradictions/undercuts, all
+    #     SILENTLY DROPPED at validation (fabricated id / self / non-existent
+    #     rule → bare ``continue`` in _validate_aspic_*).
+    #   - raw=0          ⇒ the LLM emitted NONE (a prompt/LLM question, not
+    #     plumbing).
+    # Surfaced as a warning so it is visible even when base rules make
+    # ``relations`` non-empty and the info log below hides the drop.
+    _raw_contradictions = (
+        len(data.get("contradictions", []) or []) if isinstance(data, dict) else 0
+    )
+    _raw_undercuts = (
+        len(data.get("undercuts", []) or []) if isinstance(data, dict) else 0
+    )
+    if _raw_contradictions or _raw_undercuts:
+        logger.warning(
+            "ASPIC+ #1649 diagnostics: LLM proposed %d contradiction(s) "
+            "(kept %d, dropped %d) and %d undercut(s) (kept %d, dropped %d). "
+            "Drops = fabricated/self ids or non-existent rule names "
+            "(anti-#1019 validation). If kept==0, no head_negated rule reaches "
+            "the handler ⇒ 0 attack.",
+            _raw_contradictions,
+            len(contradictions),
+            _raw_contradictions - len(contradictions),
+            _raw_undercuts,
+            len(undercuts),
+            _raw_undercuts - len(undercuts),
+        )
     relations = rules + contradictions + undercuts
     if relations:
         logger.info(

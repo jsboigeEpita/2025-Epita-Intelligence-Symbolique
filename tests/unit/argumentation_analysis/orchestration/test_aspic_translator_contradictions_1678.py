@@ -163,3 +163,58 @@ class TestThreeChannelsCoexist:
         # Rule names are unique (shared namespace).
         names = [r["name"] for r in out.relations]
         assert len(set(names)) == len(names), f"names must be unique, got {names}"
+
+
+class Test1649DropDiagnostics:
+    """#1649 (coord R783): on real corpus the handler emits 0 attack though the
+    translator ran. The diagnostic counter distinguishes — without further code
+    — whether the LLM emitted contradictions/undercuts that were SILENTLY
+    DROPPED at validation (raw>0, kept=0), or emitted NONE (raw=0). A corpus
+    run's log answers it; these tests pin the diagnostic contract.
+    """
+
+    def test_drop_diagnostic_fires_when_all_contradictions_dropped(self, caplog):
+        """raw>0, kept=0 ⇒ a warning logs the drop (the 'emitted-then-dropped'
+        hypothesis). This is the case that would explain 0 attack on a live axis.
+        """
+        payload = {
+            "rules": [{"premises": ["arg1"], "conclusion": "arg2", "name": "d_main"}],
+            "contradictions": [
+                {"attacker": "arg3", "target": "arg999_absent", "rationale": "x"},
+                {"attacker": "ghost", "target": "arg2", "rationale": "y"},
+            ],
+            "undercuts": [],
+        }
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger=tr.logger.name):
+            with patch.object(tr, "_llm_extract_relations", _llm_returning(payload)):
+                out = _run(tr.translate_to_aspic_rules("opaque text", _ARGS))
+
+        # Both contradictions dropped (absent ids) ⇒ no negated-head rule.
+        assert [r for r in out.relations if r.get("head_negated") is True] == []
+        diag = [r.message for r in caplog.records if "#1649 diagnostics" in r.message]
+        assert len(diag) == 1, f"expected one #1649 diagnostics warning, got {diag}"
+        msg = diag[0]
+        assert "2 contradiction(s)" in msg
+        assert "kept 0" in msg
+        assert "dropped 2" in msg
+
+    def test_no_diagnostic_when_llm_emitted_no_contradiction_or_undercut(self, caplog):
+        """raw=0 ⇒ NO #1649 diagnostics warning (the 'LLM emitted none'
+        hypothesis — silent, distinct from 'dropped'). Pin the negative so a
+        corpus log showing no warning reads unambiguously as 'emitted none'.
+        """
+        payload = {
+            "rules": [{"premises": ["arg1"], "conclusion": "arg2", "name": "d_main"}],
+            "contradictions": [],
+            "undercuts": [],
+        }
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger=tr.logger.name):
+            with patch.object(tr, "_llm_extract_relations", _llm_returning(payload)):
+                _run(tr.translate_to_aspic_rules("opaque text", _ARGS))
+
+        diag = [r.message for r in caplog.records if "#1649 diagnostics" in r.message]
+        assert diag == [], f"no diagnostic expected when raw=0, got {diag}"
