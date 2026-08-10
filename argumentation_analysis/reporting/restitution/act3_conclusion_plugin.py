@@ -101,6 +101,10 @@ _SUPPORT_PAIR_CAP = 3
 _SUPPORT_CYCLE_CAP = 2
 # #1645 PR2 — articulation points (sole-supporter) cap, same rationale.
 _ARTICULATION_CAP = 2
+# #1646 — minimal-retraction insight: at most this many distinct rupture
+# beliefs named in the prose (the cardinality is the headline; the beliefs are
+# the evidence). Small, same rationale as the cycle/articulation caps.
+_RETRACTION_CAP = 3
 _ASPIC_MEMBER_CAP = 120
 _ASPIC_MEMBERS_SHOWN = 4
 # #1649 — ASPIC+'s singular contribution is attack SCOPE (undercut has no
@@ -133,6 +137,7 @@ _ABSENT_DIMENSION_LABELS: Dict[str, str] = {
     "setaf_reasoning": "les attaques collectives (plusieurs arguments attaquant ensemble)",
     "weighted_argumentation": "la force pondérée des attaques",
     "bipolar_argumentation": "les relations de soutien entre arguments",
+    "belief_revision": "la révision des croyances (le point de rupture minimal)",
 }
 
 # Verdict bands (adapted from #1008 §2.1 to the restitution coverage model).
@@ -1035,6 +1040,115 @@ def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
     )
 
 
+def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project what belief revision alone establishes: the minimal retraction.
+
+    The axis's singular contribution (#1646 section A) is the **minimal
+    retraction** — the smallest set of beliefs whose removal restores
+    consistency. It is a global cardinality property no other axis produces: the
+    PL solver says UNSAT but not what to give up, and a contradiction detector
+    never asks what SURVIVES. NAMING the cardinality + the belief(s) to give up
+    (insight B-1) is the projection; when several retractions of the same
+    minimal cardinality restore consistency, NONE is the minimal one — the base
+    splits into incompatible but equally-minimal worlds (insight B-2, the figure
+    a single revised world cannot express); when the retraction touches only a
+    clashing belief and leaves the rest intact, the contradiction is INERT
+    (insight B-3) — the figure that goes against the rhetorical reflex that any
+    contradiction must bear on the thesis.
+
+    Returns None when the base is consistent (cardinality 0, honest absence), or
+    the insight degraded (cardinality -1 / missing — fail-loud #1019: never
+    fabricate a retraction the computation did not produce).
+    """
+    entries = getattr(state, "belief_revision_results", None) or []
+    if not isinstance(entries, list):
+        return None
+
+    # Pick the entry with the smallest cardinality >= 1 (the sharpest rupture).
+    # cardinal-1 is the canonical figure "one belief restores consistency"; if
+    # any entry reaches it, stop — no deeper search needed.
+    best_mr: Optional[Dict[str, Any]] = None
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        mr = entry.get("minimal_retraction")
+        if not isinstance(mr, dict):
+            continue
+        card = mr.get("cardinality")
+        if not isinstance(card, int) or card < 1:
+            continue
+        if best_mr is None or card < best_mr.get("cardinality", card + 1):
+            best_mr = mr
+            if card == 1:
+                break
+    if best_mr is None:
+        return None
+
+    card = best_mr["cardinality"]
+    options = best_mr.get("options") or []
+    n_options = sum(1 for opt in options if isinstance(opt, list))
+    # Flatten the distinct beliefs across all minimal options (the rupture
+    # candidates the reader names as evidence).
+    named: List[str] = []
+    seen: set[str] = set()
+    for opt in options:
+        if not isinstance(opt, list):
+            continue
+        for label in opt:
+            key = str(label).strip()
+            if key and key not in seen:
+                seen.add(key)
+                named.append(_truncate(key, _SUPPORT_NODE_CAP))
+                if len(named) >= _RETRACTION_CAP:
+                    break
+        if len(named) >= _RETRACTION_CAP:
+            break
+
+    base_size = best_mr.get("base_size", 0)
+    touched = best_mr.get("touched_count", 0)
+    untouched = (
+        base_size - touched
+        if isinstance(base_size, int) and isinstance(touched, int)
+        else 0
+    )
+
+    # B-1 names the cardinality + the rupture belief(s); B-2 takes precedence
+    # when several retractions of the SAME minimal cardinality restore
+    # consistency — none is *the* minimal one, and the base splits into
+    # incompatible but equally-minimal consistent worlds. That non-unicity is
+    # the figure no LLM produces (a single revised world is all a revision
+    # operator, or a prose paraphrase, can express), so it is named first when
+    # the computation surfaced more than one option.
+    if n_options >= 2:
+        lead = (
+            f"pas de rétractation minimale unique — {n_options} retraits de "
+            f"cardinal {card} restaurent également la cohérence : plusieurs "
+            "mondes consistants incompatibles, également minimaux"
+        )
+    elif card == 1:
+        lead = "une seule proposition suffit à restaurer la cohérence si on l'abandonne"
+    else:
+        lead = (
+            f"la rétractation minimale est de cardinal {card} — il faut renoncer "
+            f"à au moins {card} engagement(s) pour que le reste tienne"
+        )
+    parts: List[str] = [lead]
+    if named:
+        parts.append("le point de rupture porte sur : " + " | ".join(named))
+    # B-3: the contradiction is confined — some beliefs survive every retraction.
+    if untouched > 0:
+        parts.append(
+            f"la contradiction est confinée — {untouched} engagement(s) survivent "
+            "intact(s) : une contradiction réelle mais inerte, qui n'entraîne pas "
+            "la thèse"
+        )
+    return StructuredArgFinding(
+        capability="belief_revision",
+        label=_axis_label("belief_revision"),
+        statement=" ; ".join(parts),
+    )
+
+
 def _aspic_attack_statement(scope_counts: Dict[str, int]) -> str:
     """Render the ASPIC+ attack-scope finding (#1649).
 
@@ -1068,7 +1182,7 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
     word.
     """
     out: List[StructuredArgFinding] = []
-    for projector in (_aspic_finding, _bipolar_finding):
+    for projector in (_aspic_finding, _bipolar_finding, _belief_revision_finding):
         finding = projector(state)
         if finding is not None:
             out.append(finding)

@@ -3146,6 +3146,18 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
     When fallacies target arguments that have JTMS beliefs, the beliefs are
     contradicted. This function records the revision: original beliefs →
     revised (contradicted beliefs removed).
+
+    #1646 incr 3: also computes the axis's singular insight — the **minimal
+    retraction** (smallest set of beliefs whose removal restores consistency) —
+    JVM-free via PySAT, and carries it through ``minimal_retraction`` so the
+    Acte III reader can NAME it. The pipeline producer carries the same insight
+    via ``_invoke_belief_revision``; the two producers are **mode-exclusive**
+    (``workflow_name="conversational"`` returns from ``run_conversational_analysis``
+    before pipeline capabilities run, and vice-versa), so BOTH must compute it or
+    the insight dies in whichever mode the run uses. Guarded against the
+    ``logic/__init__`` jpype cascade (#1697): on ImportError the insight degrades
+    to cardinality -1 (honest — the reader stays mute), the contraction is
+    unaffected. Mirrors the pipeline wiring in ``_invoke_belief_revision``.
     """
     if not hasattr(state, "belief_revision_results"):
         return None
@@ -3194,11 +3206,46 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
     if not removed:
         return None
 
+    # #1646: minimal-retraction insight, JVM-free. A targeted belief is negated
+    # (the fallacy undermines its tenability) — build_belief_base adds the
+    # negation clause, minimal_retractions isolates the smallest set to give up.
+    # ``negated_indices`` = beliefs the fallacy loop removed from ``revised``.
+    negated_indices = [i for i, b in enumerate(original_beliefs) if b not in revised]
+    minimal_retraction: Optional[Dict[str, Any]] = None
+    try:
+        from argumentation_analysis.agents.core.logic.belief_revision_insight import (
+            build_belief_base,
+            minimal_retractions,
+        )
+
+        base, names = build_belief_base(original_beliefs, negated_indices)
+        card, options = minimal_retractions(base)
+        named_options = [[names[i] for i in opt] for opt in options]
+        touched = len({i for opt in options for i in opt})
+        minimal_retraction = {
+            "cardinality": card,
+            "options": named_options,
+            "base_size": len(base),
+            "touched_count": touched,
+            "degraded": False,
+        }
+    except ImportError:
+        # logic/__init__ jpype cascade (#1697) OR missing pysat: the insight
+        # degrades honestly (cardinality -1 → reader mute), the phase continues.
+        minimal_retraction = {
+            "cardinality": -1,
+            "options": [],
+            "base_size": 0,
+            "touched_count": 0,
+            "degraded": True,
+        }
+
     try:
         state.add_belief_revision_result(
             method="fallacy_contraction",
             original=original_beliefs,
             revised=revised,
+            minimal_retraction=minimal_retraction,
         )
     except Exception as e:
         logger.warning(f"Belief revision persistence failed: {e}")

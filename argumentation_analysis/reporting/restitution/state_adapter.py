@@ -28,6 +28,12 @@ _STATE_KEYS = (
     "modal_analysis_results",
     "dung_frameworks",
     "aspic_results",
+    # #1646 — belief revision reaches the Acte III conclusion: the minimal-
+    # retraction insight is NAMED by ``_belief_revision_finding`` (act3). The
+    # appendix attests the axis so a report whose conclusion rests on "the one
+    # belief to give up" carries that provenance in its own coverage table.
+    # Mirrors the #1667 carry of ``bipolar_results`` when that axis reached prose.
+    "belief_revision_results",
     # #1624 — three axes the PROSE mobilises that the appendix could not attest
     # at all, not even as "indisponible": a report whose conclusion rests on the
     # deliberation, on the governance vote and on the bipolar support relation

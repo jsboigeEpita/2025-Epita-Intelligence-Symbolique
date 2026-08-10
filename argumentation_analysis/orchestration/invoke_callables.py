@@ -3966,10 +3966,28 @@ async def _invoke_belief_revision(
 
     Uses upstream counter-arguments or fallacy detections as new evidence that
     forces actual revision of the original belief set.
+
+    #1646: the axis's singular insight is the **minimal retraction** — the
+    smallest set of beliefs whose removal restores consistency (a minimum
+    correction subset). It is a global cardinality property no other component
+    computes (PL says UNSAT but not what to give up; the Tweety-bound handler
+    below runs the Levi expansion, not a distance-based retraction). So it is
+    computed HERE as a pure SAT enumeration over the belief base (mirroring the
+    bipolar insight wiring, #1645) and attached to the result on BOTH the JVM-up
+    and the honest-degraded paths — a structural insight that lives only inside
+    the JVM-bound handler dies on the degraded path where the handler never runs
+    (#1670/#1677).
     """
     args = _extract_arguments_from_context(input_text, context)
     beliefs = context.get("belief_set") or args
     method = context.get("revision_method", "dalal")
+
+    # Upstream fallacies — read once: they drive both the Levi ``new_belief`` and
+    # the belief-base construction (a fallacy negates its target, #1646 incr 2).
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    fallacies = (
+        fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
+    )
 
     # Derive new_belief from upstream counter-arguments or fallacies (not from args!)
     new_belief = context.get("new_belief")
@@ -3982,19 +4000,78 @@ async def _invoke_belief_revision(
                 new_belief = f"NOT({llm_ca.get('target_argument', 'unknown')[:60]})"
 
         # Try fallacy output — a detected fallacy undermines a belief
-        if not new_belief:
-            fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
-            if isinstance(fallacy_output, dict):
-                fallacies = fallacy_output.get("fallacies", [])
-                if fallacies and isinstance(fallacies[0], dict):
-                    ft = fallacies[0].get("type", fallacies[0].get("fallacy_type", ""))
-                    new_belief = (
-                        f"Fallacy detected: {ft} — undermines argument credibility"
-                    )
+        if not new_belief and fallacies and isinstance(fallacies[0], dict):
+            ft = fallacies[0].get("type", fallacies[0].get("fallacy_type", ""))
+            new_belief = f"Fallacy detected: {ft} — undermines argument credibility"
 
         # Last resort: generate a revision-triggering belief
         if not new_belief:
             new_belief = "New evidence contradicts one of the original claims"
+
+    # #1646 incr 3: build a genuinely-inconsistent belief base (each fallacy
+    # negates its target) and compute the minimal retraction JVM-free. The import
+    # is guarded: ``agents.core.logic.__init__`` eagerly imports the logic agents
+    # → ``TweetyBridge`` → bare ``import jpype`` (#1697). In a jpype-less env
+    # (the #1677 probe, or jpype genuinely absent) the package import raises
+    # ImportError HERE — degrade the INSIGHT honestly (no minimal retraction
+    # computable), not the pipeline. Mirrors the guarded import in _invoke_bipolar
+    # (l.3600). ``minimal_retractions`` itself imports pysat lazily, so a missing
+    # pysat degrades the same way.
+    negated_indices: List[int] = []
+    for f in fallacies:
+        if not isinstance(f, dict):
+            continue
+        idx = _resolve_target_argument_index(_read_fallacy_target(f), len(args))
+        if idx is not None:
+            negated_indices.append(idx)
+    # One negation clause per targeted belief (build_belief_base dedups too, but
+    # resolving once here keeps the count honest for logging).
+    negated_indices = sorted(set(negated_indices))
+
+    minimal_retraction: Optional[Dict[str, Any]] = None
+    try:
+        from argumentation_analysis.agents.core.logic.belief_revision_insight import (
+            build_belief_base,
+            minimal_retractions,
+        )
+
+        base, names = build_belief_base(args, negated_indices)
+        card, options = minimal_retractions(base)
+        # Map option index-tuples → named belief labels so the reader can NAME the
+        # point of rupture (insight B-1). ``touched_count`` drives the B-3
+        # inert-contradiction signal (beliefs that survive every retraction).
+        named_options = [[names[i] for i in opt] for opt in options]
+        touched = len({i for opt in options for i in opt})
+        minimal_retraction = {
+            "cardinality": card,
+            "options": named_options,
+            "base_size": len(base),
+            "touched_count": touched,
+            "degraded": False,
+        }
+    except ImportError:
+        # logic/__init__ cascade (#1697) OR missing pysat: the insight is
+        # unavailable, not the phase. cardinality -1 → the reader produces
+        # nothing (honest), the pipeline continues.
+        minimal_retraction = {
+            "cardinality": -1,
+            "options": [],
+            "base_size": 0,
+            "touched_count": 0,
+            "degraded": True,
+        }
+
+    # #1646: resolve the JVM state ONCE, before the try (mirrors _invoke_bipolar
+    # l.3627). ``jvm_setup`` imports jpype at module level, so in a jpype-less env
+    # the import raises ImportError HERE — treat as "JVM not available" so the
+    # handler import below raises into the except and the honest-absent branch
+    # fires (the insight still reaches the state).
+    try:
+        from argumentation_analysis.core.jvm_setup import is_jvm_started
+
+        jvm_up = is_jvm_started()
+    except ImportError:
+        jvm_up = False
 
     try:
         from argumentation_analysis.agents.core.logic.belief_revision_handler import (
@@ -4011,14 +4088,53 @@ async def _invoke_belief_revision(
             safe_beliefs = [_pl_atom("initial_belief", prefix="b")]
 
         handler = BeliefRevisionHandler()  # type: ignore[no-untyped-call]
-        return await asyncio.to_thread(
+        result = await asyncio.to_thread(
             handler.revise, safe_beliefs, safe_new_belief, method
         )
+        if isinstance(result, dict):
+            result["minimal_retraction"] = minimal_retraction
+        return result
     except Exception as e:
+        # Three states, never two (mirrors _invoke_bipolar l.3646-3702). JVM
+        # absent ⇒ honest-absent: the phase continues degraded and the
+        # minimal-retraction insight (computed JVM-free above) still reaches the
+        # state and the reader. Handler/analysis failure WITH the JVM up ⇒ fail
+        # loud with the real cause (preserved via ``from e``), never relabeled
+        # as an environment gap. Anti-pendule: do NOT swap the raise for a silent
+        # ``return {}`` — that would trade this defect for its mirror (#1019).
+        #
+        # NB: this adds an honest-absent branch to a handler that previously
+        # raised unconditionally — #1646's architecture lesson (R779, mirror
+        # #1645/#1670) requires the insight to survive the degraded path. The
+        # ``logic/__init__`` jpype cascade itself stays tracked in #1697.
+        if not jvm_up:
+            logger.warning(
+                "Belief revision unavailable: JVM not started (honest-absent, "
+                "the phase continues degraded; minimal-retraction insight still "
+                "computed). Underlying signal: %s",
+                e,
+            )
+            return {
+                "method": method,
+                "original": list(beliefs) if isinstance(beliefs, list) else [],
+                "new_belief": new_belief,
+                "revised": [],  # tri-state: not computed under Levi (JVM absent)
+                "statistics": {
+                    "handler": "BeliefRevisionHandler",
+                    "backend": "jvm-unavailable",
+                },
+                "minimal_retraction": minimal_retraction,
+                "degraded": True,
+                "absent_reason": "jvm_not_started",
+                "message": (
+                    "belief revision unavailable: JVM not started (honest-absent)"
+                ),
+                "error": f"{type(e).__name__}: {e}",
+            }
         raise RuntimeError(
-            f"Belief revision ({method}) unavailable: JVM/Tweety required ({e}). "
-            "Install JVM and ensure Tweety JARs are on the classpath."
-        )
+            f"Belief revision ({method}) failed with JVM up: "
+            f"{type(e).__name__}: {e}"
+        ) from e
 
 
 async def _invoke_probabilistic(

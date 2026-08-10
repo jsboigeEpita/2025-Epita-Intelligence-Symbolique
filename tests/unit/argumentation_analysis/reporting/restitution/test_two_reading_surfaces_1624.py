@@ -95,6 +95,7 @@ def _full_state() -> Dict[str, Any]:
         "modal_analysis_results": [{"consistent": True}],
         "dung_frameworks": {"dung_1": {"name": "dung_arbitration"}},
         "aspic_results": [{"id": "aspic_1", "extensions": [["a"]]}],
+        "belief_revision_results": [{"method": "dalal"}],
         "bipolar_results": [{"supports": [["a", "b"]]}],
         "debate_transcripts": [{"turns": []}, {"turns": []}],
         "governance_decisions": [{"method": "borda"}],
@@ -177,6 +178,7 @@ PROSE_BASELINE = frozenset(
     {
         "argument_quality_scores",
         "aspic_results",
+        "belief_revision_results",
         "bipolar_results",
         "counter_arguments",
         "deanonymized",
