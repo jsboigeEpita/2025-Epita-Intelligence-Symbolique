@@ -1897,15 +1897,19 @@ class TestBeliefRevisionValueGate:
     Gate: must return revised belief set and flag fallback.
     """
 
-    async def test_belief_revision_fallback_raises_fail_loud(self):
-        """Belief revision must RAISE (fail-loud) when JVM unavailable — anti-theatre (#1252/#1019).
+    async def test_belief_revision_jvm_absent_returns_honest_degraded_dict(self):
+        """Belief revision returns an honest-absent degraded dict when the JVM is
+        down — NOT a raise, NOT a fabricated revision (#1646, mirror #1645/#1670).
 
-        Contract evolution: the earlier #1005/#1013 guards asserted a
-        *Python-fallback dict* (literal set modification: drop negated belief,
-        append new belief). Post-#1252/#1019 the except block was hardened to
-        RAISE RuntimeError so a fabricated revised set can never enter state.
-        STRICTER than the old revised-differs-from-original dicts — the raise
-        proves no synthetic revision is produced. Triage #1336.
+        Contract evolution: the #1005/#1013 guards asserted a Python-fallback
+        dict (fabricated revised set); #1252/#1019 hardened that to a RAISE so no
+        synthetic revision entered state. #1646 changes the contract again: the
+        minimal-retraction insight is computed JVM-free and MUST reach the reader
+        on the degraded path (the architecture lesson of #1645/#1670 — an insight
+        that lives only in the JVM-bound handler dies there). So the producer now
+        returns a degraded dict (``degraded: True``, ``revised: []`` tri-state)
+        instead of raising. Anti-theatre is preserved: ``revised`` is EMPTY (no
+        fabricated revision), and the JVM-free insight is the real signal.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_belief_revision,
@@ -1919,8 +1923,41 @@ class TestBeliefRevisionValueGate:
         with patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
+        ), patch(
+            "argumentation_analysis.core.jvm_setup.is_jvm_started",
+            return_value=False,
         ):
-            with pytest.raises(RuntimeError, match="Belief revision .* unavailable"):
+            result = await _invoke_belief_revision("test", context)
+
+        assert isinstance(result, dict)
+        assert result["degraded"] is True
+        assert result["absent_reason"] == "jvm_not_started"
+        # anti-theatre: no fabricated revised set enters state (tri-state empty).
+        assert result["revised"] == []
+        # the JVM-free minimal-retraction insight still reaches the state/reader.
+        assert "minimal_retraction" in result
+
+    async def test_belief_revision_jvm_up_handler_failure_raises_fail_loud(self):
+        """JVM up + handler/analysis raises ⇒ fail loud with the real cause. The
+        #1252/#1019 anti-theatre guard, now correctly scoped to the JVM-up path
+        (a handler failure with the JVM up is ours, not the environment's)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_belief_revision,
+        )
+
+        context = {
+            "belief_set": ["a", "b"],
+            "new_belief": "c",
+            "revision_method": "dalal",
+        }
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
+            side_effect=TypeError("bad belief shape in revise"),
+        ), patch(
+            "argumentation_analysis.core.jvm_setup.is_jvm_started",
+            return_value=True,
+        ):
+            with pytest.raises(RuntimeError, match="Belief revision .* failed with JVM up"):
                 await _invoke_belief_revision("test", context)
 
 

@@ -70,6 +70,7 @@ _MOBILISATION: Dict[str, tuple] = {
     "axe_dung": (("dung_frameworks",), "prose", "actes II–III"),
     "axe_aspic": (("aspic_results",), "prose", "acte III"),
     "axe_bipolaire": (("bipolar_results",), "prose", "acte III"),
+    "axe_revision": (("belief_revision_results",), "prose", "acte III"),
     "deliberation": (("debate_transcripts",), "prose", "actes II–III"),
     "gouvernance": (("governance_decisions",), "prose", "actes II–III"),
     "arg_structuree": (("structured_arg_status",), "failure_only", "acte III"),
@@ -291,6 +292,12 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     counts["axe_dung"] = "disponible" if _g("dung_frameworks") else "indisponible"
     counts["axe_aspic"] = "disponible" if _g("aspic_results") else "indisponible"
     counts["axe_bipolaire"] = "disponible" if _g("bipolar_results") else "indisponible"
+    # #1646 — belief revision reaches the Acte III prose (the minimal-retraction
+    # insight is named by _belief_revision_finding), so the coverage table
+    # attests it like the other structured-argumentation axes.
+    counts["axe_revision"] = (
+        "disponible" if _g("belief_revision_results") else "indisponible"
+    )
 
     # #1624 item 3 — two axes the Actes II and III genuinely mobilise and that
     # this table did not name at all. A coverage table that omits the

@@ -203,6 +203,20 @@ _SYMBOL_MAPPING_LIST_FIELDS = {
     "nl_to_logic_translations": "variables",
 }
 
+# List-of-dicts fields whose sub-key is itself a DICT carrying nominative list
+# leaves (#1646): top-level field -> {dict_subkey -> {leaf_subkeys}}. Unlike
+# ``_OPAQUE_NESTED_ITEM_SUBKEYS`` (5d), the sub-key is a single dict, not a list
+# of dicts — so the leaves hang directly off it.
+#   belief_revision_results[*].minimal_retraction.options = [[belief, ...], ...]
+#       ``options`` is a list-of-lists of belief labels (the argument text that
+#       names the rupture point). The list topology + arity survive (how many
+#       retraction options, how many beliefs each); only the nominative strings
+#       are opacified. The sibling ``cardinality``/``base_size``/``touched_count``
+#       are ints and are intentionally NOT listed, so they survive untouched.
+_OPAQUE_DEEP_DICT_LEAVES: Dict[str, Dict[str, set[str]]] = {
+    "belief_revision_results": {"minimal_retraction": {"options"}},
+}
+
 # Fields that are purely narrative text -> replaced with length + marker.
 _NARRATIVE_FIELDS = {
     "narrative_synthesis",
@@ -438,6 +452,23 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                         for leaf in leaf_subkeys:
                             if leaf in leaf_item:
                                 leaf_item[leaf] = _opacify_list_values(leaf_item[leaf])
+
+    # 5e. Opacify nominative leaves nested inside a DICT sub-key of a
+    #     list-of-dicts field (#1646): the sub-key is a single dict (not a list
+    #     of dicts), so the leaves hang directly off it. Mirrors 5d one level
+    #     shallower on the subtree.
+    for field, nested_spec in _OPAQUE_DEEP_DICT_LEAVES.items():
+        if field in data and isinstance(data[field], list):
+            for item in data[field]:
+                if not isinstance(item, dict):
+                    continue
+                for dict_key, leaf_subkeys in nested_spec.items():
+                    sub = item.get(dict_key)
+                    if not isinstance(sub, dict):
+                        continue
+                    for leaf in leaf_subkeys:
+                        if leaf in sub:
+                            sub[leaf] = _opacify_list_values(sub[leaf])
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).

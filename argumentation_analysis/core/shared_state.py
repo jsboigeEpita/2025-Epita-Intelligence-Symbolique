@@ -989,9 +989,23 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         return as_id
 
     def add_belief_revision_result(
-        self, method: str, original: List[str], revised: List[str]
+        self,
+        method: str,
+        original: List[str],
+        revised: List[str],
+        minimal_retraction: Optional[Dict[str, Any]] = None,
     ) -> str:
-        """Add a belief revision result."""
+        """Add a belief revision result.
+
+        ``minimal_retraction`` (#1646) carries the axis's singular structural
+        insight — the smallest set of beliefs whose removal restores consistency
+        (a minimum correction subset), as ``{cardinality, options, ...}``. It is
+        computed JVM-free by ``_invoke_belief_revision`` (mirroring the bipolar
+        insight wiring, #1645), so it is populated even on the honest-degraded
+        path. ``None`` means "not computed" (callers that pre-date the insight,
+        or an honest degrade of the insight itself); the reader names it only when
+        the cardinality is >= 1.
+        """
         br_id = self._generate_id("brevision", self.belief_revision_results)
         entry = {
             "id": br_id,
@@ -999,6 +1013,8 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "original": original,
             "revised": revised,
         }
+        if minimal_retraction is not None:
+            entry["minimal_retraction"] = minimal_retraction
         self.belief_revision_results.append(entry)
         state_logger.info(f"Belief revision result added: {br_id} (method: {method})")
         return br_id

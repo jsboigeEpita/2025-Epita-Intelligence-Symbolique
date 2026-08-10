@@ -869,7 +869,14 @@ def _write_belief_revision_to_state(
         original = []
     if not isinstance(revised, list):
         revised = []
-    state.add_belief_revision_result(method, original, revised)
+    # #1646: persist the distinctive structural insight (minimal retraction).
+    # Computed JVM-free by _invoke_belief_revision, so it is present even on the
+    # honest-degraded path. The reader names it when cardinality >= 1; a missing
+    # or degraded dict is an honest "insight unavailable" (stored as None).
+    minimal_retraction = output.get("minimal_retraction")
+    if not isinstance(minimal_retraction, dict):
+        minimal_retraction = None
+    state.add_belief_revision_result(method, original, revised, minimal_retraction)
 
 
 def _write_dialogue_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
