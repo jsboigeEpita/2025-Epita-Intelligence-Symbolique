@@ -1004,10 +1004,13 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     consistency. It is a global cardinality property no other axis produces: the
     PL solver says UNSAT but not what to give up, and a contradiction detector
     never asks what SURVIVES. NAMING the cardinality + the belief(s) to give up
-    (insight B-1) is the projection; when the retraction touches only a clashing
-    belief and leaves the rest intact, the contradiction is INERT (insight B-3)
-    — the figure that goes against the rhetorical reflex that any contradiction
-    must bear on the thesis.
+    (insight B-1) is the projection; when several retractions of the same
+    minimal cardinality restore consistency, NONE is the minimal one — the base
+    splits into incompatible but equally-minimal worlds (insight B-2, the figure
+    a single revised world cannot express); when the retraction touches only a
+    clashing belief and leaves the rest intact, the contradiction is INERT
+    (insight B-3) — the figure that goes against the rhetorical reflex that any
+    contradiction must bear on the thesis.
 
     Returns None when the base is consistent (cardinality 0, honest absence), or
     the insight degraded (cardinality -1 / missing — fail-loud #1019: never
@@ -1039,6 +1042,7 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
 
     card = best_mr["cardinality"]
     options = best_mr.get("options") or []
+    n_options = sum(1 for opt in options if isinstance(opt, list))
     # Flatten the distinct beliefs across all minimal options (the rupture
     # candidates the reader names as evidence).
     named: List[str] = []
@@ -1064,8 +1068,20 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
         else 0
     )
 
-    # B-1: name the cardinality + the rupture belief(s).
-    if card == 1:
+    # B-1 names the cardinality + the rupture belief(s); B-2 takes precedence
+    # when several retractions of the SAME minimal cardinality restore
+    # consistency — none is *the* minimal one, and the base splits into
+    # incompatible but equally-minimal consistent worlds. That non-unicity is
+    # the figure no LLM produces (a single revised world is all a revision
+    # operator, or a prose paraphrase, can express), so it is named first when
+    # the computation surfaced more than one option.
+    if n_options >= 2:
+        lead = (
+            f"pas de rétractation minimale unique — {n_options} retraits de "
+            f"cardinal {card} restaurent également la cohérence : plusieurs "
+            "mondes consistants incompatibles, également minimaux"
+        )
+    elif card == 1:
         lead = "une seule proposition suffit à restaurer la cohérence si on l'abandonne"
     else:
         lead = (

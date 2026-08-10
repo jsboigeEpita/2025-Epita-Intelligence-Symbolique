@@ -98,6 +98,10 @@ class TestJvmAbsentIsHonestAbsentWithInsight:
         mr = result["minimal_retraction"]
         assert mr["degraded"] is False  # the INSIGHT computed (jpype importable)
         assert mr["cardinality"] == 1  # the fallacy created a real clash
+        # B-2: one fallacy on arg_1 yields ≥2 cardinal-1 retractions (drop the
+        # belief OR drop its negation) — the non-unicity the reader names. The
+        # multiplicity reaches the state, not just the cardinality.
+        assert len(mr["options"]) >= 2
         # The retraction options name the clashing belief (alpha) or its negation.
         flat = {label for opt in mr["options"] for label in opt}
         assert any("alpha" in label for label in flat)
@@ -272,12 +276,38 @@ def _state_with(mr):
 
 
 class TestBeliefRevisionFinding:
-    def test_cardinality_one_names_rupture_belief(self):
+    def test_cardinality_one_unique_names_rupture_belief(self):
         from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
             _belief_revision_finding,
         )
 
-        # B-1: one belief restores consistency; two cardinal-1 options (alpha / ¬alpha).
+        # B-1: a SINGLE minimal retraction of cardinal 1 — one belief restores
+        # consistency, and the reader NAMES it as the unique point of rupture.
+        state = _state_with(
+            {
+                "cardinality": 1,
+                "options": [["claim_alpha"]],
+                "base_size": 4,
+                "touched_count": 1,
+                "degraded": False,
+            }
+        )
+        finding = _belief_revision_finding(state)
+        assert finding is not None
+        assert finding.capability == "belief_revision"
+        assert "une seule proposition" in finding.statement
+        assert "alpha" in finding.statement  # the rupture belief is NAMED
+
+    def test_non_unique_retraction_names_incompatibility(self):
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _belief_revision_finding,
+        )
+
+        # B-2: TWO retractions of cardinal 1 restore consistency (alpha or its
+        # negation). None is *the* minimal one — the base splits into two
+        # incompatible but equally-minimal consistent worlds. This is the figure
+        # no LLM produces (a single revised world is all a revision operator can
+        # express), so it must reach the rendered conclusion by name. DoD #1646.
         state = _state_with(
             {
                 "cardinality": 1,
@@ -289,9 +319,12 @@ class TestBeliefRevisionFinding:
         )
         finding = _belief_revision_finding(state)
         assert finding is not None
-        assert finding.capability == "belief_revision"
-        assert "une seule proposition" in finding.statement
-        assert "alpha" in finding.statement  # the rupture belief is NAMED
+        # The non-unicity is the headline, not folded into a generic rupture list.
+        assert "pas de rétractation minimale unique" in finding.statement
+        assert "incompatibles" in finding.statement
+        assert "également minimaux" in finding.statement
+        # The cardinality still appears (both options are cardinal 1).
+        assert "cardinal 1" in finding.statement
 
     def test_cardinality_two_names_cardinal(self):
         from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
