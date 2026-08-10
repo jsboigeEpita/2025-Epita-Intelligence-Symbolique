@@ -1379,6 +1379,30 @@ def _aspic_state(extensions: object) -> SimpleNamespace:
     return state
 
 
+def _aspic_state_with_attacks(
+    attacks: list, extensions: object = None
+) -> SimpleNamespace:
+    """#1649: an ASPIC state carrying the qualified ``attacks`` list (the
+    #1681 writer's top-level field). ``attacks`` uses the real handler shape
+    (``{attacker_rule, attacker_premises, target, scope}``), verified firsthand
+    in the producer tests — this helper feeds the READER, the #1649 deliverable.
+    """
+    state = _rich_state()
+    state.aspic_results = [
+        {
+            "id": "aspic_1",
+            "reasoner_type": "simple",
+            "extensions": [[]] if extensions is None else extensions,
+            "statistics": {
+                "extensions_count": 1,
+                "attacks_count": len(attacks),
+            },
+            "attacks": attacks,
+        }
+    ]
+    return state
+
+
 class TestStructuredArgPresenceChannel:
     """A structured axis that SUCCEEDS must reach the conclusion (#1667)."""
 
@@ -1524,6 +1548,99 @@ class TestStructuredArgPresenceChannel:
             "aspic_plus_reasoning",
             "bipolar_argumentation",
         }
+
+    # ------------------------------------------------------------------
+    # #1649 — ASPIC+ attack SCOPE (undercut/rebut/undermine) is the axis's
+    # singular contribution: no other axis names HOW a derivation is attacked.
+    # The producer (#1678 handler ``_qualify_attacks`` + #1679 translator
+    # emitting ``head_negated`` rules) populates ``attacks[*].scope`` ONLY on a
+    # real LLM-translator run (CI / no-API-key ⇒ honest empty). These tests use
+    # the real handler output shape (verified firsthand: producer tests
+    # ``test_aspic_negation_scope_1678`` + ``test_aspic_translator_contradictions_1678``,
+    # 13 passed) — they exercise the READER (the #1649 deliverable), not the
+    # producer. Coord R782 anti-#1019: the deliverable is that the RENDERED
+    # output changes when ``attacks`` changes, verified consumer-side below.
+    # ------------------------------------------------------------------
+
+    def test_aspic_qualified_attacks_reach_the_conclusion_1649(self) -> None:
+        """Qualified attacks ⇒ the finding names the SCOPE, undercut leading."""
+        state = _aspic_state_with_attacks(
+            [
+                {
+                    "attacker_rule": "d_undercut",
+                    "attacker_premises": ["arg_d"],
+                    "target": "d_main",
+                    "scope": "undercut",
+                },
+                {
+                    "attacker_rule": "d_rebut",
+                    "attacker_premises": ["arg_b"],
+                    "target": "concl_x",
+                    "scope": "rebut",
+                },
+            ]
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert finding.capability == "aspic_plus_reasoning"
+        stmt = finding.statement
+        assert "undercut" in stmt
+        assert "rebut" in stmt
+        # The singular scope (undercut) leads the sentence.
+        assert stmt.index("undercut") < stmt.index("rebut")
+        # Privacy HARD: raw source-derived atoms never reach the prose.
+        assert "d_main" not in stmt
+        assert "concl_x" not in stmt
+
+    def test_aspic_rendered_statement_changes_when_attacks_change_1649(self) -> None:
+        """Anti-#1019 (coord R782): same state with vs without ``attacks``
+        yields DIFFERENT rendered conclusions — the field genuinely drives the
+        prose, not just the writer/bundle (the witness-is-not-the-decider trap).
+        """
+        attacks = [
+            {
+                "attacker_rule": "d_u",
+                "attacker_premises": ["a"],
+                "target": "rule_x",
+                "scope": "undercut",
+            }
+        ]
+        with_stmt = (
+            build_act3_evidence(_aspic_state_with_attacks(attacks))
+            .structured_findings[0]
+            .statement
+        )
+        # Same state minus the attacks field (producer honest-empty, vacuous ext).
+        without = build_act3_evidence(_aspic_state([[]])).structured_findings
+        assert "undercut" in with_stmt
+        assert without == []
+        assert with_stmt != ""
+
+    def test_aspic_empty_attacks_do_not_open_the_scope_channel_1649(self) -> None:
+        """The producer's honest-empty ``attacks=[]`` (ran, no attack) must NOT
+        fabricate a scope statement — mirrors the contested-sets honest-absence
+        gate. Tri-state safe: an empty list must read as "no attack".
+        """
+        state = _aspic_state_with_attacks([], extensions=[[]])
+        assert build_act3_evidence(state).structured_findings == []
+
+    def test_aspic_attacks_take_priority_over_contested_sets_1649(self) -> None:
+        """When BOTH attacks and contested extensions are present, the singular
+        contribution (scope) leads; contested sets (Dung-equivalent) defer.
+        """
+        state = _aspic_state_with_attacks(
+            [
+                {
+                    "attacker_rule": "d_u",
+                    "attacker_premises": ["a"],
+                    "target": "r",
+                    "scope": "undercut",
+                }
+            ],
+            extensions=[["socle", "d1"], ["socle", "d2"]],
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert "undercut" in finding.statement
+        assert "s'excluent mutuellement" not in finding.statement
 
     @pytest.mark.parametrize(
         "state_factory, payload",
