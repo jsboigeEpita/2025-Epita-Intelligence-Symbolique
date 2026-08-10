@@ -3644,6 +3644,23 @@ def _propagate_structured_arg_cause(
     context[_translation_error_key(capability)] = error
 
 
+def _structured_arg_cause(context: Dict[str, Any], capability: str) -> Optional[str]:
+    """Read the discriminated translation cause a translator wrote into context.
+
+    Inverse of ``_propagate_structured_arg_cause`` (which writes it). Used by
+    the Dung-family invokes to decide whether an arbiter already answered
+    (#1629 soustraction): ``no_genuine_relations`` means the translator RAN and
+    found nothing — an analytical result, distinct from ``translator_failed`` /
+    ``translator_unconfigured`` where no answer was obtained.
+    """
+    from argumentation_analysis.orchestration.state_writers import (
+        _translation_cause_key,
+    )
+
+    cause = context.get(_translation_cause_key(capability))
+    return cause if isinstance(cause, str) else None
+
+
 async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke bipolar argumentation handler with JVM fallback."""
     args = context.get("arguments") or _extract_arguments_from_context(
@@ -4509,6 +4526,17 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
         and isinstance(raw_attacks[0], dict)
     ):
         attacks = raw_attacks
+    elif _structured_arg_cause(context, "setaf_reasoning") == "no_genuine_relations":
+        # #1629 soustraction: the translator arbitrated and found NO genuine
+        # joint attacks in the source — an analytical result, not a failure
+        # (it is correct on 2/3 corpus). Do NOT fall back to synthetic
+        # _generate_attacks_from_args pairs: that fabricated edges whose
+        # endpoints were never inventory members, so the handler dropped 100%
+        # of them while the producer echoed the input as a result (#1698).
+        # Fabricating nothing is the honest input to a "nothing to attack"
+        # graph. (Dung/social have no translator covering naked attacks and
+        # stay out of this scope.)
+        attacks = []
     else:
         pairs = context.get("attacks") or _generate_attacks_from_args(args, context)
         attacks = _setaf_attacks_from_pairs(pairs)
@@ -4584,6 +4612,16 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
             for t in raw_attacks
             if isinstance(t, (list, tuple)) and len(t) >= 3
         ]
+    elif (
+        _structured_arg_cause(context, "weighted_argumentation")
+        == "no_genuine_relations"
+    ):
+        # #1629 soustraction: the translator arbitrated and found NO genuine
+        # weighted attacks — an analytical result, not a failure. Do NOT fall
+        # back to synthetic _generate_attacks_from_args pairs with a fabricated
+        # neutral weight: those edges were dropped by the handler (out-of-
+        # inventory sources) and echoed as a result (#1698). See setaf twin.
+        attacks = []
     else:
         pairs = context.get("attacks") or _generate_attacks_from_args(args, context)
         attacks = _weighted_attacks_from_pairs(pairs)

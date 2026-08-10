@@ -21,6 +21,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 import pytest
+from unittest.mock import AsyncMock, patch
 
 from argumentation_analysis.orchestration.invoke_callables import (
     _annotate_attack_retention,
@@ -268,3 +269,193 @@ class TestAnnotateHonestReport:
         assert result["statistics"]["semantics_computed"] == 4
         assert result["statistics"]["handler"] == "AFHandler"
         assert result["statistics"]["attacks_count"] == 0  # aligned to retained
+
+
+# ============================================================
+# #1629 soustraction — translator answered "nothing" ⇒ no fabrication
+# ============================================================
+#
+# Coord ruling (R786, posted on #1629): when a translator arbitrated and
+# returned ``no_genuine_relations``, the synthetic ``_generate_attacks_from_args``
+# fallback must NOT fire. Tested through the real ``_invoke_setaf`` /
+# ``_invoke_weighted`` with the translator outcome + handler stubbed
+# (anti-#1019: real producer path, not a literal). Dung/social have no
+# translator covering naked attacks and stay out of this scope.
+
+
+class TestSoustractionNoGenuineRelations1629:
+    """#1629: ``no_genuine_relations`` (arbiter answered nothing) ⇒ fabricate
+    nothing. ``evaluated`` ⇒ use the genuine relations. ``translator_failed`` /
+    absent ⇒ arbiter did not answer ⇒ synthetic fallback stands (regression)."""
+
+    @staticmethod
+    def _stub_handler_module(attacks_sink: Dict[str, Any]) -> Any:
+        """Build a stub SetAFHandler/WeightedHandler capturing the attacks it
+        received, so we can assert what the invoke layer fed it."""
+
+        class _Stub:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+
+            def analyze_setaf(
+                self, args: Any, attacks: Any, semantics: Any
+            ) -> Dict[str, Any]:
+                attacks_sink["setaf"] = attacks
+                return {
+                    "semantics": semantics,
+                    "arguments": list(args),
+                    "attacks": attacks,
+                    "extensions": [],
+                    "statistics": {
+                        "arguments_count": len(args),
+                        "attacks_count": len(attacks),
+                    },
+                }
+
+            def analyze_weighted_framework(
+                self, args: Any, attacks: Any, semantics: Any
+            ) -> Dict[str, Any]:
+                attacks_sink["weighted"] = attacks
+                return {
+                    "semantics": semantics,
+                    "arguments": list(args),
+                    "attacks": [
+                        {"source": s, "target": t, "weight": w} for s, t, w in attacks
+                    ],
+                    "extensions": [],
+                    "statistics": {
+                        "arguments_count": len(args),
+                        "attacks_count": len(attacks),
+                    },
+                }
+
+        return _Stub
+
+    async def test_setaf_subtracts_when_translator_found_nothing(self) -> None:
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
+        from argumentation_analysis.orchestration.structured_arg_translator import (
+            CAUSE_NO_GENUINE_RELATIONS,
+            TranslationResult,
+        )
+
+        sink: Dict[str, Any] = {}
+        outcome = TranslationResult(
+            relations=[], cause=CAUSE_NO_GENUINE_RELATIONS, error=""
+        )
+        with patch(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_setaf_attacks",
+            new=AsyncMock(return_value=outcome),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.setaf_handler.SetAFHandler",
+            self._stub_handler_module(sink),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.tweety_initializer."
+            "TweetyInitializer",
+            return_value=None,
+        ):
+            output = await _invoke_setaf("text", {"arguments": ["a", "b"]})
+
+        # Soustraction: the handler received NO fabricated attacks.
+        assert sink["setaf"] == []
+        assert output["attacks"] == []
+        assert output["attacks_submitted"] == 0
+        assert output["attacks_dropped"] == 0  # nothing dropped: nothing fabricated
+
+    async def test_setaf_uses_genuine_when_translator_evaluated(self) -> None:
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
+        from argumentation_analysis.orchestration.structured_arg_translator import (
+            CAUSE_EVALUATED,
+            TranslationResult,
+        )
+
+        sink: Dict[str, Any] = {}
+        # corpus_B signature: 3 genuine member joint-attacks.
+        genuine = [
+            {"attackers": ["b"], "target": "a"},
+            {"attackers": ["c"], "target": "a"},
+            {"attackers": ["c"], "target": "b"},
+        ]
+        outcome = TranslationResult(relations=genuine, cause=CAUSE_EVALUATED)
+        with patch(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_setaf_attacks",
+            new=AsyncMock(return_value=outcome),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.setaf_handler.SetAFHandler",
+            self._stub_handler_module(sink),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.tweety_initializer."
+            "TweetyInitializer",
+            return_value=None,
+        ):
+            output = await _invoke_setaf("text", {"arguments": ["a", "b", "c"]})
+
+        assert sink["setaf"] == genuine  # genuine relations used as-is
+        assert output["attacks_retained"] == 3  # all members ⇒ all retained
+
+    async def test_setaf_falls_back_when_translator_failed(self) -> None:
+        """Regression: translator_failed = arbiter did NOT answer ⇒ synthetic
+        fallback stands (soustraction does NOT fire on failure)."""
+        from argumentation_analysis.orchestration.invoke_callables import _invoke_setaf
+        from argumentation_analysis.orchestration.structured_arg_translator import (
+            CAUSE_TRANSLATOR_FAILED,
+            TranslationResult,
+        )
+
+        sink: Dict[str, Any] = {}
+        outcome = TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error="RuntimeError"
+        )
+        with patch(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_setaf_attacks",
+            new=AsyncMock(return_value=outcome),
+        ), patch(
+            "argumentation_analysis.orchestration.invoke_callables."
+            "_generate_attacks_from_args",
+            return_value=[["arg1", "arg2"]],  # synthetic, member sources
+        ), patch(
+            "argumentation_analysis.agents.core.logic.setaf_handler.SetAFHandler",
+            self._stub_handler_module(sink),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.tweety_initializer."
+            "TweetyInitializer",
+            return_value=None,
+        ):
+            output = await _invoke_setaf("text", {"arguments": ["arg1", "arg2"]})
+
+        # Fallback fired (NOT subtracted): handler received the synthetic pair.
+        assert len(sink["setaf"]) == 1
+        assert output["attacks_submitted"] == 1
+
+    async def test_weighted_subtracts_when_translator_found_nothing(self) -> None:
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_weighted,
+        )
+        from argumentation_analysis.orchestration.structured_arg_translator import (
+            CAUSE_NO_GENUINE_RELATIONS,
+            TranslationResult,
+        )
+
+        sink: Dict[str, Any] = {}
+        outcome = TranslationResult(
+            relations=[], cause=CAUSE_NO_GENUINE_RELATIONS, error=""
+        )
+        with patch(
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "translate_to_weighted_attacks",
+            new=AsyncMock(return_value=outcome),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.weighted_handler."
+            "WeightedHandler",
+            self._stub_handler_module(sink),
+        ), patch(
+            "argumentation_analysis.agents.core.logic.tweety_initializer."
+            "TweetyInitializer",
+            return_value=None,
+        ):
+            output = await _invoke_weighted("text", {"arguments": ["a", "b"]})
+
+        assert sink["weighted"] == []
+        assert output["attacks_submitted"] == 0
