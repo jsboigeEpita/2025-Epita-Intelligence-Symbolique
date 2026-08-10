@@ -1,7 +1,18 @@
 from typing import Any, Dict, List, Literal, Optional, Union
 import logging
 import asyncio
-import jpype
+
+try:
+    import jpype
+except ImportError:
+    # #1677: jpype is a hard dep of environment.yml and CI installs it, but the
+    # honest-absent contract ("JVM unavailable ⇒ boot degraded, health reports
+    # unhealthy") must hold when it is absent. The bare ``import jpype`` made the
+    # ``jpype.isJVMStarted() if jpype else False`` defenses below (l.73, l.169)
+    # unreachable: the module never loaded in a jpype-less env. Binding to None
+    # lets those defenses fire — degraded boot instead of crash. Mirror of the
+    # _invoke_bipolar guard (#1682).
+    jpype = None  # type: ignore[assignment]
 from datetime import datetime
 from pathlib import Path
 import sys
@@ -71,7 +82,11 @@ class AppServices:
         return {
             "jvm": {
                 "running": jpype.isJVMStarted() if jpype else False,
-                "status": "OK" if jpype.isJVMStarted() else "Not Running",
+                # #1677: guard the status too — jpype may be None (absent), in
+                # which case ``jpype.isJVMStarted()`` would raise AttributeError.
+                # The ``running`` line above is already guarded; this one wasn't,
+                # a latent crash the import-guard fix (l.4) exposes.
+                "status": "OK" if (jpype and jpype.isJVMStarted()) else "Not Running",
             },
             "analysis": self.analysis_service.is_healthy(),
             "validation": self.validation_service.is_healthy(),
