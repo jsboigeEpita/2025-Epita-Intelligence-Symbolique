@@ -103,6 +103,23 @@ _SUPPORT_CYCLE_CAP = 2
 _ARTICULATION_CAP = 2
 _ASPIC_MEMBER_CAP = 120
 _ASPIC_MEMBERS_SHOWN = 4
+# #1649 — ASPIC+'s singular contribution is attack SCOPE (undercut has no
+# equivalent anywhere in the stack). The prose names the scope DISTRIBUTION
+# only (undercut/rebut/undermine counts = vocabulary markers), never the raw
+# ``attacks[*].target`` atoms: ``_pl_atom`` keeps up to 24 leading chars of
+# source text, so those atoms are source-derived and must stay out of the
+# prose (privacy HARD, coord R781 — "marqueurs de vocabulaire, texte caviardé").
+# Ordered so the most singular scope (undercut) leads the sentence.
+_ASPIC_ATTACK_SCOPES = ("undercut", "rebut", "undermine", "unresolved")
+_ASPIC_SCOPE_GLOSS: Dict[str, str] = {
+    "undercut": (
+        "l'inférence elle-même est contestée à la racice (règle attaquée "
+        "nommément) — l'apport singulier d'ASPIC+, sans équivalent dans la stack"
+    ),
+    "rebut": "la conclusion d'un autre enchaînement est contredite",
+    "undermine": "la prémisse d'un autre enchaînement est attaquée",
+    "unresolved": "une attaque n'a pu être qualifiée structurellement",
+}
 
 # #1605 — reader-facing French names for the structured-argumentation axes. The
 # prose forbids raw snake_case identifiers (they are opaque to the non-technical
@@ -916,39 +933,54 @@ def _bipolar_finding(state: Any) -> Optional[StructuredArgFinding]:
 
 
 def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
-    """Project what ASPIC+ alone establishes: derivations that exclude each other.
+    """Project what ASPIC+ alone establishes, in priority order (#1649).
 
     An ASPIC+ argument is a derivation *through rules*, so what this axis brings
-    that no other does is naming WHICH chains of reasoning cannot be held
-    together. That — not "which claims survived" — is the finding.
+    that no other does is naming HOW derivations conflict — the attack SCOPE
+    (undercut = the inference link itself contested; rebut = a conclusion
+    contradicted; undermine = a premise attacked). Undercut has no equivalent
+    anywhere in the stack; that is the singular contribution (#1649).
 
-    Two conditions gate emission. Both are measured firsthand (JVM probes,
-    R766), not assumed:
+    Emission is gated, in priority order, each gate measured firsthand:
 
-    1. **At least one non-empty extension.** All 8 real artifacts carry
-       ``extensions: [[]]``: ``_invoke_aspic`` reads ``context["axioms"]`` and
-       nothing in the orchestration writes it, and ``addOrdinaryPremise`` is
-       gated on ``if axioms:``. With no ordinary premise ASPIC+ builds no
-       argument at all — 0 arguments, empty framework, single empty extension.
-    2. **At least two distinct non-empty extensions.** Supplying premises is not
-       sufficient: the handler only ever builds ``Proposition(head)``, never a
-       ``Negation``, so no two rule heads can contradict — a head string of
-       ``"!x"`` yields a proposition *named* ``!x``, which conflicts with
-       nothing. Measured on the premises-supplied shape: 11 arguments, **0
-       attacks**, one extension holding all 11. A single all-inclusive extension
-       decided nothing; reporting it would hand the conclusion a
-       formally-authorised statement with no discriminating content (#1631).
+    1. **Qualified attacks** (``aspic_results[*].attacks``, #1649). The producer
+       (#1678 handler ``_qualify_attacks`` + #1679 translator emitting
+       ``head_negated`` rules) fires real attacks only when genuine contraries
+       are supplied — a ``Negation(Proposition(head))``, not a head string
+       carrying ``"!"`` (the latter is absorbed into the identifier, measured 0
+       attack), and only when the generated Dung framework actually materialised
+       an edge (``dung_attacks > 0`` gate). An empty ``attacks`` list is the
+       honest "ran, no attack", never a dropped field (#1681 writer carries it).
+       The statement names the scope DISTRIBUTION only — never the raw target
+       atoms (source-derived via ``_pl_atom``, privacy HARD).
+    2. **Contested sets** (fallback, pre-#1649 finding). At least two distinct
+       non-empty extensions: what some extensions keep and others drop. A single
+       all-inclusive extension arbitrated nothing; reporting it would hand the
+       conclusion a formally-authorised statement with no discriminating content
+       (#1631).
 
-    So the finding is the *contested* set — what some extensions keep and others
-    drop — never a count, and never "everything survived".
+    Nothing to say on either → ``None`` (honest absence, never a status word).
     """
     entries = getattr(state, "aspic_results", None) or []
     if not isinstance(entries, list):
         return None
     contested: List[str] = []
+    # #1649: aggregate qualified attack scopes across entries. The producer
+    # (#1678 handler + #1679 translator) emits ``attacks[*].scope`` in
+    # {undercut, rebut, undermine, unresolved}, gated on ``dung_attacks > 0``
+    # so an empty list is the honest "ran, no attack" (never a dropped field).
+    # Undercut is the singular contribution — no other axis names it.
+    scope_counts: Dict[str, int] = {s: 0 for s in _ASPIC_ATTACK_SCOPES}
     for entry in entries:
         if not isinstance(entry, dict):
             continue
+        for atk in entry.get("attacks") or []:
+            if not isinstance(atk, dict):
+                continue
+            scope = str(atk.get("scope", "unresolved"))
+            if scope not in scope_counts:
+                scope = "unresolved"
+            scope_counts[scope] += 1
         extensions = entry.get("extensions") or []
         if not isinstance(extensions, list):
             continue
@@ -971,6 +1003,18 @@ def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
         entry_contested = sorted(union - intersection)
         if len(entry_contested) > len(contested):
             contested = entry_contested
+    # #1649: attack scope is ASPIC+'s singular contribution and strictly more
+    # specific than contested sets (which Dung preferred-semantics also yields),
+    # so it leads the finding when the producer fired real attacks. Falls back
+    # to contested sets, then to None — preserving the existing honest-absence
+    # gate. Anti-#1019 (coord R782): the rendered statement CHANGES when
+    # ``attacks`` changes; an empty/absent list yields no scope statement.
+    if sum(scope_counts.values()) > 0:
+        return StructuredArgFinding(
+            capability="aspic_plus_reasoning",
+            label=_axis_label("aspic_plus_reasoning"),
+            statement=_aspic_attack_statement(scope_counts),
+        )
     if not contested:
         return None
     shown = contested[:_ASPIC_MEMBERS_SHOWN]
@@ -988,6 +1032,30 @@ def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
             + " | ".join(shown)
             + tail
         ),
+    )
+
+
+def _aspic_attack_statement(scope_counts: Dict[str, int]) -> str:
+    """Render the ASPIC+ attack-scope finding (#1649).
+
+    Names the scope DISTRIBUTION only (counts + vocabulary gloss), never the
+    raw ``attacks[*].target`` atoms — those are source-derived via ``_pl_atom``
+    (24 leading chars of text) and stay out of the prose (privacy HARD). The
+    most singular scope (undercut) leads the sentence; absent scopes are
+    omitted so the statement reflects exactly what the producer qualified.
+    """
+    parts: List[str] = []
+    for scope in _ASPIC_ATTACK_SCOPES:
+        count = scope_counts.get(scope, 0)
+        if count <= 0:
+            continue
+        parts.append(f"{count} « {scope} » ({_ASPIC_SCOPE_GLOSS[scope]})")
+    if not parts:
+        # Defensive: callers gate on sum>0, but never trust the gate alone.
+        return ""
+    return (
+        "le cadre ASPIC+ qualifie des attaques qui fragmentent le raisonnement "
+        "selon leur portée : " + " ; ".join(parts) + "."
     )
 
 
