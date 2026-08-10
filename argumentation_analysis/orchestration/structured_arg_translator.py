@@ -737,6 +737,7 @@ async def translate_to_aspic_rules(
     undercuts = _validate_aspic_undercuts(
         data, arg_by_id, _pl_atom, set(used_names), used_names
     )
+
     # #1649 diagnostics (coord R783): on real corpus the handler emits 0 attack
     # even though this translator ran (status "evaluated", axioms_count>0 ⇒
     # #1679 leaf-atom derivation fired). The axis is alive end-to-end but
@@ -749,13 +750,20 @@ async def translate_to_aspic_rules(
     #   - raw=0          ⇒ the LLM emitted NONE (a prompt/LLM question, not
     #     plumbing).
     # Surfaced as a warning so it is visible even when base rules make
-    # ``relations`` non-empty and the info log below hides the drop.
-    _raw_contradictions = (
-        len(data.get("contradictions", []) or []) if isinstance(data, dict) else 0
-    )
-    _raw_undercuts = (
-        len(data.get("undercuts", []) or []) if isinstance(data, dict) else 0
-    )
+    # ``relations`` non-empty and the info log below hides the drop. The count
+    # must be at least as tolerant as ``_validate_aspic_*`` (which returns ``[]``
+    # on any non-list payload): a malformed LLM payload (int/dict where a list
+    # is expected) must not raise here — ``len(non-sized)`` would crash the
+    # whole translation. Guard on ``isinstance(raw, list)`` exactly as the
+    # validators do.
+    def _raw_count(_data: object, _key: str) -> int:
+        if not isinstance(_data, dict):
+            return 0
+        _raw = _data.get(_key)
+        return len(_raw) if isinstance(_raw, list) else 0
+
+    _raw_contradictions = _raw_count(data, "contradictions")
+    _raw_undercuts = _raw_count(data, "undercuts")
     if _raw_contradictions or _raw_undercuts:
         logger.warning(
             "ASPIC+ #1649 diagnostics: LLM proposed %d contradiction(s) "
