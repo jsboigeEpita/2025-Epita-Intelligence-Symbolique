@@ -213,7 +213,7 @@ _SYMBOL_MAPPING_LIST_FIELDS = {
 #       retraction options, how many beliefs each); only the nominative strings
 #       are opacified. The sibling ``cardinality``/``base_size``/``touched_count``
 #       are ints and are intentionally NOT listed, so they survive untouched.
-_OPAQUE_DEEP_DICT_LEAVES: Dict[str, Dict[str, set[str]]] = {
+_OPAQUE_DEEP_DICT_LEAVES: dict[str, dict[str, set[str]]] = {
     "belief_revision_results": {"minimal_retraction": {"options"}},
 }
 

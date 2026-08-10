@@ -1007,7 +1007,7 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         the cardinality is >= 1.
         """
         br_id = self._generate_id("brevision", self.belief_revision_results)
-        entry = {
+        entry: Dict[str, Any] = {
             "id": br_id,
             "method": method,
             "original": original,
