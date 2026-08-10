@@ -17,6 +17,7 @@ Acte III reader. Opaque synthetic atoms only.
 """
 
 from argumentation_analysis.agents.core.logic.belief_revision_insight import (
+    build_belief_base,
     minimal_retractions,
 )
 
@@ -117,3 +118,102 @@ class TestMinimalRetractions:
         card, opts = minimal_retractions([[1], [-1, 2], [-2, 3], [-3]])
         assert card == 1
         assert len(opts) == 4  # p1, p1->p2, p2->p3, ¬p3 each break the chain
+
+
+class TestBuildBeliefBase:
+    """#1646 base construction (coord ruling R779 ruling 2): derive ¬arg from
+    fallacies so the belief base is *genuinely* inconsistent — the precondition
+    for minimal_retractions to bite (the D-forensic verdict: _pl_atom sanitizes
+    every belief positive → trivially consistent → retraction ∅).
+
+    Convention: a fallacy on argument X adds [-x] alongside [x]. Mirrors
+    fallacy_contraction (conversational), which removes the targeted belief.
+    Opaque synthetic atoms only.
+    """
+
+    def test_no_fallacy_yields_consistent_base(self) -> None:
+        """Arguments alone, no fallacy negation → trivially consistent (card 0).
+
+        This is the baseline the D-forensic measured: a base with no negations
+        has a minimal retraction of ∅ — no insight. The base construction must
+        not fabricate a clash where the upstream detected none.
+        """
+        base, names = build_belief_base(["x", "y", "z"], [])
+        assert base == [[1], [2], [3]]
+        assert names == ["x", "y", "z"]
+        assert minimal_retractions(base)[0] == 0
+
+    def test_one_fallacy_creates_real_clash(self) -> None:
+        """A fallacy on the first argument adds ¬x → base {[x],[y],[-x]} UNSAT.
+
+        The clash is real; minimal_retractions returns cardinal 1. The negation
+        clause is labeled ¬x (the reader names the point of rupture).
+        """
+        base, names = build_belief_base(["x", "y"], [0])
+        assert base == [[1], [2], [-1]]
+        assert names == ["x", "y", "¬x"]
+        card, opts = minimal_retractions(base)
+        assert card == 1
+        # Each retraction touches only the clash (index 0 = x, or 2 = ¬x), never y.
+        for opt in opts:
+            assert all(i in (0, 2) for i in opt)
+            assert all(names[i] in ("x", "¬x") for i in opt)
+
+    def test_inert_contradiction_leaves_conclusions_intact(self) -> None:
+        """B-3 via base construction: a fallacy on x clashes, but y, z survive.
+
+        base {[x],[y],[z],[-x]}: the x/¬x clash is real, cardinal 1, and the
+        conclusion beliefs y, z never appear in any retraction option — the
+        discriminating figure no contradiction-detector (PL/UNSAT) produces.
+        """
+        base, names = build_belief_base(["x", "y", "z"], [0])
+        card, opts = minimal_retractions(base)
+        assert card == 1
+        for opt in opts:
+            # Only the clash beliefs (x at 0, ¬x at 3) are ever retracted.
+            assert all(i in (0, 3) for i in opt)
+            assert all(names[i] not in ("y", "z") for i in opt)
+
+    def test_two_fallacies_on_distinct_args_need_cardinal_two(self) -> None:
+        """Two fallacies on two distinct arguments → two independent clashes.
+
+        base {[x],[y],[-x],[-y]}: removing one clause leaves the other clash,
+        so the minimal cardinality is 2 — one retraction per clash (the
+        minimality guarantee).
+        """
+        base, names = build_belief_base(["x", "y"], [0, 1])
+        assert base == [[1], [2], [-1], [-2]]
+        card, opts = minimal_retractions(base)
+        assert card == 2
+        assert all(len(o) == 2 for o in opts)
+
+    def test_out_of_range_index_ignored(self) -> None:
+        """An ungrounded target (index out of range) is ignored, not asserted.
+
+        #1019: an attack we cannot ground is an attack we do not assert. A
+        fallacy whose target resolves outside the argument list adds no clause.
+        """
+        base, names = build_belief_base(["x"], [0, 1, 5, -1])
+        # Only index 0 is in range → one negation; the rest are dropped.
+        assert base == [[1], [-1]]
+        assert names == ["x", "¬x"]
+
+    def test_repeated_fallacy_same_arg_adds_one_negation(self) -> None:
+        """Several fallacies on the same argument yield one clash, not many.
+
+        A negated belief is one clause ``[-x]`` regardless of how many fallacies
+        target x — the belief-not-tenable is a single belief, not one-per-fallacy
+        (deduplication; otherwise the reader would name phantom alternatives).
+        """
+        base, _names = build_belief_base(["x"], [0, 0, 0])
+        assert base == [[1], [-1]]
+        card, opts = minimal_retractions(base)
+        assert card == 1
+        # Two singletons: drop x (index 0) or drop ¬x (index 1).
+        assert sorted(opts) == [(0,), (1,)]
+
+    def test_construction_is_deterministic(self) -> None:
+        """Same arguments + same indices ⇒ same (base, names) every call."""
+        first = build_belief_base(["a", "b", "c"], [1])
+        for _ in range(20):
+            assert build_belief_base(["a", "b", "c"], [1]) == first
