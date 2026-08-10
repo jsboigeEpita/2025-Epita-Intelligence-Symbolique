@@ -834,6 +834,43 @@ class TestListShapedContainers1664:
         assert entry["arguments"][0] != self.NL
         assert entry["supports"][0][0] == entry["arguments"][0]
 
+    def test_aspic_attacks_atoms_opacified_scope_vocabulary_kept(self):
+        """#1649 privacy follow-up: aspic_results[*].attacks (qualified attacks
+        surfaced top-level by #1681, read by the #1699 reader) carry source-
+        derived atoms in target/attacker_premises → opacified. scope (undercut/
+        rebut/undermine/unresolved) and attacker_rule (def_con_N) are closed
+        vocabularies at every producer → preserved, exactly as
+        dung_frameworks.name is. Built by the real add_aspic_result +
+        get_state_snapshot, not a literal fixture.
+        """
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState("initial")
+        state.add_aspic_result(
+            "simple",
+            [["a"]],
+            {"n": 1},
+            attacks=[
+                {
+                    "target": self.NL,
+                    "attacker_premises": [self.OTHER_NL],
+                    "scope": "undercut",
+                    "attacker_rule": "def_con_1",
+                }
+            ],
+        )
+        result = sanitize_state(state.get_state_snapshot())
+        atk = result["aspic_results"][0]["attacks"][0]
+        # Source-derived atoms opacified (not the raw NL text).
+        assert atk["target"] != self.NL
+        assert atk["attacker_premises"][0] != self.OTHER_NL
+        assert self.NL not in json.dumps(result["aspic_results"])
+        assert self.OTHER_NL not in json.dumps(result["aspic_results"])
+        # Closed vocabularies survive — the #1699 reader names the scope to
+        # qualify the attack; opacifying it would erase the axis's contribution.
+        assert atk["scope"] == "undercut"
+        assert atk["attacker_rule"] == "def_con_1"
+
     def test_no_planted_claim_text_survives_anywhere(self):
         blob = json.dumps(sanitize_state(self._snapshot()))
         assert self.NL not in blob

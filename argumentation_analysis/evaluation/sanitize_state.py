@@ -193,6 +193,17 @@ _OPAQUE_LIST_OF_DICTS_MAPPING_KEYS = {
 _OPAQUE_NESTED_ITEM_SUBKEYS = {
     "dialogue_results": {"trace": {"argument", "target"}},
     "debate_transcripts": {"exchanges": {"proponent_move", "opponent_move"}},
+    # #1649 privacy follow-up: aspic_results[*].attacks = the qualified attacks
+    # surfaced top-level by the #1681 writer (and now read by the #1699 reader).
+    # Each attack dict = {target, attacker_premises, scope, attacker_rule}.
+    # ``target``/``attacker_premises`` are source-derived PL atoms — ``_pl_atom``
+    # (invoke_callables.py) keeps up to 24 leading chars of the argument text,
+    # so they ARE nominative → opacify. ``scope`` (undercut/rebut/undermine/
+    # unresolved) and ``attacker_rule`` (def_con_N / def_unc_N) are structural
+    # closed vocabularies at every producer (measured: handler _qualify_attacks,
+    # translator _validate_aspic_*) → preserved, exactly as dung_frameworks.name
+    # is. Uses the same opacify_list_values path as dialogue_results.trace.
+    "aspic_results": {"attacks": {"target", "attacker_premises"}},
 }
 
 # List-of-dicts fields carrying a symbol-mapping sub-key: a ``Dict[str, str]``
