@@ -3335,6 +3335,104 @@ def _aba_rules_from_context(
     return assumptions, derived
 
 
+# --- #1698: honest attack-retention accounting for the Dung family ----------
+#
+# Every Dung-family handler (af, weighted, social, setaf) builds its framework
+# by guarding each attack against the inventory ``arg_map`` and SILENTLY
+# dropping any edge with an endpoint outside it (af_handler.py:101,
+# weighted_handler.py:107, social_handler.py:97, setaf_handler.py:102/106/108).
+# ``_generate_attacks_from_args`` mints synthetic sources (``fallacy_*``,
+# ``CA:*``) that are never inventory members, so on the real corpus 100% of
+# edges are dropped — yet the producers paste the INPUT attacks back into the
+# output as if they were the evaluated graph, and up to thirteen state entries
+# (11 ``verification_*`` + ``social_af`` + ``weighted_grounded``) echo them.
+#
+# The retain/drop decision is a pure membership test in all four handlers, so
+# it is faithfully reproducible from the inputs they received — no second Java
+# build, no handler change. These helpers make the echo honest: the output
+# carries the edges actually in the frame plus an explicit
+# submitted/retained/dropped accounting, so a graph evaluated with no edge
+# declares itself (#1698 item 3 — the honest report, NOT the attacker-identity
+# design decision, which is gated on #1629).
+
+
+def _retained_attacks(arguments: List[str], submitted_attacks: List[Any]) -> List[Any]:
+    """Attacks whose endpoints are all members of ``arguments``.
+
+    Shapes (the four handlers' input contracts):
+      - Dung/Social pair ``[src, tgt]``            -> src and tgt in inventory
+      - Weighted triple ``(src, tgt, w)``          -> src and tgt in inventory
+      - SetAF spec ``{"attackers": [...], "target"}`` -> target in inventory AND
+        at least one attacker in inventory (the handler keeps the partial set).
+
+    Anything else (malformed / unknown shape) is dropped — the caller must not
+    assert an attack it cannot ground (#1019).
+    """
+    arg_set = {str(a) for a in arguments}
+    retained: List[Any] = []
+    for atk in submitted_attacks:
+        if isinstance(atk, dict) and "attackers" in atk and "target" in atk:
+            target = str(atk.get("target", ""))
+            attackers = atk.get("attackers") or []
+            if target in arg_set and any(str(a) in arg_set for a in attackers):
+                retained.append(atk)
+        elif isinstance(atk, (list, tuple)) and len(atk) >= 2:
+            if str(atk[0]) in arg_set and str(atk[1]) in arg_set:
+                retained.append(atk)
+    return retained
+
+
+def _annotate_attack_retention(
+    output: Dict[str, Any],
+    arguments: List[str],
+    submitted_attacks: List[Any],
+    *,
+    framework_name: str,
+    state: Any = None,
+) -> Dict[str, Any]:
+    """Make a Dung-family producer's attack echo honest about retention.
+
+    Replaces the input-echo ``output["attacks"]`` with the edges that actually
+    reached the framework, and records how many were submitted, retained, and
+    dropped. ``statistics.attacks_count`` is aligned to the retained count (it
+    previously echoed the input size and fed verdicts about a graph that had
+    no edges). When edges were dropped, a single trace entry declares it —
+    replacing today's pattern where ``af_handler`` logs the drop once while the
+    state entries echo the input as a result.
+
+    Anti-pendule (#1698): this reports the CURRENT behaviour honestly. It does
+    NOT make synthetic sources inventory members — that is the attacker-identity
+    design decision, gated on #1629 and on a measured rejection.
+    """
+    retained = _retained_attacks(arguments, submitted_attacks)
+    n_sub = len(submitted_attacks) if isinstance(submitted_attacks, list) else 0
+    n_ret = len(retained)
+    output["attacks"] = retained
+    output["attacks_submitted"] = n_sub
+    output["attacks_retained"] = n_ret
+    output["attacks_dropped"] = n_sub - n_ret
+    stats = output.get("statistics")
+    if isinstance(stats, dict):
+        # statistics.attacks_count now counts what was EVALUATED (retained),
+        # not what was submitted — the old value echoed the input (#1698).
+        stats["attacks_count"] = n_ret
+        stats["attacks_submitted"] = n_sub
+    if n_sub - n_ret > 0 and state is not None:
+        add_trace = getattr(state, "add_trace_entry", None)
+        if callable(add_trace):
+            add_trace(
+                phase="dung",
+                agent="AttackRetentionAccounting",
+                reacts_to=["extract", "counter"],
+                summary=(
+                    f"Cadre {framework_name}: {n_sub} arête(s) soumise(s), "
+                    f"{n_ret} retenue(s) — {n_sub - n_ret} hors inventaire "
+                    f"droppée(s) (#1698)."
+                ),
+            )
+    return output
+
+
 def _adf_conditions_from_context(
     arguments: List[str],
     context: Dict[str, Any],
@@ -4424,7 +4522,17 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
 
         initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
         handler = SetAFHandler(initializer)
-        return await asyncio.to_thread(handler.analyze_setaf, args, attacks, semantics)
+        output = await asyncio.to_thread(
+            handler.analyze_setaf, args, attacks, semantics
+        )
+        # #1698: the handler echoes the INPUT attacks; make the echo honest.
+        return _annotate_attack_retention(
+            output,
+            args,
+            attacks,
+            framework_name=f"setaf_{semantics}",
+            state=context.get("_state_object"),
+        )
     except Exception as e:
         raise RuntimeError(
             f"SetAF analysis unavailable: JVM/Tweety required ({e}). "
@@ -4491,8 +4599,16 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
 
         initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
         handler = WeightedHandler(initializer)
-        return await asyncio.to_thread(
+        output = await asyncio.to_thread(
             handler.analyze_weighted_framework, args, attacks, semantics
+        )
+        # #1698: the handler echoes the INPUT attacks; make the echo honest.
+        return _annotate_attack_retention(
+            output,
+            args,
+            attacks,
+            framework_name=f"weighted_{semantics}",
+            state=context.get("_state_object"),
         )
     except Exception as e:
         raise RuntimeError(
@@ -4521,8 +4637,16 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
 
         initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
         handler = SocialHandler(initializer)
-        return await asyncio.to_thread(
+        output = await asyncio.to_thread(
             handler.analyze_social_framework, args, attacks, votes
+        )
+        # #1698: the handler echoes the INPUT attacks; make the echo honest.
+        return _annotate_attack_retention(
+            output,
+            args,
+            attacks,
+            framework_name="social_af",
+            state=context.get("_state_object"),
         )
     except Exception as e:
         logger.info(f"Social handler unavailable ({e}), using Python fallback")
@@ -7483,10 +7607,10 @@ async def _invoke_dung_extensions(
             "extensions": primary,
             "all_extensions": enriched_extensions,
             "arguments": arguments,
-            "attacks": attacks,
+            # ``attacks`` is set by _annotate_attack_retention below (#1698):
+            # the edges actually in the frame, not the submitted input.
             "statistics": {
                 "arguments_count": len(arguments),
-                "attacks_count": len(attacks),
                 "semantics_computed": len(
                     [v for v in enriched_extensions.values() if "count" in v]
                 ),
@@ -7494,12 +7618,26 @@ async def _invoke_dung_extensions(
         }
         # Trace entry for Dung extensions specialist
         _state = context.get("_state_object")
+        # #1698: make the attack echo honest (retained edges + submitted/
+        # retained/dropped accounting) before the result trace reads it.
+        _annotate_attack_retention(
+            _dung_result,
+            arguments,
+            attacks,
+            framework_name="verification",
+            state=_state,
+        )
         _dung_args = _dung_result.get("arguments")
         if _state is not None and _dung_args:
             _n_args = len(_dung_args)
             _stats = _dung_result.get("statistics")
-            _n_attacks = (
+            _n_retained = (
                 _stats.get("attacks_count", 0) if isinstance(_stats, dict) else 0
+            )
+            _n_submitted = (
+                _stats.get("attacks_submitted", _n_retained)
+                if isinstance(_stats, dict)
+                else _n_retained
             )
             _ext_block = _dung_result.get("extensions")
             _grounded = (
@@ -7510,7 +7648,11 @@ async def _invoke_dung_extensions(
                 phase="dung",
                 agent="DungAnalyzer",
                 reacts_to=["extract", "counter"],
-                summary=f"Cadre Dung: {_n_args} arguments, {_n_attacks} attaques — extension fondée: {_g_size} arguments acceptés. 11 sémantiques calculées.",
+                summary=(
+                    f"Cadre Dung: {_n_args} arguments, {_n_retained}/"
+                    f"{_n_submitted} arêtes retenues — extension fondée: "
+                    f"{_g_size} arguments acceptés. 11 sémantiques calculées."
+                ),
             )
         return _dung_result
     except Exception as e:
