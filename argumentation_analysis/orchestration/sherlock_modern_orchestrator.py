@@ -327,13 +327,19 @@ class SherlockModernOrchestrator:
         self._hypotheses = []
         for ctx in contexts:
             if isinstance(ctx, dict):
-                self._hypotheses.append(
-                    {
-                        "id": ctx.get("hypothesis_id", "unknown"),
-                        "coherent": ctx.get("coherent", False),
-                        "assumptions": ctx.get("assumptions", []),
-                    }
-                )
+                hyp = {
+                    "id": ctx.get("hypothesis_id", "unknown"),
+                    "assumptions": ctx.get("assumptions", []),
+                }
+                # #1650 (R790 item 2, rewriter): preserve absence rather than
+                # stamping False. ctx.get("coherent", False) destroys the absence
+                # BEFORE any reader sees it — every downstream reader's "absent"
+                # branch becomes unreachable (theater). Only set coherent when
+                # the source actually carries it; readers do the three-state
+                # classification (is True / is False / absent).
+                if "coherent" in ctx:
+                    hyp["coherent"] = ctx["coherent"]
+                self._hypotheses.append(hyp)
 
         self._add_step(
             phase="hypothesis_branching",

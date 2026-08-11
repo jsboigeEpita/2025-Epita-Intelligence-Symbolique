@@ -233,3 +233,50 @@ class TestBuildSherlockModernWorkflow:
             assert "extract" in phase_names
             assert "quality" in phase_names
             assert "counter" in phase_names
+
+
+class TestCoherentThreeStateRewriter:
+    """#1650 (R790 item 2, rewriter): the hypothesis builder must PRESERVE the
+    absence of the ``coherent`` key rather than stamping ``False``. The previous
+    ``ctx.get("coherent", False)`` destroyed the absence BEFORE any reader could
+    see it, making every downstream reader's "absent" branch unreachable —
+    theater. These tests arm the rewriter in isolation (no LLM/JVM): mock
+    _invoke_safe to inject a context lacking the key, assert the built
+    hypothesis lacks the key too. Substitution control: reverting to
+    ``ctx.get("coherent", False)`` turns the first test red."""
+
+    @pytest.mark.asyncio
+    async def test_absent_coherent_key_is_preserved_not_stamped_false(self):
+        async def fake_invoke_safe(func_name, text, fallback=None):
+            return {
+                "atms_contexts": [
+                    {"hypothesis_id": "h_nokey", "assumptions": ["a"]}
+                ],
+                "has_contradictions": False,
+            }
+
+        orch = SherlockModernOrchestrator()
+        orch._invoke_safe = fake_invoke_safe
+        await orch._phase_hypothesis_branching("text")
+        assert len(orch._hypotheses) == 1
+        # The absent key is preserved — NOT stamped to False. (Reverting the
+        # rewriter to ctx.get("coherent", False) makes this assertion fail.)
+        assert "coherent" not in orch._hypotheses[0]
+
+    @pytest.mark.asyncio
+    async def test_present_coherent_key_is_carried_through(self):
+        async def fake_invoke_safe(func_name, text, fallback=None):
+            return {
+                "atms_contexts": [
+                    {"hypothesis_id": "h_t", "coherent": True, "assumptions": []},
+                    {"hypothesis_id": "h_f", "coherent": False, "assumptions": []},
+                ],
+                "has_contradictions": True,
+            }
+
+        orch = SherlockModernOrchestrator()
+        orch._invoke_safe = fake_invoke_safe
+        await orch._phase_hypothesis_branching("text")
+        by_id = {h["id"]: h for h in orch._hypotheses}
+        assert by_id["h_t"]["coherent"] is True
+        assert by_id["h_f"]["coherent"] is False
