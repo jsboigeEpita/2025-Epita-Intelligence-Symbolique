@@ -879,3 +879,135 @@ class TestAttackSourceNatureProbe:
         rendered = _render({"document": "doc", **agg}, as_json=False)
         assert "contenu contre-argumentaire" not in rendered
         assert "ca:      1 / 1" in rendered  # nature KEY yes, source text no
+
+
+class TestAttackSourceNatureProbeDedup:
+    """R792 regression: the probe must NOT sum a surface raw. The same
+    accounting declaration is replicated — the curated carry projects one
+    axe onto several framework entries (×12 on corpus_A) and the bulk surface
+    emits one block per axe over a shared candidate set (×2). Summing raw
+    published 468 / 78 where the real candidate count is 39: a value true at
+    every site, false once aggregated (#1019). Dedup by fingerprint collapses
+    the replicas; the curated-vs-bulk agreement on deduped totals is printed
+    as the verdict.
+
+    Armed by the dedup — reverting to a raw sum makes the deduped-count
+    assertion red (submitted would read 468, not 39). The snapshot dict is
+    built directly: the probe is a reader of the snapshot shape, and the
+    shape (14 entries / 2 fingerprints on corpus_A) is what the real state
+    genuinely carries (measured R792).
+    """
+
+    _ACCOUNTING = {
+        "attacks_submitted": 39,
+        "attacks_retained": 0,
+        "attacks_dropped": 39,
+        "attacks_submitted_fallacy": 38,
+        "attacks_dropped_fallacy": 38,
+        "attacks_submitted_ca": 1,
+        "attacks_dropped_ca": 1,
+        "attacks_submitted_other": 0,
+        "attacks_dropped_other": 0,
+    }
+
+    @classmethod
+    def _block(cls, **overrides: Any) -> Dict[str, Any]:
+        b: Dict[str, Any] = {"arguments": ["a", "b"], "attacks": []}
+        b.update(cls._ACCOUNTING)
+        b.update(overrides)
+        return b
+
+    def test_dedup_collapses_replication_to_the_real_candidate_count(self) -> None:
+        from scripts.probe_attack_source_nature_split import (
+            _aggregate,
+            _collect_accounting,
+            _render,
+        )
+
+        # corpus_A shape (R792): 14 curated entries — 12 share the accounting
+        # fingerprint, 2 carry zeros — and 4 bulk axes — dung/social non-zero
+        # and identical, setaf/weighted zero.
+        zero = {
+            "arguments": [],
+            "attacks": [],
+            "attacks_submitted": 0,
+            "attacks_retained": 0,
+            "attacks_dropped": 0,
+        }
+        curated = {f"fw_{i}": self._block(name=f"fw_{i}") for i in range(12)}
+        curated["zero_a"] = dict(zero)
+        curated["zero_b"] = dict(zero)
+        state = {
+            "dung_frameworks": curated,
+            "formal_synthesis_reports": [
+                {
+                    "phase_results": {
+                        "dung_extensions": self._block(),
+                        "social_reasoning": self._block(),
+                        "setaf_reasoning": dict(zero),
+                        "weighted_reasoning": dict(zero),
+                    }
+                }
+            ],
+        }
+        blocks = _collect_accounting(state)
+        agg = _aggregate(blocks)
+
+        curated_agg = agg["surfaces"]["curated"]
+        assert curated_agg["blocks"] == 14
+        assert curated_agg["distinct_fingerprints"] == 2  # the 39-block + zero
+        assert curated_agg["max_multiplicity"] == 12
+        assert curated_agg["replicated"] is True
+        # Deduped total == the real candidate count, NOT 12 × 39 = 468.
+        assert curated_agg["attacks_submitted"] == 39
+        assert curated_agg["by_nature"]["fallacy"]["submitted"] == 38
+        assert curated_agg["by_nature"]["ca"]["submitted"] == 1
+        # The raw (inflated) sum is kept as a diagnostic.
+        assert curated_agg["raw_attacks_submitted"] == 12 * 39
+
+        bulk_agg = agg["surfaces"]["bulk"]
+        assert bulk_agg["attacks_submitted"] == 39  # NOT 2 × 39 = 78
+        assert bulk_agg["raw_attacks_submitted"] == 2 * 39
+
+        # Both surfaces dedup to 39 ⇒ agreement, printed as the verdict.
+        assert agg["inter_surface"]["comparable"] is True
+        assert agg["inter_surface"]["agree"] is True
+        rendered = _render({"document": "corpus_A", **agg}, as_json=False)
+        assert "inter-surface verdict: AGREE (curated==bulk==39)" in rendered
+        # The replication stays visible (it is not hidden by the dedup).
+        assert "inflated 12x" in rendered
+
+    def test_verdict_prints_disagreement_when_surfaces_diverge_after_dedup(
+        self,
+    ) -> None:
+        from scripts.probe_attack_source_nature_split import (
+            _aggregate,
+            _collect_accounting,
+            _render,
+        )
+
+        # Curated dedups to 39, bulk dedups to 15 ⇒ a genuine, post-dedup
+        # disagreement that the verdict must surface (not paper over).
+        state = {
+            "dung_frameworks": {"fw_0": self._block()},
+            "formal_synthesis_reports": [
+                {
+                    "phase_results": {
+                        "dung_extensions": self._block(
+                            attacks_submitted=15,
+                            attacks_dropped=15,
+                            attacks_submitted_fallacy=9,
+                            attacks_dropped_fallacy=9,
+                            attacks_submitted_ca=6,
+                            attacks_dropped_ca=6,
+                        )
+                    }
+                }
+            ],
+        }
+        blocks = _collect_accounting(state)
+        agg = _aggregate(blocks)
+        assert agg["inter_surface"]["agree"] is False
+        assert agg["inter_surface"]["ratio"] == round(39 / 15, 2)
+        rendered = _render({"document": "divergent", **agg}, as_json=False)
+        assert "inter-surface verdict: DISAGREE" in rendered
