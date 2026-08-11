@@ -282,11 +282,15 @@ class TestAtmsBranchingDetector:
         assert result["contradiction_rate"] == 0.0
 
     def test_with_contexts(self):
+        # #1650: the producer (_invoke_atms) emits ``coherent`` (bool) per
+        # context, not a ``status`` string. The fixture mirrors the real
+        # contract: coherent=True → consistent env, coherent=False →
+        # incoherent (contradictory) env.
         sig = {
             "state": {
                 "atms_contexts": [
-                    {"assumptions": ["a1", "a2"], "status": "consistent"},
-                    {"assumptions": ["a3"], "status": "contradictory"},
+                    {"assumptions": ["a1", "a2"], "coherent": True},
+                    {"assumptions": ["a3"], "coherent": False},
                 ]
             }
         }
@@ -294,6 +298,62 @@ class TestAtmsBranchingDetector:
         assert result["max_assumption_count"] == 2.0
         assert result["avg_assumptions"] == 1.5
         assert result["contradiction_rate"] == 0.5
+
+    def test_all_coherent_true_yields_zero_rate(self):
+        sig = {
+            "state": {
+                "atms_contexts": [
+                    {"assumptions": ["a1"], "coherent": True},
+                    {"assumptions": ["a2"], "coherent": True},
+                ]
+            }
+        }
+        result = AtmsBranchingDetector().detect(sig)
+        assert result["contradiction_rate"] == 0.0
+
+    def test_absent_coherent_key_not_fabricated_as_contradiction(self, caplog):
+        """#1650: a context lacking the ``coherent`` key is unclassifiable —
+        it must NOT be counted as a contradiction via boolean negation
+        (``not c.get('coherent')`` would fabricate a false-positive for
+        every absent-key context). The rate stays a lower bound and the
+        data-shape drift is logged."""
+        import logging
+
+        sig = {
+            "state": {
+                "atms_contexts": [
+                    {"assumptions": ["a1"]},  # no 'coherent' key
+                    {"assumptions": ["a2"]},  # no 'coherent' key
+                ]
+            }
+        }
+        with caplog.at_level(logging.WARNING, logger="argumentation_analysis.evaluation.pattern_mining"):
+            result = AtmsBranchingDetector().detect(sig)
+        # Neither counted as contradiction → rate 0.0, NOT 1.0.
+        assert result["contradiction_rate"] == 0.0
+        # The drift is surfaced, not silent.
+        assert any(
+            "lack the 'coherent' key" in rec.message for rec in caplog.records
+        )
+
+    def test_mixed_present_and_absent_keys(self, caplog):
+        """A present coherent=False counts; an absent key does not inflate
+        the count (anti-fabrication on a mixed population)."""
+        import logging
+
+        sig = {
+            "state": {
+                "atms_contexts": [
+                    {"assumptions": ["a1"], "coherent": False},
+                    {"assumptions": ["a2"]},  # absent → unclassifiable
+                    {"assumptions": ["a3"], "coherent": True},
+                ]
+            }
+        }
+        with caplog.at_level(logging.WARNING, logger="argumentation_analysis.evaluation.pattern_mining"):
+            result = AtmsBranchingDetector().detect(sig)
+        # 1 real contradiction out of 3 → 0.3333, the absent one not counted.
+        assert result["contradiction_rate"] == round(1 / 3, 4)
 
 
 class TestJtmsRetractionRateDetector:

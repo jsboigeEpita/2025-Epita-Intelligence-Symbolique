@@ -131,7 +131,32 @@ class AtmsBranchingDetector:
 
         n = len(contexts)
         assumption_counts = [len(c.get("assumptions", [])) for c in contexts]
-        contradictions = sum(1 for c in contexts if c.get("status") == "contradictory")
+        # #1650: the producer emits ``coherent`` (bool) per context, NOT a
+        # ``status == "contradictory"`` string. The previous reader probed a
+        # phantom key (gotcha #1636/#765) → ``contradictions`` was always 0
+        # → ``contradiction_rate`` read 0.0 on every corpus, masking whether
+        # the ATMS actually found any incoherent hypothesis. Three states,
+        # never the boolean negation ``not c.get("coherent")`` (that would
+        # fabricate a contradiction for every context lacking the key):
+        #   - coherent present and False  → contradiction (incoherent env)
+        #   - coherent present and True   → coherent
+        #   - coherent absent             → unclassifiable (logged, not counted)
+        contradictions = 0
+        unclassified = 0
+        for c in contexts:
+            if "coherent" in c:
+                if c["coherent"] is False:
+                    contradictions += 1
+            else:
+                unclassified += 1
+        if unclassified:
+            _logger.warning(
+                "atms_branching: %d/%d context(s) lack the 'coherent' key — "
+                "contradiction_rate is a lower bound (unclassifiable contexts "
+                "excluded from the count, not assumed contradictory).",
+                unclassified,
+                n,
+            )
 
         return {
             "max_assumption_count": float(max(assumption_counts, default=0)),

@@ -134,9 +134,14 @@ def build_narrative(state: Any) -> str:
         )
         incoherent = len(atms_contexts) - coherent
         parts.append(
-            f"L'analyse ATMS multi-contextes a teste {len(atms_contexts)} hypothese(s): "
-            f"{coherent} coherente(s), {incoherent} incoherente(s), "
-            f"illustrant la sensibilite des conclusions aux hypotheses retenues."
+            # #1650: the hypothesis count is the size of a predefined probe
+            # battery (a fixed menu of reading-hypotheses, capped in code), NOT
+            # a measurement of how many readings the text admits. Say so, rather
+            # than implying the count characterizes the corpus.
+            f"L'analyse ATMS a teste une batterie de {len(atms_contexts)} "
+            f"hypothese(s) de lecture predefinie(s): {coherent} coherente(s), "
+            f"{incoherent} incoherente(s). Ce compte reflete la taille de la "
+            f"batterie de sondes, non un denombrement des lectures du texte."
         )
 
     # ── Dung frameworks ────────────────────────────────────────────
