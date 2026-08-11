@@ -320,8 +320,17 @@ class SherlockModernOrchestrator:
 
         contexts = result.get("atms_contexts", [])
         has_contradictions = result.get("has_contradictions", False)
-        coherent = sum(1 for c in contexts if isinstance(c, dict) and c.get("coherent"))
-        incoherent = len(contexts) - coherent
+        # #1650 (R790 item 2): three states on the raw contexts — never
+        # ``len - coherent`` (an absent key folds onto False, diluting
+        # unclassifiable contexts into the incoherent count). is True => coherent,
+        # is False => incoherent, absent/non-bool => unclassified.
+        coherent = sum(
+            1 for c in contexts if isinstance(c, dict) and c.get("coherent") is True
+        )
+        incoherent = sum(
+            1 for c in contexts if isinstance(c, dict) and c.get("coherent") is False
+        )
+        unclassified = len(contexts) - coherent - incoherent
 
         # Build hypothesis descriptions for the investigation
         self._hypotheses = []
@@ -348,11 +357,13 @@ class SherlockModernOrchestrator:
                 "hypotheses_tested": len(contexts),
                 "coherent": coherent,
                 "incoherent": incoherent,
+                "unclassified": unclassified,
                 "has_contradictions": has_contradictions,
             },
             conclusion=(
                 f"Tested {len(contexts)} hypothesis/branch(es): "
-                f"{coherent} coherent, {incoherent} incoherent."
+                f"{coherent} coherent, {incoherent} incoherent"
+                + (f", {unclassified} unclassified." if unclassified else ".")
             ),
         )
 
@@ -403,7 +414,15 @@ class SherlockModernOrchestrator:
         if self._hypotheses:
             lines.append("\nHypotheses:")
             for h in self._hypotheses:
-                status = "COHERENT" if h.get("coherent") else "INCOHERENT"
+                # #1650 (R790 item 2): three states — absent/non-bool is
+                # UNCLASSIFIED, not folded onto INCOHERENT.
+                coh = h.get("coherent")
+                if coh is True:
+                    status = "COHERENT"
+                elif coh is False:
+                    status = "INCOHERENT"
+                else:
+                    status = "UNCLASSIFIED"
                 lines.append(
                     f"  - {h['id']}: {status} (assumptions: {h.get('assumptions', [])})"
                 )

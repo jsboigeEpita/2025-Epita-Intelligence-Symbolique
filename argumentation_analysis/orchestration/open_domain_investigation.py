@@ -142,25 +142,35 @@ class OpenDomainInvestigator:
         attributions = []
         for hyp in hypotheses:
             hyp_id = hyp.get("id", "unknown")
-            coherent = hyp.get("coherent", False)
+            # #1650 (R790 item 2): three states on ``coherent`` — never
+            # hyp.get("coherent", False) (absent folds onto False). is True =>
+            # supported, is False => undermined, absent/non-bool => unclassifiable.
+            coh = hyp.get("coherent")
             assumptions = hyp.get("assumptions", [])
 
             for claim in claims:
-                # Under a coherent hypothesis, the author's claim is maintained
-                # Under an incoherent one, it is undermined
-                if coherent:
+                if coh is True:
                     attr_text = f"Author's claim ({claim}) is supported under {hyp_id}"
                     confidence = 0.7 + 0.1 * min(len(assumptions), 3)
-                else:
+                elif coh is False:
                     attr_text = f"Author's claim ({claim}) is undermined under {hyp_id}"
                     confidence = 0.3
+                else:
+                    attr_text = (
+                        f"Author's claim ({claim}) is unclassifiable under "
+                        f"{hyp_id} (coherent key absent)"
+                    )
+                    confidence = 0.5
 
                 attributions.append(
                     Attribution(
                         claim=claim,
                         attribution=attr_text,
                         hypothesis_id=hyp_id,
-                        coherent=coherent,
+                        # Attribution.coherent is bool (model constraint); map
+                        # absent/non-bool to False — the three-state nuance lives
+                        # in attr_text, which names it.
+                        coherent=coh is True,
                         confidence=min(confidence, 1.0),
                     )
                 )
@@ -171,9 +181,15 @@ class OpenDomainInvestigator:
         summary = {}
         for hyp in hypotheses:
             hyp_id = hyp.get("id", "unknown")
-            coherent = hyp.get("coherent", False)
             assumptions = hyp.get("assumptions", [])
-            status = "COHERENT" if coherent else "INCOHERENT"
+            # #1650 (R790 item 2): three states — absent/non-bool is UNCLASSIFIED.
+            coh = hyp.get("coherent")
+            if coh is True:
+                status = "COHERENT"
+            elif coh is False:
+                status = "INCOHERENT"
+            else:
+                status = "UNCLASSIFIED"
             summary[hyp_id] = f"{status} — assumptions: {assumptions}"
         return summary
 
@@ -191,8 +207,15 @@ class OpenDomainInvestigator:
                 f"investigation. Partial analysis only."
             )
 
-        coherent_hyps = [h for h in hypotheses if h.get("coherent")]
-        incoherent_hyps = [h for h in hypotheses if not h.get("coherent")]
+        # #1650 (R790 item 2): three-state partition — absent/non-bool is its
+        # own group, not folded onto incoherent (the old complementary split
+        # ``if h.get("coherent")`` / ``if not h.get("coherent")`` put every
+        # absent-key hyp into incoherent_hyps).
+        coherent_hyps = [h for h in hypotheses if h.get("coherent") is True]
+        incoherent_hyps = [h for h in hypotheses if h.get("coherent") is False]
+        unclassified_hyps = [
+            h for h in hypotheses if h.get("coherent") not in (True, False)
+        ]
 
         lines = [f"Document {doc_id} — Open-domain investigation"]
 
@@ -207,6 +230,11 @@ class OpenDomainInvestigator:
             lines.append(
                 f"  Incoherent hypotheses: {len(incoherent_hyps)} "
                 f"({', '.join(h['id'] for h in incoherent_hyps)})"
+            )
+        if unclassified_hyps:
+            lines.append(
+                f"  Unclassifiable hypotheses: {len(unclassified_hyps)} "
+                f"({', '.join(h['id'] for h in unclassified_hyps)})"
             )
 
         if attributions:
