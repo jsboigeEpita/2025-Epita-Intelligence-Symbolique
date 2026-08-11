@@ -21,6 +21,15 @@ accounting keys only. If a snapshot predates the instrumentation, the probe
 reports the totals and an honest "per-nature split unavailable" note rather
 than fabricating a split (#1019).
 
+Aggregation: the same accounting declaration is replicated within each
+surface (the curated carry projects one axe onto several framework entries;
+the bulk surface emits one block per axe over a shared candidate set), so
+naive summation multiplies the true candidate count by the replication
+factor (R792: curated raw 468, bulk raw 78, real 39). The probe dedups by a
+fingerprint of the accounting before summing — the deduped totals are the
+authoritative counts, the raw sum is kept as a diagnostic — and prints the
+curated-vs-bulk agreement (on deduped totals) as an inter-surface verdict.
+
 Usage:
     python scripts/probe_attack_source_nature_split.py STATE.json [STATE2.json ...]
     python scripts/probe_attack_source_nature_split.py --json STATE.json ...
@@ -32,12 +41,13 @@ Input formats accepted:
   * ``--snapshots``: an LLM-Judge ``iter*_snapshots.jsonl`` where each line is
     ``{"document_name": ..., "state_snapshot": {...}}``.
 """
+
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 # The accounting keys the probe reads. Counts only — never source text.
 _TOTAL_KEYS = ("attacks_submitted", "attacks_retained", "attacks_dropped")
@@ -94,9 +104,13 @@ def _collect_accounting(state: Dict[str, Any]) -> List[Dict[str, Any]]:
         )
 
     # Since R791 item 1 the SAME declaration is projected on the curated
-    # ``dung_frameworks`` entry AND sits in the bulk ``phase_results`` — the
+    # ``dung_frameworks`` entries AND sits in the bulk ``phase_results``. The
     # probe aggregates PER SURFACE (no cross-surface dedup): counting both
     # would double it, and the two surfaces agreeing is itself the check.
+    # WITHIN a surface the same declaration is also replicated (curated carry
+    # onto several entries, bulk one-per-axe over a shared candidate set), so
+    # ``_aggregate`` dedups by fingerprint before summing and prints the
+    # curated-vs-bulk agreement as a verdict (R792).
     frameworks = state.get("dung_frameworks")
     if isinstance(frameworks, dict):
         for df_id, entry in frameworks.items():
@@ -117,35 +131,149 @@ def _collect_accounting(state: Dict[str, Any]) -> List[Dict[str, Any]]:
     return blocks
 
 
+def _fingerprint(b: Dict[str, Any]) -> Tuple[Any, ...]:
+    """Hashable identity of a block's accounting (totals + per-nature).
+
+    The curated carry projects one axe's accounting onto multiple framework
+    entries, and the producer submits the SAME candidate set to several axes
+    (``dung_extensions`` and ``social_reasoning`` each receive every
+    candidate), so an identical accounting declaration appears several times
+    per surface. Blocks that share a fingerprint are that replication;
+    summing them raw multiplies the count by the replication factor — the
+    #1019 aggregation defect measured in R792 (curated raw 468, bulk raw 78,
+    real 39: a value true at every site, false the moment it is aggregated).
+    The fingerprint uses numeric accounting only; source strings are never
+    touched (privacy HARD).
+    """
+    nat = b["by_nature"]
+    return (
+        b["attacks_submitted"],
+        b["attacks_retained"],
+        b["attacks_dropped"],
+        nat["fallacy"]["submitted"],
+        nat["fallacy"]["dropped"],
+        nat["ca"]["submitted"],
+        nat["ca"]["dropped"],
+        nat["other"]["submitted"],
+        nat["other"]["dropped"],
+    )
+
+
+def _sum_accounting(
+    blocks: List[Dict[str, Any]],
+) -> "tuple[Dict[str, Any], bool]":
+    """Sum totals + per-nature counts across blocks (None-aware).
+
+    Returns ``(sums, nature_keys_present)`` — the flag is True iff at least
+    one block carried a non-None per-nature key. Pre-instrumentation blocks
+    have None natures and the split must render UNAVAILABLE (#1019).
+    """
+    sums: Dict[str, Any] = {
+        "attacks_submitted": 0,
+        "attacks_retained": 0,
+        "attacks_dropped": 0,
+        "by_nature": {n: {"submitted": 0, "dropped": 0} for n in _NATURES},
+    }
+    nature_present = False
+    for b in blocks:
+        for key in ("attacks_submitted", "attacks_retained", "attacks_dropped"):
+            v = b[key]
+            if v is not None:
+                sums[key] += v
+        for nature in _NATURES:
+            for side in ("submitted", "dropped"):
+                v = b["by_nature"][nature][side]
+                if v is not None:
+                    sums["by_nature"][nature][side] += v
+                    nature_present = True
+    return sums, nature_present
+
+
 def _aggregate(blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Sum totals + per-nature counts across blocks (None-aware)."""
+    """Aggregate per surface with fingerprint dedup.
+
+    The raw sum across blocks is NOT the candidate count: the same accounting
+    declaration is replicated (curated carry onto several framework entries;
+    bulk one-per-axe over a shared candidate set). Identical fingerprints are
+    collapsed to one representative before summing — the deduped totals are
+    the authoritative candidate counts. The raw (inflated) sum is kept as a
+    diagnostic so the replication stays visible, and the two surfaces deduped
+    must agree: that agreement is the check, printed as the inter-surface
+    verdict by ``_render`` (R792).
+    """
     out: Dict[str, Any] = {
         "blocks": len(blocks),
         "surfaces": {},
         "nature_keys_present": False,
     }
+    per_surface: Dict[str, Dict[str, Any]] = {}
     for surface in ("curated", "bulk"):
         surface_blocks = [b for b in blocks if b.get("surface") == surface]
-        agg: Dict[str, Any] = {
-            "blocks": len(surface_blocks),
-            "attacks_submitted": 0,
-            "attacks_retained": 0,
-            "attacks_dropped": 0,
-            "by_nature": {n: {"submitted": 0, "dropped": 0} for n in _NATURES},
-        }
+        raw_sums, _ = _sum_accounting(surface_blocks)
+        # Dedup: one representative per distinct fingerprint.
+        representatives: List[Dict[str, Any]] = []
+        multiplicity: Dict[Tuple[Any, ...], int] = {}
         for b in surface_blocks:
-            for k in ("attacks_submitted", "attacks_retained", "attacks_dropped"):
-                v = b[k]
-                if v is not None:
-                    agg[k] += v
-            for nature in _NATURES:
-                for side in ("submitted", "dropped"):
-                    v = b["by_nature"][nature][side]
-                    if v is not None:
-                        agg["by_nature"][nature][side] += v
-                        out["nature_keys_present"] = True
+            fp = _fingerprint(b)
+            if fp not in multiplicity:
+                multiplicity[fp] = 0
+                representatives.append(b)
+            multiplicity[fp] += 1
+        dedup_sums, nature_present = _sum_accounting(representatives)
+        if nature_present:
+            out["nature_keys_present"] = True
+        max_mult = max(multiplicity.values()) if multiplicity else 0
+        agg = {
+            "blocks": len(surface_blocks),
+            "distinct_fingerprints": len(multiplicity),
+            "max_multiplicity": max_mult,
+            "replicated": max_mult > 1,
+            # Deduped totals = authoritative candidate counts.
+            "attacks_submitted": dedup_sums["attacks_submitted"],
+            "attacks_retained": dedup_sums["attacks_retained"],
+            "attacks_dropped": dedup_sums["attacks_dropped"],
+            "by_nature": dedup_sums["by_nature"],
+            # Raw (inflated) sum — diagnostic only, do NOT read as a count.
+            "raw_attacks_submitted": raw_sums["attacks_submitted"],
+            "raw_attacks_retained": raw_sums["attacks_retained"],
+            "raw_attacks_dropped": raw_sums["attacks_dropped"],
+            "raw_by_nature": raw_sums["by_nature"],
+        }
+        per_surface[surface] = agg
         out["surfaces"][surface] = agg
+    out["inter_surface"] = _inter_surface_verdict(per_surface)
     return out
+
+
+def _inter_surface_verdict(per_surface: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    """Compare the two surfaces on their deduped totals.
+
+    The agreement of the curated surface (what the conclusion reads) and the
+    bulk surface (invoke outputs) is the check that the accounting is
+    consistent end-to-end. A constant ratio across corpora of different
+    values is a replication signature, not noise (R792)."""
+    curated = per_surface.get("curated", {})
+    bulk = per_surface.get("bulk", {})
+    if not curated.get("blocks") or not bulk.get("blocks"):
+        return {"comparable": False}
+    agree = (
+        curated["attacks_submitted"] == bulk["attacks_submitted"]
+        and curated["attacks_retained"] == bulk["attacks_retained"]
+        and curated["attacks_dropped"] == bulk["attacks_dropped"]
+        and curated["by_nature"] == bulk["by_nature"]
+    )
+    ratio: Optional[float] = None
+    cs = curated["attacks_submitted"]
+    bs = bulk["attacks_submitted"]
+    if bs and cs is not None:
+        ratio = round(cs / bs, 2)
+    return {
+        "comparable": True,
+        "agree": agree,
+        "curated_submitted": cs,
+        "bulk_submitted": bs,
+        "ratio": ratio,
+    }
 
 
 def _report_doc(name: str, blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -155,32 +283,31 @@ def _report_doc(name: str, blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _render_surface(title: str, agg: Dict[str, Any]) -> List[str]:
-    lines = [f"  {title} ({agg['blocks']} block(s)):"]
+    lines = [
+        f"  {title} ({agg['blocks']} raw block(s), "
+        f"{agg['distinct_fingerprints']} distinct fingerprint(s)):"
+    ]
     lines.append(
-        f"    totals: submitted={agg['attacks_submitted']} "
+        f"    totals (deduped): submitted={agg['attacks_submitted']} "
         f"retained={agg['attacks_retained']} "
         f"dropped={agg['attacks_dropped']}"
     )
-    sub_f, drop_f = (
-        agg["by_nature"]["fallacy"]["submitted"],
-        agg["by_nature"]["fallacy"]["dropped"],
-    )
-    sub_c, drop_c = (
-        agg["by_nature"]["ca"]["submitted"],
-        agg["by_nature"]["ca"]["dropped"],
-    )
-    sub_o, drop_o = (
-        agg["by_nature"]["other"]["submitted"],
-        agg["by_nature"]["other"]["dropped"],
-    )
+    if agg["replicated"]:
+        lines.append(
+            f"    raw sum (inflated {agg['max_multiplicity']}x — do NOT read "
+            f"as a count): submitted={agg['raw_attacks_submitted']}"
+        )
+    bn = agg["by_nature"]
     lines.append(
         "    split by source nature (submitted / dropped):\n"
-        f"      fallacy: {sub_f} / {drop_f}\n"
-        f"      ca:      {sub_c} / {drop_c}\n"
-        f"      other:   {sub_o} / {drop_o}"
+        f"      fallacy: {bn['fallacy']['submitted']} / {bn['fallacy']['dropped']}\n"
+        f"      ca:      {bn['ca']['submitted']} / {bn['ca']['dropped']}\n"
+        f"      other:   {bn['other']['submitted']} / {bn['other']['dropped']}"
     )
     # Invariant: sum(natures) == submitted total (verifiable honesty).
-    sum_sub = sub_f + sub_c + sub_o
+    sum_sub = (
+        bn["fallacy"]["submitted"] + bn["ca"]["submitted"] + bn["other"]["submitted"]
+    )
     match = "OK" if sum_sub == agg["attacks_submitted"] else "MISMATCH"
     lines.append(f"    invariant sum(natures) == submitted: {match}")
     return lines
@@ -199,6 +326,22 @@ def _render(agg: Dict[str, Any], as_json: bool) -> str:
         lines.extend(_render_surface("bulk phase_results", bulk))
     if not lines[1:]:
         lines.append("  no accounting blocks found")
+    # Inter-surface verdict — printed, not just computed. R792: the
+    # disagreement between the curated and bulk surfaces (a constant ratio
+    # across corpora) was the signature of the replication defect.
+    verdict = agg.get("inter_surface", {})
+    if verdict.get("comparable"):
+        cs = verdict["curated_submitted"]
+        bs = verdict["bulk_submitted"]
+        if verdict["agree"]:
+            lines.append(f"  inter-surface verdict: AGREE (curated==bulk=={cs})")
+        else:
+            ratio = verdict.get("ratio")
+            ratio_str = f", ratio {ratio}x" if ratio is not None else ""
+            lines.append(
+                "  inter-surface verdict: DISAGREE "
+                f"(curated={cs}, bulk={bs}{ratio_str})"
+            )
     if not agg["nature_keys_present"] and (curated or bulk):
         lines.append(
             "  per-nature split: UNAVAILABLE on this snapshot — the accounting "
@@ -289,7 +432,10 @@ def main(argv: Optional[List[str]] = None) -> int:
                         first_obj = _load_snapshot(line)
                         break
                 if not _looks_like_state_payload(first_obj):
-                    print(f"{path}: not a state export (no state keys found)", file=sys.stderr)
+                    print(
+                        f"{path}: not a state export (no state keys found)",
+                        file=sys.stderr,
+                    )
                     return 2
                 snapshot = first_obj.get("state_snapshot", first_obj)
                 doc = str(first_obj.get("document_name", path))
