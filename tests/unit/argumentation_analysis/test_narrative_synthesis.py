@@ -114,6 +114,30 @@ class TestBuildNarrative:
         # The old misleading phrase is gone.
         assert "sensibilite des conclusions" not in lowered
 
+    def test_atms_counts_absent_key_separately_three_states(self):
+        """#1650 item 1: the ATMS counts must be three-state on ``coherent``,
+        never the two-state ``len - coherent`` arithmetic (which folds an
+        absent key onto ``False`` and dilutes unclassifiable contexts into the
+        incoherent count). With a mixed population [True, False, absent]:
+          - three-state -> 1 coherent, 1 incoherent, 1 non-classifiable
+          - ``len - coherent`` -> 1 coherent, 2 incoherent, no mention
+        This test arms the distinction: it goes red if the arithmetic ever
+        reverts to two states (substitution control per DoD)."""
+        state = UnifiedAnalysisState("discourse")
+        state.atms_contexts = [
+            {"hypothesis_id": "h_a", "coherent": True},
+            {"hypothesis_id": "h_b", "coherent": False},
+            {"hypothesis_id": "h_c"},  # absent key — the arming input
+        ]
+        result = build_narrative(state)
+        # Three-state counts.
+        assert "1 coherente" in result
+        assert "1 incoherente" in result
+        # The absent key is surfaced as non-classifiable, NOT folded into
+        # incoherent (which would read "2 incoherente").
+        assert "2 incoherente" not in result
+        assert "non classifiable" in result
+
     def test_references_counter_arguments(self):
         state = _rich_state()
         result = build_narrative(state)
