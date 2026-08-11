@@ -129,10 +129,23 @@ def build_narrative(state: Any) -> str:
     # ── ATMS multi-context ─────────────────────────────────────────
     atms_contexts = getattr(state, "atms_contexts", [])
     if atms_contexts:
-        coherent = sum(
-            1 for c in atms_contexts if isinstance(c, dict) and c.get("coherent")
-        )
-        incoherent = len(atms_contexts) - coherent
+        # #1650 (item 1): three states on the ``coherent`` field, mirroring
+        # pattern_mining — never ``len - coherent`` (that two-state arithmetic
+        # folds absent keys onto ``False``, diluting unclassifiable contexts
+        # into the incoherent count). True => coherent, False => incoherent,
+        # absent (or non-bool) => unclassifiable.
+        coherent = 0
+        incoherent = 0
+        unclassified = 0
+        for c in atms_contexts:
+            if not isinstance(c, dict):
+                continue
+            if c.get("coherent") is True:
+                coherent += 1
+            elif c.get("coherent") is False:
+                incoherent += 1
+            else:
+                unclassified += 1
         parts.append(
             # #1650: the hypothesis count is the size of a predefined probe
             # battery (a fixed menu of reading-hypotheses, capped in code), NOT
@@ -140,8 +153,15 @@ def build_narrative(state: Any) -> str:
             # than implying the count characterizes the corpus.
             f"L'analyse ATMS a teste une batterie de {len(atms_contexts)} "
             f"hypothese(s) de lecture predefinie(s): {coherent} coherente(s), "
-            f"{incoherent} incoherente(s). Ce compte reflete la taille de la "
-            f"batterie de sondes, non un denombrement des lectures du texte."
+            f"{incoherent} incoherente(s)."
+            + (
+                f" {unclassified} non classifiable(s) "
+                f"(cle 'coherent' absente)."
+                if unclassified
+                else ""
+            )
+            + " Ce compte reflete la taille de la batterie de sondes, non un"
+            f" denombrement des lectures du texte."
         )
 
     # ── Dung frameworks ────────────────────────────────────────────
