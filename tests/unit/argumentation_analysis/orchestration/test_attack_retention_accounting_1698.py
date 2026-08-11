@@ -459,3 +459,423 @@ class TestSoustractionNoGenuineRelations1629:
 
         assert sink["weighted"] == []
         assert output["attacks_submitted"] == 0
+
+
+# ============================================================
+# R791 item 1 — the honest report reaches the CURATED surface
+# (dung_frameworks[*], the one the conclusion reads)
+# ============================================================
+
+
+class TestCarryAttackRetentionWriters:
+    """#1698 (R791 item 1): the #1704 submitted/retained/dropped accounting
+    must reach ``dung_frameworks[*]`` — the surface the conclusion reads —
+    not only the invoke output persisted under ``formal_synthesis_reports``.
+    Built through the real ``UnifiedAnalysisState.add_dung_framework`` entry
+    point (anti-#1019: no dict-literal state)."""
+
+    def test_dung_writer_carries_accounting_onto_curated_entry(self) -> None:
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [],
+            "extensions": {"grounded": ["a", "b"]},
+            # The #1704 accounting, as the producer now declares it.
+            "attacks_submitted": 2,
+            "attacks_retained": 0,
+            "attacks_dropped": 2,
+        }
+        _write_dung_extensions_to_state(output, state, {})
+        entry = next(iter(state.dung_frameworks.values()))
+        assert entry["attacks_submitted"] == 2
+        assert entry["attacks_retained"] == 0
+        assert entry["attacks_dropped"] == 2
+
+    def test_all_four_annotated_writers_carry_the_accounting(self) -> None:
+        """Dung, social, setaf, weighted all project the frozen subset — the
+        accounting must ride on each curated entry, not be writer-specific."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+            _write_setaf_to_state,
+            _write_social_to_state,
+            _write_weighted_to_state,
+        )
+
+        cases = [
+            (
+                _write_dung_extensions_to_state,
+                {
+                    "semantics": "grounded",
+                    "arguments": ["a", "b"],
+                    "attacks": [],
+                    "extensions": {"grounded": ["a", "b"]},
+                },
+            ),
+            (
+                _write_social_to_state,
+                {"arguments": ["a", "b"], "attacks": [], "ranking": [], "scores": {}},
+            ),
+            (
+                _write_setaf_to_state,
+                {"semantics": "grounded", "arguments": ["a", "b"], "attacks": []},
+            ),
+            (
+                _write_weighted_to_state,
+                {"semantics": "grounded", "arguments": ["a", "b"], "attacks": []},
+            ),
+        ]
+        for writer, base in cases:
+            state = UnifiedAnalysisState(initial_text="x")
+            output = dict(base)
+            output.update(
+                {
+                    "attacks_submitted": 3,
+                    "attacks_retained": 1,
+                    "attacks_dropped": 2,
+                }
+            )
+            writer(output, state, {})
+            assert state.dung_frameworks, f"{writer.__name__} wrote nothing"
+            for entry in state.dung_frameworks.values():
+                assert entry["attacks_submitted"] == 3, writer.__name__
+                assert entry["attacks_retained"] == 1, writer.__name__
+                assert entry["attacks_dropped"] == 2, writer.__name__
+
+    def test_writer_does_not_synthesise_accounting_when_keys_absent(self) -> None:
+        """Absent keys ⇒ nothing carried: a legacy producer (or a writer path
+        without annotation) must not gain a fabricated accounting (#1019)."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        _write_dung_extensions_to_state(
+            {"semantics": "grounded", "arguments": ["a"], "attacks": []}, state, {}
+        )
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "attacks_submitted" not in entry
+        assert "attacks_retained" not in entry
+        assert "attacks_dropped" not in entry
+
+
+# ============================================================
+# R791 item 3 — internal-contradiction guard (DoD item 4)
+# ============================================================
+
+
+class TestInternalContradictionGuard:
+    """#1698 DoD item 4: a framework that RETAINED edges yet whose acceptance
+    semantics all return the full inventory is internally contradictory — it
+    must be detected, not published as a normal verdict.
+
+    Armed by a framework that declares edges and accepts everything.
+    Substitution control: reverting the guard condition (e.g. dropping the
+    ``attacks_retained > 0`` gate or the ``all(members == inventory)`` check)
+    makes ``test_guard_detects_retained_edges_with_full_acceptance`` red.
+    """
+
+    def test_guard_detects_retained_edges_with_full_acceptance(self) -> None:
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [["a", "b"]],  # a live edge IS in the frame
+            "extensions": {"grounded": ["a", "b"], "preferred": ["a", "b"]},
+            "attacks_submitted": 1,
+            "attacks_retained": 1,
+            "attacks_dropped": 0,
+        }
+        _write_dung_extensions_to_state(output, state, {})
+        entry = next(iter(state.dung_frameworks.values()))
+        assert entry["internal_contradiction"] is True
+        # The contradiction is declared in the trace, not silent (#1019).
+        assert any(
+            "contradiction interne" in str(t.get("summary", ""))
+            for t in state.analysis_trace
+        )
+
+    def test_guard_silent_when_zero_retained(self) -> None:
+        """submitted > 0 with retained == 0 is NOT a contradiction — it is the
+        honest empty report of #1704 doing its job (the edges never reached
+        the evaluated graph). This is the exact 3-corpus real shape."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [],
+            "extensions": {"grounded": ["a", "b"]},
+            "attacks_submitted": 15,
+            "attacks_retained": 0,
+            "attacks_dropped": 15,
+        }
+        _write_dung_extensions_to_state(output, state, {})
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "internal_contradiction" not in entry
+
+    def test_guard_silent_when_some_semantics_exclude(self) -> None:
+        """A framework whose semantics discriminate (at least one excludes
+        something) is healthy — no contradiction."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [["a", "b"]],
+            "extensions": {"grounded": ["a"], "preferred": ["a"]},
+            "attacks_submitted": 1,
+            "attacks_retained": 1,
+            "attacks_dropped": 0,
+        }
+        _write_dung_extensions_to_state(output, state, {})
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "internal_contradiction" not in entry
+
+    def test_guard_silent_without_accounting_keys(self) -> None:
+        """No accounting keys ⇒ guard has nothing to judge (never flags on a
+        producer that did not run the annotation)."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        state = UnifiedAnalysisState(initial_text="x")
+        _write_dung_extensions_to_state(
+            {
+                "semantics": "grounded",
+                "arguments": ["a", "b"],
+                "attacks": [["a", "b"]],
+                "extensions": {"grounded": ["a", "b"]},
+            },
+            state,
+            {},
+        )
+        entry = next(iter(state.dung_frameworks.values()))
+        assert "internal_contradiction" not in entry
+
+
+# ============================================================
+# R791 item 2 — dropped-edge split by source nature
+# (fallacy_* vs CA: vs other) — producer side + probe side
+# ============================================================
+
+
+class TestAttackSourceNatureSplit:
+    """#1698 (R791 item 2): the accounting is split by the NATURE of the
+    synthetic source the producer minted (``fallacy_*`` / ``CA: ...`` /
+    ``other``). The split is declared at the annotation point where the
+    candidates are in hand — reproducible by construction, never
+    reconstructed post-hoc. Keys are counts only: the ``CA:`` sources embed
+    counter-argument text (= corpus) and must never be printed."""
+
+    def test_source_nature_classification(self) -> None:
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _attack_source_nature,
+        )
+
+        assert _attack_source_nature("fallacy_0_ad_hominem") == "fallacy"
+        assert _attack_source_nature("CA: contredit cette affirmation") == "ca"
+        # A real inventory member (upstream-provided context["attacks"]) or a
+        # malformed source lands in the defensive ``other`` bucket.
+        assert _attack_source_nature("arg_1") == "other"
+        assert _attack_source_nature(None) == "other"
+        assert _attack_source_nature("") == "other"
+
+    def test_annotation_splits_by_nature_all_dropped(self) -> None:
+        """Mixed candidates with synthetic sources: every edge is dropped (the
+        sources are never inventory members) — the split reflects each
+        family's submitted count."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _annotate_attack_retention,
+        )
+
+        candidates = [
+            ["fallacy_0_ad_hominem", "a"],
+            ["fallacy_1_faux_dilemme", "b"],
+            ["CA: contredit cette affirmation", "a"],
+            ["c", "a"],  # real member source → other, retained
+        ]
+        output = _annotate_attack_retention(
+            {}, ["a", "b", "c"], candidates, framework_name="test"
+        )
+        assert output["attacks_submitted"] == 4
+        assert output["attacks_retained"] == 1
+        assert output["attacks_dropped"] == 3
+        assert output["attacks_submitted_fallacy"] == 2
+        assert output["attacks_dropped_fallacy"] == 2
+        assert output["attacks_submitted_ca"] == 1
+        assert output["attacks_dropped_ca"] == 1
+        assert output["attacks_submitted_other"] == 1
+        assert output["attacks_dropped_other"] == 0
+        # Invariant: the split recomposes the totals (verifiable honesty).
+        assert (
+            output["attacks_submitted_fallacy"]
+            + output["attacks_submitted_ca"]
+            + output["attacks_submitted_other"]
+            == output["attacks_submitted"]
+        )
+        assert (
+            output["attacks_dropped_fallacy"]
+            + output["attacks_dropped_ca"]
+            + output["attacks_dropped_other"]
+            == output["attacks_dropped"]
+        )
+
+    def test_annotation_splits_setaf_shapes(self) -> None:
+        """SetAF specs carry the source under ``attackers`` — the split must
+        classify the same way as pairs."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _annotate_attack_retention,
+        )
+
+        candidates = [
+            {"attackers": ["CA: contredit ce point"], "target": "a"},
+            {"attackers": ["fallacy_0_generalisation"], "target": "b"},
+        ]
+        output = _annotate_attack_retention(
+            {}, ["a", "b"], candidates, framework_name="test"
+        )
+        assert output["attacks_submitted_fallacy"] == 1
+        assert output["attacks_dropped_fallacy"] == 1
+        assert output["attacks_submitted_ca"] == 1
+        assert output["attacks_dropped_ca"] == 1
+
+
+class TestAttackSourceNatureProbe:
+    """The probe is a READ-ONLY reader of the numeric accounting keys — it
+    aggregates counts by surface (curated vs bulk) and never touches source
+    strings (#1698 privacy HARD: ``CA:`` embeds corpus text)."""
+
+    def _probe(self) -> Any:
+        from scripts.probe_attack_source_nature_split import (
+            _aggregate,
+            _collect_accounting,
+        )
+
+        return _collect_accounting, _aggregate
+
+    def test_probe_reads_split_off_a_real_state(self) -> None:
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+
+        collect, aggregate = self._probe()
+        state = UnifiedAnalysisState(initial_text="x")
+        output = {
+            "semantics": "grounded",
+            "arguments": ["a", "b"],
+            "attacks": [],
+            "extensions": {"grounded": ["a", "b"]},
+            "attacks_submitted": 3,
+            "attacks_retained": 0,
+            "attacks_dropped": 3,
+            "attacks_submitted_fallacy": 2,
+            "attacks_dropped_fallacy": 2,
+            "attacks_submitted_ca": 1,
+            "attacks_dropped_ca": 1,
+            "attacks_submitted_other": 0,
+            "attacks_dropped_other": 0,
+        }
+        _write_dung_extensions_to_state(output, state, {})
+        # Same declaration also lands in the bulk phase_results — the probe
+        # reports each surface separately, never double-counting.
+        state.add_formal_synthesis_report("synthesis", {"dung_grounded": output}, 0.0)
+
+        blocks = collect(state.get_state_snapshot())
+        agg = aggregate(blocks)
+        curated = agg["surfaces"]["curated"]
+        bulk = agg["surfaces"]["bulk"]
+        assert curated["attacks_submitted"] == 3
+        assert curated["by_nature"]["fallacy"] == {"submitted": 2, "dropped": 2}
+        assert curated["by_nature"]["ca"] == {"submitted": 1, "dropped": 1}
+        assert bulk["attacks_submitted"] == 3
+        assert bulk["by_nature"]["fallacy"] == {"submitted": 2, "dropped": 2}
+        assert agg["nature_keys_present"] is True
+
+    def test_probe_honest_when_split_absent(self) -> None:
+        """Pre-instrumentation snapshots carry totals only — the probe says so
+        instead of fabricating a split (#1019)."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+        from scripts.probe_attack_source_nature_split import _render
+
+        collect, aggregate = self._probe()
+        state = UnifiedAnalysisState(initial_text="x")
+        _write_dung_extensions_to_state(
+            {
+                "semantics": "grounded",
+                "arguments": ["a", "b"],
+                "attacks": [],
+                "extensions": {"grounded": ["a", "b"]},
+                "attacks_submitted": 15,
+                "attacks_retained": 0,
+                "attacks_dropped": 15,
+            },
+            state,
+            {},
+        )
+        blocks = collect(state.get_state_snapshot())
+        agg = aggregate(blocks)
+        assert agg["nature_keys_present"] is False
+        assert "UNAVAILABLE" in _render({"document": "doc", **agg}, as_json=False)
+
+    def test_probe_never_leaks_ca_source_text(self) -> None:
+        """The probe output must never contain the ``CA:`` source string —
+        it embeds counter-argument text (= corpus)."""
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+        from argumentation_analysis.orchestration.state_writers import (
+            _write_dung_extensions_to_state,
+        )
+        from scripts.probe_attack_source_nature_split import _render
+
+        collect, aggregate = self._probe()
+        state = UnifiedAnalysisState(initial_text="x")
+        secret = "CA: contenu contre-argumentaire sensible non publiable"
+        _write_dung_extensions_to_state(
+            {
+                "semantics": "grounded",
+                "arguments": ["a", "b"],
+                "attacks": [[secret, "a"]],  # the CA source IS in the state
+                "extensions": {"grounded": ["a", "b"]},
+                "attacks_submitted": 1,
+                "attacks_retained": 0,
+                "attacks_dropped": 1,
+                "attacks_submitted_ca": 1,
+                "attacks_dropped_ca": 1,
+                "attacks_submitted_fallacy": 0,
+                "attacks_dropped_fallacy": 0,
+                "attacks_submitted_other": 0,
+                "attacks_dropped_other": 0,
+            },
+            state,
+            {},
+        )
+        blocks = collect(state.get_state_snapshot())
+        agg = aggregate(blocks)
+        rendered = _render({"document": "doc", **agg}, as_json=False)
+        assert "contenu contre-argumentaire" not in rendered
+        assert "ca:      1 / 1" in rendered  # nature KEY yes, source text no

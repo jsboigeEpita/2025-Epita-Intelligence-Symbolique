@@ -3382,6 +3382,28 @@ def _retained_attacks(arguments: List[str], submitted_attacks: List[Any]) -> Lis
     return retained
 
 
+def _attack_source_nature(attacker: Any) -> str:
+    """Classify a synthetic attack source by nature (#1698 R791 item 2).
+
+    The producer mints two disjoint families (``_generate_attacks_from_args``):
+    ``fallacy_{i}_{label}`` from fallacy detections, ``CA: {text[:50]}`` from
+    counter-argument text matches. Anything else (malformed, unknown, or a
+    real inventory member when upstream provided ``context["attacks"]``) lands
+    in ``other`` — a defensive bucket that keeps
+    ``sum(natures) == attacks_submitted`` verifiable.
+
+    Returns the KEY only, never the source string: ``CA:`` sources embed
+    counter-argument text (= corpus), so callers must never print them
+    (#1698 privacy HARD — the frontier is GitHub indexation).
+    """
+    s = str(attacker)
+    if s.startswith("fallacy_"):
+        return "fallacy"
+    if s.startswith("CA: "):
+        return "ca"
+    return "other"
+
+
 def _annotate_attack_retention(
     output: Dict[str, Any],
     arguments: List[str],
@@ -3411,6 +3433,35 @@ def _annotate_attack_retention(
     output["attacks_submitted"] = n_sub
     output["attacks_retained"] = n_ret
     output["attacks_dropped"] = n_sub - n_ret
+    # #1698 (R791 item 2): per-nature split of the accounting. The dropped
+    # edges are not persisted as a list anywhere, so the split is declared
+    # HERE, at the point where the candidates are in hand — reproducible by
+    # construction, never reconstructed post-hoc from a snapshot. Keys are
+    # counts only; the ``CA:`` sources embed counter-argument text (= corpus)
+    # and must never be printed or persisted verbatim (#1698 privacy HARD).
+    # ``_retained_attacks`` appends the same candidate objects, so id()
+    # membership is a faithful retained test across shapes.
+    if isinstance(submitted_attacks, list):
+        retained_ids = {id(a) for a in retained}
+        by_nature: Dict[str, List[int]] = {
+            "fallacy": [0, 0],
+            "ca": [0, 0],
+            "other": [0, 0],
+        }  # [submitted, dropped]
+        for atk in submitted_attacks:
+            attacker: Any = None
+            if isinstance(atk, dict) and atk.get("attackers"):
+                attackers = atk["attackers"]
+                attacker = attackers[0] if isinstance(attackers, (list, tuple)) else None
+            elif isinstance(atk, (list, tuple)) and atk:
+                attacker = atk[0]
+            nature = _attack_source_nature(attacker)
+            by_nature[nature][0] += 1
+            if id(atk) not in retained_ids:
+                by_nature[nature][1] += 1
+        for nature, (sub, dropped) in by_nature.items():
+            output[f"attacks_submitted_{nature}"] = sub
+            output[f"attacks_dropped_{nature}"] = dropped
     stats = output.get("statistics")
     if isinstance(stats, dict):
         # statistics.attacks_count now counts what was EVALUATED (retained),

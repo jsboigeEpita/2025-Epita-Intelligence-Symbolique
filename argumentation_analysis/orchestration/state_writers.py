@@ -8,7 +8,7 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -1159,6 +1159,110 @@ def _write_nl_to_logic_to_state(output: Any, state: Any, ctx: dict[str, Any]) ->
             )
 
 
+def _carry_attack_retention(state: Any, df_id: str, output: Any) -> None:
+    """#1698 (R791 item 1): carry the #1704 submitted/retained/dropped
+    accounting onto the CURATED ``dung_frameworks`` entry.
+
+    The honest report lives on the invoke output (persisted in bulk under
+    ``formal_synthesis_reports[*].phase_results.<axe>``); the curated writer
+    projects a frozen subset ``{name, arguments, attacks, extensions}`` and was
+    dropping the declaration, so a reader of the surface the conclusion reads
+    (``dung_frameworks``) could not distinguish "the text carried no conflict"
+    from "15 edges submitted, all rejected". Same three keys, same names,
+    top-level peers of ``attacks`` — zero reader migration. Absent keys ⇒
+    nothing carried (the writer boundary never synthesises an accounting the
+    producer did not make).
+    """
+    if not isinstance(output, dict) or state is None:
+        return
+    base_keys = ("attacks_submitted", "attacks_retained", "attacks_dropped")
+    if not all(k in output for k in base_keys):
+        return
+    # R791 item 2: the per-nature split rides along (counts only — the CA:
+    # sources themselves are corpus text and never leave the producer).
+    all_keys = base_keys + (
+        "attacks_submitted_fallacy",
+        "attacks_dropped_fallacy",
+        "attacks_submitted_ca",
+        "attacks_dropped_ca",
+        "attacks_submitted_other",
+        "attacks_dropped_other",
+    )
+    entry = getattr(state, "dung_frameworks", {}).get(df_id)
+    if not isinstance(entry, dict):
+        return
+    for k in all_keys:
+        if isinstance(output.get(k), int):
+            entry[k] = output[k]
+
+
+def _acceptance_member_lists(extensions: Any) -> List[List[str]]:
+    """Flatten the acceptance-extension shapes the annotated writers produce
+    into plain member lists: dung ``{sem: [members]}`` and setaf/weighted
+    ``[ [members], ... ]``. Social ranking/scores, empty and malformed shapes
+    return ``[]`` — the contradiction guard needs comparable member sets."""
+    out: List[List[str]] = []
+    if isinstance(extensions, dict):
+        for v in extensions.values():
+            if isinstance(v, list):
+                if v and all(isinstance(x, str) for x in v):
+                    out.append(v)
+                else:
+                    out.extend(m for m in v if isinstance(m, list) and m)
+    elif isinstance(extensions, list):
+        out.extend(m for m in extensions if isinstance(m, list) and m)
+    return out
+
+
+def _guard_attack_contradiction(
+    state: Any, df_id: str, output: Any, arguments: Any
+) -> None:
+    """#1698 DoD item 4 — internal-contradiction guard.
+
+    A framework that RETAINED edges (``attacks_retained > 0``) yet whose
+    acceptance extensions all return the full argument inventory is internally
+    contradictory: with a live edge, no Dung-family semantics accepts every
+    member (the edge's target is attacked, hence excluded or at least never
+    conflict-free with the full set). Detect it rather than publish it as a
+    normal verdict: flag the curated entry and trace.
+
+    Anti-pendule: ``attacks_submitted > 0`` with ``attacks_retained == 0`` is
+    NOT a contradiction — that is #1704's honest empty report doing its job
+    (the edges never reached the evaluated graph). The guard fires only when
+    an edge is actually IN the frame while every acceptance semantics still
+    accepts everything.
+    """
+    if not isinstance(output, dict) or state is None:
+        return
+    retained = output.get("attacks_retained", 0)
+    if not isinstance(retained, int) or retained <= 0:
+        return
+    entry = getattr(state, "dung_frameworks", {}).get(df_id)
+    if not isinstance(entry, dict):
+        return
+    member_lists = _acceptance_member_lists(output.get("extensions"))
+    if not member_lists:
+        return
+    arg_set = {str(a) for a in (arguments or []) if isinstance(a, str)}
+    if not arg_set:
+        return
+    if all({str(m) for m in members} == arg_set for members in member_lists):
+        entry["internal_contradiction"] = True
+        add_trace = getattr(state, "add_trace_entry", None)
+        if callable(add_trace):
+            add_trace(
+                phase="dung",
+                agent="AttackContradictionGuard",
+                reacts_to=["extract", "counter"],
+                summary=(
+                    f"Cadre {entry.get('name', df_id)}: {retained} arête(s) dans "
+                    f"le cadre mais toutes les sémantiques d'acceptation rendent "
+                    f"l'inventaire complet — contradiction interne détectée, "
+                    f"non publiée comme résultat sain (#1698)."
+                ),
+            )
+
+
 def _write_dung_extensions_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -1171,22 +1275,32 @@ def _write_dung_extensions_to_state(
     arguments = output.get("arguments", [])
     attacks = output.get("attacks", [])
     # Store primary framework with actual arguments and attacks
-    state.add_dung_framework(
-        name=f"verification_{semantics}",
-        arguments=arguments if isinstance(arguments, list) else [],
-        attacks=attacks if isinstance(attacks, list) else [],
-        extensions=extensions if isinstance(extensions, dict) else {},
-    )
+    df_ids = [
+        state.add_dung_framework(
+            name=f"verification_{semantics}",
+            arguments=arguments if isinstance(arguments, list) else [],
+            attacks=attacks if isinstance(attacks, list) else [],
+            extensions=extensions if isinstance(extensions, dict) else {},
+        )
+    ]
     # Store additional semantics if computed
     if isinstance(all_extensions, dict):
         for sem, ext in all_extensions.items():
             if sem != semantics and isinstance(ext, dict) and ext:
-                state.add_dung_framework(
-                    name=f"verification_{sem}",
-                    arguments=arguments if isinstance(arguments, list) else [],
-                    attacks=attacks if isinstance(attacks, list) else [],
-                    extensions=ext,
+                df_ids.append(
+                    state.add_dung_framework(
+                        name=f"verification_{sem}",
+                        arguments=arguments if isinstance(arguments, list) else [],
+                        attacks=attacks if isinstance(attacks, list) else [],
+                        extensions=ext,
+                    )
                 )
+    # #1698 (R791 item 1): the honest submitted/retained/dropped accounting
+    # reaches the curated surface the conclusion reads, not only the invoke
+    # output — and the internal-contradiction guard runs on each entry.
+    for df_id in df_ids:
+        _carry_attack_retention(state, df_id, output)
+        _guard_attack_contradiction(state, df_id, output, arguments)
 
 
 def _write_dung_arbitration_to_state(
@@ -1368,6 +1482,9 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
             state.dung_frameworks[df_id]["formalism_specific"] = {
                 "set_attacks": sanitised,
             }
+    # #1698 (R791 item 1): carry the honest accounting onto the curated entry.
+    _carry_attack_retention(state, df_id, output)
+    _guard_attack_contradiction(state, df_id, output, output.get("arguments", []))
 
 
 def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1434,6 +1551,9 @@ def _write_weighted_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> No
             sidecar["weight_statistics"] = stats_clean
     if sidecar:
         state.dung_frameworks[df_id]["formalism_specific"] = sidecar
+    # #1698 (R791 item 1): carry the honest accounting onto the curated entry.
+    _carry_attack_retention(state, df_id, output)
+    _guard_attack_contradiction(state, df_id, output, output.get("arguments", []))
 
 
 def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1442,12 +1562,16 @@ def _write_social_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
         return
     ranking = output.get("ranking", [])
     scores = output.get("scores", {})
-    state.add_dung_framework(
+    df_id = state.add_dung_framework(
         name="social_af",
         arguments=output.get("arguments", []),
         attacks=output.get("attacks", []),
         extensions={"social_ranking": ranking, "social_scores": scores},
     )
+    # #1698 (R791 item 1): carry the honest accounting onto the curated entry
+    # (no contradiction guard: social has ranking/scores, not acceptance
+    # extensions — _acceptance_member_lists yields nothing to compare).
+    _carry_attack_retention(state, df_id, output)
 
 
 def _write_eaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
