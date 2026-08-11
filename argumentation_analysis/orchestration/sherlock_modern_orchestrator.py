@@ -488,7 +488,19 @@ def build_sherlock_modern_workflow():
             .add_phase(
                 "narrative_synthesis",
                 capability="narrative_synthesis",
-                depends_on=["atms"],
+                # #1708 follow-up (coord R791): "jtms" is declared here because
+                # build_narrative reads state.jtms_beliefs and
+                # state.jtms_retraction_chain (narrative_synthesis_plugin.py:104,
+                # :120, :324).  Before this file dropped atms.depends_on=["jtms"],
+                # that ordering was supplied TRANSITIVELY through atms — removing
+                # the false edge on atms also removed a REAL edge for this phase,
+                # measured by execution: jtms and narrative_synthesis both landed
+                # on level 3, so narrative could read empty beliefs.  Same lesson
+                # as the atms fix one phase up, applied hop by hop: an edge that
+                # is false for a node can still be load-bearing for its
+                # descendants.  Full read set checked against the 7 phases —
+                # jtms was the only unordered producer.
+                depends_on=["atms", "jtms"],
                 optional=True,
             )
             .build()

@@ -631,18 +631,41 @@ class TestSherlockModernWorkflowGolden:
         wf = build_sherlock_modern_workflow()
         assert wf.validate() == []
 
-    def test_execution_order_4_levels(self):
+    def test_execution_order_5_levels(self):
         # #1708: dropping the false depends_on=["jtms"] and declaring the real
         # inputs (extract/hierarchical_fallacy/quality — the context keys
-        # _invoke_atms consumes) collapses the chain from 6 levels to 4.
+        # _invoke_atms consumes) collapses the chain from 6 levels to 5.
         # Measured by execution (get_execution_order), not by reading the
         # declaration — the lesson of the #1650 golden: a false declaration can
         # carry a real ordering side-effect, so the new order must be attested.
+        #
+        # R791: the first pass of this fix read 4 levels, because dropping the
+        # false atms→jtms edge ALSO dropped the transitive ordering it supplied
+        # to narrative_synthesis (which reads state.jtms_beliefs).  jtms and
+        # narrative landed on the same level.  narrative_synthesis now declares
+        # jtms directly, so the count is 5 and the order below is the real one.
         wf = build_sherlock_modern_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 4
+        assert len(levels) == 5
         assert levels[0] == ["extract"]
         assert set(levels[1]) == {"hierarchical_fallacy", "quality"}
+
+    def test_narrative_synthesis_runs_strictly_after_jtms(self):
+        """#1708 follow-up (R791) — the edge the atms fix nearly cost us.
+
+        ``build_narrative`` reads ``state.jtms_beliefs`` and
+        ``state.jtms_retraction_chain``.  Assert the ORDER by execution, not the
+        declaration: a same-level pair validates clean and reads empty beliefs.
+        """
+        wf = build_sherlock_modern_workflow()
+        levels = wf.get_execution_order()
+        pos = {name: i for i, lv in enumerate(levels) for name in lv}
+        assert pos["narrative_synthesis"] > pos["jtms"], (
+            "narrative_synthesis consumes jtms_beliefs; it must be on a strictly "
+            f"later level than jtms (got {pos}) "
+        )
+        # atms must NOT have regained the false jtms dependency to achieve this.
+        assert "jtms" not in wf.get_phase("atms").depends_on
 
     def test_dependency_chain(self):
         wf = build_sherlock_modern_workflow()
