@@ -92,6 +92,55 @@ class TranslationResult:
 _MAX_INVENTORY = 20
 
 
+def _raw_count(data: object, key: str) -> int:
+    """Count the items the LLM proposed under ``key``, tolerating any payload.
+
+    Must be at least as tolerant as the ``_validate_*`` helpers (which return
+    ``[]``/``{}`` on any non-list payload): a malformed LLM response (int/dict
+    where a list is expected) must never raise here — ``len(non-sized)`` would
+    crash the whole translation for the sake of a diagnostic.
+    """
+    if not isinstance(data, dict):
+        return 0
+    raw = data.get(key)
+    return len(raw) if isinstance(raw, list) else 0
+
+
+def _log_translation_yield(
+    axis: str, data: object, raw_keys: Tuple[str, ...], kept: int
+) -> None:
+    """Record raw / kept / dropped for one translator call — UNCONDITIONALLY.
+
+    ``CAUSE_NO_GENUINE_RELATIONS`` conflates two disjoint facts about a run:
+    the model proposed **nothing**, or it proposed items that were **all
+    dropped** at validation (unknown/fabricated ids → bare ``continue``). The
+    cause is documented as a statement about the *source* (``state_writers``
+    l.190) and fires identically in both cases, so downstream nobody can tell
+    a silent model from a silent validator.
+
+    #1649 answered exactly that question on the ASPIC axis, and only because an
+    **unconditional** line carried the counts: an absence proves nothing when
+    the only instrument is conditional on presence. This generalises that
+    instrument to every axis. Emitting on every call (including the ``raw=0,
+    kept=0`` case) is the whole point — a line that only prints when there is
+    something to report cannot distinguish "nothing happened" from "the
+    instrument was not reached".
+
+    Diagnostic only: never changes what the translator returns.
+    """
+    raw = sum(_raw_count(data, k) for k in raw_keys)
+    logger.info(
+        "%s translator yield (#1706): raw=%d kept=%d dropped=%d [keys: %s]. "
+        "raw=0 ⇒ the model proposed none; raw>0 & kept=0 ⇒ every proposal was "
+        "dropped at validation. Both report no_genuine_relations.",
+        axis,
+        raw,
+        kept,
+        raw - kept,
+        "/".join(raw_keys),
+    )
+
+
 def _build_inventory(
     arguments: List[str],
 ) -> Tuple[Dict[str, str], List[Dict[str, str]]]:
@@ -644,6 +693,7 @@ async def translate_to_bipolar_supports(
             relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
         )
     supports = _validate_supports(data, arg_by_id)
+    _log_translation_yield("Bipolar", data, ("supports",), len(supports))
     if supports:
         logger.info(
             "Bipolar translator: derived %d genuine support relation(s) from text.",
@@ -679,6 +729,7 @@ async def translate_to_aba_contraries(
             relations={}, cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
         )
     contraries = _validate_contraries(data, arg_by_id)
+    _log_translation_yield("ABA", data, ("contraries",), len(contraries))
     if contraries:
         logger.info(
             "ABA translator: derived %d genuine contrary pair(s) from text.",
@@ -751,17 +802,8 @@ async def translate_to_aspic_rules(
     #     plumbing).
     # Surfaced as a warning so it is visible even when base rules make
     # ``relations`` non-empty and the info log below hides the drop. The count
-    # must be at least as tolerant as ``_validate_aspic_*`` (which returns ``[]``
-    # on any non-list payload): a malformed LLM payload (int/dict where a list
-    # is expected) must not raise here — ``len(non-sized)`` would crash the
-    # whole translation. Guard on ``isinstance(raw, list)`` exactly as the
-    # validators do.
-    def _raw_count(_data: object, _key: str) -> int:
-        if not isinstance(_data, dict):
-            return 0
-        _raw = _data.get(_key)
-        return len(_raw) if isinstance(_raw, list) else 0
-
+    # tolerates any payload shape — see :func:`_raw_count` (hoisted to module
+    # level in #1706 so every axis gets the same instrument).
     _raw_contradictions = _raw_count(data, "contradictions")
     _raw_undercuts = _raw_count(data, "undercuts")
     if _raw_contradictions or _raw_undercuts:
@@ -779,6 +821,13 @@ async def translate_to_aspic_rules(
             _raw_undercuts - len(undercuts),
         )
     relations = rules + contradictions + undercuts
+    # The ASPIC info log below is conditional on ``relations`` being non-empty:
+    # its coverage on the #1649 runs was accidental (base rules happened to be
+    # non-empty). The unconditional line is the one that makes an absence
+    # readable.
+    _log_translation_yield(
+        "ASPIC+", data, ("rules", "contradictions", "undercuts"), len(relations)
+    )
     if relations:
         logger.info(
             "ASPIC+ translator: derived %d rule(s) (%d base, %d contradiction(s), "
@@ -820,6 +869,7 @@ async def translate_to_setaf_attacks(
             relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
         )
     attacks = _validate_setaf_attacks(data, arg_by_id)
+    _log_translation_yield("SetAF", data, ("attacks",), len(attacks))
     if attacks:
         logger.info(
             "SetAF translator: derived %d genuine joint attack(s) from text.",
@@ -857,6 +907,7 @@ async def translate_to_weighted_attacks(
             relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
         )
     attacks = _validate_weighted_attacks(data, arg_by_id)
+    _log_translation_yield("Weighted", data, ("attacks",), len(attacks))
     if attacks:
         logger.info(
             "Weighted translator: derived %d genuine weighted attack(s) from text.",
