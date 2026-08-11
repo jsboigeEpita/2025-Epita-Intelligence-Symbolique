@@ -129,3 +129,66 @@ class TestSurfaceRestitution:
         surface_restitution({"restitution_report": _Report()}, None)
         captured = capsys.readouterr()
         assert "gate=WARN" in captured.out
+
+
+class TestCoherentThreeStateRunOrchestration:
+    """#1650 (R790 item 2, site 6): the sherlock_modern block in main()
+    prints the hypothesis status for each result.hypotheses. A hypothesis
+    LACKING the ``coherent`` key must print UNCLASSIFIED — not INCOHERENT
+    (the old two-state ``else``/``not coherent`` branch folded absence onto
+    False). Armed by an input WITHOUT the key.
+
+    Substitution control: reverting the classifier to the old two-state
+    ``status = "INCOHERENT" if not h.get("coherent") else "COHERENT"``
+    makes this test red.
+    """
+
+    @pytest.mark.asyncio
+    async def test_sherlock_modern_prints_unclassified_for_absent_key(
+        self, monkeypatch, capsys
+    ):
+        from unittest.mock import AsyncMock
+
+        import argumentation_analysis.run_orchestration as ro
+        from argumentation_analysis.orchestration.sherlock_modern_orchestrator import (
+            InvestigationResult,
+            SherlockModernOrchestrator,
+        )
+
+        # Hypothesis with NO 'coherent' key — the arming input.
+        fake_result = InvestigationResult(
+            trace=[{"step": 1, "phase": "x", "agent": "A", "findings": {}, "conclusion": "c"}],
+            reasoning_chain=["c"],
+            agents_used=["A"],
+            agent_count=1,
+            hypotheses=[{"id": "h_nokey", "assumptions": []}],
+            solution="done",
+        )
+
+        # Mock investigate at the class level (imported lazily inside main()).
+        monkeypatch.setattr(
+            SherlockModernOrchestrator,
+            "investigate",
+            AsyncMock(return_value=fake_result),
+        )
+        # Avoid JVM / heavy env setup.
+        monkeypatch.setattr(ro, "setup_environment", AsyncMock(return_value=None))
+
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "run_orchestration.py",
+                "--mode",
+                "sherlock_modern",
+                "--text",
+                "x",
+            ],
+        )
+
+        await ro.main()
+        out = capsys.readouterr().out
+
+        # The absent-key hypothesis prints UNCLASSIFIED, NOT INCOHERENT.
+        assert "UNCLASSIFIED" in out
+        assert "h_nokey: UNCLASSIFIED" in out

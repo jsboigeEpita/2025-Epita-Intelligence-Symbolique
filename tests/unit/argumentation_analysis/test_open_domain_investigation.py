@@ -355,3 +355,48 @@ class TestDemoScript:
         )
         mod = importlib.util.module_from_spec(spec)
         assert hasattr(mod, "__file__")
+
+
+class TestCoherentThreeStateOpenDomain:
+    """#1650 (R790 item 2): the three open_domain sites (attributions, summary,
+    conclusion partition) must classify an absent ``coherent`` key as
+    UNCLASSIFIED / its own group, never fold it onto INCOHERENT. Armed by a
+    hypothesis that LACKS the key."""
+
+    def _investigator(self):
+        return OpenDomainInvestigator()
+
+    def test_attributions_name_absent_key_as_unclassifiable(self):
+        inv = self._investigator()
+        hyps = [{"id": "h_nokey", "assumptions": ["a"]}]  # no 'coherent' key
+        attributions = inv._build_attributions(["claim_A"], hyps)
+        assert len(attributions) == 1
+        # The output names the absent key, does NOT claim "undermined".
+        assert "unclassifiable" in attributions[0].attribution.lower()
+        assert "undermined" not in attributions[0].attribution.lower()
+
+    def test_summary_names_absent_key_unclassified(self):
+        inv = self._investigator()
+        hyps = [{"id": "h_nokey", "assumptions": []}]
+        summary = inv._build_hypothesis_summary(hyps)
+        assert "UNCLASSIFIED" in summary["h_nokey"]
+        assert "INCOHERENT" not in summary["h_nokey"]
+
+    def test_conclusion_partitions_absent_key_into_its_own_group(self):
+        """A hypothesis with the absent key goes NEITHER into coherent NOR
+        incoherent — it has its own unclassifiable line. Reverting the partition
+        to the old complementary split puts it into incoherent_hyps."""
+        inv = self._investigator()
+        hyps = [
+            {"id": "h_t", "coherent": True, "assumptions": []},
+            {"id": "h_f", "coherent": False, "assumptions": []},
+            {"id": "h_nokey", "assumptions": []},  # absent — the arming input
+        ]
+        attributions = inv._build_attributions(["claim_A"], hyps)
+        conclusion = inv._build_conclusion("doc_A", ["claim_A"], attributions, hyps)
+        assert "Coherent hypotheses: 1" in conclusion
+        assert "Incoherent hypotheses: 1" in conclusion
+        # The absent-key hypothesis is NOT miscounted as incoherent.
+        assert "Incoherent hypotheses: 2" not in conclusion
+        # It surfaces as its own group.
+        assert "Unclassifiable hypotheses: 1" in conclusion

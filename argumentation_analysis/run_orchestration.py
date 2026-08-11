@@ -604,7 +604,15 @@ Exemples:
         if result.hypotheses:
             print(f"\n  Hypotheses:")
             for h in result.hypotheses:
-                status = "COHERENT" if h.get("coherent") else "INCOHERENT"
+                # #1650 (R790 item 2): three states — absent/non-bool is
+                # UNCLASSIFIED, not folded onto INCOHERENT.
+                coh = h.get("coherent")
+                if coh is True:
+                    status = "COHERENT"
+                elif coh is False:
+                    status = "INCOHERENT"
+                else:
+                    status = "UNCLASSIFIED"
                 print(f"    - {h['id']}: {status}")
         print(f"\n  Solution:\n    {result.solution[:500]}")
         print(f"{'='*60}\n")
