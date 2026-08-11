@@ -119,13 +119,6 @@ MOCK_OUTPUTS = {
         "narrative": "Investigation complete with 2 hypotheses tested.",
         "paragraph_count": 3,
     },
-    "atms_hypothesis_testing": {
-        "atms_contexts": [
-            {"hypothesis_id": "h1", "coherent": True},
-            {"hypothesis_id": "h2", "coherent": False},
-        ],
-        "has_contradictions": True,
-    },
 }
 
 
@@ -262,9 +255,6 @@ def _make_mock_state_writers():
         if isinstance(output, dict) and "narrative" in output:
             state.narrative_synthesis = output["narrative"]
 
-    def _write_atms_hypothesis(output, state, ctx):
-        _write_atms(output, state, ctx)
-
     writers["argument_quality"] = _write_quality
     writers["counter_argument_generation"] = _write_counter
     writers["belief_maintenance"] = _write_jtms
@@ -282,7 +272,11 @@ def _make_mock_state_writers():
     writers["neural_fallacy_detection"] = _write_neural_fallacy
     writers["formal_synthesis"] = _write_formal_synthesis
     writers["narrative_synthesis"] = _write_narrative_synthesis
-    writers["atms_hypothesis_testing"] = _write_atms_hypothesis
+    # #1708: the "atms_hypothesis_testing" phantom-capability writer is removed —
+    # after the rename the phase asks for "atms_reasoning", whose writer is
+    # registered just above (l.271). The golden now attests a wiring that
+    # production actually supplies, instead of substituting a fixture for a
+    # capability nothing provides.
     return writers
 
 
@@ -637,12 +631,41 @@ class TestSherlockModernWorkflowGolden:
         wf = build_sherlock_modern_workflow()
         assert wf.validate() == []
 
-    def test_execution_order_6_levels(self):
+    def test_execution_order_5_levels(self):
+        # #1708: dropping the false depends_on=["jtms"] and declaring the real
+        # inputs (extract/hierarchical_fallacy/quality — the context keys
+        # _invoke_atms consumes) collapses the chain from 6 levels to 5.
+        # Measured by execution (get_execution_order), not by reading the
+        # declaration — the lesson of the #1650 golden: a false declaration can
+        # carry a real ordering side-effect, so the new order must be attested.
+        #
+        # R791: the first pass of this fix read 4 levels, because dropping the
+        # false atms→jtms edge ALSO dropped the transitive ordering it supplied
+        # to narrative_synthesis (which reads state.jtms_beliefs).  jtms and
+        # narrative landed on the same level.  narrative_synthesis now declares
+        # jtms directly, so the count is 5 and the order below is the real one.
         wf = build_sherlock_modern_workflow()
         levels = wf.get_execution_order()
-        assert len(levels) == 6
+        assert len(levels) == 5
         assert levels[0] == ["extract"]
         assert set(levels[1]) == {"hierarchical_fallacy", "quality"}
+
+    def test_narrative_synthesis_runs_strictly_after_jtms(self):
+        """#1708 follow-up (R791) — the edge the atms fix nearly cost us.
+
+        ``build_narrative`` reads ``state.jtms_beliefs`` and
+        ``state.jtms_retraction_chain``.  Assert the ORDER by execution, not the
+        declaration: a same-level pair validates clean and reads empty beliefs.
+        """
+        wf = build_sherlock_modern_workflow()
+        levels = wf.get_execution_order()
+        pos = {name: i for i, lv in enumerate(levels) for name in lv}
+        assert pos["narrative_synthesis"] > pos["jtms"], (
+            "narrative_synthesis consumes jtms_beliefs; it must be on a strictly "
+            f"later level than jtms (got {pos}) "
+        )
+        # atms must NOT have regained the false jtms dependency to achieve this.
+        assert "jtms" not in wf.get_phase("atms").depends_on
 
     def test_dependency_chain(self):
         wf = build_sherlock_modern_workflow()
@@ -651,7 +674,14 @@ class TestSherlockModernWorkflowGolden:
         assert "extract" in wf.get_phase("quality").depends_on
         assert "quality" in wf.get_phase("counter").depends_on
         assert "counter" in wf.get_phase("jtms").depends_on
-        assert "jtms" in wf.get_phase("atms").depends_on
+        # #1708: atms no longer depends on jtms (false — _invoke_atms never reads
+        # jtms_beliefs, #1650). It depends on the real inputs it consumes.
+        assert "jtms" not in wf.get_phase("atms").depends_on
+        assert {"extract", "hierarchical_fallacy", "quality"}.issubset(
+            set(wf.get_phase("atms").depends_on)
+        )
+        # narrative_synthesis still runs strictly after atms (measured: atms at
+        # level 2, narrative_synthesis at level 3).
         assert "atms" in wf.get_phase("narrative_synthesis").depends_on
 
     def test_capabilities_match_phases(self):

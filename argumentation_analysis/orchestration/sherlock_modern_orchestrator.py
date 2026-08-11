@@ -491,14 +491,41 @@ def build_sherlock_modern_workflow():
             )
             .add_phase(
                 "atms",
-                capability="atms_hypothesis_testing",
-                depends_on=["jtms"],
+                # #1708: was "atms_hypothesis_testing" — a phantom capability no
+                # producer supplies. The real producer (registry_setup.py registers
+                # atms_service, invoke=_invoke_atms) advertises "atms_reasoning",
+                # which this file's own _PHASE_TO_CAPABILITY table names (l.74) and
+                # the other two atms phase declarations use (workflows.py,
+                # formal_verification.py). Renamed, not registered — subtraction of
+                # a phantom name.
+                #
+                # depends_on was ["jtms"] — false (_invoke_atms never reads
+                # jtms_beliefs, #1650). Dropping it to zero left atms at DAG level 0
+                # (measured by execution), running BEFORE the extract/hierarchical_
+                # fallacy/quality context keys _invoke_atms actually consumes (R787)
+                # — the false jtms dep was carrying a real ordering side-effect.
+                # Declared here are the real inputs, so atms runs after them
+                # (level 2 measured) without re-introducing the false jtms link.
+                capability="atms_reasoning",
+                depends_on=["extract", "hierarchical_fallacy", "quality"],
                 optional=True,
             )
             .add_phase(
                 "narrative_synthesis",
                 capability="narrative_synthesis",
-                depends_on=["atms"],
+                # #1708 follow-up (coord R791): "jtms" is declared here because
+                # build_narrative reads state.jtms_beliefs and
+                # state.jtms_retraction_chain (narrative_synthesis_plugin.py:104,
+                # :120, :324).  Before this file dropped atms.depends_on=["jtms"],
+                # that ordering was supplied TRANSITIVELY through atms — removing
+                # the false edge on atms also removed a REAL edge for this phase,
+                # measured by execution: jtms and narrative_synthesis both landed
+                # on level 3, so narrative could read empty beliefs.  Same lesson
+                # as the atms fix one phase up, applied hop by hop: an edge that
+                # is false for a node can still be load-bearing for its
+                # descendants.  Full read set checked against the 7 phases —
+                # jtms was the only unordered producer.
+                depends_on=["atms", "jtms"],
                 optional=True,
             )
             .build()
