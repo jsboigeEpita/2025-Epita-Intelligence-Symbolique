@@ -137,10 +137,36 @@ class TestSpectacularWorkflowDAG:
         assert "hierarchical_fallacy" in phase.depends_on
         assert "pl" in phase.depends_on
 
-    def test_atms_depends_on_jtms(self):
+    def test_atms_depends_on_real_inputs_not_jtms(self):
+        """#1650: the ATMS producer (_invoke_atms) reads extract (arguments/
+        claims), hierarchical_fallacy (detected fallacies) and quality
+        (per-argument scores). It does NOT read jtms_beliefs. The previous
+        depends_on=['jtms'] + '(from JTMS beliefs)' comment declared a data
+        link the producer never realized. This is the DAG-side honesty fix:
+        declare the phases the producer actually consumes, drop the false jtms
+        link. The maximal-enumeration contribution is out of scope here
+        (does not ship); this only stops the phase declaration from lying."""
         wf = build_spectacular_workflow()
         phase = wf.get_phase("atms")
-        assert "jtms" in phase.depends_on
+        # The false link is gone.
+        assert "jtms" not in phase.depends_on
+        # The real inputs (the context keys _invoke_atms reads) are declared.
+        assert "extract" in phase.depends_on
+        assert "hierarchical_fallacy" in phase.depends_on
+        assert "quality" in phase.depends_on
+        # And the producer runs strictly after all its real inputs.
+        levels = wf.get_execution_order()
+        atms_level = next(
+            i for i, lvl in enumerate(levels) if "atms" in lvl
+        )
+        for upstream in ("extract", "hierarchical_fallacy", "quality"):
+            up_level = next(
+                i for i, lvl in enumerate(levels) if upstream in lvl
+            )
+            assert up_level < atms_level, (
+                f"atms (level {atms_level}) must run after '{upstream}' "
+                f"(level {up_level})"
+            )
 
     def test_formal_synthesis_aggregates(self):
         wf = build_spectacular_workflow()

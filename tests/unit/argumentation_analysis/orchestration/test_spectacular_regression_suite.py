@@ -415,10 +415,26 @@ class TestSpectacularWorkflowGolden:
         counter = wf.get_phase("counter")
         assert "quality" in counter.depends_on
 
-    def test_atms_depends_on_jtms(self):
+    def test_atms_declares_the_inputs_its_producer_reads(self):
+        # #1650: this golden used to assert ``"jtms" in atms.depends_on``. The
+        # producer ``_invoke_atms`` never reads ``jtms_beliefs`` — it builds the
+        # ATMS from extract (arguments/claims), hierarchical_fallacy (detected
+        # fallacies) and quality (per-argument scores). The golden pinned a
+        # declaration nothing realized, so it defended the lie rather than the
+        # behaviour. It now asserts the real inputs AND the absence of the
+        # phantom link, so re-introducing the false dependency goes red.
         wf = build_spectacular_workflow()
         atms = wf.get_phase("atms")
-        assert "jtms" in atms.depends_on
+        assert "jtms" not in atms.depends_on
+        assert {"extract", "hierarchical_fallacy", "quality"}.issubset(
+            set(atms.depends_on)
+        )
+        # The DAG must still order atms strictly after every input it declares.
+        levels = wf.get_execution_order()
+        atms_level = next(i for i, lv in enumerate(levels) if "atms" in lv)
+        for dep in ("extract", "hierarchical_fallacy", "quality"):
+            dep_level = next(i for i, lv in enumerate(levels) if dep in lv)
+            assert dep_level < atms_level
 
     def test_formal_synthesis_aggregates_three_logic_families(self):
         # #1115: formal_synthesis is no longer terminal (deep_synthesis is the

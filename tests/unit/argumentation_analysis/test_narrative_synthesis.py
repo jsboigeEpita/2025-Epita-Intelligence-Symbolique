@@ -99,6 +99,21 @@ class TestBuildNarrative:
         result = build_narrative(state)
         assert "atms" in result.lower() or "hypothese" in result.lower()
 
+    def test_atms_phrase_declares_predefined_battery_not_text_measurement(self):
+        """#1650: the ATMS hypothesis count is the size of a predefined probe
+        battery (a fixed menu in code), not a measurement of how many readings
+        the text admits. The prose must say so, and must NOT carry the old
+        implication that the count characterizes the corpus."""
+        state = _rich_state()
+        result = build_narrative(state)
+        lowered = result.lower()
+        # Declares a predefined battery.
+        assert "batterie" in lowered
+        # Explicitly disclaims counting the text's readings.
+        assert "denombrement" in lowered or "non un denombrement" in lowered
+        # The old misleading phrase is gone.
+        assert "sensibilite des conclusions" not in lowered
+
     def test_references_counter_arguments(self):
         state = _rich_state()
         result = build_narrative(state)

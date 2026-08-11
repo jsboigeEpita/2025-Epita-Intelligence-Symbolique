@@ -701,7 +701,7 @@ def build_spectacular_workflow() -> WorkflowDefinition:
         L5  counter                               (from quality)
         L6  jtms | debate                         (from counter)
         L6b belief_revision                       (from jtms + dung)
-        L7  atms                                  (from jtms)
+        L7  atms                                  (from extract + fallacy + quality)
         L8  governance | formal_synthesis         (aggregation)
         L9  synthesis                               (terminal aggregation)
     """
@@ -937,11 +937,17 @@ def build_spectacular_workflow() -> WorkflowDefinition:
             depends_on=["counter"],
             optional=True,
         )
-        # L7 — ATMS multi-context (from JTMS beliefs)
+        # L7 — ATMS multi-context. #1650: the producer (_invoke_atms) reads
+        # extract (arguments/claims), hierarchical_fallacy (detected fallacies)
+        # and quality (per-argument scores) — NOT jtms_beliefs. The previous
+        # depends_on=["jtms"] + "(from JTMS beliefs)" comment declared a data
+        # link the producer never realized. Declared here are the phases the
+        # producer actually consumes context from (anti-pendule: declare the
+        # real inputs rather than zero, so the DAG stays ordered).
         .add_phase(
             "atms",
             capability="atms_reasoning",
-            depends_on=["jtms"],
+            depends_on=["extract", "hierarchical_fallacy", "quality"],
             optional=True,
         )
         # L8 — governance + formal synthesis (terminal aggregation)
