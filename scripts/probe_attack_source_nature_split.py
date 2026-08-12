@@ -228,6 +228,13 @@ def _aggregate(blocks: List[Dict[str, Any]]) -> Dict[str, Any]:
             "distinct_fingerprints": len(multiplicity),
             "max_multiplicity": max_mult,
             "replicated": max_mult > 1,
+            # Per-surface nature-availability flag. The invariant
+            # (sum(natures) == submitted) is only meaningful when this surface
+            # actually carried per-nature keys; otherwise it would compare
+            # 0 (None summed) against the real submitted total and print a
+            # spurious MISMATCH — a verdict on a magnitude it never received
+            # (#1019 one level up from the aggregation defect).
+            "nature_keys_present": nature_present,
             # Deduped totals = authoritative candidate counts.
             "attacks_submitted": dedup_sums["attacks_submitted"],
             "attacks_retained": dedup_sums["attacks_retained"],
@@ -304,12 +311,21 @@ def _render_surface(title: str, agg: Dict[str, Any]) -> List[str]:
         f"      ca:      {bn['ca']['submitted']} / {bn['ca']['dropped']}\n"
         f"      other:   {bn['other']['submitted']} / {bn['other']['dropped']}"
     )
-    # Invariant: sum(natures) == submitted total (verifiable honesty).
-    sum_sub = (
-        bn["fallacy"]["submitted"] + bn["ca"]["submitted"] + bn["other"]["submitted"]
-    )
-    match = "OK" if sum_sub == agg["attacks_submitted"] else "MISMATCH"
-    lines.append(f"    invariant sum(natures) == submitted: {match}")
+    # Invariant: sum(natures) == submitted total (verifiable honesty). Printed
+    # only when this surface carried per-nature keys — on a pre-instrumentation
+    # surface the per-nature values are absent (summed to 0) and the invariant
+    # would print a spurious MISMATCH, a verdict on a magnitude the surface
+    # never declared (#1019 one level up from the aggregation defect).
+    if agg.get("nature_keys_present"):
+        sum_sub = (
+            bn["fallacy"]["submitted"]
+            + bn["ca"]["submitted"]
+            + bn["other"]["submitted"]
+        )
+        match = "OK" if sum_sub == agg["attacks_submitted"] else "MISMATCH"
+        lines.append(f"    invariant sum(natures) == submitted: {match}")
+    else:
+        lines.append("    invariant sum(natures) == submitted: N/A (split unavailable)")
     return lines
 
 
