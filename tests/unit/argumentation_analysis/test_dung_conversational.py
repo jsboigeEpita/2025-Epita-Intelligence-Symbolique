@@ -1,11 +1,18 @@
-"""Tests for Dung framework construction in conversational mode (#564).
+"""Tests for Dung framework construction in conversational mode (#564, rev #1668).
 
 Validates that:
-- _build_dung_framework_from_state builds Dung AF from arguments + counter-args
-- Attack relations are derived from counter-argument strategies (UNDERCUT/REBUT)
+- _build_dung_framework_from_state builds a Dung AF from arguments + fallacy targets
 - Fallacy-targeted arguments become attack relations
 - Grounded extension is computed via pure-Python DungFramework
 - Result is persisted to state.dung_frameworks
+
+#1668 — the counter-argument strategy branch (the ``("UNDERCUT","REBUT","REBUTTAL")``
+gate) was removed. The producer never emitted that vocabulary (0/66 pipeline +
+0/16 conversational matches on real runs), so the branch populated zero attacks.
+``test_counter_argument_no_longer_populates_framework`` is the armed proof of the
+removal (a gated strategy that used to populate the framework no longer does);
+the fallacy-driven tests prove behavioural neutrality (the framework is still
+populated by the fallacy branch, unchanged).
 """
 
 import pytest
@@ -56,8 +63,18 @@ class TestBuildDungFramework:
         result = _build_dung_framework_from_state(state)
         assert result is None
 
-    def test_builds_from_counter_argument(self):
-        """Counter-argument with UNDERCUT strategy creates attack relation."""
+    def test_counter_argument_no_longer_populates_framework(self):
+        """#1668 armed proof: a gated counter-argument strategy does NOT populate
+        the framework after the CA branch was removed.
+
+        Before #1668, a counter-argument whose ``strategy`` was in
+        ``("UNDERCUT","REBUT","REBUTTAL")`` created an attack relation here.
+        The branch was removed because the producer never emitted that
+        vocabulary (0/66 + 0/16 real-run matches). This test pins the removal:
+        with no fallacies, a gated-strategy counter-argument yields no attack,
+        so the builder returns ``None``. If this assertion ever flips back to
+        "populated", someone reintroduced a live CA branch — investigate.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _build_dung_framework_from_state,
         )
@@ -68,19 +85,20 @@ class TestBuildDungFramework:
         for desc in args:
             arg_ids.append(state.add_argument(desc))
 
-        state.counter_arguments.append({
-            "strategy": "UNDERCUT",
-            "original_argument": args[1],
-            "counter_argument": args[0],
-        })
+        # A counter-argument whose strategy is in the (removed) gate vocabulary.
+        # No fallacy is added, so the fallacy branch cannot mask the removal.
+        state.counter_arguments.append(
+            {
+                "strategy": "UNDERCUT",
+                "original_argument": args[1],
+                "counter_argument": args[0],
+            }
+        )
 
         result = _build_dung_framework_from_state(state)
-        assert result is not None
-        assert result["attacks"] >= 1
-        assert result["arguments"] >= 2
-
-        # Verify persisted to state
-        assert len(state.dung_frameworks) >= 1
+        # No attacks (CA branch gone, no fallacies) → builder short-circuits.
+        assert result is None
+        assert len(state.dung_frameworks) == 0
 
     def test_builds_from_fallacy_target(self):
         """Fallacy targeting an argument creates a pseudo-attacker node."""
@@ -99,7 +117,13 @@ class TestBuildDungFramework:
         assert result["attacks"] >= 1
 
     def test_computes_grounded_extension(self):
-        """Grounded extension is computed for valid Dung AF."""
+        """Grounded extension is computed for a valid Dung AF.
+
+        #1668: previously this test drove the attack via a counter-argument
+        (``REBUT`` strategy); it now drives it via a fallacy target, which is
+        the only attack source after the CA branch removal. The grounded
+        extension semantics under test are unchanged.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _build_dung_framework_from_state,
         )
@@ -108,16 +132,12 @@ class TestBuildDungFramework:
         arg_a = state.add_argument("Strong argument A")
         arg_b = state.add_argument("Weak argument B")
 
-        # A attacks B via counter-argument
-        state.counter_arguments.append({
-            "strategy": "REBUT",
-            "original_argument": "Weak argument B",
-            "counter_argument": "Strong argument A",
-        })
+        # A fallacy targeting arg_b makes a pseudo-attacker attack arg_b.
+        state.add_fallacy("ad_hominem", "Attacks the speaker", target_arg_id=arg_b)
 
         result = _build_dung_framework_from_state(state)
         assert result is not None
-        # Grounded extension should include the unattacked argument
+        # Grounded extension should include the unattacked argument (arg_a).
         grounded = result.get("grounded_extension", [])
         assert arg_a in grounded
 
@@ -153,8 +173,83 @@ class TestBuildDungFramework:
         assert len(df_data["arguments"]) >= 2
         assert len(df_data["attacks"]) >= 1
 
-    def test_multiple_attacks_from_mixed_sources(self):
-        """Both counter-args and fallacies contribute attacks."""
+    def test_multiple_attacks_from_distinct_fallacy_targets(self):
+        """Fallacies targeting distinct arguments each contribute one attack.
+
+        #1668: previously asserted ``attacks >= 2`` from one counter-argument
+        (``UNDERCUT``) + one fallacy. With the CA branch removed only the
+        fallacy attack remains per source; this test now uses two distinct
+        fallacy targets to preserve multi-attack coverage on the live branch.
+        """
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _build_dung_framework_from_state,
+        )
+
+        state = UnifiedAnalysisState("Test")
+        state.add_argument("Argument A about policy")
+        arg_b = state.add_argument("Argument B about evidence")
+        arg_c = state.add_argument("Argument C about logic")
+
+        # The CA below would have contributed an attack pre-#1668; it is now
+        # inert. It is kept here to prove the removal is neutral even when a
+        # gated counter-argument is present alongside live fallacy sources.
+        state.counter_arguments.append(
+            {
+                "strategy": "UNDERCUT",
+                "original_argument": "Argument B about evidence",
+                "counter_argument": "Argument A about policy",
+            }
+        )
+
+        # Two distinct fallacy targets → two attacks via the live branch.
+        state.add_fallacy("straw_man", "Misrepresents", target_arg_id=arg_b)
+        state.add_fallacy("ad_hominem", "Attacks speaker", target_arg_id=arg_c)
+
+        result = _build_dung_framework_from_state(state)
+        assert result is not None
+        assert result["attacks"] >= 2
+
+    def test_no_duplicate_attacks(self):
+        """Two fallacies targeting the same argument don't duplicate the node.
+
+        #1668: the counter-argument previously present here (``REBUT``) is now
+        inert; the test still passes because the fallacy branch alone populates
+        at least one attack.
+        """
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _build_dung_framework_from_state,
+        )
+
+        state = UnifiedAnalysisState("Test")
+        state.add_argument("Argument A")
+        arg_b = state.add_argument("Argument B")
+
+        # Inert post-#1668; kept to show neutrality in the presence of a
+        # gated counter-argument.
+        state.counter_arguments.append(
+            {
+                "strategy": "REBUT",
+                "original_argument": "Argument B",
+                "counter_argument": "Argument A",
+            }
+        )
+        state.add_fallacy("hasty_generalization", "Too broad", target_arg_id=arg_b)
+
+        result = _build_dung_framework_from_state(state)
+        assert result is not None
+        assert result["attacks"] >= 1
+
+    def test_fallacy_population_unaffected_by_gate_removal(self):
+        """#1668 neutrality proof: a realistic state (fallacies + gated CAs) is
+        still populated, entirely by the fallacy branch.
+
+        This is the behavioural-neutrality leg of the removal: the gate never
+        matched on real runs, so the framework's population came only from
+        fallacies. With gated counter-arguments present (as on a real run) the
+        framework still builds and carries the fallacy-driven attacks. If the
+        attack count here ever drops to 0, the fallacy branch was damaged —
+        that would be a real regression, unlike the dead CA branch removal.
+        """
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _build_dung_framework_from_state,
         )
@@ -162,40 +257,22 @@ class TestBuildDungFramework:
         state = UnifiedAnalysisState("Test")
         arg_a = state.add_argument("Argument A about policy")
         arg_b = state.add_argument("Argument B about evidence")
-        arg_c = state.add_argument("Argument C about logic")
 
-        # Counter-arg attack
-        state.counter_arguments.append({
-            "strategy": "UNDERCUT",
-            "original_argument": "Argument B about evidence",
-            "counter_argument": "Argument A about policy",
-        })
-
-        # Fallacy attack
-        state.add_fallacy("straw_man", "Misrepresents", target_arg_id=arg_c)
-
-        result = _build_dung_framework_from_state(state)
-        assert result is not None
-        assert result["attacks"] >= 2
-
-    def test_no_duplicate_attacks(self):
-        """Same attack from multiple sources doesn't duplicate."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _build_dung_framework_from_state,
+        # Gated-strategy counter-arguments, as a real producer emits (free-text
+        # strategies that don't match the gate). Inert post-#1668.
+        state.counter_arguments.append(
+            {
+                "strategy": "reductio ad absurdum",
+                "original_argument": "Argument B about evidence",
+                "counter_argument": "Argument A about policy",
+            }
         )
 
-        state = UnifiedAnalysisState("Test")
-        arg_a = state.add_argument("Argument A")
-        arg_b = state.add_argument("Argument B")
-
-        # Both counter-arg and fallacy target B from A
-        state.counter_arguments.append({
-            "strategy": "REBUT",
-            "original_argument": "Argument B",
-            "counter_argument": "Argument A",
-        })
-        state.add_fallacy("hasty_generalization", "Too broad", target_arg_id=arg_b)
+        # Fallacies targeting each argument — the live population source.
+        state.add_fallacy("ad_hominem", "Attacks the speaker", target_arg_id=arg_a)
+        state.add_fallacy("straw_man", "Misrepresents", target_arg_id=arg_b)
 
         result = _build_dung_framework_from_state(state)
         assert result is not None
-        assert result["attacks"] >= 1
+        # Two distinct fallacy targets → at least two attacks, none from CAs.
+        assert result["attacks"] >= 2
