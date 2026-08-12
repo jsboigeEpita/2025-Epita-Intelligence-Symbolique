@@ -33,7 +33,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.chdir(Path(__file__).parent.parent)
@@ -130,6 +130,57 @@ def _fmt(v: Any, indent: int = 0) -> str:
     return str(v)
 
 
+def _phase_status_lines(summary: Any) -> List[str]:
+    """Build the section-0 phase-status body, honest to the summary's shape.
+
+    The two orchestration paths emit different summaries — and that difference
+    is honest, not a bug to paper over:
+
+    * **pipeline** (``WorkflowExecutor`` via ``run_unified_analysis``): named
+      phase lists — ``completed_phases`` / ``failed_phases`` / ``skipped_phases``
+      (a DAG fails / skips individual named phases).
+    * **conversational** (``run_conversational_analysis``): aggregate counters —
+      ``completed`` / ``failed`` / ``skipped`` / ``total`` / ``total_messages``
+      (an AgentGroupChat dialogue does not fail individual named phases, so no
+      names exist).
+
+    Display what each shape actually carries; never fabricate phase names on the
+    conversational path (#1019 — ``completed_phases`` was always absent there, so
+    section 0 read ``(aucune)`` on every conversational run, hiding real progress).
+    Pure function (no I/O) so the shape handling is unit-testable without a run.
+    """
+    if not summary or not isinstance(summary, dict):
+        return ["_(résumé indisponible pour ce run)_"]
+    # Pipeline shape: named phase lists.
+    if any(
+        k in summary for k in ("completed_phases", "failed_phases", "skipped_phases")
+    ):
+        done = summary.get("completed_phases") or []
+        failed = summary.get("failed_phases") or []
+        skipped = summary.get("skipped_phases") or []
+        return [
+            f"- **Complétées ({len(done)})**: {', '.join(done) if done else '(aucune)'}",
+            f"- **Échouées ({len(failed)})**: {', '.join(failed) if failed else '(aucune)'}",
+            f"- **Sautées ({len(skipped)})**: {', '.join(skipped) if skipped else '(aucune)'}",
+        ]
+    # Conversational shape: aggregate counters (no per-phase names).
+    completed = summary.get("completed")
+    failed = summary.get("failed")
+    skipped = summary.get("skipped")
+    total = summary.get("total")
+    done_str = "?" if completed is None else str(completed)
+    failed_str = "0" if failed is None else str(failed)
+    skipped_str = "0" if skipped is None else str(skipped)
+    total_str = done_str if total is None else str(total)
+    lines = [
+        f"- **Phases**: {done_str}/{total_str} complétées · "
+        f"{failed_str} échouées · {skipped_str} sautées"
+    ]
+    if "total_messages" in summary and summary["total_messages"] is not None:
+        lines.append(f"- **Messages (conversation)**: {summary['total_messages']}")
+    return lines
+
+
 def render_markdown(
     snap: Dict[str, Any],
     corpus: Dict[str, Any],
@@ -156,18 +207,15 @@ def render_markdown(
     md.append("")
     md.append(_fmt(corpus["meta"]))
 
-    # 0. Phase status — honest view of what actually ran
+    # 0. Phase status — honest view of what actually ran. The two paths emit
+    # different summary shapes (named lists vs aggregate counters); the helper
+    # displays whichever exists rather than fabricating phase names (#1019).
     if summary:
-        done = summary.get("completed_phases", [])
-        failed = summary.get("failed_phases", [])
-        skipped = summary.get("skipped_phases", [])
-        body = [
-            f"- **Complétées ({len(done)})**: {', '.join(done) if done else '(aucune)'}",
-            f"- **Échouées ({len(failed)})**: {', '.join(failed) if failed else '(aucune)'}",
-            f"- **Sautées ({len(skipped)})**: {', '.join(skipped) if skipped else '(aucune)'}",
-        ]
         md.append(
-            _md_section("0. Statut des phases (transparence run)", "\n".join(body))
+            _md_section(
+                "0. Statut des phases (transparence run)",
+                "\n".join(_phase_status_lines(summary)),
+            )
         )
 
     # 1. Arguments
