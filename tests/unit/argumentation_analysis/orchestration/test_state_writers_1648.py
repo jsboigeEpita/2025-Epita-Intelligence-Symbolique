@@ -306,10 +306,10 @@ class TestSetafFlattening1648:
         state = _new_state()
         output = self._stub_handler_output()
         output["attacks"] = [
-            {"attackers": ["a", "b"], "target": "c"},     # valid
-            {"target": "b"},                              # missing attackers
-            {"attackers": "not-a-list", "target": "d"},   # wrong shape
-            {"attackers": [], "target": "e"},             # empty set (valid)
+            {"attackers": ["a", "b"], "target": "c"},  # valid
+            {"target": "b"},  # missing attackers
+            {"attackers": "not-a-list", "target": "d"},  # wrong shape
+            {"attackers": [], "target": "e"},  # empty set (valid)
         ]
 
         _write_setaf_to_state(output, state, {})
@@ -343,7 +343,9 @@ class TestAdfFlattening1648:
     future refactor that tries to "fix" ADF attacks breaks it visibly.
     """
 
-    def test_adf_attacks_stay_empty_and_acceptance_conditions_acknowledged(self) -> None:
+    def test_adf_attacks_stay_empty_and_acceptance_conditions_acknowledged(
+        self,
+    ) -> None:
         state = _new_state()
         output = {
             "semantics": "grounded",
@@ -356,14 +358,14 @@ class TestAdfFlattening1648:
 
         entry = next(iter(state.dung_frameworks.values()))
         # Writer-side contract: attacks stay empty (ADF has none).
-        assert entry["attacks"] == [], (
-            f"ADF writer unexpectedly produced attacks={entry['attacks']!r}"
-        )
+        assert (
+            entry["attacks"] == []
+        ), f"ADF writer unexpectedly produced attacks={entry['attacks']!r}"
         # Distinct ADF data (interpretations) IS preserved via extensions.
         # If a future refactor drops them, this assertion fires.
-        assert "adf_models" in entry["extensions"], (
-            f"ADF writer dropped interpretations: extensions={entry['extensions']!r}"
-        )
+        assert (
+            "adf_models" in entry["extensions"]
+        ), f"ADF writer dropped interpretations: extensions={entry['extensions']!r}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -482,9 +484,9 @@ class TestSocialFlattening1648:
         extensions = entry.get("extensions", {})
         # Today's behaviour: scores live in extensions under "social_scores".
         # If a future writer refactor drops them, this assertion fires.
-        assert extensions.get("social_scores") == output["scores"], (
-            f"Social writer dropped scores: extensions={extensions!r}"
-        )
+        assert (
+            extensions.get("social_scores") == output["scores"]
+        ), f"Social writer dropped scores: extensions={extensions!r}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -654,121 +656,122 @@ class TestDelpFlattening1648:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# DL — ontology structure is a PRODUCER-side loss (out of #1648 writer-scope).
-# See #1693 for the invoke-layer fix. The writer's contract on the real
-# (count-only) producer output is pinned here.
+# DL — ontology provenance now carried via the invoke layer (#1693, was
+# producer-side loss out of #1648 writer-scope). The writer attaches the
+# input ontology as a strictly-additive ``formalism_specific`` sidecar.
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestDlFlattening1648:
-    """DL ontology loss is producer-side (invoke-layer), not writer-side.
+    """DL ontology provenance: the invoke now carries it, the writer sidecars it.
 
-    ``dl_handler.py`` builds a Tweety KB from the TBox/ABox, but
-    ``_invoke_dl`` (``invoke_callables.py:4125-4131``) **rebuilds the output
-    dict with counts only** (``tbox_size``, ``abox_size``) — the TBox/ABox
-    lists are consumed by ``create_knowledge_base`` and dropped *before* the
-    writer boundary. So the writer never receives the ontology; no writer-side
-    sidecar could recover it (that would be #1019 theater — a dict-literal
-    fixture pretending the writer gets the lists). The genuine fix is
-    invoke-layer (carry the lists through) + a privacy review (the int
-    reduction may be a deliberate export guard, since
-    ``fol_analysis_results`` is not a ``sanitize_state`` scrub target) —
-    tracked in #1693, deferred by coord ruling R780 option (ii).
-
-    What the writer DOES receive and must carry honestly: the tri-state
-    consistency verdict (None=unverified / True / False, #1019 fail-loud) and
-    the message. The xfail-strict pin (which assumed a writer-side fix) is
-    retired; this test now pins the real writer contract on the real producer
-    output, and asserts the ontology is NOT fabricated from counts.
+    Pre-#1693 ``_invoke_dl`` rebuilt its output with counts only and dropped
+    the TBox/ABox lists before the writer boundary — so no writer-side change
+    could recover them. #1693 makes ``_invoke_dl`` carry the lists as
+    ``input_ontology`` (named provenance — context entries, not reasoner
+    output), and ``_write_dl_to_state`` attaches them as a
+    ``formalism_specific`` sidecar on the FOL entry. Native projection
+    (formulas/consistent/confidence) untouched; the sidecar is absent when
+    the invoke produced no ontology, so it never fabricates an empty TBox
+    (the anti-#1019 guard the retired version of this test pinned).
     """
 
-    def test_dl_writer_carries_verdict_ontology_is_producer_loss_1693(self) -> None:
-        """Writer carries the consistency verdict on ``_invoke_dl``'s real
-        output (counts, not lists) and does not synthesise an ontology it was
-        never given (anti-#1019). The ontology loss is documented producer-side
-        (refs #1693), not a writer defect."""
+    def test_dl_writer_carries_ontology_sidecar_when_invoke_provides_it_1693(
+        self,
+    ) -> None:
+        """Writer attaches ``formalism_specific.tbox/abox_*`` when the invoke
+        carried the input ontology (#1693)."""
         state = _new_state()
-        # The dict _invoke_dl actually builds (invoke_callables.py:4125-4131):
-        # counts only — the TBox/ABox lists are gone at this boundary.
         output = {
             "consistent": True,
             "message": "Knowledge base is consistent.",
-            "tbox_size": 1,
+            "tbox_size": 2,
             "abox_size": 2,
+            "input_ontology": {
+                "tbox": ["synthetic_axiom_1", "synthetic_axiom_2"],
+                "abox_concepts": ["synthetic_concept_a"],
+                "abox_roles": ["synthetic_role_r"],
+            },
             "statistics": {"handler": "DLHandler", "reasoner": "NaiveDlReasoner"},
         }
 
         _write_dl_to_state(output, state, {})
 
-        fol = state.fol_analysis_results
-        assert fol, "DL writer produced no entry"
-        entry = fol[0]
-        # The tri-state verdict is carried (the writer's real job, #1019
-        # fail-loud: True here, not a fabricated default).
+        entry = state.fol_analysis_results[0]
         assert entry["consistent"] is True, entry
-        # The ontology structure is NOT here — and must NOT be synthesised
-        # from the counts. A future naïve ``entry["tbox"] = output.get("tbox",
-        # [])`` (inventing a list from a missing key) would fabricate an empty
-        # tbox and disguise the producer loss; this assertion guards against
-        # that theater. Refs #1693 for the genuine invoke-layer fix.
-        assert "tbox" not in entry, entry
-        assert "abox_concepts" not in entry, entry
-        assert "abox_roles" not in entry, entry
+        sidecar = entry["formalism_specific"]
+        assert sidecar["tbox"] == ["synthetic_axiom_1", "synthetic_axiom_2"], sidecar
+        assert sidecar["abox_concepts"] == ["synthetic_concept_a"], sidecar
+        assert sidecar["abox_roles"] == ["synthetic_role_r"], sidecar
+
+    def test_dl_writer_omits_sidecar_when_invoke_produced_no_ontology(self) -> None:
+        """Pre-#1693 invoke output (no ``input_ontology``) ⇒ no sidecar, and
+        the native projection still carries the verdict. No fabrication."""
+        state = _new_state()
+        output = {
+            "consistent": False,
+            "message": "inconsistent",
+            "tbox_size": 0,
+            "abox_size": 0,
+        }
+
+        _write_dl_to_state(output, state, {})
+
+        entry = state.fol_analysis_results[0]
+        assert entry["consistent"] is False, entry
+        assert "formalism_specific" not in entry, entry
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# CL — conditionals are a PRODUCER-side loss (out of #1648 writer-scope).
-# See #1693 for the invoke-layer fix. The writer's contract on the real
-# (count-only) producer output is pinned here.
+# CL — conditionals provenance now carried via the invoke layer (#1693).
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestClFlattening1648:
-    """CL conditional loss is producer-side (invoke-layer), not writer-side.
+    """CL conditionals provenance: the invoke now carries them, the writer sidecars them.
 
-    ``_invoke_cl`` (``invoke_callables.py:4160-4164``) **rebuilds the output
-    dict with a count only** (``num_conditionals``) — the ``conditionals``
-    list is consumed by ``create_knowledge_base`` and dropped *before* the
-    writer boundary. Same producer-loss category as DL (see above). A
-    writer-side sidecar would be #1019 theater; the genuine fix is
-    invoke-layer + privacy review (``propositional_analysis_results`` is not
-    a ``sanitize_state`` scrub target) — tracked in #1693, deferred by coord
-    ruling R780 option (ii).
-
-    The xfail-strict pin is retired; this test pins the real writer contract
-    on the real producer output, and asserts conditionals are NOT fabricated
-    from the count.
+    Same #1693 pattern as DL: ``_invoke_cl`` carries the input conditionals as
+    ``input_conditionals``, and ``_write_cl_to_state`` attaches them as a
+    ``formalism_specific`` sidecar on the PL entry. Absent ⇒ no sidecar (no
+    fabrication from the count).
     """
 
-    def test_cl_writer_carries_verdict_conditionals_are_producer_loss_1693(
+    def test_cl_writer_carries_conditionals_sidecar_when_invoke_provides_it_1693(
         self,
     ) -> None:
-        """Writer carries the entailment verdict on ``_invoke_cl``'s real
-        output (count, not list) and does not synthesise conditionals it was
-        never given (anti-#1019). The loss is documented producer-side
-        (refs #1693), not a writer defect."""
+        """Writer attaches ``formalism_specific.conditionals`` when the invoke
+        carried the input conditionals (#1693)."""
         state = _new_state()
-        # The dict _invoke_cl actually builds (invoke_callables.py:4160-4164):
-        # count only — the conditionals list is gone at this boundary.
         output = {
             "entailed": True,
             "message": "ok",
             "num_conditionals": 2,
+            "input_conditionals": ["synthetic_cond_1 => synthetic_cond_2"],
             "statistics": {"handler": "CLHandler", "reasoner": "SimpleCReasoner"},
         }
 
         _write_cl_to_state(output, state, {})
 
-        pl = state.propositional_analysis_results
-        assert pl, "CL writer produced no entry"
-        entry = pl[0]
-        # The entailment verdict is carried (the writer's real job).
+        entry = state.propositional_analysis_results[0]
         assert entry["satisfiable"] is True, entry
-        # The count rides in the formula label (the writer's real job).
-        assert "2 conditionals" in entry["formulas"][0], entry
-        # The conditional list is NOT here — and must NOT be synthesised from
-        # the count. Anti-#1019 guard (same rationale as DL above). Refs #1693.
-        assert "conditionals" not in entry, entry
+        sidecar = entry["formalism_specific"]
+        assert sidecar["conditionals"] == [
+            "synthetic_cond_1 => synthetic_cond_2"
+        ], sidecar
+
+    def test_cl_writer_omits_sidecar_when_invoke_produced_no_conditionals(self) -> None:
+        """Pre-#1693 invoke output (no ``input_conditionals``) ⇒ no sidecar."""
+        state = _new_state()
+        output = {
+            "entailed": True,
+            "message": "ok",
+            "num_conditionals": 2,
+        }
+
+        _write_cl_to_state(output, state, {})
+
+        entry = state.propositional_analysis_results[0]
+        assert "formalism_specific" not in entry, entry
 
 
 # ─────────────────────────────────────────────────────────────────────────────

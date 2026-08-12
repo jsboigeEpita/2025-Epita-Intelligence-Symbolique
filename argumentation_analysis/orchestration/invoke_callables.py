@@ -4412,6 +4412,18 @@ async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
             "message": msg,
             "tbox_size": len(tbox),
             "abox_size": len(abox_concepts) + len(abox_roles),
+            # #1693: carry the INPUT ontology the reasoner worked over, named
+            # as provenance (these are context entries, not reasoner output —
+            # _write_dl_to_state attaches them as a formalism_specific sidecar
+            # so a reader can distinguish "the reasoner produced this" from
+            # "this was handed to the reasoner", anti-#1019). The lists are
+            # source-derived (NL→DL translation of claim text) and scrubbed on
+            # export via sanitize_state pass 5f.
+            "input_ontology": {
+                "tbox": list(tbox),
+                "abox_concepts": list(abox_concepts),
+                "abox_roles": list(abox_roles),
+            },
             "statistics": {"handler": "DLHandler", "reasoner": "NaiveDlReasoner"},
         }
     except Exception as e:
@@ -4446,6 +4458,11 @@ async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
             "entailed": entailed,
             "message": msg,
             "num_conditionals": len(conditionals),
+            # #1693: carry the INPUT conditionals the reasoner worked over,
+            # named as provenance (context entry, not reasoner output — see
+            # the DL sibling above). Source-derived (NL→CL translation) and
+            # scrubbed on export via sanitize_state pass 5f.
+            "input_conditionals": list(conditionals),
             "statistics": {"handler": "CLHandler", "reasoner": "SimpleCReasoner"},
         }
     except Exception as e:

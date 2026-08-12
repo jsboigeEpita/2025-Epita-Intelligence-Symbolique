@@ -1389,7 +1389,20 @@ def _write_formal_synthesis_to_state(
 
 
 def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write Description Logic results to UnifiedAnalysisState (#86)."""
+    """Write Description Logic results to UnifiedAnalysisState (#86).
+
+    #1693: the TBox/ABox the reasoner worked over used to be dropped at the
+    invoke boundary (only ``tbox_size``/``abox_size`` survived). The invoke now
+    carries them as ``input_ontology`` (named for what they are — provenance,
+    not reasoner output, anti-#1019), and this writer attaches them as a
+    strictly-additive ``formalism_specific`` sidecar on the FOL entry. The
+    native projection (formulas/consistent/confidence) is untouched; the
+    sidecar is absent when the invoke produced no ontology (empty lists ⇒ no
+    key, so an entry from a pre-#1693 or empty-context run is indistinguishable
+    from one where the reasoner saw no axioms). The sidecar is scrubbed on
+    export (sanitize_state pass 5f) because the axioms are NL→DL translations
+    of source claim text.
+    """
     if not output or not isinstance(output, dict):
         return
     consistent = output.get("consistent")  # None = unverified (#1019)
@@ -1405,6 +1418,19 @@ def _write_dl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         inferences=[],
         confidence=confidence,
     )
+    ontology = output.get("input_ontology")
+    if isinstance(ontology, dict):
+        sidecar = {
+            k: list(v)
+            for k, v in (
+                ("tbox", ontology.get("tbox")),
+                ("abox_concepts", ontology.get("abox_concepts")),
+                ("abox_roles", ontology.get("abox_roles")),
+            )
+            if isinstance(v, list)
+        }
+        if sidecar and state.fol_analysis_results:
+            state.fol_analysis_results[-1]["formalism_specific"] = sidecar
 
 
 def _write_cl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1424,6 +1450,19 @@ def _write_cl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         satisfiable=entailed,
         model={},
     )
+    # #1693: carry the INPUT conditionals the reasoner worked over as a
+    # strictly-additive ``formalism_specific`` sidecar (named provenance — see
+    # _write_dl_to_state). Absent when the invoke produced no list (empty ⇒ no
+    # key, same theatre-guard as QBF/DL). Scrubbed on export (pass 5f).
+    conditionals = output.get("input_conditionals")
+    if (
+        isinstance(conditionals, list)
+        and conditionals
+        and state.propositional_analysis_results
+    ):
+        state.propositional_analysis_results[-1]["formalism_specific"] = {
+            "conditionals": list(conditionals),
+        }
 
 
 def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
