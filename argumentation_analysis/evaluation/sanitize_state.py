@@ -166,6 +166,14 @@ _OPAQUE_FORMALISM_SPECIFIC = {
     "set_attacks": ("dict_list", ("attackers", "target")),
     "attack_weights": ("dict_list", ("source", "target")),
     "delp_arguments": "atom_list",
+    # #1693: DL/CL provenance sidecars on fol_analysis_results (DL) and
+    # propositional_analysis_results (CL). Each leaf is a list of source-derived
+    # logical axioms/conditionals (NL→DL/CL translation of claim text) — same
+    # nominative class as DeLP ``program``, so the ``atom_list`` mode applies.
+    "tbox": "atom_list",
+    "abox_concepts": "atom_list",
+    "abox_roles": "atom_list",
+    "conditionals": "atom_list",
 }
 
 # List-of-dicts fields: top-level field -> sub-keys whose values are
@@ -596,6 +604,25 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                     for leaf in leaf_subkeys:
                         if leaf in sub:
                             sub[leaf] = _opacify_list_values(sub[leaf])
+
+    # 5f. Opacify the ``formalism_specific`` provenance sidecar on the FOL/PL
+    #     list-of-dicts containers (#1693). DL attaches the sidecar to
+    #     ``fol_analysis_results[*]`` (carrying the input TBox/ABox), CL to
+    #     ``propositional_analysis_results[*]`` (carrying the input
+    #     conditionals). These containers are not 4d scrub targets (4d covers
+    #     ``dung_frameworks``), and the sidecar leaves are NL→DL/CL
+    #     translations of source claim text — nominative, same class as the
+    #     Wave-2 leaves 4d opacifies. Same ``_scrub_formalism_specific`` and
+    #     the same ``_OPAQUE_FORMALISM_SPECIFIC`` table (extended with the
+    #     DL/CL leaves); topology (list arity) survives, only the axiom text
+    #     is opacified, so downstream counts (tbox_size etc.) are unaffected.
+    for field in ("fol_analysis_results", "propositional_analysis_results"):
+        if isinstance(data.get(field), list):
+            for item in data[field]:
+                if isinstance(item, dict) and "formalism_specific" in item:
+                    item["formalism_specific"] = _scrub_formalism_specific(
+                        item["formalism_specific"]
+                    )
 
     # 6. Opacify symbol-mapping sub-keys inside list-of-dicts fields
     #    (nl_to_logic_translations[*].variables).
