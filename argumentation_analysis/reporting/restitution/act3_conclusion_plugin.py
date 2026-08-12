@@ -125,6 +125,17 @@ _ASPIC_SCOPE_GLOSS: Dict[str, str] = {
     "unresolved": "une attaque n'a pu être qualifiée structurellement",
 }
 
+# #1667 axes 3/5 (ABA / SETAF / pondéré) — the three structured-argumentation
+# axes whose container lives on ``dung_frameworks[*].formalism_specific`` (there
+# is no first-level ``aba_results`` / ``setaf_results`` / ``weighted_results`` —
+# the #1667 dispatch measured it: the sidecar the #1648 writers attach is the
+# ONLY place these axes store their distinctive data). Caps bound what a
+# successful axis spends of the prompt, same discipline as _SUPPORT_*_CAP.
+_FORMALISM_NODE_CAP = 120  # truncate corpus-derived atoms (privacy HARD, #1702)
+_ABA_CONTRARY_PAIR_CAP = 3  # max assumption↔contrary pairs named in prose
+_SETAF_JOINT_ATTACK_CAP = 3  # max collective-attack coalitions named
+_WEIGHTED_DIST_ATTACK_CAP = 8  # max attacks sampled for the weight distribution
+
 # #1605 — reader-facing French names for the structured-argumentation axes. The
 # prose forbids raw snake_case identifiers (they are opaque to the non-technical
 # reader this narrative addresses), so a capability key never reaches the
@@ -1040,6 +1051,200 @@ def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
     )
 
 
+def _iter_formalism_specific(state: Any, leaf: str) -> List[Any]:
+    """Collect every non-empty ``leaf`` value across all dung_frameworks sidecars.
+
+    #1667 axes 3/5 (ABA / SETAF / pondéré) store their distinctive data on the
+    strictly-additive ``dung_frameworks[df_id].formalism_specific`` sidecar the
+    #1648 writers attach — there is NO first-level ``aba_results`` /
+    ``setaf_results`` / ``weighted_results`` (the dispatch measured it; the
+    #1702 triage table established it writer-by-writer). This helper is the one
+    reader of that sidecar across the three projectors — *one channel, not one
+    reader per axis* (the eight-half-fixes lesson of #1633 restated at five
+    sites). Each projector decides on its own what its axis has to say; this
+    only hands it the sidecar leaves, defensively typed.
+    """
+    frameworks = getattr(state, "dung_frameworks", None)
+    if not isinstance(frameworks, dict):
+        return []
+    out: List[Any] = []
+    for entry in frameworks.values():
+        if not isinstance(entry, dict):
+            continue
+        sidecar = entry.get("formalism_specific")
+        if not isinstance(sidecar, dict):
+            continue
+        val = sidecar.get(leaf)
+        if val:
+            out.append(val)
+    return out
+
+
+def _aba_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the ASSUMPTION↔CONTRARY relation — what ABA alone says (#1667).
+
+    ABA's distinctive data is the ``contraries`` mapping (assumption → its
+    contrary), which lives on ``formalism_specific.contraries`` (#1648 Wave-2
+    sidecar, writer ``_write_aba_to_state``). The relation an assumption holds
+    *and* its contrary names what each side would have to give up — no other
+    axis in the pipeline carries it (Dung is attack-only; ASPIC+ is rule-scope).
+
+    The statement NAMES the contrary relation (truncated atoms — the sidecar is
+    the surface #1702 scrubbed, so its atoms are corpus-derived via ``_pl_atom``
+    and stay truncated here, same privacy bar as ``_aspic_finding``'s contested
+    members). Not a count: ``3 résultats ABA`` would reproduce ``appendix.py``'s
+    ``"disponible"`` one hop further — the witness moved, no decider created
+    (anti-pendule #1667). Returns ``None`` when no contrary pair is populated
+    (fail-loud #1019: an empty mapping is an honest absence, never fabricated).
+    """
+    pairs: List[str] = []
+    for contraries in _iter_formalism_specific(state, "contraries"):
+        if not isinstance(contraries, dict):
+            continue
+        for assumption, contrary in contraries.items():
+            a = _truncate(str(assumption).strip(), _FORMALISM_NODE_CAP)
+            c = _truncate(str(contrary).strip(), _FORMALISM_NODE_CAP)
+            if a and c:
+                pairs.append(f"« {a} » a pour contraire « {c} »")
+                if len(pairs) >= _ABA_CONTRARY_PAIR_CAP:
+                    break
+        if len(pairs) >= _ABA_CONTRARY_PAIR_CAP:
+            break
+    if not pairs:
+        return None
+    tail = "" if len(pairs) < _ABA_CONTRARY_PAIR_CAP else " (extrait partiel)"
+    return StructuredArgFinding(
+        capability="aba_reasoning",
+        label=_axis_label("aba_reasoning"),
+        statement=(
+            "le cadre ABA pose des relations de contrariété entre hypothèses : "
+            + " ; ".join(pairs)
+            + tail
+        ),
+    )
+
+
+def _setaf_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the COLLECTIVE attack — what SETAF alone says (#1667).
+
+    SETAF's distinctive data is the ``set_attacks`` list
+    (``{attackers: [atom, ...], target: atom}``), on
+    ``formalism_specific.set_attacks`` (#1648 Wave-2 sidecar, writer
+    ``_write_setaf_to_state``). The singularity is the **joint** attack: a
+    *coalition* of arguments that defeats a target no member defeats alone —
+    which binary (Dung) attacks cannot express. A unary set-attack (one
+    attacker) IS a Dung attack and carries nothing SETAF-specific, so it is
+    deliberately not projected here (honest absence, #1019: SETAF that emits
+    only binary attacks added nothing the Dung projection did not already say).
+
+    The statement NAMES the joint coalitions (truncated atoms — privacy HARD,
+    same bar as ABA/ASPIC+). Not a count. Returns ``None`` when no joint attack
+    is populated.
+    """
+    joint: List[str] = []
+    for set_attacks in _iter_formalism_specific(state, "set_attacks"):
+        if not isinstance(set_attacks, list):
+            continue
+        for atk in set_attacks:
+            if not isinstance(atk, dict):
+                continue
+            attackers = atk.get("attackers")
+            target = atk.get("target")
+            if not isinstance(attackers, list) or len(attackers) < 2:
+                continue  # unary = a Dung attack, nothing SETAF-specific
+            t = _truncate(str(target).strip(), _FORMALISM_NODE_CAP)
+            if not t:
+                continue
+            named = [
+                _truncate(str(a).strip(), _FORMALISM_NODE_CAP)
+                for a in attackers
+                if str(a).strip()
+            ]
+            named = [n for n in named if n]
+            if len(named) < 2 or not t:
+                continue
+            listed = ", ".join(f"« {n} »" for n in named)
+            joint.append(
+                f"une coalition de {len(named)} arguments ({listed}) renverse "
+                f"« {t} » qu'aucun ne renverse seul"
+            )
+            if len(joint) >= _SETAF_JOINT_ATTACK_CAP:
+                break
+        if len(joint) >= _SETAF_JOINT_ATTACK_CAP:
+            break
+    if not joint:
+        return None
+    return StructuredArgFinding(
+        capability="setaf_reasoning",
+        label=_axis_label("setaf_reasoning"),
+        statement=(
+            "le cadre SETAF qualifie des attaques collectives irréductibles à "
+            "des attaques binaires : " + " ; ".join(joint)
+        ),
+    )
+
+
+def _weighted_finding(state: Any) -> Optional[StructuredArgFinding]:
+    """Project the WEIGHT distribution — what weighted AF alone says (#1667).
+
+    Weighted AF's distinctive data is the numeric ``weight`` on each attack
+    (``{source, target, weight}`` + optional ``weight_statistics``), on
+    ``formalism_specific.attack_weights`` (#1648 Wave-2 sidecar, writer
+    ``_write_weighted_to_state``). The singularity is that attacks carry
+    *unequal force* — a binary attack graph treats all edges alike, so naming
+    the weight distribution (range, mean) is the projection no other axis
+    produces.
+
+    Privacy: only numeric weights reach the prose (the source/target atoms are
+    corpus-derived and stay out, like the aspic scope statement renders counts
+    not targets). Not a count of attacks. Returns ``None`` when no weighted
+    attack is populated.
+    """
+    weights: List[float] = []
+    stats_from_sidecar: Optional[Dict[str, float]] = None
+    for sidecar_val in _iter_formalism_specific(state, "attack_weights"):
+        if not isinstance(sidecar_val, list):
+            continue
+        for atk in sidecar_val:
+            if not isinstance(atk, dict):
+                continue
+            w = atk.get("weight")
+            if isinstance(w, (int, float)):
+                weights.append(float(w))
+    # weight_statistics is a sibling leaf on the same sidecar; read it directly
+    # (the helper iterates one leaf, so scan the sidecars once more for stats).
+    for sidecar_val in _iter_formalism_specific(state, "weight_statistics"):
+        if isinstance(sidecar_val, dict) and sidecar_val:
+            stats_from_sidecar = sidecar_val  # keep the last non-empty
+            break
+    if not weights:
+        return None
+    # Prefer the producer's aggregate; fall back to computing from the sample.
+    if stats_from_sidecar and all(
+        isinstance(stats_from_sidecar.get(k), (int, float))
+        for k in ("min_weight", "max_weight", "avg_weight")
+    ):
+        lo = float(stats_from_sidecar["min_weight"])
+        hi = float(stats_from_sidecar["max_weight"])
+        avg = float(stats_from_sidecar["avg_weight"])
+    else:
+        lo = min(weights)
+        hi = max(weights)
+        avg = sum(weights) / len(weights)
+    shown = weights[:_WEIGHTED_DIST_ATTACK_CAP]
+    flat = ", ".join(f"{w:.2f}" for w in shown)
+    tail = "" if len(weights) <= _WEIGHTED_DIST_ATTACK_CAP else f" (sur {len(weights)})"
+    return StructuredArgFinding(
+        capability="weighted_argumentation",
+        label=_axis_label("weighted_argumentation"),
+        statement=(
+            f"le cadre pondéré gradue {len(weights)} attaque(s) selon leur "
+            f"force (poids de {lo:.2f} à {hi:.2f}, moyenne {avg:.2f}) : "
+            f"{flat}{tail}"
+        ),
+    )
+
+
 def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     """Project what belief revision alone establishes: the minimal retraction.
 
@@ -1182,7 +1387,18 @@ def _collect_structured_arg_findings(state: Any) -> List[StructuredArgFinding]:
     word.
     """
     out: List[StructuredArgFinding] = []
-    for projector in (_aspic_finding, _bipolar_finding, _belief_revision_finding):
+    for projector in (
+        _aspic_finding,
+        _bipolar_finding,
+        _belief_revision_finding,
+        # #1667 axes 3/5 — the three axes whose container is the
+        # ``formalism_specific`` sidecar (no first-level ``*_results`` exists).
+        # Each reads the sidecar via ``_iter_formalism_specific`` and returns
+        # ``None`` when its axis has nothing singular to say (honest absence).
+        _aba_finding,
+        _setaf_finding,
+        _weighted_finding,
+    ):
         finding = projector(state)
         if finding is not None:
             out.append(finding)
