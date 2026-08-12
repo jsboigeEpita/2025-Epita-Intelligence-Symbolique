@@ -122,6 +122,52 @@ _OPAQUE_NESTED_LIST_SUBKEYS = {
     "dung_frameworks": {"extensions": {"extensions", "all_members"}},
 }
 
+# Wave-2 ``formalism_specific`` sidecars on ``dung_frameworks`` entries (#1702).
+# The six #1648 writers (ABA/SetAF/Weighted/EAF/DeLP, plus ADF which attaches no
+# sidecar) attach a strictly-additive ``entry["formalism_specific"] = {...}`` dict
+# to carry data the native Dung projection has no slot for. Each leaf was measured
+# at its producer (the anti-pendule of #1702: "mesurer le producteur"), and the
+# verdict split is nominative-source-atom vs closed-vocabulary/numeric-aggregate:
+#
+#   contraries        Dict[assumption_atom, contrary_atom]   — ABA l.968, BOTH
+#                                                               keys+values source
+#   set_attacks       List[{attackers:[atom], target:atom}]  — SetAF l.1482
+#   attack_weights    List[{source, target, weight:float}]   — Weighted l.1541,
+#                                                               weight KEPT (numeric)
+#   epistemic_beliefs Dict[agent, List[arg_atom]]            — EAF l.1611
+#   delp_arguments    str | List[str] (defeasible rule source over source
+#                     predicates)                            — DeLP l.1658
+#
+# Deliberately NOT listed (survive untouched — closed vocab / pure numeric, the
+# #1702 anti-pendule symmetrical to the scrubber's own l.156-163):
+#   weight_statistics {min/max/avg_weight: float}            — Weighted l.1551
+#   program_size      int                                     — DeLP l.1660
+#   criterion         str (e.g. "generalized_specificity")   — DeLP l.1662, closed
+#
+# Parent 2 (``propositional_analysis_results[*].formalism_specific.qbf_quantifiers``)
+# is ALSO not listed here and needs no scrub: the QBF writer docstring
+# (state_writers.py:1683) measures its leaves as formal logical symbols
+# (quantifier type + variable names like ``x``/``y``), not source-derived prose.
+# "Covering both parents" (#1702 DoD) is therefore statuated by measurement on
+# parent 2 (opaque by construction), not by a table entry.
+#
+# ``aspic_results.attacks`` (the other #1702 surface) is already covered by pass
+# 5d via ``_OPAQUE_NESTED_ITEM_SUBKEYS`` (commit a9bcf516, #1649 follow-up).
+#
+# Leaf -> opacification mode:
+#   "mapping"                 Dict keyed by a source atom -> opacify keys AND
+#                             values (values may be a list of atoms).
+#   ("dict_list", (fields,))  List[Dict] -> opacify the named string-leaves,
+#                             keep the rest (e.g. the numeric ``weight``).
+#   "atom_list"               A source-atom string OR list of them -> opacify.
+_OPAQUE_FORMALISM_SPECIFIC = {
+    "contraries": "mapping",
+    "epistemic_beliefs": "mapping",
+    "set_attacks": ("dict_list", ("attackers", "target")),
+    "attack_weights": ("dict_list", ("source", "target")),
+    "delp_arguments": "atom_list",
+}
+
 # List-of-dicts fields: top-level field -> sub-keys whose values are
 # nominative text to drop (the rest of each item is preserved).
 _TEXT_STRIP_LISTS = {
@@ -285,6 +331,60 @@ def _opacify_list_values(value: Any) -> Any:
     return value
 
 
+def _scrub_formalism_specific(sidecar: Any) -> Any:
+    """Opacify the nominative leaves of a ``formalism_specific`` sidecar (#1702).
+
+    The Wave-2 sidecar is a heterogeneous dict whose leaves mix source-derived
+    PL atoms (the nominative payload — ``_pl_atom`` keeps up to 24 leading chars
+    of argument text) with closed vocabularies and numeric aggregates the export
+    contract promises to preserve. ``_OPAQUE_FORMALISM_SPECIFIC`` names the
+    nominative leaves and their opacification mode; every key NOT in that table
+    (``weight_statistics``, ``program_size``, ``criterion``) survives untouched.
+
+    Topology is preserved everywhere: a list stays a list of the same arity, a
+    mapping keeps its key count, and the numeric ``weight`` on each
+    ``attack_weights`` entry survives — so downstream quantitative aggregates
+    (joint-attack arity, weight distribution) are unaffected, exactly as passes
+    4b/4c preserve Dung extension sizes.
+    """
+    if not isinstance(sidecar, dict):
+        return sidecar
+    out = dict(sidecar)  # shallow copy; untouched keys (criterion/stats) ride through
+    for leaf, mode in _OPAQUE_FORMALISM_SPECIFIC.items():
+        if leaf not in out:
+            continue
+        val = out[leaf]
+        if mode == "mapping":
+            # Dict keyed by a source atom; opacify keys AND values (values may be
+            # a list of atoms — _opacify_list_values handles both str and list).
+            if isinstance(val, dict):
+                out[leaf] = {
+                    (
+                        opaque_id(k) if isinstance(k, str) and k else k
+                    ): _opacify_list_values(v)
+                    for k, v in val.items()
+                }
+        elif isinstance(mode, tuple) and mode[0] == "dict_list":
+            fields = mode[1]
+            if isinstance(val, list):
+                scrubbed: list[Any] = []
+                for entry in val:
+                    if isinstance(entry, dict):
+                        new_entry = dict(entry)
+                        for f in fields:
+                            if f in new_entry:
+                                new_entry[f] = _opacify_list_values(new_entry[f])
+                        scrubbed.append(new_entry)
+                    else:
+                        scrubbed.append(entry)
+                out[leaf] = scrubbed
+        elif mode == "atom_list":
+            # A source-atom string OR a list of them (DeLP ``program`` can be
+            # either); _opacify_list_values handles both shapes uniformly.
+            out[leaf] = _opacify_list_values(val)
+    return out
+
+
 def _scrub_struct(value: Any, list_keys: tuple[str, ...]) -> dict[str, Any]:
     """Reduce a stakes/stakeholders struct to a counts-only summary."""
     if not isinstance(value, dict):
@@ -408,6 +508,22 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
                 else:
                     nested_entries[key] = val
             data[field] = nested_entries
+
+    # 4d. Opacify the Wave-2 ``formalism_specific`` sidecar on ``dung_frameworks``
+    #     entries (#1702). The six #1648 writers attach this strictly-additive dict
+    #     to carry formalism-specific data the native Dung projection has no slot
+    #     for (ABA contraries, SetAF joint attacks, Weighted weights, EAF
+    #     epistemic beliefs, DeLP program/criterion). Its nominative leaves are
+    #     the same source-derived atoms passes 4b/4c opacify one level up, under a
+    #     sibling key the dict-of-dicts sub-key passes never inspect. The closed-
+    #     vocabulary / numeric-aggregate leaves (criterion, weight_statistics,
+    #     program_size) survive by being absent from the spec table.
+    if isinstance(data.get("dung_frameworks"), dict):
+        for entry in data["dung_frameworks"].values():
+            if isinstance(entry, dict) and "formalism_specific" in entry:
+                entry["formalism_specific"] = _scrub_formalism_specific(
+                    entry["formalism_specific"]
+                )
 
     # 5. Strip nominative sub-keys from list-of-dicts fields.
     for field, text_keys in _TEXT_STRIP_LISTS.items():

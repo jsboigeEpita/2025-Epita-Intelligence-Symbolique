@@ -371,21 +371,14 @@ def _surviving_paths(sanitized: dict[str, Any]) -> dict[str, set[str]]:
 # elsewhere) is a privacy decision pending triage on #1702 — see the module
 # docstring for why this PR does not patch the scrubber.
 EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
-    # Wave-2 ``formalism_specific`` sidecars — attached by ``_write_setaf /
-    # _write_weighted / _write_eaf / _write_delp`` via direct assignment, never
-    # declared in any scrubber table. Same claim text the 4b/4c passes opacify
-    # one level up, under a sibling container the passes do not inspect.
-    "dung_frameworks": frozenset(
-        {
-            "dung_frameworks[*].formalism_specific.set_attacks[*].attackers[*]",
-            "dung_frameworks[*].formalism_specific.set_attacks[*].target",
-            "dung_frameworks[*].formalism_specific.attack_weights[*].source",
-            "dung_frameworks[*].formalism_specific.attack_weights[*].target",
-            "dung_frameworks[*].formalism_specific.epistemic_beliefs[*][*]",
-            "dung_frameworks[*].formalism_specific.contraries[*]",
-            "dung_frameworks[*].formalism_specific.delp_arguments[*]",
-        }
-    ),
+    # The Wave-2 ``formalism_specific`` sidecar on ``dung_frameworks`` was a
+    # frozen gap at #1711; #1702 covered it via pass 4d
+    # (``_scrub_formalism_specific`` — see sanitize_state.py). Its seven
+    # nominative paths are now opacified, so ``dung_frameworks`` no longer
+    # appears in the uncovered set. The canary plan still plants them (so a
+    # regression in 4d re-leaks here immediately), and ``test_scrubber_is_alive``
+    # keeps watching the sibling 4b ``.arguments`` path.
+    #
     # The dominant survivor on real corpora (coord R785: 1024–2304 occurrences).
     # ``add_formal_synthesis_report`` stores ``phase_results`` verbatim, and it
     # republishes the formal phases' output — including the Dung extensions,
@@ -546,44 +539,84 @@ class TestSubstitutionControl:
     """
 
     @pytest.mark.parametrize(
-        "table_attr,field,expected_path_fragment",
+        "table_attr,remove_field,survivor_field,expected_path_fragment",
         [
             # Pass 4b: dung_frameworks.arguments/attacks.
-            ("_OPAQUE_LIST_SUBKEYS", "dung_frameworks", ".arguments"),
+            (
+                "_OPAQUE_LIST_SUBKEYS",
+                "dung_frameworks",
+                "dung_frameworks",
+                ".arguments",
+            ),
             # Pass 5b: aspic_results.extensions.
-            ("_OPAQUE_LIST_OF_DICTS_SUBKEYS", "aspic_results", ".extensions"),
+            (
+                "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".extensions",
+            ),
             # Pass 5b: belief_revision_results.original/revised.
             (
                 "_OPAQUE_LIST_OF_DICTS_SUBKEYS",
                 "belief_revision_results",
+                "belief_revision_results",
                 ".original",
             ),
             # Pass 5d: aspic_results.attacks target/attacker_premises.
-            ("_OPAQUE_NESTED_ITEM_SUBKEYS", "aspic_results", ".attacks"),
+            (
+                "_OPAQUE_NESTED_ITEM_SUBKEYS",
+                "aspic_results",
+                "aspic_results",
+                ".attacks",
+            ),
+            # Pass 4d (#1702): formalism_specific leaves. Removing a leaf from
+            # the spec re-leaks its canary under the dung_frameworks top-level
+            # field — the new pass is not vacuous. The table key (``set_attacks``)
+            # differs from the survivor field (``dung_frameworks``) because the
+            # sidecar is nested inside a dung_frameworks entry, not a top-level.
+            (
+                "_OPAQUE_FORMALISM_SPECIFIC",
+                "set_attacks",
+                "dung_frameworks",
+                ".formalism_specific.set_attacks",
+            ),
+            (
+                "_OPAQUE_FORMALISM_SPECIFIC",
+                "contraries",
+                "dung_frameworks",
+                ".formalism_specific.contraries",
+            ),
+            (
+                "_OPAQUE_FORMALISM_SPECIFIC",
+                "attack_weights",
+                "dung_frameworks",
+                ".formalism_specific.attack_weights",
+            ),
         ],
     )
     def test_removing_a_rule_lets_the_canary_through(
         self,
         monkeypatch: pytest.MonkeyPatch,
         table_attr: str,
-        field: str,
+        remove_field: str,
+        survivor_field: str,
         expected_path_fragment: str,
     ) -> None:
         original_table = getattr(_sanitize_mod, table_attr)
         # Surgical copy minus the one field — the rest of the table stays armed.
-        reduced = {k: v for k, v in original_table.items() if k != field}
+        reduced = {k: v for k, v in original_table.items() if k != remove_field}
         monkeypatch.setattr(_sanitize_mod, table_attr, reduced)
 
         survivors = _surviving_paths(
             sanitize_state(_canaried_state().get_state_snapshot())
         )
-        field_paths = survivors.get(field, set())
+        field_paths = survivors.get(survivor_field, set())
         # The canary that the removed rule was killing must now survive, and at
         # least one surviving path must carry the expected sub-path fragment.
         assert field_paths, (
-            f"removing {table_attr}[{field!r}] did NOT let the canary through — "
-            "the substitution control is vacuous (some other pass also covers "
-            "it, or the canary never reached it)."
+            f"removing {table_attr}[{remove_field!r}] did NOT let the canary "
+            "through — the substitution control is vacuous (some other pass "
+            "also covers it, or the canary never reached it)."
         )
         assert any(
             expected_path_fragment in p for p in field_paths
