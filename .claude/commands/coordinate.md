@@ -246,6 +246,18 @@ Ne pas relier sur `GH_TOKEN` env var seul — il n'override pas le keyring. Pref
 export GH_TOKEN=$(grep "^GH_TOKEN=" .env | cut -d= -f2)
 ```
 
+## CoursIA — 3 missions d'accompagnement (standing, cross-workspace)
+
+En plus du rôle coordinateur 2025-Epita, ai-01 porte **3 prérogatives d'accompagnement** dans le dépôt **`D:\CoursIA`** (cluster distinct, dashboard workspace `CoursIA`). Définies par l'user 2026-07-21 (R687) pour 1-2, 2026-08-10 (R786) pour 3. **Source de vérité détaillée** : `memory/project_coursia_accompaniment_missions.md` (relire avant d'agir).
+
+⚠ **Identité** : la lane `myia-ai-01:CoursIA` poste sur le même dashboard — même machine, workspace différent, **ce n'est pas moi**. Toujours signer `myia-ai-01:2025-Epita-Intelligence-Symbolique` et ne jamais prendre un dispatch adressé à l'autre.
+
+1. **Distiller** notre travail dans la série `D:\CoursIA\MyIA.AI.Notebooks\SymbolicAI\Argument_Analysis\` (existe déjà, miroir de notre archi + sous-module `Argumentum`). Notre dépôt 2025 = **fabrique** (distillation incrémentale au fil de la consolidation), **jamais un sous-module** de CoursIA. Tweety s'enrichit dans les 2 sens.
+2. **Valider la strate-6 de la série ICT** (couche S6, se construit sans attendre la fin de la distillation) sous validation conjointe **2025-Epita + Argumentum**. Inclut le **port du système d'extracts** (jina/tika + chiffrement + compression) pour un accès public partiel du dataset (contenus polémiques retirés).
+3. **Accompagner l'EPIC CoursIA #10355** — finetuning + posttraining Qwen3.5 de détection de sophismes sur la taxonomie Argumentum, gated SAE, 5 phases séquentielles (Phase 1 = #10356). Je fournis **2 actifs** : le corpus FR + schéma d'étiquettes de `2.3.2-detection-sophismes/` (2680 ex., 13 classes — c'est Logic/LogicClimate traduit ; **aucun poids n'a jamais existé**, tier déprécié #297) et **l'entonnoir** `plugins/fallacy_workflow_plugin.py` (master/slave, trace de navigation ⇒ générateur de supervision pour leur Phase 4). Greffe posée R786 sur #10356 + #10355 + dashboard CoursIA. ⚠ **Anti-pendule** : s'entraîner sur nos traces = distiller notre LLM ; l'accord élève↔maître ne mesure pas la justesse. ⚠ **Splits FR fuyants** (train∩test 42) ⇒ leur gate F1 Phase 3 ne peut pas échouer pour la bonne raison.
+
+**Discipline** : CoursIA = **proposal-only, jamais push unilatéral** (PR + validation partenaires). Barème privacy CoursIA **plus strict** que notre corpus mdp (public/traduit). Gouvernance CoursIA-side : « Directive Argumentation : insight systématique workspaces partenaires requis, zéro self-dispatch CoursIA ». Relire les dashboards CoursIA + Argumentum avant d'agir (`roosync_dashboard read type:workspace workspace:CoursIA`). Ne pas doubler-dispatcher (le cluster CoursIA a sa propre coordination).
+
 ## Démarrage
 
 Charge ce contexte, lis dashboard + inbox + GitHub, puis enchaîne Phase 2 → Phase 8.
