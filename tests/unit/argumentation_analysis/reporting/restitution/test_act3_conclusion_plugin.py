@@ -27,7 +27,10 @@ import pytest
 
 from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
     Act3Result,
+    _ABA_CONTRARY_PAIR_CAP,
     _COUNTER_LIST_CAP,
+    _FORMALISM_NODE_CAP,
+    _SETAF_JOINT_ATTACK_CAP,
     _SUPPORT_NODE_CAP,
     _SUPPORT_PAIR_CAP,
     _fol_verified,
@@ -1887,3 +1890,291 @@ class TestBipolarArticulationPointInsight:
             )
         )
         assert "point d'articulation" in prompt
+
+
+# ---------------------------------------------------------------------------
+# #1667 axes 3/5 — ABA / SETAF / pondéré : the presence channel for the three
+# axes whose container is the ``dung_frameworks[*].formalism_specific`` sidecar
+# (there is no first-level ``aba_results`` / ``setaf_results`` /
+# ``weighted_results`` — the #1702 triage established it writer-by-writer).
+# Opaque synthetic atoms only (privacy HARD — the sidecar is the exact surface
+# #1702 scrubbed, so its atoms are corpus-derived and must not be echoed in a
+# GitHub-indexed surface; the projectors truncate them in the rendered prompt).
+# ---------------------------------------------------------------------------
+
+
+def _formalism_specific_state(
+    sidecar: dict, name: str = "setaf_grounded"
+) -> SimpleNamespace:
+    """Build a state carrying ONE dung_frameworks entry with a sidecar.
+
+    Mirrors the real writer assignment
+    ``state.dung_frameworks[df_id]["formalism_specific"] = {...}`` (the #1648
+    Wave-2 writers attach it by direct assignment, not via ``add_dung_framework``
+    — verified at each ``_write_*_to_state`` site for #1702). Isolates the three
+    #1667 readers from the aspic/bipolar containers (which live elsewhere).
+    """
+    state = _rich_state()
+    state.dung_frameworks = {"dung_1": {"name": name, "formalism_specific": sidecar}}
+    return state
+
+
+class TestAbaPresenceChannel:
+    """ABA's contrary relation reaches the conclusion when populated (#1667).
+
+    ABA is the ONLY one of the three axes whose sidecar is populated on real
+    corpora (coord R795 measured 8/8/4 contrary pairs across the 3 corpora; the
+    other two leaves are absent). So this channel is the one with real exposure
+    today — the other two are canary-only.
+    """
+
+    def test_no_contraries_yields_no_finding(self) -> None:
+        assert (
+            build_act3_evidence(_formalism_specific_state({})).structured_findings == []
+        )
+
+    def test_contrary_relation_becomes_a_finding(self) -> None:
+        state = _formalism_specific_state({"contraries": {"claim_alpha": "claim_beta"}})
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert finding.capability == "aba_reasoning"
+        assert "contrariété" in finding.statement
+        assert "claim_alpha" in finding.statement
+        assert "claim_beta" in finding.statement
+
+    def test_finding_is_not_a_count(self) -> None:
+        """Anti-pendule #1667: "1 résultat ABA" = the witness moved, no decider."""
+        state = _formalism_specific_state({"contraries": {"claim_alpha": "claim_beta"}})
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert "contrariété" in finding.statement  # the relation, not a tally
+        assert finding.statement.strip() not in {"1", "disponible", "1 résultat"}
+
+    def test_label_is_reader_facing(self) -> None:
+        state = _formalism_specific_state({"contraries": {"a": "b"}})
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert "_" not in finding.label
+        assert finding.label != finding.capability
+
+    @pytest.mark.parametrize(
+        "contraries",
+        [{}, {"": "x"}, {"x": ""}, "not-a-dict", None],
+        ids=["empty", "blank-key", "blank-val", "scalar", "none"],
+    )
+    def test_malformed_or_empty_produce_nothing(self, contraries) -> None:
+        assert (
+            build_act3_evidence(
+                _formalism_specific_state({"contraries": contraries})
+            ).structured_findings
+            == []
+        )
+
+    def test_long_atoms_are_truncated(self) -> None:
+        long_atom = "z" * (_FORMALISM_NODE_CAP + 200)
+        state = _formalism_specific_state({"contraries": {long_atom: "court"}})
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert long_atom not in finding.statement
+        assert "[…]" in finding.statement
+
+    def test_pairs_are_capped(self) -> None:
+        contraries = {
+            f"claim_{i}": f"claim_{i}_c" for i in range(_ABA_CONTRARY_PAIR_CAP + 5)
+        }
+        (finding,) = build_act3_evidence(
+            _formalism_specific_state({"contraries": contraries})
+        ).structured_findings
+        assert finding.statement.count(" a pour contraire ") == _ABA_CONTRARY_PAIR_CAP
+        assert "extrait partiel" in finding.statement
+
+    def test_present_axis_reaches_the_prompt(self) -> None:
+        """DoD: an axis present and non-trivial MUST reach the Acte III prompt."""
+        prompt = build_act3_prompt(
+            build_act3_evidence(
+                _formalism_specific_state({"contraries": {"claim_alpha": "claim_beta"}})
+            )
+        )
+        assert "ABA" in prompt or "hypothèses et contraires" in prompt
+        assert "claim_alpha" in prompt  # the contrary relation reached the prompt
+
+
+class TestSetafPresenceChannel:
+    """SETAF's collective attack reaches the conclusion when joint attacks exist.
+
+    Anti-pendule: a unary set-attack IS a Dung attack — it carries nothing
+    SETAF-specific, so it produces no finding (honest absence, #1019). Only
+    joint coalitions (arity ≥ 2) are projected: the singularity SETAF adds over
+    binary Dung. Canary-only on real corpora today (leaf absent in 3/3, R795).
+    """
+
+    def test_no_set_attacks_yields_no_finding(self) -> None:
+        assert (
+            build_act3_evidence(_formalism_specific_state({})).structured_findings == []
+        )
+
+    def test_unary_attacks_produce_nothing(self) -> None:
+        """A 1-attacker set-attack is a Dung attack — SETAF added nothing."""
+        state = _formalism_specific_state(
+            {"set_attacks": [{"attackers": ["claim_alpha"], "target": "claim_beta"}]}
+        )
+        assert build_act3_evidence(state).structured_findings == []
+
+    def test_joint_attack_becomes_a_finding(self) -> None:
+        state = _formalism_specific_state(
+            {
+                "set_attacks": [
+                    {
+                        "attackers": ["claim_alpha", "claim_beta"],
+                        "target": "claim_gamma",
+                    }
+                ]
+            }
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert finding.capability == "setaf_reasoning"
+        assert "coalition" in finding.statement
+        assert "renverse" in finding.statement
+        assert "claim_gamma" in finding.statement  # the target reached
+
+    def test_finding_is_not_a_count(self) -> None:
+        state = _formalism_specific_state(
+            {
+                "set_attacks": [
+                    {
+                        "attackers": ["claim_alpha", "claim_beta"],
+                        "target": "claim_gamma",
+                    }
+                ]
+            }
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert "coalition" in finding.statement
+        assert finding.statement.strip() not in {"1", "disponible", "1 attaque"}
+
+    def test_joint_attacks_are_capped(self) -> None:
+        attacks = [
+            {"attackers": [f"a{i}", f"b{i}"], "target": f"t{i}"}
+            for i in range(_SETAF_JOINT_ATTACK_CAP + 3)
+        ]
+        (finding,) = build_act3_evidence(
+            _formalism_specific_state({"set_attacks": attacks})
+        ).structured_findings
+        # "coalition" appears once per projected joint attack (the header carries
+        # none), so it counts the rendered coalitions — not "renverse", which
+        # appears twice per coalition ("… renverse « t » … ne renverse seul").
+        assert finding.statement.count("coalition") == _SETAF_JOINT_ATTACK_CAP
+
+
+class TestWeightedPresenceChannel:
+    """Weighted AF's weight distribution reaches the conclusion when weighted
+    attacks exist. Privacy: only numeric weights reach the prose (the
+    source/target atoms are corpus-derived and stay out). Canary-only on real
+    corpora today (leaf absent in 3/3, R795)."""
+
+    def test_no_weights_yields_no_finding(self) -> None:
+        assert (
+            build_act3_evidence(_formalism_specific_state({})).structured_findings == []
+        )
+
+    def test_weight_distribution_becomes_a_finding(self) -> None:
+        state = _formalism_specific_state(
+            {
+                "attack_weights": [
+                    {"source": "claim_alpha", "target": "claim_beta", "weight": 0.3},
+                    {"source": "claim_gamma", "target": "claim_delta", "weight": 0.9},
+                ]
+            }
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert finding.capability == "weighted_argumentation"
+        assert "0.30" in finding.statement and "0.90" in finding.statement
+        assert "moyenne" in finding.statement
+
+    def test_finding_is_numeric_only_no_atoms(self) -> None:
+        """Privacy HARD: the source/target atoms must NOT reach the prose —
+        only the numeric weights. The atoms are corpus-derived (scrubbed by
+        #1702) and carry source text via ``_pl_atom``."""
+        state = _formalism_specific_state(
+            {
+                "attack_weights": [
+                    {"source": "claim_alpha", "target": "claim_beta", "weight": 0.5}
+                ]
+            }
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert "claim_" not in finding.statement  # atoms never echoed
+        assert "0.50" in finding.statement  # the weight did
+
+    def test_uses_sidecar_weight_statistics_when_present(self) -> None:
+        state = _formalism_specific_state(
+            {
+                "attack_weights": [
+                    {"source": "a", "target": "b", "weight": 0.5}
+                ],  # sample of one
+                "weight_statistics": {  # producer aggregate preferred
+                    "min_weight": 0.1,
+                    "max_weight": 0.9,
+                    "avg_weight": 0.42,
+                },
+            }
+        )
+        (finding,) = build_act3_evidence(state).structured_findings
+        assert "0.10" in finding.statement and "0.90" in finding.statement
+        assert "0.42" in finding.statement  # the producer's avg, not the sample's 0.50
+
+
+class TestFormalismSidecarNonVacuityAndSubstitution:
+    """DoD items: non-vacuity (empty sidecar ⇒ nothing fabricated) and the
+    surgical-substitution control (revert the production change ⇒ the finding
+    disappears, kill-set in numbers)."""
+
+    def test_empty_sidecar_across_three_axes_fabricates_nothing(self) -> None:
+        """Non-vacuity: a sidecar present but empty (or with only the closed-
+        vocab/numeric leaves the projectors don't read) produces no finding."""
+        state = _formalism_specific_state(
+            {"criterion": "generalized_specificity", "program_size": 7}
+        )
+        assert build_act3_evidence(state).structured_findings == []
+
+    def test_substitution_revert_kills_the_three_findings(self) -> None:
+        """DoD substitution control: with the three projectors removed from the
+        collector (the surgical revert), the three axes disappear from the
+        findings. Kill-set = the 3 capabilities; spare-set = aspic/bipolar/
+        belief-revision (untouched). Measures the channel end-to-end."""
+        from argumentation_analysis.reporting.restitution import (
+            act3_conclusion_plugin as mod,
+        )
+
+        original = mod._collect_structured_arg_findings
+
+        def _reverted(state):  # the pre-#1667-axes-3/5 collector
+            out = []
+            for projector in (
+                mod._aspic_finding,
+                mod._bipolar_finding,
+                mod._belief_revision_finding,
+            ):
+                finding = projector(state)
+                if finding is not None:
+                    out.append(finding)
+            return sorted(out, key=lambda f: f.label)
+
+        state = _formalism_specific_state(
+            {
+                "contraries": {"claim_alpha": "claim_beta"},
+                "set_attacks": [
+                    {"attackers": ["claim_a", "claim_b"], "target": "claim_c"}
+                ],
+                "attack_weights": [{"source": "x", "target": "y", "weight": 0.5}],
+            }
+        )
+        full = {f.capability for f in original(state)}
+        reverted = {f.capability for f in _reverted(state)}
+        # The 3 new axes are present with the projectors, absent without.
+        assert {"aba_reasoning", "setaf_reasoning", "weighted_argumentation"} <= full
+        kill_set = full - reverted
+        assert kill_set == {
+            "aba_reasoning",
+            "setaf_reasoning",
+            "weighted_argumentation",
+        }
+        # Spare-set: the pre-existing 2/5+ axes are untouched by the revert.
+        # (They are not fired by THIS sidecar-only state, so the spare-set is
+        # measured by capability-presence parity, not counts — documented.)
