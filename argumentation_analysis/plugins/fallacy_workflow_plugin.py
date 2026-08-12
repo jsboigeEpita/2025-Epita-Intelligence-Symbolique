@@ -1234,16 +1234,7 @@ class FallacyWorkflowPlugin:
         the only cap) and shows the LLM a multi-level cluster so it can jump
         levels — restoring the original summer-2025 design by subtraction.
         """
-        file_handler = None
-        if trace_log_path and str(trace_log_path).strip() not in ("", "None", "null"):
-            file_handler = logging.FileHandler(
-                trace_log_path, mode="w", encoding="utf-8"
-            )
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            file_handler.setFormatter(formatter)
-            self.logger.addHandler(file_handler)
+        file_handler = self._attach_trace_handler(trace_log_path)
 
         try:
             self.logger.info(f"--- Fallacy Analysis for: '{argument_text[:80]}...' ---")
@@ -1370,13 +1361,9 @@ class FallacyWorkflowPlugin:
                 if tracker.descent_budget_exceeded:
                     result_obj["descent_budget_exceeded"] = True
                     result_obj["exploration_method"] = "wide_net_parallel_budget_capped"
-                    result_json = json.dumps(
-                        result_obj, indent=2, ensure_ascii=False
-                    )
+                    result_json = json.dumps(result_obj, indent=2, ensure_ascii=False)
                 else:
-                    result_json = json.dumps(
-                        result_obj, indent=2, ensure_ascii=False
-                    )
+                    result_json = json.dumps(result_obj, indent=2, ensure_ascii=False)
                 self._persist_trace(trace_log_path, analysis_result, argument_text)
                 return result_json
 
@@ -1397,9 +1384,7 @@ class FallacyWorkflowPlugin:
                 _os_obj["descent_calls_made"] = tracker.descent_calls_made
                 if tracker.descent_budget_exceeded:
                     _os_obj["descent_budget_exceeded"] = True
-                one_shot_result = json.dumps(
-                    _os_obj, indent=2, ensure_ascii=False
-                )
+                one_shot_result = json.dumps(_os_obj, indent=2, ensure_ascii=False)
             except (json.JSONDecodeError, TypeError):
                 pass
             if trace_log_path:
@@ -1425,6 +1410,40 @@ class FallacyWorkflowPlugin:
             if file_handler:
                 self.logger.removeHandler(file_handler)
                 file_handler.close()
+
+    def _attach_trace_handler(
+        self, trace_log_path: Optional[str]
+    ) -> Optional[logging.FileHandler]:
+        """Build + attach the optional descent-trace FileHandler.
+
+        Robust to a ``trace_log_path`` whose parent directory is missing or
+        non-creatable (#1722). The caller — often the LLM via SK
+        auto-function-invoke on the conversational path — may pass a POSIX path
+        improvised on a Windows host; a non-creatable trace path must NOT kill
+        the hierarchical taxonomy descent (#1019 family: a swallowed crash
+        produces an invisible degradation). Creates the parent dir; on failure
+        falls back to no handler with a WARNING. Returns the handler (or None)
+        so ``run_guided_analysis`` can detach it in its ``finally`` block.
+        """
+        if not trace_log_path or str(trace_log_path).strip() in ("", "None", "null"):
+            return None
+        try:
+            Path(str(trace_log_path)).parent.mkdir(parents=True, exist_ok=True)
+            handler = logging.FileHandler(trace_log_path, mode="w", encoding="utf-8")
+            handler.setFormatter(
+                logging.Formatter(
+                    "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+                )
+            )
+            self.logger.addHandler(handler)
+            return handler
+        except (OSError, PermissionError, ValueError) as trace_exc:
+            self.logger.warning(
+                "trace_log_path '%s' unusable (%s); continuing without " "trace file",
+                trace_log_path,
+                trace_exc,
+            )
+            return None
 
     def _persist_trace(
         self,
