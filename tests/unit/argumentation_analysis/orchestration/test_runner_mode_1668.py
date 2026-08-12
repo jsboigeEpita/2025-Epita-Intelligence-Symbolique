@@ -200,3 +200,65 @@ def mock_open_noop() -> Any:
     m.return_value.__enter__.return_value = MagicMock()
     m.return_value.__exit__.return_value = False
     return m
+
+
+class TestPhaseStatusLines:
+    """Section 0 must show what the summary actually carries, per path (#1668).
+
+    The pipeline path emits named phase lists (``*_phases``); the conversational
+    path emits aggregate counters (``completed``/``failed``/``skipped``/``total``).
+    Before the fix, section 0 always read ``completed_phases`` — absent on every
+    conversational run — so it showed ``(aucune)`` and hid real progress (#1019).
+    """
+
+    def test_pipeline_shape_renders_named_lists(self) -> None:
+        from scripts.run_real_analysis import _phase_status_lines
+
+        lines = _phase_status_lines(
+            {
+                "completed_phases": ["extract", "quality"],
+                "failed_phases": ["fol"],
+                "skipped_phases": [],
+            }
+        )
+        joined = "\n".join(lines)
+        assert "extract" in joined and "quality" in joined
+        assert "fol" in joined
+        assert "Complétées (2)" in joined
+        assert "Échouées (1)" in joined
+
+    def test_conversational_shape_renders_counters_not_empty(self) -> None:
+        from scripts.run_real_analysis import _phase_status_lines
+
+        lines = _phase_status_lines(
+            {
+                "completed": 9,
+                "failed": 0,
+                "skipped": 0,
+                "total": 9,
+                "total_messages": 46,
+            }
+        )
+        joined = "\n".join(lines)
+        # Counters are shown, not "(aucune)"
+        assert "9/9 complétées" in joined
+        assert "(aucune)" not in joined
+        assert "Messages (conversation)" in joined and "46" in joined
+
+    def test_conversational_shape_never_fabricates_phase_names(self) -> None:
+        """The conversational summary has no per-phase names; section 0 must
+        not invent them (anti-#1019). It shows counters only."""
+        from scripts.run_real_analysis import _phase_status_lines
+
+        lines = _phase_status_lines(
+            {"completed": 9, "failed": 0, "skipped": 0, "total": 9}
+        )
+        joined = "\n".join(lines)
+        assert "Complétées (9)" not in joined  # the pipeline format is not used
+        assert "complétées" in joined  # the counter format is
+
+    def test_empty_or_none_summary_is_honest(self) -> None:
+        from scripts.run_real_analysis import _phase_status_lines
+
+        assert _phase_status_lines(None) == ["_(résumé indisponible pour ce run)_"]
+        assert _phase_status_lines({}) == ["_(résumé indisponible pour ce run)_"]
