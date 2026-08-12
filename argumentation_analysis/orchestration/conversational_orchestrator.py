@@ -2834,11 +2834,24 @@ def _retract_fallacious_beliefs(
 
 
 def _build_dung_framework_from_state(state: Any) -> Optional[Dict[str, Any]]:
-    """Build a Dung AF from identified_arguments + counter_arguments (#564).
+    """Build a Dung AF from identified_arguments + fallacy targets (#564, rev #1668).
 
-    Constructs attack relations from counter-argument strategies (UNDERCUT,
-    REBUT) and computes grounded extension via pure-Python DungFramework.
+    Constructs attack relations from fallacies that target an argument and
+    computes the grounded extension via the pure-Python DungFramework.
     Writes the result to state.dung_frameworks if non-trivial.
+
+    #1668 — the counter-argument strategy branch was removed. The original
+    #564 implementation filtered counter-arguments through a
+    ``strategy in ("UNDERCUT", "REBUT", "REBUTTAL")`` gate on the assumption
+    that the producer would emit that vocabulary. It never did: the counter-
+    argument producer (``collaborative_debate``) emits free-text strategy
+    names, disjoint from this triplet. Two independent real runs measured
+    0/66 (pipeline voie) and 0/16 (conversational voie) matches — a structural
+    property, not a draw. The branch produced zero attacks on every real run;
+    the framework was in fact populated solely by the fallacy branch below.
+    Removing the dead branch is behaviourally neutral (see
+    ``test_dung_conversational`` post-removal coverage) and deletes no live
+    capacity.
     """
     if not hasattr(state, "identified_arguments") or not state.identified_arguments:
         return None
@@ -2851,36 +2864,12 @@ def _build_dung_framework_from_state(state: Any) -> Optional[Dict[str, Any]]:
     if len(arg_ids) < 2:
         return None
 
-    # Build attack relations from counter-arguments
+    # Build attack relations from fallacies targeting arguments.
+    # #1668: the counter-argument strategy branch (the
+    # ``strategy in ("UNDERCUT", "REBUT", "REBUTTAL")`` gate) previously lived
+    # here — removed, see the function docstring for why.
     attacks = []
-    counter_args = getattr(state, "counter_arguments", [])
-    for ca in counter_args:
-        strategy = ca.get("strategy", "").upper()
-        if strategy in ("UNDERCUT", "REBUT", "REBUTTAL"):
-            original = ca.get("original_argument", "")
-            counter_text = ca.get("counter_argument", "")
-            if not original:
-                continue
-            # Match counter-arg to argument IDs
-            source_id = None
-            target_id = None
-            for aid, desc in state.identified_arguments.items():
-                if desc and (original[:60] in desc or desc[:60] in original):
-                    target_id = aid
-                    break
-            # Source: find which argument the counter supports
-            for aid, desc in state.identified_arguments.items():
-                if (
-                    desc
-                    and counter_text
-                    and (counter_text[:40] in desc or desc[:40] in counter_text)
-                ):
-                    source_id = aid
-                    break
-            if source_id and target_id and source_id != target_id:
-                attacks.append([source_id, target_id])
 
-    # Also build attacks from fallacies targeting arguments
     fallacies = getattr(state, "identified_fallacies", {})
     if isinstance(fallacies, dict):
         fallacies = list(fallacies.values())
