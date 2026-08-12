@@ -841,7 +841,18 @@ class TestAttackSourceNatureProbe:
         blocks = collect(state.get_state_snapshot())
         agg = aggregate(blocks)
         assert agg["nature_keys_present"] is False
-        assert "UNAVAILABLE" in _render({"document": "doc", **agg}, as_json=False)
+        rendered = _render({"document": "doc", **agg}, as_json=False)
+        assert "UNAVAILABLE" in rendered
+        # R794 follow-up: on a pre-instrumentation surface the per-nature
+        # values are absent, so the invariant must NOT print a spurious
+        # MISMATCH (a verdict on a magnitude the surface never declared —
+        # #1019 one level up). It prints N/A instead. Substitution control:
+        # reverting _render_surface to an unconditional invariant makes the
+        # MISMATCH assertion red.
+        assert "MISMATCH" not in rendered
+        assert "N/A (split unavailable)" in rendered
+        # The per-surface flag is set, not only the document-global one.
+        assert agg["surfaces"]["curated"]["nature_keys_present"] is False
 
     def test_probe_never_leaks_ca_source_text(self) -> None:
         """The probe output must never contain the ``CA:`` source string —
