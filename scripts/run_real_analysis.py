@@ -13,6 +13,17 @@ everything that reaches git; this artifact stays on disk.
 
 Usage:
     conda run -n projet-is-roo-new --no-capture-output python scripts/run_real_analysis.py --corpus A
+    conda run -n projet-is-roo-new --no-capture-output python scripts/run_real_analysis.py --corpus A --mode conversational
+
+``--mode`` selects the orchestration path (#1668 item 5-bis):
+  * ``pipeline`` (default) — sequential DAG via ``run_unified_analysis`` workflow
+    ``spectacular``. The historic, unchanged behaviour.
+  * ``conversational`` — SK AgentGroupChat multi-agent dialogue via
+    ``run_conversational_analysis`` (``workflow_name="conversational"``). The
+    runner surfaces ``execution_path`` (agent_group_chat / round_robin_fallback)
+    and detects a silent fallback to pipeline (the conversational path raises
+    inside ``run_unified_analysis`` and is swallowed back to ``standard``) by
+    the absence of the conversational result keys — fail-loud, anti-#1019.
 """
 
 import argparse
@@ -43,6 +54,38 @@ from argumentation_analysis.core.io_manager import load_extract_definitions
 CORPUS_SRC_IDX = {"A": 11, "B": 3, "C": 2}
 RESULTS_DIR = Path("argumentation_analysis/evaluation/results/real_analysis")
 DATASET_PATH = Path("argumentation_analysis/data/extract_sources.json.gz.enc")
+
+# Mode → run_unified_analysis workflow_name. The pipeline mode is the historic
+# ``spectacular`` workflow; the conversational mode routes through
+# ``run_conversational_analysis`` inside ``run_unified_analysis``. Kept as a
+# standalone mapping so the routing is unit-testable without an API run.
+MODE_TO_WORKFLOW: Dict[str, str] = {
+    "pipeline": "spectacular",
+    "conversational": "conversational",
+}
+
+# Result keys that distinguish a genuine conversational run from a pipeline
+# fallback (run_unified_analysis swallows a conversational exception back to
+# ``standard``). Used to detect the silent fallback — anti-#1019.
+_CONV_RESULT_KEYS = ("conversation_log", "execution_path")
+
+
+def is_conversational_fallback(mode: str, result: Any) -> bool:
+    """Did a ``--mode conversational`` run silently fall back to the pipeline?
+
+    ``run_unified_analysis`` swallows a conversational exception back to the
+    ``standard`` workflow and returns a pipeline result. A mode-conversational
+    run that returns a result without any conversational key
+    (``conversation_log`` / ``execution_path``) is NOT a conversational verdict
+    — the two call opposite paths, and reading the fallback as the mode asked
+    for would measure the wrong voie (#1668 item 5-bis anti-#1019). Pure
+    function (no I/O) so the detection is unit-testable without an API run.
+    """
+    if mode != "conversational":
+        return False
+    if not isinstance(result, dict):
+        return True
+    return not any(k in result for k in _CONV_RESULT_KEYS)
 
 
 def load_corpus(label: str, max_chars: int = 60000) -> Dict[str, Any]:
@@ -93,12 +136,21 @@ def render_markdown(
     label: str,
     elapsed: float,
     summary: Dict[str, Any] | None = None,
+    mode: str = "pipeline",
+    execution_path: str | None = None,
+    conversational_fallback: bool = False,
 ) -> str:
     md = [f"# Analyse réelle (non-anonymisée) — corpus {label}", ""]
     md.append(f"> Généré localement, chemin GITIGNORED. Ne pas committer / publier.")
-    md.append(
-        f"> Pipeline: `spectacular` + `fallacy_tier:full` — {elapsed:.1f}s — corpus {corpus['raw_len']} chars (tronqué à {len(corpus['text'])})."
-    )
+    mode_line = f"> Mode: `{mode}` — {elapsed:.1f}s — corpus {corpus['raw_len']} chars (tronqué à {len(corpus['text'])})."
+    if mode == "conversational":
+        path_str = execution_path or "—"
+        mode_line += f" — execution_path: `{path_str}`"
+        if conversational_fallback:
+            mode_line += " — ⚠ FALLBACK pipeline (voie conversationnelle non atteinte)"
+    else:
+        mode_line += " — workflow: `spectacular` + `fallacy_tier:full`"
+    md.append(mode_line)
     md.append("")
     md.append("## Identité réelle du corpus (métadonnées source)")
     md.append("")
@@ -234,10 +286,14 @@ def render_markdown(
     return "\n".join(md)
 
 
-async def main_async(label: str) -> None:
+async def main_async(label: str, mode: str = "pipeline") -> None:
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
+
+    if mode not in MODE_TO_WORKFLOW:
+        raise ValueError(f"unknown mode '{mode}'; choose from {list(MODE_TO_WORKFLOW)}")
+    workflow_name = MODE_TO_WORKFLOW[mode]
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     corpus = load_corpus(label)
@@ -245,6 +301,7 @@ async def main_async(label: str) -> None:
         f"[REAL] corpus {label}: {corpus['raw_len']} chars (using {len(corpus['text'])})"
     )
     print(f"[REAL] meta: {corpus['meta']}")
+    print(f"[REAL] mode: {mode} (workflow_name={workflow_name})")
 
     # NO shield_config: (a) the owner wants the REAL non-anonymized view, the shield
     # injects an opaque-ID directive; (b) shield_config switches the workflow name to
@@ -254,34 +311,73 @@ async def main_async(label: str) -> None:
     context = {"fallacy_tier": "full"}
     t0 = time.time()
     result = await run_unified_analysis(
-        text=corpus["text"], workflow_name="spectacular", context=context
+        text=corpus["text"], workflow_name=workflow_name, context=context
     )
     elapsed = time.time() - t0
     print(f"[REAL] pipeline done in {elapsed:.1f}s")
 
+    # Fail-loud on the silent conversational→pipeline fallback (#1668 item 5-bis
+    # anti-#1019): run_unified_analysis swallows a conversational exception back
+    # to ``standard``. A mode-conversational run that returns a pipeline result
+    # (no conversation_log / execution_path) is NOT a conversational verdict —
+    # the two call opposite paths, and reading the fallback as the mode asked
+    # for would measure the wrong voie. The proof of presence is these keys.
+    if is_conversational_fallback(mode, result):
+        print(
+            "[REAL] WARNING: --mode conversational requested but the result "
+            "carries no conversational keys (conversation_log/execution_path) — "
+            "run_unified_analysis fell back to the pipeline. The state below is "
+            "a PIPELINE verdict, NOT a conversational one. Re-run after fixing "
+            "the conversational path before measuring #1668 item 5-bis."
+        )
+
     state = result.get("unified_state")
     snap = state.get_state_snapshot(summarize=False) if state is not None else {}
 
-    # Full ground-truth JSON (unscrubbed — gitignored)
-    json_path = RESULTS_DIR / f"real_{label}_state.json"
+    # Full ground-truth JSON (unscrubbed — gitignored). Keep the mode in the
+    # filename so the two voies do not overwrite each other when both are run.
+    json_path = RESULTS_DIR / f"real_{label}_{mode}_state.json"
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(snap, f, indent=2, ensure_ascii=False, default=str)
     print(f"[REAL] full snapshot -> {json_path}")
 
     # Readable digest
-    md = render_markdown(snap, corpus, label, elapsed, summary=result.get("summary"))
-    md_path = RESULTS_DIR / f"real_{label}_report.md"
+    conv_fallback = is_conversational_fallback(mode, result)
+    md = render_markdown(
+        snap,
+        corpus,
+        label,
+        elapsed,
+        summary=result.get("summary"),
+        mode=mode,
+        execution_path=(
+            result.get("execution_path") if isinstance(result, dict) else None
+        ),
+        conversational_fallback=conv_fallback,
+    )
+    md_path = RESULTS_DIR / f"real_{label}_{mode}_report.md"
     with open(md_path, "w", encoding="utf-8") as f:
         f.write(md)
     print(f"[REAL] readable report -> {md_path}")
     print(f"[REAL] top-level snapshot keys: {sorted(snap.keys())}")
 
 
-def main():
-    parser = argparse.ArgumentParser()
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("--corpus", choices=["A", "B", "C"], default="A")
+    parser.add_argument(
+        "--mode",
+        choices=list(MODE_TO_WORKFLOW),
+        default="pipeline",
+        help="orchestration path: pipeline (default, sequential DAG) or "
+        "conversational (SK AgentGroupChat dialogue). The conversational mode "
+        "is the voie the #1668 item 5-bis gate lives on.",
+    )
     args = parser.parse_args()
-    asyncio.run(main_async(args.corpus))
+    asyncio.run(main_async(args.corpus, args.mode))
 
 
 if __name__ == "__main__":
