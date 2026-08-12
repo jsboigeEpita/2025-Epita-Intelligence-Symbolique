@@ -1048,7 +1048,10 @@ def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
     if not output or not isinstance(output, dict):
         return
     formulas = output.get("formulas", [])
-    satisfiable = output.get("satisfiable", False)
+    # Three states, never two (#1650): an absent ``satisfiable`` (or an explicit
+    # None) means the reasoner did not decide — folding it onto False would make
+    # "the prover said nothing" indistinguishable from "the prover said no".
+    satisfiable = output.get("satisfiable")
     model = output.get("model", {})
     if not isinstance(formulas, list):
         formulas = []
@@ -1061,9 +1064,7 @@ def _write_propositional_to_state(output: Any, state: Any, ctx: dict[str, Any]) 
         kwargs["query_count"] = output["query_count"]
     if output.get("message"):
         kwargs["message"] = output["message"]
-    state.add_propositional_analysis_result(
-        formulas, bool(satisfiable), model, **kwargs
-    )
+    state.add_propositional_analysis_result(formulas, satisfiable, model, **kwargs)
 
 
 def _write_fol_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
@@ -1115,7 +1116,11 @@ def _write_modal_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     if not output or not isinstance(output, dict):
         return
     formulas = output.get("formulas", [])
-    valid = output.get("valid", False)
+    # Three states, never two (#1650): ``valid`` is None when the solver could
+    # not decide (no-translation / no-solver), True/False when it did. An absent
+    # key must not fold onto False — the modal reader (Acte II) already
+    # classifies ``valid is None`` as degraded.
+    valid = output.get("valid")
     modalities = output.get("modalities", [])
     if not isinstance(formulas, list):
         formulas = []
@@ -1134,7 +1139,7 @@ def _write_modal_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         status_message = None
     state.add_modal_analysis_result(
         formulas,
-        valid if valid is not None else None,
+        valid,
         modalities,
         message=status_message,
     )
@@ -1153,7 +1158,10 @@ def _write_nl_to_logic_to_state(output: Any, state: Any, ctx: dict[str, Any]) ->
                 original_text=t.get("original_text", ""),
                 formula=t.get("formula", ""),
                 logic_type=t.get("logic_type", "propositional"),
-                is_valid=bool(t.get("is_valid", False)),
+                # Three states (#1650): is_valid is the translation-validation
+                # verdict; absent/None means the validation never ran, not that
+                # the translation failed validation.
+                is_valid=t.get("is_valid"),
                 variables=t.get("variables", {}),
                 confidence=float(t.get("confidence", 0.0)),
             )
@@ -1403,12 +1411,17 @@ def _write_cl_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write Conditional Logic results to UnifiedAnalysisState (#86)."""
     if not output or not isinstance(output, dict):
         return
-    entailed = output.get("entailed", False)
+    # Three states (#1650): ``entailed`` is the Conditional-Logic verdict (the
+    # query follows from the conditionals); absent/None means the reasoner did
+    # not decide. The CL entry is a guest in the PL container
+    # (_is_guest_formal_entry excludes it from host-PL counts) — the field must
+    # still carry None rather than a fabricated False.
+    entailed = output.get("entailed")
     message = str(output.get("message", ""))
     num = output.get("num_conditionals", 0)
     state.add_propositional_analysis_result(
         formulas=[f"CL({num} conditionals): {message}"],
-        satisfiable=bool(entailed),
+        satisfiable=entailed,
         model={},
     )
 
@@ -1417,7 +1430,13 @@ def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """Write SAT solver results to UnifiedAnalysisState (#86)."""
     if not output or not isinstance(output, dict):
         return
-    is_sat = output.get("satisfiable", False)
+    # Three states (#1650): ``satisfiable`` is None when the SAT backend is
+    # unavailable (the producer emits ``satisfiable: None`` on PySAT absence) —
+    # folding it onto False would make "no solver ran" indistinguishable from
+    # "the formula set is UNSAT", and the old formula string claimed exactly
+    # that. The mus branch is a decided verdict (MUS found unsat subsets), so it
+    # keeps its explicit False.
+    is_sat = output.get("satisfiable")
     model = output.get("model") or {}
     mode = output.get("mode", "solve")
     if mode == "mus":
@@ -1428,9 +1447,12 @@ def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
             model={},
         )
     else:
+        sat_label = (
+            "SAT" if is_sat is True else ("UNSAT" if is_sat is False else "indéterminé")
+        )
         state.add_propositional_analysis_result(
-            formulas=[f"SAT: {'SAT' if is_sat else 'UNSAT'}"],
-            satisfiable=bool(is_sat),
+            formulas=[f"SAT: {sat_label}"],
+            satisfiable=is_sat,
             model=model if isinstance(model, dict) else {},
         )
 
@@ -1688,9 +1710,14 @@ def _write_qbf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
     """
     if not output or not isinstance(output, dict):
         return
+    # Three states (#1650): ``valid`` is the QBF validity verdict; the producer
+    # emits ``valid: None`` when the QBF analysis failed (native fallback
+    # error), so an absent key must not fold onto False. The QBF entry is a
+    # guest in the PL container (_is_guest_formal_entry) — the field still
+    # carries the honest tri-state value.
     state.add_propositional_analysis_result(
         formulas=[f"QBF: {output.get('formula', '')}"],
-        satisfiable=output.get("valid", False),
+        satisfiable=output.get("valid"),
         model={},
     )
     # #1648 Wave-2 sidecar: preserve the quantifier prefix the handler
