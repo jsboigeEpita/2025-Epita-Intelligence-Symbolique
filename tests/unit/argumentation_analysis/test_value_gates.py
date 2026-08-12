@@ -1721,10 +1721,16 @@ class TestEAFValueGate:
 
 
 class TestQBFValueGate:
-    """QBF solver — error fallback returns valid=False honestly (#1005)."""
+    """QBF solver — error fallback reports the verdict as undetermined (#1650).
+
+    Previously (#1005) the error fallback reported ``valid=False`` — folding
+    "the QBF reasoner failed" onto "the formula is invalid". #1650 makes formal
+    verdicts tri-state: a failed reasoner is ``None`` (undetermined), never
+    ``False`` (decided-no), so downstream readers can distinguish the two.
+    """
 
     async def test_qbf_error_fallback_reports_unavailable(self):
-        """When both JVM and native fail, QBF must report unavailability."""
+        """When both JVM and native fail, QBF must report undetermined (None)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_qbf,
         )
@@ -1742,8 +1748,9 @@ class TestQBFValueGate:
         assert result.get("fallback") == "error", (
             f"QBF error fallback should set fallback='error', got {result.get('fallback')} (#1005)."
         )
-        assert result.get("valid") is False, (
-            f"QBF unavailable must report valid=False, got {result.get('valid')} (#1005)."
+        assert result.get("valid") is None, (
+            f"QBF unavailable must report valid=None (undetermined, not False), "
+            f"got {result.get('valid')} (#1650)."
         )
 
 

@@ -1061,9 +1061,12 @@ async def _run_formal_logic_from_state(
             pl_out = await _invoke_propositional_logic(input_text, context)
             formulas = pl_out.get("formulas", []) if isinstance(pl_out, dict) else []
             if formulas:
+                # Three states (#1650): same motif as _write_propositional_to_state
+                # — an absent ``satisfiable`` must stay None, never fold onto
+                # False (the readers classify `is True`/`is False`/None).
                 state.add_propositional_analysis_result(
                     formulas,
-                    bool(pl_out.get("satisfiable", False)),
+                    pl_out.get("satisfiable"),
                     pl_out.get("model", {}) or {},
                 )
                 result["pl_added"] = len(formulas)
@@ -4874,7 +4877,11 @@ async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             return {
                 "quantifiers": quantifiers,
                 "formula": formula[:100],
-                "valid": False,
+                # Three states (#1650): the QBF analysis FAILED — the validity
+                # verdict is undetermined, not False. Folding onto False would
+                # make "no solver ran" indistinguishable from "the formula is
+                # invalid" for every downstream reader of `valid`.
+                "valid": None,
                 "message": f"QBF unavailable: {e2}",
                 "fallback": "error",
             }
