@@ -1717,6 +1717,17 @@ def _band_claim_ceiling(band: str) -> str:
     )
 
 
+def _strategy_suffix(strategy: str) -> str:
+    """Render a counter-argument's observed strategy as a parenthetical suffix.
+
+    #1668 conclusion-side: ``strategy`` is free text. Surface it in parentheses
+    only when non-empty — an empty strategy renders as nothing, not as dangling
+    empty parens (which read as a labelled-but-empty slot, the #1019 shape).
+    """
+    s = (strategy or "").strip()
+    return f" ({s})" if s else ""
+
+
 def build_act3_prompt(evidence: Act3Evidence) -> str:
     """Build the §4-compliant LLM-conducted prompt for the Acte III conclusion.
 
@@ -1791,10 +1802,14 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         )
 
     # --- Que faire (actionnable) ---
+    # #1668 conclusion-side: ``strategy`` is free text (an observed rhetorical
+    # move), surfaced in parentheses only when present — an empty strategy
+    # renders as an absence, not as dangling empty parens (which read as a
+    # labelled-but-empty slot).
     shown_counters = evidence.counter_strategies[:_COUNTER_LIST_CAP]
     if shown_counters:
         counters_lines = "\n".join(
-            f"  - Pour contrer {cs.target_arg_id} ({cs.strategy}) : {cs.snippet}"
+            f"  - Pour contrer {cs.target_arg_id}{_strategy_suffix(cs.strategy)} : {cs.snippet}"
             for cs in shown_counters
         )
     else:
