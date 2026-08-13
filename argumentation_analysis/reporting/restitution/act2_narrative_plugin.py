@@ -1088,7 +1088,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
-                lines.append(f"      Contre-argument ({ca.strategy}) : {ca.snippet}")
+                # #1668: strategy is free text; surface in parens only when
+                # present — an empty strategy renders as an absence, not ().
+                _strat = (ca.strategy or "").strip()
+                _slot = f" ({_strat})" if _strat else ""
+                lines.append(f"      Contre-argument{_slot} : {ca.snippet}")
             if a.dung_rejected:
                 # Track D #1280 — frame honestly: the Dung graph is built from
                 # the extracted arguments, so the verdict is a reorganisation of

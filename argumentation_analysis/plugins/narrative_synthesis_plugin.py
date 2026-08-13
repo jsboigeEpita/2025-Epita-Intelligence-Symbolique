@@ -88,15 +88,18 @@ def build_narrative(state: Any) -> str:
         parts.append(fallacy_text)
 
     # ── Counter-arguments ──────────────────────────────────────────
+    # #1668 conclusion-side: ``strategy`` is free text emitted by the
+    # collaborative_debate producer (91 CAs measured, 100% distinct values, 0
+    # from any closed vocabulary). Enumerating the values via set()/join() (the
+    # former "via {labels}" prose) presented rich rhetorical moves as a list of
+    # named strategies, and the ``"general"`` default fabricated a label for an
+    # absent key (#1019). The conclusion reports the honest count of
+    # contestation points; the observed moves live with the counter-arguments
+    # themselves, not categorised in the narrative.
     counters = getattr(state, "counter_arguments", [])
     if counters:
-        strategies = set()
-        for ca in counters:
-            if isinstance(ca, dict):
-                strategies.add(ca.get("strategy", "general"))
-        strat_text = ", ".join(strategies) if strategies else "plusieurs approches"
         parts.append(
-            f"Des contre-arguments ont ete generes via {strat_text}, "
+            f"Des contre-arguments ont ete generes, "
             f"identifiant {len(counters)} point(s) de contestation."
         )
 
