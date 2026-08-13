@@ -229,8 +229,31 @@ def _canaried_state() -> UnifiedAnalysisState:
     # --- jtms_beliefs: belief name can be argument text; justifications free-form
     s.add_jtms_belief(NL, True, [NL2])
 
-    # atms_contexts: stored verbatim by ``_write_atms_to_state``; plant one entry.
-    s.atms_contexts = [{"context": "ctx_1", "hypotheses": [NL]}]
+    # atms_contexts: stored verbatim by ``_write_atms_to_state`` (which does
+    # ``state.atms_contexts = output.get("atms_contexts", [])``). The producer
+    # (``_invoke_atms``, invoke_callables.py:2660) builds each context as
+    # ``{hypothesis_id, label, assumptions, coherent, derivable_beliefs,
+    #    contradicting_beliefs, derivation_count, contradiction_count}`` — there
+    # is NO ``hypotheses`` key. ``assumptions``/``derivable_beliefs``/
+    # ``contradicting_beliefs`` are arg atoms (source-derived via
+    # ``_generate_hypotheses(arg_names, ...)``); ``label`` is the hypothesis
+    # label. Plant the canary in those four nominative leaves, mirroring the real
+    # producer shape exactly (a synthetic ``{"hypotheses": [...]}`` shape would
+    # be the #1664 anti-pattern this module exists to catch — and was, until this
+    # fix, what the phantom ``atms_contexts[*].hypotheses[*]`` baseline path
+    # frozen below measured).
+    s.atms_contexts = [
+        {
+            "hypothesis_id": "ctx_1",
+            "label": NL,
+            "assumptions": [NL, NL2],
+            "coherent": True,
+            "derivable_beliefs": [NL],
+            "contradicting_beliefs": [NL2],
+            "derivation_count": 1,
+            "contradiction_count": 1,
+        }
+    ]
 
     # governance_decisions: structural (method/winner/scores). Exercised so the
     # field is in the written-set, but no NL canary — producer values are short
@@ -403,8 +426,23 @@ EXPECTED_UNCOVERED: dict[str, frozenset[str]] = {
     "jtms_beliefs": frozenset(
         {"jtms_beliefs[*].name", "jtms_beliefs[*].justifications[*]"}
     ),
-    # Stored verbatim by ``_write_atms_to_state``; not in any scrubber table.
-    "atms_contexts": frozenset({"atms_contexts[*].hypotheses[*]"}),
+    # Stored verbatim by ``_write_atms_to_state``
+    # (``state.atms_contexts = output.get("atms_contexts", [])``); not in any
+    # scrubber table. The surviving NL leaves are the ATMS producer's arg-atom
+    # fields: ``label`` (the hypothesis label) and ``assumptions``/
+    # ``derivable_beliefs``/``contradicting_beliefs`` (sorted atom lists sourced
+    # from ``arg_names`` via ``_generate_hypotheses``). ``coherent``/``*_count``
+    # are bool/int and ``hypothesis_id`` is an opaque id, so none surface here.
+    # The narrative reader consumes only ``len()`` + ``coherent``, so these
+    # atoms never reach prose — but they survive export verbatim.
+    "atms_contexts": frozenset(
+        {
+            "atms_contexts[*].label",
+            "atms_contexts[*].assumptions[*]",
+            "atms_contexts[*].derivable_beliefs[*]",
+            "atms_contexts[*].contradicting_beliefs[*]",
+        }
+    ),
 }
 
 
