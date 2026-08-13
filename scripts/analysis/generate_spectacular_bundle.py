@@ -197,21 +197,19 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
                 scrubbed_bs[bs_id] = bs_val
         cleaned["belief_sets"] = scrubbed_bs
 
-    # Eighth pass: scrub extracts (List[Dict[str, Any]] in prod via add_extract)
-    extracts = cleaned.get("extracts", [])
-    if isinstance(extracts, list):
-        scrubbed_extracts = []
-        for entry in extracts:
-            if isinstance(entry, dict):
-                scrubbed_extracts.append({
-                    k: ("<scrubbed>" if isinstance(v, str) and len(v) > 20 else v)
-                    for k, v in entry.items()
-                })
-            elif isinstance(entry, str) and len(entry) > 20:
-                scrubbed_extracts.append("<scrubbed>")
-            else:
-                scrubbed_extracts.append(entry)
-        cleaned["extracts"] = scrubbed_extracts
+    # Eighth pass: scrub extracts entries regardless of container shape (#1673).
+    # Prod is List[Dict] via add_extract (shared_state.py:94) but the scrub must
+    # not gate on the container type — _iter_dimension_entries yields the dict
+    # entries whether the container is a list or a mapping (#1662, same family).
+    # Divergence note: sanitize_state.py preserves extracts[*].name as a join
+    # key for its downstream consumer (l.35-38); this pass scrubs any value
+    # above threshold, name included. The two agree on all measured state
+    # (0/97 names reach threshold) and this script has no join-key consumer —
+    # aligning them without a consumer to arbitrate would be a blind call.
+    for entry in _iter_dimension_entries(cleaned.get("extracts")):
+        for k, v in list(entry.items()):
+            if isinstance(v, str) and len(v) > 20:
+                entry[k] = "<scrubbed>"
 
     # Ninth pass: scrub analysis_tasks (may contain NL instructions)
     tasks = cleaned.get("analysis_tasks", {})

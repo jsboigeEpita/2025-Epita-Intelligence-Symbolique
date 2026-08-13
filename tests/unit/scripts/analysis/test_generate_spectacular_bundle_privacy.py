@@ -832,3 +832,139 @@ class TestVector6Pass12CoversAllContainers:
         for entry in state["bipolar_results"]:
             for arg in entry["arguments"]:
                 assert arg == "<scrubbed>" or len(arg) <= 10
+
+
+# ---------------------------------------------------------------------------
+# Vector 7 (#1673) — Pass 8 must scrub extracts entries whatever the container
+# ---------------------------------------------------------------------------
+
+class TestVector7Pass8ExtractsContainerShape:
+    """Pass 8 (extracts) must scrub entries regardless of container shape.
+
+    Third occurrence of the #1662 family (#1662, #1664, #1665, now #1673): a
+    privacy guard written against the container shape *observed at write time*.
+    Pass 8 gated on ``isinstance(extracts, list)`` — before #1665 it gated on
+    ``isinstance(extracts, dict)``; each version swapped the orphan form rather
+    than removing the constraint. The orphan form has no producer today, so the
+    defect is in place but lets nothing through — which is exactly why the
+    previous version survived so long.
+
+    Prod shape is ``List[Dict]`` (``shared_state.add_extract`` l.279 appends a
+    dict; ``self.extracts: List[Dict[str, Any]]`` l.94). The orphan form is a
+    ``Dict[str, Dict]`` mapping (id -> entry), analogous to ``dung_frameworks``.
+    The armed canary drives that orphan shape with pure descriptive NL — no
+    entity from Pass 14's allowlist — so a leak is attributable to Pass 8 alone.
+
+    Per #1673: use ``_iter_dimension_entries`` (landed #1662, already used by
+    Pass 12) and mutate entries in place; do NOT re-introduce a ``dict`` branch
+    parallel to the ``list`` one (two branches guarded = the same defect twice).
+    """
+
+    # Pure descriptive NL — no Pass-14 entity name can mask a Pass 8 miss.
+    _LONG_CONTENT = (
+        "The speaker develops an extended argument about institutional reform"
+    )
+    _SENTINEL = "reform"  # generic word, absent from Pass 14's entity regex
+
+    def _entry(self) -> Dict[str, Any]:
+        return {"id": "ext_1", "name": "short", "content": self._LONG_CONTENT}
+
+    # -- Premise guard: prod really is List[Dict] via the real writer ----------
+
+    def test_prod_extracts_is_list_of_dicts_via_real_writer(self):
+        """Guard on the premise: add_extract appends a dict to a list.
+
+        If a future refactor stores extracts as a mapping, this fails first
+        and says so, instead of the scrub silently covering only one shape.
+        """
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+        state = UnifiedAnalysisState(initial_text="premise-fixture")
+        state.add_extract(name="short", content=self._LONG_CONTENT)
+        snapshot = state.get_state_snapshot()
+        assert isinstance(
+            snapshot["extracts"], list
+        ), "extracts is no longer a list — the premise of Pass 8 has moved"
+        assert snapshot["extracts"], "add_extract did not populate the list"
+        assert isinstance(snapshot["extracts"][0], dict)
+
+    # -- No-regression: prod list shape still scrubbed ------------------------
+
+    def test_pass8_scrubs_extracts_list_shape_prod(self):
+        """List[Dict] (prod shape) entries are scrubbed — holds pre- and post-fix."""
+        state = {"extracts": [self._entry()]}
+        result = _scrub_state_for_export(state)
+        assert isinstance(result["extracts"], list)
+        assert result["extracts"][0]["content"] == "<scrubbed>"
+
+    # -- Armed canary: the orphan dict shape (RED on main, GREEN after fix) ---
+
+    def test_pass8_scrubs_extracts_dict_shape_orphan(self):
+        """Dict[str, Dict] container (orphan form) entries must be scrubbed too.
+
+        This is the armed test for #1673: on main, Pass 8 gates on
+        ``isinstance(extracts, list)`` and skips the dict container entirely,
+        so ``content`` traverses the export untouched. After the fix (iterate
+        via ``_iter_dimension_entries``), the dict entries are reached.
+        """
+        state = {"extracts": {"ext_1": self._entry()}}
+        result = _scrub_state_for_export(state)
+        # The dict container survives (shape preserved); its entry is scrubbed.
+        assert isinstance(result["extracts"], dict)
+        assert "ext_1" in result["extracts"]
+        assert result["extracts"]["ext_1"]["content"] == "<scrubbed>", (
+            "Pass 8 skipped the dict-shaped extracts container — the orphan "
+            "form let raw NL through (#1673, same family as #1662)."
+        )
+
+    def test_pass8_dict_shape_preserves_short_values(self):
+        """The threshold logic is unchanged on the dict shape: short strings kept."""
+        state = {
+            "extracts": {"ext_1": {"id": "ext_1", "name": "ok", "content": "tiny"}}
+        }
+        result = _scrub_state_for_export(state)
+        assert result["extracts"]["ext_1"]["content"] == "tiny"
+        assert result["extracts"]["ext_1"]["name"] == "ok"
+
+    # -- Pure-NL no-leak: Pass 14 cannot mask a Pass 8 miss -------------------
+
+    def test_pass8_dict_shape_no_pure_nl_sentinel_leak(self):
+        """End-to-end: the planted pure-NL sentinel must not survive.
+
+        Free of entity names, so Pass 14 (the ~30-name allowlist) cannot scrub
+        it — only Pass 8 can. A leak means Pass 8 missed the dict container.
+        """
+        state = {"extracts": {"ext_1": self._entry()}}
+        result = _scrub_state_for_export(state)
+        assert self._SENTINEL not in json.dumps(result).lower(), (
+            "Pure-NL sentinel leaked through the dict-shaped extracts container "
+            "— Pass 8 missed it and Pass 14 cannot mask it (no entity name)."
+        )
+
+    # -- Divergence from sanitize_state on extracts[*].name -------------------
+
+    def test_pass8_scrubs_long_name_diverging_from_sanitize_state(self):
+        """Documents the known divergence: Pass 8 scrubs a long ``name``;
+        ``sanitize_state`` preserves ``extracts[*].name`` as a join key (l.35-38).
+
+        Not a behavior change — the two scrubbers agree on all measured state
+        (0/97 real names reach the threshold), and this script has no join-key
+        consumer. The comment in Pass 8 records the divergence; this test pins
+        the actual policy so a future reader sees it.
+        """
+        entry = {"id": "ext_1", "name": self._LONG_CONTENT, "content": "x"}
+        state = {"extracts": [entry]}
+        result = _scrub_state_for_export(state)
+        assert result["extracts"][0]["name"] == "<scrubbed>"
+
+    # -- Container-type guard removed: both shapes via the same code path -----
+
+    def test_pass8_reaches_both_shapes_through_one_path(self):
+        """The fix removes the type test, not the list support: both shapes
+        are scrubbed through ``_iter_dimension_entries``. Differential on the
+        same entry payload — list and dict containers both scrub content."""
+        entry = self._entry()
+        list_result = _scrub_state_for_export({"extracts": [dict(entry)]})
+        dict_result = _scrub_state_for_export({"extracts": {"ext_1": dict(entry)}})
+        assert list_result["extracts"][0]["content"] == "<scrubbed>"
+        assert dict_result["extracts"]["ext_1"]["content"] == "<scrubbed>"
