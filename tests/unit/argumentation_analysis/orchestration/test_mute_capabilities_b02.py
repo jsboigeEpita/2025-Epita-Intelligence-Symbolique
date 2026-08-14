@@ -289,29 +289,38 @@ class TestInvokeCollaborativeAnalysis:
 
         return _invoke_collaborative_analysis
 
-    @patch.dict("os.environ", {}, clear=False)
     def test_no_api_key_uses_fallback(self):
         """When no API key, falls back to heuristic analysis."""
-        import os
-
-        # Ensure OPENAI_API_KEY is empty
-        original = os.environ.get("OPENAI_API_KEY")
-        os.environ["OPENAI_API_KEY"] = ""
-        try:
-            invoke = self._get_invoke()
+        # #1591 (re-qualification): blanking ``OPENAI_API_KEY`` closes nothing.
+        # ``_invoke_collaborative_analysis`` resolves its endpoint through
+        # ``core.llm_service.resolve_chat_endpoint``, which consults
+        # ``OPENROUTER_*`` FIRST (llm_service.py:60-62) — and ``pytest-dotenv``
+        # re-loads .env over the process env. So this test, named for the
+        # fallback, took the LIVE path on any machine with OpenRouter
+        # configured, and the fallback path only in the gate (no OPENROUTER_*
+        # secret). Same test, two different code paths depending on the host.
+        # Close the door at the canonical resolver — the precedent is
+        # test_collaborative_debate.py:305 (#1336, option B): the resolver is
+        # imported lazily *inside* the callee, so patching it at its source
+        # binds a name the callee really re-reads on every call.
+        invoke = self._get_invoke()
+        with patch(
+            "argumentation_analysis.core.llm_service.resolve_chat_endpoint",
+            return_value=("", "", ""),
+        ):
             result = asyncio.get_event_loop().run_until_complete(
                 invoke("This is a test argument about policy reform.", {})
             )
-            assert isinstance(result, dict)
-            # Fallback path returns structured analysis with agent_outputs, etc.
-            assert (
-                "agent_outputs" in result or "summary" in result or "fallback" in result
-            )
-        finally:
-            if original:
-                os.environ["OPENAI_API_KEY"] = original
+        assert isinstance(result, dict)
+        # The bite: the previous three-branch ``or`` was satisfied by every
+        # possible return of this function, fallback or not. ``interaction_type``
+        # is the only key that DISTINGUISHES the two paths — the live path
+        # returns "sequential_collaborative" (collaborative_debate.py:221),
+        # the fallback "fallback_heuristic" (l.286).
+        assert (
+            result.get("interaction_type") == "fallback_heuristic"
+        ), f"expected the heuristic fallback path, got {result.get('interaction_type')!r}"
 
-    @patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False)
     def test_fallback_with_context(self):
         """Fallback path uses extract/quality context when available."""
         invoke = self._get_invoke()
@@ -326,16 +335,30 @@ class TestInvokeCollaborativeAnalysis:
                 "per_argument_scores": {"arg_1": {"note_finale": 7.5}},
             },
         }
-        result = asyncio.get_event_loop().run_until_complete(
-            invoke("test input", context)
-        )
-        # #1593: ``isinstance(result, dict)`` passed even with
-        # _invoke_collaborative_analysis stubbed to {}. The name promises
-        # "fallback path uses extract/quality context" → a structured analysis
-        # is produced (mirrors sibling test_no_api_key_uses_fallback).
+        # #1591: same open door as the sibling above — see its comment.
+        with patch(
+            "argumentation_analysis.core.llm_service.resolve_chat_endpoint",
+            return_value=("", "", ""),
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                invoke("test input", context)
+            )
+        # #1593 tightened ``isinstance(result, dict)`` to this, which does kill
+        # the stubbed-``{}`` case. But BOTH paths return ``agent_outputs``
+        # (l.215 live, l.280 fallback), so it cannot fail for the reason the
+        # name promises. Pin the path, then pin that the context was USED:
+        # the fallback maps ``arguments[:6]`` into ``surviving_arguments``.
+        assert (
+            result.get("interaction_type") == "fallback_heuristic"
+        ), f"expected the heuristic fallback path, got {result.get('interaction_type')!r}"
         assert (
             "agent_outputs" in result
         ), f"expected structured fallback analysis, got {result}"
+        surviving = result.get("surviving_arguments", [])
+        assert [s["argument"] for s in surviving] == [
+            "The economy needs stimulus.",
+            "Tax cuts help growth.",
+        ], f"extract context was not carried into the fallback, got {surviving}"
 
 
 # ---------------------------------------------------------------------------
