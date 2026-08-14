@@ -73,6 +73,12 @@ _MOBILISATION: Dict[str, tuple] = {
     "axe_revision": (("belief_revision_results",), "prose", "acte III"),
     "deliberation": (("debate_transcripts",), "prose", "actes II–III"),
     "gouvernance": (("governance_decisions",), "prose", "actes II–III"),
+    # #1676 — stakes & stakeholders reach the Acte I framing (the genre/arena
+    # derivation in ``act1_framing_plugin`` reads both containers) and have a
+    # live writer (``invoke_callables._invoke_stakes_extractor``, measured
+    # populated on real runs, #1604 R751). The annexe attests the axis by
+    # cardinality; the names themselves stay in the state (privacy).
+    "enjeux": (("stakes_and_stakeholders",), "prose", "acte I"),
     "arg_structuree": (("structured_arg_status",), "failure_only", "acte III"),
     "synthese_narrative": (("narrative_synthesis", "final_conclusion"), "none", ""),
     "synthese_formelle": (("formal_synthesis_reports",), "none", ""),
@@ -122,6 +128,27 @@ def _safe_len(value: Any) -> int:
         return len(value)
     except TypeError:
         return 0
+
+
+def _stakes_summary(stakes: Any) -> str:
+    """#1676 — cardinality of the stakes & stakeholders axis, never its content.
+
+    ``stakes_and_stakeholders`` carries ``{stakes: [...], stakeholders: [...],
+    rhetorical_register, discursive_arena}`` (the schema ``stakes_extractor``
+    writes). The annexe attests the axis by how many enjeux and parties
+    prenantes were identified — the names are nominative and stay in the state.
+    """
+    if not isinstance(stakes, Mapping) or not stakes:
+        return "indisponible"
+    n_stakes = _safe_len(stakes.get("stakes"))
+    n_holders = _safe_len(stakes.get("stakeholders"))
+    enjeux = f"{n_stakes} enjeu" if n_stakes == 1 else f"{n_stakes} enjeux"
+    parties = (
+        f"{n_holders} partie prenante"
+        if n_holders == 1
+        else f"{n_holders} parties prenantes"
+    )
+    return f"{enjeux}, {parties}"
 
 
 def _fol_axis_status(fol: Any) -> Any:
@@ -305,6 +332,13 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     # the conclusion leans on hardest.
     counts["deliberation"] = _safe_len(_g("debate_transcripts", []))
     counts["gouvernance"] = _safe_len(_g("governance_decisions", []))
+
+    # #1676 — the stakes & stakeholders axis is mobilised by the Acte I framing
+    # (``act1_framing_plugin`` derives the genre/arena from both containers) and
+    # has a live writer, so the coverage table attests it — by cardinality only.
+    # Privacy HARD: the stakes/stakeholders names are nominative (real labels
+    # when the working state is deanonymized) — never rendered here.
+    counts["enjeux"] = _stakes_summary(_g("stakes_and_stakeholders"))
 
     # Structured-argumentation honesty (FP-17 #1236). ASPIC+/ABA/SETAF/weighted/
     # bipolar have no text→structured translator wired (translation-gap FP-4
