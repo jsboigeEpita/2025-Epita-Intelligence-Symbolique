@@ -41,15 +41,22 @@ class TacticalState:
         # Assignations des tâches
         self.task_assignments: Dict[str, str] = {}  # task_id -> agent_id
 
+        # #1735 T3: le *pourquoi* de chaque assignation, miroir du CONV-C
+        # ``record_designation`` (shared_state.py). Une allocation sans motivation
+        # est le défaut exact que ce champ existe pour interdire : toujours écrit
+        # par paires avec ``task_assignments`` (voir
+        # ``TaskCoordinator.assign_task_to_operational``).
+        self.task_assignments_motivation: Dict[str, str] = {}  # task_id -> motivation
+
         # Dépendances entre tâches
-        self.task_dependencies: Dict[str, List[str]] = (
-            {}
-        )  # task_id -> [dependent_task_ids]
+        self.task_dependencies: Dict[
+            str, List[str]
+        ] = {}  # task_id -> [dependent_task_ids]
 
         # Progression des tâches
-        self.task_progress: Dict[str, float] = (
-            {}
-        )  # task_id -> completion_rate (0.0 to 1.0)
+        self.task_progress: Dict[
+            str, float
+        ] = {}  # task_id -> completion_rate (0.0 to 1.0)
 
         # Résultats intermédiaires
         self.intermediate_results: Dict[str, Any] = {}
@@ -168,6 +175,38 @@ class TacticalState:
             return False
 
         self.task_assignments[task_id] = agent_id
+        return True
+
+    def record_allocation_motivation(self, task_id: str, motivation: str) -> bool:
+        """
+        Enregistre le *pourquoi* d'une assignation de tâche (#1735 T3).
+
+        Miroir du ``record_designation`` conversationnel (CONV-C #1334) : le
+        palier tactique hiérarchique enregistre désormais, pour chaque
+        allocation, la raison de la décision — pas seulement l'agent choisi.
+        Le contenu est du texte libre (la motivation d'un palier déterministe
+        documente la règle de décision appliquée) ; une motivation vide est
+        refusée : c'est précisément le défaut (allocation sans pourquoi) que
+        ce point d'écriture existe pour interdire.
+
+        Args:
+            task_id: Identifiant de la tâche assignée.
+            motivation: La motivation de l'allocation (non vide, stripée).
+
+        Returns:
+            True si l'enregistrement a réussi.
+
+        Raises:
+            ValueError: si ``motivation`` est vide (ou blanche) après strip.
+        """
+        motivation = motivation.strip()
+        if not motivation:
+            raise ValueError(
+                f"L'allocation de la tâche {task_id} exige une motivation non "
+                f"vide (#1735 T3) — une assignation sans pourquoi est le défaut "
+                f"que record_allocation_motivation existe pour interdire."
+            )
+        self.task_assignments_motivation[task_id] = motivation
         return True
 
     def add_task_dependency(self, task_id: str, dependent_task_id: str) -> bool:
@@ -489,6 +528,7 @@ class TacticalState:
             "assigned_objectives": self.assigned_objectives,
             "tasks": self.tasks,
             "task_assignments": self.task_assignments,
+            "task_assignments_motivation": self.task_assignments_motivation,
             "task_dependencies": self.task_dependencies,
             "task_progress": self.task_progress,
             "intermediate_results": {
@@ -531,6 +571,11 @@ class TacticalState:
 
         if "task_assignments" in state_dict:
             state.task_assignments = state_dict["task_assignments"]
+
+        if "task_assignments_motivation" in state_dict:
+            state.task_assignments_motivation = state_dict[
+                "task_assignments_motivation"
+            ]
 
         if "task_dependencies" in state_dict:
             state.task_dependencies = state_dict["task_dependencies"]

@@ -445,6 +445,39 @@ class DelegationOrchestrator:
             "M3 tactical tier decomposed into %d task(s).", len(pending_tasks)
         )
 
+        # --- #1735 T3: la désignation motivée remonte à la trace ------------
+        # ``TaskCoordinator.assign_task_to_operational`` a écrit, pour chaque
+        # tâche, qui (``task_assignments``) et pourquoi
+        # (``task_assignments_motivation``) dans l'état tactique. On expose la
+        # paire ici pour que la trace du run la porte. Le scrub réutilise le
+        # mécanisme de ``strategic_bridge`` (dispatch #1735 : « réutilise-la,
+        # ne recâble pas ») — la motivation est du texte libre et PEUT contenir
+        # un nom de source : elle passe par le même strip par clé nominative
+        # que les objectifs stratégiques déjà syncés.
+        from argumentation_analysis.core.strategic_bridge import _scrub_dict
+
+        task_assignments = []
+        for task in pending_tasks:
+            # L'id est garanti : la décomposition tactique le construit toujours
+            # (``base_task_id + n``, coordinator._decompose_objective_to_tasks).
+            task_id = task["id"]
+            task_assignments.append(
+                _scrub_dict(
+                    {
+                        "task_id": task_id,
+                        "description": task.get("description", ""),
+                        "agent_id": self.tactical_coordinator.state.task_assignments.get(
+                            task_id
+                        ),
+                        "motivation": (
+                            self.tactical_coordinator.state.task_assignments_motivation.get(
+                                task_id, ""
+                            )
+                        ),
+                    }
+                )
+            )
+
         # --- T→O: translate + execute each task ----------------------------
         operational_results: List[Dict[str, Any]] = []
         for task in pending_tasks:
@@ -532,6 +565,11 @@ class DelegationOrchestrator:
             "mode": "delegation",
             "objectives": objectives,
             "tasks_created": decomposition.get("tasks_created", len(pending_tasks)),
+            # #1735 T3: la désignation motivée (qui + pourquoi), scrubée.
+            # Lue par la trace CLI (run_orchestration.py) et par les
+            # consommateurs du résultat — pas par le harnais de comparaison
+            # (il reste sur terminates/wall-time/decides/scope, #1735 T4).
+            "task_assignments": task_assignments,
             "operational_results": operational_results,
             "evaluation": final.get("evaluation"),
             "conclusion": conclusion,
