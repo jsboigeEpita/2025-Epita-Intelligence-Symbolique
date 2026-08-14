@@ -12,6 +12,17 @@ R652+#1471-era entry-points are wired here:
 - ``conversational``        -> ``run_conversational_analysis`` (wall-time-bounded)
 - ``conversation_deterministic`` -> ``ConversationOrchestrator(mode="demo")`` (no LLM)
 
+Three counts appear in this module and they denominate different things —
+do not "reconcile" them into one (R807):
+
+- **5 engines** — the list above: the distinct orchestration implementations.
+- **8 ``MODE_RUNNERS`` keys** — the ``--modes`` dispatch surface: the 5 engines
+  plus 2 pipeline workflow presets (``pipeline_light`` / ``pipeline_full``,
+  same engine, different DAG) plus 1 deprecated alias (``hierarchical``).
+- **N ``compute_depth_parity()`` rows** — the modes that have a *measurable*
+  structural depth, one row per pipeline preset. The trade-off verdict derives
+  its counts from these rows rather than restating a literal.
+
 Usage:
     # Compare all available modes on benchmark texts
     python scripts/compare_orchestration_modes.py
@@ -606,19 +617,36 @@ def compute_depth_parity() -> List[DepthParityRow]:
     return rows
 
 
-_DEPTH_PARITY_TRADEOFF_VERDICT = (
-    "The 4 modes are comparable in interface (all produce a verdict on the "
-    "same synthetic input) but NOT in work-perimeter. They occupy three "
-    "different depth dimensions: pipeline = breadth (a wide capability "
-    "catalogue, shallow per-capability), hierarchical = delegation (few "
-    "objectives, multi-tier decomposition), conversational = dialogue-depth "
-    "(few macro-phases, deep multi-turn). This asymmetry is a DELIBERATE "
-    "design trade-off, not a defect: aligning the catalogue would mean "
-    "gutting pipeline's breadth or artificially inflating hierarchical/"
-    "conversational — both pendulum swings the project rejects (anti-#1019). "
-    "Making the trade-off explicit and firsthand-chiffred (this section) is "
-    "the honest C3 deliverable."
-)
+def _depth_parity_tradeoff_verdict(rows: List[DepthParityRow]) -> str:
+    """Render the trade-off verdict with counts DERIVED from ``rows``.
+
+    R807: the counts used to be hardcoded prose ("The 4 modes ... three
+    different depth dimensions") while ``compute_depth_parity`` had grown to
+    emit more rows — a count that stopped reading the structure it describes
+    (the #1019 family in miniature). Deriving them keeps the sentence honest
+    when a mode is added or removed; bumping the literal would rot identically.
+
+    The *dimension family* is the nature up to its first parenthesis, so
+    ``"delegation"`` / ``"delegation (3-tier depth)"`` count once, as do
+    ``"dialogue-depth"`` / ``"dialogue-depth (no LLM)"``.
+    """
+    n_modes = len(rows)
+    families = {r.nature.split(" (")[0].strip() for r in rows}
+    n_families = len(families)
+    return (
+        f"The {n_modes} modes are comparable in interface (all produce a "
+        "verdict on the same synthetic input) but NOT in work-perimeter. "
+        f"They occupy {n_families} "
+        "different depth dimensions: pipeline = breadth (a wide capability "
+        "catalogue, shallow per-capability), hierarchical = delegation (few "
+        "objectives, multi-tier decomposition), conversational = dialogue-depth "
+        "(few macro-phases, deep multi-turn). This asymmetry is a DELIBERATE "
+        "design trade-off, not a defect: aligning the catalogue would mean "
+        "gutting pipeline's breadth or artificially inflating hierarchical/"
+        "conversational — both pendulum swings the project rejects (anti-#1019). "
+        "Making the trade-off explicit and firsthand-chiffred (this section) is "
+        "the honest C3 deliverable."
+    )
 
 
 def render_depth_parity_section() -> str:
@@ -643,7 +671,7 @@ def render_depth_parity_section() -> str:
             count = "variable (LLM-derived)"
         lines.append(f"| {r.mode} | {r.depth_dimension} | {count} | {r.nature} |")
     lines.append("")
-    lines.append(_DEPTH_PARITY_TRADEOFF_VERDICT)
+    lines.append(_depth_parity_tradeoff_verdict(rows))
     lines.append("")
     return "\n".join(lines)
 

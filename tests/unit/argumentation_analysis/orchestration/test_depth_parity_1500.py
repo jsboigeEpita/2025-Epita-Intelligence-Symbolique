@@ -1,7 +1,7 @@
 # tests/unit/argumentation_analysis/orchestration/test_depth_parity_1500.py
 """Track C3 of #1500 — depth-parity trade-off (documented, firsthand-chiffred).
 
-The 4 orchestration modes are comparable in interface (all produce a
+The orchestration modes are comparable in interface (all produce a
 verdict on the same synthetic input) but NOT in work-perimeter. R653
 surfaced the asymmetry firsthand: pipeline = breadth (workflow DAG phase
 count), hierarchical = delegation (4 default objectives / 3-tier),
@@ -109,6 +109,68 @@ class TestRenderDepthParitySection:
         section = harness.render_depth_parity_section()
         assert "DELIBERATE design trade-off" in section
         assert "anti-#1019" in section
+
+    def test_verdict_counts_are_derived_not_hardcoded(self) -> None:
+        """R807: the verdict's counts must READ ``rows``, not restate a literal.
+
+        The prose used to say "The 4 modes ... three different depth
+        dimensions" while ``compute_depth_parity`` emitted more rows — a count
+        that stopped reading the structure it describes. Feeding synthetic rows
+        is the degenerate substitution: any re-hardcoded literal fails here.
+        """
+        rows = [
+            harness.DepthParityRow(
+                mode="fake_a",
+                depth_dimension="d",
+                depth_count=1,
+                nature="breadth",
+                verdict_dimension="v",
+            ),
+            harness.DepthParityRow(
+                mode="fake_b",
+                depth_dimension="d",
+                depth_count=1,
+                nature="dialogue-depth (no LLM)",
+                verdict_dimension="v",
+            ),
+        ]
+        verdict = harness._depth_parity_tradeoff_verdict(rows)
+        assert "The 2 modes" in verdict
+        assert "occupy 2 " in verdict
+
+    def test_verdict_dimension_families_collapse_parenthetical_variants(
+        self,
+    ) -> None:
+        """``delegation`` and ``delegation (3-tier depth)`` are ONE family.
+
+        Counting raw ``nature`` strings would inflate the dimension count and
+        re-introduce the drift from the other end.
+        """
+        rows = [
+            harness.DepthParityRow(
+                mode="fake_a",
+                depth_dimension="d",
+                depth_count=1,
+                nature="delegation",
+                verdict_dimension="v",
+            ),
+            harness.DepthParityRow(
+                mode="fake_b",
+                depth_dimension="d",
+                depth_count=1,
+                nature="delegation (3-tier depth)",
+                verdict_dimension="v",
+            ),
+        ]
+        verdict = harness._depth_parity_tradeoff_verdict(rows)
+        assert "The 2 modes" in verdict
+        assert "occupy 1 " in verdict
+
+    def test_rendered_section_count_matches_row_count(self) -> None:
+        """End-to-end: the rendered prose agrees with the emitted table."""
+        n_rows = len(harness.compute_depth_parity())
+        section = harness.render_depth_parity_section()
+        assert f"The {n_rows} modes are comparable" in section
 
     def test_section_contains_firsthand_chiffres(self) -> None:
         section = harness.render_depth_parity_section()
