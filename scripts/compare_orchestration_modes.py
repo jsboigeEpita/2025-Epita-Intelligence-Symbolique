@@ -412,6 +412,62 @@ def _fmt_count(count: Optional[int]) -> str:
     return "—" if count is None else str(count)
 
 
+# #1740: which capability PRODUCES each count. A count only means something if
+# its producer actually ran — see ``_fmt_count_in_perimeter``.
+#
+# Pinned against ``CAPABILITY_STATE_WRITERS`` by the #1740 tests so these sets
+# cannot drift silently when a workflow gains a capability. ⚠ Stated limit: the
+# pin keys on the ``*fallacy*`` naming convention, so a fallacy capability
+# introduced under an unconventional name would escape it. That hole is far
+# narrower than the one being closed (a fabricated 0 on every single run), and
+# it is written down rather than hidden.
+_FALLACY_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset(
+    {"neural_fallacy_detection", "hierarchical_fallacy_detection"}
+)
+_ARGUMENT_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset({"fact_extraction"})
+
+
+def _fmt_count_in_perimeter(
+    count: Optional[int],
+    producers: FrozenSet[str],
+    capabilities_used: List[str],
+) -> str:
+    """Render a count as ``n/a`` when its PRODUCER never ran (#1740).
+
+    Three states, never two:
+
+    * ``n/a``   — the producing capability is demonstrably outside the executed
+      perimeter: never evaluated;
+    * ``—``     — inside the perimeter (or perimeter unknown) but not written;
+    * ``<int>`` — written.
+
+    **Why this cannot be decided one hop earlier.** ``get_state_snapshot``
+    derives every count as ``len()`` over a PRE-DECLARED container
+    (``shared_state.py``: ``"fallacy_count": len(self.identified_fallacies)``),
+    so the key is *never* absent and the "absent → None → —" convention of
+    Track CG #1540 is structurally inert on this field. Three correct fixes at
+    the reader hop (#1528 item 3, #1540, #1560) left the symptom untouched for
+    exactly that reason — repeated fixes at one hop mean the defect is at
+    another. The discriminator therefore has to come from the executed
+    perimeter, not from key presence.
+
+    ``capabilities_used`` is built from ``PhaseStatus.COMPLETED`` with degraded
+    capabilities removed (``unified_pipeline.py``) — it is the EXECUTED set,
+    not the declared one. So a phase cut off by the wall-clock budget reads
+    ``n/a`` rather than ``0``, which matters: the #1735 baseline truncated 20
+    of 24 runs.
+
+    ⚠ An EMPTY ``capabilities_used`` means the mode reports **no perimeter at
+    all** (``conversation_deterministic``), NOT an empty perimeter. Absence
+    cannot be demonstrated there, so the count renders as-is — emitting ``n/a``
+    would erase a genuine observation, which is the mirror-image of the defect
+    being fixed.
+    """
+    if capabilities_used and not (set(capabilities_used) & producers):
+        return "n/a"
+    return _fmt_count(count)
+
+
 def _compute_decides(result: ModeResult) -> bool:
     """The ONE uniform definition of whether a mode *decided* (Track CA #1529).
 
@@ -1036,7 +1092,11 @@ async def run_conversation_deterministic_mode(
         terminates=True,
         duration_seconds=round(duration, 3),
         state_fill_rate=None,
-        fallacy_count=conv_state.get("state", {}).get("fallacies_detected", 0),
+        # #1740: absent key → None → "—", never a fabricated 0. This site kept
+        # a literal ``0`` default long after the same defect was fixed for the
+        # two other runners (#1528 item 3 / #1560) — currently populated, so it
+        # was invisible; it would have manufactured a 0 the day the key moved.
+        fallacy_count=conv_state.get("state", {}).get("fallacies_detected"),
         phases_completed=3,  # informal + fol + synthesis
         phases_total=3,
         # Track CA #1529: `decides` computed uniformly (phases_completed=3 → True).
@@ -1458,6 +1518,20 @@ MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
     "hierarchical": run_hierarchical_mode,
 }
 
+# #1740: aliases stay DISPATCHABLE (``--modes hierarchical`` keeps working for
+# whoever scripted it) but are excluded from the DEFAULT sweep. Running them by
+# default emitted rows the runner self-labels ``hierarchical_bridge`` — strictly
+# indistinguishable from the real bridge rows, so the #1735 baseline carried the
+# bridge SIX times for three corpora, announced "Modes tested: 7", and anyone
+# aggregating that table counted the bridge twice.
+_DEPRECATED_MODE_ALIASES: FrozenSet[str] = frozenset({"hierarchical"})
+
+
+def default_modes() -> List[str]:
+    """The default sweep: every runner except deprecated aliases (#1740)."""
+    return [m for m in MODE_RUNNERS if m not in _DEPRECATED_MODE_ALIASES]
+
+
 # Mode -> human-readable scope-of-work description, for the report table.
 # Modes NOT in this map use the value already stored in ``ModeResult.scope_of_work``.
 MODE_SCOPE_DESCRIPTIONS = {
@@ -1595,6 +1669,12 @@ def generate_report(
     lines.append("## Detailed Summary (legacy format)")
     lines.append("")
     lines.append(
+        "Counts (#1740): `n/a` = the producing capability was **not in the "
+        "executed perimeter** (never evaluated — not a zero); `—` = in the "
+        "perimeter but not written; a number = written."
+    )
+    lines.append("")
+    lines.append(
         "| Mode | Corpus | Success | Duration | State Fill | Fallacies | Args | Phases |"
     )
     lines.append(
@@ -1607,7 +1687,8 @@ def generate_report(
         lines.append(
             f"| {r.mode} | {r.corpus_id} | {status}{err} | "
             f"{r.duration_seconds:.2f}s | {_fmt_fill(r.state_fill_rate)} | "
-            f"{_fmt_count(r.fallacy_count)} | {_fmt_count(r.argument_count)} | "
+            f"{_fmt_count_in_perimeter(r.fallacy_count, _FALLACY_PRODUCING_CAPABILITIES, r.capabilities_used)} | "
+            f"{_fmt_count_in_perimeter(r.argument_count, _ARGUMENT_PRODUCING_CAPABILITIES, r.capabilities_used)} | "
             f"{r.phases_completed}/{r.phases_total} |"
         )
 
@@ -1696,7 +1777,7 @@ async def run_all(
             sterile (``—``) rather than borrowing the bounded marker.
     """
     if modes is None:
-        modes = list(MODE_RUNNERS.keys())
+        modes = default_modes()
     if corpora is None:
         corpora = list(BENCHMARK_TEXTS.keys())
 
