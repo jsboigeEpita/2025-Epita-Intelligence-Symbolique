@@ -3455,7 +3455,9 @@ def _annotate_attack_retention(
             attacker: Any = None
             if isinstance(atk, dict) and atk.get("attackers"):
                 attackers = atk["attackers"]
-                attacker = attackers[0] if isinstance(attackers, (list, tuple)) else None
+                attacker = (
+                    attackers[0] if isinstance(attackers, (list, tuple)) else None
+                )
             elif isinstance(atk, (list, tuple)) and atk:
                 attacker = atk[0]
             nature = _attack_source_nature(attacker)
@@ -5890,6 +5892,22 @@ def _normalize_fallacies_with_quotes(items: list[Any]) -> list[Dict[str, Any]]:
     return result
 
 
+# #1745 — pole-coverage instruction, appended VERBATIM to the extraction
+# system prompt. Measured against hand-annotated real-prose ground truth
+# (issue #1745): without it the model folds cited/adversarial positions
+# into single evaluative items, so every downstream attack axis faces a
+# one-pole inventory (famine_proposal at extraction).
+_OPPOSING_POSITIONS_INSTRUCTION = (
+    " An argumentative text also CONTAINS the positions it argues against - "
+    "quoted, paraphrased, or reformulated. Extract each of those cited or "
+    "opposing positions as a standalone item of the same rank as the "
+    "positions the text defends: one item per position, stated NEUTRALLY "
+    "(the assertion as its holder would state it, not as the author "
+    "disqualifies it). Do NOT fold an opposing position inside the "
+    "description of another item."
+)
+
+
 async def _invoke_fact_extraction(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -5945,6 +5963,7 @@ async def _invoke_fact_extraction(
             "Focus on: (1) identifying distinct argumentative positions, "
             "(2) extracting factual claims that can be verified, "
             "(3) noting rhetorical strategies used (without labeling them as fallacies). "
+            + _OPPOSING_POSITIONS_INSTRUCTION
             + lang_clause
             + " Respond with ONLY a JSON object:\n"
             '{"arguments": [{"text": "arg description", "source_quote": "exact quote..."}], '
