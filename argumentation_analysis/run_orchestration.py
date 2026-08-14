@@ -767,6 +767,17 @@ Exemples:
                 )
             print(f"  Tâches créées      : {results.get('tasks_created', 0)}")
             print(f"  Tâches complétées  : {completed}/{len(op_results)}")
+            # #1735 T3: la désignation motivée du palier tactique (qui +
+            # pourquoi), portée par le résultat du run. La motivation est du
+            # texte libre construit par le coordinator (règle de décision).
+            assignments = results.get("task_assignments", [])
+            if assignments:
+                print(f"  Assignations ({len(assignments)}):")
+                for a in assignments:
+                    print(
+                        f"    - {a.get('task_id')} → {a.get('agent_id')} — "
+                        f"{a.get('motivation', '')}"
+                    )
         else:
             summary = results.get("summary", {})
             print(f" Mode hiérarchique (M2 bridge) — {summary.get('total', 0)} phases")

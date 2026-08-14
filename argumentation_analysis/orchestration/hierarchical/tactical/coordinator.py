@@ -145,7 +145,11 @@ class TaskCoordinator:
         Assigne une tâche à l'agent opérationnel le plus compétent.
 
         Utilise le registre `agent_capabilities` pour trouver le meilleur agent.
-        Envoie ensuite une directive d'assignation via le middleware.
+        Envoie ensuite une directive d'assignation via le middleware. Depuis
+        #1735 T3, chaque allocation est aussi enregistrée dans l'état tactique
+        — qui (``task_assignments``) **et pourquoi**
+        (``task_assignments_motivation``) — pour que le forensic de trace du
+        mode conversationnel s'applique au palier tactique hiérarchique.
 
         Args:
             task: La tâche à assigner.
@@ -153,9 +157,11 @@ class TaskCoordinator:
         required_capabilities = task.get("required_capabilities", [])
         recipient_id = self._determine_appropriate_agent(required_capabilities)
         message_priority = self._map_priority_to_enum(task.get("priority", "medium"))
+        motivation = self._motivate_allocation(task, recipient_id)
 
         self.logger.info(
-            f"Assignation de la tâche {task.get('id')} à l'agent {recipient_id}."
+            f"Assignation de la tâche {task.get('id')} à l'agent {recipient_id} "
+            f"— {motivation[:80]}"
         )
         self.adapter.assign_task(
             task_type="operational_task",
@@ -163,6 +169,36 @@ class TaskCoordinator:
             recipient_id=recipient_id,
             priority=message_priority,
             requires_ack=True,
+        )
+        # #1735 T3: la désignation (qui + pourquoi) est écrite dans l'état
+        # tactique. ``assign_task`` réanime le champ existant — le palier
+        # enregistre désormais l'allocation réelle, pas seulement la directive
+        # middleware. La motivation n'est tracée que si la tâche a bien été
+        # assignée (cohérence : pas de motivation orpheline).
+        if self.state.assign_task(task["id"], recipient_id):
+            self.state.record_allocation_motivation(task["id"], motivation)
+
+    def _motivate_allocation(self, task: Dict[str, Any], recipient_id: str) -> str:
+        """Construit le *pourquoi* de l'allocation de ``task`` à ``recipient_id``.
+
+        #1735 T3. Le palier tactique est déterministe : sa « motivation » est
+        la règle de décision elle-même — la couverture de capacités qui a fait
+        gagner cet agent au scoring — pas une narration. Anti-pendule #1732 :
+        on refuse le template vide « tâche X → agent Y » (zéro information) ;
+        le texte documente le score réellement appliqué.
+        """
+        required = task.get("required_capabilities", [])
+        agent_caps = self.agent_capabilities.get(recipient_id, [])
+        covered = [cap for cap in required if cap in agent_caps]
+        if not required:
+            return (
+                f"Aucune capacité requise (tâche générique) — "
+                f"{recipient_id} retenu par le fallback de décomposition"
+            )
+        return (
+            f"{recipient_id} couvre {len(covered)}/{len(required)} "
+            f"capacité(s) requise(s) de « {task.get('description', '')} » : "
+            f"{', '.join(covered) if covered else 'aucune'}"
         )
 
     def handle_task_result(self, result: Dict[str, Any]) -> Dict[str, Any]:
@@ -278,9 +314,8 @@ class TaskCoordinator:
             handle_directive
         )
 
-    def _determine_appropriate_agent(
-        self, required_capabilities: List[str]
-    ) -> Optional[str]:
+    def _determine_appropriate_agent(self, required_capabilities: List[str]) -> str:
+        # Toujours une chaîne : le fallback couvre cap inconnue ET vide.
         agent_scores = {}
         for cap in required_capabilities:
             for agent, agent_caps in self.agent_capabilities.items():
