@@ -244,6 +244,21 @@ class ModeResult:
     phases_total: int = 0
     capabilities_used: List[str] = field(default_factory=list)
     capabilities_missing: List[str] = field(default_factory=list)
+    # #1749: the THIRD capability state — "ran and returned nothing". The
+    # pipeline removes degraded capabilities from ``capabilities_used`` on
+    # purpose (``unified_pipeline._collect_degraded_capabilities``, "so a
+    # degraded capability surfaces as degraded, NOT as used" — anti-theater
+    # #1019) and emits them in their own list. Reading only two of the three
+    # made that capability vanish: neither used nor missing, so a reader
+    # counted full coverage on a truncated ledger.
+    #
+    # Optional[List] with default None, NOT ``[]`` (same convention as
+    # ``state_fill_rate``, CG #1540): None = "this mode emits no ledger"
+    # (renders ``n/a``); [] = "ledger emitted, nothing degraded" (renders 0).
+    # An absent ledger is not an empty one — measured on the return dicts,
+    # only pipeline and conversational emit the three keys; the two
+    # hierarchical modes and conversation_deterministic emit none.
+    capabilities_degraded: Optional[List[str]] = None
     extra_metrics: Dict[str, Any] = field(default_factory=dict)
     # Trade-off columns (BO-4 #1480):
     terminates: bool = True
@@ -479,6 +494,56 @@ def _hit_its_wall_clock(result: "ModeResult") -> bool:
     return bool(result.terminated_by_budget) or bool(
         result.extra_metrics.get("wall_clock_bounded")
     )
+
+
+def _capability_ledger_lines(result: "ModeResult") -> List[str]:
+    """Render the THREE capability states for one row (#1749).
+
+    ``used`` / ``degraded`` / ``missing`` are three states, never two. They
+    call for three DIFFERENT actions, which is why folding any pair together
+    destroys the actionable content:
+
+    - ``used``     — ran, produced something.
+    - ``degraded`` — ran and produced nothing (e.g. an endpoint not configured
+      and the provider fails loud). Action: configure the environment.
+    - ``missing``  — no provider at all. Action: wire one.
+
+    A mode that emits NO ledger renders ``n/a``, not zeros: "0 degraded" is a
+    measurement claim ("I looked and found none") that such a mode never made.
+    Measured on the runners' return dicts — pipeline and conversational emit
+    all three keys; ``hierarchical_bridge`` / ``hierarchical_delegation`` /
+    ``conversation_deterministic`` emit none of them.
+
+    The degraded capabilities are listed BY NAME: the corrective action is
+    per-capability, so a bare count would say something is wrong without
+    saying what to do about it.
+    """
+    no_ledger = (
+        result.capabilities_degraded is None
+        and not result.capabilities_used
+        and not result.capabilities_missing
+    )
+    if no_ledger:
+        return [
+            f"**{result.mode}** capabilities: n/a "
+            f"(mode emits no capability ledger)",
+            "",
+        ]
+
+    degraded = result.capabilities_degraded
+    degraded_part = "n/a" if degraded is None else str(len(degraded))
+    lines = [
+        f"**{result.mode}** capabilities: {len(result.capabilities_used)} used / "
+        f"{degraded_part} degraded / {len(result.capabilities_missing)} missing",
+    ]
+    if result.capabilities_used:
+        lines.append(f"  - used: {', '.join(result.capabilities_used)}")
+    if degraded:
+        lines.append(f"  - degraded: {', '.join(degraded)}")
+    if result.capabilities_missing:
+        lines.append(f"  - missing: {', '.join(result.capabilities_missing)}")
+    lines.append("")
+    return lines
 
 
 def _fmt_count_in_perimeter(
@@ -980,6 +1045,11 @@ async def run_pipeline_mode(
         phases_total=summary.get("total", 0),
         capabilities_used=result.get("capabilities_used", []),
         capabilities_missing=result.get("capabilities_missing", []),
+        # #1749: no ``[]`` default — an absent key must land on None ("no
+        # ledger" -> n/a), never on a ``[]`` that would assert "looked, found
+        # none". That fabricated-default shape is the phantom-key defect this
+        # file has already been bitten by twice (CB #1528 item 3, #1560).
+        capabilities_degraded=result.get("capabilities_degraded"),
         # #1753: the pipeline ledger comes from the WorkflowExecutor, which
         # sees every phase — so an absent producer here really does mean "not
         # in the executed perimeter", and ``n/a`` is earned. This is the ONE
@@ -1113,6 +1183,12 @@ async def run_conversational_mode(
         phases_completed=len(phases_ran),
         phases_total=len(planned_phases),
         capabilities_used=result.get("capabilities_used", []),
+        # #1749: the defect blinds BOTH ledger-emitting modes. Fixing only the
+        # pipeline would leave this row silently truncated — and the
+        # conversational mode is the one whose ledger is already known to be
+        # non-exhaustive (#1753), so a dropped degradation here is the harder
+        # one to notice. Same no-default rule as the pipeline runner.
+        capabilities_degraded=result.get("capabilities_degraded"),
         # Track CA #1529: `decides` is no longer hand-set here — run_all
         # computes it uniformly from phases_completed + total_messages below.
         # #1752 (CORRECTED): this ``False`` is CORRECT and deliberate, not the
@@ -1849,13 +1925,15 @@ def generate_report(
             )
             lines.append("")
 
-        # Capabilities used
+        # Capability ledger — all THREE states, side by side (#1749).
+        # Previously this block printed only ``capabilities_used``, so a
+        # capability that ran and returned nothing appeared nowhere: the row
+        # read "14 used / 0 missing" on a run wrong by exactly one capability.
+        # The three are rendered together on one line because that is the
+        # readable form — "14 used / 1 degraded / 0 missing" is legible,
+        # "14 used / 0 missing" plus a footnote is how the state got lost.
         for r in corpus_results:
-            if r.capabilities_used:
-                lines.append(
-                    f"**{r.mode}** capabilities: {', '.join(r.capabilities_used)}"
-                )
-                lines.append("")
+            lines.extend(_capability_ledger_lines(r))
 
         lines.append("")
 
