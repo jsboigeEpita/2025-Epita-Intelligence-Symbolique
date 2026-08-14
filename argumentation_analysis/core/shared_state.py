@@ -59,6 +59,36 @@ class DesignationRecord:
     delta_summary: Optional[str] = None
 
 
+def record_unresolved_designation(
+    state: Any,
+    requested_agent: str,
+    present_agents: List[str],
+    selection_path: str = "",
+) -> None:
+    """Guarded entry point for :meth:`UnifiedAnalysisState.record_designation_unresolved`.
+
+    #1751. The three selectors that can absorb a designation
+    (``DelegatingSelectionStrategy``, ``BalancedParticipationStrategy``,
+    ``conversational_orchestrator._select_next_agent``) only ever type-check the
+    ``RhetoricalAnalysisState`` **base**, which carries no deliberation trace.
+    Recording is therefore best-effort: on a state without the trace this is a
+    no-op and selection proceeds exactly as before. Making it mandatory would
+    turn every non-conversational caller into an ``AttributeError`` — a louder
+    absorption is not worth a new crash site.
+    """
+    recorder = getattr(state, "record_designation_unresolved", None)
+    if recorder is None:
+        return
+    try:
+        recorder(
+            requested_agent=requested_agent,
+            present_agents=present_agents,
+            selection_path=selection_path,
+        )
+    except Exception:  # pragma: no cover - never let bookkeeping break selection
+        state_logger.debug("record_designation_unresolved failed", exc_info=True)
+
+
 class RhetoricalAnalysisState:
     """Représente l'état partagé d'une analyse rhétorique collaborative."""
 
@@ -633,8 +663,16 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             open record is for a different agent and is left open).
         """
         for record in reversed(self.deliberation_trace):
-            if record.get("record_type") == "cap_breach":
-                continue  # audit marker, not a designation
+            if record.get("record_type") is not None:
+                # #1751: skip ANY marker, not just ``cap_breach``. A genuine
+                # DesignationRecord carries no ``record_type`` at all (asdict of
+                # the dataclass), so testing for a marker positively keeps this
+                # loop correct for every marker type added later. The previous
+                # ``== "cap_breach"`` exclusion list would have let a
+                # ``designation_unresolved`` marker — which has no
+                # ``designated_agent`` — match the "open record" branch and
+                # block the backfill of the real record underneath it.
+                continue
             if record.get("state_fingerprint_after") is None:
                 if record.get("designated_agent") != agent:
                     return False  # open record exists, but for another agent
@@ -690,6 +728,63 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             turn,
             cap_kind,
             detail,
+        )
+
+    def record_designation_unresolved(
+        self,
+        requested_agent: str,
+        present_agents: List[str],
+        turn: Optional[int] = None,
+        selection_path: str = "",
+    ) -> None:
+        """Record a PM designation that named an agent absent from the room.
+
+        #1751. The conversational ``AgentGroupChat`` is built **per phase** with
+        the 3-4 agents of ``phase_cfg["agents"]``, while the PM is prompted with
+        a map of 8 and told no sequence is imposed. Designating an agent outside
+        its phase used to log an ERROR and fall through to the default agent —
+        which, the PM being first in every casting, is the PM itself. The turn
+        that followed was indistinguishable from an honoured one.
+
+        The weaker reading — "the DesignationRecord stays open, so the trace
+        already says it" — does not hold: an open record is *equally* the
+        signature of an agent that has not spoken **yet** and of a run cut by a
+        cap. This marker is what separates the three.
+
+        Fail-loud without fail-fast (``feedback_no_fallback_fail_loud``): the
+        selection still returns someone, so one hallucinated agent name cannot
+        abort a run — but it can no longer pass for steering that happened.
+
+        Args:
+            requested_agent: Exact name the PM asked for.
+            present_agents: Roster actually in the room. This is the material a
+                re-prompt hands back to the PM, and what tells a reader "wrong
+                room" rather than "typo".
+            turn: Pipeline-global turn index (auto: len(trace)+1).
+            selection_path: Which selector absorbed it ("delegating",
+                "balanced", "round_robin") — the three share the shape, not the
+                fallback, so the corrective action differs.
+        """
+        if turn is None:
+            turn = len(self.deliberation_trace) + 1
+        self.deliberation_trace.append(
+            {
+                "record_type": "designation_unresolved",
+                "requested_agent": requested_agent,
+                "present_agents": list(present_agents),
+                "turn": turn,
+                "selection_path": selection_path,
+                "state_fingerprint_before": self._designation_fingerprint(),
+            }
+        )
+        state_logger.warning(
+            "[#1751] Désignation non résolue tour %s: '%s' absent de la salle "
+            "%s (sélecteur=%s) — le tour qui suit n'est PAS une désignation "
+            "honorée.",
+            turn,
+            requested_agent,
+            list(present_agents),
+            selection_path or "?",
         )
 
     def set_source_metadata(self, metadata: Dict[str, str]) -> None:

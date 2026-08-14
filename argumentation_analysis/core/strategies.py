@@ -32,7 +32,7 @@ from semantic_kernel.agents.strategies.termination.termination_strategy import (
 )
 
 # Importer la classe d'état
-from .shared_state import RhetoricalAnalysisState
+from .shared_state import RhetoricalAnalysisState, record_unresolved_designation
 
 # Type hinting
 if TYPE_CHECKING:
@@ -199,6 +199,16 @@ class DelegatingSelectionStrategy(SelectionStrategy):
                     )
                     return designated_agent
                 else:
+                    # #1751: a log line is not an effect. The turn that follows
+                    # is the DEFAULT agent — the PM, first in every phase
+                    # casting — so without a trace entry an absorbed
+                    # designation is indistinguishable from an honoured one.
+                    record_unresolved_designation(
+                        self._analysis_state,
+                        requested_agent=designated_agent_name,
+                        present_agents=list(self._agents_map.keys()),
+                        selection_path="delegating",
+                    )
                     self._logger.error(
                         f"[{self._instance_id}] Agent désigné '{designated_agent_name}' INTROUVABLE! Poursuite avec fallback."
                     )
@@ -387,6 +397,15 @@ class BalancedParticipationStrategy(SelectionStrategy):
                     self._adjust_imbalance_budget(designated_agent.name)
                     return designated_agent
                 else:
+                    # #1751: sibling of the DelegatingSelectionStrategy site —
+                    # same shape, different fallback (participation balancing).
+                    # The issue named one site; grepping the shape found three.
+                    record_unresolved_designation(
+                        self._analysis_state,
+                        requested_agent=designated_agent_name,
+                        present_agents=list(self._agents_map.keys()),
+                        selection_path="balanced",
+                    )
                     self._logger.error(
                         f"[{self._instance_id}] Agent désigné '{designated_agent_name}' INTROUVABLE! Poursuite avec équilibrage."
                     )
