@@ -245,7 +245,22 @@ class TestNLToLogicTranslator:
     async def test_translate_batch_heuristic(self):
         """Batch translation works with heuristic fallback."""
         translator = self._make_translator()
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        # #1742: blanking OPENAI_API_KEY does NOT close the LLM gate on its own.
+        # Locally ``pytest-dotenv`` re-loads .env over the process env (measured:
+        # the var is 164 chars long INSIDE the session after `env OPENAI_API_KEY=`),
+        # and ``_translate_with_llm`` prefers OpenRouter when OPENROUTER_* are set.
+        # In the gate the door opened too and the live call 429'd, so this test —
+        # named "heuristic" — was in fact asserting on LLM output. Close the door
+        # structurally at the constructor (#1583 no-network geste): whichever
+        # branch is taken, no socket is opened, and ``translate()`` falls back to
+        # the heuristic it is named for.
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1742")
+        ), patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": "", "OPENROUTER_BASE_URL": ""},
+            clear=False,
+        ):
             batch = await translator.translate_batch(
                 [
                     "Rain causes wet ground and slippery conditions.",
@@ -255,17 +270,31 @@ class TestNLToLogicTranslator:
             )
         assert len(batch.translations) == 2
         assert all(t.is_valid for t in batch.translations)
+        # The bite: ``method`` is "llm" as soon as any translation carries
+        # attempts > 0. A heuristic-named test that silently ran the LLM is the
+        # defect this pins.
+        assert batch.method == "heuristic"
 
     @pytest.mark.asyncio
     async def test_translate_batch_skips_short(self):
         """Batch skips arguments shorter than 10 chars."""
         translator = self._make_translator()
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
+        # #1742 (neighbour sweep): same open door as the sibling above. This one
+        # only asserts a count, so the live call was pure cost + nondeterminism
+        # rather than a red — which is exactly why it went unnoticed.
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1742")
+        ), patch.dict(
+            "os.environ",
+            {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": "", "OPENROUTER_BASE_URL": ""},
+            clear=False,
+        ):
             batch = await translator.translate_batch(
                 ["short", "This is a sufficiently long argument about something."],
                 logic_type="propositional",
             )
         assert len(batch.translations) == 1
+        assert batch.method == "heuristic"
 
     # ── #1457: NL→modal silent collapse guard ────────────────────────
 

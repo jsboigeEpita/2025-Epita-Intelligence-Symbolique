@@ -127,11 +127,18 @@ class TestCounterArgumentAutoEvaluation:
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(return_value=mock_response)
 
+        # #1742: patch the namespace the callee RESOLVES from, not the facade.
+        # ``_invoke_counter_argument`` is defined in ``invoke_callables``;
+        # ``unified_pipeline`` only star-imports it, so its ``__globals__`` is
+        # ``invoke_callables.__dict__``. Patching the facade name bound a symbol
+        # nobody reads: measured ``mock_client.…create.await_count == 0`` while a
+        # REAL client ran, and the test was green only while the live key had
+        # quota. It went red on a 429 with a diff that touched neither path.
         with patch(
             "argumentation_analysis.agents.core.counter_argument.counter_agent.CounterArgumentPlugin",
             return_value=mock_plugin,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(mock_client, "gpt-5-mini"),
         ):
             context = {
@@ -139,6 +146,9 @@ class TestCounterArgumentAutoEvaluation:
             }
             result = await _invoke_counter_argument("Test", context)
 
+        # The mock must MORD (#1583 geste): if the real path is ever taken again,
+        # this fails here instead of producing a confusing downstream KeyError.
+        mock_client.chat.completions.create.assert_awaited()
         assert "llm_counter_arguments" in result
         ca = result["llm_counter_arguments"][0]
         assert "evaluation" in ca
@@ -168,7 +178,7 @@ class TestGovernanceAutoVote:
             "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
             return_value=mock_plugin,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(None, None),
         ), patch(
             "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
@@ -233,7 +243,7 @@ class TestGovernanceAutoVote:
             "argumentation_analysis.plugins.governance_plugin.GovernancePlugin",
             return_value=mock_plugin,
         ), patch(
-            "argumentation_analysis.orchestration.unified_pipeline._get_openai_client",
+            "argumentation_analysis.orchestration.invoke_callables._get_openai_client",
             return_value=(None, None),
         ), patch(
             "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
