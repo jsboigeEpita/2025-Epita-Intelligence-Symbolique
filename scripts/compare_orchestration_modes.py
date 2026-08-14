@@ -192,8 +192,25 @@ class ModeResult:
                             nothing" is not "indeterminate"). A budget breach
                             that still produced partial artifacts honestly
                             decides ``True`` (the partial state IS the verdict).
-        terminated_by_budget — bool: True iff the run hit the wall-clock
-                            budget and was killed by asyncio.wait_for.
+        terminated_by_budget — bool: True iff the run was KILLED by the
+                            safety-net ``asyncio.wait_for``. This is the
+                            MECHANISM, and it is deliberately narrow: a run
+                            that stopped ITSELF at its own internal deadline
+                            is ``False`` here and carries
+                            ``extra_metrics["wall_clock_bounded"]`` instead —
+                            two DIFFERENT states, not two witnesses of one
+                            (C1 #1500: the graceful stop yields a real partial
+                            verdict, the kill does not, and the report renders
+                            them ``⏱ budget`` vs ``✅⏱ bounded``).
+                            #1752: I read the pair as one state and made this
+                            field read ``wall_clock_bounded``, which collapsed
+                            the distinction; ``test_internal_bound_maps_to_
+                            real_partial_verdict`` (#1480) caught it. What was
+                            genuinely missing is the COMPARABILITY predicate —
+                            "did this row hit its wall clock at all, so its
+                            metrics may not be compared against a run that
+                            finished on its own terms" — which is neither
+                            field alone: use ``_hit_its_wall_clock(result)``.
                             Treated as a HONEST PARTIAL verdict (anti-pendule
                             #1019 — never faked into success=True).
         scope_of_work      — short human-readable description of what the
@@ -237,6 +254,12 @@ class ModeResult:
     decides: Optional[bool] = None
     terminated_by_budget: bool = False
     scope_of_work: str = ""
+    # #1753: does ``capabilities_used`` list EVERY capability this run
+    # exercised? Only then may a missing producer be read as "never evaluated"
+    # (``n/a``). Set at the source by each runner, never inferred at the reader
+    # hop. Default False = "cannot demonstrate an absence" — the safe side,
+    # which shows the observed count instead of overclaiming.
+    perimeter_is_exhaustive: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -430,10 +453,39 @@ _FALLACY_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset(
 _ARGUMENT_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset({"fact_extraction"})
 
 
+def _hit_its_wall_clock(result: "ModeResult") -> bool:
+    """Did this row hit its wall-clock budget, by EITHER route? (#1752)
+
+    Two distinct states share this consequence and neither field spans both:
+
+    * ``terminated_by_budget`` — the safety net fired and KILLED the run. No
+      verdict of its own; the report marks it ``⏱ budget``.
+    * ``extra_metrics["wall_clock_bounded"]`` — the run stopped ITSELF at its
+      internal deadline and recovered a real partial verdict (C1 #1500); the
+      report marks it ``✅⏱ bounded``.
+
+    Those two must stay separate wherever the *mechanism* matters — that is
+    what #1480 pins, and collapsing them is the mistake this helper exists to
+    make unnecessary. But wherever the question is **comparability** ("may I
+    put this row's State Fill next to a run that finished on its own terms?"),
+    the answer is the same for both and the caller should not have to know
+    which route was taken. Callers asking the comparability question use this;
+    callers rendering the mechanism read the two fields directly.
+
+    Deliberately NOT a ``ModeResult`` field: a third stored boolean derivable
+    from two others is a third thing to keep in sync, and drift between stored
+    duplicates is the defect family this instrument exists to detect.
+    """
+    return bool(result.terminated_by_budget) or bool(
+        result.extra_metrics.get("wall_clock_bounded")
+    )
+
+
 def _fmt_count_in_perimeter(
     count: Optional[int],
     producers: FrozenSet[str],
     capabilities_used: List[str],
+    perimeter_is_exhaustive: bool = False,
 ) -> str:
     """Render a count as ``n/a`` when its PRODUCER never ran (#1740).
 
@@ -465,8 +517,25 @@ def _fmt_count_in_perimeter(
     cannot be demonstrated there, so the count renders as-is — emitting ``n/a``
     would erase a genuine observation, which is the mirror-image of the defect
     being fixed.
+
+    ⚠⚠ #1753: that guard was calibrated on **empty ↔ populated**, and production
+    delivers a third shape — **populated but partial**. The conversational mode
+    reports two self-declared plugin capabilities and nothing for the agents
+    that actually ran, so ``fact_extraction`` is missing from a ledger whose
+    run genuinely wrote 4 arguments: a real observation rendered "never
+    evaluated". A ``n/a`` claims MORE than a number does — it is an epistemic
+    verdict ("do not compare this cell") — so it may only be emitted by a mode
+    whose ledger is *exhaustive*. ``perimeter_is_exhaustive`` is set at the
+    SOURCE by each runner (never inferred here): the pipeline runners set it
+    (their ledger comes from the WorkflowExecutor and is complete); the
+    conversational and hierarchical runners do not. Default ``False`` = "I
+    cannot demonstrate an absence", which degrades to showing the count.
     """
-    if capabilities_used and not (set(capabilities_used) & producers):
+    if (
+        perimeter_is_exhaustive
+        and capabilities_used
+        and not (set(capabilities_used) & producers)
+    ):
         return "n/a"
     return _fmt_count(count)
 
@@ -911,6 +980,11 @@ async def run_pipeline_mode(
         phases_total=summary.get("total", 0),
         capabilities_used=result.get("capabilities_used", []),
         capabilities_missing=result.get("capabilities_missing", []),
+        # #1753: the pipeline ledger comes from the WorkflowExecutor, which
+        # sees every phase — so an absent producer here really does mean "not
+        # in the executed perimeter", and ``n/a`` is earned. This is the ONE
+        # runner that may claim it; the others cannot.
+        perimeter_is_exhaustive=True,
         scope_of_work=scope,
     )
 
@@ -1041,6 +1115,15 @@ async def run_conversational_mode(
         capabilities_used=result.get("capabilities_used", []),
         # Track CA #1529: `decides` is no longer hand-set here — run_all
         # computes it uniformly from phases_completed + total_messages below.
+        # #1752 (CORRECTED): this ``False`` is CORRECT and deliberate, not the
+        # constant I first took it for. This runner enforces its bound
+        # INTERNALLY and recovers a real partial verdict; the safety net did
+        # not fire, so the KILL flag is False while
+        # ``extra_metrics["wall_clock_bounded"]`` (set below) records the
+        # graceful bound. The tell I misread: every other runner sets this
+        # field only on an EXCEPTION path — which is the field's definition,
+        # not an anomaly. Readers wanting "hit its wall clock at all" must use
+        # ``_hit_its_wall_clock``, not this field.
         terminated_by_budget=False,
         scope_of_work=scope,
         extra_metrics={
@@ -1642,7 +1725,13 @@ def generate_report(
             # marker. `decides` is normalised by run_all via _compute_decides
             # (untouched here); `is True` keeps an un-normalised None sterile.
             status = "✅⏱ bounded" if r.decides is True else "⏱ budget"
-        elif r.extra_metrics.get("wall_clock_bounded"):
+        elif _hit_its_wall_clock(r):
+            # #1752 (CORRECTED): this branch is NOT a reader-hop rescue for the
+            # constant above — it renders a DIFFERENT state. A run that stopped
+            # itself at its own internal bound produced a real partial verdict
+            # (C1 #1500); a run killed by the safety net did not. I first read
+            # the two as duplicate witnesses of one state and deleted this
+            # branch; ``test_report_marks_bounded_verdict_distinctly`` caught it.
             status = "✅⏱ bounded"
         elif r.terminates and r.success:
             status = "✅"
@@ -1703,13 +1792,22 @@ def generate_report(
     )
 
     for r in sorted(results, key=lambda x: (x.mode, x.corpus_id)):
+        # #1752: this is the table that carries the COMPARISON metrics (State
+        # Fill / Fallacies / Args), so it is the table where a budget-truncated
+        # row misleads most — and it was the only one without the marker. A
+        # reader comparing 22.0% against 48.7% was comparing a policy to a
+        # budget. This is the one defect of the original #1752 report that
+        # survived its own correction: here the question is comparability, not
+        # mechanism, so both budget routes get the same mark.
         status = "✅" if r.success else "❌"
+        if r.success and _hit_its_wall_clock(r):
+            status = "✅⏱"
         err = f" ({r.error})" if r.error and len(r.error) < 50 else ""
         lines.append(
             f"| {r.mode} | {r.corpus_id} | {status}{err} | "
             f"{r.duration_seconds:.2f}s | {_fmt_fill(r.state_fill_rate)} | "
-            f"{_fmt_count_in_perimeter(r.fallacy_count, _FALLACY_PRODUCING_CAPABILITIES, r.capabilities_used)} | "
-            f"{_fmt_count_in_perimeter(r.argument_count, _ARGUMENT_PRODUCING_CAPABILITIES, r.capabilities_used)} | "
+            f"{_fmt_count_in_perimeter(r.fallacy_count, _FALLACY_PRODUCING_CAPABILITIES, r.capabilities_used, r.perimeter_is_exhaustive)} | "
+            f"{_fmt_count_in_perimeter(r.argument_count, _ARGUMENT_PRODUCING_CAPABILITIES, r.capabilities_used, r.perimeter_is_exhaustive)} | "
             f"{r.phases_completed}/{r.phases_total} |"
         )
 
