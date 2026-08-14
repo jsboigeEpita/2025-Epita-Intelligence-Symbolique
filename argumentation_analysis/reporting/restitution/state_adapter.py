@@ -64,8 +64,24 @@ _STATE_KEYS = (
     # field's text under the other's name would misattribute it.
     "final_conclusion",
     "formal_synthesis_reports",
+    # #1676 — decision at this site. The three keys below are carried here so
+    # the opt-in full-state dump stays their traceability; only one gets an
+    # annexe row. ``stakes_and_stakeholders`` is attested (the ``enjeux`` row,
+    # by cardinality) because the Acte I framing mobilises it and a live writer
+    # fills it (``invoke_callables._invoke_stakes_extractor``, measured
+    # populated on real runs, #1604 R751).
     "stakes_and_stakeholders",
+    # #1676 privacy decision (HARD): NO annexe row. The values are nominative
+    # (``{genre, speaker_role, channel, title, ...}`` — a title is a source name
+    # per CLAUDE.md privacy), and a count of metadata fields informs nobody.
+    # The prose reads it for the Acte I framing; its values are opacified on the
+    # export boundary (``sanitize_state._OPAQUE_DICT_VALUES``), and carrying the
+    # key here keeps the opt-in dump traceable without surfacing content.
     "source_metadata",
+    # #1676 decision: NO annexe row. Distinct case — neither the prose nor any
+    # annexe line reads it: a generic bag of phase/workflow results (and
+    # value-gate ledgers) with no informative count. Other surfaces read it
+    # (html_report durations, multi_format_exporter), the restitution does not.
     "workflow_results",
 )
 
