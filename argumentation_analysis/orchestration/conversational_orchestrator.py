@@ -43,6 +43,7 @@ from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
     UnifiedAnalysisState,
+    record_unresolved_designation,
 )
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.orchestration.trace_analyzer import (
@@ -994,9 +995,21 @@ async def _run_conversational_analysis_inner(
 
         phase_name = phase_cfg["name"]
         phase_agent_names = phase_cfg["agents"]
-        phase_agents = [
-            agent_by_name[n] for n in phase_agent_names if n in agent_by_name
-        ]
+        phase_agents, phase_agents_missing = _resolve_phase_agents(
+            agent_by_name, phase_agent_names
+        )
+        if phase_agents_missing:
+            # #1751 item 3: name them. A phase that runs with 2 of its 4 agents
+            # is not the phase that was configured, and the PM is steering in
+            # the shrunken room without being told.
+            logger.warning(
+                "[#1751] Phase '%s': %d agent(s) du casting absents du roster "
+                "et retirés de la salle: %s (présents: %s)",
+                phase_name,
+                len(phase_agents_missing),
+                phase_agents_missing,
+                [getattr(a, "name", "?") for a in phase_agents],
+            )
 
         if not phase_agents:
             logger.warning(f"No agents available for phase '{phase_name}', skipping")
@@ -1539,15 +1552,21 @@ async def _run_conversational_analysis_inner(
             "exhausted": budget_exhausted,
             "max_wall_seconds": max_wall_seconds,
             "wall_clock_bounded": wall_clock_bounded,
-            "deliberation_turn_count": sum(
-                1
-                for r in getattr(state, "deliberation_trace", [])
-                if r.get("record_type") != "cap_breach"
-            ),
+            "deliberation_turn_count": _deliberation_turn_count(state),
             "cap_breaches": [
                 r
                 for r in getattr(state, "deliberation_trace", [])
                 if r.get("record_type") == "cap_breach"
+            ],
+            # #1751: designations the PM emitted for an agent absent from its
+            # phase room. Surfaced next to the caps because it is the same kind
+            # of fact: the run did not do what the trace appears to say. A
+            # non-empty list means the chief was contradicted by the casting,
+            # not that it changed its mind.
+            "designations_unresolved": [
+                r
+                for r in getattr(state, "deliberation_trace", [])
+                if r.get("record_type") == "designation_unresolved"
             ],
         },
         "status": (
@@ -1779,6 +1798,39 @@ _RE_PROMPT_FEEDBACK = (
 )
 
 
+def _deliberation_turn_count(state: Any) -> int:
+    """Number of genuine PM designations in the deliberation trace (#1751).
+
+    A DesignationRecord carries **no** ``record_type`` (it is the ``asdict`` of
+    the dataclass); every non-designation entry declares one. Counting by
+    allow-list — "a designation is a record with no marker" — instead of by
+    exclusion list ("everything that is not a ``cap_breach``") is what keeps
+    this number honest when a marker type is added: the previous form would
+    have silently counted each ``designation_unresolved`` as one more
+    deliberation turn, inflating the very metric #1751 exists to correct.
+    """
+    return sum(
+        1
+        for r in getattr(state, "deliberation_trace", [])
+        if r.get("record_type") is None
+    )
+
+
+def _resolve_phase_agents(
+    agent_by_name: Dict[str, Any], phase_agent_names: List[str]
+) -> Tuple[List[Any], List[str]]:
+    """Resolve a phase casting, returning the agents AND the names that missed.
+
+    #1751 scope item 3. The comprehension this replaces dropped any unknown
+    name silently, so a phase configured with four agents could run with two
+    and say nothing. The room the PM is steering in is exactly what this issue
+    is about: it has to be reported, not inferred.
+    """
+    resolved = [agent_by_name[n] for n in phase_agent_names if n in agent_by_name]
+    missing = [n for n in phase_agent_names if n not in agent_by_name]
+    return resolved, missing
+
+
 def _validate_state_growth(
     fingerprint_before: tuple[int, ...],
     fingerprint_after: tuple[int, ...],
@@ -1818,7 +1870,16 @@ def _select_next_agent(
                 logger.debug(f"  PM designated agent: {designated}")
                 return agent
 
-        # Designated agent not in this phase, fall through to round-robin
+        # Designated agent not in this phase, fall through to round-robin.
+        # #1751: third absorption site, and the quietest of the three — DEBUG.
+        # Round-robin then hands the floor to whoever is next in the casting,
+        # which reads downstream as an ordinary turn.
+        record_unresolved_designation(
+            state,
+            requested_agent=designated,
+            present_agents=[getattr(a, "name", "?") for a in agents],
+            selection_path="round_robin",
+        )
         logger.debug(
             f"  PM designated '{designated}' but not in phase agents, using round-robin"
         )
