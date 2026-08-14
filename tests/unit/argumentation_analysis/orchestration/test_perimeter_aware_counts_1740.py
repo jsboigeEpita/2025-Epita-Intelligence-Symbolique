@@ -181,6 +181,19 @@ class TestDeprecatedAliasExcludedFromDefaultSweep:
     def test_default_sweep_has_no_duplicate_labels(self) -> None:
         # The baseline ran 24 instead of 21 because two keys produced rows
         # bearing the same label. Every default mode must be distinct.
+        #
+        # #1747: this used to read ``len(MODE_RUNNERS) - 1``, which encoded
+        # "there is exactly ONE alias" as a magic constant — so the second
+        # alias (``pipeline``, added for the same reason as ``hierarchical``)
+        # turned a correct change into a red test. The property the assertion
+        # means is that the default sweep is the runner set MINUS the aliases;
+        # deriving it from ``_DEPRECATED_MODE_ALIASES`` states that property
+        # and survives the next alias.
         modes = harness.default_modes()
         assert len(modes) == len(set(modes))
-        assert len(modes) == len(harness.MODE_RUNNERS) - 1
+        assert len(modes) == len(harness.MODE_RUNNERS) - len(
+            harness._DEPRECATED_MODE_ALIASES
+        )
+        assert (
+            set(modes) == set(harness.MODE_RUNNERS) - harness._DEPRECATED_MODE_ALIASES
+        )

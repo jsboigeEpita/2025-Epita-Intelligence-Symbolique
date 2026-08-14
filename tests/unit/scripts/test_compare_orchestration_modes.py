@@ -1,4 +1,5 @@
 """Tests for orchestration mode comparison harness."""
+
 import asyncio
 from pathlib import Path
 
@@ -112,3 +113,115 @@ class TestOrchestrationModeHarness:
         assert "hierarchical" in report
         assert "✅" in report
         assert "❌" in report
+
+
+class TestUnknownRequestFailsLoud:
+    """#1747 — an unhonoured request must not produce a plausible report.
+
+    Before this, ``--modes <typo>`` was a ``logger.warning`` + ``continue``:
+    the run wrote a complete, well-formed ``.md``/``.json`` with exit 0 and the
+    requested mode simply absent. For a comparison instrument that is the worst
+    failure shape — an absence in the table is indistinguishable from "that mode
+    was never asked for", and only the ``.log`` carried the truth.
+
+    The two states these tests keep apart:
+
+    * **skipped** (pre-flight) — the key does not exist ⇒ ``ValueError``, no
+      artifact, non-zero exit. Nothing ran.
+    * **failed** (runtime) — the key exists, the runner raised ⇒ a real
+      ``ModeResult`` row with ``success=False``. Something ran and lost.
+
+    Collapsing them into one boolean is what erased the first case.
+    """
+
+    def test_unknown_mode_raises_instead_of_skipping(self):
+        from compare_orchestration_modes import run_all
+
+        with pytest.raises(ValueError) as exc:
+            asyncio.run(run_all(modes=["pipeline_standrad"], corpora=["corpus_A"]))
+        # The message must name the valid keys — a caller fixing a typo should
+        # not have to read the source.
+        assert "pipeline_standrad" in str(exc.value)
+        assert "pipeline_standard" in str(exc.value)
+
+    def test_unknown_corpus_raises_instead_of_skipping(self):
+        from compare_orchestration_modes import run_all
+
+        with pytest.raises(ValueError) as exc:
+            asyncio.run(run_all(modes=["pipeline_standard"], corpora=["corpus_Z"]))
+        assert "corpus_Z" in str(exc.value)
+        assert "corpus_A" in str(exc.value)
+
+    def test_unknown_mode_writes_no_report(self, tmp_path):
+        """The decisive property: no artifact that *looks* complete."""
+        from compare_orchestration_modes import run_all
+
+        out = tmp_path / "should_not_exist"
+        with pytest.raises(ValueError):
+            asyncio.run(
+                run_all(modes=["nope"], corpora=["corpus_A"], output_file=str(out))
+            )
+        assert not out.with_suffix(".md").exists()
+        assert not out.with_suffix(".json").exists()
+
+    def test_a_raising_runner_still_yields_a_failed_row(self, monkeypatch):
+        """Counterpart: a KNOWN mode whose runner blows up is NOT a skip.
+
+        Without this control the fix above could be satisfied by making every
+        problem fatal, which would erase the honest ``success=False`` row that
+        #1480 established.
+        """
+        import compare_orchestration_modes as harness
+
+        async def _boom(text, cid, max_wall_seconds=None):
+            raise RuntimeError("solver unavailable")
+
+        monkeypatch.setitem(harness.MODE_RUNNERS, "pipeline_standard", _boom)
+        monkeypatch.setattr(harness, "initialize_jvm", lambda: None, raising=False)
+
+        results = asyncio.run(
+            harness.run_all(modes=["pipeline_standard"], corpora=["corpus_A"])
+        )
+        assert len(results) == 1
+        assert results[0].mode == "pipeline_standard"
+        assert results[0].success is False
+        assert "solver unavailable" in (results[0].error or "")
+
+
+class TestPipelineStandardIsTypable:
+    """#1747 — the label a report shows must be a key ``--modes`` accepts.
+
+    ``run_pipeline_mode`` self-labels ``pipeline_{workflow_name}``, so the
+    flagship mode rendered as ``pipeline_standard`` while the only key that
+    dispatched it was ``pipeline``. Copying a label out of the baseline into
+    ``--modes`` therefore failed — silently, before the fix above.
+    """
+
+    def test_canonical_key_matches_the_emitted_label(self):
+        from compare_orchestration_modes import MODE_RUNNERS, default_modes
+
+        assert "pipeline_standard" in MODE_RUNNERS
+        assert "pipeline_standard" in default_modes()
+
+    def test_bare_pipeline_stays_dispatchable_but_out_of_the_default_sweep(self):
+        """Convention #1740: aliases dispatch, but never inflate the sweep.
+
+        ``pipeline`` and ``pipeline_standard`` run the SAME workflow and emit
+        the SAME label, so keeping both in the default sweep would double-count
+        the flagship mode exactly as ``hierarchical`` double-counted the bridge.
+        """
+        from compare_orchestration_modes import (
+            _DEPRECATED_MODE_ALIASES,
+            MODE_RUNNERS,
+            default_modes,
+        )
+
+        assert "pipeline" in MODE_RUNNERS
+        assert "pipeline" in _DEPRECATED_MODE_ALIASES
+        assert "pipeline" not in default_modes()
+
+    def test_no_default_mode_is_an_alias(self):
+        """The general property, not the two instances of it."""
+        from compare_orchestration_modes import _DEPRECATED_MODE_ALIASES, default_modes
+
+        assert not (set(default_modes()) & _DEPRECATED_MODE_ALIASES)

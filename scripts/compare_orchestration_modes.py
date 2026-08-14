@@ -16,9 +16,12 @@ Three counts appear in this module and they denominate different things —
 do not "reconcile" them into one (R807):
 
 - **5 engines** — the list above: the distinct orchestration implementations.
-- **8 ``MODE_RUNNERS`` keys** — the ``--modes`` dispatch surface: the 5 engines
+- **9 ``MODE_RUNNERS`` keys** — the ``--modes`` dispatch surface: the 5 engines
   plus 2 pipeline workflow presets (``pipeline_light`` / ``pipeline_full``,
-  same engine, different DAG) plus 1 deprecated alias (``hierarchical``).
+  same engine, different DAG) plus 2 deprecated aliases (``hierarchical``,
+  ``pipeline``). ``default_modes()`` is this set minus the aliases — **7**.
+  Every default key is exactly the label its runner emits (#1747), so a label
+  copied out of a report is a key that dispatches.
 - **N ``compute_depth_parity()`` rows** — the modes that have a *measurable*
   structural depth, one row per pipeline preset. The trade-off verdict derives
   its counts from these rows rather than restating a literal.
@@ -29,7 +32,7 @@ Usage:
 
     # Specific modes only
     python scripts/compare_orchestration_modes.py \\
-        --modes pipeline hierarchical_bridge hierarchical_delegation
+        --modes pipeline_standard hierarchical_bridge hierarchical_delegation
 
     # Bound the wall-clock of every mode (default 180s)
     python scripts/compare_orchestration_modes.py \\
@@ -1501,7 +1504,13 @@ async def run_hierarchical_mode(
 # an argumentation-analysis mode comparable to the others.
 
 MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
-    "pipeline": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
+    # #1747: the CANONICAL key is ``pipeline_standard`` — identical to the label
+    # ``run_pipeline_mode`` self-assigns (``mode=f"pipeline_{workflow_name}"``,
+    # :852/:900), so a label copied out of a report is a key that works. Before
+    # this, ``pipeline`` was the only key whose label was not typable, and it was
+    # the flagship mode: reading ``pipeline_standard`` in the baseline and
+    # passing it back to ``--modes`` silently produced a report without it.
+    "pipeline_standard": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
         text, cid, "standard", max_wall_seconds=max_wall_seconds
     ),
     "pipeline_light": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
@@ -1514,8 +1523,14 @@ MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
     "conversation_deterministic": run_conversation_deterministic_mode,
     "hierarchical_bridge": run_hierarchical_bridge_mode,
     "hierarchical_delegation": run_hierarchical_delegation_mode,
-    # Backward-compat alias (see deprecation note above).
+    # Backward-compat aliases (see deprecation note above).
     "hierarchical": run_hierarchical_mode,
+    # #1747: ``pipeline`` kept dispatchable for whoever scripted it, following
+    # the convention #1740 established for ``hierarchical`` — same runner as the
+    # canonical key, so it emits ``pipeline_standard`` rows either way.
+    "pipeline": lambda text, cid, max_wall_seconds=None: run_pipeline_mode(
+        text, cid, "standard", max_wall_seconds=max_wall_seconds
+    ),
 }
 
 # #1740: aliases stay DISPATCHABLE (``--modes hierarchical`` keeps working for
@@ -1524,7 +1539,12 @@ MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
 # indistinguishable from the real bridge rows, so the #1735 baseline carried the
 # bridge SIX times for three corpora, announced "Modes tested: 7", and anyone
 # aggregating that table counted the bridge twice.
-_DEPRECATED_MODE_ALIASES: FrozenSet[str] = frozenset({"hierarchical"})
+#
+# #1747 adds ``pipeline`` for the SAME reason: it dispatches the same runner as
+# ``pipeline_standard`` and self-labels identically, so leaving both in the
+# default sweep would double-count the flagship mode exactly as ``hierarchical``
+# double-counted the bridge.
+_DEPRECATED_MODE_ALIASES: FrozenSet[str] = frozenset({"hierarchical", "pipeline"})
 
 
 def default_modes() -> List[str]:
@@ -1536,6 +1556,7 @@ def default_modes() -> List[str]:
 # Modes NOT in this map use the value already stored in ``ModeResult.scope_of_work``.
 MODE_SCOPE_DESCRIPTIONS = {
     "pipeline": ("UnifiedPipeline DAG (light/standard/full workflows)"),
+    "pipeline_standard": "UnifiedPipeline DAG (standard workflow, 15 phases)",
     "pipeline_light": "UnifiedPipeline DAG (light workflow, minimal)",
     "pipeline_full": "UnifiedPipeline DAG (full workflow, all axes)",
     "conversational": (
@@ -1781,12 +1802,45 @@ async def run_all(
     if corpora is None:
         corpora = list(BENCHMARK_TEXTS.keys())
 
+    # #1747: validate the REQUEST before doing any work. Previously an unknown
+    # mode or corpus was a ``logger.warning`` + ``continue``, so the run wrote a
+    # complete, well-formed report with exit 0 and the requested mode simply
+    # absent — nothing in the ``.md`` or ``.json`` recorded the unhonoured
+    # request. For a comparison instrument that is the worst failure shape: an
+    # absence in the table becomes indistinguishable from "that mode was never
+    # asked for". Fail loud instead (#1019), and name the valid keys so the
+    # caller can fix the typo without reading the source.
+    #
+    # This is a PRE-FLIGHT error, structurally distinct from a runner that
+    # raises: the latter is caught below and still yields a ``ModeResult`` with
+    # ``success=False``. Failed and skipped stay two different outputs.
+    unknown_modes = [m for m in modes if m not in MODE_RUNNERS]
+    unknown_corpora = [c for c in corpora if c not in BENCHMARK_TEXTS]
+    if unknown_modes or unknown_corpora:
+        problems = []
+        if unknown_modes:
+            problems.append(
+                f"unknown mode(s): {', '.join(unknown_modes)}\n"
+                f"  valid modes: {', '.join(sorted(MODE_RUNNERS))}"
+            )
+        if unknown_corpora:
+            problems.append(
+                f"unknown corpus/corpora: {', '.join(unknown_corpora)}\n"
+                f"  valid corpora: {', '.join(sorted(BENCHMARK_TEXTS))}"
+            )
+        raise ValueError(
+            "compare_orchestration_modes: refusing to run a partial sweep.\n"
+            + "\n".join(problems)
+        )
+
     if dry_run:
+        # Every mode listed here is dispatchable: the pre-flight validation
+        # already rejected the unknown ones, so ``--dry-run`` no longer doubles
+        # as the only place a typo was reported (#1747).
         print("Dry run — modes that would be tested:")
         for mode in modes:
-            runner = MODE_RUNNERS.get(mode)
-            available = "available" if runner else "UNKNOWN"
-            print(f"  {mode}: {available}")
+            alias = " (deprecated alias)" if mode in _DEPRECATED_MODE_ALIASES else ""
+            print(f"  {mode}: available{alias}")
         print(f"\nCorpora: {', '.join(corpora)}")
         print(f"Wall-clock budget (all modes, CB #1528): {max_wall_seconds:g}s")
         return []
@@ -1802,16 +1856,12 @@ async def run_all(
     results: List[ModeResult] = []
 
     for corpus_id in corpora:
-        text = BENCHMARK_TEXTS.get(corpus_id)
-        if text is None:
-            logger.warning(f"Unknown corpus: {corpus_id}, skipping")
-            continue
+        # Both lookups are total: the pre-flight validation above rejected every
+        # unknown key, so a silent skip is no longer reachable here (#1747).
+        text = BENCHMARK_TEXTS[corpus_id]
 
         for mode in modes:
-            runner = MODE_RUNNERS.get(mode)
-            if runner is None:
-                logger.warning(f"Unknown mode: {mode}, skipping")
-                continue
+            runner = MODE_RUNNERS[mode]
 
             logger.info(f"Running {mode} on {corpus_id} ({len(text)} chars)...")
             try:
@@ -1940,15 +1990,22 @@ def main():
         print(render_depth_parity_section())
         return
 
-    asyncio.run(
-        run_all(
-            modes=args.modes,
-            corpora=args.corpora,
-            output_file=args.output,
-            dry_run=args.dry_run,
-            max_wall_seconds=args.max_wall_seconds,
+    try:
+        asyncio.run(
+            run_all(
+                modes=args.modes,
+                corpora=args.corpora,
+                output_file=args.output,
+                dry_run=args.dry_run,
+                max_wall_seconds=args.max_wall_seconds,
+            )
         )
-    )
+    except ValueError as exc:
+        # #1747: a bad --modes/--corpora request exits non-zero with a readable
+        # message instead of a traceback, and — crucially — WITHOUT having
+        # written a report that looks complete.
+        print(f"\n{exc}", file=sys.stderr)
+        sys.exit(2)
 
 
 if __name__ == "__main__":
