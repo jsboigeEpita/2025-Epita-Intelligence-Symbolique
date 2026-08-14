@@ -192,18 +192,25 @@ class ModeResult:
                             nothing" is not "indeterminate"). A budget breach
                             that still produced partial artifacts honestly
                             decides ``True`` (the partial state IS the verdict).
-        terminated_by_budget — bool: True iff the run hit its wall-clock
-                            budget, whether it was KILLED by the safety-net
-                            ``asyncio.wait_for`` or stopped ITSELF gracefully
-                            at an internal deadline. #1752: the narrower
-                            "killed by asyncio.wait_for" wording is what let
-                            the conversational runner hard-code ``False`` —
-                            its budget stop is by design a graceful one
-                            ("verdict partiel honnête", C1 #1500), so it
-                            matched the field's prose while contradicting its
-                            purpose. The field marks a row as NOT comparable
-                            against a run that finished on its own terms; how
-                            the run was stopped is irrelevant to that.
+        terminated_by_budget — bool: True iff the run was KILLED by the
+                            safety-net ``asyncio.wait_for``. This is the
+                            MECHANISM, and it is deliberately narrow: a run
+                            that stopped ITSELF at its own internal deadline
+                            is ``False`` here and carries
+                            ``extra_metrics["wall_clock_bounded"]`` instead —
+                            two DIFFERENT states, not two witnesses of one
+                            (C1 #1500: the graceful stop yields a real partial
+                            verdict, the kill does not, and the report renders
+                            them ``⏱ budget`` vs ``✅⏱ bounded``).
+                            #1752: I read the pair as one state and made this
+                            field read ``wall_clock_bounded``, which collapsed
+                            the distinction; ``test_internal_bound_maps_to_
+                            real_partial_verdict`` (#1480) caught it. What was
+                            genuinely missing is the COMPARABILITY predicate —
+                            "did this row hit its wall clock at all, so its
+                            metrics may not be compared against a run that
+                            finished on its own terms" — which is neither
+                            field alone: use ``_hit_its_wall_clock(result)``.
                             Treated as a HONEST PARTIAL verdict (anti-pendule
                             #1019 — never faked into success=True).
         scope_of_work      — short human-readable description of what the
@@ -444,6 +451,34 @@ _FALLACY_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset(
     {"neural_fallacy_detection", "hierarchical_fallacy_detection"}
 )
 _ARGUMENT_PRODUCING_CAPABILITIES: FrozenSet[str] = frozenset({"fact_extraction"})
+
+
+def _hit_its_wall_clock(result: "ModeResult") -> bool:
+    """Did this row hit its wall-clock budget, by EITHER route? (#1752)
+
+    Two distinct states share this consequence and neither field spans both:
+
+    * ``terminated_by_budget`` — the safety net fired and KILLED the run. No
+      verdict of its own; the report marks it ``⏱ budget``.
+    * ``extra_metrics["wall_clock_bounded"]`` — the run stopped ITSELF at its
+      internal deadline and recovered a real partial verdict (C1 #1500); the
+      report marks it ``✅⏱ bounded``.
+
+    Those two must stay separate wherever the *mechanism* matters — that is
+    what #1480 pins, and collapsing them is the mistake this helper exists to
+    make unnecessary. But wherever the question is **comparability** ("may I
+    put this row's State Fill next to a run that finished on its own terms?"),
+    the answer is the same for both and the caller should not have to know
+    which route was taken. Callers asking the comparability question use this;
+    callers rendering the mechanism read the two fields directly.
+
+    Deliberately NOT a ``ModeResult`` field: a third stored boolean derivable
+    from two others is a third thing to keep in sync, and drift between stored
+    duplicates is the defect family this instrument exists to detect.
+    """
+    return bool(result.terminated_by_budget) or bool(
+        result.extra_metrics.get("wall_clock_bounded")
+    )
 
 
 def _fmt_count_in_perimeter(
@@ -1080,14 +1115,16 @@ async def run_conversational_mode(
         capabilities_used=result.get("capabilities_used", []),
         # Track CA #1529: `decides` is no longer hand-set here — run_all
         # computes it uniformly from phases_completed + total_messages below.
-        # #1752: read the measurement taken 40 lines above instead of writing a
-        # constant. This runner MEASURED `wall_clock_bounded` and filed it in
-        # `extra_metrics`, then nailed the decision-bearing field to False —
-        # so a run that burned 900.02s of a 900s budget and completed 2/3
-        # phases advertised itself as a completed run. Two witnesses agreed
-        # (`wall_clock_bounded`, `conversational_status`) and the decider
-        # disagreed with both.
-        terminated_by_budget=wall_clock_bounded,
+        # #1752 (CORRECTED): this ``False`` is CORRECT and deliberate, not the
+        # constant I first took it for. This runner enforces its bound
+        # INTERNALLY and recovers a real partial verdict; the safety net did
+        # not fire, so the KILL flag is False while
+        # ``extra_metrics["wall_clock_bounded"]`` (set below) records the
+        # graceful bound. The tell I misread: every other runner sets this
+        # field only on an EXCEPTION path — which is the field's definition,
+        # not an anomaly. Readers wanting "hit its wall clock at all" must use
+        # ``_hit_its_wall_clock``, not this field.
+        terminated_by_budget=False,
         scope_of_work=scope,
         extra_metrics={
             "total_messages": total_messages,
@@ -1688,14 +1725,14 @@ def generate_report(
             # marker. `decides` is normalised by run_all via _compute_decides
             # (untouched here); `is True` keeps an un-normalised None sterile.
             status = "✅⏱ bounded" if r.decides is True else "⏱ budget"
-        # #1752: an ``elif r.extra_metrics.get("wall_clock_bounded")`` used to
-        # sit here, rescuing the marker for the one runner that hard-coded
-        # ``terminated_by_budget=False``. It is removed WITH that constant, not
-        # kept alongside it: a reader-hop patch that compensates for a wrong
-        # source is exactly what made the defect survive — the Trade-off table
-        # looked right while the JSON and the metric table stayed wrong, so
-        # nobody had a reason to look at the source. Keeping it now would also
-        # mask any future regression of the source it once papered over.
+        elif _hit_its_wall_clock(r):
+            # #1752 (CORRECTED): this branch is NOT a reader-hop rescue for the
+            # constant above — it renders a DIFFERENT state. A run that stopped
+            # itself at its own internal bound produced a real partial verdict
+            # (C1 #1500); a run killed by the safety net did not. I first read
+            # the two as duplicate witnesses of one state and deleted this
+            # branch; ``test_report_marks_bounded_verdict_distinctly`` caught it.
+            status = "✅⏱ bounded"
         elif r.terminates and r.success:
             status = "✅"
         else:
@@ -1759,9 +1796,11 @@ def generate_report(
         # Fill / Fallacies / Args), so it is the table where a budget-truncated
         # row misleads most — and it was the only one without the marker. A
         # reader comparing 22.0% against 48.7% was comparing a policy to a
-        # budget.
+        # budget. This is the one defect of the original #1752 report that
+        # survived its own correction: here the question is comparability, not
+        # mechanism, so both budget routes get the same mark.
         status = "✅" if r.success else "❌"
-        if r.success and r.terminated_by_budget:
+        if r.success and _hit_its_wall_clock(r):
             status = "✅⏱"
         err = f" ({r.error})" if r.error and len(r.error) < 50 else ""
         lines.append(

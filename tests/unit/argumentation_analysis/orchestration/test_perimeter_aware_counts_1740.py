@@ -273,24 +273,76 @@ class TestPartialPerimeterIsNotAnAbsence:
         )
 
 
-class TestBudgetFlagReadsItsOwnMeasurement:
-    """#1752 — ``terminated_by_budget`` was a hard-coded ``False``."""
+class TestBothBudgetRoutesMarkTheMetricTable:
+    """#1752, as CORRECTED by its own red tests.
 
-    def test_detailed_table_marks_a_budget_truncated_row(self) -> None:
-        # The Trade-off table already marked it (via a reader-hop rescue that
-        # this fix removes). The Detailed table — the one carrying State Fill /
-        # Fallacies / Args — did not, which is where a truncated run misleads.
+    The original claim was that ``terminated_by_budget`` hard-coded ``False``
+    on the conversational runner while ``wall_clock_bounded`` said ``True`` —
+    "three surfaces of one state, two agreeing, and the decider a constant".
+    **That premise was wrong.** They are two DIFFERENT states:
+    ``terminated_by_budget`` = the safety net KILLED the run (no verdict of its
+    own, rendered ``⏱ budget``); ``wall_clock_bounded`` = the run stopped
+    ITSELF at its internal deadline and recovered a real partial verdict (C1
+    #1500, rendered ``✅⏱ bounded``). Making one read the other collapsed the
+    distinction, and #1480's own tests caught it.
+
+    The tell I had in hand and misread: every other runner sets
+    ``terminated_by_budget`` only on an EXCEPTION path. I filed that as an
+    anomaly; it is the field's definition.
+
+    What survives is narrower and real: wherever the question is
+    **comparability** rather than mechanism, the two routes have the same
+    consequence — and the Detailed Summary, the table carrying State Fill /
+    Fallacies / Args, marked neither.
+    """
+
+    def test_metric_table_marks_a_killed_row(self) -> None:
+        row = _result(
+            "pipeline_standard",
+            duration_seconds=900.02,
+            phases_completed=2,
+            phases_total=15,
+            state_fill_rate=0.22,
+            terminated_by_budget=True,
+        )
+        detailed = harness.generate_report([row]).split("## Detailed Summary")[1]
+        assert "✅⏱" in detailed, "a safety-net kill must be marked in the metric table"
+
+    def test_metric_table_marks_a_gracefully_bounded_row(self) -> None:
+        # The production row: stopped itself at 900s of a 900s budget, 2/3
+        # phases. ``terminated_by_budget`` is legitimately False here — reading
+        # the marker from it alone is exactly the collapse this class documents.
         row = _result(
             "conversational",
             duration_seconds=900.02,
             phases_completed=2,
             phases_total=3,
             state_fill_rate=0.22,
+            extra_metrics={"wall_clock_bounded": True},
+        )
+        detailed = harness.generate_report([row]).split("## Detailed Summary")[1]
+        assert "✅⏱" in detailed, "a graceful bound must be marked in the metric table"
+
+    def test_the_two_routes_stay_distinct_where_mechanism_matters(self) -> None:
+        # Non-regression on #1480: the Trade-off table must keep rendering the
+        # mechanism, so the comparability helper must NOT have flattened it.
+        killed = _result(
+            "pipeline_standard",
+            terminates=True,
+            decides=False,
             terminated_by_budget=True,
         )
-        section = harness.generate_report([row])
-        detailed = section.split("## Detailed Summary")[1]
-        assert "✅⏱" in detailed, "a budget-truncated row must be marked here too"
+        graceful = _result(
+            "conversational",
+            terminates=True,
+            decides=True,
+            extra_metrics={"wall_clock_bounded": True},
+        )
+        tradeoff = harness.generate_report([killed, graceful]).split("## Depth-Parity")[
+            0
+        ]
+        assert "⏱ budget" in tradeoff
+        assert "✅⏱ bounded" in tradeoff
 
     def test_a_completed_row_carries_no_budget_marker(self) -> None:
         # Counterpart control: the marker must discriminate, not decorate.
