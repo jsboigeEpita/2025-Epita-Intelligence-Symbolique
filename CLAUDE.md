@@ -228,8 +228,10 @@ The system supports 4 orchestration modes. See `docs/architecture/ORCHESTRATION_
 |------|--------|-------------|-------------|
 | Sequential (Pipeline) | ACTIVE | `--mode pipeline` (default) | Phases run in DAG order via WorkflowExecutor |
 | Conversational | ACTIVE | `--mode conversational` | Multi-agent dialogue via SK AgentGroupChat |
-| Hierarchical | DORMANT | — | Strategic → Tactical → Operational delegation |
+| Hierarchical | ACTIVE | `--mode hierarchical --hierarchical-mode bridge\|delegation` | `bridge` (M2, RA-10 #1069): StrategicManager → Lego WorkflowExecutor. `delegation` (M3): Strategic → Tactical → Operational, dispatching through `CapabilityRegistry` via `RegistryBackedOperationalRegistry` (BO-1 #1471, fail-loud `DelegationError` without a registry). ~10.3k LOC, `strategic_bridge.py` (RA-4 #1049) syncs NL objectives/decisions into `UnifiedAnalysisState` with privacy scrubbing. |
 | Cluedo | ACTIVE | Dedicated scripts | Sherlock-Watson investigation game |
+
+**Cross-mode comparison**: `scripts/compare_orchestration_modes.py` runs `pipeline`, `hierarchical_bridge`, `hierarchical_delegation`, `conversational` and `conversation_deterministic` on the same corpus and emits markdown + JSON with trade-off metrics (terminates / wall-time / decides / scope). This is the instrument for improving each mode against the others — see #1735.
 
 ## CI/CD
 
