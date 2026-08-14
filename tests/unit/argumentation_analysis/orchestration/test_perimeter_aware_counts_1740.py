@@ -75,6 +75,11 @@ class TestTheDefectItself:
                 "argument_quality",
                 "counter_argument_generation",
             ],
+            # #1753: the pipeline runner sets this at the source — its ledger
+            # comes from the WorkflowExecutor and lists everything that ran, so
+            # an absent producer really is demonstrable absence. Without it the
+            # row can only show its count, never claim "never evaluated".
+            perimeter_is_exhaustive=True,
         )
         section = harness.generate_report([row])
         assert "| n/a |" in section, "fallacy count outside the perimeter must be n/a"
@@ -116,14 +121,19 @@ class TestThreeStatesNeverTwo:
     def test_producer_absent_reads_na(self) -> None:
         assert (
             harness._fmt_count_in_perimeter(
-                0, harness._FALLACY_PRODUCING_CAPABILITIES, ["fact_extraction"]
+                0,
+                harness._FALLACY_PRODUCING_CAPABILITIES,
+                ["fact_extraction"],
+                True,  # #1753: exhaustive ledger — absence is demonstrable
             )
             == "n/a"
         )
 
     def test_the_three_renderings_are_pairwise_distinct(self) -> None:
         caps = harness._FALLACY_PRODUCING_CAPABILITIES
-        out_of_perimeter = harness._fmt_count_in_perimeter(0, caps, ["fact_extraction"])
+        out_of_perimeter = harness._fmt_count_in_perimeter(
+            0, caps, ["fact_extraction"], True
+        )
         in_perimeter_unwritten = harness._fmt_count_in_perimeter(
             None, caps, ["neural_fallacy_detection"]
         )
@@ -197,3 +207,145 @@ class TestDeprecatedAliasExcludedFromDefaultSweep:
         assert (
             set(modes) == set(harness.MODE_RUNNERS) - harness._DEPRECATED_MODE_ALIASES
         )
+
+
+class TestPartialPerimeterIsNotAnAbsence:
+    """#1753 — the mirror defect, arriving through the *partial* door.
+
+    ``TestUnknownPerimeterIsNotAnEmptyPerimeter`` above guards the EMPTY
+    ledger. The guard it protects was calibrated on ``empty ↔ populated``, and
+    production delivers a third shape: **populated but partial**. On a real run
+    the conversational mode reported two self-declared plugin capabilities and
+    nothing for the agents that actually ran, so ``fact_extraction`` was absent
+    from a ledger whose run genuinely wrote 4 arguments — and the report
+    rendered ``n/a`` ("never evaluated") over a real observation.
+    """
+
+    def test_partial_ledger_may_not_claim_an_absence(self) -> None:
+        # The exact production row: 4 arguments written, no argument producer
+        # in a ledger that never listed the agents that ran.
+        assert (
+            harness._fmt_count_in_perimeter(
+                4,
+                harness._ARGUMENT_PRODUCING_CAPABILITIES,
+                ["hierarchical_fallacy_detection", "neural_fallacy_detection"],
+                False,  # conversational: ledger is NOT exhaustive
+            )
+            == "4"
+        )
+
+    def test_conversational_row_shows_its_arguments(self) -> None:
+        row = _result(
+            "conversational",
+            argument_count=4,
+            fallacy_count=14,
+            capabilities_used=[
+                "hierarchical_fallacy_detection",
+                "neural_fallacy_detection",
+            ],
+        )
+        section = harness.generate_report([row])
+        assert "| 4 |" in section, "a real, written count must not read n/a"
+        assert "| n/a |" not in section
+
+    def test_exhaustive_ledger_still_claims_the_absence(self) -> None:
+        # Non-regression on #1740: the guard must keep firing where it is
+        # earned, otherwise this fix is the pendulum swing back to a
+        # never-evaluated count rendering as an observation.
+        assert (
+            harness._fmt_count_in_perimeter(
+                0,
+                harness._FALLACY_PRODUCING_CAPABILITIES,
+                ["fact_extraction", "argument_quality"],
+                True,
+            )
+            == "n/a"
+        )
+
+    def test_only_the_pipeline_runner_claims_exhaustiveness(self) -> None:
+        # The claim is made at the SOURCE, and exactly one runner may make it.
+        # A default-constructed result must never claim it.
+        assert (
+            harness.ModeResult(
+                mode="x", corpus_id="corpus_A", success=True
+            ).perimeter_is_exhaustive
+            is False
+        )
+
+
+class TestBothBudgetRoutesMarkTheMetricTable:
+    """#1752, as CORRECTED by its own red tests.
+
+    The original claim was that ``terminated_by_budget`` hard-coded ``False``
+    on the conversational runner while ``wall_clock_bounded`` said ``True`` —
+    "three surfaces of one state, two agreeing, and the decider a constant".
+    **That premise was wrong.** They are two DIFFERENT states:
+    ``terminated_by_budget`` = the safety net KILLED the run (no verdict of its
+    own, rendered ``⏱ budget``); ``wall_clock_bounded`` = the run stopped
+    ITSELF at its internal deadline and recovered a real partial verdict (C1
+    #1500, rendered ``✅⏱ bounded``). Making one read the other collapsed the
+    distinction, and #1480's own tests caught it.
+
+    The tell I had in hand and misread: every other runner sets
+    ``terminated_by_budget`` only on an EXCEPTION path. I filed that as an
+    anomaly; it is the field's definition.
+
+    What survives is narrower and real: wherever the question is
+    **comparability** rather than mechanism, the two routes have the same
+    consequence — and the Detailed Summary, the table carrying State Fill /
+    Fallacies / Args, marked neither.
+    """
+
+    def test_metric_table_marks_a_killed_row(self) -> None:
+        row = _result(
+            "pipeline_standard",
+            duration_seconds=900.02,
+            phases_completed=2,
+            phases_total=15,
+            state_fill_rate=0.22,
+            terminated_by_budget=True,
+        )
+        detailed = harness.generate_report([row]).split("## Detailed Summary")[1]
+        assert "✅⏱" in detailed, "a safety-net kill must be marked in the metric table"
+
+    def test_metric_table_marks_a_gracefully_bounded_row(self) -> None:
+        # The production row: stopped itself at 900s of a 900s budget, 2/3
+        # phases. ``terminated_by_budget`` is legitimately False here — reading
+        # the marker from it alone is exactly the collapse this class documents.
+        row = _result(
+            "conversational",
+            duration_seconds=900.02,
+            phases_completed=2,
+            phases_total=3,
+            state_fill_rate=0.22,
+            extra_metrics={"wall_clock_bounded": True},
+        )
+        detailed = harness.generate_report([row]).split("## Detailed Summary")[1]
+        assert "✅⏱" in detailed, "a graceful bound must be marked in the metric table"
+
+    def test_the_two_routes_stay_distinct_where_mechanism_matters(self) -> None:
+        # Non-regression on #1480: the Trade-off table must keep rendering the
+        # mechanism, so the comparability helper must NOT have flattened it.
+        killed = _result(
+            "pipeline_standard",
+            terminates=True,
+            decides=False,
+            terminated_by_budget=True,
+        )
+        graceful = _result(
+            "conversational",
+            terminates=True,
+            decides=True,
+            extra_metrics={"wall_clock_bounded": True},
+        )
+        tradeoff = harness.generate_report([killed, graceful]).split("## Depth-Parity")[
+            0
+        ]
+        assert "⏱ budget" in tradeoff
+        assert "✅⏱ bounded" in tradeoff
+
+    def test_a_completed_row_carries_no_budget_marker(self) -> None:
+        # Counterpart control: the marker must discriminate, not decorate.
+        row = _result("pipeline_standard", phases_completed=15, phases_total=15)
+        detailed = harness.generate_report([row]).split("## Detailed Summary")[1]
+        assert "⏱" not in detailed
