@@ -110,20 +110,6 @@ class TestDungIdempotency:
         )
 
 
-class TestAspicIdempotency:
-    """ASPIC hook must not duplicate entries on repeated invocation."""
-
-    def test_conversational_orchestrator_aspic_guard(self):
-        """conversational_orchestrator must skip ASPIC if aspic_results is non-empty."""
-        from argumentation_analysis.orchestration import conversational_orchestrator
-
-        # See test_conversational_orchestrator_dung_guard: the guard moved into
-        # _run_conversational_analysis_inner when the body was extracted from
-        # the (now wrapper) run_conversational_analysis.
-        source = inspect.getsource(
-            conversational_orchestrator._run_conversational_analysis_inner
-        )
-        assert "not state.aspic_results" in source, (
-            "ASPIC hook should have idempotency guard checking "
-            "'not state.aspic_results' before invocation"
-        )
+# TestAspicIdempotency was removed with _build_aspic_from_state (#1732):
+# it source-pinned the idempotency guard of the removed regex fallback
+# hook; the Dung guard above survives as the pattern's representative.

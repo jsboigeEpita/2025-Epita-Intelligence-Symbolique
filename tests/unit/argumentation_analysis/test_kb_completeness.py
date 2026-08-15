@@ -43,15 +43,21 @@ class TestKBCompleteness:
             state.add_jtms_belief(name=aid, valid=True, justifications=[])
 
         # Add fallacies targeting arg 0 and arg 2
-        state.add_fallacy("appeal_to_authority", "Regulation demand", target_arg_id=arg_ids[0])
-        state.add_fallacy("hasty_generalization", "Growth claim", target_arg_id=arg_ids[2])
+        state.add_fallacy(
+            "appeal_to_authority", "Regulation demand", target_arg_id=arg_ids[0]
+        )
+        state.add_fallacy(
+            "hasty_generalization", "Growth claim", target_arg_id=arg_ids[2]
+        )
 
         # Add counter-argument
-        state.counter_arguments.append({
-            "strategy": "REBUT",
-            "original_argument": args[2],
-            "counter_argument": args[4],
-        })
+        state.counter_arguments.append(
+            {
+                "strategy": "REBUT",
+                "original_argument": args[2],
+                "counter_argument": args[4],
+            }
+        )
 
         # Add PL analysis result
         state.add_propositional_analysis_result(
@@ -102,17 +108,9 @@ class TestKBCompleteness:
         assert "epistemic" in result["modalities_found"]
         assert "deontic" in result["modalities_found"]
 
-    def test_aspic_framework_built(self):
-        """ASPIC framework classifies arguments into strict/defeasible."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _build_aspic_from_state,
-        )
-
-        state, _ = self._setup_realistic_state()
-        result = _build_aspic_from_state(state)
-        assert result is not None
-        assert result["strict_rules"] + result["defeasible_rules"] == 5
-        assert len(state.aspic_results) >= 1
+    # test_aspic_framework_built was removed with _build_aspic_from_state
+    # (#1732): the regex fallback is gone; ASPIC+ results now only come from
+    # the real analyze_aspic -> Tweety path (honest-absent when never invoked).
 
     def test_belief_revision_on_contradictions(self):
         """Beliefs targeted by fallacies are revised."""
@@ -129,7 +127,6 @@ class TestKBCompleteness:
     def test_all_hooks_together(self):
         """Running all hooks produces complete KB for all arguments."""
         from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _build_aspic_from_state,
             _build_dung_framework_from_state,
             _detect_and_run_modal_analysis,
             _run_belief_revision_from_state,
@@ -140,7 +137,6 @@ class TestKBCompleteness:
         # Run all post-phase hooks
         dung = _build_dung_framework_from_state(state)
         modal = _detect_and_run_modal_analysis(state)
-        aspic = _build_aspic_from_state(state)
         revision = _run_belief_revision_from_state(state)
 
         # Verify completeness
@@ -155,17 +151,13 @@ class TestKBCompleteness:
         assert modal is not None
         assert modal["modal_results"] >= 3
 
-        # 4. ASPIC: all arguments classified
-        assert aspic is not None
-        assert aspic["strict_rules"] + aspic["defeasible_rules"] == len(arg_ids)
-
-        # 5. Belief revision: fallacies triggered contraction
+        # 4. Belief revision: fallacies triggered contraction
         assert revision is not None
 
-        # 6. PL analysis present
+        # 5. PL analysis present
         assert len(state.propositional_analysis_results) >= 1
 
-        # 7. FOL analysis present
+        # 6. FOL analysis present
         assert len(state.fol_analysis_results) >= 1
 
         # Summary check via state snapshot
@@ -173,7 +165,6 @@ class TestKBCompleteness:
         assert snapshot["jtms_belief_count"] >= len(arg_ids)
         assert snapshot["dung_framework_count"] >= 1
         assert snapshot["modal_analysis_count"] >= 3
-        assert snapshot["aspic_result_count"] >= 1
         assert snapshot["belief_revision_result_count"] >= 1
 
     def test_state_snapshot_counts_all_dimensions(self):
@@ -181,7 +172,6 @@ class TestKBCompleteness:
         state, _ = self._setup_realistic_state()
 
         from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _build_aspic_from_state,
             _build_dung_framework_from_state,
             _detect_and_run_modal_analysis,
             _run_belief_revision_from_state,
@@ -189,7 +179,6 @@ class TestKBCompleteness:
 
         _build_dung_framework_from_state(state)
         _detect_and_run_modal_analysis(state)
-        _build_aspic_from_state(state)
         _run_belief_revision_from_state(state)
 
         snapshot = state.get_state_snapshot(summarize=True)
@@ -199,8 +188,9 @@ class TestKBCompleteness:
             "jtms_belief_count": snapshot.get("jtms_belief_count", 0),
             "dung_framework_count": snapshot.get("dung_framework_count", 0),
             "modal_analysis_count": snapshot.get("modal_analysis_count", 0),
-            "aspic_result_count": snapshot.get("aspic_result_count", 0),
-            "belief_revision_result_count": snapshot.get("belief_revision_result_count", 0),
+            "belief_revision_result_count": snapshot.get(
+                "belief_revision_result_count", 0
+            ),
         }
         for name, count in dimensions.items():
             assert count > 0, f"{name} is 0 — Sprint 4 wiring incomplete"

@@ -110,58 +110,10 @@ class TestCrossReferenceGraphFallacyKey:
         assert targets == {"arg_1", "arg_3"}
 
 
-class TestASPICFallacyUndermining:
-    """BUG A1 fix: ASPIC+ uses canonical arg_id, not positional index."""
-
-    def _make_state_with_fallacies(self, fallacies_targeting):
-        """Create a mock state with arguments and fallacies.
-
-        fallacies_targeting: list of canonical arg_ids that have fallacies
-        """
-
-        class MockState:
-            identified_arguments = {
-                "arg_1": "This is proven fact about economic policy",
-                "arg_2": "The data suggests economic improvement probably",
-                "arg_3": "We always see market fluctuations",
-            }
-            identified_fallacies = {}
-
-        state = MockState()
-        state.identified_fallacies = {
-            f"fal_{i}": {
-                "fallacy_type": "Test fallacy",
-                "target_argument_id": tid,
-            }
-            for i, tid in enumerate(fallacies_targeting)
-        }
-        return state
-
-    def test_fallacy_on_third_arg_detected(self):
-        """Fallacy targeting arg_3 should undermine arg_3, not arg_1 or arg_2."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _build_aspic_from_state,
-        )
-
-        state = self._make_state_with_fallacies(["arg_3"])
-        result = _build_aspic_from_state(state)
-        if result is None:
-            pytest.skip("ASPIC framework returned None")
-        defeated = result.get("defeated", [])
-        assert len(defeated) > 0
-
-    def test_no_fallacy_no_undermining(self):
-        """Without fallacies, no arguments should be defeated."""
-        from argumentation_analysis.orchestration.conversational_orchestrator import (
-            _build_aspic_from_state,
-        )
-
-        state = self._make_state_with_fallacies([])
-        result = _build_aspic_from_state(state)
-        if result is None:
-            pytest.skip("ASPIC framework returned None")
-        defeated = result.get("defeated", [])
-        assert len(defeated) == 0
+# TestASPICFallacyUndermining was removed with _build_aspic_from_state
+# (#1732): it pinned the regex fallback's arg-id mapping, and the fallback
+# is gone. The real undermining path (analyze_aspic -> Tweety, canonical
+# ids pinned post-#1679) is guarded by test_state_writers_1649.
 
 
 class TestATMSHypothesisQualityLookup:
