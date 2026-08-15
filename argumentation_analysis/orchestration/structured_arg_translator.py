@@ -263,6 +263,23 @@ async def _llm_extract_relations(
             '{"attacks": [{"attackers": ["argN"], "target": "argM", '
             '"rationale": "one short sentence"}]}'
         )
+    elif relation_kind == "dung_attacks":
+        task = (
+            "Identify ATTACK relations among these arguments: an attack is a "
+            "pair (source, target) where the source argument DEFEATS the target "
+            "— it rebuts the target's conclusion or undermines a premise the "
+            "target rests on. Cite source AND target by id; every id must be "
+            "present in the inventory. The attacker must itself be one of the "
+            "listed arguments: name the argument that carries the objection, "
+            "never the name of a fallacy or of a counter-argument that is not "
+            "in the list. Report an attack ONLY when the text genuinely "
+            "presents the source as defeating the target — do NOT connect "
+            "unrelated arguments."
+        )
+        shape = (
+            '{"attacks": [{"source": "argN", "target": "argM", '
+            '"rationale": "one short sentence"}]}'
+        )
     elif relation_kind == "weighted_attacks":
         task = (
             "Identify WEIGHTED ATTACKS among these arguments: a weighted attack "
@@ -618,6 +635,52 @@ def _validate_setaf_attacks(
     return out
 
 
+def _validate_dung_attacks(
+    data: Dict[str, Any], arg_by_id: Dict[str, str]
+) -> List[List[str]]:
+    """Validate LLM pairwise attack proposals against the real inventory (#1698).
+
+    A Dung attack is the degenerate SetAF case — a single attacker and a target
+    — so this is :func:`_validate_setaf_attacks` with an attacker set of size
+    one, returning the ``[source, target]`` pair shape the Dung-family handlers
+    consume (identical to what ``_generate_attacks_from_args`` returned).
+
+    Both endpoints must be inventory members. That is the whole point of #1698:
+    the producer this replaces minted ``fallacy_{i}_{label}`` and ``CA: {text}``
+    sources, neither of which is ever a node of the frame, so every edge landed
+    outside the graph and nothing could ever be rejected. Here an edge naming
+    any unknown id is dropped (anti-théâtre #1019) — never salvaged by promoting
+    the attacker to a node, which would make it an unattacked argument that
+    always wins.
+
+    Self-attacks are dropped (not a genuine relation between two arguments).
+    Ids are re-mapped to canonical argument text so the frame connects real
+    nodes. Dedup on ``(source, target)``; direction is preserved, never
+    symmetrised — ``a`` attacking ``b`` does not make ``b`` attack ``a``.
+    """
+    raw = data.get("attacks", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    seen: set[Tuple[str, str]] = set()
+    out: List[List[str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        src_id = str(item.get("source", "")).strip()
+        tgt_id = str(item.get("target", "")).strip()
+        if src_id not in arg_by_id or tgt_id not in arg_by_id:
+            continue  # fabricated / malformed → dropped (anti-théâtre #1019)
+        if src_id == tgt_id:
+            continue  # self-attack is not a genuine relation
+        src, tgt = arg_by_id[src_id], arg_by_id[tgt_id]
+        key = (src, tgt)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append([src, tgt])
+    return out
+
+
 def _validate_weighted_attacks(
     data: Dict[str, Any], arg_by_id: Dict[str, str]
 ) -> List[Tuple[str, str, float]]:
@@ -917,12 +980,60 @@ async def translate_to_weighted_attacks(
     return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
+async def translate_to_dung_attacks(
+    input_text: str, arguments: List[str]
+) -> TranslationResult:
+    """Derive genuine pairwise attacks from the text + arguments (#1698).
+
+    The sixth sibling of this family, and the one that feeds the **central**
+    Dung frame — the one whose extensions back every "this argument does not
+    survive" statement in a conclusion.
+
+    Returns a ``TranslationResult`` whose ``relations`` is a list of
+    ``[source, target]`` pairs of canonical argument texts, validated against
+    the real inventory. See :func:`translate_to_bipolar_supports` for the
+    ``cause`` contract (#1608).
+
+    Unlike its five siblings this axis has **no** honest-absent gate entry —
+    ``_STRUCTURED_ARG_INPUT_KEYS`` covers the five structured formalisms only,
+    and #1698 does not touch it. The cause is still propagated into the
+    pipeline context by the caller, so an empty attack graph carries *why* it
+    is empty instead of being indistinguishable from "no attacks in the text".
+    """
+    arg_by_id, _ = _build_inventory(arguments)
+    if not arg_by_id:
+        return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
+    try:
+        data = await _llm_extract_relations(input_text, arguments, "dung_attacks")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations=[], cause=CAUSE_TRANSLATOR_UNCONFIGURED)
+    except Exception as e:  # network / parse / budget — never fatal to the run
+        logger.warning(
+            "Dung attacks translator failed (%s) — staying absent.",
+            type(e).__name__,
+        )
+        return TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
+    attacks = _validate_dung_attacks(data, arg_by_id)
+    _log_translation_yield("Dung", data, ("attacks",), len(attacks))
+    if attacks:
+        logger.info(
+            "Dung translator: derived %d genuine attack(s) from text — both "
+            "endpoints are inventory members by construction (#1698).",
+            len(attacks),
+        )
+        return TranslationResult(relations=attacks, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
+
+
 __all__ = [
     "translate_to_bipolar_supports",
     "translate_to_aba_contraries",
     "translate_to_aspic_rules",
     "translate_to_setaf_attacks",
     "translate_to_weighted_attacks",
+    "translate_to_dung_attacks",
     "TranslationResult",
     "TranslatorUnconfigured",
     "CAUSE_EVALUATED",
@@ -939,4 +1050,5 @@ __all__ = [
     "_unique_rule_name",
     "_validate_setaf_attacks",
     "_validate_weighted_attacks",
+    "_validate_dung_attacks",
 ]

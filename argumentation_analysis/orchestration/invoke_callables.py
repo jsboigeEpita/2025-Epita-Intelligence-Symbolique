@@ -3717,6 +3717,94 @@ def _structured_arg_cause(context: Dict[str, Any], capability: str) -> Optional[
     return cause if isinstance(cause, str) else None
 
 
+# #1698: the derived Dung attack graph is memoised in the pipeline context so
+# the four axes that consume it translate ONCE. Not a micro-optimisation: four
+# independent translations of the same text could disagree, and one analysis
+# carrying four different attack graphs would be an incoherence no reader could
+# see. The cached entry carries the inventory it was derived for, so a caller
+# that changes ``arguments`` between axes gets a fresh derivation rather than a
+# graph over the wrong nodes.
+_DUNG_ATTACKS_DERIVED_KEY = "_dung_attacks_derived"
+
+
+async def _translate_dung_attacks_once(
+    input_text: str, arguments: List[str]
+) -> Tuple[List[List[str]], str, str]:
+    """Run the #1698 Dung attack translator, returning ``(pairs, cause, error)``."""
+    try:
+        from argumentation_analysis.orchestration.structured_arg_translator import (
+            translate_to_dung_attacks,
+        )
+
+        outcome = await translate_to_dung_attacks(input_text, arguments)
+    except Exception as e:  # import / unexpected — never fatal to the run
+        logger.warning(
+            "Dung attack translator unavailable (%s) — empty graph, "
+            "translator_failed (#1698).",
+            type(e).__name__,
+        )
+        return [], "translator_failed", type(e).__name__
+    relations = outcome.relations if isinstance(outcome.relations, list) else []
+    return relations, outcome.cause, outcome.error
+
+
+async def _derive_dung_attacks(
+    input_text: str,
+    arguments: List[str],
+    context: Dict[str, Any],
+    *,
+    capability: str,
+) -> List[List[str]]:
+    """Genuine, id-validated attack pairs for a Dung-family axis (#1698).
+
+    Replaces ``_generate_attacks_from_args`` on the four axes that had no
+    arbiter. That producer has exactly two branches and both mint a **source
+    outside the inventory** (``fallacy_{i}_{label}`` / ``CA: {text}``), so the
+    frame received edges that connect nothing: measured ``BOTH_in = 0`` on
+    3/3 real corpora, every acceptance semantics returning the whole inventory
+    and ``conflict_free`` containing all of it. Nothing could ever be rejected
+    — under formal authority.
+
+    **No fallback.** When the translator yields nothing the graph is empty and
+    the reason is propagated into the context (``no_genuine_relations`` /
+    ``translator_unconfigured`` / ``translator_failed``), never replaced by
+    fabricated edges. An empty attack graph is a truthful input: every argument
+    stands because none was *shown* to be attacked — the same subtraction
+    #1629 applied to the modulo fallback.
+
+    Anti-pendule: the attacker is never promoted to a node. A ``fallacy_*``
+    node would be an unattacked argument that always wins, turning "0 rejected
+    over 8 nodes" into "everything rejected over 37 nodes" — the symmetrical
+    false green.
+
+    The derived pairs are deliberately NOT written to ``context["attacks"]``:
+    eight other call sites read that key, and silently re-feeding them would
+    make it impossible to attribute any change in extensions to this fix.
+    """
+    key = tuple(str(a) for a in arguments)
+    cached = context.get(_DUNG_ATTACKS_DERIVED_KEY)
+    if not (isinstance(cached, tuple) and len(cached) == 4 and cached[0] == key):
+        relations, cause, error = await _translate_dung_attacks_once(
+            input_text, arguments
+        )
+        cached = (key, relations, cause, error)
+        context[_DUNG_ATTACKS_DERIVED_KEY] = cached
+    _, relations, cause, error = cached
+    _propagate_structured_arg_cause(context, capability, cause, error)
+    # Unconditional (#1706 instrument): a line that only prints when there is
+    # something to report cannot distinguish "no attack in the text" from "the
+    # translator was never reached".
+    logger.info(
+        "Dung attack graph for %s (#1698): %d id-validated edge(s), cause=%s%s. "
+        "No synthetic fallback — an empty graph means none was derived.",
+        capability,
+        len(relations),
+        cause,
+        f" ({error})" if error else "",
+    )
+    return list(relations)
+
+
 async def _invoke_bipolar(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
     """Invoke bipolar argumentation handler with JVM fallback."""
     args = context.get("arguments") or _extract_arguments_from_context(
@@ -4315,7 +4403,10 @@ async def _invoke_probabilistic(
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    # #1698: id-validated attacks derived from the text, no synthetic fallback.
+    attacks = context.get("attacks") or await _derive_dung_attacks(
+        input_text, args, context, capability="probabilistic_argumentation"
+    )
     probs = context.get("probabilities") or {a: 0.5 for a in args}
 
     try:
@@ -4733,7 +4824,10 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    # #1698: id-validated attacks derived from the text, no synthetic fallback.
+    attacks = context.get("attacks") or await _derive_dung_attacks(
+        input_text, args, context, capability="social_argumentation"
+    )
     votes = context.get("votes", {})
     if votes:
         votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
@@ -4806,7 +4900,10 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    # #1698: id-validated attacks derived from the text, no synthetic fallback.
+    attacks = context.get("attacks") or await _derive_dung_attacks(
+        input_text, args, context, capability="epistemic_argumentation"
+    )
     # EAF expects Dict[agent, List[arg]] beliefs, NOT float probabilities.
     # Shape/validate; None lets the handler default to "all believed" (valid
     # non-fabricated baseline, #1019).
@@ -7586,8 +7683,14 @@ async def _invoke_dung_extensions(
     # 1. Extract arguments from upstream phases
     arguments = _extract_arguments_from_context(input_text, context)
 
-    # 2. Build attack relations from fallacies and counter-arguments
-    attacks = _generate_attacks_from_args(arguments, context)
+    # 2. Build attack relations from the text, cited by id (#1698). Every edge
+    #    has both endpoints in ``arguments``; the previous producer minted
+    #    sources that were never nodes, so the frame was inert on 3/3 corpora.
+    #    ``context["attacks"]`` is deliberately NOT consulted here — this site
+    #    has never read it, and making it do so is a separate decision.
+    attacks = await _derive_dung_attacks(
+        input_text, arguments, context, capability="dung_extensions"
+    )
 
     # I5 #1430: compare mode — run every available backend on the same AF and
     # surface agreement / disagreement (never auto-reconciled). Short-circuits
