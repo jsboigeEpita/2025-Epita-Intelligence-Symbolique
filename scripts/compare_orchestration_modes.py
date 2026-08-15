@@ -1063,6 +1063,7 @@ async def run_conversational_mode(
     text: str,
     corpus_id: str,
     max_wall_seconds: float = DEFAULT_WALL_SECONDS,
+    room_policy: str = "phase_casting",
 ) -> ModeResult:
     """Run conversational orchestrator (AgentGroupChat multi-agent).
 
@@ -1092,13 +1093,15 @@ async def run_conversational_mode(
 
     scope = (
         "AgentGroupChat multi-agent (3 macro-phases, "
-        f"wall-time-bounded at {max_wall_seconds:g}s)"
+        f"wall-time-bounded at {max_wall_seconds:g}s, room={room_policy})"
     )
     start = time.time()
     safety_net = _conversational_safety_net_timeout(max_wall_seconds)
     try:
         result = await asyncio.wait_for(
-            run_conversational_analysis(text=text, max_wall_seconds=max_wall_seconds),
+            run_conversational_analysis(
+                text=text, max_wall_seconds=max_wall_seconds, room_policy=room_policy
+            ),
             timeout=safety_net,
         )
     except asyncio.TimeoutError:
@@ -1211,6 +1214,20 @@ async def run_conversational_mode(
             # fallback so an absent field never reads as "agent_group_chat"
             # (anti-#1019 / leçon #1531: absent ≠ measured).
             "execution_path": result.get("execution_path", "round_robin_fallback"),
+            # #1760: the steering couple. A fix is judged on BOTH numbers —
+            # designations_unresolved must fall AND distinct agents having
+            # actually spoken must rise. The first alone goes to zero by
+            # forbidding designations, which is the false fix the DoD names.
+            "room_policy": room_policy,
+            "designations_emitted": budget.get("deliberation_turn_count"),
+            "designations_unresolved": len(budget.get("designations_unresolved") or []),
+            "distinct_speakers": sorted(
+                {
+                    m.get("agent")
+                    for m in conv_log
+                    if isinstance(m, dict) and m.get("agent")
+                }
+            ),
         },
     )
 
@@ -1959,6 +1976,7 @@ async def run_all(
     output_file: Optional[str] = None,
     dry_run: bool = False,
     max_wall_seconds: float = DEFAULT_WALL_SECONDS,
+    conv_room_policy: str = "phase_casting",
 ) -> List[ModeResult]:
     """Run selected modes on selected corpora.
 
@@ -2045,9 +2063,12 @@ async def run_all(
                 # runner (uniform signature ``runner(text, cid, max_wall_seconds=...)``).
                 # Pipeline applies the state-reference trick; conversational
                 # its internal bound (C1); hierarchical honest-degrades.
-                result = await runner(
-                    text, corpus_id, max_wall_seconds=max_wall_seconds
-                )
+                # #1760: the conversational room policy rides along for the
+                # steering measurement rows (ignored by every other runner).
+                runner_kwargs = {"max_wall_seconds": max_wall_seconds}
+                if mode == "conversational":
+                    runner_kwargs["room_policy"] = conv_room_policy
+                result = await runner(text, corpus_id, **runner_kwargs)
                 results.append(result)
                 if result.terminated_by_budget:
                     status = f"BUDGET BREACH ({result.duration_seconds:.2f}s)"
@@ -2152,6 +2173,17 @@ def main():
         ),
     )
     parser.add_argument(
+        "--conv-room-policy",
+        choices=("phase_casting", "truth", "reprompt", "all_agents"),
+        default="phase_casting",
+        help=(
+            "#1760 — conversational only: how the room the PM steers in "
+            "relates to its 8-agent capability map. phase_casting is the "
+            "baseline; the report's extra_metrics carries the steering couple "
+            "(designations_unresolved / distinct_speakers) for every value."
+        ),
+    )
+    parser.add_argument(
         "--depth-parity",
         action="store_true",
         help=(
@@ -2174,6 +2206,7 @@ def main():
                 output_file=args.output,
                 dry_run=args.dry_run,
                 max_wall_seconds=args.max_wall_seconds,
+                conv_room_policy=args.conv_room_policy,
             )
         )
     except ValueError as exc:
