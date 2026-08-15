@@ -297,7 +297,6 @@ class TestSynchronousStagesStayExemptForTheStatedReason:
     SYNC_STAGES = [
         "_build_dung_framework_from_state",
         "_detect_and_run_modal_analysis",
-        "_build_aspic_from_state",
         "_run_belief_revision_from_state",
     ]
 

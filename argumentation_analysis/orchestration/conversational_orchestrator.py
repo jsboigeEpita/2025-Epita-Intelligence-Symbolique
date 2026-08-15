@@ -1451,25 +1451,11 @@ async def _run_conversational_analysis_inner(
         except Exception as e:
             logger.warning(f"Modal analysis post-processing failed: {e}")
 
-    # 5b-4. ASPIC+ framework construction (#565)
-    # Build ASPIC strict/defeasible rules from arguments and fallacy targeting.
-    aspic_result = None
-    if spectacular and hasattr(state, "aspic_results") and not state.aspic_results:
-        try:
-            aspic_result = _build_aspic_from_state(state)
-            if aspic_result:
-                conversation_log.append(
-                    {
-                        "phase": "post_processing",
-                        "type": "aspic_framework",
-                        "strict_rules": aspic_result["strict_rules"],
-                        "defeasible_rules": aspic_result["defeasible_rules"],
-                        "surviving": aspic_result["surviving"],
-                        "defeated": aspic_result["defeated"],
-                    }
-                )
-        except Exception as e:
-            logger.warning(f"ASPIC post-processing failed: {e}")
+    # 5b-4. ASPIC+ was removed by subtraction (#1732): the regex fallback
+    # _build_aspic_from_state fired exactly when the real path (analyze_aspic
+    # -> Tweety) had produced nothing, fabricating reasoner-shaped results
+    # whose "python_fallback" marker is written but never read — masking
+    # non-reachability instead of exposing it. Absent = honest-absent.
 
     # 5b-5. Belief revision (#566)
     # Contract beliefs contradicted by detected fallacies (AGM pattern).
@@ -3319,128 +3305,6 @@ def _detect_and_run_modal_analysis(state: Any) -> Optional[Dict[str, Any]]:
         "modalities_found": list(
             {m for r in state.modal_analysis_results for m in r.get("modalities", [])}
         ),
-    }
-
-
-def _build_aspic_from_state(state: Any) -> Optional[Dict[str, Any]]:
-    """Build ASPIC+ framework from state arguments + fallacies (#565).
-
-    Classifies arguments as strict (factual/certain) or defeasible (hedged/contingent),
-    applies fallacy-based undermining, and persists to state.aspic_results via
-    pure-Python fallback (no JVM required).
-    """
-    if not hasattr(state, "identified_arguments") or not state.identified_arguments:
-        return None
-    if not hasattr(state, "add_aspic_result"):
-        return None
-
-    args = list(state.identified_arguments.values())
-    if len(args) < 1:
-        return None
-
-    import re
-
-    STRICT_CUES = [
-        r"\b(is|are|was|were|has|have|had|always|every|all|never|fact|proven)\b",
-        r"\b(est|sont|était|ont|toujours|jamais|tous|fait|prouvé)\b",
-    ]
-    DEFEASIBLE_CUES = [
-        r"\b(usually|often|might|could|may|seems|appears|likely|probably|generally)\b",
-        r"\b(généralement|souvent|peut|pourrait|semble|probablement|habituellement)\b",
-    ]
-
-    fallacies = list(getattr(state, "identified_fallacies", {}).values())
-
-    # Classify arguments into strict vs defeasible rules
-    strict_rules = []
-    defeasible_rules = []
-    for i, desc in enumerate(args):
-        if not desc or not isinstance(desc, str):
-            continue
-        has_strict = any(re.search(p, desc, re.IGNORECASE) for p in STRICT_CUES)
-        has_defeasible = any(re.search(p, desc, re.IGNORECASE) for p in DEFEASIBLE_CUES)
-
-        # Fallacy-targeted arguments are defeasible regardless
-        is_undermined = False
-        current_arg_id = f"arg_{i + 1}"
-        for f in fallacies:
-            if not isinstance(f, dict):
-                continue
-            target = f.get("target_argument_id", "")
-            target_text = f.get("target_argument", "")
-            if target and target == current_arg_id:
-                is_undermined = True
-                break
-            if target_text and target_text.lower()[:30] in desc.lower():
-                is_undermined = True
-                break
-
-        label = f"arg_{i+1}"
-        if is_undermined or has_defeasible:
-            defeasible_rules.append(f"{label}({desc[:50]}) => conclusion_{i+1}")
-        elif has_strict:
-            strict_rules.append(f"{label}({desc[:50]}) -> conclusion_{i+1}")
-        else:
-            # Default: defeasible for safety
-            defeasible_rules.append(f"{label}({desc[:50]}) => conclusion_{i+1}")
-
-    # Compute surviving vs defeated arguments
-    surviving = []
-    defeated = []
-    for i, desc in enumerate(args):
-        if not desc:
-            continue
-        is_undermined = False
-        current_arg_id = f"arg_{i + 1}"
-        for f in fallacies:
-            if not isinstance(f, dict):
-                continue
-            target = f.get("target_argument_id", "")
-            target_text = f.get("target_argument", "")
-            if (target and target == current_arg_id) or (
-                target_text and target_text.lower()[:30] in desc.lower()
-            ):
-                is_undermined = True
-                break
-        if is_undermined:
-            defeated.append(desc[:80])
-        else:
-            surviving.append(desc[:80])
-
-    if not strict_rules and not defeasible_rules:
-        return None
-
-    extensions = [surviving] if surviving else [[args[0][:80]] if args else []]
-    statistics = {
-        "total_arguments": len(args),
-        "surviving": len(surviving),
-        "defeated": len(defeated),
-        "strict_rules": len(strict_rules),
-        "defeasible_rules": len(defeasible_rules),
-        "fallacies_applied": len(fallacies),
-    }
-
-    try:
-        state.add_aspic_result(
-            reasoner_type="python_fallback",
-            extensions=extensions,
-            statistics=statistics,
-        )
-    except Exception as e:
-        logger.warning(f"ASPIC result persistence failed: {e}")
-        return None
-
-    logger.info(
-        f"ASPIC framework built: {len(strict_rules)} strict, "
-        f"{len(defeasible_rules)} defeasible, "
-        f"{len(surviving)} surviving, {len(defeated)} defeated"
-    )
-
-    return {
-        "strict_rules": len(strict_rules),
-        "defeasible_rules": len(defeasible_rules),
-        "surviving": len(surviving),
-        "defeated": len(defeated),
     }
 
 

@@ -197,7 +197,7 @@ _WIDE_NET_FALLACY = {
 
 
 def _real_state():
-    """A real UnifiedAnalysisState — _build_aspic_from_state needs add_aspic_result."""
+    """A real UnifiedAnalysisState — the lane runners index real argument ids."""
     from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
     state = UnifiedAnalysisState(initial_text="probe")
@@ -262,25 +262,10 @@ async def test_both_lanes_assign_the_same_targets_for_one_payload():
     assert sorted(_targets(pipeline)) == ["arg_1", "arg_3"]
 
 
-async def test_both_lanes_yield_the_same_aspic_partition():
-    """The consequence the divergence had: survivors/defeated differed (1/2 vs 2/1).
-
-    This is the measurement the issue asked for, pinned so it cannot drift back.
-    """
-    from argumentation_analysis.orchestration.conversational_orchestrator import (
-        _build_aspic_from_state,
-    )
-
-    payload = [_PER_ARG_FALLACY, _WIDE_NET_FALLACY]
-    from_pipeline = _build_aspic_from_state(_run_pipeline_lane(payload))
-    from_conversational = _build_aspic_from_state(
-        await _run_conversational_lane(payload)
-    )
-    assert from_pipeline is not None and from_conversational is not None
-    assert from_pipeline["surviving"] == from_conversational["surviving"]
-    assert from_pipeline["defeated"] == from_conversational["defeated"]
-    # Bite: a partition where nothing is defeated would satisfy equality alone.
-    assert from_pipeline["defeated"] == 2
+# The ASPIC partition test that lived here was removed with
+# _build_aspic_from_state (#1732): it pinned a property of the regex
+# fallback, not of the lanes. The lane-agreement guard above
+# (same targets for one payload) survives and is the load-bearing one.
 
 
 async def test_the_whole_text_sentinel_never_becomes_a_target():
