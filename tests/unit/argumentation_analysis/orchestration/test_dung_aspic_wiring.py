@@ -1,7 +1,8 @@
 """Tests for Dung/ASPIC framework wiring into pipeline and conversational modes (#286).
 
 Validates:
-- _invoke_dung_extensions uses extract_arguments and generate_attacks helpers
+- _invoke_dung_extensions uses extract_arguments, and derives its attacks with the
+  id-validated translator (#1698) rather than minting ``fallacy_*`` sources
 - _python_dung_fallback raises RuntimeError (fail-loud stub, FP-22 #1249)
 - _write_dung_extensions_to_state stores actual attacks and arguments
 - _generate_attacks_from_args matches fallacies to arguments by text content
@@ -14,6 +15,30 @@ Validates:
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+
+@pytest.fixture(autouse=True)
+def _translator_stays_offline():
+    """#1698: ``_invoke_dung_extensions`` now derives its attacks from the text.
+
+    This file tests *wiring*, not derivation. Without this fixture every test
+    reaching the invoke makes a real LLM call that no assertion reads — measured
+    at ~4 s each, 8.2 s -> 40.6 s for the file. The default derives no relation
+    (the honest empty graph, which is what these tests' contexts describe);
+    tests needing a specific graph patch the same symbol themselves and their
+    inner patch wins.
+    """
+
+    async def _no_relations(input_text, arguments, relation_kind):
+        return {}
+
+    with patch(
+        "argumentation_analysis.orchestration.structured_arg_translator."
+        "_llm_extract_relations",
+        _no_relations,
+    ):
+        yield
+
 
 # ============================================================
 # Test: _invoke_dung_extensions uses helper functions
@@ -61,19 +86,31 @@ class TestInvokeDungExtensions:
         assert "impots" in args_passed[0].lower() or "impots" in args_passed[0]
 
     @pytest.mark.asyncio
-    async def test_generates_attacks_from_fallacies(self):
-        """Dung function uses _generate_attacks_from_args for cross-KB."""
+    async def test_attacks_are_id_validated_never_minted_from_fallacies(self):
+        """#1698: the frame receives edges whose BOTH endpoints are nodes.
+
+        This test used to assert the opposite — that a ``fallacy_*`` source
+        reached the reasoner — which is exactly the defect #1698 measured on 3
+        real corpora: ``BOTH_in = 0``, so no attack constrained anything and
+        every acceptance semantics returned the whole inventory. The edge was
+        real as an *observation* and inert as an *input*.
+
+        ``_invoke_dung_extensions`` now derives attacks with the id-validated
+        translator (the sixth sibling of the bipolar/ABA/ASPIC/SetAF/weighted
+        family), so a fallacy detection no longer mints a node that does not
+        exist. The fallacy payload is kept in the context on purpose: it is the
+        input that used to produce the fabricated edge.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
 
+        arguments = [
+            "Ce regime est le meilleur car le professeur le dit",
+            "Les etudes montrent le contraire",
+        ]
         context = {
-            "phase_extract_output": {
-                "arguments": [
-                    {"text": "Ce regime est le meilleur car le professeur le dit"},
-                    {"text": "Les etudes montrent le contraire"},
-                ]
-            },
+            "phase_extract_output": {"arguments": [{"text": a} for a in arguments]},
             "phase_hierarchical_fallacy_output": {
                 "fallacies": [
                     {
@@ -89,26 +126,37 @@ class TestInvokeDungExtensions:
             },
         }
 
+        async def _fake_llm(input_text, args, relation_kind):
+            # arg2 attacks arg1 — both are inventory members.
+            return {"attacks": [{"source": "arg2", "target": "arg1"}]}
+
         with patch(
-            "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
-        ) as mock_af:
-            mock_handler = MagicMock()
-            mock_handler.analyze_multi_semantics.return_value = {
-                "extensions": {},
-            }
-            mock_af.return_value = mock_handler
-
+            "argumentation_analysis.orchestration.structured_arg_translator."
+            "_llm_extract_relations",
+            _fake_llm,
+        ):
             with patch(
-                "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
-            ) as mock_init:
-                mock_init.return_value = MagicMock()
-                result = await _invoke_dung_extensions("test text", context)
+                "argumentation_analysis.agents.core.logic.af_handler.AFHandler"
+            ) as mock_af:
+                mock_handler = MagicMock()
+                mock_handler.analyze_multi_semantics.return_value = {
+                    "extensions": {},
+                }
+                mock_af.return_value = mock_handler
 
-        # Attacks should have been generated from the fallacy
+                with patch(
+                    "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
+                ) as mock_init:
+                    mock_init.return_value = MagicMock()
+                    await _invoke_dung_extensions("test text", context)
+
         call_args = mock_handler.analyze_multi_semantics.call_args
+        args_passed = call_args[0][0]
         attacks_passed = call_args[0][1]  # Second positional arg = attacks
-        assert len(attacks_passed) > 0
-        assert any("fallacy" in str(a).lower() for a in attacks_passed)
+        assert attacks_passed == [[arguments[1], arguments[0]]]
+        assert not [a for a in attacks_passed if "fallacy" in str(a).lower()]
+        # The attacker is a node of the frame — it was not promoted into one.
+        assert list(args_passed) == arguments
 
     @pytest.mark.asyncio
     async def test_returns_multi_semantics(self):
