@@ -7728,7 +7728,8 @@ async def _invoke_dung_extensions(
             )
 
             student_provider = DungStudentProvider()  # type: ignore[no-untyped-call]
-            # attacks is List[List[str]] from _generate_attacks_from_args;
+            # attacks is List[List[str]] from _derive_dung_attacks (#1698 —
+            # this site stopped reading _generate_attacks_from_args there);
             # compute_extensions expects List[Tuple[str, str]] — convert
             _typed_attacks = [(a[0], a[1]) for a in attacks if len(a) >= 2]
             result = await student_provider.compute_extensions(

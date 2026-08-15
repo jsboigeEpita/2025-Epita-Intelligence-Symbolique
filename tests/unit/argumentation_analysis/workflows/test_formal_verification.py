@@ -355,7 +355,11 @@ class TestInvokeCallables:
         assert "logic_type" in result or "formulas" in result
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("dung_attacks_offline")
     async def test_invoke_dung_extensions_error_fallback(self):
+        # Without the stub this reaches the network: since #1698 the axis
+        # derives its attacks from the text, and neither branch of the
+        # assertion below reads the derived graph (#1591 family (a)).
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
