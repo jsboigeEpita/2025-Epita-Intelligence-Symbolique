@@ -1315,6 +1315,7 @@ class TestInvokeCallables:
         )
         assert "modalities" in result
 
+    @pytest.mark.usefixtures("dung_attacks_offline")
     async def test_invoke_dung_extensions_error(self):
         """_invoke_dung_extensions returns honest-absent when handler unavailable (#1019, #1249).
 
@@ -1335,6 +1336,7 @@ class TestInvokeCallables:
         assert result.get("degraded") is True
         assert "extensions" in result
 
+    @pytest.mark.usefixtures("dung_attacks_offline")
     async def test_invoke_dung_extensions_no_arguments(self):
         """_invoke_dung_extensions generates default args when none provided."""
         from argumentation_analysis.orchestration.unified_pipeline import (

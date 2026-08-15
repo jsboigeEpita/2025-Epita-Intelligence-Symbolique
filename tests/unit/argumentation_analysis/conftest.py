@@ -84,6 +84,36 @@ def mock_parse_args():
         yield mock
 
 
+@pytest.fixture
+def dung_attacks_offline():
+    """Stub the Dung attack derivation so a unit test does not reach the network.
+
+    Since #1698, ``_invoke_dung_extensions`` (and the social / probabilistic /
+    EAF axes) no longer mint their attack pairs locally: they derive them from
+    the text through the id-validated translator, i.e. through the LLM. A unit
+    test that exercises those axes without stubbing the derivation therefore
+    issues a real request — measured on ``7898d66b``: **+8 requests over 9
+    tests in 3 files** against the pre-#1761 tree, all of them family (a) of
+    the #1590 discriminator (the suite is byte-identical with the network
+    closed, so no assertion reads what the request returns).
+
+    Yields the patch so a test may give it genuine pairs
+    (``dung_attacks_offline.return_value = [["a", "b"]]``); the default is an
+    empty graph, which the axis treats as "nothing was *shown* to be attacked"
+    rather than as a failure.
+
+    Deliberately **not** autouse (#1591 anti-pendule): a test whose verdict
+    depends on a real derivation is family (b) and must keep failing when the
+    API is absent. Opt in per file or per class with
+    ``pytest.mark.usefixtures("dung_attacks_offline")``.
+    """
+    with patch(
+        "argumentation_analysis.orchestration.invoke_callables._derive_dung_attacks"
+    ) as stub:
+        stub.return_value = []
+        yield stub
+
+
 @pytest.fixture(autouse=True)
 def _shutdown_leaked_communication_threads():
     """Arrête les threads d'arrière-plan de communication fuyants après chaque test.

@@ -55,8 +55,8 @@ class TestDungProviderConsumer:
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_from_context",
             return_value=["arg1", "arg2"],
         ), patch(
-            "argumentation_analysis.orchestration.invoke_callables._generate_attacks_from_args",
-            return_value=[["arg1", "arg2"]],
+            "argumentation_analysis.orchestration.invoke_callables._derive_dung_attacks",
+            new=AsyncMock(return_value=[["arg1", "arg2"]]),
         ):
             result = await _invoke_dung_extensions("Test argument", {})
 
@@ -85,8 +85,8 @@ class TestDungProviderConsumer:
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_from_context",
             return_value=["arg1", "arg2"],
         ), patch(
-            "argumentation_analysis.orchestration.invoke_callables._generate_attacks_from_args",
-            return_value=[["arg1", "arg2"]],
+            "argumentation_analysis.orchestration.invoke_callables._derive_dung_attacks",
+            new=AsyncMock(return_value=[["arg1", "arg2"]]),
         ), patch(
             "argumentation_analysis.adapters.dung_student_provider.DungStudentProvider",
             return_value=mock_provider,
@@ -99,6 +99,12 @@ class TestDungProviderConsumer:
         # Should have used the student provider
         assert result["provider"] == "abs_arg_dung_student"
         mock_provider.compute_extensions.assert_called_once()
+        # And the frame it received is the one this test injected. Until #1698
+        # the patch above named ``_generate_attacks_from_args``, which
+        # ``_invoke_dung_extensions`` had stopped calling: the provider was
+        # handed whatever the translator derived from "Test argument" over the
+        # network, and no assertion here could tell.
+        assert mock_provider.compute_extensions.call_args.args[1] == [("arg1", "arg2")]
 
     async def test_student_unavailable_falls_back(self):
         """When student provider is unavailable, should fall back to native."""
@@ -117,8 +123,8 @@ class TestDungProviderConsumer:
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_from_context",
             return_value=["arg1"],
         ), patch(
-            "argumentation_analysis.orchestration.invoke_callables._generate_attacks_from_args",
-            return_value=[],
+            "argumentation_analysis.orchestration.invoke_callables._derive_dung_attacks",
+            new=AsyncMock(return_value=[]),
         ), patch(
             "argumentation_analysis.adapters.dung_student_provider.DungStudentProvider",
             return_value=mock_provider,
@@ -142,8 +148,8 @@ class TestDungProviderConsumer:
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_from_context",
             return_value=["arg1"],
         ), patch(
-            "argumentation_analysis.orchestration.invoke_callables._generate_attacks_from_args",
-            return_value=[],
+            "argumentation_analysis.orchestration.invoke_callables._derive_dung_attacks",
+            new=AsyncMock(return_value=[]),
         ):
             result = await _invoke_dung_extensions(
                 "Test argument",

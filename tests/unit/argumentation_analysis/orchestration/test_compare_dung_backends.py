@@ -14,6 +14,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, List
 
+import pytest
+
 from argumentation_analysis.orchestration.invoke_callables import (
     _compare_dung_backends,
     _default_student_dung_backend,
@@ -211,10 +213,16 @@ class TestStructure:
 # -- wiring into _invoke_dung_extensions (I5 PR2) ----------------------------
 
 
+@pytest.mark.usefixtures("dung_attacks_offline")
 class TestDungCompareWiring:
     """dung_mode="compare" routes _invoke_dung_extensions through the
     multi-backend comparison, surfacing agreement (never reconciled) without a
-    JVM — the real backends are monkeypatched to deterministic fakes."""
+    JVM — the real backends are monkeypatched to deterministic fakes.
+
+    ``dung_attacks_offline`` keeps the "no real LLM" claim of this module true:
+    since #1698 the axis derives its attack graph from the text through the
+    translator, so without the stub these fakes would be fed over the network
+    (#1591 family (a) — nothing here reads the derived graph)."""
 
     async def test_compare_mode_routes_to_comparison(self, monkeypatch):
         from argumentation_analysis.orchestration import invoke_callables as ic
