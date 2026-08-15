@@ -607,6 +607,7 @@ class TestRunConversationalAnalysis:
             reprompt_extractor=None,
             deadline=None,
             execution_path_recorder=None,
+            absorption_reprompt_limit=None,
         ):
             phase_names_seen.append(phase_name)
             return [

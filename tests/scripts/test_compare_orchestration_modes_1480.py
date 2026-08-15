@@ -1098,7 +1098,9 @@ class TestCBWallClockBudget1528:
                 mode="hierarchical_bridge", corpus_id=cid, success=True
             )
 
-        async def fake_conv(text, cid, max_wall_seconds=180.0):
+        async def fake_conv(
+            text, cid, max_wall_seconds=180.0, room_policy="phase_casting"
+        ):
             received["conversational"] = max_wall_seconds
             return mod.ModeResult(mode="conversational", corpus_id=cid, success=True)
 
