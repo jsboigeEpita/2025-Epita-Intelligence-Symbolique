@@ -327,6 +327,60 @@ class TestTheMarkerDoesNotCorruptItsReaders:
         ]
         assert designations[0]["state_fingerprint_after"] is not None
 
+    def test_the_snapshot_reader_does_not_inflate_either(self):
+        """#1765 — the trace has TWO readers, and this class walked one.
+
+        The class docstring says "a new record type is a new hop for **every**
+        reader", but only ``_deliberation_turn_count`` was flipped to the
+        allow-list. The same field name in ``get_state_snapshot(summarize=True)``
+        stayed on the exclusion list, so every absorption counted as a
+        conduction turn there. That copy is the one the agents actually read:
+        ``StateManagerPlugin.get_current_state_snapshot`` is a kernel function
+        whose ``summarize`` defaults to ``True``. The PM asking where it stood
+        in its turn budget was handed a number inflated by its own failed
+        designations — the very events #1751 exists to surface.
+        """
+        state = _state()
+        state.record_designation(agent="FormalAgent", motivation="m", trigger="initial")
+        assert state.get_state_snapshot(summarize=True)["deliberation_turn_count"] == 1
+
+        state.record_designation_unresolved(
+            requested_agent="InformalAgent", present_agents=PHASE_2_CASTING
+        )
+        state.record_designation_unresolved(
+            requested_agent="CounterAgent", present_agents=PHASE_2_CASTING
+        )
+        state.record_cap_breach(cap_kind="wall_clock", turn=1, detail="d")
+
+        assert (
+            state.get_state_snapshot(summarize=True)["deliberation_turn_count"] == 1
+        ), "the snapshot handed to the agents must not count absorptions as turns"
+
+    def test_the_two_readers_agree(self):
+        """One name, one calculation (#1765).
+
+        Pins the relation rather than each side separately: two surfaces of one
+        state that are allowed to drift are exactly how #1751 half-landed.
+        """
+        from argumentation_analysis.orchestration.conversational_orchestrator import (
+            _deliberation_turn_count,
+        )
+
+        state = _state()
+        state.record_designation(agent="FormalAgent", motivation="m", trigger="initial")
+        state.record_designation_unresolved(
+            requested_agent="CounterAgent", present_agents=PHASE_2_CASTING
+        )
+        state.record_designation(
+            agent="QualityAgent", motivation="m", trigger="synergy"
+        )
+        state.record_cap_breach(cap_kind="wall_clock", turn=2, detail="d")
+
+        snapshot_count = state.get_state_snapshot(summarize=True)[
+            "deliberation_turn_count"
+        ]
+        assert snapshot_count == _deliberation_turn_count(state) == 2
+
 
 class TestPhaseCastingDropIsVisible:
     """Scope item 3: a phase name absent from ``agent_by_name`` is dropped.

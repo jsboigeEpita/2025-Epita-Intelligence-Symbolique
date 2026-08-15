@@ -59,6 +59,26 @@ class DesignationRecord:
     delta_summary: Optional[str] = None
 
 
+def count_designation_turns(trace: Any) -> int:
+    """Number of genuine PM designations in a deliberation trace (#1765).
+
+    A :class:`DesignationRecord` carries **no** ``record_type`` (it is the
+    ``asdict`` of the dataclass); every non-designation entry declares one.
+    Counting by allow-list — "a designation is a record with no marker" —
+    instead of by exclusion list ("everything that is not a ``cap_breach``")
+    is what keeps this number honest when a marker type is added.
+
+    #1765: this is the single definition. #1751 flipped the orchestrator's
+    copy to the allow-list and left the state snapshot's copy on the exclusion
+    list, so the same field name reported two different numbers — and the
+    inflated one was the one handed to the agents (``get_current_state_snapshot``
+    defaults to ``summarize=True``). One name, one calculation, two callers.
+    """
+    return sum(
+        1 for r in trace or [] if isinstance(r, dict) and r.get("record_type") is None
+    )
+
+
 def record_unresolved_designation(
     state: Any,
     requested_agent: str,
@@ -397,12 +417,12 @@ class RhetoricalAnalysisState:
                 "next_agent_designated": self._next_agent_designated,
                 # CONV-C #1334: deliberation trace (count only in the summary;
                 # full records via the non-summarized snapshot / direct field).
-                # cap_breach markers are NOT designations — excluded from the
-                # count so the metric reflects PM conduction turns only.
-                "deliberation_turn_count": sum(
-                    1
-                    for r in getattr(self, "deliberation_trace", [])
-                    if r.get("record_type") != "cap_breach"
+                # #1765: allow-list, via the single definition. This snapshot is
+                # what ``get_current_state_snapshot`` hands the agents, so an
+                # exclusion list here made the PM read its own absorbed
+                # designations (#1751 markers) as conduction turns it had spent.
+                "deliberation_turn_count": count_designation_turns(
+                    getattr(self, "deliberation_trace", [])
                 ),
             }
         else:

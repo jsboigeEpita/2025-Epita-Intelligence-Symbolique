@@ -43,6 +43,7 @@ from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
     UnifiedAnalysisState,
+    count_designation_turns,
     record_unresolved_designation,
 )
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
@@ -1975,12 +1976,14 @@ def _deliberation_turn_count(state: Any) -> int:
     this number honest when a marker type is added: the previous form would
     have silently counted each ``designation_unresolved`` as one more
     deliberation turn, inflating the very metric #1751 exists to correct.
+
+    #1765: delegates to :func:`count_designation_turns`, the single definition.
+    #1751 flipped this reader and left the state snapshot's copy of the same
+    field name on the exclusion list — the trace has two readers, and only one
+    was walked. The ``getattr`` stays here: this reader is duck-typed (states
+    without a trace count zero rather than raising).
     """
-    return sum(
-        1
-        for r in getattr(state, "deliberation_trace", [])
-        if r.get("record_type") is None
-    )
+    return count_designation_turns(getattr(state, "deliberation_trace", []))
 
 
 def _resolve_phase_agents(
