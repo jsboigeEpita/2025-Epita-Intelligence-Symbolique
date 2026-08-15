@@ -464,6 +464,120 @@ AGENT_CONFIG = {
     },
 }
 
+# ---------------------------------------------------------------------------
+# #1760 — steering room policies. The PM's capability map names 8 specialists,
+# but phase_configs freezes rooms of 3-4: the PM designates real, wired agents
+# that are simply not in the room it sits in (#1751 made that observable;
+# this is the fix side). The three "voies" of the issue are switchable here so
+# the choice is settled by comparative measurement, not on paper.
+# ---------------------------------------------------------------------------
+ROOM_POLICY_PHASE_CASTING = "phase_casting"  # status quo — baseline to beat
+ROOM_POLICY_TRUTH = "truth"  # voie 1: PM prompt names the actual phase roster
+ROOM_POLICY_REPROMPT = "reprompt"  # voie 2: hand the floor back on absorption
+ROOM_POLICY_ALL_AGENTS = "all_agents"  # voie 3: the room IS the full roster
+
+_ROOM_POLICIES = (
+    ROOM_POLICY_PHASE_CASTING,
+    ROOM_POLICY_TRUTH,
+    ROOM_POLICY_REPROMPT,
+    ROOM_POLICY_ALL_AGENTS,
+)
+
+# #1760 voie 2: per-phase cap on absorption re-prompts. A PM that re-designates
+# the same absent agent must not turn the cap into a private debate loop.
+_ABSORPTION_REPROMPT_LIMIT = 2
+
+
+def _pm_room_section(present_agents: List[str]) -> str:
+    """Voie 1 (#1760): the room line appended to the PM instructions each phase.
+
+    Pure function so the DoD test can assert on the constructed prompt: it must
+    name EXACTLY the phase roster — every present agent, and no absent one.
+    """
+    names = ", ".join(present_agents)
+    return (
+        "\n\nSALLE ACTUELLE — agents presents dans cette phase : " + names + ".\n"
+        "Designate uniquement parmi eux : les autres specialistes de ta carte ne "
+        "sont PAS dans la piece pour cette phase, une designation hors salle ne "
+        "peut pas aboutir."
+    )
+
+
+def _pm_instructions_with_room(budget_turns: int, present_agents: List[str]) -> str:
+    """Voie 1 (#1760): PM instructions + the room truth for the current phase.
+
+    Rebuilt from the AGENT_CONFIG template each phase (single source of truth)
+    so the room section never accumulates across phases. The capability map of
+    8 stays (anti-pendule: amputating it to kill impossible designations would
+    restore the very steering loss the mandate condemns).
+    """
+    base = AGENT_CONFIG["ProjectManager"]["instructions"].format(
+        budget_turns=budget_turns
+    )
+    return base + _pm_room_section(present_agents)
+
+
+def _apply_room_truth_to_pm(
+    pm_agent: Optional[Any], present_agents: List[str], budget_turns: int
+) -> None:
+    """Voie 1 (#1760): tell the PM, at phase entry, who is actually in the room.
+
+    Mutates ``instructions`` (SK agents are Pydantic with
+    ``validate_assignment=True`` and not frozen, so assignment is allowed and
+    read at each invoke). No-op when the PM is not in the created roster.
+    """
+    if pm_agent is None:
+        return
+    pm_agent.instructions = _pm_instructions_with_room(budget_turns, present_agents)
+
+
+def _resolve_room_agents(
+    room_policy: str, phase_agents: List[Any], all_agents: List[Any]
+) -> List[Any]:
+    """Voie 3 (#1760): under ``all_agents`` the room is the full roster.
+
+    The phase casting still exists (initial prompts still steer the phase
+    focus) — what changes is who can be designated and take the floor.
+    """
+    if room_policy == ROOM_POLICY_ALL_AGENTS:
+        return list(all_agents)
+    return phase_agents
+
+
+def _absorption_feedback(requested_agent: str, present_agents: List[str]) -> str:
+    """Voie 2 (#1760): the message handed back to the PM on absorption."""
+    return (
+        f"Ta designation de '{requested_agent}' n'a pas abouti : cet agent n'est "
+        f"pas dans la salle de cette phase. Agents presents : "
+        f"{', '.join(present_agents)}. Re-designe parmi les presents via "
+        f"designate_next_agent(nom_exact) et pose-lui ta question, ou poursuis "
+        f"avec un agent present."
+    )
+
+
+def _unresolved_designation_markers(state: Any) -> List[Dict[str, Any]]:
+    """#1751 markers currently in the state's deliberation trace."""
+    return [
+        r
+        for r in getattr(state, "deliberation_trace", [])
+        if isinstance(r, dict) and r.get("record_type") == "designation_unresolved"
+    ]
+
+
+def _fresh_absorbed_designation(
+    state: Any, unresolved_before: int
+) -> Optional[Dict[str, Any]]:
+    """The absorption marker recorded since ``unresolved_before`` was counted.
+
+    Returns the newest marker when the count grew this turn, else ``None``.
+    Used by voie 2 to re-prompt the PM exactly when its designation was
+    absorbed — a stale marker from an earlier turn must not re-fire.
+    """
+    markers = _unresolved_designation_markers(state)
+    if len(markers) <= unresolved_before:
+        return None
+    return markers[-1]
+
 
 def create_conversational_agents(
     kernel: sk.Kernel,
@@ -581,6 +695,7 @@ async def run_conversational_analysis(
     max_total_turns: Optional[int] = None,
     max_wall_seconds: Optional[float] = None,
     render_restitution: bool = False,
+    room_policy: str = ROOM_POLICY_PHASE_CASTING,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -626,6 +741,17 @@ async def run_conversational_analysis(
             run the act-generation phases, so the acts are produced from the
             completed ``UnifiedAnalysisState`` (same renderer/acts as the
             pipeline path). Fail-loud-non-fatal: reporting never fails the run.
+        room_policy: #1760 — how the room the PM steers in relates to its
+            8-agent capability map. ``"phase_casting"`` (default) is the
+            status quo: the AgentGroupChat is built with the phase's hard-coded
+            casting alone and an off-room designation is absorbed (#1751
+            marker). ``"truth"`` appends the actual phase roster to the PM
+            instructions at each phase entry. ``"reprompt"`` hands the floor
+            back to the PM with the present roster when a designation is
+            absorbed (capped at ``_ABSORPTION_REPROMPT_LIMIT`` per phase).
+            ``"all_agents"`` builds the room with every created agent, so no
+            designation can be structurally impossible. The default stays the
+            baseline until the #1760 comparative measurement says otherwise.
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -660,6 +786,7 @@ async def run_conversational_analysis(
             max_total_turns=max_total_turns,
             max_wall_seconds=max_wall_seconds,
             render_restitution=render_restitution,
+            room_policy=room_policy,
         )
 
 
@@ -772,9 +899,22 @@ async def _run_conversational_analysis_inner(
     max_total_turns: Optional[int] = None,
     max_wall_seconds: Optional[float] = None,
     render_restitution: bool = False,
+    room_policy: str = ROOM_POLICY_PHASE_CASTING,
 ) -> Dict[str, Any]:
     """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
     start_time = time.time()
+
+    # #1760: a mistyped policy must fail loud, never silently run the baseline
+    # (anti-#1019 — an unknown value falling through to phase_casting would
+    # make a measurement row that claims to be a variant but is the control).
+    if room_policy not in _ROOM_POLICIES:
+        raise ValueError(
+            f"Unknown room_policy {room_policy!r}; expected one of "
+            f"{', '.join(_ROOM_POLICIES)}"
+        )
+    absorption_reprompt_limit = (
+        _ABSORPTION_REPROMPT_LIMIT if room_policy == ROOM_POLICY_REPROMPT else None
+    )
 
     # C1 #1500: wall-clock budget. Checked before each phase (coarse) and
     # threaded as an absolute deadline into _run_phase (per-turn, fine). On
@@ -1015,6 +1155,20 @@ async def _run_conversational_analysis_inner(
             logger.warning(f"No agents available for phase '{phase_name}', skipping")
             continue
 
+        # #1760: the room the AgentGroupChat is actually built with. Under
+        # ``all_agents`` it is the full created roster (voie 3); otherwise the
+        # phase casting (baseline / truth / reprompt all keep the casting).
+        room_agents = _resolve_room_agents(room_policy, phase_agents, all_agents)
+
+        # #1760 voie 1: at phase entry, the PM's prompt names exactly who is in
+        # the room — instead of the implicit "8" its capability map implies.
+        if room_policy == ROOM_POLICY_TRUTH:
+            _apply_room_truth_to_pm(
+                agent_by_name.get("ProjectManager"),
+                [a.name for a in room_agents],
+                max_total_turns,
+            )
+
         # Per-phase turn limit (falls back to global max_turns_per_phase),
         # further clamped to the remaining pipeline-global budget (§6).
         phase_max_turns = phase_cfg.get("max_turns", max_turns_per_phase)
@@ -1033,7 +1187,7 @@ async def _run_conversational_analysis_inner(
             trace.begin_phase(phase_name)
 
         phase_log = await _run_phase(
-            phase_agents,
+            room_agents,
             phase_cfg["initial_prompt"],
             max_turns=effective_max_turns,
             phase_name=phase_name,
@@ -1043,6 +1197,7 @@ async def _run_conversational_analysis_inner(
             reprompt_extractor=reprompt_extractor,
             deadline=wall.deadline,
             execution_path_recorder=phase_execution_paths,
+            absorption_reprompt_limit=absorption_reprompt_limit,
         )
         conversation_log.extend(phase_log)
 
@@ -1178,8 +1333,19 @@ async def _run_conversational_analysis_inner(
                 if reanalysis_agents:
                     reanalysis_added = True
                     phase_name = reanalysis_cfg["name"]
+                    # #1760: same room treatment as the macro-phases — the
+                    # conditional 4th room is a room too.
+                    reanalysis_room = _resolve_room_agents(
+                        room_policy, reanalysis_agents, all_agents
+                    )
+                    if room_policy == ROOM_POLICY_TRUTH:
+                        _apply_room_truth_to_pm(
+                            agent_by_name.get("ProjectManager"),
+                            [a.name for a in reanalysis_room],
+                            max_total_turns,
+                        )
                     logger.info(
-                        f"=== Phase: {phase_name} ({len(reanalysis_agents)} agents, "
+                        f"=== Phase: {phase_name} ({len(reanalysis_room)} agents, "
                         f"max {reanalysis_cfg['max_turns']} turns) ==="
                     )
 
@@ -1197,7 +1363,7 @@ async def _run_conversational_analysis_inner(
                         trace.begin_phase(phase_name)
 
                     phase_log = await _run_phase(
-                        reanalysis_agents,
+                        reanalysis_room,
                         reanalysis_cfg["initial_prompt"],
                         max_turns=reanalysis_effective,
                         phase_name=phase_name,
@@ -1207,6 +1373,7 @@ async def _run_conversational_analysis_inner(
                         reprompt_extractor=reprompt_extractor,
                         deadline=wall.deadline,
                         execution_path_recorder=phase_execution_paths,
+                        absorption_reprompt_limit=absorption_reprompt_limit,
                     )
                     conversation_log.extend(phase_log)
 
@@ -1999,6 +2166,7 @@ async def _run_phase(
     reprompt_extractor=None,
     deadline: Optional[float] = None,
     execution_path_recorder: Optional[List[str]] = None,
+    absorption_reprompt_limit: Optional[int] = None,
 ) -> List[Dict[str, Any]]:
     """Run a single conversational phase with a set of agents.
 
@@ -2021,6 +2189,15 @@ async def _run_phase(
     source (here), never deduced from metrics. The path is NOT added to the
     returned message list: polluting it would break C1 contracts that count on
     its exact length/content (``test_deadline_in_past_breaks_before_first_turn``).
+
+    ``absorption_reprompt_limit`` (#1760 voie 2): when set, a turn that opened
+    with an absorbed designation (a fresh ``designation_unresolved`` marker
+    recorded by the selection strategy, whose fallback speaker — the first
+    agent of the room — then took the floor) is followed by ONE re-prompt of
+    that fallback speaker carrying the present roster, up to ``limit`` times
+    per phase. Uses the growth re-prompt mechanism (direct ``agent.invoke`` on
+    a deep-copied history — ``chat.add_chat_message`` is forbidden while the
+    chat is active). ``None`` disables it (every policy except ``reprompt``).
     """
     messages: List[Dict[str, Any]] = []
     total_re_prompts = 0
@@ -2108,6 +2285,12 @@ async def _run_phase(
         # turn; each turn's delta is measured against the previous turn's state
         # (mirrors the round-robin path's fp_before/fp_after pattern).
         fp_before_tour = _get_growth_fingerprint(state)
+        # #1760 voie 2: baseline the unresolved-designation markers before the
+        # first turn, and remember the default speaker (the first agent of the
+        # room) — that is who an absorbed designation falls back to.
+        unresolved_before_turn = len(_unresolved_designation_markers(state))
+        default_speaker_name = getattr(agents[0], "name", None) if agents else None
+        absorption_re_prompts = 0
         # CB #1528 item 5: bound EACH __anext__ of the invocation to the
         # remaining budget. A function-calling agent chains ~12 LLM round-trips
         # inside a single chat.invoke() before yielding (measured R716/R717) —
@@ -2136,6 +2319,74 @@ async def _run_phase(
             # open). Pairs each motivated designation with the state delta it
             # produced, without a new measurement path.
             _backfill_designation_if_present(state, msg_entry["agent"])
+
+            # #1760 voie 2: if this turn opened with an absorbed designation
+            # (fresh marker recorded by the selection strategy, whose fallback
+            # speaker then took the floor), hand the floor BACK to the PM with
+            # the present roster. Same mechanism as the growth re-prompt below
+            # (direct agent.invoke on a deep-copied history). Capped per phase;
+            # a marker that is not fresh must not re-fire.
+            if absorption_reprompt_limit is not None:
+                fresh = _fresh_absorbed_designation(state, unresolved_before_turn)
+                if (
+                    fresh is not None
+                    and msg_entry["agent"] == default_speaker_name
+                    and absorption_re_prompts < absorption_reprompt_limit
+                ):
+                    if deadline is not None and time.time() >= deadline:
+                        logger.info(
+                            f"  [{phase_name}] Wall-clock deadline atteinte "
+                            f"avant l'absorption re-prompt — annulé."
+                        )
+                    else:
+                        feedback = _absorption_feedback(
+                            str(fresh.get("requested_agent", "?")),
+                            [a.name for a in agents],
+                        )
+                        absorbing_agent = _find_agent_by_name(
+                            agents, str(msg_entry["agent"])
+                        )
+                        if absorbing_agent is not None:
+                            abs_history = chat.history.model_copy(deep=True)
+                            abs_history.add_user_message(feedback)
+                            abs_content = ""
+                            _bump_sk_budget()
+                            try:
+                                async for abs_response in absorbing_agent.invoke(
+                                    abs_history  # type: ignore[arg-type]
+                                ):
+                                    if hasattr(abs_response, "content"):
+                                        abs_content += str(abs_response.content)
+                                    elif hasattr(abs_response, "value"):
+                                        abs_content += str(abs_response.value)
+                                    else:
+                                        abs_content += str(abs_response)
+                            except Exception as abs_exc:
+                                logger.warning(
+                                    f"  [{phase_name}] absorption re-prompt failed "
+                                    f"({type(abs_exc).__name__}: {abs_exc}); "
+                                    f"skipping remaining absorption re-prompts "
+                                    f"for this phase."
+                                )
+                                absorption_re_prompts = absorption_reprompt_limit
+                            if abs_content:
+                                messages.append(
+                                    {
+                                        "phase": phase_name,
+                                        "turn": turn,
+                                        "agent": msg_entry["agent"],
+                                        "content": (
+                                            abs_content[:500]
+                                            if abs_content
+                                            else "(empty)"
+                                        ),
+                                        "type": "absorption_reprompt",
+                                        "requested_agent": fresh.get("requested_agent"),
+                                        "path": "agent_group_chat",
+                                    }
+                                )
+                            absorption_re_prompts += 1
+                unresolved_before_turn = len(_unresolved_designation_markers(state))
 
             # Convergence check
             if _check_convergence(state, phase_name, messages):
