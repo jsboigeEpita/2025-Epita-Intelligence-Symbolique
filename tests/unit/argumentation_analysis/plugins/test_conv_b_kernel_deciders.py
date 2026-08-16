@@ -31,7 +31,7 @@ agent's invocation/scheduling rather than to a dead cable.
 """
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
 
 import pytest
 
@@ -162,3 +162,75 @@ class TestConvBKernelDeciders:
         ), "Dung decider unreachable (JVM short-circuit)"
         # The repaired contract returns {semantics, extensions, statistics}.
         assert "extensions" in result, f"Dung decider produced no extensions: {result}"
+
+
+class TestJvmRequiredSchemaIntegrity:
+    """#1768 — ``functools.wraps`` on ``@_jvm_required``: published schemas.
+
+    #1732 (PR #1767) measured that the 20 ``@_jvm_required`` kernel_functions
+    advertised an in-invocable schema: SK introspects
+    ``wrapper(self, *args, **kwargs)`` and publishes ``[args, kwargs] (required)``
+    instead of the real ``input: str``. The manual ``__name__``/``__doc__`` copies
+    made the plugin look intact in every inventory — that is precisely how the
+    defect survived review — so the controls below assert on the INTROSPECTED
+    PUBLISHED SIGNATURE, never on ``__name__``.
+
+    Red-before-fix by degenerate substitution: remove ``functools.wraps`` from
+    ``_jvm_required`` and these tests fail (the 20 decorated functions re-publish
+    args/kwargs; ``solve_sat``, the only undecorated one, stays intact as the
+    natural control group).
+
+    JVM-free by construction: only SK metadata is introspected, no handler runs.
+    """
+
+    @pytest.fixture(scope="class")
+    def kernel_plugin(self) -> "Any":
+        from semantic_kernel.functions import KernelPlugin
+
+        return KernelPlugin.from_object(
+            plugin_name="tweety_logic", plugin_instance=TweetyLogicPlugin()
+        )
+
+    @staticmethod
+    def _published_params(kernel_plugin: "Any") -> "Dict[str, List[Tuple[str, bool]]]":
+        return {
+            name: [(p.name, p.is_required) for p in fn.parameters]
+            for name, fn in kernel_plugin.functions.items()
+        }
+
+    def test_no_kernel_function_publishes_args_kwargs(
+        self, kernel_plugin: "Any"
+    ) -> None:
+        schemas = self._published_params(kernel_plugin)
+        trapped = {
+            name: params
+            for name, params in schemas.items()
+            if any(p[0] in ("args", "kwargs") for p in params)
+        }
+        assert not trapped, (
+            f"{len(trapped)} kernel_function(s) publish the *args/**kwargs "
+            f"wrapper signature instead of their real one (#1768 regression — "
+            f"functools.wraps missing or bypassed on _jvm_required): "
+            f"{sorted(trapped)}"
+        )
+
+    def test_every_kernel_function_publishes_input(self, kernel_plugin: "Any") -> None:
+        schemas = self._published_params(kernel_plugin)
+        bad = {n: p for n, p in schemas.items() if p != [("input", True)]}
+        assert not bad, (
+            "every kernel_function must publish its real required `input` "
+            f"parameter (expected [('input', True)]), got deviations: {bad}"
+        )
+
+    def test_solve_sat_control_signature_intact(self, kernel_plugin: "Any") -> None:
+        """``solve_sat`` is the only function WITHOUT ``@_jvm_required`` — the
+        témoin from #1732. It was intact before the fix and must remain so."""
+        schemas = self._published_params(kernel_plugin)
+        assert schemas.get("solve_sat") == [("input", True)]
+
+    def test_decorated_wrapper_exposes_wrapped(self) -> None:
+        """``functools.wraps`` sets ``__wrapped__`` so introspection (SK,
+        inspect.signature) reaches the real function through the wrapper."""
+        assert hasattr(
+            TweetyLogicPlugin.analyze_aspic, "__wrapped__"
+        ), "_jvm_required wrapper must expose __wrapped__ (functools.wraps)"
