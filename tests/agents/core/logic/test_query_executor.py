@@ -69,7 +69,8 @@ class TestQueryExecutor:
 
                 # Configurer les mocks
                 self.mock_tweety_bridge = self.query_executor._tweety_bridge
-                self.mock_tweety_bridge.is_jvm_ready.return_value = True
+                # #1773: la sonde JVM vit sur bridge.initializer (#1333)
+                self.mock_tweety_bridge.initializer.is_jvm_ready.return_value = True
 
                 # On mock les handlers directement sur l'instance du bridge
                 self.mock_tweety_bridge.pl_handler = MagicMock()
@@ -89,12 +90,12 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_jvm_not_ready(self):
         """Test de l'exécution d'une requête lorsque la JVM n'est pas prête."""
-        self.mock_tweety_bridge.is_jvm_ready.return_value = False
+        self.mock_tweety_bridge.initializer.is_jvm_ready.return_value = False
 
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
 
-        self.mock_tweety_bridge.is_jvm_ready.assert_called_once()
+        self.mock_tweety_bridge.initializer.is_jvm_ready.assert_called_once()
 
         assert result is None
         assert "FUNC_ERROR" in message
@@ -102,18 +103,14 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_propositional_accepted(self):
         """Test de l'exécution d'une requête propositionnelle acceptée."""
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.return_value = (
-            True,
-            "OK",
-        )
+        # #1773: le validateur vit sur TweetyBridge (retour booléen simple)
+        self.mock_tweety_bridge.validate_pl_formula.return_value = True
         self.mock_tweety_bridge.pl_handler.pl_query.return_value = True
 
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
 
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.assert_called_once_with(
-            "a"
-        )
+        self.mock_tweety_bridge.validate_pl_formula.assert_called_once_with("a")
         self.mock_tweety_bridge.pl_handler.pl_query.assert_called_once_with(
             belief_set.content, "a"
         )
@@ -124,18 +121,13 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_propositional_rejected(self):
         """Test de l'exécution d'une requête propositionnelle rejetée."""
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.return_value = (
-            True,
-            "OK",
-        )
+        self.mock_tweety_bridge.validate_pl_formula.return_value = True
         self.mock_tweety_bridge.pl_handler.pl_query.return_value = False
 
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
 
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.assert_called_once_with(
-            "a"
-        )
+        self.mock_tweety_bridge.validate_pl_formula.assert_called_once_with("a")
         self.mock_tweety_bridge.pl_handler.pl_query.assert_called_once_with(
             belief_set.content, "a"
         )
@@ -146,10 +138,7 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_propositional_error(self):
         """Test de l'exécution d'une requête propositionnelle avec erreur."""
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.return_value = (
-            True,
-            "OK",
-        )
+        self.mock_tweety_bridge.validate_pl_formula.return_value = True
         self.mock_tweety_bridge.pl_handler.pl_query.return_value = (
             "FUNC_ERROR: Erreur de syntaxe"
         )
@@ -157,9 +146,7 @@ class TestQueryExecutor:
         belief_set = PropositionalBeliefSet("a => b")
         result, message = self.query_executor.execute_query(belief_set, "a")
 
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.assert_called_once_with(
-            "a"
-        )
+        self.mock_tweety_bridge.validate_pl_formula.assert_called_once_with("a")
         self.mock_tweety_bridge.pl_handler.pl_query.assert_called_once_with(
             belief_set.content, "a"
         )
@@ -223,17 +210,17 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_queries(self):
         """Test de l'exécution de plusieurs requêtes."""
-        self.mock_tweety_bridge.pl_handler.validate_pl_formula.side_effect = [
-            (True, "OK"),
-            (True, "OK"),
-            (False, "Syntax Error in c"),  # Simule un échec de validation
+        self.mock_tweety_bridge.validate_pl_formula.side_effect = [
+            True,
+            True,
+            False,  # Simule un échec de validation
         ]
         self.mock_tweety_bridge.pl_handler.pl_query.side_effect = [True, False]
 
         belief_set = PropositionalBeliefSet("a => b")
         results = self.query_executor.execute_queries(belief_set, ["a", "b", "c"])
 
-        assert self.mock_tweety_bridge.pl_handler.validate_pl_formula.call_count == 3
+        assert self.mock_tweety_bridge.validate_pl_formula.call_count == 3
         assert self.mock_tweety_bridge.pl_handler.pl_query.call_count == 2
 
         assert len(results) == 3
@@ -251,4 +238,4 @@ class TestQueryExecutor:
         query3, result3, message3 = results[2]
         assert query3 == "c"
         assert result3 is None
-        assert message3 == "FUNC_ERROR: Requête invalide: Syntax Error in c"
+        assert message3 == "FUNC_ERROR: Requête invalide: c"
