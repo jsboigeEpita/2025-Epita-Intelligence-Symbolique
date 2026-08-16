@@ -13,6 +13,7 @@ Gracefully handles JVM unavailability (returns error message instead of crashing
 """
 
 import asyncio
+import functools
 import json
 import logging
 from typing import Optional
@@ -61,6 +62,7 @@ def _check_jvm() -> bool:
 def _jvm_required(func):
     """Decorator that checks JVM availability before calling handler."""
 
+    @functools.wraps(func)
     def wrapper(self, *args, **kwargs):
         if not _check_jvm():
             return json.dumps(
@@ -71,8 +73,6 @@ def _jvm_required(func):
             )
         return func(self, *args, **kwargs)
 
-    wrapper.__name__ = func.__name__
-    wrapper.__doc__ = func.__doc__
     return wrapper
 
 
