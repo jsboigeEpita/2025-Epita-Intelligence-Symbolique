@@ -53,7 +53,10 @@ class QueryExecutor:
         )
 
         # Vérifier si la JVM est prête
-        if not self._tweety_bridge.is_jvm_ready():
+        # CONV-B #1333 / #1773: ``is_jvm_ready()`` vit sur TweetyInitializer,
+        # pas sur TweetyBridge — l'ancienne forme levait AttributeError sur
+        # TOUTE exécution de execute_query.
+        if not self._tweety_bridge.initializer.is_jvm_ready():
             error_msg = "JVM non prête ou composants Tweety non chargés"
             self._logger.error(error_msg)
             return None, f"FUNC_ERROR: {error_msg}"
@@ -114,15 +117,13 @@ class QueryExecutor:
         """
         try:
             # Valider la requête
-            (
-                is_valid,
-                validation_msg,
-            ) = self._tweety_bridge.pl_handler.validate_pl_formula(query)
+            # #1773 constat 3 (frère): ``validate_pl_formula`` vit sur
+            # TweetyBridge (retour booléen simple) — PLHandler ne l'expose
+            # pas. L'ancien appel dépaquetait ce bool comme un tuple.
+            is_valid = self._tweety_bridge.validate_pl_formula(query)
             if not is_valid:
-                self._logger.error(
-                    f"Requête propositionnelle invalide: {validation_msg}"
-                )
-                return None, f"FUNC_ERROR: Requête invalide: {validation_msg}"
+                self._logger.error(f"Requête propositionnelle invalide: {query}")
+                return None, f"FUNC_ERROR: Requête invalide: {query}"
 
             # Exécuter la requête
             result = self._tweety_bridge.pl_handler.pl_query(belief_set.content, query)

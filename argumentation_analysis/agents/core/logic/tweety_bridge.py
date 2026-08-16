@@ -475,9 +475,13 @@ class TweetyBridge:
     def validate_pl_formula(self, formula: str) -> bool:
         """Valide la syntaxe d'une formule de logique propositionnelle en tentant de la parser."""
         try:
-            # La validation se fait en tentant un parsing. Si ça ne lève pas d'erreur, c'est valide.
-            self.pl_handler.parse_pl_formula(formula)
-            return True
+            # #1773 constat 3 : ``parse_pl_formula`` signale l'échec de deux
+            # façons — ``raise ValueError`` (parse Java levé) et ``return None``
+            # (rejet sanitizer / entrée non exploitable). Ne tester que
+            # l'exception transformait tout ``None`` en verdict ``True`` :
+            # le validateur était toujours-vrai sur la moitié des chemins.
+            parsed = self.pl_handler.parse_pl_formula(formula)
+            return parsed is not None
         except ValueError:
             return False
 

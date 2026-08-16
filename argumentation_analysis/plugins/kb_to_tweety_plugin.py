@@ -15,6 +15,8 @@ from typing import Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 from semantic_kernel.functions import kernel_function
 
+from argumentation_analysis.plugins.kernel_input import parse_kernel_json_object
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -128,16 +130,28 @@ def _build_modal_formula(belief_text: str) -> str:
 def _jvm_available() -> bool:
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
-        return TweetyBridge.get_instance().is_jvm_ready()
-    except Exception:
+    except ImportError:
+        return False
+    # CONV-B #1333 / #1773: ``is_jvm_ready()`` lives on TweetyInitializer
+    # (``bridge.initializer``), NOT on TweetyBridge. The previous bare
+    # ``except Exception`` swallowed the AttributeError, so this probe ALWAYS
+    # returned False and the branches below fabricated ``True`` verdicts
+    # ("skipped validation"). Only genuine unavailability (module absent,
+    # JVM init failed) may return False — a broken probe must raise.
+    try:
+        return TweetyBridge.get_instance().initializer.is_jvm_ready()
+    except RuntimeError:
         return False
 
 
 def _validate_pl(formula: str) -> Tuple[bool, str]:
     if not _jvm_available():
-        return True, "JVM unavailable — skipped validation"
+        # #1773 constat 2: pas de validation => pas de verdict. Rendre True
+        # ici fabriquait un is_valid:true sans aucun calcul.
+        return False, "JVM unavailable — validation not performed"
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge.get_instance()
         valid = bridge.validate_pl_formula(formula)
         return valid, "Valid" if valid else "Invalid PL syntax"
@@ -147,9 +161,10 @@ def _validate_pl(formula: str) -> Tuple[bool, str]:
 
 def _validate_fol(formula: str, belief_set: str = "") -> Tuple[bool, str]:
     if not _jvm_available():
-        return True, "JVM unavailable — skipped validation"
+        return False, "JVM unavailable — validation not performed"
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge.get_instance()
         is_valid, msg = bridge.check_consistency(
             belief_set or formula, logic_type="fol"
@@ -161,9 +176,10 @@ def _validate_fol(formula: str, belief_set: str = "") -> Tuple[bool, str]:
 
 def _validate_modal(formula: str, belief_set: str = "") -> Tuple[bool, str]:
     if not _jvm_available():
-        return True, "JVM unavailable — skipped validation"
+        return False, "JVM unavailable — validation not performed"
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
         bridge = TweetyBridge.get_instance()
         is_valid, msg = bridge.check_consistency(
             belief_set or formula, logic_type="modal_k"
@@ -229,7 +245,10 @@ async def _translate_with_retry(
 
         logger.debug(
             "Attempt %d/%d failed for '%s': %s",
-            attempt, max_retries, belief_text[:50], msg,
+            attempt,
+            max_retries,
+            belief_text[:50],
+            msg,
         )
 
     # All retries exhausted — return last attempt
@@ -271,10 +290,13 @@ class KBToTweetyPlugin:
     )
     async def translate_to_tweety(self, input: str) -> str:
         """Translate a KB entry to Tweety formula with retry."""
-        try:
-            params = json.loads(input) if isinstance(input, str) else input
-        except (json.JSONDecodeError, TypeError):
-            return json.dumps({"error": "Invalid JSON input"})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["text", "logic_type", "signature"],
+            required_keys=["text"],
+        )
+        if params is None:
+            return json.dumps(err)
 
         text = params.get("text", "")
         logic_type = params.get("logic_type", "pl").lower()
@@ -298,10 +320,13 @@ class KBToTweetyPlugin:
     )
     async def translate_batch_to_tweety(self, input: str) -> str:
         """Translate a batch of KB entries to Tweety formulas."""
-        try:
-            params = json.loads(input) if isinstance(input, str) else input
-        except (json.JSONDecodeError, TypeError):
-            return json.dumps({"error": "Invalid JSON input"})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["beliefs", "logic_type", "signature"],
+            required_keys=["beliefs"],
+        )
+        if params is None:
+            return json.dumps(err)
 
         beliefs = params.get("beliefs", [])
         logic_type = params.get("logic_type", "pl").lower()
@@ -311,6 +336,7 @@ class KBToTweetyPlugin:
             return json.dumps({"error": "No beliefs provided", "translations": []})
 
         import asyncio
+
         tasks = [
             _translate_with_retry(b, logic_type, max_retries=3, signature=signature)
             for b in beliefs
@@ -325,12 +351,14 @@ class KBToTweetyPlugin:
                 translations.append(r.model_dump())
 
         valid_count = sum(1 for t in translations if t.get("is_valid"))
-        return json.dumps({
-            "translations": translations,
-            "total": len(translations),
-            "valid": valid_count,
-            "pass_rate": valid_count / len(translations) if translations else 0.0,
-        })
+        return json.dumps(
+            {
+                "translations": translations,
+                "total": len(translations),
+                "valid": valid_count,
+                "pass_rate": valid_count / len(translations) if translations else 0.0,
+            }
+        )
 
     @kernel_function(
         name="translate_dung",
@@ -342,10 +370,11 @@ class KBToTweetyPlugin:
     )
     async def translate_dung(self, input: str) -> str:
         """Build a Dung AF from KB arguments and attacks."""
-        try:
-            params = json.loads(input) if isinstance(input, str) else input
-        except (json.JSONDecodeError, TypeError):
-            return json.dumps({"error": "Invalid JSON input"})
+        params, err = parse_kernel_json_object(
+            input, expected_keys=["arguments", "attacks"]
+        )
+        if params is None:
+            return json.dumps(err)
 
         arguments = params.get("arguments", [])
         attacks = params.get("attacks", [])
@@ -353,9 +382,12 @@ class KBToTweetyPlugin:
         # Validate attacks reference existing arguments
         arg_set = set(arguments)
         valid_attacks = [
-            a for a in attacks
-            if isinstance(a, (list, tuple)) and len(a) >= 2
-            and a[0] in arg_set and a[1] in arg_set
+            a
+            for a in attacks
+            if isinstance(a, (list, tuple))
+            and len(a) >= 2
+            and a[0] in arg_set
+            and a[1] in arg_set
         ]
 
         result = DungTranslationResult(
@@ -377,10 +409,16 @@ class KBToTweetyPlugin:
     )
     async def translate_aspic(self, input: str) -> str:
         """Build an ASPIC+ argumentation system from KB."""
-        try:
-            params = json.loads(input) if isinstance(input, str) else input
-        except (json.JSONDecodeError, TypeError):
-            return json.dumps({"error": "Invalid JSON input"})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=[
+                "strict_rules",
+                "defeasible_rules",
+                "ordinary_premises",
+            ],
+        )
+        if params is None:
+            return json.dumps(err)
 
         strict_rules = params.get("strict_rules", [])
         defeasible_rules = params.get("defeasible_rules", [])
@@ -408,10 +446,11 @@ class KBToTweetyPlugin:
         if state is None:
             return json.dumps({"error": "No state provided"})
 
-        try:
-            params = json.loads(input) if isinstance(input, str) else input
-        except (json.JSONDecodeError, TypeError):
-            return json.dumps({"error": "Invalid JSON input"})
+        params, err = parse_kernel_json_object(
+            input, expected_keys=["formulas"], required_keys=["formulas"]
+        )
+        if params is None:
+            return json.dumps(err)
 
         formulas = params.get("formulas", [])
         belief_ids = []
@@ -420,11 +459,17 @@ class KBToTweetyPlugin:
         if callable(add_bs):
             for f in formulas:
                 formula = f.get("formula", "") if isinstance(f, dict) else str(f)
-                logic_type = f.get("logic_type", "propositional") if isinstance(f, dict) else "propositional"
+                logic_type = (
+                    f.get("logic_type", "propositional")
+                    if isinstance(f, dict)
+                    else "propositional"
+                )
                 if formula:
                     belief_ids.append(add_bs(logic_type, formula))
 
-        return json.dumps({
-            "formulas_written": len(belief_ids),
-            "belief_ids": belief_ids,
-        })
+        return json.dumps(
+            {
+                "formulas_written": len(belief_ids),
+                "belief_ids": belief_ids,
+            }
+        )

@@ -70,17 +70,23 @@ class FOLLogicAgent:
             self._sk_agent = None
 
         # Initialiser TweetyBridge (réel ou dégradé)
-        self._tweety_bridge = None
+        self._tweety_bridge: Optional[Any] = None
         self._init_tweety_bridge()
 
     def _init_tweety_bridge(self):
         """Initialise TweetyBridge (réel si possible, sinon mode dégradé)."""
         try:
-            # Essayer d'importer et initialiser le vrai TweetyBridge
-            from ....bridges.tweety_bridge import TweetyBridge
+            # CONV-B #1333 / #1773: l'ancien import pointait vers
+            # ``argumentation_analysis.bridges.tweety_bridge`` (module
+            # inexistant) — ImportError permanent, donc mode dégradé à
+            # TOUTES les exécutions, sans que la JVM soit jamais consultée.
+            # Le vrai module vit dans agents/core/logic/.
+            from argumentation_analysis.agents.core.logic.tweety_bridge import (
+                TweetyBridge,
+            )
 
             self._tweety_bridge = TweetyBridge()
-            if not self._tweety_bridge.is_jvm_ready():
+            if not self._tweety_bridge.initializer.is_jvm_ready():
                 self.logger.warning("JVM TweetyBridge non prête, mode dégradé activé")
                 self._tweety_bridge = None
         except Exception as e:
