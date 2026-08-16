@@ -62,7 +62,9 @@ class TestInvokeDungExtensions:
 
     @pytest.mark.asyncio
     async def test_generates_attacks_from_fallacies(self):
-        """Dung function uses _generate_attacks_from_args for cross-KB."""
+        """Dung synthetic path: _generate_attacks_from_args fires when the
+        translator yields NO answer (#1698 genuine-first: caller > translator
+        > synthetic — a translator failure keeps the pre-#1698 behaviour)."""
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_dung_extensions,
         )
@@ -102,7 +104,15 @@ class TestInvokeDungExtensions:
                 "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
             ) as mock_init:
                 mock_init.return_value = MagicMock()
-                result = await _invoke_dung_extensions("test text", context)
+                # #1698: no answer from the translator (translator_failed) —
+                # the synthetic producer stands. An ARBITRATED answer would
+                # replace it (see test_dung_translator_wiring_1698.py).
+                with patch(
+                    "argumentation_analysis.orchestration.structured_arg_translator."
+                    "translate_to_dung_attacks",
+                    side_effect=RuntimeError("no answer"),
+                ):
+                    result = await _invoke_dung_extensions("test text", context)
 
         # Attacks should have been generated from the fallacy
         call_args = mock_handler.analyze_multi_semantics.call_args

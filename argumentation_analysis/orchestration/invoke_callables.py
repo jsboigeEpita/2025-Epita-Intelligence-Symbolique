@@ -3244,6 +3244,58 @@ def _generate_attacks_from_args(
     return attacks
 
 
+async def _dung_attacks_genuine_first(
+    input_text: str,
+    arguments: List[str],
+    context: Dict[str, Any],
+    capability: str,
+) -> List[List[str]]:
+    """Derive a Dung-family attack graph genuine-first (#1698).
+
+    Same contract as the five id-validated translator wirings: a caller who
+    supplies genuine attacks (``context["attacks"]``) is never overridden.
+    Otherwise the sixth translator (:func:`translate_to_dung_attacks`) derives
+    binary attacks from the text, validated so BOTH endpoints are inventory
+    members — ``BOTH_in`` by construction, no fabricated node. When the
+    translator arbitrated and found nothing (``no_genuine_relations``), the
+    graph is EMPTY (#1629 soustraction, same as SetAF/weighted): the synthetic
+    :func:`_generate_attacks_from_args` cites fabricated sources
+    (``fallacy_*`` / ``CA:``) that the handler drops at its inventory guard,
+    so running it after an arbitration would substitute an inert echo for the
+    arbitration's answer — and mixing producers in one list would make every
+    edge unattributable. The synthetic producer stands ONLY when no answer was
+    obtained (``translator_failed`` / ``translator_unconfigured``), preserving
+    the pre-#1698 behaviour of a caller-less, translator-less run.
+    """
+    existing = context.get("attacks")
+    if existing:
+        return existing
+    try:
+        from argumentation_analysis.orchestration.structured_arg_translator import (
+            translate_to_dung_attacks,
+        )
+
+        outcome = await translate_to_dung_attacks(input_text, arguments)
+    except Exception as e:
+        logger.warning(
+            "%s: Dung translator raised (%s) — translator_failed, synthetic "
+            "producer stands.",
+            capability,
+            type(e).__name__,
+        )
+        _propagate_structured_arg_cause(
+            context, capability, "translator_failed", type(e).__name__
+        )
+        return _generate_attacks_from_args(arguments, context)
+    _propagate_structured_arg_cause(context, capability, outcome.cause, outcome.error)
+    if outcome.relations:
+        context["attacks"] = outcome.relations
+        return outcome.relations
+    if outcome.cause == "no_genuine_relations":
+        return []
+    return _generate_attacks_from_args(arguments, context)
+
+
 # --- Input-shaping helpers for dormant Dung-family reasoners (#1169 W1) ---
 #
 # These map spectacular's canonical context (arguments: List[str],
@@ -4315,7 +4367,10 @@ async def _invoke_probabilistic(
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    # Genuine-first (#1698): caller > id-validated translator > synthetic.
+    attacks = await _dung_attacks_genuine_first(
+        input_text, args, context, "probabilistic_argumentation"
+    )
     probs = context.get("probabilities") or {a: 0.5 for a in args}
 
     try:
@@ -4733,7 +4788,10 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    # Genuine-first (#1698): caller > id-validated translator > synthetic.
+    attacks = await _dung_attacks_genuine_first(
+        input_text, args, context, "social_argumentation"
+    )
     votes = context.get("votes", {})
     if votes:
         votes = {k: tuple(v) if isinstance(v, list) else v for k, v in votes.items()}
@@ -4806,7 +4864,10 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     args = context.get("arguments") or _extract_arguments_from_context(
         input_text, context
     )
-    attacks = context.get("attacks") or _generate_attacks_from_args(args, context)
+    # Genuine-first (#1698): caller > id-validated translator > synthetic.
+    attacks = await _dung_attacks_genuine_first(
+        input_text, args, context, "epistemic_argumentation"
+    )
     # EAF expects Dict[agent, List[arg]] beliefs, NOT float probabilities.
     # Shape/validate; None lets the handler default to "all believed" (valid
     # non-fabricated baseline, #1019).
@@ -7586,8 +7647,11 @@ async def _invoke_dung_extensions(
     # 1. Extract arguments from upstream phases
     arguments = _extract_arguments_from_context(input_text, context)
 
-    # 2. Build attack relations from fallacies and counter-arguments
-    attacks = _generate_attacks_from_args(arguments, context)
+    # 2. Build attack relations genuine-first: caller > translator > synthetic
+    # (#1698 — the four orphan Dung-family axes get the sixth translator).
+    attacks = await _dung_attacks_genuine_first(
+        input_text, arguments, context, "dung_extensions"
+    )
 
     # I5 #1430: compare mode — run every available backend on the same AF and
     # surface agreement / disagreement (never auto-reconciled). Short-circuits

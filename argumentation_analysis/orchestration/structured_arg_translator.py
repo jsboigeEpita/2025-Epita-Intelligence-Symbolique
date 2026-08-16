@@ -278,6 +278,22 @@ async def _llm_extract_relations(
             '{"attacks": [{"source": "argN", "target": "argM", "weight": 0.8, '
             '"rationale": "one short sentence"}]}'
         )
+    elif relation_kind == "dung_attacks":
+        task = (
+            "Identify ATTACKS among these arguments in the sense of Dung's "
+            "abstract argumentation: an attack is a pair (source, target) where "
+            "the source argument, taken ALONE, gives a reason AGAINST the target "
+            "argument — rebuts its conclusion or undermines its premise. This is "
+            "ordinary pairwise defeat, one attacker against one target (NOT a "
+            "joint/collective attack, NOT weighted). Cite source AND target by "
+            "id; every id must be present in the inventory. Report an attack "
+            "ONLY when the text genuinely presents the source as undermining "
+            "the target — do NOT connect unrelated arguments."
+        )
+        shape = (
+            '{"attacks": [{"source": "argN", "target": "argM", '
+            '"rationale": "one short sentence"}]}'
+        )
     else:
         raise ValueError(f"unknown relation_kind: {relation_kind!r}")
 
@@ -663,6 +679,43 @@ def _validate_weighted_attacks(
     return out
 
 
+def _validate_dung_attacks(
+    data: Dict[str, Any], arg_by_id: Dict[str, str]
+) -> List[List[str]]:
+    """Validate LLM Dung attack proposals against the real inventory.
+
+    A Dung attack is a binary ``(source, target)`` pair: both ids must be in
+    the inventory and distinct (self-attack is not a genuine relation). A pair
+    citing any unknown id is dropped — never salvaged, never auto-added as a
+    node (anti-théâtre #1019: a fabricated node is an unattacked argument that
+    wins under every semantics, the symmetrical false-green of #1698). Ids are
+    re-mapped to canonical argument text so the framework connects real nodes.
+    Returns ``[source_text, target_text]`` pairs. Dedup on ``(source, target)``
+    keeps the first occurrence.
+    """
+    raw = data.get("attacks", []) if isinstance(data, dict) else []
+    if not isinstance(raw, list):
+        return []
+    seen: set[Tuple[str, str]] = set()
+    out: List[List[str]] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        src_id = str(item.get("source", "")).strip()
+        tgt_id = str(item.get("target", "")).strip()
+        if src_id not in arg_by_id or tgt_id not in arg_by_id:
+            continue  # fabricated / malformed → dropped (anti-théâtre)
+        if src_id == tgt_id:
+            continue  # self-attack is not a genuine relation
+        src, tgt = arg_by_id[src_id], arg_by_id[tgt_id]
+        key = (src, tgt)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append([src, tgt])
+    return out
+
+
 async def translate_to_bipolar_supports(
     input_text: str, arguments: List[str]
 ) -> TranslationResult:
@@ -917,12 +970,54 @@ async def translate_to_weighted_attacks(
     return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
 
 
+async def translate_to_dung_attacks(
+    input_text: str, arguments: List[str]
+) -> TranslationResult:
+    """Derive genuine binary Dung attacks from the text + arguments (#1698).
+
+    The sixth id-validated translator: a Dung attack is a ``[source, target]``
+    pair where BOTH endpoints are inventory members (validated by id, canonical
+    argument texts) — so ``BOTH_in`` holds by construction and no node is ever
+    fabricated. Not reusing ``_validate_setaf_attacks``: a SetAF joint attack
+    (N attackers jointly defeat a target) is not decomposable into N binary
+    attacks — the joint attack only exists as a set — so unfolding SetAF
+    proposals into Dung pairs would fabricate edges the model never proposed.
+    See :func:`translate_to_bipolar_supports` for the ``cause`` contract
+    (#1608).
+    """
+    arg_by_id, _ = _build_inventory(arguments)
+    if not arg_by_id:
+        return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
+    try:
+        data = await _llm_extract_relations(input_text, arguments, "dung_attacks")
+    except TranslatorUnconfigured:
+        return TranslationResult(relations=[], cause=CAUSE_TRANSLATOR_UNCONFIGURED)
+    except Exception as e:  # network / parse / budget — never fatal to the run
+        logger.warning(
+            "Dung attacks translator failed (%s) — staying absent.",
+            type(e).__name__,
+        )
+        return TranslationResult(
+            relations=[], cause=CAUSE_TRANSLATOR_FAILED, error=type(e).__name__
+        )
+    attacks = _validate_dung_attacks(data, arg_by_id)
+    _log_translation_yield("Dung", data, ("attacks",), len(attacks))
+    if attacks:
+        logger.info(
+            "Dung translator: derived %d genuine binary attack(s) from text.",
+            len(attacks),
+        )
+        return TranslationResult(relations=attacks, cause=CAUSE_EVALUATED)
+    return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)
+
+
 __all__ = [
     "translate_to_bipolar_supports",
     "translate_to_aba_contraries",
     "translate_to_aspic_rules",
     "translate_to_setaf_attacks",
     "translate_to_weighted_attacks",
+    "translate_to_dung_attacks",
     "TranslationResult",
     "TranslatorUnconfigured",
     "CAUSE_EVALUATED",
@@ -939,4 +1034,5 @@ __all__ = [
     "_unique_rule_name",
     "_validate_setaf_attacks",
     "_validate_weighted_attacks",
+    "_validate_dung_attacks",
 ]
