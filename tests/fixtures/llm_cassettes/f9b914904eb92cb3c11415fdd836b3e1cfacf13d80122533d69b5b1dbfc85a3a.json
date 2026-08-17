@@ -1,0 +1,47 @@
+{
+  "key": "f9b914904eb92cb3c11415fdd836b3e1cfacf13d80122533d69b5b1dbfc85a3a",
+  "value": {
+    "id": "chatcmpl-EDsf72cbU39ZiVsdGp9F8NWIK4jYQ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[{\"counter_argument\":\"'Test argument' is too vague to support any conclusion: it gives no explicit claim, premises, or evidence, so one should withhold acceptance until the speaker specifies the proposition and backing for it.\",\"strategy_used\":\"highlight_ambiguity\",\"target_argument\":\"Test argument\",\"strength\":\"moderate\",\"reasoning\":\"Pointing out vagueness effectively undermines acceptance because arguments require clear premises and evidence; exposing the lack of content prevents drawing unwarranted conclusions and prompts clarification.\"}]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1786977093,
+    "model": "gpt-5-mini-2025-08-07",
+    "object": "chat.completion",
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 622,
+      "prompt_tokens": 96,
+      "total_tokens": 718,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 512,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

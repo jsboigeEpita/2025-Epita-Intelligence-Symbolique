@@ -1,0 +1,47 @@
+{
+  "key": "4efee5d34c15f34d673f373448016982d5ea2ff3605e176d14d1d565d1cd3a48",
+  "value": {
+    "id": "chatcmpl-EDsf1ZyAqz28T6kkygjcCbhFRXoqn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [], \"claims\": [], \"summary\": \"No distinct argumentative positions or verifiable factual claims present. The input is only the two-word phrase: \\\"Test argument\\\".\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1786977087,
+    "model": "gpt-5-mini-2025-08-07",
+    "object": "chat.completion",
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 367,
+      "prompt_tokens": 253,
+      "total_tokens": 620,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 320,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
