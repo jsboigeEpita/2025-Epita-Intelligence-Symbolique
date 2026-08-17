@@ -9,7 +9,7 @@ import pytest
 from scripts.cassettes import replay_gate_check
 
 
-def _ok() -> dict:
+def _ok() -> dict[str, int]:
     return {"live": 0, "hit": 7, "miss_record": 0, "miss_replay": 0}
 
 
@@ -48,7 +48,7 @@ def test_all_counters_violate_together() -> None:
     assert len(replay_gate_check.check(stats)) == 3
 
 
-def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture) -> None:
+def test_main_exit_codes(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     ok_file = tmp_path / "ok.json"
     ok_file.write_text('{"live": 0, "hit": 3, "miss_record": 0, "miss_replay": 0}')
     assert replay_gate_check.main([str(ok_file)]) == 0
