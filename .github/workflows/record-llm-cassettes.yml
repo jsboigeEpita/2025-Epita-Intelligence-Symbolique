@@ -99,13 +99,14 @@ jobs:
           LLM_CACHE_MODE: record
           LLM_CACHE_DIR: ${{ inputs.record_db }}
         run: |
-          # Deselected — env-shape mismatches of the RECORD lane (not LLM work):
-          #  - test_create_llm_service_openai_authentic: asserts isinstance
-          #    OpenAIChatCompletion, but record mode wraps the service in
-          #    CachedChatCompletion (the wrap is the point of the lane).
-          #  - test_dashboard: needs the React build (built by the main CI
-          #    job, not here — irrelevant to recording).
-          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "${{ inputs.lane }}" --ignore=tests/unit/services/test_mcp_server_v2 --allow-dotenv ${{ inputs.extra_args }} --deselect "tests/unit/argumentation_analysis/test_llm_service.py::TestLLMService::test_create_llm_service_openai_authentic" --deselect "tests/unit/interface_web/test_dashboard.py::TestDashboardRouteRegistration::test_starlette_app_has_dashboard_route" --deselect "tests/unit/interface_web/test_dashboard.py::TestDashboardEndpointBehavior::test_starlette_dashboard_returns_html" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          # Deselected — env-shape mismatch of the RECORD lane (not LLM work):
+          # test_create_llm_service_openai_authentic asserts isinstance
+          # OpenAIChatCompletion, but record mode wraps the service in
+          # CachedChatCompletion (the wrap is the point of the lane). The
+          # dashboard tests are NOT deselected: the React build parity
+          # steps above make them pass (measured: first record run failed
+          # them without the build, the CI pipeline builds it).
+          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "${{ inputs.lane }}" --ignore=tests/unit/services/test_mcp_server_v2 --allow-dotenv ${{ inputs.extra_args }} --deselect "tests/unit/argumentation_analysis/test_llm_service.py::TestLLMService::test_create_llm_service_openai_authentic" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Export cassettes + blocking privacy audit
         shell: pwsh
