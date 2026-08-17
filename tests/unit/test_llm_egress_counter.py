@@ -150,6 +150,28 @@ async def test_counter_ignores_non_llm_host():
     )
 
 
+async def test_counter_classifies_asgi_testserver_nonllm():
+    """The ASGI TestClient host is known test infra, not an unknown host (#1591):
+    141 in-process "testserver" requests drowned the unknown bucket in the
+    first 3-state CI run — unknown must stay a signal, not the default."""
+    counter = _session_counter()
+    async with httpx.AsyncClient(transport=_mock_transport()) as client:
+        before = counter.total()
+        await client.get("https://testserver/api/egress-control")
+    assert counter.total() == before
+    snap = counter.snapshot()
+    seen = [
+        r
+        for r in snap["requests"]
+        if r["host"] == "testserver" and r["test"].endswith(
+            "test_counter_classifies_asgi_testserver_nonllm"
+        )
+    ]
+    assert seen and all(r["class"] == "nonllm" for r in seen), (
+        "testserver (ASGI TestClient) must classify as nonllm, not unknown"
+    )
+
+
 async def test_counter_sees_httpx2_request():
     """openai>=3.x transport coverage (#1591 livrable 0): openai 3.1 (what CI
     resolves from the unpinned environment.yml) sends via httpx2, not httpx.

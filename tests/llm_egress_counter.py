@@ -54,6 +54,9 @@ _ENV_URL_VARS = (
 
 # Non-LLM hosts the test infrastructure legitimately contacts. Deliberately
 # minimal: anything not here and not LLM-watched surfaces as "unknown".
+# "testserver" is the ASGI/starlette TestClient base host — in-process loopback
+# exercising the app object, never external egress (first CI run with the
+# 3-state counter showed 141 of them drowning the unknown bucket).
 KNOWN_NON_LLM_HOSTS = frozenset(
     {
         "tika.open-webui.myia.io",
@@ -63,6 +66,7 @@ KNOWN_NON_LLM_HOSTS = frozenset(
         "objects.githubusercontent.com",
         "pypi.org",
         "files.pythonhosted.org",
+        "testserver",
     }
 )
 
