@@ -14,6 +14,8 @@ import json
 import logging
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+from argumentation_analysis.core.reading_window import selected_text
+
 logger = logging.getLogger("StakesExtractor")
 
 
@@ -29,6 +31,7 @@ async def _default_chat_completion(client: Any, **kwargs: Any) -> Any:
     """
     return await client.chat.completions.create(**kwargs)
 
+
 EXTRACTION_PROMPT = (
     "You are a political-rhetorical analyst. Analyse the following discourse excerpt "
     "and extract FOUR elements in strict JSON format.\n\n"
@@ -39,7 +42,7 @@ EXTRACTION_PROMPT = (
     '   - "evidence_indices": list of integers referencing argument positions '
     "(0-based) that support this stake identification\n\n"
     '2. "stakeholders": List of objects, each with:\n'
-    "   - \"name\": {name_instruction}\n"
+    '   - "name": {name_instruction}\n'
     '   - "role": who they are in this discourse (speaker, opponent, audience, '
     "authority, institution, group)\n"
     '   - "stance": one of for, against, ambivalent, uncommitted\n'
@@ -113,7 +116,7 @@ class StakesExtractor:
             "\n".join(args_lines) if args_lines else "(no arguments extracted)"
         )
 
-        excerpt = (raw_text or "")[:3000]
+        excerpt = selected_text(raw_text or "", 3000, "stakes_extractor")
 
         # Epic #1258 / Track 1 #1259 — when the working state is deanonymized,
         # instruct the LLM to emit REAL stakeholder names (from source metadata);

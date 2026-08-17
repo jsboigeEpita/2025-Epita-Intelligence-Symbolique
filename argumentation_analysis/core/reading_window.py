@@ -125,3 +125,46 @@ def select_reading_head(
         if 0 <= nl < offset + stride:
             offset = nl + 1
     return WindowSelection(offset, window, STATUS_SELECTED)
+
+
+def selected_text(text: str, window: int, site: str, state: object = None) -> str:
+    """#1737 step 3 wiring point: the slice a reading site feeds onward.
+
+    Computes the selection (pure, deterministic), records it on the shared
+    state when one is reachable, and returns the window slice. Sites with
+    access to the shared state pass it (``context['_state_object']`` in the
+    invoke layer, ``self.state`` in managers) so the status reaches the
+    report; stateless components call without it and still get the computed
+    slice. A state object that cannot record is a wiring bug, not a
+    condition to shrug off: it fails loud (#1019) rather than silently
+    dropping the status.
+    """
+    selection = select_reading_head(text, window)
+    if state is not None:
+        recorder = getattr(state, "record_reading_window", None)
+        if recorder is None:
+            raise TypeError(
+                f"reading site '{site}': state {type(state).__name__} has no "
+                "record_reading_window — pass the shared state or None, not "
+                "an unrelated object"
+            )
+        recorder(site, selection)
+    return text[selection.offset : selection.offset + window]
+
+
+def reading_state_from_context(context: object) -> object:
+    """Resolve the shared state from a workflow context dict (#1737 step 3).
+
+    The workflow executor writes the shared state as ``_state_object``
+    (preferred) or ``unified_state``. Returns None when no
+    ``UnifiedAnalysisState`` is reachable — stateless callers then skip the
+    recording instead of guessing at an unrelated object.
+    """
+    state = None
+    if isinstance(context, dict):
+        state = context.get("_state_object") or context.get("unified_state")
+    if state is None:
+        return None
+    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+
+    return state if isinstance(state, UnifiedAnalysisState) else None

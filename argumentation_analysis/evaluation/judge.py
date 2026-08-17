@@ -9,6 +9,8 @@ import logging
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.core.reading_window import selected_text
+
 logger = logging.getLogger("evaluation.judge")
 
 JUDGE_SYSTEM_PROMPT = """You are an expert evaluator of argumentation analysis quality.
@@ -96,7 +98,7 @@ class LLMJudge:
             results_str = results_str[:12000] + "\n... [summarized]"
 
         user_msg = JUDGE_USER_TEMPLATE.format(
-            input_text=input_text[:2000],
+            input_text=selected_text(input_text, 2000, "judge"),
             workflow_name=workflow_name,
             analysis_results=results_str,
         )

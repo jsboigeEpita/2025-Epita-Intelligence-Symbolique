@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 
 from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.reading_window import selected_text
 
 
 class AnalysisMode(Enum):
@@ -309,8 +310,9 @@ class UnifiedAnalysisPipeline:
             agent.setup_agent_components(llm_service_id="openai")
 
             # Analyse selon le mode - utiliser la méthode appropriée
+            # #1737: reading window instead of a fixed head slice
             analysis_result = await agent.analyze_text(
-                text[:1000]
+                selected_text(text, 1000, "analysis_informal")
             )  # Limite pour performance
 
             return {

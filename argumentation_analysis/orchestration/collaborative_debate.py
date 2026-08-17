@@ -21,6 +21,11 @@ import os
 import time
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.core.reading_window import (
+    reading_state_from_context,
+    selected_text,
+)
+
 logger = logging.getLogger("CollaborativeDebate")
 
 
@@ -145,7 +150,16 @@ async def _invoke_collaborative_analysis(
         for i, s in enumerate(sentences[:6]):
             arg_lines.append(f"S{i + 1}. {s}")
 
-    argument_text = "\n".join(arg_lines) if arg_lines else input_text[:1500]
+    argument_text = (
+        "\n".join(arg_lines)
+        if arg_lines
+        else selected_text(
+            input_text,
+            1500,
+            "collaborative_debate",
+            state=reading_state_from_context(context),
+        )
+    )
 
     # Quality context if available
     quality_summary = ""

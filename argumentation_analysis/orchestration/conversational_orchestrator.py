@@ -30,6 +30,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import semantic_kernel as sk
 from semantic_kernel.agents import ChatCompletionAgent
 
+from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.orchestration.invoke_callables import (
     LLMBudgetExceeded,
     _bump_sk_budget,
@@ -95,7 +96,7 @@ def _detect_language(text: str) -> str:
     Distinguishes DE, FR, EN based on common function words and articles.
     Returns ISO 639-1 code: 'de', 'fr', 'en', or 'unknown'.
     """
-    sample = text[:3000].lower()
+    sample = selected_text(text, 3000, "detect_language").lower()
     scores: Dict[str, int] = {"de": 0, "fr": 0, "en": 0}
 
     de_markers = [

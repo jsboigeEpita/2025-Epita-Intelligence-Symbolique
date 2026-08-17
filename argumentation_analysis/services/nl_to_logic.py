@@ -21,6 +21,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from argumentation_analysis.core.reading_window import selected_text
+
 logger = logging.getLogger(__name__)
 
 # ── Operator mappings ────────────────────────────────────────────────────
@@ -410,11 +412,16 @@ class NLToLogicTranslator:
                 ]
 
                 if attempt == 1:
-                    messages.append({"role": "user", "content": text[:2000]})
+                    messages.append(
+                        {
+                            "role": "user",
+                            "content": selected_text(text, 2000, "nl_to_logic"),
+                        }
+                    )
                 else:
                     retry_msg = retry_template.format(
                         error=last_error,
-                        original=text[:1000],
+                        original=selected_text(text, 1000, "nl_to_logic_retry"),
                         formula=last_formula,
                         formulas=last_formula,
                     )

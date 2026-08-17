@@ -28,6 +28,7 @@ from typing import Any, Dict, List, Optional
 from argumentation_analysis.core.interfaces.fallacy_detector import (
     AbstractFallacyDetector,
 )
+from argumentation_analysis.core.reading_window import selected_text
 
 logger = logging.getLogger(__name__)
 
@@ -1267,7 +1268,8 @@ class LLMFallacyDetector:
             import json as _json
 
             user_prompt = (
-                f"Analyse ce texte pour detecter les sophismes:\n\n{text[:3000]}"
+                "Analyse ce texte pour detecter les sophismes:\n\n"
+                + selected_text(text, 3000, "french_fallacy_llm")
             )
 
             response = await client.chat.completions.create(

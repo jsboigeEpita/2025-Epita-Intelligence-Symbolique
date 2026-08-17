@@ -20,6 +20,7 @@ import uuid
 from argumentation_analysis.orchestration.hierarchical.strategic.state import (
     StrategicState,
 )
+from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
@@ -347,7 +348,9 @@ class StrategicManager:
             self.logger.info("No raw_text available for LLM objectives, using fallback")
             return self._fallback_objectives()
 
-        text_preview = text[:2000]
+        text_preview = selected_text(
+            text, 2000, "strategic_objectives", state=self._unified_state
+        )
 
         # Epic #1258 / Track 1 #1259 — the opaque-ID discipline (lines below) is
         # dropped when the working state is deanonymized, so strategic objectives

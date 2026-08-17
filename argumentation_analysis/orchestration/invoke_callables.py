@@ -17,6 +17,11 @@ import time
 from contextlib import contextmanager
 from typing import Dict, Any, Awaitable, Callable, Iterator, Optional, List, Tuple
 
+from argumentation_analysis.core.reading_window import (
+    reading_state_from_context,
+    selected_text,
+)
+
 logger = logging.getLogger("UnifiedPipeline")
 
 # #1019: Preflight solver availability check (module-level, runs once)
@@ -1259,7 +1264,14 @@ async def _invoke_counter_argument(
                     targets.append(f"[quality={score:.1f}/10] {text}")
 
             if not targets:
-                targets = [input_text[:500]]
+                targets = [
+                    selected_text(
+                        input_text,
+                        500,
+                        "counter_argument",
+                        state=reading_state_from_context(context),
+                    )
+                ]
 
             llm_counters = await _generate_counters_for_targets(
                 client, model_id, targets
@@ -1608,7 +1620,14 @@ async def _invoke_debate_analysis(
                     )
 
             debate_material = (
-                "\n\n".join(debate_parts) if debate_parts else input_text[:1500]
+                "\n\n".join(debate_parts)
+                if debate_parts
+                else selected_text(
+                    input_text,
+                    1500,
+                    "debate_analysis",
+                    state=reading_state_from_context(context),
+                )
             )
 
             det_params = _get_determinism_params()
@@ -2076,7 +2095,14 @@ async def _invoke_governance(
                     context_parts.append("Formal inconsistency detected in PL/FOL")
 
             deliberation_input = (
-                "\n\n".join(context_parts) if context_parts else input_text[:2000]
+                "\n\n".join(context_parts)
+                if context_parts
+                else selected_text(
+                    input_text,
+                    2000,
+                    "governance",
+                    state=reading_state_from_context(context),
+                )
             )
 
             det_params = _get_determinism_params()
@@ -6087,7 +6113,15 @@ async def _invoke_fact_extraction(
                     model=model_id,
                     messages=[
                         {"role": "system", "content": system_content},
-                        {"role": "user", "content": input_text[:3000]},
+                        {
+                            "role": "user",
+                            "content": selected_text(
+                                input_text,
+                                3000,
+                                "fact_extraction",
+                                state=reading_state_from_context(context),
+                            ),
+                        },
                     ],
                     **llm_kwargs,
                 )
@@ -6332,6 +6366,14 @@ async def _invoke_propositional_logic(
                 client, model_id = _get_openai_client()
                 if client is not None and input_text and len(input_text) > 100:
 
+                    # #1737: the phase's reading window — one selection, two
+                    # feeds (pass 1 inventory + whole-text pass below).
+                    pl_reading = selected_text(
+                        input_text,
+                        4000,
+                        "propositional_logic",
+                        state=reading_state_from_context(context),
+                    )
                     # ── Pass 1: Atom inventory from full source text ──
                     pass1_prompt = (
                         "You are an expert in propositional logic. Your task is to identify "
@@ -6339,7 +6381,7 @@ async def _invoke_propositional_logic(
                         "Output a JSON object with a single key 'propositions' mapping to a "
                         "list of strings. Each string is an atomic proposition name in "
                         "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
-                        f"Text:\n{input_text[:4000]}"
+                        f"Text:\n{pl_reading}"
                     )
                     det_params = _get_determinism_params()
                     pass1_resp = await _guarded_chat_completion(
@@ -6384,7 +6426,7 @@ async def _invoke_propositional_logic(
 
                         async def _pl_batch_coro(_batch: list[str]) -> list[str]:
                             if len(_batch) == 1:
-                                _texts_block = f"Text:\n{_batch[0][:2000]}"
+                                _texts_block = f"Text:\n{selected_text(_batch[0], 2000, 'propositional_batch_atoms')}"
                             else:
                                 _parts = [
                                     f"Text {_i+1}:\n{_a[:1500]}"
@@ -6454,7 +6496,7 @@ async def _invoke_propositional_logic(
                                 "- Use ONLY the propositions from the list below.\n"
                                 "- Operators: ! (not), && (and), || (or), => (implies), <=> (iff)\n"
                                 "- Output JSON with key 'formulas' (list of strings).\n\n"
-                                f"Text:\n{input_text[:4000]}\n\n"
+                                f"Text:\n{pl_reading}\n\n"
                                 f"Allowed propositions:\n{_json.dumps({'propositions': shared_atoms}, indent=2)}"
                             )
                             wt_resp = await _guarded_chat_completion(
@@ -6679,6 +6721,10 @@ async def _invoke_fol_reasoning(
     those validated formulas. Otherwise falls back to template generation.
     (#208-H: wire NL-to-logic as pre-processing)
     """
+    # #1737: keep the untouched document for reading-window selection — the
+    # directive prepend below would otherwise have the selector judge the
+    # directives (punctuated prose) and read them instead of the corpus.
+    _doc_text_fol = input_text
     # RA-4 #1049 item 3: inject strategic directives for LLM-guided FOL translation
     _strat_text_fol, _strat_ids_fol = _get_strategic_directives(context)
     if _strat_text_fol:
@@ -6762,6 +6808,14 @@ async def _invoke_fol_reasoning(
                 client, model_id = _get_openai_client()
                 if client is not None and input_text and len(input_text) > 100:
 
+                    # #1737: reading window on the ORIGINAL document (not the
+                    # directive-prepended input_text).
+                    fol_reading = selected_text(
+                        _doc_text_fol,
+                        4000,
+                        "fol_reasoning",
+                        state=reading_state_from_context(context),
+                    )
                     # ── Pass 1: Shared FOL signature from full text ──
                     pass1_prompt = (
                         "You are a formal logic expert. Analyze the text and extract a "
@@ -6778,7 +6832,7 @@ async def _invoke_fol_reasoning(
                         "- Predicates: CamelCase, list arg sorts\n"
                         "- Constants: lowercase\n"
                         '- If unsure about sort, use "Thing"\n\n'
-                        f"Text:\n{input_text[:4000]}"
+                        f"Text:\n{fol_reading}"
                     )
                     det_params = _get_determinism_params()
                     pass1_resp = await _guarded_chat_completion(
@@ -6830,7 +6884,7 @@ async def _invoke_fol_reasoning(
 
                             async def _fol_batch_coro(_batch: list[str]) -> list[str]:
                                 if len(_batch) == 1:
-                                    _texts_block = f"Text:\n{_batch[0][:2000]}"
+                                    _texts_block = f"Text:\n{selected_text(_batch[0], 2000, 'fol_batch_signature')}"
                                 else:
                                     _parts = [
                                         f"Text {_i+1}:\n{_a[:1500]}"
