@@ -76,6 +76,27 @@ def _jvm_required(func):
     return wrapper
 
 
+def _ready_initializer():
+    """#1775: a bare ``TweetyInitializer()`` never loads the Tweety classes,
+    so the handler guards rejected a booted JVM and axis availability depended
+    on which tools happened to run first in the process. Warm the initializer
+    explicitly (idempotent after the first call, traced) before constructing
+    handlers."""
+    from argumentation_analysis.agents.core.logic.tweety_initializer import (
+        TweetyInitializer,
+    )
+
+    initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+    if not initializer.is_jvm_ready():
+        logger.info(
+            "#1775: Tweety classes not loaded on this path — warming the "
+            "initializer before handler construction so axis availability "
+            "does not depend on call order."
+        )
+        initializer.ensure_jvm_and_components_are_ready()
+    return initializer
+
+
 class TweetyLogicPlugin:
     """Semantic Kernel plugin exposing Tweety logic handlers to LLM agents.
 
@@ -102,9 +123,6 @@ class TweetyLogicPlugin:
     def analyze_dung_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
         # CONV-B #1333 (po-2025): AFHandler requires an ``initializer_instance``
         # (af_handler.py:38) and exposes ``analyze_dung_framework`` -- NOT
@@ -112,7 +130,7 @@ class TweetyLogicPlugin:
         # (#1371): the previous call constructed the handler with no args
         # (TypeError) and invoked a nonexistent method (AttributeError), so the
         # FormalAgent's prescribed ETAPE 3 (Dung analysis) crashed at call time.
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = _ready_initializer()
         handler = AFHandler(initializer)
         args = params.get("arguments", [])
         attacks = params.get("attacks", [])
@@ -205,16 +223,13 @@ class TweetyLogicPlugin:
     def check_modal_satisfiability(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formula": input})
         from argumentation_analysis.agents.core.logic.modal_handler import ModalHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
         # CONV-B #1333 (po-2025): ``ModalHandler`` requires an
         # ``initializer_instance`` in its constructor and exposes
         # ``is_modal_kb_consistent`` (query-based consistency, #1205); the
         # previous call constructed the handler with no args (TypeError) and
         # invoked a nonexistent ``check_satisfiability`` (AttributeError).
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = _ready_initializer()
         handler = ModalHandler(initializer)
         formula = params.get("formula", input)
         is_consistent, message = handler.is_modal_kb_consistent(str(formula))
@@ -451,11 +466,8 @@ class TweetyLogicPlugin:
     def check_dl_consistency(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = DLHandler(initializer)
         kb = handler.create_knowledge_base(
             tbox=params.get("tbox", []),
@@ -480,11 +492,8 @@ class TweetyLogicPlugin:
     def query_conditional_logic(self, input: str) -> str:
         params = _parse_json_or_default(input, {})
         from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = CLHandler(initializer)
         kb = handler.create_knowledge_base(
             conditionals=params.get("conditionals", []),
@@ -544,11 +553,8 @@ class TweetyLogicPlugin:
     def analyze_setaf(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "set_attacks": []})
         from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = SetAFHandler(initializer)
         result = handler.analyze_setaf(
             arguments=params.get("arguments", []),
@@ -569,11 +575,8 @@ class TweetyLogicPlugin:
         from argumentation_analysis.agents.core.logic.weighted_handler import (
             WeightedHandler,
         )
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = WeightedHandler(initializer)
         result = handler.analyze_weighted_framework(
             arguments=params.get("arguments", []),
@@ -592,11 +595,8 @@ class TweetyLogicPlugin:
         from argumentation_analysis.agents.core.logic.social_handler import (
             SocialHandler,
         )
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = SocialHandler(initializer)
         votes = params.get("votes", {})
         if votes:
@@ -618,11 +618,8 @@ class TweetyLogicPlugin:
     def analyze_epistemic_framework(self, input: str) -> str:
         params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
         from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = EAFHandler(initializer)
         result = handler.analyze_epistemic_framework(
             arguments=params.get("arguments", []),
@@ -640,11 +637,8 @@ class TweetyLogicPlugin:
     def analyze_delp(self, input: str) -> str:
         params = _parse_json_or_default(input, {"program": input})
         from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = DeLPHandler(initializer)
         result = handler.analyze_delp(
             program_text=params.get("program", input),
@@ -661,11 +655,8 @@ class TweetyLogicPlugin:
     def check_qbf(self, input: str) -> str:
         params = _parse_json_or_default(input, {"formula": input, "quantifiers": []})
         from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
-        from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
-        )
 
-        initializer = TweetyInitializer()
+        initializer = _ready_initializer()
         handler = QBFHandler(initializer)
         result = handler.analyze_qbf(
             quantifiers=params.get("quantifiers", []),
