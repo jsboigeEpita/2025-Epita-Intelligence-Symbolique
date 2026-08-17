@@ -10060,7 +10060,9 @@ async def _invoke_stakes_extractor(
     """Extract stakes, stakeholders, register, and arena (Track TT #723).
 
     Reads arguments from state, calls the StakesExtractor specialist,
-    writes results to state.stakes_and_stakeholders.
+    persists via ``_write_stakes_to_state`` (registered under
+    ``CAPABILITY_STATE_WRITERS['stakes_extraction']`` — the inline call keeps
+    direct, non-executor callers persisting as before).
     """
     state = context.get("_state_object")
     if state is None:
@@ -10129,8 +10131,14 @@ async def _invoke_stakes_extractor(
         deanonymized=bool(getattr(state, "deanonymized", True)),
     )
 
-    # Write to state
-    state.stakes_and_stakeholders = result
+    # Persist via the shared writer so the capability is primary under the
+    # duality invariant (the executor re-calls it post-phase; idempotent,
+    # same four values — see the writer's double-write note).
+    from argumentation_analysis.orchestration.state_writers import (
+        _write_stakes_to_state,
+    )
+
+    _write_stakes_to_state(result, state, context)
 
     n_stakes = len(result.get("stakes", []))
     n_stakeholders = len(result.get("stakeholders", []))

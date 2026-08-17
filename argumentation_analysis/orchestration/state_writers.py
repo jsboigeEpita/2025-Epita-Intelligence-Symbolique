@@ -284,6 +284,7 @@ __all__ = [
     "_write_narrative_synthesis_to_state",
     "_write_external_fol_solver_to_state",
     "_write_external_modal_solver_to_state",
+    "_write_stakes_to_state",
     "CAPABILITY_STATE_WRITERS",
 ]
 
@@ -1534,7 +1535,8 @@ def _write_setaf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         # ``target`` keys; drop malformed entries rather than crash the
         # writer boundary.
         sanitised = [
-            dict(a) for a in set_attacks
+            dict(a)
+            for a in set_attacks
             if isinstance(a, dict)
             and isinstance(a.get("attackers"), list)
             and isinstance(a.get("target"), str)
@@ -2107,6 +2109,47 @@ def _write_external_modal_solver_to_state(
             state.modal_analysis_results["external_degraded"] = degraded
 
 
+def _write_stakes_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
+    """Write the Track TT #723 stakes & stakeholders extraction to state.
+
+    ``_invoke_stakes_extractor`` landed with its state write inline — the
+    only primary pipeline capability absent from ``CAPABILITY_STATE_WRITERS``,
+    so the workflow executor did not recognise it as primary
+    (``test_capability_duality_invariant`` red since #723; the integration
+    suite is not in CI, so nothing flagged it). Extracted per the D1b
+    precedent (#1167 ``_write_deep_synthesis_to_state``): the writer rebuilds
+    ``state.stakes_and_stakeholders`` from the invoke output, which carries
+    the four schema keys defined at ``shared_state`` init. An error output
+    (direct call without shared state) leaves the honest empty default —
+    never fabricate stakes (#1019).
+
+    Double-write note: the invoke calls this writer inline so its direct
+    callers (``conversational_orchestrator`` post-processing) persist the
+    result without going through the executor; the executor then calls it
+    again via this registration after the phase completes. The second write
+    is an idempotent overwrite of the same four values — no guard added, the
+    same-value disjointness argument as ``_write_deep_synthesis_to_state``.
+    """
+    if not output or not isinstance(output, dict) or "error" in output:
+        return
+    stakes = output.get("stakes", [])
+    stakeholders = output.get("stakeholders", [])
+    if isinstance(state, dict):
+        state["stakes_and_stakeholders"] = {
+            "stakes": stakes,
+            "stakeholders": stakeholders,
+            "rhetorical_register": output.get("rhetorical_register", ""),
+            "discursive_arena": output.get("discursive_arena", ""),
+        }
+    elif hasattr(state, "stakes_and_stakeholders"):
+        state.stakes_and_stakeholders = {
+            "stakes": stakes,
+            "stakeholders": stakeholders,
+            "rhetorical_register": output.get("rhetorical_register", ""),
+            "discursive_arena": output.get("discursive_arena", ""),
+        }
+
+
 CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "argument_quality": _write_quality_to_state,
     "counter_argument_generation": _write_counter_argument_to_state,
@@ -2150,6 +2193,7 @@ CAPABILITY_STATE_WRITERS: Dict[str, Any] = {
     "act1_framing": _write_act1_framing_to_state,
     "act3_conclusion": _write_act3_conclusion_to_state,
     "nl_extraction": _write_text_to_kb_to_state,
+    "stakes_extraction": _write_stakes_to_state,
     "kb_to_tweety": _write_kb_to_tweety_to_state,
     "formal_result_interpretation": _write_tweety_interpretation_to_state,
     "external_fol_solving": _write_external_fol_solver_to_state,
