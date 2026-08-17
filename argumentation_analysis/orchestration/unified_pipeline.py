@@ -260,11 +260,10 @@ async def run_unified_analysis(
     ):
         try:
             from argumentation_analysis.agents.core.logic.tweety_initializer import (
-                TweetyInitializer,
+                ready_initializer,
             )
 
-            init = TweetyInitializer()
-            init.ensure_jvm_and_components_are_ready()
+            ready_initializer()
             logger.info("JPype/Tweety warmup complete before DAG execution")
         except Exception as e:
             logger.warning(f"JPype warmup failed (will retry in-phase): {e}")

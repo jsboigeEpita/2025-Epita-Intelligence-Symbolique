@@ -363,3 +363,25 @@ class TweetyInitializer:
 
     def is_jvm_started(self) -> bool:
         return self.__class__._jvm_started
+
+
+def ready_initializer() -> "TweetyInitializer":
+    """#1784: canonical traced warmup for every ``TweetyInitializer`` construction.
+
+    A bare ``TweetyInitializer()`` never loads the Tweety classes, so handler
+    guards reject a booted JVM and axis availability depends on which tools
+    happened to run first in the process (#1775, #1219, #1784). This helper
+    warms the initializer explicitly before handler construction: traced (a
+    real load failure stays loud — no silent lazy-init), idempotent after the
+    first call. It replaces the 11 bare constructions #1784 measured in
+    ``invoke_callables`` and the #1778 private copy in ``tweety_logic_plugin``.
+    """
+    initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+    if not initializer.is_jvm_ready():
+        logger.info(
+            "#1784: Tweety classes not loaded on this path — warming the "
+            "initializer before handler construction so axis availability "
+            "does not depend on call order."
+        )
+        initializer.ensure_jvm_and_components_are_ready()  # type: ignore[no-untyped-call]
+    return initializer

@@ -351,7 +351,7 @@ class TestSoustractionNoGenuineRelations1629:
             self._stub_handler_module(sink),
         ), patch(
             "argumentation_analysis.agents.core.logic.tweety_initializer."
-            "TweetyInitializer",
+            "ready_initializer",
             return_value=None,
         ):
             output = await _invoke_setaf("text", {"arguments": ["a", "b"]})
@@ -386,7 +386,7 @@ class TestSoustractionNoGenuineRelations1629:
             self._stub_handler_module(sink),
         ), patch(
             "argumentation_analysis.agents.core.logic.tweety_initializer."
-            "TweetyInitializer",
+            "ready_initializer",
             return_value=None,
         ):
             output = await _invoke_setaf("text", {"arguments": ["a", "b", "c"]})
@@ -420,7 +420,7 @@ class TestSoustractionNoGenuineRelations1629:
             self._stub_handler_module(sink),
         ), patch(
             "argumentation_analysis.agents.core.logic.tweety_initializer."
-            "TweetyInitializer",
+            "ready_initializer",
             return_value=None,
         ):
             output = await _invoke_setaf("text", {"arguments": ["arg1", "arg2"]})
@@ -452,7 +452,7 @@ class TestSoustractionNoGenuineRelations1629:
             self._stub_handler_module(sink),
         ), patch(
             "argumentation_analysis.agents.core.logic.tweety_initializer."
-            "TweetyInitializer",
+            "ready_initializer",
             return_value=None,
         ):
             output = await _invoke_weighted("text", {"arguments": ["a", "b"]})
