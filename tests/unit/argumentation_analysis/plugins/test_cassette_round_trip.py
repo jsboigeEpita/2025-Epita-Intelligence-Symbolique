@@ -15,6 +15,7 @@ The intent is to *verify* the export/import scripts, not to re-record the
 fixture — re-recording is a manual workflow described in
 ``tests/fixtures/llm_cassettes/README.md``.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -27,16 +28,34 @@ from pathlib import Path
 
 import pytest
 
-
 REPO = Path(__file__).resolve().parents[4]  # tests/unit/.../test_*.py -> repo root
 SCRIPTS = REPO / "scripts" / "cassettes"
 FIXTURES_DIR = REPO / "tests" / "fixtures" / "llm_cassettes"
 
 
-def _list_cassette_keys() -> list[str]:
-    """Return cassette file stems (sha256 keys) sorted by mtime, newest first."""
+def _list_cassette_keys(*, value_is: str | None = None) -> list[str]:
+    """Return cassette file stems (sha256 keys) sorted by mtime, newest first.
+
+    ``value_is="list"`` filters to SK-path cassettes (role/content lists — the
+    shape ``_deserialize_response`` expects); ``value_is="dict"`` filters to
+    raw-path cassettes (``ChatCompletion.model_dump()`` dicts). The fixture
+    dir now mixes both shapes since the pipeline lane records raw-path values
+    (#1603) — shape-aware callers must not feed a dict to the SK replay path.
+    """
+    stems = [p.stem for p in FIXTURES_DIR.glob("*.json") if p.name != "README.md"]
+    if value_is is not None:
+        stems = [
+            s
+            for s in stems
+            if isinstance(
+                json.loads((FIXTURES_DIR / f"{s}.json").read_text(encoding="utf-8"))[
+                    "value"
+                ],
+                list if value_is == "list" else dict,
+            )
+        ]
     return sorted(
-        (p.stem for p in FIXTURES_DIR.glob("*.json")),
+        stems,
         key=lambda stem: (FIXTURES_DIR / f"{stem}.json").stat().st_mtime,
         reverse=True,
     )
@@ -140,9 +159,12 @@ class TestCassetteReplayHitsCache:
 
     def test_replay_path_uses_cache(self, monkeypatch, tmp_path: Path):
         """Given a populated cache, replay yields `hit=1, live=0`."""
-        keys = _list_cassette_keys()
+        # The SK-service path deserializes LIST values (role/content). A
+        # raw-path DICT cassette would iterate its keys and crash — filter to
+        # list-shaped cassettes for this replay proof (#1603).
+        keys = _list_cassette_keys(value_is="list")
         if not keys:
-            pytest.skip("no cassette committed")
+            pytest.skip("no SK-path (list-valued) cassette committed")
         first_key = keys[0]
 
         # Configure llm_cache to use a fresh DB populated from the cassette.
@@ -162,6 +184,7 @@ class TestCassetteReplayHitsCache:
         # Patch the module attribute too so the CachedChatCompletion wrap opens
         # the populated replay_db, not an empty default.
         import argumentation_analysis.services.llm_cache as llm_cache_mod
+
         monkeypatch.setattr(llm_cache_mod, "CACHE_DIR", replay_db)
         llm_cache_mod.reset_raw_cache()
 
@@ -170,6 +193,7 @@ class TestCassetteReplayHitsCache:
 
         # Spy on httpx so any outbound call would raise.
         import httpx
+
         real_send = httpx.AsyncClient.send
 
         async def anti_theatre(self, request, *a, **kw):
@@ -194,12 +218,10 @@ class TestCassetteReplayHitsCache:
             # force_authentic=True: bypass the test-env mock so we exercise
             # the real CachedChatCompletion wrap (the cassette is the layer
             # under test, not the LLM provider).
-            svc = create_llm_service(
-                "narration_test_replay_unit", force_authentic=True
-            )
-            assert getattr(svc, "mode", None) == "replay", (
-                "service was not wrapped in replay mode — cache wiring failed"
-            )
+            svc = create_llm_service("narration_test_replay_unit", force_authentic=True)
+            assert (
+                getattr(svc, "mode", None) == "replay"
+            ), "service was not wrapped in replay mode — cache wiring failed"
             kernel.add_service(svc)
             plugin = NarrativeSynthesisPlugin(kernel=kernel)
 
@@ -226,9 +248,7 @@ def _populate_db_from_first_cassette(db_dir: Path, key: str) -> None:
     """Materialize the first cassette into a fresh diskcache DB."""
     import diskcache  # type: ignore[import-not-found]
 
-    cassette = json.loads(
-        (FIXTURES_DIR / f"{key}.json").read_text(encoding="utf-8")
-    )
+    cassette = json.loads((FIXTURES_DIR / f"{key}.json").read_text(encoding="utf-8"))
     cache = diskcache.Cache(str(db_dir))
     try:
         cache.set(cassette["key"], cassette["value"])

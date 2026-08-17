@@ -1,0 +1,128 @@
+name: Record LLM Cassettes (#1603)
+
+# Manual-only record lane. The run BILLS REAL API USAGE — it must never be
+# auto-triggered. A run records the given pytest lane in `record` cache mode,
+# exports the resulting diskcache DB to JSON cassettes under a blocking
+# privacy audit (scripts/cassettes/privacy.py), and emits a cost artifact.
+#
+# The cassettes do NOT get committed by this job by default: they are
+# uploaded as an artifact. A separate PR flow (coordinator-arbitrated) turns
+# the artifact into tests/fixtures/llm_cassettes additions. If a
+# CASSETTES_PR_TOKEN secret is configured, the job opens that PR itself.
+#
+# Mode is EXPLICIT (LLM_CACHE_MODE=record on the record step only); nothing
+# here catches LLMCacheMiss or provisions the key for any replay step.
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: 'pytest -m expression for the record lane'
+        required: false
+        default: 'slow or requires_api'
+      extra_args:
+        description: 'Extra pytest args (e.g. a specific file, -k filter)'
+        required: false
+        default: ''
+      record_db:
+        description: 'Runtime diskcache dir for the record run'
+        required: false
+        default: '.cache/llm_record_ci'
+      max_minutes:
+        description: 'Hard time cap for the record step (bills real API)'
+        required: false
+        default: '60'
+      token_cap:
+        description: 'Fail-loud token cap (prompt+completion) for the run'
+        required: false
+        default: '2000000'
+
+concurrency:
+  group: record-llm-cassettes
+  # cancel-in-progress: false — cancelling a billable run wastes the spend
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15
+        with:
+          python-version: "3.10"
+          environment-file: environment.yml
+          activate-environment: projet-is
+          use-mamba: true
+          auto-update-conda: false
+
+      - name: Record run (bills real API usage)
+        shell: pwsh
+        timeout-minutes: ${{ fromJson(inputs.max_minutes) }}
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
+          LLM_CACHE_MODE: record
+          LLM_CACHE_DIR: ${{ inputs.record_db }}
+        run: |
+          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "${{ inputs.lane }}" --ignore=tests/unit/services/test_mcp_server_v2 --allow-dotenv ${{ inputs.extra_args }} --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+
+      - name: Export cassettes + blocking privacy audit
+        shell: pwsh
+        run: |
+          python scripts/cassettes/export.py ${{ inputs.record_db }} staging_cassettes
+          Write-Host "Exported cassettes: $((Get-ChildItem staging_cassettes -Filter *.json | Measure-Object).Count)"
+
+      - name: Cost artifact + fail-loud token cap
+        shell: pwsh
+        env:
+          LLM_CACHE_DIR: ${{ inputs.record_db }}
+        run: |
+          python scripts/cassettes/cost_report.py ${{ inputs.record_db }} --json | Out-File -Encoding utf8 cost_report.json
+          python scripts/cassettes/cost_report.py ${{ inputs.record_db }} | Out-File -Encoding utf8 cost_report.md
+          $tokens = python -c "import json;print(json.load(open('cost_report.json'))['prompt_tokens'] + json.load(open('cost_report.json'))['completion_tokens'])"
+          Write-Host "Total tokens: $tokens (cap: ${{ inputs.token_cap }})"
+          if ([int]$tokens -gt [int]${{ inputs.token_cap }}) {
+            Write-Host "❌ FAIL-LOUD: record run exceeded the token cap (see #1603 DoD 6)."
+            exit 1
+          }
+
+      - name: Upload artifacts (cassettes + cost + junit)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: llm-cassettes
+          path: |
+            staging_cassettes/
+            cost_report.json
+            cost_report.md
+            pytest_report.xml
+          if-no-files-found: error
+
+      # Optional: open the cassettes PR from this job when a PAT is configured.
+      # Without the secret the job ends at the artifact — a coordinator creates
+      # the PR from the download. The trigger PR (#1603 DoD 7) is NEVER opened
+      # by this job.
+      - name: Open cassettes PR (optional, needs CASSETTES_PR_TOKEN)
+        if: ${{ secrets.CASSETTES_PR_TOKEN != '' }}
+        shell: pwsh
+        env:
+          CASSETTES_PR_TOKEN: ${{ secrets.CASSETTES_PR_TOKEN }}
+        run: |
+          $env:CASSETTES_PR_TOKEN | gh auth login --with-token
+          $branch = "cassettes/llm-record-${{ github.run_id }}"
+          git checkout -b $branch
+          Copy-Item staging_cassettes/*.json tests/fixtures/llm_cassettes/
+          git add tests/fixtures/llm_cassettes/
+          git -c user.name='cassettes-bot' -c user.email='noreply@github.com' commit -m "chore(cassettes): record lane for #1603 (run ${{ github.run_id }})"
+          git push origin $branch
+          gh pr create --title "chore(cassettes): LLM cassettes from record run ${{ github.run_id }} (#1603)" --body "Cassettes recorded in CI (workflow_dispatch). NOT merged without arbitration — see #1603 DoD 7."

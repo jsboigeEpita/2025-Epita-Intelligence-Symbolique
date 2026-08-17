@@ -56,6 +56,26 @@ The pytest test `tests/unit/.../test_cassette_round_trip.py` runs the
 full record → export → import → replay loop and asserts `live == 0` in
 replay (the anti-#1019 metric).
 
+## What a record run actually captures (measured #1603 R826)
+
+`create_llm_service` mocks on `PYTEST_CURRENT_TEST in os.environ`
+(`core/llm_service.py:115`) — every SK-service call in a pytest run is
+mocked (fast, deterministic) and records NOTHING, unless the call site
+passes `force_authentic=True`. The direct path
+(`_guarded_chat_completion` → `cached_raw_chat_completion`,
+`orchestration/invoke_callables.py:439`) is NEVER mocked: with a key
+present it calls the real API through the raw cache layer and records
+cassettes. So a record run over the unit lane captures the raw-path
+consumers (extract / governance / quality / fallacy / counter-arg phases,
+i.e. the pipeline tests) — the SK-path tests (e.g. the narrate integration
+test) stay mocked and record nothing, which is correct: they run mocked in
+pytest anyway and need no cassette to pass in replay.
+
+Raw-path cassette values are the OpenAI `ChatCompletion.model_dump()` dict
+and carry a `usage` block (prompt/completion tokens) — the record job's
+cost artifact (`scripts/cassettes/cost_report.py`) sums it. SK-path values
+are role/content lists without usage.
+
 ## Privacy contract
 
 Cassettes committed here MUST be:
@@ -69,6 +89,12 @@ Cassettes committed here MUST be:
 - Audited by `scripts/cassettes/privacy.py` at export. The audit is
   blocking — a violation raises `PrivacyViolation` and the cassette is
   refused.
+- The audit exempts response-metadata keys (`model`, `id`, `created`,
+  `object`, `service_tier`, `system_fingerprint`, `finish_reason`,
+  `index`, `role`) from the year/name heuristics: the versioned model id
+  (`gpt-5-mini-2025-08-07`) would otherwise trip the historical-date rule
+  on every raw-path cassette. Forbidden-key checks still apply to dict
+  keys everywhere.
 
 If a legitimate-cassette use case conflicts with the privacy contract,
 do NOT bypass with `--allow-unsafe` — open an issue and discuss
