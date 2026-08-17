@@ -40,6 +40,21 @@ ACCEPTED_DUALITIES: dict[str, str] = {
     "belief_revision": "BeliefRevisionPlugin; _invoke_belief_revision same backend",
     "neural_fallacy_detection": "FrenchFallacyPlugin wraps detection; _invoke_camembert_fallacy callable",
     "formal_synthesis": "NarrativeSynthesisPlugin; _invoke_formal_synthesis aggregates formal results",
+    # #506 plugin↔service twins — each _invoke_* instantiates its twin plugin
+    # directly, so the two paths share the backend by construction (verified:
+    # _invoke_text_to_kb builds TextToKBPlugin(), _invoke_kb_to_tweety builds
+    # KBToTweetyPlugin(), _invoke_tweety_interpretation builds
+    # TweetyResultInterpretationPlugin). Undocumented since those services
+    # were registered — the integration suite is not in CI, so nothing
+    # flagged them.
+    "nl_extraction": "text_to_kb_service _invoke_text_to_kb instantiates TextToKBPlugin (#474)",
+    "argument_extraction": "text_to_kb_service _invoke_text_to_kb instantiates TextToKBPlugin (#474)",
+    "kb_construction": "text_to_kb_service _invoke_text_to_kb instantiates TextToKBPlugin (#474)",
+    "kb_to_tweety": "kb_to_tweety_service _invoke_kb_to_tweety instantiates KBToTweetyPlugin (#475)",
+    "formula_translation": "kb_to_tweety_service _invoke_kb_to_tweety instantiates KBToTweetyPlugin (#475)",
+    "tweety_validation": "kb_to_tweety_service _invoke_kb_to_tweety instantiates KBToTweetyPlugin (#475)",
+    "formal_result_interpretation": "tweety_interpretation_service _invoke_tweety_interpretation instantiates TweetyResultInterpretationPlugin (#476)",
+    "dung_interpretation": "tweety_interpretation_service _invoke_tweety_interpretation instantiates TweetyResultInterpretationPlugin (#476)",
 }
 
 
