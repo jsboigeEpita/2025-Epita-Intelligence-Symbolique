@@ -103,6 +103,11 @@ class LLMEgressCounter:
         self.current_test: Optional[str] = None
         self._installed = False
         self._patched_mods: List[Any] = []
+        # Immutable snapshot of patched transport names, set at install and
+        # never cleared: uninstall() empties _patched_mods before the terminal
+        # report reads it (sessionfinish -> terminal_summary), which made
+        # `transports_patched` read [] in the report (#1591).
+        self._transports_names: List[str] = []
         self._orig_sends: Dict[Any, Any] = {}
 
     # ── observation core ──────────────────────────────────────────────
@@ -197,6 +202,7 @@ class LLMEgressCounter:
                 self._patched_mods.append(mod)
             except AttributeError:
                 continue
+        self._transports_names = [m.__name__ for m in self._patched_mods]
         self._installed = True
 
     def uninstall(self) -> None:
@@ -233,7 +239,7 @@ class LLMEgressCounter:
             "total": totals[CLASS_LLM],
             "totals_by_class": totals,
             "hosts_watched": sorted(self._hosts),
-            "transports_patched": [m.__name__ for m in self._patched_mods],
+            "transports_patched": list(self._transports_names),
             "per_test": per_test,
             "per_test_unknown": per_test_unknown,
             "requests": requests,
