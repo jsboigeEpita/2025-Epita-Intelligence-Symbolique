@@ -33,6 +33,76 @@ def _make_mock_jpype():
     return mock_jpype, class_registry
 
 
+_HANDLER_MODULES = (
+    "argumentation_analysis.agents.core.logic.ranking_handler",
+    "argumentation_analysis.agents.core.logic.bipolar_handler",
+    "argumentation_analysis.agents.core.logic.aba_handler",
+    "argumentation_analysis.agents.core.logic.adf_handler",
+    "argumentation_analysis.agents.core.logic.aspic_handler",
+    "argumentation_analysis.agents.core.logic.belief_revision_handler",
+    "argumentation_analysis.agents.core.logic.probabilistic_handler",
+    "argumentation_analysis.agents.core.logic.dialogue_handler",
+)
+
+
+def _restore_module_globals(mod, snapshot):
+    """Un-mutate a handler module reloaded under mock jpype (#1785).
+
+    ``reload(mod)`` under a patched ``sys.modules`` mutates the module in
+    place: its ``jpype`` global becomes the mock and its handler class is
+    redefined on mock JClasses. The module object is the one referenced by
+    ``sys.modules`` and by earlier importers (``tweety_bridge``, the lazy
+    ``analyze_aba`` import), so the mutation leaks downstream — CI renders
+    mock artifacts (e.g. ``extensions: []``) where the real JVM renders
+    ``[[]]``. Popping ``sys.modules`` is NOT enough: ``patch.dict`` exits by
+    restoring a full snapshot taken at entry, which re-inserts the same
+    mutated object. Restoring the pre-reload globals un-mutates it in place.
+    """
+    mod.__dict__.clear()
+    mod.__dict__.update(snapshot)
+
+
+def _evict_mock_module(mod):
+    """Drop a handler module that entered ``sys.modules`` under the mock.
+
+    For a module NOT yet imported at test start there is no pristine
+    snapshot to restore — the import itself ran under the mocked ``jpype``.
+    Evict it instead so the next import re-executes with the real ``jpype``.
+    Safe at teardown: ``patch.dict`` has already exited, so nothing will
+    re-insert the mutated object afterwards.
+    """
+    sys.modules.pop(mod.__name__, None)
+    parent_name, _, child = mod.__name__.rpartition(".")
+    parent = sys.modules.get(parent_name)
+    if parent is not None and hasattr(parent, child):
+        delattr(parent, child)
+
+
+@pytest.fixture(autouse=True)
+def _restore_handler_modules_after_each_test():
+    """Keep handler modules pristine for downstream consumers in this session.
+
+    The restore must happen AFTER the test body (the mock-based handler
+    instance the test uses reads the module's ``jpype`` global at call time),
+    so it runs as teardown, not inside ``_make_handler``.
+    """
+    snapshots = {}
+    missing = []
+    for name in _HANDLER_MODULES:
+        mod = sys.modules.get(name)
+        if mod is not None:
+            snapshots[mod] = dict(mod.__dict__)
+        else:
+            missing.append(name)
+    yield
+    for mod, snapshot in snapshots.items():
+        _restore_module_globals(mod, snapshot)
+    for name in missing:
+        mod = sys.modules.get(name)
+        if mod is not None:
+            _evict_mock_module(mod)
+
+
 # =====================================================================
 # Ranking Handler Tests (#55)
 # =====================================================================
@@ -476,9 +546,7 @@ class TestBeliefRevisionHandler:
             in registry
         )
         # The fabricated DalalRevision / revops package must NOT be loaded.
-        assert (
-            "org.tweetyproject.beliefdynamics.revops.DalalRevision" not in registry
-        )
+        assert "org.tweetyproject.beliefdynamics.revops.DalalRevision" not in registry
 
     def test_revise_dalal(self):
         handler, _, registry = self._make_handler()
