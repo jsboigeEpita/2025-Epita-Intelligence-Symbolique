@@ -187,6 +187,23 @@ class ModalHandler:
             )
             return False, "An unexpected error occurred during validation."
 
+    def parse_belief_set(self, belief_set_content: str) -> "object":
+        """Parse a modal belief-set string with the shared MlParser (parse only).
+
+        Companion to ``execute_modal_query`` with NO reasoner run: raises
+        ``ValueError`` on unparseable syntax. The KB must use the canonical
+        declared form — ``type(p)`` 0-ary declarations + formulas, see
+        ``ModalLogicAgent._construct_modal_kb_from_json`` (#1213) — because
+        MlParser does not auto-declare atoms referenced by formulas (firsthand:
+        ``parseBeliefBase("[](p => q)")`` raises "Unknown object p", #1777).
+        """
+        belief_set_content = self._normalize_for_parse(belief_set_content)
+        try:
+            StringReader = jpype.JClass("java.io.StringReader")
+            return self._modal_parser.parseBeliefBase(StringReader(belief_set_content))
+        except jpype.JException as e:
+            raise ValueError(f"Erreur de parsing modal: {e.getMessage()}") from e
+
     def execute_modal_query(self, belief_set_content: str, query_string: str) -> str:
         """
         Executes a modal logic query against a given belief set.
