@@ -239,6 +239,7 @@ jobs:
           name: pytest-results
           path: |
             pytest_report.xml
+            llm_egress_report.json
             **/*.log
           if-no-files-found: warn
 

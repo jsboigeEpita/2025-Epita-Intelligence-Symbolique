@@ -310,6 +310,19 @@ def pytest_configure(config):
         )
         _dotenv_patcher.start()
 
+    # LLM egress counter (#1787) — observation-only instrument. Counts outgoing
+    # httpx requests to LLM hosts for the whole session (SK kernel path, direct
+    # AsyncOpenAI path, embeddings: all transit through httpx). Installed AFTER
+    # env loading above so endpoint env vars are visible for host resolution.
+    # Never blocks; report lands in the terminal summary + llm_egress_report.json
+    # next to the junitxml. Non-vacuity control: tests/unit/test_llm_egress_counter.py.
+    from tests.llm_egress_counter import LLMEgressPlugin, activate
+
+    _llm_egress = activate()
+    config.pluginmanager.register(
+        LLMEgressPlugin(_llm_egress), name="llm_egress_counter"
+    )
+
 
 def pytest_unconfigure(config):
     """
