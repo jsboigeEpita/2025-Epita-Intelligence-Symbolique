@@ -5,7 +5,8 @@ Provides @kernel_function methods wrapping each of the 15+ logic handlers,
 allowing LLM agents in AgentGroupChat to invoke formal reasoning directly.
 
 Each method:
-1. Parses string input (JSON or plain text)
+1. Parses string input (a JSON object — #1774: unparsable input renders a
+   structured error naming the keys received and expected, never a verdict)
 2. Delegates to the appropriate handler via asyncio.to_thread
 3. Returns a JSON string result
 
@@ -20,6 +21,8 @@ from typing import Optional
 
 from semantic_kernel.functions import kernel_function
 
+from argumentation_analysis.plugins.kernel_input import parse_kernel_json_object
+
 logger = logging.getLogger(__name__)
 
 # Check JVM availability once
@@ -30,17 +33,6 @@ try:
     _JVM_AVAILABLE = jpype.isJVMStarted()
 except ImportError:
     pass
-
-
-def _parse_json_or_default(text: str, default: dict) -> dict:
-    """Try to parse JSON from text, return default on failure."""
-    try:
-        parsed = json.loads(text)
-        if isinstance(parsed, dict):
-            return parsed
-        return default
-    except (json.JSONDecodeError, TypeError):
-        return default
 
 
 def _check_jvm() -> bool:
@@ -121,7 +113,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_dung_framework(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "attacks", "semantics"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.af_handler import AFHandler
 
         # CONV-B #1333 (po-2025): AFHandler requires an ``initializer_instance``
@@ -150,11 +148,15 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def check_propositional_consistency(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"formulas": [input]})
+        params, err = parse_kernel_json_object(
+            input, expected_keys=["formulas"], required_keys=["formulas"]
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge()
-        formulas = params.get("formulas", [input])
+        formulas = params.get("formulas", [])
         if not isinstance(formulas, list):
             formulas = [str(formulas)]
         kb_str = "\n".join(str(f) for f in formulas)
@@ -187,11 +189,15 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def check_fol_consistency(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"formulas": [input]})
+        params, err = parse_kernel_json_object(
+            input, expected_keys=["formulas"], required_keys=["formulas"]
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
 
         handler = FOLHandler()
-        formulas = params.get("formulas", [input])
+        formulas = params.get("formulas", [])
         if not isinstance(formulas, list):
             formulas = [str(formulas)]
         # CONV-B #1333 (po-2025): FOLHandler.check_consistency accepts a
@@ -221,7 +227,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def check_modal_satisfiability(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"formula": input})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["formula", "logic_type"],
+            required_keys=["formula"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.modal_handler import ModalHandler
 
         # CONV-B #1333 (po-2025): ``ModalHandler`` requires an
@@ -231,7 +243,7 @@ class TweetyLogicPlugin:
         # invoked a nonexistent ``check_satisfiability`` (AttributeError).
         initializer = _ready_initializer()
         handler = ModalHandler(initializer)
-        formula = params.get("formula", input)
+        formula = params.get("formula", "")
         is_consistent, message = handler.is_modal_kb_consistent(str(formula))
         # #1339: name the RESOLVED solver in the verdict (SPASS when
         # auto-routed) — the genuine-solver invariant (#1019), surfacing which
@@ -260,13 +272,29 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def rank_arguments(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "attacks", "method"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.ranking_handler import (
             RankingHandler,
         )
 
         handler = RankingHandler()
         args = params.get("arguments", [])
+        # #1774 (triage R820): empty framework is a real INPUT problem — the
+        # handler AIOOBEs (rank of nothing), render it as a structured error
+        # instead of a naked RuntimeError.
+        if not args:
+            return json.dumps(
+                {
+                    "error": "Empty framework: 'arguments' is empty — nothing to rank",
+                    "received_keys": sorted(params.keys()),
+                }
+            )
         attacks = params.get("attacks", [])
         method = params.get("method", "categorizer")
         result = handler.rank_arguments(args, attacks, method)
@@ -285,7 +313,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_bipolar_framework(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "attacks", "supports", "framework_type"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.bipolar_handler import (
             BipolarHandler,
         )
@@ -312,7 +346,15 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_aba(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        # Definitional pair required: the "extensions: [[]]" verdict must only
+        # be reachable from an explicitly-empty framework (#1774 §3/§4).
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["assumptions", "rules", "contraries", "semantics"],
+            required_keys=["assumptions", "rules"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.aba_handler import ABAHandler
 
         handler = ABAHandler()
@@ -337,7 +379,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_adf(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["statements", "acceptance_conditions", "semantics"],
+            required_keys=["statements"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.adf_handler import ADFHandler
 
         handler = ADFHandler()
@@ -360,7 +408,15 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_aspic(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        # Definitional pair required (same rationale as analyze_aba): an
+        # extensions verdict implies an explicitly-specified framework.
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["strict_rules", "defeasible_rules", "axioms"],
+            required_keys=["strict_rules", "defeasible_rules"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.aspic_handler import ASPICHandler
 
         handler = ASPICHandler()
@@ -383,7 +439,14 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def revise_beliefs(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"belief_set": [], "new_belief": input})
+        # Definitional pair required: a revision needs both a base and a belief.
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["belief_set", "new_belief", "method"],
+            required_keys=["belief_set", "new_belief"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.belief_revision_handler import (
             BeliefRevisionHandler,
         )
@@ -391,7 +454,7 @@ class TweetyLogicPlugin:
         handler = BeliefRevisionHandler()
         result = handler.revise(
             params.get("belief_set", []),
-            params.get("new_belief", input),
+            params["new_belief"],
             params.get("method", "dalal"),
         )
         return json.dumps(result, default=str)
@@ -409,7 +472,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_probabilistic(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "attacks", "probabilities"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.probabilistic_handler import (
             ProbabilisticHandler,
         )
@@ -435,7 +504,19 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def execute_dialogue(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"topic": input})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=[
+                "proponent_args",
+                "proponent_attacks",
+                "opponent_args",
+                "opponent_attacks",
+                "topic",
+            ],
+            required_keys=["proponent_args"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.dialogue_handler import (
             DialogueHandler,
         )
@@ -446,7 +527,7 @@ class TweetyLogicPlugin:
             params.get("proponent_attacks", []),
             params.get("opponent_args", []),
             params.get("opponent_attacks", []),
-            params.get("topic", input),
+            params.get("topic"),
         )
         return json.dumps(result, default=str)
 
@@ -464,7 +545,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def check_dl_consistency(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["tbox", "abox_concepts", "abox_roles"],
+            required_keys=["tbox"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
 
         initializer = _ready_initializer()
@@ -490,7 +577,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def query_conditional_logic(self, input: str) -> str:
-        params = _parse_json_or_default(input, {})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["conditionals", "query_conclusion", "query_premise"],
+            required_keys=["conditionals"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
 
         initializer = _ready_initializer()
@@ -519,13 +612,19 @@ class TweetyLogicPlugin:
         ),
     )
     def solve_sat(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"formulas": [input]})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["formulas", "solver", "mode"],
+            required_keys=["formulas"],
+        )
+        if params is None:
+            return json.dumps(err)
         try:
             from argumentation_analysis.agents.core.logic.sat_handler import SATHandler
         except RuntimeError as e:
             return json.dumps({"error": str(e)})
         handler = SATHandler(params.get("solver", "cadical195"))
-        formulas = params.get("formulas", [input])
+        formulas = params.get("formulas", [])
         mode = params.get("mode", "solve")
         if mode == "mus":
             try:
@@ -551,7 +650,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_setaf(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"arguments": [], "set_attacks": []})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "set_attacks", "semantics"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
 
         initializer = _ready_initializer()
@@ -569,9 +674,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_weighted_framework(self, input: str) -> str:
-        params = _parse_json_or_default(
-            input, {"arguments": [], "weighted_attacks": []}
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "weighted_attacks", "semantics"],
+            required_keys=["arguments"],
         )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.weighted_handler import (
             WeightedHandler,
         )
@@ -591,7 +700,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_social_framework(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "attacks", "votes"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.social_handler import (
             SocialHandler,
         )
@@ -616,7 +731,13 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_epistemic_framework(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"arguments": [], "attacks": []})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["arguments", "attacks", "epistemic_beliefs", "semantics"],
+            required_keys=["arguments"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
 
         initializer = _ready_initializer()
@@ -635,13 +756,19 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def analyze_delp(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"program": input})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["program", "queries", "criterion"],
+            required_keys=["program"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
 
         initializer = _ready_initializer()
         handler = DeLPHandler(initializer)
         result = handler.analyze_delp(
-            program_text=params.get("program", input),
+            program_text=params.get("program", ""),
             queries=params.get("queries", []),
             criterion=params.get("criterion", "generalized_specificity"),
         )
@@ -653,13 +780,19 @@ class TweetyLogicPlugin:
     )
     @_jvm_required
     def check_qbf(self, input: str) -> str:
-        params = _parse_json_or_default(input, {"formula": input, "quantifiers": []})
+        params, err = parse_kernel_json_object(
+            input,
+            expected_keys=["formula", "quantifiers"],
+            required_keys=["formula"],
+        )
+        if params is None:
+            return json.dumps(err)
         from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
 
         initializer = _ready_initializer()
         handler = QBFHandler(initializer)
         result = handler.analyze_qbf(
             quantifiers=params.get("quantifiers", []),
-            formula_str=params.get("formula", input),
+            formula_str=params.get("formula", ""),
         )
         return json.dumps(result, default=str)
