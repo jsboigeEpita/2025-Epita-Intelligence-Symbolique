@@ -247,3 +247,7 @@ docs/reports/spectacular_vs_baseline.md
 /trace_fallacy_*
 /reanalysis_arg_*
 
+
+# LLM egress counter artifact (#1787) - test names + counts, stays local
+llm_egress_report.json
+pytest_report.xml
