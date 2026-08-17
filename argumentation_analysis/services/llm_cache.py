@@ -297,7 +297,21 @@ class CachedChatCompletion(ChatCompletionClientBase):
             chat_history=chat_history, settings=settings, **kwargs
         )
         _cache_stats.live += 1
-        self._cache.set(key, _serialize_response(response))
+        # Record is an observer: it must never change the caller's outcome.
+        # A response that cannot be serialized/pickled (mock responses in
+        # unit tests) is passed through unrecorded rather than failing the
+        # call — proven live by the #1603 CI record run (PicklingError on
+        # MagicMock broke 6 budget-guard tests and, swallowed upstream,
+        # emptied 16 counter/extract assertions).
+        try:
+            self._cache.set(key, _serialize_response(response))
+        except Exception as exc:  # noqa: BLE001 — best-effort recording
+            logger.warning(
+                "Cache RECORD: response not storable (key %s..., %s) — "
+                "passed through unrecorded",
+                key[:16],
+                type(exc).__name__,
+            )
         return response
 
     # Delegate attribute access to inner service
@@ -456,5 +470,16 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     _cache_stats.miss_record += 1
     response = await client.chat.completions.create(**kwargs)
     _cache_stats.live += 1
-    cache.set(key, _serialize_chat_completion(response))
+    # Same observer contract as the SK path: an unstorable response (mock
+    # objects in tests) passes through unrecorded instead of raising from
+    # inside the cache (#1603).
+    try:
+        cache.set(key, _serialize_chat_completion(response))
+    except Exception as exc:  # noqa: BLE001 — best-effort recording
+        logger.warning(
+            "Raw cache RECORD: response not storable (key %s..., %s) — "
+            "passed through unrecorded",
+            key[:16],
+            type(exc).__name__,
+        )
     return response

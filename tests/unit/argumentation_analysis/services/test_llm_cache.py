@@ -439,8 +439,12 @@ class TestComputeRawCacheKey:
         assert compute_raw_cache_key(**kw) == compute_raw_cache_key(**kw)
 
     def test_different_messages_different_key(self):
-        k1 = compute_raw_cache_key(model="m", messages=[{"role": "user", "content": "a"}])
-        k2 = compute_raw_cache_key(model="m", messages=[{"role": "user", "content": "b"}])
+        k1 = compute_raw_cache_key(
+            model="m", messages=[{"role": "user", "content": "a"}]
+        )
+        k2 = compute_raw_cache_key(
+            model="m", messages=[{"role": "user", "content": "b"}]
+        )
         assert k1 != k2
 
     def test_different_model_different_key(self):
@@ -513,6 +517,37 @@ class TestCachedRawChatCompletion:
                     messages=[{"role": "user", "content": "never seen"}],
                 )
             assert client.calls == 0  # fail-loud: must NOT silently call the API
+
+    @pytest.mark.asyncio
+    async def test_record_mode_unstorable_response_passes_through(
+        self, isolated_raw_cache
+    ):
+        """#1603: record is an observer — a response that cannot be pickled
+        (MagicMock from mock-client unit tests) must pass through unrecorded,
+        not break the caller. Regression: the CI record run failed 6 tests
+        with PicklingError and emptied 16 more (swallowed upstream)."""
+
+        class UnstorableClient:
+            calls = 0
+
+            class chat:  # noqa: N801 — mirrors openai client shape
+                class completions:
+                    @staticmethod
+                    async def create(**kwargs):
+                        UnstorableClient.calls += 1
+                        return MagicMock()  # model_dump() -> MagicMock -> unpicklable
+
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            client = UnstorableClient()
+            kw = {"model": "m", "messages": [{"role": "user", "content": "q"}]}
+            r = await cached_raw_chat_completion(client, **kw)  # must NOT raise
+            assert r is not None
+            assert UnstorableClient.calls == 1
+            # Nothing was recorded: a fresh replay lookup must miss.
+            cache = get_raw_cache()
+            assert cache is not None
+            assert cache.get(compute_raw_cache_key(**kw)) is None
 
     @pytest.mark.asyncio
     async def test_tool_calls_roundtrip(self, isolated_raw_cache):

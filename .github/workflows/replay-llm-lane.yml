@@ -1,0 +1,97 @@
+name: Replay LLM Lane (#1603)
+
+# Manual-only replay lane: runs a pytest lane against the committed
+# cassettes with NO API key provisioned (the anti-#1019 property is
+# structural — there is nothing to fall through to), then enforces the
+# anti-vacuité gate (live==0, hit>=1, miss_replay==0).
+#
+# DoD 7 (arming this on PR pushes) is a SEPARATE trigger PR, arbitrated —
+# this workflow stays workflow_dispatch until then.
+#
+# A red gate here means one of:
+#   - live>0   : impossible by construction (no key) — a wrap leaked
+#   - hit==0   : the lane no longer consults the cache (vacuous green)
+#   - miss>0   : a cassette is missing / its key drifted (record/replay
+#                asymmetry — see #1603 constat C — or substitution)
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane_args:
+        description: 'pytest args selecting the replay lane (file and -k)'
+        required: false
+        default: 'tests/unit/argumentation_analysis/orchestration/test_workflow_robustness.py -k "test_empty_whitespace and light"'
+      replay_db:
+        description: 'Runtime diskcache dir for the replay DB'
+        required: false
+        default: '.cache/llm_replay_lane'
+
+concurrency:
+  group: replay-llm-lane
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15
+        with:
+          python-version: "3.10"
+          environment-file: environment.yml
+          activate-environment: projet-is
+          use-mamba: true
+          auto-update-conda: false
+
+      - name: Count committed cassettes (guard against a vacuous lane)
+        shell: pwsh
+        run: |
+          $n = (Get-ChildItem tests/fixtures/llm_cassettes -Filter *.json | Measure-Object).Count
+          Write-Host "Committed cassettes: $n"
+          if ($n -lt 1) {
+            Write-Host "FAIL-LOUD: no cassettes committed — the replay lane would be vacuous (hit would be 0)."
+            exit 1
+          }
+
+      - name: Import cassettes into the runtime replay DB
+        shell: pwsh
+        run: |
+          python scripts/cassettes/import.py tests/fixtures/llm_cassettes ${{ inputs.replay_db }} --purge
+          python scripts/cassettes/cost_report.py ${{ inputs.replay_db }} | Select-Object -First 3
+
+      # NO OPENAI_API_KEY is provisioned on this step or this job — replay
+      # must hold with nothing to fall back to (anti-#1019, structural).
+      - name: Replay lane (no key provisioned)
+        shell: pwsh
+        timeout-minutes: 30
+        env:
+          LLM_CACHE_MODE: replay
+          LLM_CACHE_DIR: ${{ inputs.replay_db }}
+          REPLAY_GATE: '1'
+          REPLAY_STATS_OUT: replay_stats.json
+        run: |
+          conda run -n projet-is --no-capture-output pytest ${{ inputs.lane_args }} --ignore=tests/unit/services/test_mcp_server_v2 -p scripts.cassettes.replay_stats_plugin -v --junitxml=pytest_report.xml
+
+      - name: Anti-vacuité gate (live==0, hit>=1, miss_replay==0)
+        shell: pwsh
+        run: python -m scripts.cassettes.replay_gate_check replay_stats.json
+
+      - name: Upload lane report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-lane-report
+          path: |
+            replay_stats.json
+            pytest_report.xml
+          if-no-files-found: warn
