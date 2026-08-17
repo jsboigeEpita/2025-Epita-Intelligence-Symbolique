@@ -459,6 +459,21 @@ class TestWorkflowExecution:
 class TestRunUnifiedAnalysis:
     """Test the convenience function run_unified_analysis."""
 
+    # #1591 hermeticity: these shape-verdict smoke tests used to run the
+    # light workflow against the real LLM (measured: 2 requests each →
+    # openrouter.ai / api.openai.com depending on env). No assertion reads
+    # LLM output, so the client factory is pinned to its designed no-key
+    # return (None, "") — every LLM-dependent callable then takes its
+    # honest-absent path, and the shape verdicts are preserved (measured:
+    # 6 requests → 0 across the three tests below).
+    @staticmethod
+    def _no_llm_client():
+        return patch(
+            "argumentation_analysis.orchestration.invoke_callables"
+            "._get_openai_client",
+            return_value=(None, ""),
+        )
+
     @pytest.mark.asyncio
     async def test_run_with_default_registry(self):
         """run_unified_analysis works with auto-created registry."""
@@ -466,7 +481,10 @@ class TestRunUnifiedAnalysis:
             run_unified_analysis,
         )
 
-        result = await run_unified_analysis("Test argument text", workflow_name="light")
+        with self._no_llm_client():
+            result = await run_unified_analysis(
+                "Test argument text", workflow_name="light"
+            )
         assert "workflow_name" in result
         assert "phases" in result
         assert "summary" in result
@@ -512,7 +530,8 @@ class TestRunUnifiedAnalysis:
             run_unified_analysis,
         )
 
-        result = await run_unified_analysis("Test argument", workflow_name="light")
+        with self._no_llm_client():
+            result = await run_unified_analysis("Test argument", workflow_name="light")
         summary = result["summary"]
         assert "completed" in summary
         assert "failed" in summary
@@ -530,7 +549,8 @@ class TestRunUnifiedAnalysis:
             run_unified_analysis,
         )
 
-        result = await run_unified_analysis("Test argument", workflow_name="light")
+        with self._no_llm_client():
+            result = await run_unified_analysis("Test argument", workflow_name="light")
         assert "capabilities_used" in result
         assert "capabilities_missing" in result
         assert isinstance(result["capabilities_used"], list)
@@ -655,11 +675,14 @@ class TestRealInvocationViaUnifiedAnalysis:
             run_unified_analysis,
         )
 
-        result = await run_unified_analysis(
-            "Argument test.",
-            workflow_name="light",
-            context={"custom_key": "custom_value"},
-        )
+        # Same #1591 hermeticity as TestRunUnifiedAnalysis: shape verdict only,
+        # no LLM output read — pin the client factory to its no-key return.
+        with TestRunUnifiedAnalysis._no_llm_client():
+            result = await run_unified_analysis(
+                "Argument test.",
+                workflow_name="light",
+                context={"custom_key": "custom_value"},
+            )
         # Workflow should complete — context param doesn't break anything
         assert result["summary"]["completed"] >= 1
 

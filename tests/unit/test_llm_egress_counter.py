@@ -128,9 +128,70 @@ async def test_counter_sees_bare_httpx_request():
 
 
 async def test_counter_ignores_non_llm_host():
-    """Specificity: a request to a non-LLM host leaves the count unchanged."""
+    """Specificity + 3-state vision (#1591): a request to an unwatched host
+    leaves the LLM count unchanged AND surfaces in the unknown bucket — an
+    absent endpoint env var must produce "unknown host seen", not silence."""
     counter = _session_counter()
     async with httpx.AsyncClient(transport=_mock_transport()) as client:
         before = counter.total()
         await client.get(NON_LLM_URL)
+    assert counter.total() == before, "a non-watched host must not count as LLM egress"
+    snap = counter.snapshot()
+    unknown_hits = [
+        r
+        for r in snap["requests"]
+        if r["host"] == "example.com"
+        and r["class"] == "unknown"
+        and r["test"].endswith("test_counter_ignores_non_llm_host")
+    ]
+    assert unknown_hits, (
+        "3-state vision failed: the example.com request must be visible in "
+        "the unknown bucket (class='unknown'), not silently dropped"
+    )
+
+
+async def test_counter_classifies_asgi_testserver_nonllm():
+    """The ASGI TestClient host is known test infra, not an unknown host (#1591):
+    141 in-process "testserver" requests drowned the unknown bucket in the
+    first 3-state CI run — unknown must stay a signal, not the default."""
+    counter = _session_counter()
+    async with httpx.AsyncClient(transport=_mock_transport()) as client:
+        before = counter.total()
+        await client.get("https://testserver/api/egress-control")
     assert counter.total() == before
+    snap = counter.snapshot()
+    seen = [
+        r
+        for r in snap["requests"]
+        if r["host"] == "testserver" and r["test"].endswith(
+            "test_counter_classifies_asgi_testserver_nonllm"
+        )
+    ]
+    assert seen and all(r["class"] == "nonllm" for r in seen), (
+        "testserver (ASGI TestClient) must classify as nonllm, not unknown"
+    )
+
+
+async def test_counter_sees_httpx2_request():
+    """openai>=3.x transport coverage (#1591 livrable 0): openai 3.1 (what CI
+    resolves from the unpinned environment.yml) sends via httpx2, not httpx.
+    The counter must patch it too, or every default-client SDK call is
+    invisible — CI read a false 0 this way (run 32048104455). Skipped where
+    httpx2 is absent (local envs run openai <3); CI is where this control
+    earns its keep."""
+    httpx2 = pytest.importorskip("httpx2")
+    counter = _session_counter()
+
+    def handler(request) -> "httpx2.Response":
+        return httpx2.Response(200, json=_CHAT_COMPLETION_PAYLOAD)
+
+    async with httpx2.AsyncClient(transport=httpx2.MockTransport(handler)) as client:
+        before = counter.total()
+        await client.post(f"{FAKE_OPENAI_HOST}/chat/completions", json={"p": 1})
+    assert counter.total() == before + 1, (
+        f"non-vacuity FAILED on the httpx2 path: expected {before + 1}, "
+        f"counter reads {counter.total()} — the counter is blind to "
+        "httpx2, the transport openai>=3.x uses in CI (false-zero family "
+        "#1556: an unpatched transport reads exactly like a clean gate)"
+    )
+    assert "httpx2" in counter.snapshot()["transports_patched"]

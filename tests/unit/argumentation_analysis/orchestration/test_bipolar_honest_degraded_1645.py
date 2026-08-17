@@ -42,6 +42,25 @@ _BRIDGE_BIPOLAR = (
 _FABRICATED = "JVM/Tweety required"  # the old relabeled diagnostic — must be GONE
 _INSTALL_HINT = "Install JVM"  # likewise
 
+# #1591 hermeticity: _invoke_bipolar calls the real LLM translator whenever
+# supports is empty (invoke_callables.py, late import from the source module).
+# None of the four JVM-state verdicts below read translator output, so the
+# mock returns a successful empty outcome — the honest shape the real
+# translator produces on this synthetic input, minus the 4 outgoing
+# requests (measured: 4 → 0).
+_TRANSLATOR_SRC = (
+    "argumentation_analysis.orchestration.structured_arg_translator"
+    ".translate_to_bipolar_supports"
+)
+
+
+def _translator_empty_outcome():
+    outcome = MagicMock()
+    outcome.relations = []
+    outcome.cause = "ok"
+    outcome.error = ""
+    return outcome
+
 
 def _run(coro):
     return asyncio.new_event_loop().run_until_complete(coro)
@@ -70,7 +89,9 @@ class TestJvmAbsentIsHonestAbsent:
         # BipolarHandler() construct + JClass would raise with no JVM; patch the
         # handler to raise so the except path is exercised, AND force
         # isJVMStarted False so the fix routes to honest-absent.
-        with patch(_BRIDGE_BIPOLAR, side_effect=RuntimeError("no JVM")), patch(
+        with patch(
+            _TRANSLATOR_SRC, new=AsyncMock(return_value=_translator_empty_outcome())
+        ), patch(_BRIDGE_BIPOLAR, side_effect=RuntimeError("no JVM")), patch(
             "jpype.isJVMStarted", return_value=False
         ):
             result = _run(_invoke_bipolar("text", _ctx()))
@@ -89,7 +110,9 @@ class TestJvmAbsentIsHonestAbsent:
             _invoke_bipolar,
         )
 
-        with patch(_BRIDGE_BIPOLAR, side_effect=RuntimeError("no JVM")), patch(
+        with patch(
+            _TRANSLATOR_SRC, new=AsyncMock(return_value=_translator_empty_outcome())
+        ), patch(_BRIDGE_BIPOLAR, side_effect=RuntimeError("no JVM")), patch(
             "jpype.isJVMStarted", return_value=False
         ):
             result = _run(_invoke_bipolar("text", _ctx()))
@@ -121,7 +144,9 @@ class TestJvmUpHandlerFailureFailsLoudRealCause:
         real_cause = TypeError("bad argument shape in analyze")
         mock_handler = MagicMock()
         mock_handler.analyze_bipolar_framework.side_effect = real_cause
-        with patch(_BRIDGE_BIPOLAR, return_value=mock_handler), patch(
+        with patch(
+            _TRANSLATOR_SRC, new=AsyncMock(return_value=_translator_empty_outcome())
+        ), patch(_BRIDGE_BIPOLAR, return_value=mock_handler), patch(
             "jpype.isJVMStarted", return_value=True
         ):
             with pytest.raises(RuntimeError) as exc_info:
@@ -148,7 +173,9 @@ class TestJvmUpHandlerFailureFailsLoudRealCause:
         mock_handler.analyze_bipolar_framework.side_effect = ValueError(
             "Tweety rejected the support relation"
         )
-        with patch(_BRIDGE_BIPOLAR, return_value=mock_handler), patch(
+        with patch(
+            _TRANSLATOR_SRC, new=AsyncMock(return_value=_translator_empty_outcome())
+        ), patch(_BRIDGE_BIPOLAR, return_value=mock_handler), patch(
             "jpype.isJVMStarted", return_value=True
         ):
             with pytest.raises(RuntimeError) as exc_info:
@@ -233,4 +260,3 @@ class TestTranslatorWorkSurvivesDegradedState:
             ["corpus_A", "prop_1"],
             ["corpus_B", "prop_2"],
         ], "writer must persist the translator's supports, not []"
-

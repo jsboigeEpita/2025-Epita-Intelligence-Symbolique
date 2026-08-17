@@ -355,10 +355,15 @@ class TestAdapterHierarchicalIntegration:
         assert adapter._nli_hierarchical is True
 
     def test_adapter_detect_calls_nli_with_hierarchical(self):
+        # enable_self_hosted_llm defaults to True: without disabling it, the
+        # ambient SELF_HOSTED_LLM_ENDPOINT tier fires a real completion during
+        # detect() (#1591, measured: 1 request) alongside the mocked NLI tier
+        # these tests are about.
         adapter = FrenchFallacyAdapter(
             enable_symbolic=False,
             enable_nli=True,
             enable_llm=False,
+            enable_self_hosted_llm=False,
             nli_hierarchical=True,
         )
         # Mock the NLI detector
@@ -378,10 +383,12 @@ class TestAdapterHierarchicalIntegration:
         assert "nli_hierarchical" in result["tiers_used"]
 
     def test_adapter_detect_calls_nli_flat_by_default(self):
+        # Same #1591 premise fix as the hierarchical test above.
         adapter = FrenchFallacyAdapter(
             enable_symbolic=False,
             enable_nli=True,
             enable_llm=False,
+            enable_self_hosted_llm=False,
         )
         mock_nli = MagicMock()
         mock_nli.is_available.return_value = True

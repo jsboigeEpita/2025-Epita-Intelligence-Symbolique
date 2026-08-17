@@ -40,6 +40,16 @@ def _patch_invokecallables_env_get(overrides):
     return patch.object(mod.os.environ, "get", side_effect=side_effect)
 
 
+# #1591 hermeticity: for the not-configured tests, overrides must be EXPLICIT
+# empties — an empty dict lets the ambient .env values through
+# (SELF_HOSTED_LLM_ENDPOINT/MODEL set on dev machines), which opens the
+# configured gate: the test then hits the real endpoint (measured: 2
+# requests each) AND asserts a verdict ("not configured") the run can no
+# longer produce (the 3 tests were red on any machine with the endpoint
+# configured). Empty overrides close the gate in every environment.
+_NOT_CONFIGURED = {"SELF_HOSTED_LLM_ENDPOINT": "", "SELF_HOSTED_LLM_MODEL": ""}
+
+
 class TestInvokeCamemBERTFallacy:
     """Tests for _invoke_camembert_fallacy (now self-hosted LLM)."""
 
@@ -53,7 +63,7 @@ class TestInvokeCamemBERTFallacy:
         # strings and takes the not-configured branch (the "real_get"
         # fallback may return ambient values, which are equally "" if
         # unconfigured).
-        with _patch_invokecallables_env_get({}):
+        with _patch_invokecallables_env_get(_NOT_CONFIGURED):
             result = await _invoke_camembert_fallacy("test text", {})
 
         assert result["total_fallacies"] == 0
@@ -126,7 +136,7 @@ class TestInvokeCamemBERTFallacy:
         )
 
         # Without endpoint, returns early regardless of text
-        with _patch_invokecallables_env_get({}):
+        with _patch_invokecallables_env_get(_NOT_CONFIGURED):
             result = await _invoke_camembert_fallacy("", {})
 
         assert result["total_fallacies"] == 0
@@ -161,7 +171,7 @@ class TestInvokeCamemBERTFallacy:
 
         # Without endpoint configured, the function returns early
         # without calling any async operations
-        with _patch_invokecallables_env_get({}):
+        with _patch_invokecallables_env_get(_NOT_CONFIGURED):
             result = await _invoke_camembert_fallacy("test", {})
 
         assert result["tiers_used"] == ["none"]
