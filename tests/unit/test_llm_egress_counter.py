@@ -128,9 +128,24 @@ async def test_counter_sees_bare_httpx_request():
 
 
 async def test_counter_ignores_non_llm_host():
-    """Specificity: a request to a non-LLM host leaves the count unchanged."""
+    """Specificity + 3-state vision (#1591): a request to an unwatched host
+    leaves the LLM count unchanged AND surfaces in the unknown bucket — an
+    absent endpoint env var must produce "unknown host seen", not silence."""
     counter = _session_counter()
     async with httpx.AsyncClient(transport=_mock_transport()) as client:
         before = counter.total()
         await client.get(NON_LLM_URL)
-    assert counter.total() == before
+    assert counter.total() == before, (
+        "a non-watched host must not count as LLM egress"
+    )
+    snap = counter.snapshot()
+    unknown_hits = [
+        r
+        for r in snap["requests"]
+        if r["host"] == "example.com" and r["class"] == "unknown"
+        and r["test"].endswith("test_counter_ignores_non_llm_host")
+    ]
+    assert unknown_hits, (
+        "3-state vision failed: the example.com request must be visible in "
+        "the unknown bucket (class='unknown'), not silently dropped"
+    )
