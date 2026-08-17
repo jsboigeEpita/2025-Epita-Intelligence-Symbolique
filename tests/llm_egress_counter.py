@@ -102,8 +102,8 @@ class LLMEgressCounter:
         self._per_test_unknown: "OrderedDict[str, int]" = OrderedDict()
         self.current_test: Optional[str] = None
         self._installed = False
-        self._orig_client_send = None
-        self._orig_async_send = None
+        self._patched_mods: List[Any] = []
+        self._orig_sends: Dict[Any, Any] = {}
 
     # ── observation core ──────────────────────────────────────────────
 
@@ -148,38 +148,65 @@ class LLMEgressCounter:
         except Exception:  # noqa: BLE001 — instrument must not break the measured run
             pass
 
-    # ── install / uninstall (class-level httpx patch) ─────────────────
+    # ── install / uninstall (class-level httpx + httpx2 patch) ─────────
+    #
+    # openai>=3.x dropped its httpx dependency for httpx2 (requires_dist of
+    # openai 3.1.0: httpx2<3,>=2.7.0 — no httpx). CI resolves openai 3.1.0
+    # (environment.yml is unpinned), so every SDK call that does NOT inject
+    # an httpx client leaves via httpx2.AsyncClient.send there. Patching
+    # httpx only made the CI gate read a false 0 for exactly those calls
+    # (#1591 livrable 0: run 32048104455 "3 requests" = 3 controls only,
+    # while the 12 openrouter-class leaks fired uncounted). httpx2 is absent
+    # from local envs — hence the guarded import, not a hard dependency.
+
+    def _make_wrappers(self, mod):
+        counter = self
+
+        def _client_send(client_self, request, **kwargs):
+            counter.observe_request(request.url, request.method)
+            return counter._orig_sends[(mod, "sync")](client_self, request, **kwargs)
+
+        async def _async_send(client_self, request, **kwargs):
+            counter.observe_request(request.url, request.method)
+            return await counter._orig_sends[(mod, "async")](
+                client_self, request, **kwargs
+            )
+
+        return _client_send, _async_send
 
     def install(self) -> None:
         if self._installed:
             return
         import httpx
 
-        counter = self
+        self._orig_sends = {}
+        self._patched_mods = []
+        try:
+            import httpx2  # noqa: F401 — openai>=3.x transport (CI)
 
-        def _client_send(client_self, request, **kwargs):
-            counter.observe_request(request.url, request.method)
-            return counter._orig_client_send(client_self, request, **kwargs)
-
-        async def _async_send(client_self, request, **kwargs):
-            counter.observe_request(request.url, request.method)
-            return await counter._orig_async_send(client_self, request, **kwargs)
-
-        self._orig_client_send = httpx.Client.send
-        self._orig_async_send = httpx.AsyncClient.send
-        httpx.Client.send = _client_send  # type: ignore[assignment]
-        httpx.AsyncClient.send = _async_send  # type: ignore[assignment]
+            mods = (httpx, httpx2)
+        except ImportError:
+            mods = (httpx,)
+        for mod in mods:
+            try:
+                self._orig_sends[(mod, "sync")] = mod.Client.send
+                self._orig_sends[(mod, "async")] = mod.AsyncClient.send
+                client_send, async_send = self._make_wrappers(mod)
+                mod.Client.send = client_send  # type: ignore[assignment]
+                mod.AsyncClient.send = async_send  # type: ignore[assignment]
+                self._patched_mods.append(mod)
+            except AttributeError:
+                continue
         self._installed = True
 
     def uninstall(self) -> None:
         if not self._installed:
             return
-        import httpx
-
-        httpx.Client.send = self._orig_client_send  # type: ignore[assignment]
-        httpx.AsyncClient.send = self._orig_async_send  # type: ignore[assignment]
-        self._orig_client_send = None
-        self._orig_async_send = None
+        for mod in self._patched_mods:
+            mod.Client.send = self._orig_sends[(mod, "sync")]  # type: ignore[assignment]
+            mod.AsyncClient.send = self._orig_sends[(mod, "async")]  # type: ignore[assignment]
+        self._patched_mods = []
+        self._orig_sends = {}
         self._installed = False
 
     # ── reporting ─────────────────────────────────────────────────────
@@ -206,6 +233,7 @@ class LLMEgressCounter:
             "total": totals[CLASS_LLM],
             "totals_by_class": totals,
             "hosts_watched": sorted(self._hosts),
+            "transports_patched": [m.__name__ for m in self._patched_mods],
             "per_test": per_test,
             "per_test_unknown": per_test_unknown,
             "requests": requests,
@@ -273,11 +301,11 @@ class LLMEgressPlugin:
             terminalreporter.write_line("Per-test LLM breakdown (test -> requests):")
             for test, count in sorted(snap["per_test"].items(), key=lambda kv: -kv[1]):
                 terminalreporter.write_line(f"  {count:5d}  {test}")
-            hosts = sorted({r["host"] for r in snap["requests"] if r["class"] == CLASS_LLM})
+            hosts = sorted(
+                {r["host"] for r in snap["requests"] if r["class"] == CLASS_LLM}
+            )
             terminalreporter.write_line(f"LLM hosts hit: {', '.join(hosts)}")
-        elif not any(
-            "test_llm_egress_counter" in t_ for t_ in snap["per_test"]
-        ):
+        elif not any("test_llm_egress_counter" in t_ for t_ in snap["per_test"]):
             terminalreporter.write_line(
                 "0 LLM requests and the non-vacuity control did NOT run in this "
                 "session — this 0 is indistinguishable from an unwired counter "

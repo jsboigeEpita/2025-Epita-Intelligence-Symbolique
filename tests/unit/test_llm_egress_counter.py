@@ -135,17 +135,41 @@ async def test_counter_ignores_non_llm_host():
     async with httpx.AsyncClient(transport=_mock_transport()) as client:
         before = counter.total()
         await client.get(NON_LLM_URL)
-    assert counter.total() == before, (
-        "a non-watched host must not count as LLM egress"
-    )
+    assert counter.total() == before, "a non-watched host must not count as LLM egress"
     snap = counter.snapshot()
     unknown_hits = [
         r
         for r in snap["requests"]
-        if r["host"] == "example.com" and r["class"] == "unknown"
+        if r["host"] == "example.com"
+        and r["class"] == "unknown"
         and r["test"].endswith("test_counter_ignores_non_llm_host")
     ]
     assert unknown_hits, (
         "3-state vision failed: the example.com request must be visible in "
         "the unknown bucket (class='unknown'), not silently dropped"
     )
+
+
+async def test_counter_sees_httpx2_request():
+    """openai>=3.x transport coverage (#1591 livrable 0): openai 3.1 (what CI
+    resolves from the unpinned environment.yml) sends via httpx2, not httpx.
+    The counter must patch it too, or every default-client SDK call is
+    invisible — CI read a false 0 this way (run 32048104455). Skipped where
+    httpx2 is absent (local envs run openai <3); CI is where this control
+    earns its keep."""
+    httpx2 = pytest.importorskip("httpx2")
+    counter = _session_counter()
+
+    def handler(request) -> "httpx2.Response":
+        return httpx2.Response(200, json=_CHAT_COMPLETION_PAYLOAD)
+
+    async with httpx2.AsyncClient(transport=httpx2.MockTransport(handler)) as client:
+        before = counter.total()
+        await client.post(f"{FAKE_OPENAI_HOST}/chat/completions", json={"p": 1})
+    assert counter.total() == before + 1, (
+        f"non-vacuity FAILED on the httpx2 path: expected {before + 1}, "
+        f"counter reads {counter.total()} — the counter is blind to "
+        "httpx2, the transport openai>=3.x uses in CI (false-zero family "
+        "#1556: an unpatched transport reads exactly like a clean gate)"
+    )
+    assert "httpx2" in counter.snapshot()["transports_patched"]

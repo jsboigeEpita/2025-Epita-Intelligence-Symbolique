@@ -519,8 +519,15 @@ class TestRouterIntegration:
         # routing fallback) does not depend on. Patch the AsyncOpenAI ctor so
         # the fallback phases run honest-degraded. Router mock kept: it is what
         # triggers the fallback under test.
+        # #1591: LocalLLMService.is_available probes its localhost endpoint
+        # with direct httpx (measured: 1 GET /v1/models) — outside the
+        # AsyncOpenAI seam above. The probe's answer is not read by this
+        # verdict; make it answer False without building a request.
         with patch(
             "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch(
+            "argumentation_analysis.services.local_llm_service.LocalLLMService.is_available",
+            new=AsyncMock(return_value=False),
         ), patch(
             "argumentation_analysis.orchestration.router.TextAnalysisRouter"
         ) as MockRouter:
@@ -561,7 +568,14 @@ class TestRouterIntegration:
         # path, "phases" is still produced, and the workflow_name mapping (the
         # in-test bite) is preserved. Network hermeticity is re-verified by the
         # #1579 instrumentation.
-        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
+        # #1591: same LocalLLMService localhost probe as the fallback test
+        # above (measured: 2 GET /v1/models across the three runs).
+        with patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")
+        ), patch(
+            "argumentation_analysis.services.local_llm_service.LocalLLMService.is_available",
+            new=AsyncMock(return_value=False),
+        ):
             for name in ("light", "standard", "full"):
                 result = await run_unified_analysis(
                     "Test text.",

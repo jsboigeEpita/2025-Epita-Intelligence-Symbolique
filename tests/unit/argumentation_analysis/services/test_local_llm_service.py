@@ -9,7 +9,19 @@ Tests validate:
 """
 
 import pytest
+import httpx
 from unittest.mock import AsyncMock, patch, MagicMock
+
+
+def _unreachable_async_client_factory():
+    """#1591 hermeticity: make AsyncClient CONSTRUCTION raise ConnectError —
+    the deterministic stand-in for the unreachable endpoint these
+    degraded-path tests exercise (was: an invalid port on localhost, which
+    still built and sent a request per call). NB: a MockTransport raising
+    inside the handler does NOT suffice — the egress counter observes at
+    send-entry, so a built request counts even when the transport never
+    touches the network. Zero egress means zero built requests."""
+    return MagicMock(side_effect=httpx.ConnectError("unreachable (hermetic)"))
 
 
 class TestLocalLLMImport:
@@ -133,7 +145,8 @@ class TestLocalLLMServiceAPI:
         )
 
         service = LocalLLMService(endpoint="http://localhost:99999/v1")
-        available = await service.is_available()
+        with patch("httpx.AsyncClient", _unreachable_async_client_factory()):
+            available = await service.is_available()
         assert available is False
 
     @pytest.mark.asyncio
@@ -144,9 +157,10 @@ class TestLocalLLMServiceAPI:
         )
 
         service = LocalLLMService(endpoint="http://localhost:99999/v1")
-        result = await service.chat_completion(
-            messages=[{"role": "user", "content": "test"}]
-        )
+        with patch("httpx.AsyncClient", _unreachable_async_client_factory()):
+            result = await service.chat_completion(
+                messages=[{"role": "user", "content": "test"}]
+            )
         assert "error" in result
 
     def test_repr(self):

@@ -17,7 +17,6 @@ import pytest
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
-
 # ── Helper fixtures ──────────────────────────────────────────────────────
 
 
@@ -44,6 +43,7 @@ class TestParseJsonFromLlm:
         from argumentation_analysis.orchestration.invoke_callables import (
             _parse_json_from_llm,
         )
+
         raw = '{"propositions": ["a", "b"]}'
         result = _parse_json_from_llm(raw)
         assert result == {"propositions": ["a", "b"]}
@@ -52,6 +52,7 @@ class TestParseJsonFromLlm:
         from argumentation_analysis.orchestration.invoke_callables import (
             _parse_json_from_llm,
         )
+
         raw = '```json\n{"propositions": ["x"]}\n```'
         result = _parse_json_from_llm(raw)
         assert result == {"propositions": ["x"]}
@@ -60,6 +61,7 @@ class TestParseJsonFromLlm:
         from argumentation_analysis.orchestration.invoke_callables import (
             _parse_json_from_llm,
         )
+
         raw = 'Here is the result:\n{"formulas": ["p => q"]}\nDone.'
         result = _parse_json_from_llm(raw)
         assert result == {"formulas": ["p => q"]}
@@ -68,6 +70,7 @@ class TestParseJsonFromLlm:
         from argumentation_analysis.orchestration.invoke_callables import (
             _parse_json_from_llm,
         )
+
         result = _parse_json_from_llm("no json here")
         assert result == {}
 
@@ -75,6 +78,7 @@ class TestParseJsonFromLlm:
         from argumentation_analysis.orchestration.invoke_callables import (
             _parse_json_from_llm,
         )
+
         result = _parse_json_from_llm("")
         assert result == {}
 
@@ -127,15 +131,26 @@ class TestTwoPassPipeline:
         # Mock OpenAI to return atom inventory then formulas
         mock_resp_1 = MagicMock()
         mock_resp_1.choices = [MagicMock()]
-        mock_resp_1.choices[0].message.content = json.dumps({
-            "propositions": ["sovereignty_requires_action", "foreign_threat", "cooperation_better"]
-        })
+        mock_resp_1.choices[0].message.content = json.dumps(
+            {
+                "propositions": [
+                    "sovereignty_requires_action",
+                    "foreign_threat",
+                    "cooperation_better",
+                ]
+            }
+        )
 
         mock_resp_2 = MagicMock()
         mock_resp_2.choices = [MagicMock()]
-        mock_resp_2.choices[0].message.content = json.dumps({
-            "formulas": ["sovereignty_requires_action => foreign_threat", "!cooperation_better"]
-        })
+        mock_resp_2.choices[0].message.content = json.dumps(
+            {
+                "formulas": [
+                    "sovereignty_requires_action => foreign_threat",
+                    "!cooperation_better",
+                ]
+            }
+        )
 
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
@@ -171,9 +186,9 @@ class TestTwoPassPipeline:
 
         formula_resp = MagicMock()
         formula_resp.choices = [MagicMock()]
-        formula_resp.choices[0].message.content = json.dumps({
-            "formulas": ["sovereignty_action => !foreign_threat"]
-        })
+        formula_resp.choices[0].message.content = json.dumps(
+            {"formulas": ["sovereignty_action => !foreign_threat"]}
+        )
 
         mock_client = AsyncMock()
         mock_client.chat.completions.create = AsyncMock(
@@ -199,7 +214,19 @@ class TestTwoPassPipeline:
         state = UnifiedAnalysisState("Test argument.")
         ctx = _make_context(state.raw_text, state)
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
+        # #1591 hermeticity: emptying OPENAI_API_KEY alone does not remove the
+        # key — the OpenRouter toggle (OPENROUTER_BASE_URL + OPENROUTER_API_KEY)
+        # bypasses it and the fallback-on-no-key premise never holds: the LLM
+        # fires (measured: 1 openrouter.ai request). Clearing the toggle makes
+        # the tested premise real; no mock needed.
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "",
+                "OPENROUTER_API_KEY": "",
+                "OPENROUTER_BASE_URL": "",
+            },
+        ):
             result = asyncio.get_event_loop().run_until_complete(
                 _invoke_propositional_logic(state.raw_text, ctx)
             )
@@ -217,7 +244,9 @@ class TestTwoPassPipeline:
         ctx = _make_context(state.raw_text, state)
 
         mock_client = AsyncMock()
-        mock_client.chat.completions.create = AsyncMock(side_effect=Exception("LLM error"))
+        mock_client.chat.completions.create = AsyncMock(
+            side_effect=Exception("LLM error")
+        )
 
         with patch("openai.AsyncOpenAI", return_value=mock_client):
             with patch.dict("os.environ", {"OPENAI_API_KEY": "test-key"}):
@@ -292,7 +321,15 @@ class TestBackwardCompat:
             "arguments": ["test argument"],
         }
 
-        with patch.dict("os.environ", {"OPENAI_API_KEY": ""}):
+        # Same #1591 premise fix as TestTwoPassPipeline::test_fallback_when_no_api_key.
+        with patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "",
+                "OPENROUTER_API_KEY": "",
+                "OPENROUTER_BASE_URL": "",
+            },
+        ):
             result = asyncio.get_event_loop().run_until_complete(
                 _invoke_propositional_logic("test text", ctx)
             )
@@ -330,9 +367,14 @@ class TestBatchedPass2:
 
         formula_resp = MagicMock()
         formula_resp.choices = [MagicMock()]
-        formula_resp.choices[0].message.content = json.dumps({
-            "formulas": ["sovereignty => vigilance", "national_interest && !cooperation"]
-        })
+        formula_resp.choices[0].message.content = json.dumps(
+            {
+                "formulas": [
+                    "sovereignty => vigilance",
+                    "national_interest && !cooperation",
+                ]
+            }
+        )
 
         mock_client = AsyncMock()
         # Pass 1 + 4 batches (ceil(10/3)) + whole-text = 6 calls
@@ -367,9 +409,9 @@ class TestBatchedPass2:
 
         formula_resp = MagicMock()
         formula_resp.choices = [MagicMock()]
-        formula_resp.choices[0].message.content = json.dumps({
-            "formulas": ["policy_a => policy_b"]
-        })
+        formula_resp.choices[0].message.content = json.dumps(
+            {"formulas": ["policy_a => policy_b"]}
+        )
 
         mock_client = AsyncMock()
         # Pass 1 + 1 batch (2 args fit in one) + whole-text = 3 calls
@@ -410,9 +452,9 @@ class TestBatchedPass2:
 
         good_resp = MagicMock()
         good_resp.choices = [MagicMock()]
-        good_resp.choices[0].message.content = json.dumps({
-            "formulas": ["claim_a => claim_b"]
-        })
+        good_resp.choices[0].message.content = json.dumps(
+            {"formulas": ["claim_a => claim_b"]}
+        )
 
         mock_client = AsyncMock()
         # Pass 1 + batch0(fail) + batch1(good) + batch2(good) + batch3(good) + wt
