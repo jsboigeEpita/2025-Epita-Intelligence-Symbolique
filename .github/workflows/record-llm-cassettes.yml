@@ -19,9 +19,14 @@ on:
       lane:
         description: 'pytest -m expression for the record lane'
         required: false
-        default: 'slow or requires_api'
+        # NOT 'requires_api': under pytest the SK path is mocked on
+        # PYTEST_CURRENT_TEST (llm_service.py:115) regardless of markers —
+        # those tests record NOTHING (#1603 constat A). The recordable band
+        # is the raw-path consumers (_guarded_chat_completion), reachable
+        # through ordinary unmarked pipeline tests.
+        default: 'not slow and not requires_api'
       extra_args:
-        description: 'Extra pytest args (e.g. a specific file, -k filter)'
+        description: 'Extra pytest args (e.g. a specific file, -k filter). Default runs the whole non-slow unit band — only raw-path consumers bill (~500-1000 calls, ~$1-5 projection, gpt-5-mini). Narrow explicitly for a cheap probe.'
         required: false
         default: ''
       record_db:
