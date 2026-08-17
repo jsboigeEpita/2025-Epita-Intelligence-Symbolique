@@ -28,7 +28,11 @@ class TweetyTranslationResult(BaseModel):
     original_text: str = Field(..., description="Source KB text")
     formula: str = Field(..., description="Tweety-compatible formula")
     logic_type: str = Field(..., description="PL, FOL, Modal, Dung, or ASPIC")
-    is_valid: bool = Field(False, description="Whether Tweety validation passed")
+    # #1777: tri-state (#1634). None = the label was never evaluated (unknown
+    # logic type); True/False = a validator actually parsed the formula.
+    is_valid: Optional[bool] = Field(
+        None, description="Whether Tweety validation passed"
+    )
     attempts: int = Field(1, description="Number of translate-validate attempts")
     validation_message: Optional[str] = Field(None)
     signature: Optional[Dict[str, List[str]]] = Field(
@@ -159,17 +163,36 @@ def _validate_pl(formula: str) -> Tuple[bool, str]:
         return False, str(e)
 
 
-def _validate_fol(formula: str, belief_set: str = "") -> Tuple[bool, str]:
+def _validate_fol(
+    formula: str,
+    belief_set: str = "",
+    signature: Optional[Dict[str, List[str]]] = None,
+) -> Tuple[bool, str]:
     if not _jvm_available():
         return False, "JVM unavailable — validation not performed"
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge.get_instance()
-        is_valid, msg = bridge.check_consistency(
-            belief_set or formula, logic_type="fol"
-        )
-        return is_valid, msg
+        # #1777: is_valid measures parseability (uniform with _validate_pl), not
+        # consistency. The old "fol" label never routed (bridge expects
+        # "first_order") -> (None, "Unknown logic type") -> 3 retries on a
+        # well-formed formula. A well-formed contradictory formula parses.
+        #
+        # FolParser does NOT auto-declare predicates ("Predicate 'Human' has
+        # not been declared", firsthand #1777) — the signature must be built
+        # first. create_belief_set_programmatically (fol_handler) constructs
+        # the Java FolSignature from the plugin's signature dict and
+        # defensively declares predicates used-but-undeclared in the formula,
+        # then raises ValueError on unparseable syntax.
+        sig = signature or {}
+        builder_data = {
+            "_sorts": {"thing": list(sig.get("constants") or [])},
+            "_predicates": {p: ["thing"] for p in (sig.get("predicates") or [])},
+            "_formulas": [belief_set or formula],
+        }
+        bridge.fol_handler.create_belief_set_programmatically(builder_data)
+        return True, "Valid FOL formula"
     except Exception as e:
         return False, str(e)
 
@@ -181,10 +204,19 @@ def _validate_modal(formula: str, belief_set: str = "") -> Tuple[bool, str]:
         from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
         bridge = TweetyBridge.get_instance()
-        is_valid, msg = bridge.check_consistency(
-            belief_set or formula, logic_type="modal_k"
-        )
-        return is_valid, msg
+        # #1777: same parse-validity semantics; the old "modal_k" label never
+        # routed (bridge expects naked codes K/T/S4/S5).
+        #
+        # MlParser does NOT auto-declare atoms ("Unknown object p", firsthand
+        # #1777): propositions are 0-ary predicates declared inline as
+        # ``type(p)`` (#1213) — every atom referenced by the formula must be
+        # declared first (mirrors _construct_modal_kb_from_json).
+        text = belief_set or formula
+        atoms = sorted(set(re.findall(r"\b[a-z_][a-z0-9_]*\b", text)))
+        declared = "\n".join(f"type({a})" for a in atoms)
+        kb_text = f"{declared}\n{text}" if declared else text
+        bridge.modal_handler.parse_belief_set(kb_text)
+        return True, "Valid modal formula"
     except Exception as e:
         return False, str(e)
 
@@ -213,7 +245,7 @@ async def _translate_with_retry(
             formula, sig = _build_fol_formula(belief_text, signature)
             if not formula:
                 continue
-            valid, msg = _validate_fol(formula)
+            valid, msg = _validate_fol(formula, signature=sig)
             if valid and sig["predicates"]:
                 return TweetyTranslationResult(
                     original_text=belief_text[:200],
@@ -230,8 +262,19 @@ async def _translate_with_retry(
                 continue
             valid, msg = _validate_modal(formula)
         else:
-            formula = _build_pl_formula(belief_text)
-            valid, msg = True, "Unknown logic type — heuristic formula"
+            # #1777: an unknown logic type is neither valid nor invalid — it
+            # was never evaluated (tri-state #1634). No fabrication, no retry
+            # (the label cannot change between attempts).
+            return TweetyTranslationResult(
+                original_text=belief_text[:200],
+                formula="",
+                logic_type=logic_type,
+                is_valid=None,
+                attempts=1,
+                validation_message=(
+                    f"Unknown logic type: {logic_type} — not evaluated"
+                ),
+            )
 
         if valid:
             return TweetyTranslationResult(
