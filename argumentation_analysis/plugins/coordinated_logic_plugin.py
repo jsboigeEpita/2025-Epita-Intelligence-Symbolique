@@ -17,6 +17,8 @@ from typing import List
 
 from semantic_kernel.functions import kernel_function
 
+from argumentation_analysis.core.reading_window import selected_text
+
 logger = logging.getLogger(__name__)
 
 
@@ -26,9 +28,21 @@ logger = logging.getLogger(__name__)
 # modal-free source returns an honest-empty inventory WITHOUT an LLM call
 # (anti-theater #1019: no fabricated modal atoms on non-modal text).
 MODAL_CUES: List[str] = [
-    "doit", "faut", "peut", "necessairement", "nécessairement",
-    "possible", "obligatoire", "interdit", "permis", "exige",
-    "exigeons", "devons", "pourront", " pourraient", "devraient",
+    "doit",
+    "faut",
+    "peut",
+    "necessairement",
+    "nécessairement",
+    "possible",
+    "obligatoire",
+    "interdit",
+    "permis",
+    "exige",
+    "exigeons",
+    "devons",
+    "pourront",
+    " pourraient",
+    "devraient",
 ]
 
 
@@ -102,7 +116,9 @@ class CoordinatedLogicPlugin:
     )
     async def extract_shared_pl_atoms(self, full_text: str) -> str:
         if not full_text or len(full_text) < 100:
-            return json.dumps({"shared_atoms": [], "error": "Text too short for atom extraction"})
+            return json.dumps(
+                {"shared_atoms": [], "error": "Text too short for atom extraction"}
+            )
 
         client, model_id, _ = _get_openai_client()
         if client is None:
@@ -114,7 +130,7 @@ class CoordinatedLogicPlugin:
             "Output a JSON object with a single key 'propositions' mapping to a "
             "list of strings. Each string is an atomic proposition name in "
             "lowercase snake_case (e.g. 'is_mortal', 'foreign_threat').\n\n"
-            f"Text:\n{full_text[:4000]}"
+            f"Text:\n{selected_text(full_text, 4000, 'coordinated_pl_atoms')}"
         )
 
         try:
@@ -125,7 +141,9 @@ class CoordinatedLogicPlugin:
             raw = resp.choices[0].message.content or ""
             data = _parse_json_from_llm(raw)
             raw_atoms = data.get("propositions", [])
-            valid_atoms = [a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)]
+            valid_atoms = [
+                a for a in raw_atoms if re.match(r"^[a-zA-Z_][a-zA-Z0-9_]*$", a)
+            ]
 
             logger.info(f"PL Pass 1: {len(valid_atoms)} atoms extracted from full text")
             return json.dumps({"shared_atoms": valid_atoms, "count": len(valid_atoms)})
@@ -143,11 +161,20 @@ class CoordinatedLogicPlugin:
     )
     async def extract_shared_fol_signature(self, full_text: str) -> str:
         if not full_text or len(full_text) < 100:
-            return json.dumps({"sorts": {}, "predicates": {}, "constants": {}, "error": "Text too short"})
+            return json.dumps(
+                {
+                    "sorts": {},
+                    "predicates": {},
+                    "constants": {},
+                    "error": "Text too short",
+                }
+            )
 
         client, model_id, _ = _get_openai_client()
         if client is None:
-            return json.dumps({"sorts": {}, "predicates": {}, "constants": {}, "error": "No API key"})
+            return json.dumps(
+                {"sorts": {}, "predicates": {}, "constants": {}, "error": "No API key"}
+            )
 
         prompt = (
             "You are a formal logic expert. Analyze the text and extract a "
@@ -164,7 +191,7 @@ class CoordinatedLogicPlugin:
             "- Predicates: CamelCase, list arg sorts\n"
             "- Constants: lowercase\n"
             '- If unsure about sort, use "Thing"\n\n'
-            f"Text:\n{full_text[:4000]}"
+            f"Text:\n{selected_text(full_text, 4000, 'coordinated_fol_signature')}"
         )
 
         try:
@@ -185,10 +212,14 @@ class CoordinatedLogicPlugin:
                 f"FOL Pass 1: {len(sorts)} sorts, {len(predicates)} predicates, "
                 f"{sum(len(v) for v in sorts.values())} constants"
             )
-            return json.dumps({"sorts": sorts, "predicates": predicates, "constants": constants})
+            return json.dumps(
+                {"sorts": sorts, "predicates": predicates, "constants": constants}
+            )
         except Exception as e:
             logger.debug(f"FOL signature extraction failed: {e}")
-            return json.dumps({"sorts": {}, "predicates": {}, "constants": {}, "error": str(e)})
+            return json.dumps(
+                {"sorts": {}, "predicates": {}, "constants": {}, "error": str(e)}
+            )
 
     @kernel_function(
         name="extract_shared_modal_signature",
@@ -206,17 +237,23 @@ class CoordinatedLogicPlugin:
     async def extract_shared_modal_signature(self, full_text: str) -> str:
         empty = json.dumps({"atoms": [], "modal_present": False})
         if not full_text or len(full_text) < 100:
-            return json.dumps({"atoms": [], "modal_present": False, "error": "Text too short"})
+            return json.dumps(
+                {"atoms": [], "modal_present": False, "error": "Text too short"}
+            )
 
         # Anti-theater #1019 (#1396): a modal-free source yields an honest-empty
         # inventory WITHOUT burning an LLM call. This is the cue-gate.
         if not _has_modal_cues(full_text):
-            logger.info("Modal Pass 1: no modal cues -> honest-empty signature (no LLM call)")
+            logger.info(
+                "Modal Pass 1: no modal cues -> honest-empty signature (no LLM call)"
+            )
             return empty
 
         client, model_id, _ = _get_openai_client()  # type: ignore[no-untyped-call]  # 5th call site (#1396)
         if client is None:
-            return json.dumps({"atoms": [], "modal_present": False, "error": "No API key"})
+            return json.dumps(
+                {"atoms": [], "modal_present": False, "error": "No API key"}
+            )
 
         prompt = (
             "You are a formal logic expert. Analyze the text and extract a "
@@ -226,7 +263,7 @@ class CoordinatedLogicPlugin:
             "Output a JSON object with:\n"
             '- "atoms": list of atom identifiers, each matching [A-Za-z][A-Za-z0-9]* '
             "(NO underscores -- Tweety MlParser rejects them). CamelCase or "
-            "lowercase alphanum, e.g. [\"citizen\", \"obeysLaw\", \"peace\"].\n"
+            'lowercase alphanum, e.g. ["citizen", "obeysLaw", "peace"].\n'
             '- "modal_flavors": list subset of ["alethic", "deontic"] present.\n\n'
             "Rules:\n"
             "- Atoms are PROPOSITIONS (what is necessary/possible/obligatory), "
@@ -247,10 +284,14 @@ class CoordinatedLogicPlugin:
             sig_data = _parse_json_from_llm(raw)
             raw_atoms = sig_data.get("atoms", []) or []
             # Defense-in-depth: filter to legal MlParser identifiers (#1327).
-            valid_atoms = [a for a in raw_atoms if re.match(r"^[A-Za-z][A-Za-z0-9]*$", a)]
+            valid_atoms = [
+                a for a in raw_atoms if re.match(r"^[A-Za-z][A-Za-z0-9]*$", a)
+            ]
             flavors = sig_data.get("modal_flavors", []) or []
 
-            logger.info(f"Modal Pass 1: {len(valid_atoms)} modal atoms, flavors={flavors}")
+            logger.info(
+                f"Modal Pass 1: {len(valid_atoms)} modal atoms, flavors={flavors}"
+            )
             return json.dumps(
                 {
                     "atoms": valid_atoms,
@@ -282,7 +323,11 @@ class CoordinatedLogicPlugin:
             return json.dumps({"formulas": [], "error": "No API key"})
 
         try:
-            atoms = json.loads(shared_atoms) if isinstance(shared_atoms, str) else shared_atoms
+            atoms = (
+                json.loads(shared_atoms)
+                if isinstance(shared_atoms, str)
+                else shared_atoms
+            )
         except json.JSONDecodeError:
             return json.dumps({"formulas": [], "error": "Invalid shared_atoms JSON"})
 
@@ -298,7 +343,7 @@ class CoordinatedLogicPlugin:
             "- Operators: ! (not), && (and), || (or), => (implies), <=> (iff)\n"
             "- Output a JSON object with a single key 'formulas' mapping to a "
             "list of formula strings.\n\n"
-            f"Text:\n{argument_text[:2000]}\n\n"
+            f"Text:\n{selected_text(argument_text, 2000, 'coordinated_pl_formulas')}\n\n"
             f"Allowed propositions:\n{atoms_json}"
         )
 
@@ -311,7 +356,9 @@ class CoordinatedLogicPlugin:
             data = _parse_json_from_llm(raw)
             formulas = [f for f in data.get("formulas", []) if f]
 
-            logger.info(f"PL Pass 2: {len(formulas)} formulas with {len(atoms)} shared atoms")
+            logger.info(
+                f"PL Pass 2: {len(formulas)} formulas with {len(atoms)} shared atoms"
+            )
             return json.dumps({"formulas": formulas, "used_atoms": atoms})
         except Exception as e:
             logger.debug(f"PL formula generation failed: {e}")
@@ -334,9 +381,15 @@ class CoordinatedLogicPlugin:
             return json.dumps({"formulas": [], "error": "No API key"})
 
         try:
-            sig = json.loads(shared_signature) if isinstance(shared_signature, str) else shared_signature
+            sig = (
+                json.loads(shared_signature)
+                if isinstance(shared_signature, str)
+                else shared_signature
+            )
         except json.JSONDecodeError:
-            return json.dumps({"formulas": [], "error": "Invalid shared_signature JSON"})
+            return json.dumps(
+                {"formulas": [], "error": "Invalid shared_signature JSON"}
+            )
 
         if not sig or not argument_text:
             return json.dumps({"formulas": []})
@@ -352,7 +405,7 @@ class CoordinatedLogicPlugin:
             "- Quantifiers: forall X: (...), exists X: (...)\n"
             "- Operators: ! (not), && (and), || (or), => (implies)\n"
             "- Output JSON with key 'formulas' (list of formula strings)\n\n"
-            f"Text:\n{argument_text[:2000]}\n\n"
+            f"Text:\n{selected_text(argument_text, 2000, 'coordinated_fol_formulas')}\n\n"
             f"Signature:\n{sig_json}"
         )
 

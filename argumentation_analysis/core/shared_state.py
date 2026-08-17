@@ -145,9 +145,26 @@ class RhetoricalAnalysisState:
         self.errors: List[Dict[str, Any]] = []
         self.final_conclusion = None
         self._next_agent_designated = None
+        # #1737: dernière sélection de fenêtre de lecture par site —
+        # {site: {"status": ..., "offset": ..., "window": ...}}. Écrit par
+        # reading_window.selected_text, lu par le rapport (build_narrative).
+        self.reading_window_status: Dict[str, Dict[str, Any]] = {}
         state_logger.debug(
             f"Nouvelle instance RhetoricalAnalysisState créée (id: {id(self)}) avec texte (longueur: {len(initial_text)})."
         )
+
+    def record_reading_window(self, site: str, selection: Any) -> None:
+        """#1737 — enregistre la sélection de fenêtre d'un site de lecture.
+
+        Le statut tri-état (selected / no_punctuated_span_found / empty_input
+        / short_input) doit rester visible jusqu'au rapport : un statut que
+        personne ne relit est la forme #1019.
+        """
+        self.reading_window_status[site] = {
+            "status": getattr(selection, "status", str(selection)),
+            "offset": getattr(selection, "offset", 0),
+            "window": getattr(selection, "window", 0),
+        }
 
     def _generate_id(self, prefix: str, current_dict_or_list: Any) -> str:
         """Génère un ID simple basé sur la taille actuelle."""

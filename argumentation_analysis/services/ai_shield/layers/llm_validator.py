@@ -10,6 +10,7 @@ import os
 from typing import Any, Dict, Optional
 
 from argumentation_analysis.services.ai_shield.shield import ShieldLayer, LayerResult
+from argumentation_analysis.core.reading_window import selected_text
 
 logger = logging.getLogger(__name__)
 
@@ -43,12 +44,16 @@ class LLMValidatorLayer(ShieldLayer):
         use_openrouter = bool(openrouter_base_url and openrouter_api_key)
         if use_openrouter and not api_key:
             self._api_key = openrouter_api_key
-            self._model = model or os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+            self._model = model or os.environ.get(
+                "OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini"
+            )
             self._base_url = openrouter_base_url
         else:
             self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
             self._model = model or os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-            self._base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+            self._base_url = os.environ.get(
+                "OPENAI_BASE_URL", "https://api.openai.com/v1"
+            )
 
     def validate(self, text: str, **kwargs) -> LayerResult:
         """Validate input using LLM analysis.
@@ -85,7 +90,10 @@ class LLMValidatorLayer(ShieldLayer):
                             '"explanation": "brief reason"}'
                         ),
                     },
-                    {"role": "user", "content": text[:2000]},  # Cap input length
+                    {
+                        "role": "user",
+                        "content": selected_text(text, 2000, "ai_shield_llm_validator"),
+                    },  # Cap input length
                 ],
                 max_tokens=200,
             )

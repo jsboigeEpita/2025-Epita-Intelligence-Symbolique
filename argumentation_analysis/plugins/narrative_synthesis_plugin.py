@@ -158,8 +158,7 @@ def build_narrative(state: Any) -> str:
             f"hypothese(s) de lecture predefinie(s): {coherent} coherente(s), "
             f"{incoherent} incoherente(s)."
             + (
-                f" {unclassified} non classifiable(s) "
-                f"(cle 'coherent' absente)."
+                f" {unclassified} non classifiable(s) " f"(cle 'coherent' absente)."
                 if unclassified
                 else ""
             )
@@ -195,6 +194,44 @@ def build_narrative(state: Any) -> str:
         formal_str = ", ".join(formal_parts)
         parts.append(
             f"L'analyse formelle a produit {formal_count} resultat(s) ({formal_str})."
+        )
+
+    # ── Reading-window status (#1737) ───────────────────────────────
+    # The reader side of the status contract: a status nobody reads is the
+    # #1019 shape. This block sits BEFORE the empty-parts guard on purpose:
+    # a non-prose head typically ALSO empties the analysis (everything is
+    # extracted from the same head), so the warning must survive alone —
+    # the "no data" fallback would otherwise swallow the very signal that
+    # explains why there is no data.
+    rw = getattr(state, "reading_window_status", {})
+    flagged = {
+        site: v
+        for site, v in rw.items()
+        if isinstance(v, dict) and v.get("status") != "selected"
+    }
+    moved = {
+        site: v
+        for site, v in rw.items()
+        if isinstance(v, dict)
+        and v.get("status") == "selected"
+        and v.get("offset", 0) > 0
+    }
+    if flagged:
+        detail = ", ".join(
+            f"{site}={v.get('status')}" for site, v in sorted(flagged.items())
+        )
+        parts.append(
+            f"Avertissement fenetre de lecture: {detail}. "
+            f"Les sites concernes n'ont pas trouve de span ponctue de la "
+            f"taille de leur fenetre — verifier la nature du document en tete."
+        )
+    if moved and not flagged:
+        detail = ", ".join(
+            f"{site} (offset {v.get('offset')})" for site, v in sorted(moved.items())
+        )
+        parts.append(
+            f"Fenetre de lecture: la tete du document n'etait pas de la prose "
+            f"analyisable; la lecture a ete deplacee pour {detail}."
         )
 
     if not parts:
@@ -576,9 +613,7 @@ def _build_prose_prompt(synthesis_result: Dict[str, Any]) -> str:
 
     # Epic #1258 / Track 1 #1259 — drop the opaque-ID rule when deanonymized.
     deanonymized = bool(synthesis_result.get("deanonymized", True))
-    instructions = _PROSE_INSTRUCTIONS + (
-        "" if deanonymized else _PROSE_OPAQUE_RULE
-    )
+    instructions = _PROSE_INSTRUCTIONS + ("" if deanonymized else _PROSE_OPAQUE_RULE)
 
     return (
         f"{instructions}\n\n"
