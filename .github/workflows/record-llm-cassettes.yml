@@ -114,15 +114,22 @@ jobs:
           if-no-files-found: error
 
       # Optional: open the cassettes PR from this job when a PAT is configured.
-      # Without the secret the job ends at the artifact — a coordinator creates
-      # the PR from the download. The trigger PR (#1603 DoD 7) is NEVER opened
-      # by this job.
+      # Without the secret the step self-skips — the job ends at the artifact
+      # and a coordinator creates the PR from the download. The trigger PR
+      # (#1603 DoD 7) is NEVER opened by this job. NOTE: the `secrets` context
+      # is not allowed in a step-level `if:` (GitHub rejects the whole file —
+      # caught 2026-08-17 when both branch pushes failed with 0s parse runs),
+      # so the gate lives in the shell.
       - name: Open cassettes PR (optional, needs CASSETTES_PR_TOKEN)
-        if: ${{ secrets.CASSETTES_PR_TOKEN != '' }}
+        if: always()
         shell: pwsh
         env:
           CASSETTES_PR_TOKEN: ${{ secrets.CASSETTES_PR_TOKEN }}
         run: |
+          if (-not $env:CASSETTES_PR_TOKEN) {
+            Write-Host "CASSETTES_PR_TOKEN not configured — skipping the cassettes PR (artifact-only, per #1603 DoD 7 arbitration flow)."
+            exit 0
+          }
           $env:CASSETTES_PR_TOKEN | gh auth login --with-token
           $branch = "cassettes/llm-record-${{ github.run_id }}"
           git checkout -b $branch
