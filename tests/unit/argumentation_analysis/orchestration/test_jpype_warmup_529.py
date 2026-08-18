@@ -16,16 +16,21 @@ class TestJpypeWarmup:
     """Verify synchronous JPype warmup in unified_pipeline.py."""
 
     def test_warmup_code_exists_in_run_unified_analysis(self):
-        """run_unified_analysis must contain JPype warmup block."""
+        """run_unified_analysis must warm up Tweety through the canonical helper.
+
+        #1784: the warmup now goes through ``ready_initializer()`` — the
+        canonical traced warmup in tweety_initializer (construct, then
+        ``ensure_jvm_and_components_are_ready`` when cold). The inline
+        ``TweetyInitializer`` / ``ensure_jvm_and_components_are_ready`` pair
+        this test used to grep for was moved into that helper; asserting the
+        old strings here would force callers to inline the warmup again.
+        """
         from argumentation_analysis.orchestration import unified_pipeline
 
         source = inspect.getsource(unified_pipeline.run_unified_analysis)
-        assert "TweetyInitializer" in source, (
-            "run_unified_analysis should reference TweetyInitializer for warmup"
-        )
-        assert "ensure_jvm_and_components_are_ready" in source, (
-            "run_unified_analysis should call ensure_jvm_and_components_are_ready() "
-            "for synchronous JPype warmup"
+        assert "ready_initializer" in source, (
+            "run_unified_analysis should warm up Tweety via ready_initializer() "
+            "(canonical traced warmup, #1784)"
         )
 
     def test_warmup_guarded_by_spectacular_check(self):
