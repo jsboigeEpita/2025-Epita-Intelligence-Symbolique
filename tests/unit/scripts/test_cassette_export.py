@@ -39,7 +39,7 @@ def test_degraded_refusal_takes_precedence_over_privacy_audit(
 ) -> None:
     # A degraded marker containing privacy-violating prose must still be
     # classified "degraded" (the more specific diagnosis), not "unsafe".
-    value = {"_fallback": "raw_text: Le discours de 1940."}
+    value = {"_fallback": "raw_text: corpus_A."}
     status = export_one(None, "b" * 32, value, tmp_path, allow_unsafe=False)
     assert status == "degraded"
 

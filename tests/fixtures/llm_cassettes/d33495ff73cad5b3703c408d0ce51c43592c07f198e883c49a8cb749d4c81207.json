@@ -1,6 +1,0 @@
-{
-  "key": "d33495ff73cad5b3703c408d0ce51c43592c07f198e883c49a8cb749d4c81207",
-  "value": {
-    "_fallback": "namespace(choices=[namespace(message=namespace(content='{\"arguments\": [], \"claims\": [], \"summary\": \"ok\"}'))])"
-  }
-}
