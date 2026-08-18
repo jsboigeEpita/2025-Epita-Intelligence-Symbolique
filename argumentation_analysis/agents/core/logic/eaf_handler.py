@@ -24,6 +24,30 @@ _EAF_REASONERS = {
 }
 
 
+def _trivial_constraint(handler: "EAFHandler", arg_name: str) -> Any:
+    """#1796: the JAR's no-arg constructor defaults the epistemic constraint to
+    ``Possibility(Tautology)`` — the one formula its own evaluator rejects
+    (``satisfiesClassicalFormula`` handles FolAtom/Conjunction/Disjunction/
+    Negation, not Tautology), so every EAF query dies with
+    ``IllegalArgumentException``. This builds the equivalent always-true
+    constraint the evaluator supports: the disjunction of the three labelled
+    statuses of one argument (every argument has exactly one status per
+    labeling, so the disjunction always holds).
+    """
+    from java.util import ArrayList
+
+    disjuncts = ArrayList()
+    for predicate in ("in", "out", "und"):
+        disjuncts.add(
+            handler._Possibility(
+                handler._FolAtom(
+                    handler._Predicate(predicate, 1), handler._Constant(arg_name)
+                )
+            )
+        )
+    return handler._Disjunction(disjuncts)
+
+
 class EAFHandler:
     """Epistemic Argumentation Framework analysis using Tweety.
 
@@ -47,6 +71,21 @@ class EAFHandler:
         # Dung classes shared
         self._Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
         self._Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
+
+        # #1796: constraint-building classes (see _trivial_constraint)
+        self._Predicate = jpype.JClass(
+            "org.tweetyproject.logics.commons.syntax.Predicate"
+        )
+        self._Constant = jpype.JClass(
+            "org.tweetyproject.logics.commons.syntax.Constant"
+        )
+        self._FolAtom = jpype.JClass("org.tweetyproject.logics.fol.syntax.FolAtom")
+        self._Possibility = jpype.JClass(
+            "org.tweetyproject.logics.ml.syntax.Possibility"
+        )
+        self._Disjunction = jpype.JClass(
+            "org.tweetyproject.logics.fol.syntax.Disjunction"
+        )
 
         # Load reasoners
         self._reasoners = {}
@@ -96,6 +135,11 @@ class EAFHandler:
                 arg = self._Argument(name)
                 arg_map[name] = arg
                 framework.add(arg)
+
+            # #1796: replace the default constraint (unsupported Tautology)
+            # with an equivalent, evaluable always-true constraint.
+            if arguments:
+                framework.setConstraint(_trivial_constraint(self, arguments[0]))
 
             # Create attacks
             for src, tgt in attacks:
