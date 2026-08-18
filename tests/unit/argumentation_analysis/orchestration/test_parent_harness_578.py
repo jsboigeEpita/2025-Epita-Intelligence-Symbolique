@@ -7,6 +7,7 @@ Verifies that _invoke_hierarchical_fallacy_per_argument correctly:
 - Falls back to single-text when no arguments available
 - Handles timeouts and errors per-argument
 """
+
 import asyncio
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -30,8 +31,14 @@ class TestExtractArgumentsForParallel:
         context = {"_state_object": state}
         result = _extract_arguments_for_parallel("any text", context)
         assert len(result) == 2
-        assert result[0] == ("arg_1", "First argument with sufficient length to pass threshold")
-        assert result[1] == ("arg_2", "Second argument also long enough for extraction test")
+        assert result[0] == (
+            "arg_1",
+            "First argument with sufficient length to pass threshold",
+        )
+        assert result[1] == (
+            "arg_2",
+            "Second argument also long enough for extraction test",
+        )
 
     def test_extracts_from_extraction_output(self):
         from argumentation_analysis.orchestration.invoke_callables import (
@@ -41,7 +48,9 @@ class TestExtractArgumentsForParallel:
         context = {
             "phase_extract_output": {
                 "arguments": [
-                    {"text": "Argument one is a substantial text for testing purposes here"},
+                    {
+                        "text": "Argument one is a substantial text for testing purposes here"
+                    },
                     {"text": "Argument two is another substantial text for testing"},
                 ]
             }
@@ -177,18 +186,20 @@ class TestInvokeHierarchicalFallacyPerArgument:
 
         # Each arg returns 1 fallacy — must be async coroutines
         def make_async_plugin_result(arg_id):
-            result_json = json.dumps({
-                "fallacies": [
-                    {
-                        "fallacy_type": f"fallacy_for_{arg_id}",
-                        "taxonomy_pk": f"pk_{arg_id}",
-                        "confidence": 0.8,
-                        "explanation": f"Fallacy in {arg_id}",
-                    }
-                ],
-                "exploration_method": "wide_net",
-                "total_iterations": 3,
-            })
+            result_json = json.dumps(
+                {
+                    "fallacies": [
+                        {
+                            "fallacy_type": f"fallacy_for_{arg_id}",
+                            "taxonomy_pk": f"pk_{arg_id}",
+                            "confidence": 0.8,
+                            "explanation": f"Fallacy in {arg_id}",
+                        }
+                    ],
+                    "exploration_method": "wide_net",
+                    "total_iterations": 3,
+                }
+            )
 
             async def _mock_run(*args, **kwargs):
                 return result_json
@@ -225,9 +236,16 @@ class TestInvokeHierarchicalFallacyPerArgument:
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
             return_value=arguments,
-        ), patch.dict("sys.modules", modules), patch(
-            "argumentation_analysis.orchestration.invoke_callables.os.environ",
-            {"OPENAI_API_KEY": "test-key", "OPENAI_BASE_URL": "https://api.test.com/v1", "OPENAI_CHAT_MODEL_ID": "test-model"},
+        ), patch.dict(
+            "sys.modules", modules
+        ), patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_BASE_URL": "https://api.test.com/v1",
+                "OPENAI_CHAT_MODEL_ID": "test-model",
+            },
+            clear=True,
         ):
             result = await _invoke_hierarchical_fallacy_per_argument("full text", {})
 
@@ -250,18 +268,20 @@ class TestInvokeHierarchicalFallacyPerArgument:
 
         # Both return same taxonomy_pk but different source_arg_id
         def make_async_plugin_result(arg_id):
-            result_json = json.dumps({
-                "fallacies": [
-                    {
-                        "fallacy_type": "ad_hominem",
-                        "taxonomy_pk": "pk_ad_hominem",
-                        "confidence": 0.7,
-                        "explanation": f"Same fallacy in {arg_id}",
-                    }
-                ],
-                "exploration_method": "wide_net",
-                "total_iterations": 2,
-            })
+            result_json = json.dumps(
+                {
+                    "fallacies": [
+                        {
+                            "fallacy_type": "ad_hominem",
+                            "taxonomy_pk": "pk_ad_hominem",
+                            "confidence": 0.7,
+                            "explanation": f"Same fallacy in {arg_id}",
+                        }
+                    ],
+                    "exploration_method": "wide_net",
+                    "total_iterations": 2,
+                }
+            )
 
             async def _mock_run(*args, **kwargs):
                 return result_json
@@ -296,9 +316,16 @@ class TestInvokeHierarchicalFallacyPerArgument:
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
             return_value=arguments,
-        ), patch.dict("sys.modules", modules), patch(
-            "argumentation_analysis.orchestration.invoke_callables.os.environ",
-            {"OPENAI_API_KEY": "test-key", "OPENAI_BASE_URL": "https://api.test.com/v1", "OPENAI_CHAT_MODEL_ID": "test-model"},
+        ), patch.dict(
+            "sys.modules", modules
+        ), patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_BASE_URL": "https://api.test.com/v1",
+                "OPENAI_CHAT_MODEL_ID": "test-model",
+            },
+            clear=True,
         ):
             result = await _invoke_hierarchical_fallacy_per_argument("full text", {})
 
@@ -318,11 +345,19 @@ class TestInvokeHierarchicalFallacyPerArgument:
         ]
 
         # arg_1 succeeds quickly
-        fast_result = json.dumps({
-            "fallacies": [{"fallacy_type": "ad_hominem", "taxonomy_pk": "pk_1", "confidence": 0.8}],
-            "exploration_method": "wide_net",
-            "total_iterations": 2,
-        })
+        fast_result = json.dumps(
+            {
+                "fallacies": [
+                    {
+                        "fallacy_type": "ad_hominem",
+                        "taxonomy_pk": "pk_1",
+                        "confidence": 0.8,
+                    }
+                ],
+                "exploration_method": "wide_net",
+                "total_iterations": 2,
+            }
+        )
 
         async def fast_run(*args, **kwargs):
             return fast_result
@@ -359,9 +394,16 @@ class TestInvokeHierarchicalFallacyPerArgument:
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
             return_value=arguments,
-        ), patch.dict("sys.modules", modules), patch(
-            "argumentation_analysis.orchestration.invoke_callables.os.environ",
-            {"OPENAI_API_KEY": "test-key", "OPENAI_BASE_URL": "https://api.test.com/v1", "OPENAI_CHAT_MODEL_ID": "test-model"},
+        ), patch.dict(
+            "sys.modules", modules
+        ), patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_BASE_URL": "https://api.test.com/v1",
+                "OPENAI_CHAT_MODEL_ID": "test-model",
+            },
+            clear=True,
         ):
             # Use a very short timeout for arg_2 to trigger timeout quickly
             original_wait_for = asyncio.wait_for
@@ -375,7 +417,9 @@ class TestInvokeHierarchicalFallacyPerArgument:
                 "argumentation_analysis.orchestration.invoke_callables.asyncio.wait_for",
                 side_effect=patched_wait_for,
             ):
-                result = await _invoke_hierarchical_fallacy_per_argument("full text", {})
+                result = await _invoke_hierarchical_fallacy_per_argument(
+                    "full text", {}
+                )
 
         # The fast arg completes, the slow one times out — result still valid
         assert "fallacies" in result
@@ -395,12 +439,18 @@ class TestInvokeHierarchicalFallacyPerArgument:
         # Primary guided path hangs (times out); one-shot returns quickly.
         async def guided(*args, **kwargs):
             if kwargs.get("use_one_shot"):
-                return json.dumps({
-                    "fallacies": [
-                        {"fallacy_type": "post_hoc", "taxonomy_pk": "pk_2", "confidence": 0.7}
-                    ],
-                    "exploration_method": "one_shot",
-                })
+                return json.dumps(
+                    {
+                        "fallacies": [
+                            {
+                                "fallacy_type": "post_hoc",
+                                "taxonomy_pk": "pk_2",
+                                "confidence": 0.7,
+                            }
+                        ],
+                        "exploration_method": "one_shot",
+                    }
+                )
             await asyncio.sleep(10)
             return json.dumps({"fallacies": [], "exploration_method": "wide_net"})
 
@@ -428,9 +478,16 @@ class TestInvokeHierarchicalFallacyPerArgument:
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables._extract_arguments_for_parallel",
             return_value=arguments,
-        ), patch.dict("sys.modules", modules), patch(
-            "argumentation_analysis.orchestration.invoke_callables.os.environ",
-            {"OPENAI_API_KEY": "test-key", "OPENAI_BASE_URL": "https://api.test.com/v1", "OPENAI_CHAT_MODEL_ID": "test-model"},
+        ), patch.dict(
+            "sys.modules", modules
+        ), patch.dict(
+            "os.environ",
+            {
+                "OPENAI_API_KEY": "test-key",
+                "OPENAI_BASE_URL": "https://api.test.com/v1",
+                "OPENAI_CHAT_MODEL_ID": "test-model",
+            },
+            clear=True,
         ):
             original_wait_for = asyncio.wait_for
 
@@ -445,7 +502,9 @@ class TestInvokeHierarchicalFallacyPerArgument:
                 "argumentation_analysis.orchestration.invoke_callables.asyncio.wait_for",
                 side_effect=patched_wait_for,
             ):
-                result = await _invoke_hierarchical_fallacy_per_argument("full text", {})
+                result = await _invoke_hierarchical_fallacy_per_argument(
+                    "full text", {}
+                )
 
         # The one-shot fallback recovered the fallacy instead of returning empty.
         assert len(result["fallacies"]) == 1
