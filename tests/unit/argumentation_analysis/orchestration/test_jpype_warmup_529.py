@@ -38,9 +38,9 @@ class TestJpypeWarmup:
         from argumentation_analysis.orchestration import unified_pipeline
 
         source = inspect.getsource(unified_pipeline.run_unified_analysis)
-        assert 'workflow_name == "spectacular"' in source, (
-            "Warmup should be guarded by workflow_name == 'spectacular' check"
-        )
+        assert (
+            'workflow_name == "spectacular"' in source
+        ), "Warmup should be guarded by workflow_name == 'spectacular' check"
 
     def test_warmup_failure_is_non_fatal(self):
         """Warmup failure should log warning, not crash."""
@@ -48,14 +48,16 @@ class TestJpypeWarmup:
 
         source = inspect.getsource(unified_pipeline.run_unified_analysis)
         # Find the try/except around warmup
-        assert "JPype warmup failed" in source, (
-            "Warmup should catch exceptions and log a warning, not propagate"
-        )
+        assert (
+            "JPype warmup failed" in source
+        ), "Warmup should catch exceptions and log a warning, not propagate"
 
     @pytest.mark.asyncio
     async def test_warmup_called_before_executor(self):
         """Warmup must execute before WorkflowExecutor.execute()."""
-        from argumentation_analysis.orchestration.unified_pipeline import run_unified_analysis
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
 
         # Parse the function source to verify ordering
         source = inspect.getsource(run_unified_analysis)
@@ -63,7 +65,10 @@ class TestJpypeWarmup:
 
         func_def = None
         for node in ast.walk(tree):
-            if isinstance(node, ast.AsyncFunctionDef) and node.name == "run_unified_analysis":
+            if (
+                isinstance(node, ast.AsyncFunctionDef)
+                and node.name == "run_unified_analysis"
+            ):
                 func_def = node
                 break
 
@@ -102,9 +107,9 @@ class TestJpypeWarmup:
         executor_pos = source.find("executor.execute")
         assert warmup_pos > 0, "TweetyInitializer not found in source"
         assert executor_pos > 0, "executor.execute not found in source"
-        assert warmup_pos < executor_pos, (
-            "JPype warmup (TweetyInitializer) must appear before executor.execute()"
-        )
+        assert (
+            warmup_pos < executor_pos
+        ), "JPype warmup (TweetyInitializer) must appear before executor.execute()"
 
     def test_jpype_phase_set_covers_all_required_phases(self):
         """The _jpype_phases set should include all phases that use JPype."""
@@ -112,10 +117,13 @@ class TestJpypeWarmup:
 
         source = inspect.getsource(unified_pipeline.run_unified_analysis)
         required_phases = [
-            "pl", "fol", "modal", "dung_extensions",
-            "aspic_analysis", "fol_solver", "modal_solver",
+            "pl",
+            "fol",
+            "modal",
+            "dung_extensions",
+            "aspic_analysis",
+            "fol_solver",
+            "modal_solver",
         ]
         for phase in required_phases:
-            assert f'"{phase}"' in source, (
-                f"_jpype_phases should include '{phase}'"
-            )
+            assert f'"{phase}"' in source, f"_jpype_phases should include '{phase}'"
