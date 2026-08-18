@@ -69,24 +69,14 @@ def _jvm_required(func):
 
 
 def _ready_initializer():
-    """#1775: a bare ``TweetyInitializer()`` never loads the Tweety classes,
-    so the handler guards rejected a booted JVM and axis availability depended
-    on which tools happened to run first in the process. Warm the initializer
-    explicitly (idempotent after the first call, traced) before constructing
-    handlers."""
+    """#1775/#1784: delegates to the canonical traced warmup
+    (``tweety_initializer.ready_initializer``). Kept as a thin alias so the
+    plugin's call sites and the #1775 tripwire keep one stable name."""
     from argumentation_analysis.agents.core.logic.tweety_initializer import (
-        TweetyInitializer,
+        ready_initializer,
     )
 
-    initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
-    if not initializer.is_jvm_ready():
-        logger.info(
-            "#1775: Tweety classes not loaded on this path — warming the "
-            "initializer before handler construction so axis availability "
-            "does not depend on call order."
-        )
-        initializer.ensure_jvm_and_components_are_ready()
-    return initializer
+    return ready_initializer()
 
 
 class TweetyLogicPlugin:

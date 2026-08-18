@@ -121,6 +121,9 @@ def _inject_fake_handlers(monkeypatch) -> List[Dict[str, Any]]:
         _fake_module(
             "argumentation_analysis.agents.core.logic.tweety_initializer",
             TweetyInitializer=_FakeTweetyInitializer,
+            # #1784: production now constructs the initializer via
+            # ready_initializer() before building handlers.
+            ready_initializer=lambda: _FakeTweetyInitializer(),
         ),
     )
 

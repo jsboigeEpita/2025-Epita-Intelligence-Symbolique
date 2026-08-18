@@ -16,8 +16,9 @@ Key schema invariants verified:
   - State snapshot contains the expected top-level keys
 
 Known schema mismatches (documented, not fixed here):
-  - _python_ranking_fallback returns "ranking" key; _write_ranking_to_state
-    reads "arguments" → ranking_results entries have arguments=[]
+  - _python_ranking_fallback no longer returns anything — it is a fail-loud
+    stub (#1019, RA-8 #1053), so its old ranking/arguments writer mismatch
+    is void. The dialogue mismatch below still stands.
   - _invoke_dialogue fallback returns "trace" key; _write_dialogue_to_state
     reads "dialogue_trace" → dialogue_results entries have trace=[]
 """
@@ -194,38 +195,29 @@ class TestGenerateAttacksFromArgs:
 
 
 class TestPythonRankingFallback:
-    def test_returns_required_keys(self):
-        result = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
-        assert "method" in result
-        assert "ranking" in result
-        assert "scores" in result
-        assert "comparisons" in result
-        assert result["fallback"] == "python"
+    """Fail-loud contract (#1019, RA-8 #1053, re-mesuré #1784).
 
-    def test_method_preserved(self):
-        result = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "burden")
-        assert result["method"] == "burden"
+    The pre-#1053 tests asserted the synthetic-score dict (method/ranking/
+    scores/comparisons). That fallback entered state as authentic formal
+    results — an anti-theater violation — and was deliberately replaced by
+    this raising stub. The stale assertions were silently red outside CI
+    (#1783) and were read as a #1775-class signature in #1784; the re-measure
+    showed they are the fail-loud contract working as merged.
+    """
 
-    def test_ranking_contains_all_args(self):
-        result = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
-        assert set(result["ranking"]) == set(SAMPLE_ARGS)
+    @pytest.mark.parametrize("method", ["categorizer", "burden", "discussion"])
+    def test_every_method_raises_fail_loud(self, method):
+        with pytest.raises(
+            RuntimeError, match=rf"Ranking semantics \({method}\) unavailable"
+        ):
+            _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, method)
 
-    def test_scores_between_zero_and_one(self):
-        result = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
-        for arg, score in result["scores"].items():
-            assert 0.0 <= score <= 1.0
-
-    def test_attacked_arg_has_lower_score(self):
-        args = ["a", "b"]
-        attacks = [["a", "b"]]  # a attacks b → b should have score < a
-        result = _python_ranking_fallback(args, attacks, "categorizer")
-        assert result["scores"]["b"] < result["scores"]["a"]
-
-    def test_empty_args_returns_empty_ranking(self):
-        result = _python_ranking_fallback([], [], "categorizer")
-        assert result["ranking"] == []
-        assert result["scores"] == {}
-        assert result["comparisons"] == []
+    def test_empty_inputs_raise_too(self):
+        """No degenerate input silently succeeds — empty graphs raise the same
+        unavailability rather than returning an empty-but-authentic-looking
+        ranking."""
+        with pytest.raises(RuntimeError, match="JVM/Tweety required"):
+            _python_ranking_fallback([], [], "categorizer")
 
 
 # ---------------------------------------------------------------------------
@@ -257,12 +249,11 @@ class TestInvokeRankingFallback:
         assert isinstance(result, dict)
 
     async def test_schema_mismatch_ranking_vs_arguments(self):
-        """KNOWN MISMATCH: fallback returns 'ranking', writer reads 'arguments'.
-
-        When JVM is unavailable, state.add_ranking_result() will receive
-        arguments=[] because _write_ranking_to_state looks for 'arguments' key
-        which is absent from the Python fallback output.
-        """
+        """Historical mismatch, now void (#1019/#1784): the dict-shaped Python
+        ranking fallback — whose 'ranking' key the writer never read — was
+        replaced by a fail-loud stub, so no synthetic ranking output exists to
+        mismatch. With the JVM up the handler path returns a real result with
+        no 'fallback' key; the guard below keeps documenting that."""
         result = await _invoke_ranking(SAMPLE_TEXT, {})
         if result.get("fallback") == "python":
             # Fallback has 'ranking' key but NOT 'arguments'
@@ -410,24 +401,14 @@ class TestInvokeProbabilisticFallback:
 class TestStateWritersWithFallbackOutput:
     """State writers must be robust to fallback output schemas."""
 
-    def test_write_ranking_fallback_does_not_raise(self, fresh_state):
-        output = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
-        ctx = {"current_arg_id": "test_arg"}
-        _write_ranking_to_state(output, fresh_state, ctx)  # Must not raise
-
-    def test_write_ranking_fallback_creates_entry(self, fresh_state):
-        output = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
-        _write_ranking_to_state(output, fresh_state, {})
-        assert len(fresh_state.ranking_results) == 1
-
-    def test_write_ranking_fallback_arguments_preserved(self, fresh_state):
-        """Verify ranking fallback correctly passes arguments to state writer."""
-        output = _python_ranking_fallback(SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer")
-        _write_ranking_to_state(output, fresh_state, {})
-        entry = fresh_state.ranking_results[0]
-        # Fixed: fallback now includes 'arguments' key
-        assert entry["arguments"] == SAMPLE_ARGS
-        assert entry["method"] == "categorizer"
+    def test_write_ranking_fallback_stub_raises_before_writer(self):
+        """#1019/#1784: the ranking stub raises upstream, so the writer is
+        never fed a synthetic ranking payload. If a dict-shaped fallback ever
+        reappears, the stub call stops raising and this test fails loudly."""
+        with pytest.raises(RuntimeError, match="Ranking semantics"):
+            output = _python_ranking_fallback(
+                SAMPLE_ARGS, SAMPLE_ATTACKS, "categorizer"
+            )
 
     def test_write_aspic_fallback_does_not_raise(self, fresh_state):
         output = {

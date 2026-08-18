@@ -848,6 +848,12 @@ def _inject_fake_setaf_module(monkeypatch, payload):
         pass
 
     fake_init.TweetyInitializer = _FakeTweetyInitializer  # type: ignore[attr-defined]
+
+    # #1784: production now constructs the initializer via ready_initializer()
+    # before building handlers — the fake module must carry the symbol.
+    fake_init.ready_initializer = (  # type: ignore[attr-defined]
+        lambda: _FakeTweetyInitializer()
+    )
     monkeypatch.setitem(
         sys.modules,
         "argumentation_analysis.agents.core.logic.tweety_initializer",
@@ -1084,6 +1090,12 @@ def _inject_fake_weighted_module(monkeypatch, payload):
         pass
 
     fake_init.TweetyInitializer = _FakeTweetyInitializer  # type: ignore[attr-defined]
+
+    # #1784: production now constructs the initializer via ready_initializer()
+    # before building handlers — the fake module must carry the symbol.
+    fake_init.ready_initializer = (  # type: ignore[attr-defined]
+        lambda: _FakeTweetyInitializer()
+    )
     monkeypatch.setitem(
         sys.modules,
         "argumentation_analysis.agents.core.logic.tweety_initializer",

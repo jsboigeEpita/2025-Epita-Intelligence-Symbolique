@@ -4517,10 +4517,10 @@ async def _invoke_dl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
     try:
         from argumentation_analysis.agents.core.logic.dl_handler import DLHandler
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = DLHandler(initializer)
         kb = await asyncio.to_thread(
             handler.create_knowledge_base, tbox, abox_concepts, abox_roles
@@ -4561,10 +4561,10 @@ async def _invoke_cl(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]
     try:
         from argumentation_analysis.agents.core.logic.cl_handler import CLHandler
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = CLHandler(initializer)
         kb = await asyncio.to_thread(handler.create_knowledge_base, conditionals)
         if query_conclusion:
@@ -4735,10 +4735,10 @@ async def _invoke_setaf(input_text: str, context: Dict[str, Any]) -> Dict[str, A
     try:
         from argumentation_analysis.agents.core.logic.setaf_handler import SetAFHandler
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = SetAFHandler(initializer)
         output = await asyncio.to_thread(
             handler.analyze_setaf, args, attacks, semantics
@@ -4822,10 +4822,10 @@ async def _invoke_weighted(input_text: str, context: Dict[str, Any]) -> Dict[str
             WeightedHandler,
         )
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = WeightedHandler(initializer)
         output = await asyncio.to_thread(
             handler.analyze_weighted_framework, args, attacks, semantics
@@ -4863,10 +4863,10 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
             SocialHandler,
         )
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = SocialHandler(initializer)
         output = await asyncio.to_thread(
             handler.analyze_social_framework, args, attacks, votes
@@ -4939,10 +4939,10 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     try:
         from argumentation_analysis.agents.core.logic.eaf_handler import EAFHandler
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = EAFHandler(initializer)
         return await asyncio.to_thread(
             handler.analyze_epistemic_framework, args, attacks, beliefs, semantics
@@ -4979,10 +4979,10 @@ async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, An
     try:
         from argumentation_analysis.agents.core.logic.delp_handler import DeLPHandler
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = DeLPHandler(initializer)
         return await asyncio.to_thread(
             handler.analyze_delp, program_text, queries, criterion
@@ -5002,10 +5002,10 @@ async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
     try:
         from argumentation_analysis.agents.core.logic.qbf_handler import QBFHandler
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = QBFHandler(initializer)
         return await asyncio.to_thread(handler.analyze_qbf, quantifiers, formula)
     except Exception as e:
@@ -7824,10 +7824,10 @@ async def _invoke_dung_extensions(
             SEMANTICS_REASONERS,
         )
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = AFHandler(initializer)
 
         # Compute all 11 semantics in one pass (framework built once).
@@ -8052,10 +8052,10 @@ async def _default_tweety_dung_backend(
             SEMANTICS_REASONERS,
         )
         from argumentation_analysis.agents.core.logic.tweety_initializer import (
-            TweetyInitializer,
+            ready_initializer,
         )
 
-        initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+        initializer = ready_initializer()
         handler = AFHandler(initializer)
         sem_list = [s for s in _COMPARE_DUNG_SEMANTICS if s in SEMANTICS_REASONERS]
         result = await asyncio.to_thread(
@@ -9901,12 +9901,12 @@ async def _invoke_external_modal_solver(
                 ModalHandler,
             )
             from argumentation_analysis.agents.core.logic.tweety_initializer import (
-                TweetyInitializer,
+                ready_initializer,
             )
 
             if not settings.modal_solver == ModalSolverChoice.SPASS:
                 object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
-            initializer = TweetyInitializer()  # type: ignore[no-untyped-call]
+            initializer = ready_initializer()
             handler = ModalHandler(initializer_instance=initializer)
             belief_set_str = "\n".join(str(f) for f in formulas)
             is_consistent, msg = await asyncio.to_thread(
