@@ -1,0 +1,47 @@
+{
+  "key": "b71d7c56a7f1fb6d5aca8b25df03b253363489c2ef465e89df8d37088af25fd9",
+  "value": {
+    "id": "chatcmpl-EDsenxc4xA4WYHbEPP69FGSY33kyZ",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\": [], \"claims\": [], \"summary\": \"The input \\\"Test argument text\\\" contains no identifiable argumentative positions, opposing positions, or verifiable factual claims. It appears to be a brief placeholder with no developed argumentation to extract.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1786977073,
+    "model": "gpt-5-mini-2025-08-07",
+    "object": "chat.completion",
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 315,
+      "prompt_tokens": 254,
+      "total_tokens": 569,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 256,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": null,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
