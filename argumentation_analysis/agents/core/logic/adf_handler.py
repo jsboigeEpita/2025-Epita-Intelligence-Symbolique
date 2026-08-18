@@ -45,8 +45,37 @@ class ADFHandler:
         self.NegationAcc = jpype.JClass(
             "org.tweetyproject.arg.adf.syntax.acc.NegationAcceptanceCondition"
         )
+        self.Link = jpype.JClass("org.tweetyproject.arg.adf.semantics.link.Link")
+        self.LinkType = jpype.JClass(
+            "org.tweetyproject.arg.adf.semantics.link.LinkType"
+        )
         self.KppParser = jpype.JClass("org.tweetyproject.arg.adf.io.KppADFFormatParser")
         self._reasoner_cache = {}
+        self._solver = None
+        self._solver_probed = False
+
+    def _get_solver(self) -> Any:
+        """#1796: every ADF reasoner takes an IncrementalSatSolver in its
+        constructor. The only implementations in the JARs are the JNI trio;
+        they decide when the DLL sits in a classpath *directory* (a jar URL
+        cannot be passed to System.load — that is what made #1244 conclude
+        they never decide). Probe once, honestly: if instantiation fails, the
+        axis degrades instead of crashing.
+        """
+        if not self._solver_probed:
+            self._solver_probed = True
+            try:
+                NativeMinisat = jpype.JClass(
+                    "org.tweetyproject.arg.adf.sat.solver.NativeMinisatSolver"
+                )
+                self._solver = NativeMinisat()
+            except Exception as e:
+                logger.warning(
+                    "ADF native SAT solver unavailable (%s) — axis will degrade.",
+                    str(e)[:120],
+                )
+                self._solver = None
+        return self._solver
 
     def _get_reasoner(self, semantics: str):
         if semantics not in self._reasoner_cache:
@@ -54,8 +83,11 @@ class ADFHandler:
                 raise ValueError(
                     f"Unknown ADF semantics: {semantics}. Available: {list(self.REASONERS.keys())}"
                 )
+            solver = self._get_solver()
+            if solver is None:
+                return None
             cls = jpype.JClass(self.REASONERS[semantics])
-            self._reasoner_cache[semantics] = cls()
+            self._reasoner_cache[semantics] = cls(solver)
         return self._reasoner_cache[semantics]
 
     def analyze_adf(
@@ -76,35 +108,59 @@ class ADFHandler:
             Dict with interpretations and statistics.
         """
         try:
-            builder = self.ADF.builder()
+            # #1796: default builder mode is eager with no LinkStrategy, which
+            # throws "missing links" as soon as a condition references a
+            # parent. We know each link's type (negation -> attacking), so we
+            # provide them explicitly — no SAT-based link strategy needed.
+            builder = self.ADF.builder().provided()
 
-            # Add statements
-            arg_map = {}
-            for stmt in statements:
-                arg = self.ADFArgument(stmt)
-                arg_map[stmt] = arg
-                builder.add(arg)
+            # #1796: the JAR's AbstractBuilder has no add(Argument) overload —
+            # only add(Argument, AcceptanceCondition) and add(Link). Every
+            # statement is added exactly once, with its condition.
+            arg_map = {stmt: self.ADFArgument(stmt) for stmt in statements}
 
-            # Add acceptance conditions
-            for stmt, condition in acceptance_conditions.items():
-                arg = arg_map[stmt]
-                if condition == "tautology":
-                    acc = self.TautologyAcc()
-                elif condition == "contradiction":
-                    acc = self.ContradictionAcc()
-                elif condition.startswith("negation:"):
+            def _acc_of(condition: str) -> Any:
+                if condition == "contradiction":
+                    return self.ContradictionAcc.INSTANCE
+                if condition.startswith("negation:"):
                     other = condition.split(":", 1)[1]
                     if other in arg_map:
-                        acc = self.NegationAcc(arg_map[other])
-                    else:
-                        acc = self.TautologyAcc()
-                else:
-                    acc = self.TautologyAcc()
-                builder.add(arg, acc)
+                        # Argument implements AcceptanceCondition, so the bare
+                        # argument is the literal for its own acceptance.
+                        return self.NegationAcc(arg_map[other])
+                return self.TautologyAcc.INSTANCE
+
+            for stmt, condition in acceptance_conditions.items():
+                builder.add(arg_map[stmt], _acc_of(condition))
+            for stmt in statements:
+                if stmt not in acceptance_conditions:
+                    builder.add(arg_map[stmt], self.TautologyAcc.INSTANCE)
+            for stmt, condition in acceptance_conditions.items():
+                if condition.startswith("negation:"):
+                    other = condition.split(":", 1)[1]
+                    if other in arg_map:
+                        builder.add(
+                            self.Link.of(
+                                arg_map[other], arg_map[stmt], self.LinkType.ATTACKING
+                            )
+                        )
 
             adf = builder.build()
 
             reasoner = self._get_reasoner(semantics)
+            if reasoner is None:
+                return {
+                    "semantics": semantics,
+                    "statements": sorted(statements),
+                    "interpretations": [],
+                    "degraded": True,
+                    "note": "ADF native SAT solver unavailable (see libs/native/README.md).",
+                    "statistics": {
+                        "statements_count": len(statements),
+                        "conditions_count": len(acceptance_conditions),
+                        "interpretations_count": 0,
+                    },
+                }
             interpretations = reasoner.getModels(adf)
 
             interp_list = []
