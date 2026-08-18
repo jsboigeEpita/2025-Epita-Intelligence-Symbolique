@@ -26,6 +26,7 @@ targeted; git blame stays useful. The DB format (SQLite) is opaque to the
 auditor — JSON files make the privacy check possible without parsing
 SQLite.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -61,11 +62,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def export_one(db: diskcache.Cache, key: str, value, fixtures_dir: Path, *, allow_unsafe: bool) -> str:
-    """Write one cassette. Returns 'ok' | 'unsafe' | 'already'."""
+def export_one(
+    db: diskcache.Cache, key: str, value, fixtures_dir: Path, *, allow_unsafe: bool
+) -> str:
+    """Write one cassette. Returns 'ok' | 'unsafe' | 'already' | 'degraded'.
+
+    ``degraded`` (#1603 R826 review): a dict value carrying ``_fallback`` is
+    the marker ``_serialize_chat_completion`` writes when it gives up on a
+    response — such a cassette replays as a ``str``/choices-less value, i.e.
+    an unusable cassette wearing the shape of a real one. The marker is
+    apposed by the serializer itself, so no legitimate cassette can escape
+    this check (no false negative by construction). Refusing at the export
+    boundary keeps ``llm_cache.py`` free of record-shape guards and the BO-3
+    replay invariants un-widened.
+    """
     out = fixtures_dir / f"{key}.json"
     if out.exists():
         return "already"
+    if isinstance(value, dict) and "_fallback" in value:
+        return "degraded"
     if not allow_unsafe:
         violations = audit_value(value, source=f"cassette {key[:16]}")
         if violations:
@@ -89,17 +104,24 @@ def main(argv: list[str] | None = None) -> int:
     try:
         total = len(db)
         if total == 0:
-            print(f"No entries in {args.source_dir}; nothing to export.", file=sys.stderr)
+            print(
+                f"No entries in {args.source_dir}; nothing to export.", file=sys.stderr
+            )
             return 0
 
-        counts: dict[str, int] = {"ok": 0, "already": 0, "unsafe": 0}
+        counts: dict[str, int] = {"ok": 0, "already": 0, "unsafe": 0, "degraded": 0}
         unsafe_keys: list[str] = []
+        degraded_keys: list[str] = []
         for key in db.iterkeys():
             value = db[key]
-            status = export_one(db, key, value, args.fixtures_dir, allow_unsafe=args.allow_unsafe)
+            status = export_one(
+                db, key, value, args.fixtures_dir, allow_unsafe=args.allow_unsafe
+            )
             counts[status] = counts.get(status, 0) + 1
             if status == "unsafe":
                 unsafe_keys.append(key[:16])
+            if status == "degraded":
+                degraded_keys.append(key[:16])
     finally:
         db.close()
 
@@ -109,8 +131,16 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Exported: {counts['ok']}")
     print(f"Already present: {counts['already']}")
     print(f"Refused (privacy): {counts['unsafe']}")
+    print(f"Refused (degraded value — unusable cassette): {counts['degraded']}")
+    if degraded_keys:
+        print(
+            f"Degraded cassettes (first 16 chars of key): {degraded_keys}",
+            file=sys.stderr,
+        )
     if unsafe_keys:
-        print(f"Refused cassettes (first 16 chars of key): {unsafe_keys}", file=sys.stderr)
+        print(
+            f"Refused cassettes (first 16 chars of key): {unsafe_keys}", file=sys.stderr
+        )
         return 2
     return 0
 
