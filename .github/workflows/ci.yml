@@ -137,7 +137,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
         run: |
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()
