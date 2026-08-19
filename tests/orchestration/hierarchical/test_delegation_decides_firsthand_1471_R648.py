@@ -19,6 +19,7 @@ test is the regression guard.
 import pytest
 
 from typing import Any, Dict
+from unittest.mock import patch
 
 from argumentation_analysis.orchestration.hierarchical.orchestrator import (
     run_hierarchical_analysis,
@@ -142,31 +143,56 @@ class TestDelegationModeDecidesFirsthand:
         executor = make_registry_operational_executor(registry)
         import asyncio
 
-        result = asyncio.get_event_loop().run_until_complete(
-            executor(
-                {
-                    "tactical_task_id": "t-test-legacy",
-                    "objective_id": "obj-legacy-test",
-                    "description": "Extraire segments pertinents",
-                    "required_capabilities": ["text_extraction"],
-                    "context": {},
-                    # CC #1531: le corpus voyage par ``text_extracts`` ; sans
-                    # lui l'exécuteur échoue en ``insufficient_input`` AVANT
-                    # d'invoquer. Le routage legacy→registry testé ici est
-                    # décidé en amont de cette garde : l'assertion est intacte.
-                    "text_extracts": [
-                        {
-                            "id": "x1",
-                            "content": (
-                                "Tous les experts le disent, donc c'est vrai. "
-                                "Et si vous n'êtes pas d'accord, c'est que vous "
-                                "ne comprenez rien au sujet."
-                            ),
-                        }
-                    ],
-                }
+        # #1809: the verdict below asserts routing only (status/capability) —
+        # it does NOT read the LLM output, and ``status == "completed"`` is
+        # reachable without any call: the executor marks a task completed as
+        # soon as the provider returns non-None, and the provider's no-client
+        # branch IS the heuristic fallback. Marking this test requires_api
+        # would mask that the POST bought nothing the verdict uses. The
+        # qualified windows pin the producer's own ``os`` copy (invoke_callables
+        # holds a second copy in full sessions — same mechanism as #1807), so
+        # the provider takes its no-openai-client branch and the bridge is
+        # still exercised end-to-end: legacy name → mapping → real provider →
+        # heuristic result → completed.
+        _no_key = {
+            "OPENAI_API_KEY": "",
+            "OPENROUTER_API_KEY": "",
+            "OPENROUTER_BASE_URL": "",
+        }
+        with patch.dict(
+            "argumentation_analysis.orchestration.invoke_callables.os.environ",
+            _no_key,
+            clear=True,
+        ), patch.dict(
+            "os.environ",
+            _no_key,
+            clear=True,
+        ):
+            result = asyncio.get_event_loop().run_until_complete(
+                executor(
+                    {
+                        "tactical_task_id": "t-test-legacy",
+                        "objective_id": "obj-legacy-test",
+                        "description": "Extraire segments pertinents",
+                        "required_capabilities": ["text_extraction"],
+                        "context": {},
+                        # CC #1531: le corpus voyage par ``text_extracts`` ; sans
+                        # lui l'exécuteur échoue en ``insufficient_input`` AVANT
+                        # d'invoquer. Le routage legacy→registry testé ici est
+                        # décidé en amont de cette garde : l'assertion est intacte.
+                        "text_extracts": [
+                            {
+                                "id": "x1",
+                                "content": (
+                                    "Tous les experts le disent, donc c'est vrai. "
+                                    "Et si vous n'êtes pas d'accord, c'est que vous "
+                                    "ne comprenez rien au sujet."
+                                ),
+                            }
+                        ],
+                    }
+                )
             )
-        )
         assert result["status"] == "completed", (
             f"legacy text_extraction should route via fact_extraction, " f"got {result}"
         )
