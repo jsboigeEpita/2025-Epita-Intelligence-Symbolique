@@ -4,10 +4,12 @@
 #
 # Rationale : ci.yml exécute tests/unit -m "not slow and not requires_api" pour
 # rester sous quelques minutes sans facturer d'appels LLM à chaque push. Les 640
-# tests écartés (integration 434, e2e 74, bench 11, unit slow/requires_api 121)
-# ne sont PAS exemptés de passer — ils sont différés vers cette lane, qu'on
-# déclenche à la demande (avant une release, après un gros merge) avec les vraies
-# clés. C'est aussi le seul foyer du test non-hermétique quarantiné en #1343.
+# tests écartés (integration 434, e2e 74, bench 11, unit slow/requires_api 121 —
+# ce dernier nombre est périmé : 329 mesurés le 2026-08-19 sur le sélecteur
+# élargi, voir #1592) ne sont PAS exemptés de passer — ils sont différés vers
+# cette lane, qu'on déclenche à la demande (avant une release, après un gros
+# merge) avec les vraies clés. C'est aussi le seul foyer du test non-hermétique
+# quarantiné en #1343.
 #
 # Déclenchement : onglet Actions → "Extended Test Lanes" → Run workflow →
 # choisir la lane (all ou une seule). Ou : gh workflow run extended-tests.yml -f lane=bench
@@ -22,6 +24,10 @@ on:
         type: choice
         default: all
         options: [all, integration-jvm, integration-rest, e2e, bench, unit-api]
+      collect_only:
+        description: "Collecter sans exécuter — prouve le sélecteur (nombre collecté) à coût d'appels nul (#1592)"
+        type: boolean
+        default: false
 
 # Un seul run étendu par ref ; un nouveau supersède l'en-vol.
 concurrency:
@@ -91,21 +97,43 @@ jobs:
           TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
         run: |
           $lane = "${{ matrix.lane }}"
-          $common = "--junitxml=pytest_report_$lane.xml -v --timeout=900 --timeout-method=thread"
-          switch ($lane) {
-            "integration-jvm"  { $sel = "tests/integration/jpype_tweety tests/integration/logical_agents" }
-            "integration-rest" { $sel = "tests/integration --ignore=tests/integration/jpype_tweety --ignore=tests/integration/logical_agents" }
-            "e2e"              { $sel = "tests/e2e" }
-            "bench"            { $sel = "tests/bench" }
-            "unit-api"         { $sel = "tests/unit -m `"slow or requires_api`"" }
+          # #1592: selectors are argv ARRAYS, not space-split strings. The old
+          # string form shattered `-m "slow or requires_api"` into four tokens
+          # the moment .Split(" ") ran (`-m`, `"slow`, `or`, `requires_api"`) —
+          # unit-api could never pass its marker expression intact. Arrays
+          # splat as single argv entries, quotes included where needed.
+          $common = @("--junitxml=pytest_report_$lane.xml", "-v", "--timeout=900", "--timeout-method=thread")
+          if ("${{ github.event.inputs.collect_only }}" -eq "true") {
+            # #1592: fire the selector machinery (collection on the real
+            # runner) without executing a single test — zero LLM calls, and
+            # the collected count is the decisive readout proving the lane
+            # addresses something.
+            $common = @("--collect-only", "-q")
           }
-          Write-Host "Lane $lane -> pytest $sel"
-          conda run -n projet-is --no-capture-output pytest $sel.Split(" ") $common.Split(" ")
+          switch ($lane) {
+            "integration-jvm"  { $sel = @("tests/integration/jpype_tweety", "tests/integration/logical_agents") }
+            "integration-rest" { $sel = @("tests/integration", "--ignore=tests/integration/jpype_tweety", "--ignore=tests/integration/logical_agents") }
+            "e2e"              { $sel = @("tests/e2e") }
+            "bench"            { $sel = @("tests/bench") }
+            # #1592: the deferred destination must cover every location the
+            # gate's marker filter excludes. #1805 grew the gate argv to 12
+            # directories; this selector stayed at tests/unit — the two lists
+            # were meant to stay twins and diverged in silence. Exact
+            # gate-parity directories plus the marked root file; never
+            # `tests/` wholesale: block selection would swallow the two
+            # tests/integration sessionstart blockers (#1813) that no marker
+            # filter can exclude.
+            "unit-api"         { $sel = @("tests/unit", "tests/scripts", "tests/orchestration", "tests/ui", "tests/utils", "tests/golden", "tests/core", "tests/config", "tests/property", "tests/argumentation_analysis", "tests/project_core", "tests/functional", "tests/test_regression_golden.py", "-m", "slow or requires_api") }
+          }
+          Write-Host "Lane $lane -> pytest $($sel -join ' ')"
+          conda run -n projet-is --no-capture-output pytest @sel @common
 
       - name: Upload lane results
         if: always() && env.RUN == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: extended-results-${{ matrix.lane }}
-          path: pytest_report_*.xml
+          path: |
+            pytest_report_*.xml
+            llm_egress_report.json
           if-no-files-found: warn
