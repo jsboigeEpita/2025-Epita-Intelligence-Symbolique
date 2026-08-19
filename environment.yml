@@ -74,6 +74,7 @@ dependencies:
   - pip:
     - textstat  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
     - semantic-kernel>=1.33.0
+    - openai==3.3.0  # Pinned. semantic-kernel declares only a floor (openai>=2.0.0), so every fresh env resolved whatever PyPI served that day. Measured 2026-08-19: CI resolved openai 3.3.0 while dev envs built months earlier sat on 2.26.0 — and openai>=3.x moved its transport from httpx to httpx2. That gap is precisely why a CI-only failure like #1794 cannot be reproduced on a dev box: the two sides do not run the same client. 3.3.0 is the version the gate actually exercises (run 32195821578, green). Same drift class as python-sat below: a floor is not a version.
     - flask_socketio>=5.3.6
     - playwright
     - pytest-playwright
