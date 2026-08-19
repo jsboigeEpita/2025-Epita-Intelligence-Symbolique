@@ -5,6 +5,11 @@ Tests couvrant:
 - Validation configuration OpenAI correcte
 - Test connexion GPT-4o-mini fonctionnelle
 - Test modèles supportés et limites
+
+#1809: the three tests below emit real POSTs and their verdicts read the
+call's output (response content, response time, model accessibility) — the
+call is a purchase, so they are marked ``requires_api`` and run on the
+requires_api lane, not on every gate push.
 """
 
 import pytest
@@ -166,6 +171,7 @@ class TestGPTConfigValidation:
 
     @pytest.mark.asyncio
     @pytest.mark.real_llm
+    @pytest.mark.requires_api
     async def test_gpt4o_mini_connectivity(self, gpt_config_validator):
         """Test la connectivité GPT-4o-mini."""
         connectivity = await gpt_config_validator.test_api_connectivity(OPENAI_API_KEY)
@@ -254,6 +260,7 @@ class TestKernelConfiguration:
 
     @pytest.mark.asyncio
     @pytest.mark.real_llm
+    @pytest.mark.requires_api
     async def test_kernel_settings_optimization(self):
         """Test l'optimisation des settings du kernel."""
         kernel = Kernel()
@@ -366,6 +373,7 @@ class TestConfigurationIntegration:
 
     @pytest.mark.asyncio
     @pytest.mark.real_llm
+    @pytest.mark.requires_api
     async def test_end_to_end_configuration(self):
         """Test configuration end-to-end."""
         # Configuration complète
