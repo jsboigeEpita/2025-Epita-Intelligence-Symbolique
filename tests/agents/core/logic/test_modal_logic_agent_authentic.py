@@ -153,6 +153,7 @@ def test_initialization_and_setup_authentic(authentic_agent):
 
 @pytest.mark.asyncio
 @pytest.mark.llm_integration
+@pytest.mark.requires_api
 async def test_text_to_belief_set_authentic_modal(authentic_agent):
     """Test authentique de conversion texte -> belief set modal avec vrai LLM."""
     agent = authentic_agent["agent"]
@@ -189,6 +190,7 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
 
 @pytest.mark.asyncio
 @pytest.mark.llm_integration
+@pytest.mark.requires_api
 async def test_generate_queries_authentic_modal(authentic_agent):
     """Test authentique de génération de requêtes modales avec vrai LLM."""
     agent = authentic_agent["agent"]
@@ -254,6 +256,7 @@ def test_tweety_bridge_modal_integration_authentic(authentic_agent):
 
 @pytest.mark.asyncio
 @pytest.mark.integration
+@pytest.mark.requires_api
 async def test_full_workflow_modal_authentic(authentic_agent):
     """Test d'intégration complète authentique - workflow modal complet sans mocks."""
     agent = authentic_agent["agent"]
