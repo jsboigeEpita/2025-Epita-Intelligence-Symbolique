@@ -219,7 +219,23 @@ class TestTwoPassPipeline:
         # bypasses it and the fallback-on-no-key premise never holds: the LLM
         # fires (measured: 1 openrouter.ai request). Clearing the toggle makes
         # the tested premise real; no mock needed.
+        # #1794: the producer (NLToLogicTranslator client build,
+        # services/nl_to_logic.py) can hold a DIFFERENT os module object than
+        # sys.modules["os"] in a full session (measured: divergent id(os.environ)
+        # — same mechanism as test_env_checks). A window on the global
+        # "os.environ" clears only the sys.modules copy; the producer's copy
+        # keeps whatever key it saw (CI: test-written; local repro: ambient) and
+        # the POST still fires. The qualified window pins the object the
+        # producer actually reads.
         with patch.dict(
+            "argumentation_analysis.services.nl_to_logic.os.environ",
+            {
+                "OPENAI_API_KEY": "",
+                "OPENROUTER_API_KEY": "",
+                "OPENROUTER_BASE_URL": "",
+            },
+            clear=True,
+        ), patch.dict(
             "os.environ",
             {
                 "OPENAI_API_KEY": "",
@@ -326,7 +342,18 @@ class TestBackwardCompat:
         # #1794: clear=True — without it the ambient key (CI secret or the nested
         # .env leaked by multi_model_benchmark) survives the window and the
         # no-key premise never holds (measured: real POSTs out of the test).
+        # #1794 (round 3): qualified window on the producer's os binding — the
+        # global window alone does not reach NLToLogicTranslator's os.environ
+        # copy in a full session (see test_fallback_when_no_api_key above).
         with patch.dict(
+            "argumentation_analysis.services.nl_to_logic.os.environ",
+            {
+                "OPENAI_API_KEY": "",
+                "OPENROUTER_API_KEY": "",
+                "OPENROUTER_BASE_URL": "",
+            },
+            clear=True,
+        ), patch.dict(
             "os.environ",
             {
                 "OPENAI_API_KEY": "",
