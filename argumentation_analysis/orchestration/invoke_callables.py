@@ -94,13 +94,12 @@ def _get_strategic_directives(context: Dict[str, Any]) -> Tuple[str, List[str]]:
     return f"{header}\n" + "\n".join(lines), obj_ids
 
 
-# Ensure .env is loaded so OPENAI_API_KEY is available for all invoke callables
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except ImportError:
-    pass
+# #1794: the module-level load_dotenv() that used to live here ran at pytest
+# COLLECTION time (any test-module import reached this line) and loaded the
+# nearest .env into the process env before the first test ran — deciding
+# "no api key" premises by machine topology instead of by the test. Env
+# loading now belongs to process entry points only (api/main.py,
+# run_orchestration.py; interface_web is a pure proxy).
 
 # Export all underscore-prefixed functions for star-import in unified_pipeline facade
 __all__ = [

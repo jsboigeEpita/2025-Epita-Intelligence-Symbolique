@@ -313,10 +313,6 @@ async def run_multi_model_benchmark(
     Returns:
         ComparisonReport with aggregated scores and rankings.
     """
-    from dotenv import load_dotenv
-
-    load_dotenv()
-
     workflows = workflows or ["light", "standard"]
     registry = ModelRegistry.from_env()
     available_models = list(registry.list_models().keys())
@@ -487,6 +483,14 @@ def main():
         format="%(asctime)s [%(name)s] %(message)s",
     )
 
+    # #1794: env loading belongs to the CLI entry point — run_multi_model_benchmark
+    # is a library function and must not mutate the process environment (it leaked
+    # the nested .env key into the test suite). load_dotenv() here covers the
+    # list-models branch and the benchmark run below.
+    from dotenv import load_dotenv
+
+    load_dotenv()
+
     if args.list_workflows:
         print("Available workflows:")
         for wf in list_available_workflows():
@@ -494,9 +498,6 @@ def main():
         return
 
     if args.list_models:
-        from dotenv import load_dotenv
-
-        load_dotenv()
         registry = ModelRegistry.from_env()
         print("Available models:")
         for name, config in registry.list_models().items():

@@ -4,6 +4,17 @@ import glob
 import logging
 import os
 from pathlib import Path
+
+# #1794: this entry point used to inherit its .env from the module-level
+# load_dotenv() in orchestration.invoke_callables — env loading belongs to
+# process entry points, not to library imports (collection-time pollution).
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
 from .factory import create_app
 from .endpoints import router as api_router, framework_router, informal_router
 from .proposal_endpoints import proposal_router

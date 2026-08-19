@@ -75,6 +75,10 @@ class TestCluedoModeDispatch:
             "argumentation_analysis.run_orchestration.setup_environment",
             new_callable=AsyncMock,
             return_value=MagicMock(service_id="test"),
+        ), patch(
+            # #1794: main() loads the CLI .env — in-test that call would seed
+            # the real (nested) provider key into the process env.
+            "argumentation_analysis.run_orchestration.load_dotenv",
         ):
             from argumentation_analysis.run_orchestration import main
             import sys
@@ -83,8 +87,10 @@ class TestCluedoModeDispatch:
             original_argv = sys.argv
             sys.argv = [
                 "run_orchestration.py",
-                "--mode", "cluedo",
-                "--text", "Test text for investigation",
+                "--mode",
+                "cluedo",
+                "--text",
+                "Test text for investigation",
             ]
             try:
                 await main()
@@ -109,6 +115,9 @@ class TestCluedoModeDispatch:
             "argumentation_analysis.run_orchestration.setup_environment",
             new_callable=AsyncMock,
             return_value=MagicMock(service_id="test"),
+        ), patch(
+            # #1794: same as above — main()'s CLI .env load stays out of tests.
+            "argumentation_analysis.run_orchestration.load_dotenv",
         ):
             from argumentation_analysis.run_orchestration import main
             import sys
@@ -116,8 +125,10 @@ class TestCluedoModeDispatch:
             original_argv = sys.argv
             sys.argv = [
                 "run_orchestration.py",
-                "--mode", "cluedo",
-                "--text", "Some interesting text about a mystery",
+                "--mode",
+                "cluedo",
+                "--text",
+                "Some interesting text about a mystery",
             ]
             try:
                 await main()
@@ -128,7 +139,9 @@ class TestCluedoModeDispatch:
 
             # Check initial_question was derived from text
             if mock_cluedo_fn.called:
-                call_kwargs = mock_cluedo_fn.call_args[1] if mock_cluedo_fn.call_args[1] else {}
+                call_kwargs = (
+                    mock_cluedo_fn.call_args[1] if mock_cluedo_fn.call_args[1] else {}
+                )
                 initial_q = call_kwargs.get("initial_question", "")
                 assert "text" in initial_q.lower() or "indice" in initial_q.lower()
 

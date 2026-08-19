@@ -97,9 +97,10 @@ class TestRunCommand:
 
 class TestCheckJavaEnvironment:
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch(
+    @patch.dict(
         "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
         {"JAVA_HOME": "/fake/java"},
+        clear=True,
     )
     @patch("argumentation_analysis.utils.dev_tools.env_checks._PathInternal")
     def test_java_home_valid_and_java_works(self, mock_path_cls, mock_run):
@@ -120,7 +121,9 @@ class TestCheckJavaEnvironment:
         assert result is True
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.os.environ", {})
+    @patch.dict(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ", clear=True
+    )
     def test_no_java_home_java_works(self, mock_run):
         # No JAVA_HOME but java -version works
         mock_run.return_value = (0, "", "java version 11")
@@ -129,16 +132,19 @@ class TestCheckJavaEnvironment:
         assert result is False
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch("argumentation_analysis.utils.dev_tools.env_checks.os.environ", {})
+    @patch.dict(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ", clear=True
+    )
     def test_no_java_at_all(self, mock_run):
         mock_run.return_value = (-1, "", "FileNotFoundError: java")
         result = check_java_environment()
         assert result is False
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch(
+    @patch.dict(
         "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
         {"JAVA_HOME": "/fake"},
+        clear=True,
     )
     @patch("argumentation_analysis.utils.dev_tools.env_checks._PathInternal")
     def test_java_home_not_a_dir(self, mock_path_cls, mock_run):
@@ -150,9 +156,10 @@ class TestCheckJavaEnvironment:
         assert result is False
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch(
+    @patch.dict(
         "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
         {"JAVA_HOME": "/fake/java"},
+        clear=True,
     )
     @patch("argumentation_analysis.utils.dev_tools.env_checks._PathInternal")
     def test_java_version_returns_no_output(self, mock_path_cls, mock_run):

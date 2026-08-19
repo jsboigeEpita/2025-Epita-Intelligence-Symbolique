@@ -5,6 +5,7 @@ Verifies:
   - divergence WARNING is emitted when a secondary .env carries a different key
   - no WARNING when secondary .env has the same key as root
 """
+
 import logging
 import os
 from pathlib import Path
@@ -40,16 +41,20 @@ class TestDotenvLoadingDeterministic:
         with patch.object(_em_mod, "_find_repo_root", return_value=tmp_path):
             EnvironmentManager()
 
-        assert os.environ.get("OPENAI_API_KEY") == "sk-root-VALID", (
-            "Root .env should have overridden the stale value via override=True"
-        )
+        assert (
+            os.environ.get("OPENAI_API_KEY") == "sk-root-VALID"
+        ), "Root .env should have overridden the stale value via override=True"
 
     def test_dotenv_path_points_to_root_env(self, tmp_path: Path) -> None:
         """dotenv_path attribute must reflect the root .env location."""
         root_env = tmp_path / ".env"
         root_env.write_text("DUMMY=1\n", encoding="utf-8")
 
-        with patch.object(_em_mod, "_find_repo_root", return_value=tmp_path):
+        # #1794: EnvironmentManager's load_dotenv(override=True) writes the real
+        # os.environ — sandbox it so the fixture key cannot leak into the session.
+        with patch.dict("os.environ", {}, clear=True), patch.object(
+            _em_mod, "_find_repo_root", return_value=tmp_path
+        ):
             mgr = EnvironmentManager()
 
         assert mgr.dotenv_path == str(root_env)
@@ -70,16 +75,18 @@ class TestDotenvDivergenceWarning:
         secondary_dir.mkdir()
         _write_env(secondary_dir / ".env", "OPENAI_API_KEY", "sk-dead-ZZZZ")
 
-        with patch.object(_em_mod, "_find_repo_root", return_value=tmp_path), \
-             patch.object(_em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]):
+        with patch.dict("os.environ", {}, clear=True), patch.object(
+            _em_mod, "_find_repo_root", return_value=tmp_path
+        ), patch.object(
+            _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
+        ):
             with caplog.at_level(
                 logging.WARNING, logger="project_core.managers.environment_manager"
             ):
                 EnvironmentManager()
 
         assert any(
-            "divergence" in record.message
-            for record in caplog.records
+            "divergence" in record.message for record in caplog.records
         ), "Expected a WARNING containing 'divergence' for mismatched keys"
 
     def test_no_warning_when_keys_identical(
@@ -93,16 +100,18 @@ class TestDotenvDivergenceWarning:
         secondary_dir.mkdir()
         _write_env(secondary_dir / ".env", "OPENAI_API_KEY", "sk-same-BBBB")
 
-        with patch.object(_em_mod, "_find_repo_root", return_value=tmp_path), \
-             patch.object(_em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]):
+        with patch.dict("os.environ", {}, clear=True), patch.object(
+            _em_mod, "_find_repo_root", return_value=tmp_path
+        ), patch.object(
+            _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
+        ):
             with caplog.at_level(
                 logging.WARNING, logger="project_core.managers.environment_manager"
             ):
                 EnvironmentManager()
 
         assert not any(
-            "divergence" in record.message
-            for record in caplog.records
+            "divergence" in record.message for record in caplog.records
         ), "No WARNING should be emitted when secondary key matches root"
 
     def test_warning_masks_key_values(
@@ -116,16 +125,23 @@ class TestDotenvDivergenceWarning:
         secondary_dir.mkdir()
         _write_env(secondary_dir / ".env", "OPENAI_API_KEY", "sk-proj-LONGSECONDARY9")
 
-        with patch.object(_em_mod, "_find_repo_root", return_value=tmp_path), \
-             patch.object(_em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]):
+        with patch.dict("os.environ", {}, clear=True), patch.object(
+            _em_mod, "_find_repo_root", return_value=tmp_path
+        ), patch.object(
+            _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
+        ):
             with caplog.at_level(
                 logging.WARNING, logger="project_core.managers.environment_manager"
             ):
                 EnvironmentManager()
 
         for record in caplog.records:
-            assert "LONGROOT12345" not in record.message, "Full root key must not appear in log"
-            assert "LONGSECONDARY9" not in record.message, "Full secondary key must not appear in log"
+            assert (
+                "LONGROOT12345" not in record.message
+            ), "Full root key must not appear in log"
+            assert (
+                "LONGSECONDARY9" not in record.message
+            ), "Full secondary key must not appear in log"
 
     def test_no_warning_when_secondary_absent(
         self, tmp_path: Path, caplog: pytest.LogCaptureFixture
@@ -134,14 +150,16 @@ class TestDotenvDivergenceWarning:
         root_env = tmp_path / ".env"
         _write_env(root_env, "OPENAI_API_KEY", "sk-root-CCCC")
 
-        with patch.object(_em_mod, "_find_repo_root", return_value=tmp_path), \
-             patch.object(_em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]):
+        with patch.dict("os.environ", {}, clear=True), patch.object(
+            _em_mod, "_find_repo_root", return_value=tmp_path
+        ), patch.object(
+            _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
+        ):
             with caplog.at_level(
                 logging.WARNING, logger="project_core.managers.environment_manager"
             ):
                 EnvironmentManager()
 
         assert not any(
-            "divergence" in record.message
-            for record in caplog.records
+            "divergence" in record.message for record in caplog.records
         ), "No WARNING when there is no secondary .env to diverge from"
