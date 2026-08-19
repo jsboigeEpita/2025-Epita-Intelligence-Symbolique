@@ -26,7 +26,9 @@ from pathlib import Path
 import logging
 
 # Configuration des chemins
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# parents[3] = repo root (web_api -> e2e -> tests -> root). parent³ resolves to
+# <root>/tests, which would put tests/ at sys.path[0] and shadow the real packages.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 INTERFACE_URL = "http://localhost:3000"
 
 # Sélecteurs adaptés de l'interface React vers l'interface simple

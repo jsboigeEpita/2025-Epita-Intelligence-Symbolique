@@ -23,7 +23,9 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 
 # Configuration des chemins
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# parents[3] = repo root (web_api -> e2e -> tests -> root). parent³ resolves to
+# <root>/tests, which would put tests/ at sys.path[0] and shadow the real packages.
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
