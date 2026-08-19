@@ -9,7 +9,10 @@ import logging
 from pathlib import Path
 
 # Ajouter project_core au path (depuis la racine du projet)
-project_root = Path(__file__).parent.parent.parent
+# parents[3] = repo root (demos -> e2e -> tests -> root). parent³ resolves to
+# <root>/tests, where a tests/project_core package exists but does NOT contain
+# service_manager — the import only survived via the caller's cwd.
+project_root = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(project_root / "project_core"))
 
 from service_manager import ServiceManager, ServiceConfig, create_default_configs

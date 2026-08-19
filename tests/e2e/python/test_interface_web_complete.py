@@ -30,8 +30,12 @@ else:
     print("Configuration UTF-8 chargee automatiquement")
 
 # Tentative d'import de l'orchestrateur unifié
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+# parents[3] = repo root (python -> e2e -> tests -> root). A wrong depth here
+# puts <root>/tests on sys.path[0], shadowing the real `scripts` package with
+# `tests/scripts/` and poisoning sys.modules for the whole session.
+project_root = Path(__file__).resolve().parents[3]
+if str(project_root) not in sys.path:
+    sys.path.insert(0, str(project_root))
 
 try:
     from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
@@ -48,7 +52,7 @@ def start_flask_server():
     print("Demarrage du serveur Flask sur localhost:3000...")
 
     # Changer vers le répertoire interface_web (à la racine du projet)
-    interface_web_dir = Path(__file__).parent.parent.parent / "interface_web"
+    interface_web_dir = Path(__file__).resolve().parents[3] / "interface_web"
 
     # Lancer le serveur Flask
     process = subprocess.Popen(
@@ -81,7 +85,7 @@ def run_playwright_tests():
     print("Lancement des tests Playwright...")
 
     # Répertoire racine du projet pour exécuter les tests
-    project_root = Path(__file__).parent.parent.parent
+    project_root = Path(__file__).resolve().parents[3]
 
     try:
         result = subprocess.run(
