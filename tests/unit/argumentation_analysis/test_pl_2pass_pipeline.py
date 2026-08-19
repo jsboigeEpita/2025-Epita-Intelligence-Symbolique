@@ -226,6 +226,7 @@ class TestTwoPassPipeline:
                 "OPENROUTER_API_KEY": "",
                 "OPENROUTER_BASE_URL": "",
             },
+            clear=True,
         ):
             result = asyncio.get_event_loop().run_until_complete(
                 _invoke_propositional_logic(state.raw_text, ctx)
@@ -322,6 +323,9 @@ class TestBackwardCompat:
         }
 
         # Same #1591 premise fix as TestTwoPassPipeline::test_fallback_when_no_api_key.
+        # #1794: clear=True — without it the ambient key (CI secret or the nested
+        # .env leaked by multi_model_benchmark) survives the window and the
+        # no-key premise never holds (measured: real POSTs out of the test).
         with patch.dict(
             "os.environ",
             {
@@ -329,6 +333,7 @@ class TestBackwardCompat:
                 "OPENROUTER_API_KEY": "",
                 "OPENROUTER_BASE_URL": "",
             },
+            clear=True,
         ):
             result = asyncio.get_event_loop().run_until_complete(
                 _invoke_propositional_logic("test text", ctx)

@@ -53,13 +53,14 @@ import argparse
 import logging
 from typing import Any, Dict, Optional
 
-# Ensure .env is loaded BEFORE any other import that might need API keys
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except ImportError:
-    pass
+# #1794: .env loading moved into main() — this module lives inside
+# argumentation_analysis/, so a module-level load_dotenv() resolves the NESTED
+# argumentation_analysis/.env (not the repo root one) on import, seeding the
+# real provider key into any process that merely imports this module (tests
+# included). The CLI still loads before any LLM use; the import no longer
+# mutates the process env. The import itself is kept module-level (no call) so
+# tests that drive main() can patch it.
+from dotenv import load_dotenv  # noqa: E402 — imported only, called in main()
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -296,6 +297,12 @@ async def run_modern_analysis(
 
 async def main():
     """Fonction principale du script."""
+    # #1794: env loading belongs to the CLI entry point (see module header).
+    try:
+        load_dotenv()
+    except Exception:
+        pass
+
     parser = argparse.ArgumentParser(
         description="Orchestration des agents d'analyse argumentative",
         formatter_class=argparse.RawDescriptionHelpFormatter,

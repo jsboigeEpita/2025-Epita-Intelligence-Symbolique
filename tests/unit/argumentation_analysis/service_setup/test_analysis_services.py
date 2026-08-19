@@ -195,7 +195,9 @@ def test_initialize_services_llm_fails_raises_exception(
     )
 
 
-def test_initialize_services_jvm_disabled(mock_settings, mock_init_jvm, caplog):
+def test_initialize_services_jvm_disabled(
+    mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog
+):
     """Teste que la JVM n'est pas initialisée si elle est désactivée dans la config."""
     caplog.set_level(logging.INFO)
     mock_settings.enable_jvm = False
@@ -208,7 +210,14 @@ def test_initialize_services_jvm_disabled(mock_settings, mock_init_jvm, caplog):
     mock_init_jvm.assert_not_called()
 
 
-def test_initialize_services_libs_dir_is_none(mock_settings, mock_init_jvm, caplog):
+def test_initialize_services_libs_dir_is_none(
+    mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog
+):
+    # #1794: without these mocks, initialize_analysis_services() runs a real
+    # load_dotenv(find_dotenv()) which resolves the NESTED .env (from
+    # argumentation_analysis/service_setup/ it walks up to argumentation_analysis/.env)
+    # and seeds the real provider key into the process env mid-suite — the writer
+    # behind the surviving pl_2pass POSTs (named by per-directory bisection).
     """Teste le cas où LIBS_DIR est None dans la config."""
     caplog.set_level(logging.ERROR)
     mock_settings.enable_jvm = True

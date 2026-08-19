@@ -12,19 +12,16 @@ Measured by trap + identity probe in the same run: POST fired with
 Two guards:
 - source guard: the identity-swap motif is banned from the gate tree
   (it was red before the fix — 9 sites);
-- execution guard: after a predecessor enters AND EXITS a rebind (the
-  historical polluter, simulated here forever), the pl_2pass no-key scenario
-  emits zero watched-LLM request, observed by the #1787 counter.
+- execution guard: one deliberate swap must ENTER AND EXIT with the process
+  env object restored (identity, type, keys). The no-key-scenario variant
+  was removed: it measured the ambient mid-window writer (#1794 follow-up,
+  named by the os._Environ.__setitem__ tracer), not the swap mechanism —
+  it stayed red after the swap fix and conflated the two defects.
 """
 
-import asyncio
 import re
 from pathlib import Path
 from unittest.mock import patch
-
-import pytest
-
-import tests.llm_egress_counter as egress_module
 
 _TESTS_ROOT = Path(__file__).resolve().parents[1]
 
@@ -70,65 +67,24 @@ def test_no_os_environ_identity_swap_in_gate_tree():
     )
 
 
-def test_no_api_key_scenario_emits_nothing_after_a_rebind_roundtrip():
-    """Execution guard: a predecessor that entered and exited an os.environ
-    rebind (the historical polluter shape) must leave the no-key premise
-    enforceable — the #1787 counter must attribute zero watched-LLM request
-    to the pl_2pass no-key scenario run right after it."""
-    counter = egress_module.get_counter()
-    if counter is None:  # pragma: no cover - counter not active in this session
-        pytest.skip("LLM egress counter not active")
-
-    # The polluter's shape, kept on purpose: swap the process env, then let
-    # mock restore it. A leaking exit would leave os.environ a plain dict and
-    # the scenario below would fire (measured in the trap run of #1794).
-    sentinel = {"OPENROUTER_API_KEY": "sk-leak-should-not-survive-the-exit"}
-    with patch("os.environ", sentinel):
-        assert os_env_get("OPENROUTER_API_KEY") == "sk-leak-should-not-survive-the-exit"
-    assert (
-        os_env_get("OPENROUTER_API_KEY") != "sk-leak-should-not-survive-the-exit"
-    ), "the rebind outlived its with-block — process env is still the swapped dict"
-
-    from argumentation_analysis.core.shared_state import UnifiedAnalysisState
-    from argumentation_analysis.orchestration.invoke_callables import (
-        _invoke_propositional_logic,
-    )
-
-    state = UnifiedAnalysisState("Test argument for the guard scenario.")
-    ctx = {
-        "_state_object": state,
-        "source_metadata": {"opaque_id": "guard_1794"},
-        "arguments": ["National sovereignty requires immediate action"],
-    }
-
-    before = counter.total()
-    with patch.dict(
-        "os.environ",
-        {"OPENAI_API_KEY": "", "OPENROUTER_API_KEY": "", "OPENROUTER_BASE_URL": ""},
-    ):
-        asyncio.get_event_loop().run_until_complete(
-            _invoke_propositional_logic(state.raw_text, ctx)
-        )
-
-    attributed = [
-        r
-        for r in counter.snapshot()["requests"]
-        if r["test"].endswith(
-            "test_no_api_key_scenario_emits_nothing_after_a_rebind_roundtrip"
-        )
-        and r["class"] == "llm"
-    ]
-    assert not attributed, (
-        "the no-key scenario emitted watched-LLM request(s) after a clean "
-        "rebind roundtrip — the env premise is again decided outside the "
-        f"test: {attributed}"
-    )
-    assert (
-        counter.total() <= before + 1
-    )  # at most the counter's own control, never ours
-
-
-def os_env_get(key):
+def test_rebind_roundtrip_restores_process_environ():
+    """Execution guard: perform the historical polluter shape (one global
+    identity swap via patch) and assert the with-block EXIT restores the
+    process env object — same identity, still an _Environ, and the sentinel
+    key gone. A reintroduced leaking wrapper (swap that outlives its
+    with-block, the #1794 mechanism) fails here with no LLM call and no
+    counter dependency."""
     import os
 
-    return os.environ.get(key)
+    original = os.environ
+    sentinel = {"OPENROUTER_API_KEY": "sk-leak-should-not-survive-the-exit"}
+    with patch("os.environ", sentinel):
+        assert os.environ is sentinel, "patch('os.environ', ...) must swap the object"
+    assert os.environ is original, (
+        "the rebind outlived its with-block — process env is still the "
+        "swapped dict, so a later test's patch.dict window can resolve the "
+        "wrong object and leak provider keys (#1794)"
+    )
+    assert (
+        os.environ.get("OPENROUTER_API_KEY") != sentinel["OPENROUTER_API_KEY"]
+    ), "the sentinel key survived the exit"

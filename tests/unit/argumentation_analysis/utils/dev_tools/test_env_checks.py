@@ -98,7 +98,7 @@ class TestRunCommand:
 class TestCheckJavaEnvironment:
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
     @patch.dict(
-        "os.environ",
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
         {"JAVA_HOME": "/fake/java"},
         clear=True,
     )
@@ -121,7 +121,9 @@ class TestCheckJavaEnvironment:
         assert result is True
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch.dict("os.environ", clear=True)
+    @patch.dict(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ", clear=True
+    )
     def test_no_java_home_java_works(self, mock_run):
         # No JAVA_HOME but java -version works
         mock_run.return_value = (0, "", "java version 11")
@@ -130,7 +132,9 @@ class TestCheckJavaEnvironment:
         assert result is False
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
-    @patch.dict("os.environ", clear=True)
+    @patch.dict(
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ", clear=True
+    )
     def test_no_java_at_all(self, mock_run):
         mock_run.return_value = (-1, "", "FileNotFoundError: java")
         result = check_java_environment()
@@ -138,7 +142,7 @@ class TestCheckJavaEnvironment:
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
     @patch.dict(
-        "os.environ",
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
         {"JAVA_HOME": "/fake"},
         clear=True,
     )
@@ -153,7 +157,7 @@ class TestCheckJavaEnvironment:
 
     @patch("argumentation_analysis.utils.dev_tools.env_checks._run_command")
     @patch.dict(
-        "os.environ",
+        "argumentation_analysis.utils.dev_tools.env_checks.os.environ",
         {"JAVA_HOME": "/fake/java"},
         clear=True,
     )

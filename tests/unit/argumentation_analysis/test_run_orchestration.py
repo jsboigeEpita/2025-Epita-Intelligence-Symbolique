@@ -1,11 +1,16 @@
 """Tests for run_orchestration.py CLI entry point."""
+
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-CLI_SCRIPT = Path(__file__).parent.parent.parent.parent / "argumentation_analysis" / "run_orchestration.py"
+CLI_SCRIPT = (
+    Path(__file__).parent.parent.parent.parent
+    / "argumentation_analysis"
+    / "run_orchestration.py"
+)
 
 
 class TestRunOrchestrationCLI:
@@ -19,14 +24,17 @@ class TestRunOrchestrationCLI:
         explicit PYTHONPATH.
         """
         result = subprocess.run(
-            [sys.executable, "-c",
-             f"import importlib.util; "
-             f"spec = importlib.util.spec_from_file_location('run_orch', r'{CLI_SCRIPT}'); "
-             f"mod = importlib.util.module_from_spec(spec); "
-             f"import sys; "
-             f"project_root = r'{CLI_SCRIPT.parent}'; "
-             f"script_dir = r'{CLI_SCRIPT.parent}'; "
-             f"print(str(script_dir) in sys.path or True);"],
+            [
+                sys.executable,
+                "-c",
+                f"import importlib.util; "
+                f"spec = importlib.util.spec_from_file_location('run_orch', r'{CLI_SCRIPT}'); "
+                f"mod = importlib.util.module_from_spec(spec); "
+                f"import sys; "
+                f"project_root = r'{CLI_SCRIPT.parent}'; "
+                f"script_dir = r'{CLI_SCRIPT.parent}'; "
+                f"print(str(script_dir) in sys.path or True);",
+            ],
             capture_output=True,
             text=True,
             timeout=30,
@@ -157,7 +165,15 @@ class TestCoherentThreeStateRunOrchestration:
 
         # Hypothesis with NO 'coherent' key — the arming input.
         fake_result = InvestigationResult(
-            trace=[{"step": 1, "phase": "x", "agent": "A", "findings": {}, "conclusion": "c"}],
+            trace=[
+                {
+                    "step": 1,
+                    "phase": "x",
+                    "agent": "A",
+                    "findings": {},
+                    "conclusion": "c",
+                }
+            ],
             reasoning_chain=["c"],
             agents_used=["A"],
             agent_count=1,
@@ -173,6 +189,9 @@ class TestCoherentThreeStateRunOrchestration:
         )
         # Avoid JVM / heavy env setup.
         monkeypatch.setattr(ro, "setup_environment", AsyncMock(return_value=None))
+        # #1794: main() loads the CLI .env — in-test that call would seed the
+        # real (nested) provider key into the process env.
+        monkeypatch.setattr(ro, "load_dotenv", lambda *a, **k: True)
 
         monkeypatch.setattr(
             sys,
