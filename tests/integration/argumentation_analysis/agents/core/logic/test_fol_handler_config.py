@@ -1,6 +1,5 @@
 import pytest
 import os
-import importlib
 from unittest.mock import patch, MagicMock
 
 # Importer le module config pour pouvoir le recharger
@@ -37,9 +36,10 @@ def test_fol_query_solver_dispatch(
     Tests that fol_query correctly dispatches to the right solver based on configuration.
     This replaces the previous separate tests.
     """
-    # Recharger la configuration au cas où
-    importlib.reload(config)
-
+    # NB: pas d'importlib.reload(config) ici — il remplaçait l'objet settings
+    # du module partagé, orphelinant les références figées des tests suivants
+    # (tripwire #1804 : test_invoke_modal_logic_reaches_solver basculait sur
+    # SPASS via les défauts du nouvel objet).
     with patch(
         "argumentation_analysis.agents.core.logic.fol_handler.run_prover9"
     ) as mock_run_prover9, patch.object(
@@ -82,8 +82,6 @@ async def test_fol_consistency_solver_dispatch(
     """
     Tests that fol_check_consistency correctly dispatches to the right solver.
     """
-    importlib.reload(config)
-
     with patch.object(
         FOLHandler, "_fol_check_consistency_with_prover9"
     ) as mock_prover9_impl, patch.object(
