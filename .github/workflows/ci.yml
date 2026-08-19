@@ -94,6 +94,12 @@ jobs:
 
       - name: Check API keys availability
         id: check_secrets
+        # #1799: `Generate test summary` fails loud when the report is absent
+        # while keys were configured. It can only do that if this var exists
+        # even when an upstream step failed — a Setup Miniconda timeout skips
+        # every between-step, so without `if: always()` here the fail-loud
+        # condition would never fire in exactly the scenario it exists for.
+        if: always()
         shell: pwsh
         run: |
           if ("${{ secrets.OPENAI_API_KEY }}" -ne "") {
@@ -176,10 +182,30 @@ jobs:
               Write-Host "   Configure secrets in GitHub repository settings to run them."
             }
           } else {
-            Write-Host "⚠️  No test report generated (tests may have been skipped)"
-            Write-Host ""
-            Write-Host "ℹ️  API keys not configured - all tests requiring APIs were skipped"
-            Write-Host "   This is expected behavior for forks and external contributions"
+            # #1799: two reasons the report can be absent, and they must NOT
+            # render the same. (a) API keys unset → pytest skipped by the
+            # `if:` on the Run automated tests step → honest absence, exit 0.
+            # (b) Keys configured but NO report → the suite never ran:
+            # Setup Miniconda could not build the env (the #1799 timeout), the
+            # pytest step itself timed out, or `conda run` died before writing
+            # the junitxml. That is "not measured" — a FAILURE that decided
+            # nothing, indistinguishable from a real test failure to a reader of
+            # the rollup badge. Rendering it as success would be theater;
+            # rendering it as a plain step failure keeps the old message ("tests
+            # may have been skipped") which is exactly the fork-case wording.
+            # So: when keys were configured, fail LOUD and say what happened.
+            if ($env:API_KEYS_CONFIGURED -eq 'true') {
+              Write-Host "❌ FAIL-LOUD (#1799): keys were configured and pytest was expected to run, but no pytest_report.xml exists."
+              Write-Host "   The suite did NOT run (build/setup timed out, or pytest died before writing the report)."
+              Write-Host "   This job's failure decides nothing about the code — it is 'not measured', not 'measured and red'."
+              Write-Host "   Check the Setup Miniconda step in this job's log for a timeout, or the pytest step for a hang."
+              exit 1
+            } else {
+              Write-Host "⚠️  No test report generated (tests may have been skipped)"
+              Write-Host ""
+              Write-Host "ℹ️  API keys not configured - all tests requiring APIs were skipped"
+              Write-Host "   This is expected behavior for forks and external contributions"
+            }
           }
           Write-Host "═══════════════════════════════════════════════"
 
