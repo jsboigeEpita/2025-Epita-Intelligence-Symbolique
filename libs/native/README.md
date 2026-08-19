@@ -72,8 +72,9 @@ python -c "import zipfile;z=zipfile.ZipFile('libs/tweety/<new>.jar');[open(f'lib
 PySAT's `lingeling`/`minisat22` are self-contained Python-side solvers bundled
 by `python-sat`; they are unrelated to these JNI libraries.
 
-The `.so` counterparts also present here are the Linux resources of the same
-jar, kept untracked: CI is Windows and nothing exercises them yet.
+The jar also carries `.so` counterparts (Linux). They are deliberately not
+vendored: CI is Windows and nothing exercises them yet. They appear in this
+directory only on a machine where someone extracted them by hand.
 
 `jvm_setup.py` additionally sets `-Djava.library.path=libs/native`. Tweety's ADF
 loader never calls `System.loadLibrary`, so that option is not what makes the
