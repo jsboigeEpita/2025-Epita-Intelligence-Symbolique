@@ -344,4 +344,9 @@ pytestmark = [
     pytest.mark.llm_integration,  # Tests LLM intégration (remplace authentic + no_mocks)
     pytest.mark.phase5,  # Marqueur Phase 5
     pytest.mark.modal,  # Marqueur spécifique logique modale
+    # #1817: this is the authentic (no-mocks) Modal suite — the belief-set
+    # conversions and query generations are real LLM calls whose output the
+    # verdicts assert on. Purchases by design: they belong on the requires_api
+    # lane, not on any keyless band that would collect tests/agents.
+    pytest.mark.requires_api,
 ]

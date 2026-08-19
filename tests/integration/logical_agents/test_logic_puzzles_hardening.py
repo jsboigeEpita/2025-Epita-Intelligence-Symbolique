@@ -73,6 +73,12 @@ class TestLogicalAgentHardening:
             len(consistency_report.get("conflicts", [])) > 0
         ), "The list of conflicts should not be empty."
 
+    # #1817: same classification as test_logic_puzzles.py — deduce_solution()
+    # invokes the LLM unconditionally (no no-client branch), so passing
+    # requires a live endpoint even though the asserted fields are
+    # JTMS-local. requires_api moves it off every keyless band; the
+    # contradiction test above stays in.
+    @pytest.mark.requires_api
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
     def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """

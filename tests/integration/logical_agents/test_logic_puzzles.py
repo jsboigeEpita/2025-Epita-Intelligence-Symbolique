@@ -90,6 +90,14 @@ class TestLogicalAgentHardening:
             fact_id in conflict["beliefs"]
         ), "The conflict should involve the contradictory fact."
 
+    # #1817: deduce_solution() calls kernel.invoke_prompt unconditionally —
+    # no no-client branch — so this test cannot pass without a working LLM
+    # endpoint (in CI the failing call surfaces as the "Deduction should not
+    # fail" red). The verdict itself reads JTMS-local fields, but the call is
+    # a hard dependency: classify it requires_api instead of letting it bill
+    # (and flake) on any band that collects this directory. The contradiction
+    # test above is local-only and stays in every band.
+    @pytest.mark.requires_api
     @pytest.mark.parametrize("load_scenario", ["ambiguous_scenario"], indirect=True)
     def test_agent_handles_ambiguity(self, kernel, load_scenario):
         """
