@@ -125,8 +125,9 @@ Architectural hardening landed across several epics. Entries below are verified 
 ### JVM "Access Violation" Warning Under pytest (cosmetic)
 - **Symptom**: `Windows fatal exception: access violation` printed to stderr during `jpype.startJVM()`
 - **Impact**: None — JVM starts successfully despite the warning (SEH exception is caught by Windows)
-- **Workaround**: None needed. Use `--disable-jvm-session` in CI to skip JVM entirely.
-- **Related**: #28
+- **Workaround**: None needed — the warning is cosmetic and must be ignored. `--disable-jvm-session` skips the JVM entirely (local isolation, or a lane that needs no Java), but note the CI gate does **not** pass it: `.github/workflows/ci.yml` contains zero occurrences, so the JVM does start in CI. Verified 2026-08-20.
+- **Discriminator**: the message alone does not tell you whether the JVM died. Check whether tests actually ran (a non-zero `passed` count). A real startup crash kills the process; this one does not.
+- **Related**: #28 · `docs/guides/java_integration_handbook.md` §2.0 · `docs/archives/investigations/JPYPE_WINDOWS_CRASH_FIX.md`
 
 ### Flaky Test: `test_backend_lifecycle`
 - **Symptom**: Fails intermittently in full suite due to test ordering/state pollution

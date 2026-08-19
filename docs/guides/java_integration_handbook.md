@@ -9,18 +9,44 @@ L'intégration de la JVM via JPype est un composant sensible de notre architectu
 L'architecture actuelle repose sur des principes clés pour assurer la résilience :
 *   **Gestion centralisée de la JVM** via le module `argumentation_analysis/core/jvm_setup.py`.
 *   **Isolation des tests** en utilisant un framework de mock (`tests/mocks/jpype_setup.py`) pour la majorité des cas d'utilisation, limitant les tests d'intégration complets aux scénarios essentiels.
-## 2. Troubleshooting des Erreurs Courantes
-
-Pour les erreurs spécifiques et leur résolution, consultez les guides dédiés :
-
-*   **Crash JVM (Access Violation) au Démarrage des Tests :** Causé par une mauvaise détection des sessions E2E.
-    *   **Solution :** [Résolution du Crash JVM dû à la détection E2E](./jpype_e2e_detection_crash.md)
-
 *   **Modularité des solveurs logiques** grâce à un sélecteur (`FOLHandler` refactorisé) permettant de basculer entre `tweety` (basé sur Java) et `prover9` (exécutable externe) via une variable d'environnement.
 
 Les instabilités sont principalement liées aux interactions avec des bibliothèques externes (surtout natives) et des plugins de l'écosystème de test.
 
-## 2. Historique des Problèmes et Solutions (Archéologie Git)
+## 2. Troubleshooting des Erreurs Courantes
+
+### 2.0. D'abord : votre `access violation` est-il réel ou cosmétique ?
+
+**C'est le premier tri à faire, et il est contre-intuitif.** Le message `Windows fatal exception: access violation` recouvre deux phénomènes distincts, dont un seul est un problème.
+
+| | Cosmétique | Réel |
+|---|---|---|
+| **Quand** | pendant `jpype.startJVM()`, sur stderr | pendant `jpype.startJVM()`, sur stderr |
+| **Ce qui suit** | la JVM démarre, les tests s'exécutent | le processus meurt, aucun test ne tourne |
+| **Action** | **aucune — ignorer** | diagnostiquer (§2.1 et suivantes) |
+
+Le cas cosmétique est une exception SEH interceptée par Windows ; JPype la gère et poursuit. Il est documenté deux fois : `KNOWN_ISSUES.md` (« Impact: None — JVM starts successfully despite the warning ») et [`../archives/investigations/JPYPE_WINDOWS_CRASH_FIX.md`](../archives/investigations/JPYPE_WINDOWS_CRASH_FIX.md), qui est explicite : *« un artefact purement cosmétique [...] Il doit être ignoré. Les développeurs ne doivent pas perdre de temps à essayer de "corriger" ce message d'erreur. »*
+
+**Le discriminant n'est pas le message, c'est ce qui se passe après.** Avant d'ouvrir un diagnostic, vérifiez que des tests se sont réellement exécutés — un compte de `passed` non nul suffit. Les sections §3 « Historique » ci-dessous décrivent de **vrais** crashs, tous corrigés ; ne leur attribuez pas un avertissement cosmétique.
+
+### 2.1. Guides dédiés
+
+*   **Crash JVM (Access Violation) au démarrage des tests, session réellement interrompue :** causé par une mauvaise détection des sessions E2E.
+    *   **Solution :** [Résolution du Crash JVM dû à la détection E2E](./jpype_e2e_detection_crash.md)
+
+### 2.2. Désactiver entièrement la JVM : `--disable-jvm-session`
+
+Option pytest déclarée dans `tests/conftest.py`. Elle ne se contente pas de sauter l'initialisation : un contrôle précoce (`conftest.py`, avant tout import) détecte le drapeau **dans `sys.argv`** et installe un mock global de `jpype` avant qu'aucun module ne l'importe, puis les fixtures d'intégration ne sont pas chargées du tout.
+
+```bash
+pytest tests/unit/ --disable-jvm-session
+```
+
+Utile pour isoler un problème (« est-ce la JVM ? ») et pour toute lane qui n'a pas besoin de Java. ⚠️ La contrepartie de la détection par `sys.argv` : l'option agit au niveau du **processus**, pas de la sélection de tests — un test qui exige réellement la JVM sera sauté, pas mis en échec.
+
+⚠️ **Le gate CI n'utilise pas cette option** (`.github/workflows/ci.yml`) : la JVM y démarre pour de bon. `KNOWN_ISSUES.md` la présente comme le contournement CI ; c'est un écart entre la doc et le workflow, pas une consigne à appliquer sans mesurer.
+
+## 3. Historique des Problèmes et Solutions (Archéologie Git)
 
 Cette section présente une analyse chronologique des problèmes rencontrés et des solutions apportées, qui ont façonné l'intégration actuelle.
 
@@ -50,7 +76,7 @@ Cette phase a été cruciale pour stabiliser l'environnement sous Windows.
     1.  **Conflit de Fixtures** : Certains tests utilisent une fixture `jvm_session` alors que la fixture principale semble être `jvm_fixture`. Cette incohérence cause des erreurs "fixture not found".
     2.  **Redémarrage illégal de la JVM** : La cause première du crash est une tentative de redémarrer la JVM au sein d'une même session de test. Une fixture avec une portée par défaut (`scope="function"`) tente de démarrer la JVM pour chaque test, alors que JPype n'autorise qu'un seul démarrage par processus.
 
-## 3. Bonnes Pratiques et Dépannage
+## 4. Bonnes Pratiques et Dépannage
 
 Basé sur les leçons apprises, voici les règles à suivre pour maintenir un environnement stable.
 
@@ -69,7 +95,9 @@ Si vous rencontrez un crash de la JVM ou une instabilité, suivez ces étapes :
 2.  **Examinez les plugins `pytest`** : Désactivez les plugins non essentiels dans `conftest.py` ou `pytest.ini`, en particulier ceux liés à l'instrumentation (`opentelemetry`) ou à l'asynchronisme.
 3.  **Isolez le test** : Créez un test minimal qui reproduit le problème avec le moins de dépendances possible.
 4.  **Vérifiez les bibliothèques natives** : Assurez-vous qu'aucune bibliothèque native n'est chargée dans le même processus que la JVM si elle n'est pas explicitement conçue pour cela.
-5.  **Analysez les Fixtures `pytest`** : En cas de crash des tests d'intégration, vérifiez le fichier `tests/conftest.py`. Assurez-vous que la fixture gérant la JVM (`jvm_fixture`) a une portée de session (`@pytest.fixture(scope="session")`) et que tous les tests utilisent le nom de fixture correct.
+5.  **Analysez les Fixtures `pytest`** : en cas de crash des tests d'intégration, vérifiez `tests/conftest.py`. La fixture est `jvm_session` (portée session). ⚠️ **`jvm_fixture` n'existe plus** — elle a été supprimée précisément parce qu'elle était la source des conflits décrits en Phase 4 ; `conftest.py` conserve un commentaire à l'endroit de sa suppression. Un guide antérieur demandait de vérifier sa portée : cette étape est sans objet.
+
+    Depuis la Phase 8, `jvm_session` **ne démarre plus la JVM** : elle agit comme une garde qui lit le résultat de l'initialisation faite en `pytest_sessionstart` et saute les tests si celle-ci a échoué. Un symptôme de type « la JVM n'a pas démarré » ne se diagnostique donc pas dans la fixture mais dans le hook.
 
 ## Archéologie Git : Retracer les décisions de conception
 
@@ -158,3 +186,23 @@ Ce contexte historique montre que la gestion du cycle de vie de la JVM est extr�
     2.  **Garantie d'Exécution Précoce** : Le hook `pytest_sessionstart` s'exécute avant même la collecte des tests et le chargement de la plupart des plugins. En y plaçant le démarrage de la JVM, on garantit qu'elle est initialisée avant toute autre bibliothèque native potentiellement conflictuelle (comme `opentelemetry`, `torch`, etc.), résolvant ainsi la cause racine du crash.
     3.  **Nouveau Rôle de la Fixture** : La fixture `jvm_session` a été conservée mais son rôle a été simplifié. Elle agit désormais comme une "garde" : elle ne démarre plus la JVM mais vérifie si l'initialisation dans `pytest_sessionstart` a réussi. Si ce n'est pas le cas, elle saute les tests marqués comme nécessitant la JVM (`pytest.skip`).
 *   **Leçon Apprise** : Pour les initialisations critiques et sensibles à l'ordre de chargement comme celle de la JVM, les fixtures `pytest` (même avec `scope="session"`) ne s'exécutent pas assez tôt. Le hook `pytest_sessionstart` est le mécanisme canonique et le plus sûr pour garantir qu'une ressource globale est disponible avant même que l'exécution des tests ne commence réellement.
+
+### Phase 9 : État au 2026-08-20 — ce qui est stable, et les deux écarts doc↔code ouverts
+
+Cette phase ne relate pas un incident : elle enregistre l'état vérifié du code à cette date, pour que le prochain lecteur n'ait pas à le re-dériver. Les deux écarts ci-dessous sont **signalés, pas corrigés** — chacun demande une décision qui ne se prend pas depuis un document.
+
+**Ce qui est en place et conforme à ce guide :**
+*   Le démarrage JVM est bien dans `pytest_sessionstart` (Phase 8), et sa docstring le justifie.
+*   `jvm_fixture` a disparu ; `jvm_session` est la garde (Phase 4 close).
+*   La détection E2E utilise bien `item.get_closest_marker("e2e")` — le correctif de la Mission D3.1.1 n'a pas régressé.
+*   Le plugin `opentelemetry` est toujours désenregistré (Phase 3, cause racine 3).
+
+**Écart 1 — la décision E2E est transportée par un aller-retour de cache qui ne peut pas fonctionner.** La valeur est **écrite** dans `pytest_collection_finish` (après la collecte) et **lue** dans `pytest_sessionstart` (avant). Le lecteur obtient donc la valeur du *run précédent*, ou `False` sur cache froid. Ce n'est pas une étourderie : c'est la tentative de réconcilier deux exigences documentées et incompatibles dans le temps — *démarrer avant la collecte* (Phase 8) et *décider d'après les items collectés* (D3.1.1).
+
+⛔ **Ne « corrigez » pas en déplaçant l'initialisation après la collecte** : c'est la régression de la Phase 8, déjà payée une fois avec deux fausses pistes. ⛔ **Ne revenez pas non plus à `"e2e" in item.keywords`** : c'est le faux positif de D3.1.1. La seule sortie qui respecte les deux est de décider depuis l'**argv** (disponible dans `pytest_sessionstart`), en prouvant que ça ne réintroduit pas le faux positif. Suivi : **#1820**.
+
+Corollaire indépendant et corrigeable seul : `-p no:cacheprovider` fait tomber la session en `INTERNALERROR` (`'Config' object has no attribute 'cache'`) avant toute collecte, faute d'accès défensif au cache.
+
+**Écart 2 — `java.library.path` est peuplé, alors que ce guide interdit les bibliothèques natives.** La Phase 3 nomme le chargement d'une `.dll` native aux côtés de la JVM comme *« le conflit le plus significatif »*, et `JPYPE_WINDOWS_CRASH_FIX.md` l'énonce comme troisième interdit. Or `get_jvm_options()` dans `argumentation_analysis/core/jvm_setup.py` ajoute `-Djava.library.path=<native_libs_dir>` pour les solveurs SAT natifs — six lignes après un commentaire qui cite ces mêmes docs pour justifier de garder `-Djava.awt.headless=true` désactivé.
+
+Les deux camps ont du poids : l'interdit vient d'un crash réel et reproduit ; le chemin natif est **load-bearing** et a débloqué 7 sémantiques ADF. Il est possible que l'interdit vise spécifiquement Prover9 (la `.dll` nommée dans la Phase 3) et non les natifs SAT, mais **ce n'est pas établi** — et un guide qui interdit ce que le code fait est un piège pour le prochain diagnostic. À trancher par mesure, pas par lecture. **Ne pas retirer l'option unilatéralement.**
