@@ -540,9 +540,13 @@ class PLHandler:
         Backend set (firsthand-confirmed to decide, synthetic atoms):
         * 5 PySAT solvers (``PL_COMPARISON_PYSAT_BACKENDS``) — Tseitin→CNF→CDCL.
         * Tweety ``Sat4jSolver`` via ``SatReasoner`` — pure-Java, linear.
-        * The 3 native DLLs (lingeling/minisat/picosat) are honest-absent
-          (removed #1247 — ``UnsatisfiedLinkError: Binding.init()``). PySAT's own
-          minisat/lingeling *Python* bindings are independent of those DLLs and DO
+        * The ``sat.*.Binding`` JNI API is permanently absent — the libraries
+          export no ``Java_org_tweetyproject_sat_*_Binding_*`` symbol at all, so
+          that backend family can never decide and stays excluded (#1244, #1798).
+          What is absent is the *API*, not the libraries: the same DLLs are
+          vendored at ``libs/native/`` and DO decide through the unrelated
+          ``arg.adf`` JNI API — see ``libs/native/README.md``. PySAT's own
+          minisat/lingeling *Python* bindings are independent of both and DO
           decide here.
         * ``cryptominisat5`` excluded (broken native binding, see class constant).
 
