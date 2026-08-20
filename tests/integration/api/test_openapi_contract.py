@@ -4,6 +4,7 @@ Boots the FastAPI app (with JPype mocked), fetches /openapi.json, and diffs
 against the committed snapshot. Fails on removed paths or changed required
 params. Additions are allowed (non-breaking).
 """
+
 import json
 import os
 import sys
@@ -11,22 +12,44 @@ import unittest.mock as m
 
 import pytest
 
-# Mock JPype and heavy NLP libs before any API imports
+# #1816: these stubs exist only so the app boots without a live JVM during
+# the imports below. They were bare `sys.modules.setdefault` calls at module
+# level with no restore, so the mere collection of this file leaked MagicMock
+# "spacy"/"jpype" entries into sys.modules for the whole session — any later
+# `from spacy.matcher import ...` then failed, reddening three tests in
+# tests/unit (see #1816). Two fixes:
+#   - spacy needs no stub at all: it is a real dependency (environment.yml)
+#     and nothing under api/ references it directly — the real module
+#     imports fine;
+#   - the JVM stubs stay (the app must boot JVM-less) but live in an
+#     install/import/restore window: sys.modules is snapshotted before the
+#     imports and restored after, the same pattern as
+#     test_argumentation_analyzer.py and test_flask_service_integration.py.
 _jpype_mock = m.MagicMock()
 _jpype_mock.isJVMStarted = m.MagicMock(return_value=False)
-sys.modules.setdefault("jpype", _jpype_mock)
-sys.modules.setdefault("jpype._core", m.MagicMock())
-sys.modules.setdefault("jpype.imports", m.MagicMock())
-sys.modules.setdefault("jpype.types", m.MagicMock())
-sys.modules.setdefault("argumentation_analysis.core.bootstrap", m.MagicMock())
-sys.modules.setdefault("spacy", m.MagicMock())
-sys.modules.setdefault("spacy.tokens", m.MagicMock())
-sys.modules.setdefault("spacy.language", m.MagicMock())
+_JVM_STUBS = {
+    "jpype": _jpype_mock,
+    "jpype._core": m.MagicMock(),
+    "jpype.imports": m.MagicMock(),
+    "jpype.types": m.MagicMock(),
+    "argumentation_analysis.core.bootstrap": m.MagicMock(),
+}
+
+_stubs_saved = {name: sys.modules.get(name) for name in _JVM_STUBS}
+for name, stub in _JVM_STUBS.items():
+    sys.modules.setdefault(name, stub)
 
 from fastapi.testclient import TestClient
 
 from api.factory import create_app
 from api.endpoints import router as api_router, framework_router, informal_router
+
+# Restore sys.modules — nothing this module injected leaks past its imports.
+for name, saved in _stubs_saved.items():
+    if saved is None:
+        sys.modules.pop(name, None)
+    else:
+        sys.modules[name] = saved
 
 _PROJECT_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
@@ -109,21 +132,22 @@ class TestOpenAPIContract:
             for method, details in methods.items():
                 if "parameters" not in details:
                     continue
-                live_details = (
-                    live_spec.get("paths", {}).get(path, {}).get(method, {})
-                )
+                live_details = live_spec.get("paths", {}).get(path, {}).get(method, {})
                 live_params = {
-                    p.get("name"): p
-                    for p in live_details.get("parameters", [])
+                    p.get("name"): p for p in live_details.get("parameters", [])
                 }
                 for param in details["parameters"]:
                     if not param.get("required", False):
                         continue
                     name = param.get("name")
                     if name not in live_params:
-                        errors.append(f"Removed required param '{name}' in {method.upper()} {path}")
+                        errors.append(
+                            f"Removed required param '{name}' in {method.upper()} {path}"
+                        )
                     elif not live_params[name].get("required", False):
-                        errors.append(f"Required param '{name}' became optional in {method.upper()} {path}")
+                        errors.append(
+                            f"Required param '{name}' became optional in {method.upper()} {path}"
+                        )
         assert not errors, f"Breaking param changes: {errors}"
 
     def test_no_removed_request_body_fields(self, live_spec, snapshot_spec):
@@ -134,9 +158,7 @@ class TestOpenAPIContract:
                 snap_body = details.get("requestBody")
                 if not snap_body:
                     continue
-                live_details = (
-                    live_spec.get("paths", {}).get(path, {}).get(method, {})
-                )
+                live_details = live_spec.get("paths", {}).get(path, {}).get(method, {})
                 live_body = live_details.get("requestBody")
                 if not live_body:
                     errors.append(f"Removed request body in {method.upper()} {path}")
