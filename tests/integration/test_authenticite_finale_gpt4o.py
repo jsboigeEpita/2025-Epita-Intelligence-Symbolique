@@ -18,8 +18,12 @@ from typing import Dict, List, Any, Optional
 import logging
 from dotenv import load_dotenv
 
-# Charger les variables d'environnement depuis .env
-load_dotenv()
+# #1794/#1817: pas de load_dotenv() à l'import — ce fichier matche test_*.py,
+# donc toute bande qui collecte tests/integration l'importe ; le chargement
+# d'un .env local à ce moment semait la vraie clé dans os.environ pour toute
+# la session. Le fichier est un script (pytest collecte 0 test : la classe
+# est AuthenticAPITester, pas Test*) : le chargement vit dans son point
+# d'entrée main(), ci-dessous.
 
 # Configuration logging
 logging.basicConfig(
@@ -293,6 +297,9 @@ def main():
     print("TEST D'AUTHENTICITE FINALE - GPT-4O-MINI")
     print("Preuves d'appels API réels avec données synthétiques")
     print("=" * 60)
+
+    # L'env se charge ici, au point d'entrée du script — jamais à l'import.
+    load_dotenv()
 
     tester = AuthenticAPITester()
 
