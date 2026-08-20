@@ -89,6 +89,7 @@ def setup_registry(
     """
     registry = CapabilityRegistry()
     registered = []
+    slots_declared = []
     skipped = []
 
     # --- Core agents (always available) ---
@@ -353,7 +354,10 @@ def setup_registry(
             skipped.append(("speech_transcription_service", str(e)))
 
     # --- Declare unfilled slots for future Tweety extensions ---
-    _declare_tweety_slots(registry)
+    tweety_registered, tweety_slots, tweety_skipped = _declare_tweety_slots(registry)
+    registered.extend(tweety_registered)
+    slots_declared.extend(tweety_slots)
+    skipped.extend(tweety_skipped)
 
     # --- TweetyLogicPlugin: SK wrapper for all handlers (#91) ---
     try:
@@ -692,13 +696,6 @@ def setup_registry(
     except ImportError as e:
         skipped.append(("collaborative_debate_service", str(e)))
 
-    logger.info(
-        f"Registry setup complete: {len(registered)} registered, "
-        f"{len(skipped)} skipped"
-    )
-    if skipped:
-        logger.debug(f"Skipped components: {[s[0] for s in skipped]}")
-
     # Deep synthesis service (#532)
     try:
         registry.register_service(
@@ -758,11 +755,32 @@ def setup_registry(
     except Exception as e:
         skipped.append(("ai_shield_service", str(e)))
 
+    # Bilan en fin de fonction : il doit suivre la DERNIÈRE inscription, sinon
+    # les blocs ci-dessus s'ajoutent à un compte déjà journalisé (#1748). Trois
+    # populations, pas deux : un handler Tweety dont l'inscription échoue est
+    # déclaré absent (slot), pas silencieux — 37/0 était invariant à travers
+    # cette distinction (#1019).
+    logger.info(
+        f"Registry setup complete: {len(registered)} registered, "
+        f"{len(slots_declared)} declared-absent slots, {len(skipped)} skipped"
+    )
+    if slots_declared:
+        logger.debug(f"Declared-absent capability slots: {slots_declared}")
+    if skipped:
+        logger.debug(f"Skipped components: {[s[0] for s in skipped]}")
+
     return registry
 
 
-def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
-    """Register Tweety handler capabilities (Track A #55-#62, #85-#86)."""
+def _declare_tweety_slots(
+    registry: CapabilityRegistry,
+) -> tuple[list, list, list]:
+    """Register Tweety handler capabilities (Track A #55-#62, #85-#86).
+
+    Returns its own tally to merge into the setup summary (#1748):
+    (registered handler names, declared-absent capability slots,
+    (name, reason) for handlers where even slot declaration failed).
+    """
     tweety_handlers = [
         (
             "ranking_semantics_handler",
@@ -871,6 +889,9 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
             _invoke_asp_reasoning,
         ),
     ]
+    registered: list = []
+    slots_declared: list = []
+    skipped: list = []
     for name, caps, desc, invoke_fn in tweety_handlers:
         try:
             registry.register_service(
@@ -880,8 +901,18 @@ def _declare_tweety_slots(registry: CapabilityRegistry) -> None:
                 metadata={"description": desc, "requires": ["jvm"]},
                 invoke=invoke_fn,
             )
+            registered.append(name)
         except Exception as e:
             logger.debug(f"Tweety handler {name} registration deferred: {e}")
-            # Fall back to slot declaration if JVM not available
+            # Fall back to slot declaration if registration failed: the
+            # capability is known but declared absent, not silently missing.
+            slot_error = None
             for cap in caps:
-                registry.declare_slot(cap, requires=["jvm"], description=desc)
+                try:
+                    registry.declare_slot(cap, requires=["jvm"], description=desc)
+                    slots_declared.append(cap)
+                except Exception as declare_err:
+                    slot_error = declare_err
+            if slot_error is not None:
+                skipped.append((name, str(slot_error)))
+    return registered, slots_declared, skipped
