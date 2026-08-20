@@ -2,20 +2,23 @@ import pytest
 import json
 from pathlib import Path
 import asyncio
+from unittest.mock import AsyncMock
 
 import semantic_kernel as sk
-from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
-from argumentation_analysis.config.settings import AppSettings
 
 
-# Fixture to create a kernel with LLM service for the agent
+# Hermetic kernel (#1817): every value the assertions read (confidence_score,
+# alternative_hypotheses, primary_hypothesis) is computed by the JTMS locally;
+# the LLM only writes `detailed_solution`, which no assert reads. Stubbing
+# invoke_prompt removes the key requirement and the POST without changing
+# any verdict.
 @pytest.fixture
-def kernel():
-    k = sk.Kernel()
-    chat_service = OpenAIChatCompletion(service_id="default", ai_model_id="gpt-5-mini")
-    k.add_service(chat_service)
-    return k
+def kernel(monkeypatch):
+    monkeypatch.setattr(
+        sk.Kernel, "invoke_prompt", AsyncMock(return_value="deduction stub")
+    )
+    return sk.Kernel()
 
 
 # Fixture to load scenarios from JSON files

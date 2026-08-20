@@ -1,33 +1,26 @@
 # tests/integration/logical_agents/test_logic_puzzles.py
 
-import os
 import pytest
 import json
 from pathlib import Path
 import asyncio
+from unittest.mock import AsyncMock
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
-from argumentation_analysis.config.settings import AppSettings
-
-pytestmark = pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"),
-    reason="Tests require OPENAI_API_KEY for agent logic puzzle solving",
-)
 
 
-# Fixture to create a kernel with LLM service for the agent
+# Hermetic kernel (#1817): every value the assertions read (confidence_score,
+# alternative_hypotheses, primary_hypothesis) is computed by the JTMS locally;
+# the LLM only writes `detailed_solution`, which no assert reads. Stubbing
+# invoke_prompt removes the key requirement and the POST without changing
+# any verdict.
 @pytest.fixture
-def kernel():
-    k = sk.Kernel()
-    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-
-    api_key = os.getenv("OPENAI_API_KEY")
-    chat_service = OpenAIChatCompletion(
-        service_id="default", ai_model_id="gpt-5-mini", api_key=api_key
+def kernel(monkeypatch):
+    monkeypatch.setattr(
+        sk.Kernel, "invoke_prompt", AsyncMock(return_value="deduction stub")
     )
-    k.add_service(chat_service)
-    return k
+    return sk.Kernel()
 
 
 # Fixture to load scenarios from JSON files
@@ -54,7 +47,6 @@ class TestLogicalAgentHardening:
         # This test is synchronous as it does not await any coroutines.
         # The `async def` was likely a leftover.
         # 1. Initialize the agent
-        settings = AppSettings()
         agent = SherlockJTMSAgent(kernel, agent_name="test_contradiction_agent")
 
         # 2. Add a single fact and declare it as true in JTMS
