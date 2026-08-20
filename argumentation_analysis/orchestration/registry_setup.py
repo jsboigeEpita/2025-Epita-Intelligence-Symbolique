@@ -7,7 +7,7 @@ Split from unified_pipeline.py (#310).
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List, Tuple
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -774,7 +774,7 @@ def setup_registry(
 
 def _declare_tweety_slots(
     registry: CapabilityRegistry,
-) -> tuple[list, list, list]:
+) -> tuple[List[str], List[str], List[Tuple[str, str]]]:
     """Register Tweety handler capabilities (Track A #55-#62, #85-#86).
 
     Returns its own tally to merge into the setup summary (#1748):
@@ -889,9 +889,9 @@ def _declare_tweety_slots(
             _invoke_asp_reasoning,
         ),
     ]
-    registered: list = []
-    slots_declared: list = []
-    skipped: list = []
+    registered: List[str] = []
+    slots_declared: List[str] = []
+    skipped: List[Tuple[str, str]] = []
     for name, caps, desc, invoke_fn in tweety_handlers:
         try:
             registry.register_service(
