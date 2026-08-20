@@ -15,49 +15,52 @@ import requests
 import subprocess
 import threading
 from pathlib import Path
-from dotenv import load_dotenv
 import pytest
 
-# Charger l'environnement
-load_dotenv()
-
-# Vérifier disponibilité OPENAI_API_KEY et fichiers API
-API_ENVIRONMENT_AVAILABLE = True
-API_ENVIRONMENT_ERROR = None
+# #1827 : plus de load_dotenv() à l'import — ce fichier est collecté par la
+# gate (première entrée de son argv), donc tout import de collecte exécutait
+# le chargement du .env local pour TOUTE la session pytest (le même défaut
+# que #1794/#1817). Le drapeau de disponibilité devient PARESSEUX : évalué à
+# l'exécution du test, jamais figé à l'import — la clé vient de l'environnement
+# du process (env du step en CI, conftest --allow-dotenv ou shell en local).
 API_FILES_REQUIRED = ["api/main.py", "api/endpoints.py", "api/dependencies.py"]
 
-try:
+
+def _api_environment_status():
+    """Disponibilité évaluée À L'EXÉCUTION (pas à l'import) — #1827."""
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key or len(api_key) < 20:
-        API_ENVIRONMENT_AVAILABLE = False
-        API_ENVIRONMENT_ERROR = "OPENAI_API_KEY non configurée ou invalide"
+        return False, "OPENAI_API_KEY non configurée ou invalide"
 
-    # Vérifier fichiers API
     missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
     if missing_files:
-        API_ENVIRONMENT_AVAILABLE = False
-        API_ENVIRONMENT_ERROR = f"Fichiers API manquants: {', '.join(missing_files)}"
+        return False, f"Fichiers API manquants: {', '.join(missing_files)}"
 
     # Vérifier disponibilité PyTorch (requis pour démarrage API via spacy/thinc)
     if sys.platform == "win32":
         try:
             import torch
         except (ImportError, OSError) as e:
-            API_ENVIRONMENT_AVAILABLE = False
-            API_ENVIRONMENT_ERROR = (
+            return False, (
                 f"PyTorch indisponible sur Windows (requis pour API) - {str(e)[:100]}"
             )
-except Exception as e:
-    API_ENVIRONMENT_AVAILABLE = False
-    API_ENVIRONMENT_ERROR = str(e)
+
+    return True, None
 
 
-@pytest.mark.skipif(
-    not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
-)
+def _skip_if_api_environment_unavailable():
+    """Skip évalué à l'exécution — remplace le skipif figé à l'import (#1827)."""
+    available, error = _api_environment_status()
+    if not available:
+        pytest.skip(
+            f"API test environment not configured - "
+            f"{error if error else 'Missing OPENAI_API_KEY or API files'}"
+        )
+
+
 def test_environment_setup():
     """Test 1: Vérification environnement."""
+    _skip_if_api_environment_unavailable()
     print("\n=== Test 1: Vérification environnement ===")
 
     # Vérifier clé OpenAI
@@ -75,12 +78,9 @@ def test_environment_setup():
     print("✓ Test environnement RÉUSSI")
 
 
-@pytest.mark.skipif(
-    not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
-)
 def test_api_startup_and_basic_functionality():
     """Test 2: Démarrage API et fonctionnalité de base."""
+    _skip_if_api_environment_unavailable()
     print("\n=== Test 2: Démarrage API et fonctionnalités ===")
 
     # Find a free port to avoid conflicts with Docker or other services
@@ -332,6 +332,12 @@ def run_all_tests():
 
         return True
 
+    except pytest.skip.Exception:
+        # #1827 : le skip d'exécution (env API absent) ne doit pas tracer en
+        # __main__ — Skipped hérite de BaseException, hors portée du except
+        # Exception ci-dessous.
+        print("\n⏭️ SKIP: environnement API non configuré")
+        return False
     except Exception as e:
         print(f"\n❌ ÉCHEC DE VALIDATION: {e}")
         return False
