@@ -18,46 +18,56 @@ from pathlib import Path
 from dotenv import load_dotenv
 import pytest
 
-# Charger l'environnement
-load_dotenv()
-
-# Vérifier disponibilité OPENAI_API_KEY et fichiers API
-API_ENVIRONMENT_AVAILABLE = True
-API_ENVIRONMENT_ERROR = None
+# Disponibilité calculée À L'EXÉCUTION (#1827) : l'import de ce fichier ne
+# doit ni charger .env ni écrire os.environ — toute bande qui collecte
+# tests/unit/ l'importe, et un load_dotenv() au niveau module semerait la clé
+# réelle pour toute la session pytest.
 API_FILES_REQUIRED = ["api/main.py", "api/endpoints.py", "api/dependencies.py"]
 
-try:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or len(api_key) < 20:
-        API_ENVIRONMENT_AVAILABLE = False
-        API_ENVIRONMENT_ERROR = "OPENAI_API_KEY non configurée ou invalide"
 
-    # Vérifier fichiers API
-    missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
-    if missing_files:
-        API_ENVIRONMENT_AVAILABLE = False
-        API_ENVIRONMENT_ERROR = f"Fichiers API manquants: {', '.join(missing_files)}"
+def _api_environment_status():
+    """(disponible, raison) — évalué au moment où le test démarre."""
+    try:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key or len(api_key) < 20:
+            return False, "OPENAI_API_KEY non configurée ou invalide"
 
-    # Vérifier disponibilité PyTorch (requis pour démarrage API via spacy/thinc)
-    if sys.platform == "win32":
-        try:
-            import torch
-        except (ImportError, OSError) as e:
-            API_ENVIRONMENT_AVAILABLE = False
-            API_ENVIRONMENT_ERROR = (
-                f"PyTorch indisponible sur Windows (requis pour API) - {str(e)[:100]}"
-            )
-except Exception as e:
-    API_ENVIRONMENT_AVAILABLE = False
-    API_ENVIRONMENT_ERROR = str(e)
+        # Vérifier fichiers API
+        missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
+        if missing_files:
+            return False, f"Fichiers API manquants: {', '.join(missing_files)}"
+
+        # Vérifier disponibilité PyTorch (requis pour démarrage API via spacy/thinc)
+        if sys.platform == "win32":
+            try:
+                import torch
+            except (ImportError, OSError) as e:
+                return False, (
+                    f"PyTorch indisponible sur Windows (requis pour API) - {str(e)[:100]}"
+                )
+    except Exception as e:
+        return False, str(e)
+    return True, None
 
 
-@pytest.mark.skipif(
-    not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
-)
+def _ensure_api_environment():
+    """Charge .env puis vérifie la disponibilité — début de CHAQUE test.
+
+    Le load_dotenv() vit ici, pas au niveau module : la clé n'entre dans
+    os.environ que si un test de ce fichier s'exécute réellement.
+    """
+    load_dotenv()
+    available, error = _api_environment_status()
+    if not available:
+        pytest.skip(
+            f"API test environment not configured - "
+            f"{error or 'Missing OPENAI_API_KEY or API files'}"
+        )
+
+
 def test_environment_setup():
     """Test 1: Vérification environnement."""
+    _ensure_api_environment()
     print("\n=== Test 1: Vérification environnement ===")
 
     # Vérifier clé OpenAI
@@ -75,12 +85,9 @@ def test_environment_setup():
     print("✓ Test environnement RÉUSSI")
 
 
-@pytest.mark.skipif(
-    not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
-)
 def test_api_startup_and_basic_functionality():
     """Test 2: Démarrage API et fonctionnalité de base."""
+    _ensure_api_environment()
     print("\n=== Test 2: Démarrage API et fonctionnalités ===")
 
     # Find a free port to avoid conflicts with Docker or other services
