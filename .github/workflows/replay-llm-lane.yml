@@ -80,7 +80,12 @@ jobs:
           REPLAY_GATE: '1'
           REPLAY_STATS_OUT: replay_stats.json
         run: |
-          conda run -n projet-is --no-capture-output pytest ${{ inputs.lane_args }} --ignore=tests/unit/services/test_mcp_server_v2 -p scripts.cassettes.replay_stats_plugin -v --junitxml=pytest_report.xml
+          conda run -n projet-is --no-capture-output pytest ${{ inputs.lane_args }} --ignore=tests/unit/services/test_mcp_server_v2 -p scripts.cassettes.replay_stats_plugin -v --junitxml=pytest_report.xml --timeout=900 --timeout-method=thread
+          # #1759: this was the only pytest surface in CI without a per-test
+          # bound (step timeout-minutes: 30 kills the JOB, losing the report);
+          # --timeout=900 brings it to parity with the gate and every other
+          # lane. Same caveat as those: thread is the only method on Windows
+          # and aborts the run on fire — the dump in the log is the artifact.
 
       - name: Anti-vacuité gate (live==0, hit>=1, miss_replay==0)
         shell: pwsh
