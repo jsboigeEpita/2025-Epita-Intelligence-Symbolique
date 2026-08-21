@@ -67,9 +67,21 @@ class ArgAnalysisSettings(BaseSettings):
     # sans OOM, au lieu du défaut SimpleMlReasoner (Kripke naïf, OOM sur KB
     # réels ~12 atomes, FP-16 #1231). Anti-pendule : on *soustrait* le défaut
     # OOM-prone en routant vers le solveur capable, on n'empile pas un try/except
-    # sur l'OOM. Un utilisateur/fixture peut forcer TWEETY (False) pour tester
-    # le path SimpleMlReasoner explicitement — un ``modal_solver`` explicitement
-    # choisi est toujours respecté.
+    # sur l'OOM.
+    #
+    # ⚠ #1339 — POUR ÉPINGLER TWEETY, IL FAUT LES DEUX RÉGLAGES. Une phrase
+    # antérieure affirmait ici qu'« un ``modal_solver`` explicitement choisi est
+    # toujours respecté ». C'est vrai pour SPASS et **faux pour TWEETY**, et
+    # c'est inimplémentable en l'état : TWEETY est à la fois le défaut et un
+    # choix explicite légitime, donc ``_resolve_active_solver_choice``
+    # (``modal_handler.py``) ne peut pas les distinguer — c'est ce drapeau, et
+    # lui seul, qui les sépare. Poser ``modal_solver = TWEETY`` sans poser
+    # ``modal_prefer_spass_when_available = False`` laisse le resolver remonter
+    # vers SPASS **autour du pin** dès qu'un binaire vendoré est détecté : le
+    # verdict reste authentique, mais son message nomme ``spass`` et tout assert
+    # de traçabilité ``"tweety" in msg`` rougit. La croyance induite par
+    # l'ancienne phrase a produit le défaut dans plusieurs fixtures de test
+    # (#1831, #1834) ; elle est corrigée ici plutôt que site par site.
     #
     modal_prefer_spass_when_available: bool = True
 
