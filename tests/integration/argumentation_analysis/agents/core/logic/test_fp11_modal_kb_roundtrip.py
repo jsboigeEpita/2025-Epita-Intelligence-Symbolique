@@ -73,13 +73,23 @@ def modal_kb_builder():
 @pytest.fixture
 def tweety_solver():
     """Force the pure-Java default (``TWEETY``/``SimpleMlReasoner``) — the
-    always-available, always-deciding modal path (no external binary)."""
-    previous = settings.modal_solver
+    always-available, always-deciding modal path (no external binary).
+
+    Pinning ``modal_solver`` alone is NOT enough (#1339): when
+    ``modal_prefer_spass_when_available`` is on and a vendored SPASS binary
+    is detected (local dev machines), the resolver upgrades TWEETY to SPASS
+    — the verdict stays authentic but its message names "spass", and this
+    file's ``"tweety" in msg`` traceability asserts redden. CI runners have
+    no vendored SPASS, which is why this only bites locally."""
+    previous_solver = settings.modal_solver
+    previous_prefer = settings.modal_prefer_spass_when_available
     settings.modal_solver = ModalSolverChoice.TWEETY
+    settings.modal_prefer_spass_when_available = False
     try:
         yield
     finally:
-        settings.modal_solver = previous
+        settings.modal_solver = previous_solver
+        settings.modal_prefer_spass_when_available = previous_prefer
 
 
 class TestConstructModalKbRoundTripDecides:
