@@ -53,7 +53,19 @@ async def _aspic_with_failing_handler(monkeypatch):
         "analyze_aspic_framework",
         _boom,
     )
-    return await ic._invoke_aspic(SAMPLE_TEXT, {"arguments": ["a", "b"]})
+    # #1836 : sans règles fournies par l'appelant, _invoke_aspic traverse
+    # translate_to_aspic_rules (étape LLM) AVANT le handler stubbé — chaque
+    # test fuyait un POST réel vers un hôte LLM et passait par grâce d'un
+    # réseau vivant, plus faible que ce que son nom annonce. Les règles de
+    # l'appelant ne sont jamais écrasées (contrat documenté) et court-circuitent
+    # le translator : 0 egress, le test n'éprouve que la propagation de cause.
+    ctx = {
+        "arguments": ["a", "b"],
+        "defeasible_rules": [
+            {"head": "plausible_conclusion_1", "body": ["claim_a"], "name": "def_arg_1"}
+        ],
+    }
+    return await ic._invoke_aspic(SAMPLE_TEXT, ctx)
 
 
 class TestRankingCauseNotMasked:
