@@ -7621,8 +7621,19 @@ async def _invoke_modal_logic(
     # them (#1239/#1242, firsthand 4/4). Anti-pendule: *route* to the solver
     # that can decide rather than catch the OOM and report degraded. The flip is
     # conditional on (a) a detected vendored SPASS path, (b) the prefer flag,
-    # (c) the default TWEETY solver — an explicit ``modal_solver`` choice is
-    # always respected (the #1219 regression test pins TWEETY via that path).
+    # (c) ``modal_solver == TWEETY``.
+    #
+    # ⚠ #1339 — this comment used to add "an explicit ``modal_solver`` choice is
+    # always respected". That is true for SPASS and FALSE for TWEETY, and the
+    # condition just above shows why it cannot be otherwise: the test is
+    # ``_prev_modal_solver == TWEETY``, which cannot tell an EXPLICIT TWEETY
+    # from the DEFAULT TWEETY — they are the same value. The prefer flag is the
+    # only thing that separates them. To pin TWEETY you must set BOTH
+    # ``modal_solver = TWEETY`` and ``modal_prefer_spass_when_available = False``;
+    # pinning the solver alone lets this site route to SPASS around the pin, and
+    # every ``"tweety" in msg`` traceability assert downstream reddens. The old
+    # sentence produced exactly that defect in several test fixtures
+    # (#1831, #1834).
     # Restored in ``finally`` so the global choice never leaks past this call
     # (#1219 lesson: no unconditional, leaked force-set).
     from argumentation_analysis.core.config import settings as _modal_settings
