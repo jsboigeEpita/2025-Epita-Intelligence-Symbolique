@@ -227,12 +227,18 @@ def test_no_module_level_env_seeder_in_tests():
     )
 
 
-# Paramétrée sur la population découverte : tant que la population est propre,
-# la liste est vide et cette sonde ne collecte rien — le rouge visible est
-# alors le contrôle statique ci-dessus ; dès qu'un semeur apparaît, chaque
-# fichier fautif est prouvé à l'exécution.
-@pytest.mark.parametrize("seeder", _sower_paths())
-def test_seeder_import_does_not_seed_os_environ(seeder):
+# Boucle sur la population découverte (pas de @pytest.mark.parametrize) :
+# une paramétrisation vide collecte un placeholder test[NOTSET] SKIPPED sous
+# pytest 8.4.1 — un artefact de collecte, pas un signal. En forme boucle, la
+# population propre rend ce test trivialement vert SANS artefact ; dès qu'un
+# semeur apparaît, chaque fichier fautif est prouvé à l'exécution. Le rouge
+# porteur de sens reste le contrôle statique ci-dessus.
+def test_seeder_import_does_not_seed_os_environ():
+    for seeder in _sower_paths():
+        _assert_import_seeds_nothing(seeder)
+
+
+def _assert_import_seeds_nothing(seeder):
     victim = REPO_ROOT / seeder
     result = subprocess.run(
         [sys.executable, "-c", _PROBE.format(victim=str(victim))],

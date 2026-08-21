@@ -339,6 +339,13 @@ def run_all_tests():
 
         return True
 
+    except pytest.skip.Exception:
+        # _ensure_api_environment() skippe quand l'env API est absent ; Skipped
+        # hérite de BaseException, le except Exception ci-dessous ne l'attrape
+        # pas — sans ce catch le __main__ trace une exception brute au lieu
+        # d'un message.
+        print("\n⏭️ SKIP: environnement API non configuré")
+        return False
     except Exception as e:
         print(f"\n❌ ÉCHEC DE VALIDATION: {e}")
         return False
