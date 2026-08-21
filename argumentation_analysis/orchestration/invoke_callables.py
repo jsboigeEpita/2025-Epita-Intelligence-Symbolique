@@ -3575,13 +3575,24 @@ def _eaf_beliefs_from_context(
 
 
 def _python_ranking_fallback(
-    arguments: List[str], attacks: List[List[str]], method: str
+    arguments: List[str],
+    attacks: List[List[str]],
+    method: str,
+    cause: Optional[Exception] = None,
 ) -> Dict[str, Any]:
     """Fail-loud stub — ranking semantics requires JVM/Tweety (#1019, RA-8 #1053).
 
     Previous pure-Python fallback produced synthetic scores that entered state
     as authentic formal results (anti-theater violation). Now raises instead.
+    #1826: quand le handler lui-même a échoué, ``cause`` porte l'erreur réelle —
+    une entrée mal formée ne doit pas se lire « JVM absente » alors que la JVM
+    tourne. Sans cause (appel direct/tripwire), le message environnemental
+    reste le bon diagnostic.
     """
+    if cause is not None:
+        raise RuntimeError(
+            f"Ranking semantics ({method}) unavailable: {cause}"
+        ) from cause
     raise RuntimeError(
         f"Ranking semantics ({method}) unavailable: JVM/Tweety required. "
         "Install JVM and ensure Tweety JARs are on the classpath."
@@ -3701,9 +3712,10 @@ async def _invoke_ranking(input_text: str, context: Dict[str, Any]) -> Dict[str,
             result = _enrich_ranking_with_justification(result, args, attacks, context)
         return result
     except Exception as e:
-        logger.info(f"Ranking handler unavailable ({e}), using Python fallback")
-        result = _python_ranking_fallback(args, attacks, method)
-        return _enrich_ranking_with_justification(result, args, attacks, context)
+        logger.info(
+            f"Ranking handler failed ({e}); failing loud with the cause (#1826)"
+        )
+        return _python_ranking_fallback(args, attacks, method, cause=e)
 
 
 def _propagate_structured_arg_cause(
@@ -4101,12 +4113,17 @@ def _python_aspic_fallback(
     defeasible: List[str],
     fallacies: List[Any],
     context: Dict[str, Any],
+    cause: Optional[Exception] = None,
 ) -> Dict[str, Any]:
     """Fail-loud stub — ASPIC+ analysis requires JVM/Tweety (#1019, RA-8 #1053).
 
     Previous pure-Python fallback produced synthetic defensibility scores that
     entered state as authentic formal results (anti-theater violation).
+    #1826: ``cause`` porte l'échec réel du handler quand il y en a un —
+    sans cause (appel direct/tripwire), le message environnemental reste.
     """
+    if cause is not None:
+        raise RuntimeError(f"ASPIC+ analysis unavailable: {cause}") from cause
     raise RuntimeError(
         "ASPIC+ analysis unavailable: JVM/Tweety required. "
         "Install JVM and ensure Tweety JARs are on the classpath."
@@ -4239,8 +4256,10 @@ async def _invoke_aspic(input_text: str, context: Dict[str, Any]) -> Dict[str, A
             handler.analyze_aspic_framework, strict, defeasible, axioms
         )
     except Exception as e:
-        logger.info(f"ASPIC+ handler unavailable ({e}), using Python fallback")
-        return _python_aspic_fallback(args, strict, defeasible, fallacies, context)
+        logger.info(f"ASPIC+ handler failed ({e}); failing loud with the cause (#1826)")
+        return _python_aspic_fallback(
+            args, strict, defeasible, fallacies, context, cause=e
+        )
 
 
 async def _invoke_belief_revision(
@@ -4879,8 +4898,8 @@ async def _invoke_social(input_text: str, context: Dict[str, Any]) -> Dict[str, 
             state=context.get("_state_object"),
         )
     except Exception as e:
-        logger.info(f"Social handler unavailable ({e}), using Python fallback")
-        return _python_social_fallback(args, attacks, votes, context)
+        logger.info(f"Social handler failed ({e}); failing loud with the cause (#1826)")
+        return _python_social_fallback(args, attacks, votes, context, cause=e)
 
 
 def _python_social_fallback(
@@ -4888,12 +4907,17 @@ def _python_social_fallback(
     attacks: List[List[str]],
     votes: Dict[str, Any],
     context: Dict[str, Any],
+    cause: Optional[Exception] = None,
 ) -> Dict[str, Any]:
     """Fail-loud stub — Social AF requires JVM/Tweety (#1019, RA-8 #1053).
 
     Previous pure-Python fallback produced synthetic social scores that entered
     state as authentic formal results (anti-theater violation).
+    #1826: ``cause`` porte l'échec réel du handler quand il y en a un —
+    sans cause (appel direct/tripwire), le message environnemental reste.
     """
+    if cause is not None:
+        raise RuntimeError(f"Social argumentation unavailable: {cause}") from cause
     raise RuntimeError(
         "Social argumentation unavailable: JVM/Tweety required. "
         "Install JVM and ensure Tweety JARs are on the classpath."
@@ -4905,12 +4929,19 @@ def _python_eaf_fallback(
     attacks: List[List[str]],
     semantics: str,
     context: Dict[str, Any],
+    cause: Optional[Exception] = None,
 ) -> Dict[str, Any]:
     """Fail-loud stub — EAF analysis requires JVM/Tweety (#1019, RA-8 #1053).
 
     Previous pure-Python fallback produced synthetic epistemic states that entered
     state as authentic formal results (anti-theater violation).
+    #1826: ``cause`` porte l'échec réel du handler quand il y en a un —
+    sans cause (appel direct/tripwire), le message environnemental reste.
     """
+    if cause is not None:
+        raise RuntimeError(
+            f"Epistemic AF analysis ({semantics}) unavailable: {cause}"
+        ) from cause
     raise RuntimeError(
         f"Epistemic AF analysis ({semantics}) unavailable: JVM/Tweety required. "
         "Install JVM and ensure Tweety JARs are on the classpath."
@@ -4947,8 +4978,8 @@ async def _invoke_eaf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             handler.analyze_epistemic_framework, args, attacks, beliefs, semantics
         )
     except Exception as e:
-        logger.info(f"EAF handler unavailable ({e}), using Python fallback")
-        return _python_eaf_fallback(args, attacks, semantics, context)
+        logger.info(f"EAF handler failed ({e}); failing loud with the cause (#1826)")
+        return _python_eaf_fallback(args, attacks, semantics, context, cause=e)
 
 
 async def _invoke_delp(input_text: str, context: Dict[str, Any]) -> Dict[str, Any]:
