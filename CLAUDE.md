@@ -180,12 +180,18 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > decorated `def`s, not the decorator lines.
 
 > ⚠ **Capability declarations are currently doubled** (#1842): `debate`, `governance` and
-> `quality` each declare capabilities twice, in two disjoint vocabularies — once in
-> `orchestration/registry_setup.py` (the surface that actually runs) and once in their own
+> `quality` each declare capabilities twice — once in `orchestration/registry_setup.py` (the
+> surface `setup_registry` populates) and once in their own
 > `__init__.register_with_capability_registry`, which for these three is called **only by
-> tests**. Only `counter_argument` is wired through its module function. When adding a
-> capability, add it to the surface `setup_registry` calls, and give it a consumer: several
-> declared capabilities are requested by no `find_*_for_capability` call at all.
+> tests**. Only `counter_argument` is wired through its module function. The two surfaces
+> share exactly one term, `adversarial_debate`; every *other* capability these three
+> `__init__`s declare has **zero** `find_*_for_capability` consumers (measured). Do not
+> "fix" this by calling the module function in addition to `setup_registry`: for `debate`
+> both surfaces use `register_agent` under the same name, so the second raises
+> `ValueError: Component 'debate_agent' is already registered` (measured); for `governance`
+> and `quality` it registers a *plugin* under a different name and silently adds capabilities
+> nobody requests. When adding a capability, add it to the surface `setup_registry`
+> populates, and give it a consumer.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 
