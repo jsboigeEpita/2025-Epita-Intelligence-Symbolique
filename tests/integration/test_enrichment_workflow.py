@@ -1,21 +1,36 @@
-"""Tests for the enrichment workflow CLI and docs (Issue #413).
+"""Tests for the enrichment workflow CLI and docs (Issue #413, #1813).
 
 Validates:
 - tasks.py CLI parses commands and flags correctly
-- Graceful error when dependent scripts (C.1–C.4) are not yet available
+- Graceful error when a dependent script path is missing (injected — the
+  C.1-C.4 scripts are delivered now, so the "not yet available" premise
+  of the original tests is dead; the guarantee itself stays)
+- The delivered C.1-C.4 scripts are dispatched with the right argv, with
+  the subprocess intercepted so no real run fires from this file (the
+  pre-fix version executed build_pattern_report.py for real, which is
+  where the native abort of #1813 lived)
 - Enrichment doc exists and contains key sections
 - README points to Discourse Pattern Mining
 - Privacy guard catches intentional leaks
 """
 
+import importlib.util
 import pathlib
 import subprocess
 import sys
+import types
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 TASKS_CLI = REPO_ROOT / "scripts" / "dataset" / "tasks.py"
 ENRICH_DOC = REPO_ROOT / "docs" / "security" / "dataset_enrichment.md"
 README = REPO_ROOT / "README.md"
+
+
+def _load_tasks_module():
+    spec = importlib.util.spec_from_file_location("dataset_tasks", TASKS_CLI)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class TestTasksCLI:
@@ -33,23 +48,63 @@ class TestTasksCLI:
         assert result.returncode != 0
         assert "--source" in result.stderr or "--source" in result.stdout
 
-    def test_pattern_rerun_graceful_missing_script(self):
-        result = subprocess.run(
-            [sys.executable, str(TASKS_CLI), "pattern-rerun", "--skip-existing"],
-            capture_output=True,
-            text=True,
+    def test_pattern_rerun_graceful_missing_script(self, monkeypatch, capsys):
+        tasks = _load_tasks_module()
+        monkeypatch.setattr(
+            tasks, "BATCH_SCRIPT", tasks.SCRIPTS_DIR / "definitely_missing_1813.py"
         )
-        assert result.returncode == 1
-        assert "not found" in result.stderr.lower()
+        rc = tasks.cmd_pattern_rerun(types.SimpleNamespace(skip_existing=True))
+        assert rc == 1
+        assert "not found" in capsys.readouterr().err.lower()
 
-    def test_pattern_report_graceful_missing_script(self):
-        result = subprocess.run(
-            [sys.executable, str(TASKS_CLI), "pattern-report"],
-            capture_output=True,
-            text=True,
+    def test_pattern_report_graceful_missing_script(self, monkeypatch, capsys):
+        tasks = _load_tasks_module()
+        monkeypatch.setattr(
+            tasks, "REPORT_SCRIPT", tasks.SCRIPTS_DIR / "definitely_missing_1813.py"
         )
-        assert result.returncode == 1
-        assert "not found" in result.stderr.lower()
+        rc = tasks.cmd_pattern_report(types.SimpleNamespace())
+        assert rc == 1
+        assert "not found" in capsys.readouterr().err.lower()
+
+    def test_delivered_scripts_exist(self):
+        tasks = _load_tasks_module()
+        assert tasks.ADD_SCRIPT.is_file(), "C.1-C.4 delivered: add_extract.py"
+        assert tasks.BATCH_SCRIPT.is_file(), "C.1-C.4 delivered: run_corpus_batch.py"
+        assert (
+            tasks.REPORT_SCRIPT.is_file()
+        ), "C.1-C.4 delivered: build_pattern_report.py"
+
+    def test_pattern_rerun_dispatches_delivered_script(self, monkeypatch):
+        tasks = _load_tasks_module()
+        captured = []
+        monkeypatch.setattr(
+            tasks,
+            "subprocess",
+            types.SimpleNamespace(call=lambda cmd: captured.append(cmd) or 0),
+        )
+        rc = tasks.cmd_pattern_rerun(types.SimpleNamespace(skip_existing=True))
+        assert rc == 0
+        assert captured == [
+            [
+                sys.executable,
+                str(tasks.BATCH_SCRIPT),
+                "--workflow",
+                "spectacular",
+                "--skip-existing",
+            ]
+        ]
+
+    def test_pattern_report_dispatches_delivered_script(self, monkeypatch):
+        tasks = _load_tasks_module()
+        captured = []
+        monkeypatch.setattr(
+            tasks,
+            "subprocess",
+            types.SimpleNamespace(call=lambda cmd: captured.append(cmd) or 0),
+        )
+        rc = tasks.cmd_pattern_report(types.SimpleNamespace())
+        assert rc == 0
+        assert captured == [[sys.executable, str(tasks.REPORT_SCRIPT)]]
 
     def test_invalid_command_exits_error(self):
         result = subprocess.run(
