@@ -2,6 +2,7 @@ import pytest
 import sys
 import psutil
 import asyncio
+from pathlib import Path
 
 sys.path.insert(0, ".")
 
@@ -9,6 +10,48 @@ from argumentation_analysis.webapp.orchestrator import (
     UnifiedWebOrchestrator,
     WebAppStatus,
 )
+
+
+def _webapp_log_offset(orchestrator) -> int:
+    """Byte offset of the orchestrator's log file before the attempt (#1840)."""
+    for handler in getattr(orchestrator.logger, "handlers", []):
+        base = getattr(handler, "baseFilename", None)
+        if base and Path(base).exists():
+            return Path(base).stat().st_size
+    return 0
+
+
+def _webapp_failure_reason(orchestrator, log_offset: int = 0) -> str:
+    """The orchestrator's own reason for a failed start (#1840).
+
+    ``start_webapp()`` returns a bare bool; the orchestrator knows why it
+    failed (port, startup timeout, mute health endpoint) and writes it to its
+    log — with ``propagate = False``, so caplog cannot see it. Read the state
+    it leaves (status, attempted port, pid) plus the log lines written during
+    THIS run only (the log file appends across runs).
+    """
+    info = orchestrator.app_info
+    parts = [
+        f"status={getattr(info.status, 'value', info.status)}",
+        "port_tente="
+        f"{getattr(getattr(orchestrator, 'backend_manager', None), 'port', None)}",
+        f"backend_pid={info.backend_pid}",
+    ]
+    for handler in getattr(orchestrator.logger, "handlers", []):
+        base = getattr(handler, "baseFilename", None)
+        if not base or not Path(base).exists():
+            continue
+        with open(base, "r", encoding="utf-8", errors="replace") as f:
+            f.seek(log_offset)
+            lines = f.read().splitlines()
+        tail = "\n".join(lines[-40:]) if lines else "(log vide pour ce run)"
+        parts.append(
+            "\n--- log orchestrateur (40 dernières lignes de ce run) ---\n" + tail
+        )
+        break
+    else:
+        parts.append("(aucun fichier de log trouvé)")
+    return "\n".join(parts)
 
 
 @pytest.fixture
@@ -68,9 +111,10 @@ def test_backend_lifecycle(orchestrator):
         pid_before_stop = None
         try:
             # Start the webapp (only backend enabled)
+            log_offset = _webapp_log_offset(orchestrator)
             success = await orchestrator.start_webapp()
 
-            assert success is True
+            assert success is True, _webapp_failure_reason(orchestrator, log_offset)
             assert orchestrator.app_info.status == WebAppStatus.RUNNING
             assert orchestrator.app_info.backend_pid is not None
             pid_before_stop = orchestrator.app_info.backend_pid
