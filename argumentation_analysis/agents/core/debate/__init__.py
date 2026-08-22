@@ -62,24 +62,8 @@ __all__ = [
     "PersuasionProtocol",
 ]
 
-
-def register_with_capability_registry(registry):
-    """Register debate capabilities with the Lego registry."""
-    registry.register_agent(
-        name="debate_agent",
-        agent_class=DebateAgent,
-        capabilities=[
-            "adversarial_debate",
-            "argument_generation",
-            "strategy_adaptation",
-            "opponent_analysis",
-            "argument_scoring",
-        ],
-        metadata={
-            "description": (
-                "Generates arguments in adversarial debates with 8 personality "
-                "archetypes, adaptive strategies, 8-metric scoring, and "
-                "phase-based orchestration."
-            ),
-        },
-    )
+# #1842: no register_with_capability_registry here. The debate capability
+# table lives on the production surface (registry_setup.setup_registry) —
+# this module's former second table was only ever called by tests, and its
+# register_agent("debate_agent") would COLLIDE with the wired one
+# (ValueError: Component 'debate_agent' is already registered).

@@ -119,11 +119,10 @@ def setup_registry(
         registry.register_agent(
             name="quality_evaluator",
             agent_class=ArgumentQualityEvaluator,
-            capabilities=[
-                "argument_quality",
-                "virtue_detection",
-                "quality_scoring",
-            ],
+            # #1842: one table, demander-gated — virtue_detection and
+            # quality_scoring had zero production consumers (the 9 virtues
+            # run inside the evaluator; the registry routes the phase ask).
+            capabilities=["argument_quality"],
             metadata={"description": "9-virtue argument quality evaluator"},
             invoke=_invoke_quality_evaluator,
         )
@@ -140,11 +139,9 @@ def setup_registry(
         registry.register_agent(
             name="debate_agent",
             agent_class=DebateAgent,
-            capabilities=[
-                "adversarial_debate",
-                "argument_stress_test",
-                "debate_scoring",
-            ],
+            # #1842: stress-testing and scoring run inside the debate phase;
+            # neither had a production consumer for the registry to route.
+            capabilities=["adversarial_debate"],
             metadata={"description": "Multi-personality adversarial debate agent"},
             invoke=_invoke_debate_analysis,
         )
@@ -161,11 +158,11 @@ def setup_registry(
         registry.register_agent(
             name="governance_agent",
             agent_class=GovernanceAgent,
-            capabilities=[
-                "governance_simulation",
-                "multi_method_voting",
-                "preference_aggregation",
-            ],
+            # #1842: _invoke_governance already runs the multi-method vote
+            # and preference aggregation inside the governance_simulation
+            # phase (GE-4 #1462) — separate registry strings had no router
+            # value: any phase asking them resolved to this same invoke.
+            capabilities=["governance_simulation"],
             metadata={"description": "7-method governance voting agent"},
             invoke=_invoke_governance,
         )
@@ -701,7 +698,10 @@ def setup_registry(
         registry.register_service(
             name="deep_synthesis_service",
             service_class=type("DeepSynthesisService", (), {}),
-            capabilities=["deep_synthesis", "multi_page_report", "grounded_analysis"],
+            # #1842: the report shape (multi-page, grounded, 9 sections) is
+            # what the deep_synthesis phase produces, not separate routing
+            # asks — neither string had a production consumer.
+            capabilities=["deep_synthesis"],
             metadata={
                 "description": "Aggregates spectacular-run state into multi-page grounded markdown report (9 sections)",
                 "sections": 9,

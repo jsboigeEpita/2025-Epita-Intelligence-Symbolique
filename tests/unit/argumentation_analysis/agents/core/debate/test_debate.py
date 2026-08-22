@@ -190,18 +190,17 @@ class TestDebateRegistration:
         assert "adversarial_debate" in all_caps
         assert "argument_generation" in all_caps
 
-    def test_register_with_convenience_function(self):
-        """register_with_capability_registry() works."""
-        from argumentation_analysis.core.capability_registry import (
-            CapabilityRegistry,
-        )
-        from argumentation_analysis.agents.core.debate import (
-            register_with_capability_registry,
-        )
+    def test_debate_registered_on_production_surface(self):
+        """The debate specialist is reachable through the REAL registry.
 
-        registry = CapabilityRegistry()
-        register_with_capability_registry(registry)
+        #1842: this module no longer carries its own capability table —
+        the production surface (registry_setup.setup_registry) is the one
+        table, and its debate_agent would collide with any second
+        register_agent under the same name.
+        """
+        from argumentation_analysis.orchestration.registry_setup import setup_registry
 
+        registry = setup_registry(include_optional=False)
         agents = registry.find_agents_for_capability("adversarial_debate")
         assert len(agents) == 1
         assert agents[0].name == "debate_agent"

@@ -120,7 +120,14 @@ class TestCounterArgumentRegistration:
         assert len(agents) >= 1
         assert agents[0].name == "counter_argument_agent"
 
-    def test_register_multiple_capabilities(self):
+    def test_register_routes_the_phase_ask(self):
+        """The one-table registration routes the demanded capability (#1842).
+
+        Parsing, vulnerability analysis, strategies and evaluation are the
+        agent's internals — the registry routes the phase ask
+        (counter_argument_generation), the only capability production
+        code ever demands.
+        """
         from argumentation_analysis.core.capability_registry import CapabilityRegistry
         from argumentation_analysis.agents.core.counter_argument import (
             register_with_capability_registry,
@@ -129,15 +136,11 @@ class TestCounterArgumentRegistration:
         registry = CapabilityRegistry()
         register_with_capability_registry(registry)
 
-        for cap in [
-            "counter_argument_generation",
-            "argument_parsing",
-            "vulnerability_analysis",
-            "rhetorical_strategy",
-            "counter_argument_evaluation",
-        ]:
-            agents = registry.find_agents_for_capability(cap)
-            assert len(agents) >= 1, f"Missing capability: {cap}"
+        agents = registry.find_agents_for_capability("counter_argument_generation")
+        assert len(agents) >= 1
+        # Secondary vocabulary stays OFF the routing table: nothing in
+        # production asks for it (#1842 DoD — no declared-without-demander).
+        assert registry.find_agents_for_capability("argument_parsing") == []
 
 
 # ── Parser tests ──────────────────────────────────────────────────

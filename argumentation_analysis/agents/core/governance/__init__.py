@@ -30,23 +30,7 @@ __all__ = [
     "summarize_results",
 ]
 
-
-def register_with_capability_registry(registry):
-    """Register governance capabilities with the Lego registry."""
-    registry.register_plugin(
-        name="governance",
-        plugin_class=type("GovernanceMethods", (), {"methods": GOVERNANCE_METHODS}),
-        capabilities=[
-            "collective_decision_making",
-            "voting_methods",
-            "conflict_resolution",
-            "consensus_metrics",
-        ],
-        metadata={
-            "description": (
-                "Provides 7 governance/voting methods, conflict detection "
-                "and resolution, and consensus metrics for multi-agent "
-                "collective decision-making."
-            ),
-        },
-    )
+# #1842: no register_with_capability_registry here. The governance
+# capability table lives on the production surface
+# (registry_setup.setup_registry); this module's former second table was
+# only ever called by tests and shared no capability string with it.
