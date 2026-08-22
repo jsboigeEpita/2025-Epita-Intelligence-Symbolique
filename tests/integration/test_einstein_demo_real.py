@@ -655,8 +655,10 @@ class TestEinsteinPerformanceMetrics:
                     stderr=asyncio.subprocess.PIPE,
                 )
 
+                memory_budget_seconds = 60.0
+                started = time.monotonic()
                 stdout, stderr = await asyncio.wait_for(
-                    process.communicate(), timeout=60.0
+                    process.communicate(), timeout=memory_budget_seconds
                 )
 
                 assert (
@@ -683,7 +685,22 @@ class TestEinsteinPerformanceMetrics:
                     ), f"Problème mémoire détecté: {issue}"
 
             except asyncio.TimeoutError:
-                pytest.fail("Timeout test mémoire")
+                # #1840: the bare message made a one-second overrun and a full
+                # deadlock indistinguishable. Carry the applied budget, the
+                # elapsed time, and whatever the demo printed before cutoff.
+                elapsed = time.monotonic() - started
+                try:
+                    process.kill()
+                    stdout, stderr = await process.communicate()
+                except Exception:
+                    stdout = stderr = b""
+                stdout_tail = stdout.decode("utf-8", errors="replace")[-2000:]
+                stderr_tail = stderr.decode("utf-8", errors="replace")[-2000:]
+                pytest.fail(
+                    f"Timeout test mémoire: budget={memory_budget_seconds}s, "
+                    f"écoulé={elapsed:.1f}s, returncode={process.returncode}, "
+                    f"stdout_tail={stdout_tail!r}, stderr_tail={stderr_tail!r}"
+                )
             except Exception as e:
                 pytest.fail(f"Erreur test mémoire: {e}")
 
