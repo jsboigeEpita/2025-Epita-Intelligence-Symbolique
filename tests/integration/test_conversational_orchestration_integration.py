@@ -11,6 +11,7 @@ Tests the full conversational pipeline with mock LLM, verifying:
 
 import asyncio
 import pytest
+from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
 
 from argumentation_analysis.orchestration.conversational_orchestrator import (
@@ -51,6 +52,40 @@ def _make_mock_pipeline():
     return mock_kernel, mock_service, make_fake_agent
 
 
+@contextmanager
+def _pipeline_patches(mock_kernel, make_fake_agent):
+    """Every patch a run_conversational_analysis test needs, in one place.
+
+    The LLM double targets create_llm_service in the orchestrator namespace —
+    the module stopped importing OpenAIChatCompletion when #675 routed it
+    through the factory. Two post-processing stages also get doubles:
+    _invoke_stakes_extractor and _invoke_deep_synthesis build their own LLM
+    client inside invoke_callables, outside the orchestrator namespace, so
+    without these patches a budget-allowed run leaks one real LLM request.
+    """
+    with patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator.create_llm_service"
+    ) as MockLLM, patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
+        return_value=mock_kernel,
+    ), patch(
+        "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
+        side_effect=make_fake_agent,
+    ), patch(
+        "argumentation_analysis.agents.factory.get_plugin_instances",
+        return_value=[MagicMock()],
+    ), patch(
+        "argumentation_analysis.orchestration.invoke_callables._invoke_stakes_extractor",
+        new=AsyncMock(return_value={"error": "disabled in integration test"}),
+    ), patch(
+        "argumentation_analysis.orchestration.invoke_callables._invoke_deep_synthesis",
+        new=AsyncMock(return_value={"error": "disabled in integration test"}),
+    ), patch.dict(
+        "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
+    ):
+        yield MockLLM
+
+
 @pytest.mark.integration
 class TestConversationalPipelineIntegration:
     """End-to-end pipeline tests with mock LLM."""
@@ -59,20 +94,7 @@ class TestConversationalPipelineIntegration:
         """Full pipeline result contains all expected top-level fields."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
@@ -102,20 +124,7 @@ class TestConversationalPipelineIntegration:
         """The 3 macro-phases run in sequence: Extraction, Formal, Synthesis."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
@@ -179,20 +188,7 @@ class TestTraceAnalyzerIntegration:
         """Pipeline generates a non-empty trace report."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
@@ -208,20 +204,7 @@ class TestTraceAnalyzerIntegration:
         """Trace report captures transitions for all 3 phases."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
@@ -241,20 +224,7 @@ class TestCrossKBSynergies:
         """All phases share the same RhetoricalAnalysisState instance."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
@@ -270,20 +240,7 @@ class TestCrossKBSynergies:
         """State snapshot should be a serializable dict."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
@@ -301,55 +258,43 @@ class TestConversationLog:
         """Each log entry should have phase, turn, agent, content."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
             )
 
-        for entry in result["conversation_log"]:
+        # The log carries two families of entries: agent messages (phase/
+        # turn/agent/content) and typed system events — growth_validation,
+        # conflict_resolution, post_processing stages — which legitimately
+        # carry only phase + type + their own payload keys.
+        agent_entries = [e for e in result["conversation_log"] if "type" not in e]
+        system_entries = [e for e in result["conversation_log"] if "type" in e]
+        assert agent_entries, "no agent-message entries in conversation log"
+        for entry in agent_entries:
             assert "phase" in entry
             assert "turn" in entry
             assert "agent" in entry
             assert "content" in entry
+        for entry in system_entries:
+            assert "phase" in entry
+            assert entry["type"]
 
     async def test_multiple_agents_contribute_to_log(self):
         """Conversation log contains entries from multiple agents."""
         mock_kernel, mock_service, make_fake_agent = _make_mock_pipeline()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.sk.Kernel",
-            return_value=mock_kernel,
-        ), patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.OpenAIChatCompletion"
-        ) as MockLLM, patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
-            side_effect=make_fake_agent,
-        ), patch(
-            "argumentation_analysis.agents.factory.get_plugin_instances",
-            return_value=[MagicMock()],
-        ), patch.dict(
-            "os.environ", {"OPENAI_API_KEY": "sk-test-fake-key"}
-        ):
+        with _pipeline_patches(mock_kernel, make_fake_agent) as MockLLM:
             MockLLM.return_value = mock_service
             result = await run_conversational_analysis(
                 text=SAMPLE_TEXT, max_turns_per_phase=2
             )
 
-        agents_in_log = set(entry["agent"] for entry in result["conversation_log"])
+        agents_in_log = {
+            entry["agent"]
+            for entry in result["conversation_log"]
+            if "type" not in entry
+        }
         assert (
             len(agents_in_log) >= 2
         ), f"Expected multiple agents in log, got: {agents_in_log}"
