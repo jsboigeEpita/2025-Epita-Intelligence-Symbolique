@@ -180,12 +180,33 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > decorated `def`s, not the decorator lines.
 
 > ⚠ **Capability declarations are currently doubled** (#1842): `debate`, `governance` and
-> `quality` each declare capabilities twice, in two disjoint vocabularies — once in
-> `orchestration/registry_setup.py` (the surface that actually runs) and once in their own
+> `quality` each declare capabilities twice — once in `orchestration/registry_setup.py` (the
+> surface `setup_registry` populates) and once in their own
 > `__init__.register_with_capability_registry`, which for these three is called **only by
-> tests**. Only `counter_argument` is wired through its module function. When adding a
-> capability, add it to the surface `setup_registry` calls, and give it a consumer: several
-> declared capabilities are requested by no `find_*_for_capability` call at all.
+> tests**. `setup_registry` calls exactly one module function, `counter_argument`'s. A fifth
+> such function, in `synthesis/deep_synthesis_agent.py`, has **no caller at all** — not even
+> a test — and duplicates a service `setup_registry` already registers.
+>
+> Across those three, the two surfaces share **exactly one capability**: `debate`'s
+> `adversarial_debate` (`governance` and `quality` share none; `quality_scoring` looks shared
+> but is a *capability* in A and a component *name* in B). Every other capability the three
+> `__init__`s declare is requested nowhere — 0 on both consumer surfaces, measured. Do not
+> "fix" this by calling the module function in addition to `setup_registry`: for `debate`
+> both surfaces use `register_agent` under the same name, so the second raises
+> `ValueError: Component 'debate_agent' is already registered` (measured); for `governance`
+> and `quality` it registers a *plugin* under a different name and adds capabilities nobody
+> requests, with no error. When adding a capability, add it to the surface `setup_registry`
+> populates, and give it a consumer.
+
+> ⚠ **"Requested" means `add_phase(capability="…")`, not `find_*_for_capability("…")`.**
+> Phases are what consume capabilities: `workflow_dsl.py` resolves `phase.capability` through
+> `find_for_capability` at run time, and production carries **49** distinct `capability=`
+> literals (89 counting tests and examples). Literal `find_*_for_capability("…")` calls are almost entirely a *test* idiom —
+> **57** sites under `tests/`, and in production exactly **one** real call site (plus one
+> inside a docstring). Counting consumers with that grep measures the test suite, not the
+> system: `argument_quality` (30 phases), `counter_argument_generation` (16),
+> `governance_simulation` (15) and `adversarial_debate` (11) are all consumed on real runs
+> while having almost no literal `find_*` site.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 
