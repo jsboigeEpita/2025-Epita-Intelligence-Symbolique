@@ -7626,14 +7626,19 @@ async def _invoke_modal_logic(
     # ⚠ #1339 — this comment used to add "an explicit ``modal_solver`` choice is
     # always respected". That is true for SPASS and FALSE for TWEETY, and the
     # condition just above shows why it cannot be otherwise: the test is
-    # ``_prev_modal_solver == TWEETY``, which cannot tell an EXPLICIT TWEETY
-    # from the DEFAULT TWEETY — they are the same value. The prefer flag is the
-    # only thing that separates them. To pin TWEETY you must set BOTH
-    # ``modal_solver = TWEETY`` and ``modal_prefer_spass_when_available = False``;
-    # pinning the solver alone lets this site route to SPASS around the pin, and
-    # every ``"tweety" in msg`` traceability assert downstream reddens. The old
-    # sentence produced exactly that defect in several test fixtures
-    # (#1831, #1834).
+    # ``_prev_modal_solver == TWEETY``, which compares the field's VALUE — and
+    # an explicit TWEETY carries the same value as the default TWEETY. To pin
+    # TWEETY *against this site* you must set BOTH ``modal_solver = TWEETY`` and
+    # ``modal_prefer_spass_when_available = False``; pinning the solver alone
+    # lets this site route to SPASS around the pin, and every ``"tweety" in msg``
+    # traceability assert downstream reddens. The old sentence produced exactly
+    # that defect in several test fixtures (#1831, #1834).
+    #
+    # ⚠ That recipe is NOT a whole-process guarantee: it protects against THIS
+    # site, not against every one. ``_invoke_external_modal_solver`` (same file,
+    # ~L9937) forces SPASS on ``shutil.which("SPASS")`` alone — it reads neither
+    # setting and never restores. Tracked separately; do not read the BOTH
+    # recipe as protection there.
     # Restored in ``finally`` so the global choice never leaks past this call
     # (#1219 lesson: no unconditional, leaked force-set).
     from argumentation_analysis.core.config import settings as _modal_settings

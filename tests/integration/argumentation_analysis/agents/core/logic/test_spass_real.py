@@ -131,8 +131,14 @@ class TestModalConsistencyDecidesViaDefault:
         is detected (local dev machines), the resolver upgrades TWEETY to SPASS
         around the pin — the verdict stays authentic but its message names
         "spass", and this class's ``"tweety" in msg`` traceability asserts
-        redden. CI runners have no vendored SPASS, which is why this only bites
-        locally: the pin is a no-op there and CI green cannot prove this fix."""
+        redden. Why CI green cannot prove this fix: NOT because runners lack
+        SPASS — ``ext_tools/spass/SPASS.exe`` is git-tracked and
+        ``_get_spass_path`` only tests existence, so every checkout detects it.
+        The reason is that ``tests/integration/argumentation_analysis/`` is
+        outside the gate's argv (``ci.yml`` admits only ``orchestration``,
+        ``services``, ``workers``, ``api``). The pin is therefore NOT a no-op on
+        CI — it is what will keep these tests green the day this directory is
+        admitted."""
         previous_solver = settings.modal_solver
         previous_prefer = settings.modal_prefer_spass_when_available
         settings.modal_solver = ModalSolverChoice.TWEETY
@@ -277,8 +283,14 @@ class TestUnderscoredKbDecidesViaDefault:
         is detected (local dev machines), the resolver upgrades TWEETY to SPASS
         around the pin — the verdict stays authentic but its message names
         "spass", and this class's ``"tweety" in msg`` traceability asserts
-        redden. CI runners have no vendored SPASS, which is why this only bites
-        locally: the pin is a no-op there and CI green cannot prove this fix."""
+        redden. Why CI green cannot prove this fix: NOT because runners lack
+        SPASS — ``ext_tools/spass/SPASS.exe`` is git-tracked and
+        ``_get_spass_path`` only tests existence, so every checkout detects it.
+        The reason is that ``tests/integration/argumentation_analysis/`` is
+        outside the gate's argv (``ci.yml`` admits only ``orchestration``,
+        ``services``, ``workers``, ``api``). The pin is therefore NOT a no-op on
+        CI — it is what will keep these tests green the day this directory is
+        admitted."""
         previous_solver = settings.modal_solver
         previous_prefer = settings.modal_prefer_spass_when_available
         settings.modal_solver = ModalSolverChoice.TWEETY

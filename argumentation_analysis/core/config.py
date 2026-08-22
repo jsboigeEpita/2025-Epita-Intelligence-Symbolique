@@ -71,11 +71,13 @@ class ArgAnalysisSettings(BaseSettings):
     #
     # ⚠ #1339 — POUR ÉPINGLER TWEETY, IL FAUT LES DEUX RÉGLAGES. Une phrase
     # antérieure affirmait ici qu'« un ``modal_solver`` explicitement choisi est
-    # toujours respecté ». C'est vrai pour SPASS et **faux pour TWEETY**, et
-    # c'est inimplémentable en l'état : TWEETY est à la fois le défaut et un
-    # choix explicite légitime, donc ``_resolve_active_solver_choice``
-    # (``modal_handler.py``) ne peut pas les distinguer — c'est ce drapeau, et
-    # lui seul, qui les sépare. Poser ``modal_solver = TWEETY`` sans poser
+    # toujours respecté ». C'est vrai pour SPASS et **faux pour TWEETY** :
+    # ``_resolve_active_solver_choice`` (``modal_handler.py``) compare la
+    # *valeur* du champ, et la valeur d'un TWEETY explicite est identique à
+    # celle du TWEETY par défaut. (La provenance, elle, est bien disponible —
+    # ``model_fields_set`` distingue les deux, mesuré — mais le resolver ne la
+    # consulte pas. Ne pas lire cette note comme une impossibilité.)
+    # Poser ``modal_solver = TWEETY`` sans poser
     # ``modal_prefer_spass_when_available = False`` laisse le resolver remonter
     # vers SPASS **autour du pin** dès qu'un binaire vendoré est détecté : le
     # verdict reste authentique, mais son message nomme ``spass`` et tout assert
