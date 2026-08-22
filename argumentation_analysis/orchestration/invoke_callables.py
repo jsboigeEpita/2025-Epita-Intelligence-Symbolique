@@ -9954,28 +9954,48 @@ async def _invoke_external_modal_solver(
                 ready_initializer,
             )
 
-            if not settings.modal_solver == ModalSolverChoice.SPASS:
+            # #1845 decision, written where it applies: this site is
+            # INCONDITIONAL on binary presence — deliberately, unlike the
+            # pipeline routing site (~:7637, Track C #1279) which honors
+            # ``modal_prefer_spass_when_available``. The capability is
+            # registered as ``external_modal_solving`` (registry_setup.py) and
+            # requesting THAT service is the consent to run an external
+            # solver; the prefer flag governs routing, not this lane. What was
+            # missing here was never the guard — it was giving the setting
+            # BACK: the force below is a LOAN, not a doctrine change.
+            # ``settings`` is a module singleton, so an unrestored override
+            # leaks process-wide to every later caller (#1845). Both the loan
+            # and the restore go through ``object.__setattr__``, which leaves
+            # ``model_fields_set`` untouched — the default-vs-explicit
+            # provenance the #1339 discriminator reads stays intact.
+            _prev_modal_solver = settings.modal_solver
+            _loaned = _prev_modal_solver is not ModalSolverChoice.SPASS
+            if _loaned:
                 object.__setattr__(settings, "modal_solver", ModalSolverChoice.SPASS)
-            initializer = ready_initializer()
-            handler = ModalHandler(initializer_instance=initializer)
-            belief_set_str = "\n".join(str(f) for f in formulas)
-            is_consistent, msg = await asyncio.to_thread(
-                handler.is_modal_kb_consistent, belief_set_str
-            )
-            return {
-                "formulas": formulas,
-                # #1634: ``is_modal_kb_consistent`` is tri-state — the sibling
-                # phase (``_invoke_modal_logic``) already passes it through
-                # unflattened. This branch wrapped it in ``bool()``, so the
-                # external-solver lane reported a decided verdict where the
-                # reasoning lane reported none, for the very same KB.
-                "valid": is_consistent,
-                "modalities": modalities,
-                "solver": "spass",
-                "degraded": is_consistent is None,
-                "message": msg,
-                "logic_type": "modal",
-            }
+            try:
+                initializer = ready_initializer()
+                handler = ModalHandler(initializer_instance=initializer)
+                belief_set_str = "\n".join(str(f) for f in formulas)
+                is_consistent, msg = await asyncio.to_thread(
+                    handler.is_modal_kb_consistent, belief_set_str
+                )
+                return {
+                    "formulas": formulas,
+                    # #1634: ``is_modal_kb_consistent`` is tri-state — the sibling
+                    # phase (``_invoke_modal_logic``) already passes it through
+                    # unflattened. This branch wrapped it in ``bool()``, so the
+                    # external-solver lane reported a decided verdict where the
+                    # reasoning lane reported none, for the very same KB.
+                    "valid": is_consistent,
+                    "modalities": modalities,
+                    "solver": "spass",
+                    "degraded": is_consistent is None,
+                    "message": msg,
+                    "logic_type": "modal",
+                }
+            finally:
+                if _loaned:
+                    object.__setattr__(settings, "modal_solver", _prev_modal_solver)
         except Exception as e:
             logger.info(f"SPASS modal solver unavailable ({e}), falling back to Tweety")
     else:
