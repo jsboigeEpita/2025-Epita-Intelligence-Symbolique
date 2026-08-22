@@ -222,7 +222,12 @@ class TestRegistrySetup:
         assert summary["total_registrations"] > 0
 
     def test_counter_argument_capabilities(self):
-        """Counter-argument agent provides expected capabilities."""
+        """Counter-argument agent routes the demanded capability (#1842).
+
+        Parsing and vulnerability analysis are the agent's internals, not
+        registry entries — nothing in production asks for them, so the
+        one-table resolution keeps them off the routing surface.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
         )
@@ -231,8 +236,8 @@ class TestRegistrySetup:
         agents = registry.find_agents_for_capability("counter_argument_generation")
         assert len(agents) >= 1
         agent_reg = agents[0]
-        assert "argument_parsing" in agent_reg.capabilities
-        assert "vulnerability_analysis" in agent_reg.capabilities
+        assert "counter_argument_generation" in agent_reg.capabilities
+        assert "argument_parsing" not in agent_reg.capabilities
 
     def test_quality_evaluator_registered(self):
         """Quality evaluator is registered."""

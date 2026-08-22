@@ -55,8 +55,8 @@ class DeepSynthesisAgent(BaseAgent):
         "MUST NEVER appear in your output by their real name. Refer to every "
         "entity ONLY by an opaque label: the speaker is `Speaker_A`, a state "
         "is `State_Q`, an era is `era_A`, the document is `doc_A`, an argument "
-        "is `arg_1`. Characterize content ABSTRACTLY (\"the speaker frames X "
-        "as historically inevitable\") — never quote or paraphrase proper "
+        'is `arg_1`. Characterize content ABSTRACTLY ("the speaker frames X '
+        'as historically inevitable") — never quote or paraphrase proper '
         "nouns even if they appear in the data blocks below (those blocks may "
         "carry named entities inherited from upstream extraction; treat them "
         "as content only, never copy the names). If you cannot express an "
@@ -1343,9 +1343,7 @@ class DeepSynthesisAgent(BaseAgent):
             # Epic #1258 / Track 1 #1259 — prepend the opaque-ID directive only
             # when the agent runs in opaque mode (deanonymized=False).
             _opaque_guard = (
-                ""
-                if getattr(self, "_deanonymized", True)
-                else self.OPAQUE_ID_DIRECTIVE
+                "" if getattr(self, "_deanonymized", True) else self.OPAQUE_ID_DIRECTIVE
             )
             prompt = (
                 f"{_opaque_guard}{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
@@ -1647,20 +1645,7 @@ class DeepSynthesisAgent(BaseAgent):
             return None
 
 
-# Module-level registry function
-def register_with_capability_registry(registry):
-    """Register DeepSynthesisAgent with the capability registry."""
-    registry.register_agent(
-        name="deep_synthesis_agent",
-        agent_class=DeepSynthesisAgent,
-        capabilities=[
-            "deep_synthesis",
-            "multi_page_report",
-            "grounded_analysis",
-        ],
-        metadata={
-            "description": "Aggregates spectacular-run state into multi-page grounded markdown report (9 sections)",
-            "sections": 9,
-            "report_version": "1.0.0",
-        },
-    )
+# #1842: no register_with_capability_registry here. This dead second
+# surface (zero callers — not even tests) duplicated the production
+# deep_synthesis_service declaration on registry_setup's surface with an
+# identical capability list.

@@ -247,35 +247,42 @@ class TestRegistryCompliance:
         assert "belief_maintenance" in all_caps
         assert "local_llm" in all_caps
 
-    def test_register_with_convenience_functions(self):
-        """All modules with register_with_capability_registry work."""
-        from argumentation_analysis.core.capability_registry import (
-            CapabilityRegistry,
-        )
-        from argumentation_analysis.agents.core.counter_argument import (
-            register_with_capability_registry as reg_counter,
-        )
-        from argumentation_analysis.agents.core.debate import (
-            register_with_capability_registry as reg_debate,
-        )
-        from argumentation_analysis.agents.core.quality import (
-            register_with_capability_registry as reg_quality,
-        )
-        from argumentation_analysis.agents.core.governance import (
-            register_with_capability_registry as reg_governance,
+    def test_setup_registry_covers_all_specialists(self):
+        """Every specialist module appears in the REAL setup_registry output.
+
+        #1842 (DoD): the previous test built its own registry and called
+        the per-module convenience functions itself — a fabricated
+        population that could not reveal production wiring only imports
+        one of them. Here the population is exactly what production
+        builds, and each specialist must appear on it with its invoke
+        wired.
+        """
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
         )
 
-        registry = CapabilityRegistry()
-        reg_counter(registry)
-        reg_debate(registry)
-        reg_quality(registry)
-        reg_governance(registry)
+        registry = setup_registry(include_optional=False)
 
-        all_caps = registry.get_all_capabilities()
-        assert "counter_argument_generation" in all_caps
-        assert "adversarial_debate" in all_caps
-        assert "argument_quality_evaluation" in all_caps
-        assert "collective_decision_making" in all_caps
+        expected = {
+            "counter_argument_agent": "counter_argument_generation",
+            "quality_evaluator": "argument_quality",
+            "debate_agent": "adversarial_debate",
+            "governance_agent": "governance_simulation",
+            "deep_synthesis_service": "deep_synthesis",
+        }
+        for component, capability in expected.items():
+            providers = registry.find_for_capability(capability)
+            names = [getattr(p, "name", None) for p in providers]
+            assert component in names, (
+                f"{component} missing from the real setup_registry "
+                f"population for capability {capability!r} — the production "
+                f"wiring dropped a specialist."
+            )
+            by_name = [p for p in providers if getattr(p, "name", None) == component]
+            assert by_name and by_name[0].invoke is not None, (
+                f"{component} registered without an invoke callable — a "
+                f"specialist the pipeline cannot actually route to."
+            )
 
 
 # ---------------------------------------------------------------------------

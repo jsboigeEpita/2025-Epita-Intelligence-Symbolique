@@ -179,24 +179,19 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > `@kernel_function`, which `grep -c '^\s*@kernel_function'` scores as a decorator. Count the
 > decorated `def`s, not the decorator lines.
 
-> ⚠ **Capability declarations are currently doubled** (#1842): `debate`, `governance` and
-> `quality` each declare capabilities twice — once in `orchestration/registry_setup.py` (the
-> surface `setup_registry` populates) and once in their own
-> `__init__.register_with_capability_registry`, which for these three is called **only by
-> tests**. `setup_registry` calls exactly one module function, `counter_argument`'s. A fifth
-> such function, in `synthesis/deep_synthesis_agent.py`, has **no caller at all** — not even
-> a test — and duplicates a service `setup_registry` already registers.
->
-> Across those three, the two surfaces share **exactly one capability**: `debate`'s
-> `adversarial_debate` (`governance` and `quality` share none; `quality_scoring` looks shared
-> but is a *capability* in A and a component *name* in B). Every other capability the three
-> `__init__`s declare is requested nowhere — 0 on both consumer surfaces, measured. Do not
-> "fix" this by calling the module function in addition to `setup_registry`: for `debate`
-> both surfaces use `register_agent` under the same name, so the second raises
-> `ValueError: Component 'debate_agent' is already registered` (measured); for `governance`
-> and `quality` it registers a *plugin* under a different name and adds capabilities nobody
-> requests, with no error. When adding a capability, add it to the surface `setup_registry`
-> populates, and give it a consumer.
+> ⚠ **One capability surface per module** (#1842, resolved): `debate`, `governance`,
+> `quality` and `synthesis/deep_synthesis_agent` each used to declare capabilities on a
+> second surface (`__init__.register_with_capability_registry`) that only tests — or nobody —
+> called. Those dead functions are deleted; the one table per module is the production
+> surface `orchestration/registry_setup.py` populates (`counter_argument` keeps its module
+> function, which `setup_registry` imports and calls). Each specialist's routing entry is
+> the capability production demands: `adversarial_debate`, `argument_quality`,
+> `governance_simulation`, `counter_argument_generation`, `deep_synthesis` — internal
+> features (scoring, virtues, voting methods) are not separate registry entries.
+> `tests/unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py`
+> guards both invariants: any new unwired definer reddens, and so does a declared
+> capability with zero production demanders. When adding a capability, add it to the surface
+> `setup_registry` populates, **and give it a consumer** — a phase asking for it.
 
 > ⚠ **"Requested" means `add_phase(capability="…")`, not `find_*_for_capability("…")`.**
 > Phases are what consume capabilities: `workflow_dsl.py` resolves `phase.capability` through

@@ -41,17 +41,17 @@ __all__ = [
 
 
 def register_with_capability_registry(registry):
-    """Register counter-argument capabilities with the Lego registry."""
+    """Register counter-argument capabilities with the Lego registry.
+
+    #1842: this is the module's ONE capability table — the surface
+    ``registry_setup.setup_registry`` imports and calls. The routing entry
+    is the phase ask (``counter_argument_generation``); parsing,
+    vulnerability analysis, strategies and evaluation run inside the agent.
+    """
     registry.register_agent(
         name="counter_argument_agent",
         agent_class=CounterArgumentAgent,
-        capabilities=[
-            "counter_argument_generation",
-            "argument_parsing",
-            "vulnerability_analysis",
-            "rhetorical_strategy",
-            "counter_argument_evaluation",
-        ],
+        capabilities=["counter_argument_generation"],
         metadata={
             "description": (
                 "Generates counter-arguments using 5 rhetorical strategies, "
