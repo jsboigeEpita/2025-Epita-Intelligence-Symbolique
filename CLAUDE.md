@@ -164,15 +164,28 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - **`pm/`** — `SherlockEnqueteAgent` (investigation orchestration)
 - **`pl/`** — Propositional logic agent
 - **`debate/`** — `DebateAgent(BaseAgent)` — multi-personality adversarial debate with Walton-Krabbe protocols, argument scoring, knowledge bases. Alias: `EnhancedArgumentationAgent`.
-- **`counter_argument/`** — `CounterArgumentAgent(BaseAgent)` — generates counter-arguments using 5 rhetorical strategies (reductio ad absurdum, counter-example, distinction, reformulation, concession). 5-criteria weighted evaluator.
-- **`governance/`** — Governance simulation: 7 voting methods (majority, Borda, Condorcet, approval, etc.), conflict resolution, consensus metrics. NOT a BaseAgent — logic exposed via plugin.
-- **`quality/`** — Argument quality evaluation: 9 virtue detectors (clarity, coherence, relevance, etc.). Exposed via plugin.
+- **`counter_argument/`** — `CounterArgumentAgent(BaseAgent)`. `definitions.py` carries **two distinct enums, do not conflate them**: `CounterArgumentType` (5 — direct refutation, counter-example, alternative explanation, premise challenge, reductio ad absurdum) and `RhetoricalStrategy` (5 — socratic questioning, reductio ad absurdum, analogical counter, authority appeal, statistical evidence). 5-criteria weighted evaluator.
+- **`governance/`** — Governance simulation. `governance_methods.py` exposes **7 governance methods**, of which **5 are voting rules** (majority, plurality, Borda, Condorcet, quadratic) and **2 are distributed-consensus protocols** (Byzantine, Raft) — the latter are not scrutins, do not count them as voting methods. `social_choice.py` adds **8 more social-choice functions**: approval voting, STV, Copeland, Kemeny-Young (+ a `_safe` variant), Schulze, Condorcet winner, pairwise matrix. Plus conflict resolution and consensus metrics. NOT a BaseAgent — logic exposed via plugin.
+- **`quality/`** — Argument quality evaluation: **9 virtue detectors** in `quality_evaluator.py`, named in French — `clarte`, `pertinence`, `presence_sources`, `refutation_constructive`, `structure_logique`, `analogie_pertinente`, `fiabilite_sources`, `exhaustivite`, `redondance_faible`. `agentic_virtue_detectors.py` adds LLM-backed variants through an **injectable** `LLMCallable` (so a grep for `kernel.invoke`/`ChatCompletion` will wrongly report this module as LLM-free). Exposed via plugin.
 
 ### Semantic Kernel Plugins (`argumentation_analysis/plugins/`)
 
-- **`quality_scoring_plugin.py`** — `QualityScoringPlugin`: 3 `@kernel_function` methods wrapping `ArgumentQualityEvaluator`
+- **`quality_scoring_plugin.py`** — `QualityScoringPlugin`: **4** `@kernel_function` methods wrapping `ArgumentQualityEvaluator` (`evaluate_argument_quality`, `get_quality_score`, `evaluate_with_cross_kb_context`, `list_virtues`)
 - **`french_fallacy_plugin.py`** — `FrenchFallacyPlugin`: 3 `@kernel_function` methods for 3-tier hybrid fallacy detection (French NLP)
-- **`governance_plugin.py`** — `GovernancePlugin`: 4 `@kernel_function` methods for voting, conflict detection, consensus metrics
+- **`governance_plugin.py`** — `GovernancePlugin`: **6** `@kernel_function` methods (`detect_conflicts_fn`, `resolve_conflict_fn`, `compute_consensus_metrics`, `list_governance_methods`, `social_choice_vote`, `find_condorcet_winner`)
+
+> ⚠ **Counting `@kernel_function` with a plain grep over-counts**: the class docstrings of
+> `quality_scoring_plugin.py` and `french_fallacy_plugin.py` each open a line with
+> `@kernel_function`, which `grep -c '^\s*@kernel_function'` scores as a decorator. Count the
+> decorated `def`s, not the decorator lines.
+
+> ⚠ **Capability declarations are currently doubled** (#1842): `debate`, `governance` and
+> `quality` each declare capabilities twice, in two disjoint vocabularies — once in
+> `orchestration/registry_setup.py` (the surface that actually runs) and once in their own
+> `__init__.register_with_capability_registry`, which for these three is called **only by
+> tests**. Only `counter_argument` is wired through its module function. When adding a
+> capability, add it to the surface `setup_registry` calls, and give it a consumer: several
+> declared capabilities are requested by no `find_*_for_capability` call at all.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 
