@@ -92,6 +92,16 @@ Entry points: `api/main.py` (FastAPI), `argumentation_analysis/run_orchestration
 
 The analysis corpus is encrypted at rest. Passphrase is configured via `TEXT_CONFIG_PASSPHRASE` in `.env`. See [security documentation](docs/security/) for handling rules.
 
+## Discourse Pattern Mining
+
+Quantitative analysis of discourse signatures across the encrypted corpus — fallacy spectra, Tricherie/Influence asymmetry, co-occurrence patterns, and cross-coverage with formal reasoning.
+
+- **Report**: `docs/reports/discourse_patterns.md` (generated, committed with opaque IDs only)
+- **Enrichment workflow**: `docs/security/dataset_enrichment.md` — how to add new extracts and regenerate
+- **CLI**: `python scripts/dataset/tasks.py pattern-add|pattern-rerun|pattern-report`
+
+All analyses use opaque IDs; qualitative data remains local (`.analysis_kb/`, gitignored).
+
 ## Documentation
 
 | Directory             | Content                                       |
