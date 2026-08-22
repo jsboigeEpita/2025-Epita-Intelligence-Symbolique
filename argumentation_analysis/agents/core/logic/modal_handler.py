@@ -323,8 +323,15 @@ class ModalHandler:
         # #1339: report the RESOLVED solver (SPASS when auto-routed), not the
         # raw ``settings.modal_solver`` — otherwise a conversational call that
         # auto-upgrades to SPASS would still label its verdict "tweety".
-        solver_name = self._resolve_active_solver_choice().value
+        # #1846 advances that fix one step: _get_active_reasoner() already
+        # consults _resolve_active_solver_choice(), so deriving the label
+        # from a SECOND call made label and reasoner two reads of one
+        # instrument — a reasoner swapped under the verdict kept deciding
+        # under a stale stamp (degenerate substitution: 8 passed, 0 red).
+        # The class name OBSERVES the object that will actually decide
+        # (SPASSMlReasoner vs SimpleMlReasoner).
         reasoner = self._get_active_reasoner()
+        solver_name = "spass" if "SPASS" in type(reasoner).__name__ else "tweety"
         logger.debug(f"Checking modal KB consistency with {solver_name}.")
 
         # #1326: normalize identifiers amont de parseBeliefBase so underscored
