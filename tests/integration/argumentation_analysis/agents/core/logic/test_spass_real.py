@@ -124,13 +124,30 @@ class TestModalConsistencyDecidesViaDefault:
     def tweety_solver(self):
         """Force the pure-Java default (``TWEETY``/``SimpleMlReasoner``) for the
         test. This reasoner decides consistency via ``query`` with no external
-        binary — the honest, always-available modal path."""
-        previous = settings.modal_solver
+        binary — the honest, always-available modal path.
+
+        Pinning ``modal_solver`` alone is NOT enough (#1339): when
+        ``modal_prefer_spass_when_available`` is on and a vendored SPASS binary
+        is detected (local dev machines), the resolver upgrades TWEETY to SPASS
+        around the pin — the verdict stays authentic but its message names
+        "spass", and this class's ``"tweety" in msg`` traceability asserts
+        redden. Why CI green cannot prove this fix: NOT because runners lack
+        SPASS — ``ext_tools/spass/SPASS.exe`` is git-tracked and
+        ``_get_spass_path`` only tests existence, so every checkout detects it.
+        The reason is that ``tests/integration/argumentation_analysis/`` is
+        outside the gate's argv (``ci.yml`` admits only ``orchestration``,
+        ``services``, ``workers``, ``api``). The pin is therefore NOT a no-op on
+        CI — it is what will keep these tests green the day this directory is
+        admitted."""
+        previous_solver = settings.modal_solver
+        previous_prefer = settings.modal_prefer_spass_when_available
         settings.modal_solver = ModalSolverChoice.TWEETY
+        settings.modal_prefer_spass_when_available = False
         try:
             yield
         finally:
-            settings.modal_solver = previous
+            settings.modal_solver = previous_solver
+            settings.modal_prefer_spass_when_available = previous_prefer
 
     def test_inconsistent_kb_reports_inconsistent(self, modal_bridge, tweety_solver):
         """An inconsistent modal KB (``Rain`` and ``!Rain``) must yield
@@ -258,12 +275,31 @@ class TestUnderscoredKbDecidesViaDefault:
 
     @pytest.fixture
     def tweety_solver(self):
-        previous = settings.modal_solver
+        """Same pin as the sibling class above, and the same reason it needs two
+        settings rather than one.
+
+        Pinning ``modal_solver`` alone is NOT enough (#1339): when
+        ``modal_prefer_spass_when_available`` is on and a vendored SPASS binary
+        is detected (local dev machines), the resolver upgrades TWEETY to SPASS
+        around the pin — the verdict stays authentic but its message names
+        "spass", and this class's ``"tweety" in msg`` traceability asserts
+        redden. Why CI green cannot prove this fix: NOT because runners lack
+        SPASS — ``ext_tools/spass/SPASS.exe`` is git-tracked and
+        ``_get_spass_path`` only tests existence, so every checkout detects it.
+        The reason is that ``tests/integration/argumentation_analysis/`` is
+        outside the gate's argv (``ci.yml`` admits only ``orchestration``,
+        ``services``, ``workers``, ``api``). The pin is therefore NOT a no-op on
+        CI — it is what will keep these tests green the day this directory is
+        admitted."""
+        previous_solver = settings.modal_solver
+        previous_prefer = settings.modal_prefer_spass_when_available
         settings.modal_solver = ModalSolverChoice.TWEETY
+        settings.modal_prefer_spass_when_available = False
         try:
             yield
         finally:
-            settings.modal_solver = previous
+            settings.modal_solver = previous_solver
+            settings.modal_prefer_spass_when_available = previous_prefer
 
     def test_underscored_consistent_kb_decides_true(self, modal_bridge, tweety_solver):
         """A consistent KB with underscored atoms must DECIDE ``True`` via a real

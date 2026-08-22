@@ -7621,10 +7621,30 @@ async def _invoke_modal_logic(
     # them (#1239/#1242, firsthand 4/4). Anti-pendule: *route* to the solver
     # that can decide rather than catch the OOM and report degraded. The flip is
     # conditional on (a) a detected vendored SPASS path, (b) the prefer flag,
-    # (c) the default TWEETY solver — an explicit ``modal_solver`` choice is
-    # always respected (the #1219 regression test pins TWEETY via that path).
+    # (c) ``modal_solver == TWEETY``.
+    #
     # Restored in ``finally`` so the global choice never leaks past this call
     # (#1219 lesson: no unconditional, leaked force-set).
+    #
+    # ⚠ #1339 — this comment used to add "an explicit ``modal_solver`` choice is
+    # always respected". That is true for SPASS and FALSE for TWEETY, and the
+    # condition just above shows why, AS IMPLEMENTED: the test is
+    # ``_prev_modal_solver == TWEETY``, which compares the field's VALUE — and
+    # an explicit TWEETY carries the same value as the default TWEETY. (The
+    # provenance is available — ``model_fields_set`` tells an explicit pin from
+    # the default, measured — this site simply does not consult it. Read this as
+    # "not done", not as "cannot be done".) To pin TWEETY *against this site*
+    # you must set BOTH ``modal_solver = TWEETY`` and
+    # ``modal_prefer_spass_when_available = False``; pinning the solver alone
+    # lets this site route to SPASS around the pin, and every ``"tweety" in msg``
+    # traceability assert downstream reddens. The old sentence produced exactly
+    # that defect in several test fixtures (#1831, #1834).
+    #
+    # ⚠ That recipe is NOT a whole-process guarantee — it protects against THIS
+    # site only. ``_invoke_external_modal_solver`` (same file, ~L9937) forces
+    # SPASS on ``shutil.which("SPASS")`` alone: it reads neither setting AND,
+    # unlike this site, never restores — the force-set leaks process-wide.
+    # Tracked as #1845; do not read the BOTH recipe as protection there.
     from argumentation_analysis.core.config import settings as _modal_settings
     from argumentation_analysis.core.config import ModalSolverChoice
     from argumentation_analysis.agents.core.logic.modal_handler import (

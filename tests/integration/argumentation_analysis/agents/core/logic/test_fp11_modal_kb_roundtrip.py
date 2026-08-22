@@ -79,8 +79,10 @@ def tweety_solver():
     ``modal_prefer_spass_when_available`` is on and a vendored SPASS binary
     is detected (local dev machines), the resolver upgrades TWEETY to SPASS
     — the verdict stays authentic but its message names "spass", and this
-    file's ``"tweety" in msg`` traceability asserts redden. CI runners have
-    no vendored SPASS, which is why this only bites locally."""
+    file's ``"tweety" in msg`` traceability asserts redden. This only bites
+    locally NOT because CI runners lack SPASS (``ext_tools/spass/SPASS.exe`` is
+    git-tracked and ``_get_spass_path`` only tests existence, so every checkout
+    detects it) but because this directory is outside the gate's argv."""
     previous_solver = settings.modal_solver
     previous_prefer = settings.modal_prefer_spass_when_available
     settings.modal_solver = ModalSolverChoice.TWEETY
