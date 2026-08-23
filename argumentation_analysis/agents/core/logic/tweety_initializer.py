@@ -5,7 +5,18 @@ Ce module suppose que la JVM a déjà été démarrée et configurée par un
 gestionnaire externe (ex: une fixture pytest de session).
 """
 
-import jpype
+try:
+    import jpype
+
+    _JPYPE_AVAILABLE = True
+except ImportError:
+    # #1697: same honest-absent guard as jvm_setup/tweety_bridge. The logic
+    # agents import this module at module level, so a bare ``import jpype``
+    # here kept the whole logic package unimportable without jpype. The class
+    # only touches ``jpype`` inside ``_import_java_classes``, which runs after
+    # the JVM is up — unreachable when jpype is absent.
+    jpype = None  # type: ignore[assignment]
+    _JPYPE_AVAILABLE = False
 import logging
 import os
 from argumentation_analysis.core.utils.logging_utils import setup_logging

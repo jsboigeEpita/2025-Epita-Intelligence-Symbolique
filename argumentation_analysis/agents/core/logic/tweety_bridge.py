@@ -14,9 +14,26 @@ logiques (comme la logique propositionnelle ou la logique du premier ordre).
 L'initialisation se fait via la méthode `initialize_jvm`.
 """
 
-import jpype
-from jpype import java
-import jpype.imports
+from __future__ import annotations
+
+try:
+    import jpype
+    from jpype import java
+    import jpype.imports
+
+    _JPYPE_AVAILABLE = True
+except ImportError:
+    # #1697: jpype is a hard dep of environment.yml and CI installs it, but the
+    # honest-absent contract ("JVM unavailable ⇒ boot degraded, health reports
+    # unhealthy") must hold when it is absent. A bare top-level ``import jpype``
+    # here made the WHOLE logic layer (logic/__init__ → agents → this module)
+    # unimportable in a jpype-less env, so neither the MCP server nor the web API
+    # could boot degraded — the cascade #1677's narrow main.py guard could not
+    # heal. Binding ``jpype`` to None lets the module (and thus the cascade)
+    # import, records the absence honestly, and lets ``initialize_jvm`` raise a
+    # clear "jpype not installed" instead of ``AttributeError``.
+    jpype = None  # type: ignore[assignment]
+    _JPYPE_AVAILABLE = False
 import logging
 import os
 import glob
@@ -24,23 +41,37 @@ import threading
 import asyncio
 from typing import Optional, Dict, List, Tuple, Any
 
-# Importer les handlers de logique spécifiques
-# Pour éviter les dépendances circulaires, on les importe et on les type-hint comme ça
-from .pl_handler import PLHandler as PropositionalLogicHandler
-from .fol_handler import FOLHandler as FirstOrderLogicHandler
-from .modal_handler import ModalHandler
-from .af_handler import AFHandler as ArgumentationFrameworkHandler
-from .ranking_handler import RankingHandler
-from .bipolar_handler import BipolarHandler
-from .aba_handler import ABAHandler
-from .adf_handler import ADFHandler
-from .aspic_handler import ASPICHandler
-from .belief_revision_handler import BeliefRevisionHandler
-from .probabilistic_handler import ProbabilisticHandler
-from .dialogue_handler import DialogueHandler
-from .tweety_initializer import TweetyInitializer
+# Handlers are imported LOCALLY at their point of use, not at module load: each
+# handler module does a bare top-level ``import jpype``, so importing them
+# eagerly is what dragged the whole logic layer (logic/__init__ → agents → here)
+# into the jpype cascade at boot (#1697). ``from __future__ import annotations``
+# keeps the class-level and property annotations below as strings, so the class
+# NAMES no longer force the import at module load; each property imports its
+# handler class right before instantiating it — which only happens after
+# ``is_jvm_ready()``, i.e. only when jpype IS present. (Same pattern the
+# ``qbf_handler`` property already used.)
 
 logger = logging.getLogger(__name__)
+
+
+class _DegradedInitializer:
+    """#1697: stand-in for ``TweetyInitializer`` when jpype is absent.
+
+    Reports ``is_jvm_ready() == False`` and makes ``ensure_*`` a no-op, so a
+    ``TweetyBridge`` constructed in a jpype-less env (honest-absent boot) can
+    still be handed to the services: the handler properties raise the intended
+    ``RuntimeError("La JVM n'est pas démarrée…")`` instead of crashing on a None
+    initializer, and the health dict reads the JVM as down.
+    """
+
+    def __init__(self, *_args: Any, **_kwargs: Any) -> None:
+        pass
+
+    def is_jvm_ready(self) -> bool:
+        return False
+
+    def ensure_jvm_and_components_are_ready(self) -> None:
+        pass
 
 
 class TweetyBridge:
@@ -88,9 +119,19 @@ class TweetyBridge:
         """
         if not hasattr(self, "_initialized"):
             self.jar_directory = jar_directory or self._find_default_jar_dir()
-            self._initializer = TweetyInitializer(self)
-            # L'initialisation de la JVM et des composants est maintenant gérée par une méthode unifiée
-            self._initializer.ensure_jvm_and_components_are_ready()
+            if _JPYPE_AVAILABLE:
+                from .tweety_initializer import TweetyInitializer
+
+                self._initializer = TweetyInitializer(self)
+                # L'initialisation de la JVM et des composants est maintenant gérée par une méthode unifiée
+                self._initializer.ensure_jvm_and_components_are_ready()
+            else:
+                # #1697: jpype absent ⇒ a degraded initializer that reports "JVM
+                # not ready" so downstream property guards raise the honest
+                # RuntimeError rather than crashing on a None initializer. The
+                # bridge OBJECT is still constructible (honest-absent boot), but
+                # no JVM work can be done until jpype is present.
+                self._initializer = _DegradedInitializer()
             # Les handlers ne sont plus initialisés ici pour éviter les erreurs de JVM
             self._initialized = True
 
@@ -122,6 +163,8 @@ class TweetyBridge:
                 "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
             )
         if self._pl_handler is None:
+            from .pl_handler import PLHandler as PropositionalLogicHandler
+
             logger.debug("Chargement paresseux (lazy-loading) du PLHandler.")
             self._pl_handler = PropositionalLogicHandler(self._initializer)
         return self._pl_handler
@@ -134,6 +177,8 @@ class TweetyBridge:
                 "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
             )
         if self._af_handler is None:
+            from .af_handler import AFHandler as ArgumentationFrameworkHandler
+
             logger.debug("Chargement paresseux (lazy-loading) du AFHandler.")
             self._af_handler = ArgumentationFrameworkHandler(self._initializer)
         return self._af_handler
@@ -146,6 +191,8 @@ class TweetyBridge:
                 "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
             )
         if self._modal_handler is None:
+            from .modal_handler import ModalHandler
+
             logger.debug("Chargement paresseux (lazy-loading) du ModalHandler.")
             self._modal_handler = ModalHandler(self._initializer)
         return self._modal_handler
@@ -163,6 +210,8 @@ class TweetyBridge:
                 "La JVM n'est pas démarrée. Appelez initialize_jvm() en premier."
             )
         if self._fol_handler is None:
+            from .fol_handler import FOLHandler as FirstOrderLogicHandler
+
             logger.debug("Chargement paresseux (lazy-loading) du FOLHandler.")
             self._fol_handler = FirstOrderLogicHandler(self._initializer)
         return self._fol_handler
@@ -176,6 +225,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._ranking_handler is None:
+            from .ranking_handler import RankingHandler
+
             self._ranking_handler = RankingHandler(self._initializer)
         return self._ranking_handler
 
@@ -184,6 +235,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._bipolar_handler is None:
+            from .bipolar_handler import BipolarHandler
+
             self._bipolar_handler = BipolarHandler(self._initializer)
         return self._bipolar_handler
 
@@ -192,6 +245,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._aba_handler is None:
+            from .aba_handler import ABAHandler
+
             self._aba_handler = ABAHandler(self._initializer)
         return self._aba_handler
 
@@ -200,6 +255,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._adf_handler is None:
+            from .adf_handler import ADFHandler
+
             self._adf_handler = ADFHandler(self._initializer)
         return self._adf_handler
 
@@ -208,6 +265,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._aspic_handler is None:
+            from .aspic_handler import ASPICHandler
+
             self._aspic_handler = ASPICHandler(self._initializer)
         return self._aspic_handler
 
@@ -216,6 +275,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._belief_revision_handler is None:
+            from .belief_revision_handler import BeliefRevisionHandler
+
             self._belief_revision_handler = BeliefRevisionHandler(self._initializer)
         return self._belief_revision_handler
 
@@ -224,6 +285,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._probabilistic_handler is None:
+            from .probabilistic_handler import ProbabilisticHandler
+
             self._probabilistic_handler = ProbabilisticHandler(self._initializer)
         return self._probabilistic_handler
 
@@ -232,6 +295,8 @@ class TweetyBridge:
         if not self.initializer.is_jvm_ready():
             raise RuntimeError("JVM not started.")
         if self._dialogue_handler is None:
+            from .dialogue_handler import DialogueHandler
+
             self._dialogue_handler = DialogueHandler(self._initializer)
         return self._dialogue_handler
 
@@ -368,6 +433,8 @@ class TweetyBridge:
 
     async def wait_for_jvm(self, timeout: int = 30) -> None:
         """Attend de manière asynchrone que la JVM soit prête."""
+        from .tweety_initializer import TweetyInitializer
+
         if TweetyInitializer.is_jvm_ready():
             return
 
@@ -418,6 +485,13 @@ class TweetyBridge:
         Démarre la JVM avec les JARs du répertoire spécifié.
         Cette méthode est bloquante et peut prendre du temps.
         """
+        if jpype is None:  # #1697: honest-absent, not a masked AttributeError
+            raise RuntimeError(
+                "jpype is not installed — the JVM cannot be started (#1697). "
+                "Deployed boot: render a degraded/unhealthy state, do not crash."
+            )
+        from .tweety_initializer import TweetyInitializer
+
         with self._lock:  # Utilise un verrou pour éviter le démarrage concurrent de la JVM
             if TweetyInitializer.is_jvm_ready():
                 logger.warning(
@@ -463,6 +537,8 @@ class TweetyBridge:
 
     def shutdown_jvm(self):
         """Arrête la JVM si elle est en cours d'exécution."""
+        from .tweety_initializer import TweetyInitializer
+
         with self._lock:
             if TweetyInitializer.is_jvm_ready():
                 # shutdown_jvm est maintenant géré de manière centralisée

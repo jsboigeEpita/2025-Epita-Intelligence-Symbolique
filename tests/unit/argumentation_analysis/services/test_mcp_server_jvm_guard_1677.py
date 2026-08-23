@@ -16,19 +16,16 @@ The fix (this PR) guards the import with ``try/except ImportError`` binding
 fix would exchange an import crash for an ``AttributeError`` at health-check
 time (the defense was latent-broken, exposed by making ``jpype`` falsy).
 
-**Scope finding (xfail below):** the main.py guard is *necessary but not
-sufficient* to restore the degraded boot. A deeper cascade —
+**Scope finding (RESOLVED by #1697):** the main.py guard was *necessary but
+not sufficient* to restore the degraded boot. A deeper cascade —
 ``validation_service`` → ``logic_service`` → ``logic_factory`` →
 ``agents.core.logic.__init__`` → ``propositional_logic_agent`` →
-``tweety_bridge.py:17`` (a bare module-level ``import jpype``) — raises
-``ModuleNotFoundError`` before the module finishes loading. That logic-layer
-import-time jpype dependency is a separate, deeper issue than the #1677
-"guard via dependent helper" defect (the #1677 census already noted every
-jpype-backed handler module bare-imports jpype); it is reported to the
-coordinator as a scope decision (expand #1677 to break the cascade, or spin
-off). The main.py fix here is correct and necessary: without it, even fixing
-the cascade would not help (main.py:4 crashes first). The xfail lifts the day
-the cascade is import-safe without jpype.
+``tweety_bridge.py:17`` (a bare module-level ``import jpype``) — raised
+``ModuleNotFoundError`` before the module finished loading. #1697 healed the
+cascade at its three module-level nodes (``tweety_bridge`` / ``tweety_initializer``
+/ ``jvm_setup``: guarded ``import jpype`` binding ``None``; handler classes now
+imported locally at their point of use): the full-boot probe below now passes
+and the former strict-xfail marker has been dropped.
 
 **Why a subprocess, not a ``sys.modules`` fixture**: the only faithful way to
 simulate "jpype not importable" is a ``sys.meta_path`` finder that refuses
@@ -54,24 +51,11 @@ import subprocess
 import sys
 import textwrap
 
-import pytest
-
-#: the full degraded boot is currently blocked by a deeper import-time cascade
-#: (logic_service → logic_factory → tweety_bridge bare ``import jpype``), not by
-#: the main.py:4 guard this PR fixes. strict=True so the day the cascade is made
-#: import-safe without jpype, this test XPASSes and alerts us to drop the marker.
-_CASCADE_BLOCKED = pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "main.py:4 guard is necessary but not sufficient: the boot cascade "
-        "validation_service→logic_service→logic_factory→logic/__init__→"
-        "tweety_bridge.py:17 (bare `import jpype`) raises ModuleNotFoundError "
-        "before main finishes loading. Logic-layer import-time jpype dependency "
-        "— a deeper issue than the #1677 'guard via dependent helper' defect; "
-        "reported to coordinator as a scope decision (expand #1677 or spin off)."
-    ),
-)
+#: The cascade this marker documented (logic_service → logic_factory →
+#: logic/__init__ → tweety_bridge bare ``import jpype``) was healed by #1697
+#: (guarded imports in tweety_bridge/tweety_initializer/jvm_setup + local
+#: handler imports at point of use). The strict-xfail marker was dropped that
+#: day, as its own reason text instructed: the full-boot probe now PASSES.
 
 # A self-contained probe that simulates a jpype-less environment. It (1) installs
 # a ``sys.meta_path`` finder refusing ``jpype`` BEFORE importing anything from
@@ -81,7 +65,8 @@ _CASCADE_BLOCKED = pytest.mark.xfail(
 # ``jpype`` binding. It prints one machine-parseable marker line:
 # ``RETURNED <json>`` on a degraded boot, ``RAISED <type>: <msg>`` if the
 # unguarded import (or the unguarded status line) leaked through.
-_PROBE = textwrap.dedent("""\
+_PROBE = textwrap.dedent(
+    """\
     import json, sys, types
 
 
@@ -131,7 +116,8 @@ _PROBE = textwrap.dedent("""\
         }))
     except Exception as e:
         print("RAISED %s: %s" % (type(e).__name__, e))
-""")
+"""
+)
 
 
 def _run_probe() -> str:
@@ -152,12 +138,13 @@ def _run_probe() -> str:
 
 
 # Isolated probe: stubs MCPServer AND the web_api service/model layer so main.py
-# imports WITHOUT dragging the jpype-bound logic layer (the cascade the xfail test
-# documents). This isolates the #1677 main.py:4 guard — the literal defect site —
+# imports WITHOUT the service layer (which the full-boot probe below exercises
+# for real). This isolates the #1677 main.py:4 guard — the literal defect site —
 # and proves it binds jpype=None and the l.73/l.74 defenses evaluate to a
 # degraded JVM state. The stubs are of DOWNSTREAM services (not the code under
 # test); they exist because the cascade is a separate, deeper issue.
-_ISOLATED_PROBE = textwrap.dedent("""\
+_ISOLATED_PROBE = textwrap.dedent(
+    """\
     import json, sys, types
 
 
@@ -225,7 +212,8 @@ _ISOLATED_PROBE = textwrap.dedent("""\
         }))
     except Exception as e:
         print("RAISED %s: %s" % (type(e).__name__, e))
-""")
+"""
+)
 
 
 def _run_isolated_probe() -> str:
@@ -271,7 +259,6 @@ def test_main_guard_binds_jpype_none_isolated() -> None:
     assert payload["jvm_status"] == "Not Running"
 
 
-@_CASCADE_BLOCKED
 def test_mcp_server_boots_degraded_without_jpype() -> None:
     """A jpype-less env reaches the honest-absent boot, never an uncaught raise.
 
