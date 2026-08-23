@@ -65,7 +65,7 @@ class ServiceManager:
             sys.executable,
             "-m",
             "uvicorn",
-            "argumentation_analysis.services.web_api.app:app",
+            "api.main:app",  # #1853: l'ancienne cible Flask est archivée (app = None)
             "--host",
             "127.0.0.1",
             "--port",

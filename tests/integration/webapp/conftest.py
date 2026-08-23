@@ -12,11 +12,13 @@ def webapp_config():
         "webapp": {"name": "Test Web App", "version": "0.1.0", "environment": "test"},
         "backend": {
             "enabled": True,
-            "module": "argumentation_analysis.services.web_api.app:app",
+            # #1853: the Flask target was archived in March (#217) and exports
+            # app = None; api.main is the live FastAPI app, serving /health.
+            "module": "api.main:app",
             "start_port": 8000,
             "fallback_ports": [8001, 8002],
             "timeout_seconds": 180,
-            "health_endpoint": "/api/health",
+            "health_endpoint": "/health",
         },
         "frontend": {
             "enabled": False,

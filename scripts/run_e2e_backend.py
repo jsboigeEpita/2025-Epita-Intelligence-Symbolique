@@ -29,7 +29,7 @@ def start_server():
     logger.info("Attempting to start Uvicorn server for E2E tests...")
     try:
         uvicorn.run(
-            "argumentation_analysis.services.web_api.app:app",
+            "api.main:app",  # #1853: l'ancienne cible Flask est archivée (app = None)
             host="0.0.0.0",
             port=8095,
             log_level="debug",

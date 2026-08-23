@@ -64,7 +64,9 @@ def integration_config(webapp_config, tmp_path):
 
     # config['backend']['command_list'] = fake_backend_command_list
     # config['backend']['command'] = None # Ensure list is used
-    config["backend"]["health_endpoint"] = "/api/health"
+    # #1853: no health_endpoint override here — the conftest already declares
+    # "/health", and a stale "/api/health" value here made _check_all_api_endpoints
+    # wait for a critical path absent from API_ENDPOINTS_TO_CHECK (always False).
     config["backend"]["start_port"] = 9020  # Use a higher port to be safer
     config["backend"]["fallback_ports"] = [9021, 9022]
     config["backend"]["timeout_seconds"] = 20  # > 15s initial wait

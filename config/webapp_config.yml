@@ -14,16 +14,16 @@ webapp:
   name: "Argumentation Analysis Web App"
   version: "1.0.0"
   environment: "development"
-  description: "Application web d'analyse argumentative avec backend Flask et tests Playwright"
+  description: "Application web d'analyse argumentative avec backend FastAPI et tests Playwright"
 
 # =============================================================================
-# CONFIGURATION BACKEND FLASK
+# CONFIGURATION BACKEND (FastAPI - api/main.py)
 # =============================================================================
 backend:
   enabled: true
   
   # Module Python à démarrer
-  module: "argumentation_analysis.services.web_api.app:app"
+  module: "api.main:app"  # #1853: la cible Flask est archivee depuis 2026-03 (#217); api.main sert /health
   
   # Gestion des ports avec failover automatique
   start_port: 8095
@@ -32,7 +32,7 @@ backend:
   timeout_seconds: 30
   
   # Endpoints de surveillance
-  health_endpoint: "/api/health"
+  health_endpoint: "/health"  # #1853: route reelle de api.main (racine, pas /api/health)
   
   # Activation environnement conda
   env_activation: "powershell -File scripts/env/activate_project_env.ps1"
@@ -214,7 +214,7 @@ urls:
   
   # Endpoints critiques
   endpoints:
-    health: "/api/health"
+    health: "/health"
     analyze: "/api/analyze"
     status: "/api/status"
     metrics: "/api/metrics"

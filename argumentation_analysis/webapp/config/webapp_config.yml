@@ -5,7 +5,7 @@ backend:
   - 5004
   - 5005
   - 5006
-  health_endpoint: /api/health
+  health_endpoint: /health
   max_attempts: 5
   module: api.main:app
   start_port: 5003

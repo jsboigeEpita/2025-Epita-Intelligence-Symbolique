@@ -60,7 +60,7 @@ def create_backend_config() -> ServiceConfig:
             python_exe,
             "-m",
             "uvicorn",
-            "argumentation_analysis.services.web_api.app:app",
+            "api.main:app",  # #1853: l'ancienne cible Flask est archivée (app = None)
             "--host",
             "0.0.0.0",
             "--port",
