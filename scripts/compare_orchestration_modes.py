@@ -242,8 +242,18 @@ class ModeResult:
     argument_count: Optional[int] = None
     phases_completed: int = 0
     phases_total: int = 0
-    capabilities_used: List[str] = field(default_factory=list)
-    capabilities_missing: List[str] = field(default_factory=list)
+    # #1756: Optional with default None, same convention as
+    # ``capabilities_degraded`` below (#1749) and ``state_fill_rate``
+    # (CG #1540): None = "this mode emits no ledger", [] = "ledger emitted,
+    # found nothing". A runner whose producer never kept a ledger (the
+    # hierarchical modes — ``HierarchicalOrchestrator.analyze`` returns 8
+    # keys, none of the three; ``DelegationOrchestrator`` likewise) must
+    # leave None, never a fabricated ``[]`` that reads as "I looked and
+    # found none" (#1019). JSON: asdict renders None -> null; downstream
+    # readers treat null as "not applicable", not 0 — the convention CG
+    # #1540 already documents for the count columns.
+    capabilities_used: Optional[List[str]] = None
+    capabilities_missing: Optional[List[str]] = None
     # #1749: the THIRD capability state — "ran and returned nothing". The
     # pipeline removes degraded capabilities from ``capabilities_used`` on
     # purpose (``unified_pipeline._collect_degraded_capabilities``, "so a
@@ -532,9 +542,22 @@ def _capability_ledger_lines(result: "ModeResult") -> List[str]:
 
     degraded = result.capabilities_degraded
     degraded_part = "n/a" if degraded is None else str(len(degraded))
+    # #1756: same None -> "n/a" rule for used/missing. A partial ledger
+    # (producer emitted one key, not the others) must render the absent
+    # ones as "n/a", never as a fabricated 0.
+    used_part = (
+        "n/a"
+        if result.capabilities_used is None
+        else str(len(result.capabilities_used))
+    )
+    missing_part = (
+        "n/a"
+        if result.capabilities_missing is None
+        else str(len(result.capabilities_missing))
+    )
     lines = [
-        f"**{result.mode}** capabilities: {len(result.capabilities_used)} used / "
-        f"{degraded_part} degraded / {len(result.capabilities_missing)} missing",
+        f"**{result.mode}** capabilities: {used_part} used / "
+        f"{degraded_part} degraded / {missing_part} missing",
     ]
     if result.capabilities_used:
         lines.append(f"  - used: {', '.join(result.capabilities_used)}")
@@ -549,7 +572,7 @@ def _capability_ledger_lines(result: "ModeResult") -> List[str]:
 def _fmt_count_in_perimeter(
     count: Optional[int],
     producers: FrozenSet[str],
-    capabilities_used: List[str],
+    capabilities_used: Optional[List[str]],
     perimeter_is_exhaustive: bool = False,
 ) -> str:
     """Render a count as ``n/a`` when its PRODUCER never ran (#1740).
@@ -1455,8 +1478,20 @@ async def run_hierarchical_bridge_mode(
         duration_seconds=round(duration, 2),
         phases_completed=phases_completed,
         phases_total=phases_total,
+        # #1756: `HierarchicalOrchestrator.analyze` (bridge) returns 8 keys —
+        # objectives / strategic_plan / phase_results / conclusion /
+        # evaluation / duration_seconds / summary / workflow_name — and NONE
+        # of the three ledger keys. We read ``capabilities_used`` WITHOUT a
+        # fabricated default: ``.get(k, [])`` would render "[]" = "I looked,
+        # there are none" for a mode that never kept a ledger (bridge decides
+        # by conclusion/verdict, not by registry — _compute_decides, CA
+        # #1529). Absent key -> None -> `_render_capability_states` renders
+        # ``n/a (mode emits no capability ledger)`` for the RIGHT reason.
+        # The day the producer starts emitting one of the three keys, this
+        # reader passes it through and the other two render ``n/a``, never a
+        # measured-looking ``0`` — pinned by the #1756 control tests.
         capabilities_used=(
-            result.get("capabilities_used", []) if isinstance(result, dict) else []
+            result.get("capabilities_used") if isinstance(result, dict) else None
         ),
         scope_of_work=(
             "Strategic planning -> objectives_to_workflow -> "
@@ -1583,10 +1618,13 @@ async def run_hierarchical_delegation_mode(
     # / ``evaluation`` / ``conclusion``. The previous reader read ``summary`` and
     # ``capabilities_used``, two keys the mode NEVER emits, so the report line
     # showed ``0/0`` phases + ``0.0%`` fill on a run where 5 tasks really
-    # executed. Those zeros were UNREAD FIELDS, not measurements. (Bridge mode
-    # IS correctly read — it emits ``summary`` via WorkflowExecutor,
-    # orchestrator.py:209.) Anti-pendule: the mode already has the data; we read
-    # it instead of fabricating a ``summary`` surface orchestrator-side.
+    # executed. Those zeros were UNREAD FIELDS, not measurements. (For
+    # ``summary`` the bridge mode IS correctly read — it emits ``summary`` via
+    # WorkflowExecutor, orchestrator.py:209. Its ledger is another story: the
+    # bridge emits NONE of the three capability-ledger keys, and its reader
+    # must not pretend otherwise — #1756, same family as this fix.) Anti-
+    # pendule: the mode already has the data; we read it instead of
+    # fabricating a ``summary`` surface orchestrator-side.
     objectives = result.get("objectives", []) if isinstance(result, dict) else []
     tasks_created = result.get("tasks_created", 0) if isinstance(result, dict) else 0
     operational_results = (
