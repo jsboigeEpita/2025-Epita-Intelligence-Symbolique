@@ -1918,5 +1918,108 @@ class TestDeterministicFillTranche:
         assert mod._compute_decides(r) is True
 
 
+class TestBridgeLedgerReason1756:
+    """#1756 — the bridge reader must not pretend to read an absent key.
+
+    ``HierarchicalOrchestrator.analyze`` (bridge) returns 8 keys, NONE of the
+    three capability-ledger keys. The old reader did
+    ``result.get("capabilities_used", [])`` — the ``[]`` was FABRICATED ("I
+    looked, there are none") for a mode that never kept a ledger. The
+    ``n/a (mode emits no capability ledger)`` line was rendered by
+    coincidence (three empty containers), not by knowledge.
+
+    Two controls, both red on the pre-fix tree:
+
+    1. **The reason today**: a bridge return with NO ledger key must leave
+       ``capabilities_used is None`` — not a fabricated ``[]`` — and still
+       render the ``n/a`` line.
+    2. **The reason the day the producer changes** (the issue's core): a
+       bridge return carrying ONE of the three keys must render the other
+       two as ``n/a``, never as a measured-looking ``0``. On the pre-fix
+       tree ``capabilities_missing`` defaulted to ``[]`` and rendered
+       ``0 missing`` — a zero nobody measured.
+
+    A test that merely asserts "the line shows n/a" (the current, correct
+    rendering) would be green on both trees and measure nothing — that is
+    exactly why these controls pin the MECHANISM, not the output.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    @staticmethod
+    def _fake_bridge_result(with_partial_ledger: bool) -> dict:
+        """The real ``HierarchicalOrchestrator.analyze`` bridge return shape:
+        8 keys, none of the ledger keys — plus, when ``with_partial_ledger``,
+        ONE ledger key (the future-producer scenario the issue warns about)."""
+        base = {
+            "objectives": [{"id": "obj-1"}],
+            "strategic_plan": {"phases": ["p1", "p2"]},
+            "phase_results": {
+                "p1": {"status": "completed", "output": {}, "error": None}
+            },
+            "conclusion": "Analyse terminée.",
+            "evaluation": {"overall_success_rate": 1.0},
+            "duration_seconds": 1.5,
+            "summary": {"completed": 1, "total": 2},
+            "workflow_name": "standard",
+        }
+        if with_partial_ledger:
+            base["capabilities_used"] = ["argument_quality"]
+        return base
+
+    def _drive_bridge(self, mod, fake: dict):
+        async def fake_analyze(**kwargs):
+            return fake
+
+        async def _drive():
+            with patch(
+                "argumentation_analysis.orchestration.hierarchical.orchestrator"
+                ".run_hierarchical_analysis",
+                side_effect=fake_analyze,
+            ), patch(
+                "argumentation_analysis.orchestration.registry_setup" ".setup_registry",
+                return_value=None,
+            ):
+                return await mod.run_hierarchical_bridge_mode(
+                    "text", "corpus_A", max_wall_seconds=None
+                )
+
+        return asyncio.run(_drive())
+
+    def test_no_ledger_is_none_not_fabricated_empty(self) -> None:
+        """Bridge return WITHOUT any ledger key: the reader must leave None
+        (absence), not a fabricated [] (measured-empty). Red pre-fix: the
+        old ``.get(k, [])`` produced []."""
+        mod = self._harness()
+        r = self._drive_bridge(mod, self._fake_bridge_result(with_partial_ledger=False))
+        assert r.capabilities_used is None, (
+            "the bridge producer emits no `capabilities_used` — the reader "
+            "must not fabricate a [] that reads as a measurement (#1756)"
+        )
+        assert r.capabilities_missing is None
+        assert r.capabilities_degraded is None
+        # ...and the n/a line is rendered FOR THAT REASON (no_ledger).
+        lines = mod._capability_ledger_lines(r)
+        assert any("emits no capability ledger" in line for line in lines)
+
+    def test_partial_ledger_other_two_render_na_not_zero(self) -> None:
+        """The issue's core scenario: the day the producer starts emitting
+        ONE of the three keys, the other two must render n/a — never a 0
+        nobody measured. Red pre-fix: missing defaulted to [] → '0 missing'."""
+        mod = self._harness()
+        r = self._drive_bridge(mod, self._fake_bridge_result(with_partial_ledger=True))
+        assert r.capabilities_used == ["argument_quality"]
+        lines = mod._capability_ledger_lines(r)
+        head = lines[0]
+        assert "1 used" in head
+        assert "n/a degraded" in head
+        assert (
+            "n/a missing" in head
+        ), "a non-emitted ledger key must render n/a, not a fabricated 0"
+        assert "0 missing" not in head
+        assert "0 degraded" not in head
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
