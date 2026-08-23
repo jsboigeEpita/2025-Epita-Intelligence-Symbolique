@@ -335,6 +335,30 @@ def pytest_unconfigure(config):
         _dotenv_patcher = None
 
 
+class _NullCache:
+    """#1820 : cache de secours quand ``-p no:cacheprovider`` est passé —
+    ``config.cache`` n'existe pas et chaque accès levait en INTERNALERROR avant
+    toute collecte. ``get``/``set`` round-trippent dans un dict de classe : le
+    transport intra-session (sessionstart écrit ``jvm_started``, la fixture
+    ``jvm_session`` le lit) reste fonctionnel — un set-noop aurait fait sauter
+    à tort les tests JVM d'une session où la JVM VIT. Portée = le process
+    pytest : chaque invocation repart vierge (sémantique cache froid), rien
+    ne persiste entre runs."""
+
+    _store: dict = {}
+
+    def get(self, key, default=None):
+        return self._store.get(key, default)
+
+    def set(self, key, value):
+        self._store[key] = value
+
+
+def _cache(config):
+    """#1820 : accès unique au cache pytest pour les 9 sites de conftest."""
+    return getattr(config, "cache", None) or _NullCache()
+
+
 def pytest_collection_finish(session):
     """
     Hook exécuté après la collecte des tests.
@@ -343,7 +367,7 @@ def pytest_collection_finish(session):
     is_e2e_session = any(
         item.get_closest_marker("e2e") is not None for item in session.items
     )
-    session.config.cache.set("is_e2e_session", is_e2e_session)
+    _cache(session.config).set("is_e2e_session", is_e2e_session)
     if is_e2e_session:
         logger.warning(
             "Session de test E2E détectée. L'initialisation globale de la JVM sera sautée."
@@ -418,22 +442,22 @@ def pytest_sessionstart(session):
         logger.info(
             "Mode collection uniquement : JVM non initialisée (évite conflit torch/DLL)"
         )
-        session.config.cache.set("jvm_started", False)
+        _cache(session.config).set("jvm_started", False)
         return
 
     if session.config.getoption("--disable-jvm-session"):
         logger.warning("Initialisation de la JVM sautée via --disable-jvm-session.")
-        session.config.cache.set("jvm_started", False)
+        _cache(session.config).set("jvm_started", False)
         return
 
     # La décision est prise après la collecte, dans pytest_collection_finish
-    is_e2e_session = session.config.cache.get("is_e2e_session", False)
+    is_e2e_session = _cache(session.config).get("is_e2e_session", False)
 
     if is_e2e_session:
         logger.warning(
             "Décision confirmée: L'initialisation globale de la JVM est sautée pour la session E2E."
         )
-        session.config.cache.set("jvm_started", False)
+        _cache(session.config).set("jvm_started", False)
         return
 
     # #1641 (B): pytest captures logs per-test and only releases them on a test
@@ -466,7 +490,7 @@ def pytest_sessionstart(session):
         # a genuine raise; the l.522 double-check still covers a real post-start
         # crash — three distinct causes, three distinct messages, all kept.
         _jvm_ok = initialize_jvm(session_fixture_owns_jvm=True)
-        session.config.cache.set("jvm_started", bool(_jvm_ok))
+        _cache(session.config).set("jvm_started", bool(_jvm_ok))
         if _jvm_ok:
             logger.info("JVM initialisée avec succès depuis pytest_sessionstart.")
         else:
@@ -480,7 +504,7 @@ def pytest_sessionstart(session):
         logger.error(
             f"ÉCHEC CRITIQUE de l'initialisation de la JVM dans pytest_sessionstart: {e}"
         )
-        session.config.cache.set("jvm_started", False)
+        _cache(session.config).set("jvm_started", False)
         # On ne lance pas pytest.exit ici pour laisser les tests non-JVM s'exécuter
         # Mais on pourrait le faire si la JVM est absolument critique pour toute la suite.
     finally:
@@ -541,8 +565,8 @@ def jvm_session(request):
     L'initialisation réelle a été déplacée vers `pytest_sessionstart` pour une exécution
     plus précoce et plus sûre. Cette fixture vérifie si l'initialisation a réussi.
     """
-    jvm_started = request.config.cache.get("jvm_started", False)
-    is_e2e_session = request.config.cache.get("is_e2e_session", False)
+    jvm_started = _cache(request.config).get("jvm_started", False)
+    is_e2e_session = _cache(request.config).get("is_e2e_session", False)
 
     is_no_jvm_test = "no_jvm_session" in request.node.keywords
     is_jvm_disabled_globally = request.config.getoption("--disable-jvm-session")
