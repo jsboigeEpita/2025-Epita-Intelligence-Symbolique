@@ -65,7 +65,9 @@ class ServiceManager:
             sys.executable,
             "-m",
             "uvicorn",
-            "argumentation_analysis.services.web_api.app:app",
+            # #1853: the previous target (web_api.app:app) was archived in
+            # #217 and exports app = None — every served route 500s.
+            "api.main:app",
             "--host",
             "127.0.0.1",
             "--port",

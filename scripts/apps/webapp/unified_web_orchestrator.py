@@ -206,7 +206,10 @@ class UnifiedWebOrchestrator:
             },
             "backend": {
                 "enabled": True,
-                "module": "argumentation_analysis.services.web_api.app",
+                # #1853: the archived Flask module exports app = None (#217).
+                # Normalized to the explicit "module:app" uvicorn spec so the
+                # census guard in test_uvicorn_targets_live_1853.py probes it.
+                "module": "api.main:app",
                 "start_port": backend_port,
                 "fallback_ports": fallback_ports,
                 "max_attempts": 3,

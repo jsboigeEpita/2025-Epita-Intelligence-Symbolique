@@ -12,7 +12,10 @@ def webapp_config():
         "webapp": {"name": "Test Web App", "version": "0.1.0", "environment": "test"},
         "backend": {
             "enabled": True,
-            "module": "argumentation_analysis.services.web_api.app:app",
+            # #1853: the archived Flask module exports app = None — the
+            # deep-merge in _load_config let this entry override the
+            # orchestrator's live default (api.main:app) for five months.
+            "module": "api.main:app",
             "start_port": 8000,
             "fallback_ports": [8001, 8002],
             "timeout_seconds": 180,

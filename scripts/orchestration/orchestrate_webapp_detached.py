@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argumentation_analysis.core.environment
+
 """
 Orchestrateur webapp détaché - utilise les outils de haut niveau existants
 Démarre backend/frontend en arrière-plan et retourne immédiatement le contrôle
@@ -60,15 +61,17 @@ def create_backend_config() -> ServiceConfig:
             python_exe,
             "-m",
             "uvicorn",
-            "argumentation_analysis.services.web_api.app:app",
+            # #1853: the previous target (web_api.app:app) was archived in
+            # #217 and exports app = None — every served route 500s.
+            "api.main:app",
             "--host",
             "0.0.0.0",
             "--port",
             "8095",
         ],
         working_dir=str(Path(__file__).parent),
-        port=5003,
-        health_check_url="http://localhost:5003/api/status",
+        port=8095,
+        health_check_url="http://localhost:8095/api/status",
         startup_timeout=45,
         max_port_attempts=4,
     )

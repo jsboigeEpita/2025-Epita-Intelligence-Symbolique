@@ -49,9 +49,10 @@ class BackendManager:
         self.logger = logger
 
         # Configuration par défaut
-        self.module = config.get(
-            "module", "argumentation_analysis.services.web_api.app"
-        )
+        # #1853: the archived Flask module exports app = None (#217) — the
+        # fallback default is the live FastAPI app, as an explicit
+        # "module:app" uvicorn spec.
+        self.module = config.get("module", "api.main:app")
         self.start_port = config.get("start_port", 8095)
         self.fallback_ports = config.get("fallback_ports", [8096, 8097, 8098])
         self.max_attempts = config.get("max_attempts", 5)
