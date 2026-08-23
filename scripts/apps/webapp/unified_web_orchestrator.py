@@ -214,7 +214,9 @@ class UnifiedWebOrchestrator:
                 "fallback_ports": fallback_ports,
                 "max_attempts": 3,
                 "timeout_seconds": 30,
-                "health_endpoint": "/api/health",
+                # #1861: aligned with the canonical fork (#1858) and the
+                # root webapp_config.yml — /health. The app serves both paths.
+                "health_endpoint": "/health",
                 "env_activation": f'powershell -File "{project_root.joinpath("scripts", "env", "activate_project_env.ps1")}"',
             },
             "frontend": {

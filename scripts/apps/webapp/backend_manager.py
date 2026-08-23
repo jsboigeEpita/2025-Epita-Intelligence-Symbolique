@@ -59,7 +59,9 @@ class BackendManager:
         self.timeout_seconds = config.get(
             "timeout_seconds", 180
         )  # Augmentation du timeout
-        self.health_endpoint = config.get("health_endpoint", "/api/health")
+        # #1861: aligned with the canonical fork (#1858) and the root
+        # webapp_config.yml — /health. The app serves both paths.
+        self.health_endpoint = config.get("health_endpoint", "/health")
         # Forcer l'utilisation d'un chemin absolu pour la robustesse
         # Forcer l'utilisation d'un chemin absolu pour la robustesse et pointer vers le bon script
         # Forcer l'utilisation du script d'activation à la racine du projet, comme demandé par l'audit
@@ -349,17 +351,15 @@ class BackendManager:
                 "pid": None,
             }
 
-    async def _wait_for_backend(
-        self, port: int, app_module: Optional[str] = None
-    ) -> bool:
+    async def _wait_for_backend(self, port: int) -> bool:
         """Attend que le backend soit accessible via health check avec une patience accrue."""
-        # Sélectionne l'endpoint de santé approprié
-        if app_module and "api.main" in app_module:
-            health_endpoint = "/health"
-        else:
-            health_endpoint = self.health_endpoint
-
-        url = f"http://127.0.0.1:{port}{health_endpoint}"
+        # #1861: the configured key decides — same decision as the canonical
+        # fork (#1858). The former "api.main substring => /health" special
+        # case never executed (its only caller passed no app_module) and,
+        # once armed by a caller passing one, would have muted
+        # backend.health_endpoint for every configuration. A target that
+        # needs /health sets the key; the probe follows it.
+        url = f"http://127.0.0.1:{port}{self.health_endpoint}"
         start_time = time.time()
         self.logger.info(
             f"Attente backend sur {url} (timeout: {self.timeout_seconds}s)"
