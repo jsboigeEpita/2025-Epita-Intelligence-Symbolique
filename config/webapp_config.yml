@@ -24,7 +24,9 @@ backend:
 
   # Module Python à démarrer
   # #1853: the Flask module was archived in #217 (app = None since) — the
-  # launcher target is the live FastAPI app, which serves /api/health.
+  # launcher target is the live FastAPI app, whose declared health route is
+  # /health (api/main.py). #1857: every reader of the health path — startup
+  # probe, deep-check list, verdict — reads this key.
   module: "api.main:app"
   
   # Gestion des ports avec failover automatique
@@ -34,7 +36,7 @@ backend:
   timeout_seconds: 30
   
   # Endpoints de surveillance
-  health_endpoint: "/api/health"
+  health_endpoint: "/health"
   
   # Activation environnement conda
   env_activation: "powershell -File scripts/env/activate_project_env.ps1"
@@ -216,7 +218,7 @@ urls:
   
   # Endpoints critiques
   endpoints:
-    health: "/api/health"
+    health: "/health"
     analyze: "/api/analyze"
     status: "/api/status"
     metrics: "/api/metrics"

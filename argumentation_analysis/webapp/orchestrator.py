@@ -305,9 +305,7 @@ class MinimalBackendManager:
             )
 
             url = f"http://localhost:{self.port}"
-            health_check_url = (
-                f"{url}{self.config.get('health_endpoint', '/api/health')}"
-            )
+            health_check_url = f"{url}{self.config.get('health_endpoint', '/health')}"
 
             if await self.health_check(health_check_url):
                 self.logger.info(
@@ -622,9 +620,10 @@ class UnifiedWebOrchestrator:
     - Configuration centralisée
     """
 
+    # Sondes additionnelles du deep-check. L'endpoint critique (santé) n'y
+    # figure volontairement PAS en dur : il est lu de ``backend.health_endpoint``
+    # au moment du check (#1857) — une seule source de vérité pour le chemin.
     API_ENDPOINTS_TO_CHECK = [
-        # Routes FastAPI
-        {"path": "/api/health", "method": "GET"},
         {"path": "/api/endpoints", "method": "GET"},
     ]
 
@@ -825,7 +824,7 @@ class UnifiedWebOrchestrator:
                 "fallback_ports": fallback_ports,
                 "max_attempts": 5,
                 "timeout_seconds": 180,  # Timeout long pour le 1er démarrage
-                "health_endpoint": "/api/health",
+                "health_endpoint": "/health",
                 # La solution robuste: on passe une commande complète qui peut être exécutée
                 # directement par le système sans dépendre d'un PATH spécifique.
                 # On utilise "powershell.exe -Command" pour chaîner l'activation et l'exécution.
@@ -1475,12 +1474,25 @@ class UnifiedWebOrchestrator:
             )
             return True  # Non bloquant
 
+    def _endpoints_to_check(self) -> List[Dict[str, str]]:
+        """La liste effective du deep-check : l'endpoint critique lu de
+        ``backend.health_endpoint`` en tête, puis les sondes additionnelles.
+
+        #1857 : le lecteur qui décide lit la clé — une source unique, pas
+        trois. Le doublon éventuel (clé déjà présente dans les sondes) est
+        dédupliqué.
+        """
+        critical_path = self.config.get("backend", {}).get("health_endpoint", "/health")
+        return [{"path": critical_path, "method": "GET"}] + [
+            e for e in self.API_ENDPOINTS_TO_CHECK if e.get("path") != critical_path
+        ]
+
     async def _validate_services(self) -> bool:
         """Valide que les services backend et frontend répondent correctement."""
         print("[DEBUG] unified_web_orchestrator.py: _validate_services()")
         self.add_trace(
             "[CHECK] VALIDATION SERVICES",
-            f"Vérification des endpoints critiques: {[ep['path'] for ep in self.API_ENDPOINTS_TO_CHECK]}",
+            f"Vérification des endpoints critiques: {[ep['path'] for ep in self._endpoints_to_check()]}",
         )
 
         backend_ok = await self._check_all_api_endpoints()
@@ -1502,11 +1514,15 @@ class UnifiedWebOrchestrator:
         return True
 
     async def _check_all_api_endpoints(self) -> bool:
-        """Vérifie tous les endpoints API critiques listés dans la classe.
+        """Vérifie tous les endpoints API critiques.
 
         MODIFICATION CRITIQUE POUR TESTS PLAYWRIGHT:
-        Le backend est considéré comme opérationnel si au moins /api/health fonctionne.
+        Le backend est considéré comme opérationnel si au moins l'endpoint
+        critique (``backend.health_endpoint``) fonctionne.
         Cela permet au frontend de démarrer même si d'autres endpoints sont défaillants.
+
+        #1857 : le verdict compare au chemin lu de la clé de configuration,
+        pas à un littéral en dur.
         """
         if not self.app_info.backend_url:
             self.add_trace(
@@ -1516,14 +1532,17 @@ class UnifiedWebOrchestrator:
             )
             return False
 
+        critical_path = self.config.get("backend", {}).get("health_endpoint", "/health")
+        endpoints = self._endpoints_to_check()
+
         self.add_trace(
             "[CHECK] BACKEND ENDPOINTS",
-            f"Validation de {len(self.API_ENDPOINTS_TO_CHECK)} endpoints...",
+            f"Validation de {len(endpoints)} endpoints...",
         )
 
         async with aiohttp.ClientSession() as session:
             tasks = []
-            for endpoint_info in self.API_ENDPOINTS_TO_CHECK:
+            for endpoint_info in endpoints:
                 url = f"{self.app_info.backend_url}{endpoint_info['path']}"
                 method = endpoint_info.get("method", "GET").upper()
                 data = endpoint_info.get("data", None)
@@ -1541,7 +1560,7 @@ class UnifiedWebOrchestrator:
         working_endpoints = 0
 
         for i, res in enumerate(results):
-            endpoint_info = self.API_ENDPOINTS_TO_CHECK[i]
+            endpoint_info = endpoints[i]
             endpoint_path = endpoint_info["path"]
 
             if isinstance(res, Exception):
@@ -1558,8 +1577,8 @@ class UnifiedWebOrchestrator:
                 status = "success"
                 working_endpoints += 1
 
-                # Marquer si l'endpoint critique /api/health fonctionne
-                if endpoint_path == "/api/health":
+                # Marquer si l'endpoint critique configuré fonctionne
+                if endpoint_path == critical_path:
                     health_endpoint_ok = True
 
             # Marquer l'échec pour les métriques, mais ne pas bloquer si health fonctionne
@@ -1570,26 +1589,26 @@ class UnifiedWebOrchestrator:
                 f"[API CHECK] {endpoint_path}", details, result, status=status
             )
 
-        # NOUVELLE LOGIQUE: Backend opérationnel si /api/health fonctionne
+        # NOUVELLE LOGIQUE: Backend opérationnel si l'endpoint critique fonctionne
         if health_endpoint_ok:
             if not all_ok:
                 self.add_trace(
                     "[WARNING] BACKEND PARTIELLEMENT OPERATIONNEL",
-                    f"L'endpoint critique /api/health fonctionne ({working_endpoints}/{len(self.API_ENDPOINTS_TO_CHECK)} endpoints OK). "
+                    f"L'endpoint critique {critical_path} fonctionne ({working_endpoints}/{len(endpoints)} endpoints OK). "
                     "Le frontend peut démarrer pour les tests Playwright.",
                     status="warning",
                 )
             else:
                 self.add_trace(
                     "[OK] BACKEND COMPLETEMENT OPERATIONNEL",
-                    f"Tous les {len(self.API_ENDPOINTS_TO_CHECK)} endpoints fonctionnent.",
+                    f"Tous les {len(endpoints)} endpoints fonctionnent.",
                     status="success",
                 )
             return True
         else:
             self.add_trace(
                 "[ERROR] BACKEND CRITIQUE NON OPERATIONNEL",
-                "L'endpoint critique /api/health ne répond pas. Le démarrage ne peut pas continuer.",
+                f"L'endpoint critique {critical_path} ne répond pas. Le démarrage ne peut pas continuer.",
                 status="error",
             )
             return False
