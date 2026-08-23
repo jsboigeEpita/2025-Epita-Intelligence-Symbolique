@@ -9,6 +9,8 @@ These test files were archived because the Flask app was deprecated in favor of 
 | `tests/integration/test_argument_analyzer_client.py` | Flask TestClient tests |
 | `tests/integration/argumentation_analysis/workers/worker_hardening_cases.py` | Flask hardening tests |
 | `tests/integration/argumentation_analysis/test_hardening_cases.py` | Flask integration tests |
+| `argumentation_analysis/services/web_api/tests/test_endpoints.py` | Flask endpoint tests — all 25 skipped via the #242 `client` guard since the archive; never collected anyway (`testpaths = tests`). Archived #1783. |
+| `argumentation_analysis/services/web_api/tests/test_basic.py` | Vacuous — 11 pure-Python assertions (`assert True`, json/list ops), zero project imports. Archived #1783. |
 
 ## Migration
 
