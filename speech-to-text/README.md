@@ -29,7 +29,7 @@ git clone https://github.com/jsboigeEpita/2025-Epita-Intelligence-Symbolique.git
 
 ### 3. **Run the argumentation analysis python Web Api**
 ```sh
-python -m argumentation_analysis.services.web_api.app
+python -m uvicorn api.main:app --port 8000
 ```
 
 ### 4. **Install Frontend Dependencies**

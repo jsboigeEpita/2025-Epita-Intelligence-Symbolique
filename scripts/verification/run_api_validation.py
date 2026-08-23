@@ -162,65 +162,6 @@ async def run_fastapi_tests(
     print("--- Fin des tests FastAPI ---")
 
 
-async def run_flask_tests(
-    orchestrator: UnifiedWebOrchestrator, reporter: ReportGenerator
-):
-    """Démarre Flask et exécute la suite de tests."""
-    reporter.add_section_header(
-        "2. Application Web Flask (`argumentation_analysis/services/web_api/app.py`)"
-    )
-
-    # Le BackendManager de l'orchestrateur est conçu pour gérer différents types
-    # de serveurs WSGI/ASGI. Il suffit de spécifier le module applicatif.
-    # L'orchestrateur essaiera de trouver un port libre en commençant par celui
-    # configuré (ou 8095 par défaut s'il n'est pas déjà pris).
-    if not await orchestrator.start_webapp(
-        app_module="argumentation_analysis.services.web_api.app:app",
-        frontend_enabled=False,
-    ):
-        print("Échec du démarrage du serveur Flask.")
-        return
-
-    base_url = orchestrator.app_info.backend_url
-    tester = ApiTester(base_url, reporter)
-
-    print(f"--- Tests Flask sur {base_url} ---")
-
-    # Mise à jour: /api/status n'existe pas, on utilise le health check complet
-    tester.test_get("/api/health", "Flask - GET /api/health (deep check)")
-    tester.test_get("/api/endpoints", "Flask - GET /api/endpoints")
-
-    analyze_payload = {
-        "text": "Cats are better than dogs because they are more independent."
-    }
-    tester.test_post("/api/analyze", "Flask - POST /api/analyze", analyze_payload)
-
-    validate_payload = {"premises": ["p -> q", "p"], "conclusion": "q"}
-    tester.test_post("/api/validate", "Flask - POST /api/validate", validate_payload)
-
-    fallacy_payload = {"text": "Everyone is doing it, so it must be right."}
-    tester.test_post("/api/fallacies", "Flask - POST /api/fallacies", fallacy_payload)
-
-    framework_payload = {
-        "arguments": [
-            {"id": "a", "content": "Il faut réduire les impots.", "attacks": ["b"]},
-            {
-                "id": "b",
-                "content": "Réduire les impots va diminuer les recettes de l'Etat.",
-            },
-            {
-                "id": "c",
-                "content": "C'est faux, la baisse des impots stimule la consommation.",
-                "attacks": ["b"],
-            },
-        ]
-    }
-    tester.test_post("/api/framework", "Flask - POST /api/framework", framework_payload)
-
-    await orchestrator.stop_webapp()
-    print("--- Fin des tests Flask ---")
-
-
 async def main():
     """Point d'entrée principal du script de validation."""
     reporter = ReportGenerator(REPORT_FILE)
@@ -228,7 +169,6 @@ async def main():
 
     try:
         await run_fastapi_tests(orchestrator, reporter)
-        await run_flask_tests(orchestrator, reporter)
     except Exception as e:
         print(f"Une erreur critique est survenue durant l'orchestration des tests: {e}")
     finally:

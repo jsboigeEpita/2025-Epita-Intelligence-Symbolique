@@ -21,7 +21,7 @@ Ces scripts sont utilisés pour démarrer les composants clés de l'application.
 Utilisé pour démarrer le serveur API nécessaire à l'exécution de la suite de tests E2E.
 
 - **Script** : `run_e2e_backend.py`
-- **Rôle** : Lance un serveur Uvicorn sur le port `5003` qui sert l'application web définie dans `argumentation_analysis.services.web_api.app`.
+- **Rôle** : Lance un serveur Uvicorn sur le port `8095` qui sert l'application web définie dans `api.main` (#1853).
 - **Exemple d'utilisation** :
   ```bash
   python scripts/run_e2e_backend.py

@@ -123,7 +123,7 @@ playwright install chromium
 #### 2. Lancer les Services
 ```powershell
 # Terminal 1: Backend API
-python -m argumentation_analysis.services.web_api.app
+python -m uvicorn api.main:app --port 8000
 
 # Terminal 2: Frontend React  
 cd services\web_api\interface-web-argumentative

@@ -29,7 +29,9 @@ def start_server():
     logger.info("Attempting to start Uvicorn server for E2E tests...")
     try:
         uvicorn.run(
-            "argumentation_analysis.services.web_api.app:app",
+            # #1853: the previous target (web_api.app:app) was archived in
+            # #217 and exports app = None — every served route 500s.
+            "api.main:app",
             host="0.0.0.0",
             port=8095,
             log_level="debug",

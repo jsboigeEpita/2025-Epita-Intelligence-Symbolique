@@ -95,18 +95,25 @@ python -m scripts.webapp.unified_web_orchestrator --test
 
 -   **Symptôme** : Le log affiche une erreur lors du démarrage du backend.
 -   **Cause** :
-    - Le module Flask spécifié dans `webapp_config.yml` (`argumentation_analysis.services.web_api.app:app`) est incorrect ou contient une erreur de syntaxe.
     - Une dépendance Python est manquante.
     - L'environnement Conda/venv n'est pas correctement activé.
+    - La cible uvicorn (`backend.module`) pointe sur un module qui n'exporte
+      pas une app appelable. Ce fut le cas de mars à août 2026 : le module
+      Flask `argumentation_analysis.services.web_api.app` a été archivé (#217)
+      avec `app = None`, mais les lanceurs ont continué à le viser — le
+      processus démarrait, écoutait, et servait des 500 sur toutes les routes
+      (#1853). Depuis #1853, tous les lanceurs visent `api.main:app` et le
+      garde `tests/unit/webapp/test_uvicorn_targets_live_1853.py` sonde que
+      chaque cible chargée est appelable.
 -   **Solution** :
     1.  Vérifiez que l'activation de l'environnement au démarrage du script a fonctionné.
-    2.  Lancez le backend manuellement pour voir l'erreur exacte : `python -m argumentation_analysis.services.web_api.app`
+    2.  Lancez le backend manuellement pour voir l'erreur exacte : `python -m uvicorn api.main:app --port 8000`
     3.  Assurez-vous que toutes les dépendances sont installées (`pip install -r requirements.txt`).
 
 ### Problème : Un ou plusieurs endpoints API ne répondent pas ("BACKEND INCOMPLET")
 
--   **Symptôme** : La validation des services échoue sur un ou plusieurs des 9 endpoints API.
--   **Cause** : Une route spécifique dans l'application Flask est cassée ou non initialisée.
+-   **Symptôme** : La validation des services échoue sur un ou plusieurs endpoints API.
+-   **Cause** : Une route spécifique dans l'application FastAPI est cassée ou non initialisée.
 -   **Solution** :
     1. Examinez les logs de l'orchestrateur pour voir quel endpoint échoue.
-    2. Vérifiez le code source de l'API Flask dans `argumentation_analysis/services/web_api/app.py` pour vous assurer que la route est correctement définie.
+    2. Vérifiez le code source de l'API FastAPI dans `api/main.py` et `api/endpoints.py` pour vous assurer que la route est correctement définie.

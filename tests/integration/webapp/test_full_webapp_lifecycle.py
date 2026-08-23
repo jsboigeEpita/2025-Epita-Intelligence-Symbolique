@@ -67,7 +67,11 @@ def integration_config(webapp_config, tmp_path):
     config["backend"]["health_endpoint"] = "/api/health"
     config["backend"]["start_port"] = 9020  # Use a higher port to be safer
     config["backend"]["fallback_ports"] = [9021, 9022]
-    config["backend"]["timeout_seconds"] = 20  # > 15s initial wait
+    # #1853: the live target (api.main:app) runs initialize_project_environment
+    # — JVM bootstrap included — in its startup event; the previous 20s budget
+    # was calibrated on the archived Flask stub, which skipped all of it
+    # (measured locally: 18.4s wall for the whole test).
+    config["backend"]["timeout_seconds"] = 60
     # config['backend']['module'] = None # Let the orchestrator use the default real module
 
     config["frontend"]["enabled"] = False

@@ -73,6 +73,7 @@ argumentation_analysis/evaluation/results/
 .venv/
 venv/
 venv_*/
+venvs/
 env/
 ENV/
 

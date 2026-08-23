@@ -14,16 +14,18 @@ webapp:
   name: "Argumentation Analysis Web App"
   version: "1.0.0"
   environment: "development"
-  description: "Application web d'analyse argumentative avec backend Flask et tests Playwright"
+  description: "Application web d'analyse argumentative avec backend FastAPI et tests Playwright"
 
 # =============================================================================
-# CONFIGURATION BACKEND FLASK
+# CONFIGURATION BACKEND
 # =============================================================================
 backend:
   enabled: true
-  
+
   # Module Python à démarrer
-  module: "argumentation_analysis.services.web_api.app:app"
+  # #1853: the Flask module was archived in #217 (app = None since) — the
+  # launcher target is the live FastAPI app, which serves /api/health.
+  module: "api.main:app"
   
   # Gestion des ports avec failover automatique
   start_port: 8095

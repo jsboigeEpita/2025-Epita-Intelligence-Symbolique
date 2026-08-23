@@ -48,7 +48,9 @@ def launch_backend_detached():
         python_exe,
         "-m",
         "uvicorn",
-        "argumentation_analysis.services.web_api.app:app",
+        # #1853: the previous target (web_api.app:app) was archived in #217
+        # and exports app = None — every served route 500s.
+        "api.main:app",
         "--host",
         "127.0.0.1",
         "--port",
@@ -145,7 +147,9 @@ def kill_existing_backends():
         for proc in psutil.process_iter(["pid", "name", "cmdline"]):
             try:
                 cmdline = " ".join(proc.info["cmdline"] or [])
-                if "uvicorn" in cmdline and "argumentation_analysis" in cmdline:
+                if "uvicorn" in cmdline and (
+                    "argumentation_analysis" in cmdline or "api.main" in cmdline
+                ):
                     proc.terminate()
                     killed += 1
                     print(f"[KILL] Processus backend terminé: PID {proc.info['pid']}")
