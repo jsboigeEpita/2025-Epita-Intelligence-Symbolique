@@ -73,3 +73,16 @@ class FrameworkService:
                 exc_info=True,
             )
             return {"error": f"An unexpected error occurred: {e}", "status_code": 500}
+
+    def is_healthy(self) -> bool:
+        """
+        #1864 : contrat de santé exigé par le dict AppServices.is_healthy() du
+        serveur MCP — implémenté sur l'état réel mesuré dans __init__ (le pont
+        est construit ou il ne l'est pas), même forme que les services frères
+        (FallacyService : ``is_initialized or bool(self.fallacy_patterns)``).
+        Le pont est toute la capacité du service : analyze_dung_framework rend
+        une erreur 500 sans lui. Ne mesure pas « JVM démarrée » — c'est le
+        rôle de la clé ``jvm`` du même dict ; ici, seulement que le pont (et
+        son ensure JVM) s'est construit.
+        """
+        return self.tweety_bridge is not None

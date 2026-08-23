@@ -43,13 +43,11 @@ from argumentation_analysis.services.web_api.models.request_models import (
     AnalysisRequest,
     ValidationRequest,
     FallacyRequest,
-    FrameworkRequest,
     LogicBeliefSetRequest,
     LogicQueryRequest,
     LogicGenerateQueriesRequest,
     AnalysisOptions,
     FallacyOptions,
-    FrameworkOptions,
     LogicOptions,
 )
 from argumentation_analysis.services.web_api.models.response_models import (
@@ -62,6 +60,7 @@ from argumentation_analysis.services.web_api.models.response_models import (
 
 # Bootstrap pour initialiser l'environnement
 from argumentation_analysis.core.bootstrap import initialize_project_environment
+from argumentation_analysis.core.llm_service import create_llm_service
 
 
 class AppServices:
@@ -70,8 +69,21 @@ class AppServices:
     def __init__(self):
         self.logger = logging.getLogger("AppServices")
         self.logger.info("Initializing app services container...")
-        self.logic_service = LogicService()
-        self.analysis_service = AnalysisService()
+        # #1864: LogicService et AnalysisService exigent un llm_service — les
+        # constructeurs nus levaient TypeError au boot (serveur inconstructible).
+        # Câblage en miroir du conteneur de l'API Web
+        # (docs/archives/services_web_api_flask/app.py) : un service LLM par
+        # consommateur, via la fabrique canonique. Pas de défaut ``= None``
+        # sur les constructeurs : ça déplacerait la panne du démarrage vers
+        # le premier appel réel.
+        logic_llm = create_llm_service(
+            service_id="logic_service", model_id="gpt-5-mini"
+        )
+        analysis_llm = create_llm_service(
+            service_id="analysis_service", model_id="gpt-5-mini"
+        )
+        self.logic_service = LogicService(llm_service=logic_llm)
+        self.analysis_service = AnalysisService(llm_service=analysis_llm)
         self.validation_service = ValidationService(self.logic_service)
         self.fallacy_service = FallacyService()
         self.framework_service = FrameworkService()
@@ -362,52 +374,58 @@ class MCPService:
     async def build_framework(
         self,
         arguments: List[Dict[str, Any]],
-        compute_extensions: bool = True,
-        semantics: str = "preferred",
-        include_visualization: bool = True,
         max_arguments: int = 100,
     ) -> Dict[str, Any]:
         """
-        Construction d'un framework de Dung.
+        Analyse d'un framework de Dung.
         Équivalent de POST /api/framework
 
         Args:
             arguments: Liste des arguments avec id, content, attacks, supports
-            compute_extensions: Calculer les extensions
-            semantics: Sémantique à utiliser (grounded, complete, preferred, stable, semi-stable)
-            include_visualization: Inclure la visualisation
             max_arguments: Nombre maximum d'arguments
         """
         self._ensure_initialized()
 
         try:
-            # Construire la requête avec validation (identique à l'API Web)
+            # Valider les entrées via le modèle (identique à l'API Web)
             from argumentation_analysis.services.web_api.models.request_models import (
                 Argument,
             )
+
+            if len(arguments) > max_arguments:
+                return {
+                    "error": "Trop d'arguments",
+                    "message": (
+                        f"{len(arguments)} arguments dépassent la limite "
+                        f"de {max_arguments}"
+                    ),
+                    "status_code": 400,
+                }
 
             # Convertir les dictionnaires en objets Argument
             argument_objects = []
             for arg_dict in arguments:
                 argument_objects.append(Argument(**arg_dict))
 
-            options = FrameworkOptions(
-                compute_extensions=compute_extensions,
-                semantics=semantics,
-                include_visualization=include_visualization,
-                max_arguments=max_arguments,
-            )
+            # #1864: la surface réelle du service est analyze_dung_framework(
+            # arguments, attacks) — synchrone, dict brut (pas de model_dump).
+            # L'appel précédent visait build_framework(FrameworkRequest), une
+            # méthode qu'aucune version du service n'a jamais exposée ; les
+            # paramètres compute_extensions/semantics/include_visualization
+            # décrivaient cette interface fantôme (le service calcule les
+            # extensions preferred, sans option). Paires d'attaques dérivées
+            # des listes `attacks` de chaque argument, miroir de la route
+            # /api/v1/framework/analyze archivée.
+            argument_ids = [arg.id for arg in argument_objects]
+            attack_pairs = [
+                [arg.id, target]
+                for arg in argument_objects
+                for target in (arg.attacks or [])
+            ]
 
-            framework_request = FrameworkRequest(
-                arguments=argument_objects, options=options
+            return self.services.framework_service.analyze_dung_framework(
+                argument_ids, attack_pairs
             )
-
-            # Appeler le service (identique à l'API Web)
-            result = await self.services.framework_service.build_framework(
-                framework_request
-            )
-
-            return result.model_dump()
 
         except ValidationError as e:
             self.logger.warning(f"Validation des données a échoué: {str(e)}")
