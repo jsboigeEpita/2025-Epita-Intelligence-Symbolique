@@ -11,7 +11,7 @@ import uuid
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch, PropertyMock
 
 import pytest
 
@@ -259,13 +259,32 @@ class TestSessionManager:
 
 
 class TestAppServices:
-    """Tests for main.AppServices."""
+    """Tests for main.AppServices.
 
-    @patch("argumentation_analysis.services.mcp_server.main.FrameworkService")
-    @patch("argumentation_analysis.services.mcp_server.main.FallacyService")
-    @patch("argumentation_analysis.services.mcp_server.main.ValidationService")
-    @patch("argumentation_analysis.services.mcp_server.main.AnalysisService")
-    @patch("argumentation_analysis.services.mcp_server.main.LogicService")
+    #1864 : les cinq doubles de classes sont autospec'és. Avant, un Mock nu
+    acceptait n'importe quel constructeur et répondait à n'importe quelle
+    méthode — la suite restait verte au-dessus d'un conteneur inconstructible
+    (TypeError : llm_service) et d'un dict de santé appelant is_healthy() sur
+    un service qui ne l'exposait pas. Le spec fait rougir les deux.
+    """
+
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FrameworkService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FallacyService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.ValidationService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.AnalysisService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.LogicService", autospec=True
+    )
     def test_init_creates_services(
         self, mock_logic, mock_analysis, mock_validation, mock_fallacy, mock_framework
     ):
@@ -277,12 +296,73 @@ class TestAppServices:
         mock_validation.assert_called_once_with(mock_logic.return_value)
         mock_fallacy.assert_called_once()
         mock_framework.assert_called_once()
+        # Né-rouge #1864 : sur l'arbre d'avant, ce même AppServices() levait
+        # "TypeError: LogicService.__init__() missing 1 required positional
+        # argument: 'llm_service'" — c'est le spec qui l'a rendu visible.
+        for mock_cls in (mock_logic, mock_analysis):
+            assert "llm_service" in mock_cls.call_args.kwargs
 
-    @patch("argumentation_analysis.services.mcp_server.main.FrameworkService")
-    @patch("argumentation_analysis.services.mcp_server.main.FallacyService")
-    @patch("argumentation_analysis.services.mcp_server.main.ValidationService")
-    @patch("argumentation_analysis.services.mcp_server.main.AnalysisService")
-    @patch("argumentation_analysis.services.mcp_server.main.LogicService")
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FrameworkService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FallacyService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.ValidationService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.AnalysisService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.LogicService", autospec=True
+    )
+    @patch("argumentation_analysis.services.mcp_server.main.create_llm_service")
+    def test_init_wires_llm_services(
+        self,
+        mock_llm_factory,
+        mock_logic,
+        mock_analysis,
+        mock_validation,
+        mock_fallacy,
+        mock_framework,
+    ):
+        """Contrôle dédié du câblage : un service LLM par consommateur, en
+        miroir du conteneur de l'API Web (l'app Flask archivée)."""
+        from argumentation_analysis.services.mcp_server.main import AppServices
+
+        logic_llm, analysis_llm = object(), object()
+        mock_llm_factory.side_effect = [logic_llm, analysis_llm]
+
+        AppServices()
+
+        assert [c.kwargs["service_id"] for c in mock_llm_factory.call_args_list] == [
+            "logic_service",
+            "analysis_service",
+        ]
+        assert mock_logic.call_args.kwargs["llm_service"] is logic_llm
+        assert mock_analysis.call_args.kwargs["llm_service"] is analysis_llm
+        assert mock_validation.call_args.args == (mock_logic.return_value,)
+
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FrameworkService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FallacyService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.ValidationService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.AnalysisService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.LogicService", autospec=True
+    )
     @patch("argumentation_analysis.services.mcp_server.main.jpype")
     def test_is_healthy_jvm_running(
         self,
@@ -294,11 +374,16 @@ class TestAppServices:
         mock_framework,
     ):
         mock_jpype.isJVMStarted.return_value = True
-        mock_logic.return_value.is_healthy.return_value = {"status": "ok"}
-        mock_analysis.return_value.is_healthy.return_value = {"status": "ok"}
-        mock_validation.return_value.is_healthy.return_value = {"status": "ok"}
-        mock_fallacy.return_value.is_healthy.return_value = {"status": "ok"}
-        mock_framework.return_value.is_healthy.return_value = {"status": "ok"}
+        for m in [
+            mock_logic,
+            mock_analysis,
+            mock_validation,
+            mock_fallacy,
+            mock_framework,
+        ]:
+            # Le contrat réel des services frères est un bool (#1864) — pas
+            # le dict {"status": "ok"} que l'ancien Mock nu fabriquait.
+            m.return_value.is_healthy.return_value = True
 
         from argumentation_analysis.services.mcp_server.main import AppServices
 
@@ -306,12 +391,29 @@ class TestAppServices:
         health = app.is_healthy()
         assert health["jvm"]["running"] is True
         assert health["jvm"]["status"] == "OK"
+        # Né-rouge #1864 (2e couche) : sur l'arbre d'avant, l'accès à
+        # mock_framework.return_value.is_healthy levait AttributeError —
+        # la vraie classe ne l'exposait pas ; le double la fabriquait.
+        assert health["framework"] is True
+        assert health["logic"] is True
 
-    @patch("argumentation_analysis.services.mcp_server.main.FrameworkService")
-    @patch("argumentation_analysis.services.mcp_server.main.FallacyService")
-    @patch("argumentation_analysis.services.mcp_server.main.ValidationService")
-    @patch("argumentation_analysis.services.mcp_server.main.AnalysisService")
-    @patch("argumentation_analysis.services.mcp_server.main.LogicService")
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FrameworkService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.FallacyService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.ValidationService",
+        autospec=True,
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.AnalysisService", autospec=True
+    )
+    @patch(
+        "argumentation_analysis.services.mcp_server.main.LogicService", autospec=True
+    )
     @patch("argumentation_analysis.services.mcp_server.main.jpype")
     def test_is_healthy_jvm_not_running(
         self,
@@ -330,7 +432,7 @@ class TestAppServices:
             mock_fallacy,
             mock_framework,
         ]:
-            m.return_value.is_healthy.return_value = {"status": "ok"}
+            m.return_value.is_healthy.return_value = False
 
         from argumentation_analysis.services.mcp_server.main import AppServices
 
@@ -338,6 +440,7 @@ class TestAppServices:
         health = app.is_healthy()
         assert health["jvm"]["running"] is False
         assert health["jvm"]["status"] == "Not Running"
+        assert health["framework"] is False
 
 
 # ---------------------------------------------------------------------------
@@ -558,26 +661,106 @@ class TestMCPServiceDetectFallacies:
 
 
 class TestMCPServiceBuildFramework:
-    """Tests for MCPService.build_framework."""
+    """Tests for MCPService.build_framework.
+
+    #1864 : repointés sur la surface réelle — analyze_dung_framework(ids,
+    paires), synchrone, dict brut. L'ancien double fabriquait
+    build_framework(FrameworkRequest), la méthode fantôme.
+    """
+
+    def _spec_services(self, svc):
+        from argumentation_analysis.services.web_api.services.framework_service import (
+            FrameworkService,
+        )
+
+        # Spec sur le double qui décide : une instance spec'ée de la vraie
+        # classe refuse build_framework (méthode fantôme) et expose
+        # analyze_dung_framework — un Mock nu fabriquait les deux.
+        framework = create_autospec(FrameworkService, instance=True)
+        svc.services.framework_service = framework
+        return framework
 
     async def test_build_framework_success(self):
         svc = _make_mcp_service()
-        mock_result = MagicMock()
-        mock_result.model_dump.return_value = {"framework": "built"}
-        svc.services.framework_service.build_framework = AsyncMock(
-            return_value=mock_result
-        )
-        args = [{"id": "a1", "content": "arg1", "attacks": [], "supports": []}]
+        framework = self._spec_services(svc)
+        framework.analyze_dung_framework.return_value = {"extensions": [["a1"]]}
+        args = [
+            {"id": "a1", "content": "arg1", "attacks": ["a2"], "supports": []},
+            {"id": "a2", "content": "arg2"},
+        ]
         result = await svc.build_framework(args)
-        assert result == {"framework": "built"}
+        assert result == {"extensions": [["a1"]]}
+        framework.analyze_dung_framework.assert_called_once_with(
+            ["a1", "a2"], [["a1", "a2"]]
+        )
 
     async def test_build_framework_error(self):
         svc = _make_mcp_service()
-        svc.services.framework_service.build_framework = AsyncMock(
-            side_effect=Exception("fw fail")
-        )
+        framework = self._spec_services(svc)
+        framework.analyze_dung_framework.side_effect = Exception("fw fail")
         result = await svc.build_framework([{"id": "a1", "content": "x"}])
         assert result["status_code"] == 500
+
+    async def test_build_framework_rejects_too_many_arguments(self):
+        svc = _make_mcp_service()
+        framework = self._spec_services(svc)
+        args = [{"id": f"a{i}", "content": "c"} for i in range(3)]
+        result = await svc.build_framework(args, max_arguments=2)
+        assert result["status_code"] == 400
+        framework.analyze_dung_framework.assert_not_called()
+
+
+class TestFrameworkServiceAnalyzeDung:
+    """#1864 : couverture minimale de FrameworkService.analyze_dung_framework —
+    la seule surface vivante du service, jusque-là sans aucun test (le serveur
+    MCP qui la consomme ne pouvait même pas se construire). JVM-free : le pont
+    est doublé dans l'espace de nom du module, aucune JVM n'est démarrée.
+    """
+
+    def _make_service(self, bridge):
+        from argumentation_analysis.services.web_api.services import framework_service
+
+        with patch.object(framework_service, "TweetyBridge") as mock_bridge_cls:
+            mock_bridge_cls.get_instance.return_value = bridge
+            return framework_service.FrameworkService()
+
+    def _make_degraded_service(self):
+        from argumentation_analysis.services.web_api.services import framework_service
+
+        with patch.object(framework_service, "TweetyBridge") as mock_bridge_cls:
+            mock_bridge_cls.get_instance.side_effect = RuntimeError("no jvm")
+            return framework_service.FrameworkService()
+
+    def test_forwards_to_af_handler(self):
+        bridge = MagicMock()
+        expected = {"status": "preferred", "extensions": [["a1"]]}
+        bridge.af_handler.analyze_dung_framework.return_value = expected
+
+        svc = self._make_service(bridge)
+        result = svc.analyze_dung_framework(["a1", "a2"], [["a1", "a2"]])
+
+        assert result is expected
+        bridge.af_handler.analyze_dung_framework.assert_called_once_with(
+            arguments=["a1", "a2"], attacks=[["a1", "a2"]], semantics="preferred"
+        )
+
+    def test_bridge_construction_failed_returns_error_payload(self):
+        svc = self._make_degraded_service()
+        result = svc.analyze_dung_framework(["a1"], [])
+        assert result["status_code"] == 500
+        assert "TweetyBridge" in result["error"]
+
+    def test_handler_failure_returns_error_payload(self):
+        bridge = MagicMock()
+        bridge.af_handler.analyze_dung_framework.side_effect = RuntimeError("jvm down")
+
+        svc = self._make_service(bridge)
+        result = svc.analyze_dung_framework(["a1"], [])
+        assert result["status_code"] == 500
+
+    def test_is_healthy_reflects_bridge_state(self):
+        assert self._make_service(MagicMock()).is_healthy() is True
+        assert self._make_degraded_service().is_healthy() is False
 
 
 class TestMCPServiceLogicGraph:
