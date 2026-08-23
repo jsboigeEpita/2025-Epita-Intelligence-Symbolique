@@ -62,6 +62,20 @@ class _ColdCache:
         pass
 
 
+class _ContaminatedCache:
+    """A cache provider carrying the value a PRIOR run wrote for every key —
+    the ``.pytest_cache`` state when an earlier invocation collected e2e."""
+
+    def __init__(self, stale):
+        self._stale = stale
+
+    def get(self, key, default=None):
+        return self._stale
+
+    def set(self, key, value):
+        pass
+
+
 @pytest.fixture(scope="module")
 def _sessionstart():
     """Load the real tests/conftest.py and expose its pytest_sessionstart hook
@@ -149,3 +163,21 @@ class TestTransportControl:
             _sessionstart(session)
 
         mock_init.assert_not_called()
+
+    def test_sessionstart_contaminated_cache_non_e2e_session_boots_jvm(
+        self, _sessionstart
+    ):
+        # Two-invocation contamination (DoD item 2): a PRIOR run collected e2e
+        # and left is_e2e_session=True in the persistent cache. THIS run's argv
+        # is a plain unit path — it must boot the JVM (unit tests need it), and
+        # the decision must come from the argv, not from the contaminated slot.
+        # Pre-fix this FAILS: the reader trusts the slot and skips the JVM.
+        cfg = _cfg(args=["tests/unit/argumentation_analysis"])
+        cfg.cache = _ContaminatedCache(True)
+        session = MagicMock()
+        session.config = cfg
+
+        with patch(_JVM_SETUP) as mock_init:
+            _sessionstart(session)
+
+        mock_init.assert_called()
