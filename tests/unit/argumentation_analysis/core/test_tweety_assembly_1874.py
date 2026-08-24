@@ -340,49 +340,109 @@ def test_maven_is_found_through_maven_home_when_absent_from_path(tmp_path, monke
     assert ta.maven_executable() == str(tmp_path / "bin" / "mvn.cmd")
 
 
-def test_transient_transfer_failures_are_retried(tmp_path, monkeypatch):
-    """CI run 32776186323 died on `Connection reset` while fetching jspf:core from
-    tweetyproject.org/mvn/ -- the only host that serves it. One dropped socket took
-    down the whole suite, and the job still reported success.
+def _no_sleep(monkeypatch):
+    monkeypatch.setattr(ta.time, "sleep", lambda _s: None)
 
-    Maven retries only transient IO errors: a 404 or an absent coordinate still fails
-    on the first attempt, so this flag cannot convert a dead artifact into a slow green.
+
+# The two markers really co-occurred on CI run 32776186323: Maven asks Central first
+# (jspf:core is genuinely absent there) and only then tweetyproject.org/mvn/, which is
+# where the socket dropped. Kept verbatim so the classifier is tested on the shape it
+# actually has to survive, not on a tidied-up one.
+REAL_TRANSPORT_FAILURE = (
+    "[ERROR] Could not transfer artifact jspf:core:jar:1.0.2 from/to tweety-mvn "
+    "(https://tweetyproject.org/mvn/): Connection reset\n"
+    "[ERROR] Could not find artifact jspf:core:jar:1.0.2 in central "
+    "(https://repo.maven.apache.org/maven2)"
+)
+
+# The unbuildable-version trap: aggregator published, modules absent. No transport
+# marker anywhere -- retrying cannot change the answer.
+UNBUILDABLE_VERSION_FAILURE = (
+    "[ERROR] Could not find artifact org.tweetyproject:arg.dung:jar:1.28 in central "
+    "(https://repo.maven.apache.org/maven2)"
+)
+
+
+def test_a_dropped_socket_is_retried(tmp_path, monkeypatch):
+    """One dropped socket on the single-source host took down the whole suite and the
+    job still reported success (run 32776186323). The retry lives in Python, not in a
+    Maven flag: `-Dmaven.wagon.http.retryHandler.count` is a Wagon property and Maven
+    3.9 resolves through the native transport by default, so that flag has no reader.
     """
-    seen = {}
+    _no_sleep(monkeypatch)
+    calls = []
     monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
 
     def fake_run(cmd, **kwargs):
-        seen["cmd"] = cmd
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 1, "", REAL_TRANSPORT_FAILURE)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError):
+        ta.assemble("1.31", tmp_path)
+    assert len(calls) == ta.MVN_TRANSIENT_RETRIES, (
+        f"{len(calls)} tentative(s) pour {ta.MVN_TRANSIENT_RETRIES} attendues: "
+        "une coupure de transport sur l hote unique redevient fatale du premier coup"
+    )
+
+
+def test_a_missing_coordinate_is_not_retried(tmp_path, monkeypatch):
+    """Anti-pendulum. A retry that also re-attempts absent coordinates would turn the
+    1.26/1.28 trap into three slow failures, and would be one step from turning a dead
+    artifact into a slow green -- which is the whole subject of #1874."""
+    _no_sleep(monkeypatch)
+    calls = []
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 1, "", UNBUILDABLE_VERSION_FAILURE)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError):
+        ta.assemble("1.28", tmp_path)
+    assert len(calls) == 1, f"{len(calls)} tentatives sur une coordonnee absente"
+
+
+def test_the_classifier_reads_presence_not_absence():
+    """The load-bearing case: the real outage carries BOTH markers. A classifier
+    written as "transient unless it says could-not-find" calls the true transport
+    failure permanent -- the exact opposite of what is needed."""
+    assert ta.is_transient_failure(REAL_TRANSPORT_FAILURE)
+    assert not ta.is_transient_failure(UNBUILDABLE_VERSION_FAILURE)
+
+
+def test_a_transient_failure_that_clears_lets_the_assembly_finish(
+    tmp_path, monkeypatch
+):
+    """The point of retrying: the second attempt succeeds and the run continues."""
+    _no_sleep(monkeypatch)
+    calls = []
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if len(calls) == 1:
+            return subprocess.CompletedProcess(cmd, 1, "", REAL_TRANSPORT_FAILURE)
         _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(60)])
         return subprocess.CompletedProcess(cmd, 0, "", "")
 
     monkeypatch.setattr(ta.subprocess, "run", fake_run)
-    ta.assemble("1.31", tmp_path)
-
-    flags = [a for a in seen["cmd"] if "retryHandler.count" in a]
-    assert flags, (
-        "aucun -Dmaven.wagon.http.retryHandler.count dans la commande mvn: "
-        "une coupure de transport sur l hote unique redevient fatale. "
-        f"commande={seen['cmd']}"
-    )
-    assert (
-        int(flags[0].rsplit("=", 1)[1]) > 1
-    ), f"retryHandler.count={flags[0]} ne retente rien"
+    assert ta.assemble("1.31", tmp_path) == 60
+    assert len(calls) == 2
 
 
 def test_failure_message_names_the_transport_cause(tmp_path, monkeypatch):
     """The message used to say `verifier la version AVANT de suspecter le reseau`,
-    which pointed the reader away from the cause actually observed. It must now name
-    both causes and tell them apart by the wording Maven itself prints."""
+    which pointed the reader away from the cause actually observed. It must name both
+    causes and tell them apart by the wording Maven itself prints."""
+    _no_sleep(monkeypatch)
     monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
     monkeypatch.setattr(
         ta.subprocess,
         "run",
         lambda *a, **k: subprocess.CompletedProcess(
-            a[0],
-            1,
-            "",
-            "Could not transfer artifact jspf:core:jar:1.0.2 ... Connection reset",
+            a[0], 1, "", REAL_TRANSPORT_FAILURE
         ),
     )
     with pytest.raises(ta.AssemblyError) as exc:
@@ -390,3 +450,4 @@ def test_failure_message_names_the_transport_cause(tmp_path, monkeypatch):
     msg = str(exc.value)
     assert "TRANSFER" in msg and "FIND" in msg, msg
     assert "tweetyproject.org/mvn/" in msg, msg
+    assert "Tentatives effectuees: 3" in msg, msg

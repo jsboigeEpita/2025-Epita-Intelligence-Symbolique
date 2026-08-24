@@ -47,6 +47,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -60,10 +61,51 @@ TWEETY_AGGREGATOR = "tweety-full"
 # from here. Alive (200) as of #1874, unlike the removed /builds/ fat-jar channel.
 TWEETY_MVN_REPO = "https://tweetyproject.org/mvn/"
 
-# Retries for TRANSIENT transfer failures only (connection reset, socket timeout).
-# Maven does not retry a 404, so a coordinate that truly does not exist still fails
-# on the first attempt -- see the comment at the call site.
+# Retries for TRANSIENT transport failures only.
+#
+# Deliberately NOT `-Dmaven.wagon.http.retryHandler.count`: that property is read by
+# the Wagon transport, and Maven 3.9 resolves through the *native* transport by
+# default. Measured on 3.9.10 -- `mvn -X dependency:resolve` prints
+# `Using transporter HttpTransporter`, so the Wagon knob is read by nobody and the
+# flag would be a declaration with no reader (#1019 family). A loop around the
+# subprocess is transport-agnostic and, unlike a CLI flag, can be tested offline.
 MVN_TRANSIENT_RETRIES = 3
+MVN_RETRY_BACKOFF_S = 5
+
+# Substrings that mean "the bytes did not arrive", as opposed to "the coordinate does
+# not exist". Lowercased before matching.
+MVN_TRANSIENT_MARKERS = (
+    "could not transfer artifact",
+    "connection reset",
+    "connection timed out",
+    "read timed out",
+    "transfer failed",
+    "checksum validation failed",
+)
+
+
+def is_transient_failure(output: str) -> bool:
+    """True when mvn failed to move bytes rather than failed to find a coordinate.
+
+    Load-bearing subtlety, from the actual failure on CI run 32776186323: the log
+    carried BOTH markers at once --
+
+        Could not transfer artifact jspf:core:jar:1.0.2 from/to tweety-mvn ...
+            Connection reset
+        Could not find artifact jspf:core:jar:1.0.2 in central
+
+    because Maven asks Central first (absent there, by design -- jspf:core, gurobi and
+    isula are only on tweetyproject.org/mvn/) and only then the Tweety repository,
+    which is where the socket dropped. A classifier that short-circuits on
+    "could not find" would therefore call the real transport outage *permanent* and
+    refuse to retry it -- the exact opposite of what is needed.
+
+    So the rule is presence of a transport marker, never absence of the other one.
+    The unbuildable-version trap (1.26 / 1.28) emits "Could not find artifact" with
+    no transport marker, and is refused at once.
+    """
+    return any(m in output.lower() for m in MVN_TRANSIENT_MARKERS)
+
 
 # Measured on 1.31 (2026-08-24), so the floor is calibrated on real values rather
 # than a guess: the full closure is **155** jars (50 Tweety + 105 third-party), and
@@ -358,15 +400,6 @@ def assemble(
             "-Dmdep.prependGroupId=true",
             "-Dmdep.useRepositoryLayout=false",
             "-Dmdep.overWriteReleases=false",
-            # Three artifacts of the closure (jspf:core, gurobi, isula) live on
-            # `tweetyproject.org/mvn/` and NOWHERE else -- Central does not carry
-            # them. That is the same host whose `/builds/` path vanished in #1874,
-            # and on CI run 32776186323 it answered `Connection reset` mid-transfer:
-            # the assembly died and the whole suite was reported as skipped.
-            # The retry handler re-attempts transient IO failures only; a 404 or a
-            # missing artifact still fails at once, so this cannot turn a genuinely
-            # dead coordinate into a slow green.
-            f"-Dmaven.wagon.http.retryHandler.count={MVN_TRANSIENT_RETRIES}",
         ]
         logger.info(
             "Assemblage Tweety %s depuis Maven Central vers %s (pins=%s)",
@@ -378,17 +411,35 @@ def assemble(
         (target_dir / INCOMPLETE_MARKER).write_text(
             "assemblage " + version + " en cours", encoding="utf-8"
         )
-        try:
-            proc = subprocess.run(
-                cmd,
-                capture_output=True,
-                text=True,
-                timeout=timeout,
+        attempts = 0
+        while True:
+            attempts += 1
+            try:
+                proc = subprocess.run(
+                    cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise AssemblyError(
+                    f"Assemblage Tweety {version}: depassement de {timeout}s."
+                ) from exc
+
+            if proc.returncode == 0:
+                break
+            combined = (proc.stderr or "") + (proc.stdout or "")
+            if attempts >= MVN_TRANSIENT_RETRIES or not is_transient_failure(combined):
+                break
+            logger.warning(
+                "Assemblage Tweety %s: echec de transport (tentative %d/%d), "
+                "nouvel essai dans %ds.",
+                version,
+                attempts,
+                MVN_TRANSIENT_RETRIES,
+                MVN_RETRY_BACKOFF_S,
             )
-        except subprocess.TimeoutExpired as exc:
-            raise AssemblyError(
-                f"Assemblage Tweety {version}: depassement de {timeout}s."
-            ) from exc
+            time.sleep(MVN_RETRY_BACKOFF_S)
 
         if proc.returncode != 0:
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-25:]
@@ -401,7 +452,7 @@ def assemble(
                 "  (2) Transport en panne sur tweetyproject.org/mvn/, seule source de "
                 "jspf:core, gurobi et isula. La sortie dit alors: Could not TRANSFER "
                 "artifact ... Connection reset -- observe sur le run 32776186323. "
-                f"Ce cas est deja retente {MVN_TRANSIENT_RETRIES}x: le lire ici signifie "
+                f"Tentatives effectuees: {attempts}. Le lire ici signifie "
                 "que l hote est durablement indisponible, pas qu il a hoquete.\n"
                 + "\n".join(tail)
             )
