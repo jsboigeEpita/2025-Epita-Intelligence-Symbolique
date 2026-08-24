@@ -3,6 +3,8 @@
 Worker pour les tests d'intégration du système Oracle complet.
 """
 
+import sys
+
 import pytest
 import pytest_asyncio
 import asyncio
@@ -599,3 +601,10 @@ class TestOracleScalabilityIntegration:
         assert (
             stats["workflow_metrics"]["oracle_interactions"] == 10
         )  # Une requête tous les 3 tours
+
+
+if __name__ == "__main__":
+    # Ce fichier était spawné par son lanceur SANS bloc __main__ : il
+    # définissait 14 tests, n'en lançait aucun, et sortait 0 — le lanceur
+    # concluait PASS sur zéro test exécuté.
+    sys.exit(pytest.main([__file__, "-v"]))

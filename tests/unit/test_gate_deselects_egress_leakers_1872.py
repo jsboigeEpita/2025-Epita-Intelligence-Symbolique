@@ -75,6 +75,22 @@ for _name in (
 
 _NODEID_RE = re.compile(r"^\S+::\S+$")
 
+# Contrôle de non-vacuité. Le verdict est `LEAKER_NODEIDS & admitted` : il est
+# vide aussi bien quand la porte fait son travail que quand `admitted` l'est —
+# parseur de node-id cassé, collecte avortée, tout déselectionné. Reproduit :
+# en remplaçant _NODEID_RE par r"^ZZZ_NEVER_MATCHES$" le garde restait VERT.
+# L'assertion de complétion ne rattrape pas non plus, "no tests collected
+# (12 deselected)" contenant la sous-chaîne "tests collected".
+#
+# Ces trois-là sont les tests structurels que le marquage au test près laisse
+# volontairement runnables : s'ils disparaissent de `admitted`, l'instrument ne
+# mesure plus rien et doit rougir avant de rendre un verdict rassurant.
+EXPECTED_ADMITTED = {
+    "tests/integration/test_realite_pure_jtms.py::test_imports_jtms_reels",
+    "tests/integration/test_realite_pure_jtms.py::test_existence_fichiers_reels",
+    "tests/integration/test_realite_pure_jtms.py::test_interface_web_reelle",
+}
+
 
 def _admitted_nodeids(out: str):
     return {line.strip() for line in out.splitlines() if _NODEID_RE.match(line.strip())}
@@ -102,6 +118,14 @@ def test_gate_filter_deselects_egress_leakers():
         f"#1872: collect-only did not complete (rc={proc.returncode}); "
         "cannot verify the leakers' deselection.\n"
         f"stderr tail:\n{proc.stderr[-1500:]}"
+    )
+    missing = sorted(EXPECTED_ADMITTED - admitted)
+    assert not missing, (
+        "#1872: the guard cannot see the tests the gate is supposed to ADMIT, "
+        "so its 'no leaker admitted' verdict would be vacuous:\n"
+        f"  manquants: {missing}\n"
+        f"  admitted ({len(admitted)}): {sorted(admitted)}\n"
+        f"rc={proc.returncode}"
     )
     assert not leaked, (
         "#1872: egress leakers are ADMITTED by the gate filter "

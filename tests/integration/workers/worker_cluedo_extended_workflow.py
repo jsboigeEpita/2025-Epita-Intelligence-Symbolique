@@ -15,6 +15,8 @@ Tests couvrant:
 - Évolution des stratégies avec l'agent Oracle
 """
 
+import sys
+
 import pytest
 import asyncio
 import time
@@ -871,4 +873,8 @@ class TestUserExperienceComparison:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__])
+    # sys.exit : sans lui, `pytest.main(...)` en expression nue jette son code
+    # de retour et le script sort 0 même quand ses tests échouent. La fixture
+    # `run_in_jvm_subprocess` lit ce code : le lanceur concluait donc PASS quoi
+    # qu'il arrive.
+    sys.exit(pytest.main([__file__]))

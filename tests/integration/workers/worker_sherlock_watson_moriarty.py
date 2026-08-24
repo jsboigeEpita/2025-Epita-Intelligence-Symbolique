@@ -3,6 +3,8 @@
 Worker pour les tests d'intégration avec GPT-4o-mini réel pour Sherlock/Watson/Moriarty.
 """
 
+import sys
+
 import pytest
 import asyncio
 import time
@@ -547,7 +549,19 @@ class TestRealGPTLoadHandling:
 
 
 if __name__ == "__main__":
-    # #1872: the launcher spawns this file as a pytest session. Carrying the
-    # same -m the gate uses (not just "-v -s") keeps a real-GPT run from firing
-    # its ~9 billed chat requests once the markers above deselect them.
-    pytest.main([__file__, "-v", "-s", "-m", "not slow and not requires_api"])
+    # #1872 avait copié ici le filtre de la porte pour éviter la facturation.
+    # Mesuré : ce filtre déselectionne 12 tests sur 12 — la totalité du
+    # fichier. Le worker n'est atteignable que via son lanceur, et le lanceur
+    # porte déjà `requires_api` : une bande qui filtre ce marqueur ne le
+    # *spawne pas*, donc rien n'est facturé. Le filtre local n'ajoutait aucune
+    # protection et supprimait la seule bande où ces tests devaient tourner.
+    #
+    # C'était de surcroît une COPIE du filtre de la porte, pas une propagation :
+    # si la porte bouge, la copie dérive en silence.
+    #
+    # sys.exit : `pytest.main(...)` en expression nue jette son code de retour,
+    # et le script sort 0 — y compris quand ses tests échouent. La fixture
+    # `run_in_jvm_subprocess` lit ce code, donc le lanceur concluait PASS quoi
+    # qu'il arrive. Vérifié sur un worker jouet : test en échec -> rc=0 sans
+    # sys.exit, rc!=0 avec.
+    sys.exit(pytest.main([__file__, "-v", "-s"]))

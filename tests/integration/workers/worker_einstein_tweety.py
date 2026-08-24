@@ -592,4 +592,8 @@ if __name__ == "__main__":
     print("=" * 50)
 
     # Exécution des tests avec verbose
-    pytest.main([__file__, "-v", "--tb=short", "-x"])  # Stop au premier échec
+    # sys.exit : sans lui, `pytest.main(...)` en expression nue jette son code
+    # de retour et le script sort 0 même quand ses tests échouent. La fixture
+    # `run_in_jvm_subprocess` lit ce code : le lanceur concluait donc PASS quoi
+    # qu'il arrive.
+    sys.exit(pytest.main([__file__, "-v", "--tb=short", "-x"]))
