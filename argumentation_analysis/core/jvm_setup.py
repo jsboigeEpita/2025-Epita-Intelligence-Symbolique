@@ -2,8 +2,22 @@
 # core/jvm_setup.py
 import os
 import argumentation_analysis.core.dll_guard  # noqa: F401 — must precede jpype import on Windows
-import jpype
-import jpype.imports
+
+try:
+    import jpype
+    import jpype.imports
+
+    _JPYPE_AVAILABLE = True
+except ImportError:
+    # #1697: honest-absent contract. A bare ``import jpype`` here made every
+    # module that imports jvm_setup (tweety_initializer → the logic agents →
+    # logic/__init__) unimportable in a jpype-less env, so neither the MCP
+    # server nor the web API could boot degraded. Binding ``jpype`` to None
+    # keeps ``is_jvm_started()`` honest (its ``except Exception`` already
+    # returns False) and lets ``initialize_jvm()`` report failure instead of
+    # crashing the import.
+    jpype = None  # type: ignore[assignment]
+    _JPYPE_AVAILABLE = False
 import logging
 import threading
 import platform
@@ -746,6 +760,13 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     La logique est thread-safe.
     """
     global _JVM_INITIALIZED_THIS_SESSION, _SESSION_FIXTURE_OWNS_JVM, _JVM_WAS_SHUTDOWN
+
+    if jpype is None:  # #1697: honest-absent — report failure, do not crash
+        logger.error(
+            "jpype is not installed — the JVM cannot be started (#1697). "
+            "Degraded boot: callers must render a degraded/unhealthy state."
+        )
+        return False
 
     with _jvm_lock:
         _SESSION_FIXTURE_OWNS_JVM = session_fixture_owns_jvm
