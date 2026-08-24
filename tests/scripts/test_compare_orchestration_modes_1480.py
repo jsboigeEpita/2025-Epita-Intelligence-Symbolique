@@ -2021,5 +2021,181 @@ class TestBridgeLedgerReason1756:
         assert "0 degraded" not in head
 
 
+class TestCountPerimeter1740:
+    """#1740 — a count only means something if its PRODUCER actually ran.
+
+    ``get_state_snapshot`` derives every count as ``len()`` over a
+    PRE-DECLARED container (``shared_state.py``), so the count key is never
+    absent and the CG #1540 "absent → None → —" convention is inert on it.
+    The discriminator therefore has to come from the executed perimeter: a
+    pipeline whose workflow never exercised the producing capability must
+    render ``n/a``, never a fabricated ``0``. That is the ``#1735`` defect —
+    a budget/scope-truncated run read as "0 mistakes found".
+
+    Each control is green on the current tree and RED under a degenerate
+    substitution (proof in the round log): re-wiring the hop to a constant
+    ``"0"`` reddens the without-producer control; to a constant ``"n/a"``
+    reddens the with-producer control. A test that merely asserted the
+    current output would be green on both trees and measure nothing.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    @staticmethod
+    def _workflow_capabilities(builder):
+        """The phase-capability set of a real workflow builder."""
+        return frozenset(p.capability for p in builder().phases)
+
+    def test_light_workflow_has_no_fallacy_producer(self) -> None:
+        mod = self._harness()
+        from argumentation_analysis.orchestration.workflows import (
+            build_light_workflow,
+        )
+
+        caps = self._workflow_capabilities(build_light_workflow)
+        assert not (caps & mod._FALLACY_PRODUCING_CAPABILITIES), (
+            "the light workflow must not exercise a fallacy producer, or this "
+            "control loses its discriminating power (#1740)"
+        )
+        assert "fact_extraction" in caps, (
+            "the light workflow must still exercise the ARGUMENT producer, so "
+            "the perimeter contrast is on the FALLACY axis only — otherwise the "
+            "render difference is trivially the workflow, not the perimeter hop"
+        )
+
+    def test_standard_workflow_exercises_both_fallacy_producers(self) -> None:
+        mod = self._harness()
+        from argumentation_analysis.orchestration.workflows import (
+            build_standard_workflow,
+        )
+
+        caps = self._workflow_capabilities(build_standard_workflow)
+        assert (caps & mod._FALLACY_PRODUCING_CAPABILITIES) == (
+            mod._FALLACY_PRODUCING_CAPABILITIES
+        ), (
+            "the standard workflow must exercise both fallacy producers, so its "
+            "perimeter is exhaustive over the fallacy axis (#1740)"
+        )
+
+    def test_workflow_without_producer_renders_na_not_zero(self) -> None:
+        mod = self._harness()
+        from argumentation_analysis.orchestration.workflows import (
+            build_light_workflow,
+        )
+
+        caps = self._workflow_capabilities(build_light_workflow)
+        rendered = mod._fmt_count_in_perimeter(
+            0, mod._FALLACY_PRODUCING_CAPABILITIES, sorted(caps), True
+        )
+        assert rendered == "n/a", (
+            "the light workflow ran no fallacy producer, so its 0 is NOT a "
+            "measurement — it must render n/a (#1740), not " + repr(rendered)
+        )
+
+    def test_workflow_with_producer_renders_measured_zero(self) -> None:
+        mod = self._harness()
+        from argumentation_analysis.orchestration.workflows import (
+            build_standard_workflow,
+        )
+
+        caps = self._workflow_capabilities(build_standard_workflow)
+        rendered = mod._fmt_count_in_perimeter(
+            0, mod._FALLACY_PRODUCING_CAPABILITIES, sorted(caps), True
+        )
+        assert rendered == "0", (
+            "the standard workflow ran the fallacy producer, so 0 is a genuine "
+            "measurement — it must render 0 (#1740), not " + repr(rendered)
+        )
+
+    def test_workflow_without_and_with_producer_render_differ(self) -> None:
+        mod = self._harness()
+        from argumentation_analysis.orchestration.workflows import (
+            build_light_workflow,
+            build_standard_workflow,
+        )
+
+        light = self._workflow_capabilities(build_light_workflow)
+        standard = self._workflow_capabilities(build_standard_workflow)
+        light_render = mod._fmt_count_in_perimeter(
+            0, mod._FALLACY_PRODUCING_CAPABILITIES, sorted(light), True
+        )
+        standard_render = mod._fmt_count_in_perimeter(
+            0, mod._FALLACY_PRODUCING_CAPABILITIES, sorted(standard), True
+        )
+        assert (light_render, standard_render) == ("n/a", "0"), (
+            "the two workflows' Fallacies cells must differ (n/a vs 0) — the "
+            "#1735 defect collapsed them to the same 0, "
+            f"here {light_render!r} vs {standard_render!r}"
+        )
+
+    def test_producing_capability_sets_pinned_against_state_writers(self) -> None:
+        """The :469 promise: the producing sets are pinned so they cannot
+        drift silently when a workflow gains a capability."""
+        mod = self._harness()
+        from argumentation_analysis.orchestration.state_writers import (
+            CAPABILITY_STATE_WRITERS,
+        )
+
+        writer_keys = set(CAPABILITY_STATE_WRITERS.keys())
+        fallacy_writer_keys = frozenset(
+            k for k in writer_keys if "fallacy" in k.lower()
+        )
+        assert mod._FALLACY_PRODUCING_CAPABILITIES == fallacy_writer_keys, (
+            "the fallacy-producing set drifted from the *fallacy*-named "
+            "state-writer keys it must mirror (#1740)"
+        )
+        assert mod._ARGUMENT_PRODUCING_CAPABILITIES == {"fact_extraction"}
+        assert mod._ARGUMENT_PRODUCING_CAPABILITIES <= writer_keys, (
+            "fact_extraction is no longer a state writer — the argument "
+            "producer is gone and the count can never be measured (#1740)"
+        )
+
+
+class TestDeprecatedModeAliases1740:
+    """#1740 / #1747 — deprecated aliases stay DISPATCHABLE but are excluded
+    from the DEFAULT sweep, so a report cannot double-count a mode.
+
+    The #1735 baseline ran ``hierarchical`` AND ``hierarchical_bridge`` by
+    default; both self-label ``hierarchical_bridge``, so the bridge appeared
+    SIX times for three corpora while the report announced "Modes tested: 7"
+    — anyone aggregating that table counted the bridge twice.
+    """
+
+    def _harness(self):
+        return _load_harness_module()
+
+    def test_aliases_are_dispatchable(self) -> None:
+        mod = self._harness()
+        assert mod._DEPRECATED_MODE_ALIASES <= set(mod.MODE_RUNNERS), (
+            "a deprecated alias absent from MODE_RUNNERS is a broken lane, not "
+            "a deprecation (#1740) — the alias must still dispatch"
+        )
+
+    def test_default_sweep_excludes_aliases(self) -> None:
+        mod = self._harness()
+        defaults = set(mod.default_modes())
+        assert not (defaults & mod._DEPRECATED_MODE_ALIASES), (
+            "the default sweep must exclude deprecated aliases (#1740) — "
+            "running them by default is what double-counted the bridge"
+        )
+        assert "pipeline_standard" in defaults
+        assert "hierarchical_bridge" in defaults
+
+    def test_modes_tested_counts_distinct_labels(self) -> None:
+        mod = self._harness()
+        r1 = mod.ModeResult(
+            mode="pipeline_standard", corpus_id="corpus_A", success=True
+        )
+        r2 = mod.ModeResult(
+            mode="pipeline_standard", corpus_id="corpus_B", success=True
+        )
+        report = mod.generate_report([r1, r2])
+        assert "Modes tested: 1" in report, (
+            "a report must count DISTINCT mode labels, so an alias and its "
+            "canonical key cannot inflate the count (#1740/#1747)"
+        )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
