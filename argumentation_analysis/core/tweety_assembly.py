@@ -42,6 +42,7 @@ tests do not need Maven, a JVM, or an internet connection.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -138,6 +139,13 @@ MIN_EXPECTED_JARS = 40
 # booting a JVM on a half-copied classpath. Cleaning up in an ``except`` clause
 # would not cover the kill path, which is the likely one.
 INCOMPLETE_MARKER = ".assembly-incomplete"
+
+# Written next to the jars once the assembly clears the floor, and cached with
+# them. It records what this assembly actually produced, so a cache restore can
+# be compared to an EXACT count instead of to MIN_EXPECTED_JARS -- a floor of 60
+# calibrated well under the real closure (149 jars measured on CI run
+# 32768195554), which therefore accepts a restore that lost most of its jars.
+ASSEMBLY_MANIFEST = ".assembly-manifest.json"
 
 
 class AssemblyError(RuntimeError):
@@ -511,6 +519,16 @@ def assemble(
             "partiel demarre la JVM et fait echouer chaque import -- refus "
             "explicite plutot qu'un succes mince."
         )
+    (target_dir / ASSEMBLY_MANIFEST).write_text(
+        json.dumps(
+            {
+                "version": version,
+                "module_jars": count,
+                "total_jars": len(list(target_dir.glob("*.jar"))),
+            }
+        ),
+        encoding="utf-8",
+    )
     (target_dir / INCOMPLETE_MARKER).unlink(missing_ok=True)
     logger.info("Assemblage Tweety %s: %d jars de module copies.", version, count)
     return count
