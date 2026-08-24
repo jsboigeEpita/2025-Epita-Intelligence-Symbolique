@@ -844,7 +844,11 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
             if f"-{settings.jvm.tweety_version}-" in jar.name:
                 return [str(jar.resolve())]
         return [str(sorted(uber_jars)[-1].resolve())]
-    jar_entries = [str(jar.resolve()) for jar in all_jars]
+    # A named-fat jar rejected just above is unusable, so it does not belong on the
+    # fallback classpath either. Only those are dropped: a `copy-dependencies`
+    # assembly legitimately holds ~80 third-party jars carrying no Tweety class.
+    usable = [jar for jar in all_jars if jar not in set(named_fat) - set(uber_jars)]
+    jar_entries = [str(jar.resolve()) for jar in usable]
     if not jar_entries:
         logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
     return jar_entries

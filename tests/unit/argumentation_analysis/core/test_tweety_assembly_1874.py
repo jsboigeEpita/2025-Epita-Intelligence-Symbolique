@@ -8,6 +8,7 @@ would contain whatever answer the author put in it).
 """
 
 import subprocess
+import zipfile
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -102,9 +103,24 @@ def test_rendered_pom_is_well_formed_xml_in_every_combination():
 # ------------------------------------------------------- counting / idempotence
 
 
-def _touch(d: Path, *names):
+def _touch(d: Path, *names, tweety: bool = True):
+    """Real jars, because `is_already_assembled` now selects on content.
+
+    The previous fixture wrote four bytes of zip header. That is not a jar -- it
+    is exactly the shape an interrupted download leaves behind, which is the
+    failure these tests exist to catch, so it could not stand in for a healthy
+    one. Pass ``tweety=False`` for a valid jar carrying no Tweety class.
+    """
     for n in names:
-        (d / n).write_bytes(b"PK\x03\x04")
+        with zipfile.ZipFile(d / n, "w") as z:
+            z.writestr(
+                (
+                    "org/tweetyproject/logics/pl/syntax/Proposition.class"
+                    if tweety
+                    else "ch/qos/logback/classic/Logger.class"
+                ),
+                b"x",
+            )
 
 
 def test_thin_aggregator_is_not_counted_as_a_module(tmp_path):
@@ -119,6 +135,12 @@ def test_thin_aggregator_is_not_counted_as_a_module(tmp_path):
 
 
 def test_fat_jar_alone_counts_as_assembled(tmp_path):
+    """Anti-pendulum for the content check: the fast path must survive.
+
+    A cached fat jar is the cheapest provisioning state there is; re-assembling on
+    top of it would trade a hundred-millisecond zip read for a two-minute Maven run
+    on every start.
+    """
     _touch(tmp_path, "org.tweetyproject.tweety-full-1.29-with-dependencies.jar")
     assert ta.is_already_assembled(tmp_path) is True
 
@@ -451,3 +473,36 @@ def test_failure_message_names_the_transport_cause(tmp_path, monkeypatch):
     assert "TRANSFER" in msg and "FIND" in msg, msg
     assert "tweetyproject.org/mvn/" in msg, msg
     assert "Tentatives effectuees: 3" in msg, msg
+
+
+# --------------------------------------------------------------------------- #1880 review
+# `is_already_assembled` is the EARLIER barrier: it answers "nothing to do".
+# Hardening the loader alone left this one deciding, so a truncated download was
+# never repaired -- the loader correctly refused it and the provisioning layer
+# never assembled the module jars that would have replaced it.
+
+
+def _truncated_fat(tmp_path, version="1.29", size=1024):
+    """A valid zip *prefix*, not a valid zip: what an interrupted 54 MB GET leaves."""
+    jar = tmp_path / f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
+    jar.write_bytes(b"PK\x03\x04" + b"\x00" * (size - 4))
+    return jar
+
+
+def test_a_truncated_fat_jar_is_not_an_assembly(tmp_path):
+    """Measured 2026-08-24 before the fix: a 1024-byte stub returned True.
+
+    `st_size > 0` was the earlier proxy for "usable" -- it rejects only the 0-byte
+    case. Returning True here means the assembly never runs, so the JVM boots on
+    an unusable classpath and every Tweety import fails as a **skip**.
+    """
+    _truncated_fat(tmp_path)
+    assert ta.is_already_assembled(tmp_path, version="1.29") is False
+
+
+def test_a_fat_jar_carrying_no_tweety_class_is_not_an_assembly(tmp_path):
+    """A perfectly valid zip of the wrong content -- invisible to name and to size."""
+    jar = tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar"
+    with zipfile.ZipFile(jar, "w") as z:
+        z.writestr("ch/qos/logback/classic/Logger.class", b"x")
+    assert ta.is_already_assembled(tmp_path, version="1.29") is False

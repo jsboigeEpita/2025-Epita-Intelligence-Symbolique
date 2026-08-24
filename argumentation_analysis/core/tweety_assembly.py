@@ -347,10 +347,21 @@ def is_already_assembled(
         )
         return False
     for fat in target_dir.glob("*-with-dependencies.jar"):
-        if fat.stat().st_size <= 0:
+        if version is not None and version not in fat.name:
             continue
-        if version is None or version in fat.name:
+        # `st_size > 0` was the earlier proxy for "usable". It rejects only the
+        # 0-byte case; 1 KB of an interrupted 54 MB download passes it, and this
+        # branch answers "nothing to do", so the assembly never runs and the JVM
+        # then boots on an unusable classpath -- skips, not errors. Measured
+        # 2026-08-24: a 1024-byte stub returned True here.
+        if carries_tweety_classes(fat):
             return True
+        logger.warning(
+            "%s porte le nom d'un fat jar mais aucune classe Tweety (%d octet(s)): "
+            "assemblage requis.",
+            fat.name,
+            fat.stat().st_size,
+        )
     return count_module_jars(target_dir, version=version) >= minimum
 
 

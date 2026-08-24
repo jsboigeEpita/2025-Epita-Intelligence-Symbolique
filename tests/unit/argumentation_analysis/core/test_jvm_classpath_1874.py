@@ -166,8 +166,9 @@ def test_a_zero_byte_fat_jar_does_not_preempt_the_assembly(tmp_path):
     )
     (tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar").touch()
     cp = _build_tweety_classpath(tmp_path)
-    assert len(cp) == 63, (
-        "a 0-byte fat jar must not preempt 62 real module jars; the JVM would boot "
+    assert len(cp) == 62, (
+        "a 0-byte fat jar must not preempt 62 real module jars, and must not ride "
+        "along on the fallback either -- it is unusable. "
         f"on an empty classpath. got {len(cp)}: {[Path(p).name for p in cp]}"
     )
 
@@ -179,7 +180,7 @@ def test_a_truncated_fat_jar_does_not_preempt_the_assembly(tmp_path):
         b"PK\x03\x04" + b"\x00" * 1020
     )
     cp = _build_tweety_classpath(tmp_path)
-    assert len(cp) == 63, f"truncated fat jar preempted the assembly: {len(cp)} entries"
+    assert len(cp) == 62, f"truncated fat jar preempted the assembly: {len(cp)} entries"
 
 
 def test_a_fat_jar_holding_no_tweety_class_does_not_preempt(tmp_path):
@@ -189,7 +190,7 @@ def test_a_fat_jar_holding_no_tweety_class_does_not_preempt(tmp_path):
     with zipfile.ZipFile(decoy, "w") as z:
         z.writestr("ch/qos/logback/classic/Logger.class", b"x")
     cp = _build_tweety_classpath(tmp_path)
-    assert len(cp) == 63, f"a 0-Tweety-class fat jar preempted: {len(cp)} entries"
+    assert len(cp) == 62, f"a 0-Tweety-class fat jar preempted: {len(cp)} entries"
 
 
 def test_the_configured_version_wins_over_alphabetical_order(tmp_path, monkeypatch):
