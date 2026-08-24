@@ -110,6 +110,60 @@ jobs:
             Write-Host "⚠️ OPENAI_API_KEY not configured - tests will be skipped"
           }
 
+      # --- #1874 : cache de la chaine Java ---------------------------------
+      # Le canal fat-jar (tweetyproject.org/builds/) a ete supprime en amont, donc
+      # le classpath est desormais ASSEMBLE depuis Maven Central a chaque run :
+      # mesure 165 s sur le run 32768195554 (19:37:59 -> 19:40:44), plus le
+      # telechargement du JDK 17 portable. Ni l'un ni l'autre ne depend du commit.
+      #
+      # Ceci retire un COUT, ca ne debloque rien : la porte a ete debloquee par
+      # l'assemblage lui-meme (15010 skipped/0 passed -> 14775 passed). Dit
+      # explicitement pour que le prochain lecteur ne prenne pas le cache pour le
+      # correctif.
+      #
+      # La cle est derivee de settings (version + pins + exclusions + coordonnees
+      # du JDK), PAS d'un artefact heberge : un artefact epingle en amont est
+      # exactement ce qui est mort dans #1874. Changer une coordonnee change la
+      # cle, donc la fermeture se reconstruit seule, sans geste humain.
+      - name: Compute Java toolchain cache key
+        if: env.API_KEYS_CONFIGURED == 'true'
+        id: javakey
+        shell: pwsh
+        run: |
+          $key = conda run -n projet-is --no-capture-output python scripts/ci/tweety_cache_key.py
+          if (-not $key) { Write-Host "::error::cle de cache vide"; exit 1 }
+          Write-Host "Cle: $key"
+          echo "key=$key" >> $env:GITHUB_OUTPUT
+
+      - name: Restore Java toolchain
+        if: env.API_KEYS_CONFIGURED == 'true'
+        id: javacache
+        uses: actions/cache@v4
+        with:
+          path: |
+            libs/tweety
+            portable_jdk
+          # Pas de restore-keys : un prefixe partiel restaurerait le classpath
+          # d'une AUTRE version, que la porte version-specifique refuserait de
+          # toute facon -- on paierait la restauration pour rien, et un lecteur
+          # verrait "cache hit" juste avant un assemblage complet.
+          key: java-${{ runner.os }}-${{ steps.javakey.outputs.key }}
+
+      - name: Provision Tweety classpath
+        if: env.API_KEYS_CONFIGURED == 'true' && steps.javacache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python scripts/ci/provision_tweety.py
+
+      # Tourne sur les DEUX chemins, hit comme miss. Sur un miss il redit ce que
+      # l'assemblage vient de verifier ; sur un HIT il est le seul controle qui
+      # existe : actions/cache annonce un hit pour ce qu'il a stocke, meme si
+      # c'etait un assemblage partiel, et un classpath partiel demarre la JVM puis
+      # fait echouer chaque import -- en skips, pas en erreur.
+      - name: Verify Java toolchain is usable
+        if: env.API_KEYS_CONFIGURED == 'true'
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python scripts/ci/verify_tweety.py
+
       - name: Run automated tests
         if: env.API_KEYS_CONFIGURED == 'true'
         # Gate scope (#1336/#1341): tests/unit + tests/scripts, LLM- and

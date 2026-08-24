@@ -214,7 +214,14 @@ class TestServiceManagerSettings:
 class TestJVMSettings:
     def test_java_version_defaults(self):
         s = JVMSettings()
-        assert s.min_java_version == 11
+        assert s.min_java_version == 15, (
+            "Deliberate golden update (#1874): the declared floor was 11 while "
+            "every Tweety artifact measured -- 1.28 fat, 1.29 fat, 1.31 assembly "
+            "-- carries class-file major 59 (Java 15) on real classes. A JDK 11 "
+            "passed this floor and then failed every class load, as skips. If "
+            "you are here because this reddened, measure the bytecode before "
+            "changing the number back."
+        )
         assert s.jdk_version == "17.0.12"
         assert s.jdk_build == "7"
 

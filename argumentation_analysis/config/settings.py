@@ -86,7 +86,20 @@ class ServiceManagerSettings(BaseSettings):
 
 
 class JVMSettings(BaseSettings):
-    min_java_version: int = 11
+    # 15, not 11, and not 17. Measured 2026-08-24 across the 1.28 fat jar, the
+    # 1.29 fat jar and a 1.31 Maven assembly: the highest class-file major
+    # outside META-INF/versions/ is 59 = Java 15 in all three, carried by a real
+    # class (org/tweetyproject/action/grounding/VarsNeqRequirement), and 120 of
+    # the 129 Tweety classes this repo names by FQCN sit above major 55. A JDK 11
+    # therefore passes this floor and then fails EVERY class load -- silently, as
+    # skips rather than errors. 17 would also be true today but would over-claim:
+    # the library asks for 15, and pinning the floor to what we happen to ship
+    # would make the next JDK bump look like a requirement change.
+    #
+    # This is a latent trap, not the CI blocker: jvm_setup ignores JAVA_HOME and
+    # provisions its own portable JDK 17, so the Java 11 from setup-java never
+    # reaches the JVM. It bites whoever drops a JDK 11 into portable_jdk/.
+    min_java_version: int = 15
     min_heap_size: str = "256m"
     max_heap_size: str = "2048m"
 
