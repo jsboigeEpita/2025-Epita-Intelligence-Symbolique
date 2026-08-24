@@ -99,6 +99,19 @@ def _restore_handler_modules_after_each_test():
         _restore_module_globals(mod, snapshot)
     for name in missing:
         mod = sys.modules.get(name)
+        if mod is None:
+            # patch.dict's exit restored the entry snapshot, popping the
+            # module from sys.modules BEFORE this teardown runs — but the
+            # parent-package attribute set by the import survives, dangling
+            # on the mock-reloaded module (#1870). Downstream ``from logic
+            # import <handler>`` resolves that orphan while a fresh
+            # ``import <handler>`` builds another module: monkeypatch/mock
+            # land on one, production on the other. Reach the orphan through
+            # the package to finish the eviction.
+            parent_name, _, child = name.rpartition(".")
+            parent = sys.modules.get(parent_name)
+            if parent is not None:
+                mod = getattr(parent, child, None)
         if mod is not None:
             _evict_mock_module(mod)
 
