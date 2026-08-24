@@ -210,6 +210,16 @@ def download_tweety_jars(
         logger.info(f"JAR Core '{jar_filename}': déjà présent.")
         logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
         return True
+    # #1874 : en mode assemblage Maven, les JARs module sont posés à côté de l'agrégateur
+    # mince (absent) — la classpath est déjà utilisable, ne pas taper l'URL /builds/ morte.
+    existing_jars = list(target_dir_path.glob("*.jar"))
+    if existing_jars:
+        logger.info(
+            f"Tweety JARs déjà présents ({len(existing_jars)} trouvés dans "
+            f"{target_dir_path}) — assemblage Maven, pas de téléchargement (#1874)."
+        )
+        logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
+        return True
     logger.info(
         f"JAR '{jar_filename}' non trouvé ou vide. Tentative de téléchargement..."
     )

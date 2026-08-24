@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  #1874: Maven assembly of the Tweety classpath.
+
+  tweetyproject.org removed /builds/ (the fat-jar host). This POM reassembles the
+  classpath from Maven Central via `mvn dependency:copy-dependencies`, which is the
+  only surviving distribution channel.
+
+  Two version knobs, and ONLY two — no scattered literals beyond these properties:
+    * tweety.version  = 1.31  (global aggregator release)
+    * bipolar.version = 1.30  (arg:bipolar is the ONLY module pinned down)
+
+  Why the bipolar pin: Tweety 1.31 deleted the evidential bipolar family
+  (EvidentialArgumentationFramework / evidential.GroundedReasoner). argumentation_analysis
+  exposes framework_type (necessity/evidential) and asserts it in
+  tests/unit/argumentation_analysis/agents/core/logic/test_track_a_handlers.py.
+  The 1.30 release is the newest evidential-capable one, so it is pinned here and forced
+  over the aggregator's 1.31 via a direct dependency (nearest-wins).
+
+  org.tweetyproject:web is excluded: it is the only 1.31 module that references the new
+  (1.31) bipolar classes, and nothing in argumentation_analysis imports it.
+
+  Non-Central artifacts come from the project's own Maven repo (still up):
+    jspf:core:1.0.2, gurobi:gurobi:9.1.0, isula:isula:1.1.1.
+
+  Drive it with scripts/setup/assemble_tweety_classpath.py.
+-->
+<project
+    xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>org.tweetyproject</groupId>
+  <artifactId>tweety-assembly</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+
+  <properties>
+    <tweety.version>1.31</tweety.version>
+    <bipolar.version>1.30</bipolar.version>
+  </properties>
+
+  <repositories>
+    <repository>
+      <id>tweety-mvn</id>
+      <url>https://tweetyproject.org/mvn/</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.tweetyproject</groupId>
+      <artifactId>tweety-full</artifactId>
+      <version>${tweety.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.tweetyproject</groupId>
+          <artifactId>web</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <!-- Force the evidential-capable bipolar over the aggregator's 1.31 (nearest wins). -->
+    <dependency>
+      <groupId>org.tweetyproject.arg</groupId>
+      <artifactId>bipolar</artifactId>
+      <version>${bipolar.version}</version>
+    </dependency>
+  </dependencies>
+</project>
