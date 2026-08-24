@@ -149,7 +149,17 @@ jobs:
           # install/import/restore window, so admission is safe; the 2
           # genuine-verdict LLM tests in that dir are requires_api-marked and
           # stay deselected by the gate filter.
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          #
+          # #1867 MEASUREMENT ONLY — DO NOT MERGE. The three never-candidate
+          # zones (53 root files of tests/integration/ = 341 tests,
+          # argumentation_analysis/ = 64, webapp/ = 1) are added IN POSITION
+          # (gate argv + zones, same session) to measure what they do where
+          # they would live. Naming tests/integration/ wholesale would readmit
+          # the two #1814 vetoes, so they stay excluded via --ignore: the form
+          # constraint is itself part of what this run demonstrates. Local
+          # collect check: 15381 admitted / 336 deselected (= baseline 14988 +
+          # 393 admitted zones / 323 + 13).
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/ --ignore=tests/integration/logical_agents --ignore=tests/integration/jpype_tweety -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()
