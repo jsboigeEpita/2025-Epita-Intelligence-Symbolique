@@ -118,7 +118,14 @@ class JVMSettings(BaseSettings):
     clingo_version: str = "5.4.0"
 
     azure_openai: AzureOpenAISettings = AzureOpenAISettings()
-    model_config = SettingsConfigDict(env_prefix="JVM_")
+    # env_file is not inherited: without it JVM_TWEETY_PINNED_MODULES set in
+    # .env -- the channel this project documents -- silently resolves to the
+    # empty string, parse_pin_spec('') returns {} without complaint, and the
+    # assembly proceeds unpinned. The pin is then lost one layer below where
+    # parse_pin_spec promises never to drop one. Measured on #1883 review.
+    model_config = SettingsConfigDict(
+        env_prefix="JVM_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
 
 class AppSettings(BaseSettings):

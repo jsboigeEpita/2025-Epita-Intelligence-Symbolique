@@ -111,9 +111,20 @@ def test_download_refuses_a_directory_holding_only_the_thin_aggregator(
     Degenerate substitution: replace the body of `is_already_assembled` with
     `bool(list(d.glob("*.jar")))` and this test is the one that reddens.
     """
+    import requests
+
     from argumentation_analysis.core import tweety_assembly
     from argumentation_analysis.core.jvm_setup import download_tweety_jars
 
     _mkjars(tmp_path, "org.tweetyproject.tweety-full-1.31.jar")
     monkeypatch.setattr(tweety_assembly, "maven_executable", lambda: None)
+
+    # Without this the test really does hit tweetyproject.org: a unit verdict that
+    # depends on an external host, and a 10s timeout on an egress-blocked runner.
+    # Its sibling above already guards the network with a raising `_dead`; here the
+    # legacy branch must be REACHED, so it gets a canned 404 rather than a refusal.
+    class _Gone:
+        status_code = 404
+
+    monkeypatch.setattr(requests, "head", lambda *a, **k: _Gone())
     assert download_tweety_jars(version="1.31", target_dir=tmp_path) is False

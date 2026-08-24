@@ -66,7 +66,18 @@ TWEETY_MVN_REPO = "https://tweetyproject.org/mvn/"
 # `web` is what transitively pulls the whole servlet/JSON stack, and dropping it
 # costs exactly one Tweety module. A probe exercising the bipolar frameworks was
 # verified identical on both. Anything far below 76 means the copy stopped early.
-MIN_EXPECTED_JARS = 40
+# CI measured **149** at 1.29 with no exclusion, so the default closure is ~149 and
+# the excluded one ~76: the floor must clear a partial copy without reddening a
+# legitimately excluded closure, which puts it just under 76 rather than at 40.
+# It is a backstop, not the main guard -- an interrupted run is caught by
+# INCOMPLETE_MARKER below, which survives a kill that raises nothing to catch.
+MIN_EXPECTED_JARS = 60
+
+# Written before mvn runs, removed only once the floor check passes. A timeout or
+# a Ctrl-C leaves it behind, so the *next* process refuses the wreckage instead of
+# booting a JVM on a half-copied classpath. Cleaning up in an ``except`` clause
+# would not cover the kill path, which is the likely one.
+INCOMPLETE_MARKER = ".assembly-incomplete"
 
 
 class AssemblyError(RuntimeError):
@@ -214,37 +225,89 @@ def pinned_versions_in_pom(pom_xml: str) -> Dict[str, str]:
     return out
 
 
-def count_module_jars(target_dir: Path) -> int:
+def count_module_jars(target_dir: Path, version: Optional[str] = None) -> int:
     """Number of jars present, ignoring the thin aggregator.
 
     ``dependency:copy-dependencies`` also deposits ``…tweety-full-<v>.jar``, which
     holds **zero** classes. Counting it would let a 1-jar directory look like a
     successful assembly -- the same shape #1880 fixed on the loader side.
     """
-    return len(
-        [
-            jar
-            for jar in target_dir.glob("*.jar")
-            if f"{TWEETY_AGGREGATOR}-" not in jar.name
-        ]
-    )
+    jars = [
+        jar
+        for jar in target_dir.glob("*.jar")
+        if f"{TWEETY_AGGREGATOR}-" not in jar.name
+    ]
+    if version is not None:
+        # A directory left over from an earlier version is not a usable classpath
+        # for the one being asked for. Without this, a machine that cached 1.28
+        # serves 1.28 forever after the config moves to 1.31.
+        jars = [j for j in jars if f"-{version}." in j.name or f"-{version}-" in j.name]
+    return len(jars)
 
 
-def is_already_assembled(target_dir: Path, minimum: int = MIN_EXPECTED_JARS) -> bool:
-    """True when the directory already holds a usable classpath (fat or assembled)."""
+def is_already_assembled(
+    target_dir: Path,
+    minimum: int = MIN_EXPECTED_JARS,
+    version: Optional[str] = None,
+) -> bool:
+    """True when the directory already holds a usable classpath (fat or assembled).
+
+    Three ways this used to say yes when it should not, all of them silent:
+
+    * a run interrupted mid-copy left module jars behind and the next call
+      accepted them -- caught now by ``INCOMPLETE_MARKER``;
+    * a zero-byte fat jar (an interrupted copy, a ``touch``, a failed restore)
+      satisfied the fast path, and the size check inside ``download_file`` was
+      never reached because this short-circuits first -- caught now by ``st_size``;
+    * a jar of a *different* version satisfied it, so a machine holding 1.28 kept
+      serving 1.28 after the config moved on -- caught now by ``version``. Serving
+      the wrong version silently is the failure this module exists to prevent,
+      inverted: 1.31 removes a family that 1.30 still has.
+
+    ``version=None`` keeps the version-blind behaviour for callers that genuinely
+    do not care; production passes it.
+    """
     if not target_dir.is_dir():
         return False
-    if any(target_dir.glob("*-with-dependencies.jar")):
-        return True
-    return count_module_jars(target_dir) >= minimum
+    if (target_dir / INCOMPLETE_MARKER).exists():
+        logger.warning(
+            "%s porte %s: assemblage interrompu, refus de demarrer dessus.",
+            target_dir,
+            INCOMPLETE_MARKER,
+        )
+        return False
+    for fat in target_dir.glob("*-with-dependencies.jar"):
+        if fat.stat().st_size <= 0:
+            continue
+        if version is None or version in fat.name:
+            return True
+    return count_module_jars(target_dir, version=version) >= minimum
 
 
 # ------------------------------------------------------------------------- I/O
 
 
 def maven_executable() -> Optional[str]:
-    """Path to mvn, or None. Windows ships it as ``mvn.cmd``."""
-    return shutil.which("mvn") or shutil.which("mvn.cmd")
+    """Path to mvn, or None. Windows ships it as ``mvn.cmd``.
+
+    ``MAVEN_HOME``/``M2_HOME`` are consulted too. The GitHub Windows runner images
+    ship Maven 3.9.16 but their docs do not promise it is on ``PATH``, and a
+    machine with Maven installed off-PATH would otherwise report "Maven
+    introuvable" while Maven sits right there. Carried over from the ``_find_maven``
+    written by po-2025 in #1884.
+    """
+    found = shutil.which("mvn") or shutil.which("mvn.cmd")
+    if found:
+        return found
+    for var in ("MAVEN_HOME", "M2_HOME"):
+        home = os.environ.get(var)
+        if not home:
+            continue
+        for name in ("mvn.cmd", "mvn.bat", "mvn"):
+            candidate = Path(home) / "bin" / name
+            if candidate.is_file():
+                return str(candidate)
+    return None
 
 
 def assemble(
@@ -297,13 +360,16 @@ def assemble(
             target_dir,
             pins or {},
         )
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / INCOMPLETE_MARKER).write_text(
+            "assemblage " + version + " en cours", encoding="utf-8"
+        )
         try:
             proc = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=timeout,
-                env={**os.environ, "MAVEN_OPTS": os.environ.get("MAVEN_OPTS", "")},
             )
         except subprocess.TimeoutExpired as exc:
             raise AssemblyError(
@@ -319,7 +385,7 @@ def assemble(
                 "avant de suspecter le reseau.\n" + "\n".join(tail)
             )
 
-    count = count_module_jars(target_dir)
+    count = count_module_jars(target_dir, version=version)
     if count < MIN_EXPECTED_JARS:
         raise AssemblyError(
             f"Assemblage Tweety {version}: seulement {count} jar(s) de module "
@@ -327,5 +393,6 @@ def assemble(
             "partiel demarre la JVM et fait echouer chaque import -- refus "
             "explicite plutot qu'un succes mince."
         )
+    (target_dir / INCOMPLETE_MARKER).unlink(missing_ok=True)
     logger.info("Assemblage Tweety %s: %d jars de module copies.", version, count)
     return count

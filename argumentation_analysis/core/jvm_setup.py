@@ -225,11 +225,15 @@ def download_tweety_jars(
     target_dir_path = Path(target_dir) if target_dir else LIBS_DIR
     target_dir_path.mkdir(parents=True, exist_ok=True)
 
-    if tweety_assembly.is_already_assembled(target_dir_path):
+    # `version`, not settings: this function takes the version as an argument and
+    # callers (tests included) pass one that differs from the configured default.
+    # Gating on settings would answer a question nobody asked.
+    if tweety_assembly.is_already_assembled(target_dir_path, version=version):
         logger.info(
-            "Classpath Tweety déjà présent dans %s (%d jar(s) de module). Rien à faire.",
+            "Classpath Tweety %s déjà présent dans %s (%d jar(s) de module). Rien à faire.",
+            version,
             target_dir_path,
-            tweety_assembly.count_module_jars(target_dir_path),
+            tweety_assembly.count_module_jars(target_dir_path, version=version),
         )
         logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
         return True

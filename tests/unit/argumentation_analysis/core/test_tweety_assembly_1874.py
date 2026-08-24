@@ -243,3 +243,92 @@ def test_pom_declares_the_non_central_repository():
     ns = {"m": "http://maven.apache.org/POM/4.0.0"}
     urls = [e.text for e in root.findall(".//m:repository/m:url", ns)]
     assert urls == [ta.TWEETY_MVN_REPO]
+
+
+# ------------------------------------------------- ways a bad dir used to pass
+# Each of the four below was measured accepting a directory it should refuse
+# (#1883 review). They are grouped because they share one property: every one of
+# them fails SILENTLY -- the JVM starts, the imports die, and the run reports
+# skips rather than an error.
+
+
+def test_zero_byte_fat_jar_is_not_a_classpath(tmp_path):
+    """An interrupted copy, a touch, a failed restore all produce this shape.
+
+    The size check inside `download_file` never runs, because this gate
+    short-circuits before it. Drop `st_size` from `is_already_assembled` and this
+    reddens.
+    """
+    (tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar").touch()
+    assert ta.is_already_assembled(tmp_path) is False
+
+
+def test_fat_jar_of_another_version_does_not_satisfy_the_asked_version(tmp_path):
+    """Serving the wrong version silently is what this module exists to prevent.
+
+    1.31 removes the evidential family that 1.30 still has, so a machine that
+    cached 1.28 must not keep answering for a config that moved on. Without the
+    version argument this returns True and the Maven path becomes dead code on
+    every machine holding an old fat jar.
+    """
+    _touch(tmp_path, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+    assert ta.is_already_assembled(tmp_path, version="1.28") is True
+    assert ta.is_already_assembled(tmp_path, version="1.31") is False
+
+
+def test_interrupted_assembly_is_refused_on_the_next_run(tmp_path):
+    """A killed mvn raises nothing to catch, so cleanup-on-exception cannot help.
+
+    The marker is written before mvn and lifted only after the floor check, so a
+    timeout or a Ctrl-C leaves the directory self-describing as unusable.
+    """
+    _touch(
+        tmp_path,
+        *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(ta.MIN_EXPECTED_JARS)],
+    )
+    assert ta.is_already_assembled(tmp_path, version="1.31") is True
+    (tmp_path / ta.INCOMPLETE_MARKER).write_text("interrompu", encoding="utf-8")
+    assert ta.is_already_assembled(tmp_path, version="1.31") is False
+
+
+def test_marker_is_lifted_once_the_assembly_clears_the_floor(tmp_path, monkeypatch):
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        assert (
+            tmp_path / ta.INCOMPLETE_MARKER
+        ).exists(), (
+            "the marker must exist WHILE mvn runs, otherwise a kill leaves no trace"
+        )
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(70)])
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    assert ta.assemble("1.31", tmp_path) == 70
+    assert not (tmp_path / ta.INCOMPLETE_MARKER).exists()
+
+
+def test_marker_survives_a_failed_assembly(tmp_path, monkeypatch):
+    """The wreckage must stay labelled: 45 jars is above no floor worth having."""
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(45)])
+        raise subprocess.TimeoutExpired(cmd, 5)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError):
+        ta.assemble("1.31", tmp_path, timeout=5)
+    assert (tmp_path / ta.INCOMPLETE_MARKER).exists()
+    assert ta.is_already_assembled(tmp_path, version="1.31") is False
+
+
+def test_maven_is_found_through_maven_home_when_absent_from_path(tmp_path, monkeypatch):
+    """The runner images ship Maven but do not promise it is on PATH."""
+    monkeypatch.setattr(ta.shutil, "which", lambda _n: None)
+    monkeypatch.delenv("M2_HOME", raising=False)
+    monkeypatch.setenv("MAVEN_HOME", str(tmp_path))
+    assert ta.maven_executable() is None  # MAVEN_HOME set but no bin/mvn yet
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "mvn.cmd").write_text("@echo off", encoding="utf-8")
+    assert ta.maven_executable() == str(tmp_path / "bin" / "mvn.cmd")

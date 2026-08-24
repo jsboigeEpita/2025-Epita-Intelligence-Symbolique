@@ -59,14 +59,49 @@ def _native_dir() -> Path:
     return PROJ_ROOT / settings.jvm.native_libs_dir
 
 
-def _uber_jar() -> Path:
-    jars = sorted(
-        j
-        for j in (PROJ_ROOT / settings.jvm.tweety_libs_dir).glob("*.jar")
-        if "full" in j.name.lower()
-    )
-    assert jars, "no Tweety uber-jar: the whole tweety band is meaningless here"
-    return jars[-1]
+def _jar_carrying(resource: str) -> Path:
+    """The jar that actually holds ``resource``, whichever layout is on disk.
+
+    Selecting by name (``"full" in j.name``) was wrong in both directions once
+    #1874 made the Maven assembly a real layout. The thin aggregator
+    ``org.tweetyproject.tweety-full-<v>.jar`` matches that predicate and carries
+    no resource at all, and it sorts *after* ``...-with-dependencies.jar``
+    (``-`` < ``.``), so ``[-1]`` picked precisely the empty one -- measured: the
+    three parametrisations failed with ``KeyError: minisat.dll`` on CI run
+    32768195554 while passing on the pre-assembly baseline 32672127427. In an
+    assembly the natives live in ``org.tweetyproject.sat`` and
+    ``org.tweetyproject.arg.adf``; no jar has "full" in its name at all.
+
+    Asking *which jar contains the entry* is the one predicate true of every
+    layout, and it does not weaken the guard: if nothing carries the resource
+    that is itself a finding, and this raises instead of skipping.
+    """
+    libs = PROJ_ROOT / settings.jvm.tweety_libs_dir
+    version = settings.jvm.tweety_version
+    carriers = []
+    for jar in sorted(libs.glob("*.jar")):
+        try:
+            with zipfile.ZipFile(jar) as z:
+                if resource in z.namelist():
+                    carriers.append(jar)
+        except zipfile.BadZipFile:
+            continue
+    if not carriers:
+        raise AssertionError(
+            f"no jar under {libs} carries {resource!r}: either the classpath is "
+            "empty, or a version bump dropped the vendored natives. Both are "
+            "real findings -- do not relax this into a skip."
+        )
+    # Prefer the configured version. Without this the first carrier wins
+    # alphabetically, which on a machine holding both 1.28 and 1.29 fat jars
+    # compares the vendored DLL against 1.28 while the JVM loads 1.29 -- a
+    # drift guard reading the wrong side of the drift. They happen to be
+    # byte-identical today (measured), which is exactly why the mistake would
+    # not have shown up until the day it mattered.
+    for jar in carriers:
+        if version in jar.name:
+            return jar
+    return carriers[0]
 
 
 class TestNativeSatDecides:
@@ -97,12 +132,12 @@ class TestNativeSatDecides:
             finally:
                 state.close()
 
-        assert verdicts["sat"] is True, (
-            f"{solver_name} called (a) & (~b) unsatisfiable — it is not deciding"
-        )
-        assert verdicts["unsat"] is False, (
-            f"{solver_name} called (a) & (~a) satisfiable — it is not deciding"
-        )
+        assert (
+            verdicts["sat"] is True
+        ), f"{solver_name} called (a) & (~b) unsatisfiable — it is not deciding"
+        assert (
+            verdicts["unsat"] is False
+        ), f"{solver_name} called (a) & (~a) satisfiable — it is not deciding"
 
     def test_adf_axis_is_live_not_degraded(self):
         """The consumer's own probe must find a solver.
@@ -128,12 +163,13 @@ class TestVendoredLibrariesComeFromTheJar:
             f"{on_disk} is missing — Native{lib.capitalize()}Solver will hand a "
             "jar: URL to System.load and the ADF axis dies silently"
         )
-        with zipfile.ZipFile(_uber_jar()) as z:
+        carrier = _jar_carrying(f"{lib}.dll")
+        with zipfile.ZipFile(carrier) as z:
             in_jar = z.read(f"{lib}.dll")
         assert hashlib.sha256(on_disk.read_bytes()).hexdigest() == (
             hashlib.sha256(in_jar).hexdigest()
         ), (
-            f"{lib}.dll differs from the resource in {_uber_jar().name}. If the "
+            f"{lib}.dll differs from the resource in {carrier.name}. If the "
             "jar was bumped (#21), re-extract the trio; do not silence this."
         )
 
