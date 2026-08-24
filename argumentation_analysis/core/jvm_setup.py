@@ -803,24 +803,6 @@ def _configure_external_tools():
         logger.info(f"  {tool_name} path registered: {path}")
 
 
-def _carries_tweety_classes(jar: Path) -> bool:
-    """True when ``jar`` actually holds at least one ``org/tweetyproject/**.class``.
-
-    Cheap enough to run on the one or two candidates the name filter leaves, and it
-    is the only question that matters: a jar the JVM cannot load classes from is not
-    a classpath, whatever it is called. Unreadable or truncated -> False, so the
-    caller falls back to loading the assembly in full rather than booting on nothing.
-    """
-    try:
-        with zipfile.ZipFile(jar) as z:
-            return any(
-                name.startswith("org/tweetyproject/") and name.endswith(".class")
-                for name in z.namelist()
-            )
-    except (zipfile.BadZipFile, OSError):
-        return False
-
-
 def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     """Ordered classpath of the Tweety jars present in ``tweety_libs_dir``.
 
@@ -845,7 +827,9 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     """
     all_jars = sorted(tweety_libs_dir.glob("*.jar"), key=lambda p: p.name)
     named_fat = [jar for jar in all_jars if "with-dependencies" in jar.name.lower()]
-    uber_jars = [jar for jar in named_fat if _carries_tweety_classes(jar)]
+    uber_jars = [
+        jar for jar in named_fat if tweety_assembly.carries_tweety_classes(jar)
+    ]
     for rejected in set(named_fat) - set(uber_jars):
         logger.warning(
             "%s porte le nom d'un fat jar mais aucune classe Tweety (%d octet(s)): "

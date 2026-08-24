@@ -45,6 +45,8 @@ import warnings  # Ajout de warnings
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple, Union
+
+from argumentation_analysis.core.tweety_assembly import carries_tweety_classes
 from pydantic import BaseModel
 from dataclasses import field
 from enum import Enum
@@ -454,6 +456,37 @@ class UnifiedLLMService:
         return prompts.get(analysis_type, prompts["rhetorical"])
 
 
+def validate_tweety_jars(libs_dir: Path) -> List[str]:
+    """Diagnostic errors about the Tweety classpath sitting in ``libs_dir``.
+
+    Split out of ``DependencyValidator._validate_tweety_dependencies`` so the
+    decision can be exercised without starting a JVM: the surrounding method
+    imports jpype and boots a VM, so the only test that ever covered this check
+    *transcribed* it instead of calling it, and the transcription could not drift
+    into a bug because it was not the code.
+
+    The check used to be ``len(jar_files) == 0``. A count cannot see the failure
+    that actually happens (#1874/#1880): a directory holding jars that carry **no
+    Tweety class** -- the 1918-byte thin aggregator, a truncated download that
+    kept its name, a leftover directory of unrelated jars. The JVM starts on such
+    a classpath and then fails every Tweety import, which pytest records as
+    **skips, not errors**. A validator whose whole job is to say "you are not
+    provisioned" must be able to see the shape that produces the silent run.
+    """
+    if not libs_dir.exists():
+        return ["Répertoire libs/tweety manquant"]
+    jar_files = list(libs_dir.glob("*.jar"))
+    if not jar_files:
+        return ["Aucun JAR TweetyProject trouvé"]
+    if not any(carries_tweety_classes(jar) for jar in jar_files):
+        return [
+            f"{len(jar_files)} JAR(s) dans {libs_dir} mais aucun ne porte de classe "
+            "org/tweetyproject/** : la JVM démarrerait sur un classpath inutilisable "
+            "et chaque import Tweety échouerait en skip, pas en erreur."
+        ]
+    return []
+
+
 class DependencyValidator:
     """Validateur de dépendances pré-exécution"""
 
@@ -575,13 +608,7 @@ class DependencyValidator:
 
         # Vérification des JARs TweetyProject
         project_root = Path(__file__).resolve().parent.parent.parent.parent
-        libs_dir = project_root / "libs" / "tweety"
-        if not libs_dir.exists():
-            errors.append("Répertoire libs/tweety manquant")
-        else:
-            jar_files = list(libs_dir.glob("*.jar"))
-            if len(jar_files) == 0:
-                errors.append("Aucun JAR TweetyProject trouvé")
+        errors.extend(validate_tweety_jars(project_root / "libs" / "tweety"))
 
         return errors
 

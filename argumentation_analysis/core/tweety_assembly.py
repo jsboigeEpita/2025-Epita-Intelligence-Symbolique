@@ -49,6 +49,7 @@ import subprocess
 import tempfile
 import time
 import xml.etree.ElementTree as ET
+import zipfile
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -270,6 +271,28 @@ def pinned_versions_in_pom(pom_xml: str) -> Dict[str, str]:
         version = dep.findtext("m:version", default="", namespaces=ns)
         out[f"{group}:{artifact}"] = version
     return out
+
+
+def carries_tweety_classes(jar: Path) -> bool:
+    """True when ``jar`` actually holds at least one ``org/tweetyproject/**.class``.
+
+    The one question that matters about a candidate classpath entry: a jar the JVM
+    cannot load a Tweety class from is not a classpath, whatever it is named. Every
+    shape that has bitten this repository -- the 0-class thin aggregator, a 0-byte
+    or truncated download keeping the ``-with-dependencies`` name, a directory of
+    unrelated jars -- is invisible to a name check and obvious to this one.
+
+    Unreadable or truncated -> False, never an exception: every caller is deciding
+    whether to *keep* the candidate, and "cannot read it" is a no.
+    """
+    try:
+        with zipfile.ZipFile(jar) as archive:
+            return any(
+                name.startswith("org/tweetyproject/") and name.endswith(".class")
+                for name in archive.namelist()
+            )
+    except (zipfile.BadZipFile, OSError):
+        return False
 
 
 def count_module_jars(target_dir: Path, version: Optional[str] = None) -> int:
