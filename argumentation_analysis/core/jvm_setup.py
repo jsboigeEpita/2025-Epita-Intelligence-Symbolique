@@ -803,6 +803,24 @@ def _configure_external_tools():
         logger.info(f"  {tool_name} path registered: {path}")
 
 
+def _carries_tweety_classes(jar: Path) -> bool:
+    """True when ``jar`` actually holds at least one ``org/tweetyproject/**.class``.
+
+    Cheap enough to run on the one or two candidates the name filter leaves, and it
+    is the only question that matters: a jar the JVM cannot load classes from is not
+    a classpath, whatever it is called. Unreadable or truncated -> False, so the
+    caller falls back to loading the assembly in full rather than booting on nothing.
+    """
+    try:
+        with zipfile.ZipFile(jar) as z:
+            return any(
+                name.startswith("org/tweetyproject/") and name.endswith(".class")
+                for name in z.namelist()
+            )
+    except (zipfile.BadZipFile, OSError):
+        return False
+
+
 def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     """Ordered classpath of the Tweety jars present in ``tweety_libs_dir``.
 
@@ -814,15 +832,33 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     class at all — success that decided nothing.
 
     A genuine fat jar in this ecosystem is always named ``*-with-dependencies.jar``
-    (see ``TWEETY_JAR_FILENAME``); the thin aggregator is not. Keying the single-jar
-    fast-path on that real fat name separates the two layouts: a fat jar (possibly
-    several cached versions) resolves to the latest single jar; anything else is a
-    multi-jar assembly and is loaded in full.
+    (see ``TWEETY_JAR_FILENAME``); the thin aggregator is not.
+
+    The name alone is still not enough, and this is the layer where it matters most:
+    this function *decides the classpath*, so anything it gets wrong the JVM then
+    boots on. A zero-byte or truncated download keeps the fat name and preempts the
+    62 real module jars sitting next to it -- and the provisioning layer lets a
+    truncated jar through (``download_tweety_jars`` only *warns* on an inconsistent
+    size). So the fast-path is taken only when the candidate actually **carries
+    Tweety classes**, which is the same rule ``_jar_carrying`` applies in the #1798
+    tests: select by content, never by name.
     """
     all_jars = sorted(tweety_libs_dir.glob("*.jar"), key=lambda p: p.name)
-    uber_jars = [jar for jar in all_jars if "with-dependencies" in jar.name.lower()]
+    named_fat = [jar for jar in all_jars if "with-dependencies" in jar.name.lower()]
+    uber_jars = [jar for jar in named_fat if _carries_tweety_classes(jar)]
+    for rejected in set(named_fat) - set(uber_jars):
+        logger.warning(
+            "%s porte le nom d'un fat jar mais aucune classe Tweety (%d octet(s)): "
+            "ignore pour le classpath.",
+            rejected.name,
+            rejected.stat().st_size if rejected.exists() else 0,
+        )
     if uber_jars:
-        # Sort to pick the latest version (alphabetical = version order for tweety jars)
+        # Prefer the configured version; `sorted()[-1]` alone is not version order
+        # (it breaks at 1.9 vs 1.10, where "1.9" sorts last).
+        for jar in sorted(uber_jars):
+            if f"-{settings.jvm.tweety_version}-" in jar.name:
+                return [str(jar.resolve())]
         return [str(sorted(uber_jars)[-1].resolve())]
     jar_entries = [str(jar.resolve()) for jar in all_jars]
     if not jar_entries:

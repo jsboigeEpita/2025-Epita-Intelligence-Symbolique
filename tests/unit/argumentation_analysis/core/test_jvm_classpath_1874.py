@@ -14,14 +14,36 @@ classpath. Born-red against the old ``"full"`` predicate: the Maven-layout test
 fails on the pre-fix code (kept only the thin jar) and passes post-fix.
 """
 
+import zipfile
+
 from pathlib import Path
+
+import pytest
 
 from argumentation_analysis.core.jvm_setup import _build_tweety_classpath
 
+# These five tests need neither a JVM nor a jar on disk, but without this marker the
+# session guard (`tests/conftest.py`) skips everything it did not start a JVM for --
+# so the guards written for #1874 were skipped in CI *during* the very skip storm they
+# exist to diagnose. Measured on run 32765607500: all of them SKIPPED.
+pytestmark = pytest.mark.no_jvm_session
 
-def _mkjars(tmp_path: Path, *names: str):
+
+def _mkjars(tmp_path: Path, *names: str, loadable: bool = True):
+    """Real zips, because the loader now selects on content rather than on name.
+
+    A jar carrying the fat name but no Tweety class must not preempt the assembly
+    next to it, so a fixture of empty files can no longer stand in for a usable fat
+    jar -- and that is the point: `.touch()` produced exactly the shape (fat name,
+    zero class) that a truncated download leaves behind.
+    """
     for name in names:
-        (tmp_path / name).touch()
+        path = tmp_path / name
+        if loadable:
+            with zipfile.ZipFile(path, "w") as z:
+                z.writestr("org/tweetyproject/logics/pl/syntax/Proposition.class", b"x")
+        else:
+            path.touch()
     return tmp_path
 
 
@@ -128,3 +150,60 @@ def test_download_refuses_a_directory_holding_only_the_thin_aggregator(
 
     monkeypatch.setattr(requests, "head", lambda *a, **k: _Gone())
     assert download_tweety_jars(version="1.31", target_dir=tmp_path) is False
+
+
+# --------------------------------------------------------------------------- #1880 review
+# The name-only fast path survived #1880: a jar carrying the fat name but no class
+# still preempted the module jars next to it. That layer *decides* the classpath, so
+# whatever it gets wrong the JVM then boots on -- and the provisioning layer lets a
+# truncated download through (it only warns on an inconsistent size).
+
+
+def test_a_zero_byte_fat_jar_does_not_preempt_the_assembly(tmp_path):
+    _mkjars(
+        tmp_path,
+        *[f"org.tweetyproject.arg.m{i}-1.29.jar" for i in range(62)],
+    )
+    (tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar").touch()
+    cp = _build_tweety_classpath(tmp_path)
+    assert len(cp) == 63, (
+        "a 0-byte fat jar must not preempt 62 real module jars; the JVM would boot "
+        f"on an empty classpath. got {len(cp)}: {[Path(p).name for p in cp]}"
+    )
+
+
+def test_a_truncated_fat_jar_does_not_preempt_the_assembly(tmp_path):
+    """1 KB of a 54 MB download: a valid prefix, not a valid zip."""
+    _mkjars(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.29.jar" for i in range(62)])
+    (tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar").write_bytes(
+        b"PK\x03\x04" + b"\x00" * 1020
+    )
+    cp = _build_tweety_classpath(tmp_path)
+    assert len(cp) == 63, f"truncated fat jar preempted the assembly: {len(cp)} entries"
+
+
+def test_a_fat_jar_holding_no_tweety_class_does_not_preempt(tmp_path):
+    """A perfectly valid zip of the wrong content -- the shape a name check cannot see."""
+    _mkjars(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.29.jar" for i in range(62)])
+    decoy = tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar"
+    with zipfile.ZipFile(decoy, "w") as z:
+        z.writestr("ch/qos/logback/classic/Logger.class", b"x")
+    cp = _build_tweety_classpath(tmp_path)
+    assert len(cp) == 63, f"a 0-Tweety-class fat jar preempted: {len(cp)} entries"
+
+
+def test_the_configured_version_wins_over_alphabetical_order(tmp_path, monkeypatch):
+    """`sorted()[-1]` is not version order: "1.9" sorts after "1.10". Two cached fat
+    jars is a real state -- libs/tweety holds 1.28 and 1.29 on this machine -- and
+    silently loading a version other than the configured one is the wrong neighbour
+    for a per-module pinning feature."""
+    import argumentation_analysis.core.jvm_setup as js
+
+    _mkjars(
+        tmp_path,
+        "org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
+        "org.tweetyproject.tweety-full-1.29-with-dependencies.jar",
+    )
+    monkeypatch.setattr(js.settings.jvm, "tweety_version", "1.28")
+    cp = _build_tweety_classpath(tmp_path)
+    assert len(cp) == 1 and "1.28" in cp[0], f"configured version ignored: {cp}"
