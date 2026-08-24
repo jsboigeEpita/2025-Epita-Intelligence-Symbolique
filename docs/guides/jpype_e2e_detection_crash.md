@@ -30,3 +30,7 @@ is_e2e_session = any(item.get_closest_marker("e2e") is not None for item in sess
 ```
 
 Cette modification garantit que la JVM n'est initialisée que lorsque des tests explicitement marqués comme `e2e` sont ciblés pour l'exécution, résolvant ainsi le crash au démarrage pour toutes les autres sessions de test.
+
+## Évolution (#1820) — décision prise depuis l'argv, pas depuis le cache
+
+La détection ci-dessus vit dans `pytest_collection_finish` (post-collecte), et reste utilisée par la fixture `jvm_session` pour le jugement final. Mais `pytest_sessionstart` — qui initialise la JVM AVANT la collecte — lisait ce même résultat depuis `session.config.cache`, un créneau écrit plus tard par `pytest_collection_finish`. Le lecteur tourne avant l'écrivain : sur un cache froid il lisait le défaut `False` (donc JVM démarrée même pour une session e2e, le crash ci-dessus), et sur un cache chaud la valeur d'un run précédent. La décision de `pytest_sessionstart` est désormais calculée depuis l'argv (chemins de collecte + `-m`), toujours connu à cet instant, via `tests/_e2e_session_decision.py` — même tranchant que la vérité post-collecte, sans dépendre du cache.

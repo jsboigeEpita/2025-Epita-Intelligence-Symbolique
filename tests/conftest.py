@@ -15,6 +15,8 @@ import asyncio
 from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
+
+from tests._e2e_session_decision import _argv_decides_e2e_session
 import nest_asyncio
 
 # Apply nest_asyncio early at module level to allow nested event loops
@@ -450,8 +452,16 @@ def pytest_sessionstart(session):
         _cache(session.config).set("jvm_started", False)
         return
 
-    # La décision est prise après la collecte, dans pytest_collection_finish
-    is_e2e_session = _cache(session.config).get("is_e2e_session", False)
+    # #1820 : la décision vient de l'ARGV (chemins + -m), toujours connus ici.
+    # L'ancien `_cache(...).get("is_e2e_session", False)` lisait un créneau
+    # écrit PLUS TARD par pytest_collection_finish — le lecteur tourne avant
+    # l'écrivain, donc sur cache froid il lisait le défaut False (JVM démarrée
+    # même pour une session e2e : le crash torch/JVM que D3.1.1 évite) et sur
+    # cache chaud la valeur d'un RUN PRÉCÉDENT. Le classifieur réplique en argv
+    # ce que la collecte dirait. Le writer (collection_finish) et le consommateur
+    # (jvm_session) restent inchangés : la fixture lit toujours la vérité
+    # post-collecte.
+    is_e2e_session = _argv_decides_e2e_session(session.config)
 
     if is_e2e_session:
         logger.warning(
