@@ -56,6 +56,9 @@ logger = logging.getLogger(__name__)
 MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 TWEETY_GROUP = "org.tweetyproject"
 TWEETY_AGGREGATOR = "tweety-full"
+# Non-Central artifacts of the closure (jspf:core, gurobi, isula) are served only
+# from here. Alive (200) as of #1874, unlike the removed /builds/ fat-jar channel.
+TWEETY_MVN_REPO = "https://tweetyproject.org/mvn/"
 
 # Measured on 1.31 (2026-08-24), so the floor is calibrated on real values rather
 # than a guess: the full closure is **155** jars (50 Tweety + 105 third-party), and
@@ -145,6 +148,19 @@ def render_assembly_pom(
         "  <artifactId>tweety-classpath</artifactId>",
         "  <version>1.0.0</version>",
         "  <packaging>pom</packaging>",
+        # Declared explicitly rather than relied upon: Tweety's parent POM already
+        # carries this repository, and three artifacts of the closure resolve from it
+        # and nowhere else -- verified by reading `_remote.repositories` in the local
+        # cache, which records `tweety-mvn` for jspf:core, gurobi and isula. Inheriting
+        # it works today, but #1874 exists precisely because an upstream URL moved, and
+        # inheritance makes our build depend on a file we do not control. (Merged from
+        # po-2025's scripts/setup/tweety-maven.xml:43-48 in PR #1884.)
+        "  <repositories>",
+        "    <repository>",
+        "      <id>tweety-mvn</id>",
+        f"      <url>{TWEETY_MVN_REPO}</url>",
+        "    </repository>",
+        "  </repositories>",
         "  <dependencies>",
     ]
 

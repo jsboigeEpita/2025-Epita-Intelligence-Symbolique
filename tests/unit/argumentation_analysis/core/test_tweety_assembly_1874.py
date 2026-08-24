@@ -8,6 +8,7 @@ would contain whatever answer the author put in it).
 """
 
 import subprocess
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -224,3 +225,21 @@ def test_prepend_group_id_is_passed_to_maven(tmp_path, monkeypatch):
     monkeypatch.setattr(ta.subprocess, "run", fake_run)
     ta.assemble("1.31", tmp_path)
     assert "-Dmdep.prependGroupId=true" in seen["cmd"]
+
+
+def test_pom_declares_the_non_central_repository():
+    """Three artifacts of the closure resolve only from tweetyproject.org/mvn/.
+
+    Merged from po-2025's static POM (#1884, scripts/setup/tweety-maven.xml:43-48).
+    Tweety's parent POM already declares it, so inheriting works today -- verified by
+    reading `_remote.repositories` in the local cache, which records `tweety-mvn` as
+    the source of jspf:core, gurobi and isula. Declaring it ourselves removes a
+    dependency on an upstream file we do not control, which is the exact class of
+    breakage #1874 is about.
+    """
+    pom = ta.render_assembly_pom("1.31")
+    assert ta.TWEETY_MVN_REPO in pom
+    root = ET.fromstring(pom)
+    ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+    urls = [e.text for e in root.findall(".//m:repository/m:url", ns)]
+    assert urls == [ta.TWEETY_MVN_REPO]
