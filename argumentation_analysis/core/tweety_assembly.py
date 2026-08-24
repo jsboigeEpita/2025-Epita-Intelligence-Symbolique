@@ -60,6 +60,11 @@ TWEETY_AGGREGATOR = "tweety-full"
 # from here. Alive (200) as of #1874, unlike the removed /builds/ fat-jar channel.
 TWEETY_MVN_REPO = "https://tweetyproject.org/mvn/"
 
+# Retries for TRANSIENT transfer failures only (connection reset, socket timeout).
+# Maven does not retry a 404, so a coordinate that truly does not exist still fails
+# on the first attempt -- see the comment at the call site.
+MVN_TRANSIENT_RETRIES = 3
+
 # Measured on 1.31 (2026-08-24), so the floor is calibrated on real values rather
 # than a guess: the full closure is **155** jars (50 Tweety + 105 third-party), and
 # excluding `org.tweetyproject:web` leaves **76** (49 Tweety + 27 third-party) --
@@ -353,6 +358,15 @@ def assemble(
             "-Dmdep.prependGroupId=true",
             "-Dmdep.useRepositoryLayout=false",
             "-Dmdep.overWriteReleases=false",
+            # Three artifacts of the closure (jspf:core, gurobi, isula) live on
+            # `tweetyproject.org/mvn/` and NOWHERE else -- Central does not carry
+            # them. That is the same host whose `/builds/` path vanished in #1874,
+            # and on CI run 32776186323 it answered `Connection reset` mid-transfer:
+            # the assembly died and the whole suite was reported as skipped.
+            # The retry handler re-attempts transient IO failures only; a 404 or a
+            # missing artifact still fails at once, so this cannot turn a genuinely
+            # dead coordinate into a slow green.
+            f"-Dmaven.wagon.http.retryHandler.count={MVN_TRANSIENT_RETRIES}",
         ]
         logger.info(
             "Assemblage Tweety %s depuis Maven Central vers %s (pins=%s)",
@@ -380,9 +394,16 @@ def assemble(
             tail = (proc.stderr or proc.stdout or "").strip().splitlines()[-25:]
             raise AssemblyError(
                 f"Assemblage Tweety {version} echoue (mvn rc={proc.returncode}).\n"
-                "Rappel #1874: 1.26 et 1.28 ne sont PAS constructibles depuis "
-                "Central (agregat publie, modules absents) -- verifier la version "
-                "avant de suspecter le reseau.\n" + "\n".join(tail)
+                "Deux causes connues, a distinguer dans la sortie ci-dessous.\n"
+                "  (1) Version non constructible: 1.26 et 1.28 publient un agregat "
+                "sans ses modules. La sortie dit alors: Could not FIND artifact "
+                "org.tweetyproject...\n"
+                "  (2) Transport en panne sur tweetyproject.org/mvn/, seule source de "
+                "jspf:core, gurobi et isula. La sortie dit alors: Could not TRANSFER "
+                "artifact ... Connection reset -- observe sur le run 32776186323. "
+                f"Ce cas est deja retente {MVN_TRANSIENT_RETRIES}x: le lire ici signifie "
+                "que l hote est durablement indisponible, pas qu il a hoquete.\n"
+                + "\n".join(tail)
             )
 
     count = count_module_jars(target_dir, version=version)

@@ -151,12 +151,18 @@ def test_absent_maven_names_the_cause(tmp_path, monkeypatch):
         ta.assemble("1.31", tmp_path)
 
 
-def test_maven_failure_reports_the_1_28_trap(tmp_path, monkeypatch):
-    """The most likely cause of a resolution failure is an unbuildable version.
+def test_maven_failure_reports_the_unbuildable_version_trap(tmp_path, monkeypatch):
+    """1.26 and 1.28 publish the aggregator without its modules, so mvn fails with a
+    resolution error that reads like a network problem. Naming the trap keeps the next
+    reader from re-running a build that can never succeed.
 
-    1.26 and 1.28 publish the aggregator without its modules, so mvn fails with a
-    resolution error that reads like a network problem. Naming the trap in the
-    message is what stops the next reader from retrying the run.
+    Deliberate update (2026-08-24): the docstring here used to claim this was "the most
+    likely cause" and that naming it "stops the next reader from retrying the run".
+    Run 32776186323 refuted both halves -- the failure was a dropped socket on
+    tweetyproject.org/mvn/, and re-running was exactly the right move. The message now
+    carries BOTH causes with the wording that tells them apart (Maven prints "Could not
+    FIND" for a missing coordinate and "Could not TRANSFER" for a broken socket), so
+    this test asserts the discriminating content instead of a single literal.
     """
     monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
     monkeypatch.setattr(
@@ -164,7 +170,7 @@ def test_maven_failure_reports_the_1_28_trap(tmp_path, monkeypatch):
         "run",
         lambda *a, **k: subprocess.CompletedProcess(a[0], 1, "", "Could not resolve"),
     )
-    with pytest.raises(ta.AssemblyError, match="1.26 et 1.28 ne sont PAS"):
+    with pytest.raises(ta.AssemblyError, match="1.26 et 1.28"):
         ta.assemble("1.28", tmp_path)
 
 
@@ -332,3 +338,55 @@ def test_maven_is_found_through_maven_home_when_absent_from_path(tmp_path, monke
     (tmp_path / "bin").mkdir()
     (tmp_path / "bin" / "mvn.cmd").write_text("@echo off", encoding="utf-8")
     assert ta.maven_executable() == str(tmp_path / "bin" / "mvn.cmd")
+
+
+def test_transient_transfer_failures_are_retried(tmp_path, monkeypatch):
+    """CI run 32776186323 died on `Connection reset` while fetching jspf:core from
+    tweetyproject.org/mvn/ -- the only host that serves it. One dropped socket took
+    down the whole suite, and the job still reported success.
+
+    Maven retries only transient IO errors: a 404 or an absent coordinate still fails
+    on the first attempt, so this flag cannot convert a dead artifact into a slow green.
+    """
+    seen = {}
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(60)])
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    ta.assemble("1.31", tmp_path)
+
+    flags = [a for a in seen["cmd"] if "retryHandler.count" in a]
+    assert flags, (
+        "aucun -Dmaven.wagon.http.retryHandler.count dans la commande mvn: "
+        "une coupure de transport sur l hote unique redevient fatale. "
+        f"commande={seen['cmd']}"
+    )
+    assert (
+        int(flags[0].rsplit("=", 1)[1]) > 1
+    ), f"retryHandler.count={flags[0]} ne retente rien"
+
+
+def test_failure_message_names_the_transport_cause(tmp_path, monkeypatch):
+    """The message used to say `verifier la version AVANT de suspecter le reseau`,
+    which pointed the reader away from the cause actually observed. It must now name
+    both causes and tell them apart by the wording Maven itself prints."""
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+    monkeypatch.setattr(
+        ta.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(
+            a[0],
+            1,
+            "",
+            "Could not transfer artifact jspf:core:jar:1.0.2 ... Connection reset",
+        ),
+    )
+    with pytest.raises(ta.AssemblyError) as exc:
+        ta.assemble("1.31", tmp_path)
+    msg = str(exc.value)
+    assert "TRANSFER" in msg and "FIND" in msg, msg
+    assert "tweetyproject.org/mvn/" in msg, msg
