@@ -298,3 +298,27 @@ class TestAppSettings:
     def test_encryption_key_default_none(self):
         s = AppSettings()
         assert s.encryption_key is None or isinstance(s.encryption_key, SecretStr)
+
+
+def test_jvm_settings_read_the_pins_from_dotenv(tmp_path):
+    """`.env` is the channel this project documents; JVMSettings ignored it.
+
+    Measured on the #1883 review: `JVM_TWEETY_PINNED_MODULES` placed in `.env`
+    resolved to the empty string, `parse_pin_spec("")` returned {} without
+    complaint, and the assembly proceeded unpinned -- losing the pin one layer
+    below where `parse_pin_spec` promises never to drop one. A real OS env var
+    always worked, which is why the gap was invisible.
+
+    Drop `env_file` from JVMSettings.model_config and this reddens.
+    """
+    from argumentation_analysis.config.settings import JVMSettings
+
+    env = tmp_path / ".env"
+    env.write_text(
+        "JVM_TWEETY_PINNED_MODULES=org.tweetyproject.arg:bipolar:1.30\n"
+        "JVM_TWEETY_EXCLUDED_MODULES=org.tweetyproject:web\n",
+        encoding="utf-8",
+    )
+    s = JVMSettings(_env_file=str(env))
+    assert s.tweety_pinned_modules == "org.tweetyproject.arg:bipolar:1.30"
+    assert s.tweety_excluded_modules == "org.tweetyproject:web"

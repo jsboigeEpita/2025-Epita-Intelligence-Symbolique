@@ -100,7 +100,9 @@ class TestJPypeDependencyValidator:
 
         print(f"\n📦 Packages JPype trouvés: {len(jpype_packages)}")
         for dist in jpype_packages:
-            print(f"   - {dist.metadata['Name']} {dist.version} ({dist.locate_file('')})")
+            print(
+                f"   - {dist.metadata['Name']} {dist.version} ({dist.locate_file('')})"
+            )
 
         # Vérifier l'environnement Python
         print(f"\n🐍 Environnement Python:")
@@ -127,3 +129,114 @@ class TestJPypeDependencyValidator:
 if __name__ == "__main__":
     # Permettre l'exécution directe du test pour débogage
     pytest.main([__file__, "-v", "-s"])
+
+
+# --------------------------------------------------------------------------- #1874
+# The tests above *transcribe* the validator ("Code exact de la ligne 490 du
+# unified_production_analyzer.py") instead of calling it. A transcription cannot
+# drift into a bug, because it is not the code: the jar check it copies shipped
+# `len(jar_files) == 0` with zero coverage while this file carried the module's
+# name. These tests call the real function.
+
+
+class TestValidateTweetyJars:
+    """`validate_tweety_jars` must see the shape that produces a silent run.
+
+    A count answers "is the directory empty". The failure that actually happens is
+    a directory that is *not* empty and still yields no loadable Tweety class --
+    the thin aggregator, a truncated download, a leftover of unrelated jars. The
+    JVM starts on it and every Tweety import then fails as a **skip**.
+    """
+
+    @staticmethod
+    def _jar(path, *entries):
+        import zipfile
+
+        with zipfile.ZipFile(path, "w") as z:
+            for entry in entries:
+                z.writestr(entry, b"x")
+        return path
+
+    def test_a_healthy_assembly_reports_nothing(self, tmp_path):
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        self._jar(
+            tmp_path / "org.tweetyproject.logics.pl-1.29.jar",
+            "org/tweetyproject/logics/pl/syntax/Proposition.class",
+        )
+        assert validate_tweety_jars(tmp_path) == []
+
+    def test_a_missing_directory_is_reported(self, tmp_path):
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        errors = validate_tweety_jars(tmp_path / "absent")
+        assert len(errors) == 1 and "manquant" in errors[0]
+
+    def test_an_empty_directory_is_reported(self, tmp_path):
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        errors = validate_tweety_jars(tmp_path)
+        assert len(errors) == 1 and "Aucun JAR" in errors[0]
+
+    def test_only_the_thin_aggregator_is_reported(self, tmp_path):
+        """1918 bytes, 0 class -- a real .jar that a count accepts.
+
+        Degenerate substitution: put `len(jar_files) == 0` back and this is the
+        test that reddens.
+        """
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        self._jar(tmp_path / "org.tweetyproject.tweety-full-1.29.jar", "META-INF/X.txt")
+        errors = validate_tweety_jars(tmp_path)
+        assert len(errors) == 1, f"expected one diagnostic, got {errors}"
+        assert "aucun ne porte de classe" in errors[0]
+
+    def test_a_truncated_download_keeping_the_fat_name_is_reported(self, tmp_path):
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        (
+            tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar"
+        ).write_bytes(b"PK\x03\x04" + b"\x00" * 1020)
+        errors = validate_tweety_jars(tmp_path)
+        assert len(errors) == 1 and "aucun ne porte de classe" in errors[0]
+
+    def test_a_directory_of_unrelated_jars_is_reported(self, tmp_path):
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        for i in range(5):
+            self._jar(
+                tmp_path / f"third.party.lib{i}-9.9.jar", f"third/party/L{i}.class"
+            )
+        errors = validate_tweety_jars(tmp_path)
+        assert len(errors) == 1 and "aucun ne porte de classe" in errors[0]
+
+    def test_one_real_jar_among_junk_is_enough(self, tmp_path):
+        """Anti-pendulum: the criterion is "at least one loadable Tweety class",
+        not "every jar is clean". A `copy-dependencies` assembly legitimately
+        holds ~80 third-party jars next to the Tweety modules -- a rule requiring
+        all of them to carry Tweety classes would redden every healthy run."""
+        from project_core.rhetorical_analysis_from_scripts.unified_production_analyzer import (
+            validate_tweety_jars,
+        )
+
+        for i in range(5):
+            self._jar(
+                tmp_path / f"third.party.lib{i}-9.9.jar", f"third/party/L{i}.class"
+            )
+        self._jar(
+            tmp_path / "org.tweetyproject.logics.pl-1.29.jar",
+            "org/tweetyproject/logics/pl/syntax/Proposition.class",
+        )
+        assert validate_tweety_jars(tmp_path) == []

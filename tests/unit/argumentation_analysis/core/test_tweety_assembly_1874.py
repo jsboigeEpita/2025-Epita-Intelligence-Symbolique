@@ -1,0 +1,567 @@
+"""Offline tests for the Maven assembly of the Tweety classpath (#1874).
+
+No Maven, no JVM, no network: everything asserted here is a pure function or a
+subprocess boundary that is monkeypatched. The one thing these tests deliberately
+do NOT claim is that Maven actually resolves the closure -- that is proven by the
+real assembly run recorded in the PR, because no fixture can prove it (a fixture
+would contain whatever answer the author put in it).
+"""
+
+import subprocess
+import zipfile
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+import pytest
+
+from argumentation_analysis.core import tweety_assembly as ta
+
+# ------------------------------------------------------------------ pin parsing
+
+
+def test_empty_pin_spec_is_the_common_case():
+    assert ta.parse_pin_spec("") == {}
+    assert ta.parse_pin_spec("   ") == {}
+    assert ta.parse_pin_spec(None) == {}
+
+
+def test_pin_spec_parses_the_1874_pin():
+    assert ta.parse_pin_spec("org.tweetyproject.arg:bipolar:1.30") == {
+        "org.tweetyproject.arg:bipolar": "1.30"
+    }
+
+
+def test_pin_spec_parses_several_and_trims():
+    assert ta.parse_pin_spec(" a:b:1 , c:d:2 ") == {"a:b": "1", "c:d": "2"}
+
+
+@pytest.mark.parametrize("bad", ["a:b", "a:b:c:d", "a::1", ":b:1", "a:b:"])
+def test_malformed_pin_raises_instead_of_being_dropped(bad):
+    """A silently dropped pin reinstates the capability loss it was added to stop.
+
+    Dropping it would leave the assembly succeeding with the WRONG module version
+    and nothing downstream would notice -- the failure would surface much later as
+    a missing class, far from its cause.
+    """
+    with pytest.raises(ValueError, match="pin invalide"):
+        ta.parse_pin_spec(bad)
+
+
+def test_exclude_spec_parsing_and_rejection():
+    assert ta.parse_exclude_spec("org.tweetyproject:web") == [
+        ("org.tweetyproject", "web")
+    ]
+    assert ta.parse_exclude_spec("") == []
+    with pytest.raises(ValueError, match="exclusion invalide"):
+        ta.parse_exclude_spec("org.tweetyproject:web:1.31")
+
+
+# ------------------------------------------------------------------ POM rendering
+
+
+def test_pom_without_pins_declares_only_the_aggregator():
+    pom = ta.render_assembly_pom("1.29")
+    assert ta.pinned_versions_in_pom(pom) == {"org.tweetyproject:tweety-full": "1.29"}
+
+
+def test_pinned_module_is_a_direct_dependency_so_nearest_wins():
+    """Maven resolves conflicts by nearest definition, not by highest version.
+
+    The pin must therefore be a direct <dependency>, not merely mentioned. Reading
+    it back with a real XML parser (not a substring check) is what makes this a
+    decoding test rather than a template echo.
+    """
+    pom = ta.render_assembly_pom("1.31", pins={"org.tweetyproject.arg:bipolar": "1.30"})
+    decoded = ta.pinned_versions_in_pom(pom)
+    assert decoded["org.tweetyproject.arg:bipolar"] == "1.30"
+    assert decoded["org.tweetyproject:tweety-full"] == "1.31"
+
+
+def test_pin_is_emitted_before_the_aggregator():
+    pom = ta.render_assembly_pom("1.31", pins={"org.tweetyproject.arg:bipolar": "1.30"})
+    assert pom.index("<artifactId>bipolar</artifactId>") < pom.index(
+        "<artifactId>tweety-full</artifactId>"
+    )
+
+
+def test_exclusion_is_attached_to_the_aggregator():
+    pom = ta.render_assembly_pom("1.31", excludes=[("org.tweetyproject", "web")])
+    assert "<exclusions>" in pom
+    assert pom.index("<artifactId>tweety-full</artifactId>") < pom.index("<exclusion>")
+
+
+def test_rendered_pom_is_well_formed_xml_in_every_combination():
+    pom = ta.render_assembly_pom(
+        "1.31",
+        pins={"org.tweetyproject.arg:bipolar": "1.30", "x.y:z": "9"},
+        excludes=[("org.tweetyproject", "web"), ("a", "b")],
+    )
+    decoded = ta.pinned_versions_in_pom(pom)  # raises on malformed XML
+    assert decoded["x.y:z"] == "9"
+
+
+# ------------------------------------------------------- counting / idempotence
+
+
+def _touch(d: Path, *names, tweety: bool = True):
+    """Real jars, because `is_already_assembled` now selects on content.
+
+    The previous fixture wrote four bytes of zip header. That is not a jar -- it
+    is exactly the shape an interrupted download leaves behind, which is the
+    failure these tests exist to catch, so it could not stand in for a healthy
+    one. Pass ``tweety=False`` for a valid jar carrying no Tweety class.
+    """
+    for n in names:
+        with zipfile.ZipFile(d / n, "w") as z:
+            z.writestr(
+                (
+                    "org/tweetyproject/logics/pl/syntax/Proposition.class"
+                    if tweety
+                    else "ch/qos/logback/classic/Logger.class"
+                ),
+                b"x",
+            )
+
+
+def test_thin_aggregator_is_not_counted_as_a_module(tmp_path):
+    """The 1918-byte, zero-class aggregator must not make a directory look assembled.
+
+    This is the same defect #1880 fixed on the loader side; counting it here would
+    let a 1-jar directory pass for a full closure.
+    """
+    _touch(tmp_path, "org.tweetyproject.tweety-full-1.31.jar")
+    assert ta.count_module_jars(tmp_path) == 0
+    assert ta.is_already_assembled(tmp_path) is False
+
+
+def test_fat_jar_alone_counts_as_assembled(tmp_path):
+    """Anti-pendulum for the content check: the fast path must survive.
+
+    A cached fat jar is the cheapest provisioning state there is; re-assembling on
+    top of it would trade a hundred-millisecond zip read for a two-minute Maven run
+    on every start.
+    """
+    _touch(tmp_path, "org.tweetyproject.tweety-full-1.29-with-dependencies.jar")
+    assert ta.is_already_assembled(tmp_path) is True
+
+
+def test_partial_directory_is_not_assembled(tmp_path):
+    _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(5)])
+    assert ta.count_module_jars(tmp_path) == 5
+    assert ta.is_already_assembled(tmp_path) is False
+
+
+def test_full_directory_is_assembled(tmp_path):
+    _touch(
+        tmp_path,
+        "org.tweetyproject.tweety-full-1.31.jar",
+        *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(ta.MIN_EXPECTED_JARS)],
+    )
+    assert ta.is_already_assembled(tmp_path) is True
+
+
+def test_missing_directory_is_not_assembled(tmp_path):
+    assert ta.is_already_assembled(tmp_path / "nope") is False
+
+
+# --------------------------------------------------------------- failure is loud
+
+
+def test_absent_maven_names_the_cause(tmp_path, monkeypatch):
+    monkeypatch.setattr(ta, "maven_executable", lambda: None)
+    with pytest.raises(ta.AssemblyError, match="Maven introuvable"):
+        ta.assemble("1.31", tmp_path)
+
+
+def test_maven_failure_reports_the_unbuildable_version_trap(tmp_path, monkeypatch):
+    """1.26 and 1.28 publish the aggregator without its modules, so mvn fails with a
+    resolution error that reads like a network problem. Naming the trap keeps the next
+    reader from re-running a build that can never succeed.
+
+    Deliberate update (2026-08-24): the docstring here used to claim this was "the most
+    likely cause" and that naming it "stops the next reader from retrying the run".
+    Run 32776186323 refuted both halves -- the failure was a dropped socket on
+    tweetyproject.org/mvn/, and re-running was exactly the right move. The message now
+    carries BOTH causes with the wording that tells them apart (Maven prints "Could not
+    FIND" for a missing coordinate and "Could not TRANSFER" for a broken socket), so
+    this test asserts the discriminating content instead of a single literal.
+    """
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+    monkeypatch.setattr(
+        ta.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(a[0], 1, "", "Could not resolve"),
+    )
+    with pytest.raises(ta.AssemblyError, match="1.26 et 1.28"):
+        ta.assemble("1.28", tmp_path)
+
+
+def test_thin_success_is_refused(tmp_path, monkeypatch):
+    """A partial classpath starts the JVM and fails every import -- refuse it.
+
+    That shape is exactly what produces a skip storm instead of an error, which is
+    the failure #1873 had to build a guard against.
+    """
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(3)])
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError, match="moins que le plancher"):
+        ta.assemble("1.31", tmp_path)
+
+
+def test_timeout_is_reported_as_such(tmp_path, monkeypatch):
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        raise subprocess.TimeoutExpired(cmd, 900)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError, match="depassement"):
+        ta.assemble("1.31", tmp_path, timeout=900)
+
+
+def test_successful_assembly_returns_the_module_count(tmp_path, monkeypatch):
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        _touch(tmp_path, "org.tweetyproject.tweety-full-1.31.jar")
+        _touch(
+            tmp_path,
+            *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(60)],
+        )
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    assert ta.assemble("1.31", tmp_path) == 60
+
+
+def test_prepend_group_id_is_passed_to_maven(tmp_path, monkeypatch):
+    """Load-bearing flag: without it same-named artifacts across Tweety groups
+    overwrite each other and the classpath silently loses modules."""
+    seen = {}
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        seen["cmd"] = cmd
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(60)])
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    ta.assemble("1.31", tmp_path)
+    assert "-Dmdep.prependGroupId=true" in seen["cmd"]
+
+
+def test_pom_declares_the_non_central_repository():
+    """Three artifacts of the closure resolve only from tweetyproject.org/mvn/.
+
+    Merged from po-2025's static POM (#1884, scripts/setup/tweety-maven.xml:43-48).
+    Tweety's parent POM already declares it, so inheriting works today -- verified by
+    reading `_remote.repositories` in the local cache, which records `tweety-mvn` as
+    the source of jspf:core, gurobi and isula. Declaring it ourselves removes a
+    dependency on an upstream file we do not control, which is the exact class of
+    breakage #1874 is about.
+    """
+    pom = ta.render_assembly_pom("1.31")
+    assert ta.TWEETY_MVN_REPO in pom
+    root = ET.fromstring(pom)
+    ns = {"m": "http://maven.apache.org/POM/4.0.0"}
+    urls = [e.text for e in root.findall(".//m:repository/m:url", ns)]
+    assert urls == [ta.TWEETY_MVN_REPO]
+
+
+# ------------------------------------------------- ways a bad dir used to pass
+# Each of the four below was measured accepting a directory it should refuse
+# (#1883 review). They are grouped because they share one property: every one of
+# them fails SILENTLY -- the JVM starts, the imports die, and the run reports
+# skips rather than an error.
+
+
+def test_zero_byte_fat_jar_is_not_a_classpath(tmp_path):
+    """An interrupted copy, a touch, a failed restore all produce this shape.
+
+    The size check inside `download_file` never runs, because this gate
+    short-circuits before it. Drop `st_size` from `is_already_assembled` and this
+    reddens.
+    """
+    (tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar").touch()
+    assert ta.is_already_assembled(tmp_path) is False
+
+
+def test_fat_jar_of_another_version_does_not_satisfy_the_asked_version(tmp_path):
+    """Serving the wrong version silently is what this module exists to prevent.
+
+    1.31 removes the evidential family that 1.30 still has, so a machine that
+    cached 1.28 must not keep answering for a config that moved on. Without the
+    version argument this returns True and the Maven path becomes dead code on
+    every machine holding an old fat jar.
+    """
+    _touch(tmp_path, "org.tweetyproject.tweety-full-1.28-with-dependencies.jar")
+    assert ta.is_already_assembled(tmp_path, version="1.28") is True
+    assert ta.is_already_assembled(tmp_path, version="1.31") is False
+
+
+def test_interrupted_assembly_is_refused_on_the_next_run(tmp_path):
+    """A killed mvn raises nothing to catch, so cleanup-on-exception cannot help.
+
+    The marker is written before mvn and lifted only after the floor check, so a
+    timeout or a Ctrl-C leaves the directory self-describing as unusable.
+    """
+    _touch(
+        tmp_path,
+        *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(ta.MIN_EXPECTED_JARS)],
+    )
+    assert ta.is_already_assembled(tmp_path, version="1.31") is True
+    (tmp_path / ta.INCOMPLETE_MARKER).write_text("interrompu", encoding="utf-8")
+    assert ta.is_already_assembled(tmp_path, version="1.31") is False
+
+
+def test_marker_is_lifted_once_the_assembly_clears_the_floor(tmp_path, monkeypatch):
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        assert (
+            tmp_path / ta.INCOMPLETE_MARKER
+        ).exists(), (
+            "the marker must exist WHILE mvn runs, otherwise a kill leaves no trace"
+        )
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(70)])
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    assert ta.assemble("1.31", tmp_path) == 70
+    assert not (tmp_path / ta.INCOMPLETE_MARKER).exists()
+
+
+def test_marker_survives_a_failed_assembly(tmp_path, monkeypatch):
+    """The wreckage must stay labelled: 45 jars is above no floor worth having."""
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(45)])
+        raise subprocess.TimeoutExpired(cmd, 5)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError):
+        ta.assemble("1.31", tmp_path, timeout=5)
+    assert (tmp_path / ta.INCOMPLETE_MARKER).exists()
+    assert ta.is_already_assembled(tmp_path, version="1.31") is False
+
+
+def test_maven_is_found_through_maven_home_when_absent_from_path(tmp_path, monkeypatch):
+    """The runner images ship Maven but do not promise it is on PATH."""
+    monkeypatch.setattr(ta.shutil, "which", lambda _n: None)
+    monkeypatch.delenv("M2_HOME", raising=False)
+    monkeypatch.setenv("MAVEN_HOME", str(tmp_path))
+    assert ta.maven_executable() is None  # MAVEN_HOME set but no bin/mvn yet
+    (tmp_path / "bin").mkdir()
+    (tmp_path / "bin" / "mvn.cmd").write_text("@echo off", encoding="utf-8")
+    assert ta.maven_executable() == str(tmp_path / "bin" / "mvn.cmd")
+
+
+def _no_sleep(monkeypatch):
+    monkeypatch.setattr(ta.time, "sleep", lambda _s: None)
+
+
+# The two markers really co-occurred on CI run 32776186323: Maven asks Central first
+# (jspf:core is genuinely absent there) and only then tweetyproject.org/mvn/, which is
+# where the socket dropped. Kept verbatim so the classifier is tested on the shape it
+# actually has to survive, not on a tidied-up one.
+REAL_TRANSPORT_FAILURE = (
+    "[ERROR] Could not transfer artifact jspf:core:jar:1.0.2 from/to tweety-mvn "
+    "(https://tweetyproject.org/mvn/): Connection reset\n"
+    "[ERROR] Could not find artifact jspf:core:jar:1.0.2 in central "
+    "(https://repo.maven.apache.org/maven2)"
+)
+
+# The unbuildable-version trap: aggregator published, modules absent. No transport
+# marker anywhere -- retrying cannot change the answer.
+UNBUILDABLE_VERSION_FAILURE = (
+    "[ERROR] Could not find artifact org.tweetyproject:arg.dung:jar:1.28 in central "
+    "(https://repo.maven.apache.org/maven2)"
+)
+
+
+def test_a_dropped_socket_is_retried(tmp_path, monkeypatch):
+    """One dropped socket on the single-source host took down the whole suite and the
+    job still reported success (run 32776186323). The retry lives in Python, not in a
+    Maven flag: `-Dmaven.wagon.http.retryHandler.count` is a Wagon property and Maven
+    3.9 resolves through the native transport by default, so that flag has no reader.
+    """
+    _no_sleep(monkeypatch)
+    calls = []
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 1, "", REAL_TRANSPORT_FAILURE)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError):
+        ta.assemble("1.31", tmp_path)
+    assert len(calls) == ta.MVN_TRANSIENT_RETRIES, (
+        f"{len(calls)} tentative(s) pour {ta.MVN_TRANSIENT_RETRIES} attendues: "
+        "une coupure de transport sur l hote unique redevient fatale du premier coup"
+    )
+
+
+def test_a_missing_coordinate_is_not_retried(tmp_path, monkeypatch):
+    """Anti-pendulum. A retry that also re-attempts absent coordinates would turn the
+    1.26/1.28 trap into three slow failures, and would be one step from turning a dead
+    artifact into a slow green -- which is the whole subject of #1874."""
+    _no_sleep(monkeypatch)
+    calls = []
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 1, "", UNBUILDABLE_VERSION_FAILURE)
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    with pytest.raises(ta.AssemblyError):
+        ta.assemble("1.28", tmp_path)
+    assert len(calls) == 1, f"{len(calls)} tentatives sur une coordonnee absente"
+
+
+def test_the_classifier_reads_presence_not_absence():
+    """The load-bearing case: the real outage carries BOTH markers. A classifier
+    written as "transient unless it says could-not-find" calls the true transport
+    failure permanent -- the exact opposite of what is needed."""
+    assert ta.is_transient_failure(REAL_TRANSPORT_FAILURE)
+    assert not ta.is_transient_failure(UNBUILDABLE_VERSION_FAILURE)
+
+
+def test_a_transient_failure_that_clears_lets_the_assembly_finish(
+    tmp_path, monkeypatch
+):
+    """The point of retrying: the second attempt succeeds and the run continues."""
+    _no_sleep(monkeypatch)
+    calls = []
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        if len(calls) == 1:
+            return subprocess.CompletedProcess(cmd, 1, "", REAL_TRANSPORT_FAILURE)
+        _touch(tmp_path, *[f"org.tweetyproject.arg.m{i}-1.31.jar" for i in range(60)])
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(ta.subprocess, "run", fake_run)
+    assert ta.assemble("1.31", tmp_path) == 60
+    assert len(calls) == 2
+
+
+def test_failure_message_names_the_transport_cause(tmp_path, monkeypatch):
+    """The message used to say `verifier la version AVANT de suspecter le reseau`,
+    which pointed the reader away from the cause actually observed. It must name both
+    causes and tell them apart by the wording Maven itself prints."""
+    _no_sleep(monkeypatch)
+    monkeypatch.setattr(ta, "maven_executable", lambda: "mvn")
+    monkeypatch.setattr(
+        ta.subprocess,
+        "run",
+        lambda *a, **k: subprocess.CompletedProcess(
+            a[0], 1, "", REAL_TRANSPORT_FAILURE
+        ),
+    )
+    with pytest.raises(ta.AssemblyError) as exc:
+        ta.assemble("1.31", tmp_path)
+    msg = str(exc.value)
+    assert "TRANSFER" in msg and "FIND" in msg, msg
+    assert "tweetyproject.org/mvn/" in msg, msg
+    assert "Tentatives effectuees: 3" in msg, msg
+
+
+# --------------------------------------------------------------------------- #1880 review
+# `is_already_assembled` is the EARLIER barrier: it answers "nothing to do".
+# Hardening the loader alone left this one deciding, so a truncated download was
+# never repaired -- the loader correctly refused it and the provisioning layer
+# never assembled the module jars that would have replaced it.
+
+
+def _truncated_fat(tmp_path, version="1.29", size=1024):
+    """A valid zip *prefix*, not a valid zip: what an interrupted 54 MB GET leaves."""
+    jar = tmp_path / f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
+    jar.write_bytes(b"PK\x03\x04" + b"\x00" * (size - 4))
+    return jar
+
+
+def test_a_truncated_fat_jar_is_not_an_assembly(tmp_path):
+    """Measured 2026-08-24 before the fix: a 1024-byte stub returned True.
+
+    `st_size > 0` was the earlier proxy for "usable" -- it rejects only the 0-byte
+    case. Returning True here means the assembly never runs, so the JVM boots on
+    an unusable classpath and every Tweety import fails as a **skip**.
+    """
+    _truncated_fat(tmp_path)
+    assert ta.is_already_assembled(tmp_path, version="1.29") is False
+
+
+def test_a_fat_jar_carrying_no_tweety_class_is_not_an_assembly(tmp_path):
+    """A perfectly valid zip of the wrong content -- invisible to name and to size."""
+    jar = tmp_path / "org.tweetyproject.tweety-full-1.29-with-dependencies.jar"
+    with zipfile.ZipFile(jar, "w") as z:
+        z.writestr("ch/qos/logback/classic/Logger.class", b"x")
+    assert ta.is_already_assembled(tmp_path, version="1.29") is False
+
+
+# --------------------------------------------------------------------------- #1874
+# The floor and its reader had drifted apart. `count_module_jars` gained a version
+# filter after `MIN_EXPECTED_JARS` was calibrated, and the calibration reasoned in
+# *closure totals* (155 / 149 / 76 jars) while the reader returns *Tweety modules at
+# the asked version* (48). A healthy assembly therefore raised AssemblyError.
+
+
+def _real_1929_shape(d: Path):
+    """The shape a successful `dependency:copy-dependencies` of 1.29 leaves.
+
+    Measured 2026-08-24 on a real assembly into a temp dir, served entirely from
+    the local `.m2` in 2 s -- so this is the deterministic shape, with no network
+    in the picture: **153 jars = 49 org.tweetyproject (48 modules + the thin
+    aggregator) + 104 third-party**.
+    """
+    _touch(d, *[f"org.tweetyproject.mod{i}-1.29.jar" for i in range(48)])
+    _touch(d, "org.tweetyproject.tweety-full-1.29.jar", tweety=False)
+    _touch(d, *[f"third.party.lib{i}-9.9.jar" for i in range(104)], tweety=False)
+    return d
+
+
+def test_a_real_assembly_clears_the_floor(tmp_path):
+    """Born-red at `MIN_EXPECTED_JARS = 60`: the reader returns 48 on this shape.
+
+    Before the recalibration this exact directory produced
+    `seulement 48 jar(s) de module ... moins que le plancher 60` -- with 153 jars
+    on disk, an INCOMPLETE_MARKER left behind, and `download_tweety_jars`
+    returning False on a copy that had worked.
+    """
+    _real_1929_shape(tmp_path)
+    assert ta.count_module_jars(tmp_path, version="1.29") == 48
+    assert ta.is_already_assembled(tmp_path, version="1.29") is True
+
+
+def test_the_floor_is_calibrated_on_what_its_reader_returns(tmp_path):
+    """Guards the declaration, not just the behaviour.
+
+    Every supported shape yields ~48-50 Tweety modules; only the third-party volume
+    swings (104 with the full closure, 27 once `org.tweetyproject:web` is excluded).
+    A floor above the module count can never be cleared, and the failure it produces
+    names a jar shortage that does not exist.
+    """
+    assert ta.MIN_EXPECTED_JARS < 48, (
+        f"MIN_EXPECTED_JARS = {ta.MIN_EXPECTED_JARS} is at or above the measured "
+        "module count of a healthy 1.29 assembly (48): no real assembly can clear it"
+    )
+    assert ta.MIN_EXPECTED_JARS >= 20, (
+        "anti-pendulum: a floor near zero accepts a copy that stopped after a "
+        "handful of modules, which is the partial classpath this exists to refuse"
+    )
+
+
+def test_a_copy_that_stopped_early_is_still_refused(tmp_path):
+    """The floor must keep doing its job: a third of the modules is not an assembly."""
+    _touch(tmp_path, *[f"org.tweetyproject.mod{i}-1.29.jar" for i in range(15)])
+    _touch(tmp_path, *[f"third.party.lib{i}-9.9.jar" for i in range(104)], tweety=False)
+    assert ta.is_already_assembled(tmp_path, version="1.29") is False

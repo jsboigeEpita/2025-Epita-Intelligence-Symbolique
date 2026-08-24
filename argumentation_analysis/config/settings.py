@@ -99,6 +99,18 @@ class JVMSettings(BaseSettings):
     # Configuration des librairies Java (Tweety)
     tweety_version: str = "1.29"
     tweety_libs_dir: Path = Path("libs/tweety")
+    # #1874: modules held at a version other than tweety_version, as
+    # "groupId:artifactId:version" separated by commas. Empty by default because a
+    # pin is only needed when the target version REMOVES something we expose --
+    # 1.31 deletes the evidential family from org.tweetyproject.arg:bipolar while
+    # `framework_type=evidential` stays a documented option of a registered
+    # @kernel_function. Bumping tweety_version to 1.31 therefore also means setting
+    # JVM_TWEETY_PINNED_MODULES=org.tweetyproject.arg:bipolar:1.30
+    tweety_pinned_modules: str = ""
+    # Modules kept OUT of the assembly, as "groupId:artifactId" separated by
+    # commas. org.tweetyproject:web references bipolar classes that only exist at
+    # 1.31, so it dangles whenever bipolar is pinned back; nothing here imports it.
+    tweety_excluded_modules: str = ""
     native_libs_dir: Path = Path("libs/native")
 
     # External tools
@@ -106,7 +118,14 @@ class JVMSettings(BaseSettings):
     clingo_version: str = "5.4.0"
 
     azure_openai: AzureOpenAISettings = AzureOpenAISettings()
-    model_config = SettingsConfigDict(env_prefix="JVM_")
+    # env_file is not inherited: without it JVM_TWEETY_PINNED_MODULES set in
+    # .env -- the channel this project documents -- silently resolves to the
+    # empty string, parse_pin_spec('') returns {} without complaint, and the
+    # assembly proceeds unpinned. The pin is then lost one layer below where
+    # parse_pin_spec promises never to drop one. Measured on #1883 review.
+    model_config = SettingsConfigDict(
+        env_prefix="JVM_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+    )
 
 
 class AppSettings(BaseSettings):
