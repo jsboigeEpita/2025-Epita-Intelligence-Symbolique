@@ -108,18 +108,30 @@ def is_transient_failure(output: str) -> bool:
     return any(m in output.lower() for m in MVN_TRANSIENT_MARKERS)
 
 
-# Measured on 1.31 (2026-08-24), so the floor is calibrated on real values rather
-# than a guess: the full closure is **155** jars (50 Tweety + 105 third-party), and
-# excluding `org.tweetyproject:web` leaves **76** (49 Tweety + 27 third-party) --
-# `web` is what transitively pulls the whole servlet/JSON stack, and dropping it
-# costs exactly one Tweety module. A probe exercising the bipolar frameworks was
-# verified identical on both. Anything far below 76 means the copy stopped early.
-# CI measured **149** at 1.29 with no exclusion, so the default closure is ~149 and
-# the excluded one ~76: the floor must clear a partial copy without reddening a
-# legitimately excluded closure, which puts it just under 76 rather than at 40.
-# It is a backstop, not the main guard -- an interrupted run is caught by
-# INCOMPLETE_MARKER below, which survives a kill that raises nothing to catch.
-MIN_EXPECTED_JARS = 60
+# The floor is compared to `count_module_jars`, which counts **Tweety module jars at
+# the asked version** -- not the closure total. Calibrating it on the total was a
+# field-and-its-reader mismatch: `60` was derived from closures of 155 / 149 / 76
+# *jars*, then read against a number that is 48. It could never be cleared, and a
+# healthy assembly raised "seulement 48 jar(s) de module ... moins que le plancher
+# 60" with 153 jars sitting on disk (measured 2026-08-24, from the local .m2 in 2s,
+# so no network was involved). The version filter that made the reader mean this
+# arrived later than the calibration, and the comment was not moved with it.
+#
+# Counting modules rather than jars is also the *stabler* invariant, which is what
+# made the old calibration so awkward. Third-party volume swings with exclusions --
+# 105 jars with the full closure, 27 once `org.tweetyproject:web` is excluded (it
+# transitively pulls the whole servlet/JSON stack) -- while the Tweety module count
+# barely moves:
+#
+#     1.29, no exclusion   : 153 jars =  49 Tweety (48 modules + aggregator) + 104
+#     1.31, no exclusion   : 155 jars =  50 Tweety + 105 third-party
+#     1.31, `web` excluded :  76 jars =  49 Tweety +  27 third-party
+#
+# So a floor at 40 clears every supported shape with room to spare and still catches
+# a copy that stopped early (a third of the modules missing). It is a backstop, not
+# the main guard -- an interrupted run is caught by INCOMPLETE_MARKER below, which
+# survives a kill that raises nothing to catch.
+MIN_EXPECTED_JARS = 40
 
 # Written before mvn runs, removed only once the floor check passes. A timeout or
 # a Ctrl-C leaves it behind, so the *next* process refuses the wreckage instead of

@@ -506,3 +506,62 @@ def test_a_fat_jar_carrying_no_tweety_class_is_not_an_assembly(tmp_path):
     with zipfile.ZipFile(jar, "w") as z:
         z.writestr("ch/qos/logback/classic/Logger.class", b"x")
     assert ta.is_already_assembled(tmp_path, version="1.29") is False
+
+
+# --------------------------------------------------------------------------- #1874
+# The floor and its reader had drifted apart. `count_module_jars` gained a version
+# filter after `MIN_EXPECTED_JARS` was calibrated, and the calibration reasoned in
+# *closure totals* (155 / 149 / 76 jars) while the reader returns *Tweety modules at
+# the asked version* (48). A healthy assembly therefore raised AssemblyError.
+
+
+def _real_1929_shape(d: Path):
+    """The shape a successful `dependency:copy-dependencies` of 1.29 leaves.
+
+    Measured 2026-08-24 on a real assembly into a temp dir, served entirely from
+    the local `.m2` in 2 s -- so this is the deterministic shape, with no network
+    in the picture: **153 jars = 49 org.tweetyproject (48 modules + the thin
+    aggregator) + 104 third-party**.
+    """
+    _touch(d, *[f"org.tweetyproject.mod{i}-1.29.jar" for i in range(48)])
+    _touch(d, "org.tweetyproject.tweety-full-1.29.jar", tweety=False)
+    _touch(d, *[f"third.party.lib{i}-9.9.jar" for i in range(104)], tweety=False)
+    return d
+
+
+def test_a_real_assembly_clears_the_floor(tmp_path):
+    """Born-red at `MIN_EXPECTED_JARS = 60`: the reader returns 48 on this shape.
+
+    Before the recalibration this exact directory produced
+    `seulement 48 jar(s) de module ... moins que le plancher 60` -- with 153 jars
+    on disk, an INCOMPLETE_MARKER left behind, and `download_tweety_jars`
+    returning False on a copy that had worked.
+    """
+    _real_1929_shape(tmp_path)
+    assert ta.count_module_jars(tmp_path, version="1.29") == 48
+    assert ta.is_already_assembled(tmp_path, version="1.29") is True
+
+
+def test_the_floor_is_calibrated_on_what_its_reader_returns(tmp_path):
+    """Guards the declaration, not just the behaviour.
+
+    Every supported shape yields ~48-50 Tweety modules; only the third-party volume
+    swings (104 with the full closure, 27 once `org.tweetyproject:web` is excluded).
+    A floor above the module count can never be cleared, and the failure it produces
+    names a jar shortage that does not exist.
+    """
+    assert ta.MIN_EXPECTED_JARS < 48, (
+        f"MIN_EXPECTED_JARS = {ta.MIN_EXPECTED_JARS} is at or above the measured "
+        "module count of a healthy 1.29 assembly (48): no real assembly can clear it"
+    )
+    assert ta.MIN_EXPECTED_JARS >= 20, (
+        "anti-pendulum: a floor near zero accepts a copy that stopped after a "
+        "handful of modules, which is the partial classpath this exists to refuse"
+    )
+
+
+def test_a_copy_that_stopped_early_is_still_refused(tmp_path):
+    """The floor must keep doing its job: a third of the modules is not an assembly."""
+    _touch(tmp_path, *[f"org.tweetyproject.mod{i}-1.29.jar" for i in range(15)])
+    _touch(tmp_path, *[f"third.party.lib{i}-9.9.jar" for i in range(104)], tweety=False)
+    assert ta.is_already_assembled(tmp_path, version="1.29") is False
