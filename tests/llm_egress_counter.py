@@ -270,12 +270,23 @@ def get_counter() -> Optional[LLMEgressCounter]:
 
 
 def write_report(counter: LLMEgressCounter, config: Any) -> Optional[Path]:
-    """Write ``llm_egress_report.json`` next to the junitxml artifact (or CWD)."""
+    """Write the egress report next to the junitxml artifact (or CWD).
+
+    A session with ``--junitxml`` is (by construction) the gate; it writes the
+    canonical ``llm_egress_report.json`` the CI artifact uploads. A session
+    WITHOUT one is nested — a worker spawned by a launcher (a second, unfiltered
+    pytest session). Before #1872 both wrote the same canonical name, so a child
+    overwrote the gate's tally exactly when the leak made that tally matter. The
+    nested session writes a per-process distinct path instead, leaving the
+    parent's canonical report intact.
+    """
     data = counter.snapshot()
     data["generated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     xmlpath = getattr(getattr(config, "option", None), "xmlpath", None)
-    target_dir = Path(xmlpath).parent if xmlpath else Path(".")
-    out = target_dir / "llm_egress_report.json"
+    if xmlpath:
+        out = Path(xmlpath).parent / "llm_egress_report.json"
+    else:
+        out = Path(f"llm_egress_report.{os.getpid()}.json")
     try:
         out.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
         return out

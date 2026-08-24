@@ -126,6 +126,7 @@ def test_interface_web_reelle():
 # --- Tests d'orchestration asynchrones ---
 
 
+@pytest.mark.requires_api
 def test_interaction_sherlock_reelle(sherlock_agent):
     """Teste une interaction de base avec l'agent Sherlock."""
 
@@ -140,6 +141,7 @@ def test_interaction_sherlock_reelle(sherlock_agent):
     asyncio.run(_async_test())
 
 
+@pytest.mark.requires_api
 def test_validation_watson_reelle(watson_agent):
     """Teste une interaction de base avec l'agent Watson."""
 
@@ -165,6 +167,7 @@ def test_validation_watson_reelle(watson_agent):
     asyncio.run(_async_test())
 
 
+@pytest.mark.requires_api
 def test_collaboration_orchestration_reelle(group_chat, sherlock_agent, watson_agent):
     """Teste un cycle de collaboration simple entre Sherlock et Watson."""
 

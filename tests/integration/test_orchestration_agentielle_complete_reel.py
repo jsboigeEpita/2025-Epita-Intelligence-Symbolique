@@ -42,10 +42,16 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 import pytest
 
-pytestmark = pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"),
-    reason="Tests require OPENAI_API_KEY for real orchestration",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Tests require OPENAI_API_KEY for real orchestration",
+    ),
+    # #1872 genuine-verdict real-LLM test (real agents, real kernel). The gate
+    # filter reads the marker, not the skipif (the key is present on CI), so
+    # admits a widened argv must deselect it rather than bill the runner.
+    pytest.mark.requires_api,
+]
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -22,9 +22,17 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 # Skip si pas d'API key
-pytestmark = pytest.mark.skipif(
-    not REAL_GPT_AVAILABLE, reason="Tests réels GPT-4o-mini nécessitent OPENAI_API_KEY"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not REAL_GPT_AVAILABLE,
+        reason="Tests réels GPT-4o-mini nécessitent OPENAI_API_KEY",
+    ),
+    # #1872: the launcher exists only to spend real GPT-4o-mini — a
+    # genuine-verdict LLM test. The gate filter reads this marker (not the
+    # skipif, since the key is set on CI) to deselect it, so admitting a wider
+    # argv never spawns the real-GPT worker and bills the runner.
+    pytest.mark.requires_api,
+]
 
 
 @pytest.mark.integration

@@ -39,9 +39,18 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 # Skip si pas d'API key
-pytestmark = pytest.mark.skipif(
-    not REAL_GPT_AVAILABLE, reason="Tests réels GPT-4o-mini nécessitent OPENAI_API_KEY"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not REAL_GPT_AVAILABLE,
+        reason="Tests réels GPT-4o-mini nécessitent OPENAI_API_KEY",
+    ),
+    # #1872: the worker is a nested pytest session spawned by the launcher. It
+    # is never collected by the main session (worker_*.py does not match
+    # test_*.py), so the parent's gate filter cannot protect it by directory.
+    # Marking it lets the propagated -m ("not slow and not requires_api") in
+    # __main__ deselect its real-GPT tests instead of firing 9+ billed POSTs.
+    pytest.mark.requires_api,
+]
 
 
 # Fixtures de configuration
@@ -538,4 +547,7 @@ class TestRealGPTLoadHandling:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+    # #1872: the launcher spawns this file as a pytest session. Carrying the
+    # same -m the gate uses (not just "-v -s") keeps a real-GPT run from firing
+    # its ~9 billed chat requests once the markers above deselect them.
+    pytest.main([__file__, "-v", "-s", "-m", "not slow and not requires_api"])
