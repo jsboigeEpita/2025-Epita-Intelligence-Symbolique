@@ -31,6 +31,8 @@ from pathlib import Path
 from typing import List, Optional, Dict
 from tqdm.auto import tqdm
 
+from argumentation_analysis.core import tweety_assembly
+
 
 class JVMStartupTimeoutError(TimeoutError):
     """Exception raised when JVM startup exceeds the configured timeout."""
@@ -197,44 +199,87 @@ def download_file(url: str, dest_path: Path, description: Optional[str] = None):
 def download_tweety_jars(
     version: str = TWEETY_VERSION, target_dir: Optional[Path] = None
 ) -> bool:
+    """Ensure a usable Tweety classpath exists in ``target_dir``.
+
+    #1874: the historical source ``https://tweetyproject.org/builds/{version}/``
+    was removed upstream and now 404s, so this used to leave ``libs/tweety/``
+    empty on a fresh runner -- the JVM then refused to start and the whole suite
+    reported skips. What disappeared is the **fat-jar packaging**, not the
+    library: Maven Central carries ``org.tweetyproject:*`` from 1.18 to 1.31.
+
+    Order of preference:
+
+    1. an existing classpath (a cached ``*-with-dependencies.jar``, or an already
+       assembled directory) -- nothing to do;
+    2. the legacy fat jar, still tried so a machine whose mirror survives keeps
+       its fast path and byte-identical artifact;
+    3. an assembly of the dependency closure from Maven Central.
+
+    Failure is loud and named. A partial classpath is worse than none: the JVM
+    starts, every Tweety import fails, and the run reports skips instead of an
+    error -- exactly the silent shape #1873 had to build a guard against.
+    """
     logger.info(
         f"--- Démarrage de la vérification/téléchargement des JARs Tweety v{version} ---"
     )
     target_dir_path = Path(target_dir) if target_dir else LIBS_DIR
     target_dir_path.mkdir(parents=True, exist_ok=True)
-    jar_filename = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
-    jar_url = f"https://tweetyproject.org/builds/{version}/{jar_filename}"
-    jar_target_path = target_dir_path / jar_filename
-    logger.info(f"Vérification de la présence de: {jar_target_path}")
-    if jar_target_path.exists() and jar_target_path.stat().st_size > 0:
-        logger.info(f"JAR Core '{jar_filename}': déjà présent.")
+
+    if tweety_assembly.is_already_assembled(target_dir_path):
+        logger.info(
+            "Classpath Tweety déjà présent dans %s (%d jar(s) de module). Rien à faire.",
+            target_dir_path,
+            tweety_assembly.count_module_jars(target_dir_path),
+        )
         logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
         return True
+
+    jar_filename = f"org.tweetyproject.tweety-full-{version}-with-dependencies.jar"
+    jar_target_path = target_dir_path / jar_filename
+    jar_url = f"https://tweetyproject.org/builds/{version}/{jar_filename}"
     logger.info(
-        f"JAR '{jar_filename}' non trouvé ou vide. Tentative de téléchargement..."
+        "JAR fat '%s' absent. Tentative sur le canal historique %s",
+        jar_filename,
+        jar_url,
     )
-    base_url = f"https://tweetyproject.org/builds/{version}/"
+    legacy_ok = False
     try:
-        response = requests.head(base_url, timeout=10)
-        response.raise_for_status()
-        logger.info(f"URL de base Tweety v{version} accessible.")
+        response = requests.head(jar_url, timeout=10, allow_redirects=True)
+        legacy_ok = response.status_code == 200
     except requests.RequestException as e:
-        logger.error(
-            f"Impossible d'accéder à l'URL de base de Tweety {base_url}. Erreur: {e}"
+        logger.info("Canal historique injoignable (%s).", e)
+    if legacy_ok:
+        success, _ = download_file(jar_url, jar_target_path, description=jar_filename)
+        if success:
+            logger.info(f"JAR '{jar_filename}' téléchargé avec succès.")
+            logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
+            return True
+        logger.warning(
+            "Le canal historique a répondu 200 mais le téléchargement a échoué; "
+            "bascule sur l'assemblage Maven."
         )
-        logger.error(
-            "Vérifiez la connexion internet ou la disponibilité du site de Tweety."
-        )
-        return False
-    success, _ = download_file(jar_url, jar_target_path, description=jar_filename)
-    if success:
-        logger.info(f"JAR '{jar_filename}' téléchargé avec succès.")
     else:
-        logger.error(
-            f"Échec du téléchargement du JAR '{jar_filename}' depuis {jar_url}."
+        logger.info(
+            "Canal historique indisponible (#1874: /builds/ supprimé en amont). "
+            "Bascule sur l'assemblage depuis Maven Central."
         )
+
+    try:
+        pins = tweety_assembly.parse_pin_spec(settings.jvm.tweety_pinned_modules)
+        excludes = tweety_assembly.parse_exclude_spec(
+            settings.jvm.tweety_excluded_modules
+        )
+        count = tweety_assembly.assemble(
+            version, target_dir_path, pins=pins, excludes=excludes
+        )
+    except (tweety_assembly.AssemblyError, ValueError) as e:
+        logger.error("Approvisionnement Tweety %s impossible: %s", version, e)
+        logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
+        return False
+
+    logger.info("Assemblage Tweety %s réussi: %d jars de module.", version, count)
     logger.info("--- Fin de la vérification/téléchargement des JARs Tweety ---")
-    return success
+    return True
 
 
 def download_clingo(version: str = None, target_dir: Optional[Path] = None) -> bool:
