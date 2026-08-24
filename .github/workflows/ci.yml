@@ -278,17 +278,33 @@ jobs:
           # Ventilation : nommer la cause dominante fait gagner le premier
           # quart d'heure du prochain incident (init décidée-échouée =>
           # amont/setup ; non-démarrée ou health check => flake runner).
-          foreach ($sig in @(
-            @{ label = "init décidée-échouée (sessionstart)"; rx = 'message="Saut du test car l.initialisation de la JVM' },
-            @{ label = "JVM non réellement démarrée";            rx = 'message="Saut du test car la JVM n.est pas' },
-            @{ label = "JVM démarrée mais non fonctionnelle";    rx = 'message="Saut du test car la JVM est d' })) {
-            $n = ([regex]::Matches($content, $sig.rx)).Count
-            if ($n -gt 0) { Write-Host "   • $n — $($sig.label)" }
-          }
+          $decided  = ([regex]::Matches($content, 'message="Saut du test car l.initialisation de la JVM')).Count
+          $notStart = ([regex]::Matches($content, 'message="Saut du test car la JVM n.est pas')).Count
+          $unhealthy= ([regex]::Matches($content, 'message="Saut du test car la JVM est d')).Count
+          if ($decided   -gt 0) { Write-Host "   • $decided — init décidée-échouée (sessionstart)" }
+          if ($notStart  -gt 0) { Write-Host "   • $notStart — JVM non réellement démarrée" }
+          if ($unhealthy -gt 0) { Write-Host "   • $unhealthy — JVM démarrée mais non fonctionnelle" }
           if (($jvmSkipCount / $total) -gt 0.5) {
             Write-Host "❌ FAIL-LOUD: $jvmSkipCount tests ($pct%) were skipped because the JVM did not start."
             Write-Host "   The run decided nothing — a green badge here would be theater (#1385, #1019)."
-            Write-Host "   Likely cause: transient Temurin/JVM-setup flake on the runner. Re-run; if it persists, JVM init is broken on CI (urgent)."
+            # #1873: le remède dépend de la cause ventilée, et les deux sont
+            # OPPOSÉS. Conseiller "re-run" sur un échec DÉCIDÉ brûle des
+            # minutes CI sur une panne déterministe — c'est exactement ce que
+            # la docstring de tests/unit/test_conftest_jvm_return_1641.py
+            # avait prédit ("le garde dit re-run là où le vrai remède est une
+            # correction de config"). #1641 a rendu les deux discernables ;
+            # ici on cesse enfin de les confondre à la sortie.
+            if ($decided -ge [math]::Max($notStart, $unhealthy)) {
+              Write-Host "   Cause dominante: ÉCHEC DÉCIDÉ d'initialisation (initialize_jvm a retourné False)."
+              Write-Host "   Ce n'est PAS un aléa: re-lancer le job ne changera rien. Causes typiques:"
+              Write-Host "     - JARs Tweety absents / non téléchargeables (amont indisponible — cf. #1874)"
+              Write-Host "     - Java absent du runner, ou ré-init après shutdown JVM"
+              Write-Host "   Cure: corriger la config/l'approvisionnement des JARs, pas un re-run."
+            } else {
+              Write-Host "   Cause dominante: JVM non démarrée / non fonctionnelle après démarrage."
+              Write-Host "   Profil d'aléa natif (Temurin/JVM-setup). Re-run légitime; si ça persiste,"
+              Write-Host "   l'init JVM est cassée sur CI (urgent) — ne pas re-run en boucle."
+            }
             exit 1
           }
           Write-Host "✅ JVM-startup guard OK — JVM-dependent tests ran (or skipped for legitimate non-JVM reasons)."
