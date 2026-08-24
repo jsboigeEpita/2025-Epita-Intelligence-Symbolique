@@ -255,14 +255,58 @@ jobs:
           $total = 0
           foreach ($s in @($xml.testsuites.testsuite)) { $total += [int]$s.tests }
           $content = Get-Content pytest_report.xml -Raw
-          # #1873: famille de signatures, pas un littéral unique. Les trois
-          # messages de tests/conftest.py partagent le préfixe "Saut du test
-          # car " et le token "JVM" ; aucun autre skip du dépôt n'utilise ce
-          # préfixe (vérifié : 3/3 occurrences, toutes JVM). Le motif évite
-          # aussi de dépendre des accents.
-          $jvmPattern = 'message="Saut du test car [^"]*JVM'
-          # Scoped to skip messages, so a mention in test names / stdout
-          # cannot inflate the count.
+          # #1873: famille de signatures, pas un littéral unique.
+          #
+          # Version remplacée (main) : UN littéral, $jvmSignature = "JVM n'est
+          # pas réellement démarrée", injecté via [regex]::Escape. Mesuré sur
+          # les 206 littéraux pytest.skip de tests/ : il en matche exactement 1.
+          # Sur les TROIS messages que #1641 a séparés dans jvm_session, il n'en
+          # voit qu'un — et c'est le plus bénin. Celui qui lui échappe d'abord,
+          # "Saut du test car l'initialisation de la JVM a échoué dans
+          # pytest_sessionstart.", est précisément la moitié grave : c'est ce
+          # trou qu'a emprunté le run 32706721429 (0 / 15010, ✅ OK, success).
+          #
+          # Le motif actuel en matche 35, dont 32 hors conftest. Quatre exemples
+          # de ces littéraux, qui sautent pour la même cause sans porter le
+          # littéral de main --
+          #   "Test nécessite la JVM."                    (16 testcases)
+          #   "JVM non disponible pour dung_classes."
+          #   "TweetyBridge JVM non disponible…"
+          #   "JVM not started — cannot exercise…"
+          # Ils sont invisibles aujourd'hui SEULEMENT parce que la fixture
+          # autouse jvm_session les préempte ; tout ce qui la contourne
+          # (--disable-jvm-session, is_e2e_session) convertirait une vraie
+          # tempête en "0 match → ✅ OK". Le motif couvre donc le token JVM
+          # dans n'importe quel message de skip, pas un préfixe.
+          #
+          # Le motif est ancré sur <skipped …>, pas sur message= : la version
+          # précédente matchait aussi <failure message="… JVM …">, ce que son
+          # propre commentaire niait. Contrôle discriminant (12 cas) : les 3
+          # messages conftest + les 4 ci-dessus matchent ; "needs
+          # USE_REAL_JPYPE=true", "set USE_REAL_JPYPE=true…", "Orphan model…
+          # (B-06 #810)", une dépendance optionnelle et un <failure> citant la
+          # JVM ne matchent pas. Les 244 skips légitimes du run 32744198742
+          # restent donc hors du numérateur — l'anti-pendule tient.
+          #
+          # Le token est insensible à la casse, et ce n'est pas cosmétique :
+          # [regex]::Matches est sensible à la casse en .NET, si bien que trois
+          # messages nommant la MÊME cause lui échappaient parce qu'ils écrivent
+          # le token en minuscules — "Dépendance 'jvm_session' non résolue…",
+          # "belief_revision_classes: jpype_instance (integration_jvm) est
+          # None." et "Skipping test: jvm_session fixture failed to initialize."
+          # Les deux derniers se déclenchent exactement quand jvm_session vaut
+          # None, c'est-à-dire la tempête elle-même.
+          #
+          # Mesuré sur les 206 littéraux pytest.skip de tests/ : le motif passe
+          # de 32 à 35, et les 3 gagnés sont ceux-là. Les 13 littéraux citant
+          # Tweety/jpype qui restent DEHORS y restent à dessein — "Test
+          # nécessite USE_REAL_JPYPE=true", "Real Tweety not available",
+          # "TweetyBridge non disponible" : ce sont des skips d'opt-in, ils
+          # tombent sur un run sain (les 27 du bucket USE_REAL_JPYPE). Les
+          # admettre transformerait le garde en taux de skip brut, exactement le
+          # pendule que le paragraphe ci-dessus interdit.
+          $jvmPattern = '<skipped[^>]*message="[^"]*[Jj][Vv][Mm]'
+
           $jvmSkipCount = ([regex]::Matches($content, $jvmPattern)).Count
           # Un rapport présent dont le total est nul n'est pas un succès : soit
           # la suite n'a rien exécuté, soit le parse est cassé. Les deux doivent
@@ -294,7 +338,15 @@ jobs:
             # avait prédit ("le garde dit re-run là où le vrai remède est une
             # correction de config"). #1641 a rendu les deux discernables ;
             # ici on cesse enfin de les confondre à la sortie.
-            if ($decided -ge [math]::Max($notStart, $unhealthy)) {
+            $ventilated = $decided + $notStart + $unhealthy
+            if ($ventilated -lt $jvmSkipCount) {
+              Write-Host "   • $($jvmSkipCount - $ventilated) — signature JVM hors des trois messages de tests/conftest.py"
+            }
+            if ($ventilated -eq 0) {
+              Write-Host "   Cause dominante: INDÉTERMINÉE — aucune des trois signatures conftest n'est présente."
+              Write-Host "   Les skips portent le token JVM sans venir du garde de session : lire le log de"
+              Write-Host "   l'étape 'Run automated tests' avant de re-lancer quoi que ce soit."
+            } elseif ($decided -ge [math]::Max($notStart, $unhealthy)) {
               Write-Host "   Cause dominante: ÉCHEC DÉCIDÉ d'initialisation (initialize_jvm a retourné False)."
               Write-Host "   Ce n'est PAS un aléa: re-lancer le job ne changera rien. Causes typiques:"
               Write-Host "     - JARs Tweety absents / non téléchargeables (amont indisponible — cf. #1874)"
@@ -307,7 +359,30 @@ jobs:
             }
             exit 1
           }
-          Write-Host "✅ JVM-startup guard OK — JVM-dependent tests ran (or skipped for legitimate non-JVM reasons)."
+          # Filet indépendant du message (majeur n°3 de la review de #1881).
+          # Le ratio ci-dessus dépend d'une SIGNATURE ; celui-ci ne dépend de
+          # rien qu'un futur reformulateur puisse casser. Aucune étape amont
+          # n'échoue sur "0 test passé" : l'étape 9 calcule $passed, l'imprime
+          # ("✅ Passed: 0 / 15010" au run 32744198742) puis le jette. Ce garde
+          # était donc la seule chose entre "0 test exécuté" et un badge vert.
+          #
+          # Ce n'est PAS le pendule du taux brut que le commentaire ci-dessus
+          # interdit : 244 skips légitimes sur 15010 ne peuvent pas rendre
+          # $passed nul. Seule une suite qui n'a rien décidé le peut.
+          $skipped = 0; $failures = 0; $errors = 0
+          foreach ($s in @($xml.testsuites.testsuite)) {
+            $skipped  += [int]$s.skipped
+            $failures += [int]$s.failures
+            $errors   += [int]$s.errors
+          }
+          $passed = $total - $errors - $failures - $skipped
+          if ($passed -le 0) {
+            Write-Host "❌ FAIL-LOUD: 0 test passé sur $total collectés ($skipped skipped, $($errors + $failures) en échec)."
+            Write-Host "   Le run n'a décidé de rien. Aucune signature JVM ne domine, donc la cause est"
+            Write-Host "   ailleurs (collecte, import, timeout) — mais un badge vert resterait du théâtre."
+            exit 1
+          }
+          Write-Host "✅ JVM-startup guard OK — $passed test(s) passed; JVM-dependent tests ran (or skipped for legitimate non-JVM reasons)."
 
       - name: Upload test results
         if: always()
