@@ -11,6 +11,14 @@ error -- the silent shape the #1385 guard exists to catch.
 """
 
 import sys
+from pathlib import Path
+
+# `python scripts/ci/x.py` met scripts/ci/ dans sys.path[0], pas la racine du
+# depot, et l'environnement CI n'installe aucune copie editable du paquet
+# (environment.yml n'a pas de `-e .`). Sans cette ligne, l'import ci-dessous
+# leve ModuleNotFoundError en CI tout en passant en local, ou un install
+# editable resident masque le probleme -- mesure #1874.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from argumentation_analysis.core.jvm_setup import download_tweety_jars
 

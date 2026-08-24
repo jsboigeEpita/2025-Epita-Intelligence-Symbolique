@@ -17,6 +17,14 @@ is exactly what died in #1874; a coordinate-keyed cache is self-healing.
 
 import hashlib
 import sys
+from pathlib import Path
+
+# `python scripts/ci/x.py` met scripts/ci/ dans sys.path[0], pas la racine du
+# depot, et l'environnement CI n'installe aucune copie editable du paquet
+# (environment.yml n'a pas de `-e .`). Sans cette ligne, l'import ci-dessous
+# leve ModuleNotFoundError en CI tout en passant en local, ou un install
+# editable resident masque le probleme -- mesure #1874.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from argumentation_analysis.config.settings import settings
 

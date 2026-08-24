@@ -30,8 +30,16 @@ should run.
 import json
 import re
 import struct
+import sys
 import zipfile
 from pathlib import Path
+
+# `python scripts/ci/x.py` met scripts/ci/ dans sys.path[0], pas la racine du
+# depot, et l'environnement CI n'installe aucune copie editable du paquet
+# (environment.yml n'a pas de `-e .`). Sans cette ligne, l'import ci-dessous
+# leve ModuleNotFoundError en CI tout en passant en local, ou un install
+# editable resident masque le probleme -- mesure #1874.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core import tweety_assembly
@@ -147,7 +155,11 @@ def check_manifest(libs: Path, version: str) -> int:
 
 
 def main() -> int:
-    libs = Path(settings.jvm.tweety_libs_dir)
+    # Ancre sur la racine, comme jvm_setup.py:91 (`PROJ_ROOT / ...`).
+    # Un chemin relatif resolu contre le CWD ferait diverger le
+    # verificateur du producteur. Un chemin absolu passe par
+    # JVM_TWEETY_LIBS_DIR l'emporte : `Path(a) / Path(abs)` == abs.
+    libs = Path(__file__).resolve().parents[2] / settings.jvm.tweety_libs_dir
     version = settings.jvm.tweety_version
     if not libs.is_dir():
         print(f"ECHEC: {libs} n'existe pas.")
