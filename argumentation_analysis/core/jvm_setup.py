@@ -754,6 +754,33 @@ def _configure_external_tools():
         logger.info(f"  {tool_name} path registered: {path}")
 
 
+def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
+    """Ordered classpath of the Tweety jars present in ``tweety_libs_dir``.
+
+    #1874 Piège 2: the old preemption key ``"full"`` also matched the Maven
+    ``copy-dependencies`` thin aggregator ``org.tweetyproject.tweety-full-1.29.jar``
+    (1918 bytes, **0 class**). A ``copy-dependencies`` layout deposits that thin jar
+    *alongside* the ~150 real module jars; the preemption kept the thin one and threw
+    the rest away, and ``startJVM`` then "booted" a JVM whose classpath held no Tweety
+    class at all — success that decided nothing.
+
+    A genuine fat jar in this ecosystem is always named ``*-with-dependencies.jar``
+    (see ``TWEETY_JAR_FILENAME``); the thin aggregator is not. Keying the single-jar
+    fast-path on that real fat name separates the two layouts: a fat jar (possibly
+    several cached versions) resolves to the latest single jar; anything else is a
+    multi-jar assembly and is loaded in full.
+    """
+    all_jars = sorted(tweety_libs_dir.glob("*.jar"), key=lambda p: p.name)
+    uber_jars = [jar for jar in all_jars if "with-dependencies" in jar.name.lower()]
+    if uber_jars:
+        # Sort to pick the latest version (alphabetical = version order for tweety jars)
+        return [str(sorted(uber_jars)[-1].resolve())]
+    jar_entries = [str(jar.resolve()) for jar in all_jars]
+    if not jar_entries:
+        logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
+    return jar_entries
+
+
 def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     """
     Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
@@ -813,18 +840,9 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
         os.environ["JAVA_HOME"] = java_home
 
         tweety_libs_dir = PROJ_ROOT / settings.jvm.tweety_libs_dir
-        uber_jars = [
-            jar for jar in tweety_libs_dir.glob("*.jar") if "full" in jar.name.lower()
-        ]
-        if uber_jars:
-            # Sort to pick the latest version (alphabetical = version order for tweety jars)
-            jar_entries = [str(sorted(uber_jars)[-1].resolve())]
-        else:
-            logger.warning("Aucun uber-jar trouvé, chargement de tous les JARs.")
-            jar_entries = [str(jar.resolve()) for jar in tweety_libs_dir.glob("*.jar")]
-            if not jar_entries:
-                logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
-                return False
+        jar_entries = _build_tweety_classpath(tweety_libs_dir)
+        if not jar_entries:
+            return False
 
         # Build classpath: native dir first for JNI SAT solver getResource(), then JARs
         classpath = []
