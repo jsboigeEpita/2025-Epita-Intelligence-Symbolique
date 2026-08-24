@@ -149,7 +149,11 @@ jobs:
           # install/import/restore window, so admission is safe; the 2
           # genuine-verdict LLM tests in that dir are requires_api-marked and
           # stay deselected by the gate filter.
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          # MEASUREMENT ONLY (#1872, not for merge) — widen the argv to admit the
+          # root of tests/integration/ (the #1867 form constraint), keeping the two
+          # #1814 vetted zones excluded. -k excludes the known run-abort test so
+          # the session completes and writes the egress report (an abort loses it).
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/integration/ --ignore=tests/integration/logical_agents --ignore=tests/integration/jpype_tweety -k "not memory_efficiency_integration" -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()
