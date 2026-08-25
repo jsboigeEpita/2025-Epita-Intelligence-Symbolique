@@ -245,7 +245,10 @@ class TestRealModeExecution:
         orch._real_agents = {"informal": slow}
 
         report = await orch.run_orchestration_async("Test text.")
-        assert isinstance(report, str)
+        # #1593: isinstance-only assertion accepted any string incl. "".
+        # Measured: ~2.1k chars; the wall time IS the full 10s sleep —
+        # "handled" means graceful completion, not cancellation.
+        assert report, "no report produced despite handled agent timeout"
 
     @pytest.mark.asyncio
     async def test_run_demo_conversation_real_mode(self, orch_real):

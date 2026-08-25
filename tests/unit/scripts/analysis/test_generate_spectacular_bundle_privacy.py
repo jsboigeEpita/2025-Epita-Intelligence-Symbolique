@@ -98,6 +98,7 @@ def _build_dag_state_via_real_writers():
 # Vector 1 — LLM paraphrase fields scrubbed
 # ---------------------------------------------------------------------------
 
+
 class TestVector1LLMParaphrase:
     """Verify all NL fields in _NL_SCRUB_KEYS are replaced with <scrubbed>."""
 
@@ -170,7 +171,11 @@ class TestVector1LLMParaphrase:
         state = {
             "debate_transcripts": [
                 {"speaker": "proponent", "content": "a" * 100},
-                {"speaker": "opponent", "content": "b" * 100, "topic": "foreign policy"},
+                {
+                    "speaker": "opponent",
+                    "content": "b" * 100,
+                    "topic": "foreign policy",
+                },
             ]
         }
         result = _scrub_state_for_export(state)
@@ -192,7 +197,10 @@ class TestVector1LLMParaphrase:
         assert result["belief_sets"]["bs_2"]["content"] == "short"
 
     def test_final_conclusion_scrubbed(self):
-        state = {"final_conclusion": "The argument structure reveals a pattern of " + "w" * 100}
+        state = {
+            "final_conclusion": "The argument structure reveals a pattern of "
+            + "w" * 100
+        }
         result = _scrub_state_for_export(state)
         assert result["final_conclusion"] == "<scrubbed>"
 
@@ -216,7 +224,11 @@ class TestVector1LLMParaphrase:
         # and Pass 12 to handle the real List[Dict] shape.
         state = {
             "extracts": [
-                {"id": "ext_1", "name": "raw long extract name here", "content": "p" * 100},
+                {
+                    "id": "ext_1",
+                    "name": "raw long extract name here",
+                    "content": "p" * 100,
+                },
                 {"id": "ext_2", "name": "short", "content": "tiny"},
             ]
         }
@@ -231,6 +243,7 @@ class TestVector1LLMParaphrase:
 # ---------------------------------------------------------------------------
 # Vector 2 — Entity regex patterns
 # ---------------------------------------------------------------------------
+
 
 class TestVector2EntityPatterns:
     """Verify _ENTITY_PATTERN (\b) and _ENTITY_SUBSTR_PATTERN (substring)."""
@@ -300,6 +313,7 @@ class TestVector2EntityPatterns:
 # Vector 3 — FOL formulae + dict keys in nl_to_logic_translations
 # ---------------------------------------------------------------------------
 
+
 class TestVector3FOLFormulae:
     """Verify 11th pass: nl_to_logic_translations scrubbing."""
 
@@ -361,6 +375,7 @@ class TestVector3FOLFormulae:
 # Vector 4 — Integration end-to-end
 # ---------------------------------------------------------------------------
 
+
 class TestVector4Integration:
     """Full pipeline: _scrub_state_for_export + _global_entity_scrub on a
     realistic state fixture with leaks in every vector."""
@@ -391,7 +406,10 @@ class TestVector4Integration:
                 },
             },
             "counter_arguments": [
-                {"text": "Ukraine has shown resilience against Russia", "strategy": "counter_example"},
+                {
+                    "text": "Ukraine has shown resilience against Russia",
+                    "strategy": "counter_example",
+                },
             ],
             "debate_transcripts": [
                 {"speaker": "A", "content": "z" * 200},
@@ -412,7 +430,9 @@ class TestVector4Integration:
     def test_no_raw_text_fields_remain(self, full_dirty_state):
         result = _scrub_state_for_export(full_dirty_state)
         for field in _PRIVACY_STRIP_FIELDS:
-            assert field not in result, f"Privacy strip field '{field}' should be removed"
+            assert (
+                field not in result
+            ), f"Privacy strip field '{field}' should be removed"
 
     def test_all_nl_fields_scrubbed(self, full_dirty_state):
         result = _scrub_state_for_export(full_dirty_state)
@@ -446,13 +466,31 @@ class TestVector4Integration:
         result = _scrub_state_for_export(full_dirty_state)
         serialized = json.dumps(result).lower()
         entity_fragments = [
-            "trump", "biden", "obama", "putin", "poutine", "zelensky",
-            "macron", "netanyahu", "iran", "ukraine", "russia",
-            "china", "israel", "nato", "otan", "maidan", "crimea",
-            "kremlin", "pentagon", "white_house",
+            "trump",
+            "biden",
+            "obama",
+            "putin",
+            "poutine",
+            "zelensky",
+            "macron",
+            "netanyahu",
+            "iran",
+            "ukraine",
+            "russia",
+            "china",
+            "israel",
+            "nato",
+            "otan",
+            "maidan",
+            "crimea",
+            "kremlin",
+            "pentagon",
+            "white_house",
         ]
         for fragment in entity_fragments:
-            assert fragment not in serialized, f"Entity '{fragment}' found in scrubbed output"
+            assert (
+                fragment not in serialized
+            ), f"Entity '{fragment}' found in scrubbed output"
 
     def test_non_sensitive_fields_preserved(self, full_dirty_state):
         result = _scrub_state_for_export(full_dirty_state)
@@ -466,12 +504,26 @@ class TestVector4Integration:
         """Running scrub twice produces the same result."""
         result1 = _scrub_state_for_export(full_dirty_state)
         result2 = _scrub_state_for_export(copy.deepcopy(full_dirty_state))
-        assert json.dumps(result1, sort_keys=True) == json.dumps(result2, sort_keys=True)
+        assert json.dumps(result1, sort_keys=True) == json.dumps(
+            result2, sort_keys=True
+        )
 
     def test_empty_state_no_crash(self):
         result = _scrub_state_for_export({})
-        # Scrub creates default empty structures for known dimensions
-        assert isinstance(result, dict)
+        # #1593: isinstance-only accepted any dict incl. {} — the comment
+        # claims default structures for known dimensions, so pin them.
+        # Measured: exactly the 8 analysis dimensions, all empty.
+        assert set(result.keys()) == {
+            "analysis_tasks",
+            "argument_quality_scores",
+            "belief_sets",
+            "counter_arguments",
+            "debate_transcripts",
+            "identified_arguments",
+            "identified_fallacies",
+            "nl_to_logic_translations",
+        }
+        assert all(not v for v in result.values())
 
     def test_state_with_only_clean_data(self):
         state = {
@@ -485,6 +537,7 @@ class TestVector4Integration:
 # ---------------------------------------------------------------------------
 # Vector 5 — DAG path: dung_frameworks / ranking / probabilistic arguments[]
 # ---------------------------------------------------------------------------
+
 
 class TestVector5DAGArgumentsDescription:
     """Verify scrubbing of arguments[].description on DAG path structures.
@@ -519,7 +572,9 @@ class TestVector5DAGArgumentsDescription:
     def test_dung_non_string_fields_preserved(self):
         result = _scrub_state_for_export(self._make_dag_state())
         assert result["dung_frameworks"]["dung_1"]["attacks"] == [["arg_1", "arg_2"]]
-        assert result["dung_frameworks"]["dung_1"]["extensions"] == {"preferred": ["arg_1", "arg_3"]}
+        assert result["dung_frameworks"]["dung_1"]["extensions"] == {
+            "preferred": ["arg_1", "arg_3"]
+        }
 
     def test_ranking_results_arguments_scrubbed(self):
         result = _scrub_state_for_export(self._make_dag_state())
@@ -552,12 +607,24 @@ class TestVector5DAGArgumentsDescription:
         result = _scrub_state_for_export(self._make_dag_state())
         serialized = json.dumps(result).lower()
         entity_fragments = [
-            "trump", "biden", "putin", "poutine", "zelensky",
-            "macron", "netanyahu", "ukraine", "russia", "israel",
-            "nato", "crimea", "kremlin",
+            "trump",
+            "biden",
+            "putin",
+            "poutine",
+            "zelensky",
+            "macron",
+            "netanyahu",
+            "ukraine",
+            "russia",
+            "israel",
+            "nato",
+            "crimea",
+            "kremlin",
         ]
         for fragment in entity_fragments:
-            assert fragment not in serialized, f"Entity '{fragment}' leaked in DAG scrub"
+            assert (
+                fragment not in serialized
+            ), f"Entity '{fragment}' leaked in DAG scrub"
 
     def test_identified_arguments_unaffected(self):
         """Pass 2 (identified_arguments) should still work alongside Pass 12."""
@@ -568,6 +635,7 @@ class TestVector5DAGArgumentsDescription:
 # ---------------------------------------------------------------------------
 # Vector 6 (#1662) — the DAG pass must reach the shape the WRITERS produce
 # ---------------------------------------------------------------------------
+
 
 class TestVector6RealWriterShapes:
     """Pass 12 must scrub every container it declares, not just the dict-shaped one.
@@ -635,9 +703,9 @@ class TestVector6RealWriterShapes:
         entries = result[dim_key]
         assert entries, f"{dim_key} empty — the assertion would be vacuous"
         for entry in entries:
-            assert entry["arguments"] == ["<scrubbed>"], (
-                f"{dim_key} carried raw NL through the export scrub"
-            )
+            assert entry["arguments"] == [
+                "<scrubbed>"
+            ], f"{dim_key} carried raw NL through the export scrub"
 
     def test_dict_shaped_dimension_still_scrubbed(self):
         """No-regression: dung_frameworks was the one container the gate reached."""
@@ -660,6 +728,7 @@ class TestVector6RealWriterShapes:
 # ---------------------------------------------------------------------------
 # Vector 6 — Differential proof: Pass 12 covers all 4 containers (#1662)
 # ---------------------------------------------------------------------------
+
 
 class TestVector6Pass12CoversAllContainers:
     """Differential tests that isolate Pass 12 behaviour from Pass 14 (_global_entity_scrub).
@@ -837,6 +906,7 @@ class TestVector6Pass12CoversAllContainers:
 # ---------------------------------------------------------------------------
 # Vector 7 (#1673) — Pass 8 must scrub extracts entries whatever the container
 # ---------------------------------------------------------------------------
+
 
 class TestVector7Pass8ExtractsContainerShape:
     """Pass 8 (extracts) must scrub entries regardless of container shape.

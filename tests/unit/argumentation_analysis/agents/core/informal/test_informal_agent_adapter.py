@@ -274,8 +274,12 @@ class TestAnalyzeText:
         detector.return_value = [{"fallacy_type": "test"}]
         agent = InformalAgent(tools={"fallacy_detector": detector})
         result = agent.analyze_text("text")
-        # Falls back to getattr(detector, 'return_value', [])
-        assert isinstance(result["fallacies"], list)
+        # #1593: ``isinstance(result["fallacies"], list)`` passed with the
+        # fallback stubbed to []. The name promises the fallback READS
+        # ``detector.return_value`` — measured: exactly that list.
+        assert result["fallacies"] == [
+            {"fallacy_type": "test"}
+        ], f"fallback must read detector.return_value, got {result['fallacies']}"
 
     def test_context_included_when_provided(self):
         agent = InformalAgent()

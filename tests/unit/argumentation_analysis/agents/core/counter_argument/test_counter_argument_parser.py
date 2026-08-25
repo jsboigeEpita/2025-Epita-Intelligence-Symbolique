@@ -332,8 +332,10 @@ class TestVulnerabilityAnalyzer:
             confidence=0.8,
         )
         vulns = analyzer.analyze_vulnerabilities(arg)
-        # May have structural vuln but no pattern match
-        assert isinstance(vulns, list)
+        # #1593: ``isinstance(vulns, list)`` passed even with the analyzer
+        # stubbed to report fake vulnerabilities. The name promises NO
+        # vulnerabilities on this plain argument — measured: [].
+        assert vulns == [], f"expected no vulnerabilities, got {vulns}"
 
     def test_generalisation_abusive(self, analyzer):
         arg = Argument(

@@ -272,8 +272,18 @@ class TestSynthesizeHierarchicalResults:
         # Provide data that causes an error (None in objectives list)
         results = {"strategic_analysis": None}
         synthesis = await orchestrator._synthesize_hierarchical_results(results)
-        # Should not crash — either error key or 0 scores
-        assert isinstance(synthesis, dict)
+        # #1593: isinstance-only assertion accepted any dict incl. {}.
+        # Measured: the synthesis degrades to the full 6-key scorecard
+        # with 0 scores — "handled" means a usable report, not a bare dict.
+        assert set(synthesis.keys()) == {
+            "coordination_effectiveness",
+            "operational_success",
+            "overall_score",
+            "recommendations",
+            "strategic_alignment",
+            "tactical_efficiency",
+        }
+        assert synthesis["overall_score"] == 0.0
 
 
 # ── _execute_operational_tasks ──────────────────────────────────────────

@@ -522,8 +522,12 @@ class TestRhetoricalResultVisualizer:
 
     def test_all_visualizations_values_are_strings(self, visualizer, full_state):
         result = visualizer.generate_all_visualizations(full_state)
+        # #1593: the bare for/isinstance loop passed on a degenerate EMPTY
+        # result — no values, nothing checked. The visualizations must exist
+        # for their string-ness to mean anything.
+        assert result, "no visualizations produced"
         for key, value in result.items():
-            assert isinstance(value, str)
+            assert isinstance(value, str), f"{key} is not a string: {type(value)}"
 
     # -- generate_html_report --
 

@@ -124,7 +124,12 @@ class TestEvaluate:
         arg = _make_argument()
         counter = _make_counter()
         result = evaluator.evaluate(arg, counter)
-        assert isinstance(result.recommendations, list)
+        # #1593: ``isinstance(result.recommendations, list)`` passed with the
+        # evaluator stubbed to return NO recommendations. The name promises
+        # recommendations EXIST — measured: 2 on this input.
+        assert (
+            len(result.recommendations) >= 1
+        ), f"expected at least one recommendation, got {result.recommendations}"
 
 
 # ============================================================

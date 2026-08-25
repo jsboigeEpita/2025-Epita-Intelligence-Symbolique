@@ -48,10 +48,16 @@ class TestModuleSingleton:
 
 
 class TestOpenAISettings:
-    def test_default_chat_model(self):
-        s = OpenAISettings()
-        # May be overridden by env, but should be a string
-        assert isinstance(s.chat_model_id, str)
+    def test_default_chat_model(self, monkeypatch):
+        # #1593: the old ``isinstance(s.chat_model_id, str)`` passed even with
+        # the default degraded to "" — it never checked the default EXISTS.
+        # Hermetic: shield env (.env sets OPENAI_CHAT_MODEL_ID on dev machines)
+        # so the DECLARED default is what's measured.
+        monkeypatch.delenv("OPENAI_CHAT_MODEL_ID", raising=False)
+        s = OpenAISettings(_env_file=None)
+        assert (
+            isinstance(s.chat_model_id, str) and s.chat_model_id
+        ), f"default chat_model_id must be a non-empty string, got {s.chat_model_id!r}"
 
     def test_api_key_type(self):
         s = OpenAISettings()
@@ -85,9 +91,15 @@ class TestAzureOpenAISettings:
         s = AzureOpenAISettings()
         assert s.endpoint is None or isinstance(s.endpoint, HttpUrl)
 
-    def test_deployment_name_optional(self):
-        s = AzureOpenAISettings()
-        assert s.deployment_name is None or isinstance(s.deployment_name, str)
+    def test_deployment_name_optional(self, monkeypatch):
+        # #1593: ``is None or isinstance(str)`` accepts EVERY value — it could
+        # never detect the field becoming required. "Optional" means None when
+        # unset; measured with the env shielded.
+        monkeypatch.delenv("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", raising=False)
+        s = AzureOpenAISettings(_env_file=None)
+        assert (
+            s.deployment_name is None
+        ), f"unset deployment_name must be None, got {s.deployment_name!r}"
 
     def test_chat_model_id_is_string(self):
         s = AzureOpenAISettings()
