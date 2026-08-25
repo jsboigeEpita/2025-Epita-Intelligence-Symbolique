@@ -153,13 +153,22 @@ class TestCamemBERTFallacyDetector:
         results = detector.detect("Un texte quelconque.")
         assert results == []
 
-    def test_model_path_search(self):
+    def test_model_path_search(self, tmp_path):
         """_find_model_path searches in known locations."""
+        # #1593: `path is None or isinstance(path, str)` is a tautology —
+        # every value passes it. Pin the two named behaviors instead: an
+        # explicit path must actually hold a model dir (config.json), and a
+        # bogus explicit path must NOT leak into the search fallback.
+        model_dir = tmp_path / "camembert"
+        model_dir.mkdir()
+        (model_dir / "config.json").write_text("{}", encoding="utf-8")
+
         detector = self._make_detector()
-        # Without a real model, should return None
-        path = detector._find_model_path()
-        # Just verify it doesn't crash and returns str or None
-        assert path is None or isinstance(path, str)
+        detector._model_path = str(model_dir)
+        assert detector._find_model_path() == str(model_dir)
+
+        detector = self._make_detector(model_path="/nonexistent/path")
+        assert detector._find_model_path() is None
 
     def test_get_status_details(self):
         """get_status_details returns structured info."""

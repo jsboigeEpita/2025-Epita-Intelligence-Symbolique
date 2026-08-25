@@ -627,10 +627,16 @@ class TestConsolidateResultsRobust:
             },
         }
         consolidated = orchestration._consolidate_results_robust(results)
-        # "argument is valid" vs "argument is strong" share "argument" and "is" = 2 matches
-        # Should trigger consensus
-        # Note: exact behavior depends on word overlap logic
-        assert isinstance(consolidated["consensus_areas"], list)
+        # #1593: isinstance-only assertion accepted any list incl. [].
+        # Measured: the two findings (2 shared first-3 words) merge into
+        # exactly one consensus area. The theme is built by joining a SET
+        # (group_chat.py:509), so its word ORDER is arbitrary per run —
+        # pin the set, not the string.
+        assert len(consolidated["consensus_areas"]) == 1
+        area = consolidated["consensus_areas"][0]
+        assert set(area["theme"].split()) == {"argument", "is", "valid"}
+        assert area["agents"] == ["a1", "a2"]
+        assert area["findings_count"] == 2
 
 
 # ── get_service_health ──────────────────────────────────────────────────

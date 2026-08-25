@@ -24,7 +24,6 @@ from argumentation_analysis.orchestration.workflows import (
     _ALL_EXTENSION_CAPS,
 )
 
-
 # ---------------------------------------------------------------------------
 # Extension registry tests
 # ---------------------------------------------------------------------------
@@ -48,10 +47,23 @@ class TestFormalExtensionRegistry:
     def test_known_cli_names(self):
         """All 17 CLI short names should be present."""
         expected = {
-            "ranking", "bipolar", "aba", "adf", "aspic",
-            "belief_revision", "probabilistic", "dialogue",
-            "dl", "cl", "setaf", "weighted", "social",
-            "eaf", "delp", "qbf", "asp",
+            "ranking",
+            "bipolar",
+            "aba",
+            "adf",
+            "aspic",
+            "belief_revision",
+            "probabilistic",
+            "dialogue",
+            "dl",
+            "cl",
+            "setaf",
+            "weighted",
+            "social",
+            "eaf",
+            "delp",
+            "qbf",
+            "asp",
         }
         assert set(_EXTENSION_CAPABILITIES.keys()) == expected
 
@@ -66,8 +78,12 @@ class TestFormalExtensionCLI:
 
     def test_valid_presets(self):
         """all, core, none should be valid preset values."""
+        # #1593: isinstance on string literals is a tautology — no
+        # production code runs. "Valid preset" means the production filter
+        # accepts the vocabulary (unknown names raise ValueError); the
+        # per-preset semantics are pinned by TestFormalExtensionFilter.
         for preset in ("all", "core", "none"):
-            assert isinstance(preset, str)
+            filter_formal_extensions(build_spectacular_workflow(), preset)
 
     def test_csv_list_format(self):
         """Comma-separated list should be parseable."""
@@ -153,13 +169,42 @@ class TestFormalExtensionFilter:
         return (
             WorkflowBuilder("test_formal")
             .add_phase("extract", capability="fact_extraction")
-            .add_phase("pl", capability="propositional_logic", depends_on=["extract"], optional=True)
-            .add_phase("fol", capability="fol_reasoning", depends_on=["extract"], optional=True)
-            .add_phase("modal", capability="modal_logic", depends_on=["extract"], optional=True)
-            .add_phase("dung", capability="dung_extensions", depends_on=["extract"], optional=True)
-            .add_phase("ranking", capability="ranking_semantics", depends_on=["dung"], optional=True)
-            .add_phase("bipolar", capability="bipolar_argumentation", depends_on=["extract"], optional=True)
-            .add_phase("aspic", capability="aspic_plus_reasoning", depends_on=["dung"], optional=True)
+            .add_phase(
+                "pl",
+                capability="propositional_logic",
+                depends_on=["extract"],
+                optional=True,
+            )
+            .add_phase(
+                "fol", capability="fol_reasoning", depends_on=["extract"], optional=True
+            )
+            .add_phase(
+                "modal", capability="modal_logic", depends_on=["extract"], optional=True
+            )
+            .add_phase(
+                "dung",
+                capability="dung_extensions",
+                depends_on=["extract"],
+                optional=True,
+            )
+            .add_phase(
+                "ranking",
+                capability="ranking_semantics",
+                depends_on=["dung"],
+                optional=True,
+            )
+            .add_phase(
+                "bipolar",
+                capability="bipolar_argumentation",
+                depends_on=["extract"],
+                optional=True,
+            )
+            .add_phase(
+                "aspic",
+                capability="aspic_plus_reasoning",
+                depends_on=["dung"],
+                optional=True,
+            )
             .add_phase("quality", capability="argument_quality", depends_on=["extract"])
             .build()
         )
@@ -235,6 +280,7 @@ class TestFormalExtensionFilter:
         total_before = len(wf.phases)
         # Deep copy phases for comparison
         import copy
+
         wf2 = copy.deepcopy(wf)
         filter_formal_extensions(wf2, "core")
         assert len(wf2.phases) < total_before

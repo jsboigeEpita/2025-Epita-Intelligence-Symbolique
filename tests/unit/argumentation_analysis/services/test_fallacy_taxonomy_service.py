@@ -139,7 +139,9 @@ class TestFallacyTaxonomyManager:
 
     def test_detect_empty_text(self, manager):
         results = manager.detect_fallacies_with_families("")
-        assert isinstance(results, list)
+        # #1593: isinstance-only assertion accepted any list incl. junk;
+        # measured: empty text detects zero fallacies.
+        assert results == [], f"empty text should detect nothing, got {results}"
 
     def test_detect_returns_classified_list(self, manager, mock_detector):
         mock_detector.detect_sophisms_from_taxonomy.return_value = [

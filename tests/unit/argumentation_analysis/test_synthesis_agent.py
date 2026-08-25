@@ -345,7 +345,9 @@ class TestSynthesisAgent:
         summary = await synthesis_agent._generate_simple_summary(
             LogicAnalysisResult(), InformalAnalysisResult()
         )
-        assert isinstance(summary, str)
+        # #1593: isinstance-only assertion accepted any string incl. "".
+        # Measured: 50 chars ("Analyse informelle: aucun sophisme majeur détecté.").
+        assert summary, "empty summary for empty analysis results"
 
     def test_assess_overall_validity(self, synthesis_agent):
         assert not synthesis_agent._assess_overall_validity(

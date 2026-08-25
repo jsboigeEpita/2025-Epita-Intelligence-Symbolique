@@ -151,7 +151,11 @@ class TestContextsDictionary:
     def test_contexts_are_strings(self):
         for family, contexts in FALLACY_FAMILY_CONTEXTS.items():
             for ctx in contexts:
-                assert isinstance(ctx, str), f"{family} has non-string context: {ctx}"
+                # #1593: isinstance-only accepted "" contexts; a context label
+                # is only useful to routing if it carries at least one char.
+                assert (
+                    isinstance(ctx, str) and ctx
+                ), f"{family} has empty/non-string context: {ctx!r}"
 
     def test_authority_contexts(self):
         contexts = FALLACY_FAMILY_CONTEXTS[FallacyFamily.AUTHORITY_POPULARITY]

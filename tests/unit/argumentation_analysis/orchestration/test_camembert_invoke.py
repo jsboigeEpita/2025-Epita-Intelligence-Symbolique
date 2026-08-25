@@ -264,8 +264,11 @@ class TestCamemBERTRegistryRegistration:
         registry = setup_registry(include_optional=True)
         providers = registry.find_for_capability("neural_fallacy_detection")
         names = [p.name for p in providers]
-        # Should be registered as a provider
-        assert isinstance(names, list)
+        # #1593: ``isinstance(names, list)`` passed with the lookup stubbed
+        # to return NO providers. The capability must have at least one
+        # (measured: self_hosted_fallacy_detector; camembert joins when its
+        # deps import).
+        assert names, "neural_fallacy_detection must have at least one provider"
 
     def test_registry_camembert_optional_registration(self):
         """camembert_fallacy_detector is optional (graceful skip if unavailable)."""

@@ -292,7 +292,23 @@ class TestResolvePhaseConflicts:
         # Add fallacy and quality score for same argument
         state.add_fallacy("ad_hominem", "Attacks person", target_arg_id="arg_1")
 
-        # The function should access state.identified_fallacies without error
-        # Even if no quality_scores exist, it should not raise AttributeError
-        result = await _resolve_phase_conflicts(state, "phase_1")
-        assert isinstance(result, list)
+        # #1593: isinstance-only assertion accepted any list incl. [] — it
+        # could never distinguish identified_fallacies from any other attr.
+        # Discriminating scenario: fallacy on arg_1 whose quality score is
+        # high (note_finale > 5.0) is the one pattern that makes detection
+        # fire. The pin is on DETECTION (the conflict handed to the
+        # resolver) because the real resolver may legitimately return
+        # resolved:False without a resolutions entry.
+        state.argument_quality_scores = {"arg_1": {"note_finale": 7.0}}
+        with patch(
+            "argumentation_analysis.services.jtms.conflict_resolution.ConflictResolver"
+        ) as spy_cls:
+            spy_resolver = spy_cls.return_value
+            spy_resolver.resolve.return_value = {"resolved": True, "reasoning": "spy"}
+            result = await _resolve_phase_conflicts(state, "phase_1")
+
+        spy_resolver.resolve.assert_called_once()
+        conflict = spy_resolver.resolve.call_args[0][0]
+        assert conflict["conflict_id"] == "fallacy_quality_arg_1"
+        assert conflict["type"] == "fallacy_vs_quality"
+        assert result and result[0]["conflict_id"] == "fallacy_quality_arg_1"

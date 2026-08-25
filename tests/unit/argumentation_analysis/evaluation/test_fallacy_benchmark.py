@@ -748,10 +748,13 @@ class TestModeRunners:
 
         try:
             result = await runner.run_mode_c_constrained("Test argument text")
-            # If API is available, check result structure
-            assert isinstance(result, dict)
         except Exception as e:
             pytest.skip(f"API not available or plugin error: {e}")
+        # #1593: the assertion used to sit INSIDE the try — any failure was
+        # caught by ``except Exception`` and converted to a skip, so it could
+        # never redden. Moved below the try: API/env errors still skip, but a
+        # structural regression now fails.
+        assert isinstance(result, dict)
 
 
 @pytest.mark.unit

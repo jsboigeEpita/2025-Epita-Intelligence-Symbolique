@@ -43,6 +43,13 @@ class TestAgentSpecialityMap:
     def test_all_values_are_lists(self):
         for key, plugins in AGENT_SPECIALITY_MAP.items():
             assert isinstance(plugins, list), f"{key} should map to a list"
+        # #1593: the isinstance-only loop could not fail on ANY list value.
+        # A NEW speciality silently mapped to [] would load no plugins for
+        # that agent. sherlock is the one documented intentional empty
+        # ("Sherlock uses its own investigation tools", factory.py) — pin
+        # it as the only allowed one.
+        empty = {k for k, v in AGENT_SPECIALITY_MAP.items() if not v}
+        assert empty == {"sherlock"}, f"unexpected empty specialities: {empty}"
 
     def test_informal_has_fallacy_plugin(self):
         assert "french_fallacy" in AGENT_SPECIALITY_MAP["informal_fallacy"]
@@ -76,8 +83,13 @@ class TestAgentSpecialityMap:
         assert plugins == {"narrative_synthesis"}
         assert not (
             plugins
-            & {"toulmin", "text_to_kb", "french_fallacy", "fallacy_workflow",
-               "tweety_logic"}
+            & {
+                "toulmin",
+                "text_to_kb",
+                "french_fallacy",
+                "fallacy_workflow",
+                "tweety_logic",
+            }
         )
 
 
@@ -279,9 +291,16 @@ class TestPluginCounts:
         """
         fallacy_domain = {"french_fallacy", "fallacy_workflow"}
         logic_domain = {
-            "tweety_logic", "nl_to_logic", "coordinated_logic", "atms",
-            "ranking", "aspic", "belief_revision", "logic_agents",
-            "tweety_interpretation", "kb_to_tweety",
+            "tweety_logic",
+            "nl_to_logic",
+            "coordinated_logic",
+            "atms",
+            "ranking",
+            "aspic",
+            "belief_revision",
+            "logic_agents",
+            "tweety_interpretation",
+            "kb_to_tweety",
         }
         for speciality, plugins in AGENT_SPECIALITY_MAP.items():
             plugin_set = set(plugins)
