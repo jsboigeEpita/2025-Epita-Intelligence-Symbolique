@@ -36,7 +36,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from config.unified_config import UnifiedConfig
 
 # Configuration paths
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "examples" / "Sherlock_Watson"))
 

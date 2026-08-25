@@ -12,7 +12,7 @@ from pathlib import Path
 from tests.fixtures.jvm_subprocess_fixture import run_in_jvm_subprocess
 
 # Le chemin vers le script worker qui contient les vrais tests.
-WORKER_SCRIPT_PATH = Path(__file__).parent / "workers" / "worker_logic_api.py"
+WORKER_SCRIPT_PATH = Path(__file__).parent.parent / "workers" / "worker_logic_api.py"
 
 
 @pytest.mark.integration

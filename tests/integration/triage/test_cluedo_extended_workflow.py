@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Le chemin vers le script worker qui contient les vrais tests.
 WORKER_SCRIPT_PATH = (
-    Path(__file__).parent / "workers" / "worker_cluedo_extended_workflow.py"
+    Path(__file__).parent.parent / "workers" / "worker_cluedo_extended_workflow.py"
 )
 
 

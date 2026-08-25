@@ -18,7 +18,7 @@ from pathlib import Path
 from datetime import datetime
 
 # Configuration auto-env
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Imports des vrais agents
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
