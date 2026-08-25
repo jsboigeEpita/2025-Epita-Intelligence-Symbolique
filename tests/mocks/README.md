@@ -20,16 +20,31 @@ Le mock de JPype est le plus complexe et est essentiel pour tester le code qui i
 
 *   **`pandas_mock.py`**: Fournit une implémentation légère de `pandas`, incluant `DataFrame`, `GroupBy`, et les fonctions de lecture/écriture. Cela permet de tester les manipulations de données sans avoir `pandas` installé.
 *   **`numpy_setup.py`**: Met en place un système sophistiqué pour utiliser soit la vraie bibliothèque `NumPy`, soit un mock. Il fournit une fixture `pytest` (`setup_numpy_for_tests_fixture`) qui, marquée par `@pytest.mark.use_mock_numpy`, installe un mock complet de NumPy. Cela est particulièrement utile pour les environnements où NumPy n'est pas disponible ou pour accélérer les tests.
-*   **`legacy_numpy_array_mock.py`**: Contient l'implémentation détaillée du mock de `NumPy`, y compris `recarray` et les sous-modules principaux.
+*   **`numpy_mock.py`**: Implementation detaillee du mock de NumPy (`recarray`, sous-modules).
+    Deux consommateurs reels : `tests/mocks/numpy_setup.py:113` et
+    `tests/utils/common_test_helpers.py:212`.
 
-### 3. Simulation de Services d'IA
+## Mocks supprimes (#1891)
 
-*   **`semantic_kernel_mock.py`**: Simule le framework `semantic-kernel`, y compris le noyau, les plugins, les fonctions et les services de complétion de chat. Cela permet de tester la logique d'orchestration d'IA sans faire de réels appels à des modèles de langage.
-*   **`semantic_kernel_agents_mock.py`**: Fournit des mocks spécifiques pour les agents basés sur Semantic Kernel.
+Neuf fichiers morts -- zero importeur, jamais collectes -- ont ete supprimes
+(`ebe2b8b7`) : `bootstrap.py`, `matplotlib_mock.py`, `networkx_mock.py`,
+`pydantic_mock.py`, `pytest_mock.py`, `semantic_kernel_mock.py`,
+`semantic_kernel_agents_mock.py`, `tensorflow_mock.py`, `torch_mock.py`.
 
-### 4. Autres Mocks
+Le motif n'etait pas seulement qu'ils etaient morts : plusieurs **s'installaient
+eux-memes dans `sys.modules` au niveau module**. Importer un tel fichier par
+accident -- une seule ligne suffit -- remplacait la vraie dependance pour tout le
+reste du processus : `networkx_mock` aurait masque le networkx reel dont la
+production depend (`argumentation_analysis/services/jtms/jtms_core.py:19`), et
+`pytest_mock` aurait remplace pytest lui-meme.
 
-*   **`matplotlib_mock.py`**, **`networkx_mock.py`**, **`tensorflow_mock.py`**, **`torch_mock.py`**: Mocks plus simples pour d'autres bibliothèques, qui permettent d'éviter les erreurs d'importation dans les tests qui n'utilisent pas directement leurs fonctionnalités.
+La garde `tests/unit/mocks/test_no_sysmodules_hijack_1891.py` interdit le retour du
+mecanisme. Elle ne tient pas une liste de fichiers autorises -- elle epingle une
+**distinction** : une ecriture `sys.modules` executee a l'import (statement nu, `try`,
+`if`) est interdite ; la meme ecriture **dans le corps d'une fonction**, activee par un
+appel ou une fixture explicite, est le patron sanctionne (`numpy_setup.py`,
+`pandas_setup.py`). Portee actuelle : `tests/mocks/*.py`, sans les sous-repertoires
+(cf. #1895).
 
 ## Utilisation
 
