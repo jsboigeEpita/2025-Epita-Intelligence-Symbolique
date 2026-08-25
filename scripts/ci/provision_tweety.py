@@ -23,9 +23,29 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from argumentation_analysis.core.jvm_setup import download_tweety_jars
 
 
+def failure_annotation() -> str:
+    """GitHub workflow command naming the SPOF (#1874 arbitration, point 5).
+
+    The named cause already lives in the AssemblyError chain, but it sits
+    mid-log: whoever lands on the red run page sees only "Process completed
+    with exit code 1" and restarts the investigation from zero. This is the
+    annotation-surface copy, and it must go to STDOUT -- GitHub parses
+    ``::error::`` from stdout only.
+    """
+    return (
+        "::error::Approvisionnement Tweety echoue. SPOF connu: "
+        "tweetyproject.org/mvn/ est la SEULE source de jspf:core, "
+        "gurobi:gurobi et isula:isula, et un cache froid doit y passer. "
+        "Distinguer dans le log complet: (1) version non constructible = "
+        "Could not FIND artifact org.tweetyproject...; (2) transport en "
+        "panne sur l'hote = Could not TRANSFER ... Connection reset."
+    )
+
+
 def main() -> int:
     if download_tweety_jars():
         return 0
+    print(failure_annotation())
     sys.stderr.write(
         "Approvisionnement Tweety echoue. La cause nommee est dans les lignes "
         "au-dessus (Maven absent, version non assemblable, reseau). Ne pas "
