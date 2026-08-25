@@ -150,6 +150,13 @@ class TestCluedoOrchestrationRealIntegration:
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required"
     )
+    # #1879: this test exists to exercise a REAL AgentGroupChat orchestration —
+    # its skipif alone let it through the gate filter and it fired 1 real POST
+    # (api.openai.com, visible on CI) in the #1872 post-fix measurement. Its
+    # purpose IS the real LLM, so requires_api (not a mock) per #1817 per-case
+    # discipline. The sibling creation/availability tests below invoke no LLM
+    # and stay runnable.
+    @pytest.mark.requires_api
     async def test_real_group_chat_orchestration(self, real_kernel, cluedo_case_data):
         """Test orchestration avec la VRAIE classe AgentGroupChat"""
         if not real_kernel:

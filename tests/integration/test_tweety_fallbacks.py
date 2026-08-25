@@ -21,6 +21,15 @@ Known schema mismatches (documented, not fixed here):
     is void. The dialogue mismatch below still stands.
   - _invoke_dialogue fallback returns "trace" key; _write_dialogue_to_state
     reads "dialogue_trace" → dialogue_results entries have trace=[]
+
+#1879: these tests validate the fallback chain, NOT the LLM translation, but
+_invoke_aspic/_invoke_bipolar/_invoke_aba/_invoke_probabilistic each traverse a
+structured-arg LLM translator BEFORE the handler guard when the caller supplies
+no relations — 13 real POSTs per run on a machine with a full .env (the R846
+family, integration variant). Each *_CTX below short-circuits the translator at
+its guard with pre-built caller-supplied relations (the documented contract:
+caller rules are never overridden), so the tests exercise only the chain they
+claim to test. TestNoTranslatorEgressGuard pins it born-red.
 """
 
 import pytest
@@ -61,6 +70,39 @@ SAMPLE_TEXT = (
 
 SAMPLE_ARGS = ["arg_1", "arg_2", "arg_3"]
 SAMPLE_ATTACKS = [["arg_1", "arg_2"], ["arg_3", "arg_1"]]
+
+# ---------------------------------------------------------------------------
+# #1879 — translator short-circuit contexts (R846/#1836 pattern)
+# ---------------------------------------------------------------------------
+# Each context carries the pre-built relation key its _invoke_* guard reads:
+#   _invoke_aspic         -> context["defeasible_rules"] (list of {head, body, name})
+#   _invoke_bipolar       -> context["supports"]         (list of [src, tgt])
+#   _invoke_aba           -> context["contraries"]       (dict asm -> contrary)
+#   _invoke_probabilistic -> context["attacks"]          (list of [src, tgt])
+# Relation endpoints reference real inventory ids so the JVM-up handler path
+# receives a genuine framework (bipolar drops endpoints outside arg_map).
+ASPIC_CTX = {
+    "phase_extract_output": {"arguments": ["claim_a", "claim_b"]},
+    "defeasible_rules": [
+        {"head": "plausible_conclusion_1", "body": ["claim_a"], "name": "def_arg_1"}
+    ],
+}
+BIPOLAR_CTX = {
+    "arguments": ["arg_a", "arg_b", "arg_c"],
+    "attacks": [["arg_a", "arg_b"]],
+    "supports": [["arg_a", "arg_c"]],
+}
+ABA_CTX = {
+    "phase_extract_output": {
+        "arguments": ["assumption_a", "assumption_b", "conclusion_c"]
+    },
+    "assumptions": ["assumption_a", "assumption_b"],
+    "contraries": {"assumption_a": "conclusion_c"},
+}
+PROBA_CTX = {
+    "arguments": ["arg_a", "arg_b"],
+    "attacks": [["arg_a", "arg_b"]],
+}
 
 
 @pytest.fixture
@@ -263,20 +305,20 @@ class TestInvokeRankingFallback:
 
 class TestInvokeAspicFallback:
     async def test_returns_dict(self):
-        result = await _invoke_aspic(SAMPLE_TEXT, {})
+        result = await _invoke_aspic(SAMPLE_TEXT, dict(ASPIC_CTX))
         assert isinstance(result, dict)
 
     async def test_has_extensions_key(self):
-        result = await _invoke_aspic(SAMPLE_TEXT, {})
+        result = await _invoke_aspic(SAMPLE_TEXT, dict(ASPIC_CTX))
         assert "extensions" in result
 
     async def test_has_statistics_key(self):
-        result = await _invoke_aspic(SAMPLE_TEXT, {})
+        result = await _invoke_aspic(SAMPLE_TEXT, dict(ASPIC_CTX))
         assert "statistics" in result
         assert isinstance(result["statistics"], dict)
 
     async def test_fallback_uses_extracted_rules(self):
-        result = await _invoke_aspic(SAMPLE_TEXT, {})
+        result = await _invoke_aspic(SAMPLE_TEXT, dict(ASPIC_CTX))
         if result.get("fallback") == "python":
             assert "strict_rules" in result
             assert "defeasible_rules" in result
@@ -341,16 +383,16 @@ class TestInvokeDialogueFallback:
 
 class TestInvokeBipolarFallback:
     async def test_returns_dict(self):
-        result = await _invoke_bipolar(SAMPLE_TEXT, {})
+        result = await _invoke_bipolar(SAMPLE_TEXT, dict(BIPOLAR_CTX))
         assert isinstance(result, dict)
 
     async def test_has_extensions_or_statistics(self):
         """Bipolar returns 'extensions' (fallback) or 'statistics' (JVM success)."""
-        result = await _invoke_bipolar(SAMPLE_TEXT, {})
+        result = await _invoke_bipolar(SAMPLE_TEXT, dict(BIPOLAR_CTX))
         assert "extensions" in result or "statistics" in result
 
     async def test_framework_type_preserved(self):
-        ctx = {"framework_type": "support"}
+        ctx = dict(BIPOLAR_CTX, framework_type="support")
         result = await _invoke_bipolar(SAMPLE_TEXT, ctx)
         if result.get("fallback") == "python":
             assert result["framework_type"] == "support"
@@ -358,11 +400,11 @@ class TestInvokeBipolarFallback:
 
 class TestInvokeAbaFallback:
     async def test_returns_dict(self):
-        result = await _invoke_aba(SAMPLE_TEXT, {})
+        result = await _invoke_aba(SAMPLE_TEXT, dict(ABA_CTX))
         assert isinstance(result, dict)
 
     async def test_has_assumptions_and_extensions(self):
-        result = await _invoke_aba(SAMPLE_TEXT, {})
+        result = await _invoke_aba(SAMPLE_TEXT, dict(ABA_CTX))
         assert "assumptions" in result
         assert "extensions" in result
 
@@ -379,15 +421,15 @@ class TestInvokeAdfFallback:
 
 class TestInvokeProbabilisticFallback:
     async def test_returns_dict(self):
-        result = await _invoke_probabilistic(SAMPLE_TEXT, {})
+        result = await _invoke_probabilistic(SAMPLE_TEXT, dict(PROBA_CTX))
         assert isinstance(result, dict)
 
     async def test_has_acceptance_probabilities(self):
-        result = await _invoke_probabilistic(SAMPLE_TEXT, {})
+        result = await _invoke_probabilistic(SAMPLE_TEXT, dict(PROBA_CTX))
         assert "acceptance_probabilities" in result
 
     async def test_probabilities_are_valid(self):
-        result = await _invoke_probabilistic(SAMPLE_TEXT, {})
+        result = await _invoke_probabilistic(SAMPLE_TEXT, dict(PROBA_CTX))
         probs = result.get("acceptance_probabilities", {})
         for arg, prob in probs.items():
             assert 0.0 <= prob <= 1.0, f"Invalid probability for {arg}: {prob}"
@@ -569,7 +611,9 @@ class TestStateSnapshotAfterFallbackChain:
     """Verify state snapshot keys after running multiple fallbacks."""
 
     async def test_snapshot_contains_all_result_keys(self, fresh_state):
-        ctx = {}
+        # #1879: aspic in this chain would traverse the LLM translator on an
+        # empty ctx — carry its short-circuit rules (only key aspic reads).
+        ctx = {"defeasible_rules": list(ASPIC_CTX["defeasible_rules"])}
 
         # Run several fallbacks and write to state
         ranking_out = await _invoke_ranking(SAMPLE_TEXT, ctx)
@@ -629,3 +673,60 @@ class TestStateSnapshotAfterFallbackChain:
         # New belief must appear in revised set
         if br_out.get("fallback") == "python":
             assert "r" in entry["revised"]
+
+
+# ---------------------------------------------------------------------------
+# #1879 — born-red guard: the LLM translator must never be reached
+# ---------------------------------------------------------------------------
+
+
+class TestNoTranslatorEgressGuard:
+    """The four *_CTX short-circuits above are load-bearing: without them each
+    ``_invoke_*`` traverses a structured-arg LLM translator BEFORE its handler
+    guard (the R846 family) — on a machine with a full ``.env`` that is 4 real
+    POSTs for these four calls alone, invisible on CI (no OPENROUTER key there).
+
+    Counting stubs, not raising ones: every ``_invoke_*`` swallows translator
+    exceptions (``except Exception`` → ``translator_failed``), so a raising stub
+    would be silently degraded and the guard would stay green. The counter is
+    the only observable. Born-red pre-fix: with the old ``{}`` contexts each
+    invoke reaches its translator and the counter trips.
+    """
+
+    async def test_fixed_contexts_never_reach_a_translator(self, monkeypatch):
+        from argumentation_analysis.orchestration import (
+            structured_arg_translator as sat,
+        )
+
+        calls: list[str] = []
+
+        def _counting_stub(name):
+            async def _stub(*_args, **_kwargs):
+                calls.append(name)
+                return sat.TranslationResult(
+                    relations=[], cause=sat.CAUSE_TRANSLATOR_UNCONFIGURED
+                )
+
+            return _stub
+
+        for name in (
+            "translate_to_aspic_rules",
+            "translate_to_bipolar_supports",
+            "translate_to_aba_contraries",
+            "translate_to_dung_attacks",
+        ):
+            monkeypatch.setattr(sat, name, _counting_stub(name))
+
+        # Replay exactly what the fixed tests above invoke (fresh dict copies:
+        # the invokes persist derived keys into the context).
+        await _invoke_aspic(SAMPLE_TEXT, dict(ASPIC_CTX))
+        await _invoke_bipolar(SAMPLE_TEXT, dict(BIPOLAR_CTX))
+        await _invoke_aba(SAMPLE_TEXT, dict(ABA_CTX))
+        await _invoke_probabilistic(SAMPLE_TEXT, dict(PROBA_CTX))
+
+        assert calls == [], (
+            "#1879: an LLM translator was reached by an invoke whose test "
+            "context was supposed to short-circuit it — a *_CTX guard key was "
+            f"likely emptied or removed. Reached: {calls}. On a machine with a "
+            "real .env each of those is a billed POST (R846 family)."
+        )
