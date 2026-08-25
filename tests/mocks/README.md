@@ -20,16 +20,11 @@ Le mock de JPype est le plus complexe et est essentiel pour tester le code qui i
 
 *   **`pandas_mock.py`**: Fournit une implémentation légère de `pandas`, incluant `DataFrame`, `GroupBy`, et les fonctions de lecture/écriture. Cela permet de tester les manipulations de données sans avoir `pandas` installé.
 *   **`numpy_setup.py`**: Met en place un système sophistiqué pour utiliser soit la vraie bibliothèque `NumPy`, soit un mock. Il fournit une fixture `pytest` (`setup_numpy_for_tests_fixture`) qui, marquée par `@pytest.mark.use_mock_numpy`, installe un mock complet de NumPy. Cela est particulièrement utile pour les environnements où NumPy n'est pas disponible ou pour accélérer les tests.
-*   **`legacy_numpy_array_mock.py`**: Contient l'implémentation détaillée du mock de `NumPy`, y compris `recarray` et les sous-modules principaux.
+*   **`numpy_mock.py`**: Implémentation détaillée du mock de `NumPy` (consommée par `tests/utils/common_test_helpers.py`).
 
-### 3. Simulation de Services d'IA
+## Mocks supprimés (#1891)
 
-*   **`semantic_kernel_mock.py`**: Simule le framework `semantic-kernel`, y compris le noyau, les plugins, les fonctions et les services de complétion de chat. Cela permet de tester la logique d'orchestration d'IA sans faire de réels appels à des modèles de langage.
-*   **`semantic_kernel_agents_mock.py`**: Fournit des mocks spécifiques pour les agents basés sur Semantic Kernel.
-
-### 4. Autres Mocks
-
-*   **`matplotlib_mock.py`**, **`networkx_mock.py`**, **`tensorflow_mock.py`**, **`torch_mock.py`**: Mocks plus simples pour d'autres bibliothèques, qui permettent d'éviter les erreurs d'importation dans les tests qui n'utilisent pas directement leurs fonctionnalités.
+Huit fichiers morts — zéro importeur, jamais collectés — ont été supprimés car plusieurs s'installaient eux-mêmes dans `sys.modules` au niveau module (l'import du fichier aurait silencieusement remplacé pytest/pydantic/networkx/SK/torch/tensorflow/matplotlib process-wide) : `pytest_mock.py`, `networkx_mock.py`, `torch_mock.py`, `tensorflow_mock.py`, `pydantic_mock.py`, `semantic_kernel_mock.py`, `semantic_kernel_agents_mock.py`, `matplotlib_mock.py`. La garde `tests/unit/test_mocks_no_module_level_shadow_1891.py` interdit le retour du mécanisme : toute écriture `sys.modules` au niveau module sous `tests/mocks/` rougit, sauf les deux fichiers d'infrastructure jpype allowlistés.
 
 ## Utilisation
 
