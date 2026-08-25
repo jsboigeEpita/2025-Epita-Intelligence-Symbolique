@@ -76,12 +76,8 @@ class AppServices:
         # consommateur, via la fabrique canonique. Pas de défaut ``= None``
         # sur les constructeurs : ça déplacerait la panne du démarrage vers
         # le premier appel réel.
-        logic_llm = create_llm_service(
-            service_id="logic_service", model_id="gpt-5-mini"
-        )
-        analysis_llm = create_llm_service(
-            service_id="analysis_service", model_id="gpt-5-mini"
-        )
+        logic_llm = create_llm_service(service_id="logic_service")
+        analysis_llm = create_llm_service(service_id="analysis_service")
         self.logic_service = LogicService(llm_service=logic_llm)
         self.analysis_service = AnalysisService(llm_service=analysis_llm)
         self.validation_service = ValidationService(self.logic_service)

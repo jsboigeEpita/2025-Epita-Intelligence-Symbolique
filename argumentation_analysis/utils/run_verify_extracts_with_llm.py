@@ -179,9 +179,7 @@ async def main():
 
     # Créer le service LLM
     logger.info("Création du service LLM...")
-    llm_service = create_llm_service(
-        service_id="verify_extracts", model_id="gpt-5-mini"
-    )
+    llm_service = create_llm_service(service_id="verify_extracts")
     if not llm_service:
         logger.error("Impossible de créer le service LLM.")
         return

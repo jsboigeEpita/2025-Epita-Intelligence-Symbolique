@@ -128,7 +128,6 @@ class ProfesseurVirtuelLLM:
                 # Force l'utilisation de vrais LLMs (pas de mock)
                 self.llm_service = create_llm_service(
                     service_id="validation_point3_professeur",
-                    model_id="gpt-5-mini",
                     force_mock=self.config.use_mock_llm,
                 )
                 self.logger.info(
