@@ -3,6 +3,8 @@
 Worker pour les tests d'intégration avec GPT-4o-mini réel pour Sherlock/Watson/Moriarty.
 """
 
+import sys
+
 import pytest
 import asyncio
 import time
@@ -39,9 +41,18 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 # Skip si pas d'API key
-pytestmark = pytest.mark.skipif(
-    not REAL_GPT_AVAILABLE, reason="Tests réels GPT-4o-mini nécessitent OPENAI_API_KEY"
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not REAL_GPT_AVAILABLE,
+        reason="Tests réels GPT-4o-mini nécessitent OPENAI_API_KEY",
+    ),
+    # #1872: the worker is a nested pytest session spawned by the launcher. It
+    # is never collected by the main session (worker_*.py does not match
+    # test_*.py), so the parent's gate filter cannot protect it by directory.
+    # Marking it lets the propagated -m ("not slow and not requires_api") in
+    # __main__ deselect its real-GPT tests instead of firing 9+ billed POSTs.
+    pytest.mark.requires_api,
+]
 
 
 # Fixtures de configuration
@@ -538,4 +549,19 @@ class TestRealGPTLoadHandling:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+    # #1872 avait copié ici le filtre de la porte pour éviter la facturation.
+    # Mesuré : ce filtre déselectionne 12 tests sur 12 — la totalité du
+    # fichier. Le worker n'est atteignable que via son lanceur, et le lanceur
+    # porte déjà `requires_api` : une bande qui filtre ce marqueur ne le
+    # *spawne pas*, donc rien n'est facturé. Le filtre local n'ajoutait aucune
+    # protection et supprimait la seule bande où ces tests devaient tourner.
+    #
+    # C'était de surcroît une COPIE du filtre de la porte, pas une propagation :
+    # si la porte bouge, la copie dérive en silence.
+    #
+    # sys.exit : `pytest.main(...)` en expression nue jette son code de retour,
+    # et le script sort 0 — y compris quand ses tests échouent. La fixture
+    # `run_in_jvm_subprocess` lit ce code, donc le lanceur concluait PASS quoi
+    # qu'il arrive. Vérifié sur un worker jouet : test en échec -> rc=0 sans
+    # sys.exit, rc!=0 avec.
+    sys.exit(pytest.main([__file__, "-v", "-s"]))

@@ -18,6 +18,8 @@ Tests critiques d'intégration :
 ✅ Performance stable et prévisible
 """
 
+import sys
+
 import pytest
 import pytest_asyncio
 import asyncio
@@ -574,12 +576,18 @@ async def fol_agent_with_kernel():
 
 if __name__ == "__main__":
     # Exécution des tests d'intégration
-    pytest.main(
-        [
-            __file__,
-            "-v",
-            "--tb=short",
-            "-k",
-            "not test_real_tweety" if not TWEETY_AVAILABLE else "",
-        ]
+    # sys.exit : sans lui, `pytest.main(...)` en expression nue jette son code
+    # de retour et le script sort 0 même quand ses tests échouent. La fixture
+    # `run_in_jvm_subprocess` lit ce code : le lanceur concluait donc PASS quoi
+    # qu'il arrive.
+    sys.exit(
+        pytest.main(
+            [
+                __file__,
+                "-v",
+                "--tb=short",
+                "-k",
+                "not test_real_tweety" if not TWEETY_AVAILABLE else "",
+            ]
+        )
     )

@@ -12,10 +12,15 @@ sys.path.insert(0, str(project_root))
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.core.llm_service import create_llm_service
 
-pytestmark = pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"),
-    reason="Tests require OPENAI_API_KEY for real LLM agent tool choice validation",
-)
+pytestmark = [
+    pytest.mark.skipif(
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Tests require OPENAI_API_KEY for real LLM agent tool choice validation",
+    ),
+    # #1872 genuine-verdict: force_authentic=True so the tool-choice is observed
+    # on a real LLM. Marker (not skipif) is what deselects it under the gate.
+    pytest.mark.requires_api,
+]
 from semantic_kernel.contents.chat_history import ChatHistory
 from argumentation_analysis.agents.core.informal.informal_definitions import (
     InformalAnalysisPlugin as IdentificationPlugin,

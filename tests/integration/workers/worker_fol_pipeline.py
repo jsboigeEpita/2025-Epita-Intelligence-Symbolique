@@ -135,9 +135,7 @@ class TestFOLPipelineIntegration:
     @pytest.mark.skip(reason="requires live LLM funded window — see #695")
     async def test_fol_orchestration_integration(self):
         """Test d'intégration avec orchestration FOL via UnifiedPipeline."""
-        result = await run_unified_analysis(
-            self.test_text, workflow_name="standard"
-        )
+        result = await run_unified_analysis(self.test_text, workflow_name="standard")
 
         assert result is not None
         assert isinstance(result, dict)
@@ -422,6 +420,10 @@ class TestFOLValidationIntegration:
 
 
 if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
-if __name__ == "__main__":
-    pytest.main([__file__])
+    # Il y avait DEUX blocs __main__ consécutifs : la suite tournait deux
+    # fois de suite, et les deux verdicts étaient jetés.
+    # sys.exit : sans lui, `pytest.main(...)` en expression nue jette son code
+    # de retour et le script sort 0 même quand ses tests échouent. La fixture
+    # `run_in_jvm_subprocess` lit ce code : le lanceur concluait donc PASS quoi
+    # qu'il arrive.
+    sys.exit(pytest.main([__file__, "-v"]))

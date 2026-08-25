@@ -178,3 +178,10 @@ class TestLogicServiceIntegration:
         assert response.belief_set_id == belief_set_id
         assert response.logic_type == "propositional"
         assert response.queries == ["a", "b", "a => b"]
+
+
+if __name__ == "__main__":
+    # Ce worker était spawné SANS bloc __main__ : il définissait 3 tests,
+    # n'en lançait aucun, et son lanceur lisait le code de sortie d'un
+    # script qui ne testait rien.
+    sys.exit(pytest.main([__file__, "-v"]))

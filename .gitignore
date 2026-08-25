@@ -251,4 +251,6 @@ docs/reports/spectacular_vs_baseline.md
 
 # LLM egress counter artifact (#1787) - test names + counts, stays local
 llm_egress_report.json
+# #1872: nested (no --junitxml) pytest sessions write a per-process distinct name
+llm_egress_report.*.json
 pytest_report.xml
