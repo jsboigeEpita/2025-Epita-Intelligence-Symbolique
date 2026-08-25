@@ -6,7 +6,7 @@ from pathlib import Path
 # sous-processus isolé, garantissant une initialisation propre de la JVM.
 
 # Chemin vers le script "worker" qui contient la logique de test réelle.
-WORKER_SCRIPT_PATH = Path(__file__).parent / "workers" / "worker_einstein_tweety.py"
+WORKER_SCRIPT_PATH = Path(__file__).parent.parent / "workers" / "worker_einstein_tweety.py"
 
 
 @pytest.mark.integration

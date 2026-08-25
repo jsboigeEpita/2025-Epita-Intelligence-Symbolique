@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 # Détermination du répertoire racine du projet
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 # Chemin vers les scripts de démonstration à tester
 CLUEDO_DEMO_SCRIPT = (

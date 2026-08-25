@@ -20,7 +20,7 @@ class TestNotebooksStructure(unittest.TestCase):
         # Construire le chemin absolu basé sur l'emplacement de ce fichier de test
         # tests/integration/test_notebooks_structure.py -> remonter de deux niveaux pour la racine
         project_root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "..", "..")
+            os.path.join(os.path.dirname(__file__), "..", "..", "..")
         )
         notebook_path = os.path.join(project_root, notebook_relative_path)
 

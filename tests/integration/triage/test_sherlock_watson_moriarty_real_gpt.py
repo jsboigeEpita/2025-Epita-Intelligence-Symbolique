@@ -14,7 +14,7 @@ from tests.fixtures.jvm_subprocess_fixture import run_in_jvm_subprocess
 
 # Le chemin vers le script worker qui contient les vrais tests.
 WORKER_SCRIPT_PATH = (
-    Path(__file__).parent / "workers" / "worker_sherlock_watson_moriarty.py"
+    Path(__file__).parent.parent / "workers" / "worker_sherlock_watson_moriarty.py"
 )
 
 # Configuration pour tests réels GPT-4o-mini

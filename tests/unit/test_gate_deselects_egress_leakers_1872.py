@@ -26,10 +26,10 @@ import sys
 import pytest
 
 FILES = [
-    "tests/integration/test_sherlock_watson_moriarty_real_gpt.py",
-    "tests/integration/test_orchestration_agentielle_complete_reel.py",
-    "tests/integration/test_realite_pure_jtms.py",
-    "tests/integration/test_informal_agent_tool_choice.py",
+    "tests/integration/triage/test_sherlock_watson_moriarty_real_gpt.py",
+    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py",
+    "tests/integration/triage/test_realite_pure_jtms.py",
+    "tests/integration/triage/test_informal_agent_tool_choice.py",
     "tests/integration/workers/worker_sherlock_watson_moriarty.py",
 ]
 
@@ -37,14 +37,14 @@ FILES = [
 # attributed a POST to the first three subsets; the siblings are marked with
 # the same marker so the gate never runs a half-marked file.
 LEAKER_NODEIDS = {
-    "tests/integration/test_sherlock_watson_moriarty_real_gpt.py::test_sherlock_watson_moriarty_real_gpt_in_subprocess",
-    "tests/integration/test_orchestration_agentielle_complete_reel.py::test_sherlock_jtms_hypotheses",
-    "tests/integration/test_orchestration_agentielle_complete_reel.py::test_watson_jtms_validation",
-    "tests/integration/test_orchestration_agentielle_complete_reel.py::test_orchestration_collaborative",
-    "tests/integration/test_realite_pure_jtms.py::test_interaction_sherlock_reelle",
-    "tests/integration/test_realite_pure_jtms.py::test_validation_watson_reelle",
-    "tests/integration/test_realite_pure_jtms.py::test_collaboration_orchestration_reelle",
-    "tests/integration/test_informal_agent_tool_choice.py::test_informal_agent_forced_tool_choice",
+    "tests/integration/triage/test_sherlock_watson_moriarty_real_gpt.py::test_sherlock_watson_moriarty_real_gpt_in_subprocess",
+    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py::test_sherlock_jtms_hypotheses",
+    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py::test_watson_jtms_validation",
+    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py::test_orchestration_collaborative",
+    "tests/integration/triage/test_realite_pure_jtms.py::test_interaction_sherlock_reelle",
+    "tests/integration/triage/test_realite_pure_jtms.py::test_validation_watson_reelle",
+    "tests/integration/triage/test_realite_pure_jtms.py::test_collaboration_orchestration_reelle",
+    "tests/integration/triage/test_informal_agent_tool_choice.py::test_informal_agent_forced_tool_choice",
 }
 
 # The worker file's tests are collected when the file is named explicitly.
@@ -86,9 +86,9 @@ _NODEID_RE = re.compile(r"^\S+::\S+$")
 # volontairement runnables : s'ils disparaissent de `admitted`, l'instrument ne
 # mesure plus rien et doit rougir avant de rendre un verdict rassurant.
 EXPECTED_ADMITTED = {
-    "tests/integration/test_realite_pure_jtms.py::test_imports_jtms_reels",
-    "tests/integration/test_realite_pure_jtms.py::test_existence_fichiers_reels",
-    "tests/integration/test_realite_pure_jtms.py::test_interface_web_reelle",
+    "tests/integration/triage/test_realite_pure_jtms.py::test_imports_jtms_reels",
+    "tests/integration/triage/test_realite_pure_jtms.py::test_existence_fichiers_reels",
+    "tests/integration/triage/test_realite_pure_jtms.py::test_interface_web_reelle",
 }
 
 

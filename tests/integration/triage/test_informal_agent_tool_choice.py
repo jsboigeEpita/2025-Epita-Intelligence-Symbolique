@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 # Ajouter la racine du projet au sys.path pour les importations
-project_root = Path(__file__).resolve().parent.parent.parent
+project_root = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 from argumentation_analysis.agents.factory import AgentFactory, AgentType

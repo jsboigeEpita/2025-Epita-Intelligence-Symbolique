@@ -24,7 +24,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 REAL_GPT_AVAILABLE = OPENAI_API_KEY is not None and len(OPENAI_API_KEY) > 10
 
 # Chemins des scripts
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 SCRIPTS_DIR = PROJECT_ROOT / "scripts" / "sherlock_watson"
 CLUEDO_ENHANCED_SCRIPT = SCRIPTS_DIR / "run_cluedo_oracle_enhanced.py"
 

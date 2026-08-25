@@ -5,7 +5,7 @@ import os
 import sys
 
 # Add the project root to the Python path to allow for absolute imports
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 sys.path.insert(0, root_dir)
 
 import semantic_kernel as sk

@@ -20,7 +20,7 @@ import subprocess
 import sys
 import types
 
-REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent.parent
 TASKS_CLI = REPO_ROOT / "scripts" / "dataset" / "tasks.py"
 ENRICH_DOC = REPO_ROOT / "docs" / "security" / "dataset_enrichment.md"
 README = REPO_ROOT / "README.md"

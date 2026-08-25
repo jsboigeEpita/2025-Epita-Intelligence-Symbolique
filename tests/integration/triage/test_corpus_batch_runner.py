@@ -13,7 +13,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-SCRIPT_DIR = Path(__file__).resolve().parents[2] / "scripts" / "dataset"
+SCRIPT_DIR = Path(__file__).resolve().parents[3] / "scripts" / "dataset"
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import run_corpus_batch as runner

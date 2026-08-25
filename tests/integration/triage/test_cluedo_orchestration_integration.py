@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 # Configuration paths
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # Imports des VRAIES classes du système
