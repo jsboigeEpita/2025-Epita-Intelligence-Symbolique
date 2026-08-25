@@ -46,6 +46,7 @@ import io
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 import zipfile
@@ -53,6 +54,7 @@ from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
 MAVEN_CENTRAL = "https://repo1.maven.org/maven2"
 DEFAULT_TIMEOUT = 60
+RETRY_BACKOFF_SECONDS = 2
 
 # Java class-file major version -> human label. Anything above 52 is rejected by a
 # toolchain that only accepts Java 8 bytecode, which is the IKVM 8.x situation.
@@ -83,13 +85,42 @@ CLASS_MAGIC = b"\xca\xfe\xba\xbe"
 # --------------------------------------------------------------------------- I/O
 
 
-def _get(url: str, timeout: int = DEFAULT_TIMEOUT) -> Optional[bytes]:
-    """Return the body at ``url``, or None on any HTTP/network failure."""
-    try:
-        with urllib.request.urlopen(url, timeout=timeout) as resp:
-            return resp.read()
-    except (urllib.error.URLError, urllib.error.HTTPError, OSError):
-        return None
+# A miss and an outage are not the same finding, and collapsing them is how a
+# transport failure gets certified as "nothing was lost". ABSENT means the server
+# answered and said no (404/410): the artifact is genuinely not published there,
+# which is a *result*. UNREACHABLE means we never got an answer -- reset, timeout,
+# DNS, 5xx: the instrument did not look, so every downstream negative drawn from it
+# is an instrumental zero, not a semantic one. Measured on CI run 32776186323: a
+# single `Connection reset` on one source-side jar turned `perdues=75` into
+# `perdues=0` with the report certifying the zero.
+FETCH_OK = "ok"
+FETCH_ABSENT = "absent"
+FETCH_UNREACHABLE = "unreachable"
+
+# Retries cover the transport only. A 404 must keep failing on the first try:
+# retrying it would spend three round-trips to re-learn a permanent answer, and --
+# worse -- would blur the very distinction this function exists to draw.
+FETCH_ATTEMPTS = 3
+
+
+def _get(
+    url: str, timeout: int = DEFAULT_TIMEOUT, attempts: int = FETCH_ATTEMPTS
+) -> Tuple[Optional[bytes], str]:
+    """Return ``(body, status)`` where status is one of the ``FETCH_*`` constants."""
+    last = FETCH_UNREACHABLE
+    for attempt in range(max(1, attempts)):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as resp:
+                return resp.read(), FETCH_OK
+        except urllib.error.HTTPError as exc:
+            if exc.code in (404, 410):
+                return None, FETCH_ABSENT
+            last = FETCH_UNREACHABLE
+        except (urllib.error.URLError, OSError):
+            last = FETCH_UNREACHABLE
+        if attempt + 1 < max(1, attempts):
+            time.sleep(RETRY_BACKOFF_SECONDS * (attempt + 1))
+    return None, last
 
 
 def list_repo_children(
@@ -100,7 +131,7 @@ def list_repo_children(
     Returns [] when the listing is unavailable. An empty listing is *not* proof of
     absence -- some mirrors disable directory browsing while still serving artifacts.
     """
-    body = _get(f"{repo}/{path.strip('/')}/", timeout=timeout)
+    body, _status = _get(f"{repo}/{path.strip('/')}/", timeout=timeout)
     if body is None:
         return []
     text = body.decode("utf-8", errors="replace")
@@ -110,15 +141,27 @@ def list_repo_children(
 
 def fetch_jar(
     repo: str, group: str, artifact: str, version: str, timeout: int = DEFAULT_TIMEOUT
-) -> Optional[bytes]:
-    """Download one module jar. None when the coordinate is not published."""
+) -> Tuple[Optional[bytes], str]:
+    """Download one module jar, as ``(body, status)``.
+
+    The status matters more than the body: ``FETCH_ABSENT`` is an answer about the
+    repository ("this module is not published at this version"), while
+    ``FETCH_UNREACHABLE`` is an answer about us ("we failed to ask"). Returning a
+    bare None for both is what let a transport outage be read as a clean absence.
+    """
     gpath = group.replace(".", "/")
     url = f"{repo}/{gpath}/{artifact}/{version}/{artifact}-{version}.jar"
-    body = _get(url, timeout=timeout)
-    # A 404 page is served as HTML by some fronts; a real jar is a zip.
+    body, status = _get(url, timeout=timeout)
+    # A 404 page is served as HTML by some fronts; a real jar is a zip. The server
+    # answered, so this is an absence, not an outage.
     if body is not None and not body.startswith(b"PK"):
-        return None
-    return body
+        return None, FETCH_ABSENT
+    return body, status
+
+
+def _module_group(root: str, module: str) -> str:
+    """groupId of ``module`` under ``root`` (arg.bipolar -> <root>.arg)."""
+    return f"{root}.{module.rsplit('.', 1)[0]}" if "." in module else root
 
 
 def published_versions(
@@ -126,11 +169,50 @@ def published_versions(
 ) -> List[str]:
     """Versions listed in an artifact's maven-metadata.xml (may have holes)."""
     gpath = group.replace(".", "/")
-    body = _get(f"{repo}/{gpath}/{artifact}/maven-metadata.xml", timeout=timeout)
+    body, _status = _get(
+        f"{repo}/{gpath}/{artifact}/maven-metadata.xml", timeout=timeout
+    )
     if body is None:
         return []
     text = body.decode("utf-8", errors="replace")
     return re.findall(r"<version>([^<]+)</version>", text)
+
+
+def aggregator_modules(
+    repo: str,
+    group: str,
+    artifact: str,
+    version: str,
+    timeout: int = DEFAULT_TIMEOUT,
+) -> Tuple[List[str], str]:
+    """Module names an umbrella POM declares, as ``(modules, status)``.
+
+    Measured on `tweety-full-1.29.pom`: 48 `<dependency>` blocks and zero
+    `<module>` entries, so the declaration lives in the dependency list. Entries
+    outside the root group are third-party closure, not modules of the library,
+    and are dropped -- counting them would inflate every gap figure below.
+
+    The status is propagated for the same reason it is everywhere else: an
+    unreachable POM must not be read as "the aggregator declares nothing".
+    """
+    gpath = group.replace(".", "/")
+    url = f"{repo}/{gpath}/{artifact}/{version}/{artifact}-{version}.pom"
+    body, status = _get(url, timeout=timeout)
+    if body is None:
+        return [], status
+    text = body.decode("utf-8", errors="replace")
+    modules = []
+    for dep in re.findall(r"<dependency>(.*?)</dependency>", text, re.S):
+        gid = re.search(r"<groupId>([^<]+)</groupId>", dep)
+        aid = re.search(r"<artifactId>([^<]+)</artifactId>", dep)
+        if not gid or not aid:
+            continue
+        gid, aid = gid.group(1).strip(), aid.group(1).strip()
+        if gid == group:
+            modules.append(aid)
+        elif gid.startswith(group + "."):
+            modules.append(f"{gid[len(group) + 1:]}.{aid}")
+    return sorted(set(modules)), status
 
 
 # ------------------------------------------------------------------- pure analysis
@@ -140,7 +222,10 @@ def index_jar(blob: bytes, skip_inner: bool = True) -> Dict[str, int]:
     """Map fully-qualified class name -> class-file major version.
 
     ``skip_inner`` drops ``Foo$Bar`` entries, which inflate counts without naming a
-    distinct API surface.
+    distinct API surface. The test is on the *simple name*, not on the whole path:
+    a package directory containing a dollar sign is legal in a jar, and testing the
+    full path would silently drop every class under it -- an exclusion that leaves
+    no trace in the count it shrinks.
     """
     out: Dict[str, int] = {}
     with zipfile.ZipFile(io.BytesIO(blob)) as zf:
@@ -148,7 +233,7 @@ def index_jar(blob: bytes, skip_inner: bool = True) -> Dict[str, int]:
             if not name.endswith(".class"):
                 continue
             stem = name[: -len(".class")]
-            if skip_inner and "$" in stem:
+            if skip_inner and "$" in stem.rsplit("/", 1)[-1]:
                 continue
             head = zf.open(name).read(8)
             if len(head) < 8 or head[:4] != CLASS_MAGIC:
@@ -172,6 +257,7 @@ def classify_lost(
     new_index: Dict[str, int],
     owners_old: Optional[Dict[str, str]] = None,
     unresolved_new: Iterable[str] = (),
+    owners_new: Optional[Dict[str, str]] = None,
 ) -> Dict[str, List[Tuple[str, Optional[str]]]]:
     """Split old-only classes into RELOCATED, DELETED and INDETERMINATE.
 
@@ -192,7 +278,19 @@ def classify_lost(
         new_simple[fqcn.rsplit(".", 1)[-1]].append(fqcn)
 
     owners_old = owners_old or {}
+    owners_new = owners_new or {}
     blind: Set[str] = set(unresolved_new)
+
+    def annotate(fqcns: Iterable[str]) -> str:
+        # Naming the module that HOSTS the candidate is what lets a reader reject
+        # the move: `CompleteReasoner (arg.adf)` next to a class lost from
+        # `arg.bipolar` reads as two unrelated formalisms reusing a generic name,
+        # which the bare FQCN only implies.
+        out = []
+        for fqcn in sorted(fqcns):
+            host = owners_new.get(fqcn)
+            out.append(f"{fqcn} ({host})" if host else fqcn)
+        return ", ".join(out)
 
     relocated: List[Tuple[str, Optional[str]]] = []
     deleted: List[Tuple[str, Optional[str]]] = []
@@ -200,14 +298,26 @@ def classify_lost(
     for fqcn in sorted(set(old_index) - set(new_index)):
         simple = fqcn.rsplit(".", 1)[-1]
         candidates = new_simple.get(simple, [])
-        if candidates:
-            relocated.append((fqcn, ", ".join(sorted(candidates))))
-            continue
         owner = owners_old.get(fqcn)
+        # Blindness is tested FIRST, before the simple-name match. When the owning
+        # module never resolved on the new side, no observation about this class was
+        # made at all -- and a same-simple-name hit elsewhere is exactly the kind of
+        # coincidence that produced the original wrong answer (Evidential* in
+        # `arg.bipolar` vs the unrelated `arg.eaf`). Letting `if candidates:` win
+        # here would turn "we never looked" into a confident "it moved there",
+        # which is the optimistic failure this tool exists to refuse. The candidate
+        # is not discarded: it rides along as an annotation, clearly marked as a
+        # lead to check rather than a conclusion.
         if owner in blind:
-            indeterminate.append((fqcn, owner))
-        else:
-            deleted.append((fqcn, None))
+            hint = (
+                "candidat non verifie: " + annotate(candidates) if candidates else None
+            )
+            indeterminate.append((fqcn, hint or owner))
+            continue
+        if candidates:
+            relocated.append((fqcn, annotate(candidates)))
+            continue
+        deleted.append((fqcn, None))
     return {
         "relocated": relocated,
         "deleted": deleted,
@@ -264,6 +374,48 @@ def render_report(result: dict) -> str:
                 f"    /!\\ declares mais NON publies ({len(info['unresolved'])}): "
                 + ", ".join(info["unresolved"][:12])
             )
+        agg = info.get("aggregator")
+        if agg:
+            if agg["status"] != FETCH_OK:
+                lines.append(
+                    f"    agregat {agg['artifact']}: POM {agg['status'].upper()} -- "
+                    "aucun chiffre de publication n'est disponible pour cette version"
+                )
+            else:
+                lines.append(
+                    f"    agregat {agg['artifact']}: declare={len(agg['declared'])} "
+                    f"trous={len(agg['gaps'])} hors-agregat={len(agg['not_aggregated'])}"
+                )
+                shown = agg["gaps"][:12]
+                if len(agg["gaps"]) > len(shown):
+                    # A cut that leaves no trace reads as "that was all of them".
+                    lines.append(
+                        f"      ... {len(agg['gaps']) - len(shown)} autre(s) trou(s) "
+                        "non listes (--limit ne s'applique qu'aux classes)"
+                    )
+                for module in shown:
+                    seen = agg.get("gap_versions", {}).get(module) or []
+                    where = (
+                        "publie ailleurs en " + ", ".join(seen)
+                        if seen
+                        else "aucune version publiee"
+                    )
+                    lines.append(f"      TROU  {module} ({where})")
+                if agg.get("metadata_only"):
+                    lines.append(
+                        "      METADATA-SEULE "
+                        + ", ".join(agg["metadata_only"][:12])
+                        + " -- maven-metadata annonce cette version, le jar ne "
+                        "repond pas: l'ecart mesure ce qu'une lecture metadata "
+                        "seule ne voit pas"
+                    )
+                if agg["not_aggregated"]:
+                    lines.append(
+                        "      HORS-AGREGAT "
+                        + ", ".join(agg["not_aggregated"][:12])
+                        + " -- invisible pour une recherche menee sur la seule "
+                        "fermeture de l'agregat"
+                    )
 
     lost = result["lost"]
     indet = lost.get("indeterminate", [])
@@ -280,22 +432,61 @@ def render_report(result: dict) -> str:
         lines.append(f"    INDETERMINEE {fqcn} (module {owner} non resolu en cible)")
 
     control = result["control"]
+    unreachable = control.get("unreachable_source", []) + control.get(
+        "unreachable_target", []
+    )
     if control["ok"]:
         lines.append(
             "  controle: index de depart non vide "
-            f"({control['old_classes']} classes) et cible entierement resolue "
-            "-> un zero est semantique"
+            f"({control['old_classes']} classes), aucun module injoignable, cible "
+            "entierement resolue -> un zero est semantique"
         )
     elif not control["old_classes"]:
         lines.append(
             "  /!\\ CONTROLE ECHOUE: index de depart vide -- "
             "aucune conclusion negative n'est recevable"
         )
+    elif unreachable:
+        # Named first and separately: this is the failure that used to be invisible.
+        # It says nothing about the library and everything about the run -- a
+        # transport outage on one source module is what turned `perdues=75` into
+        # `perdues=0` under a report certifying the zero was semantic.
+        side = []
+        if control.get("unreachable_source"):
+            side.append("source: " + ", ".join(control["unreachable_source"][:6]))
+        if control.get("unreachable_target"):
+            side.append("cible: " + ", ".join(control["unreachable_target"][:6]))
+        lines.append(
+            "  /!\\ CONTROLE ECHOUE: module(s) INJOIGNABLE(S) ("
+            + " | ".join(side)
+            + ") -- panne de transport, pas une absence: aucun chiffre de ce "
+            "rapport n'est un resultat"
+        )
+    elif control.get("attribution_missing"):
+        lines.append(
+            "  /!\\ CONTROLE ECHOUE: attribution des classes indisponible "
+            "(owners_old absent) alors que la cible n'a pas tout resolu -- "
+            "les verdicts SUPPRIMEE de ce rapport ne sont pas recevables"
+        )
     else:
         lines.append(
             "  /!\\ CONTROLE ECHOUE: la version cible n'a pas entierement resolu ("
             + ", ".join(control["unresolved_target"][:6])
             + ") -- ces classes sont INDETERMINEES, pas supprimees"
+        )
+    # Absence on the source side does not void the control (a module missing from the
+    # older version contributes no class, so it cannot fake a zero), but staying
+    # silent about it is how the source side came to be ignored in the first place.
+    only_absent_source = [
+        m
+        for m in control.get("unresolved_source", [])
+        if m not in control.get("unreachable_source", [])
+    ]
+    if only_absent_source:
+        lines.append(
+            f"  note: {len(only_absent_source)} module(s) absent(s) de la version "
+            "source (" + ", ".join(only_absent_source[:6]) + ") -- normal si la "
+            "liste de modules vient de la version cible"
         )
     return "\n".join(lines)
 
@@ -310,32 +501,42 @@ def collect_version(
     version: str,
     timeout: int = DEFAULT_TIMEOUT,
     verbose: bool = False,
-) -> Tuple[Dict[str, int], Dict[str, str], List[str], List[str]]:
+    skip_inner: bool = True,
+) -> Tuple[Dict[str, int], Dict[str, str], List[str], List[str], List[str]]:
     """Download every module at ``version``.
 
-    Returns (index, owners, resolved, unresolved). ``owners`` maps each class to the
-    module it came from; without it a lost class cannot be attributed to a module
-    that failed to resolve, and the diff would call it deleted.
+    Returns (index, owners, resolved, unresolved, unreachable). ``owners`` maps each
+    class to the module it came from; without it a lost class cannot be attributed to
+    a module that failed to resolve, and the diff would call it deleted.
+
+    ``unreachable`` is a strict subset of ``unresolved``: the modules for which no
+    answer was obtained at all. Keeping it apart is what lets a caller tell "this
+    module is not published here" from "this run never found out".
     """
     index: Dict[str, int] = {}
     owners: Dict[str, str] = {}
     resolved: List[str] = []
     unresolved: List[str] = []
+    unreachable: List[str] = []
     for module in modules:
         artifact = module.rsplit(".", 1)[-1]
-        sub_group = f"{group}.{module.rsplit('.', 1)[0]}" if "." in module else group
-        blob = fetch_jar(repo, sub_group, artifact, version, timeout=timeout)
+        sub_group = _module_group(group, module)
+        blob, status = fetch_jar(repo, sub_group, artifact, version, timeout=timeout)
         if blob is None:
             unresolved.append(module)
+            if status != FETCH_ABSENT:
+                unreachable.append(module)
+                if verbose:
+                    print(f"    ! {module}-{version}: INJOIGNABLE", file=sys.stderr)
             continue
         resolved.append(module)
-        module_index = index_jar(blob)
+        module_index = index_jar(blob, skip_inner=skip_inner)
         index.update(module_index)
         for fqcn in module_index:
             owners.setdefault(fqcn, module)
         if verbose:
             print(f"    + {module}-{version}", file=sys.stderr)
-    return index, owners, resolved, unresolved
+    return index, owners, resolved, unresolved, unreachable
 
 
 def diff_versions(
@@ -347,13 +548,26 @@ def diff_versions(
     to_version: str,
     per_version: dict,
     owners_old: Optional[Dict[str, str]] = None,
-    limit: int = 25,
+    owners_new: Optional[Dict[str, str]] = None,
+    limit: Optional[int] = 25,
 ) -> dict:
     """Assemble the full comparison result from two already-built indexes."""
     unresolved_new = per_version.get(to_version, {}).get("unresolved", [])
+    unresolved_old = per_version.get(from_version, {}).get("unresolved", [])
+    unreachable_new = per_version.get(to_version, {}).get("unreachable", [])
+    unreachable_old = per_version.get(from_version, {}).get("unreachable", [])
     lost = classify_lost(
-        old_index, new_index, owners_old=owners_old, unresolved_new=unresolved_new
+        old_index,
+        new_index,
+        owners_old=owners_old,
+        unresolved_new=unresolved_new,
+        owners_new=owners_new,
     )
+    # Without `owners_old`, a lost class cannot be attributed to its module, so the
+    # INDETERMINATE verdict cannot be reached at all: every class would be reported
+    # DELETED while the same report states the target side did not fully resolve.
+    # A report that contradicts itself is worse than one that refuses to conclude.
+    attribution_missing = bool(unresolved_new) and not owners_old
     gained = sorted(set(new_index) - set(old_index))
     return {
         "group": group,
@@ -364,12 +578,33 @@ def diff_versions(
         "gained": gained,
         "limit": limit,
         # A negative ("nothing was lost", "nothing relocated") is only meaningful if
-        # the instrument demonstrably saw something on the reference side, AND the
-        # target side actually resolved. Either hole makes the diff uninterpretable.
+        # the instrument demonstrably saw something on the reference side, AND both
+        # sides were actually observed. The source side was rendered in the report
+        # and never consulted here, which is how one failed GET on a source module
+        # turned `perdues=75` into `perdues=0` -- with the report certifying that the
+        # zero was semantic.
+        #
+        # The two holes are NOT symmetric, and collapsing them would build a guard
+        # that cries wolf. A module *absent* from the source version is a normal
+        # outcome of comparing two versions with one module list -- it contributes no
+        # class to `old_index`, so it cannot manufacture a false zero. A module
+        # *unreachable* on either side means the instrument did not look, and every
+        # negative drawn from it is instrumental. So: absence on the source is
+        # reported, unreachability anywhere voids the control.
         "control": {
-            "ok": bool(old_index) and not unresolved_new,
+            "ok": (
+                bool(old_index)
+                and not attribution_missing
+                and not unreachable_old
+                and not unreachable_new
+                and not unresolved_new
+            ),
             "old_classes": len(old_index),
+            "attribution_missing": attribution_missing,
+            "unresolved_source": list(unresolved_old),
             "unresolved_target": list(unresolved_new),
+            "unreachable_source": list(unreachable_old),
+            "unreachable_target": list(unreachable_new),
         },
     }
 
@@ -399,13 +634,46 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "par listing du depot."
         ),
     )
-    parser.add_argument("--limit", type=int, default=25)
+    parser.add_argument(
+        "--aggregator",
+        default=None,
+        help=(
+            "artifactId de l'agregat (ex: tweety-full). Active l'axe publication: "
+            "modules declares mais non publies, et modules publies hors agregat."
+        ),
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=25,
+        help="nombre de classes detaillees par verdict (0 = toutes)",
+    )
+    parser.add_argument(
+        "--include-inner",
+        action="store_true",
+        help=(
+            "compter aussi les classes internes (Foo$Bar). Par defaut elles sont "
+            "ecartees: elles gonflent un total sans nommer une surface d'API "
+            "distincte. Les deux comptages sont justes, ils ne mesurent pas le "
+            "meme objet."
+        ),
+    )
     parser.add_argument("--json", action="store_true", help="sortie JSON brute")
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT)
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args(argv)
 
     modules = args.modules
+    # `--modules` with no value is a caller who meant to restrict the comparison and
+    # got a full network discovery instead -- a silently different run, on a much
+    # larger population, under a flag that says the opposite.
+    if modules is not None and not modules:
+        print(
+            "--modules a ete passe sans valeur. Retirez le drapeau pour la "
+            "decouverte automatique, ou nommez les modules a comparer.",
+            file=sys.stderr,
+        )
+        return 2
     if not modules:
         gpath = args.group.replace(".", "/")
         top = list_repo_children(args.repo, gpath, timeout=args.timeout)
@@ -438,22 +706,64 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     for version in (args.from_version, args.to_version):
         if args.verbose:
             print(f"  version {version}...", file=sys.stderr)
-        index, owners, resolved, unresolved = collect_version(
+        index, owners, resolved, unresolved, unreachable = collect_version(
             args.repo,
             args.group,
             modules,
             version,
             timeout=args.timeout,
             verbose=args.verbose,
+            skip_inner=not args.include_inner,
         )
         indexes[version] = index
         owners_by_version[version] = owners
         per_version[version] = {
             "module_count": len(resolved),
             "unresolved": unresolved,
+            "unreachable": unreachable,
             "class_count": len(index),
             "bytecode": bytecode_histogram(index),
         }
+        if args.aggregator:
+            declared, agg_status = aggregator_modules(
+                args.repo, args.group, args.aggregator, version, timeout=args.timeout
+            )
+            # The gap axis must be computed over the DECLARED set, never over the
+            # compared set: with an explicit --modules list, every module the user
+            # did not ask about would be counted as a publication gap. So each
+            # declared module is probed on its own metadata.
+            meta = {
+                module: published_versions(
+                    args.repo,
+                    _module_group(args.group, module),
+                    module.rsplit(".", 1)[-1],
+                    timeout=args.timeout,
+                )
+                for module in declared
+            }
+            resolvable = [m for m, versions in meta.items() if version in versions]
+            gaps = publication_gaps(declared, resolvable)
+            # Two instruments on the same band: metadata says published, the jar
+            # download says otherwise. The disagreement is not noise to arbitrate --
+            # it measures what a metadata-only reading cannot see. Only computable
+            # for modules that were actually compared.
+            compared = set(resolved) | set(unresolved)
+            metadata_only = sorted(
+                m for m in resolvable if m in compared and m not in set(resolved)
+            )
+            per_version[version]["aggregator"] = {
+                "artifact": args.aggregator,
+                "status": agg_status,
+                "declared": declared,
+                "gaps": gaps,
+                # For a gap, "never published anywhere" and "published, but not at
+                # this version" call for different actions.
+                "gap_versions": {m: meta[m][-6:] for m in gaps[:12]},
+                "metadata_only": metadata_only,
+                # Published here but not pulled by the umbrella: the blind spot of
+                # any relocation search run on the aggregator's closure alone.
+                "not_aggregated": not_aggregated(resolved, declared),
+            }
 
     result = diff_versions(
         indexes[args.from_version],
@@ -463,7 +773,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         to_version=args.to_version,
         per_version=per_version,
         owners_old=owners_by_version[args.from_version],
-        limit=args.limit,
+        owners_new=owners_by_version[args.to_version],
+        # 0 means "all": a silent truncation reads as "that was the whole list".
+        limit=args.limit or None,
     )
 
     if args.json:
@@ -471,7 +783,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     else:
         print(render_report(result))
 
-    # Exit 1 when the reference side is empty: the comparison is not interpretable.
+    # Exit 1 whenever the control refuses to certify: empty reference side, a module
+    # left unreachable on either side, or an unresolved module on the target. A caller
+    # scripting this tool must not be able to read a negative out of a run that
+    # never looked.
     return 0 if result["control"]["ok"] else 1
 
 
