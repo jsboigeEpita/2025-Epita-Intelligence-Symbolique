@@ -27,6 +27,26 @@ Les scripts de maintenance documentation, récupération et analyse se trouvent 
 ### Connectivité
 - `validate_openai_connection.py` : vérifie la connectivité OpenAI
 
+### Dépendances Java amont (Tweety)
+- `java_lib_version_diff.py` : diff inter-versions d'une bibliothèque Maven — quels modules
+  résolvent réellement, quelles classes sont perdues, et **pourquoi** (RELOCALISÉE /
+  SUPPRIMÉE / INDÉTERMINÉE), plus l'histogramme du bytecode `major`.
+
+  Sert quand un build amont casse ou qu'une classe disparaît. Les deux questions naïves
+  donnent la mauvaise réponse : *« la version X est-elle disponible ? »* répond **oui**
+  alors que les modules déclarés par l'agrégateur ne sont pas publiés (`--aggregator` mesure
+  ce trou), et *« où est passée cette classe ? »* répond par un **homonyme d'un autre
+  formalisme** (le module d'accueil est annoté pour rendre le rejet possible).
+
+  Lire d'abord la ligne `controle:` : elle dit si un zéro est sémantique ou s'il vient d'un
+  module injoignable. `rc=1` = mesure non concluante, jamais « rien n'a changé ».
+
+  ```bash
+  python scripts/maintenance/java_lib_version_diff.py \
+      --from-version 1.29 --to-version 1.30 --modules arg.dung commons
+  ```
+  Tests : `pytest tests/unit/scripts/test_java_lib_version_diff.py` (hors ligne). Ref #1874.
+
 ## Sous-répertoires
 
 - [`tools/`](tools/README.md) — Documentation, récupération, analyse (17 scripts)
