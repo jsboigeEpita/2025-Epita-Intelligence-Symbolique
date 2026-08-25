@@ -27,8 +27,8 @@ import re
 import subprocess
 import sys
 
-CLUEDO_FILE = "tests/integration/test_cluedo_orchestration_integration.py"
-FALLBACKS_FILE = "tests/integration/test_tweety_fallbacks.py"
+CLUEDO_FILE = "tests/integration/triage/test_cluedo_orchestration_integration.py"
+FALLBACKS_FILE = "tests/integration/triage/test_tweety_fallbacks.py"
 
 LEAKER_NODEID = (
     f"{CLUEDO_FILE}::TestCluedoOrchestrationRealIntegration::"

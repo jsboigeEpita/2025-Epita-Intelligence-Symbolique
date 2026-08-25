@@ -33,7 +33,7 @@ POLLUTER = (
 )
 VICTIM = (
     REPO_ROOT
-    / "tests/integration/argumentation_analysis/agents/core/logic/test_invoke_modal_logic_reaches_solver.py"
+    / "tests/integration/test_invoke_modal_logic_reaches_solver.py"
 )
 
 
