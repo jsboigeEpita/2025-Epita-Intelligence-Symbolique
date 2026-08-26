@@ -99,15 +99,19 @@ class TestProjectSetup(unittest.TestCase):
         )
 
     @patch("pathlib.Path.home", return_value=Path("/fake/home"))
+    @patch("project_core.core_from_scripts.project_setup.SystemValidationEngine")
     @patch("project_core.core_from_scripts.project_setup.ValidationEngine")
     @patch("project_core.core_from_scripts.project_setup.EnvironmentManager")
     def test_install_project_success(
-        self, MockEnvironmentManager, MockValidationEngine, mock_home
+        self, MockEnvironmentManager, MockValidationEngine, MockSystemEngine, mock_home
     ):
         """Teste le cas nominal de install_project où toutes les étapes réussissent."""
         # Note: 'from pathlib import Path' is already at the top of the file
-
-        mock_validator_instance = MockValidationEngine.return_value
+        # #1803: validate_build_tools vit sur le ValidationEngine RACINE
+        # (SystemValidationEngine). L'ancien mock le configurait sur le moteur
+        # à règles, qui n'a pas cette méthode -- le test passait sur un
+        # auto-attr de MagicMock, pas sur le chemin réel.
+        mock_validator_instance = MockSystemEngine.return_value
         mock_validator_instance.validate_build_tools.return_value = {
             "status": "success",
             "message": "OK",
@@ -138,11 +142,14 @@ class TestProjectSetup(unittest.TestCase):
 
     @patch("project_core.core_from_scripts.project_setup.EnvironmentManager")
     @patch("project_core.core_from_scripts.project_setup.ValidationEngine")
+    @patch("project_core.core_from_scripts.project_setup.SystemValidationEngine")
     def test_install_project_failure_on_build_tools(
-        self, MockValidationEngine, MockEnvironmentManager
+        self, MockSystemEngine, MockValidationEngine, MockEnvironmentManager
     ):
         """Teste le cas où l'installation échoue à cause des outils de compilation."""
-        mock_validator_instance = MockValidationEngine.return_value
+        # #1803: même correction que test_install_project_success -- le mock
+        # doit cibler le moteur qui PORTE validate_build_tools.
+        mock_validator_instance = MockSystemEngine.return_value
         mock_validator_instance.validate_build_tools.return_value = {
             "status": "failure",
             "message": "Build tools not found",
