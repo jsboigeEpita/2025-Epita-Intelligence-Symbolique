@@ -269,7 +269,8 @@ async def _run_single(
     state_dumps_dir.mkdir(parents=True, exist_ok=True)
     dump_path = state_dumps_dir / f"state_full_{opaque_id_str}.json"
     dump_path.write_text(
-        json.dumps(state_snapshot, ensure_ascii=False, indent=2, cls=_SafeEncoder), encoding="utf-8"
+        json.dumps(state_snapshot, ensure_ascii=False, indent=2, cls=_SafeEncoder),
+        encoding="utf-8",
     )
     logger.info(
         "[%s] state dump written (%d bytes)", opaque_id_str, dump_path.stat().st_size
@@ -289,7 +290,8 @@ async def _run_single(
 
     signatures_dir.mkdir(parents=True, exist_ok=True)
     sig_path.write_text(
-        json.dumps(signature, ensure_ascii=False, indent=2, cls=_SafeEncoder), encoding="utf-8"
+        json.dumps(signature, ensure_ascii=False, indent=2, cls=_SafeEncoder),
+        encoding="utf-8",
     )
     logger.info("[%s] signature written (wall=%.1fs)", opaque_id_str, wall_clock)
 
@@ -405,8 +407,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         raise_on_decrypt_error=True,
     )
 
-    # Flatten to (source_name, full_text, metadata) tuples
+    # Flatten to (source_name, full_text, metadata) tuples.
+    # #1903: a source contributing zero documents must be named with its
+    # cause -- an unlogged omission silently falsifies the denominator of
+    # every corpus report.
     docs: List[Dict[str, Any]] = []
+    omitted_sources: List[Dict[str, str]] = []
     for source_def in definitions:
         src_name = source_def.get("source_name", "unknown")
         src_meta = source_def.get("metadata", {})
@@ -417,7 +423,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             classified.setdefault(k, v)
 
         src_oid = opaque_id(src_name)
-        for ext_idx, extract in enumerate(source_def.get("extracts", [])):
+        extracts = source_def.get("extracts", [])
+        src_doc_count = 0
+        n_filtered = 0
+        n_no_text = 0
+        for ext_idx, extract in enumerate(extracts):
             # Corpus uses "extract_text" (not "full_text") at extract level.
             # Fallback chain: extract_text → full_text_segment → source full_text.
             full_text = (
@@ -426,16 +436,25 @@ def main(argv: Optional[List[str]] = None) -> int:
                 or source_def.get("full_text", "")
             )
             if not full_text:
+                logger.info(
+                    "[%s] skip (extract %d/%d has no text after fallback chain)",
+                    src_oid,
+                    ext_idx + 1,
+                    len(extracts),
+                )
+                n_no_text += 1
                 continue
             if args.max_chars > 0 and len(full_text) > args.max_chars:
                 logger.info(
                     "[%s] skip (text too long: %d > %d)",
-                    src_oid, len(full_text), args.max_chars,
+                    src_oid,
+                    len(full_text),
+                    args.max_chars,
                 )
+                n_filtered += 1
                 continue
             # Per-extract unique ID: src_oid_ext_N or src_oid if only 1 extract
-            n_extracts = len(source_def.get("extracts", []))
-            if n_extracts > 1:
+            if len(extracts) > 1:
                 oid = f"{src_oid}_ext{ext_idx}"
             else:
                 oid = src_oid
@@ -447,9 +466,37 @@ def main(argv: Optional[List[str]] = None) -> int:
                     "metadata": classified,
                 }
             )
+            src_doc_count += 1
+
+        if src_doc_count == 0:
+            if not extracts:
+                cause = "0 extract"
+            elif n_filtered and n_no_text:
+                cause = (
+                    f"{n_filtered} extract(s) filtered, " f"{n_no_text} without text"
+                )
+            elif n_filtered:
+                cause = f"all {n_filtered} extract(s) filtered (--max-chars)"
+            else:
+                cause = f"all {n_no_text} extract(s) without text"
+            logger.info("[%s] source without documents: %s", src_oid, cause)
+            omitted_sources.append({"opaque_id": src_oid, "cause": cause})
 
     if args.max_docs > 0:
         docs = docs[: args.max_docs]
+
+    # #1903: the honest denominator, on stdout (the surface #1874 established
+    # for run-visible facts) and before processing starts.
+    print(
+        "Coverage: {} sources -> {} documents; {} sources without documents: "
+        "[{}]".format(
+            len(definitions),
+            len(docs),
+            len(omitted_sources),
+            ", ".join(o["opaque_id"] for o in omitted_sources),
+        ),
+        flush=True,
+    )
 
     logger.info(
         "Starting batch: %d docs, workflow=%s, skip_existing=%s, resume=%s",
