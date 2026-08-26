@@ -35,6 +35,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+from .native_dung import (  # #1912: single shared decoder — see native_dung.py
+    decode_accepted_members,
+    decode_native_dung,
+    native_semantics_label,
+    select_primary_native,
+)
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -83,9 +89,7 @@ def _load_name_to_family() -> Dict[str, str]:
     try:
         import csv
 
-        csv_path = (
-            Path(__file__).resolve().parents[2] / "data" / "taxonomy_full.csv"
-        )
+        csv_path = Path(__file__).resolve().parents[2] / "data" / "taxonomy_full.csv"
         if csv_path.is_file():
             with csv_path.open(newline="", encoding="utf-8") as fh:
                 for row in csv.DictReader(fh):
@@ -216,6 +220,10 @@ class DungSolverTrace:
     sample_attacks: List[List[str]] = field(
         default_factory=list
     )  # up to N opaque [attacker, target] pairs
+    # #1912: True when the primary native framework EXISTS but its extension
+    # shape could not be decoded — no accepted/rejected verdict can be drawn.
+    # Surfaced so the reader sees "non concluable", never "all rejected".
+    non_concluable: bool = False
 
 
 @dataclass
@@ -320,61 +328,6 @@ def _truncate(text: Any, cap: int) -> str:
     return s if len(s) <= cap else s[:cap].rstrip() + " […]"
 
 
-def _dung_rejected_by_arg(state: Any) -> Dict[str, str]:
-    """Map arg_id → Dung semantics label for arguments rejected by a framework.
-
-    Mirrors the resolution logic of ``narrative_synthesis_plugin._dung_rejected_args``
-    (kept local here for file-disjointness — R3 establishes its own pattern).
-    A rejected argument is one present in a framework's arguments but absent
-    from its accepted extension.
-    """
-    rejected: Dict[str, str] = {}
-    frameworks = getattr(state, "dung_frameworks", {}) or {}
-    if not isinstance(frameworks, dict):
-        return rejected
-    for _fid, fw in frameworks.items():
-        if not isinstance(fw, dict):
-            continue
-        fw_args = fw.get("arguments", []) or []
-        if not isinstance(fw_args, list):
-            continue
-        # Finding D (#1151/#1153): add_dung_framework stores no ``semantics``
-        # key — the writer folds it into ``name=f"verification_{semantics}"``
-        # (state_writers.py:717). Prefer an explicit key if present, else parse
-        # it back from ``name``; only default to ``grounded`` when neither
-        # carries a signal (honest: the label stays, but it is now correct when
-        # the name encodes the semantics).
-        semantics = fw.get("semantics")
-        if not semantics:
-            name = str(fw.get("name", "") or "")
-            if name.startswith("verification_"):
-                semantics = name[len("verification_") :]
-        semantics = str(semantics or "grounded")
-        accepted: set[str] = set()
-        ext = fw.get("extensions", [])
-        if isinstance(ext, dict):
-            if "all_members" in ext:
-                accepted = set(ext.get("all_members", []) or [])
-            else:
-                for val in ext.values():
-                    if isinstance(val, list):
-                        for item in val:
-                            if isinstance(item, list):
-                                accepted.update(item)
-                            elif isinstance(item, str):
-                                accepted.add(item)
-        elif isinstance(ext, list):
-            for item in ext:
-                if isinstance(item, list):
-                    accepted.update(item)
-                elif isinstance(item, str):
-                    accepted.add(item)
-        for arg in fw_args:
-            if isinstance(arg, str) and arg not in accepted:
-                rejected.setdefault(arg, semantics)
-    return rejected
-
-
 # Cap on how many attack relations we surface in the trace / prompt. The full
 # attack list can be long; a representative sample suffices to make the graph
 # inspectable without blowing the prompt budget (privacy + budget discipline).
@@ -390,74 +343,53 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
     so this trace lets the restitution frame the result as « le graphe construit
     à partir des arguments extraits donne… » rather than as an external oracle.
 
-    Picks the primary framework (preferred → grounded → first verification_*),
-    then records graph size, the accepted extension members, the rejected args
-    (reusing ``_dung_rejected_by_arg``), and a capped sample of attack pairs.
-    All IDs opaque (arg_N) — privacy HARD. Returns ``available=False`` when no
-    verification framework was written (honest absence, not fabricated).
+    Picks the primary framework via the shared #1912 selector (preferred →
+    grounded → first verification_*), decodes its extension with the shared
+    decoder, and records graph size, accepted members, rejected args and a
+    capped sample of attack pairs. #1912: a primary framework whose extension
+    shape is undecodable yields ``non_concluable=True`` and NO verdict —
+    never "accepted = ∅" (which would reject every argument). All IDs opaque
+    (arg_N) — privacy HARD. Returns ``available=False`` when no verification
+    framework was written (honest absence, not fabricated).
     """
     frameworks = getattr(state, "dung_frameworks", {}) or {}
     if not isinstance(frameworks, dict):
         return DungSolverTrace()
-    # Prefer the semantics the pipeline surfaces as primary (preferred, then
-    # grounded), then any verification_* entry as a last resort.
-    primary: Optional[Dict[str, Any]] = None
-    primary_sem = ""
-    for pref in ("preferred", "grounded"):
-        for _fid, fw in frameworks.items():
-            if not isinstance(fw, dict):
-                continue
-            name = str(fw.get("name", "") or "")
-            if name == f"verification_{pref}":
-                primary = fw
-                primary_sem = pref
-                break
-        if primary is not None:
-            break
-    if primary is None:
-        for _fid, fw in frameworks.items():
-            if not isinstance(fw, dict):
-                continue
-            name = str(fw.get("name", "") or "")
-            if name.startswith("verification_"):
-                primary = fw
-                primary_sem = name[len("verification_") :] or "grounded"
-                break
+    primary = select_primary_native(frameworks)
     if primary is None:
         return DungSolverTrace()
+    primary_sem = native_semantics_label(primary)
 
     fw_args = primary.get("arguments", []) or []
     fw_args = fw_args if isinstance(fw_args, list) else []
     fw_attacks = primary.get("attacks", []) or []
     fw_attacks = fw_attacks if isinstance(fw_attacks, list) else []
 
-    # Accepted extension members (opaque arg_ids).
-    accepted: List[str] = []
-    ext = primary.get("extensions", [])
-    if isinstance(ext, dict) and "all_members" in ext:
-        members = ext.get("all_members", []) or []
-        accepted = [str(m) for m in members if isinstance(m, str)]
-    elif isinstance(ext, dict):
-        for val in ext.values():
-            if isinstance(val, list):
-                for item in val:
-                    if isinstance(item, list):
-                        accepted.extend(str(x) for x in item if isinstance(x, str))
-                    elif isinstance(item, str):
-                        accepted.append(item)
-        accepted = sorted(set(accepted))
-    elif isinstance(ext, list):
-        for item in ext:
-            if isinstance(item, list):
-                accepted.extend(str(x) for x in item if isinstance(x, str))
-            elif isinstance(item, str):
-                accepted.append(item)
-        accepted = sorted(set(accepted))
+    # Accepted extension members (opaque arg_ids) — None = shape unknown.
+    decoded = decode_accepted_members(primary.get("extensions"))
+    if decoded is None:
+        sample_attacks = [
+            [pair[0], pair[1]]
+            for pair in fw_attacks
+            if isinstance(pair, (list, tuple))
+            and len(pair) >= 2
+            and isinstance(pair[0], str)
+            and isinstance(pair[1], str)
+        ][:_TRACE_ATTACK_SAMPLE]
+        return DungSolverTrace(
+            available=True,
+            semantics_label=primary_sem or "grounded",
+            n_arguments=len(fw_args),
+            n_attacks=len(fw_attacks),
+            non_concluable=True,
+            sample_attacks=sample_attacks,
+        )
+    accepted: List[str] = sorted(decoded)
 
     # Rejected args (arg present in the framework but absent from the accepted
-    # extension) — reuse the canonical resolver so the labels stay consistent
-    # with the per-argument ``dung_rejected`` beat.
-    rejected = _dung_rejected_by_arg(state)
+    # extension) — the shared decoder, so the labels stay consistent with the
+    # per-argument ``dung_rejected`` beat.
+    rejected = decode_native_dung(state).rejected_by_arg
 
     sample_attacks: List[List[str]] = []
     for pair in fw_attacks:
@@ -593,7 +525,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
             )
         )
 
-    dung_rejected = _dung_rejected_by_arg(state)
+    dung_rejected = decode_native_dung(state).rejected_by_arg
 
     # Assign each argument a movement key = primary fallacy family (sorted for
     # determinism) or the soutiens theme if un-attacked.
@@ -954,7 +886,25 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 )
 
     dung_trace = _collect_dung_trace(state)
-    if dung_trace.available and dung_trace.rejected_args:
+    if dung_trace.available and dung_trace.non_concluable:
+        # #1912: a native framework exists but its extension shape is
+        # undecodable — say so. Never render "N rejected" from a shape the
+        # decoder could not read (the accepted-empty fallacy).
+        findings.append(
+            FormalFinding(
+                kind="dung",
+                verdict=(
+                    f"extension Dung {dung_trace.semantics_label} non "
+                    "concluable (forme d'extension non décodable)"
+                ),
+                detail=(
+                    "cadre natif présent mais forme d'extension inconnue — "
+                    "aucun rejet déduit (#1912) ; ni accepté-vide ni "
+                    "inventé"
+                ),
+            )
+        )
+    elif dung_trace.available and dung_trace.rejected_args:
         sems = sorted(set(dung_trace.rejected_args.values()))
         n_acc = len(dung_trace.accepted_members)
         n_rej = len(dung_trace.rejected_args)
@@ -976,16 +926,12 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # arg_ids (from ``identified_arguments``) so the detail never dumps
         # position text. ``rejected_args`` already maps opaque arg_id → label.
         # The verdict carries the counts; the detail carries the IDs + attacks.
-        known_arg_ids = set(
-            getattr(state, "identified_arguments", {}) or {}
-        )
+        known_arg_ids = set(getattr(state, "identified_arguments", {}) or {})
         accepted_opaque = sorted(
             m for m in dung_trace.accepted_members if m in known_arg_ids
         )[:6]
         rejected_opaque = sorted(dung_trace.rejected_args.keys())[:4]
-        attacks_opaque = "; ".join(
-            f"{p[0]}→{p[1]}" for p in dung_trace.sample_attacks
-        )
+        attacks_opaque = "; ".join(f"{p[0]}→{p[1]}" for p in dung_trace.sample_attacks)
         detail_parts = [
             f"extension {dung_trace.semantics_label}",
             f"acceptés [{', '.join(accepted_opaque) or '—'}]",

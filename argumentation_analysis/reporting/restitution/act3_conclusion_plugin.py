@@ -56,6 +56,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
+from .native_dung import (  # #1912: single shared decoder — see native_dung.py
+    decode_native_dung,
+)
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -590,48 +593,13 @@ def _fol_verified(state: Any) -> int:
     )
 
 
-def _dung_rejected_by_arg(state: Any) -> Dict[str, str]:
-    """Map arg_id → Dung semantics label for arguments a framework rejected.
-
-    A rejected argument is present in a framework's arguments but absent from
-    its accepted extension — the attack isolates it as defeated. Mirrors the
-    resolution in ``act2_narrative_plugin._dung_rejected_by_arg`` (kept local
-    here for file-disjointness — R4 establishes its own copy, same logic).
-    """
-    rejected: Dict[str, str] = {}
-    frameworks = getattr(state, "dung_frameworks", {}) or {}
-    if not isinstance(frameworks, dict):
-        return rejected
-    for _fid, fw in frameworks.items():
-        if not isinstance(fw, dict):
-            continue
-        fw_args = fw.get("arguments", []) or []
-        if not isinstance(fw_args, list):
-            continue
-        semantics = str(fw.get("semantics", "grounded"))
-        accepted: set[str] = set()
-        ext = fw.get("extensions", [])
-        if isinstance(ext, dict):
-            if "all_members" in ext:
-                accepted = set(ext.get("all_members", []) or [])
-            else:
-                for val in ext.values():
-                    if isinstance(val, list):
-                        for item in val:
-                            if isinstance(item, list):
-                                accepted.update(item)
-                            elif isinstance(item, str):
-                                accepted.add(item)
-        elif isinstance(ext, list):
-            for item in ext:
-                if isinstance(item, list):
-                    accepted.update(item)
-                elif isinstance(item, str):
-                    accepted.add(item)
-        for arg in fw_args:
-            if isinstance(arg, str) and arg not in accepted:
-                rejected.setdefault(arg, semantics)
-    return rejected
+# #1912: the local ``_dung_rejected_by_arg`` resolver is DELETED. This was
+# the duplicated copy whose comment said "kept local for file-disjointness".
+# Both acts share the single decoder in ``restitution.native_dung`` — only
+# verification_* entries contribute Dung rejections; the old generic loop read
+# sidecar shapes as native acceptance and fabricated 221 false rejections on
+# the real corpus (#1894 forensic). Do not resurrect a local copy: extend
+# native_dung.py instead.
 
 
 def _collect_weak_points(
@@ -1532,7 +1500,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # OR False), so a coherent text surfaces a non-trivial formal finding.
     pl_verified = _pl_verified(state)
     fol_verified = _fol_verified(state)
-    dung_rejected = _dung_rejected_by_arg(state)
+    dung_rejected = decode_native_dung(state).rejected_by_arg
 
     # Non-trivial axes (real-in-state content), in a stable display order.
     axes_nontrivial: List[str] = []

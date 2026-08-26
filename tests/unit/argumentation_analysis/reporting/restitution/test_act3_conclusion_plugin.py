@@ -113,6 +113,9 @@ def _rich_state() -> SimpleNamespace:
         ],
         dung_frameworks={
             "fw_1": {
+                # #1912: canonical writer shape — add_dung_framework always
+                # stores a name; native evidence = verification_*.
+                "name": "verification_grounded",
                 "arguments": ["arg_1", "arg_2"],
                 "extensions": {"all_members": ["arg_2"]},
                 "semantics": "grounded",
@@ -411,8 +414,13 @@ class TestBuildEvidence:
             ],
             dung_frameworks={
                 "fw_1": {
+                    # #1912: canonical shape + decodable empty extension —
+                    # the solver genuinely accepted nothing, so arg_1 is
+                    # really rejected and the 4th axis exists (MATCH band
+                    # pin depends on it).
+                    "name": "verification_grounded",
                     "arguments": ["arg_1"],
-                    "extensions": {},
+                    "extensions": {"all_members": []},
                     "semantics": "grounded",
                 }
             },
