@@ -19,6 +19,15 @@ from .common_utils import Logger, LogLevel
 from .environment_manager import EnvironmentManager
 from .validation.validation_engine import ValidationEngine
 
+# #1803: deux classes portent ce nom. Celle du sous-paquet ``validation/`` est le
+# moteur à RÈGLES (``run()``) ; celle ci-dessous, à la racine, porte les
+# contrôles SYSTÈME (``validate_build_tools``, ``validate_jvm_bridge``) que les
+# verbes ``install`` et ``validate --component`` appellent. La façade a besoin
+# des deux surfaces ; avant l'alias, ``install_project`` appelait
+# ``self.validator.validate_build_tools`` sur la classe du sous-paquet, qui ne
+# l'a pas -- AttributeError latent, prouvé par exécution au câblage de #1803.
+from .validation_engine import ValidationEngine as SystemValidationEngine
+
 
 class ProjectSetup:
     """Gestionnaire de setup projet"""
@@ -27,6 +36,7 @@ class ProjectSetup:
         self.logger = logger or Logger()
         self.env_manager = EnvironmentManager(logger_instance=self.logger)
         self.validator = ValidationEngine(logger=self.logger)
+        self.system_validator = SystemValidationEngine()
 
     def setup_environment(
         self, env_name: str, force: bool = False, with_mocks: bool = False
@@ -104,7 +114,7 @@ class ProjectSetup:
 
         # Étape 1: Valider les outils de compilation
         self.logger.info("Étape 1/3 : Validation des outils de compilation...")
-        build_tools_status = self.validator.validate_build_tools()
+        build_tools_status = self.system_validator.validate_build_tools()
         self.logger.info(build_tools_status["message"])
         if build_tools_status["status"] == "failure":
             self.logger.error(
@@ -141,6 +151,47 @@ class ProjectSetup:
 
         self.logger.success("Installation complète du projet terminée avec succès!")
         return True
+
+    def fix_project_dependencies(
+        self,
+        packages: Optional[List[str]] = None,
+        requirements_file: Optional[str] = None,
+        strategy_name: str = "default",
+    ) -> bool:
+        """
+        #1803: point d'entrée façade du moteur de stratégies de réparation.
+
+        Délègue à ``EnvironmentManager.fix_dependencies`` -- la logique
+        consolidée existait (91 lignes, moteur des 5 stratégies) mais aucun
+        verbe ne pouvait l'atteindre depuis la façade.
+        """
+        if not packages and not requirements_file:
+            self.logger.error(
+                "fix-deps: fournissez --package (répétable) ou --requirements."
+            )
+            return False
+        return self.env_manager.fix_dependencies(
+            packages=packages,
+            requirements_file=requirements_file,
+            strategy_name=strategy_name,
+        )
+
+    def validate_component(self, component: str) -> Dict[str, Any]:
+        """
+        #1803: route un composant système vers son contrôle dédié.
+
+        Retourne le dict {status, message} du ValidationEngine racine ; le
+        exit code du verbe CLI en dérive (success -> 0, sinon 1).
+        """
+        if component == "jvm":
+            return self.system_validator.validate_jvm_bridge()
+        if component == "build-tools":
+            return self.system_validator.validate_build_tools()
+        self.logger.error(f"Composant de validation inconnu : '{component}'.")
+        return {
+            "status": "error",
+            "message": f"Composant inconnu : '{component}'. Choix valides : 'jvm', 'build-tools'.",
+        }
 
     def set_project_path_file(self) -> bool:
         """
@@ -295,6 +346,42 @@ def main():
         help="Chemin vers le fichier requirements.txt.",
     )
 
+    # Commande `fix-deps` (#1803: câblée sur EnvironmentManager.fix_dependencies)
+    parser_fixdeps = subparsers.add_parser(
+        "fix-deps",
+        help="Réparer des paquets via le moteur de stratégies (simple, no-binary, wheel-install, msvc-build, default, aggressive).",
+    )
+    parser_fixdeps.add_argument(
+        "--package",
+        action="append",
+        help="Nom du paquet à réparer (répétable).",
+    )
+    parser_fixdeps.add_argument(
+        "--requirements",
+        type=str,
+        default=None,
+        help="Fichier requirements à réinstaller (exclusif avec --package).",
+    )
+    parser_fixdeps.add_argument(
+        "--strategy",
+        type=str,
+        default="default",
+        help="Stratégie : default, aggressive, simple, no-binary, wheel-install, msvc-build.",
+    )
+
+    # Commande `validate` (#1803: câblée sur le ValidationEngine racine)
+    parser_validate = subparsers.add_parser(
+        "validate",
+        help="Valider un composant système (pont JVM, outils de compilation).",
+    )
+    parser_validate.add_argument(
+        "--component",
+        type=str,
+        required=True,
+        choices=["jvm", "build-tools"],
+        help="Composant à valider.",
+    )
+
     args = parser.parse_args()
     logger = Logger(verbose=args.verbose)
     setup = ProjectSetup(logger)
@@ -312,6 +399,17 @@ def main():
     elif args.command == "install":
         success = setup.install_project(requirements_file=args.requirements)
         sys.exit(0 if success else 1)
+    elif args.command == "fix-deps":
+        success = setup.fix_project_dependencies(
+            packages=args.package,
+            requirements_file=args.requirements,
+            strategy_name=args.strategy,
+        )
+        sys.exit(0 if success else 1)
+    elif args.command == "validate":
+        result = setup.validate_component(args.component)
+        logger.info(result["message"])
+        sys.exit(0 if result["status"] == "success" else 1)
     else:
         # Inatteignable avec `required=True` sur subparsers en Python 3.7+
         parser.print_help()
