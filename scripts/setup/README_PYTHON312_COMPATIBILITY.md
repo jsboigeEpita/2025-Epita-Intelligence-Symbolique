@@ -17,12 +17,14 @@ L'erreur spécifique est liée à la structure _longobject qui a changé dans Py
 ### numpy
 numpy 2.0.0 ou supérieur est compatible avec Python 3.12 et peut être installé normalement.
 
-## Comment utiliser ce script
+## Comment appliquer ces correctifs
 
-Ce script tente d'installer numpy 2.0.0 et soit la dernière version de développement de JPype1, soit pyjnius comme alternative.
+Le script `fix_dependencies_for_python312.ps1` a été retiré (#1803, étape 3) : sa logique
+vit désormais dans l'outil unifié, dont la cascade `aggressive` installe numpy puis tente
+JPype1 et ses solutions de repli.
 
-`powershell
-.\fix_dependencies_for_python312.ps1
-`
+```bash
+python -m project_core.core_from_scripts.project_setup fix-deps --package numpy --package jpype1 --strategy aggressive
+```
 
 Si vous avez besoin de JPype1 spécifiquement, nous vous recommandons d'utiliser Python 3.11 ou une version antérieure.
