@@ -53,6 +53,23 @@ def _sys_modules_writes(tree: ast.AST):
                     yield node
 
 
+def _has_module_level_write(path) -> bool:
+    """True when *path* writes ``sys.modules`` as an import side effect.
+
+    Only statements directly in the module body count. A def/class statement is
+    machinery DEFINED at module level but activated by an explicit call -- its
+    body is out of scope (that's the sanctioned numpy_setup / pandas_setup
+    pattern). Anything else (bare Assign, Try, If...) executes at import time.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8-sig"))
+    for stmt in tree.body:
+        if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            continue
+        for _ in _sys_modules_writes(stmt):
+            return True
+    return False
+
+
 class TestNoModuleLevelSysModulesHijack:
     def test_no_mock_writes_sys_modules_at_module_level(self):
         assert MOCKS_DIR.is_dir(), f"#1891 guard: {MOCKS_DIR} disappeared"
@@ -68,33 +85,31 @@ class TestNoModuleLevelSysModulesHijack:
             "#1895: rglob found no .py under a subpackage of tests/mocks/ — "
             "the #1895 widening did not take"
         )
-        # Every allowlisted entry must still exist; a stale entry reddens so it
-        # is removed rather than silently doing nothing.
-        for entry in ALLOWLIST:
-            assert (MOCKS_DIR / entry).is_file(), (
+        # Every allowlisted entry must still exist AND must still earn its
+        # exemption. Existence alone is not enough: the day someone moves
+        # imports.py's write into a function (the real fix #1895 offered), the
+        # file becomes clean and the entry would silently exempt a file that no
+        # longer needs it — a permanent hole nobody would ever reopen. Pinning
+        # "the exemption is earned" turns that into a red test naming the fix.
+        for entry in sorted(ALLOWLIST):
+            target = MOCKS_DIR / entry
+            assert target.is_file(), (
                 "#1895: allowlist entry "
                 f"{entry!r} no longer exists under {MOCKS_DIR} — remove it"
+            )
+            assert _has_module_level_write(target), (
+                f"#1895: {entry!r} is allowlisted but no longer writes "
+                "sys.modules at module level — the exemption is no longer "
+                "earned. Remove it from ALLOWLIST so the file is guarded "
+                "again like every other."
             )
         offenders = []
         for py in all_py:
             rel = py.relative_to(MOCKS_DIR).as_posix()
             if rel in ALLOWLIST:
                 continue
-            tree = ast.parse(py.read_text(encoding="utf-8-sig"))
-            # Only statements directly in the module body count as import
-            # side effects. A def/class statement is machinery DEFINED at
-            # module level but activated by an explicit call — its body is
-            # out of scope (that's the sanctioned numpy_setup / pandas_setup
-            # pattern). Anything else (bare Assign, Try, If...) executes at
-            # import time.
-            for stmt in tree.body:
-                if isinstance(
-                    stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-                ):
-                    continue
-                for _ in _sys_modules_writes(stmt):
-                    offenders.append(rel)
-                    break
+            if _has_module_level_write(py):
+                offenders.append(rel)
         assert not offenders, (
             "#1891: module-level sys.modules write in tests/mocks/ — "
             f"{offenders}. A mock that hijacks sys.modules as an import "
