@@ -39,6 +39,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     decode_accepted_members,
     decode_native_dung,
     native_semantics_label,
+    rejected_from_framework,
     select_primary_native,
 )
 from .readability_gate import GateVerdict, ReadabilityGate
@@ -386,10 +387,14 @@ def _collect_dung_trace(state: Any) -> DungSolverTrace:
         )
     accepted: List[str] = sorted(decoded)
 
-    # Rejected args (arg present in the framework but absent from the accepted
-    # extension) — the shared decoder, so the labels stay consistent with the
-    # per-argument ``dung_rejected`` beat.
-    rejected = decode_native_dung(state).rejected_by_arg
+    # Rejected args from the SAME primary framework as the accepted members
+    # (R868 rework): the trace announces one semantics label, so it must
+    # carry that framework's verdict only — the pre-rework aggregate of ALL
+    # verification_* measured rejected={arg_2: grounded} while preferred
+    # accepted arg_2, a self-contradicting reader-facing trace with zero
+    # sidecars. The multi-semantics union stays available as the distinct
+    # aggregate output (Act III weak points, per-argument beats).
+    rejected = rejected_from_framework(primary, decoded) or {}
 
     sample_attacks: List[List[str]] = []
     for pair in fw_attacks:

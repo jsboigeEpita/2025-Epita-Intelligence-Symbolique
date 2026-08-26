@@ -98,7 +98,9 @@ def decode_accepted_members(ext: Any) -> Optional[Set[str]]:
             members = ext.get("all_members")
             if not isinstance(members, list):
                 return None
-            return {m for m in members if isinstance(m, str)}
+            if not all(isinstance(m, str) for m in members):
+                return None
+            return set(members)
         if not ext:
             return None
         accepted: Set[str] = set()
@@ -109,7 +111,10 @@ def decode_accepted_members(ext: Any) -> Optional[Set[str]]:
                 if isinstance(item, str):
                     accepted.add(item)
                 elif isinstance(item, list):
-                    accepted.update(x for x in item if isinstance(x, str))
+                    for x in item:
+                        if not isinstance(x, str):
+                            return None
+                        accepted.add(x)
                 else:
                     return None
         return accepted
@@ -119,11 +124,43 @@ def decode_accepted_members(ext: Any) -> Optional[Set[str]]:
             if isinstance(item, str):
                 accepted.add(item)
             elif isinstance(item, list):
-                accepted.update(x for x in item if isinstance(x, str))
+                for x in item:
+                    if not isinstance(x, str):
+                        return None
+                    accepted.add(x)
             else:
                 return None
         return accepted
     return None
+
+
+def rejected_from_framework(
+    fw: Dict[str, Any], accepted: Optional[Set[str]] = None
+) -> Optional[Dict[str, str]]:
+    """Rejections of ONE native framework: its own arguments absent from its
+    own accepted extension, labeled with ITS semantics.
+
+    Single home of the rejection rule: ``decode_native_dung`` aggregates it
+    per ``verification_*`` entry, and the Act II primary trace applies it to
+    the primary framework alone — a trace announcing one semantics must never
+    carry another framework's rejections (R868 rework: the aggregate measured
+    ``semantics=preferred, accepted=[arg_1, arg_2], rejected={arg_2:
+    grounded}`` with zero sidecars). Returns ``None`` only when ``accepted``
+    is not provided and the extension shape is undecodable (non-concluable).
+    """
+    if not is_native_dung_framework(fw):
+        return {}
+    if accepted is None:
+        accepted = decode_accepted_members(fw.get("extensions"))
+        if accepted is None:
+            return None
+    fw_args = fw.get("arguments", []) or []
+    if not isinstance(fw_args, list):
+        return {}
+    label = native_semantics_label(fw)
+    return {
+        arg: label for arg in fw_args if isinstance(arg, str) and arg not in accepted
+    }
 
 
 def decode_native_dung(state: Any) -> NativeDungDecoding:
@@ -142,17 +179,12 @@ def decode_native_dung(state: Any) -> NativeDungDecoding:
     for _fid, fw in frameworks.items():
         if not is_native_dung_framework(fw):
             continue
-        fw_args = fw.get("arguments", []) or []
-        if not isinstance(fw_args, list):
-            continue
         accepted = decode_accepted_members(fw.get("extensions"))
         if accepted is None:
             non_concluable.append(native_semantics_label(fw))
             continue
-        label = native_semantics_label(fw)
-        for arg in fw_args:
-            if isinstance(arg, str) and arg not in accepted:
-                rejected.setdefault(arg, label)
+        for arg, label in (rejected_from_framework(fw, accepted) or {}).items():
+            rejected.setdefault(arg, label)
     return NativeDungDecoding(rejected, non_concluable)
 
 

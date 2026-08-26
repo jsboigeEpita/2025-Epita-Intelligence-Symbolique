@@ -339,6 +339,100 @@ class TestUnknownNativeShapeNonConcluable:
 
 
 # ---------------------------------------------------------------------------
+# 4b. Rework R868 (#1916 review): a malformed MEMBER inside a decodable
+#     shape is non-concluable — the strict rule holds at EVERY depth, and
+#     the primary trace never mixes native semantics.
+# ---------------------------------------------------------------------------
+
+
+class TestMalformedMemberIsNonConcluable:
+    """An invalid member (non-string) inside a KNOWN shape must decode to
+    None — same rule as an unknown shape. Silently filtering it turns bad
+    data into a plausible partial verdict (R868: measured
+    ``{"all_members": ["arg_1", 7]}`` -> ``{arg_1}`` -> arg_2 fabricated
+    rejected). One test per decoder site, the invalid member INSIDE a
+    decodable shape."""
+
+    def test_all_members_with_non_string_member_is_none(self):
+        # Site 1 — the canonical all_members list.
+        from argumentation_analysis.reporting.restitution.native_dung import (
+            decode_accepted_members,
+        )
+
+        assert decode_accepted_members({"all_members": ["arg_1", 7]}) is None, (
+            "#1912 rework: a non-string member inside all_members was "
+            "silently filtered into a partial verdict — the shape carries "
+            "invalid data, the only honest answer is non-concluable"
+        )
+
+    def test_multi_extension_dict_with_non_string_member_is_none(self):
+        # Site 2 — the multi-extension dict path (union of list values).
+        from argumentation_analysis.reporting.restitution.native_dung import (
+            decode_accepted_members,
+        )
+
+        assert decode_accepted_members({"e": [["arg_1", 7]]}) is None, (
+            "#1912 rework: a non-string member inside a dict extension list "
+            "was silently filtered — depth-1 members must meet the same "
+            "strict rule as depth-0"
+        )
+
+    def test_bare_list_with_non_string_member_is_none(self):
+        # Site 3 — the bare list path (already strict pre-rework; pinned so
+        # the three paths cannot diverge again).
+        from argumentation_analysis.reporting.restitution.native_dung import (
+            decode_accepted_members,
+        )
+
+        assert decode_accepted_members(["arg_1", 7]) is None, (
+            "#1912 rework: the bare-list path is the reference strict "
+            "behaviour — the other two paths must match it, not diverge"
+        )
+
+
+class TestPrimaryTraceSingleSemantics:
+    """The primary trace's accepted AND rejected members must come from the
+    SAME framework. Pre-rework, accepted came from the primary (preferred)
+    while rejected came from the aggregate of ALL verification_* — measured:
+    semantics=preferred, accepted=[arg_1, arg_2], rejected={arg_2: grounded},
+    the same argument accepted AND rejected with zero sidecars (R868)."""
+
+    def test_no_argument_is_simultaneously_accepted_and_rejected(self):
+        state = _state(
+            identified_arguments={
+                "arg_1": "Thèse un.",
+                "arg_2": "Thèse deux.",
+            },
+            dung_frameworks={
+                "fw_pref": {
+                    "name": "verification_preferred",
+                    "arguments": ["arg_1", "arg_2"],
+                    "attacks": [],
+                    "extensions": {"all_members": ["arg_1", "arg_2"]},
+                },
+                "fw_grd": {
+                    "name": "verification_grounded",
+                    "arguments": ["arg_1", "arg_2"],
+                    "attacks": [["arg_2", "arg_1"]],
+                    "extensions": {"all_members": ["arg_1"]},
+                },
+            },
+        )
+        trace = _collect_dung_trace(state)
+        assert trace.available is True
+        assert trace.semantics_label == "preferred"
+        assert sorted(trace.accepted_members) == ["arg_1", "arg_2"]
+        assert trace.rejected_args == {}, (
+            "#1912 rework: the trace announces preferred and decodes its "
+            "accepted members from the preferred framework, but its rejected "
+            "args came from the aggregate of ALL verification_* — arg_2 was "
+            "simultaneously accepted (preferred) and rejected (grounded). "
+            "A trace with one semantics label must carry one framework's "
+            f"verdict; got {trace.rejected_args!r}"
+        )
+
+
+# ---------------------------------------------------------------------------
 # 5. One decoder — the duplicated local resolvers are gone
 # ---------------------------------------------------------------------------
 
