@@ -755,6 +755,16 @@ class TestModeRunners:
         # never redden. Moved below the try: API/env errors still skip, but a
         # structural regression now fails.
         assert isinstance(result, dict)
+        # #1593 (2e passe): sortir l'assertion du ``try`` ne suffisait pas --
+        # ``isinstance(result, dict)`` passe encore sur ``{}``, donc l'assertion
+        # restait non-echouable au sens de #1588 (substitution degeneree). Les
+        # DEUX branches de ``run_mode_c_constrained`` renvoient
+        # ``exploration_method`` (sophisme detecte ou non), donc l'exiger mord
+        # sur un dict vide sans rien supposer du verdict du LLM.
+        assert "exploration_method" in result, (
+            "run_mode_c_constrained doit toujours rapporter la methode "
+            f"d'exploration, sur les deux branches; recu: {sorted(result)}"
+        )
 
 
 @pytest.mark.unit
