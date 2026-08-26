@@ -80,7 +80,10 @@ Consultez également la [FAQ générale de développement](../projets/sujets/aid
    pip install --only-binary=:all: -r requirements.txt
    ```
 
-3. Consultez le script `scripts/setup/install_prebuilt_dependencies.ps1` pour Windows.
+3. Sous Windows, forcez la stratégie des wheels précompilées de l'outil unifié :
+   ```bash
+   python -m project_core.core_from_scripts.project_setup fix-deps --package <paquet> --strategy wheel-install
+   ```
 
 ### Problèmes avec JPype
 
@@ -91,9 +94,10 @@ Consultez également la [FAQ générale de développement](../projets/sujets/aid
 **Solution** :
 1. Suivez les instructions spécifiques dans `scripts/setup/README_INSTALLATION_OUTILS_COMPILATION.md`
 
-2. Pour Windows, utilisez le script d'installation avec Visual Studio :
-   ```powershell
-   .\scripts\setup\install_jpype_with_vcvars.ps1
+2. Pour Windows, utilisez la stratégie de compilation MSVC de l'outil unifié
+   (elle configure l'environnement Visual Studio puis relance l'installation) :
+   ```bash
+   python -m project_core.core_from_scripts.project_setup fix-deps --package jpype1 --strategy msvc-build
    ```
 
 3. Pour les environnements sans possibilité d'installation de JPype, utilisez le mock :
@@ -115,9 +119,10 @@ Consultez également la [FAQ générale de développement](../projets/sujets/aid
 **Solution** :
 1. Assurez-vous d'avoir les compilateurs et outils de développement à jour
 
-2. Pour Windows, exécutez dans un terminal avec droits administrateur :
-   ```powershell
-   .\scripts\setup\run_with_vcvars.ps1
+2. Pour Windows, relancez l'installation dans l'environnement de compilation
+   Visual Studio (la stratégie configure `vcvarsall.bat` puis réessaie) :
+   ```bash
+   python -m project_core.core_from_scripts.project_setup fix-deps --package <paquet> --strategy msvc-build
    ```
 
 3. Pour les problèmes spécifiques à Python 3.12 :
