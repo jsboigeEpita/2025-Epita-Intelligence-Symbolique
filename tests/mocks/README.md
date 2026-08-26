@@ -39,12 +39,15 @@ production depend (`argumentation_analysis/services/jtms/jtms_core.py:19`), et
 `pytest_mock` aurait remplace pytest lui-meme.
 
 La garde `tests/unit/mocks/test_no_sysmodules_hijack_1891.py` interdit le retour du
-mecanisme. Elle ne tient pas une liste de fichiers autorises -- elle epingle une
-**distinction** : une ecriture `sys.modules` executee a l'import (statement nu, `try`,
-`if`) est interdite ; la meme ecriture **dans le corps d'une fonction**, activee par un
-appel ou une fixture explicite, est le patron sanctionne (`numpy_setup.py`,
-`pandas_setup.py`). Portee actuelle : `tests/mocks/*.py`, sans les sous-repertoires
-(cf. #1895).
+mecanisme. Elle n'assouplit pas la regle -- elle epingle une **distinction** : une
+ecriture `sys.modules` executee a l'import (statement nu, `try`, `if`) est interdite ;
+la meme ecriture **dans le corps d'une fonction**, activee par un appel ou une fixture
+explicite, est le patron sanctionne (`numpy_setup.py`, `pandas_setup.py`). Depuis #1895
+sa portee couvre `tests/mocks/` **recursivement** (sous-repertoires inclus), avec une
+exception unique par nom : `jpype_components/imports.py` -- ce fichier a un importeur
+reel (`jpype_setup.py:80`, branche mock de `USE_REAL_JPYPE`), il est load-bearing, et
+son ecriture `sys.modules["jpype.imports"]` ne part qu'a l'import du paquet (meme forme
+que les neuf supprimes, mais pas morte).
 
 ## Utilisation
 

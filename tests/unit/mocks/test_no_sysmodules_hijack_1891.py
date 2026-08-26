@@ -14,12 +14,28 @@ The legitimate sys.modules manipulation in this package (``numpy_setup.py``,
 fixture or a call — never as an import side effect. The guard pins exactly
 that distinction: module-level writes are forbidden, function-level ones are
 the sanctioned pattern.
+
+#1895: the guard scans ``tests/mocks/`` RECURSIVELY (``rglob``), not just the
+top level. A single-level ``glob`` missed ``jpype_components/imports.py``,
+which writes ``sys.modules["jpype.imports"]`` at module level. It is the ONE
+exempted file — not because the rule is softened, but because it is load-bearing
+rather than dead like the nine deleted: it has a real importer
+(``jpype_setup.py:80``), and the write only fires when the jpype mock package is
+imported while ``USE_REAL_JPYPE`` is not ``"true"``.
 """
 
 import ast
 from pathlib import Path
 
 MOCKS_DIR = Path(__file__).resolve().parents[2] / "mocks"
+
+# The single deliberate module-level write that remains, exempted BY NAME.
+# Cause: unique importer is jpype_setup.py:80 (reached only in the mock branch
+# of USE_REAL_JPYPE), and imports_module exists only in that branch of
+# imports.py — so moving the write into a function would change the load
+# contract of a load-bearing mock. Removing this entry must make the guard
+# redden: the file really is a module-level write.
+ALLOWLIST = {"jpype_components/imports.py"}
 
 
 def _sys_modules_writes(tree: ast.AST):
@@ -40,8 +56,30 @@ def _sys_modules_writes(tree: ast.AST):
 class TestNoModuleLevelSysModulesHijack:
     def test_no_mock_writes_sys_modules_at_module_level(self):
         assert MOCKS_DIR.is_dir(), f"#1891 guard: {MOCKS_DIR} disappeared"
+        # #1895: recursive scan. The widening must actually descend into
+        # subpackages — if rglob returned no subpackage .py (e.g. the mutation
+        # didn't take, a typo in the path), a single-level glob would also have
+        # returned none, so the recursion check is what proves it bit.
+        all_py = [
+            p for p in sorted(MOCKS_DIR.rglob("*.py")) if "__pycache__" not in p.parts
+        ]
+        sub_py = [p for p in all_py if p.parent != MOCKS_DIR]
+        assert sub_py, (
+            "#1895: rglob found no .py under a subpackage of tests/mocks/ — "
+            "the #1895 widening did not take"
+        )
+        # Every allowlisted entry must still exist; a stale entry reddens so it
+        # is removed rather than silently doing nothing.
+        for entry in ALLOWLIST:
+            assert (MOCKS_DIR / entry).is_file(), (
+                "#1895: allowlist entry "
+                f"{entry!r} no longer exists under {MOCKS_DIR} — remove it"
+            )
         offenders = []
-        for py in sorted(MOCKS_DIR.glob("*.py")):
+        for py in all_py:
+            rel = py.relative_to(MOCKS_DIR).as_posix()
+            if rel in ALLOWLIST:
+                continue
             tree = ast.parse(py.read_text(encoding="utf-8-sig"))
             # Only statements directly in the module body count as import
             # side effects. A def/class statement is machinery DEFINED at
@@ -55,7 +93,7 @@ class TestNoModuleLevelSysModulesHijack:
                 ):
                     continue
                 for _ in _sys_modules_writes(stmt):
-                    offenders.append(py.name)
+                    offenders.append(rel)
                     break
         assert not offenders, (
             "#1891: module-level sys.modules write in tests/mocks/ — "
