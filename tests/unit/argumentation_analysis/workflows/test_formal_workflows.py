@@ -34,7 +34,10 @@ def _make_registry(*capabilities):
     """Create a registry with fake invoke callables."""
     registry = CapabilityRegistry()
     for cap in capabilities:
-        invoke_fn = AsyncMock(return_value={"capability": cap, "score": 0.75})
+        output = {"capability": cap, "score": 0.75}
+        if cap == "fact_extraction":
+            output["extraction_status"] = "ok"
+        invoke_fn = AsyncMock(return_value=output)
         registry.register(
             name=f"mock_{cap}",
             component_type=ComponentType.AGENT,
@@ -107,6 +110,7 @@ class TestFormalDebateExecution:
     @pytest.mark.asyncio
     async def test_execute_full_pipeline(self):
         registry = _make_registry(
+            "fact_extraction",
             "argument_quality",
             "aspic_plus_reasoning",
             "dialogue_protocols",
@@ -214,6 +218,7 @@ class TestBeliefDynamicsExecution:
     @pytest.mark.asyncio
     async def test_execute_full_pipeline(self):
         registry = _make_registry(
+            "fact_extraction",
             "adversarial_debate",
             "belief_revision",
             "belief_maintenance",
@@ -298,6 +303,7 @@ class TestArgumentStrengthExecution:
     @pytest.mark.asyncio
     async def test_execute_full_pipeline(self):
         registry = _make_registry(
+            "fact_extraction",
             "argument_quality",
             "ranking_semantics",
             "probabilistic_argumentation",
@@ -314,6 +320,7 @@ class TestArgumentStrengthExecution:
     @pytest.mark.asyncio
     async def test_missing_optional_probabilistic(self):
         registry = _make_registry(
+            "fact_extraction",
             "argument_quality",
             "ranking_semantics",
             "counter_argument_generation",

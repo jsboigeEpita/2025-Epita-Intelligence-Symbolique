@@ -17,7 +17,7 @@ backward compatibility.
 """
 
 import logging
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Set, Tuple
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -50,6 +50,40 @@ from argumentation_analysis.orchestration.registry_setup import (  # noqa: F401
 from argumentation_analysis.orchestration.workflows import *  # noqa: F401,F403
 
 logger = logging.getLogger("UnifiedPipeline")
+
+
+def _analysis_outcome(phase_results: Dict[str, Any]) -> Dict[str, str]:
+    """Normalize the foundational analysis outcome from the extraction contract."""
+    extraction = next(
+        (
+            result
+            for result in phase_results.values()
+            if result.capability == "fact_extraction"
+        ),
+        None,
+    )
+    if extraction is None:
+        return {"status": "ok"}
+
+    output = extraction.output if isinstance(extraction.output, dict) else {}
+    extraction_status = output.get("extraction_status")
+    explicit_failure = isinstance(
+        extraction_status, str
+    ) and extraction_status.startswith("failed:")
+    if (
+        extraction.status == PhaseStatus.FAILED
+        or extraction.terminal
+        or explicit_failure
+    ):
+        reason = extraction_status if explicit_failure else extraction.error
+        return {
+            "status": "failed",
+            "phase": extraction.phase_name,
+            "reason": str(reason or "unknown"),
+        }
+    if extraction_status == "non_argumentative":
+        return {"status": "non_argumentative", "phase": extraction.phase_name}
+    return {"status": "ok"}
 
 
 def _collect_degraded_capabilities(
@@ -109,7 +143,7 @@ async def run_unified_analysis(
     state: Optional[Any] = None,
     create_state: bool = True,
     checkpoint_callback: Optional[Any] = None,
-    resume_from: Optional[set] = None,
+    resume_from: Optional[Set[str]] = None,
     render_restitution: bool = False,
     deanonymized: bool = True,
     source_metadata: Optional[Dict[str, str]] = None,
@@ -198,7 +232,7 @@ async def run_unified_analysis(
         try:
             from argumentation_analysis.orchestration.router import TextAnalysisRouter
 
-            router = TextAnalysisRouter(registry=registry)
+            router = TextAnalysisRouter(registry=registry)  # type: ignore[no-untyped-call]
             workflow = await router.analyze_and_route_async(text, registry=registry)
         except Exception as e:
             logger.warning("Auto-routing failed, falling back to standard: %s", e)
@@ -340,9 +374,16 @@ async def run_unified_analysis(
         phase_results, state, capabilities_used
     )
 
-    result = {
+    analysis_outcome = _analysis_outcome(phase_results)
+    if state is not None:
+        workflow_result = getattr(state, "workflow_results", {}).get(workflow.name)
+        if isinstance(workflow_result, dict):
+            workflow_result["analysis_outcome"] = analysis_outcome
+
+    result: Dict[str, Any] = {
         "workflow_name": workflow.name,
         "phases": phase_results,
+        "analysis_outcome": analysis_outcome,
         "summary": {
             "completed": len(completed),
             "failed": len(failed),

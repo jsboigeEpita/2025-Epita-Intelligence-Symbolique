@@ -119,6 +119,11 @@ class PhaseResult:
     # Consumers MUST surface this flag — anti-theater #1019.
     degraded: bool = False
     attempts: int = 1
+    # #1913: a terminal result is a semantic stop, not an ordinary failure.
+    # Descendants depending on it have no valid substrate and must not run.
+    # Optional enrichment failures remain non-terminal and keep their existing
+    # completed-but-degraded workflow semantics (#1597/#1608).
+    terminal: bool = False
 
 
 @dataclass
@@ -143,7 +148,8 @@ class WorkflowDefinition:
         Returns a list of "levels" — phases at the same level can
         execute in parallel; each level depends on all previous levels.
         """
-        remaining = {p.name for p in self.phases}
+        phase_names = {p.name for p in self.phases}
+        remaining = set(phase_names)
         completed: Set[str] = set()
         levels: List[List[str]] = []
 
@@ -152,8 +158,23 @@ class WorkflowDefinition:
             ready = []
             for phase_name in remaining:
                 phase = self.get_phase(phase_name)
-                if phase and all(d in completed for d in phase.depends_on):
-                    ready.append(phase_name)
+                if phase:
+                    dependencies_ready = True
+                    for dependency in phase.depends_on:
+                        if "*" in dependency:
+                            fragment = dependency.replace("*", "")
+                            matches = {name for name in phase_names if fragment in name}
+                            dependencies_ready = (
+                                dependencies_ready
+                                and bool(matches)
+                                and matches.issubset(completed)
+                            )
+                        else:
+                            dependencies_ready = (
+                                dependencies_ready and dependency in completed
+                            )
+                    if dependencies_ready:
+                        ready.append(phase_name)
 
             if not ready:
                 # Circular dependency or unsatisfiable — break
@@ -465,6 +486,9 @@ class WorkflowExecutor:
                             output=existing_result.output,
                             error="Skipped (resumed from checkpoint)",
                             duration_seconds=existing_result.duration_seconds,
+                            degraded=existing_result.degraded,
+                            attempts=existing_result.attempts,
+                            terminal=existing_result.terminal,
                         )
                     else:
                         _skipped_phase = workflow.get_phase(phase_name)
@@ -483,6 +507,31 @@ class WorkflowExecutor:
             for phase_name in to_run:
                 phase = workflow.get_phase(phase_name)
                 if phase:
+                    terminal_dependencies = [
+                        name
+                        for name in self._matching_dependencies(phase, results)
+                        if results[name].terminal
+                    ]
+                    if terminal_dependencies:
+                        reason = "Blocked by terminal dependency: " + ", ".join(
+                            sorted(terminal_dependencies)
+                        )
+                        self._store_phase_result(
+                            phase_name,
+                            PhaseResult(
+                                phase_name=phase_name,
+                                status=PhaseStatus.SKIPPED,
+                                capability=phase.capability,
+                                error=reason,
+                                terminal=True,
+                            ),
+                            None,
+                            results,
+                            ctx,
+                            state,
+                            state_writers,
+                        )
+                        continue
                     slog.info(
                         "Starting phase",
                         extra={
@@ -550,12 +599,51 @@ class WorkflowExecutor:
                         "degraded_phases": degraded_phases,
                         "structured_arg_degraded": structured_degraded_caps,
                         "phases": {name: r.status.value for name, r in results.items()},
+                        "phase_errors": {
+                            name: r.error
+                            for name, r in results.items()
+                            if r.status == PhaseStatus.FAILED and r.error
+                        },
+                        "terminal_phases": [
+                            name
+                            for name, r in results.items()
+                            if r.terminal and r.status == PhaseStatus.FAILED
+                        ],
                     },
                 )
             except Exception as sw_err:
                 logger.warning(f"Failed to store workflow results in state: {sw_err}")
 
         return results
+
+    @staticmethod
+    def _matching_dependencies(
+        phase: WorkflowPhase, results: Dict[str, PhaseResult]
+    ) -> List[str]:
+        """Resolve declared dependencies against results, including wildcards."""
+        matched: List[str] = []
+        for dependency in phase.depends_on:
+            if "*" in dependency:
+                fragment = dependency.replace("*", "")
+                matched.extend(name for name in results if fragment in name)
+            elif dependency in results:
+                matched.append(dependency)
+        return matched
+
+    @staticmethod
+    def _foundational_failure(output: Any, capability: str) -> Optional[str]:
+        """Return the explicit foundational failure reason, if any (#1913).
+
+        The producer's machine-readable ``extraction_status`` is authoritative.
+        Empty arguments are not interpreted here: ``ok`` and the explicit valid
+        terminal ``non_argumentative`` remain successful outputs (#1909).
+        """
+        if capability != "fact_extraction" or not isinstance(output, dict):
+            return None
+        status = output.get("extraction_status")
+        if isinstance(status, str) and status.startswith("failed:"):
+            return status
+        return None
 
     async def _invoke_with_retry(
         self,
@@ -662,6 +750,7 @@ class WorkflowExecutor:
                     capability=phase.capability,
                     error=f"Capability resolution error: {resolve_err}",
                     duration_seconds=duration,
+                    terminal=phase.capability == "fact_extraction",
                 ),
                 None,
             )
@@ -685,6 +774,7 @@ class WorkflowExecutor:
                     status=PhaseStatus.FAILED,
                     capability=phase.capability,
                     error=f"No provider for required capability '{phase.capability}'",
+                    terminal=phase.capability == "fact_extraction",
                 ),
                 None,
             )
@@ -722,8 +812,40 @@ class WorkflowExecutor:
                     f"Phase '{phase_name}': component '{provider.name}' "
                     f"has no invoke callable, output will be None"
                 )
+                if phase.capability == "fact_extraction":
+                    duration = time.time() - start
+                    return (
+                        phase_name,
+                        PhaseResult(
+                            phase_name=phase_name,
+                            status=PhaseStatus.FAILED,
+                            capability=phase.capability,
+                            component_used=provider.name,
+                            error="Foundational provider has no invoke callable",
+                            duration_seconds=duration,
+                            terminal=True,
+                        ),
+                        None,
+                    )
 
             duration = time.time() - start
+            foundational_error = self._foundational_failure(output, phase.capability)
+            if foundational_error is not None:
+                return (
+                    phase_name,
+                    PhaseResult(
+                        phase_name=phase_name,
+                        status=PhaseStatus.FAILED,
+                        capability=phase.capability,
+                        component_used=provider.name,
+                        output=output,
+                        error=foundational_error,
+                        duration_seconds=duration,
+                        attempts=attempts,
+                        terminal=True,
+                    ),
+                    output,
+                )
             return (
                 phase_name,
                 PhaseResult(
@@ -771,6 +893,7 @@ class WorkflowExecutor:
                     duration_seconds=duration,
                     degraded=phase.optional,
                     attempts=attempts_used,
+                    terminal=phase.capability == "fact_extraction",
                 ),
                 None,
             )

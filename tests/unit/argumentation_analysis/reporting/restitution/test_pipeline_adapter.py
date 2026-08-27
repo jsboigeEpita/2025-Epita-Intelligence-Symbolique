@@ -24,7 +24,6 @@ from argumentation_analysis.reporting.restitution.pipeline_adapter import (
     render_spectacular_restitution,
 )
 
-
 # --- state stubs -------------------------------------------------------------
 
 
@@ -76,7 +75,9 @@ _ACT3 = (
 
 class TestBuildRestitutionActs:
     def test_reads_three_acts_from_state(self):
-        state = _stub_state(act1_framing=_ACT1, act2_narrative=_ACT2, act3_conclusion=_ACT3)
+        state = _stub_state(
+            act1_framing=_ACT1, act2_narrative=_ACT2, act3_conclusion=_ACT3
+        )
         acts = build_restitution_acts(state)
         assert acts.act1_framing == _ACT1
         assert acts.act2_narrative == _ACT2
@@ -93,7 +94,11 @@ class TestBuildRestitutionActs:
         assert acts.act1_framing == ""
 
     def test_works_on_dict_state(self):
-        state = {"act1_framing": _ACT1, "act2_narrative": _ACT2, "act3_conclusion": _ACT3}
+        state = {
+            "act1_framing": _ACT1,
+            "act2_narrative": _ACT2,
+            "act3_conclusion": _ACT3,
+        }
         acts = build_restitution_acts(state, source_id="doc_A")
         assert acts.act1_framing == _ACT1
         assert acts.source_id == "doc_A"
@@ -266,8 +271,52 @@ class TestRenderSpectacularRestitution:
         # a missing act is a structural failure the gate must flag
         assert report.verdict.band == "FAIL"
 
+    def test_foundational_failure_cause_replaces_generic_missing_act_reason(self):
+        """#1913: the reader sees extraction failure, not a guessed empty-act cause."""
+        state = _stub_state(
+            workflow_results={
+                "spectacular": {
+                    "analysis_outcome": {
+                        "status": "failed",
+                        "phase": "extract",
+                        "reason": "failed:synthetic-quota-error",
+                    }
+                }
+            }
+        )
+
+        report = render_spectacular_restitution(state, source_id="doc_B")
+
+        assert report.markdown.count("failed:synthetic-quota-error") == 3
+        assert "extraction fondatrice" in report.markdown.lower()
+        assert "n'a pas pu être généré" not in report.markdown
+
+    def test_foundational_failure_does_not_overwrite_existing_act_motif(self):
+        """An act-local precise motif remains more specific than the terminal fallback."""
+        state = _stub_state(
+            restitution_acts_degraded={
+                "act2_narrative": {"local": "motif local plus précis"}
+            },
+            workflow_results={
+                "spectacular": {
+                    "analysis_outcome": {
+                        "status": "failed",
+                        "phase": "extract",
+                        "reason": "failed:synthetic-quota-error",
+                    }
+                }
+            },
+        )
+
+        acts = build_restitution_acts(state)
+
+        assert acts.degraded["act2_narrative"] == "motif local plus précis"
+        assert "synthetic-quota-error" in acts.degraded["act1_framing"]
+
     def test_gate_verdict_returned(self):
-        state = _stub_state(act1_framing=_ACT1, act2_narrative=_ACT2, act3_conclusion=_ACT3)
+        state = _stub_state(
+            act1_framing=_ACT1, act2_narrative=_ACT2, act3_conclusion=_ACT3
+        )
         report = render_spectacular_restitution(state)
         assert report.verdict is not None
         assert report.verdict.band in ("PASS", "WARN", "FAIL")
@@ -284,7 +333,9 @@ class TestRenderSpectacularRestitution:
         assert out.read_text(encoding="utf-8") == report.markdown
 
     def test_output_path_creates_missing_dir(self, tmp_path):
-        state = _stub_state(act1_framing=_ACT1, act2_narrative=_ACT2, act3_conclusion=_ACT3)
+        state = _stub_state(
+            act1_framing=_ACT1, act2_narrative=_ACT2, act3_conclusion=_ACT3
+        )
         out = tmp_path / "deeply" / "nested" / "dir" / "report.md"
         render_spectacular_restitution(state, output_path=str(out))
         assert out.exists()

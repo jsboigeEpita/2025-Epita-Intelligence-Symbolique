@@ -484,6 +484,20 @@ class TestPreBuiltLoopWorkflows:
 class TestQualityGatedEndToEnd:
     """End-to-end tests for the quality-gated counter-argument workflow."""
 
+    @staticmethod
+    def _valid_extraction():
+        return (
+            "fact_extraction",
+            "extractor",
+            AsyncMock(
+                return_value={
+                    "arguments": [],
+                    "claims": [],
+                    "extraction_status": "ok",
+                }
+            ),
+        )
+
     async def test_quality_above_threshold_counter_runs(self):
         quality_invoke = AsyncMock(return_value={"note_finale": 4.5})
         counter_invoke = AsyncMock(
@@ -493,6 +507,7 @@ class TestQualityGatedEndToEnd:
             }
         )
         registry = make_registry(
+            self._valid_extraction(),
             ("argument_quality", "quality_eval", quality_invoke),
             ("counter_argument_generation", "counter_gen", counter_invoke),
         )
@@ -513,6 +528,7 @@ class TestQualityGatedEndToEnd:
         quality_invoke = AsyncMock(return_value={"note_finale": 2.0})
         counter_invoke = AsyncMock(return_value={})
         registry = make_registry(
+            self._valid_extraction(),
             ("argument_quality", "quality_eval", quality_invoke),
             ("counter_argument_generation", "counter_gen", counter_invoke),
         )
@@ -544,6 +560,7 @@ class TestQualityGatedEndToEnd:
             }
         )
         registry = make_registry(
+            self._valid_extraction(),
             ("argument_quality", "quality_eval", quality_invoke),
             ("counter_argument_generation", "counter_gen", counter_invoke),
         )
@@ -576,6 +593,7 @@ class TestQualityGatedEndToEnd:
             }
         )
         registry = make_registry(
+            self._valid_extraction(),
             ("argument_quality", "quality_eval", quality_invoke),
             ("counter_argument_generation", "counter_gen", counter_invoke),
         )
