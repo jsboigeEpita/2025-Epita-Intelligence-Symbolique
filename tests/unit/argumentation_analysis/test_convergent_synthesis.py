@@ -9,7 +9,7 @@ build_convergent_synthesis surfaces named convergent verdicts and a conclusion.
 from argumentation_analysis.plugins.narrative_synthesis_plugin import (
     compute_argument_convergence,
     build_convergent_synthesis,
-    _dung_rejected_args,
+    _native_dung_rejections,
     NarrativeSynthesisPlugin,
 )
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
@@ -23,57 +23,63 @@ def _state_with_args(*descriptions: str) -> UnifiedAnalysisState:
 
 
 class TestDungRejection:
-    """_dung_rejected_args handles the three extension storage shapes."""
+    """_native_dung_rejections handles the three extension storage shapes
+    (#1912: fixtures aligned to the canonical writer shape — production
+    natives are always ``verification_*``, the nameless handcrafted states
+    predate that convention)."""
 
     def test_enriched_all_members_form(self):
         state = _state_with_args("a", "b", "c")  # arg_1, arg_2, arg_3
         state.dung_frameworks = {
             "dung_1": {
+                "name": "verification_grounded",
                 "semantics": "grounded",
                 "arguments": ["arg_1", "arg_2", "arg_3"],
                 "extensions": {"all_members": ["arg_1", "arg_2"]},
             }
         }
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         assert rejected == {"arg_3": "grounded"}
 
     def test_semantics_to_list_form(self):
         state = _state_with_args("a", "b", "c")
         # This is the shape add_dung_framework stores (Dict[str, List[str]])
         state.add_dung_framework(
-            name="fw",
+            name="verification_grounded",
             arguments=["arg_1", "arg_2", "arg_3"],
             attacks=[["arg_1", "arg_3"]],
             extensions={"grounded": ["arg_1", "arg_2"]},
         )
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         assert "arg_3" in rejected
 
     def test_list_of_lists_form(self):
         state = _state_with_args("a", "b", "c")
         state.dung_frameworks = {
             "dung_1": {
+                "name": "verification_preferred",
                 "semantics": "preferred",
                 "arguments": ["arg_1", "arg_2", "arg_3"],
                 "extensions": [["arg_1"], ["arg_2"]],
             }
         }
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         assert rejected == {"arg_3": "preferred"}
 
     def test_no_frameworks_returns_empty(self):
         state = _state_with_args("a")
-        assert _dung_rejected_args(state) == {}
+        assert _native_dung_rejections(state) == {}
 
     def test_all_args_accepted_none_rejected(self):
         state = _state_with_args("a", "b")
         state.dung_frameworks = {
             "dung_1": {
+                "name": "verification_grounded",
                 "arguments": ["arg_1", "arg_2"],
                 "extensions": {"all_members": ["arg_1", "arg_2"]},
             }
         }
-        assert _dung_rejected_args(state) == {}
+        assert _native_dung_rejections(state) == {}
 
 
 class TestComputeConvergence:
@@ -115,6 +121,7 @@ class TestComputeConvergence:
         state.add_fallacy("ad_hominem", "attack", "arg_2")
         state.dung_frameworks = {
             "dung_1": {
+                "name": "verification_grounded",
                 "semantics": "grounded",
                 "arguments": ["arg_1", "arg_2"],
                 "extensions": {"all_members": ["arg_1"]},  # arg_2 rejected
@@ -128,7 +135,9 @@ class TestComputeConvergence:
     def test_jtms_invalid_belief_counts(self):
         state = _state_with_args("retracted argument")
         # belief name uses "arg_N:" prefix (NN wiring convention)
-        state.add_jtms_belief("arg_1:retracted argument", False, justifications=["undermined"])
+        state.add_jtms_belief(
+            "arg_1:retracted argument", False, justifications=["undermined"]
+        )
         state.add_quality_score("arg_1", {"x": 1.0}, 2.0)
         conv = compute_argument_convergence(state)
         assert conv["arg_1"]["score"] == 2

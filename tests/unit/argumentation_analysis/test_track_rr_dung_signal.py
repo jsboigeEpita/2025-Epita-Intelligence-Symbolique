@@ -13,7 +13,7 @@ import types
 import pytest
 
 from argumentation_analysis.plugins.narrative_synthesis_plugin import (
-    _dung_rejected_args,
+    _native_dung_rejections,
     _resolve_dung_arg_id,
     compute_argument_convergence,
 )
@@ -43,9 +43,12 @@ def _state(
 
 
 def _framework(arguments, rejected_args, semantics="grounded"):
-    """Build a minimal Dung framework dict where rejected_args are absent from extension."""
+    """Build a minimal Dung framework dict where rejected_args are absent from
+    extension. #1912: carries the canonical ``verification_*`` name the
+    production writer always stores (native-only decoding boundary)."""
     accepted = [a for a in arguments if a not in rejected_args]
     return {
+        "name": f"verification_{semantics}",
         "arguments": arguments,
         "semantics": semantics,
         "extensions": {"all_members": accepted},
@@ -120,7 +123,7 @@ class TestResolveDungArgId:
 
 
 class TestDungRejectedArgs:
-    """_dung_rejected_args — resolves text labels to canonical arg_ids."""
+    """_native_dung_rejections — resolves text labels to canonical arg_ids."""
 
     def test_canonical_id_framework_unchanged(self):
         """When Dung uses canonical IDs, rejection still works (no regression)."""
@@ -130,7 +133,7 @@ class TestDungRejectedArgs:
                 "fw1": _framework(["arg_1", "arg_2"], rejected_args=["arg_2"])
             },
         )
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         assert "arg_2" in rejected
         assert "arg_1" not in rejected
 
@@ -144,7 +147,7 @@ class TestDungRejectedArgs:
                 "fw1": _framework([text_a1, text_a2], rejected_args=[text_a2])
             },
         )
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         # text_a2 → "arg_2" after resolution
         assert "arg_2" in rejected
         assert "arg_1" not in rejected
@@ -163,7 +166,7 @@ class TestDungRejectedArgs:
                 "fw1": _framework(texts, rejected_args=[texts[1], texts[2]])
             },
         )
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         assert "arg_2" in rejected
         assert "arg_3" in rejected
         assert "arg_1" not in rejected
@@ -171,7 +174,7 @@ class TestDungRejectedArgs:
     def test_no_frameworks(self):
         """Empty dung_frameworks → empty result."""
         state = _state(identified_arguments={"arg_1": "desc"}, dung_frameworks={})
-        assert _dung_rejected_args(state) == {}
+        assert _native_dung_rejections(state) == {}
 
     def test_all_accepted_no_rejections(self):
         """All args in extension → empty rejections."""
@@ -179,7 +182,7 @@ class TestDungRejectedArgs:
             identified_arguments={"arg_1": "desc1"},
             dung_frameworks={"fw1": _framework(["arg_1"], rejected_args=[])},
         )
-        assert _dung_rejected_args(state) == {}
+        assert _native_dung_rejections(state) == {}
 
     def test_prior_rejection_not_overwritten(self):
         """First framework's semantics is preserved when multiple frameworks reject same arg."""
@@ -187,18 +190,20 @@ class TestDungRejectedArgs:
             identified_arguments={"arg_1": "some argument"},
             dung_frameworks={
                 "fw1": {
+                    "name": "verification_grounded",
                     "arguments": ["arg_1"],
                     "semantics": "grounded",
                     "extensions": {"all_members": []},
                 },
                 "fw2": {
+                    "name": "verification_preferred",
                     "arguments": ["arg_1"],
                     "semantics": "preferred",
                     "extensions": {"all_members": []},
                 },
             },
         )
-        rejected = _dung_rejected_args(state)
+        rejected = _native_dung_rejections(state)
         assert rejected.get("arg_1") == "grounded"  # first framework wins
 
 
