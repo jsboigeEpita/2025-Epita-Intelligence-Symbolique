@@ -55,6 +55,7 @@ class TestSignalIntegrity:
             },
             dung_frameworks={
                 "fw1": {
+                    "name": "verification_grounded",
                     "arguments": ["arg_1"],
                     "extensions": [],
                     "semantics": "grounded",
@@ -138,6 +139,7 @@ class TestSignalIntegrity:
             identified_arguments={"arg_1": "desc"},
             dung_frameworks={
                 "fw1": {
+                    "name": "verification_grounded",
                     "arguments": ["arg_1"],
                     "extensions": [],
                     "semantics": "grounded",
@@ -172,6 +174,7 @@ class TestSignalIntegrity:
             identified_arguments={"arg_1": "The policy causes harm"},
             dung_frameworks={
                 "fw1": {
+                    "name": "verification_grounded",
                     "arguments": ["The policy causes harm to many people"],
                     "extensions": [],
                     "semantics": "grounded",
@@ -294,6 +297,7 @@ class TestConvergenceDepth:
             jtms_beliefs={"b1": {"name": "arg_1:text", "valid": False}},
             dung_frameworks={
                 "fw1": {
+                    "name": "verification_grounded",
                     "arguments": ["arg_1"],
                     "extensions": [],
                     "semantics": "grounded",

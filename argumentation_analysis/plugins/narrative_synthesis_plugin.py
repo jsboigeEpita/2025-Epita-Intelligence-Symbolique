@@ -24,6 +24,10 @@ synthesis skeleton produced by Track BB (#634).
 import logging
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.reporting.restitution.native_dung import (
+    decode_native_dung,  # #1912: single shared native-Dung decoder (re-exported
+)  # for traceability — same object the two act plugins delegate to)
+
 try:
     from semantic_kernel.functions import kernel_function
 
@@ -297,53 +301,27 @@ def _resolve_dung_arg_id(text: str, identified_args: Dict[str, Any]) -> str:
     return text
 
 
-def _dung_rejected_args(state: Any) -> Dict[str, str]:
-    """Return {arg_id: semantics} for arguments present in a Dung framework
-    but absent from its accepted extension (i.e. rejected by that semantics)."""
+def _native_dung_rejections(state: Any) -> Dict[str, str]:
+    """#1912 (third site): native-only Dung rejections, canonicalized.
+
+    The third copy of the generic resolver lived here (``_dung_rejected_args``,
+    deleted): it iterated EVERY ``dung_frameworks`` entry with a lenient
+    union decoder, so sidecar shapes (ABA/SetAF/weighted/social, each with
+    its own extension key) fabricated "rejet Dung" convergence signals — the
+    same contamination as Acts II/III (#1894: 221 false rejections). The
+    rejection rule now lives in the shared decoder
+    (``restitution.native_dung``): only ``verification_*`` entries are native
+    evidence, sidecars are skipped whatever their shape. Free-text labels
+    still resolve back to canonical arg ids so ``compute_argument_convergence``
+    matches ``identified_arguments`` keys (track RR behavior preserved).
+    """
     rejected: Dict[str, str] = {}
-    frameworks = getattr(state, "dung_frameworks", {}) or {}
-    if not isinstance(frameworks, dict):
-        return rejected
     identified_args: Dict[str, Any] = getattr(state, "identified_arguments", {}) or {}
-    for _fid, fw in frameworks.items():
-        if not isinstance(fw, dict):
-            continue
-        fw_args = fw.get("arguments", []) or []
-        if not isinstance(fw_args, list):
-            continue
-        semantics = fw.get("semantics", "grounded")
-        # Accepted members: prefer enriched dict (all_members), fall back to
-        # flat list-of-lists, then to a bare list.
-        ext = fw.get("extensions", [])
-        accepted: set = set()
-        if isinstance(ext, dict):
-            # Enriched form: {"all_members": [...]}; else semantics->list form:
-            # {"grounded": ["arg_1", ...], "preferred": [...]}
-            if "all_members" in ext:
-                accepted = set(ext.get("all_members", []) or [])
-            else:
-                for val in ext.values():
-                    if isinstance(val, list):
-                        for item in val:
-                            if isinstance(item, list):
-                                accepted.update(item)
-                            elif isinstance(item, str):
-                                accepted.add(item)
-                    elif isinstance(val, dict):
-                        accepted.update(val.get("all_members", []) or [])
-        elif isinstance(ext, list):
-            for item in ext:
-                if isinstance(item, list):
-                    accepted.update(item)
-                elif isinstance(item, str):
-                    accepted.add(item)
-        for arg in fw_args:
-            if isinstance(arg, str) and arg not in accepted:
-                # Resolve text → canonical arg_id so compute_argument_convergence
-                # can match the Dung rejection against identified_arguments keys.
-                canonical = _resolve_dung_arg_id(arg, identified_args)
-                # Don't overwrite a prior rejection from another framework
-                rejected.setdefault(canonical, semantics)
+    if not isinstance(identified_args, dict):
+        identified_args = {}
+    for arg, label in decode_native_dung(state).rejected_by_arg.items():
+        # Don't overwrite a prior rejection from another framework
+        rejected.setdefault(_resolve_dung_arg_id(arg, identified_args), label)
     return rejected
 
 
@@ -362,7 +340,7 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
     quality = getattr(state, "argument_quality_scores", {}) or {}
     counters = getattr(state, "counter_arguments", []) or []
     jtms = getattr(state, "jtms_beliefs", {}) or {}
-    rejected_by_dung = _dung_rejected_args(state)
+    rejected_by_dung = _native_dung_rejections(state)
 
     # Pre-index fallacies by target argument
     fallacy_by_arg: Dict[str, List[str]] = {}

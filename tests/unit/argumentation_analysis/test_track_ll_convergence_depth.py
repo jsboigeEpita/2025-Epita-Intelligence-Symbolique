@@ -217,7 +217,7 @@ class TestConvergenceDepthImprovement:
             justifications=["retracted by fallacy"],
         )
         state.add_dung_framework(
-            "test_af",
+            "verification_grounded",
             arguments=["fallacy_straw_man", "arg_1"],
             attacks=[["fallacy_straw_man", "arg_1"]],
             extensions={"grounded": ["fallacy_straw_man"]},
