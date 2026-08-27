@@ -242,11 +242,12 @@ docs/reports/spectacular_vs_baseline.md
 # at repo root during a run (trace_arg_*, trace_fallacy_*, reanalysis_arg_*).
 # These contain corpus-derived content (privacy: never commit). They have
 # leaked as untracked-root files repeatedly (R543, R544, R547). Gitignore the
-# pattern so runs never surface them in `git status`. Move existing ones to a
+# pattern so runs never surface them in `git status`. Move existing ones to the
 # gitignored scratchpad before/after runs.
-/trace_arg_*
-/trace_fallacy_*
-/reanalysis_arg_*
+scratchpad/
+trace_arg_*
+trace_fallacy_*
+reanalysis_arg_*
 
 
 # LLM egress counter artifact (#1787) - test names + counts, stays local
