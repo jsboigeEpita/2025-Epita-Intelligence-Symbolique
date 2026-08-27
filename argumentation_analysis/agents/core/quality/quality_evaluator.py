@@ -25,6 +25,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from enum import Enum, IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("ArgumentQualityEvaluator")
@@ -65,6 +66,7 @@ def _neutralize_faulty_torch() -> None:
         return
     try:
         import torch  # noqa: F401
+
         return  # torch imports cleanly — nothing to do.
     except ImportError:
         return  # torch genuinely absent — thinc already handles this fine.
@@ -227,6 +229,111 @@ VERTUES = [
 ]
 
 
+# --- Context taxonomy (#1907) ---
+
+
+class ContextLevel(IntEnum):
+    """How much material a virtue needs before it can be judged at all.
+
+    Ordered: a unit at level N carries every property judgeable at levels <= N.
+    """
+
+    CLAIM = 1
+    """A single extracted claim, stripped of its surroundings."""
+
+    LOCAL_CONTEXT = 2
+    """The claim plus the passage it sits in (a few sentences)."""
+
+    DOCUMENT = 3
+    """The whole document, with its citations and its rebuttal moves."""
+
+    @property
+    def label(self) -> str:
+        return {
+            ContextLevel.CLAIM: "revendication isolee",
+            ContextLevel.LOCAL_CONTEXT: "passage local",
+            ContextLevel.DOCUMENT: "document complet",
+        }[self]
+
+
+class VirtueStatus(str, Enum):
+    """Outcome of asking one virtue about one unit (#1907)."""
+
+    EVALUATED = "evaluated"
+    """The detector ran on adequate material; ``scores_par_vertu`` holds a value."""
+
+    NOT_APPLICABLE = "not_applicable"
+    """The unit cannot carry this property. Honestly absent — NOT a zero."""
+
+    UNAVAILABLE = "unavailable"
+    """The detector or one of its dependencies failed. Also NOT a zero."""
+
+
+VIRTUE_CONTEXT_REQUIREMENTS: Dict[str, ContextLevel] = {
+    # Judgeable on the claim itself: readability, and whether the claim links
+    # its own parts. Measured on 142 real records, these are the only two
+    # dimensions that actually varied on isolated claims.
+    "clarte": ContextLevel.CLAIM,
+    "pertinence": ContextLevel.CLAIM,
+    # Need the surrounding passage. A multi-step structure spans clauses; an
+    # analogy is a passage-level device; a lexical-diversity ratio over a
+    # 94-character claim is ~1.0 for any input (it scored exactly 1.00 on
+    # 142/142 records, adding a flat +1.0 to every score while ranking nothing).
+    "structure_logique": ContextLevel.LOCAL_CONTEXT,
+    "analogie_pertinente": ContextLevel.LOCAL_CONTEXT,
+    "redondance_faible": ContextLevel.LOCAL_CONTEXT,
+    # Stating an opposing thesis and rebutting it fits in a passage, not a
+    # document: the ``REAL_REFUTATION`` fixture of FB-29 does it in two
+    # sentences, and ``REAL_ANALOGY`` carries a full structural mapping in one
+    # long sentence. Those fixtures refuted an earlier draft that filed
+    # refutation as DOCUMENT-level.
+    "refutation_constructive": ContextLevel.LOCAL_CONTEXT,
+    # Need the whole document. Extraction strips citations, and essay-level
+    # coverage is by definition a whole-text property. ``detect_exhaustivite``
+    # already says so in its own comment ("Texte trop court pour juger") and
+    # then returned 0.0 anyway — that is the inference #1907 removes.
+    "presence_sources": ContextLevel.DOCUMENT,
+    "fiabilite_sources": ContextLevel.DOCUMENT,
+    "exhaustivite": ContextLevel.DOCUMENT,
+}
+
+VIRTUE_DEPENDENCIES: Dict[str, str] = {
+    # The reliability of sources is undefined when no source is present at all.
+    # Scoring it 0.0 asserts "the sources are unreliable" about a text that
+    # cites none.
+    "fiabilite_sources": "presence_sources",
+}
+
+# Derived from the detectors' own scoring bands, not invented: detect_exhaustivite
+# reaches its top band at >= 5 sentences, so a unit that long is document-shaped;
+# below 2 sentences nothing multi-sentence can be exhibited.
+_DOCUMENT_MIN_SENTENCES = 5
+_LOCAL_MIN_SENTENCES = 2
+# A single long sentence can still be a passage: a multi-clause sentence carries
+# an analogy or a rebuttal. Calibrated against the observed corpus unit (median
+# 94 characters, ~15 words) and against ``detect_redondance_faible``, whose
+# unique-word ratio is mechanically ~1.0 below roughly this many tokens — it
+# scored exactly 1.00 on 142/142 real records. ``TestPopulationBand`` is the
+# guard that keeps this from drifting back into a degenerate band.
+_LOCAL_MIN_WORDS = 30
+
+
+def infer_context_level(text: str) -> ContextLevel:
+    """Infer the unit shape when the caller did not declare one.
+
+    The ~40 legacy call sites pass text only. Defaulting them to DOCUMENT is
+    what produced seven fabricated zeros per record; defaulting to CLAIM would
+    silently discard real document evaluations. So we read the text.
+    """
+    sentences = len([s for s in re.split(r"[.!?]+", text or "") if s.strip()])
+    words = len((text or "").split())
+    if sentences >= _DOCUMENT_MIN_SENTENCES:
+        return ContextLevel.DOCUMENT
+    if sentences >= _LOCAL_MIN_SENTENCES or words >= _LOCAL_MIN_WORDS:
+        return ContextLevel.LOCAL_CONTEXT
+    return ContextLevel.CLAIM
+
+
 # --- Individual virtue detectors ---
 
 
@@ -387,7 +494,10 @@ class ArgumentQualityEvaluator:
         self.detectors = detectors or DETECTORS
 
     def evaluate(
-        self, text: str, agentic_llm: Optional[Any] = None
+        self,
+        text: str,
+        agentic_llm: Optional[Any] = None,
+        context_level: Optional[ContextLevel] = None,
     ) -> Dict[str, Any]:
         """Evaluate argument quality and return structured report.
 
@@ -404,6 +514,16 @@ class ArgumentQualityEvaluator:
         detectors (see ``agentic_virtue_detectors``). The other 7 virtues stay
         deterministic. Without ``agentic_llm`` the legacy lexical detectors are
         used for all 9 — backwards-compatible, no behavior change.
+
+        #1907: every virtue declares the context level it needs
+        (``VIRTUE_CONTEXT_REQUIREMENTS``). A virtue that needs more material
+        than ``context_level`` provides is reported NOT_APPLICABLE and carries
+        no score at all — it is not scored 0.0 and it does not enter the
+        denominator. ``context_level`` defaults to ``infer_context_level(text)``
+        so legacy single-argument callers stop receiving fabricated zeros.
+        The returned dict gains ``statuts_par_vertu`` (all 9 virtues),
+        ``note_max_applicable`` (the ceiling actually reachable on this unit)
+        and ``contexte_evalue``.
         """
         # Fail-loud gate (#1019 / NanoClaw review): if deps already failed,
         # raise immediately rather than looping through 9 detectors that
@@ -417,8 +537,13 @@ class ArgumentQualityEvaluator:
                 "conda environment is activated. See setup_project_env.ps1."
             )
 
-        scores = {}
-        details = {}
+        if context_level is None:
+            context_level = infer_context_level(text)
+        context_level = ContextLevel(context_level)
+
+        scores: Dict[str, float] = {}
+        details: Dict[str, str] = {}
+        statuses: Dict[str, VirtueStatus] = {}
 
         # FB-29 #1105: upgrade the 2 joint-zero blindspot virtues to agentic
         # multi-step detectors when an LLM is wired. Lazy import avoids a hard
@@ -437,10 +562,36 @@ class ArgumentQualityEvaluator:
             except ImportError as exc:
                 logger.warning(
                     "agentic_virtue_detectors unavailable (%s); falling back to "
-                    "lexical detectors for all 9 virtues.", exc,
+                    "lexical detectors for all 9 virtues.",
+                    exc,
                 )
 
         for vertu, detector in self.detectors.items():
+            # #1907 — applicability is decided by the input unit, never by the
+            # score that came out. A virtue whose required context exceeds what
+            # we were handed is honestly absent: no value, no denominator slot.
+            # (Custom/injected detectors are unknown to the taxonomy and default
+            # to CLAIM, i.e. always applicable — no behaviour change for them.)
+            required = VIRTUE_CONTEXT_REQUIREMENTS.get(vertu, ContextLevel.CLAIM)
+            if required > context_level:
+                statuses[vertu] = VirtueStatus.NOT_APPLICABLE
+                details[vertu] = (
+                    f"Non applicable : cette vertu requiert un {required.label}, "
+                    f"l'unite evaluee est une {context_level.label}. Absence "
+                    "honnete, aucune note attribuee (#1907)."
+                )
+                continue
+
+            dep = VIRTUE_DEPENDENCIES.get(vertu)
+            if dep is not None and scores.get(dep) == 0.0:
+                statuses[vertu] = VirtueStatus.NOT_APPLICABLE
+                details[vertu] = (
+                    f"Non applicable : depend de « {dep} », qui n'a rien releve. "
+                    "Juger la fiabilite de sources absentes n'a pas de sens "
+                    "(#1907)."
+                )
+                continue
+
             try:
                 # Use the agentic detector for the upgraded virtues when an LLM
                 # is available; keep the lexical detector otherwise.
@@ -450,6 +601,7 @@ class ArgumentQualityEvaluator:
                     note, comment = detector(text)
                 scores[vertu] = note
                 details[vertu] = comment
+                statuses[vertu] = VirtueStatus.EVALUATED
             except Exception as e:
                 # FB-29 #1105: AgenticDetectorError is the agentic chain's
                 # fail-loud contract (no LLM / unparseable step). It MUST
@@ -457,19 +609,27 @@ class ArgumentQualityEvaluator:
                 # measured", the exact degraded theatre #1019 forbids. Other
                 # exceptions (detector-internal bugs) keep the legacy
                 # 0.0+"Erreur" robustness (anti-pendule: don't widen the change).
-                if agentic_error_cls is not None and isinstance(
-                    e, agentic_error_cls
-                ):
+                if agentic_error_cls is not None and isinstance(e, agentic_error_cls):
                     raise
+                # #1907: an outage is the third state. Recording 0.0 made a
+                # crashed detector indistinguishable from a measured verdict.
                 logger.warning("Detector '%s' failed: %s", vertu, e)
-                scores[vertu] = 0.0
-                details[vertu] = f"Erreur: {e}"
+                statuses[vertu] = VirtueStatus.UNAVAILABLE
+                details[vertu] = f"Indisponible : {e}"
 
+        # #1907 — the denominator is the number of dimensions actually
+        # evaluated, not a fixed 9. Averaging over inapplicable dimensions is
+        # what pinned every real-corpus argument into a 1.4-2.5 band on a
+        # surface labelled "/10".
         note_finale = sum(scores.values())
+        evaluees = len(scores)
         result = {
             "note_finale": note_finale,
-            "note_moyenne": note_finale / len(scores) if scores else 0.0,
+            "note_moyenne": note_finale / evaluees if evaluees else 0.0,
+            "note_max_applicable": float(evaluees),
             "scores_par_vertu": scores,
+            "statuts_par_vertu": statuses,
+            "contexte_evalue": context_level,
             "rapport_detaille": details,
         }
         return result

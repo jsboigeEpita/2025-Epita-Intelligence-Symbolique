@@ -159,6 +159,12 @@ class CounterEvidence:
     counter_succeeds: Optional[bool] = None
 
 
+# Total number of argumentative virtues the evaluator knows about. Used only
+# to state instrument *coverage* ("2 of 9 were judgeable here"), never as the
+# denominator of a grade (#1907).
+_TOTAL_VIRTUES = 9
+
+
 @dataclass
 class ArgEvidence:
     """Per-argument evidence woven into a movement beat."""
@@ -1020,13 +1026,32 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         for a in mvt.arguments:
             lines.append(f"  • {a.arg_id} : {a.description}")
             if a.quality_available:
-                vchar = ", ".join(f"{k}" for k in sorted(a.virtues.keys())) or "—"
-                lines.append(
-                    f"      Profil de vertus (caractère) : {vchar}. "
-                    f"Note globale : {a.quality_overall:.1f}/10."
-                    if a.quality_overall is not None
-                    else f"      Profil de vertus (caractère) : {vchar}."
-                )
+                # #1907 — no grade in the reader narrative. ``a.virtues`` now
+                # holds ONLY the dimensions that were actually evaluable on this
+                # unit; the ones an isolated extract cannot carry (bibliography,
+                # rebuttal, essay-level coverage) are absent rather than scored
+                # zero. Reporting "x/10" over a fixed denominator turned that
+                # instrument-reach artifact into a verdict on the speaker.
+                evaluated = sorted(a.virtues.keys())
+                vchar = ", ".join(evaluated) or "—"
+                tiennent = [k for k in evaluated if a.virtues[k] >= 0.75]
+                faiblissent = [k for k in evaluated if a.virtues[k] <= 0.25]
+                lines.append(f"      Profil de vertus (caractère) : {vchar}.")
+                if evaluated:
+                    observation = (
+                        f"      {len(evaluated)} dimension(s) sur "
+                        f"{_TOTAL_VIRTUES} étaient jugeables sur cet extrait"
+                    )
+                    if tiennent:
+                        observation += f" — tiennent : {', '.join(tiennent)}"
+                    if faiblissent:
+                        observation += f" ; ne tiennent pas : {', '.join(faiblissent)}"
+                    observation += (
+                        ". Les autres ne sont pas évaluables sur une unité de "
+                        "cette taille et ne sont donc pas comptées contre "
+                        "l'argument."
+                    )
+                    lines.append(observation)
             else:
                 lines.append(
                     "      Axe qualité : non concluable ici "

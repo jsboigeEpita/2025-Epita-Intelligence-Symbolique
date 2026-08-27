@@ -210,8 +210,13 @@ class TestArgumentQualityEvaluator:
 
         evaluator = qe.ArgumentQualityEvaluator(detectors={"failing": failing_detector})
         result = evaluator.evaluate("test")
-        assert result["scores_par_vertu"]["failing"] == 0.0
-        assert "Erreur" in result["rapport_detaille"]["failing"]
+        # #1907: a detector that crashed contributes no measurement. Recording
+        # 0.0 here made an outage indistinguishable from a verdict of "this
+        # argument has none of that virtue".
+        assert result["statuts_par_vertu"]["failing"] == qe.VirtueStatus.UNAVAILABLE
+        assert "failing" not in result["scores_par_vertu"]
+        assert "Indisponible" in result["rapport_detaille"]["failing"]
+        assert result["note_max_applicable"] == 0.0
 
     def test_note_moyenne_is_average(self):
         evaluator = qe.ArgumentQualityEvaluator()
