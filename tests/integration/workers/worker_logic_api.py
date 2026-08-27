@@ -12,7 +12,7 @@ Worker pour les tests d'intégration de LogicService, à exécuter dans un sous-
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 import json
 
 import uuid
@@ -51,9 +51,9 @@ from argumentation_analysis.services.web_api.models.response_models import (
 def logic_service_with_mocks():
     """Fixture pour patcher LogicAgentFactory et Kernel et initialiser le service."""
     with patch(
-        "argumentation_analysis.services.web_api.logic_service.LogicAgentFactory"
+        "argumentation_analysis.services.web_api.services.logic_service.LogicAgentFactory"
     ) as mock_logic_factory, patch(
-        "argumentation_analysis.services.web_api.logic_service.Kernel"
+        "argumentation_analysis.services.web_api.services.logic_service.Kernel"
     ) as mock_kernel_class:
         # Créer un mock plus réaliste pour le Kernel
         mock_kernel = MagicMock(spec=Kernel)
@@ -62,15 +62,12 @@ def logic_service_with_mocks():
 
         mock_pl_agent = MagicMock(spec=PropositionalLogicAgent)
 
-        # Simuler le retour d'une coroutine pour text_to_belief_set
-        async def mock_text_to_belief_set(*args, **kwargs):
-            return (
-                PropositionalBeliefSet(content="a => b", source_text="Si a alors b"),
+        mock_pl_agent.text_to_belief_set = AsyncMock(
+            return_value=(
+                PropositionalBeliefSet(content="a => b"),
                 "Conversion réussie",
             )
-
-        # Attribuer la coroutine directement à la méthode mockée
-        mock_pl_agent.text_to_belief_set = mock_text_to_belief_set
+        )
 
         # Simuler le retour d'une coroutine pour generate_queries
         async def mock_generate_queries(*args, **kwargs):
@@ -86,7 +83,9 @@ def logic_service_with_mocks():
 
         mock_logic_factory.create_agent.return_value = mock_pl_agent
 
-        logic_service = LogicService()
+        mock_llm_service = MagicMock()
+        mock_llm_service.service_id = "test_logic_service"
+        logic_service = LogicService(llm_service=mock_llm_service)
         # Remplacer le kernel instancié par notre mock
         logic_service.kernel = mock_kernel
 

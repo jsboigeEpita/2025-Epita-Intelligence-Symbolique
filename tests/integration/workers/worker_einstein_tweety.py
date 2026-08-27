@@ -25,6 +25,9 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 from unittest.mock import patch, AsyncMock, MagicMock
 
+from semantic_kernel import Kernel
+from tests.mocks.llm_service_mocks import MockChatCompletion
+
 # Configuration paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -73,12 +76,16 @@ def watson_logic_agent():
             WatsonLogicAssistant,
         )
 
-        # Mock kernel pour tests
-        mock_kernel = MagicMock()
-        mock_kernel.services = {}
+        kernel = Kernel()
+        kernel.add_service(
+            MockChatCompletion(
+                service_id="test_service",
+                ai_model_id="test_model",
+            )
+        )
 
         return WatsonLogicAssistant(
-            kernel=mock_kernel,
+            kernel=kernel,
             agent_name="Watson_TweetyProject_Test",
             service_id="test_service",
         )
@@ -221,7 +228,7 @@ class TestEinsteinTweetyProjectIntegration:
         """
 
         # Test de l'analyse formelle
-        result = watson_logic_agent.formal_step_by_step_analysis(
+        result = watson_logic_agent._tools.formal_step_by_step_analysis(
             problem_description=einstein_problem,
             constraints="5 maisons, 5 nationalités, 5 animaux",
         )
@@ -255,7 +262,10 @@ class TestEinsteinTweetyProjectIntegration:
         # Vérification solution secrète
         assert hasattr(einstein_puzzle_oracle, "solution")
         solution = einstein_puzzle_oracle.solution
-        assert "Allemand" in solution or "German" in solution
+        assert any(
+            house.get("nationalite") == "Allemand" and house.get("animal") == "Poisson"
+            for house in solution.values()
+        )
 
     def test_tweetyproject_constraints_formulation(
         self, tweetyproject_constraints_validator
@@ -356,7 +366,7 @@ class TestEinsteinTweetyProjectIntegration:
         malformed_problem = "Invalid logic problem with no constraints"
 
         try:
-            result = watson_logic_agent.formal_step_by_step_analysis(
+            result = watson_logic_agent._tools.formal_step_by_step_analysis(
                 problem_description=malformed_problem, constraints=""
             )
 
@@ -374,7 +384,7 @@ class TestEinsteinTweetyProjectIntegration:
     ):
         """Test la gestion des timeouts TweetyProject."""
         # Simulation timeout avec nombreuses contraintes
-        timeout_constraints = [f"complex_constraint_{i}(value)" for i in range(100)]
+        timeout_constraints = [f"house({i}) -> color(test_{i})" for i in range(100)]
 
         start_time = time.time()
 
@@ -467,7 +477,7 @@ class TestEinsteinTweetyProjectIntegration:
 
         for clause in test_clauses:
             # Test analyse de chaque clause
-            analysis = watson_logic_agent.formal_step_by_step_analysis(
+            analysis = watson_logic_agent._tools.formal_step_by_step_analysis(
                 problem_description=f"Analysez cette contrainte: {clause}",
                 constraints="Einstein puzzle constraint",
             )

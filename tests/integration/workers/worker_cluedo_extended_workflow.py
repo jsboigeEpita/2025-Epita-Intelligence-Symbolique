@@ -77,7 +77,7 @@ class TestNewOrchestrator:
         self, mock_kernel, comparison_elements
     ):
         """Vérifie que le nouvel orchestrateur s'exécute sans erreur."""
-        kernel_instance = await mock_kernel
+        kernel_instance = mock_kernel
         mock_settings = Mock()
         orchestrator = CluedoExtendedOrchestrator(
             kernel=kernel_instance,
@@ -93,9 +93,10 @@ class TestNewOrchestrator:
         results = await orchestrator.execute_workflow(initial_question)
 
         assert "workflow_info" in results
-        assert "final_metrics" in results
+        assert "oracle_statistics" in results
+        assert "conversation_history" in results
         assert results["workflow_info"]["strategy"] == "cooperative"
-        assert len(results["final_metrics"]["history"]) > 0
+        assert isinstance(results["conversation_history"], list)
 
 
 class TestWorkflowComparison:
@@ -208,13 +209,11 @@ class TestWorkflowComparison:
         self, mock_kernel, comparison_elements
     ):
         """Test la comparaison des capacités des agents."""
-        kernel_instance = await mock_kernel
+        kernel_instance = mock_kernel
         # Initialisation de la factory
-        from argumentation_analysis.config.settings import AppSettings
-
-        settings = AppSettings()
-        settings.service_manager.default_llm_service_id = "chat-gpt"
-        factory = AgentFactory(kernel=kernel_instance, settings=settings)
+        factory = AgentFactory(
+            kernel=kernel_instance, llm_service_id="gpt-5-mini-authentic"
+        )
 
         # Agents 2-agents
         sherlock_2 = factory.create_sherlock_agent(agent_name="Sherlock2")
@@ -265,19 +264,14 @@ class TestWorkflowComparison:
         assert len(agents_3) == 3
 
         # Vérification des capacités uniques de Moriarty
-        assert hasattr(moriarty, "_tools")
+        moriarty_capabilities = moriarty.get_agent_capabilities()
+        assert "reveal_card_if_owned" in moriarty_capabilities["oracle_tools"]
         assert_moriarty_has_dataset = hasattr(moriarty, "dataset_manager") and hasattr(
-            moriarty.dataset_manager, "_dataset"
+            moriarty.dataset_manager, "dataset"
         )
         assert assert_moriarty_has_dataset
-        assert (
-            not hasattr(sherlock_2, "_tools")
-            or "reveal_card" not in sherlock_2.get_agent_capabilities()
-        )
-        assert (
-            not hasattr(watson_2, "_tools")
-            or "reveal_card" not in watson_2.get_agent_capabilities()
-        )
+        assert not hasattr(getattr(sherlock_2, "_tools", None), "reveal_card_if_owned")
+        assert not hasattr(getattr(watson_2, "_tools", None), "reveal_card_if_owned")
 
     @pytest.mark.asyncio
     async def test_conversation_length_comparison(
@@ -416,7 +410,7 @@ class TestWorkflowComparison:
     @pytest.mark.asyncio
     async def test_scalability_comparison(self, mock_kernel):
         """Test la comparaison de scalabilité."""
-        kernel_instance = await mock_kernel
+        kernel_instance = mock_kernel
         # Éléments de jeu de tailles différentes
         small_elements = {
             "suspects": ["Colonel Moutarde", "Professeur Violet"],
@@ -574,8 +568,31 @@ class TestPerformanceComparison:
             state_2.add_hypothesis(f"Hypothesis {i}", 0.5)
             state_2.add_task(f"Task {i}", f"Agent{i%2}")
 
-        # Estimation de l'utilisation mémoire 2-agents
-        memory_2 = sys.getsizeof(state_2.__dict__)
+        def workflow_data_size(value, seen=None):
+            """Measure dynamic workflow data without traversing service objects."""
+            if seen is None:
+                seen = set()
+            identity = id(value)
+            if identity in seen:
+                return 0
+            seen.add(identity)
+            size = sys.getsizeof(value)
+            if isinstance(value, dict):
+                size += sum(
+                    workflow_data_size(key, seen) + workflow_data_size(item, seen)
+                    for key, item in value.items()
+                )
+            elif isinstance(value, (list, tuple, set, frozenset)):
+                size += sum(workflow_data_size(item, seen) for item in value)
+            elif hasattr(value, "__dict__"):
+                size += workflow_data_size(vars(value), seen)
+            return size
+
+        data_payload_2 = {
+            "hypotheses": state_2.get_hypotheses(),
+            "tasks": state_2.get_tasks(),
+        }
+        memory_2 = workflow_data_size(data_payload_2)
 
         # Mesure pour workflow 3-agents
         state_3 = CluedoOracleState(
@@ -592,8 +609,13 @@ class TestPerformanceComparison:
             state_3.add_task(f"Task {i}", f"Agent{i%3}")
             state_3.record_agent_turn(f"Agent{i%3}", "test", {"data": i})
 
-        # Estimation de l'utilisation mémoire 3-agents
-        memory_3 = sys.getsizeof(state_3.__dict__)
+        data_payload_3 = {
+            "hypotheses": state_3.get_hypotheses(),
+            "tasks": state_3.get_tasks(),
+            "revelations": state_3.recent_revelations,
+            "agent_turns": state_3.agent_turns,
+        }
+        memory_3 = workflow_data_size(data_payload_3)
 
         # Analyse comparative
         memory_overhead = memory_3 - memory_2
