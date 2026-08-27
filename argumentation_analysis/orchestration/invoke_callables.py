@@ -629,13 +629,11 @@ async def _invoke_quality_evaluator(
             # Trace entry for quality evaluation specialist
             _state = context.get("_state_object")
             if _state is not None and output.get("per_argument_scores"):
-                _n_eval = output.get("arguments_evaluated", 0)
-                _avg_q = output.get("aggregate_score", 0.0)
                 _state.add_trace_entry(
                     phase="quality",
                     agent="QualityScorer",
                     reacts_to=["extract", "hierarchical_fallacy"],
-                    summary=_quality_trace_summary(_n_eval, output),
+                    summary=_quality_trace_summary(len(results), output),
                 )
             return output
         # Fallback if no results
