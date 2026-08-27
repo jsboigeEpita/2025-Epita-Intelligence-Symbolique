@@ -31,12 +31,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from types import SimpleNamespace
 from typing import List
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 _AGENT_GROUP_CHAT = "semantic_kernel.agents.group_chat.agent_group_chat.AgentGroupChat"
+_ORCHESTRATOR_TIME = (
+    "argumentation_analysis.orchestration.conversational_orchestrator.time"
+)
 
 
 class _FakeMsg:
@@ -53,8 +57,15 @@ class _StuckInvokeChat:
 
     Mirrors the measured shape: the agent chains many LLM round-trips inside a
     single ``__anext__`` before yielding. ``state_writer`` (if provided) is
-    called BEFORE the long sleep — simulating plugins writing to the shared
-    ``state`` DURING the invocation, which must survive the cut.
+    called AT INVOCATION KICKOFF — inside ``invoke()``, synchronously, before
+    any await — simulating plugins writing to the shared ``state`` as the
+    invocation starts, which must survive the cut.
+
+    #1905: the write used to live in the generator body, racing the wall-clock
+    budget under a loaded runner (phase setup consumed the 50 ms before the
+    first ``__anext__``, the pre-check cut returned, the write never ran).
+    ``_run_phase`` evaluates ``chat.invoke()`` as the ``_bounded_invoke``
+    argument, so a write here deterministically precedes every deadline check.
     """
 
     def __init__(self, state_writer=None, stuck_seconds: float = 10.0) -> None:
@@ -65,14 +76,57 @@ class _StuckInvokeChat:
         return None
 
     def invoke(self):
+        if self._state_writer is not None:
+            self._state_writer()
         return self._gen()
 
     async def _gen(self):
-        if self._state_writer is not None:
-            self._state_writer()
         # The ~12 LLM round-trips that never yield control back to the loop.
         await asyncio.sleep(self._stuck_seconds)
         yield _FakeMsg("unreachable")  # pragma: no cover — the bound cuts first
+
+
+class _FrozenClock:
+    """Test-controlled wall clock (#1905).
+
+    The production module reads wall-clock time through its ``time`` module
+    reference — patching that reference makes every deadline check (the
+    entry check, the bound's pre-check, the inter-turn guards) read a time
+    only the TEST advances. Scheduler preemption can no longer consume the
+    budget between the test's deadline evaluation and the production checks,
+    which is what ghost-reded the state-survival test on a loaded CI run.
+    The ``wait_for`` timeout itself still runs on the event loop's real
+    clock, so the cut mechanism exercised is the real one.
+    """
+
+    def __init__(self, now: float = 1000.0) -> None:
+        self.now = now
+
+    def time(self) -> float:
+        return self.now
+
+    def advance(self, delta: float) -> None:
+        self.now += delta
+
+
+def _patched_orchestrator_clock(clock: _FrozenClock):
+    return patch(_ORCHESTRATOR_TIME, SimpleNamespace(time=clock.time))
+
+
+class _SlowSetupStuckChat(_StuckInvokeChat):
+    """A stuck chat whose PHASE SETUP outlives the whole budget: during
+    ``add_chat_message`` (which runs BEFORE the first ``__anext__`` is
+    requested) the test clock advances PAST the deadline — the loaded-runner
+    shape measured in #1905 (22-min CI job, run 32976061946), replayed
+    deterministically instead of by stalling real wall-clock time."""
+
+    def __init__(self, clock: _FrozenClock, state_writer=None) -> None:
+        super().__init__(state_writer=state_writer)
+        self._clock = clock
+
+    async def add_chat_message(self, _msg) -> None:  # noqa: ANN001 — SK signature
+        await asyncio.sleep(0)  # a real yield point, like the real setup path
+        self._clock.advance(0.1)
 
 
 class _QuickYieldChat:
@@ -109,7 +163,7 @@ class TestIntraInvocationBoundCutsStuckTurn:
     """The bound fires INSIDE a single ``chat.invoke()`` that never yields."""
 
     @pytest.mark.asyncio
-    async def test_stuck_first_turn_is_cut_within_budget(self) -> None:
+    async def test_stuck_first_turn_is_cut_within_budget(self, caplog) -> None:
         """A first ``__anext__`` that never returns is cut by the bound.
 
         Mutation-verified: remove the ``_bounded_invoke`` wrap at the group-chat
@@ -132,9 +186,12 @@ class TestIntraInvocationBoundCutsStuckTurn:
         chat = _StuckInvokeChat()
         chat_cls = MagicMock(return_value=chat)
 
-        tight_deadline = time.time() + 0.05
+        clock = _FrozenClock()
+        tight_deadline = clock.time() + 0.05
         start = time.time()
-        with patch(_AGENT_GROUP_CHAT, chat_cls):
+        with caplog.at_level(logging.INFO, logger="ConversationalOrchestrator"), patch(
+            _AGENT_GROUP_CHAT, chat_cls
+        ), _patched_orchestrator_clock(clock):
             messages = await _run_phase(
                 [fake_agent],
                 "initial prompt",
@@ -154,6 +211,18 @@ class TestIntraInvocationBoundCutsStuckTurn:
         assert messages == [], (
             f"the stuck first __anext__ must be cut before ANY message is "
             f"yielded; got {len(messages)} message(s)."
+        )
+        # #1905 mirror exposure: the old assertions could not distinguish the
+        # bound's cut from the item-3 ENTRY check firing first (elapsed small,
+        # messages empty either way — a vacuous pass). Both _bounded_invoke
+        # wordings ("avant un tour" pre-check and "PENDANT l'invocation"
+        # wait_for timeout) carry this marker; the entry-check log does not.
+        assert any(
+            "borne intra-invocation" in rec.getMessage() for rec in caplog.records
+        ), (
+            "#1905: the cut left no _bounded_invoke trace — the phase was cut "
+            "by the item-3 entry check before the bound ever ran, so this "
+            "test was not exercising item 5 at all."
         )
 
     @pytest.mark.asyncio
@@ -179,8 +248,9 @@ class TestIntraInvocationBoundCutsStuckTurn:
 
         chat = _StuckInvokeChat(state_writer=_plugin_write)
         chat_cls = MagicMock(return_value=chat)
+        clock = _FrozenClock()
 
-        with patch(_AGENT_GROUP_CHAT, chat_cls):
+        with patch(_AGENT_GROUP_CHAT, chat_cls), _patched_orchestrator_clock(clock):
             await _run_phase(
                 [MagicMock(name="FakeAgent")],
                 "initial prompt",
@@ -188,7 +258,7 @@ class TestIntraInvocationBoundCutsStuckTurn:
                 phase_name="Extraction & Detection",
                 state=state,
                 enable_growth_validation=False,
-                deadline=time.time() + 0.05,
+                deadline=clock.time() + 0.05,
             )
 
         assert getattr(state, "_intra_invocation_marker", None) == (
@@ -196,6 +266,55 @@ class TestIntraInvocationBoundCutsStuckTurn:
         ), (
             "CB #1528 item 5: the partial state written during the stuck "
             "invocation was lost at the cut — the verdict partial must be REAL."
+        )
+
+    @pytest.mark.asyncio
+    async def test_state_write_survives_when_setup_eats_the_budget(self) -> None:
+        """#1905 guard: the marker write must not race the 50 ms budget.
+
+        The real runner (run 32976061946, 22-min loaded job) spent the whole
+        budget in phase setup BEFORE the generator's first ``__anext__``:
+        ``_bounded_invoke``'s pre-check returned without ever starting the
+        generator, the write living INSIDE the generator body never ran, and
+        ``test_stuck_turn_state_survives_the_cut`` ghost-reded on an unchanged
+        tree. This guard replays that load deterministically — the test clock
+        advances PAST the deadline during ``add_chat_message``, so the cut
+        fires through the pre-check path. The write, performed at invocation
+        kickoff (before any await, hence before every deadline check), must
+        still be there.
+        """
+        _run_phase = _run_phase_import()
+        from argumentation_analysis.core.shared_state import (
+            RhetoricalAnalysisState,
+        )
+
+        state = RhetoricalAnalysisState("test text")
+
+        def _plugin_write():
+            state._intra_invocation_marker = "written-before-cut"
+
+        clock = _FrozenClock()
+        chat = _SlowSetupStuckChat(clock=clock, state_writer=_plugin_write)
+        chat_cls = MagicMock(return_value=chat)
+
+        with patch(_AGENT_GROUP_CHAT, chat_cls), _patched_orchestrator_clock(clock):
+            await _run_phase(
+                [MagicMock(name="FakeAgent")],
+                "initial prompt",
+                max_turns=5,
+                phase_name="Extraction & Detection",
+                state=state,
+                enable_growth_validation=False,
+                deadline=clock.time() + 0.05,
+            )
+
+        assert getattr(state, "_intra_invocation_marker", None) == (
+            "written-before-cut"
+        ), (
+            "#1905: when phase setup consumes the whole budget, the marker "
+            "write raced the cut and never ran — the state-survival claim "
+            "must hold on the pre-check cut path too, not only when the "
+            "scheduler is prompt."
         )
 
     @pytest.mark.asyncio
@@ -214,10 +333,11 @@ class TestIntraInvocationBoundCutsStuckTurn:
         state = RhetoricalAnalysisState("test text")
         chat = _StuckInvokeChat()
         chat_cls = MagicMock(return_value=chat)
+        clock = _FrozenClock()
 
         with caplog.at_level(logging.INFO, logger="ConversationalOrchestrator"), patch(
             _AGENT_GROUP_CHAT, chat_cls
-        ):
+        ), _patched_orchestrator_clock(clock):
             await _run_phase(
                 [MagicMock(name="FakeAgent")],
                 "initial prompt",
@@ -225,7 +345,7 @@ class TestIntraInvocationBoundCutsStuckTurn:
                 phase_name="Extraction & Detection",
                 state=state,
                 enable_growth_validation=False,
-                deadline=time.time() + 0.05,
+                deadline=clock.time() + 0.05,
             )
 
         assert any(
@@ -350,10 +470,12 @@ class TestBoundedInvokeUnit:
             await asyncio.sleep(10)
             yield "unreachable"  # pragma: no cover
 
-        deadline = time.time() + 0.05
+        clock = _FrozenClock()
+        deadline = clock.time() + 0.05
         out = []
-        async for r in _bounded_invoke(stuck_gen(), deadline, "X", "unit"):
-            out.append(r)
+        with _patched_orchestrator_clock(clock):
+            async for r in _bounded_invoke(stuck_gen(), deadline, "X", "unit"):
+                out.append(r)
 
         assert out == [], "the stuck __anext__ must be cut before any yield"
         assert (
