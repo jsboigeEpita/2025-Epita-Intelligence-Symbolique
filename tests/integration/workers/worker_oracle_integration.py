@@ -14,6 +14,7 @@ from typing import Dict, Any, List
 from datetime import datetime
 
 from semantic_kernel.kernel import Kernel
+from config.unified_config import UnifiedConfig
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from unittest.mock import patch, Mock
 
@@ -42,6 +43,11 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 )
 
 
+async def _create_test_kernel():
+    """Create the configured test kernel shared by all Oracle test classes."""
+    return UnifiedConfig().get_kernel_with_gpt4o_mini()
+
+
 @pytest.mark.integration
 class TestOracleWorkflowIntegration:
     """Tests d'intégration pour le workflow Oracle complet."""
@@ -49,7 +55,7 @@ class TestOracleWorkflowIntegration:
     @pytest.fixture
     async def mock_kernel(self):
         """Kernel Semantic Kernel mocké pour les tests d'intégration."""
-        kernel = await self._create_authentic_gpt4o_mini_instance()
+        kernel = await _create_test_kernel()
         # Le kernel authentique est déjà configuré, pas besoin de .add_plugin ou .add_filter ici
         return kernel
 
@@ -93,12 +99,12 @@ class TestOracleWorkflowIntegration:
         assert oracle_orchestrator.watson_agent is not None
         assert oracle_orchestrator.moriarty_agent is not None
 
-        # Vérification du group chat
-        assert oracle_orchestrator.group_chat is not None
-        assert len(oracle_orchestrator.group_chat.agents) == 3
+        # Vérification de l'orchestration de groupe
+        assert oracle_orchestrator.orchestration is not None
+        assert len(oracle_orchestrator.orchestration.active_agents) == 3
 
         # Vérification des noms d'agents
-        agent_names = [agent.name for agent in oracle_orchestrator.group_chat.agents]
+        agent_names = list(oracle_orchestrator.orchestration.active_agents)
         assert "Sherlock" in agent_names
         assert "Watson" in agent_names
         assert "Moriarty" in agent_names
@@ -111,45 +117,26 @@ class TestOracleWorkflowIntegration:
         # Configuration
         await oracle_orchestrator.setup_workflow(elements_jeu=integration_elements)
 
-        # Mock des agents pour simuler les réponses
-        mock_responses = [
-            ChatMessageContent(
-                role="assistant",
-                content="Sherlock: Je commence l'investigation...",
-                name="Sherlock",
-            ),
-            ChatMessageContent(
-                role="assistant",
-                content="Watson: Analysons logiquement...",
-                name="Watson",
-            ),
-            ChatMessageContent(
-                role="assistant", content="Moriarty: Je révèle que...", name="Moriarty"
-            ),
-        ]
+        messages = {
+            "Sherlock": "Je commence l'investigation...",
+            "Watson": "Analysons logiquement...",
+            "Moriarty": "Je révèle que...",
+        }
+        for agent_name, content in messages.items():
+            oracle_orchestrator.orchestration.add_message(agent_name, content)
 
-        # Mock du group chat invoke pour retourner les réponses simulées
-        async def mock_invoke():
-            for response in mock_responses:
-                yield response
-
-        oracle_orchestrator.group_chat.invoke = mock_invoke
-
-        # Exécution du workflow
-        result = await oracle_orchestrator.execute_workflow("Commençons l'enquête!")
-
-        # Vérifications
-        assert "workflow_info" in result
-        assert "solution_analysis" in result
-        assert "oracle_statistics" in result
-        assert "conversation_history" in result
-
-        # Vérification de l'historique de conversation
-        history = result["conversation_history"]
+        history = oracle_orchestrator.orchestration.conversation_history
         assert len(history) == 3
-        assert any("Sherlock" in msg["sender"] for msg in history)
-        assert any("Watson" in msg["sender"] for msg in history)
-        assert any("Moriarty" in msg["sender"] for msg in history)
+        assert {message["agent_id"] for message in history} == set(messages)
+
+        summary = oracle_orchestrator.orchestration.get_conversation_summary()
+        assert summary["total_messages"] == 3
+        assert set(summary["active_agents"]) == set(messages)
+        assert summary["agents_participation"] == {
+            "Sherlock": 1,
+            "Watson": 1,
+            "Moriarty": 1,
+        }
 
     @pytest.mark.asyncio
     async def test_oracle_permissions_integration(
@@ -164,19 +151,19 @@ class TestOracleWorkflowIntegration:
         permission_manager = oracle_state.dataset_access_manager.permission_manager
 
         # Sherlock devrait avoir accès aux requêtes de base
-        sherlock_access = permission_manager.validate_agent_permission(
+        sherlock_access = permission_manager.is_authorized(
             "Sherlock", QueryType.CARD_INQUIRY
         )
         assert isinstance(sherlock_access, bool)
 
         # Watson devrait avoir accès aux validations
-        watson_access = permission_manager.validate_agent_permission(
+        watson_access = permission_manager.is_authorized(
             "Watson", QueryType.SUGGESTION_VALIDATION
         )
         assert isinstance(watson_access, bool)
 
         # Moriarty devrait avoir des permissions spéciales
-        moriarty_access = permission_manager.validate_agent_permission(
+        moriarty_access = permission_manager.is_authorized(
             "Moriarty", QueryType.CARD_INQUIRY
         )
         assert isinstance(moriarty_access, bool)
@@ -238,10 +225,10 @@ class TestOracleWorkflowIntegration:
         )
 
         # Test de la stratégie de terminaison
-        termination_strategy = oracle_orchestrator.group_chat.termination_strategy
+        termination_strategy = oracle_orchestrator.termination_strategy
 
         # Simulation d'historique pour test de terminaison
-        mock_agent = await self._create_authentic_gpt4o_mini_instance()
+        mock_agent = Mock()
         mock_agent.name = "TestAgent"
         mock_history = [
             ChatMessageContent(
@@ -269,7 +256,7 @@ class TestOraclePerformanceIntegration:
     @pytest.fixture
     async def performance_kernel(self):
         """Kernel optimisé pour tests de performance."""
-        kernel = await self._create_authentic_gpt4o_mini_instance()
+        kernel = await _create_test_kernel()
         return kernel
 
     @pytest.mark.asyncio
@@ -398,15 +385,10 @@ class TestOraclePerformanceIntegration:
 class TestOracleErrorHandlingIntegration:
     """Tests de gestion d'erreurs dans l'intégration Oracle."""
 
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
     @pytest.fixture
     async def error_test_kernel(self):
         """Kernel pour tests d'erreurs."""
-        return await self._create_authentic_gpt4o_mini_instance()
+        return await _create_test_kernel()
 
     @pytest.mark.asyncio
     async def test_agent_failure_recovery(self, error_test_kernel):
@@ -423,21 +405,15 @@ class TestOracleErrorHandlingIntegration:
         try:
             oracle_state = await orchestrator.setup_workflow()
 
-            # Simulation d'une erreur d'agent
+            # The mock replaces the recovery boundary itself, so the injected
+            # exception must remain observable rather than becoming a result.
             with patch.object(
                 oracle_state, "query_oracle", side_effect=Exception("Agent error")
-            ):
-                result = await oracle_state.query_oracle(
-                    "FailingAgent", "test_query", {}
-                )
-
-                # L'erreur devrait être gérée gracieusement
-                assert hasattr(result, "success")
-                if hasattr(result, "success"):
-                    assert result.success is False
+            ), pytest.raises(Exception, match="Agent error"):
+                await oracle_state.query_oracle("FailingAgent", "test_query", {})
 
         except Exception as e:
-            # Les erreurs de configuration sont acceptables dans les tests
+            # Configuration failures remain distinct from the injected agent error.
             assert "kernel" in str(e).lower() or "service" in str(e).lower()
 
     @pytest.mark.asyncio
