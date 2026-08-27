@@ -99,10 +99,43 @@ def classify_metadata(source_name: str, date_iso: str = "") -> Dict[str, str]:
     elif any(kw in name_lower for kw in scientific_kw):
         meta["discourse_type"] = "scientific"
 
-    # Regime type (default for Western democracies)
-    meta["regime_type"] = "democracy"
+    # #1906: ``regime_type`` was assigned "democracy" unconditionally here --
+    # not a heuristic but a constant, contradicting this function's own
+    # docstring ("the fields default to unknown"). It has no code consumer, yet
+    # since #1913 wired ``source_metadata`` through the batch runner it reaches
+    # the Act I framing verbatim (act1_framing_plugin renders every key), so the
+    # model was handed a hard-coded claim about every source as established
+    # metadata. Removed rather than replaced: the declared default already says
+    # "unknown", and a corpus definition that states the regime now wins at the
+    # merge site below.
 
     return meta
+
+
+def merge_source_metadata(
+    classified: Dict[str, str], src_meta: Dict[str, Any]
+) -> Dict[str, str]:
+    """Overlay a corpus definition's explicit metadata onto the inference.
+
+    #1906: explicit structured metadata wins over label inference, field by
+    field. The previous ``classified.setdefault(k, v)`` did the opposite:
+    ``classify_metadata`` always writes its four keys, so an explicit ``era``
+    from the definition was discarded in favour of the inferred ``"unknown"``
+    -- the sentinel is a value, and ``setdefault`` treats it as present. Only
+    keys the inference never writes (e.g. ``speaker``) used to survive.
+
+    An explicit ``"unknown"`` does **not** erase a resolved inference:
+    precedence is for values, not for the sentinel. Extracted from ``main()``
+    so the merge is reachable by a test -- inline, it could only be checked by
+    a copy of itself, which cannot fail.
+    """
+    merged = dict(classified)
+    for k, v in src_meta.items():
+        if v not in (None, "", "unknown"):
+            merged[k] = v
+        else:
+            merged.setdefault(k, v)
+    return merged
 
 
 # ---------------------------------------------------------------------------
@@ -475,10 +508,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         src_name = source_def.get("source_name", "unknown")
         src_meta = source_def.get("metadata", {})
         date_iso = src_meta.get("date_iso", source_def.get("date", ""))
-        classified = classify_metadata(src_name, date_iso)
-        # Merge source-level metadata into classified
-        for k, v in src_meta.items():
-            classified.setdefault(k, v)
+        classified = merge_source_metadata(
+            classify_metadata(src_name, date_iso), src_meta
+        )
 
         src_oid = opaque_id(src_name)
         extracts = source_def.get("extracts", [])
