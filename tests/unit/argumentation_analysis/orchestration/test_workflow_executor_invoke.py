@@ -8,7 +8,7 @@ downstream context chaining, timeout support, and integration with real componen
 
 import asyncio
 import pytest
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -17,6 +17,7 @@ from argumentation_analysis.core.capability_registry import (
 from argumentation_analysis.orchestration.workflow_dsl import (
     WorkflowBuilder,
     WorkflowExecutor,
+    PhaseResult,
     PhaseStatus,
 )
 
@@ -134,6 +135,144 @@ class TestInvokeNoneFallback:
 
 class TestInvokeErrorHandling:
     @pytest.mark.asyncio
+    async def test_foundational_output_failure_blocks_only_its_descendants(self):
+        """An explicit extraction failure is terminal, not a completed substrate."""
+        calls = []
+        state_writer_calls = []
+
+        async def failed_extraction(text, ctx):
+            return {
+                "arguments": [],
+                "claims": ["diagnostic claim"],
+                "extraction_method": "heuristic",
+                "extraction_status": "failed:synthetic-quota-error",
+            }
+
+        async def record_call(text, ctx):
+            calls.append("called")
+            return {"done": True}
+
+        registry = CapabilityRegistry()
+        registry.register(
+            "extractor",
+            ComponentType.AGENT,
+            capabilities=["fact_extraction"],
+            invoke=failed_extraction,
+        )
+        for name in ("analyze", "synthesize", "independent"):
+            registry.register(
+                name,
+                ComponentType.AGENT,
+                capabilities=[name],
+                invoke=record_call,
+            )
+
+        workflow = (
+            WorkflowBuilder("terminal_extraction")
+            .add_phase("extract", capability="fact_extraction")
+            .add_phase("analyze", capability="analyze", depends_on=["extract"])
+            .add_phase("synthesize", capability="synthesize", depends_on=["analyze"])
+            .add_phase("independent", capability="independent")
+            .build()
+        )
+
+        results = await WorkflowExecutor(registry).execute(
+            workflow,
+            "test",
+            state=object(),
+            state_writers={
+                "fact_extraction": lambda output, state, ctx: state_writer_calls.append(
+                    output
+                )
+            },
+        )
+
+        assert results["extract"].status == PhaseStatus.FAILED
+        assert results["extract"].terminal is True
+        assert results["extract"].output["claims"] == ["diagnostic claim"]
+        assert results["analyze"].status == PhaseStatus.SKIPPED
+        assert results["analyze"].terminal is True
+        assert results["synthesize"].status == PhaseStatus.SKIPPED
+        assert results["synthesize"].terminal is True
+        assert calls == ["called"], "only the independent sibling may execute"
+        assert state_writer_calls == [], "heuristic diagnostics are not DAG substrate"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("mode", ["raises", "missing_provider"])
+    async def test_any_foundational_phase_failure_is_terminal(self, mode):
+        """Exceptions and missing providers cannot bypass the extraction contract."""
+        calls = []
+        registry = CapabilityRegistry()
+
+        if mode == "raises":
+
+            async def failed_extraction(text, ctx):
+                raise RuntimeError("synthetic extraction crash")
+
+            registry.register(
+                "extractor",
+                ComponentType.AGENT,
+                capabilities=["fact_extraction"],
+                invoke=failed_extraction,
+            )
+
+        async def descendant(text, ctx):
+            calls.append(True)
+            return {"done": True}
+
+        registry.register(
+            "descendant",
+            ComponentType.AGENT,
+            capabilities=["descendant"],
+            invoke=descendant,
+        )
+        workflow = (
+            WorkflowBuilder("failed_foundation")
+            .add_phase("extract", capability="fact_extraction")
+            .add_phase("descendant", capability="descendant", depends_on=["extract"])
+            .build()
+        )
+
+        results = await WorkflowExecutor(registry).execute(workflow, "test")
+
+        assert results["extract"].status == PhaseStatus.FAILED
+        assert results["extract"].terminal is True
+        assert results["descendant"].status == PhaseStatus.SKIPPED
+        assert calls == []
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "output",
+        [
+            {"arguments": [], "extraction_status": "ok"},
+            {"arguments": [], "extraction_status": "non_argumentative"},
+        ],
+    )
+    async def test_empty_but_explicitly_valid_extraction_is_not_failed(self, output):
+        """Empty arguments do not imply failure; the explicit status is authoritative."""
+
+        async def extraction(text, ctx):
+            return output
+
+        registry = CapabilityRegistry()
+        registry.register(
+            "extractor",
+            ComponentType.AGENT,
+            capabilities=["fact_extraction"],
+            invoke=extraction,
+        )
+        workflow = (
+            WorkflowBuilder("valid_empty")
+            .add_phase("extract", capability="fact_extraction")
+            .build()
+        )
+
+        result = (await WorkflowExecutor(registry).execute(workflow, "test"))["extract"]
+
+        assert result.status == PhaseStatus.COMPLETED
+        assert result.terminal is False
+
+    @pytest.mark.asyncio
     async def test_invoke_failure_marks_phase_failed(self):
         """When invoke raises, the phase is marked FAILED."""
 
@@ -219,6 +358,99 @@ class TestContextChaining:
 
         assert results["a"].output == {"quality_score": 0.9}
         assert results["b"].output["counter_based_on"] == 0.9
+
+    @pytest.mark.asyncio
+    async def test_wildcard_dependency_waits_for_all_matching_phases(self):
+        """Wildcard dependencies are real DAG edges, not a catch-all final level."""
+        observed = []
+
+        async def terminal_branch(text, ctx):
+            return {
+                "arguments": [],
+                "extraction_status": "failed:synthetic-branch-error",
+            }
+
+        async def successful_branch(text, ctx):
+            observed.append("branch")
+            return {"done": True}
+
+        async def aggregate(text, ctx):
+            observed.append("aggregate")
+            return {"done": True}
+
+        registry = CapabilityRegistry()
+        registry.register(
+            "terminal",
+            ComponentType.AGENT,
+            capabilities=["fact_extraction"],
+            invoke=terminal_branch,
+        )
+        registry.register(
+            "success",
+            ComponentType.AGENT,
+            capabilities=["success"],
+            invoke=successful_branch,
+        )
+        registry.register(
+            "aggregate",
+            ComponentType.AGENT,
+            capabilities=["aggregate"],
+            invoke=aggregate,
+        )
+        workflow = (
+            WorkflowBuilder("wildcard")
+            .add_phase("branch_terminal", capability="fact_extraction")
+            .add_phase("branch_success", capability="success")
+            .add_phase("aggregate", capability="aggregate", depends_on=["branch_*"])
+            .build()
+        )
+
+        results = await WorkflowExecutor(registry).execute(workflow, "test")
+
+        assert observed == ["branch"]
+        assert results["aggregate"].status == PhaseStatus.SKIPPED
+        assert results["aggregate"].terminal is True
+
+    @pytest.mark.asyncio
+    async def test_resumed_terminal_result_keeps_blocking_descendants(self):
+        """Resume reconstruction must preserve a terminal checkpoint marker."""
+        calls = []
+
+        async def descendant(text, ctx):
+            calls.append(True)
+            return {"done": True}
+
+        registry = CapabilityRegistry()
+        registry.register(
+            "descendant",
+            ComponentType.AGENT,
+            capabilities=["descendant"],
+            invoke=descendant,
+        )
+        workflow = (
+            WorkflowBuilder("resumed_terminal")
+            .add_phase("extract", capability="fact_extraction")
+            .add_phase("descendant", capability="descendant", depends_on=["extract"])
+            .build()
+        )
+        resumed = PhaseResult(
+            phase_name="extract",
+            status=PhaseStatus.FAILED,
+            capability="fact_extraction",
+            error="failed:synthetic-checkpoint-error",
+            terminal=True,
+        )
+
+        results = await WorkflowExecutor(registry).execute(
+            workflow,
+            "test",
+            context={"phase_extract_result": resumed},
+            resume_from={"extract"},
+        )
+
+        assert results["extract"].terminal is True
+        assert results["descendant"].status == PhaseStatus.SKIPPED
+        assert calls == []
 
     @pytest.mark.asyncio
     async def test_phase_result_stored_in_context(self):
@@ -313,6 +545,48 @@ class TestTimeoutSupport:
 
 
 class TestOptionalPhases:
+    @pytest.mark.asyncio
+    async def test_optional_failure_remains_degraded_and_does_not_block_descendant(
+        self,
+    ):
+        """#1597: ordinary optional degradation is not a foundational stop."""
+        descendant_calls = []
+
+        async def optional_failure(text, ctx):
+            raise RuntimeError("synthetic enrichment failure")
+
+        async def descendant(text, ctx):
+            descendant_calls.append(True)
+            return {"done": True}
+
+        registry = CapabilityRegistry()
+        registry.register(
+            "optional",
+            ComponentType.AGENT,
+            capabilities=["optional_enrichment"],
+            invoke=optional_failure,
+        )
+        registry.register(
+            "descendant",
+            ComponentType.AGENT,
+            capabilities=["descendant"],
+            invoke=descendant,
+        )
+        workflow = (
+            WorkflowBuilder("optional_degradation")
+            .add_phase("optional", capability="optional_enrichment", optional=True)
+            .add_phase("descendant", capability="descendant", depends_on=["optional"])
+            .build()
+        )
+
+        results = await WorkflowExecutor(registry).execute(workflow, "test")
+
+        assert results["optional"].status == PhaseStatus.FAILED
+        assert results["optional"].degraded is True
+        assert results["optional"].terminal is False
+        assert results["descendant"].status == PhaseStatus.COMPLETED
+        assert descendant_calls == [True]
+
     @pytest.mark.asyncio
     async def test_optional_phase_no_provider_skipped(self):
         """Optional phase without provider is SKIPPED."""
@@ -496,7 +770,17 @@ class TestRealComponentIntegration:
             build_light_workflow,
         )
 
-        registry = setup_registry(include_optional=False)
+        valid_extraction = {
+            "arguments": [],
+            "claims": [],
+            "extraction_status": "ok",
+        }
+        with patch(
+            "argumentation_analysis.orchestration.registry_setup"
+            "._invoke_fact_extraction",
+            new=AsyncMock(return_value=valid_extraction),
+        ):
+            registry = setup_registry(include_optional=False)
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
         with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):

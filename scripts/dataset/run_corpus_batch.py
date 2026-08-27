@@ -128,8 +128,47 @@ async def _run_single(
 
     sig_path = signatures_dir / f"signature_{opaque_id_str}.json"
     if skip_existing and sig_path.exists():
-        logger.info("[%s] skip (signature exists)", opaque_id_str)
-        return None
+        logger.info("[%s] skip (signature exists; reusing its outcome)", opaque_id_str)
+        try:
+            existing = json.loads(sig_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            return {
+                "opaque_id": opaque_id_str,
+                "outcome": {
+                    "status": "partial_error",
+                    "reason": f"unreadable existing signature: {type(exc).__name__}",
+                },
+            }
+        if isinstance(existing, dict):
+            if isinstance(existing.get("outcome"), dict):
+                return existing
+            if existing.get("partial") is True:
+                existing["outcome"] = {
+                    "status": "partial_error",
+                    "reason": "legacy partial signature without outcome",
+                }
+                return existing
+            legacy_fields = {"opaque_id", "workflow", "state"}
+            if legacy_fields.issubset(existing):
+                existing["outcome"] = {
+                    "status": "skipped_existing",
+                    "reason": "legacy successful signature without outcome",
+                }
+                return existing
+            return {
+                "opaque_id": opaque_id_str,
+                "outcome": {
+                    "status": "partial_error",
+                    "reason": "existing signature has no recognizable outcome",
+                },
+            }
+        return {
+            "opaque_id": opaque_id_str,
+            "outcome": {
+                "status": "partial_error",
+                "reason": "existing signature is not a JSON object",
+            },
+        }
 
     if sanitize_fn is None:
         from argumentation_analysis.evaluation.sanitize_state import sanitize_state
@@ -218,6 +257,8 @@ async def _run_single(
     # --- Execute pipeline ---------------------------------------------------
     t0 = time.perf_counter()
     partial = False
+    partial_reason: Optional[str] = None
+    analysis_outcome: Dict[str, str] = {"status": "ok"}
     state_snapshot: Dict[str, Any] = {}
 
     try:
@@ -237,9 +278,15 @@ async def _run_single(
                     _checkpoint_callback if checkpoint_mgr is not None else None
                 ),
                 resume_from=resume_from,
+                source_metadata=metadata,
             ),
             timeout=timeout,
         )
+        returned_outcome = result.get("analysis_outcome")
+        if isinstance(returned_outcome, dict) and isinstance(
+            returned_outcome.get("status"), str
+        ):
+            analysis_outcome = dict(returned_outcome)
         # Prefer full (non-summarized) state for pattern mining.
         state_snapshot = result.get("state_snapshot", {})
         # Prefer full (non-summarized) state for pattern mining.
@@ -257,11 +304,21 @@ async def _run_single(
             merged = _merge_snapshots(checkpoint_snapshot, state_snapshot)
             state_snapshot = merged
     except asyncio.TimeoutError:
-        logger.warning("[%s] timeout (>600s), marking partial", opaque_id_str)
+        partial_reason = f"timeout after {timeout}s"
+        logger.warning("[%s] %s, marking partial", opaque_id_str, partial_reason)
         partial = True
+        analysis_outcome = {
+            "status": "partial_timeout",
+            "reason": partial_reason,
+        }
     except Exception as exc:
-        logger.error("[%s] error: %s", opaque_id_str, exc)
+        partial_reason = str(exc) or type(exc).__name__
+        logger.error("[%s] error: %s", opaque_id_str, partial_reason)
         partial = True
+        analysis_outcome = {
+            "status": "partial_error",
+            "reason": partial_reason,
+        }
 
     wall_clock = round(time.perf_counter() - t0, 1)
 
@@ -283,6 +340,7 @@ async def _run_single(
         "metadata": metadata,
         "workflow": workflow,
         "wall_clock_s": wall_clock,
+        "outcome": analysis_outcome,
         "state": sanitized,
     }
     if partial:
@@ -461,6 +519,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             docs.append(
                 {
                     "source_name": src_name,
+                    "source_opaque_id": src_oid,
                     "opaque_id": oid,
                     "full_text": full_text,
                     "metadata": classified,
@@ -482,21 +541,46 @@ def main(argv: Optional[List[str]] = None) -> int:
             logger.info("[%s] source without documents: %s", src_oid, cause)
             omitted_sources.append({"opaque_id": src_oid, "cause": cause})
 
+    documents_before_limit = len(docs)
+    truncated_source_ids: List[str] = []
     if args.max_docs > 0:
+        processed_source_ids = {
+            doc["source_opaque_id"] for doc in docs[: args.max_docs]
+        }
+        all_source_ids = {doc["source_opaque_id"] for doc in docs}
+        truncated_source_ids = sorted(all_source_ids - processed_source_ids)
         docs = docs[: args.max_docs]
 
     # #1903: the honest denominator, on stdout (the surface #1874 established
-    # for run-visible facts) and before processing starts.
-    print(
-        "Coverage: {} sources -> {} documents; {} sources without documents: "
-        "[{}]".format(
-            len(definitions),
-            len(docs),
-            len(omitted_sources),
-            ", ".join(o["opaque_id"] for o in omitted_sources),
-        ),
-        flush=True,
-    )
+    # for run-visible facts) and before processing starts. #1919 preserves the
+    # byte-identical unlimited line while naming both populations when a limit
+    # excludes otherwise valid source documents.
+    if args.max_docs > 0:
+        print(
+            "Coverage: {} sources -> {} documents before --max-docs; "
+            "{} documents processed; {} sources without documents: [{}]; "
+            "{} sources excluded by --max-docs: [{}]".format(
+                len(definitions),
+                documents_before_limit,
+                len(docs),
+                len(omitted_sources),
+                ", ".join(o["opaque_id"] for o in omitted_sources),
+                len(truncated_source_ids),
+                ", ".join(truncated_source_ids),
+            ),
+            flush=True,
+        )
+    else:
+        print(
+            "Coverage: {} sources -> {} documents; {} sources without documents: "
+            "[{}]".format(
+                len(definitions),
+                len(docs),
+                len(omitted_sources),
+                ", ".join(o["opaque_id"] for o in omitted_sources),
+            ),
+            flush=True,
+        )
 
     logger.info(
         "Starting batch: %d docs, workflow=%s, skip_existing=%s, resume=%s",
@@ -527,12 +611,25 @@ def main(argv: Optional[List[str]] = None) -> int:
         if sig is not None:
             signatures.append(sig)
 
+    outcome_counts: Dict[str, int] = {}
+    for signature in signatures:
+        outcome = signature.get("outcome")
+        status = outcome.get("status") if isinstance(outcome, dict) else "unknown"
+        outcome_counts[str(status)] = outcome_counts.get(str(status), 0) + 1
+
     logger.info(
-        "Batch complete: %d/%d signatures produced",
+        "Batch complete: %d/%d signatures produced; outcomes=%s",
         len(signatures),
         len(docs),
+        outcome_counts,
     )
-    return 0
+    failed_documents = (
+        outcome_counts.get("failed", 0)
+        + outcome_counts.get("partial_timeout", 0)
+        + outcome_counts.get("partial_error", 0)
+        + outcome_counts.get("unknown", 0)
+    )
+    return 1 if failed_documents else 0
 
 
 if __name__ == "__main__":

@@ -84,7 +84,11 @@ def batch(monkeypatch, tmp_path, capsys, caplog):
 
     async def fake_run_single(**kwargs):
         pipeline_calls.append(kwargs)
-        return {"opaque_id": kwargs["opaque_id_str"], "partial": False}
+        return {
+            "opaque_id": kwargs["opaque_id_str"],
+            "partial": False,
+            "outcome": {"status": "ok"},
+        }
 
     monkeypatch.setattr(runner, "_run_single", fake_run_single)
     monkeypatch.setattr(
@@ -155,6 +159,130 @@ class TestCoverageSummary:
             assert (
                 batch.oid(name) in out
             ), f"#1903: the summary must name omitted source {batch.oid(name)}"
+
+
+class TestMaxDocsCoverage1919:
+    @staticmethod
+    def _run(monkeypatch, tmp_path, capsys, max_docs):
+        from argumentation_analysis.evaluation.opaque_id import opaque_id
+
+        runner = _load_runner()
+        definitions = [
+            {
+                "source_name": "Synthetic Kept Source",
+                "extracts": [{"extract_text": "Kept document."}],
+            },
+            {
+                "source_name": "Synthetic Truncated Source",
+                "extracts": [{"extract_text": "Truncated document."}],
+            },
+        ]
+        calls = []
+
+        async def fake_run_single(**kwargs):
+            calls.append(kwargs)
+            return {"opaque_id": kwargs["opaque_id_str"], "outcome": {"status": "ok"}}
+
+        monkeypatch.delenv("OPAQUE_ID_SALT", raising=False)
+        monkeypatch.setattr(runner, "_run_single", fake_run_single)
+        monkeypatch.setattr(
+            "argumentation_analysis.core.utils.crypto_utils.derive_encryption_key",
+            lambda passphrase: b"synthetic-key",
+        )
+        monkeypatch.setattr(
+            "argumentation_analysis.core.io_manager.load_extract_definitions",
+            lambda **kwargs: definitions,
+        )
+        monkeypatch.setenv("TEXT_CONFIG_PASSPHRASE", "synthetic")
+
+        rc = runner.main(
+            [
+                "--max-docs",
+                str(max_docs),
+                "--output-dir",
+                str(tmp_path / f"max-{max_docs}"),
+            ]
+        )
+        return rc, calls, capsys.readouterr().out, opaque_id
+
+    def test_truncation_names_the_population_it_excludes(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        rc, calls, out, opaque_id = self._run(monkeypatch, tmp_path, capsys, max_docs=1)
+
+        assert rc == 0
+        assert len(calls) == 1
+        assert "2 documents before --max-docs" in out
+        assert "1 documents processed" in out
+        assert "1 sources excluded by --max-docs" in out
+        assert opaque_id("Synthetic Truncated Source") in out
+
+    def test_unlimited_coverage_line_is_byte_identical(
+        self, monkeypatch, tmp_path, capsys
+    ):
+        rc, calls, out, _opaque_id = self._run(
+            monkeypatch, tmp_path, capsys, max_docs=0
+        )
+
+        assert rc == 0
+        assert len(calls) == 2
+        assert out == (
+            "Coverage: 2 sources -> 2 documents; " "0 sources without documents: []\n"
+        )
+
+
+class TestBatchOutcomeAggregation1913:
+    def test_failed_document_does_not_abort_later_documents(
+        self, monkeypatch, tmp_path, caplog
+    ):
+        """The campaign continues, but its aggregate process status fails honestly."""
+        runner = _load_runner()
+        definitions = [
+            {
+                "source_name": "Synthetic Failed Source",
+                "extracts": [{"extract_text": "Failed document."}],
+            },
+            {
+                "source_name": "Synthetic Later Source",
+                "extracts": [{"extract_text": "Later document."}],
+            },
+        ]
+        calls = []
+
+        async def fake_run_single(**kwargs):
+            calls.append(kwargs["opaque_id_str"])
+            if len(calls) == 1:
+                return {
+                    "opaque_id": kwargs["opaque_id_str"],
+                    "outcome": {
+                        "status": "failed",
+                        "phase": "extract",
+                        "reason": "failed:synthetic-auth-error",
+                    },
+                }
+            return {
+                "opaque_id": kwargs["opaque_id_str"],
+                "outcome": {"status": "ok"},
+            }
+
+        monkeypatch.setattr(runner, "_run_single", fake_run_single)
+        monkeypatch.setattr(
+            "argumentation_analysis.core.utils.crypto_utils.derive_encryption_key",
+            lambda passphrase: b"synthetic-key",
+        )
+        monkeypatch.setattr(
+            "argumentation_analysis.core.io_manager.load_extract_definitions",
+            lambda **kwargs: definitions,
+        )
+        monkeypatch.setenv("TEXT_CONFIG_PASSPHRASE", "synthetic")
+        caplog.set_level(logging.INFO, logger="corpus_batch")
+
+        rc = runner.main(["--output-dir", str(tmp_path / "outcomes")])
+
+        assert len(calls) == 2, "the failed first document must not abort the batch"
+        assert rc == 1
+        assert "'failed': 1" in caplog.text
+        assert "'ok': 1" in caplog.text
 
 
 class TestPopulationUnchanged:

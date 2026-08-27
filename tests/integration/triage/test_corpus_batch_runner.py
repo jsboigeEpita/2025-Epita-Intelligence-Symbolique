@@ -93,6 +93,7 @@ class TestRunSingle:
         assert sig["opaque_id"] == "abcd1234"
         assert sig["workflow"] == "spectacular"
         assert sig["metadata"]["discourse_type"] == "political"
+        assert sig["outcome"] == {"status": "ok"}
         assert "raw_text" not in sig["state"]
         assert sig["state"]["argument_quality_scores"]["a1"]["overall"] == 0.9
 
@@ -101,11 +102,21 @@ class TestRunSingle:
         assert (tmp_path / "sigs" / "signature_abcd1234.json").exists()
 
     @pytest.mark.asyncio
-    async def test_skip_existing(self, tmp_path):
-        """skip_existing=True returns None when signature exists."""
+    async def test_skip_existing_reuses_failure_outcome(self, tmp_path):
+        """A skipped existing failure remains visible to aggregate exit status."""
         sigs = tmp_path / "sigs"
         sigs.mkdir()
-        (sigs / "signature_abcd1234.json").write_text("{}", encoding="utf-8")
+        existing = {
+            "opaque_id": "abcd1234",
+            "outcome": {
+                "status": "failed",
+                "phase": "extract",
+                "reason": "failed:synthetic-auth-error",
+            },
+        }
+        (sigs / "signature_abcd1234.json").write_text(
+            json.dumps(existing), encoding="utf-8"
+        )
 
         sig = await runner._run_single(
             text="x",
@@ -118,7 +129,68 @@ class TestRunSingle:
             skip_existing=True,
             sanitize_fn=_mock_sanitize,
         )
-        assert sig is None
+        assert sig == existing
+
+    @pytest.mark.asyncio
+    async def test_skip_existing_maps_legacy_success_without_false_failure(
+        self, tmp_path
+    ):
+        """A pre-outcome successful signature remains a valid skipped result."""
+        sigs = tmp_path / "sigs"
+        sigs.mkdir()
+        existing = {
+            "opaque_id": "legacy01",
+            "workflow": "spectacular",
+            "state": {},
+        }
+        (sigs / "signature_legacy01.json").write_text(
+            json.dumps(existing), encoding="utf-8"
+        )
+
+        sig = await runner._run_single(
+            text="x",
+            source_name="x",
+            opaque_id_str="legacy01",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=sigs,
+            skip_existing=True,
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert sig is not None
+        assert sig["outcome"]["status"] == "skipped_existing"
+
+    @pytest.mark.asyncio
+    async def test_skip_existing_keeps_legacy_partial_nonzero(self, tmp_path):
+        """A legacy partial signature cannot be promoted to skipped success."""
+        sigs = tmp_path / "sigs"
+        sigs.mkdir()
+        existing = {
+            "opaque_id": "legacy02",
+            "workflow": "spectacular",
+            "state": {},
+            "partial": True,
+        }
+        (sigs / "signature_legacy02.json").write_text(
+            json.dumps(existing), encoding="utf-8"
+        )
+
+        sig = await runner._run_single(
+            text="x",
+            source_name="x",
+            opaque_id_str="legacy02",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=sigs,
+            skip_existing=True,
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert sig is not None
+        assert sig["outcome"]["status"] == "partial_error"
 
     @pytest.mark.asyncio
     async def test_partial_on_error(self, tmp_path):
@@ -140,6 +212,112 @@ class TestRunSingle:
 
         assert sig is not None
         assert sig.get("partial") is True
+        assert sig["outcome"]["status"] == "partial_error"
+        assert "LLM error" in sig["outcome"]["reason"]
+
+    @pytest.mark.asyncio
+    async def test_timeout_has_distinct_partial_timeout_outcome(self, tmp_path):
+        """A real timeout remains distinguishable from another pipeline exception."""
+
+        async def slow_pipeline(*args, **kwargs):
+            await asyncio.sleep(0.05)
+            return {"state_snapshot": {}}
+
+        sig = await runner._run_single(
+            text="x",
+            source_name="x",
+            opaque_id_str="timeout1",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            timeout=0.001,
+            pipeline_fn=slow_pipeline,
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert sig is not None
+        assert sig["outcome"]["status"] == "partial_timeout"
+        assert sig.get("partial") is True
+
+    @pytest.mark.asyncio
+    async def test_foundational_failure_is_preserved_in_signature(self, tmp_path):
+        """A failed extraction is a failed document, not a normal signature."""
+        mock_result = {
+            "analysis_outcome": {
+                "status": "failed",
+                "phase": "extract",
+                "reason": "failed:synthetic-quota-error",
+            },
+            "state_snapshot": {"identified_arguments": {}},
+        }
+
+        sig = await runner._run_single(
+            text="x",
+            source_name="x",
+            opaque_id_str="fail1234",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            pipeline_fn=_mock_pipeline(mock_result),
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert sig is not None
+        assert sig["outcome"] == mock_result["analysis_outcome"]
+        assert sig.get("partial") is not True
+
+    @pytest.mark.asyncio
+    async def test_non_argumentative_outcome_remains_valid(self, tmp_path):
+        """#1909: a valid terminal input is not counted as failed or partial."""
+        mock_result = {
+            "analysis_outcome": {
+                "status": "non_argumentative",
+                "phase": "extract",
+            },
+            "state_snapshot": {"identified_arguments": {}},
+        }
+
+        sig = await runner._run_single(
+            text="x",
+            source_name="x",
+            opaque_id_str="nonarg01",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            pipeline_fn=_mock_pipeline(mock_result),
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert sig is not None
+        assert sig["outcome"]["status"] == "non_argumentative"
+        assert sig.get("partial") is not True
+
+    @pytest.mark.asyncio
+    async def test_threads_source_metadata_into_pipeline(self, tmp_path):
+        """The batch's authoritative metadata reaches the shared-state boundary."""
+        pipeline = _mock_pipeline({"state_snapshot": {}})
+        metadata = {"corpus_id": "doc_A", "speaker": "synthetic_role"}
+
+        await runner._run_single(
+            text="x",
+            source_name="x",
+            opaque_id_str="meta1234",
+            workflow="spectacular",
+            metadata=metadata,
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            pipeline_fn=pipeline,
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert pipeline.await_args.kwargs["source_metadata"] == metadata
 
 
 # ---------------------------------------------------------------------------

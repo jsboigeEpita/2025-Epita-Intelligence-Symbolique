@@ -75,6 +75,27 @@ def _derive_source_id(state: Any, source_id: Optional[str]) -> str:
     return _SOURCE_ID_FALLBACK
 
 
+def _read_foundational_failure(state: Any) -> Optional[str]:
+    """Read the normalized failed foundation from the workflow registry (#1913)."""
+    if isinstance(state, dict):
+        workflows = state.get("workflow_results")
+    else:
+        workflows = getattr(state, "workflow_results", None)
+    if not isinstance(workflows, dict):
+        return None
+
+    for workflow_result in workflows.values():
+        if not isinstance(workflow_result, dict):
+            continue
+        outcome = workflow_result.get("analysis_outcome")
+        if not isinstance(outcome, dict) or outcome.get("status") != "failed":
+            continue
+        phase = str(outcome.get("phase") or "extract")
+        reason = str(outcome.get("reason") or "cause inconnue")
+        return f"Échec de l'extraction fondatrice ({phase}) — {reason}"
+    return None
+
+
 def _read_act_degraded(state: Any) -> Dict[str, str]:
     """Flatten ``state.restitution_acts_degraded`` into ``RestitutionActs.degraded``.
 
@@ -154,12 +175,20 @@ def build_restitution_acts(
             val = getattr(state, key, "")
         return val if isinstance(val, str) else ""
 
+    degraded = _read_act_degraded(state)
+    foundational_failure = _read_foundational_failure(state)
+    if foundational_failure:
+        for act_number in (1, 2, 3):
+            degraded.setdefault(
+                RestitutionActs.act_key(act_number), foundational_failure
+            )
+
     return RestitutionActs(
         act1_framing=_read("act1_framing"),
         act2_narrative=_read("act2_narrative"),
         act3_conclusion=_read("act3_conclusion"),
         source_id=_derive_source_id(state, source_id),
-        degraded=_read_act_degraded(state),
+        degraded=degraded,
     )
 
 

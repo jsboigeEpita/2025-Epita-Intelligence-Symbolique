@@ -10,7 +10,7 @@ Validates:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -404,7 +404,17 @@ class TestWorkflowExecution:
             build_light_workflow,
         )
 
-        registry = setup_registry(include_optional=False)
+        valid_extraction = {
+            "arguments": [],
+            "claims": [],
+            "extraction_status": "ok",
+        }
+        with patch(
+            "argumentation_analysis.orchestration.registry_setup"
+            "._invoke_fact_extraction",
+            new=AsyncMock(return_value=valid_extraction),
+        ):
+            registry = setup_registry(include_optional=False)
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
         with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
@@ -517,6 +527,124 @@ class TestRunUnifiedAnalysis:
             "Test", registry=registry, custom_workflow=custom_wf
         )
         assert result["summary"]["completed"] == 1
+
+    @pytest.mark.asyncio
+    async def test_foundational_failure_exposes_one_authoritative_outcome(self):
+        """#1913: pipeline return and shared-state registry agree on failure."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        async def failed_extraction(text, context):
+            return {
+                "arguments": [],
+                "claims": ["diagnostic claim"],
+                "extraction_method": "heuristic",
+                "extraction_status": "failed:synthetic-auth-error",
+            }
+
+        registry = CapabilityRegistry()
+        registry.register_agent(
+            name="failed_extractor",
+            agent_class=type("FE", (), {}),
+            capabilities=["fact_extraction"],
+            invoke=failed_extraction,
+        )
+        workflow = (
+            WorkflowBuilder("failed_foundation")
+            .add_phase("extract", capability="fact_extraction")
+            .build()
+        )
+
+        result = await run_unified_analysis(
+            "Synthetic input.", registry=registry, custom_workflow=workflow
+        )
+
+        expected = {
+            "status": "failed",
+            "phase": "extract",
+            "reason": "failed:synthetic-auth-error",
+        }
+        assert result["analysis_outcome"] == expected
+        assert (
+            result["unified_state"].workflow_results["failed_foundation"][
+                "analysis_outcome"
+            ]
+            == expected
+        )
+        assert result["summary"]["failed"] == 1
+
+    def test_resumed_terminal_extraction_cannot_report_ok(self):
+        """A terminal checkpoint reconstruction keeps its foundational outcome."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _analysis_outcome,
+        )
+
+        resumed = PhaseResult(
+            phase_name="extract",
+            status=PhaseStatus.SKIPPED,
+            capability="fact_extraction",
+            output={"extraction_status": "failed:synthetic-checkpoint-error"},
+            error="Skipped (resumed from checkpoint)",
+            terminal=True,
+        )
+
+        assert _analysis_outcome({"extract": resumed}) == {
+            "status": "failed",
+            "phase": "extract",
+            "reason": "failed:synthetic-checkpoint-error",
+        }
+
+    def test_resumed_terminal_extraction_cannot_report_ok(self):
+        """A terminal checkpoint reconstruction keeps its foundational outcome."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            _analysis_outcome,
+        )
+
+        resumed = PhaseResult(
+            phase_name="extract",
+            status=PhaseStatus.SKIPPED,
+            capability="fact_extraction",
+            output={"extraction_status": "failed:synthetic-checkpoint-error"},
+            error="Skipped (resumed from checkpoint)",
+            terminal=True,
+        )
+
+        assert _analysis_outcome({"extract": resumed}) == {
+            "status": "failed",
+            "phase": "extract",
+            "reason": "failed:synthetic-checkpoint-error",
+        }
+
+    @pytest.mark.asyncio
+    async def test_raising_extractor_cannot_report_ok(self):
+        """A foundational exception is normalized to the same failed outcome."""
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            run_unified_analysis,
+        )
+
+        async def raising_extractor(text, context):
+            raise RuntimeError("synthetic extraction crash")
+
+        registry = CapabilityRegistry()
+        registry.register_agent(
+            name="raising_extractor",
+            agent_class=type("RE", (), {}),
+            capabilities=["fact_extraction"],
+            invoke=raising_extractor,
+        )
+        workflow = (
+            WorkflowBuilder("raising_foundation")
+            .add_phase("extract", capability="fact_extraction")
+            .build()
+        )
+
+        result = await run_unified_analysis(
+            "Synthetic input.", registry=registry, custom_workflow=workflow
+        )
+
+        assert result["analysis_outcome"]["status"] == "failed"
+        assert "synthetic extraction crash" in result["analysis_outcome"]["reason"]
 
     @pytest.mark.asyncio
     async def test_run_unknown_workflow_raises(self):
@@ -639,6 +767,20 @@ class TestRealInvocationViaUnifiedAnalysis:
     Real-invocation tests: call run_unified_analysis end-to-end (CI tally
     run 28582260688: ~142s). Marked `slow` for the per-push gate (#1336, R535)."""
 
+    @staticmethod
+    def _valid_extraction():
+        return patch(
+            "argumentation_analysis.orchestration.registry_setup"
+            "._invoke_fact_extraction",
+            new=AsyncMock(
+                return_value={
+                    "arguments": [],
+                    "claims": [],
+                    "extraction_status": "ok",
+                }
+            ),
+        )
+
     @pytest.mark.asyncio
     async def test_light_workflow_produces_quality_output(self):
         """Light workflow quality phase produces real evaluation scores."""
@@ -646,10 +788,13 @@ class TestRealInvocationViaUnifiedAnalysis:
             run_unified_analysis,
         )
 
-        result = await run_unified_analysis(
-            "Les vaccins sont efficaces car les études scientifiques le prouvent.",
-            workflow_name="light",
-        )
+        with self._valid_extraction(), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1913")
+        ):
+            result = await run_unified_analysis(
+                "Les vaccins sont efficaces car les études scientifiques le prouvent.",
+                workflow_name="light",
+            )
         quality_phase = result["phases"]["quality"]
         assert quality_phase.output is not None
         assert isinstance(quality_phase.output, dict)
@@ -662,10 +807,13 @@ class TestRealInvocationViaUnifiedAnalysis:
             run_unified_analysis,
         )
 
-        result = await run_unified_analysis(
-            "La peine de mort est nécessaire car elle dissuade les criminels.",
-            workflow_name="light",
-        )
+        with self._valid_extraction(), patch(
+            "openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1913")
+        ):
+            result = await run_unified_analysis(
+                "La peine de mort est nécessaire car elle dissuade les criminels.",
+                workflow_name="light",
+            )
         counter_phase = result["phases"]["counter"]
         assert counter_phase.output is not None
         assert "parsed_argument" in counter_phase.output
@@ -682,7 +830,7 @@ class TestRealInvocationViaUnifiedAnalysis:
 
         # Same #1591 hermeticity as TestRunUnifiedAnalysis: shape verdict only,
         # no LLM output read — pin the client factory to its no-key return.
-        with TestRunUnifiedAnalysis._no_llm_client():
+        with TestRunUnifiedAnalysis._no_llm_client(), self._valid_extraction():
             result = await run_unified_analysis(
                 "Argument test.",
                 workflow_name="light",
