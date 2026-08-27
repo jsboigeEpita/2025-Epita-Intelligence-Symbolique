@@ -240,6 +240,10 @@ class TestFullEvaluation:
     def test_evaluate_high_quality(self):
         """High-quality text gets a high score."""
         from argumentation_analysis.agents.core.quality import evaluer_argument
+        from argumentation_analysis.agents.core.quality.quality_evaluator import (
+            ContextLevel,
+            VirtueStatus,
+        )
 
         text = (
             "Selon un rapport de l'Agence Internationale de l'Énergie (2023), "
@@ -261,7 +265,15 @@ class TestFullEvaluation:
         assert "note_moyenne" in result
         assert "scores_par_vertu" in result
         assert "rapport_detaille" in result
-        assert len(result["scores_par_vertu"]) == 9
+        # #1907: a document-level unit unlocks all nine dimensions, and the
+        # ceiling the reader is shown is the one that was actually reachable.
+        assert "statuts_par_vertu" in result
+        assert len(result["statuts_par_vertu"]) == 9
+        assert result["contexte_evalue"] == ContextLevel.DOCUMENT
+        assert all(
+            s == VirtueStatus.EVALUATED for s in result["statuts_par_vertu"].values()
+        )
+        assert result["note_max_applicable"] == 9.0
         # High quality text should score well
         assert result["note_moyenne"] > 0.5
 
@@ -282,10 +294,21 @@ class TestFullEvaluation:
             VERTUES,
         )
 
+        from argumentation_analysis.agents.core.quality.quality_evaluator import (
+            VirtueStatus,
+        )
+
+        # #1907: "always returns all 9 virtues" is the declaration this issue
+        # overturns. A three-word claim cannot carry a bibliography or
+        # essay-level coverage, so seven dimensions are honestly absent rather
+        # than scored 0.0. What must still hold for *every* virtue is that it
+        # is accounted for: a status and an explanation, always.
         result = evaluer_argument("Un texte quelconque.")
         for vertu in VERTUES:
-            assert vertu in result["scores_par_vertu"]
+            assert vertu in result["statuts_par_vertu"]
             assert vertu in result["rapport_detaille"]
+            if result["statuts_par_vertu"][vertu] != VirtueStatus.EVALUATED:
+                assert vertu not in result["scores_par_vertu"]
 
     def test_evaluator_class_api(self):
         """ArgumentQualityEvaluator class has correct API."""

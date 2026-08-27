@@ -623,7 +623,10 @@ class TestDebateCrossKB:
             "phase_counter_output": {},
             "phase_quality_output": {
                 "per_argument_scores": {
-                    "arg_1": {"note_finale": 9.0},
+                    # #1907: the evaluator now reports the ceiling that was
+                    # actually reachable. arg_2 deliberately omits it to keep
+                    # the legacy shape (score with no ceiling) under test.
+                    "arg_1": {"note_finale": 9.0, "note_max_applicable": 9.0},
                     "arg_2": {"note_finale": 3.0, "fallacy_penalty": {"applied": True}},
                 },
             },
@@ -672,7 +675,14 @@ class TestDebateCrossKB:
         assert prompt, "the debate never reached the LLM path — cross-KB read skipped"
         # Quality scores were read: note_finale and the fallacy penalty marker.
         assert "QUALITY SCORES:" in prompt
-        assert "9.0/10" in prompt
+        # #1907: the denominator is the number of dimensions that were
+        # applicable to this unit, never a fixed 10. Asserting the whole line
+        # (not a substring) keeps this as strong as the "9.0/10" it replaces:
+        # it still fails if the cross-KB read is skipped, and now also fails if
+        # the fabricated /10 ceiling comes back.
+        assert "arg_1: 9.0/9 applicable dimension(s)" in prompt
+        assert "arg_2: 3.0 [PENALIZED by fallacy]" in prompt
+        assert "/10" not in prompt
         assert "[PENALIZED by fallacy]" in prompt
         # JTMS was read: the invalid belief is surfaced as retracted, and the
         # formal_consistency=False flag raises the inconsistency warning.

@@ -635,13 +635,59 @@ async def _invoke_quality_evaluator(
                     phase="quality",
                     agent="QualityScorer",
                     reacts_to=["extract", "hierarchical_fallacy"],
-                    summary=f"Évaluation qualité de {_n_eval} arguments — score moyen: {_avg_q:.1f}/10. Détection par vertus rhétoriques.",
+                    summary=_quality_trace_summary(_n_eval, output),
                 )
             return output
         # Fallback if no results
         return await asyncio.to_thread(evaluator.evaluate, input_text)
     else:
         return await asyncio.to_thread(evaluator.evaluate, input_text)
+
+
+def _quality_fraction(scores: Any) -> Optional[float]:
+    """Share of the ceiling that was actually reachable on this unit (#1907).
+
+    ``note_finale`` alone is no longer on a fixed scale: an argument evaluated
+    on nine dimensions and one evaluated on two are summed over different
+    denominators, so comparing or printing the raw value ranks instrument reach
+    rather than argument quality. Returns ``None`` when the unit carries no
+    usable measurement — the caller must then say "unmeasured", never 0.
+    """
+    if not isinstance(scores, dict):
+        return None
+    note = scores.get("note_finale")
+    ceiling = scores.get("note_max_applicable")
+    if not isinstance(note, (int, float)):
+        return None
+    if isinstance(ceiling, (int, float)) and ceiling > 0:
+        return float(note) / float(ceiling)
+    return None
+
+
+def _quality_trace_summary(n_evaluated: int, output: Any) -> str:
+    """Trace line for the quality phase, on an honest scale (#1907).
+
+    The previous wording read "score moyen: 1.8/10", which is what a corpus of
+    isolated claims produced when seven inapplicable dimensions were averaged
+    in as zeros. There is no fixed /10 to report: each unit has its own
+    reachable ceiling, so we report the share of it that held.
+    """
+    per_arg = output.get("per_argument_scores", {}) if isinstance(output, dict) else {}
+    fracs = [
+        f for f in (_quality_fraction(s) for s in per_arg.values()) if f is not None
+    ]
+    if not fracs:
+        return (
+            f"Évaluation qualité de {n_evaluated} arguments — part des "
+            "dimensions applicables non mesurable sur ce run. "
+            "Détection par vertus rhétoriques."
+        )
+    avg = sum(fracs) / len(fracs)
+    return (
+        f"Évaluation qualité de {n_evaluated} arguments — {avg:.0%} des "
+        "dimensions applicables tiennent en moyenne. "
+        "Détection par vertus rhétoriques."
+    )
 
 
 def _aggregate_virtue_scores(per_arg_results: Dict[str, Any]) -> Dict[str, float]:
@@ -1254,13 +1300,23 @@ async def _invoke_counter_argument(
             for i, a in enumerate(arguments):
                 text = a.get("text", str(a)) if isinstance(a, dict) else str(a)
                 score_key = f"arg_{i+1}"
-                score = per_arg_scores.get(score_key, {}).get("note_finale", 5.0)
-                scored_args.append((score, text))
-            scored_args.sort(key=lambda x: x[0])  # weakest first
+                # #1907: rank on the share of the reachable ceiling, not on
+                # the raw sum — otherwise an argument that happened to be
+                # evaluated on more dimensions always outranks a shorter one
+                # regardless of merit. Unmeasured arguments sort last and say
+                # so, instead of being handed a fabricated middling 5.0.
+                frac = _quality_fraction(per_arg_scores.get(score_key, {}))
+                scored_args.append((frac, text))
+            scored_args.sort(key=lambda x: (x[0] is None, x[0]))  # weakest first
 
-            for score, text in scored_args:
+            for frac, text in scored_args:
                 if text:
-                    targets.append(f"[quality={score:.1f}/10] {text}")
+                    label = (
+                        "quality=non mesurée"
+                        if frac is None
+                        else f"quality={frac:.0%} des dimensions applicables"
+                    )
+                    targets.append(f"[{label}] {text}")
 
             if not targets:
                 targets = [
@@ -1599,7 +1655,17 @@ async def _invoke_debate_analysis(
                         suffix = (
                             " [PENALIZED by fallacy]" if penalty.get("applied") else ""
                         )
-                        quality_lines.append(f"  {key}: {note}/10{suffix}")
+                        # #1907: the denominator is the number of dimensions
+                        # that were applicable to this unit, not a fixed 10 —
+                        # the score never could reach 10, so "x/10" told the
+                        # debate agent every argument was weak.
+                        ceiling = scores.get("note_max_applicable")
+                        scale = (
+                            f"/{ceiling:.0f} applicable dimension(s)"
+                            if isinstance(ceiling, (int, float)) and ceiling
+                            else ""
+                        )
+                        quality_lines.append(f"  {key}: {note}{scale}{suffix}")
                 if quality_lines:
                     debate_parts.append("QUALITY SCORES:\n" + "\n".join(quality_lines))
             # (#289) Cross-KB: JTMS beliefs inform debate about retracted claims
@@ -2053,11 +2119,12 @@ async def _invoke_governance(
                 else {}
             )
             if per_arg_scores:
-                avg_score = sum(
-                    s.get("note_finale", 0)
-                    for s in per_arg_scores.values()
-                    if isinstance(s, dict)
-                ) / max(len(per_arg_scores), 1)
+                _fracs = [
+                    f
+                    for f in (_quality_fraction(s) for s in per_arg_scores.values())
+                    if f is not None
+                ]
+                avg_frac = sum(_fracs) / len(_fracs) if _fracs else None
                 penalized = sum(
                     1
                     for s in per_arg_scores.values()
@@ -2065,8 +2132,13 @@ async def _invoke_governance(
                     and s.get("fallacy_penalty", {}).get("applied")
                 )
                 context_parts.append(
-                    f"Quality assessment: avg score {avg_score:.1f}/10, "
-                    f"{penalized} argument(s) penalized by fallacies"
+                    (
+                        "Quality assessment: unmeasured on this run, "
+                        if avg_frac is None
+                        else f"Quality assessment: {avg_frac:.0%} of the "
+                        "applicable dimensions held on average, "
+                    )
+                    + f"{penalized} argument(s) penalized by fallacies"
                 )
             raw_fallacies = (
                 fallacy_output.get("fallacies", [])
