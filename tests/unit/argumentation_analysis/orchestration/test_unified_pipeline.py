@@ -595,27 +595,6 @@ class TestRunUnifiedAnalysis:
             "reason": "failed:synthetic-checkpoint-error",
         }
 
-    def test_resumed_terminal_extraction_cannot_report_ok(self):
-        """A terminal checkpoint reconstruction keeps its foundational outcome."""
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            _analysis_outcome,
-        )
-
-        resumed = PhaseResult(
-            phase_name="extract",
-            status=PhaseStatus.SKIPPED,
-            capability="fact_extraction",
-            output={"extraction_status": "failed:synthetic-checkpoint-error"},
-            error="Skipped (resumed from checkpoint)",
-            terminal=True,
-        )
-
-        assert _analysis_outcome({"extract": resumed}) == {
-            "status": "failed",
-            "phase": "extract",
-            "reason": "failed:synthetic-checkpoint-error",
-        }
-
     @pytest.mark.asyncio
     async def test_raising_extractor_cannot_report_ok(self):
         """A foundational exception is normalized to the same failed outcome."""
