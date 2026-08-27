@@ -18,6 +18,7 @@ Two test layers:
 import asyncio
 import json
 import pytest
+from typing import Any, Dict, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
@@ -627,6 +628,141 @@ class TestGoldenCrossReferencing:
 
 
 # ============================================================
+# #1924: key presence is not key validity
+# ============================================================
+
+_KEY_REJECTION_MARKERS = (
+    "type=AuthenticationError",
+    "type=PermissionDeniedError",
+    "Error code: 401",
+    "Error code: 403",
+)
+
+
+def key_rejection_cause(result: Dict[str, Any]) -> Optional[str]:
+    """Return the provider's message iff the run died on an unusable key.
+
+    ``if not os.environ.get("OPENAI_API_KEY"): pytest.skip(...)`` tests
+    *presence*, not *validity* (#1924). A key that is present but refused --
+    401 (invalid) or 403 (quota / key limit) -- passes that guard; the run then
+    reports ``completed == 0`` because #1913 makes a foundational extraction
+    failure terminal, and an assertion presuming the analysis ran is charged to
+    the code under test instead of to the provider.
+
+    Deliberately narrow: only "this key cannot be used". A rate limit, a
+    timeout, a malformed response or any other LLM error is NOT matched, so
+    these tests keep reddening when the pipeline is genuinely broken. The
+    downstream ``Blocked by terminal dependency: ...`` marker is not matched
+    either -- it says a dependency died, not why; only the originating phase
+    carries the provider's own message.
+
+    Observed shape on main ``9888cbca`` with a key at its ceiling::
+
+        failed:llm_call_error(attempt=3,type=PermissionDeniedError,
+        msg=Error code: 403 - {'error': {'message': 'Key limit exceeded ...
+
+    Returns the first matching error string, or ``None``.
+    """
+    for phase_result in (result or {}).get("phases", {}).values():
+        error = getattr(phase_result, "error", None)
+        if error and any(marker in error for marker in _KEY_REJECTION_MARKERS):
+            return error
+    return None
+
+
+@pytest.mark.unit
+class TestKeyRejectionGuard:
+    """#1924: the guard must tell *absent* from *refused* from *usable*.
+
+    These run under the CI gate filter -- unlike TestGoldenIntegration below,
+    which is ``slow`` + ``requires_api`` and is deselected there (0 collected).
+    A guard the harness does not name is not a guard, so the classifier is
+    tested here rather than only inside the tests it protects.
+    """
+
+    @staticmethod
+    def _result(*errors):
+        """Build the production shape: PhaseResult objects, not dicts."""
+        return {
+            "phases": {
+                f"p{i}": PhaseResult(
+                    phase_name=f"p{i}",
+                    status=PhaseStatus.FAILED if err else PhaseStatus.COMPLETED,
+                    capability="cap",
+                    error=err,
+                )
+                for i, err in enumerate(errors)
+            }
+        }
+
+    def test_403_key_limit_is_a_rejection(self):
+        """The signature observed firsthand when the key hits its ceiling."""
+        cause = key_rejection_cause(
+            self._result(
+                "failed:llm_call_error(attempt=3,type=PermissionDeniedError,"
+                "msg=Error code: 403 - {'error': {'message': 'Key limit "
+                "exceeded (total limit).'}})",
+                "Blocked by terminal dependency: extract",
+            )
+        )
+        assert cause is not None, "a 403 from the provider must be classified"
+        assert "403" in cause
+
+    def test_401_invalid_key_is_a_rejection(self):
+        cause = key_rejection_cause(
+            self._result(
+                "failed:llm_call_error(attempt=3,type=AuthenticationError,"
+                "msg=Error code: 401 - invalid api key)"
+            )
+        )
+        assert cause is not None
+        assert "401" in cause
+
+    def test_rate_limit_is_not_a_rejection(self):
+        """429 is throttling, not an unusable key: the test must still redden."""
+        assert (
+            key_rejection_cause(
+                self._result(
+                    "failed:llm_call_error(attempt=3,type=RateLimitError,"
+                    "msg=Error code: 429 - rate limit reached)"
+                )
+            )
+            is None
+        )
+
+    def test_ordinary_pipeline_failure_is_not_a_rejection(self):
+        """A genuine break must never be laundered into a skip."""
+        assert (
+            key_rejection_cause(
+                self._result(
+                    "failed:ValueError(no argument found in text)",
+                    "Blocked by terminal dependency: extract",
+                )
+            )
+            is None
+        )
+
+    def test_terminal_block_alone_is_not_a_rejection(self):
+        """The downstream marker says a dependency died, not why."""
+        assert (
+            key_rejection_cause(
+                self._result(
+                    "Blocked by terminal dependency: extract",
+                    "Blocked by terminal dependency: quality",
+                )
+            )
+            is None
+        )
+
+    def test_clean_run_is_not_a_rejection(self):
+        assert key_rejection_cause(self._result(None, None, None)) is None
+
+    def test_missing_phases_key_is_not_a_rejection(self):
+        assert key_rejection_cause({}) is None
+        assert key_rejection_cause(None) is None
+
+
+# ============================================================
 # Layer 2: run_unified_analysis integration (needs LLM)
 # ============================================================
 
@@ -646,7 +782,7 @@ class TestGoldenIntegration:
         import os
 
         if not os.environ.get("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not set")
+            pytest.skip("OPENAI_API_KEY absent from the environment")
 
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
@@ -656,6 +792,10 @@ class TestGoldenIntegration:
             GOLDEN_TEXT,
             workflow_name="standard",
         )
+
+        rejected = key_rejection_cause(result)
+        if rejected:
+            pytest.skip(f"API key present but refused by the provider: {rejected}")
 
         state = result.get("unified_state")
         assert state is not None, "Pipeline did not produce unified_state"
@@ -673,7 +813,7 @@ class TestGoldenIntegration:
         import os
 
         if not os.environ.get("OPENAI_API_KEY"):
-            pytest.skip("OPENAI_API_KEY not set")
+            pytest.skip("OPENAI_API_KEY absent from the environment")
 
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
@@ -683,6 +823,10 @@ class TestGoldenIntegration:
             GOLDEN_TEXT,
             workflow_name="light",
         )
+
+        rejected = key_rejection_cause(result)
+        if rejected:
+            pytest.skip(f"API key present but refused by the provider: {rejected}")
 
         assert "state_snapshot" in result
         assert result["state_snapshot"] is not None
