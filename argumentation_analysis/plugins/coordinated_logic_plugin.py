@@ -85,11 +85,11 @@ def _get_openai_client():
     if use_openrouter:
         api_key = openrouter_api_key
         base_url = openrouter_base_url
-        model_id = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
     else:
         api_key = os.environ.get("OPENAI_API_KEY", "")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
     if not api_key:
         return None, "", ""

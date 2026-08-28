@@ -974,7 +974,7 @@ async def _run_conversational_analysis_inner(
     # preserves the prior behavior (a real LLM was always built here, never a
     # mock, even under PYTEST_CURRENT_TEST).
     kernel = sk.Kernel()
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
     try:
         llm_service = create_llm_service(
             service_id="conversational_llm",

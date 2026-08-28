@@ -105,7 +105,7 @@ GLOBAL_LLM_SERVICE="OpenAI"
 OPENAI_API_KEY="votre-clé-api-openai"
 
 # Modèle de chat OpenAI à utiliser
-OPENAI_CHAT_MODEL_ID="gpt-5-mini"
+OPENAI_CHAT_MODEL_ID="gpt-5.6-luna"
 
 # Phrase secrète pour le chiffrement des configurations
 TEXT_CONFIG_PASSPHRASE="votre-phrase-secrète"

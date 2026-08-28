@@ -19,7 +19,10 @@ import semantic_kernel as sk
 from pathlib import Path
 from semantic_kernel.functions import KernelArguments
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-from argumentation_analysis.core.llm_service import create_llm_service
+from argumentation_analysis.core.llm_service import (
+    create_llm_service,
+    substitute_obsolete_model,
+)
 from openai import AsyncOpenAI, AuthenticationError
 
 
@@ -36,7 +39,11 @@ class TestLLMService:
         load_dotenv(dotenv_path=dotenv_path, override=True)
 
         self.api_key = os.environ.get("OPENAI_API_KEY")
-        self.model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        # Un .env encore sur un modèle retiré (ex: gpt-5-mini) est substitué par
+        # la factory — l'attendu doit suivre la même règle (#1930).
+        self.model_id = substitute_obsolete_model(
+            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+        )
 
         yield  # C'est ici que le test s'exécute
 
@@ -70,7 +77,10 @@ class TestLLMService:
             and os.environ.get("OPENROUTER_API_KEY")
         )
         expected_model = (
-            os.environ.get("OPENROUTER_CHAT_MODEL_ID", self.model_id)
+            substitute_obsolete_model(
+                os.environ.get("OPENROUTER_CHAT_MODEL_ID", self.model_id),
+                "OPENROUTER_CHAT_MODEL_ID",
+            )
             if use_openrouter
             else self.model_id
         )

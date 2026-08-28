@@ -36,7 +36,34 @@ if not logger.handlers and not logger.propagate:
 logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 
 
-def resolve_chat_endpoint(default_model: str = "gpt-5-mini") -> Tuple[str, str, str]:
+# Modèles retirés : toute résolution les remplace, quelle que soit la source
+# (.env, argument explicite). #1930 (décision user 2026-08-28) : gpt-5-mini
+# dépense ~81 % de ses tokens en raisonnement invisible — 11× le coût de luna
+# par tâche rendue — et tombe dans le piège #1929 (contenu vide en HTTP 200
+# quand le budget de sortie est serré, car le raisonnement se sert en premier).
+OBSOLETE_MODEL_SUBSTITUTIONS = {
+    "gpt-4-32k": "gpt-5.6-luna",
+    "gpt-5-mini": "gpt-5.6-luna",
+    "openai/gpt-5-mini": "openai/gpt-5.6-luna",
+}
+
+
+def substitute_obsolete_model(
+    model_id: str, env_var_hint: str = "OPENAI_CHAT_MODEL_ID"
+) -> str:
+    """Replace a retired model id, naming the .env line to update."""
+    new_model_id = OBSOLETE_MODEL_SUBSTITUTIONS.get(model_id)
+    if new_model_id is None:
+        return model_id
+    logger.warning(
+        f"Le modèle '{model_id}' est obsolète ou inaccessible. "
+        f"Substitution automatique par '{new_model_id}'. "
+        f"Veuillez mettre à jour votre fichier .env avec {env_var_hint}={new_model_id}"
+    )
+    return new_model_id
+
+
+def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str, str]:
     """Resolve the chat endpoint honoring the OpenRouter toggle.
 
     Single canonical source of truth for routing raw-SDK (non-kernel) LLM
@@ -66,11 +93,12 @@ def resolve_chat_endpoint(default_model: str = "gpt-5-mini") -> Tuple[str, str, 
             "OPENROUTER_CHAT_MODEL_ID",
             os.environ.get("OPENAI_CHAT_MODEL_ID", default_model),
         )
-    else:
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", default_model)
-    return api_key, base_url, model_id
+        model_id = substitute_obsolete_model(model_id, "OPENROUTER_CHAT_MODEL_ID")
+        return api_key, base_url, model_id
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", default_model)
+    return api_key, base_url, substitute_obsolete_model(model_id)
 
 
 # La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service
@@ -131,20 +159,13 @@ def create_llm_service(
 
     # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
     if not model_id:
-        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         logger.info(
             f"model_id non fourni, utilisation de la valeur de .env: {model_id}"
         )
 
-    # Correction automatique pour les modèles obsolètes
-    if model_id == "gpt-4-32k":
-        new_model_id = "gpt-5-mini"
-        logger.warning(
-            f"Le modèle '{model_id}' est obsolète ou inaccessible. "
-            f"Substitution automatique par '{new_model_id}'. "
-            f"Veuillez mettre à jour votre fichier .env avec OPENAI_CHAT_MODEL_ID={new_model_id}"
-        )
-        model_id = new_model_id
+    # Correction automatique pour les modèles obsolètes (table partagée #1930)
+    model_id = substitute_obsolete_model(model_id)
     # --- Sélection du provider : bascule OpenRouter si configurée ---
     # Si OPENROUTER_BASE_URL est défini (+ OPENROUTER_API_KEY), les appels sont
     # routés vers OpenRouter (API compatible OpenAI). Sinon, le comportement
@@ -157,7 +178,10 @@ def create_llm_service(
     if use_openrouter:
         api_key = openrouter_api_key
         # OpenRouter exige des slugs préfixés par le provider (ex. "openai/gpt-5-mini")
-        model_id = os.getenv("OPENROUTER_CHAT_MODEL_ID", model_id)
+        model_id = substitute_obsolete_model(
+            os.getenv("OPENROUTER_CHAT_MODEL_ID", model_id),
+            "OPENROUTER_CHAT_MODEL_ID",
+        )
     else:
         api_key = os.environ.get("OPENAI_API_KEY")
     org_id = os.environ.get("OPENAI_ORG_ID")

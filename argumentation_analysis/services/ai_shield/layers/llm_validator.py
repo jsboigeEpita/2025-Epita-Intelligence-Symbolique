@@ -45,12 +45,14 @@ class LLMValidatorLayer(ShieldLayer):
         if use_openrouter and not api_key:
             self._api_key = openrouter_api_key
             self._model = model or os.environ.get(
-                "OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini"
+                "OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna"
             )
             self._base_url = openrouter_base_url
         else:
             self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
-            self._model = model or os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+            self._model = model or os.environ.get(
+                "OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"
+            )
             self._base_url = os.environ.get(
                 "OPENAI_BASE_URL", "https://api.openai.com/v1"
             )

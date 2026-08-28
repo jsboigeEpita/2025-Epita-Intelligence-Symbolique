@@ -215,7 +215,7 @@ class TestServiceManagerSettings:
 
     def test_default_model_id(self):
         s = ServiceManagerSettings()
-        assert s.default_model_id == "gpt-5-mini"
+        assert s.default_model_id == "gpt-5.6-luna"  # default (#1930)
 
 
 # ============================================================

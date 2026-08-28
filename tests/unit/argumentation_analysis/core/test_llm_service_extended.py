@@ -58,7 +58,10 @@ class TestCreateLlmServiceMocking:
     def test_missing_api_key_raises(self):
         """Missing OPENAI_API_KEY raises ValueError."""
         create = self._import_create()
-        env = {k: v for k, v in os.environ.items() if k != "OPENAI_API_KEY"}
+        # Hermetic: sans le couple OpenRouter non plus, sinon la factory
+        # bascule sur ce provider (chargé depuis .env sur les machines dev).
+        removed = {"OPENAI_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_BASE_URL"}
+        env = {k: v for k, v in os.environ.items() if k not in removed}
         env.pop("PYTEST_CURRENT_TEST", None)
         with patch.dict(os.environ, env, clear=True):
             with pytest.raises(ValueError, match="OPENAI_API_KEY"):
@@ -69,7 +72,7 @@ class TestCreateLlmServiceModelSubstitution:
     """Tests for automatic model substitution."""
 
     def test_gpt4_32k_substituted(self):
-        """gpt-4-32k is automatically replaced by gpt-5-mini."""
+        """gpt-4-32k is automatically replaced by gpt-5.6-luna (#1930)."""
         from argumentation_analysis.core.llm_service import create_llm_service
 
         with patch.dict(
@@ -78,8 +81,16 @@ class TestCreateLlmServiceModelSubstitution:
                 "OPENAI_API_KEY": "sk-test",
             },
         ):
-            # Remove PYTEST_CURRENT_TEST to avoid mock path
+            # Remove PYTEST_CURRENT_TEST to avoid mock path; hermetic vs the
+            # OpenRouter override loaded from .env on dev machines (restored
+            # by patch.dict at context exit).
             os.environ.pop("PYTEST_CURRENT_TEST", None)
+            for var in (
+                "OPENROUTER_API_KEY",
+                "OPENROUTER_BASE_URL",
+                "OPENROUTER_CHAT_MODEL_ID",
+            ):
+                os.environ.pop(var, None)
             with patch("argumentation_analysis.core.llm_service.AsyncOpenAI"):
                 with patch(
                     "argumentation_analysis.core.llm_service.OpenAIChatCompletion"
@@ -92,7 +103,7 @@ class TestCreateLlmServiceModelSubstitution:
                     )
             # Verify the substituted model was used
             call_kwargs = mock_oai.call_args
-            assert call_kwargs[1]["ai_model_id"] == "gpt-5-mini"
+            assert call_kwargs[1]["ai_model_id"] == "gpt-5.6-luna"
 
     def test_default_model_from_env(self):
         """When model_id is None, reads from OPENAI_CHAT_MODEL_ID."""
@@ -106,6 +117,13 @@ class TestCreateLlmServiceModelSubstitution:
             },
         ):
             os.environ.pop("PYTEST_CURRENT_TEST", None)
+            # Hermetic vs the OpenRouter override (restored by patch.dict).
+            for var in (
+                "OPENROUTER_API_KEY",
+                "OPENROUTER_BASE_URL",
+                "OPENROUTER_CHAT_MODEL_ID",
+            ):
+                os.environ.pop(var, None)
             with patch("argumentation_analysis.core.llm_service.AsyncOpenAI"):
                 with patch(
                     "argumentation_analysis.core.llm_service.OpenAIChatCompletion"

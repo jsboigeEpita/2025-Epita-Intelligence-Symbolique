@@ -85,7 +85,7 @@ class ModelRegistry:
 
         # Primary endpoint
         api_key = os.environ.get("OPENAI_API_KEY", "")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
         if api_key:
             registry.register(

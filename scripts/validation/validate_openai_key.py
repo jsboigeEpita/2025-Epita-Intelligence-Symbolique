@@ -21,7 +21,7 @@ def validate_key():
         models = client.models.list()
         print("✅ Connexion réussie à l'API OpenAI.")
         print(
-            f"🤖 Modèle gpt-5-mini trouvé : {'gpt-5-mini' in [m.id for m in models.data]}"
+            f"🤖 Modèle gpt-5.6-luna trouvé : {'gpt-5.6-luna' in [m.id for m in models.data]}"
         )
     except Exception as e:
         print(f"❌ ERREUR : Échec de la connexion à l'API OpenAI : {e}")

@@ -55,6 +55,10 @@ SAMPLE_TEXTS = {
 
 # Cost per 1M tokens (input/output) — approximate 2025 pricing
 COST_TABLE = {
+    # GPT-5.6 series — OpenRouter catalog pricing, 2026-08-28 (#1930)
+    "gpt-5.6-luna": {"input": 0.20, "output": 1.20},
+    "gpt-5.6-sol": {"input": 2.00, "output": 10.00},
+    "gpt-5.6-terra": {"input": 2.00, "output": 12.00},
     "gpt-5-mini": {"input": 0.15, "output": 0.60},
     "gpt-5": {"input": 2.50, "output": 10.00},
     "gpt-5-nano": {"input": 0.05, "output": 0.20},

@@ -219,7 +219,7 @@ class OrchestrationServiceManager:
         # Kernel Semantic Kernel et service LLM principal
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = (
-            "gpt-5-mini"  # Default, sera confirmé lors de l'ajout au kernel
+            "gpt-5.6-luna"  # Default, sera confirmé lors de l'ajout au kernel
         )
         self.project_context: Optional[ProjectContext] = None  # Contexte du projet
 
@@ -789,7 +789,7 @@ INSTRUCTIONS:
 
 Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetorique, coherence, recommandations."""
 
-            model = "gpt-5-mini"
+            model = "gpt-5.6-luna"
 
             # Mesurer le temps de début
             start_time = time.time()
@@ -879,7 +879,7 @@ INSTRUCTIONS OPÉRATIONNELLES:
 
 Réponds au format JSON avec les clés: entites, relations, patterns, persuasion, premisses, conclusions, biais, validite_logique."""
 
-            model = "gpt-5-mini"
+            model = "gpt-5.6-luna"
 
             # Mesurer le temps de début
             start_time = time.time()
