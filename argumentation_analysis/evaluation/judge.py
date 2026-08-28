@@ -93,7 +93,8 @@ class LLMJudge:
         # Prepare the prompt with smart summarization
         prepared = self._prepare_results_for_judge(analysis_results)
         results_str = json.dumps(prepared, indent=2, ensure_ascii=False, default=str)
-        # Budget: 12000 chars for results (gpt-5-mini has 128k context)
+        # Budget: 12000 chars for results (~3k tokens, fits well within
+        # gpt-5.6-luna's 128k context)
         if len(results_str) > 12000:
             results_str = results_str[:12000] + "\n... [summarized]"
 
