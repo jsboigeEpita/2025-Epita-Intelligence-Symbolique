@@ -21,6 +21,12 @@ from argumentation_analysis.core.reading_window import (
     reading_state_from_context,
     selected_text,
 )
+from argumentation_analysis.core.llm_service import (
+    get_determinism_params as _get_determinism_params,
+    is_reasoning_model as _is_reasoning_model,
+    resolve_active_model_id as _resolve_model_id,
+    REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
+)
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -172,82 +178,6 @@ __all__ = [
     "_invoke_ai_shield",
     "_invoke_dung_arbitration",
 ]
-
-
-_REASONING_MODEL_PREFIXES: Tuple[str, ...] = (
-    "gpt-5",
-    "o1",
-    "o3",
-    "openai/gpt-5",
-    "openai/o1",
-    "openai/o3",
-)
-
-
-def _resolve_model_id() -> str:
-    """Resolve the active chat model id from environment (mirrors _get_openai_client)."""
-    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    if openrouter_base_url and openrouter_api_key:
-        return os.environ.get(
-            "OPENROUTER_CHAT_MODEL_ID",
-            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
-        )
-    return os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-
-
-def _is_reasoning_model(model_id: str) -> bool:
-    """Return True if *model_id* belongs to a known reasoning-model family."""
-    lower = model_id.lower()
-    return any(lower.startswith(p) for p in _REASONING_MODEL_PREFIXES)
-
-
-def _get_determinism_params() -> Dict[str, Any]:
-    """Read determinism settings from environment variables.
-
-    Supports two modes:
-    - LLM_DETERMINISTIC_MODE=1: shorthand for temperature=0, seed=42
-    - LLM_TEMPERATURE / LLM_SEED: fine-grained overrides (take precedence)
-
-    When the active chat model is a known reasoning model (gpt-5*, o1*, o3*),
-    temperature/seed are suppressed unless ``LLM_FORCE_SAMPLING_PARAMS=1`` is set,
-    because reasoning models typically reject those parameters with a 400 BadRequest.
-
-    Returns a dict suitable for merging into ``client.chat.completions.create()``.
-    """
-    params: Dict[str, Any] = {}
-    if os.environ.get("LLM_DETERMINISTIC_MODE"):
-        params["temperature"] = 0.0
-        params["seed"] = 42
-    temp_str = os.environ.get("LLM_TEMPERATURE")
-    if temp_str is not None:
-        try:
-            params["temperature"] = float(temp_str)
-        except ValueError:
-            pass
-    seed_str = os.environ.get("LLM_SEED")
-    if seed_str is not None:
-        try:
-            params["seed"] = int(seed_str)
-        except ValueError:
-            pass
-
-    if params and _is_reasoning_model(_resolve_model_id()):
-        if os.environ.get("LLM_FORCE_SAMPLING_PARAMS"):
-            logger.warning(
-                "Determinism params forced on reasoning model '%s' — may 400.",
-                _resolve_model_id(),
-            )
-        else:
-            logger.warning(
-                "Determinism requested but reasoning model '%s' does not support "
-                "temperature/seed — params suppressed. Set LLM_FORCE_SAMPLING_PARAMS=1 "
-                "to override.",
-                _resolve_model_id(),
-            )
-            params = {}
-
-    return params
 
 
 def _get_openai_client() -> Tuple[Any, str]:
