@@ -195,7 +195,7 @@ class TestOrchestrationServiceManagerInit:
         assert manager.config is None
 
     def test_init_llm_service_id_default(self, manager):
-        assert manager.llm_service_id == "gpt-5-mini"
+        assert manager.llm_service_id == "gpt-5.6-luna"  # default (#1930)
 
     def test_init_with_logging_enabled(self):
         from argumentation_analysis.orchestration.service_manager import (
