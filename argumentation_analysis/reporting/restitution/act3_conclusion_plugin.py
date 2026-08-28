@@ -59,6 +59,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_native_dung,
 )
+from .global_projection import GlobalFinding, project_global_findings
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -445,6 +446,12 @@ class Act3Evidence:
     # module work again removed its single trace from the prose. Empty when no
     # axis established anything — never a status word, never a count.
     structured_findings: List[StructuredArgFinding] = field(default_factory=list)
+    # #1911 — the GLOBAL synthesis channel. Bounded structured findings
+    # (cross-axis convergences + deep-synthesis value gates) derived from
+    # lower-level state, never the synthesis prose and never a boolean (the
+    # two dead ends #1620 documented). Every finding cites its anchors, so
+    # the conclusion can weigh convergence as confidence, not as inventory.
+    global_findings: List[GlobalFinding] = field(default_factory=list)
 
 
 @dataclass
@@ -1557,10 +1564,11 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # reader does get comes from ``appendix.py`` (``synthese_narrative``), which
     # computes it from the state directly — a working reader, not this one.
     #
-    # Anti-pendule: do NOT reintroduce it as "evidence the prompt might use one
-    # day". A flag that changes no verdict is not a reader (#1019). If Acte III
-    # should ever *use the synthesis content*, that is a different gesture —
-    # passing the text, not a boolean — and it needs its own issue.
+    # #1911 is "its own issue" below — and it took the third branch neither
+    # dead end anticipated: not the text, not a boolean, but the bounded
+    # STRUCTURED projection (convergences + value gates), derived from
+    # lower-level state so every claim stays traceable.
+    global_findings = project_global_findings(state)
 
     # SV (#1182): surface governance verdict + debate exchanges (debranched
     # capabilities — same fix shape as G6 for counter-arg validity).
@@ -1607,6 +1615,7 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         claim_excerpts=claim_excerpts,
         absent_dimensions=_collect_absent_dimensions(state),
         structured_findings=_collect_structured_arg_findings(state),
+        global_findings=global_findings,
     )
 
 
@@ -1889,6 +1898,20 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             "exploitable sur ce corpus — ne fabrique aucun résultat formel)"
         )
 
+    # #1911 — the global synthesis's structured findings. Empty section and
+    # missing section read the same to the LLM, so this renders in both states
+    # like the presence/absence blocks above.
+    if evidence.global_findings:
+        global_block = "\n".join(
+            f"  - [{f.kind}] {f.statement} (ancres : {', '.join(f.cites)})"
+            for f in evidence.global_findings
+        )
+    else:
+        global_block = (
+            "  (aucune convergence inter-axes ni gate de synthèse ne se dégage "
+            "— n'en fabrique aucune)"
+        )
+
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
     return (
@@ -1921,6 +1944,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[POINTS DE PRUDENCE — ancrages structurels]\n{target_lines}\n\n"
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
         f"[CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT]\n{presence_block}\n\n"
+        f"[CONVERGENCES GLOBALES — synthèse inter-axes, ancrées]\n{global_block}\n\n"
         f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
@@ -1956,6 +1980,13 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  la nommer par son formalisme et sans en faire un titre. Si le bloc dit\n"
         "  qu'aucun cadre n'a rien établi, n'invente aucun résultat formel : cette\n"
         "  absence-là se tait, elle relève du bloc suivant.\n"
+        "- Si le bloc CONVERGENCES GLOBALES porte des convergences, SERS-T'EN\n"
+        "  comme DEGRÉ DE CONFIANCE du verdict dans le deuxième battement :\n"
+        "  quand plusieurs méthodes indépendantes s'accordent sur un même\n"
+        "  argument, dis-le au lecteur en français courant (ce qui frappe, c'est\n"
+        "  que tout converge vers le même point faible) — sans énumérer les\n"
+        "  méthodes par leur nom technique. Si le bloc dit qu'aucune convergence\n"
+        "  ne se dégage, n'invente aucune unanimité.\n"
         "- Si le bloc DIMENSIONS NON ÉVALUÉES en liste, DIS-LE au lecteur dans le\n"
         "  troisième battement, en une phrase et en français courant : quel angle\n"
         "  d'analyse n'a pas abouti sur ce texte, et donc ce que ce verdict ne\n"

@@ -111,6 +111,7 @@ def _full_state() -> Dict[str, Any]:
         "narrative_synthesis": "synthèse",
         "final_conclusion": "conclusion",
         "formal_synthesis_reports": [{"axis": "fol"}],
+        "workflow_results": {"deep_synthesis_value_gates": {"VG1": True}},
     }
 
 
@@ -121,6 +122,10 @@ _PROSE_MODULES = (
     "act1_framing_plugin.py",
     "act2_narrative_plugin.py",
     "act3_conclusion_plugin.py",
+    # #1911 — the global-projection helper is a prose module: it reads state to
+    # feed the acts' conducted prompts, so its ``getattr(state, ...)`` calls
+    # belong to the prose reading surface the sweep measures.
+    "global_projection.py",
 )
 
 
@@ -193,6 +198,11 @@ PROSE_BASELINE = frozenset(
         "source_metadata",
         "stakes_and_stakeholders",
         "structured_arg_status",
+        # #1911 — ``global_projection.py`` reads the bag that carries the
+        # deep-synthesis value gates; the key left ANNEXE_ONLY for the
+        # intersection. The ``synthese_globale`` appendix row attests the
+        # channel, while the bag itself keeps no count row of its own.
+        "workflow_results",
     }
 )
 
@@ -218,7 +228,9 @@ ANNEXE_ONLY = frozenset(
         "final_conclusion",
         "formal_synthesis_reports",
         "narrative_synthesis",
-        "workflow_results",
+        # ``workflow_results`` left this set in #1911: the global projection
+        # (a prose module) reads the bag for the deep-synthesis value gates,
+        # moving the key to the intersection (PROSE_BASELINE ∩ _STATE_KEYS).
     }
 )
 

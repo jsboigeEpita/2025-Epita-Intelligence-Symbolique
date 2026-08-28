@@ -82,6 +82,17 @@ _MOBILISATION: Dict[str, tuple] = {
     "arg_structuree": (("structured_arg_status",), "failure_only", "acte III"),
     "synthese_narrative": (("narrative_synthesis", "final_conclusion"), "none", ""),
     "synthese_formelle": (("formal_synthesis_reports",), "none", ""),
+    # #1911 — the synthesis axis's STRUCTURED channel. The acts consume a
+    # bounded projection (cross-axis convergences + deep-synthesis value
+    # gates) built by ``global_projection.py`` from lower-level state and
+    # ``workflow_results``; the synthesis PROSE stays unmobilised (the two
+    # rows above remain honest). Presence keys on the bag that carries the
+    # gates when the deep-synthesis phase ran.
+    "synthese_globale": (
+        ("workflow_results",),
+        "prose",
+        "actes II–III (convergences + gates structurées, pas la prose)",
+    ),
 }
 
 _MOBILISATION_LABEL = {
@@ -387,6 +398,16 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     )
     counts["synthese_formelle"] = (
         "présente" if _g("formal_synthesis_reports") else "absente"
+    )
+    # #1911 — the structured channel attests by its ledger, not by the bag:
+    # the row is "présente" when the deep synthesis left its value gates
+    # (the generic workflow_results bag itself is always populated and would
+    # make the column vacuous).
+    workflow = _g("workflow_results")
+    counts["synthese_globale"] = (
+        "présente"
+        if isinstance(workflow, dict) and workflow.get("deep_synthesis_value_gates")
+        else "absente"
     )
     return counts
 
