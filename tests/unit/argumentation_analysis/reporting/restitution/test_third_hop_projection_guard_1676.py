@@ -129,7 +129,15 @@ def _full_state() -> Dict[str, Any]:
 # reads it: a generic bag of phase/workflow results with no informative count.
 # Other surfaces read it (html_report durations, multi_format_exporter); the
 # restitution does not.
-_UNRENDERED = frozenset({"source_metadata", "workflow_results"})
+_UNRENDERED = frozenset(
+    {
+        "source_metadata",
+        # ``workflow_results`` left this set in #1911: the ``synthese_globale``
+        # row now renders it (attested by its value-gates ledger, not by the
+        # bag's generic content — the #1676 "a count of a bag informs nobody"
+        # objection is answered by keying presence on the gates dict).
+    }
+)
 
 
 def _rendered_keys() -> set[str]:

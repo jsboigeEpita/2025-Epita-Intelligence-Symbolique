@@ -42,6 +42,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     rejected_from_framework,
     select_primary_native,
 )
+from .global_projection import GlobalFinding, project_global_findings
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -304,6 +305,10 @@ class Act2Evidence:
     # Epic #1258 / Track 1 #1259 — when True, build_act2_prompt DROPS the
     # opaque-ID directive so the readable restitution names the real argument.
     deanonymized: bool = True
+    # #1911 — the global synthesis channel: bounded structured findings
+    # (cross-axis convergences + deep-synthesis value gates), each citing its
+    # anchors. The narrative weighs them as confidence, never as inventory.
+    global_findings: List[GlobalFinding] = field(default_factory=list)
 
 
 @dataclass
@@ -625,6 +630,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         governance_verdict=governance_verdict,
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
+        global_findings=project_global_findings(state),
     )
 
 
@@ -1181,6 +1187,20 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
+    # #1911 — the global synthesis channel; renders in both states so a silence
+    # is never read as a verdict.
+    global_block = (
+        "\n".join(
+            f"  - [{f.kind}] {f.statement} (ancres : {', '.join(f.cites)})"
+            for f in evidence.global_findings
+        )
+        if evidence.global_findings
+        else (
+            "  (aucune convergence inter-axes ni gate de synthèse ne se dégage "
+            "— n'en fabrique aucune)"
+        )
+    )
+
     return (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
@@ -1197,6 +1217,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"le verdict de gouvernance ou un échange de débat peut appuyer un "
         f"battement, jamais une sous-section isolée) :\n"
         f"{deliberation_block}\n\n"
+        f"CONVERGENCES GLOBALES (synthèse inter-axes, ancrées — à tisser comme "
+        f"DEGRÉ DE CONFIANCE d'un battement : quand plusieurs méthodes "
+        f"indépendantes s'accordent sur un même argument, le récit le pèse en "
+        f"français courant, sans énumérer les méthodes par leur nom technique) :\n"
+        f"{global_block}\n\n"
         f"{quality_note}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Pour chaque mouvement, écris un paragraphe qui tisse en UN battement : "

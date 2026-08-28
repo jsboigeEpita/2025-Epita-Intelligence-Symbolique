@@ -78,10 +78,12 @@ _STATE_KEYS = (
     # export boundary (``sanitize_state._OPAQUE_DICT_VALUES``), and carrying the
     # key here keeps the opt-in dump traceable without surfacing content.
     "source_metadata",
-    # #1676 decision: NO annexe row. Distinct case — neither the prose nor any
-    # annexe line reads it: a generic bag of phase/workflow results (and
-    # value-gate ledgers) with no informative count. Other surfaces read it
-    # (html_report durations, multi_format_exporter), the restitution does not.
+    # #1676 decision: NO annexe row of its own. Distinct case — a generic bag
+    # of phase/workflow results (and value-gate ledgers) with no informative
+    # count. #1911 changed the reading side: ``global_projection.py`` (a prose
+    # module) now reads it to surface the deep-synthesis value gates in the
+    # acts, so the key sits on BOTH surfaces — the ``synthese_globale`` row
+    # attests that channel while this key itself stays un-counted.
     "workflow_results",
 )
 
