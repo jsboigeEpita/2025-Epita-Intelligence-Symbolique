@@ -160,10 +160,11 @@ Architectural hardening landed across several epics. Entries below are verified 
 - **Status**: Stable — skip count remains low and consistent across runs
 - **Related**: #28, #30, #94, #112
 
-### gpt-5-mini Constraints
-- No `temperature` parameter (hardcoded to 1.0)
-- No `max_tokens` (use `max_completion_tokens`, but omit entirely via SK 1.37 to avoid empty responses)
-- **Related**: #22 (closed)
+### Reasoning-model API constraints (gpt-5*, o1*, o3* — includes gpt-5.6-luna)
+- No `temperature` parameter (hardcoded to 1.0). Enforced by prefix match: `_REASONING_MODEL_PREFIXES` (`orchestration/invoke_callables.py`) starts with `gpt-5`, so `gpt-5.6-luna` matches and `_get_determinism_params()` drops temperature/seed automatically (with a warning).
+- No `max_tokens` (use `max_completion_tokens`, but omit entirely via SK 1.37 to avoid empty responses). Live call sites: `watson_logic_assistant.py` (200), `sherlock_enquete_agent.py` (2000); the fact-extraction retry funnel drops the param if the endpoint rejects it.
+- The empty-response trap behind the omit guidance (#1929) came from reasoning tokens consuming the output budget first; luna spends none (measured, #1930), but the omit-in-SK practice above remains what the code does.
+- **Related**: #22 (closed), #1929, #1930
 
 ### CI test suite silently skipped — green badge misleading
 - **Symptom**: The `automated-tests` job is `success` (green) on every run, but runs **zero tests**. The README CI badge advertises a pipeline that does not, in fact, test.

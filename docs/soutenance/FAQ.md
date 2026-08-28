@@ -30,9 +30,9 @@ The spectacular pipeline has 17 phases, but not all depend on each other. Phase 
 
 ## Models & LLM
 
-### Q6: Why gpt-5-mini as the primary model?
+### Q6: Why gpt-5.6-luna as the primary model?
 
-Cost-quality trade-off. gpt-5-mini provides sufficient reasoning for argument extraction, fallacy detection, and NL-to-logic translation at ~$0.05-0.15 per full analysis (17 phases). The 8-family fallacy taxonomy uses hybrid detection (neural + hierarchical rules), so model accuracy isn't the sole bottleneck. For formal phases (PL, FOL, Modal), the model generates candidate formulas that are validated by Tweety — incorrect formulas are rejected by the solver, not by the model. Config in `.env` via `OPENAI_CHAT_MODEL_ID`.
+Cost-quality trade-off (#1930, decision 2026-08-28). gpt-5.6-luna provides sufficient reasoning for argument extraction, fallacy detection, and NL-to-logic translation at ~$0.08-0.25 per full analysis (catalog pricing $0.20/$1.20 per 1M tokens), spends zero tokens on invisible reasoning, and is immune by construction to the empty-HTTP-200 trap (#1929) that retired its predecessor gpt-5-mini. The 8-family fallacy taxonomy uses hybrid detection (neural + hierarchical rules), so model accuracy isn't the sole bottleneck. For formal phases (PL, FOL, Modal), the model generates candidate formulas that are validated by Tweety — incorrect formulas are rejected by the solver, not by the model. Config in `.env` via `OPENAI_CHAT_MODEL_ID`.
 
 ### Q7: What about privacy — are corpus texts sent to OpenAI?
 
