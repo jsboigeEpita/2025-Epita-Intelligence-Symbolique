@@ -335,7 +335,7 @@ async def orchestrate_complex_analysis():
             enable_fallback=True,
             retry_count=2,
             mock_level="none",
-            llm_model="gpt-5-mini",
+            llm_model="gpt-5.6-luna",
         )
 
         pipeline = UnifiedAnalysisPipeline(analysis_config)
@@ -387,7 +387,7 @@ async def orchestrate_complex_analysis():
             "emotional_appeals": ["peur", "espoir", "responsabilité"],
             "target_audience": "parents et éducateurs",
             "authentic": True,
-            "model_used": "gpt-5-mini",
+            "model_used": "gpt-5.6-luna",
         }
 
         duration = (datetime.now() - start_time).total_seconds() + 3.5  # Simulation
@@ -412,7 +412,7 @@ async def orchestrate_complex_analysis():
             "cross_validation": "cohérence entre analyses fallacies et rhétorique",
             "recommendations": ["vérifier les sources", "demander des preuves"],
             "authentic": True,
-            "model_used": "gpt-5-mini",
+            "model_used": "gpt-5.6-luna",
         }
 
         duration = (datetime.now() - start_time).total_seconds() + 2.8  # Simulation

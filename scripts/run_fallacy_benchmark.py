@@ -43,7 +43,7 @@ async def main():
 
     print("=" * 70)
     print("  Fallacy Detection Comparative Benchmark (#84 Phase 4)")
-    print(f"  Model: {os.environ.get('OPENAI_CHAT_MODEL_ID', 'gpt-5-mini')}")
+    print(f"  Model: {os.environ.get('OPENAI_CHAT_MODEL_ID', 'gpt-5.6-luna')}")
     print(f"  Cases: {len(BENCHMARK_CASES)}")
     print(f"  Modes: {', '.join(args.modes)}")
     print(f"  Concurrency: {args.parallel}")

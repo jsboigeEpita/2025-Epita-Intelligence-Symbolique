@@ -128,10 +128,10 @@ def _get_llm_client():
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
     use_openrouter = bool(openrouter_base_url and openrouter_api_key)
     if use_openrouter:
-        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
         client = OpenAI(api_key=openrouter_api_key, base_url=openrouter_base_url)
     else:
-        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
     return client, model
 

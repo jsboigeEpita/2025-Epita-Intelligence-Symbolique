@@ -152,7 +152,7 @@ def _get_llm_client():
     # Generous ceiling for reasoning-model calls on complex detector prompts.
     call_timeout = float(os.environ.get("FB38_CALL_TIMEOUT", "120"))
     if use_openrouter:
-        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
         client = OpenAI(
             api_key=openrouter_api_key,
             base_url=openrouter_base_url,
@@ -160,7 +160,7 @@ def _get_llm_client():
             max_retries=1,
         )
     else:
-        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         client = OpenAI(
             api_key=os.environ.get("OPENAI_API_KEY"),
             timeout=call_timeout,

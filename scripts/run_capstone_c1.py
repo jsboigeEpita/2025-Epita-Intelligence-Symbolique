@@ -280,11 +280,11 @@ async def run_zeroshot_baseline(corpus_label: str, text: str) -> Dict[str, Any]:
     use_openrouter = bool(openrouter_base_url and openrouter_api_key)
     if use_openrouter:
         api_key = openrouter_api_key
-        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
+        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
         client = OpenAI(api_key=api_key, base_url=openrouter_base_url)
     else:
         api_key = os.environ.get("OPENAI_API_KEY")
-        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
         client = OpenAI(api_key=api_key)  # reads OPENAI_API_KEY from env
 
     prompt = ZEROSHOT_PROMPT.format(text=text[:8000])  # Limit text for baseline (token budget)

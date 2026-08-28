@@ -542,7 +542,7 @@ class FallacyBenchmarkRunner:
 
         api_key = os.environ.get("OPENAI_API_KEY", "")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
         client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         response = await client.chat.completions.create(
@@ -572,7 +572,7 @@ class FallacyBenchmarkRunner:
 
         api_key = os.environ.get("OPENAI_API_KEY", "")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
         # Build compact taxonomy reference
         taxonomy_ref = []
@@ -622,7 +622,7 @@ class FallacyBenchmarkRunner:
 
         api_key = os.environ.get("OPENAI_API_KEY", "")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
         async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
         llm_service = OpenAIChatCompletion(

@@ -149,7 +149,7 @@ async def run_mode_a_raw(text: str) -> Dict[str, Any]:
         api_key=os.environ.get("OPENAI_API_KEY", ""),
         base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
     )
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
     start = time.time()
     resp = await client.chat.completions.create(
         model=model,
@@ -171,7 +171,7 @@ async def run_mode_b_taxonomy_fc(text: str, taxonomy_data: list) -> Dict[str, An
         api_key=os.environ.get("OPENAI_API_KEY", ""),
         base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
     )
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
     taxonomy_summary = []
     for node in taxonomy_data:
@@ -214,7 +214,7 @@ async def run_mode_c_subworkflow(text: str, taxonomy_data: list) -> Dict[str, An
 
     api_key = os.environ.get("OPENAI_API_KEY", "")
     base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
     async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     llm_service = OpenAIChatCompletion(ai_model_id=model_id, async_client=async_client)

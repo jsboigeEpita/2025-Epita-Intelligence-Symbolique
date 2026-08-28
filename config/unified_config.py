@@ -12,7 +12,7 @@ Ce module centralise tous les paramètres configurables pour permettre :
 - Source d'analyse (Simple/Encrypted/File)
 - Validation d'authenticité 100%
 
-Objectif : Système authentique par défaut avec gpt-5-mini et OpenAI.
+Objectif : Système authentique par défaut avec gpt-5.6-luna et OpenAI.
 TOUT EST CONFIGURÉ POUR L'AUTHENTICITÉ : Aucun mock par défaut.
 """
 
@@ -110,7 +110,7 @@ class UnifiedConfig:
     )
 
     # === Configuration LLM/Provider (AUTHENTICITÉ PAR DÉFAUT) ===
-    default_model: str = "gpt-5-mini"  # Modèle OpenAI par défaut - AUTHENTIQUE
+    default_model: str = "gpt-5.6-luna"  # Modèle OpenAI par défaut - AUTHENTIQUE
     default_provider: str = "openai"  # Provider OpenAI par défaut - AUTHENTIQUE
     use_mock_llm: bool = False  # Désactivé par défaut - AUTHENTICITÉ
     use_authentic_llm: bool = True  # Activé par défaut - AUTHENTICITÉ
@@ -225,7 +225,7 @@ class UnifiedConfig:
             self.use_authentic_llm = True
             self.use_mock_services = False
             self.use_authentic_services = True
-            self.default_model = "gpt-5-mini"
+            self.default_model = "gpt-5.6-luna"
             self.default_provider = "openai"
 
     def get_agent_classes(self) -> Dict[str, str]:
@@ -316,7 +316,7 @@ class UnifiedConfig:
         model_to_use = self.default_model
 
         llm_service = create_llm_service(
-            service_id="gpt-5-mini-authentic",
+            service_id="gpt-5.6-luna-authentic",
             model_id=self.default_model,
             force_authentic=force_authentic,
             force_mock=not force_authentic and self.mock_level != MockLevel.NONE,
@@ -395,7 +395,7 @@ class PresetConfigs:
             require_real_gpt=True,
             require_real_tweety=True,
             require_full_taxonomy=True,
-            default_model="gpt-5-mini",
+            default_model="gpt-5.6-luna",
             default_provider="openai",
             use_mock_llm=False,
             use_authentic_llm=True,
@@ -410,7 +410,7 @@ class PresetConfigs:
             orchestration_type=OrchestrationType.UNIFIED,
             mock_level=MockLevel.NONE,
             taxonomy_size=TaxonomySize.FULL,
-            default_model="gpt-5-mini",
+            default_model="gpt-5.6-luna",
             default_provider="openai",
             use_mock_llm=False,
             use_authentic_llm=True,
@@ -467,7 +467,7 @@ def load_config_from_env() -> UnifiedConfig:
     if mock_level := os.getenv("UNIFIED_MOCK_LEVEL"):
         config.mock_level = MockLevel(mock_level)
 
-    config.default_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    config.default_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
     config.default_provider = os.getenv("UNIFIED_DEFAULT_PROVIDER", "openai")
 
     config.require_real_gpt = (
@@ -507,9 +507,9 @@ def validate_config(config: UnifiedConfig) -> List[str]:
             "use_mock_services et use_authentic_services ne peuvent pas être tous les deux True"
         )
 
-    if config.default_model != "gpt-5-mini":
+    if config.default_model != "gpt-5.6-luna":
         errors.append(
-            f"default_model devrait être 'gpt-5-mini' pour l'authenticité, trouvé: {config.default_model}"
+            f"default_model devrait être 'gpt-5.6-luna' pour l'authenticité, trouvé: {config.default_model}"
         )
 
     if config.default_provider != "openai":

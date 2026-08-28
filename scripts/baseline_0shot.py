@@ -118,7 +118,7 @@ def call_llm(prompt: str) -> str:
     client = openai.OpenAI(
         api_key=os.environ["OPENAI_API_KEY"],
     )
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],

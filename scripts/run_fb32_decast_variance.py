@@ -23,7 +23,7 @@ Three modes:
 
 Anti-pendule HARD (#1109): variance IS the feature. We do NOT set
 ``LLM_DETERMINISTIC_MODE`` (the default suppresses temperature/seed, so
-gpt-5-mini's sampling variance is active). No prose-freezing test. No synthetic
+gpt-5.6-luna's sampling variance is active). No prose-freezing test. No synthetic
 fallback on LLM error — fail-loud.
 
 Privacy HARD: corpus loaded in-memory from the encrypted blob via the dataset
@@ -376,8 +376,8 @@ def _get_llm_client():
     base = os.environ.get("OPENROUTER_BASE_URL")
     key = os.environ.get("OPENROUTER_API_KEY")
     if base and key:
-        return OpenAI(api_key=key, base_url=base), os.environ.get("OPENROUTER_CHAT_MODEL_ID", "gpt-5-mini")
-    return OpenAI(api_key=os.environ.get("OPENAI_API_KEY")), os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        return OpenAI(api_key=key, base_url=base), os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
+    return OpenAI(api_key=os.environ.get("OPENAI_API_KEY")), os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
 
 def _snap(val):

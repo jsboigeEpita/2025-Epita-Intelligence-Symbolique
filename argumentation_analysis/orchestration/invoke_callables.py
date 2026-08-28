@@ -191,9 +191,9 @@ def _resolve_model_id() -> str:
     if openrouter_base_url and openrouter_api_key:
         return os.environ.get(
             "OPENROUTER_CHAT_MODEL_ID",
-            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini"),
+            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
         )
-    return os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+    return os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
 
 def _is_reasoning_model(model_id: str) -> bool:
@@ -269,12 +269,12 @@ def _get_openai_client() -> Tuple[Any, str]:
         base_url = openrouter_base_url
         model_id = os.environ.get(
             "OPENROUTER_CHAT_MODEL_ID",
-            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini"),
+            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
         )
     else:
         api_key = os.environ.get("OPENAI_API_KEY", "")
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
+        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
 
     if not api_key:
         return None, ""

@@ -34,7 +34,7 @@ conda run -n projet-is-roo-new --no-capture-output <command>
 Copy `.env.example` to `.env`. Primary LLM access is through OpenAI:
 ```
 OPENAI_API_KEY=sk-...
-OPENAI_CHAT_MODEL_ID=gpt-5-mini
+OPENAI_CHAT_MODEL_ID=gpt-5.6-luna
 ```
 
 OpenRouter is also supported as an alternative:

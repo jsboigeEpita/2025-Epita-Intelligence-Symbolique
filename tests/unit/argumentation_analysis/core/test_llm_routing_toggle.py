@@ -33,13 +33,13 @@ class TestResolveChatEndpoint:
         env = {
             "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
             "OPENROUTER_API_KEY": "sk-or-test",
-            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-5-mini",
+            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-4o",
         }
         with patch.dict("os.environ", env, clear=True):
             api_key, base_url, model_id = resolve_chat_endpoint()
         assert api_key == "sk-or-test"
         assert base_url == "https://openrouter.ai/api/v1"
-        assert model_id == "openai/gpt-5-mini"
+        assert model_id == "openai/gpt-4o"
 
     def test_openrouter_model_falls_back_to_openai_chat_model(self):
         from argumentation_analysis.core.llm_service import resolve_chat_endpoint
@@ -47,21 +47,21 @@ class TestResolveChatEndpoint:
         env = {
             "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
             "OPENROUTER_API_KEY": "sk-or-test",
-            "OPENAI_CHAT_MODEL_ID": "gpt-5-mini",
+            "OPENAI_CHAT_MODEL_ID": "gpt-4o",
         }
         with patch.dict("os.environ", env, clear=True):
             _, _, model_id = resolve_chat_endpoint()
-        assert model_id == "gpt-5-mini"
+        assert model_id == "gpt-4o"
 
     def test_no_openrouter_falls_back_to_openai_official(self):
         from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
-        env = {"OPENAI_API_KEY": "sk-test", "OPENAI_CHAT_MODEL_ID": "gpt-5-mini"}
+        env = {"OPENAI_API_KEY": "sk-test", "OPENAI_CHAT_MODEL_ID": "gpt-4o"}
         with patch.dict("os.environ", env, clear=True):
             api_key, base_url, model_id = resolve_chat_endpoint()
         assert api_key == "sk-test"
         assert base_url == "https://api.openai.com/v1"
-        assert model_id == "gpt-5-mini"
+        assert model_id == "gpt-4o"
 
     def test_no_key_returns_empty(self):
         from argumentation_analysis.core.llm_service import resolve_chat_endpoint
@@ -70,7 +70,7 @@ class TestResolveChatEndpoint:
             api_key, base_url, model_id = resolve_chat_endpoint()
         assert api_key == ""
         assert base_url == "https://api.openai.com/v1"
-        assert model_id == "gpt-5-mini"  # default
+        assert model_id == "gpt-5.6-luna"  # default (#1930)
 
     def test_partial_openrouter_falls_back_to_openai(self):
         """Key without base_url (or vice-versa) must NOT enable the toggle."""
@@ -88,6 +88,58 @@ class TestResolveChatEndpoint:
 # ---------------------------------------------------------------------------
 # 2. Production sites route the resolved base_url into their client
 # ---------------------------------------------------------------------------
+
+
+class TestObsoleteModelSubstitution:
+    """#1930: a retired model id never survives resolution, whatever its source.
+
+    gpt-5-mini burns ~81% of its tokens on invisible reasoning (11x luna's
+    cost per delivered task) and falls into the #1929 trap (empty content
+    with HTTP 200 under tight output budgets). Retirement means resolution
+    substitutes it -- env vars included -- while non-obsolete ids round-trip
+    untouched (guarded by TestResolveChatEndpoint above).
+    """
+
+    def test_env_mini_is_substituted_on_openai_branch(self):
+        from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+        env = {"OPENAI_API_KEY": "sk-test", "OPENAI_CHAT_MODEL_ID": "gpt-5-mini"}
+        with patch.dict("os.environ", env, clear=True):
+            _, _, model_id = resolve_chat_endpoint()
+        assert model_id == "gpt-5.6-luna"
+
+    def test_env_prefixed_mini_is_substituted_on_openrouter_branch(self):
+        from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+        env = {
+            "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+            "OPENROUTER_API_KEY": "sk-or-test",
+            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-5-mini",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            _, _, model_id = resolve_chat_endpoint()
+        assert model_id == "openai/gpt-5.6-luna"
+
+    def test_legacy_gpt4_32k_still_substituted(self):
+        from argumentation_analysis.core.llm_service import substitute_obsolete_model
+
+        assert substitute_obsolete_model("gpt-4-32k") == "gpt-5.6-luna"
+
+    def test_non_obsolete_model_passes_through(self):
+        from argumentation_analysis.core.llm_service import substitute_obsolete_model
+
+        assert substitute_obsolete_model("gpt-4o") == "gpt-4o"
+        assert substitute_obsolete_model("openai/gpt-5.6-sol") == "openai/gpt-5.6-sol"
+
+    def test_substitution_warns_with_the_env_line_to_fix(self, caplog):
+        import logging
+        from argumentation_analysis.core.llm_service import substitute_obsolete_model
+
+        with caplog.at_level(logging.WARNING, logger="Orchestration.LLM"):
+            substitute_obsolete_model("gpt-5-mini", "OPENROUTER_CHAT_MODEL_ID")
+        assert any(
+            "OPENROUTER_CHAT_MODEL_ID=gpt-5.6-luna" in r.message for r in caplog.records
+        )
 
 
 class TestSitesConsultToggle:
@@ -113,7 +165,7 @@ class TestSitesConsultToggle:
         env = {
             "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
             "OPENROUTER_API_KEY": "sk-or-test",
-            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-5-mini",
+            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-4o",
         }
         with patch.dict("os.environ", env, clear=True), patch(
             "openai.AsyncOpenAI", side_effect=_FakeClient
@@ -129,14 +181,14 @@ class TestSitesConsultToggle:
         env = {
             "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
             "OPENROUTER_API_KEY": "sk-or-test",
-            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-5-mini",
+            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-4o",
         }
         with patch.dict("os.environ", env, clear=True):
             router = TextAnalysisRouter()
         # __init__ must derive the endpoint from the toggle.
         assert router._api_key == "sk-or-test"
         assert router._base_url == "https://openrouter.ai/api/v1"
-        assert router._model == "openai/gpt-5-mini"
+        assert router._model == "openai/gpt-4o"
 
     async def test_french_fallacy_adapter_get_client_uses_toggle(self):
         from argumentation_analysis.adapters.french_fallacy_adapter import (
@@ -152,7 +204,7 @@ class TestSitesConsultToggle:
         env = {
             "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
             "OPENROUTER_API_KEY": "sk-or-test",
-            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-5-mini",
+            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-4o",
         }
         with patch.dict("os.environ", env, clear=True), patch(
             "openai.AsyncOpenAI", side_effect=_FakeAsyncOpenAI
@@ -160,7 +212,7 @@ class TestSitesConsultToggle:
             client, model = LLMFallacyDetector()._get_openai_client()
         assert client is not None
         assert captured.get("base_url") == "https://openrouter.ai/api/v1"
-        assert model == "openai/gpt-5-mini"
+        assert model == "openai/gpt-4o"
 
     async def test_judge_routes_through_toggle(self):
         from argumentation_analysis.evaluation.judge import LLMJudge
@@ -184,7 +236,7 @@ class TestSitesConsultToggle:
         env = {
             "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
             "OPENROUTER_API_KEY": "sk-or-test",
-            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-5-mini",
+            "OPENROUTER_CHAT_MODEL_ID": "openai/gpt-4o",
         }
         with patch.dict("os.environ", env, clear=True), patch(
             "openai.AsyncOpenAI", side_effect=_FakeClient

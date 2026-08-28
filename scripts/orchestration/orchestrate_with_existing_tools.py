@@ -187,7 +187,7 @@ async def orchestrate_with_existing_tools():
             enable_fallback=True,
             retry_count=1,
             mock_level="none",
-            llm_model="gpt-5-mini",
+            llm_model="gpt-5.6-luna",
         )
 
         pipeline = UnifiedAnalysisPipeline(analysis_config)

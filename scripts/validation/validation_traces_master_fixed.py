@@ -126,7 +126,7 @@ class MasterTraceValidator:
 
         return validation_results
 
-    def create_kernel(self, model_name: str = "gpt-5-mini") -> Kernel:
+    def create_kernel(self, model_name: str = "gpt-5.6-luna") -> Kernel:
         """Création du kernel Semantic Kernel avec service OpenAI."""
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
@@ -266,7 +266,7 @@ class MasterTraceValidator:
                     "start_time": start_time.isoformat(),
                     "end_time": end_time.isoformat(),
                     "duration_seconds": duration,
-                    "model_used": "gpt-5-mini",
+                    "model_used": "gpt-5.6-luna",
                 },
                 "input": {"case_description": case_description},
                 "conversation_history": final_history,
@@ -374,7 +374,7 @@ class MasterTraceValidator:
                     "start_time": start_time.isoformat(),
                     "end_time": end_time.isoformat(),
                     "duration_seconds": duration,
-                    "model_used": "gpt-5-mini",
+                    "model_used": "gpt-5.6-luna",
                 },
                 "input": {"case_description": case_description},
                 "execution_results": resultats,
