@@ -54,7 +54,7 @@ uvicorn api.main:app --reload --port 8000
 
 | Variable | Type | Default | Source |
 |---|---|---|---|
-| `OPENAI_CHAT_MODEL_ID` | str | `gpt-5-mini` | `settings.py:12` |
+| `OPENAI_CHAT_MODEL_ID` | str | `gpt-5.6-luna` | `settings.py:12` |
 | `OPENAI_BASE_URL` | str | None | `settings.py:13` |
 | `GLOBAL_LLM_SERVICE` | str | `OpenAI` | `.env.example:6` |
 | `OPENROUTER_API_KEY` | str | None | `.env.example:36` — alternative provider |

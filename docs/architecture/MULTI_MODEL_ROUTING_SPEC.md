@@ -40,9 +40,9 @@ All LLM calls in the spectacular pipeline funnel through two functions in `invok
 **Current model resolution** (`_resolve_model_id()`):
 ```
 If OPENROUTER_BASE_URL + OPENROUTER_API_KEY set:
-    model = OPENROUTER_CHAT_MODEL_ID || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+    model = OPENROUTER_CHAT_MODEL_ID || OPENAI_CHAT_MODEL_ID || "gpt-5.6-luna"
 Else:
-    model = OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+    model = OPENAI_CHAT_MODEL_ID || "gpt-5.6-luna"
 ```
 
 **Key constraint**: `_resolve_model_id()` returns a **single** model id. Every phase in the pipeline uses this same model.
@@ -65,8 +65,8 @@ Introduce a **tier** abstraction over model ids:
 
 | Tier | Purpose | Default resolution | Example models |
 |------|---------|-------------------|----------------|
-| `cheap` | Mechanical phases (extraction, parsing, NL-to-logic) | Falls back to `OPENAI_CHAT_MODEL_ID` | `gpt-5-mini`, `gpt-4.1-mini` |
-| `strong` | Reasoning-heavy phases (synthesis, debate, governance) | Falls back to `OPENAI_CHAT_MODEL_ID` | `gpt-5-mini`, `gpt-4.1`, `o3-mini` |
+| `cheap` | Mechanical phases (extraction, parsing, NL-to-logic) | Falls back to `OPENAI_CHAT_MODEL_ID` | `gpt-5.6-luna`, `gpt-4.1-mini` |
+| `strong` | Reasoning-heavy phases (synthesis, debate, governance) | Falls back to `OPENAI_CHAT_MODEL_ID` | `gpt-5.6-luna`, `gpt-4.1`, `o3-mini` |
 
 **Default behaviour**: Both tiers resolve to `OPENAI_CHAT_MODEL_ID`. This means **zero breaking change** — if the user doesn't configure tier overrides, every phase uses the same model as today.
 
@@ -74,24 +74,24 @@ Introduce a **tier** abstraction over model ids:
 
 ```bash
 # Existing (unchanged):
-OPENAI_CHAT_MODEL_ID=gpt-5-mini          # Default model for all tiers
+OPENAI_CHAT_MODEL_ID=gpt-5.6-luna          # Default model for all tiers
 OPENAI_API_KEY=<key>
 
 # New (optional, both default to OPENAI_CHAT_MODEL_ID):
-LLM_MODEL_CHEAP=gpt-5-mini               # Model for "cheap" tier phases
-LLM_MODEL_STRONG=gpt-5-mini              # Model for "strong" tier phases
+LLM_MODEL_CHEAP=gpt-5.6-luna               # Model for "cheap" tier phases
+LLM_MODEL_STRONG=gpt-5.6-luna              # Model for "strong" tier phases
 ```
 
 **Resolution priority** (OpenAI path):
 ```
-cheap model  = LLM_MODEL_CHEAP  || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
-strong model = LLM_MODEL_STRONG || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+cheap model  = LLM_MODEL_CHEAP  || OPENAI_CHAT_MODEL_ID || "gpt-5.6-luna"
+strong model = LLM_MODEL_STRONG || OPENAI_CHAT_MODEL_ID || "gpt-5.6-luna"
 ```
 
 **Resolution priority** (OpenRouter path — mirrors existing `_resolve_model_id()` precedence):
 ```
-cheap model  = OPENROUTER_MODEL_CHEAP  || OPENROUTER_CHAT_MODEL_ID || LLM_MODEL_CHEAP  || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
-strong model = OPENROUTER_MODEL_STRONG || OPENROUTER_CHAT_MODEL_ID || LLM_MODEL_STRONG || OPENAI_CHAT_MODEL_ID || "gpt-5-mini"
+cheap model  = OPENROUTER_MODEL_CHEAP  || OPENROUTER_CHAT_MODEL_ID || LLM_MODEL_CHEAP  || OPENAI_CHAT_MODEL_ID || "gpt-5.6-luna"
+strong model = OPENROUTER_MODEL_STRONG || OPENROUTER_CHAT_MODEL_ID || LLM_MODEL_STRONG || OPENAI_CHAT_MODEL_ID || "gpt-5.6-luna"
 ```
 
 > **Design rationale (Concern 3)**: The OpenRouter chain preserves the existing invariant that `OPENROUTER_CHAT_MODEL_ID` takes priority over `OPENAI_CHAT_MODEL_ID` when on the OpenRouter provider. The new `OPENROUTER_MODEL_CHEAP`/`OPENROUTER_MODEL_STRONG` vars sit above `OPENROUTER_CHAT_MODEL_ID` (per-provider overrides), while `LLM_MODEL_CHEAP`/`LLM_MODEL_STRONG` sit below (provider-agnostic fallbacks). This avoids the v1 asymmetry where `LLM_MODEL_CHEAP` would have silently overridden a user's `OPENROUTER_CHAT_MODEL_ID`.
@@ -242,7 +242,7 @@ def _get_determinism_params(model_id: str = None) -> Dict[str, Any]:
 
 ### 3.2 Integration Test
 
-A fixture pipeline run with `LLM_MODEL_CHEAP=gpt-5-mini` and `LLM_MODEL_STRONG=gpt-5-mini` (both same, to avoid actual cost) that verifies:
+A fixture pipeline run with `LLM_MODEL_CHEAP=gpt-5.6-luna` and `LLM_MODEL_STRONG=gpt-5.6-luna` (both same, to avoid actual cost) that verifies:
 - Each phase logs its resolved model id
 - The log shows tier labels per phase
 - Output is identical to current single-model run (behavioural parity)
@@ -253,21 +253,21 @@ A fixture pipeline run with `LLM_MODEL_CHEAP=gpt-5-mini` and `LLM_MODEL_STRONG=g
 
 ### 4.1 Current (all-strong)
 
-Assuming `gpt-5-mini` at ~$0.15/1M input tokens, ~$0.60/1M output tokens:
+Assuming `gpt-5.6-luna` at ~$0.20/1M input tokens, ~$1.20/1M output tokens (catalog pricing, #1930):
 - Spectacular pipeline: ~20-29 LLM calls per run
-- Estimated cost per run: ~$0.05-0.15
+- Estimated cost per run: ~$0.08-0.25
 
 ### 4.2 With Tiered Routing (estimation conceptuelle)
 
 > **Note (Concern 2)**: The following savings estimate uses real token-pricing ratios rather than an arbitrary 0.1 weight. It is still an estimation conceptuelle — actual savings depend on prompt/output token distribution per phase, which varies by source text.
 
-Cheap tier could use `gpt-4.1-mini` at ~$0.10/1M input tokens (~33% cheaper than `gpt-5-mini`):
-- 19 cheap phases × ~0.67× cost + 10 strong phases × 1.0× cost
-- Estimated effective cost: (19 × 0.67 + 10 × 1.0) / 29 ≈ **0.77× current** (~23% reduction)
-- With more aggressively cheaper models (e.g. `gpt-4.1-mini` at half the token cost of `gpt-5-mini`): ~33% reduction
+Cheap tier could use `gpt-4.1-mini` at ~$0.10/1M input tokens (half of `gpt-5.6-luna`'s input price):
+
+- 19 cheap phases × ~0.5× cost + 10 strong phases × 1.0× cost
+- Estimated effective cost: (19 × 0.5 + 10 × 1.0) / 29 ≈ **0.67× current** (~33% reduction)
 - Meaningful at scale (100+ runs for benchmarking, Phase 4 corpus_A/B/C × variations)
 
-> The v1 projection of "56% reduction" used a conceptual weight of 0.1 for cheap phases, which implied a 10× cost difference between tiers. Actual tier differences for OpenAI models are typically 1.5-3×, not 10×. The revised estimate of 23-33% is more realistic.
+> The v1 projection of "56% reduction" used a conceptual weight of 0.1 for cheap phases, which implied a 10× cost difference between tiers. Actual tier differences for OpenAI models are typically 1.5-3×, not 10×. The revised estimate of ~33% is more realistic.
 
 ### 4.3 Break-Even
 
