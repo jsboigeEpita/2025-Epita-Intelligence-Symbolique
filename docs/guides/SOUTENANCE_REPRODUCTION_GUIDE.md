@@ -23,7 +23,7 @@ Copy `.env.example` to `.env` and fill in:
 
 ```ini
 OPENAI_API_KEY=sk-...           # Required: OpenAI API access
-OPENAI_CHAT_MODEL_ID=gpt-5-mini # Required: pipeline standard model
+OPENAI_CHAT_MODEL_ID=gpt-5.6-luna # Required: pipeline standard model
 TEXT_CONFIG_PASSPHRASE=...      # Required: dataset decryption
 GH_TOKEN=...                    # Optional: GitHub CLI access
 ```

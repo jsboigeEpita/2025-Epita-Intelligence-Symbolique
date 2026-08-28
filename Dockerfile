@@ -55,7 +55,7 @@ COPY pyproject.toml pytest.ini ./
 COPY libs/ libs/
 
 # Placeholder .env (API keys injected at runtime)
-RUN printf "# API keys — inject via docker compose env-file or -e\nOPENAI_API_KEY=\nOPENAI_CHAT_MODEL_ID=gpt-5-mini\n" > .env
+RUN printf "# API keys — inject via docker compose env-file or -e\nOPENAI_API_KEY=\nOPENAI_CHAT_MODEL_ID=gpt-5.6-luna\n" > .env
 
 EXPOSE 8000
 

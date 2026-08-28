@@ -21,7 +21,7 @@ Setup and configuration for the evaluation framework.
 # OpenAI-compatible API configuration
 OPENAI_API_KEY=sk-...
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_CHAT_MODEL_ID=gpt-5-mini
+OPENAI_CHAT_MODEL_ID=gpt-5.6-luna
 
 # Alternative: OpenRouter
 OPENROUTER_API_KEY=sk-or-...
@@ -57,7 +57,7 @@ Example `.env` file:
 # OpenAI (default provider)
 OPENAI_API_KEY=sk-proj-your-key-here
 OPENAI_BASE_URL=https://api.openai.com/v1
-OPENAI_CHAT_MODEL_ID=gpt-5-mini
+OPENAI_CHAT_MODEL_ID=gpt-5.6-luna
 
 # Alternative: OpenRouter
 # OPENROUTER_API_KEY=sk-or-your-key-here
@@ -98,7 +98,7 @@ from argumentation_analysis.evaluation.model_registry import ModelRegistry, Mode
 
 # Create registry with default config
 default_config = ModelConfig(
-    model_id="gpt-5-mini",
+    model_id="gpt-5.6-luna",
     base_url="https://api.openai.com/v1",
     api_key_env_var="OPENAI_API_KEY",
     display_name="GPT-5 Mini",
@@ -161,7 +161,7 @@ registry.restore_env(saved_env)
 ```python
 # GPT-5 Mini (fast, cost-effective)
 ModelConfig(
-    model_id="gpt-5-mini",
+    model_id="gpt-5.6-luna",
     base_url="https://api.openai.com/v1",
     api_key_env_var="OPENAI_API_KEY",
     display_name="GPT-5 Mini",
@@ -659,7 +659,7 @@ Create a configuration file for reproducible benchmarks:
 
 models:
   default:
-    model_id: "gpt-5-mini"
+    model_id: "gpt-5.6-luna"
     base_url: "https://api.openai.com/v1"
     api_key_env_var: "OPENAI_API_KEY"
     display_name: "GPT-5 Mini"

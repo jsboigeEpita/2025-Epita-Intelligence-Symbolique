@@ -106,7 +106,7 @@ Note: Documents 4 and 6 have no text and will be skipped.
 
 | Name | Model | Cost | Role |
 |------|-------|------|------|
-| default | gpt-5-mini | ~$0.01/call | Production |
+| default | gpt-5.6-luna | ~$0.01/call | Production |
 | qwen-local | qwen3.5-35b-a3b | Free | Calibration |
 | openrouter | Claude Sonnet | Variable | SOTA |
 

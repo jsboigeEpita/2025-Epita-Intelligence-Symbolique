@@ -22,7 +22,7 @@ Complete API documentation for all evaluation framework components.
 class ModelConfig:
     """Configuration for an LLM model."""
 
-    model_id: str                    # Model identifier (e.g., "gpt-5-mini")
+    model_id: str                    # Model identifier (e.g., "gpt-5.6-luna")
     base_url: str                    # API endpoint URL
     api_key_env_var: str             # Environment variable name for API key
     display_name: str                # Human-readable name
@@ -34,10 +34,10 @@ class ModelConfig:
 **Example:**
 ```python
 config = ModelConfig(
-    model_id="gpt-5-mini",
+    model_id="gpt-5.6-luna",
     base_url="https://api.openai.com/v1",
     api_key_env_var="OPENAI_API_KEY",
-    display_name="GPT-5 Mini",
+    display_name="GPT-5.6 Luna",
     cost_per_1k_tokens=0.0001,
     is_thinking_model=False,
     max_tokens=128000,
@@ -236,7 +236,7 @@ class ResultCollector:
     "successes": 95,                 # Successful runs
     "failures": 5,                   # Failed runs
     "by_model": {                    # Per-model stats
-        "gpt-5-mini": {
+        "gpt-5.6-luna": {
             "total": 50,
             "success": 48,
             "avg_duration": 15.3,
@@ -610,4 +610,4 @@ except Exception as e:
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | API key for OpenAI-compatible endpoints | - |
 | `OPENAI_BASE_URL` | Base URL for API requests | `https://api.openai.com/v1` |
-| `OPENAI_CHAT_MODEL_ID` | Model identifier | `gpt-5-mini` |
+| `OPENAI_CHAT_MODEL_ID` | Model identifier | `gpt-5.6-luna` |
