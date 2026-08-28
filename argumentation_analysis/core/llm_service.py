@@ -7,7 +7,7 @@ from semantic_kernel.connectors.ai.open_ai import (
     OpenAIChatCompletion,
     AzureChatCompletion,
 )
-from typing import Union, AsyncGenerator, List, Tuple
+from typing import Any, Dict, Optional, Union, AsyncGenerator, List, Tuple
 import httpx
 from openai import AsyncOpenAI
 import json
@@ -61,6 +61,96 @@ def substitute_obsolete_model(
         f"Veuillez mettre à jour votre fichier .env avec {env_var_hint}={new_model_id}"
     )
     return new_model_id
+
+
+# Sampling-params policy (#1936): reasoning-model families (gpt-5*, o1*, o3*)
+# reject temperature/seed (and the max_tokens spelling) with a 400 BadRequest.
+# Routing was centralized in resolve_chat_endpoint; these helpers centralize
+# the sampling side so raw-SDK callers consult ONE policy instead of
+# hardcoding params at each call site. They live in core (not orchestration)
+# because adapters and specialists must be able to import them without an
+# adapter→orchestrator cycle.
+REASONING_MODEL_PREFIXES: Tuple[str, ...] = (
+    "gpt-5",
+    "o1",
+    "o3",
+    "openai/gpt-5",
+    "openai/o1",
+    "openai/o3",
+)
+
+
+def resolve_active_model_id() -> str:
+    """Resolve the active chat model id from environment (mirrors _get_openai_client)."""
+    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
+    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+    if openrouter_base_url and openrouter_api_key:
+        return os.environ.get(
+            "OPENROUTER_CHAT_MODEL_ID",
+            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
+        )
+    return os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
+
+def is_reasoning_model(model_id: str) -> bool:
+    """Return True if *model_id* belongs to a known reasoning-model family."""
+    lower = model_id.lower()
+    return any(lower.startswith(p) for p in REASONING_MODEL_PREFIXES)
+
+
+def get_determinism_params(model_id: Optional[str] = None) -> Dict[str, Any]:
+    """Read determinism settings from environment variables.
+
+    Supports two modes:
+    - LLM_DETERMINISTIC_MODE=1: shorthand for temperature=0, seed=42
+    - LLM_TEMPERATURE / LLM_SEED: fine-grained overrides (take precedence)
+
+    When the model is a known reasoning model (gpt-5*, o1*, o3*),
+    temperature/seed are suppressed unless ``LLM_FORCE_SAMPLING_PARAMS=1`` is set,
+    because reasoning models typically reject those parameters with a 400 BadRequest.
+
+    Args:
+        model_id: the model id the caller will actually send this request to
+            (e.g. the id returned by ``resolve_chat_endpoint``). When omitted,
+            the active model is resolved from the environment — the historical
+            behavior of the orchestration call sites.
+
+    Returns a dict suitable for merging into ``client.chat.completions.create()``.
+    """
+    params: Dict[str, Any] = {}
+    if os.environ.get("LLM_DETERMINISTIC_MODE"):
+        params["temperature"] = 0.0
+        params["seed"] = 42
+    temp_str = os.environ.get("LLM_TEMPERATURE")
+    if temp_str is not None:
+        try:
+            params["temperature"] = float(temp_str)
+        except ValueError:
+            pass
+    seed_str = os.environ.get("LLM_SEED")
+    if seed_str is not None:
+        try:
+            params["seed"] = int(seed_str)
+        except ValueError:
+            pass
+
+    effective_model = model_id if model_id is not None else resolve_active_model_id()
+    if params and is_reasoning_model(effective_model):
+        if os.environ.get("LLM_FORCE_SAMPLING_PARAMS"):
+            logger.warning(
+                "Determinism params forced on reasoning model '%s' — may 400.",
+                effective_model,
+            )
+        else:
+            logger.warning(
+                "Determinism requested but reasoning model '%s' does not support "
+                "temperature/seed — params suppressed. Set LLM_FORCE_SAMPLING_PARAMS=1 "
+                "to override.",
+                effective_model,
+            )
+            params = {}
+
+    return params
 
 
 def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str, str]:

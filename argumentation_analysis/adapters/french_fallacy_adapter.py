@@ -1272,14 +1272,21 @@ class LLMFallacyDetector:
                 + selected_text(text, 3000, "french_fallacy_llm")
             )
 
+            # #1936: sampling params come from the central policy, not from a
+            # hardcoded temperature — the resolved model (env-driven, e.g.
+            # gpt-5.6-luna) is a reasoning model that rejects them. The token
+            # cap uses the max_completion_tokens spelling per KNOWN_ISSUES.
+            from argumentation_analysis.core.llm_service import get_determinism_params
+
+            det_params = get_determinism_params(model_id=model)
             response = await client.chat.completions.create(
                 model=model,
                 messages=[
                     {"role": "system", "content": self.SYSTEM_PROMPT},
                     {"role": "user", "content": user_prompt},
                 ],
-                temperature=0.1,
-                max_tokens=1024,
+                max_completion_tokens=1024,
+                **det_params,
             )
 
             raw = response.choices[0].message.content.strip()

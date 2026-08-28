@@ -97,7 +97,7 @@ class LLMValidatorLayer(ShieldLayer):
                         "content": selected_text(text, 2000, "ai_shield_llm_validator"),
                     },  # Cap input length
                 ],
-                max_tokens=200,
+                max_completion_tokens=200,
             )
             raw = response.choices[0].message.content or ""
             text_content = raw.strip()
