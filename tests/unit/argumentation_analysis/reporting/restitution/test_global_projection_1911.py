@@ -49,9 +49,15 @@ def _flagged_state() -> SimpleNamespace:
 
 
 def _clean_state() -> SimpleNamespace:
-    """Same shape, no signal: no finding may emerge (honest absence)."""
+    """Same shape, no signal: no finding may emerge (honest absence).
+
+    ``arg_7`` stays IN the corpus (with no flagging signal) so that its
+    absence from the findings proves convergence-absence, not
+    argument-absence — otherwise ``"arg_7" not in clean`` could pass for
+    the wrong reason (R881 review finding).
+    """
     return SimpleNamespace(
-        identified_arguments={"arg_1": "these clean"},
+        identified_arguments={"arg_1": "these clean", "arg_7": "these clean"},
         identified_fallacies={},
         argument_quality_scores={},
         counter_arguments=[],
