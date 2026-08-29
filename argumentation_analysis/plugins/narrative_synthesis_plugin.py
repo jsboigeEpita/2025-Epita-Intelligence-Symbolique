@@ -326,10 +326,13 @@ def _native_dung_rejections(state: Any) -> Dict[str, str]:
 
 
 def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
-    """For each identified argument, count independent methods flagging it weak.
+    """Count independent methods flagging each SIGNALLED argument weak.
 
-    Reads raw state fields (works on both UnifiedAnalysisState and a namespace
-    built from a state dict). Returns a mapping
+    Only arguments flagged by at least one method appear in the result — an
+    unflagged argument cannot clear any threshold, so it is structurally
+    absent, not scored zero (R882 review measurement). Reads raw state
+    fields (works on both UnifiedAnalysisState and a namespace built from a
+    state dict). Returns a mapping
     ``{arg_id: {"score": int, "signals": [(method, detail), ...]}}``.
     """
     args = getattr(state, "identified_arguments", {}) or {}
