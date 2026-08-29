@@ -129,6 +129,9 @@ _PROSE_MODULES = (
     # #1914 — the specialist-role classifier is a prose module of the same
     # family: it reads state to feed the acts' citation hierarchy.
     "specialist_roles.py",
+    # #1914 (Acte III slice) — the salience/surplus assessor reads state to
+    # feed the conclusion's ranking block, same prose surface.
+    "conclusion_salience.py",
 )
 
 
