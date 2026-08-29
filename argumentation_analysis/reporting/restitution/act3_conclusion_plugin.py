@@ -59,6 +59,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_native_dung,
 )
+from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
 from .global_projection import GlobalFinding, project_global_findings
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -452,6 +453,10 @@ class Act3Evidence:
     # two dead ends #1620 documented). Every finding cites its anchors, so
     # the conclusion can weigh convergence as confidence, not as inventory.
     global_findings: List[GlobalFinding] = field(default_factory=list)
+    # #1914 (Acte III slice) — the salience ranking (P1 decisif → P3
+    # accompanying) + the zero-shot surplus split. None until
+    # build_act3_evidence populates it (mirrors virtuous_mode).
+    salience: Optional[ConclusionSalience] = None
 
 
 @dataclass
@@ -1570,6 +1575,18 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
     # lower-level state so every claim stays traceable.
     global_findings = project_global_findings(state)
 
+    # #1914 (Acte III slice) — the salience ranking + zero-shot surplus,
+    # derived from the components above (one reader per state leaf, #1633):
+    # the role classifier reads the state, the structured/global findings
+    # are passed in already-derived.
+    structured = _collect_structured_arg_findings(state)
+    salience = assess_conclusion_salience(
+        state,
+        structured_findings=structured,
+        global_findings=global_findings,
+        counters_total=counters_total,
+    )
+
     # SV (#1182): surface governance verdict + debate exchanges (debranched
     # capabilities — same fix shape as G6 for counter-arg validity).
     governance_verdict = _collect_governance(state)
@@ -1614,8 +1631,9 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         deanonymized=bool(getattr(state, "deanonymized", True)),
         claim_excerpts=claim_excerpts,
         absent_dimensions=_collect_absent_dimensions(state),
-        structured_findings=_collect_structured_arg_findings(state),
+        structured_findings=structured,
         global_findings=global_findings,
+        salience=salience,
     )
 
 
@@ -1912,6 +1930,48 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             "— n'en fabrique aucune)"
         )
 
+    # #1914 (Acte III slice) — the salience hierarchy. The structure carries
+    # the ranking; the consigne binds the verdict beat to it. Renders in
+    # both states so a silence is never read as a verdict.
+    sal = evidence.salience
+    if sal is not None and sal.ranked:
+        hierarchy_block = "\n".join(
+            f"  - P{item.weight} [{item.kind}] {item.statement} "
+            f"(ancres : {', '.join(item.cites)})"
+            for item in sal.ranked
+        )
+    else:
+        hierarchy_block = (
+            "  (aucun résultat ne porte le verdict par lui-même — les labels "
+            "et compteurs restent du contexte, pas des findings)"
+        )
+    if sal is not None and sal.surplus.established:
+        surplus_established = "\n".join(
+            f"  - {s.statement} (ancres : {', '.join(s.cites)})"
+            for s in sal.surplus.established
+        )
+    else:
+        surplus_established = (
+            "  - RIEN au-delà d'une lecture attentive : aucun résultat de ce "
+            "run n'établit ce qu'une lecture unique ne peut pas. Les "
+            "compteurs et labels disponibles NE SONT PAS un surplus "
+            "interprétatif."
+        )
+    if sal is not None and sal.surplus.procedural_only:
+        surplus_procedural = "\n".join(
+            f"  - {line}" for line in sal.surplus.procedural_only
+        )
+    else:
+        surplus_procedural = (
+            "  (aucune matière purement procédurale à écarter nommément)"
+        )
+    surplus_block = (
+        "  ÉTABLI (ce qu'une lecture simple ne peut pas produire) :\n"
+        f"{surplus_established}\n"
+        "  PUREMENT PROCÉDURAL (contexte, jamais un surplus) :\n"
+        f"{surplus_procedural}"
+    )
+
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
     return (
@@ -1945,6 +2005,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
         f"[CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT]\n{presence_block}\n\n"
         f"[CONVERGENCES GLOBALES — synthèse inter-axes, ancrées]\n{global_block}\n\n"
+        f"[HIÉRARCHIE DU VERDICT — ce qui porte la conclusion]\n{hierarchy_block}\n\n"
+        f"[SURPLUS MULTI-AGENTS — au-delà d'une lecture simple]\n{surplus_block}\n\n"
         f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
         f"{what_next_block}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
@@ -1987,6 +2049,24 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  que tout converge vers le même point faible) — sans énumérer les\n"
         "  méthodes par leur nom technique. Si le bloc dit qu'aucune convergence\n"
         "  ne se dégage, n'invente aucune unanimité.\n"
+        "- HIÉRARCHIE : fonde le deuxième battement sur la HIÉRARCHIE DU VERDICT\n"
+        "  ci-dessus, dans cet ordre — les P1 d'abord, puis les tensions, puis\n"
+        "  l'accompagnement. Un label hors hiérarchie est du contexte : il peut\n"
+        "  illustrer, jamais porter le verdict. Ne rejoue pas chaque label au\n"
+        "  même niveau.\n"
+        "- QUATRE ORDRES DE JUGEMENT, jamais confondus : (1) VÉRITÉ FACTUELLE —\n"
+        "  aucun axe de ce run ne l'établit : ne formule jamais qu'un propos est\n"
+        "  factuellement vrai ou faux ; (2) ACCEPTABILITÉ ARGUMENTATIVE — ce que\n"
+        "  les verdicts formels et la qualité mesurée établissent ; (3)\n"
+        "  EFFICACITÉ RHÉTORIQUE — ce que les procédés accomplissent sur\n"
+        "  l'auditoire ; (4) PRÉFÉRENCE DE SOLVEUR/MODÈLE — les choix de\n"
+        "  sémantique ou de méthode de vote : présente-les comme des choix\n"
+        "  d'outil, jamais comme des vérités du discours.\n"
+        "- SURPLUS : si le bloc SURPLUS MULTI-AGENTS dit que RIEN n'est établi\n"
+        "  au-delà d'une lecture attentive, ne revendique AUCUN apport du\n"
+        "  pipeline au-delà de ce qu'une lecture soignée donne. Le lecteur doit\n"
+        "  pouvoir distinguer ce que l'analyse multi-agents a CHANGÉ dans\n"
+        "  l'interprétation de ce qu'elle a seulement compté.\n"
         "- Si le bloc DIMENSIONS NON ÉVALUÉES en liste, DIS-LE au lecteur dans le\n"
         "  troisième battement, en une phrase et en français courant : quel angle\n"
         "  d'analyse n'a pas abouti sur ce texte, et donc ce que ce verdict ne\n"

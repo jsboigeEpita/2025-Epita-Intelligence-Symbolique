@@ -173,6 +173,15 @@ class TestContradictory:
         }
         assignments = sr.classify_specialist_roles(state)
         assert not [a for a in assignments if a.role == sr.ROLE_CONTRADICTOIRE]
+        # Bilateral, as the docstring promises: arg_7's neutral quality yields
+        # no cross verdict AT ALL — neither contradiction nor corroboration
+        # (arg_1 at 3.0 legitimately corroborates; the assert targets arg_7).
+        # The elif→else mutation (coord R883) must redden here, not pass.
+        assert not [
+            a
+            for a in assignments
+            if a.role == sr.ROLE_CORROBORANT and "arg_7" in a.cites
+        ]
 
     def test_strong_quality_without_fallacy_is_not_a_contradiction(self):
         # One method alone is an axis result — a role needs a cross verdict.
