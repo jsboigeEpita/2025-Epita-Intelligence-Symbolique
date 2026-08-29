@@ -126,6 +126,9 @@ _PROSE_MODULES = (
     # feed the acts' conducted prompts, so its ``getattr(state, ...)`` calls
     # belong to the prose reading surface the sweep measures.
     "global_projection.py",
+    # #1914 — the specialist-role classifier is a prose module of the same
+    # family: it reads state to feed the acts' citation hierarchy.
+    "specialist_roles.py",
 )
 
 

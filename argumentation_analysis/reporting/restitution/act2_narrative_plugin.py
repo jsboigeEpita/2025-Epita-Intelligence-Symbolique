@@ -43,6 +43,12 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     select_primary_native,
 )
 from .global_projection import GlobalFinding, project_global_findings
+from .specialist_roles import (
+    ROLE_LABELS,
+    ROLE_ORDER,
+    RoleAssignment,
+    classify_specialist_roles,
+)
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -309,6 +315,11 @@ class Act2Evidence:
     # (cross-axis convergences + deep-synthesis value gates), each citing its
     # anchors. The narrative weighs them as confidence, never as inventory.
     global_findings: List[GlobalFinding] = field(default_factory=list)
+    # #1914 (Acte II slice) — the evidential-role classification of specialist
+    # results (decisif / corroborant / contradictoire / non-discriminant),
+    # derived deterministically from lower-level state. The narrative's
+    # citation hierarchy is carried by this structure, never asked of the LLM.
+    role_assignments: List[RoleAssignment] = field(default_factory=list)
 
 
 @dataclass
@@ -631,6 +642,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         debate_exchanges=debate_exchanges,
         deanonymized=bool(getattr(state, "deanonymized", True)),
         global_findings=project_global_findings(state),
+        role_assignments=classify_specialist_roles(state),
     )
 
 
@@ -1187,6 +1199,26 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
+    # #1914 (Acte II slice) — the evidential-role hierarchy. The structure
+    # carries the classification; the consigne below binds how each role may
+    # be cited. Renders in both states so a silence is never read as a verdict.
+    role_lines: List[str] = []
+    for _role in ROLE_ORDER:
+        for a in evidence.role_assignments:
+            if a.role == _role:
+                role_lines.append(
+                    f"  - [{ROLE_LABELS[_role]}] {a.statement} "
+                    f"(ancres : {', '.join(a.cites)})"
+                )
+    roles_block = (
+        "\n".join(role_lines)
+        if role_lines
+        else (
+            "  (aucun résultat de spécialiste ne change le jugement, ne le "
+            "corrobore ni ne le contredit sur ce corpus — n'invente aucun rôle)"
+        )
+    )
+
     # #1911 — the global synthesis channel; renders in both states so a silence
     # is never read as a verdict.
     global_block = (
@@ -1217,6 +1249,9 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"le verdict de gouvernance ou un échange de débat peut appuyer un "
         f"battement, jamais une sous-section isolée) :\n"
         f"{deliberation_block}\n\n"
+        f"RÔLES DES RÉSULTATS DE SPÉCIALISTES (hiérarchie de preuve dérivée de "
+        f"l'état — ce que chaque résultat peut changer dans le jugement) :\n"
+        f"{roles_block}\n\n"
         f"CONVERGENCES GLOBALES (synthèse inter-axes, ancrées — à tisser comme "
         f"DEGRÉ DE CONFIANCE d'un battement : quand plusieurs méthodes "
         f"indépendantes s'accordent sur un même argument, le récit le pèse en "
@@ -1237,6 +1272,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "  Pour Dung : le graphe est BÂTI à partir des arguments extraits "
         "(pas un oracle externe) — cadre-le comme une réorganisation du matériau "
         "extrait, pas comme une vérification indépendante.\n"
+        "- La hiérarchie RÔLES gouverne la citation d'un résultat de "
+        "spécialiste : un DÉCISIF doit changer ce que le récit conclut sur sa "
+        "cible ; un CORROBORANT appuie sans rien changer à lui seul ; un "
+        "CONTRADICTOIRE se dit comme une tension non résolue, jamais tranchée "
+        "en silence ; un NON-DISCRIMINANT ne peut JAMAIS être cité comme une "
+        "force ni une faiblesse — il a tourné sans rien distinguer.\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un "
