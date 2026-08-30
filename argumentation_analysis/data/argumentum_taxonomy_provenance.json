@@ -1,0 +1,48 @@
+{
+  "_comment": "Snapshot de provenance des deux taxonomies Argumentum vendorées. Source publique unique, vérifiable par un tiers (ArgumentumGames/Argumentum @ c86b71ff2782b822a3d4fc07992dc6661d145ab3 / master). Toute reproduction locale doit matcher upstream_content_sha1_no_bom (contenu LF-normalisé sans BOM) ou upstream_blob_sha1 (BOM upstream ré-appliqué). Le contenu local est stocké sans BOM UTF-8 pour cohérence avec le reste du dépôt — le BOM upstream est strippé à l'ingest (voir tests/unit/scripts/test_argumentum_taxonomy_integrity.py).",
+  "fallacies": {
+    "upstream_repo": "ArgumentumGames/Argumentum",
+    "upstream_commit": "c86b71ff2782b822a3d4fc07992dc6661d145ab3",
+    "upstream_branch": "master",
+    "upstream_path": "Cards/Fallacies/Argumentum Fallacies - Taxonomy.csv",
+    "upstream_blob_sha1": "c55449885e85d6829e8593df0e2983b120d3a2fe",
+    "upstream_content_sha1_no_bom": "5456ea549fe81b3e71721c052ca5bce9453ffe1e",
+    "rows": 1409,
+    "rows_excluding_header": 1408,
+    "columns": 104,
+    "bytes": 4139983,
+    "local_path": "argumentation_analysis/data/argumentum_fallacies_taxonomy.csv"
+  },
+  "virtues": {
+    "upstream_repo": "ArgumentumGames/Argumentum",
+    "upstream_commit": "c86b71ff2782b822a3d4fc07992dc6661d145ab3",
+    "upstream_branch": "master",
+    "upstream_path": "Cards/Fallacies/Argumentum Virtues - Taxonomy.csv",
+    "upstream_blob_sha1": "f918c9f1f3390073b1385260c684cc3dd52a7f85",
+    "upstream_content_sha1_no_bom": "b5edbe743af8290d8fea37fb280d4f804c236c4a",
+    "rows": 224,
+    "rows_excluding_header": 223,
+    "columns": 82,
+    "bytes": 921638,
+    "local_path": "argumentation_analysis/data/argumentum_virtues_taxonomy.csv"
+  },
+  "required_columns_fallacies": [
+    "PK", "path", "decimal_path", "depth", "Famille",
+    "AIF_attackType", "AIF_attackedNode"
+  ],
+  "required_columns_virtues": [
+    "pk", "path", "depth",
+    "AIF_attackType", "AIF_attackedNode",
+    "print_and_play"
+  ],
+  "_history": [
+    {
+      "date": "2026-08-30",
+      "action": "initial snapshot after re-pull from upstream c86b71ff",
+      "tracked_issue": "#1956",
+      "delta_fallacies": "+2 columns (AIF_attackType, AIF_attackedNode) vs pre-R894 local",
+      "delta_virtues": "+16 columns (crossLink_*, AIF_*, print_and_play) vs pre-R894 local",
+      "lines_added": "fallacies 1408 nodes (unchanged), virtues 223 nodes (unchanged)"
+    }
+  ]
+}
