@@ -175,7 +175,17 @@ carries: #1443 (modal/FOL sanitization) — porté directement dans la surface v
 | Aucune écriture dans `D:\CoursIA` (amont-only) | ✓ — ce track ne touche que notre dépôt |
 | Pas de changement classpath / `jvm_setup.py` (candidat D) | ✓ — seul le manifeste + tag + doc stale |
 | IDs opaques, pas de corpus | ✓ — aucun contenu de dataset |
-| Source de vérité du set exact = `NOTICE-EPITA` (CoursIA) | ☐ revue croisée recommandée au re-pull |
+| Source de vérité du set exact = `NOTICE-EPITA` (CoursIA) | ✓ — revue croisée **faite** : le §2 est désormais lu depuis leur ledger par `scripts/coursia/check_vendored_drift.py` |
+
+> ⚠ **Limite qui reste ouverte, et qu'il faut nommer.** L'instrument existe ; **rien ne le lance
+> automatiquement.** Notre CI n'a pas de checkout `D:\CoursIA`, donc le vérificateur ne peut pas
+> tourner en intégration continue — il a un `--fail-on` prêt pour le jour où un runner y aura accès,
+> mais aujourd'hui personne ne l'appelle. La prochaine dérive sera donc constatée quand quelqu'un
+> regardera, exactement comme celle-ci. La différence avec l'état d'avant #1949 n'est pas que la
+> dérive est surveillée : c'est que **regarder coûte désormais une commande au lieu d'une enquête**,
+> et que le résultat est reproductible par un tiers au lieu d'être un jugement.
+>
+> Ne pas lire ce tableau comme « la dérive est sous contrôle ».
 
 ---
 
