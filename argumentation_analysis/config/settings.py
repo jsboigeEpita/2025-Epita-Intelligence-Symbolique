@@ -114,10 +114,20 @@ class JVMSettings(BaseSettings):
     tweety_libs_dir: Path = Path("libs/tweety")
     # #1874: modules held at a version other than tweety_version, as
     # "groupId:artifactId:version" separated by commas. Empty by default because a
-    # pin is only needed when the target version REMOVES something we expose --
-    # 1.31 deletes the evidential family from org.tweetyproject.arg:bipolar while
-    # `framework_type=evidential` stays a documented option of a registered
-    # @kernel_function. Bumping tweety_version to 1.31 therefore also means setting
+    # pin is only needed when the target version removes a CLASS a consumer names.
+    # 1.31 does NOT delete the evidential family (an earlier revision of this
+    # comment said so): javap shows Support$Type still carrying EVIDENTIAL, and
+    # BipolarArgumentationFramework.getAssociatedTheory(Support$Type) reduces it to
+    # a Dung theory. What 1.31 removes is broader than the two AF classes, and
+    # measuring it matters: the bipolar module drops to 16 classes and replaces the
+    # whole argument/edge vocabulary with Dung's (BArgument -> dung.syntax.Argument,
+    # BinaryAttack/Attack -> dung.syntax.Attack, BinarySupport ->
+    # bipolar.syntax.Support(Argument, Argument)). bipolar_handler resolves FIVE of
+    # those names via jpype.JClass in __init__, so it fails at CONSTRUCTION under
+    # 1.31 -- a migration that swaps only the AF class leaves four siblings broken
+    # and is caught by verify_tweety.py, not by the tests (measured #1959). The pin buys time for that unmigrated consumer; it
+    # does not protect a capability. Bumping tweety_version to 1.31 means migrating
+    # the handler (#1959), not setting
     # JVM_TWEETY_PINNED_MODULES=org.tweetyproject.arg:bipolar:1.30
     tweety_pinned_modules: str = ""
     # Modules kept OUT of the assembly, as "groupId:artifactId" separated by
