@@ -640,12 +640,21 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _build_counter_arguments(state: Any) -> List[CounterArgumentEntry]:
+        # #1942: ``overall`` is a SUM over the evaluated virtues, and the
+        # denominator varies post-#1923 — a weak verdict reads the fraction
+        # of the applicable maximum, never the raw sum against 5.0.
+        from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+            QUALITY_WEAK_FRACTION,
+            quality_fraction,
+        )
+
         cas = getattr(state, "counter_arguments", [])
         weak_args = set()
         # Identify weak arguments from quality scores
         quality = getattr(state, "argument_quality_scores", {})
         for arg_id, scores in quality.items():
-            if isinstance(scores, dict) and scores.get("overall", 10.0) < 5.0:
+            fraction = quality_fraction(scores)
+            if fraction is not None and fraction < QUALITY_WEAK_FRACTION:
                 weak_args.add(arg_id)
 
         entries = []

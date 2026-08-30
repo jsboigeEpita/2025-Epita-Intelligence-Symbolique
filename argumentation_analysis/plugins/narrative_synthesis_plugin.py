@@ -267,6 +267,54 @@ def build_narrative(state: Any) -> str:
 # ════════════════════════════════════════════════════════════════════
 
 QUALITY_WEAK_THRESHOLD = 5.0
+# #1942: same /10 intent scale. Both thresholds are read as FRACTIONS of the
+# applicable maximum (``quality_fraction`` below): 5.0/10 weak, 7.0/10 strong.
+QUALITY_STRONG_THRESHOLD = 7.0
+QUALITY_WEAK_FRACTION = QUALITY_WEAK_THRESHOLD / 10.0
+QUALITY_STRONG_FRACTION = QUALITY_STRONG_THRESHOLD / 10.0
+
+
+def quality_fraction(entry: Any) -> Optional[float]:
+    """Normalize a STORED quality entry to the [0, 1] reader scale (#1942).
+
+    ``overall`` is the SUM of per-virtue [0, 1] scores over the EVALUATED
+    virtues — not a 0-1 average, not a note sur 10 (three unit contracts
+    disagreed on this before #1942: the evaluator sums, two LLM-facing
+    descriptions said 0-1). The denominator is ``len(scores)``: post-#1923
+    the tri-state machinery leaves inapplicable virtues absent, so the
+    ceiling varies by input unit ({2, 6, 8} measured on real texts). Same
+    semantics as the trace-side ``_quality_fraction`` of #1907 — the share
+    of the reachable ceiling that held; ``None`` = unmeasured, never 0.
+    """
+    if not isinstance(entry, dict):
+        return None
+    overall = entry.get("overall")
+    scores = entry.get("scores")
+    if (
+        not isinstance(overall, (int, float))
+        or not isinstance(scores, dict)
+        or not scores
+    ):
+        return None
+    return float(overall) / len(scores)
+
+
+def quality_population_spans_weak(quality: Any) -> bool:
+    """True when at least one measured entry of the run clears the weak bar.
+
+    The non-vacuity gate for quality-derived verdicts (#1942): when EVERY
+    evaluated argument of a run sits under the weak threshold, "weak" fires
+    on 100% of the population and discriminates nothing — quality-derived
+    corroboration and convergence signals are then suppressed and the axis
+    renders non-discriminant instead. An empty or unmeasured population
+    never spans.
+    """
+    if not isinstance(quality, dict):
+        return False
+    return any(
+        fraction is not None and fraction >= QUALITY_WEAK_FRACTION
+        for fraction in (quality_fraction(qs) for qs in quality.values())
+    )
 
 
 def _resolve_dung_arg_id(text: str, identified_args: Dict[str, Any]) -> str:
@@ -344,6 +392,10 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
     counters = getattr(state, "counter_arguments", []) or []
     jtms = getattr(state, "jtms_beliefs", {}) or {}
     rejected_by_dung = _native_dung_rejections(state)
+    # #1942 non-vacuity gate: "weak" only means something when the run's
+    # population spans the bar — else it fires on 100% of arguments and
+    # manufactures sophisme+faible convergences out of a uniform population.
+    quality_spans = quality_population_spans_weak(quality)
 
     # Pre-index fallacies by target argument
     fallacy_by_arg: Dict[str, List[str]] = {}
@@ -374,12 +426,13 @@ def compute_argument_convergence(state: Any) -> Dict[str, Dict[str, Any]]:
             ftypes = sorted(set(fallacy_by_arg[arg_id]))
             signals.append(("sophisme", ", ".join(ftypes)))
 
-        # 2. Low quality score
+        # 2. Low quality score (#1942: ``overall`` is a SUM over the evaluated
+        # virtues — the verdict reads the normalized fraction of the applicable
+        # maximum, never a false "/10").
         qs = quality.get(arg_id) if isinstance(quality, dict) else None
-        if isinstance(qs, dict):
-            overall = qs.get("overall")
-            if isinstance(overall, (int, float)) and overall < QUALITY_WEAK_THRESHOLD:
-                signals.append(("qualite faible", f"{overall:.1f}/10"))
+        fraction = quality_fraction(qs)
+        if fraction is not None and fraction < QUALITY_WEAK_FRACTION and quality_spans:
+            signals.append(("qualite faible", f"{fraction:.0%} du maximum applicable"))
 
         # 3. Counter-argument generated against it
         if arg_id in counter_by_arg:

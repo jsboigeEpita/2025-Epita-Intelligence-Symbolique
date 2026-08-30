@@ -232,7 +232,10 @@ class FormalPhaseState(_SharedStateBase):
             return f"FUNC_ERROR: {e}"
 
     @kernel_function(
-        description="Ajoute des scores de qualité pour un argument.",
+        description=(
+            "Ajoute des scores de qualité pour un argument. overall = somme "
+            "des notes par vertu (chacune 0-1), pas une moyenne 0-1 (#1942)."
+        ),
         name="add_quality_score",
     )
     def add_quality_score(self, arg_id: str, scores_json: str, overall: str = "0.5") -> str:

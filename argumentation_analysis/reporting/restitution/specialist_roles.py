@@ -69,13 +69,15 @@ ROLE_LABELS = {
 _MAX_PER_ROLE = 3
 _STATEMENT_CAP = 160
 
-# Quality is measured on a /10 scale. Below 5.0 the synthesis convergence
-# machinery flags weakness (``QUALITY_WEAK_THRESHOLD``); at or above 7.0 the
-# measured quality is solid enough that a co-located fallacy is a genuine
-# cross-axis disagreement. Between the two, the quality axis neither
-# corroborates nor contradicts the fallacy signal — it says nothing either
-# way and gets no role.
-_QUALITY_STRONG_THRESHOLD = 7.0
+# Quality verdicts read the NORMALIZED fraction of the applicable maximum
+# (#1942): ``overall`` is a sum over the evaluated virtues, and post-#1923
+# the denominator varies ({2, 6, 8} measured on real texts) — under the
+# fraction scale a perfect argument on 6 virtues sums to 6.0 and the
+# absolute 7.0 strong bar would be mathematically unreachable. Single
+# source of truth in the synthesis plugin: ``quality_fraction``,
+# ``QUALITY_WEAK_FRACTION`` (5.0/10), ``QUALITY_STRONG_FRACTION`` (7.0/10).
+# Between the two fractions the quality axis neither corroborates nor
+# contradicts the fallacy signal — it says nothing either way, no role.
 
 
 @dataclass(frozen=True)
@@ -204,35 +206,41 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     # --- corroborant / contradictoire: per-argument cross-axis verdicts -------
     args = getattr(state, "identified_arguments", {}) or {}
     if isinstance(args, dict):
-        # Lazy import: the weakness threshold has a single source of truth in
-        # the synthesis plugin (5.0/10).
+        # Lazy import: the quality scale has a single source of truth in the
+        # synthesis plugin (#1942 — fraction of the applicable maximum).
         from argumentation_analysis.plugins.narrative_synthesis_plugin import (
-            QUALITY_WEAK_THRESHOLD,
+            QUALITY_STRONG_FRACTION,
+            QUALITY_WEAK_FRACTION,
+            quality_fraction,
+            quality_population_spans_weak,
         )
 
         fallacy_by_arg = _fallacy_targets(getattr(state, "identified_fallacies", None))
         quality = getattr(state, "argument_quality_scores", None)
+        # #1942 non-vacuity gate: weak corroborates nothing on a population
+        # where 100% of the measured arguments are under the bar.
+        quality_spans = quality_population_spans_weak(quality)
         for arg_id in sorted(args):
             if arg_id not in fallacy_by_arg:
                 continue  # a single method's result is an axis result, no role
             qs = quality.get(arg_id) if isinstance(quality, dict) else None
-            overall = qs.get("overall") if isinstance(qs, dict) else None
-            if not isinstance(overall, (int, float)):
-                continue  # quality never ran on this argument — no cross verdict
-            if overall >= _QUALITY_STRONG_THRESHOLD:
+            fraction = quality_fraction(qs)
+            if fraction is None:
+                continue  # unmeasured on this argument — no cross verdict
+            if fraction >= QUALITY_STRONG_FRACTION:
                 _add(
                     ROLE_CONTRADICTOIRE,
                     f"Tension non résolue sur {arg_id} : un sophisme y est "
-                    f"localisé mais la qualité mesurée est solide "
-                    f"({overall:.1f}/10) — les axes se contredisent.",
+                    f"localisé mais la qualité mesurée est solide ({fraction:.0%} "
+                    f"du maximum applicable) — les axes se contredisent.",
                     (arg_id, "sophisme", "qualite"),
                 )
-            elif overall < QUALITY_WEAK_THRESHOLD:
+            elif fraction < QUALITY_WEAK_FRACTION and quality_spans:
                 _add(
                     ROLE_CORROBORANT,
                     f"Les axes sophisme et qualité corroborent la faiblesse de "
-                    f"{arg_id} ({overall:.1f}/10 mesuré) — deux méthodes "
-                    f"indépendantes s'accordent.",
+                    f"{arg_id} ({fraction:.0%} du maximum applicable) — deux "
+                    f"méthodes indépendantes s'accordent.",
                     (arg_id, "sophisme", "qualite"),
                 )
 
@@ -257,6 +265,36 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
             f"L'axe modal a vérifié {modal_counts['true']} théorie(s), toutes "
             f"cohérentes — le test ne distingue rien ici.",
             ("modal", "solveur modal"),
+        )
+    # #1942: a quality axis whose ENTIRE measured population sits under the
+    # weak bar has not discriminated anything — render that vacuity instead
+    # of corroborating every fallacious argument for free.
+    from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+        QUALITY_WEAK_FRACTION,
+        quality_fraction,
+    )
+
+    quality_entries = getattr(state, "argument_quality_scores", None)
+    measured_fractions = [
+        f
+        for f in (
+            quality_fraction(qs)
+            for qs in (
+                quality_entries.values() if isinstance(quality_entries, dict) else []
+            )
+        )
+        if f is not None
+    ]
+    if measured_fractions and not any(
+        f >= QUALITY_WEAK_FRACTION for f in measured_fractions
+    ):
+        _add(
+            ROLE_NON_DISCRIMINANT,
+            f"L'axe qualité ne discrimine pas ce run : "
+            f"{len(measured_fractions)}/{len(measured_fractions)} notes mesurées "
+            f"sous le seuil faible ({QUALITY_WEAK_FRACTION:.0%} du maximum "
+            f"applicable) — la faiblesse mesurée n'y distingue rien.",
+            ("qualite", "évaluateur de vertus"),
         )
     for label in decode_native_dung(state).non_concluable:
         _add(

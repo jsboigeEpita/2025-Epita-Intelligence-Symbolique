@@ -253,12 +253,16 @@ class TestDungSignalInConvergence:
     def test_dung_signal_contributes_to_depth_3(self):
         """With fallacy + quality + Dung, depth reaches 3 (corpus-C scenario)."""
         desc = "Renewable energy cannot replace fossil fuels economically"
+        # #1942: honest quality shape (sum over 9 evaluated virtues) + a
+        # silent not-weak arg_2 so the population spans the weak bar.
+        weak = {"overall": 3.5, "scores": {f"v{i}": 3.5 / 9 for i in range(9)}}
+        span = {"overall": 5.4, "scores": {f"v{i}": 0.6 for i in range(9)}}
         state = _state(
-            identified_arguments={"arg_1": desc},
+            identified_arguments={"arg_1": desc, "arg_2": "solid argument"},
             identified_fallacies={
                 "f1": {"type": "causal", "target_argument_id": "arg_1"}
             },
-            argument_quality_scores={"arg_1": {"overall": 3.5}},
+            argument_quality_scores={"arg_1": weak, "arg_2": span},
             dung_frameworks={"fw1": _framework([desc], rejected_args=[desc])},
         )
         result = compute_argument_convergence(state)
@@ -272,12 +276,14 @@ class TestDungSignalInConvergence:
     def test_dung_signal_contributes_to_depth_4(self):
         """With fallacy + quality + JTMS + Dung, depth reaches 4."""
         desc = "The market will self-regulate without government intervention"
+        weak = {"overall": 2.1, "scores": {f"v{i}": 2.1 / 9 for i in range(9)}}
+        span = {"overall": 5.4, "scores": {f"v{i}": 0.6 for i in range(9)}}
         state = _state(
-            identified_arguments={"arg_1": desc},
+            identified_arguments={"arg_1": desc, "arg_2": "solid argument"},
             identified_fallacies={
                 "f1": {"type": "relevance", "target_argument_id": "arg_1"}
             },
-            argument_quality_scores={"arg_1": {"overall": 2.1}},
+            argument_quality_scores={"arg_1": weak, "arg_2": span},
             jtms_beliefs={
                 "b1": {"name": "arg_1:The market will self-regulate", "valid": False}
             },

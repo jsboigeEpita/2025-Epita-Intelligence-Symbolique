@@ -70,6 +70,12 @@ def _ns(d: dict) -> SimpleNamespace:
     return SimpleNamespace(**d)
 
 
+def _q(overall: float, n: int = 10) -> dict:
+    """Post-#1923 entry shape: ``overall`` is a SUM over n evaluated virtues
+    (#1942) — readers normalize by ``len(scores)``."""
+    return {"overall": overall, "scores": {f"vertu_{i}": 0.5 for i in range(n)}}
+
+
 def _violation_state() -> SimpleNamespace:
     """Same corpus, discriminating signals: FOL refutes a theory, Dung
     excludes arg_9, a fallacy sits on arg_7 with strong quality (tension)
@@ -80,8 +86,8 @@ def _violation_state() -> SimpleNamespace:
         "f2": {"target_argument_id": "arg_1", "type": "faux dilemme"},
     }
     d["argument_quality_scores"] = {
-        "arg_7": {"overall": 8.0},
-        "arg_1": {"overall": 3.0},
+        "arg_7": _q(8.0),
+        "arg_1": _q(3.0),
     }
     d["fol_analysis_results"] = [{"consistent": False, "message": "incoherent"}]
     d["propositional_analysis_results"] = [{"satisfiable": True}]
@@ -100,7 +106,7 @@ def _settled_state() -> SimpleNamespace:
     """Same corpus, everything settled the other way: FOL verifies, no
     fallacies, Dung accepts everyone, one arg has neutral quality."""
     d = _base()
-    d["argument_quality_scores"] = {"arg_7": {"overall": 6.0}}
+    d["argument_quality_scores"] = {"arg_7": _q(6.0)}
     d["fol_analysis_results"] = [{"consistent": True, "message": "ok"}]
     d["dung_frameworks"] = {
         "d1": {
@@ -175,7 +181,7 @@ class TestRanking:
 class TestStrengths:
     def test_unchallenged_strong_quality_ranks_as_strength(self):
         state = _settled_state()
-        state.argument_quality_scores = {"arg_7": {"overall": 9.0}}
+        state.argument_quality_scores = {"arg_7": _q(9.0)}
         sal = cs.assess_conclusion_salience(state)
         strengths = [i for i in sal.ranked if i.kind == cs.KIND_STRENGTH]
         assert len(strengths) == 1
@@ -193,8 +199,8 @@ class TestStrengths:
     def test_dung_rejected_argument_is_not_a_strength(self):
         state = _settled_state()
         state.argument_quality_scores = {
-            "arg_9": {"overall": 9.0},
-            "arg_7": {"overall": 6.0},
+            "arg_9": _q(9.0),
+            "arg_7": _q(6.0),
         }
         state.dung_frameworks = {
             "d1": {
@@ -321,7 +327,11 @@ class TestBudget:
             f"f{i}": {"target_argument_id": f"arg_{i}", "type": "ad_hominem"}
             for i in range(20)
         }
-        d["argument_quality_scores"] = {f"arg_{i}": {"overall": 2.0} for i in range(20)}
+        # arg_0 at 0.6 spans the weak bar — else the #1942 non-vacuity gate
+        # suppresses every corroboration and the cap goes unexercised.
+        d["argument_quality_scores"] = {
+            f"arg_{i}": _q(6.0 if i == 0 else 2.0) for i in range(20)
+        }
         sal = cs.assess_conclusion_salience(_ns(d))
         assert len(sal.ranked) <= cs._MAX_RANKED
 

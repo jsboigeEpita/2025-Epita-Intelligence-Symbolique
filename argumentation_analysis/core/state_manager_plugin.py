@@ -744,7 +744,11 @@ class StateManagerPlugin:
             return f"FUNC_ERROR: {e}"
 
     @kernel_function(
-        description="Add quality scores for an argument. Params: arg_id, scores_json (virtue→float), overall (0-1).",
+        description=(
+            "Add quality scores for an argument. Params: arg_id, "
+            "scores_json (virtue→float, each 0-1), overall (SUM of the "
+            "per-virtue scores, 0 to number of virtues — not a 0-1 average)."
+        ),
         name="add_quality_score",
     )
     def add_quality_score(

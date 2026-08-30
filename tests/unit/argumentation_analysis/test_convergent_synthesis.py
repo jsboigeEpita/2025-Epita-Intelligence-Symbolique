@@ -22,6 +22,18 @@ def _state_with_args(*descriptions: str) -> UnifiedAnalysisState:
     return state
 
 
+def _virtues(overall: float, n: int = 9) -> dict:
+    """#1942 honest entry shape: n per-virtue [0, 1] notes whose SUM is
+    ``overall`` — readers normalize by ``len(scores)``."""
+    return {f"vertu_{i}": overall / n for i in range(n)}
+
+
+# A not-weak entry (0.6 of the applicable maximum) that spans the weak bar
+# on a second, otherwise-silent argument — the #1942 non-vacuity gate needs
+# the run's population to span before "qualite faible" means anything.
+_SPANNING_OVERALL = 5.4
+
+
 class TestDungRejection:
     """_native_dung_rejections handles the three extension storage shapes
     (#1912: fixtures aligned to the canonical writer shape — production
@@ -94,18 +106,20 @@ class TestComputeConvergence:
         assert methods == ["sophisme"]
 
     def test_two_methods_scores_two(self):
-        state = _state_with_args("weak argument")
+        state = _state_with_args("weak argument", "solid argument")
         state.add_fallacy("straw_man", "distortion", "arg_1")
-        state.add_quality_score("arg_1", {"clarte": 2.0}, 2.5)  # < 5.0 threshold
+        state.add_quality_score("arg_1", _virtues(2.25), 2.25)  # 0.25 fraction
+        state.add_quality_score("arg_2", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         conv = compute_argument_convergence(state)
         assert conv["arg_1"]["score"] == 2
         methods = {m for m, _ in conv["arg_1"]["signals"]}
         assert methods == {"sophisme", "qualite faible"}
 
     def test_three_methods_convergence(self):
-        state = _state_with_args("doomed argument")
+        state = _state_with_args("doomed argument", "solid argument")
         state.add_fallacy("false_dilemma", "either/or", "arg_1")
-        state.add_quality_score("arg_1", {"coherence": 1.0}, 2.0)
+        state.add_quality_score("arg_1", _virtues(1.8), 1.8)
+        state.add_quality_score("arg_2", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         state.add_counter_argument(
             "doomed argument",
             "reductio counter",
@@ -133,12 +147,13 @@ class TestComputeConvergence:
         assert methods == {"sophisme", "rejet Dung"}
 
     def test_jtms_invalid_belief_counts(self):
-        state = _state_with_args("retracted argument")
+        state = _state_with_args("retracted argument", "solid argument")
         # belief name uses "arg_N:" prefix (NN wiring convention)
         state.add_jtms_belief(
             "arg_1:retracted argument", False, justifications=["undermined"]
         )
-        state.add_quality_score("arg_1", {"x": 1.0}, 2.0)
+        state.add_quality_score("arg_1", _virtues(1.8), 1.8)
+        state.add_quality_score("arg_2", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         conv = compute_argument_convergence(state)
         assert conv["arg_1"]["score"] == 2
         methods = {m for m, _ in conv["arg_1"]["signals"]}
@@ -166,9 +181,10 @@ class TestBuildConvergentSynthesis:
     """build_convergent_synthesis produces named verdicts + conclusion."""
 
     def test_convergent_verdict_named(self):
-        state = _state_with_args("doomed")
+        state = _state_with_args("doomed", "solid")
         state.add_fallacy("false_dilemma", "either/or", "arg_1")
-        state.add_quality_score("arg_1", {"coherence": 1.0}, 2.0)
+        state.add_quality_score("arg_1", _virtues(1.8), 1.8)
+        state.add_quality_score("arg_2", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         result = build_convergent_synthesis(state)
         assert "arg_1" in result["convergent_verdicts"]
         assert any("arg_1" in ins for ins in result["emergent_insights"])
@@ -190,16 +206,18 @@ class TestBuildConvergentSynthesis:
         assert "robuste" in result["conclusion"]
 
     def test_verdicts_ordered_by_convergence_strength(self):
-        state = _state_with_args("two-method", "three-method")
+        state = _state_with_args("two-method", "three-method", "solid")
         # arg_1: 2 methods
         state.add_fallacy("straw_man", "distortion", "arg_1")
-        state.add_quality_score("arg_1", {"x": 1.0}, 2.0)
+        state.add_quality_score("arg_1", _virtues(1.8), 1.8)
         # arg_2: 3 methods
         state.add_fallacy("false_dilemma", "either/or", "arg_2")
-        state.add_quality_score("arg_2", {"x": 1.0}, 1.5)
+        state.add_quality_score("arg_2", _virtues(1.35), 1.35)
         state.add_counter_argument(
             "three-method", "counter", "reductio", 0.8, target_arg_id="arg_2"
         )
+        # arg_3: silent span (0.6) — opens the #1942 non-vacuity gate
+        state.add_quality_score("arg_3", _virtues(_SPANNING_OVERALL), _SPANNING_OVERALL)
         result = build_convergent_synthesis(state)
         # Strongest (arg_2, score 3) must appear before arg_1 in insights
         insights_text = "\n".join(result["emergent_insights"])
@@ -225,7 +243,10 @@ class TestKernelFunctionWrapper:
         plugin = NarrativeSynthesisPlugin()
         state_json = json.dumps(
             {
-                "identified_arguments": {"arg_1": "doomed argument"},
+                "identified_arguments": {
+                    "arg_1": "doomed argument",
+                    "arg_2": "solid argument",
+                },
                 "identified_fallacies": {
                     "fallacy_1": {
                         "type": "false_dilemma",
@@ -233,7 +254,12 @@ class TestKernelFunctionWrapper:
                         "target_argument_id": "arg_1",
                     }
                 },
-                "argument_quality_scores": {"arg_1": {"scores": {}, "overall": 2.0}},
+                "argument_quality_scores": {
+                    # #1942: sums over the evaluated virtues, and the
+                    # population spans the weak bar via the silent arg_2.
+                    "arg_1": {"scores": _virtues(1.8), "overall": 1.8},
+                    "arg_2": {"scores": _virtues(5.4), "overall": 5.4},
+                },
             }
         )
         out = plugin.convergent_synthesize(state_json)

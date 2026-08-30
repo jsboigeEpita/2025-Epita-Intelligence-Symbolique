@@ -133,7 +133,17 @@ class TestBudget:
                 f"f{i}": {"target_argument_id": f"arg_{i}", "type": "ad_hominem"}
                 for i in range(20)
             },
-            argument_quality_scores={f"arg_{i}": {"overall": 2.0} for i in range(20)},
+            argument_quality_scores={
+                # #1942: honest post-#1923 shape (``scores`` present) and a
+                # population that spans the weak bar (arg_0 at 0.6) — a
+                # uniform-weak population would trip the non-vacuity gate
+                # and suppress the qualite convergence signal entirely.
+                f"arg_{i}": {
+                    "overall": 6.0 if i == 0 else 2.0,
+                    "scores": {f"vertu_{j}": 0.5 for j in range(10)},
+                }
+                for i in range(20)
+            },
             counter_arguments=[],
             jtms_beliefs={},
             dung_frameworks={},

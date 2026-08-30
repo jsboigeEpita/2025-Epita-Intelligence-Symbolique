@@ -62,6 +62,13 @@ def _ns(d: dict) -> SimpleNamespace:
     return SimpleNamespace(**d)
 
 
+def _q(overall: float, n: int = 10) -> dict:
+    """Post-#1923 entry shape: ``overall`` is a SUM over n evaluated virtues
+    (#1942) — the writer always stores ``scores`` alongside, and the readers
+    normalize by ``len(scores)``."""
+    return {"overall": overall, "scores": {f"vertu_{i}": 0.5 for i in range(n)}}
+
+
 def _violation_state() -> SimpleNamespace:
     """Same corpus as _settled_state, with discriminating specialist signals:
     FOL refutes a theory, Dung excludes arg_9, a fallacy sits on arg_7 whose
@@ -73,8 +80,8 @@ def _violation_state() -> SimpleNamespace:
         "f2": {"target_argument_id": "arg_1", "type": "faux dilemme"},
     }
     d["argument_quality_scores"] = {
-        "arg_7": {"overall": 8.0},
-        "arg_1": {"overall": 3.0},
+        "arg_7": _q(8.0),
+        "arg_1": _q(3.0),
     }
     d["fol_analysis_results"] = [{"consistent": False, "message": "incoherent"}]
     d["propositional_analysis_results"] = [{"satisfiable": True}]
@@ -95,8 +102,8 @@ def _settled_state() -> SimpleNamespace:
     results are non-discriminating."""
     d = _base()
     d["argument_quality_scores"] = {
-        "arg_7": {"overall": 8.0},
-        "arg_1": {"overall": 6.0},
+        "arg_7": _q(8.0),
+        "arg_1": _q(6.0),
     }
     d["fol_analysis_results"] = [{"consistent": True, "message": "ok"}]
     d["dung_frameworks"] = {
@@ -168,8 +175,8 @@ class TestContradictory:
         # axis says nothing either way, so no cross verdict exists.
         state = _violation_state()
         state.argument_quality_scores = {
-            "arg_7": {"overall": 6.0},
-            "arg_1": {"overall": 3.0},
+            "arg_7": _q(6.0),
+            "arg_1": _q(3.0),
         }
         assignments = sr.classify_specialist_roles(state)
         assert not [a for a in assignments if a.role == sr.ROLE_CONTRADICTOIRE]
@@ -186,7 +193,7 @@ class TestContradictory:
     def test_strong_quality_without_fallacy_is_not_a_contradiction(self):
         # One method alone is an axis result — a role needs a cross verdict.
         state = _settled_state()
-        state.argument_quality_scores = {"arg_7": {"overall": 9.0}}
+        state.argument_quality_scores = {"arg_7": _q(9.0)}
         assignments = sr.classify_specialist_roles(state)
         assert not [a for a in assignments if a.role == sr.ROLE_CONTRADICTOIRE]
 
@@ -200,7 +207,7 @@ class TestCorroborant:
 
     def test_weak_quality_without_fallacy_corroborates_nothing(self):
         state = _settled_state()
-        state.argument_quality_scores = {"arg_1": {"overall": 2.0}}
+        state.argument_quality_scores = {"arg_1": _q(2.0)}
         assignments = sr.classify_specialist_roles(state)
         assert not [a for a in assignments if a.role == sr.ROLE_CORROBORANT]
 
@@ -237,7 +244,13 @@ class TestBudget:
             f"f{i}": {"target_argument_id": f"arg_{i}", "type": "ad_hominem"}
             for i in range(20)
         }
-        d["argument_quality_scores"] = {f"arg_{i}": {"overall": 2.0} for i in range(20)}
+        d["argument_quality_scores"] = {
+            # arg_0 at 0.6 spans the weak bar so the population is NOT
+            # uniform-weak — else the #1942 non-vacuity gate would suppress
+            # every corroboration and the cap would go unexercised.
+            f"arg_{i}": _q(6.0 if i == 0 else 2.0)
+            for i in range(20)
+        }
         d["dung_frameworks"] = {
             "d1": {
                 "name": "verification_grounded",

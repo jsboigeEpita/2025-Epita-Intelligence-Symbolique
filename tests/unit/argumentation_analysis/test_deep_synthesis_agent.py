@@ -110,9 +110,10 @@ def _make_fixture_state() -> UnifiedAnalysisState:
         score=8.5,
     )
 
-    # Quality scores (for weakest-arg detection in Section 7)
-    state.add_quality_score("arg_1", {"clarity": 6.0, "relevance": 4.0}, 5.0)
-    state.add_quality_score("arg_2", {"clarity": 3.0, "relevance": 2.0}, 2.5)
+    # Quality scores (for weakest-arg detection in Section 7).
+    # Per #1942: overall = sum(per-virtue [0, 1] scores).
+    state.add_quality_score("arg_1", {"clarity": 0.20, "relevance": 0.10}, 0.30)
+    state.add_quality_score("arg_2", {"clarity": 0.35, "relevance": 0.40}, 0.75)
 
     return state
 
@@ -578,12 +579,19 @@ class TestInvokeCallable:
 
 
 def _convergent_state() -> UnifiedAnalysisState:
-    """State where arg_2 is flagged by 3 independent methods."""
+    """State where arg_2 is flagged by 3 independent methods.
+
+    arg_3 (added under #1942) spans the weak bar so the non-vacuity gate
+    opens and 'qualite faible' fires on arg_2.
+    """
     state = UnifiedAnalysisState("Discourse with a multiply-flawed argument.")
     state.add_argument("clean argument")  # arg_1 — no signals
     state.add_argument("multiply flawed argument")  # arg_2
+    state.add_argument("balanced reference argument")  # arg_3 — opens non-vacuity gate
     state.add_fallacy("false_dilemma", "either/or framing", "arg_2")
-    state.add_quality_score("arg_2", {"coherence": 1.0}, 2.0)  # < 5.0
+    # Per #1942: overall = sum(per-virtue [0, 1]); fraction = 0.10 for arg_2.
+    state.add_quality_score("arg_2", {"coherence": 0.10}, 0.10)
+    state.add_quality_score("arg_3", {"coherence": 0.70}, 0.70)  # spans weak
     state.add_counter_argument(
         "multiply flawed argument",
         "reductio counter",
@@ -614,7 +622,7 @@ class TestConvergenceWiring:
     def test_no_signals_returns_empty(self):
         state = UnifiedAnalysisState("solid discourse")
         state.add_argument("robust argument")
-        state.add_quality_score("arg_1", {"clarity": 9.0}, 9.0)
+        state.add_quality_score("arg_1", {"clarity": 0.95}, 0.95)
         verdicts, conclusion = DeepSynthesisAgent._build_convergent_verdicts(state)
         assert verdicts == []
         assert "robuste" in conclusion or "robust" in conclusion.lower()
@@ -713,7 +721,7 @@ class TestConvergenceProse:
         # Clean state → build_convergent_synthesis yields no verdicts → no LLM call.
         state = UnifiedAnalysisState("solid discourse")
         state.add_argument("robust argument")
-        state.add_quality_score("arg_1", {"clarity": 9.0}, 9.0)
+        state.add_quality_score("arg_1", {"clarity": 0.95}, 0.95)
         kernel = MagicMock()
         kernel.invoke_prompt = AsyncMock()
         stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)

@@ -52,7 +52,6 @@ from .specialist_roles import (
     ROLE_DECISIF,
     ROLE_NON_DISCRIMINANT,
     ROLE_ORDER,
-    _QUALITY_STRONG_THRESHOLD,
     classify_specialist_roles,
 )
 
@@ -150,17 +149,25 @@ def _fallacy_target_ids(state: Any) -> set:
 def _unchallenged_strengths(state: Any) -> List[SalienceItem]:
     """Strong measured quality that no other axis contests (rank-3 strengths).
 
-    A strength earns a rank only when unchallenged: overall ≥ 7.0, no
-    localized fallacy on the argument, and the Dung graph does not exclude
-    it. A strong-quality argument carrying a fallacy is already classified
-    ``contradictoire`` upstream (the tension IS the finding); a strong-
-    quality argument Dung rejects is already ``decisif``. Ranking either
-    here again would present a contested move as settled ground.
+    A strength earns a rank only when unchallenged: quality fraction ≥
+    7.0/10 of the applicable maximum (#1942 — ``overall`` is a sum whose
+    denominator varies), no localized fallacy on the argument, and the Dung
+    graph does not exclude it. A strong-quality argument carrying a fallacy
+    is already classified ``contradictoire`` upstream (the tension IS the
+    finding); a strong-quality argument Dung rejects is already ``decisif``.
+    Ranking either here again would present a contested move as settled
+    ground.
     """
     args = getattr(state, "identified_arguments", None)
     quality = getattr(state, "argument_quality_scores", None)
     if not isinstance(args, dict) or not isinstance(quality, dict):
         return []
+    # Lazy import: plugins import restitution modules, so package-init order
+    # must not become load-bearing (same pattern as specialist_roles).
+    from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+        QUALITY_STRONG_FRACTION,
+        quality_fraction,
+    )
     from .native_dung import decode_native_dung
 
     contested = _fallacy_target_ids(state)
@@ -170,16 +177,16 @@ def _unchallenged_strengths(state: Any) -> List[SalienceItem]:
         if arg_id in contested or arg_id in rejected:
             continue
         qs = quality.get(arg_id)
-        overall = qs.get("overall") if isinstance(qs, dict) else None
-        if not isinstance(overall, (int, float)) or overall < _QUALITY_STRONG_THRESHOLD:
+        fraction = quality_fraction(qs)
+        if fraction is None or fraction < QUALITY_STRONG_FRACTION:
             continue
         out.append(
             SalienceItem(
                 weight=_WEIGHT_ACCOMPANYING,
                 kind=KIND_STRENGTH,
                 statement=(
-                    f"{arg_id} tient : qualité mesurée solide ({overall:.1f}/10) "
-                    f"et aucun axe ne la conteste."
+                    f"{arg_id} tient : qualité mesurée solide ({fraction:.0%} "
+                    f"du maximum applicable) et aucun axe ne la conteste."
                 ),
                 cites=(arg_id, "qualite"),
             )
