@@ -1492,12 +1492,47 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
 
         return profile
 
-    def get_weak_arguments(self, threshold: float = 5.0) -> List[ArgumentProfile]:
-        """Return ArgumentProfiles for arguments whose quality overall < threshold."""
+    def get_weak_arguments(self, threshold: float = 0.5) -> List[ArgumentProfile]:
+        """Return ArgumentProfiles whose quality FRACTION is below ``threshold``.
+
+        The fraction is ``overall / len(scores)`` -- the share of the applicable
+        maximum that held -- per the single unit contract declared on
+        :meth:`add_quality_score` (#1942). ``threshold`` is therefore a fraction
+        in [0, 1]: ``0.5`` is the weak bar. It is **not** a note sur 10.
+
+        Arguments carrying no usable quality entry are *unmeasured*, not weak,
+        and are never returned: a missing measurement is not a zero (#1019),
+        which is also why ``quality_fraction`` returns ``None`` rather than 0.
+
+        Args:
+            threshold: Fraction bar in [0, 1]. Defaults to the weak bar 0.5.
+
+        Returns:
+            ArgumentProfiles whose measured fraction is strictly below
+            ``threshold``, in ``identified_arguments`` order.
+
+        Raises:
+            ValueError: if ``threshold`` exceeds 1.0. A share of an attainable
+                maximum cannot exceed 1, so such a call was written against the
+                pre-#1942 note-sur-10 contract; normalising it silently would
+                return *every* scored argument. Fail loud instead (#1951).
+        """
+        if threshold > 1.0:
+            raise ValueError(
+                f"get_weak_arguments(threshold={threshold}) is not a fraction: "
+                "since #1942 quality 'overall' is the SUM of per-virtue [0, 1] "
+                "scores and readers divide by len(scores), so the comparison "
+                "scale is [0, 1], not a note sur 10. Divide the pre-#1942 "
+                "threshold by 10 (5.0 -> 0.5, the weak bar)."
+            )
+        from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+            quality_fraction,
+        )
+
         weak = []
         for arg_id in self.identified_arguments:
-            qs = self.argument_quality_scores.get(arg_id)
-            if qs is not None and qs.get("overall", 10.0) < threshold:
+            fraction = quality_fraction(self.argument_quality_scores.get(arg_id))
+            if fraction is not None and fraction < threshold:
                 weak.append(self.get_argument_profile(arg_id))
         return weak
 

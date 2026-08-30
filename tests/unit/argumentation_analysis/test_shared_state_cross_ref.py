@@ -24,10 +24,13 @@ def _make_state() -> UnifiedAnalysisState:
         "Straw Man", "Misrepresents the original position", target_arg_id=a2
     )
 
-    # Quality scores for all 3 (arg_1 weak, arg_2 medium, arg_3 strong)
-    state.add_quality_score(a1, {"clarity": 3.0, "relevance": 4.0}, overall=3.5)
-    state.add_quality_score(a2, {"clarity": 6.0, "relevance": 5.0}, overall=5.5)
-    state.add_quality_score(a3, {"clarity": 8.0, "relevance": 9.0}, overall=8.5)
+    # Quality scores for all 3 (arg_1 weak, arg_2 medium, arg_3 strong).
+    # #1942 contract: per-virtue scores in [0, 1], ``overall`` is their SUM
+    # over the evaluated virtues; the comparable magnitude is the fraction
+    # ``overall / len(scores)`` -- here 0.35, 0.55 and 0.85.
+    state.add_quality_score(a1, {"clarity": 0.30, "relevance": 0.40}, overall=0.70)
+    state.add_quality_score(a2, {"clarity": 0.60, "relevance": 0.50}, overall=1.10)
+    state.add_quality_score(a3, {"clarity": 0.80, "relevance": 0.90}, overall=1.70)
 
     # 1 counter-argument targeting arg_1 (by text match)
     state.add_counter_argument(
@@ -81,7 +84,7 @@ class TestGetArgumentProfile:
         assert len(profile.fallacies) == 1
         assert profile.fallacies[0]["type"] == "Ad Hominem"
         assert profile.quality_score is not None
-        assert profile.quality_score["overall"] == 3.5
+        assert profile.quality_score["overall"] == 0.70
 
     def test_profile_has_counter_argument(self):
         state = _make_state()
@@ -119,13 +122,13 @@ class TestGetWeakArguments:
 
     def test_default_threshold(self):
         state = _make_state()
-        weak = state.get_weak_arguments(threshold=5.0)
+        weak = state.get_weak_arguments(threshold=0.5)
         assert len(weak) == 1
         assert weak[0].arg_id == "arg_1"
 
     def test_higher_threshold(self):
         state = _make_state()
-        weak = state.get_weak_arguments(threshold=6.0)
+        weak = state.get_weak_arguments(threshold=0.6)
         assert len(weak) == 2
         ids = {w.arg_id for w in weak}
         assert ids == {"arg_1", "arg_2"}
@@ -138,8 +141,32 @@ class TestGetWeakArguments:
     def test_no_quality_scores(self):
         state = UnifiedAnalysisState("text")
         state.add_argument("some argument")
-        weak = state.get_weak_arguments(threshold=5.0)
+        weak = state.get_weak_arguments(threshold=0.5)
         assert len(weak) == 0
+
+    def test_pre_1942_threshold_raises(self):
+        """A note-sur-10 threshold must fail loud, never normalise silently.
+
+        Blocking control (#1951): without it, ``threshold=5.0`` on the
+        fraction scale returns EVERY scored argument -- a wrong answer with
+        no signal. The downstream CoursIA notebook calls exactly this.
+        """
+        state = _make_state()
+        with pytest.raises(ValueError, match="not a fraction"):
+            state.get_weak_arguments(threshold=5.0)
+
+    def test_unmeasured_argument_is_not_weak(self):
+        """An argument with no quality entry is unmeasured, not weak (#1019).
+
+        Probed at ``threshold=1.0``, which admits every possible fraction:
+        the three scored arguments all come back, the unscored one never
+        does. Treating a missing measurement as 0 would return it too.
+        """
+        state = _make_state()
+        unscored = state.add_argument("Never evaluated by the quality axis")
+        weak_ids = {p.arg_id for p in state.get_weak_arguments(threshold=1.0)}
+        assert len(weak_ids) == 3
+        assert unscored not in weak_ids
 
 
 class TestGetFallaciousArguments:
@@ -209,7 +236,7 @@ class TestGetEnrichmentSummary:
         """State where every argument has every enrichment => no gaps."""
         state = UnifiedAnalysisState("text")
         a1 = state.add_argument("Argument one about topic X")
-        state.add_quality_score(a1, {"clarity": 8.0}, overall=8.0)
+        state.add_quality_score(a1, {"clarity": 0.80}, overall=0.80)
         state.add_nl_to_logic_translation(
             original_text="Argument one about topic X",
             formula="p(x)",
