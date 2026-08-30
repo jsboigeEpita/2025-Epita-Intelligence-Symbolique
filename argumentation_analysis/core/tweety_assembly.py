@@ -9,9 +9,15 @@ runner, the JVM refuses to start, and the whole suite skips. Measured on #1874:
 
 * ``tweetyproject.org/builds/`` -- **404**, the fat-jar channel is gone.
 * ``tweetyproject.org/mvn/`` -- **alive (200)**, declared in Tweety's *parent* POM
-  and therefore inherited by every module. It serves three artifacts that Maven
-  Central does not have (``jspf:core``, ``gurobi:gurobi``, ``isula:isula``), so it
-  is still load-bearing for a full build even though it is not our download source.
+  and therefore inherited by every module, which is why stripping it from *our*
+  POM does not remove it. It serves three artifacts Central does not have
+  (``jspf:core``, ``gurobi:gurobi``, ``isula:isula``; all three probed 404 on
+  Central, against a 200 control). It is load-bearing for the **full** closure
+  only: excluding ``web``, ``gurobi``, ``isula`` and ``jspf`` leaves 74 artifacts,
+  and all 74 were probed present on Central -- so an excluded closure needs no
+  third-party host at all. ``gurobi:gurobi`` is in any case an 86 KB / 28-class
+  API binding, not the solver, reached only by instantiating Tweety's
+  ``GurobiSolver``; ``math`` is the sole module in the closure that names it.
 * **Maven Central carries 1.18 through 1.31**, immutably, with no
   ``-with-dependencies`` classifier at any version.
 
@@ -26,15 +32,35 @@ Two traps this module is shaped around, both measured rather than assumed
    1.30 and 1.31** are assemblable; 1.26 and 1.28 are not. :func:`assemble` does
    not try to pre-validate that -- it lets Maven fail and reports the real cause,
    because a version check that reads the aggregator would answer YES again.
-2. **1.31 deletes a capability we expose.** ``org.tweetyproject.arg:bipolar`` drops
-   from 86 to 16 classes at 1.31: the whole evidential family disappears with no
-   successor, and ``framework_type=evidential`` is a documented option of a
-   registered ``@kernel_function``. Hence :data:`DEFAULT_PIN_SPEC`-style pinning --
-   a module may be held at an older version inside an otherwise-newer closure.
-   Measured working: 1.31 + ``bipolar:1.30`` loads and *computes*; 1.31 alone
-   fails to initialise. Maven's nearest-definition-wins rule makes a direct
-   declaration beat the transitive one, which is why the pin is emitted as a
-   first-class ``<dependency>``.
+2. **1.31 refactors a family this file once said it deleted.**
+   ``org.tweetyproject.arg:bipolar`` drops from 86 to 16 classes at 1.31, and an
+   earlier revision of this docstring read that as "the whole evidential family
+   disappears with no successor". That is **wrong**, and searching for the old
+   name is what made it look right: ``javap`` on 1.31 shows
+   ``syntax.Support$Type`` carrying ``DEFAULT, SIMPLE_DEDUCTIVE, DEDUCTIVE,
+   NECESSITY, SIMPLE_NECESSITY, EVIDENTIAL``, with
+   ``BipolarArgumentationFramework.getAssociatedTheory(Support$Type)`` reducing
+   any of them to a Dung theory. The notion was folded into one unified type, not
+   removed.
+
+   What 1.31 *does* remove is narrower and still real: the seven dedicated
+   ``reasoner.evidential`` classes, ``SelfSupporting`` semantics (the new
+   ``Semantics`` enum is BCF / BCOH / BAD), and both concrete syntax classes --
+   ``EvidentialArgumentationFramework`` and ``NecessityArgumentationFramework``.
+   That last pair is the whole reason the pin exists: ``bipolar_handler`` resolves
+   both through :func:`jpype.JClass` in its ``__init__``, so it fails at
+   *construction* under 1.31, not on use. The pin is therefore a stopgap for a
+   consumer that has not been migrated -- not protection of a lost capability.
+   Sizing that stopgap honestly: the handler builds a framework, never queries a
+   reasoner (no ``.query``, ``Reasoner`` or ``getModels`` anywhere in its 116
+   lines) and returns ``len()`` of its own input lists, so ``necessity`` and
+   ``evidential`` return identical results today.
+
+   Mechanically, pinning still works the way it always did: a module may be held
+   at an older version inside an otherwise-newer closure, and Maven's
+   nearest-definition-wins rule makes a direct declaration beat the transitive
+   one, which is why the pin is emitted as a first-class ``<dependency>``.
+   Measured: 1.31 + ``bipolar:1.30`` loads; 1.31 alone fails to initialise.
 
 Everything that can be decided without the network is a pure function, so the
 tests do not need Maven, a JVM, or an internet connection.
