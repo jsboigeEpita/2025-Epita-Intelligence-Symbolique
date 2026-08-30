@@ -56,12 +56,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-
+      # #1959 (JDK source unique): the setup-java step was inert and listed
+      # Java 11, contradicting settings.jvm.jdk_version (17.0.12, provisioned
+      # by provision_tweety.py into portable_jdk/). find_existing_jdk() ignores
+      # JAVA_HOME entirely and is_valid_jdk rejects any major < 15, so the
+      # JDK installed here was never examined. Removed rather than bumped to
+      # 17 -- a parallel source of truth would re-derive at the next bump.
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         timeout-minutes: 15  # Protection contre timeouts
