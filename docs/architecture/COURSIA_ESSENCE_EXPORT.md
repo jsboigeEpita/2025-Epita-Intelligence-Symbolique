@@ -17,52 +17,95 @@
 | Pin CoursIA (`NOTICE-EPITA`) | `a8025f60` — `feat(conv-c): de-templatised PM prompt…` (#1345) |
 | Date du pin | 2026-07-02 |
 | Tag recommandé par ce manifeste (2026-07-14) | ~~`coursia-essence-20260714`~~ — **jamais créé**, voir §3 |
-| **Tag réellement poussé** | **`coursia-essence-20260830`** → `59f9cbd9` |
+| **Tag réellement poussé** | **`coursia-essence-20260830`** → `73d95d7b` (recréé — voir §3) |
 | Carries | `#1443` (sanitization modal/FOL) + `#1444` (doc BNF) + `#1446` (Constat 5 conversational) + `#1447` (harness) |
 
 > **Pourquoi rafraîchir.** Le pin `a8025f60` **précède** le fix `#1441`/`#1443` (« sanitize modal sort decls + FOL T/F bool constants »). Or `#1443` porte **directement dans la surface vendorée** — les deux handlers modal/FOL ci-dessous (§2). Rafraîchir le pin propage le fix en aval : un corpus qui faisait crasher le solveur modal sur le token `'p && q'` (sort declaration illégale) ou le parseur FOL sur `T`/`F` (Top/Bottom = `+`/`-`, pas `T`/`F`) est désormais neutralisé en amont du parseur.
 
 ---
 
-## 2. Surface vendorée — mapping upstream
+## 2. Surface vendorée — mesurée, pas supposée
 
-> **Note d'autorité.** Le ledger `NOTICE-EPITA` (CoursIA) reste la source de vérité pour le **set exact** des fichiers vendorés. Cette liste documente la *catégorie d'essence* et identifie les fichiers **touchés par `#1443`** (le motif du refresh). Une revue croisée avec `NOTICE-EPITA` reste recommandée avant le re-pull.
+> **Autorité.** Le ledger `NOTICE-EPITA` (CoursIA) est la source de vérité du set exact.
+> Cette section n'est plus une liste d'intention : elle est **rejouée** par
+> `scripts/coursia/check_vendored_drift.py`, qui lit leur ledger et compare octet à octet.
+> Ce qui suit est la sortie du 2026-08-30 (`--rev HEAD`). Pour la re-mesurer :
+>
+> ```bash
+> python scripts/coursia/check_vendored_drift.py --self-check   # prouve l'instrument
+> python scripts/coursia/check_vendored_drift.py                # table complete
+> ```
 
-### 2.1 Cœur du refresh — fichiers touchés par `#1443` (HOT)
+### 2.1 Ce que le ledger tabule réellement — 15 fichiers
 
-Ces deux fichiers sont la **raison d'être** du pin refresh : ils portent les sanitizers qui neutralisent les `ParserException` modal/FOL.
+Leur repertoire porte 22 `.py` ; **15** sont tabulés dans `NOTICE-EPITA`, les 7 autres sont
+de la glue CoursIA (`__init__`, `_config`, `_paths`, `_runner`, `_jvm_compat`,
+`_jvm_setup_compat`, `_reporting_noop`) — hors périmètre malgré leur préfixe `_`.
 
-| Fichier upstream (nous) | Rôle | Fix `#1443` apporté |
-|-------------------------|------|---------------------|
-| `argumentation_analysis/agents/core/logic/fol_handler.py` | Handler FOL (EProver/Tweety) | `_sanitize_fol_bool_constants` — `Top`/`Bottom` = `+`/`-` (pas `T`/`F`, per BNF Tweety FOL) |
-| `argumentation_analysis/agents/core/logic/modal_kb_identifier_normalizer.py` | Normaliseur KB modal | `strip_illegal_sort_declarations` — retire le keyword `sort` (illégal en modal, sorts = `NAME={const}`) |
+| État | N | Fichiers |
+|------|---|----------|
+| `identical` | 7 | `_af_handler`, `_belief_revision_handler`, `_dialogue_handler`, `_probabilistic_handler`, `_ranking_handler`, `_informal_definitions`, `_taxonomy_sophism_detector` |
+| `drifted` | 6 | `_adf_handler` (1 commit), `_fol_handler` (1), `_pl_handler` (1), `_tweety_initializer` (2), `_modal_handler` (3), `_tweety_bridge` (3) |
+| `partial` | 2 | `_shared_state` (11 commits **et** 370 lignes absentes dès le pin), `_state_manager_plugin` (1 commit, 55 lignes absentes) |
 
-### 2.2 Handlers logiques (essence canonique)
+### 2.2 Correction — la liste `logic/` annoncée était une supposition
 
-Le cœur logique vendorisé se concentre dans `argumentation_analysis/agents/core/logic/`. Les fichiers suivants constituent l'essence Tweety/JPype :
+La version précédente de cette section annonçait **14 fichiers** sous `logic/` comme
+« l'essence Tweety/JPype ». La lecture firsthand de leur repertoire en donne **11**
+(9 handlers + `tweety_bridge` + `tweety_initializer`). L'écart n'est pas un arrondi :
 
-| Fichier | Axe formel |
-|---------|------------|
-| `tweety_bridge.py` | Pont Java/JPype ↔ Tweety (FOL parsing, belief sets, reasoners) |
-| `tweety_initializer.py` | Initialisation JVM + classes Tweety |
-| `tweety_bridge_sk.py` | Variante Semantic Kernel |
-| `fol_handler.py` | ⚠ `#1443` (voir §2.1) |
-| `modal_handler.py` | Raisonnement modal (S5) |
-| `modal_logic_agent.py` | Agent modal |
-| `modal_kb_identifier_normalizer.py` | ⚠ `#1443` (voir §2.1) |
-| `pl_handler.py` | Logique propositionnelle (PySAT) |
-| `fol_logic_agent.py` / `first_order_logic_agent_adapter.py` | Agents FOL |
-| `propositional_logic_agent.py` | Agent PL |
-| `belief_set.py` | Structures de belief sets |
-| `logic_factory.py` | Fabrique d'agents logiques |
-| `pl_formula_sanitizer.py` | Sanitization formules PL |
+- **Annoncés mais jamais vendorisés** : `tweety_bridge_sk.py`, `modal_logic_agent.py`,
+  `modal_kb_identifier_normalizer.py`, `fol_logic_agent.py`,
+  `first_order_logic_agent_adapter.py`, `propositional_logic_agent.py`, `belief_set.py`,
+  `logic_factory.py`, `pl_formula_sanitizer.py`. Tous existent chez nous ; aucun chez eux.
+- **Vendorisés mais absents de la liste** : `adf_handler.py`, `af_handler.py`,
+  `ranking_handler.py`, `belief_revision_handler.py`, `probabilistic_handler.py`,
+  `dialogue_handler.py` — soit 6 des 9 handlers réellement portés.
 
-### 2.3 Autres fichiers d'essence (hors `logic/`)
+C'était l'inventaire de *notre* essence, présenté comme *leur* surface.
 
-| Fichier | Rôle |
-|---------|------|
-| `argumentation_analysis/core/shared_state.py` | `UnifiedAnalysisState` — état partagé multi-dimensions |
-| `argumentation_analysis/agents/core/informal/taxonomy_sophism_detector.py` | Détection 8 familles de sophismes |
+⚠ **Conséquence sur le motif `#1443` (§2.3).** Le refresh est justifié par deux fichiers
+porteurs des sanitizers. `fol_handler.py` est bien vendorisé (et dérivé d'1 commit) ;
+`modal_kb_identifier_normalizer.py` **ne l'est pas**. Tirer le tag ne leur livrera donc pas
+la moitié modale du fix — il faudrait d'abord qu'ils vendorisént ce fichier.
+
+### 2.3 Cœur du refresh — fichiers touchés par `#1443` (HOT)
+
+| Fichier upstream (nous) | Vendorisé ? | Fix `#1443` apporté |
+|-------------------------|-------------|---------------------|
+| `argumentation_analysis/agents/core/logic/fol_handler.py` | **oui**, dérivé 1 commit | `_sanitize_fol_bool_constants` — `Top`/`Bottom` = `+`/`-` (pas `T`/`F`, per BNF Tweety FOL) |
+| `argumentation_analysis/agents/core/logic/modal_kb_identifier_normalizer.py` | **non** | `strip_illégal_sort_declarations` — retire le keyword `sort` (illégal en modal, sorts = `NAME={const}`) |
+
+### 2.4 Les deux copies partielles — ce qui n'a jamais traversé
+
+`_shared_state.py` et `_state_manager_plugin.py` ne sont pas des copies verbatim intégrales.
+Leur propre colonne de taille l'enregistre (`1121 lignes` pour un amont de 1483) ; c'est leur
+clause « Verbatim integrity: byte-for-byte identical » qui surestime. La distinction compte,
+parce qu'un fichier `partial` ne se répare pas par un re-pull : la surface absente le restera.
+
+Absent de `_shared_state.py` dès le pin `a8025f60` — alors même que ce commit **est** celui
+qui a introduit cette machinerie (`#1334` phase 3/3, `#1345`) :
+
+`DesignationRecord`, `record_désignation`, `_désignation_fingerprint`,
+`backfill_last_désignation_for`, `_désignation_delta_summary` (trace de désignation CONV-C),
+`record_cap_breach` (audit anti-runaway `#708`), `set_source_metadata`,
+`add_structured_arg_status`.
+
+Absent de `_state_manager_plugin.py` : le `@kernel_function record_désignation`.
+
+C'est cohérent avec leur EPIC, qui exclut explicitement l'orchestration de l'import « essence » —
+donc plausiblement un périmètre assumé, pas un accident. Mais cela déplace la conclusion de
+`#1949` : la dérive n'est pas seulement « 11 commits de retard sur `shared_state` », c'est
+**11 commits de retard sur une base qui n'a jamais porté la trace de désignation**.
+
+### 2.5 Autres fichiers d'essence (hors `logic/`)
+
+| Fichier | État mesuré |
+|---------|-------------|
+| `argumentation_analysis/core/shared_state.py` | `partial` — voir §2.4 |
+| `argumentation_analysis/core/state_manager_plugin.py` | `partial` — voir §2.4 |
+| `argumentation_analysis/agents/core/informal/taxonomy_sophism_detector.py` | `identical` (au saut de ligne final près) |
+| `argumentation_analysis/agents/core/informal/informal_definitions.py` | `identical` |
 
 ---
 
@@ -73,10 +116,21 @@ Le cœur logique vendorisé se concentre dans `argumentation_analysis/agents/cor
 > mesurable : la commande de re-pull documentée ne pouvait pas s'exécuter, et le pin CoursIA est
 > resté figé sur `a8025f60` (2026-07-02) pendant huit semaines. Voir #1949.
 >
-> **Tag effectivement poussé le 2026-08-30** : `coursia-essence-20260830` → `59f9cbd9`.
+> **Tag effectivement poussé le 2026-08-30** : `coursia-essence-20260830` → **`73d95d7b`**.
+> Il a été **recréé** le jour même : sa première cible (`59f9cbd9`) ne portait pas encore
+> `docs/coursia_contrib/quality_contract_note_argumentprofile.md`, que son propre message cite —
+> soit exactement la faute reprochée à #1451 (un artefact dont la commande documentée ne
+> s'exécute pas). Vérifié avant suppression : rien ne l'avait consommé.
 >
-> Dérive mesurée depuis leur pin `a8025f60` : **381 commits** au total, dont **32** touchant la
-> surface vendorée et **11** touchant `core/shared_state.py` seul.
+> Dérive mesurée depuis leur pin `a8025f60` : **383 commits** au total, dont **21** touchant les
+> **15 fichiers réellement tabulés** au ledger et **11** touchant `core/shared_state.py` seul.
+>
+> ⚠ Le message du tag annonce **32** pour la surface vendorée. Ce n'est pas faux mais c'est un
+> compte **par répertoire** (`core/shared_state.py` + `agents/core/logic/` +
+> `agents/core/informal/`), et il nomme lui-même ce périmètre. Ces répertoires contiennent des
+> fichiers que CoursIA ne vendorise pas — le compte par fichier tabulé est **21**. Le tag n'a pas
+> été rejoué pour autant : ses commandes s'exécutent et il énonce son propre périmètre. Le
+> prochain tag doit utiliser 21, mesuré par `scripts/coursia/check_vendored_drift.py` (§2).
 >
 > Il porte deux changements qui concernent directement la copie vendorée :
 > - **#1942 / #1946** — un seul contrat d'unité pour `overall` (somme des vertus en [0, 1] sur les
@@ -121,7 +175,17 @@ carries: #1443 (modal/FOL sanitization) — porté directement dans la surface v
 | Aucune écriture dans `D:\CoursIA` (amont-only) | ✓ — ce track ne touche que notre dépôt |
 | Pas de changement classpath / `jvm_setup.py` (candidat D) | ✓ — seul le manifeste + tag + doc stale |
 | IDs opaques, pas de corpus | ✓ — aucun contenu de dataset |
-| Source de vérité du set exact = `NOTICE-EPITA` (CoursIA) | ☐ revue croisée recommandée au re-pull |
+| Source de vérité du set exact = `NOTICE-EPITA` (CoursIA) | ✓ — revue croisée **faite** : le §2 est désormais lu depuis leur ledger par `scripts/coursia/check_vendored_drift.py` |
+
+> ⚠ **Limite qui reste ouverte, et qu'il faut nommer.** L'instrument existe ; **rien ne le lance
+> automatiquement.** Notre CI n'a pas de checkout `D:\CoursIA`, donc le vérificateur ne peut pas
+> tourner en intégration continue — il a un `--fail-on` prêt pour le jour où un runner y aura accès,
+> mais aujourd'hui personne ne l'appelle. La prochaine dérive sera donc constatée quand quelqu'un
+> regardera, exactement comme celle-ci. La différence avec l'état d'avant #1949 n'est pas que la
+> dérive est surveillée : c'est que **regarder coûte désormais une commande au lieu d'une enquête**,
+> et que le résultat est reproductible par un tiers au lieu d'être un jugement.
+>
+> Ne pas lire ce tableau comme « la dérive est sous contrôle ».
 
 ---
 
