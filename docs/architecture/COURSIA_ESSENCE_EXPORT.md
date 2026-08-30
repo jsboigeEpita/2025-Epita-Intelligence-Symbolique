@@ -16,8 +16,8 @@
 |-------|--------|
 | Pin CoursIA (`NOTICE-EPITA`) | `a8025f60` — `feat(conv-c): de-templatised PM prompt…` (#1345) |
 | Date du pin | 2026-07-02 |
-| Tag recommandé (ce manifeste) | **`coursia-essence-20260714`** |
-| Cible du tag | `a450496a` (origin/main courant) |
+| Tag recommandé par ce manifeste (2026-07-14) | ~~`coursia-essence-20260714`~~ — **jamais créé**, voir §3 |
+| **Tag réellement poussé** | **`coursia-essence-20260830`** → `59f9cbd9` |
 | Carries | `#1443` (sanitization modal/FOL) + `#1444` (doc BNF) + `#1446` (Constat 5 conversational) + `#1447` (harness) |
 
 > **Pourquoi rafraîchir.** Le pin `a8025f60` **précède** le fix `#1441`/`#1443` (« sanitize modal sort decls + FOL T/F bool constants »). Or `#1443` porte **directement dans la surface vendorée** — les deux handlers modal/FOL ci-dessous (§2). Rafraîchir le pin propage le fix en aval : un corpus qui faisait crasher le solveur modal sur le token `'p && q'` (sort declaration illégale) ou le parseur FOL sur `T`/`F` (Top/Bottom = `+`/`-`, pas `T`/`F`) est désormais neutralisé en amont du parseur.
@@ -66,10 +66,37 @@ Le cœur logique vendorisé se concentre dans `argumentation_analysis/agents/cor
 
 ---
 
-## 3. Tag recommandé
+## 3. Tag — état réel au 2026-08-30
+
+> ⚠ **Le tag recommandé ci-dessous n'a jamais été créé.** #1451 a été fermée sur ce document, qui
+> *proposait* un tag ; la procédure « une fois validé » n'a jamais été exécutée. Conséquence
+> mesurable : la commande de re-pull documentée ne pouvait pas s'exécuter, et le pin CoursIA est
+> resté figé sur `a8025f60` (2026-07-02) pendant huit semaines. Voir #1949.
+>
+> **Tag effectivement poussé le 2026-08-30** : `coursia-essence-20260830` → `59f9cbd9`.
+>
+> Dérive mesurée depuis leur pin `a8025f60` : **381 commits** au total, dont **32** touchant la
+> surface vendorée et **11** touchant `core/shared_state.py` seul.
+>
+> Il porte deux changements qui concernent directement la copie vendorée :
+> - **#1942 / #1946** — un seul contrat d'unité pour `overall` (somme des vertus en [0, 1] sur les
+>   vertus évaluées ; les lecteurs divisent par `len(scores)`).
+> - **#1951** — `get_weak_arguments`, le **5ᵉ lecteur**, était resté sur la lecture absolue dans le
+>   fichier même de la déclaration, 580 lignes plus bas. Il lit désormais la fraction et **lève** sur
+>   un seuil note-sur-10 au lieu de renvoyer silencieusement tous les arguments.
+>
+> ⚠ **À lire avant de re-pull `_shared_state.py`** : leur notebook `ArgumentProfile` appelle
+> `get_weak_arguments(threshold=5.0)` avec un corrigé écrit. Cet appel lève désormais, **par
+> conception**. La migration ne coûte rien pédagogiquement — vérifié numériquement, tous les verdicts
+> affichés sont préservés. Cellules migrées :
+> [`quality_contract_note_argumentprofile.md`](../coursia_contrib/quality_contract_note_argumentprofile.md).
+> Garder l'échelle /10 côté enseignement reste un choix légitime : dans ce cas **ne pas** re-pull ce
+> fichier, et le consigner dans `NOTICE-EPITA`.
+
+### 3.1 Proposition d'origine (2026-07-14, historique)
 
 ```
-tag:    coursia-essence-20260714
+tag:    coursia-essence-20260714    <-- JAMAIS CRÉÉ
 target: a450496a  (origin/main, 2026-07-14)
 carries: #1443 (modal/FOL sanitization) — porté directement dans la surface vendorée
          #1444 (doc FOL BNF Top/Bottom + MlParser gotchas)
