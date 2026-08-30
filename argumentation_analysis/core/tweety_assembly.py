@@ -32,43 +32,26 @@ Two traps this module is shaped around, both measured rather than assumed
    1.30 and 1.31** are assemblable; 1.26 and 1.28 are not. :func:`assemble` does
    not try to pre-validate that -- it lets Maven fail and reports the real cause,
    because a version check that reads the aggregator would answer YES again.
-2. **1.31 refactors a family this file once said it deleted.**
-   ``org.tweetyproject.arg:bipolar`` drops from 86 to 16 classes at 1.31, and an
-   earlier revision of this docstring read that as "the whole evidential family
-   disappears with no successor". That is **wrong**, and searching for the old
-   name is what made it look right: ``javap`` on 1.31 shows
-   ``syntax.Support$Type`` carrying ``DEFAULT, SIMPLE_DEDUCTIVE, DEDUCTIVE,
-   NECESSITY, SIMPLE_NECESSITY, EVIDENTIAL``, with
-   ``BipolarArgumentationFramework.getAssociatedTheory(Support$Type)`` reducing
-   any of them to a Dung theory. The notion was folded into one unified type, not
-   removed.
+2. **1.31 refactors, it does not delete, the bipolar capability we expose.**
+   ``org.tweetyproject.arg:bipolar`` drops from 86 to 16 classes at 1.31: the
+   three AF classes (EvidentialArgumentationFramework,
+   NecessityArgumentationFramework, DeductiveArgumentationFramework) were
+   unified into a single ``BipolarArgumentationFramework`` parameterised by
+   ``Support.Type`` (EVIDENTIAL / NECESSITY / DEDUCTIVE / etc.). The migration
+   in ``agents.core.logic.bipolar_handler`` resolves all five consumer-named
+   classes through the 1.31 API (see #1959 R896 rework):
 
-   What 1.31 *does* remove is still substantial, and measuring its full extent is
-   what separates a working migration from a broken one: the seven dedicated
-   ``reasoner.evidential`` classes, ``SelfSupporting`` semantics (the new
-   ``Semantics`` enum is BCF / BCOH / BAD), both concrete syntax classes
-   (``EvidentialArgumentationFramework``, ``NecessityArgumentationFramework``)
-   **and the entire argument/edge vocabulary**, which Dung's now replaces:
-   ``BArgument`` -> ``dung.syntax.Argument``, ``BinaryAttack`` and bipolar's
-   ``Attack`` -> ``dung.syntax.Attack``, ``BinarySupport`` ->
-   ``bipolar.syntax.Support(Argument, Argument)``.
+      * ``BArgument`` -> ``dung.syntax.Argument``
+      * ``BinaryAttack`` / bipolar's ``Attack`` -> ``dung.syntax.Attack``
+      * ``BinarySupport`` -> ``bipolar.syntax.Support(Argument, Argument)``
+      * ``EvidentialArgumentationFramework`` /
+        ``NecessityArgumentationFramework`` -> ``BipolarArgumentationFramework``
+        with ``Support.Type.EVIDENTIAL`` / ``NECESSITY``.
 
-   That breadth is the whole reason the pin exists: ``bipolar_handler`` resolves
-   **five** of those names through :func:`jpype.JClass` in its ``__init__``, so it
-   fails at *construction* under 1.31, not on use. A migration that swaps only the
-   AF class leaves the other four broken -- measured in #1959, where
-   ``verify_tweety.py`` (not the test suite) is what caught it. The pin is therefore a stopgap for a
-   consumer that has not been migrated -- not protection of a lost capability.
-   Sizing that stopgap honestly: the handler builds a framework, never queries a
-   reasoner (no ``.query``, ``Reasoner`` or ``getModels`` anywhere in its 116
-   lines) and returns ``len()`` of its own input lists, so ``necessity`` and
-   ``evidential`` return identical results today.
-
-   Mechanically, pinning still works the way it always did: a module may be held
-   at an older version inside an otherwise-newer closure, and Maven's
-   nearest-definition-wins rule makes a direct declaration beat the transitive
-   one, which is why the pin is emitted as a first-class ``<dependency>``.
-   Measured: 1.31 + ``bipolar:1.30`` loads; 1.31 alone fails to initialise.
+   The reasoner family ``reasoner.evidential.*`` was retired; consumers now
+   reduce via ``getAssociatedTheory(Support$Type)`` and run a Dung reasoner on
+   the theory. Hence the previous ``bipolar:1.30`` pin is no longer needed at
+   1.31 -- the capability is preserved by migration, not by pinning back.
 
 Everything that can be decided without the network is a pure function, so the
 tests do not need Maven, a JVM, or an internet connection.

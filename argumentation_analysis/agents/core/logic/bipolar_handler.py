@@ -20,12 +20,21 @@ class BipolarHandler:
     def __init__(self, initializer_instance=None):
         if initializer_instance and not initializer_instance.is_jvm_ready():
             raise RuntimeError("BipolarHandler instantiated before JVM is ready.")
-        self.NecessityAF = jpype.JClass(
-            "org.tweetyproject.arg.bipolar.syntax.NecessityArgumentationFramework"
+        # #1959 (1.31 migration): Tweety 1.31 unified the three AF classes
+        # (EvidentialArgumentationFramework, NecessityArgumentationFramework,
+        # DeductiveArgumentationFramework) into a single
+        # BipolarArgumentationFramework parameterised by a Support.Type enum
+        # (EVIDENTIAL / NECESSITY / DEDUCTIVE). The 1:1 migration keeps
+        # `framework_type=evidential` and `framework_type=necessity` as
+        # behavioural no-ops — the handler constructs and discards the
+        # framework without ever querying it (see #1959 DoD "open a separate
+        # issue for the no-op"; do NOT extend the scope here). The Support.Type
+        # selection is preserved on the returned dict by analyze_bipolar_framework
+        # so callers see the same shape.
+        self.BipolarAF = jpype.JClass(
+            "org.tweetyproject.arg.bipolar.syntax.BipolarArgumentationFramework"
         )
-        self.EvidentialAF = jpype.JClass(
-            "org.tweetyproject.arg.bipolar.syntax.EvidentialArgumentationFramework"
-        )
+        self.Support = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Support")
         self.BArgument = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.BArgument")
         self.BinaryAttack = jpype.JClass(
             "org.tweetyproject.arg.bipolar.syntax.BinaryAttack"
@@ -33,7 +42,7 @@ class BipolarHandler:
         self.BinarySupport = jpype.JClass(
             "org.tweetyproject.arg.bipolar.syntax.BinarySupport"
         )
-        # #1422 / #1178-class: NecessityArgumentationFramework inherits
+        # #1422 / #1178-class: BipolarArgumentationFramework inherits
         # ``add(GeneralEdge)`` from AbstractBipolarFramework AND declares
         # ``add(Attack)`` / ``add(Support)``; BinaryAttack/BinarySupport are
         # assignable to both their specific type and GeneralEdge, so a plain
@@ -46,7 +55,6 @@ class BipolarHandler:
         # supported subclass methods (the inherited add(GeneralEdge) is an
         # UnsupportedOperationException stub).
         self.Attack = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Attack")
-        self.Support = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Support")
 
     def analyze_bipolar_framework(
         self,
@@ -67,10 +75,16 @@ class BipolarHandler:
             Dict with analysis results.
         """
         try:
-            if framework_type == "evidential":
-                framework = self.EvidentialAF()
-            else:
-                framework = self.NecessityAF()
+            # #1959 (1.31 migration): single BipolarArgumentationFramework
+            # replaces the three 1.28 classes (EvidentialArgumentationFramework,
+            # NecessityArgumentationFramework, DeductiveArgumentationFramework).
+            # The handler is a 1:1 swap — both `framework_type` values
+            # construct and discard the framework without querying it (the
+            # iso-comportement rule from #1959; see DoD "open a separate issue
+            # for the no-op", do NOT extend the scope here). The selected
+            # Support.Type is preserved on the returned dict so callers see the
+            # same shape.
+            framework = self.BipolarAF()
 
             arg_map = {name: self.BArgument(name) for name in arguments}
             for arg in arg_map.values():
