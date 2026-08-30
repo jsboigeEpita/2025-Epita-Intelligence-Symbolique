@@ -913,7 +913,9 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         Args:
             arg_id: Argument identifier (from LLM or pipeline).
             scores: Per-virtue scores dict.
-            overall: Aggregated note_finale.
+            overall: Sum of the per-virtue [0, 1] scores over the EVALUATED
+                virtues (#1942) — not a 0-1 average and not a note sur 10;
+                readers normalize by dividing by ``len(scores)``.
             llm_assessment: Optional LLM-generated qualitative narrative (#290).
             resolved_arg_id: If provided, store under this canonical arg_id instead.
         """

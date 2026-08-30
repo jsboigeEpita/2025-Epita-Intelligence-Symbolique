@@ -43,10 +43,20 @@ def _convergent_state() -> UnifiedAnalysisState:
     """State with arg_1 flagged by 3 independent methods (convergence score=3)."""
     state = UnifiedAnalysisState("Test discourse for LLM prose narration.")
     state.add_argument("A weak argument susceptible to multiple analytical methods.")
+    # arg_2 is a silent, not-weak quality entry (per #1923 shape: 9 virtues,
+    # sum 5.4 = fraction 0.6) — it spans the weak bar so the #1942 non-vacuity
+    # gate lets "qualite faible" discriminate on arg_1.
+    state.add_argument("A solid argument with measured strengths.")
     # Signal 1: fallacy targeting arg_1
     state.add_fallacy("straw_man", "Distortion of original position.", "arg_1")
-    # Signal 2: low quality score (< QUALITY_WEAK_THRESHOLD=5.0)
-    state.add_quality_score("arg_1", {"clarte": 2.0, "coherence": 2.5}, 2.5)
+    # Signal 2: low quality score (fraction 0.25)
+    state.add_quality_score(
+        "arg_1", {f"vertu_{i}": 0.25 for i in range(9)}, 2.25
+    )
+    # Silent span: not-weak signal that opens the gate
+    state.add_quality_score(
+        "arg_2", {f"vertu_{i}": 0.6 for i in range(9)}, 5.4
+    )
     # Signal 3: counter-argument with target_arg_id
     state.add_counter_argument(
         "A weak argument susceptible to multiple analytical methods.",

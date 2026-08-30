@@ -12,6 +12,18 @@ from types import SimpleNamespace
 from collections import Counter
 
 
+def _quality(overall: float, n: int = 9) -> dict:
+    """#1942 honest entry shape: per-virtue [0, 1] notes summing to ``overall``
+    — readers normalize by ``len(scores)``."""
+    return {"overall": overall, "scores": {f"v{i}": overall / n for i in range(n)}}
+
+
+# 0.6 of the applicable maximum — a silent second argument that spans the
+# weak bar, so the #1942 non-vacuity gate lets "qualite faible" mean
+# something on these fixtures.
+_SPAN = _quality(5.4)
+
+
 def _make_state(
     identified_arguments=None,
     identified_fallacies=None,
@@ -44,11 +56,11 @@ class TestSignalIntegrity:
         )
 
         state = _make_state(
-            identified_arguments={"arg_1": "desc1"},
+            identified_arguments={"arg_1": "desc1", "arg_2": "solid"},
             identified_fallacies={
                 "f1": {"target_argument_id": "arg_1", "type": "ad hominem"},
             },
-            argument_quality_scores={"arg_1": {"overall": 3.0}},
+            argument_quality_scores={"arg_1": _quality(3.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
             jtms_beliefs={
                 "b1": {"name": "arg_1:some text", "valid": False},
@@ -95,8 +107,8 @@ class TestSignalIntegrity:
         )
 
         state = _make_state(
-            identified_arguments={"arg_1": "desc"},
-            argument_quality_scores={"arg_1": {"overall": 2.5}},
+            identified_arguments={"arg_1": "desc", "arg_2": "solid"},
+            argument_quality_scores={"arg_1": _quality(2.5), "arg_2": _SPAN},
         )
         result = compute_argument_convergence(state)
         assert result["arg_1"]["score"] == 1
@@ -255,11 +267,11 @@ class TestConvergenceDepth:
         )
 
         state = _make_state(
-            identified_arguments={"arg_1": "desc"},
+            identified_arguments={"arg_1": "desc", "arg_2": "solid"},
             identified_fallacies={
                 "f1": {"target_argument_id": "arg_1", "type": "ad hominem"}
             },
-            argument_quality_scores={"arg_1": {"overall": 2.0}},
+            argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
         )
         result = compute_argument_convergence(state)
@@ -271,11 +283,11 @@ class TestConvergenceDepth:
         )
 
         state = _make_state(
-            identified_arguments={"arg_1": "desc"},
+            identified_arguments={"arg_1": "desc", "arg_2": "solid"},
             identified_fallacies={
                 "f1": {"target_argument_id": "arg_1", "type": "ad hominem"}
             },
-            argument_quality_scores={"arg_1": {"overall": 2.0}},
+            argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
             jtms_beliefs={"b1": {"name": "arg_1:text", "valid": False}},
         )
@@ -288,11 +300,11 @@ class TestConvergenceDepth:
         )
 
         state = _make_state(
-            identified_arguments={"arg_1": "desc"},
+            identified_arguments={"arg_1": "desc", "arg_2": "solid"},
             identified_fallacies={
                 "f1": {"target_argument_id": "arg_1", "type": "ad hominem"}
             },
-            argument_quality_scores={"arg_1": {"overall": 2.0}},
+            argument_quality_scores={"arg_1": _quality(2.0), "arg_2": _SPAN},
             counter_arguments=[{"target_arg_id": "arg_1", "content": "counter"}],
             jtms_beliefs={"b1": {"name": "arg_1:text", "valid": False}},
             dung_frameworks={
