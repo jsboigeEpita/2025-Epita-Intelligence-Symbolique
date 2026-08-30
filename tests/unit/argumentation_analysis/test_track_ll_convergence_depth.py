@@ -178,15 +178,24 @@ class TestConvergenceDepthImprovement:
     """After fix: fallacy + quality + JTMS = convergence ≥3 for same arg."""
 
     def test_three_signals_achievable_with_jtms(self):
-        """Combining fallacy + quality + JTMS produces score ≥3 for arg_1."""
+        """Combining fallacy + quality + JTMS produces score ≥3 for arg_1.
+
+        The #1942 non-vacuity gate requires at least one argument whose
+        quality fraction spans the weak bar; otherwise the population is
+        vacuous and 'qualite faible' is suppressed. We add a second,
+        stronger argument so the population spans and the gate opens.
+        """
         state = UnifiedAnalysisState("Test discourse.")
-        state.add_argument("A rhetorically weak argument with low quality.")
+        state.add_argument("A rhetorically weak argument with low quality.")  # arg_1
+        state.add_argument("A balanced reference argument (opens non-vacuity gate).")  # arg_2
 
         # Signal 1: fallacy targeting arg_1
         state.add_fallacy("ad_hominem", "Attacks the person, not the idea.", "arg_1")
 
-        # Signal 2: low quality score
-        state.add_quality_score("arg_1", {"clarte": 1.5, "coherence": 2.0}, 1.8)
+        # Signal 2: low quality score on arg_1 — per-virtue [0,1]; overall = sum.
+        # And a spanning arg_2 (fraction 0.70 ≥ weak bar 0.5) opens the gate.
+        state.add_quality_score("arg_1", {"clarte": 0.15, "coherence": 0.20}, 0.35)
+        state.add_quality_score("arg_2", {"clarte": 0.70}, 0.70)
 
         # Signal 4: JTMS belief retracted — using the new "arg_N:..." naming
         state.add_jtms_belief(
@@ -205,12 +214,18 @@ class TestConvergenceDepthImprovement:
         assert "JTMS retracte" in methods
 
     def test_four_signals_achievable_with_jtms_and_dung(self):
-        """fallacy + quality + JTMS + Dung = convergence ≥4."""
+        """fallacy + quality + JTMS + Dung = convergence ≥4 on arg_1.
+
+        The #1942 non-vacuity gate requires a spanning argument to open the
+        'qualite faible' signal; we add arg_2 to span so the gate opens.
+        """
         state = UnifiedAnalysisState("Multi-signal test discourse.")
-        state.add_argument("A weak argument.")
+        state.add_argument("A weak argument.")  # arg_1
+        state.add_argument("A balanced reference (opens non-vacuity gate).")  # arg_2
 
         state.add_fallacy("straw_man", "Distorts the position.", "arg_1")
-        state.add_quality_score("arg_1", {"clarte": 2.0}, 2.0)
+        state.add_quality_score("arg_1", {"clarte": 0.20}, 0.20)
+        state.add_quality_score("arg_2", {"clarte": 0.70}, 0.70)
         state.add_jtms_belief(
             "arg_1:A weak argument.",
             valid=False,
