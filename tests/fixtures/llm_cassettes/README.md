@@ -26,19 +26,50 @@ Each file: `<sha256>.json`. The sha256 is the cache key computed by
 
 ## Usage
 
-Recording a new cassette (manual workflow, NOT part of the default tests):
+Recording a new cassette (manual workflow, NOT part of the default tests).
+
+**The procedure differs by path, and picking the wrong one silently records
+nothing** — see "What a record run actually captures" below for why. Until
+#1950 this section named a single command that could not work for the SK path.
+
+### SK path (`narrate_convergence` and friends)
+
+Use the dedicated script. It is the only supported way: an SK-path test run
+under pytest is mocked and records nothing, so no `pytest` invocation can
+refresh these cassettes.
 
 ```bash
-# 1. Run the test with `record` mode into a clean DB:
+conda run -n projet-is-roo-new --no-capture-output \
+  python scripts/cassettes/record_sk_cassette.py
+```
+
+It records with `force_authentic=True` into a scratch DB, then exports through
+`export.py` (blocking privacy audit) and prints the new `<sha256>.json`. Then
+delete the file it supersedes and commit.
+
+⚠ Makes a real LLM call (order of $0.0005). Run it only when
+`TestCommittedCassettesStillReplay::test_replay_path_uses_cache` reddens with
+the DRIFT message — that red means the prompt moved, not that the code broke.
+
+### Raw path (pipeline consumers: extract / governance / quality / fallacy /
+counter-arg)
+
+These are never mocked, so a plain record run over the pipeline lane does
+capture them:
+
+```bash
+# 1. Run the pipeline tests with `record` mode into a clean DB:
 LLM_CACHE_MODE=record LLM_CACHE_DIR=.cache/llm_record \
-  conda run -n projet-is-roo-new pytest \
-    tests/unit/argumentation_analysis/plugins/test_narrate_convergence.py::TestNarrateConvergenceIntegration
+  conda run -n projet-is-roo-new pytest <pipeline test path>
 
 # 2. Export the DB to JSON, audits privacy:
 python scripts/cassettes/export.py .cache/llm_record tests/fixtures/llm_cassettes
 
 # 3. Commit the new <sha256>.json files (a PR diff shows them).
 ```
+
+⚠ #1603: the broad record pass is **not** hermetic yet (it produced 5 leaks and
+3 false positives). Do not re-record the raw-path bands before that is fixed.
 
 Replaying (the default — CI lane and reproducibility):
 
@@ -52,9 +83,18 @@ LLM_CACHE_MODE=replay LLM_CACHE_DIR=.cache/llm_replay \
     tests/unit/argumentation_analysis/plugins/test_narrate_convergence.py::TestNarrateConvergenceIntegration
 ```
 
-The pytest test `tests/unit/.../test_cassette_round_trip.py` runs the
-full record → export → import → replay loop and asserts `live == 0` in
-replay (the anti-#1019 metric).
+`tests/unit/.../test_cassette_round_trip.py` holds **two properties with
+opposite failure regimes** (#1950). It records nothing — no test does.
+
+| Class | Property | On red |
+|---|---|---|
+| `TestExportImportScriptsRoundTrip` | the export/import scripts are lossless | **fix the scripts.** Built on synthetic `(key, value)` pairs, so a contract change cannot redden it |
+| `TestCommittedCassettesStillReplay` | committed cassettes still match the production prompt | **re-record** (see SK path above). Not a code defect |
+
+The anti-#1019 metric (`live == 0` in replay) lives in the second. Note that
+`narrate_convergence` swallows a replay miss and falls back to its template
+narrative, so drift is visible **only** in the `hit` counter — never in the
+returned string, and never in `live` alone.
 
 ## What a record run actually captures (measured #1603 R826)
 
