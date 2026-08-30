@@ -110,30 +110,36 @@ class JVMSettings(BaseSettings):
         "https://github.com/adoptium/temurin{maj_v}-binaries/releases/download/jdk-{v}%2B{b}/OpenJDK{maj_v}U-jdk_{arch}_{os}_hotspot_{v}_{b_flat}.zip"
     )
     # Configuration des librairies Java (Tweety)
-    tweety_version: str = "1.29"
+    tweety_version: str = "1.31"
     tweety_libs_dir: Path = Path("libs/tweety")
-    # #1874: modules held at a version other than tweety_version, as
-    # "groupId:artifactId:version" separated by commas. Empty by default because a
-    # pin is only needed when the target version removes a CLASS a consumer names.
-    # 1.31 does NOT delete the evidential family (an earlier revision of this
-    # comment said so): javap shows Support$Type still carrying EVIDENTIAL, and
-    # BipolarArgumentationFramework.getAssociatedTheory(Support$Type) reduces it to
-    # a Dung theory. What 1.31 removes is broader than the two AF classes, and
-    # measuring it matters: the bipolar module drops to 16 classes and replaces the
-    # whole argument/edge vocabulary with Dung's (BArgument -> dung.syntax.Argument,
-    # BinaryAttack/Attack -> dung.syntax.Attack, BinarySupport ->
-    # bipolar.syntax.Support(Argument, Argument)). bipolar_handler resolves FIVE of
-    # those names via jpype.JClass in __init__, so it fails at CONSTRUCTION under
-    # 1.31 -- a migration that swaps only the AF class leaves four siblings broken
-    # and is caught by verify_tweety.py, not by the tests (measured #1959). The pin buys time for that unmigrated consumer; it
-    # does not protect a capability. Bumping tweety_version to 1.31 means migrating
-    # the handler (#1959), not setting
-    # JVM_TWEETY_PINNED_MODULES=org.tweetyproject.arg:bipolar:1.30
+    # #1874 / #1959: modules held at a version other than tweety_version, as
+    # "groupId:artifactId:version" separated by commas. Empty by default because
+    # a pin is only needed when the target version REMOVES a CLASS a consumer
+    # names. The 1.31 bump (handled here, see #1959 R896 rework) resolved every
+    # name the production code resolves through ``jpype.JClass`` in
+    # ``bipolar_handler.__init__``:
+    #   - BArgument   -> dung.syntax.Argument
+    #   - BinaryAttack / Attack -> dung.syntax.Attack
+    #   - BinarySupport -> bipolar.syntax.Support(Argument, Argument)
+    #   - EvidentialArgumentationFramework /
+    #     NecessityArgumentationFramework -> BipolarArgumentationFramework
+    #     parameterised by Support.Type.EVIDENTIAL / NECESSITY.
+    # Hence the previous ``bipolar:1.30`` pin is no longer needed at 1.31 -- the
+    # capability is preserved by migration, not by pinning back. A pin would
+    # only be required if a future bump REMOVES something we expose.
     tweety_pinned_modules: str = ""
     # Modules kept OUT of the assembly, as "groupId:artifactId" separated by
-    # commas. org.tweetyproject:web references bipolar classes that only exist at
-    # 1.31, so it dangles whenever bipolar is pinned back; nothing here imports it.
-    tweety_excluded_modules: str = ""
+    # commas. Default exclusions under #1874 / #1959:
+    #   - ``org.tweetyproject:web``         (Servlet/JSP UI; never imported here)
+    #   - ``gurobi:gurobi``                  (commercial solver licence; 404 on Central)
+    #   - ``isula:isula``                    (iSAT research licence; 404 on Central)
+    #   - ``jspf:core``                      (Java Solver Pathfinding; 404 on Central)
+    # Excluding these shrinks the closure from 155 to 74 jars, all 74 served
+    # by Maven Central, so ``tweetyproject.org/mvn/`` is no longer a required
+    # host (it was the SPOF #1874 treated).
+    tweety_excluded_modules: str = (
+        "org.tweetyproject:web,gurobi:gurobi,isula:isula,jspf:core"
+    )
     native_libs_dir: Path = Path("libs/native")
 
     # External tools
