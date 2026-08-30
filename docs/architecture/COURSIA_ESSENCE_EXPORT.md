@@ -17,7 +17,7 @@
 | Pin CoursIA (`NOTICE-EPITA`) | `a8025f60` — `feat(conv-c): de-templatised PM prompt…` (#1345) |
 | Date du pin | 2026-07-02 |
 | Tag recommandé par ce manifeste (2026-07-14) | ~~`coursia-essence-20260714`~~ — **jamais créé**, voir §3 |
-| **Tag réellement poussé** | **`coursia-essence-20260830`** → `59f9cbd9` |
+| **Tag réellement poussé** | **`coursia-essence-20260830`** → `73d95d7b` (recréé — voir §3) |
 | Carries | `#1443` (sanitization modal/FOL) + `#1444` (doc BNF) + `#1446` (Constat 5 conversational) + `#1447` (harness) |
 
 > **Pourquoi rafraîchir.** Le pin `a8025f60` **précède** le fix `#1441`/`#1443` (« sanitize modal sort decls + FOL T/F bool constants »). Or `#1443` porte **directement dans la surface vendorée** — les deux handlers modal/FOL ci-dessous (§2). Rafraîchir le pin propage le fix en aval : un corpus qui faisait crasher le solveur modal sur le token `'p && q'` (sort declaration illégale) ou le parseur FOL sur `T`/`F` (Top/Bottom = `+`/`-`, pas `T`/`F`) est désormais neutralisé en amont du parseur.
@@ -116,10 +116,21 @@ donc plausiblement un périmètre assumé, pas un accident. Mais cela déplace l
 > mesurable : la commande de re-pull documentée ne pouvait pas s'exécuter, et le pin CoursIA est
 > resté figé sur `a8025f60` (2026-07-02) pendant huit semaines. Voir #1949.
 >
-> **Tag effectivement poussé le 2026-08-30** : `coursia-essence-20260830` → `59f9cbd9`.
+> **Tag effectivement poussé le 2026-08-30** : `coursia-essence-20260830` → **`73d95d7b`**.
+> Il a été **recréé** le jour même : sa première cible (`59f9cbd9`) ne portait pas encore
+> `docs/coursia_contrib/quality_contract_note_argumentprofile.md`, que son propre message cite —
+> soit exactement la faute reprochée à #1451 (un artefact dont la commande documentée ne
+> s'exécute pas). Vérifié avant suppression : rien ne l'avait consommé.
 >
-> Dérive mesurée depuis leur pin `a8025f60` : **381 commits** au total, dont **32** touchant la
-> surface vendorée et **11** touchant `core/shared_state.py` seul.
+> Dérive mesurée depuis leur pin `a8025f60` : **383 commits** au total, dont **21** touchant les
+> **15 fichiers réellement tabulés** au ledger et **11** touchant `core/shared_state.py` seul.
+>
+> ⚠ Le message du tag annonce **32** pour la surface vendorée. Ce n'est pas faux mais c'est un
+> compte **par répertoire** (`core/shared_state.py` + `agents/core/logic/` +
+> `agents/core/informal/`), et il nomme lui-même ce périmètre. Ces répertoires contiennent des
+> fichiers que CoursIA ne vendorise pas — le compte par fichier tabulé est **21**. Le tag n'a pas
+> été rejoué pour autant : ses commandes s'exécutent et il énonce son propre périmètre. Le
+> prochain tag doit utiliser 21, mesuré par `scripts/coursia/check_vendored_drift.py` (§2).
 >
 > Il porte deux changements qui concernent directement la copie vendorée :
 > - **#1942 / #1946** — un seul contrat d'unité pour `overall` (somme des vertus en [0, 1] sur les
