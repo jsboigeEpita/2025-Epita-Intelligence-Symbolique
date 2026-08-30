@@ -43,13 +43,21 @@ Two traps this module is shaped around, both measured rather than assumed
    any of them to a Dung theory. The notion was folded into one unified type, not
    removed.
 
-   What 1.31 *does* remove is narrower and still real: the seven dedicated
+   What 1.31 *does* remove is still substantial, and measuring its full extent is
+   what separates a working migration from a broken one: the seven dedicated
    ``reasoner.evidential`` classes, ``SelfSupporting`` semantics (the new
-   ``Semantics`` enum is BCF / BCOH / BAD), and both concrete syntax classes --
-   ``EvidentialArgumentationFramework`` and ``NecessityArgumentationFramework``.
-   That last pair is the whole reason the pin exists: ``bipolar_handler`` resolves
-   both through :func:`jpype.JClass` in its ``__init__``, so it fails at
-   *construction* under 1.31, not on use. The pin is therefore a stopgap for a
+   ``Semantics`` enum is BCF / BCOH / BAD), both concrete syntax classes
+   (``EvidentialArgumentationFramework``, ``NecessityArgumentationFramework``)
+   **and the entire argument/edge vocabulary**, which Dung's now replaces:
+   ``BArgument`` -> ``dung.syntax.Argument``, ``BinaryAttack`` and bipolar's
+   ``Attack`` -> ``dung.syntax.Attack``, ``BinarySupport`` ->
+   ``bipolar.syntax.Support(Argument, Argument)``.
+
+   That breadth is the whole reason the pin exists: ``bipolar_handler`` resolves
+   **five** of those names through :func:`jpype.JClass` in its ``__init__``, so it
+   fails at *construction* under 1.31, not on use. A migration that swaps only the
+   AF class leaves the other four broken -- measured in #1959, where
+   ``verify_tweety.py`` (not the test suite) is what caught it. The pin is therefore a stopgap for a
    consumer that has not been migrated -- not protection of a lost capability.
    Sizing that stopgap honestly: the handler builds a framework, never queries a
    reasoner (no ``.query``, ``Reasoner`` or ``getModels`` anywhere in its 116

@@ -118,10 +118,14 @@ class JVMSettings(BaseSettings):
     # 1.31 does NOT delete the evidential family (an earlier revision of this
     # comment said so): javap shows Support$Type still carrying EVIDENTIAL, and
     # BipolarArgumentationFramework.getAssociatedTheory(Support$Type) reduces it to
-    # a Dung theory. What 1.31 removes is the two concrete syntax classes
-    # EvidentialArgumentationFramework / NecessityArgumentationFramework, which
-    # bipolar_handler resolves via jpype.JClass in __init__ -- so it fails at
-    # CONSTRUCTION under 1.31. The pin buys time for that unmigrated consumer; it
+    # a Dung theory. What 1.31 removes is broader than the two AF classes, and
+    # measuring it matters: the bipolar module drops to 16 classes and replaces the
+    # whole argument/edge vocabulary with Dung's (BArgument -> dung.syntax.Argument,
+    # BinaryAttack/Attack -> dung.syntax.Attack, BinarySupport ->
+    # bipolar.syntax.Support(Argument, Argument)). bipolar_handler resolves FIVE of
+    # those names via jpype.JClass in __init__, so it fails at CONSTRUCTION under
+    # 1.31 -- a migration that swaps only the AF class leaves four siblings broken
+    # and is caught by verify_tweety.py, not by the tests (measured #1959). The pin buys time for that unmigrated consumer; it
     # does not protect a capability. Bumping tweety_version to 1.31 means migrating
     # the handler (#1959), not setting
     # JVM_TWEETY_PINNED_MODULES=org.tweetyproject.arg:bipolar:1.30

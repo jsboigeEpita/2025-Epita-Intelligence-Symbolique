@@ -11,8 +11,11 @@ deployment.
 .. warning:: Reddening here does NOT mean "restore the pin" (#1959). 1.31 did not
    delete the evidential family: ``Support$Type`` still carries ``EVIDENTIAL`` and
    ``BipolarArgumentationFramework.getAssociatedTheory(Support$Type)`` reduces it to
-   a Dung theory. What 1.31 removes is the two concrete syntax classes and the seven
-   dedicated ``reasoner.evidential`` classes -- so on a 1.31 bump this test is
+   a Dung theory. What 1.31 removes is wider than those two AF classes: the bipolar
+   module falls to 16 classes, dropping the seven dedicated ``reasoner.evidential``
+   classes AND the whole argument/edge vocabulary (``BArgument``, ``BinaryAttack``,
+   ``BinarySupport``, bipolar's ``Attack``), which Dung's now replaces -- so on a
+   1.31 bump this test is
    *migrated* to the unified API (build a ``BipolarArgumentationFramework``, mark the
    support ``EVIDENTIAL``, reduce with ``getAssociatedTheory``, run a Dung reasoner),
    keeping the same non-vacuity property. Re-pinning would retain a version whose
