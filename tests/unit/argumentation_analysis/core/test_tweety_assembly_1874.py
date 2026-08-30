@@ -294,7 +294,7 @@ def test_zero_byte_fat_jar_is_not_a_classpath(tmp_path):
 def test_fat_jar_of_another_version_does_not_satisfy_the_asked_version(tmp_path):
     """Serving the wrong version silently is what this module exists to prevent.
 
-    1.31 removes the evidential family that 1.30 still has, so a machine that
+    Consecutive Tweety releases do not expose the same classes, so a machine that
     cached 1.28 must not keep answering for a config that moved on. Without the
     version argument this returns True and the Maven path becomes dead code on
     every machine holding an old fat jar.

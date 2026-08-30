@@ -378,7 +378,7 @@ def is_already_assembled(
     * a jar of a *different* version satisfied it, so a machine holding 1.28 kept
       serving 1.28 after the config moved on -- caught now by ``version``. Serving
       the wrong version silently is the failure this module exists to prevent,
-      inverted: 1.31 removes a family that 1.30 still has.
+      inverted: 1.30 and 1.31 do not expose the same bipolar classes.
 
     ``version=None`` keeps the version-blind behaviour for callers that genuinely
     do not care; production passes it.

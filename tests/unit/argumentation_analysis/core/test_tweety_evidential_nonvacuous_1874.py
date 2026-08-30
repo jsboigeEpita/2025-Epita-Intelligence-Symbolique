@@ -3,10 +3,20 @@
 ...``bipolar`` must stay pinned at 1.30 (the only evidential-capable release). This
 test is the discriminating control: it loads the evidential family through the real
 consumer (``BipolarHandler``) and runs a reasoner on a genuine framework. If someone
-re-aligns ``arg:bipolar`` to 1.31 (which deleted the evidential family), the
+re-aligns ``arg:bipolar`` to 1.31, the
 ``EvidentialArgumentationFramework`` class load fails loudly at construction and this
 test reddens — a JVM that "boots" but lacks the evidential classes is not a live
 deployment.
+
+.. warning:: Reddening here does NOT mean "restore the pin" (#1959). 1.31 did not
+   delete the evidential family: ``Support$Type`` still carries ``EVIDENTIAL`` and
+   ``BipolarArgumentationFramework.getAssociatedTheory(Support$Type)`` reduces it to
+   a Dung theory. What 1.31 removes is the two concrete syntax classes and the seven
+   dedicated ``reasoner.evidential`` classes -- so on a 1.31 bump this test is
+   *migrated* to the unified API (build a ``BipolarArgumentationFramework``, mark the
+   support ``EVIDENTIAL``, reduce with ``getAssociatedTheory``, run a Dung reasoner),
+   keeping the same non-vacuity property. Re-pinning would retain a version whose
+   only remaining benefit is that this file has not been rewritten yet.
 
 The framework construction mirrors ``BipolarHandler.analyze_bipolar_framework`` with the
 same JPype most-specific-overload cast idiom (edge cast to Attack/Support). Synthetic
@@ -35,7 +45,14 @@ def _jvm():
 
 def test_evidential_framework_loaded_and_reasoner_produces_model():
     # The real consumer loads EvidentialArgumentationFramework at construction — if
-    # bipolar is re-aligned to 1.31 this raises (class deleted) and the test reddens.
+    # bipolar is re-aligned to 1.31 this raises (that class is gone) and the test
+    # reddens. See the module docstring: the fix is to migrate, not to re-pin.
+    #
+    # The two assertions below are echoes of this call's own arguments, so they cannot
+    # tell a working handler from one that computes nothing. Not hypothetical:
+    # analyze_bipolar_framework builds the framework and discards it, which is why the
+    # reasoner check further down has to rebuild it by hand. The reasoning proven here
+    # is Tweety's, not ours (#1959).
     handler = BipolarHandler()
 
     # Exercise the production build path (loads + builds the framework with the casts).
