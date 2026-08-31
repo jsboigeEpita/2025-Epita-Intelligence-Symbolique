@@ -203,7 +203,33 @@ jobs:
           # install/import/restore window, so admission is safe; the 2
           # genuine-verdict LLM tests in that dir are requires_api-marked and
           # stay deselected by the gate filter.
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          #
+          # #1967: 15 files at tests/test_*.py (root) were outside the argv —
+          # 6 of them are 0-byte shells (collect nothing), 7 are substantive.
+          # Of those 7, 4 carry no markers and were never collected by any lane:
+          #   - test_complex_trace_authentic: 1 test, makes 1 authentic LLM
+          #     call (semantic_kernel + GPT-4o-mini), needs requires_api
+          #   - test_fact_checking_integration: 22 tests, all mock-based
+          #   - test_integration_success_validation: 21 tests, all mock-based
+          #   - test_orchestration_integration: 10 tests, mock-based
+          # 1 marks requires_api on one of three classes and was paying 45 LLM
+          # calls in a double angle mort:
+          #   - test_regression_golden: 17 TestGoldenLightWorkflow + 2
+          #     TestRegressionSnapshots + 14 TestGoldenStandardWorkflow (the
+          #     last correctly marked). The light/snapshot classes do produce
+          #     LLM egress (measured 45 calls/collection run — see #1967);
+          #     they belong in unit-api, exactly like logical_agents in #1817.
+          # 1 has 9 stale assertions dating from #418 and was red since #449
+          # (118 days, invisible because no lane names the file):
+          #   - test_readme_quickstart: 14 tests, realigned in this PR.
+          # The shell files (test_informal_*, test_operational_agents_*,
+          # test_pythonpath, test_tactical_*) collect 0 tests and contribute
+          # nothing whether we name them or not.
+          #
+          # Glob the 7 substantive files explicitly so the 6 empty shells do
+          # not bloat the argv and so a future empty stub cannot sneak into a
+          # lane named after it.
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_complex_trace_authentic.py tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "not slow and not requires_api" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Generate test summary
         if: always()

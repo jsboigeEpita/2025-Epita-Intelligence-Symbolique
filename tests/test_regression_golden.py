@@ -120,10 +120,11 @@ def _check_thresholds(
 
 
 # ============================================================
-# Light workflow golden tests (no API key required)
+# Light workflow golden tests
 # ============================================================
 
 
+@pytest.mark.requires_api
 class TestGoldenLightWorkflow:
     """Golden regression tests for the light workflow.
 
@@ -330,6 +331,7 @@ class TestGoldenStandardWorkflow:
 # ============================================================
 
 
+@pytest.mark.requires_api
 class TestRegressionSnapshots:
     """Ensure key output structure doesn't change between versions."""
 
