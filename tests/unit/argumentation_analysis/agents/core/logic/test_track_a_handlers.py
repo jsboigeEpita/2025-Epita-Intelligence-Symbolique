@@ -318,6 +318,30 @@ class TestBipolarHandler:
             reload(mod)
             return mod.BipolarHandler(), mock_jpype, registry
 
+    @staticmethod
+    def _wire_framework_query(
+        registry, n_attacks=1, n_supports=1, model_args=("a", "b")
+    ):
+        """#1965: the handler reads counts and the grounded model from the
+        framework -- wire the mock JVM so those calls return sized values.
+        Without this, ``len(framework.getAttacks())`` raises TypeError on a
+        bare MagicMock and the analysis path fails before reaching the model.
+        """
+        fw = registry[
+            "org.tweetyproject.arg.bipolar.syntax.BipolarArgumentationFramework"
+        ].return_value
+        fw.getAttacks.return_value = [object()] * n_attacks
+        fw.getSupports.return_value = [object()] * n_supports
+        reasoner = registry[
+            "org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner"
+        ].return_value
+        model = reasoner.getModel.return_value
+        model.size.return_value = len(model_args)
+        model.__iter__.return_value = iter(
+            [MagicMock(getName=MagicMock(return_value=name)) for name in model_args]
+        )
+        return fw, model
+
     def test_init_loads_bipolar_classes(self):
         handler, _, registry = self._make_handler()
         # #1959 (1.31 migration, R896 rework): the three AF classes
@@ -334,7 +358,8 @@ class TestBipolarHandler:
         assert "org.tweetyproject.arg.dung.syntax.Attack" in registry
 
     def test_analyze_necessity_framework(self):
-        handler, _, _ = self._make_handler()
+        handler, _, registry = self._make_handler()
+        self._wire_framework_query(registry, n_attacks=1, n_supports=1)
         result = handler.analyze_bipolar_framework(
             arguments=["a", "b", "c"],
             attacks=[["a", "b"]],
@@ -345,9 +370,15 @@ class TestBipolarHandler:
         assert result["statistics"]["arguments_count"] == 3
         assert result["statistics"]["attacks_count"] == 1
         assert result["statistics"]["supports_count"] == 1
+        # #1965: the framework is queried, not echoed -- a non-trivial result
+        # derived from the (mocked) grounded model.
+        assert result["semantic"] == "grounded"
+        assert result["model_size"] == 2
+        assert result["extensions"] == [["a", "b"]]
 
     def test_analyze_evidential_framework(self):
-        handler, _, _ = self._make_handler()
+        handler, _, registry = self._make_handler()
+        self._wire_framework_query(registry, n_attacks=0, n_supports=1)
         result = handler.analyze_bipolar_framework(
             arguments=["x", "y"],
             attacks=[],
@@ -356,6 +387,7 @@ class TestBipolarHandler:
         )
         assert result["framework_type"] == "evidential"
         assert result["statistics"]["supports_count"] == 1
+        assert result["model_size"] == 2
 
 
 # =====================================================================
