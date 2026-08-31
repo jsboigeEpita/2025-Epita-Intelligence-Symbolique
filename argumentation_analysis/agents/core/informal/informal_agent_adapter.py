@@ -94,6 +94,16 @@ class InformalAgent:
         Returns:
             Résultats de l'analyse au format attendu par les tests
         """
+        # #1978 (1/3): la garde explicite dit ce qui ne va pas au lieu
+        # d'avaler le TypeError dans un try global muet. Sans cette garde
+        # ``len(text)`` ligne suivante levait dès que text=None.
+        if text is None:
+            raise TypeError(
+                "analyze_text(text) requiert un texte non-None ; "
+                "None passé en argument (sans doute une propagation "
+                "manquée depuis un appelant)."
+            )
+
         self.logger.info(f"Analyse d'un texte de {len(text)} caractères...")
 
         # Essayer d'utiliser l'agent SK réel si disponible
@@ -113,8 +123,30 @@ class InformalAgent:
         if "fallacy_detector" in self.tools:
             detector = self.tools["fallacy_detector"]
             if hasattr(detector, "detect"):
-                fallacies = detector.detect(text)
+                # #1978 (2/3): le chemin SK ci-dessus enveloppe son appel
+                # dans un try/except ; le mode dégradé est *le* filet de
+                # sécurité et doit aussi isoler un détecteur qui lève.
+                # Sinon le fallback propage l'erreur qu'il est censé
+                # amortir.
+                try:
+                    fallacies = detector.detect(text)
+                except Exception as e:
+                    self.logger.error(
+                        f"Erreur du détecteur de sophismes en mode "
+                        f"dégradé: {e}. Retour d'une liste vide."
+                    )
+                    fallacies = []
             else:
+                # #1978 (3/3): outil présent mais sans l'interface attendue.
+                # On *signale* l'outil ignoré (WARNING) au lieu de le taire
+                # — sans casser les tests MagicMock (pas de validation
+                # stricte). Permet de distinguer « outil absent » de
+                # « outil mal configuré ».
+                self.logger.warning(
+                    f"Outil 'fallacy_detector' ignoré: type "
+                    f"{type(detector).__name__} sans interface .detect(). "
+                    f"L'agent fonctionnera en mode dégradé sans détection."
+                )
                 # Fallback pour les tests
                 fallacies = getattr(detector, "return_value", [])
 
