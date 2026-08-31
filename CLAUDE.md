@@ -193,15 +193,23 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > capability with zero production demanders. When adding a capability, add it to the surface
 > `setup_registry` populates, **and give it a consumer** — a phase asking for it.
 
-> ⚠ **"Requested" means `add_phase(capability="…")`, not `find_*_for_capability("…")`.**
+> ⚠ **"Requested" means `add_phase(capability="…")`, not a `find_*` grep.**
 > Phases are what consume capabilities: `workflow_dsl.py` resolves `phase.capability` through
-> `find_for_capability` at run time, and production carries **49** distinct `capability=`
-> literals (89 counting tests and examples). Literal `find_*_for_capability("…")` calls are almost entirely a *test* idiom —
-> **57** sites under `tests/`, and in production exactly **one** real call site (plus one
-> inside a docstring). Counting consumers with that grep measures the test suite, not the
-> system: `argument_quality` (30 phases), `counter_argument_generation` (16),
-> `governance_simulation` (15) and `adversarial_debate` (11) are all consumed on real runs
-> while having almost no literal `find_*` site.
+> `find_for_capability` at run time, and `argumentation_analysis/` carries **48** distinct
+> `capability=` phase literals. The resolver has **five spellings**, and they partition
+> sharply: production calls *only* the untyped `find_for_capability` (12 sites across six
+> modules — `workflow_dsl`, `router`, `hierarchy_bridge`, `capability_eval`, and the two MCP
+> tool modules), while the three typed variants
+> (`find_agents_`/`find_plugins_`/`find_services_for_capability`) have **zero** production
+> callers and live entirely under `tests/`. A grep on one spelling therefore measures
+> whichever half it matched, not the resolver — enumerate the surface before counting it.
+> Scope every figure, too: `argument_quality` (**22** production phases, 30 counting tests),
+> `counter_argument_generation` (13 / 16), `governance_simulation` (11 / 15) and
+> `adversarial_debate` (9 / 11) are all consumed on real runs; the production figure is the
+> one a claim about real runs may quote.
+> `tests/unit/argumentation_analysis/orchestration/test_capability_resolver_surface_1980.py`
+> re-derives the partition — it reddens when a sixth spelling appears or a typed variant gains
+> a production caller, not when the codebase grows.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 
