@@ -119,10 +119,7 @@ traces/
 text_cache/
 # Scratch run logs (may contain corpus-derived plaintext — never track). #1231
 .cache/
-data/
-!data/.gitkeep
-!data/extract_sources.json.gz.enc
-!argumentation_analysis/agents/data/
+# No blanket `data/` rule: the root data/ it targeted was relocated by #323, and unanchored it silently dropped every new file in nested data dirs (#1971).
 
 # External tools & downloads
 # ext_tools/ is ignored EXCEPT the vendored EProver FOL solver runtime.
