@@ -205,8 +205,8 @@ jobs:
           # stay deselected by the gate filter.
           #
           # #1967: 15 files at tests/test_*.py (root) were outside the argv —
-          # 6 of them are 0-byte shells (collect nothing), 7 are substantive.
-          # Of those 7, 4 carry no markers and were never collected by any lane:
+          # 9 of them are 0-byte shells (collect nothing), 6 are substantive.
+          # Of those 6, 3 carry no markers and were never collected by any lane:
           #   - test_fact_checking_integration: 22 tests, all mock-based
           #   - test_integration_success_validation: 21 tests, all mock-based
           #   - test_orchestration_integration: 10 tests, mock-based
