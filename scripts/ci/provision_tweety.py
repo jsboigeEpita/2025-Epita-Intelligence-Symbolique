@@ -24,7 +24,7 @@ from argumentation_analysis.core.jvm_setup import download_tweety_jars
 
 
 def failure_annotation() -> str:
-    """GitHub workflow command naming the SPOF (#1874 arbitration, point 5).
+    """GitHub workflow command orienting the reader (#1874 point 5, retuned by #1959).
 
     The named cause already lives in the AssemblyError chain, but it sits
     mid-log: whoever lands on the red run page sees only "Process completed
@@ -33,12 +33,15 @@ def failure_annotation() -> str:
     ``::error::`` from stdout only.
     """
     return (
-        "::error::Approvisionnement Tweety echoue. SPOF connu: "
-        "tweetyproject.org/mvn/ est la SEULE source de jspf:core, "
-        "gurobi:gurobi et isula:isula, et un cache froid doit y passer. "
-        "Distinguer dans le log complet: (1) version non constructible = "
+        "::error::Approvisionnement Tweety echoue. Le closure par defaut est "
+        "servi a 74/74 par Maven Central: tweetyproject.org/mvn/ n'est plus un "
+        "hote requis depuis #1959, donc ne pas partir enqueter dessus. Les trois "
+        "artefacts qu'il servait seul (jspf:core, gurobi:gurobi, isula:isula) "
+        "sont exclus par defaut -- s'ils reapparaissent dans l'erreur, la cause "
+        "est que tweety_excluded_modules a ete vide ou surcharge. Sinon "
+        "distinguer dans le log complet: (1) version non constructible = "
         "Could not FIND artifact org.tweetyproject...; (2) transport en "
-        "panne sur l'hote = Could not TRANSFER ... Connection reset."
+        "panne sur Central = Could not TRANSFER ... Connection reset."
     )
 
 
