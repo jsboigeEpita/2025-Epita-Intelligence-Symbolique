@@ -1,5 +1,12 @@
 # -*- coding: utf-8 -*-
-"""Guard for #1874 (arbitration point 5): the Provision step's failure names the SPOF.
+"""Guard for #1874 (arbitration point 5): the Provision step's failure orients the reader.
+
+⚠ Retuned by #1959. This guard pins the *presence* of the host name and the
+three artifact names -- it cannot detect that the sentence around them has
+become false, and it did not: the annotation went on calling
+tweetyproject.org/mvn/ "la SEULE source" after the default exclusions removed
+all three artifacts from the closure, and this guard stayed green through it.
+Keep the assertions, but read the copy when the assembly story changes.
 
 The Python error chain already names tweetyproject.org (AssemblyError in
 ``tweety_assembly.py``, logged by ``download_tweety_jars``), but that text sits
@@ -42,13 +49,18 @@ class TestProvisionFailureNamesSPOF:
             "command, or it never reaches the run-page annotation strip"
         )
         assert "tweetyproject.org" in text, (
-            "#1874: the failure annotation must name the SPOF host -- a "
-            "generic 'exit code 1' is what restarted each investigation"
+            "#1874/#1959: the annotation must still name the host, but the "
+            "reason inverted. It named it as the SPOF to go check; since the "
+            "default exclusions put the closure at 74/74 on Central it names "
+            "it as the host NOT to go check. Naming it either way is what "
+            "stops the reader re-deriving where the jars come from"
         )
         assert "jspf" in text and "gurobi" in text, (
-            "#1874: the annotation must name the three artifacts only "
-            "tweetyproject.org/mvn/ serves, or the reader cannot tell a "
-            "SPOF outage from a Central outage"
+            "#1959: the three artifacts stay named, for a reason that "
+            "outlived their exclusion -- seeing one of them in a provisioning "
+            "error now means tweety_excluded_modules was emptied or "
+            "overridden, which is a different defect from a Central outage "
+            "and has a different fix"
         )
 
     def test_main_emits_annotation_on_stdout_when_provisioning_fails(
