@@ -20,41 +20,31 @@ class BipolarHandler:
     def __init__(self, initializer_instance=None):
         if initializer_instance and not initializer_instance.is_jvm_ready():
             raise RuntimeError("BipolarHandler instantiated before JVM is ready.")
-        # #1959 (1.31 migration): Tweety 1.31 unified the three AF classes
-        # (EvidentialArgumentationFramework, NecessityArgumentationFramework,
-        # DeductiveArgumentationFramework) into a single
-        # BipolarArgumentationFramework parameterised by a Support.Type enum
-        # (EVIDENTIAL / NECESSITY / DEDUCTIVE). The 1:1 migration keeps
-        # `framework_type=evidential` and `framework_type=necessity` as
-        # behavioural no-ops — the handler constructs and discards the
-        # framework without ever querying it (see #1959 DoD "open a separate
-        # issue for the no-op"; do NOT extend the scope here). The Support.Type
-        # selection is preserved on the returned dict by analyze_bipolar_framework
-        # so callers see the same shape.
+        # #1959 (1.31 migration, R896 rework): Tweety 1.31 reduced the bipolar
+        # module from 86 to 16 classes. Three AF classes were unified into a
+        # single ``BipolarArgumentationFramework`` parameterised by ``Support.Type``
+        # (EVIDENTIAL / NECESSITY / DEDUCTIVE / etc.), AND the whole argument/edge
+        # vocabulary was replaced by Dung's. The five names the handler resolves
+        # here migrate as follows (measured in #1959, table in
+        # ``core/tweety_assembly.py``):
+        #   - ``EvidentialArgumentationFramework`` /
+        #     ``NecessityArgumentationFramework`` -> ``BipolarArgumentationFramework``
+        #   - ``BArgument``           -> ``dung.syntax.Argument``
+        #   - ``BinaryAttack`` / bipolar's ``Attack``
+        #                              -> ``dung.syntax.Attack``
+        #   - ``BinarySupport``       -> ``bipolar.syntax.Support(Argument, Argument)``
+        #
+        # The 1:1 migration keeps ``framework_type=evidential`` and
+        # ``framework_type=necessity`` as behavioural no-ops -- the handler
+        # constructs and discards the framework without ever querying it
+        # (see #1965 "open a separate issue for the no-op"; do NOT extend the
+        # scope here).
         self.BipolarAF = jpype.JClass(
             "org.tweetyproject.arg.bipolar.syntax.BipolarArgumentationFramework"
         )
         self.Support = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Support")
-        self.BArgument = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.BArgument")
-        self.BinaryAttack = jpype.JClass(
-            "org.tweetyproject.arg.bipolar.syntax.BinaryAttack"
-        )
-        self.BinarySupport = jpype.JClass(
-            "org.tweetyproject.arg.bipolar.syntax.BinarySupport"
-        )
-        # #1422 / #1178-class: BipolarArgumentationFramework inherits
-        # ``add(GeneralEdge)`` from AbstractBipolarFramework AND declares
-        # ``add(Attack)`` / ``add(Support)``; BinaryAttack/BinarySupport are
-        # assignable to both their specific type and GeneralEdge, so a plain
-        # ``framework.add(edge)`` is a JPype ambiguous-overload error. This was
-        # dormant while supports were always empty (absent_no_translator); the
-        # TR-1 translator (#1419) now feeds genuine supports and exposes it.
-        # Fix: cast the edge to its specific static type (Attack / Support, the
-        # same JObject idiom as cl_handler/qbf_handler) so JPype's most-specific
-        # overload selection resolves to add(Attack)/add(Support) — the
-        # supported subclass methods (the inherited add(GeneralEdge) is an
-        # UnsupportedOperationException stub).
-        self.Attack = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Attack")
+        self.Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
+        self.Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
 
     def analyze_bipolar_framework(
         self,
@@ -75,38 +65,35 @@ class BipolarHandler:
             Dict with analysis results.
         """
         try:
-            # #1959 (1.31 migration): single BipolarArgumentationFramework
-            # replaces the three 1.28 classes (EvidentialArgumentationFramework,
-            # NecessityArgumentationFramework, DeductiveArgumentationFramework).
-            # The handler is a 1:1 swap — both `framework_type` values
-            # construct and discard the framework without querying it (the
-            # iso-comportement rule from #1959; see DoD "open a separate issue
-            # for the no-op", do NOT extend the scope here). The selected
-            # Support.Type is preserved on the returned dict so callers see the
-            # same shape.
+            # #1959 (1.31 migration, R896 rework): single BipolarArgumentationFramework
+            # replaces the three 1.28 AF classes; the whole argument/edge vocabulary
+            # was replaced by Dung's. The handler is a 1:1 swap -- both
+            # ``framework_type`` values construct and discard the framework without
+            # querying it (the iso-comportement rule from #1959; see #1965 "open a
+            # separate issue for the no-op", do NOT extend the scope here).
             framework = self.BipolarAF()
 
-            arg_map = {name: self.BArgument(name) for name in arguments}
+            arg_map = {name: self.Argument(name) for name in arguments}
             for arg in arg_map.values():
                 framework.add(arg)
 
             for src, tgt in attacks:
                 if src in arg_map and tgt in arg_map:
-                    # #1422/#1178-class: cast to the Attack static type so the
-                    # most-specific add(Attack) overload is selected.
-                    edge = jpype.JObject(
-                        self.BinaryAttack(arg_map[src], arg_map[tgt]),
-                        self.Attack,
-                    )
-                    framework.add(edge)
+                    # #1959 (R896 rework): the old JPype-JObject cast to the
+                    # Attack static type was needed in 1.29 because BinaryAttack
+                    # was assignable to GeneralEdge AND Attack (overload
+                    # ambiguity on framework.add). In 1.31 ``dung.syntax.Attack``
+                    # is the sole attack type -- there is no sibling -- so the
+                    # most-specific overload is selected without a cast.
+                    framework.add(self.Attack(arg_map[src], arg_map[tgt]))
 
             for src, tgt in supports:
                 if src in arg_map and tgt in arg_map:
-                    edge = jpype.JObject(
-                        self.BinarySupport(arg_map[src], arg_map[tgt]),
-                        self.Support,
-                    )
-                    framework.add(edge)
+                    # #1959 (R896 rework): bipolar.Support now has a binary
+                    # constructor ``Support(Argument, Argument)`` and inherits
+                    # from DirectedEdge<Argument> (not from Attack), so the
+                    # cast needed in 1.29 is no longer necessary here either.
+                    framework.add(self.Support(arg_map[src], arg_map[tgt]))
 
             # Get attacks and supports count from the framework
             attack_count = len(attacks)
