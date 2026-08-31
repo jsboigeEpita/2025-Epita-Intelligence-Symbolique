@@ -320,11 +320,18 @@ class TestBipolarHandler:
 
     def test_init_loads_bipolar_classes(self):
         handler, _, registry = self._make_handler()
+        # #1959 (1.31 migration, R896 rework): the three AF classes
+        # (Evidential/Necessity/Deductive) are unified into
+        # BipolarArgumentationFramework; the whole argument/edge vocabulary was
+        # replaced by Dung's. The five names the handler resolves here are the
+        # migrated ones, in 1.31 coordinates.
         assert (
-            "org.tweetyproject.arg.bipolar.syntax.NecessityArgumentationFramework"
+            "org.tweetyproject.arg.bipolar.syntax.BipolarArgumentationFramework"
             in registry
         )
-        assert "org.tweetyproject.arg.bipolar.syntax.BArgument" in registry
+        assert "org.tweetyproject.arg.bipolar.syntax.Support" in registry
+        assert "org.tweetyproject.arg.dung.syntax.Argument" in registry
+        assert "org.tweetyproject.arg.dung.syntax.Attack" in registry
 
     def test_analyze_necessity_framework(self):
         handler, _, _ = self._make_handler()

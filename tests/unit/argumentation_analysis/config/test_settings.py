@@ -244,7 +244,25 @@ class TestJVMSettings:
 
     def test_tweety_settings(self):
         s = JVMSettings()
-        assert s.tweety_version == "1.29"
+        assert s.tweety_version == "1.31", (
+            "Deliberate golden update (#1959): 1.31 is not a preference, it is the "
+            "ceiling -- Central serves 1.18 through 1.31 and answers 404 for 1.32, "
+            "1.33 and 2.0. Reverting to 1.29 looks like the safe move and is not: "
+            "the pin it used to need was dropped here, and 1.29 with the default "
+            "exclusions below has never been measured. Measure before changing it."
+        )
+        # The default exclusion set is load-bearing, so it is asserted rather than
+        # left to whoever reads settings.py: excluding these four shrinks the
+        # closure from 155 to 74 artifacts, all 74 served by Maven Central, which
+        # is what removes tweetyproject.org/mvn as a required host (the SPOF #1874
+        # existed to treat). A default nothing checks is a default that drifts.
+        assert s.tweety_excluded_modules == (
+            "org.tweetyproject:web,gurobi:gurobi,isula:isula,jspf:core"
+        )
+        assert s.tweety_pinned_modules == "", (
+            "no pin: 1.31 removes classes bipolar_handler used to name, and the "
+            "answer was to migrate the handler (#1959), not to hold bipolar back."
+        )
         assert isinstance(s.tweety_libs_dir, Path)
         assert isinstance(s.native_libs_dir, Path)
 

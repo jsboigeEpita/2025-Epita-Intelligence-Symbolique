@@ -54,12 +54,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: 'temurin'
-          java-version: '11'
-
+      # #1959 (JDK source unique): see ci.yml -- the setup-java step listed
+      # Java 11 but was inert (find_existing_jdk ignores JAVA_HOME,
+      # is_valid_jdk rejects any major < 15). Removed rather than bumped.
       - name: Setup Miniconda
         uses: conda-incubator/setup-miniconda@v2
         timeout-minutes: 15
