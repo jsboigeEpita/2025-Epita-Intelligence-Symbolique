@@ -34,17 +34,25 @@ class BipolarHandler:
         #                              -> ``dung.syntax.Attack``
         #   - ``BinarySupport``       -> ``bipolar.syntax.Support(Argument, Argument)``
         #
-        # The 1:1 migration keeps ``framework_type=evidential`` and
-        # ``framework_type=necessity`` as behavioural no-ops -- the handler
-        # constructs and discards the framework without ever querying it
-        # (see #1965 "open a separate issue for the no-op"; do NOT extend the
-        # scope here).
+        # The 1:1 migration initially kept both ``framework_type`` values as
+        # behavioural no-ops (construct, discard, never query) -- #1965 closed
+        # that gap: the handler now reduces the framework to its associated
+        # Dung theory per support type and returns the grounded model.
         self.BipolarAF = jpype.JClass(
             "org.tweetyproject.arg.bipolar.syntax.BipolarArgumentationFramework"
         )
         self.Support = jpype.JClass("org.tweetyproject.arg.bipolar.syntax.Support")
         self.Argument = jpype.JClass("org.tweetyproject.arg.dung.syntax.Argument")
         self.Attack = jpype.JClass("org.tweetyproject.arg.dung.syntax.Attack")
+        # #1965: the handler used to construct the framework and return an echo
+        # of its inputs. The canonical query per Tweety 1.31 is: reduce the
+        # bipolar framework to a Dung theory via getAssociatedTheory(Support.Type),
+        # then run the grounded Dung reasoner (the 1.31 evidential reasoner
+        # family was retired; this is the same reduction the non-vacuity
+        # control test_tweety_evidential_nonvacuous_1874 performs by hand).
+        self.SimpleGroundedReasoner = jpype.JClass(
+            "org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner"
+        )
 
     def analyze_bipolar_framework(
         self,
@@ -67,10 +75,8 @@ class BipolarHandler:
         try:
             # #1959 (1.31 migration, R896 rework): single BipolarArgumentationFramework
             # replaces the three 1.28 AF classes; the whole argument/edge vocabulary
-            # was replaced by Dung's. The handler is a 1:1 swap -- both
-            # ``framework_type`` values construct and discard the framework without
-            # querying it (the iso-comportement rule from #1959; see #1965 "open a
-            # separate issue for the no-op", do NOT extend the scope here).
+            # was replaced by Dung's. #1965 then closed the no-op the migration
+            # had preserved: the framework is now queried (see below).
             framework = self.BipolarAF()
 
             arg_map = {name: self.Argument(name) for name in arguments}
@@ -95,9 +101,33 @@ class BipolarHandler:
                     # cast needed in 1.29 is no longer necessary here either.
                     framework.add(self.Support(arg_map[src], arg_map[tgt]))
 
-            # Get attacks and supports count from the framework
-            attack_count = len(attacks)
-            support_count = len(supports)
+            # #1965: count from the framework, not from the input lists. An
+            # edge referencing an argument absent from ``arguments`` is
+            # filtered above, so the two counts diverge on such an input --
+            # that divergence is the falsifiable control that the handler
+            # really built and consulted the framework.
+            attack_count = len(framework.getAttacks())
+            support_count = len(framework.getSupports())
+
+            # #1965: query the framework -- grounded model of the associated
+            # Dung theory, one canonical reasoner per support type. ``None``
+            # means nothing was computed (unknown framework_type), distinct
+            # from a computed empty model (0 / []).
+            support_type = self.Support.Type
+            assoc_type = {
+                "necessity": support_type.NECESSITY,
+                "evidential": support_type.EVIDENTIAL,
+            }.get(framework_type)
+            extensions: Optional[List[List[str]]] = None
+            model_size: Optional[int] = None
+            semantic: Optional[str] = None
+            if assoc_type is not None:
+                dung_theory = framework.getAssociatedTheory(assoc_type)
+                grounded = self.SimpleGroundedReasoner()
+                model = grounded.getModel(dung_theory)
+                model_size = int(model.size())
+                extensions = [sorted(str(arg.getName()) for arg in model)]
+                semantic = "grounded"
 
             result = {
                 "framework_type": framework_type,
@@ -109,6 +139,10 @@ class BipolarHandler:
                     "attacks_count": attack_count,
                     "supports_count": support_count,
                 },
+                # #1965: fields derived from the constructed framework.
+                "extensions": extensions,
+                "model_size": model_size,
+                "semantic": semantic,
             }
 
             return result

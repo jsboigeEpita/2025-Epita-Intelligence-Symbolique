@@ -20,20 +20,15 @@ not a live deployment.
    retain a version whose only remaining benefit is that this file has not
    been rewritten yet.
 
-Synthetic framework: args a, b, c; attack a->b; support c->b. We mark the
-support with ``Support.Type.EVIDENTIAL``, reduce via
-``getAssociatedTheory(Support$Type)`` to a Dung framework, and query the
-grounded reasoner. The model must be non-empty -- an empty model would mean
+Synthetic framework: args a, b, c; attack a->b; support c->b. Since #1965 the
+handler itself marks the support with ``Support.Type.EVIDENTIAL``, reduces via
+``getAssociatedTheory(Support$Type)`` to a Dung framework, and queries the
+grounded reasoner -- the non-vacuity assertion reads the handler's returned
+model (pre-#1965 the test rebuilt the framework by hand because the handler
+never queried it). The model must be non-empty -- an empty model would mean
 the reasoner never ran, i.e. vacuously green.
-
-The framework construction mirrors ``BipolarHandler.analyze_bipolar_framework``
-using the 1.31 API (``dung.syntax.Argument``, ``dung.syntax.Attack``,
-``bipolar.syntax.Support(Argument, Argument)``). Synthetic atoms only (a, b, c);
-the jpype/tweety markers mirror test_native_sat_decides_1798 so the gate still
-runs this when jars are present.
 """
 
-import jpype
 import pytest
 
 from argumentation_analysis.agents.core.logic.bipolar_handler import BipolarHandler
@@ -52,38 +47,22 @@ def test_evidential_framework_loaded_and_reasoner_produces_model():
     # The real consumer loads BipolarArgumentationFramework at construction.
     handler = BipolarHandler()
 
-    # Exercise the production build path (loads + builds the framework with the casts).
+    # Exercise the production path end to end: loads, builds AND queries the
+    # framework. #1965 closed the no-op -- the handler itself now reduces via
+    # getAssociatedTheory(Support.Type.EVIDENTIAL) and returns the grounded
+    # model, so the non-vacuity assertion holds through the real consumer
+    # instead of a manual rebuild of the framework (pre-fix l.62-89 rebuilt
+    # it because the handler never exposed a queried model).
     result = handler.analyze_bipolar_framework(
         ["a", "b", "c"], [["a", "b"]], [["c", "b"]], framework_type="evidential"
     )
     assert result["framework_type"] == "evidential"
     assert result["statistics"]["arguments_count"] == 3
-
-    # analyze_bipolar_framework does not expose the framework, so rebuild it to run a
-    # reasoner. Same construction + cast idiom as the handler, using the 1.31 API:
-    #   Argument  -> dung.syntax.Argument
-    #   Attack    -> dung.syntax.Attack (inherited by BipolarArgumentationFramework)
-    #   Support   -> bipolar.syntax.Support(Argument, Argument)
-    framework = handler.BipolarAF()
-    arg_map = {name: handler.Argument(name) for name in ["a", "b", "c"]}
-    for arg in arg_map.values():
-        framework.add(arg)
-    framework.add(handler.Attack(arg_map["a"], arg_map["b"]))
-    framework.add(handler.Support(arg_map["c"], arg_map["b"]))
-
-    # #1959 (1.31 migration): evidential reasoner family was retired in 1.31.
-    # Reduce the bipolar framework to a Dung theory via getAssociatedTheory,
-    # parameterised by Support.Type.EVIDENTIAL, then run the grounded Dung
-    # reasoner. The model must remain non-empty -- a size-0 model means the
-    # reasoner ran on a classpath with no real evidential classes (#1874).
-    support_type = handler.Support.Type
-    dung_framework = framework.getAssociatedTheory(support_type.EVIDENTIAL)
-    grounded = jpype.JClass(
-        "org.tweetyproject.arg.dung.reasoner.SimpleGroundedReasoner"
-    )()
-    model = grounded.getModel(dung_framework)
-    assert model.size() >= 1, (
-        "the grounded Dung reasoner on the evidential theory must produce "
-        "at least one extension -- a size-0 model means the reasoner ran on "
-        "a classpath with no real evidential classes (#1874)"
+    assert result["semantic"] == "grounded"
+    assert result["model_size"] >= 1, (
+        "the grounded Dung reasoner on the evidential theory, read through "
+        "the handler, must produce a non-empty model -- a size-0 model means "
+        "the reduction or the reasoner ran on a classpath with no real "
+        "evidential classes (#1874, via handler since #1965)"
     )
+    assert result["extensions"][0], "the model must contain at least one argument"
