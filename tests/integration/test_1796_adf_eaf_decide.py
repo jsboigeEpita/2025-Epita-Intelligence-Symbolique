@@ -16,13 +16,18 @@ point) and requires a real decision from each axis: non-empty interpretations
 for ADF, the grounded extension [a, c] for EAF on a->b->c.
 """
 
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+# #1867: le fichier vit a tests/integration/ -> la racine du repo est a
+# DEUX niveaux. parents[3] pointait sur D:\dev : le sous-processus heritait
+# un cwd faux et AUCUN PYTHONPATH (Python met le repertoire du SCRIPT sur
+# sys.path, pas le cwd), donc l'import argumentation_analysis echouait.
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 _SCRIPT = r"""
 import os
@@ -66,12 +71,19 @@ def test_adf_and_eaf_decide_in_fresh_process(tmp_path):
     script = tmp_path / "probe_1796.py"
     script.write_text(_SCRIPT, encoding="utf-8")
 
+    # #1867: cwd ne met PAS la racine sur sys.path d'un enfant `python script.py`
+    # (Python y met le repertoire du script). Il faut aussi PYTHONPATH — meme
+    # idiome que tests/fixtures/jvm_subprocess_fixture.py l.34.
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO_ROOT) + os.pathsep + env.get("PYTHONPATH", "")
+
     result = subprocess.run(
         [sys.executable, str(script)],
         capture_output=True,
         text=True,
         timeout=420,
         cwd=str(REPO_ROOT),
+        env=env,
     )
 
     combined = result.stdout + result.stderr

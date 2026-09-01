@@ -20,7 +20,15 @@ import tempfile
 from pathlib import Path
 
 # Ajout du chemin pour les imports
-PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# #1867: worker vit a tests/integration/workers/ -> la racine du repo est a
+# QUATRE niveaux (workers -> integration -> tests -> racine). Trois niveaux
+# pointaient sur tests/, ou le package tests/argumentation_analysis/ SHADOW
+# le vrai argumentation_analysis : l'enfant importait alors un package sans
+# .core/.webapp et mourait ("No module named 'argumentation_analysis.webapp'",
+# plugin tests.fixtures.integration_fixtures l.667). Meme idiome que les trois
+# workers voisins (worker_einstein_tweety, worker_logic_puzzles_hardening,
+# worker_minimal_jvm_startup), repares par #1928.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 try:
@@ -77,7 +85,10 @@ async def fol_agent_with_kernel():
     # Utilisation de la factory pour créer une instance concrète
     agent = LogicAgentFactory.create_agent(logic_type="first_order", kernel=kernel)
     # L'ID 'default' correspond au service par défaut ajouté dans get_kernel_with_gpt4o_mini
-    agent.setup_agent_components(llm_service_id="default")
+    # #1867: setup_agent_components est une coroutine — sans await, la coroutine
+    # n'exécute jamais et le TweetyBridge reste None ("Degraded: no Tweety
+    # bridge", fol_logic_agent.py:1068).
+    await agent.setup_agent_components(llm_service_id="default")
     return agent
 
 
@@ -169,16 +180,31 @@ class TestFOLPipelineIntegration:
     @pytest.mark.asyncio
     async def test_fol_pipeline_with_error_handling(self, fol_agent_with_kernel):
         """Test du pipeline FOL avec gestion d'erreurs."""
-        # Texte problématique pour FOL
-        problematic_text = "Cette phrase n'a pas de structure logique claire."
+        # #1867 (recalibré après cross-review R906) : avec le TweetyBridge
+        # câblé (l'await de la fixture) et la JVM du conftest, un contenu FOL
+        # non parsable prend la branche pont-présent d'is_consistent : le
+        # fol_handler dégrade honnêtement en tri-état (None, "...Degraded...")
+        # plutôt qu'en un faux True/False (anti-théâtre #1019). Le préfixe
+        # "Tweety consistency check:" est ce qui discrimine cette branche de
+        # la branche sans-pont ("Degraded: no Tweety bridge") — sans lui, le
+        # vert ne prouverait pas que le pont existe.
+        from argumentation_analysis.agents.core.logic.belief_set import (
+            FirstOrderBeliefSet,
+        )
 
         fol_agent = fol_agent_with_kernel
 
-        # Le nouvel agent devrait retourner un belief_set None et un message d'erreur
-        belief_set, message = await fol_agent.text_to_belief_set(problematic_text)
+        # Préalable explicite : ce test pin la dégradation DU pont, pas son
+        # absence. Si ce assert rougit, la fixture n'a pas câblé le pont
+        # (await manquant, JVM absente) — le rouge doit se lire là.
+        assert getattr(fol_agent, "_tweety_bridge", None) is not None
 
-        assert belief_set is None
-        assert "échec" in message.lower() or "erreur" in message.lower()
+        belief_set = FirstOrderBeliefSet(content="ceci n'est pas du fol valide @@@ ???")
+        verdict, message = await fol_agent.is_consistent(belief_set)
+
+        assert verdict is None
+        assert message.startswith("Tweety consistency check:")
+        assert "Degraded" in message
 
     @pytest.mark.asyncio
     async def test_fol_pipeline_performance(self, fol_agent_with_kernel):
