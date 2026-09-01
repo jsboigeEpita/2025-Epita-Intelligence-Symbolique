@@ -180,24 +180,30 @@ class TestFOLPipelineIntegration:
     @pytest.mark.asyncio
     async def test_fol_pipeline_with_error_handling(self, fol_agent_with_kernel):
         """Test du pipeline FOL avec gestion d'erreurs."""
-        # #1867: recalibré sur le contrat vivant. text_to_belief_set est
-        # déterministe (_basic_fol_conversion, aucun LLM) et produit une
-        # formule P{i}(a) pour TOUTE phrase non vide — son booléen interne
-        # `if not formulas` est inatteignable (les déclarations de sort sont
-        # toujours pré-pendues). Le chemin d'erreur réel du pipeline est la
-        # dégradation honnête d'is_consistent sur un contenu FOL non parsable
-        # (fol_logic_agent.py:1068 et le except voisin) : verdict None, pas un
-        # faux True/False (anti-théâtre #1019).
+        # #1867 (recalibré après cross-review R906) : avec le TweetyBridge
+        # câblé (l'await de la fixture) et la JVM du conftest, un contenu FOL
+        # non parsable prend la branche pont-présent d'is_consistent : le
+        # fol_handler dégrade honnêtement en tri-état (None, "...Degraded...")
+        # plutôt qu'en un faux True/False (anti-théâtre #1019). Le préfixe
+        # "Tweety consistency check:" est ce qui discrimine cette branche de
+        # la branche sans-pont ("Degraded: no Tweety bridge") — sans lui, le
+        # vert ne prouverait pas que le pont existe.
         from argumentation_analysis.agents.core.logic.belief_set import (
             FirstOrderBeliefSet,
         )
 
         fol_agent = fol_agent_with_kernel
 
+        # Préalable explicite : ce test pin la dégradation DU pont, pas son
+        # absence. Si ce assert rougit, la fixture n'a pas câblé le pont
+        # (await manquant, JVM absente) — le rouge doit se lire là.
+        assert getattr(fol_agent, "_tweety_bridge", None) is not None
+
         belief_set = FirstOrderBeliefSet(content="ceci n'est pas du fol valide @@@ ???")
         verdict, message = await fol_agent.is_consistent(belief_set)
 
         assert verdict is None
+        assert message.startswith("Tweety consistency check:")
         assert "Degraded" in message
 
     @pytest.mark.asyncio
