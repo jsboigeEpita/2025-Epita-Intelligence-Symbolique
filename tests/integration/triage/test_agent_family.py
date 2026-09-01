@@ -12,10 +12,18 @@ import semantic_kernel as sk
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
 from argumentation_analysis.core.llm_service import create_llm_service
 
-pytestmark = pytest.mark.skipif(
-    not os.getenv("OPENAI_API_KEY"),
-    reason="Tests require OPENAI_API_KEY for real LLM agent integration",
-)
+# #1988: ces tests appellent de vrais agents ChatCompletionAgent (preuve :
+# 3 POST réels openrouter par SHERLOCK_JTMS avec un .env réel). Ils doivent
+# vivre dans la lane requires_api — dans la lane gratuite ils ne passaient
+# que par le chemin dégradé d'une clé factice. Marquer n'est pas taire,
+# c'est router (anti-pendule #3).
+pytestmark = [
+    pytest.mark.requires_api,
+    pytest.mark.skipif(
+        not os.getenv("OPENAI_API_KEY"),
+        reason="Tests require OPENAI_API_KEY for real LLM agent integration",
+    ),
+]
 
 # --- Test Data Loading ---
 
