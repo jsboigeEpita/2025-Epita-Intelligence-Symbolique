@@ -48,8 +48,9 @@ async def run_unified_analysis(
 
 ## Architecture Lego — `CapabilityRegistry`
 
-Le registre central câble agents, plugins et services. `UnifiedPipeline.setup_registry()`
-enregistre automatiquement tous les composants.
+Le registre central câble agents, plugins et services. `UnifiedPipeline` le peuple
+via la fonction module `setup_registry()` (`argumentation_analysis/orchestration/registry_setup.py`),
+appelée à l'init quand aucun registre n'est fourni.
 
 ```python
 from argumentation_analysis.core.capability_registry import CapabilityRegistry
@@ -59,8 +60,10 @@ registry.register_agent(name="my_agent", agent_class=MyAgent)
 registry.register_plugin(name="my_plugin", plugin_class=MyPlugin)
 registry.register_service(name="my_service", service_class=MyService)
 
-# Recherche par capacité (find_*_for_capability)
-agent = registry.find_agent_for_capability("...")
+# Recherche par capacité — la production résout par la forme non typée
+components = registry.find_for_capability("argument_quality")
+# (les variantes typées find_agents_for_capability / find_plugins_for_capability /
+# find_services_for_capability existent aussi : idiome de test uniquement)
 ```
 
 Source : `argumentation_analysis/core/capability_registry.py`.
