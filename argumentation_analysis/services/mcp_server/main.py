@@ -647,7 +647,7 @@ class MCPService:
                 "description": "Analyse par débat adversarial multi-personnalités"
             },
             "run_governance_analysis": {
-                "description": "Analyse pour prise de décision collective (7 méthodes de vote)"
+                "description": "Analyse pour prise de décision collective : 5 scrutins (majority, plurality, Borda, Condorcet, quadratic) + 2 protocoles de consensus distribué (Byzantine, Raft) + 8 fonctions de choix social (approval, STV, Copeland, Kemeny-Young + safe, Schulze, Condorcet winner, pairwise matrix). Byzantine et Raft sont des protocoles de tolérance aux pannes, pas des scrutins (#1981)."
             },
         }
 

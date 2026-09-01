@@ -89,8 +89,13 @@ def register_specialized_tools(mcp: Any, get_registry: Any) -> None:
     async def run_governance_analysis(text: str) -> Dict[str, Any]:
         """Analyze proposals for collective decision-making.
 
-        Uses 7 voting methods (majority, Borda, Condorcet, approval, etc.)
-        with conflict resolution and consensus metrics.
+        Uses 5 voting rules (majority, plurality, Borda, Condorcet, quadratic)
+        + 2 distributed-consensus protocols (Byzantine, Raft — *protocols*, not
+        scrutins) + 8 social-choice functions (approval, STV, Copeland,
+        Kemeny-Young + safe, Schulze, Condorcet winner, pairwise matrix).
+        Byzantine and Raft are fault-tolerance protocols, not voting rules
+        (#1981). approval is a social-choice function, not a governance
+        voting rule.
 
         Args:
             text: The proposal or decision context to analyze.

@@ -1820,8 +1820,10 @@ def _derive_governance_profile(
 def _aggregate_governance_votes(
     agents: List[Any], options: List[str], ballots: List[List[str]]
 ) -> Dict[str, Any]:
-    """Run the 7 agent-based + 5 social-choice voting methods on the derived
-    profile (GE-4 #1462).
+    """Run the 7 governance methods (5 voting rules + 2 distributed-consensus
+    protocols) + 8 social-choice functions on the derived profile
+    (GE-4 #1462). The "7 voting methods" phrasing was the category error
+    #1981; Byzantine and Raft are consensus protocols, not scrutins.
 
     Returns the per-method winners and the **divergence set** (distinct winners
     across methods) — reported verbatim, NEVER reconciled into a single number

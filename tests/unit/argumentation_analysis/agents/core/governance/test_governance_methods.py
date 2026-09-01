@@ -1,5 +1,11 @@
 # tests/unit/argumentation_analysis/agents/core/governance/test_governance_methods.py
-"""Tests for 7 governance voting methods."""
+"""Tests for 7 governance methods (5 voting rules + 2 consensus protocols).
+
+Byzantine and Raft are distributed-consensus protocols, not voting rules;
+calling them "7 governance voting methods" was the category error #1981.
+The 8 social-choice functions (approval, STV, Copeland, Kemeny-Young + safe,
+Schulze, Condorcet winner, pairwise matrix) live in ``social_choice.py``.
+"""
 
 import pytest
 from unittest.mock import MagicMock, patch

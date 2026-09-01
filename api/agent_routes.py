@@ -292,8 +292,13 @@ async def run_debate(request: TextRequest):
 async def run_governance(request: TextRequest):
     """Run governance simulation on the text.
 
-    Applies 7 voting methods (majority, Borda, Condorcet, approval, etc.)
-    to evaluate competing arguments and reach a decision.
+    Applies 5 voting rules (majority, plurality, Borda, Condorcet, quadratic)
+    + 2 distributed-consensus protocols (Byzantine, Raft — *protocols*, not
+    scrutins) + 8 social-choice functions (approval, STV, Copeland,
+    Kemeny-Young + safe, Schulze, Condorcet winner, pairwise matrix) to
+    evaluate competing arguments and reach a decision. Byzantine and Raft
+    are fault-tolerance protocols, not voting rules; approval is a
+    social-choice function, not a governance voting rule (#1981).
     """
     start = time.time()
     try:

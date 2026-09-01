@@ -232,7 +232,7 @@ MOCK_SPECTACULAR_RESULT = {
             "icon": "⚔️",
             "narration": (
                 "Two agents debate: one defends the original discourse, the other attacks it. "
-                "A governance module votes on the final position using 7 voting methods."
+                "A governance module votes on the final position using 5 voting rules + 2 distributed-consensus protocols (Byzantine, Raft are protocols, not scrutins — see governance_methods.py, #1981) + 8 social-choice functions."
             ),
             "output": {
                 "rounds": [

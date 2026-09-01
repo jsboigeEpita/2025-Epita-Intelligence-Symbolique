@@ -1,10 +1,27 @@
 """
-Governance voting methods — 7 algorithms for collective decision-making.
+Governance methods — 5 voting rules + 2 distributed-consensus protocols.
 
-Methods: majority, plurality, borda, condorcet, quadratic, byzantine, raft.
+This module exposes 7 algorithms in two distinct families:
+
+- **5 voting rules** (scrutins d'agrégation de préférences) : ``majority``,
+  ``plurality``, ``borda``, ``condorcet``, ``quadratic``.
+- **2 distributed-consensus protocols** (protocoles de tolérance aux pannes,
+  *pas* des scrutins) : ``byzantine``, ``raft``. Byzantine tire un ratio
+  d'agents byzantins puis fait voter les honnêtes ; Raft implémente
+  l'élection de leader. Ce sont des protocoles, pas des règles
+  d'agrégation de préférences — ils ne se comparent pas à Borda.
+
 All functions share the signature ``(agents, options, context) -> winner``.
 
 Adapted from 2.1.6_multiagent_governance_prototype/governance/methods.py.
+
+.. note::
+    Do **not** describe this module as "7 voting methods" downstream — that
+    wording is the category error #1981. The 8 social-choice functions live
+    in ``social_choice.py`` (approval, STV, Copeland, Kemeny-Young + safe,
+    Schulze, Condorcet winner, pairwise matrix). The full surface is
+    **5 scrutins + 2 protocoles de consensus + 8 fonctions de choix social
+    = 15 algorithmes**, pas un seul total interchangeable.
 """
 
 from collections import Counter
