@@ -908,9 +908,11 @@ class TestDungValueGate:
 class TestGovernanceValueGate:
     """Assert governance simulation produces a real winner and satisfaction.
 
-    The simulate_governance function runs 7 voting methods. On synthetic
-    agents with clear preferences, it must pick a winner and compute
-    per-agent satisfaction scores.
+    The simulate_governance function runs 7 governance methods (5 voting
+    rules + 2 distributed-consensus protocols; Byzantine and Raft are
+    protocols, not scrutins — see governance_methods.py, #1981). On
+    synthetic agents with clear preferences, it must pick a winner and
+    compute per-agent satisfaction scores.
     """
 
     def _make_agents(self):

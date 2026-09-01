@@ -4,7 +4,9 @@ Tests for the Governance module (integrated from 2.1.6).
 Tests validate:
 - Module import without errors
 - CapabilityRegistry registration
-- 7 governance methods (voting)
+- 5 voting rules + 2 distributed-consensus protocols (the "7 governance
+  methods" — see governance_methods.py for the category split; Byzantine
+  and Raft are consensus protocols, not scrutins (#1981))
 - Agent creation and decision-making
 - Simulation and metrics
 - Conflict resolution
@@ -36,7 +38,7 @@ class TestGovernanceImport:
         assert callable(simulate_governance)
 
     def test_import_methods(self):
-        """All 7 governance methods are importable."""
+        """All 7 governance methods are importable (5 voting rules + 2 consensus protocols)."""
         from argumentation_analysis.agents.core.governance.governance_methods import (
             majority_voting,
             plurality_voting,
@@ -133,7 +135,7 @@ class TestGovernanceRegistration:
 
 
 class TestGovernanceMethods:
-    """Test the 7 governance/voting methods."""
+    """Test the 7 governance methods (5 voting rules + 2 consensus protocols)."""
 
     def _make_agents(self, votes):
         """Create governance Agent objects with preferences matching votes."""

@@ -242,10 +242,13 @@ class DungSolverTrace:
 
 @dataclass
 class GovernanceVerdict:
-    """A governance voting decision (7-method social-choice layer), verified-in-state.
+    """A governance decision (5 voting rules + 2 consensus protocols, plus
+    social-choice functions — see governance_methods.py for the split),
+    verified-in-state.
 
-    SV (#1182): the spectacular pipeline runs a governance phase (7 voting methods,
-    Copeland winner, consensus) but it was invisible in the report — the same
+    SV (#1182): the spectacular pipeline runs a governance phase (the 7
+    governance methods + social-choice functions like Copeland winner and
+    consensus metrics) but it was invisible in the report — the same
     debranching G6 fixed for counter-argument validity. ``scores`` maps opaque
     option IDs → Copeland/influence score (privacy: opaque keys, never party names).
 

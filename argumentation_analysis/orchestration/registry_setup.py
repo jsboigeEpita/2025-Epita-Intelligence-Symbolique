@@ -163,7 +163,7 @@ def setup_registry(
             # phase (GE-4 #1462) — separate registry strings had no router
             # value: any phase asking them resolved to this same invoke.
             capabilities=["governance_simulation"],
-            metadata={"description": "7-method governance voting agent"},
+            metadata={"description": "5-voting-rule + 2-consensus-protocol governance agent (see governance_methods.py; the 8 social-choice functions live in social_choice.py)"},
             invoke=_invoke_governance,
         )
         registered.append("governance_agent")
