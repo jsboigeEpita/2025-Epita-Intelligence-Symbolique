@@ -74,7 +74,7 @@ la moitié modale du fix — il faudrait d'abord qu'ils vendorisént ce fichier.
 | Fichier upstream (nous) | Vendorisé ? | Fix `#1443` apporté |
 |-------------------------|-------------|---------------------|
 | `argumentation_analysis/agents/core/logic/fol_handler.py` | **oui**, dérivé 1 commit | `_sanitize_fol_bool_constants` — `Top`/`Bottom` = `+`/`-` (pas `T`/`F`, per BNF Tweety FOL) |
-| `argumentation_analysis/agents/core/logic/modal_kb_identifier_normalizer.py` | **non** | `strip_illégal_sort_declarations` — retire le keyword `sort` (illégal en modal, sorts = `NAME={const}`) |
+| `argumentation_analysis/agents/core/logic/modal_kb_identifier_normalizer.py` | **non** | `strip_illegal_sort_declarations` — retire le keyword `sort` (illégal en modal, sorts = `NAME={const}`) |
 
 ### 2.4 Les deux copies partielles — ce qui n'a jamais traversé
 
@@ -86,12 +86,12 @@ parce qu'un fichier `partial` ne se répare pas par un re-pull : la surface abse
 Absent de `_shared_state.py` dès le pin `a8025f60` — alors même que ce commit **est** celui
 qui a introduit cette machinerie (`#1334` phase 3/3, `#1345`) :
 
-`DesignationRecord`, `record_désignation`, `_désignation_fingerprint`,
-`backfill_last_désignation_for`, `_désignation_delta_summary` (trace de désignation CONV-C),
+`DesignationRecord`, `record_designation`, `_designation_fingerprint`,
+`backfill_last_designation_for`, `_designation_delta_summary` (trace de désignation CONV-C),
 `record_cap_breach` (audit anti-runaway `#708`), `set_source_metadata`,
 `add_structured_arg_status`.
 
-Absent de `_state_manager_plugin.py` : le `@kernel_function record_désignation`.
+Absent de `_state_manager_plugin.py` : le `@kernel_function record_designation`.
 
 C'est cohérent avec leur EPIC, qui exclut explicitement l'orchestration de l'import « essence » —
 donc plausiblement un périmètre assumé, pas un accident. Mais cela déplace la conclusion de
