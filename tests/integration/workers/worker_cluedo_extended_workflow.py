@@ -464,26 +464,19 @@ class TestWorkflowComparison:
         )
         large_3_setup_time = time.time() - start_time
 
-        # Analyse de la scalabilité
-        scaling_2 = (
-            large_2_setup_time / small_2_setup_time
-            if small_2_setup_time > 0
-            else float("inf")
-        )
-        scaling_3 = (
-            large_3_setup_time / small_3_setup_time
-            if small_3_setup_time > 0
-            else float("inf")
-        )
-
         # Vérification que les temps restent raisonnables
         assert small_2_setup_time < 1.0
         assert small_3_setup_time < 2.0  # Peut être plus long à cause de l'Oracle
         assert large_2_setup_time < 5.0
         assert large_3_setup_time < 10.0
 
-        # Le workflow 3-agents peut prendre plus de temps de setup mais devrait bien scaler
-        assert scaling_3 < 20  # Scaling acceptable
+        # Le workflow 3-agents peut prendre plus de temps de setup mais devrait bien scaler.
+        # #1867: sur une machine rapide la construction peut durer moins qu'un
+        # tick d'horloge (small_3_setup_time == 0.0) — le ratio est alors
+        # inmesurable, pas infini : on ne l'affirme que s'il est mesurable.
+        if small_3_setup_time > 0:
+            scaling_3 = large_3_setup_time / small_3_setup_time
+            assert scaling_3 < 20  # Scaling acceptable
 
     @pytest.mark.asyncio
     async def test_strategy_adaptation_comparison(
