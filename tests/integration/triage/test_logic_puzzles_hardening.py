@@ -23,6 +23,13 @@ pytestmark = [
 
 
 @pytest.mark.real_jpype
+# #1988 (résiduel): this test routes to Orchestrator.run_analysis_async via
+# tests/utils/scenario_runner.py, which fires real LLM POSTs when the key
+# is present. The pytestmark skipif alone does not deselect from the gate
+# filter (cf. #1988/#1993 shape) — requires_api routes the test to the API
+# lane. The xfail strict=False captures the known InformalFallacyAgent
+# signature mismatch in CI; both markers can co-exist.
+@pytest.mark.requires_api
 @pytest.mark.parametrize(
     "scenario_path",
     [

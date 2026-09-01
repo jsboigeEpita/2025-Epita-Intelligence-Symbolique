@@ -250,6 +250,11 @@ class TestCluedoOrchestrationRealIntegration:
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required"
     )
+    # #1988 (résiduel): this test invokes sherlock.get_current_case_description()
+    # via asyncio.wait_for — a real LLM POST, not a creation-only path.
+    # The pure creation/availability tests below it stay runnable because they
+    # invoke no LLM (see the sibling-note comment above).
+    @pytest.mark.requires_api
     async def test_real_sherlock_case_description(self, real_kernel, cluedo_case_data):
         """Test de la VRAIE méthode get_current_case_description de Sherlock"""
         if not real_kernel:
@@ -290,6 +295,9 @@ class TestCluedoOrchestrationRealIntegration:
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY required"
     )
+    # #1988 (résiduel): same shape as test_real_sherlock_case_description —
+    # invokes watson.analyze_text() under skipif alone.
+    @pytest.mark.requires_api
     async def test_real_watson_analysis(self, real_kernel, cluedo_case_data):
         """Test de la VRAIE méthode analyze_text de Watson"""
         if not real_kernel:
