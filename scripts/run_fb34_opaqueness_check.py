@@ -53,24 +53,13 @@ CORPUS_LABELS = {"A": "corpus_A", "B": "corpus_B", "C": "corpus_C"}
 # known corpus composition (dictators / heads of state / domestic politics).
 # NOTE: these are grep patterns ONLY — never written to a committed artifact
 # except as this verification result (which reports hit counts, not context).
-LEAK_PATTERNS = [
-    # leaders / heads of state
-    r"\bPutin\b", r"\bPoutine\b", r"\bStalin\b", r"\bStaline\b",
-    r"\bLenin\b", r"\bLénine\b", r"\bHitler\b", r"\bMussolini\b",
-    r"\bMacron\b", r"\bSarkozy\b", r"\bMitterrand\b", r"\bLe Pen\b",
-    r"\bKhrushchev\b", r"\bKhrouchtchev\b", r"\bTrump\b", r"\bBiden\b",
-    r"\bMélenchon\b", r"\bZelensky\b", r"\bZelenskiy\b",
-    # states / regions
-    r"\bUkraine\b", r"\bUkrainien(?:ne)?s?\b", r"\bRussie\b", r"\bRussian\b",
-    r"\bFrance\b", r"\bFrench\b", r"\bAllemagne\b", r"\bGermany\b",
-    r"\bCrimée\b", r"\bCrimea\b", r"\bDonbass\b", r"\bDonetsk\b",
-    # parties / ideologies (proper-noun forms)
-    r"\bBolshevik\b", r"\bBolchevik(?:s)?\b", r"\bNazi(?:s)?\b",
-    r"\bCommunist(?:e)?(?:s)?\b", r"\bSoviétique(?:s)?\b", r"\bSoviet\b",
-    # specific events/dates that betray identity
-    r"\b1917\b", r"\bBrest-Litovsk\b",
-]
-LEAK_RE = re.compile("|".join(LEAK_PATTERNS), re.IGNORECASE)
+# Single source of truth moved to an import-effect-free module (#2004) so the
+# tests/ person-name sweep guard consumes the same list; the list KEEPS the
+# names: this detector must never be emptied into a false zero.
+from argumentation_analysis.evaluation.leak_patterns import (
+    LEAK_PATTERNS,
+    LEAK_RE,
+)
 
 
 def load_corpus_text(label: str) -> str:

@@ -199,7 +199,7 @@ class TestFOLIdentifierSanitization:
             FOLLogicAgent,
         )
 
-        formulas = ["EstPrésident(macron)"]
+        formulas = ["EstPrésident(jean_paul)"]
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
         # The predicate name should be sanitized
         assert len(meta["predicate_map"]) > 0

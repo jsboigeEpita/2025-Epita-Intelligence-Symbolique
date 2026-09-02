@@ -26,13 +26,13 @@ class TestExtractFolMetadataExtended:
 
     def test_accented_constants(self):
         """Accented characters in predicate/constant names are sanitized for Tweety."""
-        formulas = ["EstPrésident(macron)"]
+        formulas = ["EstPrésident(jean_paul)"]
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
 
         # Predicate name sanitized: EstPrésident -> EstPr_sident
         assert "EstPr_sident" in meta["predicates"]
-        # Constant sanitized: macron (no accent, stays as-is)
-        assert "macron" in meta["constants"]
+        # Constant sanitized: jean_paul (no accent, stays as-is)
+        assert "jean_paul" in meta["constants"]
 
     def test_numeric_constant_suffixes(self):
         """Numeric suffixes in constants (arg1, fallacy2) should be captured."""
