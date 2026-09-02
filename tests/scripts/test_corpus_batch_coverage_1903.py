@@ -77,8 +77,11 @@ def batch(monkeypatch, tmp_path, capsys, caplog):
 
     runner = _load_runner()
 
-    # Deterministic oids: the default salt, whatever the machine env carries.
-    monkeypatch.delenv("OPAQUE_ID_SALT", raising=False)
+    # Deterministic oids regardless of the machine env: pin an explicit
+    # synthetic salt. The sources here are fabricated ("Synthetic ..."), so
+    # the salt carries no secrecy; opaque_id has no default to fall back on
+    # since #1973 and would raise without it.
+    monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-1903")
 
     pipeline_calls = []
 
@@ -183,7 +186,7 @@ class TestMaxDocsCoverage1919:
             calls.append(kwargs)
             return {"opaque_id": kwargs["opaque_id_str"], "outcome": {"status": "ok"}}
 
-        monkeypatch.delenv("OPAQUE_ID_SALT", raising=False)
+        monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-1903")
         monkeypatch.setattr(runner, "_run_single", fake_run_single)
         monkeypatch.setattr(
             "argumentation_analysis.core.utils.crypto_utils.derive_encryption_key",
@@ -265,6 +268,7 @@ class TestBatchOutcomeAggregation1913:
                 "outcome": {"status": "ok"},
             }
 
+        monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-1903")
         monkeypatch.setattr(runner, "_run_single", fake_run_single)
         monkeypatch.setattr(
             "argumentation_analysis.core.utils.crypto_utils.derive_encryption_key",
