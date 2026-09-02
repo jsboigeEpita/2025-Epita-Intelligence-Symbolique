@@ -171,6 +171,16 @@ _AXIS_FORMAL_PL = "formal_pl"
 _AXIS_FORMAL_FOL = "formal_fol"
 _AXIS_DUNG = "dung"
 
+# #1986 — encompassment is deliberately NOT a seventh axis here (the DoD's
+# written-justification branch). This band counts axes of analytical
+# coverage that the pipeline writes into state; the encompassment detector
+# (evaluation/encompassment.py) is a per-document rhetorical verdict with
+# no state writer yet. Adding a 7th axis would also silently recalibrate
+# _EXCEEDED_MIN_AXES / _MATCH_MIN_AXES / _PARTIAL_MIN_AXES for every
+# future run — a threshold decision to take deliberately, with its own
+# before/after measurement, once the instrument is validated on the #1970
+# witnesses (20a53f0c / 2cdc11ee) — not a side effect of building it.
+
 # Thresholds mapping coverage count → band (anti-pendule: transparent, fixed).
 # EXCEEDED needs formal depth (PL or FOL) AND quality (a characterised discourse)
 # on top of broad coverage — the "depth surpassing" spirit of #1008 §2.1.
