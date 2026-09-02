@@ -124,7 +124,7 @@ class TestPrivacyScrub:
             "description": "Analyser le discours de Source_A",
             "priority": "high",
             "raw_text": "Ceci est le texte brut du discours complet...",
-            "source_name": "Nicolas Sarkozy",
+            "source_name": "Speaker_A",
             "author": "Prénom Nom",
             "full_text": "Texte intégral...",
         })

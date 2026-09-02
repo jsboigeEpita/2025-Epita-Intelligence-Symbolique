@@ -101,7 +101,7 @@ class TestUnifiedOrchestrations:
 
     def setup_method(self):
         """Configuration initiale pour chaque test."""
-        self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
+        self.test_text = "L'organisation A a été créée par l'organisation B. Donc Speaker_A a raison."
         self.test_config = UnifiedConfig(
             logic_type="FOL",
             mock_level="PARTIAL",  # On utilise des mocks partiels maintenant
@@ -237,7 +237,7 @@ class TestUnifiedSystemCoordination:
 
     def setup_method(self):
         """Configuration initiale pour chaque test."""
-        self.test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
+        self.test_text = "L'organisation A a été créée par l'organisation B. Donc Speaker_A a raison."
         self.unified_config = UnifiedConfig(
             logic_type="FOL", mock_level="NONE", orchestration_type="UNIFIED"
         )

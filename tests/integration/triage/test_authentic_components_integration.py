@@ -66,7 +66,7 @@ class TestRealGPT4oMiniIntegration:
             run_unified_analysis,
         )
 
-        test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
+        test_text = "L'organisation A a été créée par l'organisation B. Donc Speaker_A a raison."
 
         result = asyncio.run(run_unified_analysis(test_text, workflow_name="standard"))
 
@@ -258,7 +258,7 @@ class TestCompleteTaxonomyIntegration:
             )
 
             # Analyser un texte avec sophisme connu
-            sophism_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison. Tout le monde le sait."
+            sophism_text = "L'organisation A a été créée par l'organisation B. Donc Speaker_A a raison. Tout le monde le sait."
 
             analysis = agent.analyze_text(sophism_text)
 
@@ -295,7 +295,7 @@ class TestUnifiedAuthenticComponentsIntegration:
             run_unified_analysis,
         )
 
-        test_text = "L'Ukraine a été créée par la Russie. Donc Poutine a raison."
+        test_text = "L'organisation A a été créée par l'organisation B. Donc Speaker_A a raison."
 
         result = asyncio.run(run_unified_analysis(test_text, workflow_name="full"))
 

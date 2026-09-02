@@ -138,7 +138,7 @@ class TestUnifiedSystemIntegration:
     def setup_method(self):
         """Configuration initiale pour chaque test."""
         self.test_texts = [
-            "L'Ukraine a été créée par la Russie. Donc Poutine a raison.",
+            "L'organisation A a été créée par l'organisation B. Donc Speaker_A a raison.",
             "Si tous les hommes sont mortels et Socrate est un homme, alors Socrate est mortel.",
             "Le changement climatique est réel. Les politiques doivent agir maintenant.",
         ]
