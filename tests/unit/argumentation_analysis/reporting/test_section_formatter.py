@@ -39,7 +39,7 @@ def rich_data(basic_data):
     return {
         **basic_data,
         "metadata": {
-            "source_description": "Putin speech",
+            "source_description": "Speaker_A speech",
             "source_type": "political",
             "text_length": 5000,
             "processing_time_ms": 1234,
@@ -140,7 +140,7 @@ class TestRenderMarkdown:
     def test_with_analysis_metadata(self, metadata, rich_data):
         t = UnifiedReportTemplate({"format": "markdown"})
         result = t.render(rich_data, metadata)
-        assert "Putin speech" in result
+        assert "Speaker_A speech" in result
         assert "5000" in result
 
     def test_with_fallacies(self, metadata, rich_data):
