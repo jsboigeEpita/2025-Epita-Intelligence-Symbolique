@@ -20,6 +20,24 @@ SetAF ``set_attacks`` (List[{attackers,target}]), Weighted ``attack_weights``
 from __future__ import annotations
 
 from argumentation_analysis.evaluation.sanitize_state import sanitize_state
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_opaque_salt(monkeypatch):
+    """#1973: ``opaque_id`` has no default salt any more and raises without one.
+
+    Every source this module feeds the scrubber is fabricated (see the module
+    docstring), so a salt protects nothing here — it is pinned at the perimeter
+    of the synthetic fixtures rather than provisioned as a CI secret. Two
+    reasons, in that order: a repository secret makes the dependency invisible
+    (green in CI, red on a fresh clone), and a root-scope ``autouse`` would
+    disarm the #1973 fail-loud guard for the whole test environment, letting a
+    future production path that forgets the salt pass green. Scoped to this
+    module, the guard keeps its teeth everywhere else and
+    ``test_opaque_id.py`` keeps asserting the raise.
+    """
+    monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-1973")
 
 
 def _entry(sidecar: dict) -> dict:
