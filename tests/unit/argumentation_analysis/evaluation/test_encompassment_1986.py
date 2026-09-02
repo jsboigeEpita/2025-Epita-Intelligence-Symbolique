@@ -73,10 +73,15 @@ class TestFiringRule:
     def test_full_form_fires(self):
         assert verdict_from_criteria({"c1": True, "c2": True, "c3": True, "c4": True})
 
-    def test_witness_shape_fires_without_enemy(self):
-        """The 20a53f0c shape (C3 refused, C4 held) MUST fire — this is the
-        disjunction that keeps the witness a live probe, not a built-in
-        negative."""
+    def test_closure_only_shape_fires_without_enemy(self):
+        """The closure-only shape (C3 refused, C4 held) MUST fire — the
+        disjunction is what keeps a text that absorbs its audience without
+        naming an enemy from being a negative defined by construction.
+
+        NB: this shape is NOT an empirical description of witness
+        ``20a53f0c``. The held-out measurement reads that witness with C3
+        true 3/3 and C4 false 2/3 — it fires through the OTHER disjunct.
+        The item calibrates the branch; it does not portray the witness."""
         assert verdict_from_criteria({"c1": True, "c2": True, "c3": False, "c4": True})
 
     def test_closure_disjunct_either_side(self):
@@ -242,7 +247,7 @@ class TestDevCorpus:
         assert by_cat.count("positif_plein") >= 3
         assert (
             by_cat.count("positif_sans_extrusion") >= 2
-        ), "the witness-mirror shape (fires without C3) must be represented"
+        ), "the closure-only shape (fires without C3) must be represented"
         assert any(
             it["expected"] is None for it in data["items"]
         ), "the None boundary needs a live calibration item"
