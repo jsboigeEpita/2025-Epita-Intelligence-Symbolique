@@ -429,12 +429,54 @@ def mock_kernel_with_llm(mock_chat_completion_service):
     return kernel
 
 
+def _run_torch_dll_probe(session):
+    """#1651 — sonde de chargement DLL torch, en sous-processus isolé.
+
+    Le skip-storm 0xc0000138 (STATUS_ORDINAL_NOT_FOUND) meurt avant tout log
+    exploitable : PATH effectif et DLL fautive partent avec la VM. La sonde
+    rejoue la séquence de chargement de torch de façon attrapable et écrit un
+    log flushé ligne à ligne. Sous-processus : un pre-flight dans CE processus
+    chargerait les DLL en premier et masquerait le défaut mesuré.
+
+    Instrument pur — un échec de sonde ne doit jamais casser la session (le
+    signal réel reste l'import torch + le garde #1385). Kill-switch local :
+    TORCH_DLL_PROBE=0.
+    """
+    if os.environ.get("TORCH_DLL_PROBE") == "0":
+        return
+    try:
+        import subprocess
+
+        probe = (
+            Path(__file__).resolve().parent.parent
+            / "scripts"
+            / "diagnostics"
+            / "probe_torch_dll_load.py"
+        )
+        if not probe.is_file():
+            print(f"[torch-dll-probe] script absent: {probe}", file=sys.stderr)
+            return
+        result = subprocess.run(
+            [sys.executable, str(probe), "--log", "torch_dll_probe.log"],
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=str(probe.parent.parent.parent),
+        )
+        tail = (result.stdout or "").strip().splitlines()[-3:]
+        for line in tail:
+            print(f"[torch-dll-probe] {line}")
+    except Exception as exc:  # noqa: BLE001 — instrument, jamais bloquant
+        print(f"[torch-dll-probe] sonde non exécutée: {exc}", file=sys.stderr)
+
+
 def pytest_sessionstart(session):
     """
     Hook exécuté au tout début de la session de test, avant la collecte.
     C'est l'endroit le plus sûr pour initialiser la JVM afin d'éviter les conflits
     avec les bibliothèques natives chargées par les plugins pytest.
     """
+    _run_torch_dll_probe(session)
     logger.info("=" * 80)
     logger.info("pytest_sessionstart: Vérification pour l'initialisation de la JVM...")
     logger.info("=" * 80)

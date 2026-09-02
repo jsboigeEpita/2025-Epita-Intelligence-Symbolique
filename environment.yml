@@ -9,7 +9,11 @@ dependencies:
   - pip
 
   # Core ML/Data Science
-  - intel-openmp # Force une version unifiée d'OpenMP
+  # #1651 : pytorch 2.2.2 (fbgemm.dll) importe libiomp5md.dll par ORDINAUX
+  # (703/706/707/900/904/958/961). Les builds intel-openmp 2025.x de conda-forge
+  # n'exportent pas 900/904/958/961 -> WinError 182 / 0xc0000138 a l'import torch
+  # (skip-storm silencieux). 2026.1.0 les exporte tous (verifie sur _246/_247/_248).
+  - intel-openmp=2026.1.0
   - mkl # Force l'utilisation des librairies Intel MKL
   - tbb # Threading Building Blocks, souvent lié à MKL
   - numpy=1.25.0 # Version figée pour la stabilité binaire
