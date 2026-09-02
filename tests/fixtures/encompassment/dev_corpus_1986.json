@@ -1,0 +1,159 @@
+{
+  "issue": "#1986 — encompassment axis development corpus",
+  "rule": "fired iff c1 and c2 and (c3 or c4)",
+  "fabricated": "All items are authored for this corpus (no real speaker, no corpus content). Annotations are the hand-authored master; the detector is validated against THEM, never against another LLM.",
+  "items": [
+    {
+      "id": "pos_plein_01",
+      "category": "positif_plein",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": true, "c4": true},
+      "rationale": "Harangue militaire fictive : apostrophe à la légion, nous du destin, hordes ennemies, aube finale.",
+      "text": "Soldats de la Troisième Légion ! Debout, et regardez-moi ! Ce soir, nous ne sommes plus des cohortes éparses : nous sommes un seul corps, une seule volonté, et je suis votre voix. Les hordes du Nord voudraient nos terres et nos enfants — qu'elles apprennent ce que vaut un mur de frères. Marchons ensemble, et demain, quand l'aube se lèvera sur le dernier champ reconquis, le temps de la guerre sera fini pour toujours."
+    },
+    {
+      "id": "pos_plein_02",
+      "category": "positif_plein",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": true, "c4": true},
+      "rationale": "Sermon fictif : foule des fidèles, nous du troupeau, séducteurs du siècle, jour du Grand Réveil.",
+      "text": "Fidèles assemblés ce soir sous ces voûtes ! Entendez-vous battre le cœur du troupeau que nous formons ? Moi et vous, nous sommes une seule brebis collective marchant vers la même lumière. Les séducteurs de ce siècle tissent leurs mensonges pour nous séparer de la source — mais leur règle s'achèvera. Au jour du Grand Réveil, quand la trompette sonnera la dernière heure, nous entrerons ensemble dans la joie qui ne finit pas."
+    },
+    {
+      "id": "pos_plein_03",
+      "category": "positif_plein",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": true, "c4": true},
+      "rationale": "Discours de congrès fictif : camarades, nous historique, spéculateurs ennemis, société finale.",
+      "text": "Camarades délégués de toutes les sections ! Le congrès vous regarde et c'est nous qu'il attend. Depuis un an, nous avons fondu nos fédérations en un seul parti, en un seul poing — moi qui vous parle, je ne suis rien d'autre que votre mandat. Les spéculateurs de la bourse vendent ce que nos mains fabriquent ; leur temps est compté. Quand la dernière bourse aura brûlé, nous vivrons dans la société sans classes, et l'histoire elle-même aura trouvé son terme."
+    },
+    {
+      "id": "pos_plein_04",
+      "category": "positif_plein",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": true, "c4": true},
+      "rationale": "Harangue navale fictive : équipage, nous du bord, flotte corsaire, entrée dans la légende.",
+      "text": "Hommes du Vent du Nord, écoutez le pont résonner sous vos pas ! Ce navire n'a jamais été un assemblage de planches et de gueules : c'est nous, c'est notre corps commun qui flotte, et je n'en suis que le timonier. La flotte corsaire nous traque depuis trois mers pour nous couler — elle découvrira ce que vaut un équipage soudé. Tenez la barre avec moi jusqu'au soir, et quand la dernière voile noire aura chu à l'horizon, nous entrerons dans la légende pour toujours."
+    },
+    {
+      "id": "pos_sans_ennemi_01",
+      "category": "positif_sans_extrusion",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": false, "c4": true},
+      "rationale": "Miroir du témoin 20a53f0c : adresse à la masse + nous fusionnel + clôture terminale, AUCUN ennemi. Doit tirer (la règle est C1∧C2∧(C3∨C4)).",
+      "text": "Camarades du douzième régiment, posons une dernière fois les armes ensemble ! Trois campagnes, et je ne sais plus où finit mon pas et où commence le vôtre : nous sommes devenus une seule marche, une seule fatigue, une seule fierté, et c'est encore nous qui serons cela demain. Personne ne nous a fait don de ces années ; nous les avons portées côte à côte. Quand les cloches sonneront le traité et que les portes des casernes s'ouvriront une dernière fois, le temps de la guerre sera fini pour toujours, et nous serons un seul souvenir."
+    },
+    {
+      "id": "pos_sans_ennemi_02",
+      "category": "positif_sans_extrusion",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": false, "c4": true},
+      "rationale": "Pèlerinage fictif : communauté apostrophée, nous de la marche, pas d'ennemi, sommet terminal.",
+      "text": "Pèlerins de la vallée haute, levez les yeux vers le col ! Nos grands-mères ont commencé cette route, nos pas d'aujourd'hui la continuent : nous sommes une seule caravane âgée de cent ans, et celui qui vous parle n'est que le dernier des bâtons de marche. Aucune main levée contre nous ne nous a jamais arrêtés, et nous n'en cherchons aucune. Gravissons cette dernière pente ensemble, et au sommet, la lumière que nous cherchons depuis des générations nous attendra : ce sera la fin du chemin, et le début de ce qui ne s'achève pas."
+    },
+    {
+      "id": "pos_sans_eschato_01",
+      "category": "positif_sans_cloture",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": true, "c4": false},
+      "rationale": "Harangue de grève fictive : nous ouvrier fusionnel, direction ennemie, objectif PROXIMATE (négociation) — pas d'horizon terminal.",
+      "text": "Cols bleus de l'atelier quatre, serrez les rangs ! Nous ne sommes pas cinquante postes de travail : nous sommes une seule chaîne qui s'arrête et qui repart, et je ne suis que le premier d'entre vous à siffler. La direction nous méprise, elle compte nos gestes comme elle compte des vis — c'est elle, l'adversaire, et elle le sait. Tenons le portail ensemble, bloquons les camions de la même main, et elle finira bien par signer ce qu'elle nous doit : la prime, les contrats, rien de plus."
+    },
+    {
+      "id": "pos_sans_eschato_02",
+      "category": "positif_sans_cloture",
+      "expected": true,
+      "criteria": {"c1": true, "c2": true, "c3": true, "c4": false},
+      "rationale": "Battue fictive : chasseurs apostrophés, nous de la ligne, loups ennemis, but immédiat (viande) — pas de clôture ultime.",
+      "text": "Chasseurs de la vallée, formez la ligne avant le lever du jour ! Vous et moi, nous sommes une seule enceinte de lances quand la neige crisse, et le plus vieux d'entre nous en est seulement le pivot. Le troupeau des loups gris descend des crêtes pour nos bêtes — c'est lui, dehors, et nous, dedans. Avançons d'un pas, chassons-les au-delà des pins, et ramenez de la viande pour les feux de ce soir."
+    },
+    {
+      "id": "neg_deliberatif_01",
+      "category": "negatif_nous_deliberatif",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": false, "c4": false},
+      "rationale": "Contrôle anti-mots-clés : « nous » à chaque phrase, mais nous d'auteurs qui raisonnent — aucune adresse de masse, aucun destin.",
+      "text": "Dans ce chapitre, nous montrons que la stabilité du régime dépend de trois facteurs que la littérature avait confondus. Nous commencerons par isoler la variable fiscale, puis nous comparerons deux séries régionales. Le lecteur verra que, lorsque nous contrôlons l'effet de cohorte, l'écart se réduit ; nous en tirons une lecture prudente, et nous invitons les travaux futurs à prolonger la nôtre sur une période plus longue."
+    },
+    {
+      "id": "neg_deliberatif_02",
+      "category": "negatif_nous_deliberatif",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": false, "c4": false},
+      "rationale": "Procès-verbal : nous délibératif borné, procédure, aucun geste totalisant.",
+      "text": "Nous avons examiné le budget prévisionnel ligne par ligne. Certains d'entre nous proposent de reporter l'achat des équipements au second semestre ; d'autres soulignent que les subventions ne sont pas garanties. Nous avons entendu le trésorier, puis nous avons voté à main levée. Nous reconvoquerons l'assemblée lorsque nous disposerons des comptes définitifs, afin de décider en connaissance de cause."
+    },
+    {
+      "id": "neg_ennemi_sans_fusion_01",
+      "category": "negatif_ennemi_sans_fusion",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": true, "c4": false},
+      "rationale": "Éditorial mesuré : ennemi nommé à valence négative, mais lecteur DISTRIBUTIF (chaque consommateur) — ni masse, ni nous fusionnel.",
+      "text": "Les lobbies de l'industrie agroalimentaire ont systématiquement sapé les labels qu'ils avaient eux-mêmes demandés. Chaque consommateur peut le vérifier : les étiquettes promettent un origine garante tandis que les circuits de collecte restent opaques. Face à ce constat, chacun gardera l'initiative de ses choix — lire, comparer, exiger la traçabilité — plutôt que d'attendre qu'une régulation tardive daigne s'appliquer."
+    },
+    {
+      "id": "neg_ennemi_sans_fusion_02",
+      "category": "negatif_ennemi_sans_fusion",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": true, "c4": false},
+      "rationale": "Plaidoirie : l'accusation comme adversaire, audience singulière (le tribunal), premier degré, pas de masse.",
+      "text": "Madame la présidente, l'accusation a construit son récit sur une pièce tardive et non datée. Elle a forgé une continuité là où les minutes montrent trois interruptions. J'établis ici, pièce à l'appui, que mon client se trouvait ailleurs ; je demande donc à la cour d'écarter ce dossier et de rendre la seule décision que les faits autorisent."
+    },
+    {
+      "id": "neg_apostrophe_sans_fusion_01",
+      "category": "negatif_apostrophe_sans_fusion",
+      "expected": false,
+      "criteria": {"c1": true, "c2": false, "c3": false, "c4": false},
+      "rationale": "Publicité : « vous » de masse + « nous » de l'offre (le nous EXCLUT l'auditoire), enrôlement transactionnel, pas de clôture terminale.",
+      "text": "Vous méritez le meilleur, et vous le savez ! Des milliers de clients nous font déjà confiance chaque matin : notre torréfaction, notre engagement, notre promesse. Rejoignez la grande famille des réveillés dès aujourd'hui, profitez de l'offre de lancement, et dites-nous demain quel parfum vous a convaincu."
+    },
+    {
+      "id": "neg_apostrophe_sans_fusion_02",
+      "category": "negatif_apostrophe_sans_fusion",
+      "expected": false,
+      "criteria": {"c1": true, "c2": false, "c3": false, "c4": false},
+      "rationale": "Adresse administrative : « chers concitoyens » = vous pluriel sans totalisation, aucun nous fusionnel, aucun horizon.",
+      "text": "Chers concitoyens, la collecte des encombrants aura lieu mardi prochain dans tous les quartiers. Merci de déposer vos sacs devant le portail avant six heures, veillez à ne pas obstruer les trottoirs, et signalez les dépôts sauvages via le formulaire habituel. Les équipes municipales vous remercient de votre coopération."
+    },
+    {
+      "id": "neg_eschato_intime_01",
+      "category": "negatif_eschatologie_intime",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": false, "c4": true},
+      "rationale": "Clôture eschatologique présente mais INTIME : « ton âme », tu singulier — aucun collectif, aucun nous.",
+      "text": "Mon enfant, prépare ton cœur, car ton âme sera pesée à la fin des temps. Ce que tu auras semé en secret, tu le récolteras au jour du grand jugement ; le Royaume viendra comme un voleur dans la nuit. Veille donc, toi qui lis ces lignes, et que ta lampe ne s'éteigne pas avant l'aube du siècle."
+    },
+    {
+      "id": "frag_lacunaire_01",
+      "category": "fragment",
+      "expected": null,
+      "criteria": {"c1": null, "c2": null, "c3": null, "c4": null},
+      "rationale": "Fragment lacunaire : les lacunes rendent C1/C2 indécidables — calibration de la frontière None.",
+      "text": "...et nous, soldats de la... [lacune] ...car la victoire ou... [lacune] ...comme nos pères l'avaient... [lacune] ...à jamais..."
+    },
+    {
+      "id": "frag_slogan_02",
+      "category": "fragment",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": false, "c4": true},
+      "rationale": "Slogan lisible mais SANS adresse : pas de vocatif, pas de nous — totalisant en lexique, vide en structure. Contrôle anti-mots-clés dur.",
+      "text": "Un peuple, un but, une victoire finale !"
+    },
+    {
+      "id": "bruit_recette_01",
+      "category": "bruit",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": false, "c4": false},
+      "rationale": "Recette : aucun critère.",
+      "text": "Préchauffer le four à 180 degrés. Beurrer un moule à manqué, y verser la pâte, lisser la surface. Faire cuire quarante minutes et vérifier la cuisson avec la pointe d'un couteau. Laisser refroidir sur une grille avant de démouler, puis saupoudrer de sucre glace au moment de servir."
+    },
+    {
+      "id": "bruit_meteo_02",
+      "category": "bruit",
+      "expected": false,
+      "criteria": {"c1": false, "c2": false, "c3": false, "c4": false},
+      "rationale": "Bulletin météo : aucun critère.",
+      "text": "Aujourd'hui, la journée débutera sous un ciel voilé sur le littoral, puis le soleil s'imposera en cours de matinée à l'intérieur des terres. Le vent de nord-est restera faible, et les températures maximales atteindront vingt et un degrés en plaine. Demain, une perturbation abordera l'ouest du pays en fin de journée."
+    }
+  ]
+}
