@@ -40,7 +40,7 @@
       "category": "positif_sans_extrusion",
       "expected": true,
       "criteria": {"c1": true, "c2": true, "c3": false, "c4": true},
-      "rationale": "Miroir du témoin 20a53f0c : adresse à la masse + nous fusionnel + clôture terminale, AUCUN ennemi. Doit tirer (la règle est C1∧C2∧(C3∨C4)).",
+      "rationale": "Forme clôture-seule : adresse à la masse + nous fusionnel + clôture terminale, AUCUN ennemi. Doit tirer (la règle est C1∧C2∧(C3∨C4)). Calibre la branche C4 ; ne décrit PAS le témoin 20a53f0c, que la mesure held-out lit avec C3 vrai 3/3.",
       "text": "Camarades du douzième régiment, posons une dernière fois les armes ensemble ! Trois campagnes, et je ne sais plus où finit mon pas et où commence le vôtre : nous sommes devenus une seule marche, une seule fatigue, une seule fierté, et c'est encore nous qui serons cela demain. Personne ne nous a fait don de ces années ; nous les avons portées côte à côte. Quand les cloches sonneront le traité et que les portes des casernes s'ouvriront une dernière fois, le temps de la guerre sera fini pour toujours, et nous serons un seul souvenir."
     },
     {
