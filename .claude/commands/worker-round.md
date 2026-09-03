@@ -3,9 +3,21 @@ description: Coordination round — lit dashboard, vérifie état cluster, exéc
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write, mcp__roo-state-manager__*, TodoWrite
 ---
 
-# /worker-round — Agent Exécutant EPITA (worker po-2025)
+# /worker-round — Agent Exécutant EPITA
 
-Round de coordination pour le worker po-2025 du cluster EPITA Intelligence Symbolique.
+Round de coordination pour un worker du cluster EPITA Intelligence Symbolique.
+
+## Identité — dérivée, jamais supposée
+
+Ce fichier est **partagé par les deux workers**. Commence par `hostname` et déduis :
+
+| hostname | machine-id | signature |
+|---|---|---|
+| `MyIA-PO-2025` | `myia-po-2025` | `Claude Code @ myia-po-2025:2025-Epita-Intelligence-Symbolique` |
+| `MyIA-PO-2023` | `myia-po-2023` | `Claude Code @ myia-po-2023:2025-Epita-Intelligence-Symbolique` |
+| `MyIA-AI-01` | — | tu n'es **pas** un worker → utilise `/coordinate` |
+
+Partout où ce fichier écrit `<MOI>`, substitue ton machine-id. Ne signe jamais du nom de l'autre worker : le dashboard est commun, et une signature fausse attribue le travail à la mauvaise lane.
 
 **PRINCIPE : Collecter les infos, puis TRAVAILLER. Ne pas demander à l'utilisateur quoi faire.**
 L'utilisateur n'intervient que pour les **arbitrages**. Tout le reste est autonome.
@@ -16,7 +28,7 @@ L'utilisateur n'intervient que pour les **arbitrages**. Tout le reste est autono
 |---------|------|----------|
 | myia-ai-01 | **Coordinateur** | MyIA-AI-01 |
 | myia-po-2023 | Worker | MyIA-PO-2023 |
-| **myia-po-2025** | **Worker (MOI)** | MyIA-PO-2025 |
+| myia-po-2025 | Worker | MyIA-PO-2025 |
 
 ---
 
@@ -61,7 +73,7 @@ gh issue list --state open --limit 15
 ### Résumé concis (10 lignes max)
 
 ```
-Machine: myia-po-2025 | Git: {hash} | CI: GREEN/RED
+Machine: <MOI> | Git: {hash} | CI: GREEN/RED
 Dashboard: {X messages} | Inbox: {Y non-lus} | PRs: {Z open}
 Issues ouvertes: {N} | Dispatch en cours: {oui/non + lequel}
 ```
@@ -74,10 +86,79 @@ Issues ouvertes: {N} | Dispatch en cours: {oui/non + lequel}
 
 1. **DISPATCH du coordinateur** → Exécuter immédiatement
 2. **main RED** → Investiguer et fixer (urgence, pas besoin de dispatch)
-3. **PR en attente de review** → Review si assignée à po-2025
-4. **Issue GitHub ouverte** avec travail réalisable localement → Prendre
-5. **Tech-debt visible** (shims, tests fragiles, docs) → Corriger
-6. **Aucune tâche** → Poster [IDLE] sur dashboard
+3. **PR en attente de review** → Review si assignée à `<MOI>`
+4. **Aucun dispatch** → **dépiler la file** selon le PROTOCOLE IDLE ci-dessous
+5. **Tech-debt visible** (shims, tests fragiles, docs) → Corriger, en ouvrant l'issue d'abord
+6. **Rien d'éligible** → IDLE **énuméré** (cf. protocole), jamais un IDLE nu
+
+---
+
+## PROTOCOLE IDLE — dépiler la file sans steering
+
+**L'absence de dispatch n'est pas un signal d'arrêt, c'est le cas normal.** Le coordinateur
+tourne à une cadence lente (plusieurs heures) : un worker qui livre puis attend le prochain
+réveil gaspille l'essentiel de sa disponibilité. Entre deux dispatches, la file d'issues est
+le travail. Ce protocole existe pour que ce dépilage soit **sûr** — pas pour autoriser
+l'improvisation.
+
+### 1. Éligibilité — filtrer AVANT de choisir
+
+Une issue est prenable si **toutes** ces conditions tiennent :
+
+- ce n'est pas un **Epic** (un Epic se décompose, il ne s'exécute pas) ;
+- **aucun commentaire ne la gèle** — chercher dans les commentaires : `arbitrage`,
+  `do NOT engage`, `garée`, `gated`, `décision utilisateur`, `en attente de` ;
+- elle ne dépend pas d'une **décision utilisateur** (secret de dépôt, périmètre du gate,
+  contenu de `.github/workflows/`) ;
+- **aucune PR ouverte ne la référence** (`gh pr list --search "#N"`) ;
+- **personne ne l'a revendiquée** (cf. §2) ;
+- son périmètre ne touche ni `.github/workflows/`, ni `.github/CODEOWNERS`, ni `.claude/rules/`.
+
+**Un doute sur un seul critère suffit à passer à la suivante.** Sauter une issue prenable ne
+coûte rien — elle sera là au tour d'après. Reprendre une issue délibérément gelée détruit un
+arbitrage et fait travailler deux agents l'un contre l'autre.
+
+### 2. Revendication — avant d'écrire la première ligne de code
+
+1. Relire le dashboard workspace et repérer les `[CLAIMED]` récents.
+2. `roosync_dashboard(action:"append", type:"workspace", tags:["CLAIMED"], …)` — l'issue et
+   l'horizon que tu te donnes.
+3. Commenter l'issue en **une ligne** : c'est la surface que l'autre worker et le
+   coordinateur lisent sans passer par le dashboard.
+4. **Relire le dashboard.** En cas de revendication simultanée sur la même issue, le
+   **machine-id le plus petit dans l'ordre alphabétique garde**, l'autre libère et passe à la
+   suivante. Règle déterministe : ni négociation, ni attente, ni message.
+
+### 3. Ordre de choix
+
+1. Une issue qui en **débloque** une autre (référencée par une autre issue ou PR ouverte).
+2. Une issue dont la **DoD est déjà écrite** — exécutable sans phase de conception.
+3. Une issue de **ta lane** : `po-2025` plomberie et runs lourds ; `po-2023` travail
+   conceptuel ciblé.
+4. À valeur égale, **la plus petite** : livrer vaut mieux qu'entamer.
+
+Si l'issue n'a **pas** de DoD, écris-la en commentaire d'abord, puis exécute celle-là. Un
+travail sans critère d'arrêt n'est pas vérifiable, et ne sera pas mergeable.
+
+### 4. Ce que le travail idle ne fait jamais
+
+- **Ne merge pas sa propre PR** — le merge appartient au coordinateur.
+- **Ne supprime rien** hors du Cleanup Gate (justification par fichier ; table obligatoire
+  au-delà de 5 suppressions). Déplacer vers `_archives/` sans preuve de préservation n'est
+  pas une consolidation.
+- **N'élargit pas le périmètre** de l'issue prise. Autre chose trouvé en chemin → une issue
+  séparée, nommée, et on continue.
+- **Ne re-litige pas un arbitrage** déjà posé, même en désaccord : commenter, pas défaire.
+- **Ne pousse jamais sur `main`.**
+
+### 5. Quand rien n'est éligible
+
+Poster l'IDLE **avec l'énumération** : les issues examinées et, pour chacune, le motif de
+rejet en une ligne. Un IDLE nu ne transmet rien ; un IDLE énuméré dit au coordinateur si la
+file est réellement vide ou si le filtre est trop serré — et c'est lui qui peut desserrer.
+
+**Cap : après 3 IDLE consécutifs, ne pas ré-armer.** Attendre un steering explicite. Trois
+tours vides mesurent une file vide, pas un incident à répéter.
 
 ---
 
@@ -116,7 +197,7 @@ gh pr create --title "type(scope): description" --body "..."
 ### 3e. Rapport
 ```
 roosync_dashboard(action: "append", type: "workspace", tags: ["DONE"],
-  content: "**Claude Code @ myia-po-2025:2025-Epita-Intelligence-Symbolique** — [DONE] ...")
+  content: "**Claude Code @ <MOI>:2025-Epita-Intelligence-Symbolique** — [DONE] ...")
 ```
 
 **Ordre OBLIGATOIRE :** Commit + PR AVANT de poster le rapport [DONE] sur le dashboard.
@@ -125,21 +206,32 @@ roosync_dashboard(action: "append", type: "workspace", tags: ["DONE"],
 
 ## PHASE 4 : RÉARMEMENT
 
-**OBLIGATOIRE avant de terminer le round :**
+**`CronList` D'ABORD — toujours, avant toute création.**
 
-```
-ScheduleWakeup(delaySeconds: 7200, prompt: "/worker-round",
-  reason: "next coordination round 2h")
-```
+1. `CronList`
+2. Un job récurrent `/worker-round` existe déjà → **ne rien créer**, le round est fini.
+3. Aucun → en créer **exactement un** :
+   `CronCreate(cron: "<minute hors :00 et :30> */<N ≥ 2> * * *", prompt: "/worker-round", recurring: true)`
 
-**OU** vérifier via `CronList` qu'un cron récurrent est actif.
+**Ne pas utiliser `ScheduleWakeup` pour porter la cadence** : il est clampé à 3600 s. Un
+`delaySeconds: 7200` ne donne pas deux heures, il en donne une — sous le plancher de cadence
+de la flotte, sans que rien ne le signale.
+
+**Jamais deux crons sur une lane.** Un cron vit en mémoire de session : il meurt avec le REPL
+et avec une mise à jour de VS Code. Mais la restauration de fenêtre ressuscite **la session
+sans son cron** — donc un ré-armement réflexe après restauration crée un doublon qui tire deux
+fois. Le seul état lisible est celui que `CronList` rend, jamais celui dont on se souvient.
+
+**Changer de cadence = `CronDelete` puis `CronCreate`**, jamais créer à côté.
+
+Après 3 IDLE consécutifs (cf. protocole idle) : **ne pas ré-armer**.
 
 ---
 
 ## RÈGLES
 
 ### Identité
-- **Signature** : Toujours signer `Claude Code @ myia-po-2025:2025-Epita-Intelligence-Symbolique`
+- **Signature** : Toujours signer `Claude Code @ <MOI>:2025-Epita-Intelligence-Symbolique` (`<MOI>` dérivé du `hostname`, cf. section Identité)
 - **Je suis un WORKER** — j'exécute les dispatches, je ne dispatche pas
 
 ### Sécurité
