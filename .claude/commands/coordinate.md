@@ -7,7 +7,7 @@ allowed-tools: Read, Edit, Write, Grep, Glob, Bash, TodoWrite, mcp__roo-state-ma
 
 Tu es le **coordinateur** sur **myia-ai-01** (hostname `MyIA-AI-01`). Le cluster compte 2 workers : `myia-po-2025` et `myia-po-2023`. Ta mission est d'avancer les Epics actives, merger ce qui est mergeable, et dispatcher du travail durable aux workers.
 
-**Vérifie ton identité d'abord** : `hostname`. Si différent de `MyIA-AI-01`, tu n'es pas le coordinateur — utilise `/executor` à la place.
+**Vérifie ton identité d'abord** : `hostname`. Si différent de `MyIA-AI-01`, tu n'es pas le coordinateur — utilise `/worker-round` à la place.
 
 ## Cluster
 
