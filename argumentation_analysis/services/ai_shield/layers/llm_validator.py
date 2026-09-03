@@ -11,6 +11,10 @@ from typing import Any, Dict, Optional
 
 from argumentation_analysis.services.ai_shield.shield import ShieldLayer, LayerResult
 from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.core.utils.llm_completion_guard import (
+    ReasoningStarvedError,
+    assert_not_reasoning_starved,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +103,17 @@ class LLMValidatorLayer(ShieldLayer):
                 ],
                 max_completion_tokens=200,
             )
-            raw = response.choices[0].message.content or ""
+            choice = response.choices[0]
+            # #1929: a starved budget renders empty content with finish_reason
+            # "length" over HTTP 200 — a failed call that used to collapse into
+            # the silent score-0.0 default below. Consulted here, at the call
+            # point, so the caller sees a named failure instead of "no threat".
+            assert_not_reasoning_starved(
+                choice.finish_reason,
+                choice.message.content,
+                site="ai_shield/llm_validator",
+            )
+            raw = choice.message.content or ""
             text_content = raw.strip()
 
             # Parse JSON response
@@ -131,6 +145,11 @@ class LLMValidatorLayer(ShieldLayer):
                 reason=f"LLM detected: {', '.join(categories)}" if categories else "",
             )
 
+        except ReasoningStarvedError:
+            # Never collapse a starved budget into the generic error fallback:
+            # the shield turns it into a NAMED layer error (details/reason)
+            # instead of the silent score-0.0 that masked the failure (#1929).
+            raise
         except Exception as e:
             logger.warning(f"LLM validator failed: {e}")
             return self._make_result(
