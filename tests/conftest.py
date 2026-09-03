@@ -17,6 +17,9 @@ import shutil
 from unittest.mock import patch, MagicMock
 
 from tests._e2e_session_decision import _argv_decides_e2e_session
+from tests.jvm_skip_storm_signal import COUNTER as _skip_storm_counter
+from tests.jvm_skip_storm_signal import storm_verdict as _storm_verdict
+from tests.jvm_skip_storm_signal import ventilate as _storm_ventilate
 import nest_asyncio
 
 # Apply nest_asyncio early at module level to allow nested event loops
@@ -563,7 +566,56 @@ def pytest_sessionstart(session):
         logging.getLogger().removeHandler(_diag_handler)
 
 
-def pytest_sessionfinish(session):
+def pytest_runtest_logreport(report):
+    """#2021: feed the local skip-storm signal (see tests/jvm_skip_storm_signal.py)."""
+    _skip_storm_counter.add(report)
+
+
+def _skip_storm_signal(session, exitstatus):
+    """#2021 — local fail-loud twin of the CI skip-storm guard (ci.yml #1385/#1873).
+
+    A failed JVM init in pytest_sessionstart makes the autouse jvm_session
+    fixture skip EVERY test at setup; the session exits 0 in under a second
+    having measured nothing. In CI the pwsh guard catches it; locally it
+    rendered as a plausible-looking ``N skipped ... in 0.7s`` — three agents
+    hit the shape in one round, one as a born-red that never ran (#2021).
+
+    Exempt by design: sessions where JVM-less is a CHOICE (--disable-jvm-session,
+    E2E classification) — a JVM-less environment must still be able to run
+    the non-JVM suite. The defect is that a vacuous run is SILENT, not that
+    it skips. Never make the conftest fail instead of skip (#2021 anti-pendulum).
+    """
+    if exitstatus != 0:
+        return  # already red — there is no green mask to lift
+    config = session.config
+    if config.option.collectonly:
+        return
+    if config.getoption("--disable-jvm-session"):
+        return
+    if _cache(config).get("is_e2e_session", False) or _argv_decides_e2e_session(config):
+        return
+    jvm_reasons = _skip_storm_counter.jvm_signature_reasons()
+    shout, message = _storm_verdict(len(session.items), len(jvm_reasons))
+    if not shout:
+        return
+    # print, not logger: sessionfinish runs after per-test capture is gone,
+    # and the line must survive in the terminal the worker actually reads.
+    print("=" * 60)
+    print(message)
+    print(_storm_ventilate(jvm_reasons))
+    print(
+        "  The storm is a failed measurement, not a broken suite: re-run the\n"
+        "  non-JVM work with --disable-jvm-session (jpype mocked), and treat any\n"
+        "  born-red or suite result from THIS session as not executed."
+    )
+    print("=" * 60)
+    pytest.exit(
+        "skip-storm signal tripped (#2021) — see the FAIL-LOUD block above",
+        returncode=1,
+    )
+
+
+def pytest_sessionfinish(session, exitstatus):
     """
     Hook exécuté à la toute fin de la session de test.
     """
@@ -573,6 +625,7 @@ def pytest_sessionfinish(session):
         "pytest_sessionfinish: L'arrêt de la JVM est désactivé pour plus de stabilité."
     )
     logger.info("=" * 80)
+    _skip_storm_signal(session, exitstatus)
 
 
 @pytest.fixture(scope="session", autouse=True)
