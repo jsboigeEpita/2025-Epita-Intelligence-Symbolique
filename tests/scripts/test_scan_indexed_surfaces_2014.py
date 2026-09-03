@@ -115,18 +115,35 @@ def test_empty_commit_range_scans_nothing_and_says_so():
 
 
 def test_real_commit_range_actually_reads_messages(capsys):
-    """Non-vacuity floor: a range with commits must report a non-zero census.
+    """Non-vacuity floor, checked against an independent instrument.
 
-    Without this, a CI runner whose range comes back empty would print "clean"
-    forever, indistinguishably from a scan that read something.
+    A runner whose range comes back empty would print "clean" forever,
+    indistinguishable from a scan that read something. So the census must be
+    non-zero *and* agree with ``git rev-list --count``: the two instruments
+    disagreeing is precisely how the silent-drop of an unparsed record would
+    show up.
+
+    The count is asked for, never assumed. An earlier version hard-coded 3 for
+    ``HEAD~3..HEAD``; CI checks out the pull request's *merge* commit, where
+    that range spans six commits, so the assertion measured git topology rather
+    than the scanner.
     """
-    scan = scanner.scan_commits("HEAD~3..HEAD")
-    assert scan.scanned == 3
+    import subprocess
+
+    rng = "HEAD~3..HEAD"
+    expected = int(
+        subprocess.run(
+            ["git", "rev-list", "--count", rng], capture_output=True, text=True
+        ).stdout.strip()
+    )
+    assert expected >= 1, "an empty range makes this control vacuous"
+
+    scan = scanner.scan_commits(rng)
+    assert scan.scanned == expected
     assert scan.malformed == 0
-    assert scanner.main(["--commits", "HEAD~3..HEAD"]) == 0
-    out = capsys.readouterr().out
-    assert "scanned 3 commit message(s)" in out
-    assert "clean" in out
+
+    scanner.main(["--commits", rng])
+    assert f"scanned {expected} commit message(s)" in capsys.readouterr().out
 
 
 def test_planted_name_in_a_commit_message_reddens_the_commit_path(
