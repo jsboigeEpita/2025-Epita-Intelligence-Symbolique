@@ -194,6 +194,26 @@ gh pr create --title "type(scope): description" --body "..."
 
 **Avant push** : `git rebase origin/main` obligatoire.
 
+**Avant push — scan privacy des surfaces indexées (HARD, aucune exception)** :
+
+```bash
+# 1. les messages de commit que tu t'apprêtes à pousser
+python scripts/security/scan_indexed_surfaces.py --commits origin/main..HEAD
+
+# 2. le corps de PR que tu t'apprêtes à écrire
+python scripts/security/scan_indexed_surfaces.py --text-file <ton_body.md>
+```
+
+Les deux doivent sortir `clean`. Un message de commit poussé est **permanent** : le dépôt est
+public et forké, donc une réécriture d'historique ne le retire même pas des forks. Il n'existe
+aucun garde CI sur ces surfaces — le scan manuel est la seule barrière.
+
+⚠ **Ne scanne pas à la main avec `grep`** : les 19 motifs partagés portent ``, qui est une
+frontière de *mot*, et `_` est un caractère de mot. `Nom` **ne peut pas** matcher `nom_only`
+(#2012) — exactement la forme qu'un nom prend en entrant dans du code. Le script applique une
+frontière-lettre et voit les deux formes. Une case DoD « aucun nom de source » cochée contre un
+`grep -w` est fausse par construction.
+
 ### 3e. Rapport
 ```
 roosync_dashboard(action: "append", type: "workspace", tags: ["DONE"],
