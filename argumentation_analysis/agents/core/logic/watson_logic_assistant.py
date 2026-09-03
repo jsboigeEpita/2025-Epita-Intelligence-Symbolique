@@ -19,6 +19,10 @@ from semantic_kernel.functions import KernelArguments
 from semantic_kernel.contents.chat_history import ChatHistory
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer
+from argumentation_analysis.core.utils.llm_completion_guard import (
+    ReasoningStarvedError,
+    assert_not_reasoning_starved,
+)
 
 WATSON_LOGIC_ASSISTANT_SYSTEM_PROMPT = """Vous êtes Watson - analyste brillant et partenaire égal de Holmes.
 
@@ -532,7 +536,12 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             prompt_config.add_execution_settings(
                 OpenAIPromptExecutionSettings(
                     service_id=self._llm_service_id,
-                    max_completion_tokens=200,
+                    # #1929: 200 starves the production default on a two-turn
+                    # history (measured: finish_reason='length' at 200, stop at
+                    # 196 with 120 of them reasoning); 400 covers the measured
+                    # envelope with margin. The guard below, not this number,
+                    # is what makes any future starvation audible.
+                    max_completion_tokens=400,
                 )
             )
 
@@ -547,6 +556,23 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
             arguments = KernelArguments(chat_history=full_history)
 
             response = await self.kernel.invoke(chat_function, arguments=arguments)
+
+            # #1929: Semantic Kernel carries the provider's finish_reason on
+            # each ChatMessageContent (FunctionResult.value is the completions
+            # list). A starved budget renders empty content with finish_reason
+            # "length" over HTTP 200 — consulted here so the failure is loud
+            # instead of masquerading as the fabricated fallback answer below.
+            completions = getattr(response, "value", None) or []
+            first_completion = completions[0] if completions else None
+            assert_not_reasoning_starved(
+                getattr(first_completion, "finish_reason", None),
+                (
+                    getattr(first_completion, "content", None)
+                    if first_completion is not None
+                    else None
+                ),
+                site="watson_logic_assistant/invoke_custom",
+            )
 
             if response:
                 self.logger.info(f"[{self.name}] Réponse générée: {response}")
@@ -564,6 +590,10 @@ class WatsonLogicAssistant(PropositionalLogicAgent):
                     name=self.name,
                 )
 
+        except ReasoningStarvedError:
+            # Never let the generic handler below convert a starved budget
+            # into a fabricated answer — that was the mask (#1929).
+            raise
         except Exception as e:
             self.logger.error(
                 f"[{self.name}] Erreur lors de invoke_custom: {e}", exc_info=True
