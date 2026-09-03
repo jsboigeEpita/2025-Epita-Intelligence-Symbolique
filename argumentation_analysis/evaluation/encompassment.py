@@ -37,11 +37,17 @@ never emits the verdict, only the per-criterion judgments):
     fired  ⟺  C1 ∧ C2 ∧ (C3 ∨ C4)
 
 C1∧C2 are the constitutive pair (absorb the audience, speak as the merged
-body); the totalising closure is C3 OR C4. The disjunction is what makes
-the #1970 witness ``20a53f0c`` (control_inversion: mass address, fused
-"we", eschatological close, REFUSES enemy extrusion) a LIVE probe rather
+body); the totalising closure is C3 OR C4. The disjunction is what keeps
+the #1970 witness ``20a53f0c`` (control_inversion) a LIVE probe rather
 than a negative defined by construction — per #1970, firing on it means
 the detector reads form, which is defensible.
+
+Measured on that witness (held-out, 3 runs, R914): it DOES fire, but
+through C3, not C4 — C3 true 3/3, C4 false 2/3. The design intent named
+the opposite route ("refuses enemy extrusion"); that was an unmeasured
+premise about the text, and the measurement falsified it. The rule is
+untouched and comes out stronger: under C1∧C2∧C4 alone the witness would
+fire 1/3, so the disjunction is load-bearing — from the other side.
 
 Three-state contract (#1977): ``state`` is
   True  — fired,

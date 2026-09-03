@@ -62,6 +62,24 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.evaluation import sanitize_state as _sanitize_mod
 from argumentation_analysis.evaluation.sanitize_state import sanitize_state
 
+
+@pytest.fixture(autouse=True)
+def _synthetic_opaque_salt(monkeypatch):
+    """#1973: ``opaque_id`` has no default salt any more and raises without one.
+
+    Every source this module feeds the scrubber is fabricated (see the module
+    docstring), so a salt protects nothing here — it is pinned at the perimeter
+    of the synthetic fixtures rather than provisioned as a CI secret. Two
+    reasons, in that order: a repository secret makes the dependency invisible
+    (green in CI, red on a fresh clone), and a root-scope ``autouse`` would
+    disarm the #1973 fail-loud guard for the whole test environment, letting a
+    future production path that forgets the salt pass green. Scoped to this
+    module, the guard keeps its teeth everywhere else and
+    ``test_opaque_id.py`` keeps asserting the raise.
+    """
+    monkeypatch.setenv("OPAQUE_ID_SALT", "synthetic-test-salt-1973")
+
+
 # Two distinct canaries so pair-shaped slots (attacks, supports, extensions) can
 # be exercised without a string coincidentally matching itself. Both are > 40
 # chars of claim-shaped natural language — the threshold the coordinator's probe

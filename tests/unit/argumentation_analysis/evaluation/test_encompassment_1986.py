@@ -241,7 +241,7 @@ class TestDevCorpus:
             assert it["expected"] in (True, False, None)
             assert set(it["criteria"]) == {"c1", "c2", "c3", "c4"}
 
-    def test_corpus_has_both_firing_shapes_and_the_witness_mirror(self):
+    def test_corpus_has_both_firing_shapes_and_the_closure_only_item(self):
         data = _load_corpus()
         by_cat = [it["category"] for it in data["items"]]
         assert by_cat.count("positif_plein") >= 3
