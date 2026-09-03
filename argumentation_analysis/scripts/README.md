@@ -16,12 +16,12 @@ scripts/
 
 ### repair_extract_markers.py
 
-Script de réparation des bornes défectueuses dans les extraits définis dans le fichier de configuration. Il se concentre particulièrement sur le corpus de discours d'Hitler qui est volumineux.
+Script de réparation des bornes défectueuses dans les extraits définis dans le fichier de configuration. Il se concentre particulièrement sur le corpus mono-orateur qui est volumineux.
 
 #### Fonctionnalités principales
 - Analyse des extraits existants pour détecter les bornes défectueuses
 - Correction automatique des bornes avec des algorithmes de correspondance approximative
-- Traitement spécifique pour le corpus de discours d'Hitler
+- Traitement spécifique pour le corpus mono-orateur
 - Validation et sauvegarde des corrections
 - Génération d'un rapport détaillé des modifications
 
@@ -39,7 +39,7 @@ python run_extract_repair.py --output repair_report.html --save
 #### Options
 - `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: repair_report.html)
 - `--save`, `-s`: Sauvegarder les modifications
-- `--hitler-only`: Traiter uniquement le corpus de discours d'Hitler
+- `--single-orator-only`: Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 - `--verbose`, `-v`: Activer le mode verbeux
 - `--input`, `-i`: Fichier d'entrée personnalisé
 - `--output-json`: Fichier de sortie JSON pour vérification (défaut: extract_sources_updated.json)
@@ -52,7 +52,7 @@ Script de vérification des extraits définis dans le fichier de configuration. 
 - Vérification de la présence des marqueurs dans les textes sources
 - Génération d'un rapport détaillé des problèmes détectés
 - Prise en charge des templates pour les marqueurs de début
-- Vérification spécifique pour le corpus de discours d'Hitler
+- Vérification spécifique pour le corpus mono-orateur
 
 #### Utilisation
 Le script peut être exécuté directement ou via le point d'entrée `run_verify_extracts.py` à la racine du projet:
@@ -69,7 +69,7 @@ python run_verify_extracts.py --output verify_report.html
 - `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: verify_report.html)
 - `--verbose`, `-v`: Activer le mode verbeux
 - `--input`, `-i`: Fichier d'entrée personnalisé
-- `--hitler-only`: Traiter uniquement le corpus de discours d'Hitler
+- `--single-orator-only`: Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 
 ## Intégration avec les services et modèles
 

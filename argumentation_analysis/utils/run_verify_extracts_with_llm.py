@@ -35,8 +35,13 @@ file_handler.setFormatter(
 logger.addHandler(file_handler)
 
 
-async def main():
-    """Fonction principale."""
+def build_verify_parser() -> argparse.ArgumentParser:
+    """Construit le parseur de la CLI de vérification LLM des extraits."""
+    from argumentation_analysis.core.utils.cli_utils import (
+        DEPRECATED_ORATOR_ALIAS,
+        _DeprecatedAliasStoreTrue,
+    )
+
     parser = argparse.ArgumentParser(
         description="Vérification de la qualité des extraits avec un LLM"
     )
@@ -47,9 +52,18 @@ async def main():
         help="Fichier de sortie pour le rapport HTML",
     )
     parser.add_argument(
-        "--hitler-only",
+        "--single-orator-only",
         action="store_true",
-        help="Traiter uniquement le corpus de discours d'Hitler",
+        dest="single_orator_only",
+        default=False,
+        help="Traiter uniquement le corpus mono-orateur (sélecteur opaque)",
+    )
+    parser.add_argument(
+        DEPRECATED_ORATOR_ALIAS,
+        action=_DeprecatedAliasStoreTrue,
+        dest="single_orator_only",
+        default=False,
+        help="(déprécié) alias de --single-orator-only",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Activer le mode verbeux"
@@ -64,8 +78,12 @@ async def main():
         default=None,
         help="Limiter le nombre d'extraits à traiter",
     )
+    return parser
 
-    args = parser.parse_args()
+
+async def main():
+    """Fonction principale."""
+    args = build_verify_parser().parse_args()
 
     # Configurer le niveau de journalisation
     if args.verbose:
@@ -132,8 +150,8 @@ async def main():
         logger.info(f"  Type: {source.get('source_type', 'Non spécifié')}")
         logger.info(f"  Extraits: {len(source.get('extracts', []))}")
 
-    # Filtrer les sources si l'option --hitler-only est activée
-    if args.hitler_only:
+    # Filtrer les sources si l'option --single-orator-only est activée
+    if args.single_orator_only:
         original_count = len(extract_definitions)
         extract_definitions = [
             source
@@ -141,7 +159,7 @@ async def main():
             if "hitler" in source.get("source_name", "").lower()
         ]
         logger.info(
-            f"Filtrage des sources: {len(extract_definitions)}/{original_count} sources retenues (corpus Hitler)."
+            f"Filtrage des sources: {len(extract_definitions)}/{original_count} sources retenues (corpus mono-orateur)."
         )
 
     # Limiter le nombre d'extraits si l'option --limit est spécifiée

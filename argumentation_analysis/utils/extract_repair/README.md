@@ -110,13 +110,13 @@ python ../../run_extract_repair.py
 Le script de réparation accepte plusieurs options en ligne de commande:
 
 ```bash
-python ../../run_extract_repair.py --output rapport.html --save --hitler-only
+python ../../run_extract_repair.py --output rapport.html --save --single-orator-only
 ```
 
 Options disponibles:
 - `--output` ou `-o`: Spécifie le fichier de sortie pour le rapport HTML
 - `--save` ou `-s`: Sauvegarde les modifications apportées aux extraits
-- `--hitler-only`: Traite uniquement le corpus de discours d'Hitler
+- `--single-orator-only`: Traite uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 
 ### Via le notebook
 
@@ -244,7 +244,7 @@ Pour ajouter de nouvelles fonctionnalités à l'outil de réparation, suivez ces
 - Génération de rapports détaillés sur les réparations effectuées
 - Interface utilisateur interactive via notebook Jupyter
 - Sauvegarde automatique des extraits réparés
-- Traitement spécifique pour le corpus de discours d'Hitler
+- Traitement spécifique pour le corpus mono-orateur
 
 ### Vérification des extraits
 - Vérification de la validité syntaxique des extraits
