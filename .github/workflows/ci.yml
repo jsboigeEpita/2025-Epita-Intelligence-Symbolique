@@ -55,6 +55,24 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          # #2014: the privacy scan below reads `origin/main..HEAD`, so it needs
+          # the history the default depth-1 checkout does not fetch. This is the
+          # one line that turns the commit-message guard from a procedural rule
+          # into an enforced gate.
+          fetch-depth: 0
+
+      # #2014: commit messages are the only GitHub-indexed surface that is both
+      # permanent and replicated (this repo is public and forked), and until now
+      # the only one with no guard at any stage. Runs on the runner's system
+      # Python, before the conda env is built, so a leak fails in seconds rather
+      # than after a 15-minute setup. The scanner is stdlib-only and loads the
+      # shared patterns by path, so it needs no project environment.
+      - name: Privacy gate — no dataset source named in commit messages (#2014)
+        shell: bash
+        run: |
+          git fetch origin main --quiet || true
+          python scripts/security/scan_indexed_surfaces.py --commits origin/main..HEAD
 
       # #1959 (JDK source unique): the setup-java step was inert and listed
       # Java 11, contradicting settings.jvm.jdk_version (17.0.12, provisioned

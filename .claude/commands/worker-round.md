@@ -194,6 +194,35 @@ gh pr create --title "type(scope): description" --body "..."
 
 **Avant push** : `git rebase origin/main` obligatoire.
 
+**Avant push — scan privacy des surfaces indexées (HARD, aucune exception)** :
+
+```bash
+# 1. les messages de commit que tu t'apprêtes à pousser
+python scripts/security/scan_indexed_surfaces.py --commits origin/main..HEAD
+
+# 2. le corps de PR que tu t'apprêtes à écrire
+python scripts/security/scan_indexed_surfaces.py --text-file <ton_body.md>
+```
+
+Les deux doivent sortir `clean`. Un message de commit poussé est **permanent** : le dépôt est
+public et forké, donc une réécriture d'historique ne le retire même pas des forks.
+
+Le scan des **commits** est désormais un gate CI (#2014) : il tourne avant le build conda, donc
+une fuite fait échouer ton run en secondes au lieu de quinze minutes. Le lancer avant de pousser
+te coûte deux secondes et t'évite un aller-retour. Le scan du **corps de PR** n'a pas de gate :
+là, le manuel reste la seule barrière.
+
+⚠ Lis le recensement, pas seulement le verdict : la sortie dit `scanned N commit message(s)`.
+Si N vaut 0 alors que tu as des commits, le scan n'a **rien lu** — son `clean` ne prouve rien.
+
+⚠ **Ne scanne pas à la main avec `grep`** : `\b` est une frontière de *mot*, et `_` est
+un caractère de mot. `\bNom\b` **ne peut pas** matcher `nom_only` — exactement la forme
+qu'un nom prend en entrant dans du code (#2012). Depuis #2012 les motifs partagés sont
+stockés **nus** et la frontière vit à un seul endroit, `leak_patterns.letter_boundary()`,
+qui est une frontière-**lettre** et voit les deux formes — donc ne compile jamais ces motifs
+bruts non plus : nus, ils matcheraient en sous-chaîne. Passe par le script. Une case DoD
+« aucun nom de source » cochée contre un `grep -w` est fausse par construction.
+
 ### 3e. Rapport
 ```
 roosync_dashboard(action: "append", type: "workspace", tags: ["DONE"],
