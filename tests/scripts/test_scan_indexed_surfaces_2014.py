@@ -35,14 +35,13 @@ scanner = _load_scanner()
 def _alphabetic_core() -> str:
     """A purely alphabetic pattern core, so the planted token is a clean identifier."""
     for pattern in scanner.PERSON_PATTERNS:
-        core = pattern.replace(r"\b", "")
-        if re.fullmatch(r"[A-Za-z]+", core):
-            return core
+        if re.fullmatch(r"[A-Za-z]+", pattern):
+            return pattern
     pytest.skip("no purely alphabetic pattern core available to plant")
 
 
 def test_identifier_shaped_name_is_caught(tmp_path):
-    """Born-red: the form the shipped ``\b`` patterns are blind to must be caught."""
+    """Born-red: the identifier form a word boundary is blind to must be caught."""
     body = tmp_path / "body.md"
     body.write_text(
         f"- migrated the `{_alphabetic_core().lower()}_only=` keyword\n",
@@ -51,16 +50,33 @@ def test_identifier_shaped_name_is_caught(tmp_path):
     assert scanner.main(["--text-file", str(body)]) == 1
 
 
-def test_the_shipped_word_boundary_patterns_would_miss_it():
-    """The control that makes the test above non-vacuous.
+def test_scanner_consumes_the_shared_frontier_not_a_local_copy(monkeypatch):
+    """The frontier must have one *source*, not merely one spelling.
 
-    If the shipped patterns already caught the identifier form, the scanner would
-    be redundant and its green would prove nothing. ``\b`` is a *word* boundary
-    and ``_`` is a word character, so it cannot match ``core_only`` (#2012).
+    #2012 moved it into ``leak_patterns.letter_boundary``, and two copies of one
+    rule is the drift that made the identifier form invisible to begin with.
+    Comparing the compiled strings is not enough: a locally re-derived frontier
+    produces byte-identical output and would slip through. So the shared helper
+    is redirected, and the detectors must follow it — which they can only do by
+    actually calling it.
     """
-    planted = f"the {_alphabetic_core().lower()}_only keyword"
-    shipped = [re.compile(p, re.IGNORECASE) for p in scanner.PERSON_PATTERNS]
-    assert sum(len(rx.findall(planted)) for rx in shipped) == 0
+    monkeypatch.setattr(scanner, "letter_boundary", lambda core: f"__{core}__")
+    assert [rx.pattern for rx in scanner.compile_detectors()] == [
+        f"__{p}__" for p in scanner.PERSON_PATTERNS
+    ]
+
+
+def test_a_word_boundary_would_still_miss_the_identifier_form():
+    """Why the frontier exists at all — the property #2012 fixed, pinned here.
+
+    Reverting ``letter_boundary`` to a word boundary must redden this file too,
+    not only the shared module's own guard: this scanner is the consumer that
+    carries that rule into the commit-message gate.
+    """
+    core = _alphabetic_core().lower()
+    planted = f"the {core}_only keyword"
+    word_boundary = re.compile(rf"\b{core}\b", re.IGNORECASE)
+    assert word_boundary.search(planted) is None
     assert scanner.scan_text(planted) == 1
 
 

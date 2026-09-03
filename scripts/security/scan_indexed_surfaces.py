@@ -52,7 +52,7 @@ _PATTERNS_MODULE = (
 )
 
 
-def _load_patterns() -> list:
+def _load_patterns() -> tuple[list, object]:
     """Load the shared vocabulary by path.
 
     Importing ``argumentation_analysis.evaluation.leak_patterns`` normally would
@@ -66,29 +66,23 @@ def _load_patterns() -> list:
         raise RuntimeError(f"cannot load shared patterns from {_PATTERNS_MODULE}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return list(module.PERSON_PATTERNS)
+    return list(module.PERSON_PATTERNS), module.letter_boundary
 
 
-PERSON_PATTERNS = _load_patterns()
-
-
-def _cores() -> list[str]:
-    """Strip the baked-in ``\b`` so a letter boundary can be applied instead."""
-    out = []
-    for pattern in PERSON_PATTERNS:
-        text = (
-            pattern
-            if isinstance(pattern, str)
-            else getattr(pattern, "pattern", str(pattern))
-        )
-        out.append(text.replace(r"\b", ""))
-    return out
+PERSON_PATTERNS, letter_boundary = _load_patterns()
 
 
 def compile_detectors() -> list[re.Pattern[str]]:
+    """Compile the shared vocabulary through the shared frontier.
+
+    The frontier is NOT re-derived here. #2012 moved it into
+    ``leak_patterns.letter_boundary``; keeping a second spelling of the same
+    rule in this file is exactly the drift that made the identifier form
+    invisible in the first place.
+    """
     return [
-        re.compile(rf"(?<![A-Za-z]){core}(?![A-Za-z])", re.IGNORECASE)
-        for core in _cores()
+        re.compile(letter_boundary(pattern), re.IGNORECASE)
+        for pattern in PERSON_PATTERNS
     ]
 
 
@@ -99,10 +93,10 @@ def scan_text(text: str, detectors: list[re.Pattern[str]] | None = None) -> int:
 
 
 def _identifier_shaped(text: str) -> bool:
-    """True when a hit is adjacent to ``_`` — the form ``\b`` is blind to."""
+    """True when a hit is adjacent to ``_`` — the form a word boundary misses."""
     return any(
         re.search(rf"(?<![A-Za-z]){core}_|_{core}(?![A-Za-z])", text, re.IGNORECASE)
-        for core in _cores()
+        for core in PERSON_PATTERNS
     )
 
 
