@@ -42,6 +42,7 @@ import argparse
 import importlib.util
 import re
 import subprocess
+from typing import NamedTuple
 import sys
 from pathlib import Path
 
@@ -105,7 +106,15 @@ def _identifier_shaped(text: str) -> bool:
     )
 
 
-def scan_commits(rev_range: str) -> list[tuple[str, int, bool, bool]]:
+class CommitScan(NamedTuple):
+    """A commit-range scan plus the census proving it was not vacuous."""
+
+    findings: list[tuple[str, int, bool, bool]]
+    scanned: int
+    malformed: int
+
+
+def scan_commits(rev_range: str) -> CommitScan:
     """Scan commit messages in ``rev_range``. Returns (sha, hits, in_subject, identifier)."""
     sep = "\x1e"
     proc = subprocess.run(
@@ -118,9 +127,17 @@ def scan_commits(rev_range: str) -> list[tuple[str, int, bool, bool]]:
     )
     detectors = compile_detectors()
     findings = []
+    scanned = 0
+    malformed = 0
     for record in proc.stdout.split(sep):
-        if record.count("\x1f") != 2:
+        if not record.strip():
             continue
+        if record.count("\x1f") != 2:
+            # Never drop silently: an unparsed record is a message we did
+            # not read, so the scan is incomplete and must not read clean.
+            malformed += 1
+            continue
+        scanned += 1
         sha, subject, body = record.split("\x1f")
         sha = sha.strip()
         hits = scan_text(subject + "\n" + body, detectors)
@@ -133,7 +150,7 @@ def scan_commits(rev_range: str) -> list[tuple[str, int, bool, bool]]:
                     _identifier_shaped(subject + "\n" + body),
                 )
             )
-    return findings
+    return CommitScan(findings, scanned, malformed)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -149,12 +166,13 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.commits:
-        findings = scan_commits(args.commits)
-        print(f"scanned commit range: {args.commits}")
+        scan = scan_commits(args.commits)
+        findings = scan.findings
+        print(f"scanned {scan.scanned} commit message(s) in range: {args.commits}")
         for sha, hits, in_subject, identifier in findings:
             where = "SUBJECT" if in_subject else "body"
             shape = (
-                " identifier-shaped (invisible to the repo's own \b patterns)"
+                " identifier-shaped (invisible to the repo's own \\b patterns)"
                 if identifier
                 else ""
             )
@@ -163,6 +181,12 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"\n{len(findings)} commit message(s) name a dataset source. "
                 f"Rewrite them before pushing — a pushed commit message is permanent."
+            )
+            return 1
+        if scan.malformed:
+            print(
+                f"{scan.malformed} record(s) could not be parsed: the scan "
+                f"is incomplete and cannot certify this range."
             )
             return 1
         print("clean")

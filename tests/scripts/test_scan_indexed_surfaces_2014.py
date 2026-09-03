@@ -87,8 +87,69 @@ def test_substring_inside_an_ordinary_word_is_not_flagged():
     assert scanner.scan_text(f"x{core}x and pre{core}ing") == 0
 
 
-def test_commit_range_scan_reports_and_stays_quiet_on_a_clean_range(capsys):
-    """Smoke the git path on a range with no leak; empty range must be clean."""
-    assert scanner.scan_commits("HEAD..HEAD") == []
-    assert scanner.main(["--commits", "HEAD..HEAD"]) == 0
-    assert "clean" in capsys.readouterr().out
+def test_empty_commit_range_scans_nothing_and_says_so():
+    """The vacuous case, named: HEAD..HEAD has no commits, so scanned is 0.
+
+    Stated explicitly because the previous version asserted ``== []`` on this
+    range, which is true no matter whether the git path works at all.
+    """
+    scan = scanner.scan_commits("HEAD..HEAD")
+    assert scan.findings == []
+    assert scan.scanned == 0
+
+
+def test_real_commit_range_actually_reads_messages(capsys):
+    """Non-vacuity floor: a range with commits must report a non-zero census.
+
+    Without this, a CI runner whose range comes back empty would print "clean"
+    forever, indistinguishably from a scan that read something.
+    """
+    scan = scanner.scan_commits("HEAD~3..HEAD")
+    assert scan.scanned == 3
+    assert scan.malformed == 0
+    assert scanner.main(["--commits", "HEAD~3..HEAD"]) == 0
+    out = capsys.readouterr().out
+    assert "scanned 3 commit message(s)" in out
+    assert "clean" in out
+
+
+def test_planted_name_in_a_commit_message_reddens_the_commit_path(
+    tmp_path, monkeypatch, capsys
+):
+    """Born-red on the path CI invokes: the gate must be able to fail.
+
+    The text path is exercised above; this one drives ``git log`` itself, which
+    is what ``--commits origin/main..HEAD`` runs in the workflow.
+    """
+    import subprocess
+
+    repo = tmp_path / "r"
+    repo.mkdir()
+    monkeypatch.chdir(repo)
+    run = lambda *a: subprocess.run(a, check=True, capture_output=True)
+    run("git", "init", "-q")
+    run("git", "config", "user.email", "t@t")
+    run("git", "config", "user.name", "t")
+    (repo / "f").write_text("x")
+    run("git", "add", "f")
+    run("git", "commit", "-q", "-m", "chore: clean subject with corpus_A only")
+    base = subprocess.run(
+        ["git", "rev-parse", "HEAD"], capture_output=True, text=True
+    ).stdout.strip()
+    (repo / "f").write_text("y")
+    run("git", "add", "f")
+    run(
+        "git",
+        "commit",
+        "-q",
+        "-m",
+        f"chore: names {_alphabetic_core().lower()}_only here",
+    )
+
+    scan = scanner.scan_commits(f"{base}..HEAD")
+    assert scan.scanned == 1, "the mutation must have applied before the verdict counts"
+    assert len(scan.findings) == 1
+    _sha, hits, in_subject, identifier = scan.findings[0]
+    assert hits == 1 and in_subject and identifier
+    assert scanner.main(["--commits", f"{base}..HEAD"]) == 1
+    assert "LEAK" in capsys.readouterr().out
