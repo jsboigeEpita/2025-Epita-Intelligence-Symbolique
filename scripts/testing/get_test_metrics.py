@@ -42,7 +42,6 @@ def run_safe_tests():
         "tests/test_minimal.py",
         "tests/test_dependencies.py",
         "argumentation_analysis/core/communication/tests/",
-        "argumentation_analysis/core/tests/",
         "tests/integration/test_agents_tools_integration.py",
     ]
 

@@ -8,11 +8,6 @@ from .extended_belief_model import (
     BeliefMetadata,
     ModificationHistory,
 )
-from .investigation_session_model import (
-    InvestigationSessionModel,
-    SessionCheckpoint,
-    SessionSummary,
-)
 from .agent_communication_model import (
     AgentMessage,
     CommunicationProtocol,
@@ -23,9 +18,6 @@ __all__ = [
     "ExtendedBeliefModel",
     "BeliefMetadata",
     "ModificationHistory",
-    "InvestigationSessionModel",
-    "SessionCheckpoint",
-    "SessionSummary",
     "AgentMessage",
     "CommunicationProtocol",
     "SyncOperation",
