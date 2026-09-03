@@ -4,9 +4,11 @@ on the same dest with a DeprecationWarning.
 
 Builders are imported from the modules — never re-typed. The modules create a
 log file at import, so imports happen lazily inside the fixture under a chdir
-to tmp_path. The scripts/ runner additionally pulls `ag2` (declared in
-environment.yml, absent from the lighter local env) — its tests skip without
-it and run it for real in CI.
+to tmp_path. The scripts/ runner additionally pulls `ag2.agentchat` (the
+distribution is declared in environment.yml, but that namespace is absent
+from it — see #2018). The guard probes the submodule, not the aggregate:
+`ag2` alone resolves in CI while `ag2.agentchat` does not, so probing the
+aggregate skips locally and dies in CI on the part that is missing.
 """
 
 import importlib
@@ -40,7 +42,7 @@ def parser_factory(tmp_path, monkeypatch):
 
     def _factory(module_name, needs_ag2):
         if needs_ag2:
-            pytest.importorskip("ag2")
+            pytest.importorskip("ag2.agentchat")
         module = importlib.import_module(module_name)
         return module.build_verify_parser()
 
