@@ -513,9 +513,32 @@ class WorkflowExecutor:
                         if results[name].terminal
                     ]
                     if terminal_dependencies:
-                        reason = "Blocked by terminal dependency: " + ", ".join(
-                            sorted(terminal_dependencies)
+                        # #1909: a terminal COMPLETED dependency (the valid
+                        # non-argumentative stop) and a terminal FAILED one
+                        # (#1913) produce the same skip — the reason must name
+                        # which, or the two senses are indistinguishable in
+                        # every log built on this line.
+                        failed_deps = sorted(
+                            name
+                            for name in terminal_dependencies
+                            if results[name].status == PhaseStatus.FAILED
                         )
+                        succeeded_deps = sorted(
+                            name
+                            for name in terminal_dependencies
+                            if results[name].status != PhaseStatus.FAILED
+                        )
+                        if succeeded_deps and not failed_deps:
+                            reason = (
+                                "Skipped: non-argumentative input — "
+                                + ", ".join(succeeded_deps)
+                                + " classified the document (#1909); no "
+                                "argument-dependent analysis follows."
+                            )
+                        else:
+                            reason = "Blocked by terminal dependency: " + ", ".join(
+                                sorted(terminal_dependencies)
+                            )
                         self._store_phase_result(
                             phase_name,
                             PhaseResult(
@@ -589,6 +612,17 @@ class WorkflowExecutor:
 
         if state is not None and hasattr(state, "set_workflow_results"):
             try:
+                # #1909: surface the document classification when the run
+                # stopped on the valid non-argumentative terminal — the batch
+                # summary counts this shape separately from failures and from
+                # full-success runs.
+                non_argumentative = any(
+                    r.terminal
+                    and r.status == PhaseStatus.COMPLETED
+                    and isinstance(r.output, dict)
+                    and r.output.get("extraction_status") == "non_argumentative"
+                    for r in results.values()
+                )
                 state.set_workflow_results(
                     workflow.name,
                     {
@@ -609,6 +643,11 @@ class WorkflowExecutor:
                             for name, r in results.items()
                             if r.terminal and r.status == PhaseStatus.FAILED
                         ],
+                        **(
+                            {"document_classification": "non_argumentative"}
+                            if non_argumentative
+                            else {}
+                        ),
                     },
                 )
             except Exception as sw_err:
@@ -643,6 +682,31 @@ class WorkflowExecutor:
         status = output.get("extraction_status")
         if isinstance(status, str) and status.startswith("failed:"):
             return status
+        return None
+
+    @staticmethod
+    def _foundational_classification(output: Any, capability: str) -> Optional[str]:
+        """Return the valid terminal non-argumentative classification, if any (#1909).
+
+        Tri-state, never ``bool(arguments)``: an explicit producer status
+        (``non_argumentative``) is honored as-is; otherwise a SUCCESSFUL
+        extraction (``ok``) that found zero arguments is the classification
+        the producer left implicit — factual material without argumentative
+        content is a valid terminal outcome, not a model failure (#1894).
+        A ``failed:`` status never reaches here (handled above as a failure).
+        """
+        if capability != "fact_extraction" or not isinstance(output, dict):
+            return None
+        status = output.get("extraction_status")
+        if status == "non_argumentative":
+            return "non_argumentative"
+        if status == "ok":
+            argument_count = output.get("argument_count")
+            if argument_count is None:
+                arguments = output.get("arguments")
+                argument_count = len(arguments) if isinstance(arguments, list) else 0
+            if argument_count == 0:
+                return "non_argumentative"
         return None
 
     async def _invoke_with_retry(
@@ -840,6 +904,32 @@ class WorkflowExecutor:
                         component_used=provider.name,
                         output=output,
                         error=foundational_error,
+                        duration_seconds=duration,
+                        attempts=attempts,
+                        terminal=True,
+                    ),
+                    output,
+                )
+            # #1909: a successful extraction that classified the document as
+            # non-argumentative (explicit status or the implicit zero-argument
+            # shape) is a NAMED terminal success — status stays COMPLETED, the
+            # classification is written into the output so every consumer
+            # (_analysis_outcome, state writers, batch summaries) reads one
+            # authoritative value.
+            if (
+                self._foundational_classification(output, phase.capability)
+                == "non_argumentative"
+            ):
+                if isinstance(output, dict):
+                    output = {**output, "extraction_status": "non_argumentative"}
+                return (
+                    phase_name,
+                    PhaseResult(
+                        phase_name=phase_name,
+                        status=PhaseStatus.COMPLETED,
+                        capability=phase.capability,
+                        component_used=provider.name,
+                        output=output,
                         duration_seconds=duration,
                         attempts=attempts,
                         terminal=True,

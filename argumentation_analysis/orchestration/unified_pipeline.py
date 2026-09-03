@@ -70,18 +70,19 @@ def _analysis_outcome(phase_results: Dict[str, Any]) -> Dict[str, str]:
     explicit_failure = isinstance(
         extraction_status, str
     ) and extraction_status.startswith("failed:")
-    if (
-        extraction.status == PhaseStatus.FAILED
-        or extraction.terminal
-        or explicit_failure
-    ):
+    # #1909: ``terminal`` alone no longer decides failure — a terminal
+    # COMPLETED extraction is the valid non-argumentative stop; only a FAILED
+    # status or an explicit ``failed:`` producer status is a failure (#1913).
+    if extraction.status == PhaseStatus.FAILED or explicit_failure:
         reason = extraction_status if explicit_failure else extraction.error
         return {
             "status": "failed",
             "phase": extraction.phase_name,
             "reason": str(reason or "unknown"),
         }
-    if extraction_status == "non_argumentative":
+    if extraction_status == "non_argumentative" or (
+        extraction.terminal and extraction.status == PhaseStatus.COMPLETED
+    ):
         return {"status": "non_argumentative", "phase": extraction.phase_name}
     return {"status": "ok"}
 
@@ -379,6 +380,8 @@ async def run_unified_analysis(
         workflow_result = getattr(state, "workflow_results", {}).get(workflow.name)
         if isinstance(workflow_result, dict):
             workflow_result["analysis_outcome"] = analysis_outcome
+            if analysis_outcome.get("status") == "non_argumentative":
+                workflow_result["document_classification"] = "non_argumentative"
 
     result: Dict[str, Any] = {
         "workflow_name": workflow.name,

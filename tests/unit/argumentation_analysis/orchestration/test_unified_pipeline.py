@@ -405,8 +405,12 @@ class TestWorkflowExecution:
         )
 
         valid_extraction = {
-            "arguments": [],
+            # #1909: one argument — a zero-argument "ok" extraction is now the
+            # valid non-argumentative terminal stop, and this test exists to
+            # prove the light workflow completes its phases without an LLM.
+            "arguments": [{"text": "Test argument text"}],
             "claims": [],
+            "argument_count": 1,
             "extraction_status": "ok",
         }
         with patch(
@@ -753,8 +757,11 @@ class TestRealInvocationViaUnifiedAnalysis:
             "._invoke_fact_extraction",
             new=AsyncMock(
                 return_value={
-                    "arguments": [],
+                    # #1909: keep this workflow argumentative — zero arguments
+                    # would now be the valid non-argumentative terminal stop.
+                    "arguments": [{"text": "Les etudes scientifiques le prouvent."}],
                     "claims": [],
+                    "argument_count": 1,
                     "extraction_status": "ok",
                 }
             ),
