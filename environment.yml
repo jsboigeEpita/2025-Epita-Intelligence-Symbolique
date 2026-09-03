@@ -83,7 +83,6 @@ dependencies:
     - playwright
     - pytest-playwright
     - psutil
-    - ag2>=0.2.0
     - tenacity
     - pybreaker
     - pytest-dotenv
