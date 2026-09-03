@@ -38,10 +38,7 @@ logger.addHandler(file_handler)
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
-
-# from semantic_kernel.contents import AuthorRole
-# CORRECTIF COMPATIBILITÉ: Utilisation du module de compatibilité
-from ag2.agentchat.contrib.llm_assistant_agent import LLMAssistantAgent
+from semantic_kernel.agents import ChatCompletionAgent
 
 try:
     # Import relatif depuis le package utils
@@ -272,7 +269,7 @@ async def setup_evaluation_agent(llm_service):
         prompt_exec_settings = {}
 
     try:
-        evaluation_agent = LLMAssistantAgent(
+        evaluation_agent = ChatCompletionAgent(
             kernel=kernel,
             service=llm_service,
             name="EvaluationAgent",
