@@ -18,12 +18,19 @@ Exclusion ledger:
   constant, so the spelling lives only in production code (never swept here).
 - #2009 also removed the serialized exclusion on test_opaque_id.py: the name
   there was a substitutable non-ASCII carrier, substituted by a synthetic one.
+- #2012 stripped the word boundaries from the shared literals: the guard now
+  applies the module-level ``letter_boundary`` (letter frontier), which catches
+  the identifier form (``<core>_only``) the word boundary was blind to. The
+  control lives in ``test_letter_boundary_catches_identifier_carrier``.
 """
 
 import re
 from pathlib import Path
 
-from argumentation_analysis.evaluation.leak_patterns import PERSON_PATTERNS
+from argumentation_analysis.evaluation.leak_patterns import (
+    PERSON_PATTERNS,
+    letter_boundary,
+)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
@@ -42,7 +49,7 @@ NAME_KEYED_CANARIES = {
 
 
 def test_person_sweep_tests_tree():
-    regexes = [re.compile(p, re.IGNORECASE) for p in PERSON_PATTERNS]
+    regexes = [re.compile(letter_boundary(p), re.IGNORECASE) for p in PERSON_PATTERNS]
     leaks = {}
     for path in sorted(REPO_ROOT.joinpath("tests").rglob("*.py")):
         rel = path.relative_to(REPO_ROOT).as_posix()
@@ -61,3 +68,22 @@ def test_person_sweep_tests_tree():
         + " — each new site needs a written verdict (canary / substitutable) "
         "per #1999/#2004 before it may join an exclusion set"
     )
+
+
+def test_letter_boundary_catches_identifier_carrier():
+    """#2012 born-red: the identifier form the word boundary never saw.
+
+    A leaked name smuggled into code takes the shape ``<core>_only``. The
+    old literals framed every pattern with a word boundary; ``_`` is a word
+    character, so it never fired. The letter frontier does. The core is
+    derived at runtime: no leader spelling may live in this file, or the
+    sweep this module guards would flag it.
+    """
+    core = next(p for p in PERSON_PATTERNS if p.isascii() and p.isalpha())
+    token = f"{core.lower()}_only"
+
+    word_boundary = re.compile(rf"\b{core}\b", re.IGNORECASE)
+    assert word_boundary.search(token) is None, "born-red premise broken"
+
+    bounded = [re.compile(letter_boundary(p), re.IGNORECASE) for p in PERSON_PATTERNS]
+    assert any(rx.search(token) for rx in bounded), "letter frontier must catch it"
