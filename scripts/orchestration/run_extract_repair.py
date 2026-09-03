@@ -64,7 +64,7 @@ async def main():
         project_root_dir=project_root,
         output_report_path_str=args.output,
         save_changes=args.save,
-        hitler_only=args.hitler_only,
+        hitler_only=args.single_orator_only,
         custom_input_path_str=args.input,
         output_json_path_str=args.output_json,
         # args.verbose est utilisé pour configurer le logger de ce script,

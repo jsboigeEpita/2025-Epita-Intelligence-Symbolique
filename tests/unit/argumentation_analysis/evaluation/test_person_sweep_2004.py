@@ -10,6 +10,14 @@ canary. Reddens on any non-canary match — the #1999 fixtures and the #2004
 FOL constants both reddened it before their substitution (né-rouge control
 run on pre-fix origin/main). Failure output reports file paths and pattern
 indexes only, never the matched context.
+
+Exclusion ledger:
+- #2009 removed the CLI-contract exclusion: the production corpus-selector
+  flag got an opaque spelling with the old one kept as a deprecated alias,
+  and the argparse test now pins the alias through the imported production
+  constant, so the spelling lives only in production code (never swept here).
+- #2009 also removed the serialized exclusion on test_opaque_id.py: the name
+  there was a substitutable non-ASCII carrier, substituted by a synthetic one.
 """
 
 import re
@@ -24,29 +32,12 @@ PRIVACY_CANARY_SUFFIXES = ("_privacy.py", "_cassette_privacy.py")
 
 # Behavior-keyed canaries — production code under test branches on the name:
 # extract-repair name-keyed filter, AnonymizeFilter [LEADER] substitution,
-# generator corpus-selection branch, corpus grouping keys (verdicts #1999),
-# and the CLI contract: --hitler-only is a real flag of
-# argumentation_analysis/core/utils/cli_utils.py (verdict #2004).
+# generator corpus-selection branch, corpus grouping keys (verdicts #1999).
 NAME_KEYED_CANARIES = {
     "tests/argumentation_analysis/utils/dev_tools/test_repair_utils.py",
     "tests/unit/argumentation_analysis/core/test_source_management_extended.py",
     "tests/unit/argumentation_analysis/utils/test_data_generation.py",
     "tests/unit/argumentation_analysis/utils/test_data_processing_utils.py",
-    "tests/unit/argumentation_analysis/utils/core_utils/test_cli_utils.py",
-}
-
-# Serialized on #1998 (its PR rewrites this file): re-verify once it lands;
-# remove from this set only if the real name is gone by then.
-SERIALIZED_CANARIES = {
-    "tests/unit/argumentation_analysis/evaluation/test_opaque_id.py",
-}
-
-# This guard itself: documenting the canary verdicts requires spelling the
-# production flag name (which embeds a leader pattern) in the comment above.
-# Declared self-exclusion, not a silent one — the né-rouge control proves
-# the sweep still catches real fixtures.
-GUARD_SELF = {
-    "tests/unit/argumentation_analysis/evaluation/test_person_sweep_2004.py",
 }
 
 
@@ -57,11 +48,7 @@ def test_person_sweep_tests_tree():
         rel = path.relative_to(REPO_ROOT).as_posix()
         if rel.endswith(PRIVACY_CANARY_SUFFIXES):
             continue
-        if (
-            rel in NAME_KEYED_CANARIES
-            or rel in SERIALIZED_CANARIES
-            or rel in GUARD_SELF
-        ):
+        if rel in NAME_KEYED_CANARIES:
             continue
         content = path.read_text(encoding="utf-8", errors="replace")
         hits = [i for i, rx in enumerate(regexes) if rx.search(content)]
