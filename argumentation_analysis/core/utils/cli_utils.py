@@ -4,8 +4,32 @@ Utilitaires pour la gestion des arguments de ligne de commande (CLI).
 """
 
 import argparse
+import warnings
 
 # from pathlib import Path # Pas nécessaire pour cette fonction spécifique, mais souvent utile avec argparse
+
+# Corpus-selector compat alias (#2009): the pre-2026 spelling named a dataset
+# source on the most indexed surface of the repo (production code). The opaque
+# spelling is the contract now; this one only keeps parsing, with a warning,
+# so no existing caller breaks. Exported so tests pin the compat path without
+# spelling it on a new surface.
+DEPRECATED_ORATOR_ALIAS = "--hitler-only"
+
+
+class _DeprecatedAliasStoreTrue(argparse.Action):
+    """store_true for a deprecated flag spelling: sets dest and warns."""
+
+    def __init__(self, option_strings, dest, **kwargs):
+        kwargs["nargs"] = 0
+        super().__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        warnings.warn(
+            f"{option_string} est déprécié : utiliser --single-orator-only.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        setattr(namespace, self.dest, True)
 
 
 def parse_advanced_analysis_arguments() -> argparse.Namespace:
@@ -110,9 +134,18 @@ def parse_extract_verification_arguments() -> argparse.Namespace:
         "--input", "-i", default=None, help="Fichier d'entrée personnalisé"
     )
     parser.add_argument(
-        "--hitler-only",
+        "--single-orator-only",
         action="store_true",
-        help="Traiter uniquement le corpus de discours d'Hitler",
+        dest="single_orator_only",
+        default=False,
+        help="Traiter uniquement le corpus mono-orateur (sélecteur opaque)",
+    )
+    parser.add_argument(
+        DEPRECATED_ORATOR_ALIAS,
+        action=_DeprecatedAliasStoreTrue,
+        dest="single_orator_only",
+        default=False,
+        help="(déprécié) alias de --single-orator-only",
     )
     return parser.parse_args()
 
@@ -230,9 +263,18 @@ def parse_extract_repair_arguments() -> argparse.Namespace:
         "--save", "-s", action="store_true", help="Sauvegarder les modifications"
     )
     parser.add_argument(
-        "--hitler-only",
+        "--single-orator-only",
         action="store_true",
-        help="Traiter uniquement le corpus de discours d'Hitler",
+        dest="single_orator_only",
+        default=False,
+        help="Traiter uniquement le corpus mono-orateur (sélecteur opaque)",
+    )
+    parser.add_argument(
+        DEPRECATED_ORATOR_ALIAS,
+        action=_DeprecatedAliasStoreTrue,
+        dest="single_orator_only",
+        default=False,
+        help="(déprécié) alias de --single-orator-only",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Activer le mode verbeux"

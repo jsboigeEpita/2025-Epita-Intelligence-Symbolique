@@ -10,6 +10,7 @@ from argumentation_analysis.core.utils.cli_utils import (
     parse_summary_generation_arguments,
     parse_extract_verification_arguments,
     parse_extract_repair_arguments,  # Ajout de l'import
+    DEPRECATED_ORATOR_ALIAS,
 )
 
 
@@ -145,7 +146,7 @@ def test_parse_extract_verification_arguments_defaults():
     assert args.output == "verify_report.html"  # Valeur par défaut
     assert args.verbose is False
     assert args.input is None  # Valeur par défaut
-    assert args.hitler_only is False  # Valeur par défaut
+    assert args.single_orator_only is False  # Valeur par défaut
 
 
 def test_parse_extract_verification_arguments_output_provided():
@@ -187,12 +188,20 @@ def test_parse_extract_verification_arguments_input_provided():
     assert args_i.input == "another_def.yaml"
 
 
-def test_parse_extract_verification_arguments_hitler_only_true():
-    """Teste la fourniture de l'argument --hitler-only."""
-    with patch("sys.argv", ["script_name", "--hitler-only"]):
+def test_parse_extract_verification_arguments_single_orator_only_true():
+    """Teste la fourniture de l'argument --single-orator-only."""
+    with patch("sys.argv", ["script_name", "--single-orator-only"]):
         args = parse_extract_verification_arguments()
-    assert args.hitler_only is True
+    assert args.single_orator_only is True
     # Pas d'alias court pour cet argument
+
+
+def test_parse_extract_verification_arguments_deprecated_alias():
+    """L'orthographe pré-#2009 (constante de production) parse encore, avec warning."""
+    with patch("sys.argv", ["script_name", DEPRECATED_ORATOR_ALIAS]):
+        with pytest.warns(DeprecationWarning):
+            args = parse_extract_verification_arguments()
+    assert args.single_orator_only is True  # même dest que le flag opaque
 
 
 def test_parse_extract_verification_arguments_all_provided():
@@ -207,7 +216,7 @@ def test_parse_extract_verification_arguments_all_provided():
         "-v",  # verbose
         "-i",
         input_f,
-        "--hitler-only",
+        "--single-orator-only",
     ]
     with patch("sys.argv", cli_args):
         args = parse_extract_verification_arguments()
@@ -215,7 +224,7 @@ def test_parse_extract_verification_arguments_all_provided():
     assert args.output == output_f
     assert args.verbose is True
     assert args.input == input_f
-    assert args.hitler_only is True
+    assert args.single_orator_only is True
 
 
 # --- Tests for parse_extract_repair_arguments ---
@@ -227,7 +236,7 @@ def test_parse_extract_repair_arguments_defaults():
         args = parse_extract_repair_arguments()
     assert args.output == "repair_report.html"
     assert args.save is False
-    assert args.hitler_only is False
+    assert args.single_orator_only is False
     assert args.verbose is False
     assert args.input is None
     assert args.output_json == "extract_sources_updated.json"
@@ -255,11 +264,19 @@ def test_parse_extract_repair_arguments_save_true():
     assert args_s.save is True
 
 
-def test_parse_extract_repair_arguments_hitler_only_true():
-    """Teste la fourniture de l'argument --hitler-only."""
-    with patch("sys.argv", ["script_name", "--hitler-only"]):
+def test_parse_extract_repair_arguments_single_orator_only_true():
+    """Teste la fourniture de l'argument --single-orator-only."""
+    with patch("sys.argv", ["script_name", "--single-orator-only"]):
         args = parse_extract_repair_arguments()
-    assert args.hitler_only is True
+    assert args.single_orator_only is True
+
+
+def test_parse_extract_repair_arguments_deprecated_alias():
+    """L'orthographe pré-#2009 (constante de production) parse encore, avec warning."""
+    with patch("sys.argv", ["script_name", DEPRECATED_ORATOR_ALIAS]):
+        with pytest.warns(DeprecationWarning):
+            args = parse_extract_repair_arguments()
+    assert args.single_orator_only is True  # même dest que le flag opaque
 
 
 def test_parse_extract_repair_arguments_verbose_true():
@@ -303,7 +320,7 @@ def test_parse_extract_repair_arguments_all_provided():
         "--output",
         output_f,
         "-s",  # save
-        "--hitler-only",
+        "--single-orator-only",
         "-v",  # verbose
         "-i",
         input_f,
@@ -315,7 +332,7 @@ def test_parse_extract_repair_arguments_all_provided():
 
     assert args.output == output_f
     assert args.save is True
-    assert args.hitler_only is True
+    assert args.single_orator_only is True
     assert args.verbose is True
     assert args.input == input_f
     assert args.output_json == output_j

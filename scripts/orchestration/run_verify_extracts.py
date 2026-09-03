@@ -69,7 +69,7 @@ def main():
     # project_root_dir=project_root,
     # output_report_path_str=args.output,
     # custom_input_path_str=args.input,
-    # hitler_only=args.hitler_only
+    # hitler_only=args.single_orator_only
     # ))
 
     # En supposant une version synchrone du pipeline pour l'instant pour éviter de changer le if __name__ == "__main__":
@@ -78,7 +78,7 @@ def main():
             project_root_dir=project_root,
             output_report_path_str=args.output,
             custom_input_path_str=args.input,
-            hitler_only=args.hitler_only,
+            hitler_only=args.single_orator_only,
         )
         logger.info("Script de vérification des extraits (via pipeline) terminé.")
     except Exception as e:

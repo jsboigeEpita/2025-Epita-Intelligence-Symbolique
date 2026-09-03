@@ -50,9 +50,9 @@ class TestOpaqueIdEdgeCases:
         assert len(result) == 8
 
     def test_unicode_name(self):
-        result = opaque_id("François Mitterrand")
+        result = opaque_id("Geneviève Béranger")
         assert len(result) == 8
-        assert result == opaque_id("François Mitterrand")  # stable
+        assert result == opaque_id("Geneviève Béranger")  # stable
 
     def test_very_long_name(self):
         result = opaque_id("x" * 10000)

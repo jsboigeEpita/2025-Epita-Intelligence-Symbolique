@@ -65,7 +65,7 @@ Script d'exécution pour la réparation des bornes défectueuses dans les extrai
 **Options disponibles :**
 - `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut: "repair_report.html")
 - `--save`, `-s` : Sauvegarder les modifications
-- `--hitler-only` : Traiter uniquement le corpus de discours d'Hitler
+- `--single-orator-only` : Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 - `--verbose`, `-v` : Activer le mode verbeux
 - `--input`, `-i` : Fichier d'entrée personnalisé
 - `--output-json` : Fichier de sortie JSON pour vérification (défaut: "extract_sources_updated.json")
@@ -93,7 +93,7 @@ Script d'exécution pour la vérification des extraits. Ce script est un point d
 - `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut: "verify_report.html")
 - `--verbose`, `-v` : Activer le mode verbeux
 - `--input`, `-i` : Fichier d'entrée personnalisé
-- `--hitler-only` : Traiter uniquement le corpus de discours d'Hitler
+- `--single-orator-only` : Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 
 **Utilisation :**
 ```bash
