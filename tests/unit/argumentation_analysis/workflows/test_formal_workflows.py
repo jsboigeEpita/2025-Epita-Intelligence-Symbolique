@@ -36,7 +36,12 @@ def _make_registry(*capabilities):
     for cap in capabilities:
         output = {"capability": cap, "score": 0.75}
         if cap == "fact_extraction":
+            # #1909: "ok" + zero arguments is now the named non-argumentative
+            # terminal stop — these tests exercise the argument-dependent
+            # phases, so the substrate must carry one argument.
             output["extraction_status"] = "ok"
+            output["arguments"] = [{"text": "synthetic argument"}]
+            output["argument_count"] = 1
         invoke_fn = AsyncMock(return_value=output)
         registry.register(
             name=f"mock_{cap}",
