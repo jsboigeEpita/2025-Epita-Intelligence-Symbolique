@@ -229,8 +229,13 @@ class TestMaxDocsCoverage1919:
 
         assert rc == 0
         assert len(calls) == 2
-        assert out == (
-            "Coverage: 2 sources -> 2 documents; " "0 sources without documents: []\n"
+        # The coverage line itself is the contract; it stays byte-identical
+        # and first in stdout. #1909 slice 2 adds the batch summary and the
+        # gate verdict *after* it, so whole-stdout equality no longer holds —
+        # the pin moves to the line, which is what #1903 actually promised.
+        assert out.splitlines()[0] == (
+            "Coverage: 2 sources -> 2 documents; "
+            "0 sources without documents: []"
         )
 
 
