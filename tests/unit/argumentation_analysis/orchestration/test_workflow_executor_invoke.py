@@ -249,7 +249,10 @@ class TestInvokeErrorHandling:
         ],
     )
     async def test_empty_but_explicitly_valid_extraction_is_not_failed(self, output):
-        """Empty arguments do not imply failure; the explicit status is authoritative."""
+        """Empty arguments do not imply failure; the explicit status is
+        authoritative. Since #1909 such an extraction is additionally the
+        NAMED terminal stop: COMPLETED (not failed) and terminal (no
+        argument-dependent descendant may run)."""
 
         async def extraction(text, ctx):
             return output
@@ -270,7 +273,8 @@ class TestInvokeErrorHandling:
         result = (await WorkflowExecutor(registry).execute(workflow, "test"))["extract"]
 
         assert result.status == PhaseStatus.COMPLETED
-        assert result.terminal is False
+        assert result.terminal is True
+        assert result.output["extraction_status"] == "non_argumentative"
 
     @pytest.mark.asyncio
     async def test_invoke_failure_marks_phase_failed(self):
@@ -771,8 +775,12 @@ class TestRealComponentIntegration:
         )
 
         valid_extraction = {
-            "arguments": [],
+            # #1909: one argument keeps this workflow argumentative — the
+            # hermeticity contract under test (phases complete without LLM)
+            # needs the phases to run at all.
+            "arguments": [{"text": "La peine de mort ne dissuade pas le crime."}],
             "claims": [],
+            "argument_count": 1,
             "extraction_status": "ok",
         }
         with patch(

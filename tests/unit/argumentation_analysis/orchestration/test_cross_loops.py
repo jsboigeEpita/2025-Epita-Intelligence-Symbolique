@@ -491,8 +491,12 @@ class TestQualityGatedEndToEnd:
             "extractor",
             AsyncMock(
                 return_value={
-                    "arguments": [],
+                    # #1909: one argument keeps this workflow argumentative —
+                    # these tests exercise the quality gate and the loop, so
+                    # the phases must run at all.
+                    "arguments": [{"text": "Some argument"}],
                     "claims": [],
+                    "argument_count": 1,
                     "extraction_status": "ok",
                 }
             ),
