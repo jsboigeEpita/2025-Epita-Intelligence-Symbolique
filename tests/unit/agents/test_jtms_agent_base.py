@@ -27,11 +27,6 @@ from argumentation_analysis.agents.jtms_agent_base import (
     JTMSSession,
     ExtendedBelief,
 )
-from argumentation_analysis.models.extended_belief_model import (
-    BeliefType,
-    ConfidenceLevel,
-    EvidenceQuality,
-)
 
 
 class TestJTMSAgent(JTMSAgentBase):

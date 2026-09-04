@@ -532,7 +532,7 @@ class PluginBenchmarkSuite:
         """Create plugin instance with appropriate constructor args."""
         if plugin_name == "exploration":
             # ExplorationPlugin requires TaxonomyNavigator
-            from argumentation_analysis.core.taxonomy_navigator import (
+            from argumentation_analysis.agents.utils.taxonomy_navigator import (
                 TaxonomyNavigator,
             )
 

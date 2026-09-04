@@ -22,10 +22,6 @@ sys.path.append(
 )
 
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
-from argumentation_analysis.models.extended_belief_model import (
-    BeliefType,
-    ConfidenceLevel,
-)
 from argumentation_analysis.config.settings import AppSettings
 
 
