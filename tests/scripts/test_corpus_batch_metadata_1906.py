@@ -57,7 +57,11 @@ def _merge(src_name: str, date_iso: str, src_meta: dict) -> dict:
     """
     runner = _load_runner()
     return runner.merge_source_metadata(
-        runner.classify_metadata(src_name, date_iso), src_meta
+        runner.merge_source_metadata(
+            runner.classify_metadata(src_name, date_iso),
+            runner.parse_legacy_label(src_name),
+        ),
+        src_meta,
     )
 
 
@@ -107,3 +111,80 @@ class TestNoAssertedRegime:
         """Removing the constant must not remove the ability to state it."""
         merged = _merge("Some Document", "", {"regime_type": "regime_A"})
         assert merged["regime_type"] == "regime_A"
+
+
+class TestLegacyLabelParsing:
+    """#1906 scope item 2: a single parser/normalizer for legacy source labels.
+
+    Most corpus definitions carry speaker/title/year information in the label
+    string and no structured metadata dict — without a parser, the model was
+    handed ``unknown`` for fields the label states explicitly, and Act I
+    reported an absent speaker that Act III then inferred from the text (the
+    inter-act contradiction this issue exists to close). The parser may only
+    claim what the label structurally states: genuinely absent fields stay
+    omitted, never invented.
+    """
+
+    def test_speaker_title_year_dash_shape(self):
+        parsed = _load_runner().parse_legacy_label("Speaker_A - Title_X 1940")
+        assert parsed["speaker"] == "Speaker_A"
+        assert parsed["title"] == "Title_X"
+        assert parsed["date_or_year"] == "1940"
+        assert parsed["era"] == "1940"
+
+    def test_three_segment_dash_shape_keeps_work_and_piece(self):
+        parsed = _load_runner().parse_legacy_label("Speaker_A - Work_X - Piece_Y 1994")
+        assert parsed["speaker"] == "Speaker_A"
+        assert parsed["title"] == "Work_X - Piece_Y"
+        assert parsed["date_or_year"] == "1994"
+
+    def test_inverted_work_author_shape_resolves_the_author(self):
+        """A single-word first segment followed by a person-shaped second
+        segment is ``Oeuvre - Auteur``, not ``Auteur - Oeuvre``."""
+        parsed = _load_runner().parse_legacy_label("Oeuvre_X - Author_First Last")
+        assert parsed["speaker"] == "Author_First Last"
+
+    def test_french_genre_keyword_yields_speaker_and_date(self):
+        parsed = _load_runner().parse_legacy_label("Speaker_A Discours 12/03/1938")
+        assert parsed["speaker"] == "Speaker_A"
+        assert parsed["genre"] == "discours"
+        assert parsed["date_or_year"] == "12/03/1938"
+        assert parsed["era"] == "1938"
+
+    def test_hyphenated_pair_and_parenthetical_venue(self):
+        parsed = _load_runner().parse_legacy_label(
+            "Speaker_A-Speaker_B Genreword_X 1 (Venue_Y)"
+        )
+        assert parsed["speaker"] == "Speaker_A-Speaker_B"
+        assert parsed["venue"] == "Venue_Y"
+
+    def test_genre_keyword_at_start_leaves_speaker_absent(self):
+        parsed = _load_runner().parse_legacy_label("Discours du President")
+        assert "speaker" not in parsed
+        assert parsed["genre"] == "discours"
+
+    def test_nothing_inferable_is_stated(self):
+        """Anti-theater control: a label with no structure yields no claims —
+        an omitted key, never a guessed value."""
+        parsed = _load_runner().parse_legacy_label("corpus_X")
+        assert parsed == {}
+
+    def test_file_format_parenthetical_is_not_a_venue(self):
+        """A ``(PDF)`` tag describes the artifact's format, not the arena —
+        claiming it as venue hands the model a false fact."""
+        parsed = _load_runner().parse_legacy_label("Speaker_A Discours (PDF)")
+        assert "venue" not in parsed
+        assert parsed["speaker"] == "Speaker_A"
+
+    def test_wiring_parsed_label_reaches_the_merged_metadata(self):
+        """The parser must be in the production merge chain — a parser nobody
+        calls would green every unit test above and change nothing."""
+        merged = _merge("Speaker_A - Title_X 1940", "", {})
+        assert merged["speaker"] == "Speaker_A"
+        assert merged["era"] == "1940"
+
+    def test_wiring_explicit_definition_still_wins_over_parsed_label(self):
+        """Anti-pendulum: adding a parser must not dethrone the explicit
+        corpus definition — precedence order is heuristics < label < explicit."""
+        merged = _merge("Speaker_A - Title_X 1940", "", {"speaker": "Explicit_Speaker"})
+        assert merged["speaker"] == "Explicit_Speaker"

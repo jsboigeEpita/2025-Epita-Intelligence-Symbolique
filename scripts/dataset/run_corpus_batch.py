@@ -33,6 +33,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -136,6 +137,124 @@ def merge_source_metadata(
         else:
             merged.setdefault(k, v)
     return merged
+
+
+# ---------------------------------------------------------------------------
+# Legacy label parser (#1906 scope item 2)
+# ---------------------------------------------------------------------------
+
+_GENRE_KEYWORDS = [
+    ("compte rendu", "rapport"),
+    ("editorial", "éditorial"),
+    ("discours", "discours"),
+    ("speech", "discours"),
+    ("address", "discours"),
+    ("débat", "débat"),
+    ("debat", "débat"),
+    ("rapport", "rapport"),
+]
+
+# Parenthetical file-format tags — not venues, whatever else they say.
+_FORMAT_TAG_RE = re.compile(r"\A(?:pdf|mp3|wav|txt|docx?|source)\Z", re.IGNORECASE)
+
+_FRENCH_MONTHS = (
+    "janvier|février|mars|avril|mai|juin|juillet|"
+    "août|septembre|octobre|novembre|décembre"
+)
+_DATE_NUMERIC_RE = re.compile(r"\b(\d{1,2}/\d{1,2}/(\d{4}))\b")
+_DATE_FRENCH_RE = re.compile(
+    rf"\b(\d{{1,2}}(?:er)?\s+(?:{_FRENCH_MONTHS})\s+(\d{{4}}))\b", re.IGNORECASE
+)
+_YEAR_RE = re.compile(r"\b(1[5-9]\d{2}|20\d{2})\b")
+_TITLE_STOPWORDS = {"the", "le", "la", "les", "du", "de", "des", "un", "une"}
+
+
+def _person_shaped(segment: str) -> bool:
+    """True for a ``First Last`` / ``First Middle Last`` person name."""
+    words = segment.split()
+    return (
+        2 <= len(words) <= 3
+        and all(w[:1].isupper() for w in words)
+        and not any(w.lower() in _TITLE_STOPWORDS for w in words)
+    )
+
+
+def parse_legacy_label(source_name: str) -> Dict[str, str]:
+    """Structurally parse a legacy corpus source label into short metadata.
+
+    #1906: most corpus definitions carry speaker/title/year information only
+    in the label string. Without a parser, ``source_metadata`` reached Act I
+    as ``unknown`` for fields the label states explicitly, and Act III then
+    inferred the speaker from the text — the inter-act contradiction this
+    issue exists to close.
+
+    Only structurally stated information is claimed: a field the label does
+    not carry is omitted, never invented. Precedence (heuristics < parsed
+    label < explicit corpus metadata) is applied by the merge sites above.
+    """
+    meta: Dict[str, str] = {}
+    text = source_name.strip()
+
+    year: Optional[int] = None
+    m = _DATE_NUMERIC_RE.search(text) or _DATE_FRENCH_RE.search(text)
+    if m:
+        meta["date_or_year"] = m.group(1)
+        year = int(m.group(2))
+    else:
+        m = _YEAR_RE.search(text)
+        if m:
+            year = int(m.group(1))
+            meta["date_or_year"] = str(year)
+    if year is not None:
+        meta["era"] = str(year)
+        meta["year_bucket"] = f"{(year // 5) * 5}-{(year // 5) * 5 + 4}"
+
+    paren = re.search(r"\(([^)]*)\)", text)
+    if paren and paren.group(1).strip():
+        inner = paren.group(1).strip()
+        if not (
+            _DATE_NUMERIC_RE.search(inner)
+            or _DATE_FRENCH_RE.search(inner)
+            or _FORMAT_TAG_RE.match(inner)
+        ):
+            meta["venue"] = inner
+
+    lowered = text.lower()
+    for keyword, genre in _GENRE_KEYWORDS:
+        if re.search(rf"\b{re.escape(keyword)}\b", lowered):
+            meta["genre"] = genre
+            keyword_pos = lowered.find(keyword)
+            break
+    else:
+        keyword_pos = -1
+
+    segments = [s.strip() for s in re.split(r"\s+-\s+", text) if s.strip()]
+    if len(segments) >= 2:
+        if (
+            len(segments) == 2
+            and len(segments[0].split()) == 1
+            and _person_shaped(segments[1])
+        ):
+            # ``Oeuvre - Auteur``, the inverted shape.
+            meta["speaker"] = segments[1]
+            meta["title"] = segments[0]
+        else:
+            meta["speaker"] = segments[0]
+            meta["title"] = " - ".join(segments[1:])
+        for key in ("speaker", "title"):
+            meta[key] = _YEAR_RE.sub("", meta[key]).strip()
+            meta[key] = re.sub(r"\s*\([^)]*\)", "", meta[key]).strip()
+    elif keyword_pos > 0:
+        speaker = text[:keyword_pos].strip(" -:–")
+        if speaker:
+            meta["speaker"] = speaker
+    else:
+        m = re.match(r"\A([A-ZÀ-Þ][\w'’-]+-[A-ZÀ-Þ][\w'’-]+)(?:\s|\Z)", text)
+        if m:
+            meta["speaker"] = m.group(1)
+
+    meta = {k: v for k, v in meta.items() if v}
+    return meta
 
 
 # ---------------------------------------------------------------------------
@@ -508,8 +627,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         src_name = source_def.get("source_name", "unknown")
         src_meta = source_def.get("metadata", {})
         date_iso = src_meta.get("date_iso", source_def.get("date", ""))
+        # #1906 precedence chain: keyword heuristics < parsed legacy label <
+        # explicit corpus metadata. Each layer may only resolve what the
+        # previous one left unknown or absent.
         classified = merge_source_metadata(
-            classify_metadata(src_name, date_iso), src_meta
+            merge_source_metadata(
+                classify_metadata(src_name, date_iso),
+                parse_legacy_label(src_name),
+            ),
+            src_meta,
         )
 
         src_oid = opaque_id(src_name)
