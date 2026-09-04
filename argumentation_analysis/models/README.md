@@ -8,7 +8,6 @@ Ce package contient les modèles de données utilisés dans le projet d'analyse 
 models/
 ├── __init__.py
 ├── extract_definition.py
-├── extract_result.py
 └── README.md
 ```
 
@@ -50,32 +49,6 @@ definitions = ExtractDefinitions(sources=[source])
 
 # Convertir en dictionnaire pour la sérialisation
 definitions_dict = definitions.to_dict()
-```
-
-### ExtractResult (extract_result.py)
-
-Ce module définit la classe `ExtractResult` qui représente le résultat d'une extraction de texte à partir d'une source. Elle contient des informations sur le succès de l'extraction, le texte extrait, et les éventuelles erreurs rencontrées.
-
-#### Exemple d'utilisation
-
-```python
-from argumentation_analysis.models.extract_result import ExtractResult
-
-# Créer un résultat d'extraction
-result = ExtractResult(
-    source_name="Source d'exemple",
-    extract_name="Exemple d'extrait",
-    extracted_text="Texte extrait de la source",
-    start_marker_found=True,
-    end_marker_found=True,
-    status="success"
-)
-
-# Vérifier si l'extraction a réussi
-if result.is_success():
-    print(f"Extraction réussie: {result.extracted_text}")
-else:
-    print(f"Échec de l'extraction: {result.status}")
 ```
 
 ## Intégration avec les services

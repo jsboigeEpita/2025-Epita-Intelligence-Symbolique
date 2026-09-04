@@ -1,24 +1,7 @@
 """
-Modèles de données étendus pour l'intégration JTMS.
-Selon les spécifications du RAPPORT_ARCHITECTURE_INTEGRATION_JTMS.md - AXE A
+Data models for the argumentation analysis trunk.
+
+The package now carries only the extract-definition models used by the
+encrypted-dataset loading chain; the JTMS-era models were consolidated into
+their living successors (#214, cleanup #1963).
 """
-
-from .extended_belief_model import (
-    ExtendedBeliefModel,
-    BeliefMetadata,
-    ModificationHistory,
-)
-from .agent_communication_model import (
-    AgentMessage,
-    CommunicationProtocol,
-    SyncOperation,
-)
-
-__all__ = [
-    "ExtendedBeliefModel",
-    "BeliefMetadata",
-    "ModificationHistory",
-    "AgentMessage",
-    "CommunicationProtocol",
-    "SyncOperation",
-]

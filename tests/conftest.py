@@ -891,48 +891,6 @@ def fol_agent(mock_kernel):
 
 
 @pytest.fixture
-def extract_result_dict():
-    """Provides a dictionary for a valid ExtractResult."""
-    return {
-        "source_name": "Test Source",
-        "extract_name": "Test Extract",
-        "status": "valid",
-        "message": "Extraction réussie",
-        "start_marker": "DEBUT_EXTRAIT",
-        "end_marker": "FIN_EXTRAIT",
-        "template_start": "T{0}",
-        "explanation": "Explication de l'extraction",
-        "extracted_text": "Texte extrait de test",
-    }
-
-
-@pytest.fixture
-def valid_extract_result(extract_result_dict):
-    """Provides a valid instance of ExtractResult."""
-    from argumentation_analysis.models.extract_result import ExtractResult
-
-    return ExtractResult.from_dict(extract_result_dict)
-
-
-@pytest.fixture
-def error_extract_result(extract_result_dict):
-    """Provides an error instance of ExtractResult."""
-    error_dict = extract_result_dict.copy()
-    error_dict["status"] = "error"
-    error_dict["message"] = "Erreur lors de l'extraction"
-    return ExtractResult.from_dict(error_dict)
-
-
-@pytest.fixture
-def rejected_extract_result(extract_result_dict):
-    """Provides a rejected instance of ExtractResult."""
-    rejected_dict = extract_result_dict.copy()
-    rejected_dict["status"] = "rejected"
-    rejected_dict["message"] = "Extraction rejetée"
-    return ExtractResult.from_dict(rejected_dict)
-
-
-@pytest.fixture
 def sample_definitions():
     """Provides a sample ExtractDefinitions object for tests."""
     from argumentation_analysis.models.extract_definition import (

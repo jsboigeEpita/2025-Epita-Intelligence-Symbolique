@@ -24,10 +24,6 @@ sys.path.append(
 from argumentation_analysis.agents.jtms_communication_hub import JTMSCommunicationHub
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
 from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
-from argumentation_analysis.models.agent_communication_model import (
-    AgentMessage,
-    MessageType,
-)
 from argumentation_analysis.config.settings import AppSettings
 
 
@@ -122,7 +118,7 @@ class TestJTMSCommunicationHub:
         message_id = await communication_hub.send_message(
             sherlock_agent.agent_name,
             watson_agent.agent_name,
-            MessageType.VALIDATION_REQUEST,
+            "validation_request",
             message_data,
         )
 
@@ -144,7 +140,7 @@ class TestJTMSCommunicationHub:
         }
 
         message_ids = await communication_hub.broadcast_message(
-            sherlock_agent.agent_name, MessageType.BELIEF_SHARE, broadcast_data
+            sherlock_agent.agent_name, "belief_share", broadcast_data
         )
 
         assert len(message_ids) > 0
@@ -165,14 +161,14 @@ class TestJTMSCommunicationHub:
         await communication_hub.send_message(
             sherlock_agent.agent_name,
             watson_agent.agent_name,
-            MessageType.VALIDATION_REQUEST,
+            "validation_request",
             {"content": "Test message 1"},
         )
 
         await communication_hub.send_message(
             watson_agent.agent_name,
             sherlock_agent.agent_name,
-            MessageType.CRITIQUE_RESPONSE,
+            "critique_response",
             {"content": "Test message 2"},
         )
 
@@ -317,7 +313,7 @@ class TestJTMSCommunicationHub:
         await communication_hub.send_message(
             sherlock_agent.agent_name,
             watson_agent.agent_name,
-            MessageType.BELIEF_SHARE,
+            "belief_share",
             {"content": "Test communication"},
         )
 
@@ -398,7 +394,7 @@ if __name__ == "__main__":
         msg_id = await hub.send_message(
             sherlock.agent_name,
             watson.agent_name,
-            MessageType.VALIDATION_REQUEST,
+            "validation_request",
             {"content": "Test"},
         )
         print(f"Message envoyé ID: {msg_id}")
