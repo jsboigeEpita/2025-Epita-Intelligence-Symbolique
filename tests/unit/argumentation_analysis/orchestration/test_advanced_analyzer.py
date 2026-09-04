@@ -16,12 +16,6 @@ from unittest.mock import MagicMock
 from argumentation_analysis.orchestration.advanced_analyzer import (
     analyze_extract_advanced,
 )
-from argumentation_analysis.mocks.advanced_tools import (
-    MockEnhancedComplexFallacyAnalyzer,
-    MockEnhancedContextualFallacyAnalyzer,
-    MockEnhancedFallacySeverityEvaluator,
-    MockEnhancedRhetoricalResultAnalyzer,
-)
 
 from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 
