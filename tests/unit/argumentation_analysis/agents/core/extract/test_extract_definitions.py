@@ -14,6 +14,8 @@ agents.core.extract.extract_definitions.
 import unittest
 import json
 
+import pytest
+
 from argumentation_analysis.agents.core.extract.extract_definitions import (
     ExtractResult,
     ExtractAgentPlugin,
@@ -332,6 +334,81 @@ class TestExtractDefinition(unittest.TestCase):
         self.assertEqual(definition.end_marker, "Fin minimale")
         self.assertEqual(definition.template_start, "")
         self.assertEqual(definition.description, "")
+
+
+# Ported from the deleted tests/unit/argumentation_analysis/test_extract_result.py
+# (#1963): the cases exercising the serialization surface the surviving class
+# actually exposes. The is_valid/is_error/is_rejected and custom __str__ cases
+# were not ported — that API never existed on the survivor, and no caller in
+# the tree uses it (production reads the status as a string comparison).
+
+
+@pytest.fixture
+def extract_result_dict():
+    return {
+        "source_name": "Test Source",
+        "extract_name": "Test Extract",
+        "status": "valid",
+        "message": "Extraction réussie",
+        "start_marker": "DEBUT_EXTRAIT",
+        "end_marker": "FIN_EXTRAIT",
+        "template_start": "T{0}",
+        "explanation": "Explication de l'extraction",
+        "extracted_text": "Texte extrait de test",
+    }
+
+
+@pytest.fixture
+def valid_extract_result(extract_result_dict):
+    return ExtractResult.from_dict(extract_result_dict)
+
+
+def test_json_serialization(valid_extract_result):
+    """JSON round-trip preserves every field."""
+    round_trip = ExtractResult.from_dict(
+        json.loads(json.dumps(valid_extract_result.to_dict()))
+    )
+    assert round_trip.to_dict() == valid_extract_result.to_dict()
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("source_name", "Custom Source"),
+        ("extract_name", "Custom Extract"),
+        ("status", "custom_status"),
+        ("message", "Custom message"),
+        ("start_marker", "CUSTOM_START"),
+        ("end_marker", "CUSTOM_END"),
+        ("template_start", "C{0}"),
+        ("explanation", "Custom explanation"),
+        ("extracted_text", "Custom extracted text"),
+    ],
+)
+def test_extract_result_field_customization(extract_result_dict, field, value):
+    """from_dict honors each field independently."""
+    extract_result_dict[field] = value
+    result = ExtractResult.from_dict(extract_result_dict)
+    assert getattr(result, field) == value
+
+
+@pytest.mark.parametrize(
+    "extracted_text",
+    [
+        "",
+        "Texte court",
+        "Texte avec des caractères spéciaux: é, è, à, ç, ù",
+        "Texte\nmulti-ligne\navec\ndes\nretours\nà\nla\nligne",
+        "Texte très long " + "a" * 1000,
+    ],
+)
+def test_extract_result_with_different_extracted_texts(
+    extract_result_dict, extracted_text
+):
+    """Empty, accented, multi-line and very long payloads survive from_dict."""
+    extract_result_dict["extracted_text"] = extracted_text
+    result = ExtractResult.from_dict(extract_result_dict)
+    assert result.extracted_text == extracted_text
 
 
 if __name__ == "__main__":
