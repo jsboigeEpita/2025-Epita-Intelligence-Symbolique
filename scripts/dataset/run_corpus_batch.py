@@ -37,7 +37,7 @@ import re
 import sys
 import time
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "argumentation_analysis" / "data"
@@ -260,6 +260,182 @@ def parse_legacy_label(source_name: str) -> Dict[str, str]:
 # ---------------------------------------------------------------------------
 # Checkpoint-aware per-document processing
 # ---------------------------------------------------------------------------
+
+
+def expand_corpus(
+    definitions: List[Dict[str, Any]], max_chars: int = 0
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, str]], int]:
+    """Flatten corpus definitions into per-document records, named skip counts.
+
+    #1909 slice 2: a document skipped for length and a source that produced
+    no document are populations the batch summary must be able to count — the
+    ``skipped_too_long`` and ``source_without_extract`` buckets. Returns
+    ``(docs, omitted_sources, skipped_too_long)``.
+    """
+    from argumentation_analysis.evaluation.opaque_id import opaque_id as _opaque_id
+
+    docs: List[Dict[str, Any]] = []
+    omitted_sources: List[Dict[str, str]] = []
+    skipped_too_long = 0
+    for source_def in definitions:
+        src_name = source_def.get("source_name", "unknown")
+        src_meta = source_def.get("metadata", {})
+        date_iso = src_meta.get("date_iso", source_def.get("date", ""))
+        # #1906 precedence chain: keyword heuristics < parsed legacy label <
+        # explicit corpus metadata. Each layer may only resolve what the
+        # previous one left unknown or absent.
+        classified = merge_source_metadata(
+            merge_source_metadata(
+                classify_metadata(src_name, date_iso),
+                parse_legacy_label(src_name),
+            ),
+            src_meta,
+        )
+
+        src_oid = _opaque_id(src_name)
+        extracts = source_def.get("extracts", [])
+        src_doc_count = 0
+        n_filtered = 0
+        n_no_text = 0
+        for ext_idx, extract in enumerate(extracts):
+            # Corpus uses "extract_text" (not "full_text") at extract level.
+            # Fallback chain: extract_text → full_text_segment → source full_text.
+            full_text = (
+                extract.get("extract_text", "")
+                or extract.get("full_text_segment", "")
+                or source_def.get("full_text", "")
+            )
+            if not full_text:
+                logger.info(
+                    "[%s] skip (extract %d/%d has no text after fallback chain)",
+                    src_oid,
+                    ext_idx + 1,
+                    len(extracts),
+                )
+                n_no_text += 1
+                continue
+            if max_chars > 0 and len(full_text) > max_chars:
+                logger.info(
+                    "[%s] skip (text too long: %d > %d)",
+                    src_oid,
+                    len(full_text),
+                    max_chars,
+                )
+                n_filtered += 1
+                continue
+            # Per-extract unique ID: src_oid_ext_N or src_oid if only 1 extract
+            if len(extracts) > 1:
+                oid = f"{src_oid}_ext{ext_idx}"
+            else:
+                oid = src_oid
+            docs.append(
+                {
+                    "source_name": src_name,
+                    "source_opaque_id": src_oid,
+                    "opaque_id": oid,
+                    "full_text": full_text,
+                    "metadata": classified,
+                }
+            )
+            src_doc_count += 1
+
+        skipped_too_long += n_filtered
+        if src_doc_count == 0:
+            if not extracts:
+                cause = "0 extract"
+            elif n_filtered and n_no_text:
+                cause = (
+                    f"{n_filtered} extract(s) filtered, " f"{n_no_text} without text"
+                )
+            elif n_filtered:
+                cause = f"all {n_filtered} extract(s) filtered (--max-chars)"
+            else:
+                cause = f"all {n_no_text} extract(s) without text"
+            logger.info("[%s] source without documents: %s", src_oid, cause)
+            omitted_sources.append({"opaque_id": src_oid, "cause": cause})
+
+    return docs, omitted_sources, skipped_too_long
+
+
+_FAILED_STATUSES = ("failed", "partial_timeout", "partial_error", "unknown")
+
+
+def summarize_batch(
+    outcome_counts: Dict[str, int],
+    skipped_too_long: int,
+    sources_without_extract: int,
+) -> Dict[str, Any]:
+    """Project per-document outcomes into the five reader-facing buckets.
+
+    ``argumentative`` maps from ``ok`` (the pipeline has no other success
+    status; the tri-state lives in ``document_classification``), the valid
+    no-analysis terminal keeps its own bucket (#1909), and every failure,
+    partial, and unreadable status lands in ``failed`` with the raw status
+    counts preserved under ``failed_detail`` — the buckets are a sum for
+    humans, never a replacement of what the runner must be able to say.
+    """
+    failed_detail = {
+        status: outcome_counts.get(status, 0) for status in _FAILED_STATUSES
+    }
+    return {
+        "argumentative": outcome_counts.get("ok", 0),
+        "non_argumentative": outcome_counts.get("non_argumentative", 0),
+        "failed": sum(failed_detail.values()),
+        "skipped_too_long": skipped_too_long,
+        "source_without_extract": sources_without_extract,
+        "failed_detail": failed_detail,
+    }
+
+
+def render_batch_summary(summary: Dict[str, Any]) -> str:
+    return (
+        "Batch summary: argumentative={} non_argumentative={} failed={} "
+        "skipped_too_long={} source_without_extract={} (failed detail: {})".format(
+            summary["argumentative"],
+            summary["non_argumentative"],
+            summary["failed"],
+            summary["skipped_too_long"],
+            summary["source_without_extract"],
+            summary["failed_detail"],
+        )
+    )
+
+
+def render_batch_verdict(summary: Dict[str, Any]) -> str:
+    failed = summary["failed"]
+    if failed:
+        return f"Verdict: FAIL ({failed} document(s) failed)"
+    return "Verdict: PASS (0 documents failed)"
+
+
+def render_non_argumentative_restitution(
+    opaque_id_str: str, outcome: Dict[str, Any]
+) -> str:
+    """Short reader-facing report for the valid no-analysis case (#1909).
+
+    States what kind of material was found and why no argumentative analysis
+    follows — a named terminal success, never confusable with a failure.
+    """
+    phase = outcome.get("phase", "extraction")
+    return (
+        f"Document {opaque_id_str}: classified non-argumentative at {phase} — "
+        "the extraction found factual material with no identified arguments; "
+        "argument-dependent phases were skipped as a valid terminal "
+        "classification (#1909). Analysis intentionally partial: not a failure."
+    )
+
+
+def _with_document_classification(
+    signature: Dict[str, Any], analysis_outcome: Dict[str, Any]
+) -> Dict[str, Any]:
+    """Surface the tri-state on the signature (#1909 slice 2, scope 4).
+
+    Mirrors the pipeline: the key is written only for the non-argumentative
+    classification; argumentative documents leave it absent.
+    """
+    if analysis_outcome.get("status") == "non_argumentative":
+        signature["document_classification"] = "non_argumentative"
+    return signature
 
 
 async def _run_single(
@@ -497,6 +673,7 @@ async def _run_single(
     }
     if partial:
         signature["partial"] = True
+    _with_document_classification(signature, analysis_outcome)
 
     signatures_dir.mkdir(parents=True, exist_ok=True)
     sig_path.write_text(
@@ -604,7 +781,6 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
     from argumentation_analysis.core.io_manager import load_extract_definitions
-    from argumentation_analysis.evaluation.opaque_id import opaque_id
 
     key = derive_encryption_key(passphrase)
     if not key:
@@ -621,83 +797,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # #1903: a source contributing zero documents must be named with its
     # cause -- an unlogged omission silently falsifies the denominator of
     # every corpus report.
-    docs: List[Dict[str, Any]] = []
-    omitted_sources: List[Dict[str, str]] = []
-    for source_def in definitions:
-        src_name = source_def.get("source_name", "unknown")
-        src_meta = source_def.get("metadata", {})
-        date_iso = src_meta.get("date_iso", source_def.get("date", ""))
-        # #1906 precedence chain: keyword heuristics < parsed legacy label <
-        # explicit corpus metadata. Each layer may only resolve what the
-        # previous one left unknown or absent.
-        classified = merge_source_metadata(
-            merge_source_metadata(
-                classify_metadata(src_name, date_iso),
-                parse_legacy_label(src_name),
-            ),
-            src_meta,
-        )
-
-        src_oid = opaque_id(src_name)
-        extracts = source_def.get("extracts", [])
-        src_doc_count = 0
-        n_filtered = 0
-        n_no_text = 0
-        for ext_idx, extract in enumerate(extracts):
-            # Corpus uses "extract_text" (not "full_text") at extract level.
-            # Fallback chain: extract_text → full_text_segment → source full_text.
-            full_text = (
-                extract.get("extract_text", "")
-                or extract.get("full_text_segment", "")
-                or source_def.get("full_text", "")
-            )
-            if not full_text:
-                logger.info(
-                    "[%s] skip (extract %d/%d has no text after fallback chain)",
-                    src_oid,
-                    ext_idx + 1,
-                    len(extracts),
-                )
-                n_no_text += 1
-                continue
-            if args.max_chars > 0 and len(full_text) > args.max_chars:
-                logger.info(
-                    "[%s] skip (text too long: %d > %d)",
-                    src_oid,
-                    len(full_text),
-                    args.max_chars,
-                )
-                n_filtered += 1
-                continue
-            # Per-extract unique ID: src_oid_ext_N or src_oid if only 1 extract
-            if len(extracts) > 1:
-                oid = f"{src_oid}_ext{ext_idx}"
-            else:
-                oid = src_oid
-            docs.append(
-                {
-                    "source_name": src_name,
-                    "source_opaque_id": src_oid,
-                    "opaque_id": oid,
-                    "full_text": full_text,
-                    "metadata": classified,
-                }
-            )
-            src_doc_count += 1
-
-        if src_doc_count == 0:
-            if not extracts:
-                cause = "0 extract"
-            elif n_filtered and n_no_text:
-                cause = (
-                    f"{n_filtered} extract(s) filtered, " f"{n_no_text} without text"
-                )
-            elif n_filtered:
-                cause = f"all {n_filtered} extract(s) filtered (--max-chars)"
-            else:
-                cause = f"all {n_no_text} extract(s) without text"
-            logger.info("[%s] source without documents: %s", src_oid, cause)
-            omitted_sources.append({"opaque_id": src_oid, "cause": cause})
+    docs, omitted_sources, skipped_too_long = expand_corpus(definitions, args.max_chars)
 
     documents_before_limit = len(docs)
     truncated_source_ids: List[str] = []
@@ -768,6 +868,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         if sig is not None:
             signatures.append(sig)
+            outcome = sig.get("outcome")
+            if (
+                isinstance(outcome, dict)
+                and outcome.get("status") == "non_argumentative"
+            ):
+                print(
+                    render_non_argumentative_restitution(doc["opaque_id"], outcome),
+                    flush=True,
+                )
 
     outcome_counts: Dict[str, int] = {}
     for signature in signatures:
@@ -781,13 +890,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         len(docs),
         outcome_counts,
     )
-    failed_documents = (
-        outcome_counts.get("failed", 0)
-        + outcome_counts.get("partial_timeout", 0)
-        + outcome_counts.get("partial_error", 0)
-        + outcome_counts.get("unknown", 0)
-    )
-    return 1 if failed_documents else 0
+    summary = summarize_batch(outcome_counts, skipped_too_long, len(omitted_sources))
+    # stdout is the run-visible surface (#1874/#1903): the five buckets and
+    # the gate verdict in plain text, not a logger line.
+    print(render_batch_summary(summary), flush=True)
+    print(render_batch_verdict(summary), flush=True)
+    return 1 if summary["failed"] else 0
 
 
 if __name__ == "__main__":
