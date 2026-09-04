@@ -1,1 +1,0 @@
-# This file makes the 'informal' directory a Python package.
