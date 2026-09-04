@@ -1,3 +1,8 @@
+"""Survives with zero `.py` importers by design: `EXTERNAL_SOLVER_AUDIT_FP9.md`
+(Clingo, ASP) cites these helpers as the pre-existing Python bypass of the buggy
+`ClingoSolver` Java path. Deletion is only sensible after FP-9 absorbs the
+technique first (#1960 arbitration, R924)."""
+
 import subprocess
 import re
 import logging
