@@ -133,6 +133,12 @@ class LLMValidatorLayer(ShieldLayer):
             score = max(0.0, min(1.0, score))
 
             categories = analysis.get("categories", [])
+            # #2041 (family of #2035): a model drifting to a scalar emission
+            # ("categories": "prompt_injection") would otherwise be joined
+            # character by character into the shield reason — normalize to
+            # the one-element list the emitter meant.
+            if isinstance(categories, str):
+                categories = [categories]
             explanation = analysis.get("explanation", "")
 
             return self._make_result(
