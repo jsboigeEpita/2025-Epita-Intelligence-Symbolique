@@ -9,6 +9,15 @@ class TaxonomyNavigator:
     """
 
     def __init__(self, taxonomy_data: List[Dict[str, Any]]):
+        if isinstance(taxonomy_data, str):
+            # #2041: a path where loaded rows belong would crash on the
+            # first character ('c'.get) — say what was wrong instead. An
+            # empty navigator would be a silent false-negative on the whole
+            # taxonomy, so refusing beats any lenient fallback.
+            raise TypeError(
+                "TaxonomyNavigator expects loaded rows (List[Dict[str, Any]]), "
+                f"got a str — a path was passed where loaded rows belong: {taxonomy_data!r}"
+            )
         self.taxonomy_data = taxonomy_data if taxonomy_data is not None else []
         self.node_map: Dict[str, Dict[str, Any]] = {}
         self.path_map: Dict[str, Dict[str, Any]] = {}  # New: For path-based lookup

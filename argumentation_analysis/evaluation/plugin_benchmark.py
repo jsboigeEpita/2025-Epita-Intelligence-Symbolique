@@ -19,12 +19,15 @@ Usage:
 """
 
 import asyncio
+import csv
 import json
 import logging
 import os
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+
+from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 
 logger = logging.getLogger("plugin_benchmark")
 
@@ -548,7 +551,12 @@ class PluginBenchmarkSuite:
                     "data",
                     "argumentum_fallacies_taxonomy.csv",
                 )
-            navigator = TaxonomyNavigator(taxonomy_path)
+            # #2041: the navigator takes loaded ROWS, not a path — the path
+            # string raised on its first character and the blanket except
+            # above silenced the branch into "not benchmarkable".
+            with open(taxonomy_path, "r", encoding="utf-8") as fh:
+                rows = purge_rows(list(csv.DictReader(fh)))
+            navigator = TaxonomyNavigator(rows)
             return cls(navigator)
 
         if plugin_name == "fallacy_workflow":
