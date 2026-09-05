@@ -21,15 +21,30 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
+def _extension_as_list(value):
+    """Normalize one Dung extension payload to a list (#2041, family of #2035).
+
+    A dict payload carries its set under ``"set"``; a serialized scalar
+    passed today's guards and was sliced into characters by ``[:10]``
+    (rendering « contient 10 argument(s): a, 1, ,, a, 2 ») — normalize it
+    to the one-element list the emitter meant. Never returns an empty
+    fallback: an empty extension read as full would be a silent false
+    negative, strictly worse than what it fixes.
+    """
+    if isinstance(value, dict):
+        return value.get("set", [])
+    if isinstance(value, str):
+        return [value]
+    return value
+
+
 def _interpret_dung(extensions: Dict, arguments: List[str] = None) -> str:
     """Generate NL interpretation of Dung framework analysis."""
     parts = []
     args_text = f"{len(arguments)} arguments" if arguments else "des arguments"
 
     if "grounded" in extensions:
-        grounded = extensions["grounded"]
-        if isinstance(grounded, dict):
-            grounded = grounded.get("set", [])
+        grounded = _extension_as_list(extensions["grounded"])
         if grounded:
             parts.append(
                 f"L'extension groundee (acceptee sans controversy) contient "
@@ -39,18 +54,12 @@ def _interpret_dung(extensions: Dict, arguments: List[str] = None) -> str:
             parts.append("Aucun argument n'est accepte dans l'extension groundee.")
 
     if "preferred" in extensions:
-        pref = extensions["preferred"]
-        if isinstance(pref, dict):
-            pref = pref.get("set", [])
+        pref = _extension_as_list(extensions["preferred"])
         if pref:
-            parts.append(
-                f"L'extension preferee contient {len(pref)} argument(s)."
-            )
+            parts.append(f"L'extension preferee contient {len(pref)} argument(s).")
 
     if "stable" in extensions:
-        stable = extensions["stable"]
-        if isinstance(stable, dict):
-            stable = stable.get("set", [])
+        stable = _extension_as_list(extensions["stable"])
         if stable:
             parts.append(
                 f"L'extension stable identifie {len(stable)} argument(s) accepte(s)."
@@ -73,9 +82,7 @@ def _interpret_fol(result: Dict) -> str:
             f"La requete '{query}' est acceptee (deductible de l'ensemble de croyances). "
             f"{message}"
         )
-    return (
-        f"La requete '{query}' n'est pas acceptee. {message}"
-    )
+    return f"La requete '{query}' n'est pas acceptee. {message}"
 
 
 def _interpret_aspic(result: Dict) -> str:
@@ -108,7 +115,11 @@ def _interpret_ranking(result: Dict) -> str:
     if not rankings:
         return "Classement des arguments complete."
 
-    sorted_items = sorted(rankings.items(), key=lambda x: float(x[1]) if isinstance(x[1], (int, float)) else 0, reverse=True)
+    sorted_items = sorted(
+        rankings.items(),
+        key=lambda x: float(x[1]) if isinstance(x[1], (int, float)) else 0,
+        reverse=True,
+    )
     top = sorted_items[:5]
     parts = [f"Top arguments: {', '.join(f'{k} ({v})' for k, v in top)}."]
     return " ".join(parts)
@@ -218,7 +229,9 @@ class TweetyResultInterpretationPlugin:
         try:
             params = json.loads(input) if isinstance(input, str) else input
         except (json.JSONDecodeError, TypeError):
-            return "Impossible d'interpreter les resultats de classement: JSON invalide."
+            return (
+                "Impossible d'interpreter les resultats de classement: JSON invalide."
+            )
         return _interpret_ranking(params)
 
     @kernel_function(
@@ -256,26 +269,21 @@ class TweetyResultInterpretationPlugin:
 
         if "dung" in params:
             sections.append(
-                "**Analyse Dung**: " + _interpret_dung(
+                "**Analyse Dung**: "
+                + _interpret_dung(
                     params["dung"].get("extensions", {}),
                     params["dung"].get("arguments", []),
                 )
             )
 
         if "fol" in params:
-            sections.append(
-                "**Raisonnement FOL**: " + _interpret_fol(params["fol"])
-            )
+            sections.append("**Raisonnement FOL**: " + _interpret_fol(params["fol"]))
 
         if "aspic" in params:
-            sections.append(
-                "**Analyse ASPIC+**: " + _interpret_aspic(params["aspic"])
-            )
+            sections.append("**Analyse ASPIC+**: " + _interpret_aspic(params["aspic"]))
 
         if "ranking" in params:
-            sections.append(
-                "**Classement**: " + _interpret_ranking(params["ranking"])
-            )
+            sections.append("**Classement**: " + _interpret_ranking(params["ranking"]))
 
         if "belief_revision" in params:
             sections.append(
@@ -317,7 +325,9 @@ class TweetyResultInterpretationPlugin:
             add_extract("formal_interpretation", interpretation)
             written = True
 
-        return json.dumps({
-            "written": written,
-            "length": len(interpretation),
-        })
+        return json.dumps(
+            {
+                "written": written,
+                "length": len(interpretation),
+            }
+        )
