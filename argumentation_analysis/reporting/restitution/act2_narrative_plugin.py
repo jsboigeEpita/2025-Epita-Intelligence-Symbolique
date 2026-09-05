@@ -955,8 +955,14 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # external oracle), the epistemic caveat at first mention, and the
         # appendix reference. No extension list, no serialized attack edges —
         # that machinery lives in the appendix now.
+        # #2037: the Acte I inventory (identified_arguments) and the graph's
+        # nodes are two populations — pass the total so the consequence can
+        # NAME the reduction instead of reusing the inventory's syntagme
+        # with the graph's number.
+        _inv = getattr(state, "identified_arguments", {}) or {}
+        n_identified = len(_inv) if isinstance(_inv, dict) else 0
         verdict = (
-            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, n_rej, dung_trace.semantics_label)}. "
+            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, n_rej, dung_trace.semantics_label, n_identified=n_identified)}. "
             f"{EPISTEMIC_CAVEAT}."
         )
         detail = (
@@ -969,8 +975,11 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
         # #1908: a decodable graph with zero rejections still deserves its
         # digested sentence — « every support survives » is a finding, not a
         # silence (the pre-fix code only spoke when something was rejected).
+        # #2037: same inventory bridge as the rejection branch.
+        _inv = getattr(state, "identified_arguments", {}) or {}
+        n_identified = len(_inv) if isinstance(_inv, dict) else 0
         verdict = (
-            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, 0, dung_trace.semantics_label)}. "
+            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, 0, dung_trace.semantics_label, n_identified=n_identified)}. "
             f"{EPISTEMIC_CAVEAT}."
         )
         detail = (
@@ -1277,9 +1286,14 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "JAMAIS 'inconsistant'. "
         "INTERDIT de prétendre que Tweety confirme une 'inconsistance' si TENUE "
         "FORMELLE ne contient pas le mot 'inconsistant'.\n"
-        "  Pour Dung : le graphe est BÂTI à partir des arguments extraits "
-        "(pas un oracle externe) — cadre-le comme une réorganisation du matériau "
-        "extrait, pas comme une vérification indépendante.\n"
+        "  Pour Dung : le graphe est BÂTI à partir des arguments retenus "
+        "pour le graphe (pas un oracle externe) — cadre-le comme une "
+        "réorganisation du matériau extrait, pas comme une vérification "
+        "indépendante. Si tu cites la volumétrie du graphe, reprends le pont "
+        "fourni dans TENUE FORMELLE (« N retenus sur M unités "
+        "argumentatives identifiées ») ; n'écris JAMAIS « N arguments "
+        "extraits » pour la population du graphe — ce syntagme désigne "
+        "l'inventaire complet de l'Acte I.\n"
         "- La hiérarchie RÔLES gouverne la citation d'un résultat de "
         "spécialiste : un DÉCISIF doit changer ce que le récit conclut sur sa "
         "cible ; un CORROBORANT appuie sans rien changer à lui seul ; un "
