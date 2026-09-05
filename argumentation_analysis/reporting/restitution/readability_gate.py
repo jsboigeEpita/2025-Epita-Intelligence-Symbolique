@@ -230,6 +230,20 @@ _BARE_WARN_THRESHOLD = 2  # 1–2 bare refs → WARN (residual)
 _BARE_FAIL_THRESHOLD = 3  # ≥3 → FAIL (manifest enumeration)
 _DUMP_FAIL_THRESHOLD = 2  # ≥2 repeated dump headings in one act → FAIL
 
+# A raw taxonomy address leaking into reader prose (#2031): dotted-decimal
+# codes like "6.1.3.1.2" — observed parenthesised "(6.1.3.1.2)", bracketed
+# "[descente: 5.2.1.1]" and bare. ≥3 segments so decimals ("1.5 million"),
+# years and 2-segment versions ("Tweety 1.31") stay legitimate; the letter
+# guards (not a digit or dot on either side) keep it out of identifiers.
+_TAXONOMY_CODE_RE = re.compile(r"(?<![0-9.])\d+(?:\.\d+){2,}(?![0-9.])")
+_TAXCODE_WARN_THRESHOLD = 1  # any leak is worth a reason; 1–2 → WARN (residual)
+_TAXCODE_FAIL_THRESHOLD = 3  # ≥3 → FAIL (same band as a manifest enumeration)
+
+
+def _find_taxonomy_codes(markdown: str) -> List[str]:
+    """Raw dotted taxonomy codes present in a rendered text, in order."""
+    return _TAXONOMY_CODE_RE.findall(markdown)
+
 
 def _line_has_framework(line: str) -> bool:
     low = line.lower()
@@ -290,6 +304,7 @@ class ReadabilityGate:
         worst_band = "PASS"
 
         total_bare = 0
+        total_taxcodes = 0
 
         for n in (1, 2, 3):
             text = acts.as_dict()[n] or ""
@@ -315,6 +330,18 @@ class ReadabilityGate:
                     f"Ex: « {preview} »."
                 )
 
+            # (2b) raw taxonomy addresses — internal dotted codes are never
+            # reader prose, whatever wrapper the renderer or the LLM put
+            # around them (#2031).
+            act_codes = _find_taxonomy_codes(text)
+            total_taxcodes += len(act_codes)
+            if act_codes:
+                reasons.append(
+                    f"{title}: {len(act_codes)} code(s) de taxonomie brut(s) "
+                    f"en prose (adresse interne pointée, illisible pour le "
+                    f"lecteur — #2031). Ex: « {act_codes[0]} »."
+                )
+
             # (3) non-dump — repeated numbered dimension headings = enumeration
             dump_n = _count_dump_headings(text)
             if dump_n >= self.dump_fail_threshold:
@@ -328,6 +355,12 @@ class ReadabilityGate:
         if total_bare >= self.bare_fail_threshold:
             worst_band = _worsen(worst_band, "FAIL")
         elif total_bare >= self.bare_warn_threshold:
+            worst_band = _worsen(worst_band, "WARN")
+
+        # aggregate raw taxonomy codes across acts → WARN/FAIL by threshold
+        if total_taxcodes >= _TAXCODE_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+        elif total_taxcodes >= _TAXCODE_WARN_THRESHOLD:
             worst_band = _worsen(worst_band, "WARN")
 
         return GateVerdict(band=worst_band, reasons=reasons)
@@ -357,6 +390,19 @@ class ReadabilityGate:
         if _count_dump_headings(body) >= self.dump_fail_threshold:
             worst_band = _worsen(worst_band, "FAIL")
             reasons.append("Corps: titres d'énumération dimensionnelle détectés.")
+
+        body_codes = _find_taxonomy_codes(body)
+        if len(body_codes) >= _TAXCODE_FAIL_THRESHOLD:
+            worst_band = _worsen(worst_band, "FAIL")
+            reasons.append(
+                f"Corps: {len(body_codes)} codes de taxonomie bruts en prose "
+                f"(adresses internes pointées — #2031)."
+            )
+        elif len(body_codes) >= _TAXCODE_WARN_THRESHOLD:
+            worst_band = _worsen(worst_band, "WARN")
+            reasons.append(
+                f"Corps: {len(body_codes)} code(s) de taxonomie brut(s) résiduel(s)."
+            )
 
         if self._reader_check is not None:
             result = self._reader_check(body)
