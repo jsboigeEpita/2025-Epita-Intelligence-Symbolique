@@ -23,6 +23,26 @@ design (the field is empty on the vast majority of the 1408 rows), the
 lexical matcher guards empty values (``if nom_vulgarise and …``), and no
 replacement name is coined here: inventing taxonomy content is item 2 of
 #2036, which needs an explicit register-policy decision.
+
+#2036 item 2 — attested display aliases for broken-register ``text_fr``
+names. Arbitration: display-only aliases are allowed ONLY where the French
+term is *attested* (published title, reference glossary, established
+proverb) — never forged. The four attestations live in
+``RENDER_ALIAS_SOURCES`` and are machine-checked (a sourced-table/test pair
+reddens on an unsourced alias).
+
+The alias is display-ONLY. It must never ride the loaded data: the lexical
+matcher reads ``nom_vulgarisé`` (substring) and ``text_fr`` (words > 4
+chars) from the same loaded rows, so an alias in those fields would change
+what matches. It applies at name-resolution-for-reader sites only —
+detector state writes, benchmark name preference, navigator prompt renders
+— via :func:`render_alias`.
+
+Nodes left untouched because no attested French term was found (searched
+2026-09-05): PK 41 « Je le sais quand je le vois », PK 980 « La science
+s'est déjà trompée », PK 992 « Vouloir le beurre et l'argent du beurre »
+(attested idiom, no alternative technical term), PK 1009 « Où est le mal ? ».
+The 7 borderlines are deliberately untouched (established idioms).
 """
 
 from __future__ import annotations
@@ -35,6 +55,38 @@ EDITORIAL_NOTE_PURGES: Dict[int, Dict[str, str]] = {
     41: {"nom_vulgarisé": ""},
     992: {"nom_vulgarisé": ""},
 }
+
+# PK -> attested display alias (#2036 item 2). Every entry MUST have a
+# citation in RENDER_ALIAS_SOURCES — an alias without a source is a forged
+# name and fails the guard test.
+RENDER_ALIASES: Dict[int, str] = {
+    320: "Pensez aux enfants",
+    328: "Sagesse du dégoût",
+    449: "Mieux vaut peu que rien",
+    1311: "Gros mensonge",
+}
+
+RENDER_ALIAS_SOURCES: Dict[int, str] = {
+    320: "fr.wikipedia.org/wiki/Pensez_aux_enfants — nom rhétorique établi du cliché (argumentum ad misericordiam)",
+    328: "fr.wikipedia.org/wiki/Sagesse_du_dégoût — titre français publié de la « wisdom of repugnance » (Kass, 1997)",
+    449: "proverbe français attesté — linternaute.fr/proverbe/2008, dicocitations.com",
+    1311: "rendu attesté de « big lie » — fr.wikipedia.org/wiki/Glossaire_de_la_langue_du_Troisième_Reich, Linguee/Reverso",
+}
+
+
+def render_alias(pk, default_name: str) -> str:
+    """Return the attested display alias for a node, else the default name.
+
+    Display-only: callers pass the name they resolved for a reader (state
+    write, name preference, prompt render); the matching fields in the
+    loaded taxonomy are never rewritten. A malformed PK is a passthrough —
+    this helper must never be the reason a render crashes.
+    """
+    try:
+        key = int(pk)
+    except (TypeError, ValueError):
+        return default_name
+    return RENDER_ALIASES.get(key, default_name)
 
 
 def purge_row(row: Dict[str, str]) -> Dict[str, str]:
