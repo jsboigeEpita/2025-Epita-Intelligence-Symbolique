@@ -148,7 +148,6 @@ class FallacyEvidence:
     fallacy_id: str
     family: str
     type: str
-    taxonomy_path: str
     justification: str
     target_arg_id: str
 
@@ -519,7 +518,6 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
                 fallacy_id=str(_fid),
                 family=_reconcile_family(fdata),
                 type=str(fdata.get("type", "inconnu")),
-                taxonomy_path=str(fdata.get("taxonomy_path", "")),
                 justification=_truncate(
                     fdata.get("justification", ""), _JUSTIFICATION_CAP
                 ),
@@ -1079,9 +1077,11 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                     "(argument_quality_scores indisponible sur ce run)."
                 )
             for fl in a.fallacies:
-                path = f" [descente: {fl.taxonomy_path}]" if fl.taxonomy_path else ""
+                # #2031: the dotted taxonomy address never enters the evidence
+                # — the reader gets the NAME (type + family); an internal
+                # address fed to the conducted LLM leaks into prose.
                 lines.append(
-                    f"      Dérapage : « {fl.type} » (famille {fl.family}){path}. "
+                    f"      Dérapage : « {fl.type} » (famille {fl.family}). "
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:

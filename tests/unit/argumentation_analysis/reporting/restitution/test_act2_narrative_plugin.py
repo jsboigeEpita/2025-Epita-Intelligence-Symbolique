@@ -947,7 +947,9 @@ class TestAtt3RestitutionPolish1421:
             _reconcile_family,
         )
 
-        fam = _reconcile_family({"family": "", "type": "Sophisme totalement inventé 42"})
+        fam = _reconcile_family(
+            {"family": "", "type": "Sophisme totalement inventé 42"}
+        )
         assert fam == _HORS_TAXONOMIE
         assert fam.lower() != "inconnu"
 
@@ -979,7 +981,10 @@ class TestAtt3RestitutionPolish1421:
         )
         ev = build_act2_evidence(state)
         families = {
-            f.family for mvt in ev.movements for arg in mvt.arguments for f in arg.fallacies
+            f.family
+            for mvt in ev.movements
+            for arg in mvt.arguments
+            for f in arg.fallacies
         }
         assert "inconnu" not in families
         assert any(f.lower() == "hors taxonomie" for f in families)
@@ -987,6 +992,55 @@ class TestAtt3RestitutionPolish1421:
         themes = {mvt.theme for mvt in ev.movements}
         assert "inconnu" not in themes
 
+
+class Test2031TaxonomyAddressNeverEntersPrompt:
+    """#2031: the dotted taxonomy address is internal plumbing.
+
+    A real-corpus state carries numeric ``taxonomy_path`` values
+    (``6.1.3.1.2``); rendering them into the conducted-LLM evidence leaked
+    raw codes into reader prose (measured 9 on the July artifact, 16 on the
+    September one). The evidence must carry the fallacy NAME only.
+    """
+
+    _CODE_RE = __import__("re").compile(r"(?<![0-9.])\d+(?:\.\d+){2,}(?![0-9.])")
+
+    def test_numeric_taxonomy_path_not_rendered_in_prompt(self):
+        state = _state(
+            identified_arguments={"arg_1": "Un argument attaqué."},
+            identified_fallacies={
+                "fl_1": {
+                    "target_argument_id": "arg_1",
+                    "family": "confusion de causalité",
+                    "type": "Tirer une mauvaise conclusion",
+                    "taxonomy_path": "4.3.1.1.3",
+                    "justification": "La conclusion ne suit pas les prémisses.",
+                }
+            },
+        )
+        prompt = build_act2_prompt(build_act2_evidence(state))
+        assert "[descente:" not in prompt
+        assert not self._CODE_RE.search(
+            prompt
+        ), "a dotted taxonomy address reached the Act II prompt"
+        # The fallacy stays NAMED for the reader (anti-pendule: no silence).
+        assert "Tirer une mauvaise conclusion" in prompt
+        assert "famille confusion de causalité" in prompt
+
+    def test_evidence_dataclass_has_no_taxonomy_path_field(self):
+        # The field is gone, not merely ignored — a dead carrier invites
+        # the next renderer to interpolate it again.
+        import dataclasses
+
+        from argumentation_analysis.reporting.restitution.act2_narrative_plugin import (
+            FallacyEvidence,
+        )
+
+        assert "taxonomy_path" not in {
+            f.name for f in dataclasses.fields(FallacyEvidence)
+        }
+
+
+class TestDungDetailPrivacy:
     def test_dung_detail_no_position_text_leak(self):
         """Defect 2: when ``accepted_members`` leaks full position descriptions
         (real-corpus case), the rendered Dung detail must NOT echo any position

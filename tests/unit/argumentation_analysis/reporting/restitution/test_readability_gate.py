@@ -158,6 +158,91 @@ class TestGateThresholds:
         assert any("énumération dimensionnelle" in r for r in verdict.reasons)
 
 
+class TestTaxonomyCodeDetection:
+    """#2031: a dotted taxonomy address is never reader prose.
+
+    Real observed shapes, from the measured artifacts:
+    - September run: parenthesised next to the fallacy name —
+      "(6.1.3.1.2)", "(1.1.2.1)", "(5.1.2.3.2.1)", "(2.2.2.4.1)",
+      "(6.3.1.2.1.1)" — 16 occurrences in Act II.
+    - July run: bracketed with a label — "[descente: 5.2.1.1]",
+      "[descente: 2.1.1.4?]" (the trailing ? is the LLM hedging) — 9
+      occurrences in Act II.
+    The detector must catch every wrapper; decimals, versions, years and
+    scores must stay legitimate prose.
+    """
+
+    gate = ReadabilityGate()
+
+    def test_find_codes_all_observed_wrappers(self):
+        from argumentation_analysis.reporting.restitution.readability_gate import (
+            _find_taxonomy_codes,
+        )
+
+        text = (
+            "l'« Exagération » (6.1.3.1.2) et « Comparaison incomplète » "
+            "(5.1.2.3.2.1) ; l'« Appel à la fierté » [descente: 2.2.1.3.3] "
+            "et l'« Acception vague » [descente: 5.1.1], nu 6.3.1.2.1.1, "
+            "hedge [descente: 2.1.1.4?]."
+        )
+        found = _find_taxonomy_codes(text)
+        assert sorted(found) == sorted(
+            [
+                "6.1.3.1.2",
+                "5.1.2.3.2.1",
+                "2.2.1.3.3",
+                "5.1.1",
+                "6.3.1.2.1.1",
+                "2.1.1.4",
+            ]
+        )
+
+    def test_legitimate_numbers_not_flagged(self):
+        from argumentation_analysis.reporting.restitution.readability_gate import (
+            _find_taxonomy_codes,
+        )
+
+        text = (
+            "1.5 million de lecteurs, une version Tweety 1.31, l'année 1789, "
+            "un score de (0.8), arg_1 visé par 2 arguments, et 2 500 données."
+        )
+        assert _find_taxonomy_codes(text) == []
+
+    def test_one_residual_code_warns(self):
+        acts = _woven_acts()
+        acts.act2_narrative += "\n\nL'« Exagération » (6.1.3.1.2) appuie ce mouvement."
+        verdict = self.gate.check(acts)
+        assert verdict.band == "WARN"
+        assert verdict.passed is True
+        assert any("code(s) de taxonomie brut(s)" in r for r in verdict.reasons)
+
+    def test_three_codes_fail(self):
+        # The July artifact's measured density (9) and September's (16) both
+        # sit far above this threshold — 3 is the manifest-leak band.
+        acts = _woven_acts()
+        acts.act2_narrative += (
+            "\n\nL'« Exagération » (6.1.3.1.2), l'« Effet de halo » "
+            "(2.2.1.1.1) et l'« Acception vague » (5.1.1) marquent le passage."
+        )
+        verdict = self.gate.check(acts)
+        assert verdict.band == "FAIL"
+        assert verdict.passed is False
+        assert any("3 code(s) de taxonomie brut(s)" in r for r in verdict.reasons)
+
+    def test_body_check_flags_leak_without_acts(self):
+        from argumentation_analysis.reporting.restitution.readability_gate import (
+            _find_taxonomy_codes,
+        )
+
+        body = (
+            "Le mouvement tient par la comparaison « Exagération » "
+            "[descente: 6.1.1.1.1.2] répétée deux fois."
+        )
+        verdict = self.gate.check_body(body)
+        assert verdict.band == "WARN"
+        assert len(_find_taxonomy_codes(body)) == 1
+
+
 # --- verdict merging & reader-check ------------------------------------------
 
 
