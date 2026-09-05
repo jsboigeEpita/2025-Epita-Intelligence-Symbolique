@@ -16,7 +16,7 @@ regardless, so a careless caller cannot leak the corpus through the appendix.
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Mapping, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 # Keys that carry corpus plaintext (directly or via derived fields). Stripped
 # defensively from any state dict before it is rendered into the appendix, even
@@ -412,6 +412,89 @@ def _provenance_counts(state: Mapping[str, Any]) -> Dict[str, Any]:
     return counts
 
 
+def _dung_machinery_section(
+    state: Mapping[str, Any], *, include_full: bool
+) -> List[str]:
+    """#1908 — the Dung machinery, relocated from the body to the appendix.
+
+    One subsection per native ``verification_*`` framework (semantics stay
+    distinct — no default label when the writer supplied another semantics).
+    Default (counts-only) mode carries opaque IDs, counts and attack edges;
+    raw non-canonical argument entries (measured on corpus B: English
+    position texts stored as framework arguments) appear only in the opt-in
+    full mode, like every other corpus-derived payload here.
+
+    Reuses the shared ``native_dung`` decoders — a third decoder in the
+    appendix would be a third way to misread an extension shape (#1912).
+    """
+    from .dung_reader import appendix_ref, backend_provenance
+    from .native_dung import decode_accepted_members, native_semantics_label
+
+    frameworks = state.get("dung_frameworks") or {}
+    if not isinstance(frameworks, dict):
+        return []
+    natives = [
+        fw
+        for fw in frameworks.values()
+        if isinstance(fw, dict)
+        and str(fw.get("name", "") or "").startswith("verification_")
+    ]
+    if not natives:
+        return []
+
+    lines = [
+        "",
+        "### Machinerie Dung (référencée par la narration)",
+        "",
+        f"{backend_provenance()}.",
+        "",
+    ]
+    for fw in natives:
+        sem = native_semantics_label(fw) or "dung"
+        fw_args = fw.get("arguments") or []
+        fw_args = fw_args if isinstance(fw_args, list) else []
+        fw_attacks = fw.get("attacks") or []
+        fw_attacks = fw_attacks if isinstance(fw_attacks, list) else []
+        accepted = decode_accepted_members(fw.get("extensions")) or set()
+        lines.append(f"#### {appendix_ref(sem)}")
+        lines.append("")
+        lines.append(
+            f"- graphe : {len(fw_args)} arguments, {len(fw_attacks)} relations "
+            "d'attaque"
+        )
+        if accepted:
+            members = ", ".join(sorted(str(m) for m in accepted))
+            lines.append(f"- extension acceptée : {members}")
+        else:
+            lines.append(
+                "- extension acceptée : forme non décodable — aucun rejet "
+                "déductible (#1912)"
+            )
+        rejected = [str(a) for a in fw_args if str(a) not in accepted]
+        canonical = [a for a in rejected if " " not in a and len(a) <= 40]
+        raw = [a for a in rejected if a not in canonical]
+        if canonical:
+            lines.append(f"- absents de l'extension : {', '.join(sorted(canonical))}")
+        if raw:
+            if include_full:
+                for entry in raw:
+                    lines.append(f"  - entrée brute : {entry[:120]}")
+            else:
+                lines.append(
+                    f"- {len(raw)} entrée(s) non canonique(s) (textes bruts — "
+                    "affichées uniquement en mode complet)"
+                )
+        if fw_attacks:
+            edges = "; ".join(
+                f"{p[0]} → {p[1]}"
+                for p in fw_attacks
+                if isinstance(p, (list, tuple)) and len(p) >= 2
+            )
+            lines.append(f"- arêtes d'attaque : {edges}")
+        lines.append("")
+    return lines
+
+
 def render_appendix(
     state: Optional[Mapping[str, Any]],
     *,
@@ -466,6 +549,10 @@ def render_appendix(
             f"| {label} | {value} | {mobilisation.get(label, 'non déclarée')} |"
         )
     lines.append("")
+
+    # #1908: the Dung machinery the narration references — same folded block,
+    # after the dimensional table, before any opt-in full dump.
+    lines.extend(_dung_machinery_section(state, include_full=include_full_state_json))
 
     if include_full_state_json:
         scrubbed = _strip_leak_keys(state)

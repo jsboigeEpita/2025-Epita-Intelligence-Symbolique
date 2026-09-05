@@ -294,7 +294,7 @@ class TestUnknownNativeShapeNonConcluable:
         dung = [f for f in findings if f.kind == "dung"]
         assert dung, "#1912: a non-concluable native framework must surface"
         assert (
-            "non conclu" in dung[0].verdict.lower()
+            "pas concluable" in dung[0].verdict.lower()
         ), f"#1912: the finding must state non-concluable, got {dung[0].verdict!r}"
 
     def test_empty_extension_dict_is_non_concluable_not_all_rejected(self):

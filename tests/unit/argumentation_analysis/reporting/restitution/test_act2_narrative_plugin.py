@@ -396,20 +396,29 @@ class TestReaderWriterContracts:
         """Track D #1280 — the Dung finding must frame the graph as BUILT from
         the extracted arguments (reorganisation, not external corroboration),
         and surface the concrete computation. The old oracle wording « le cadre
-        de Dung isole » must NOT survive."""
+        de Dung isole » must NOT survive. #1908: the body carries the DIGESTED
+        consequence — the count is phrased in prose, and the raw machinery
+        (extension list, ids, edges) lives in the appendix, not in the verdict."""
         ev = build_act2_evidence(_rich_state())
         dung = next((f for f in ev.formal_findings if f.kind == "dung"), None)
         assert dung is not None
         # Honest framing: the graph is constructed from extracted arguments.
         assert "construit" in dung.verdict.lower()
         assert "arguments extraits" in dung.verdict.lower()
-        # The concrete computation is surfaced (accepted count, semantics).
-        assert "retenu" in dung.verdict
+        # The concrete computation is surfaced as a DIGESTED prose consequence
+        # ("fragilisant N des M"), with the semantics named — no raw count dump.
+        assert "fragilisant" in dung.verdict
         assert "preferred" in dung.verdict
-        # Detail names it is NOT an external oracle.
-        assert "oracle externe" in dung.detail.lower()
-        # The old black-box oracle wording must be gone.
+        # Not an external oracle (#1280): the caveat at the first mention
+        # states the verdict is internal to the constructed graph.
+        assert "verdict interne au graphe" in dung.verdict.lower()
+        # The reader detail carries only the appendix reference + the meaning.
+        assert "Annexe Dung[preferred]" in dung.detail
+        # The old black-box oracle wording and the machine count dump are gone.
         assert "isole" not in dung.verdict.lower()
+        assert "retenu" not in dung.verdict.lower()
+        assert "oracle externe" not in dung.verdict.lower()
+        assert "oracle externe" not in dung.detail.lower()
 
     def test_governance_and_debate_surfaced_sv(self):
         """SV (#1182): governance verdict + debate exchange reach Acte II."""
@@ -1068,22 +1077,33 @@ class TestDungDetailPrivacy:
         findings = _collect_formal_findings(state)
         dung = next((f for f in findings if f.kind == "dung"), None)
         assert dung is not None
-        # No position text leaks into the detail.
+        # No position text leaks into the detail or the verdict.
         assert "Position text" not in dung.detail
         assert "should NOT appear" not in dung.detail
-        # Opaque rejected ids + attacks are still surfaced.
-        assert "arg_" in dung.detail
+        assert "Position text" not in dung.verdict
+        # #1908: the machinery (opaque ids/edges) is off the reader surface —
+        # it lives in the appendix. The detail carries only the reference.
+        assert "arg_" not in dung.detail
+        assert "Annexe Dung" in dung.detail
 
     def test_dung_detail_renders_opaque_ids_when_clean(self):
         """When ``accepted_members`` stores canonical opaque ids (nominal case),
-        the detail lists them — the fix must not regress the clean path."""
+        they render in the APPENDIX — #1908 moved the machinery off the reader
+        surface, so the body never echoes the extension list. The detail keeps
+        the appendix reference + the meaning; the clean path is not regressed,
+        just relocated to its engineering home."""
         ev = build_act2_evidence(_rich_state())
         dung = next((f for f in ev.formal_findings if f.kind == "dung"), None)
         assert dung is not None
-        # arg_2 is accepted in _rich_state; it must appear (opaque id rendered).
-        assert "arg_2" in dung.detail
-        # The honest framing is preserved.
-        assert "oracle externe" in dung.detail.lower()
+        # The reader detail references the appendix; it never dumps the graph.
+        assert "Annexe Dung[preferred]" in dung.detail
+        assert "arg_" not in dung.detail
+        # The appendix (engineering surface) reconstructs the canonical id/edge.
+        from argumentation_analysis.reporting.restitution.appendix import render_appendix
+
+        html = render_appendix({"dung_frameworks": _rich_state().dung_frameworks})
+        assert "arg_2" in html
+        assert "arg_2 → arg_1" in html
 
 
 def _state_with_unattributed(n_unattributed: int) -> SimpleNamespace:

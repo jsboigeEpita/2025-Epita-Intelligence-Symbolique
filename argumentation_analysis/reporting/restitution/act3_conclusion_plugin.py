@@ -56,6 +56,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
+from .dung_reader import REJECTED_MEANS  # #1908: shared meaning with act2
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_native_dung,
 )
@@ -660,6 +661,9 @@ def _collect_weak_points(
                 source="dung",
                 label=f"argument rejeté par le cadre de Dung (sémantique {semantics})",
                 target_arg_id=str(arg_id),
+                # #1908: the accepted/rejected meaning is shared with Act II —
+                # one helper (dung_reader), so the acts cannot diverge.
+                detail=REJECTED_MEANS,
             )
         )
     if pl_inc:
