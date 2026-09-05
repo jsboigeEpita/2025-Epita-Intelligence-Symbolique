@@ -26,8 +26,7 @@ EPISTEMIC_CAVEAT = (
 # What the reader may conclude from each verdict — the interpretation
 # glossary both acts share.
 ACCEPTED_MEANS = (
-    "un argument accepté garde son assise dans le graphe face aux attaques "
-    "reçues"
+    "un argument accepté garde son assise dans le graphe face aux attaques " "reçues"
 )
 REJECTED_MEANS = (
     "un argument rejeté perd cette assise dans le graphe, rien de plus : "
@@ -40,6 +39,7 @@ def reader_consequence(
     n_attacks: int,
     n_rejected: int,
     semantics_label: str,
+    n_identified: int | None = None,
 ) -> str:
     """The digested Dung consequence for the body — no extension list, no
     serialized edges, no raw counts dump.
@@ -47,12 +47,30 @@ def reader_consequence(
     Frames the graph as a reorganisation of the extracted arguments (#1280)
     and says what changed for the reader's judgment, not what the solver
     printed.
+
+    #2037: the graph's node count and the Acte I inventory (``N arguments
+    extraits``) are two DIFFERENT populations — the graph is built from a
+    subset produced by a different phase. When the inventory total is known
+    and the graph covers less than it, the frame NAMES the reduction
+    (retained-for-the-graph, out of identified units) instead of reusing the
+    inventory's syntagme with a second number. Never align the numbers —
+    the bridge is the fix, not the convergence.
     """
-    frame = (
-        f"le graphe d'attaque construit sur les {n_arguments} arguments "
-        f"extraits ({n_attacks} relations d'attaque, sémantique "
-        f"{semantics_label}) réorganise le matériau"
-    )
+    if n_identified is not None and 0 < n_arguments < n_identified:
+        frame = (
+            f"le graphe d'attaque construit sur les {n_arguments} arguments "
+            f"retenus pour le graphe, sur {n_identified} unités "
+            f"argumentatives identifiées ({n_attacks} relations d'attaque, "
+            f"sémantique {semantics_label}) réorganise le matériau"
+        )
+        node_syntagme = "retenus"
+    else:
+        frame = (
+            f"le graphe d'attaque construit sur les {n_arguments} arguments "
+            f"extraits ({n_attacks} relations d'attaque, sémantique "
+            f"{semantics_label}) réorganise le matériau"
+        )
+        node_syntagme = "extraits"
     if n_rejected == 0:
         consequence = (
             f"{frame} sans fragiliser aucun argument : chaque position "
@@ -61,11 +79,13 @@ def reader_consequence(
     else:
         # Morphology-free French: the « (s) » alternation is a solver-output
         # marker the readability gate now tracks (#1908) — the digested
-        # consequence must read as prose, not as machine output.
+        # consequence must read as prose, not as machine output. The node
+        # population keeps the SAME syntagme as the frame — « extraits » is
+        # the inventory's word (#2037), never the graph's when bridged.
         consequence = (
             f"{frame} en fragilisant {n_rejected} des {n_arguments} arguments "
-            f"extraits, qui perdent l'assise que l'extension {semantics_label} "
-            "garantit aux autres"
+            f"{node_syntagme}, qui perdent l'assise que l'extension "
+            f"{semantics_label} garantit aux autres"
         )
     return consequence
 

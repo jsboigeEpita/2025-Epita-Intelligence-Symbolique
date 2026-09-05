@@ -279,7 +279,9 @@ def _count_dump_headings(markdown: str) -> int:
 # ``[tags]`` became September's « guillemets », but both are solver output in
 # reader prose. The families below cover BOTH forms — a detector keyed on the
 # July shape alone is blind to the live one (the round's measured trap).
-_MORPHOLOGY_S_RE = re.compile(r"\b\S+\(s\)")  # retenu(s), vérifiée(s)… — no trailing \b: « ) » is non-word, a word-boundary can never follow it
+_MORPHOLOGY_S_RE = re.compile(
+    r"\b\S+\(s\)"
+)  # retenu(s), vérifiée(s)… — no trailing \b: « ) » is non-word, a word-boundary can never follow it
 _BRACKETED_ID_LIST_RE = re.compile(r"\b(acceptés|rejetés)\s*\[")
 _EXTENSION_ENUM_RE = re.compile(r"\bextension\s+\S+\s*:", re.IGNORECASE)
 _ATTACK_EDGE_HINT_RE = re.compile(r"\battaques?\s+clés?\b", re.IGNORECASE)
@@ -302,6 +304,65 @@ def _count_machinery_dumps(body: str) -> int:
     hits += len(_ATTACK_EDGE_HINT_RE.findall(body))
     hits += body.count("→")
     return hits
+
+
+# --- #2037: one number per syntagme --------------------------------------------
+#
+# Measured (corpus_A/corpus_B, R931): « 149 arguments extraits » (Acte I
+# inventory) next to « bâti à partir des neuf arguments extraits » (Acte II
+# graph volume) — same syntagme, two populations, no bridge. Both numbers
+# can be true; the defect is the shared name (the fix renames the graph's
+# population to « retenus pour le graphe » and names the reduction). This
+# detector enforces the invariant: the syntagme « N arguments extraits »
+# carries AT MOST ONE distinct value per body. Number words count as their
+# value — the measured defect spelled one of the two numbers out.
+_EXTRACTED_COUNT_WORD = (
+    r"(?:\d+|une?|deux|trois|quatre|cinq|six|sept|huit|neuf|dix|onze|douze|"
+    r"treize|quatorze|quinze|seize|dix-sept|dix-huit|dix-neuf|vingt|trente|"
+    r"quarante|cinquante|soixante|cent|mille)"
+)
+_EXTRACTED_ARGS_VALUE_RE = re.compile(
+    rf"\b({_EXTRACTED_COUNT_WORD})\s+arguments?\s+extrait(?:e|s|es)?\b",
+    re.IGNORECASE,
+)
+_NUMBER_WORDS = {
+    "un": 1,
+    "une": 1,
+    "deux": 2,
+    "trois": 3,
+    "quatre": 4,
+    "cinq": 5,
+    "six": 6,
+    "sept": 7,
+    "huit": 8,
+    "neuf": 9,
+    "dix": 10,
+    "onze": 11,
+    "douze": 12,
+    "treize": 13,
+    "quatorze": 14,
+    "quinze": 15,
+    "seize": 16,
+    "dix-sept": 17,
+    "dix-huit": 18,
+    "dix-neuf": 19,
+    "vingt": 20,
+    "trente": 30,
+    "quarante": 40,
+    "cinquante": 50,
+    "soixante": 60,
+    "cent": 100,
+    "mille": 1000,
+}
+
+
+def _distinct_extracted_arg_values(body: str) -> "set[int]":
+    """Distinct numeric values carried by « N arguments extraits »."""
+    values: set = set()
+    for match in _EXTRACTED_ARGS_VALUE_RE.finditer(body):
+        token = match.group(1).lower()
+        values.add(_NUMBER_WORDS[token] if token in _NUMBER_WORDS else int(token))
+    return values
 
 
 class ReadabilityGate:
@@ -447,6 +508,16 @@ class ReadabilityGate:
             worst_band = _worsen(worst_band, "WARN")
             reasons.append(
                 "Corps: 1 signature résiduelle de machinerie formelle brute."
+            )
+
+        extracted_values = _distinct_extracted_arg_values(body)
+        if len(extracted_values) >= 2:
+            worst_band = _worsen(worst_band, "FAIL")
+            reasons.append(
+                f"Corps: {len(extracted_values)} valeurs distinctes "
+                f"({', '.join(str(v) for v in sorted(extracted_values))}) "
+                "sous le syntagme « arguments extraits » — deux populations "
+                "sous un même nom sans pont nommé (#2037)."
             )
 
         if self._reader_check is not None:
