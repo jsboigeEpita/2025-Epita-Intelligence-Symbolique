@@ -2108,10 +2108,16 @@ _CAP_TOKEN_STOP_LIST = frozenset({"argumentation", "reasoning", "analysis"})
 
 # Phrases that mark a scope limitation being stated. Presence is necessary but
 # NOT sufficient: it must co-occur with a keyword of an actually-lost axis.
+# #2032 cross-review (corpus B): « n'a pas produit de résultat exploitable »
+# and « reste non concluable » are ordinary French limitation phrasings the
+# original table lacked — the gate returned False before the cue layer (which
+# would have matched « pondér ») ever ran.
 _SCOPE_LIMIT_MARKERS: Tuple[str, ...] = (
     "n'a pas abouti",
     "n'a pas pu",
     "n'a pas permis",
+    "n'a pas produit",
+    "non concluable",
     "non évalué",
     "pas été évalué",
     "pas été conduite",

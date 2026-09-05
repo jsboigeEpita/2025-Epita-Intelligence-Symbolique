@@ -1071,6 +1071,7 @@ class Test2032ScopeDetectorDiscriminates:
                     "belief_revision": (
                         "la révision des croyances (le point de rupture minimal)"
                     ),
+                    "weighted_argumentation": "la force pondérée des attaques",
                 }[capability],
                 status="degraded",
                 reason="phase failed",
@@ -1143,6 +1144,25 @@ class Test2032ScopeDetectorDiscriminates:
             "que ce verdict ne couvre pas."
         )
         assert detect(names_it, absent) is True
+
+    def test_corpus_b_limitation_phrasings_reach_the_cue_layer(self):
+        """#2032 cross-review (independent corpus-B run): the closing prose
+        names the axis through a limitation phrasing family the marker table
+        lacked — « n'a pas produit » / « reste non concluable ». The marker
+        gate returned False BEFORE the cue layer could match « pondér », so
+        a corpus-B-shaped run still served the caveat three times. Verbatim,
+        axis vocabulary only."""
+        detect = self._detector()
+        absent = self._absent("weighted_argumentation")
+        verbatim = (
+            "Un angle reste non concluable : la force pondérée des attaques "
+            "n'a pas produit de résultat exploitable."
+        )
+        assert detect(verbatim, absent) is True
+        # The widened table does not loosen the conjunction: the new markers
+        # alone, without an axis cue, still answer False.
+        control = "Un angle reste non concluable, la prudence s'impose."
+        assert detect(control, absent) is False
 
 
 class TestGuestFormalEntriesDoNotCreditHostAxis:
