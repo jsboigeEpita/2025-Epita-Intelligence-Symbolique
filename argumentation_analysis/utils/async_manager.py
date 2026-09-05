@@ -383,6 +383,19 @@ class AsyncManager:
                 # Fermer la boucle
                 self._loop.close()
 
+            # #2040 : get_or_create_event_loop() a pu installer self._loop
+            # comme boucle courante du process ; la fermer sans la détacher
+            # laisse cette boucle courante MORTE pour tout utilisateur
+            # ultérieur d'asyncio (fuite d'ordre mesurée : 30 tests plugins/
+            # rouges quand utils/ les précède dans la même session pytest).
+            try:
+                current = asyncio.get_event_loop_policy().get_event_loop()
+            except RuntimeError:
+                current = None
+            if current is self._loop:
+                asyncio.set_event_loop(None)
+            self._loop = None
+
         except Exception as e:
             self.logger.error(f"Erreur lors de l'arrêt: {e}")
 
