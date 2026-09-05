@@ -754,7 +754,7 @@ Lors de la création d'un nouvel adaptateur, vous devriez vous inspirer de ces i
   ```
 - Peut inclure des méthodes pour s'abonner à des sujets via le `MessageMiddleware`.
 
-Le `MessageMiddleware` possède une méthode `get_adapter(self, agent_id: str, level: AgentLevel)` (patchée via [`argumentation_analysis/core/communication/middleware_patch.py`](../../argumentation_analysis/core/communication/middleware_patch.py:8)) qui peut instancier l'adaptateur approprié en fonction du niveau de l'agent.
+Le `MessageMiddleware` possède une méthode `get_adapter(self, agent_id: str, level: AgentLevel)` (définie dans [`argumentation_analysis/core/communication/middleware.py`](../../argumentation_analysis/core/communication/middleware.py)) qui peut instancier l'adaptateur approprié en fonction du niveau de l'agent.
 
 ### Traduction des messages
 
