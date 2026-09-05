@@ -35,6 +35,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Awaitable, Callable, Dict, List, Optional
 
+from .dung_reader import (  # #1908: one shared meaning for act2 and act3
+    ACCEPTED_MEANS,
+    EPISTEMIC_CAVEAT,
+    REJECTED_MEANS,
+    appendix_ref,
+    reader_consequence,
+)
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_accepted_members,
     decode_native_dung,
@@ -924,54 +931,52 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
             FormalFinding(
                 kind="dung",
                 verdict=(
-                    f"extension Dung {dung_trace.semantics_label} non "
-                    "concluable (forme d'extension non décodable)"
+                    f"le graphe d'attaque construit sur les arguments extraits "
+                    f"n'est pas concluable en sémantique "
+                    f"{dung_trace.semantics_label} (forme d'extension non "
+                    "décodable) — aucun argument n'est fragilisé par ce "
+                    "verdict d'indécidabilité"
                 ),
                 detail=(
-                    "cadre natif présent mais forme d'extension inconnue — "
-                    "aucun rejet déduit (#1912) ; ni accepté-vide ni "
-                    "inventé"
+                    f"machinerie complète et protocole : {appendix_ref(dung_trace.semantics_label)} ; "
+                    f"{EPISTEMIC_CAVEAT} (#1912 : ni accepté-vide ni inventé)"
                 ),
             )
         )
     elif dung_trace.available and dung_trace.rejected_args:
-        sems = sorted(set(dung_trace.rejected_args.values()))
-        n_acc = len(dung_trace.accepted_members)
+        # #1908: the prose COUNTS the rejections but never NAMES non-canonical
+        # entries — the framework's ``arguments`` list can carry raw position
+        # texts (measured on corpus B: English descriptions in the rejected
+        # set), and the reader surface must never echo them. The appendix
+        # carries the identifiers, canonicalised where possible.
         n_rej = len(dung_trace.rejected_args)
-        # Track D #1280 — frame Dung honestly: the attack graph is BUILT from the
-        # extracted arguments (the pipeline's own attack relations), so Dung
-        # reorganises upstream extraction rather than corroborating it from
-        # outside. Surface the graph so the reader can see the computation, not
-        # a black-box oracle. Cadrage « graphe construit à partir des arguments
-        # extraits », pas « le cadre isole ».
+        # #1908 — the body carries the DIGESTED consequence (#1280 framing
+        # kept: the graph reorganises the extracted arguments, it is not an
+        # external oracle), the epistemic caveat at first mention, and the
+        # appendix reference. No extension list, no serialized attack edges —
+        # that machinery lives in the appendix now.
         verdict = (
-            f"graphe de Dung construit sur les {dung_trace.n_arguments} arguments "
-            f"extraits ({dung_trace.n_attacks} relations d'attaque) — "
-            f"extension {dung_trace.semantics_label} : {n_acc} retenu(s), "
-            f"{n_rej} rejeté(s) (absents de l'extension acceptée)."
+            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, n_rej, dung_trace.semantics_label)}. "
+            f"{EPISTEMIC_CAVEAT}."
         )
-        # #1421-2: render the Dung detail with OPAQUE arg_ids only (FB-34). The
-        # upstream usually stores opaque ids in ``accepted_members``, but real
-        # corpora can leak full position descriptions there — keep only canonical
-        # arg_ids (from ``identified_arguments``) so the detail never dumps
-        # position text. ``rejected_args`` already maps opaque arg_id → label.
-        # The verdict carries the counts; the detail carries the IDs + attacks.
-        known_arg_ids = set(getattr(state, "identified_arguments", {}) or {})
-        accepted_opaque = sorted(
-            m for m in dung_trace.accepted_members if m in known_arg_ids
-        )[:6]
-        rejected_opaque = sorted(dung_trace.rejected_args.keys())[:4]
-        attacks_opaque = "; ".join(f"{p[0]}→{p[1]}" for p in dung_trace.sample_attacks)
-        detail_parts = [
-            f"extension {dung_trace.semantics_label}",
-            f"acceptés [{', '.join(accepted_opaque) or '—'}]",
-        ]
-        if rejected_opaque:
-            detail_parts.append(f"rejetés [{', '.join(rejected_opaque)}]")
-        detail_parts.append(f"attaques clés : {attacks_opaque or '—'}")
         detail = (
-            f"cadre abstrait de Dung bâti à partir des arguments extraits "
-            f"(PAS un oracle externe indépendant) — {' ; '.join(detail_parts)}."
+            f"{appendix_ref(dung_trace.semantics_label)} — composition exacte de "
+            f"l'extension, identifiants et arêtes d'attaque ; {REJECTED_MEANS}. "
+            "Cite la conséquence ci-dessus, PAS la composition."
+        )
+        findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
+    elif dung_trace.available and dung_trace.accepted_members:
+        # #1908: a decodable graph with zero rejections still deserves its
+        # digested sentence — « every support survives » is a finding, not a
+        # silence (the pre-fix code only spoke when something was rejected).
+        verdict = (
+            f"{reader_consequence(dung_trace.n_arguments, dung_trace.n_attacks, 0, dung_trace.semantics_label)}. "
+            f"{EPISTEMIC_CAVEAT}."
+        )
+        detail = (
+            f"{appendix_ref(dung_trace.semantics_label)} — composition exacte de "
+            f"l'extension, identifiants et arêtes d'attaque ; {ACCEPTED_MEANS}. "
+            "Cite la conséquence ci-dessus, PAS la composition."
         )
         findings.append(FormalFinding(kind="dung", verdict=verdict, detail=detail))
 

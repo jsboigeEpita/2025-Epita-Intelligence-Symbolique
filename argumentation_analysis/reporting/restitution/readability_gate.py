@@ -273,6 +273,37 @@ def _count_dump_headings(markdown: str) -> int:
     return len(_DUMP_HEADING_RE.findall(markdown))
 
 
+# --- #1908: raw formal machinery on the reader surface -------------------------
+#
+# The defect changed clothes between passes without changing nature: July's
+# ``[tags]`` became September's « guillemets », but both are solver output in
+# reader prose. The families below cover BOTH forms — a detector keyed on the
+# July shape alone is blind to the live one (the round's measured trap).
+_MORPHOLOGY_S_RE = re.compile(r"\b\S+\(s\)")  # retenu(s), vérifiée(s)… — no trailing \b: « ) » is non-word, a word-boundary can never follow it
+_BRACKETED_ID_LIST_RE = re.compile(r"\b(acceptés|rejetés)\s*\[")
+_EXTENSION_ENUM_RE = re.compile(r"\bextension\s+\S+\s*:", re.IGNORECASE)
+_ATTACK_EDGE_HINT_RE = re.compile(r"\battaques?\s+clés?\b", re.IGNORECASE)
+
+
+def _count_machinery_dumps(body: str) -> int:
+    """Count machinery signature hits in the reader body.
+
+    Hits, not families: the default-mode trap is MULTIPLE identical solver
+    chains in one prose (« 4 occurrences (PL/FOL/modal + dump) » on corpus B)
+    — four families-less identical chains must still exceed the threshold.
+    The ``(s)`` morphology and the ``→`` arrow each count their occurrences;
+    a bracket list or extension enumeration counts per occurrence too, so
+    the count scales with how much machinery met the reader.
+    """
+    hits = 0
+    hits += len(_MORPHOLOGY_S_RE.findall(body))
+    hits += len(_BRACKETED_ID_LIST_RE.findall(body))
+    hits += len(_EXTENSION_ENUM_RE.findall(body))
+    hits += len(_ATTACK_EDGE_HINT_RE.findall(body))
+    hits += body.count("→")
+    return hits
+
+
 class ReadabilityGate:
     """Deterministic structural check of a restitution report (spec §4).
 
@@ -402,6 +433,20 @@ class ReadabilityGate:
             worst_band = _worsen(worst_band, "WARN")
             reasons.append(
                 f"Corps: {len(body_codes)} code(s) de taxonomie brut(s) résiduel(s)."
+            )
+
+        machinery = _count_machinery_dumps(body)
+        if machinery >= 2:
+            worst_band = _worsen(worst_band, "FAIL")
+            reasons.append(
+                f"Corps: {machinery} signatures de machinerie formelle brute "
+                "(extension/IDs/arêtes ou chaîne solveur en prose — #1908 : "
+                "la machinerie vit en annexe)."
+            )
+        elif machinery == 1:
+            worst_band = _worsen(worst_band, "WARN")
+            reasons.append(
+                "Corps: 1 signature résiduelle de machinerie formelle brute."
             )
 
         if self._reader_check is not None:
