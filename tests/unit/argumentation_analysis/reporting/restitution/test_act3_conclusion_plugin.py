@@ -924,7 +924,10 @@ class TestConclusionCarriesTheAbsence:
         state.structured_arg_status = _ledger("aspic_plus_reasoning")
         result = self._run(state, _SILENT_CONCLUSION)
         assert "Portée de cette analyse" in result.narrative
-        assert "act3_scope_note_appended" in result.degraded
+        # #2032: the repair event is logged, never rendered — every key of
+        # ``degraded`` reaches the reader as a blockquote, and a note
+        # explaining the renderer's own repair is machine voice.
+        assert "act3_scope_note_appended" not in result.degraded
 
     def test_compliant_prose_is_not_duplicated(self):
         # The detector must be able to return True — otherwise the append is
@@ -938,6 +941,36 @@ class TestConclusionCarriesTheAbsence:
         assert "Portée de cette analyse" not in result.narrative
         assert "act3_scope_note_appended" not in result.degraded
         assert "act3_absent_dimensions" in result.degraded
+
+    def test_prose_naming_the_axis_by_its_label_is_not_duplicated(self):
+        """#2032, the measured false negative: the September run's conducted
+        prose closed the act by naming the lost axis and saying the judgment
+        does not cover it — the keyword-only detector returned False anyway,
+        and the reader got the same caveat three times. Naming the axis by
+        its LABEL (the French name the prompt itself instructs the LLM to
+        use) must count as naming it."""
+        state = _rich_state()
+        state.structured_arg_status = _ledger("bipolar_argumentation")
+        compliant = _SILENT_CONCLUSION + (
+            "\n\nCe jugement ne couvre pas les relations de soutien entre "
+            "arguments : l'axe bipolaire n'a pas abouti sur ce texte."
+        )
+        result = self._run(state, compliant)
+        assert "Portée de cette analyse" not in result.narrative
+        assert "act3_absent_dimensions" in result.degraded
+
+    def test_axis_outside_the_keyword_table_is_detectable(self):
+        """belief_revision has no entry in the keyword table — before #2032
+        its absence was UNDETECTABLE whatever the prose said. The label cue
+        closes that hole."""
+        state = _rich_state()
+        state.structured_arg_status = _ledger("belief_revision")
+        compliant = _SILENT_CONCLUSION + (
+            "\n\nLa révision des croyances (le point de rupture minimal) n'a "
+            "pas été évaluée : ce verdict ne couvre pas cet angle."
+        )
+        result = self._run(state, compliant)
+        assert "Portée de cette analyse" not in result.narrative
 
     def test_generic_hedge_does_not_count_as_naming_the_absence(self):
         # "certaines analyses n'ont pas abouti" leaves the reader unable to know
@@ -1015,6 +1048,101 @@ def _real_fol_entry(consistent: bool = False) -> dict:
         "inferences": [],
         "confidence": 1.0,
     }
+
+
+class Test2032ScopeDetectorDiscriminates:
+    """The #2032 acceptance control: feed the detector one prose sample that
+    names the axis and one that does not — it must return different answers.
+    A detector answering "absent" for both is what produced the triple caveat.
+    """
+
+    def _absent(self, capability: str):
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            AbsentDimension,
+        )
+
+        return [
+            AbsentDimension(
+                capability=capability,
+                label={
+                    "bipolar_argumentation": (
+                        "les relations de soutien entre arguments"
+                    ),
+                    "belief_revision": (
+                        "la révision des croyances (le point de rupture minimal)"
+                    ),
+                }[capability],
+                status="degraded",
+                reason="phase failed",
+            )
+        ]
+
+    def _detector(self):
+        from argumentation_analysis.reporting.restitution.act3_conclusion_plugin import (
+            _narrative_states_scope_limit,
+        )
+
+        return _narrative_states_scope_limit
+
+    def test_names_vs_silent_give_different_answers(self):
+        detect = self._detector()
+        names_it = (
+            "Ce jugement ne couvre pas les relations de soutien entre "
+            "arguments, qui n'ont pas abouti sur ce texte."
+        )
+        silent = (
+            "Le discours tient par sa dramaturgie; le verdict reste celui "
+            "de l'acceptabilité argumentative."
+        )
+        absent = self._absent("bipolar_argumentation")
+        assert detect(names_it, absent) is True
+        assert detect(silent, absent) is False
+
+    def test_technical_paraphrase_without_keyword_names_the_axis(self):
+        # "l'axe bipolaire" names the axis as surely as the label does —
+        # the keyword table ("soutien") misses it, the capability token
+        # ("bipolar" ⊂ "bipolaire") does not. This is the shape the
+        # September run's closing sentence most plausibly took.
+        detect = self._detector()
+        absent = self._absent("bipolar_argumentation")
+        paraphrase = (
+            "Ce jugement ne couvre pas l'axe bipolaire, qui n'a pas abouti "
+            "sur ce texte."
+        )
+        assert detect(paraphrase, absent) is True
+
+    def test_typographic_apostrophe_does_not_hide_the_marker(self):
+        """#2032, the measured root cause, verbatim from a local run: the
+        LLM's closing sentence carries U+2019 (« n’a pas abouti ») while the
+        marker table stores U+0027 — no marker matched, the detector said
+        the prose was silent, and the reader received the deterministic
+        scope note for an axis the prose had just named."""
+        detect = self._detector()
+        absent = self._absent("bipolar_argumentation")
+        verbatim = (
+            "l’évaluation générale des relations de soutien n’a pas abouti, "
+            "même si certaines dépendances locales ont été repérées."
+        )
+        assert "’" in verbatim  # the typographic apostrophe, not the straight one
+        assert detect(verbatim, absent) is True
+
+    def test_domain_generic_token_does_not_name_an_axis(self):
+        # "argumentation" is in every restitution sentence — it must not
+        # count as naming any axis (that would silence the scope note
+        # whenever ANY scope marker co-occurs with ordinary prose).
+        detect = self._detector()
+        absent = self._absent("bipolar_argumentation")
+        generic = "L'argumentation du discours n'a pas permis de conclure."
+        assert detect(generic, absent) is False
+
+    def test_label_naming_detectable_for_untabled_axis(self):
+        detect = self._detector()
+        absent = self._absent("belief_revision")
+        names_it = (
+            "La révision des croyances n'a pas été évaluée sur ce texte, ce "
+            "que ce verdict ne couvre pas."
+        )
+        assert detect(names_it, absent) is True
 
 
 class TestGuestFormalEntriesDoNotCreditHostAxis:

@@ -224,10 +224,14 @@ def _assess_surplus(
     for finding in structured_findings:
         statement = _truncate(getattr(finding, "statement", ""), _STATEMENT_CAP)
         if statement:
+            # #2032: ``cites`` is a sequence of anchor labels. A bare
+            # parenthesised string here made ', '.join(cites) iterate the
+            # label character by character in the assembled Act III prompt.
+            label = str(getattr(finding, "label", "")).strip()
             established.append(
                 SurplusItem(
                     statement=statement,
-                    cites=(str(getattr(finding, "label", "")) or "cadre_structure"),
+                    cites=(label,) if label else ("cadre_structure",),
                 )
             )
     for finding in global_findings:
