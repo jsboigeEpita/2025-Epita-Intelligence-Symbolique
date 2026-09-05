@@ -2,6 +2,8 @@ import csv
 import json
 from typing import List, Dict, Any, Optional
 
+from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
+
 
 class TaxonomyNavigator:
     """
@@ -116,12 +118,16 @@ class TaxonomyNavigator:
             return "Node not found."
 
         branch_str = ""
-        node_name = node.get("nom_vulgarisé", node.get("PK"))
+        node_name = render_alias(
+            node.get("PK"), node.get("nom_vulgarisé", node.get("PK"))
+        )
         branch_str += f"- {node_name} (ID: {node['PK']})\n"
 
         children = self.get_children(node_id)
         for child in children:
-            child_name = child.get("nom_vulgarisé", child.get("PK"))
+            child_name = render_alias(
+                child.get("PK"), child.get("nom_vulgarisé", child.get("PK"))
+            )
             branch_str += f"  - {child_name} (ID: {child['PK']})\n"
 
         return branch_str.strip()
@@ -147,7 +153,9 @@ class TaxonomyNavigator:
                 return
 
             indent = "  " * (current_depth - 1)
-            node_name = node.get(f"text_{language}", node.get("PK"))
+            node_name = render_alias(
+                node.get("PK"), node.get(f"text_{language}", node.get("PK"))
+            )
 
             if details:
                 desc = node.get(f"desc_{language}", "").strip()

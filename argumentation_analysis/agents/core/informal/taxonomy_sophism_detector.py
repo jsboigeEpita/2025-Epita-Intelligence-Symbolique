@@ -18,6 +18,7 @@ from pathlib import Path
 
 # Import de l'InformalAnalysisPlugin pour accéder à la taxonomie
 from .informal_definitions import InformalAnalysisPlugin
+from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
 
 logger = logging.getLogger("TaxonomySophismDetector")
 
@@ -218,7 +219,7 @@ class TaxonomySophismDetector:
                     sophism = {
                         "taxonomy_key": int(pk),
                         "name": row.get("Name", ""),
-                        "nom_vulgarise": row.get("nom_vulgarisé", ""),
+                        "nom_vulgarise": render_alias(pk, row.get("nom_vulgarisé", "")),
                         "famille": row.get("Famille", ""),
                         "description": row.get("text_fr", ""),
                         "confidence": min(confidence, 1.0),
@@ -380,7 +381,7 @@ class TaxonomySophismDetector:
                     sophism = {
                         "taxonomy_key": int(pk),
                         "name": row.get("Name", ""),
-                        "nom_vulgarise": row.get("nom_vulgarisé", ""),
+                        "nom_vulgarise": render_alias(pk, row.get("nom_vulgarisé", "")),
                         "famille": row.get("Famille", ""),
                         "description": row.get("text_fr", ""),
                         "match_score": score,

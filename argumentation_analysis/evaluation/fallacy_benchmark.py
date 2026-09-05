@@ -19,9 +19,27 @@ import time
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
-from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
+from argumentation_analysis.utils.taxonomy_local_overrides import (
+    purge_rows,
+    render_alias,
+)
 
 logger = logging.getLogger("fallacy_benchmark")
+
+
+def _display_name(node: Dict[str, Any]) -> str:
+    """Reader-facing name of a taxonomy node (#2036 item 2).
+
+    Preference order is unchanged (``text_fr`` then ``nom_vulgarisé``) —
+    the attested alias table applies on top, so a node whose canonical
+    ``text_fr`` carries a broken register reaches the report (and the mode
+    B taxonomy listing) under its attested French name. Display-only: the
+    loaded rows keep their upstream values for matching.
+    """
+    return render_alias(
+        node.get("PK", ""), node.get("text_fr", node.get("nom_vulgarisé", ""))
+    )
+
 
 # ============================================================
 # Benchmark test cases: 30 fallacies across 7 families, depths 2-6
@@ -580,7 +598,7 @@ class FallacyBenchmarkRunner:
         taxonomy_ref = []
         for node in self.taxonomy_data:
             pk = node.get("PK", "")
-            name = node.get("text_fr", node.get("nom_vulgarisé", ""))
+            name = _display_name(node)
             depth = node.get("depth", "")
             path = node.get("path", "")
             if name and pk:
