@@ -17,7 +17,7 @@ DEFAULT_PACKAGE_TO_MODULE_MAPPING: Dict[str, str] = {
     # 'project_core.pipelines': 'Project Core Pipelines', # Supprimé
     "argumentation_analysis.utils": "Argumentation Analysis Utilities",
     "argumentation_analysis.analytics": "Argumentation Analysis Analytics",
-    "argumentation_analysis.mocks": "Argumentation Analysis Mocks",
+    # 'argumentation_analysis.mocks': 'Argumentation Analysis Mocks', # Supprimé
     "argumentation_analysis.agents": "Argumentation Agents",
     "argumentation_analysis.services": "Argumentation Services",
     "argumentation_analysis.pipelines": "Argumentation Pipelines",
