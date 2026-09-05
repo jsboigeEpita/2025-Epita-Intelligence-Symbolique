@@ -2102,12 +2102,22 @@ _ABSENCE_KEYWORDS: Dict[str, Tuple[str, ...]] = {
     "bipolar_argumentation": ("soutien", "appui mutuel"),
 }
 
+# Domain-generic capability tokens that must never count as naming an axis —
+# every restitution sentence talks about "argumentation".
+_CAP_TOKEN_STOP_LIST = frozenset({"argumentation", "reasoning", "analysis"})
+
 # Phrases that mark a scope limitation being stated. Presence is necessary but
 # NOT sufficient: it must co-occur with a keyword of an actually-lost axis.
+# #2032 cross-review (corpus B): « n'a pas produit de résultat exploitable »
+# and « reste non concluable » are ordinary French limitation phrasings the
+# original table lacked — the gate returned False before the cue layer (which
+# would have matched « pondér ») ever ran.
 _SCOPE_LIMIT_MARKERS: Tuple[str, ...] = (
     "n'a pas abouti",
     "n'a pas pu",
     "n'a pas permis",
+    "n'a pas produit",
+    "non concluable",
     "non évalué",
     "pas été évalué",
     "pas été conduite",
@@ -2127,12 +2137,42 @@ def _narrative_states_scope_limit(
     costs a redundant sentence, a false positive costs exactly the defect this
     guards against — a conclusion that reads identically whether the run lost 0
     or 4 analytical axes (measured on three real corpora, #1605).
+
+    #2032: an axis the prose names by its LABEL counts as named. The label is
+    the French name the prompt itself instructs the LLM to use, so a compliant
+    closing sentence (« les relations de soutien… ne sont pas couvertes ») must
+    not trigger the fallback. The keyword table alone missed axes it does not
+    list (belief_revision) and paraphrases of listed ones — a false negative
+    that served the reader the same caveat three times.
     """
-    low = narrative.lower()
+    # #2032, the measured root cause: French LLM prose writes the
+    # typographic apostrophe (U+2019 « n'a pas abouti ») while the marker
+    # table stores the straight one (U+0027) — no marker ever matched, the
+    # detector returned False on prose that HAD named the axis, and the
+    # reader got the deterministic scope note anyway. Normalise before
+    # matching.
+    low = narrative.lower().replace("’", "'")
     if not any(m in low for m in _SCOPE_LIMIT_MARKERS):
         return False
     for dim in absent:
-        if any(w in low for w in _ABSENCE_KEYWORDS.get(dim.capability, ())):
+        label = dim.label.lower()
+        # The label's core (before any parenthetical gloss) — prose names the
+        # axis by its name, not by the full label with its gloss.
+        label_core = label.split(" (")[0]
+        # Distinctive capability tokens (≥6 chars, domain-generic words
+        # excluded), truncated to their 6-char stem so the stem crosses the
+        # French/English spelling boundary: "bipolar"[:6] = "bipola" also
+        # matches "bipolaire". A technical paraphrase names the axis as
+        # surely as the label does.
+        cap_tokens = tuple(
+            t[:6]
+            for t in dim.capability.lower().split("_")
+            if len(t) >= 6 and t not in _CAP_TOKEN_STOP_LIST
+        )
+        cues = (
+            _ABSENCE_KEYWORDS.get(dim.capability, ()) + (label, label_core) + cap_tokens
+        )
+        if any(w in low for w in cues):
             return True
     return False
 
@@ -2426,9 +2466,14 @@ async def build_act3_conclusion(
             narrative = (
                 narrative.rstrip() + "\n\n" + _scope_note(evidence.absent_dimensions)
             )
-            degraded["act3_scope_note_appended"] = (
-                "La prose conduite ne rattachait aucune limitation aux axes "
-                "perdus — paragraphe de portée ajouté de façon déterministe."
+            # #2032: this is a pipeline event, not reader information — every
+            # key of ``degraded`` reaches the reader as a blockquote note, and
+            # a repair note telling the reader the renderer repaired something
+            # is machine voice. Logged (the trace surface), never rendered.
+            logger.info(
+                "act3 scope note appended deterministically: the conducted "
+                "prose named no limitation for the lost axes %s",
+                labels,
             )
 
     # #1605 — the blocking half. Runs BEFORE the §4 self-check so the gate reads

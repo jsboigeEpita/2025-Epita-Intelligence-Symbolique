@@ -236,6 +236,28 @@ class TestSurplus:
         )
         assert any("cycle" in s.statement for s in sal.surplus.established)
 
+    def test_structured_finding_cites_is_a_sequence_not_a_string(self):
+        """#2032: ``cites`` must be a sequence of anchor labels. A bare
+        parenthesised string made ``', '.join(cites)`` iterate the label
+        CHARACTER BY CHARACTER in the assembled Act III prompt (measured:
+        "ancres : l, ', a, r, g, u, m, e, n, t…"). The anchor reaches the
+        model whole or the entry's provenance is destroyed."""
+        finding = StructuredArgFinding(
+            capability="bipolar_argumentation",
+            label="les relations de soutien",
+            statement="un cycle de soutien (autorité circulaire)",
+        )
+        sal = cs.assess_conclusion_salience(
+            _settled_state(), structured_findings=[finding]
+        )
+        structured = [s for s in sal.surplus.established if "cycle" in s.statement]
+        assert structured, "the finding must be established surplus"
+        cites = structured[0].cites
+        assert isinstance(cites, tuple), f"cites must be a tuple, got {type(cites)}"
+        assert cites == ("les relations de soutien",)
+        # And the rendered anchor list is the label, once — never exploded.
+        assert ", ".join(cites) == "les relations de soutien"
+
     def test_llm_only_convergence_is_not_surplus(self):
         # fallacy + weak quality both flag arg_1 — two LLM labelling methods
         # agreeing is convergence, not zero-shot surplus (reader-chair).
