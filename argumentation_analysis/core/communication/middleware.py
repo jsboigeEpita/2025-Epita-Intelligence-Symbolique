@@ -520,6 +520,26 @@ class MessageMiddleware:
 
         return channel.get_channel_info()
 
+    def get_adapter(self, agent_id: str, level: AgentLevel):
+        """
+        Récupère l'adaptateur approprié pour un agent et un niveau donnés.
+
+        Args:
+            agent_id: Identifiant de l'agent
+            level: Niveau de l'agent (STRATEGIC, TACTICAL, OPERATIONAL)
+
+        Returns:
+            L'adaptateur approprié ou None si le niveau n'est pas reconnu
+        """
+        from .tactical_adapter import TacticalAdapter
+        from .operational_adapter import OperationalAdapter
+
+        if level == AgentLevel.TACTICAL:
+            return TacticalAdapter(agent_id, self)
+        elif level == AgentLevel.OPERATIONAL:
+            return OperationalAdapter(agent_id, self)
+        return None
+
     def initialize_protocols(self):
         """Initialise les protocoles de communication."""
         from .request_response import RequestResponseProtocol

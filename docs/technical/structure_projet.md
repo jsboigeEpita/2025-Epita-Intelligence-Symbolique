@@ -275,7 +275,7 @@ Le module `agents` contient les définitions spécifiques à chaque agent IA par
   - **Agent d'Extraction** (`agents/core/extract/`): Gère l'extraction et la réparation des extraits de texte.
 - **`agents/extract/`** : Module de redirection vers `agents/core/extract/` pour maintenir la compatibilité.
 - **`agents/tools/`** : Outils utilisés par les agents (ex: analyseur contextuel de sophismes, évaluateur de gravité, système d'encryption).
-- **`agents/utils/`** : Utilitaires spécifiques aux agents (ex: `informal_optimization/`).
+- **`agents/utils/`** : Utilitaires spécifiques aux agents (ex: `taxonomy_navigator.py`).
 - **`agents/data/`** : Données spécifiques aux agents (ex: `argumentum_fallacies_taxonomy.csv`).
 
 **Structure d'un agent (typique dans `agents/core/<type_agent>/`) :**
