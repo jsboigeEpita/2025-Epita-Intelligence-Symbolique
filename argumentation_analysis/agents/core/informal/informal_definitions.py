@@ -43,6 +43,7 @@ from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterM
 # Import de l'utilitaire de lazy loading pour la taxonomie
 from argumentation_analysis.core.utils.file_loaders import load_csv_file
 from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
+from argumentation_analysis.utils.taxonomy_local_overrides import purge_dataframe
 from argumentation_analysis.paths import DATA_DIR
 
 # Configuration du logging
@@ -126,6 +127,10 @@ class InformalAnalysisPlugin:
                 raise Exception(
                     f"Impossible de charger la taxonomie depuis {self._current_taxonomy_path}"
                 )
+
+            # #2036: local editorial-note purges — the vendored CSV stays a
+            # byte-faithful upstream mirror, fixes live in code.
+            purge_dataframe(df)
 
             self._logger.info(
                 f"Taxonomie chargée : {len(df)} entrées. Standardisation des types de clés..."

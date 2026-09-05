@@ -19,6 +19,8 @@ import time
 from dataclasses import dataclass, field, asdict
 from typing import Any, Dict, List, Optional
 
+from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
+
 logger = logging.getLogger("fallacy_benchmark")
 
 # ============================================================
@@ -524,7 +526,7 @@ class FallacyBenchmarkRunner:
             logger.error(f"Taxonomy not found: {self.taxonomy_path}")
             return []
         with open(self.taxonomy_path, "r", encoding="utf-8") as f:
-            return list(csv.DictReader(f))
+            return purge_rows(list(csv.DictReader(f)))
 
     def _get_family_for_pk(self, pk: str) -> str:
         """Get the root family name for a given PK."""
