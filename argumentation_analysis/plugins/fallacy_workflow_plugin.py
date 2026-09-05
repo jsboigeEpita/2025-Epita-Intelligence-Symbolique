@@ -39,6 +39,7 @@ from semantic_kernel.contents import (
 
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
+from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 from argumentation_analysis.plugins.identification_models import (
     IdentifiedFallacy,
     FallacyAnalysisResult,
@@ -243,7 +244,7 @@ class FallacyWorkflowPlugin:
             try:
                 with open(taxonomy_file_path, mode="r", encoding="utf-8") as infile:
                     reader = csv.DictReader(infile)
-                    data = list(reader)
+                    data = purge_rows(list(reader))
             except FileNotFoundError:
                 self.logger.error(f"Taxonomy file not found at {taxonomy_file_path}")
             except Exception as e:
