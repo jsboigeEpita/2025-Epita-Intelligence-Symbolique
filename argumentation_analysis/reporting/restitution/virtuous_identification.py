@@ -40,6 +40,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Mapping, Optional, Sequence
 
+from .fr_accord import accord
+
 # --- schema ---------------------------------------------------------------
 
 # The dataset carries prose under two coexisting schemas:
@@ -545,7 +547,7 @@ def detect_virtuous_mode(state: Any) -> VirtuousModeAssessment:
         reasons: List[str] = []
         if not low_fallacies:
             reasons.append(
-                f"{fallacy_count} sophisme(s) localisé(s) → ne titre pas sur les vertus"
+                f"{accord(fallacy_count, 'sophisme localisé', 'sophismes localisés')} → ne titre pas sur les vertus"
             )
         if not quality_present:
             reasons.append("aucune vertu mesurée (argument_quality_scores vide)")

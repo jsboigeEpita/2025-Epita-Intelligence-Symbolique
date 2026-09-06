@@ -193,7 +193,7 @@ class RestitutionReportRenderer:
             "Récit en trois actes (mise en situation → analyse narrative → "
             "conclusion actionnable). Les cadres formels et informels (Tweety, "
             "Dung/ASPIC, taxonomie, vertus) sont les *preuves* citées en appui "
-            "du récit, jamais une énumération (spec §4)."
+            "du récit, jamais une énumération."
         )
         parts.append("")
 
@@ -222,7 +222,7 @@ class RestitutionReportRenderer:
             "",
         ]
         if verdict.reasons:
-            lines.append("Contrôles structurels (règle de tissage, spec §4) :")
+            lines.append("Contrôles structurels (règle de tissage) :")
             lines.append("")
             for r in verdict.reasons:
                 lines.append(f"- {r}")

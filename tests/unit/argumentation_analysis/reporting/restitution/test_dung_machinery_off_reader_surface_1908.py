@@ -118,7 +118,14 @@ class TestAct2DungDigest:
         findings = _dung_findings(_state())
         assert findings, "a decodable graph with rejected args must yield a finding"
         text = findings[0].verdict + " " + findings[0].detail
-        for marker in ("acceptés [", "rejetés [", "attaques clés", "→", "retenu(s)", "rejeté(s)"):
+        for marker in (
+            "acceptés [",
+            "rejetés [",
+            "attaques clés",
+            "→",
+            "retenu(s)",
+            "rejeté(s)",
+        ):
             assert marker not in text, f"machinery marker leaked into body: {marker}"
 
     def test_noncanonical_english_never_reaches_body(self):
@@ -158,12 +165,8 @@ class TestSharedHelperDivergence:
         )
 
         assert act2_narrative_plugin.EPISTEMIC_CAVEAT is dung_reader.EPISTEMIC_CAVEAT
-        assert (
-            act2_narrative_plugin.REJECTED_MEANS is dung_reader.REJECTED_MEANS
-        )
-        assert (
-            act2_narrative_plugin.ACCEPTED_MEANS is dung_reader.ACCEPTED_MEANS
-        )
+        assert act2_narrative_plugin.REJECTED_MEANS is dung_reader.REJECTED_MEANS
+        assert act2_narrative_plugin.ACCEPTED_MEANS is dung_reader.ACCEPTED_MEANS
         assert act3_conclusion_plugin.REJECTED_MEANS is dung_reader.REJECTED_MEANS
 
 

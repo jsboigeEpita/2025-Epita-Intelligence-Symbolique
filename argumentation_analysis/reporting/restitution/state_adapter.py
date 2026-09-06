@@ -85,6 +85,12 @@ _STATE_KEYS = (
     # acts, so the key sits on BOTH surfaces — the ``synthese_globale`` row
     # attests that channel while this key itself stays un-counted.
     "workflow_results",
+    # #2046 decision: NO annexe table row — carried so the appendix's
+    # fabrication-notes section can archive the pipeline's self-diagnosis
+    # motifs (per-act readability self-checks, the historical repair note)
+    # that ``pipeline_adapter._read_act_degraded`` drops from the reader
+    # blockquote. Provenance stays complete; the reader surface stays clean.
+    "restitution_acts_degraded",
 )
 
 

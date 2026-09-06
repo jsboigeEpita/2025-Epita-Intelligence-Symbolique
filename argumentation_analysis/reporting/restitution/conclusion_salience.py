@@ -46,6 +46,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Iterable, List, Sequence, Tuple
 
+from .fr_accord import accord
 from .specialist_roles import (
     ROLE_CONTRADICTOIRE,
     ROLE_CORROBORANT,
@@ -252,7 +253,7 @@ def _assess_surplus(
             procedural.append(_truncate(role.statement, _STATEMENT_CAP))
     if counters_total:
         procedural.append(
-            f"les {counters_total} contre-argument(s) généré(s) et les labels de "
+            f"les {accord(counters_total, 'contre-argument généré', 'contre-arguments générés')} et les labels de "
             "sophisme localisés sont de la matière disponible — aucun n'a changé "
             "la conclusion interprétative par lui-même."
         )

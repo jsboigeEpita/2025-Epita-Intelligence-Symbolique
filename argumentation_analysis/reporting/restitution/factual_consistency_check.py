@@ -56,6 +56,7 @@ import re
 from typing import Any, List, Mapping, Optional
 
 from .appendix import _provenance_counts
+from .fr_accord import accord
 from .readability_gate import GateVerdict
 
 # Formal frameworks / external solvers that, when cited in the narrative, turn a
@@ -175,7 +176,8 @@ def check_factual_consistency(
     return GateVerdict(
         band="FAIL",
         reasons=[
-            f"Prose theatre (#1316) — {len(claims)} affirmation(s) du récit "
+            f"Prose theatre (#1316) — "
+            f"{accord(len(claims), 'affirmation du récit', 'affirmations du récit')} "
             f"cite(nt) un cadre formel (Tweety/Dung/ASPIC/…) comme autorité "
             f"d'une inconsistance que l'annexe ne soutient pas (axes formels : "
             f"inconsistance décidée = {supported}). La prose contredit les "

@@ -31,7 +31,6 @@ from argumentation_analysis.reporting.restitution.readability_gate import (
     ReadabilityGate,
 )
 
-
 # --- state stubs -------------------------------------------------------------
 
 
@@ -61,7 +60,10 @@ def _political_state() -> SimpleNamespace:
             "rhetorical_register": "délibératif",
             "discursive_arena": "politique",
             "stakes": [
-                {"stake_type": "décision", "description": "Mobiliser l'auditoire sur une décision controversée."},
+                {
+                    "stake_type": "décision",
+                    "description": "Mobiliser l'auditoire sur une décision controversée.",
+                },
             ],
             "stakeholders": [
                 {"role": "locuteur", "interest": "Faire adopter la décision."},
@@ -182,7 +184,10 @@ class TestGenreDerivation:
 
     def test_register_used_when_arena_absent(self):
         state = _state(
-            stakes_and_stakeholders={"rhetorical_register": "Délibératif", "discursive_arena": ""}
+            stakes_and_stakeholders={
+                "rhetorical_register": "Délibératif",
+                "discursive_arena": "",
+            }
         )
         genre, src = _derive_genre(state)
         assert genre == "délibératif"
@@ -245,7 +250,9 @@ class TestBuildEvidence:
 
 
 class TestPrivacy:
-    @pytest.mark.parametrize("deanonymized,expect_opaque", [(True, False), (False, True)])
+    @pytest.mark.parametrize(
+        "deanonymized,expect_opaque", [(True, False), (False, True)]
+    )
     def test_opaque_directive_gated_by_deanonymized(self, deanonymized, expect_opaque):
         # Epic #1258 / Track 1 #1259 — the opaque-ID directive is present only
         # when the working state is NOT deanonymized (False restores it
@@ -372,7 +379,10 @@ class TestConsumedByRenderer:
         report = render_restitution_report(acts)
         assert _WOVEN_FRAMING.splitlines()[0] in report.markdown
         # act2/act3 are missing → reported honestly, not silently dropped.
-        assert "indisponible" in report.markdown.lower() or "acte" in report.markdown.lower()
+        assert (
+            "indisponible" in report.markdown.lower()
+            or "acte" in report.markdown.lower()
+        )
 
 
 # ============================================================================

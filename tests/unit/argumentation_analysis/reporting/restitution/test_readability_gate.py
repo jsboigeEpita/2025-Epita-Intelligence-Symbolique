@@ -214,7 +214,8 @@ class TestTaxonomyCodeDetection:
         verdict = self.gate.check(acts)
         assert verdict.band == "WARN"
         assert verdict.passed is True
-        assert any("code(s) de taxonomie brut(s)" in r for r in verdict.reasons)
+        # #2046: the reason computes the agreement — 1 → singular.
+        assert any("1 code de taxonomie brut" in r for r in verdict.reasons)
 
     def test_three_codes_fail(self):
         # The July artifact's measured density (9) and September's (16) both
@@ -227,7 +228,8 @@ class TestTaxonomyCodeDetection:
         verdict = self.gate.check(acts)
         assert verdict.band == "FAIL"
         assert verdict.passed is False
-        assert any("3 code(s) de taxonomie brut(s)" in r for r in verdict.reasons)
+        # #2046: the reason computes the agreement — 3 → plural.
+        assert any("3 codes de taxonomie bruts" in r for r in verdict.reasons)
 
     def test_body_check_flags_leak_without_acts(self):
         from argumentation_analysis.reporting.restitution.readability_gate import (
