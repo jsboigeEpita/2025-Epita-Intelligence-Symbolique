@@ -972,19 +972,43 @@ def _write_aba_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
 
 
 def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
-    """Write ADF reasoning results to UnifiedAnalysisState (stored as Dung framework)."""
+    """Write ADF reasoning results to UnifiedAnalysisState (stored as Dung framework).
+
+    #2063: the handler (``adf_handler.analyze_adf``) returns
+    ``interpretations`` — never ``models``/``extensions`` (grep-verified, the
+    only producer) — so the old key pair stored ``[]`` on every run. The
+    provenance fields (``statistics``, ``degraded``, ``note``) ride the
+    strictly-additive ``formalism_specific`` sidecar on the ABA Wave-2 model
+    (#1648): the 12 readers of ``dung_frameworks`` are not migrated, a
+    reader that wants them reads ``entry["formalism_specific"]``.
+    """
     if not output or not isinstance(output, dict):
         return
     statements = output.get("statements", [])
-    models = output.get("models", output.get("extensions", []))
+    interpretations = output.get("interpretations", [])
     if not isinstance(statements, list):
         statements = []
-    state.add_dung_framework(
+    if not isinstance(interpretations, list):
+        interpretations = []
+    df_id = state.add_dung_framework(
         name=f"adf_{output.get('semantics', 'grounded')}",
         arguments=statements,
         attacks=[],
-        extensions={"adf_models": models},
+        extensions={"adf_models": interpretations},
     )
+    # #2063 sidecar: carry the provenance the handler supplied — presence of
+    # the key, not its truthiness, gates each field (``degraded: False`` is
+    # information; a handler that said nothing gets no fabricated entry).
+    sidecar: dict[str, Any] = {}
+    if "statistics" in output:
+        stats = output["statistics"]
+        sidecar["statistics"] = dict(stats) if isinstance(stats, dict) else stats
+    if "degraded" in output:
+        sidecar["degraded"] = bool(output["degraded"])
+    if "note" in output:
+        sidecar["note"] = str(output["note"])
+    if sidecar:
+        state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
 def _write_fact_extraction_to_state(

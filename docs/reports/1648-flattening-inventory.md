@@ -63,7 +63,7 @@ The container `state.dung_frameworks` is declared at
 | # | Module | Container | Writer (file:line) | Invoke (file:line) | Distinct info lost | Source vs re-read gap |
 |---|--------|-----------|--------------------|--------------------|--------------------|-----------------------|
 | 1 | **ABA** | `state.dung_frameworks` | `_write_aba_to_state` (`state_writers.py:831-845`) | `_invoke_aba` (`invoke_callables.py:3603-3646`) → `handler.analyze_aba_framework` (`agents/core/logic/aba_handler.py:59-128`) | **Contraries** (`Dict[str, str]` mapping assumption → contrary) consumed at `invoke_callables.py:3610,3640` but NEVER returned by handler (`aba_handler.py:115-125` returns `{semantics, extensions, assumptions, rules_count, statistics}` only). Also: ABA semantics is multi-extension (`preferred`/`stable`/`complete`/`well_founded`/`ideal`), the writer stores only ONE composite `{"aba_extensions": extensions}` key — distinct semantics names are collapsed into a single list. | **`attacks=[]` hard-coded** (`state_writers.py:843`). Native Dung `add_dung_framework` interprets empty attacks as "no attack relations" → extension trivially contains all arguments. See Section 2. |
-| 2 | **ADF** | `state.dung_frameworks` | `_write_adf_to_state` (`state_writers.py:848-861`) | `_invoke_adf` (`invoke_callables.py:3649-3668`) → `handler.analyze_adf` (`agents/core/logic/adf_handler.py:61-126`) | **Acceptance conditions** (the `Dict[str, str]` mapping `statement → "tautology"|"contradiction"|"negation:stmt"`). Consumed at `invoke_callables.py:3654,3662` (`_adf_conditions_from_context(args, context)`). The handler computes interpretations over the conditions but returns `{semantics, statements, interpretations, statistics}` — **conditions are NOT in the return dict** (loss at the handler level, not the writer). | **`attacks=[]` hard-coded** (`state_writers.py:859`). **Correct representation** for ADF: ADF has no binary attack relation, only acceptance conditions. See Section 2. Writer is technically correct; the real loss is the conditions themselves (the formalism's distinctive data). |
+| 2 | **ADF** | `state.dung_frameworks` | `_write_adf_to_state` (`state_writers.py:848-861`) | `_invoke_adf` (`invoke_callables.py:3649-3668`) → `handler.analyze_adf` (`agents/core/logic/adf_handler.py:61-126`) | **Acceptance conditions** (the `Dict[str, str]` mapping `statement → "tautology"|"contradiction"|"negation:stmt"`). Consumed at `invoke_callables.py:3654,3662` (`_adf_conditions_from_context(args, context)`). The handler computes interpretations over the conditions but returns `{semantics, statements, interpretations, statistics}` — **conditions are NOT in the return dict** (loss at the handler level). **#2063 correction (2026-09-06): writer-side loss too** — the writer read `models`/`extensions`, keys the handler never writes, so `extensions["adf_models"]` was `[]` on every run while `interpretations`/`statistics`/`degraded`/`note` went to the floor. Fixed: reads `interpretations`, provenance in the `formalism_specific` sidecar. | **`attacks=[]` hard-coded** (`state_writers.py:859`). **Correct representation** for ADF: ADF has no binary attack relation, only acceptance conditions. See Section 2. Writer is technically correct on `attacks=[]`; the conditions loss is upstream — and until #2063 the writer ALSO dropped the interpretations it received (phantom key). |
 | 3 | **SetAF** | `state.dung_frameworks` | `_write_setaf_to_state` (`state_writers.py:1199-1209`) | `_invoke_setaf` (`invoke_callables.py:4126-4180`) → `handler.analyze_setaf` (`agents/core/logic/setaf_handler.py:69-134`) | **Joint (set) attacks** — the native data structure `List[{attackers: List[str], target: str}]`. The handler returns them in `output["attacks"]` (line 123), but the writer hard-codes `attacks=[]` with comment "set attacks don't map to binary attacks" (`state_writers.py:1207`). The information exists in the invoke return; the writer explicitly drops it. | Writer synthesises the extensions dict as `{"setaf_extensions": [...]}`. Any reader looking for Dung-style `attacks` sees `[]` — silent lossy projection. See Section 2. |
 | 4 | **Weighted** | `state.dung_frameworks` | `_write_weighted_to_state` (`state_writers.py:1212-1226`) | `_invoke_weighted` (`invoke_callables.py:4183-4249`) → `handler.analyze_weighted_framework` (`agents/core/logic/weighted_handler.py:73-153`) | **Attack weights** — the handler returns `output["attacks"]` as `List[{source, target, weight}]` (line 139-141). The writer extracts only `[src, tgt]` (drops `weight`). **Also lost: `weight_statistics`** (the handler returns `min_weight`, `max_weight`, `avg_weight` at lines 130-134, never consumed). | Writer produces attacks as `[src, tgt]` pairs — a list-shape that downstream readers expect, but the weight is invisible. `weight_statistics` is computed at the handler but discarded at the writer. |
 | 5 | **Social** | `state.dung_frameworks` | `_write_social_to_state` (`state_writers.py:1229-1240`) | `_invoke_social` (`invoke_callables.py:4252-4277`) → `handler.analyze_social_framework` (`agents/core/logic/social_handler.py:56-133`) | **Per-argument social strength scores** (the `Dict[str, float]` of `model.get(arg)`) and **vote tallies** (`Dict[arg, (pos, neg)]`). Both are computed by the handler (`social_handler.py:113` for scores, line 89-92 for votes). The writer stores them only inside `extensions={"social_ranking": [...], "social_scores": {...}}` — opaque to readers that aggregate `attacks`. | Reader-visible shape: `attacks` preserved as `[src, tgt]` (good), but a reader iterating `attacks` cannot tell a social-vote weighted graph from a Dung binary graph. |
@@ -160,12 +160,15 @@ the interpretations computed from them). The handler returns
 `{semantics, statements, interpretations, statistics}` (`adf_handler.py:114-123`)
 — conditions are NOT returned.
 
-**The fix is not at the writer.** It is at the handler / invoke contract: the
-acceptance conditions should be returned (or at least the computed
-interpretations, which ARE returned). The writer could then either project the
-interpretations into a Dung-extension-equivalent (`extensions={"adf_models": ...}`
-is already there, line 860) **OR** a dedicated ADF container would carry the
-interpretations natively.
+**[Corrected 2026-09-06, #2063]** This section originally claimed "the fix is
+not at the writer" and that `extensions={"adf_models": ...}` was "already
+there". Both were wrong for the writer: it read `models`/`extensions` — keys
+the handler never writes — so `adf_models` was `[]` on every run while the
+interpretations (and `statistics`/`degraded`/`note`) went to the floor. The
+writer now reads `interpretations` and carries the provenance fields in a
+strictly-additive `formalism_specific` sidecar (ABA Wave-2 model — no dedicated
+container: a container without a reader is a self-made mode-1). The acceptance
+conditions themselves remain an upstream (handler) gap, unchanged.
 
 ### 2.3 SetAF — LOSS AT THE WRITER (handler returns attacks, writer drops them)
 
@@ -392,9 +395,10 @@ Before the remedy is applied, the issue body's DoD must be addressed:
    concrete number the coordinator wants.
 
 3. **`attacks=[]` for ABA/ADF tranché:**
-   - **ADF: correct (formally).** The fix is at the handler / writer level —
-     return / surface the acceptance conditions (or interpretations), not the
-     attack list.
+   - **ADF: correct (formally).** Interpretations surfacing is DONE writer-side
+     (#2063, 2026-09-06: phantom key `models`/`extensions` fixed, provenance in
+     the `formalism_specific` sidecar); the acceptance conditions remain a
+     handler-side gap. The attack list stays empty — by construction.
    - **ABA: real loss.** Contraries are upstream of the handler's return dict.
      Either the handler returns `contraries` (and the writer projects the
      contrary-derived attacks), OR a `formalism_specific.contraries` carries
