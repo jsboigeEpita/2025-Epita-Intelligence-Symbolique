@@ -160,9 +160,9 @@ class TestFolAxisStatusListShape:
         inconsistent = _fol_axis_status({"consistent": False, "formulas": ["a"]})
         assert degraded == {"consistent": None, "formules": 1}
         assert inconsistent == {"consistent": False, "formules": 1}
-        assert degraded["consistent"] is not inconsistent["consistent"], (
-            "a degraded axis reads as a decided inconsistency again (#1634)"
-        )
+        assert (
+            degraded["consistent"] is not inconsistent["consistent"]
+        ), "a degraded axis reads as a decided inconsistency again (#1634)"
 
 
 class TestModalAxisStatus:
@@ -194,11 +194,15 @@ class TestModalAxisStatus:
     def test_list_degraded_only_is_honest_unavailable(self):
         # ran but could not decide — NOT a bare "indisponible" (axis never ran)
         modal = [{"valid": None, "message": "unavailable:no-solver"}]
-        assert _modal_axis_status(modal) == "indisponible (aucun verdict décidé — dégradé)"
+        assert (
+            _modal_axis_status(modal) == "indisponible (aucun verdict décidé — dégradé)"
+        )
 
     def test_external_solver_mapping_shape(self):
         # SPASS external-solver path (state_writers external_valid)
-        status = _modal_axis_status({"external_solver": "spass", "external_valid": True})
+        status = _modal_axis_status(
+            {"external_solver": "spass", "external_valid": True}
+        )
         assert status == {"verdict": "décidé", "consistante": True}
 
     def test_empty_and_none_are_indisponible(self):

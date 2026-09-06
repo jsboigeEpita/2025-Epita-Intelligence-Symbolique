@@ -273,8 +273,9 @@ class TestActsConsumeTheHierarchy:
         assert evidence.role_assignments, "the classifier must run on the state"
         prompt = build_act2_prompt(evidence)
         assert "RÔLES DES RÉSULTATS DE SPÉCIALISTES" in prompt
-        assert "[DÉCISIF]" in prompt
-        assert "[CONTRADICTOIRE]" in prompt
+        # #2046: readable leads (label — statement), not bracket tags.
+        assert "Décisif — " in prompt
+        assert "Contradictoire — " in prompt
         assert "arg_7" in prompt
         assert "ancres" in prompt
 
@@ -289,13 +290,14 @@ class TestActsConsumeTheHierarchy:
         """
         violation = build_act2_prompt(build_act2_evidence(_violation_state()))
         settled = build_act2_prompt(build_act2_evidence(_settled_state()))
-        assert "[DÉCISIF]" in violation
-        assert "[CONTRADICTOIRE]" in violation
+        # #2046: readable leads carry the role; the tags are gone.
+        assert "Décisif — " in violation
+        assert "Contradictoire — " in violation
         assert "arg_9" in violation
-        assert "[DÉCISIF]" not in settled
-        assert "[CONTRADICTOIRE]" not in settled
-        assert "[CORROBORANT]" not in settled
-        assert "[NON-DISCRIMINANT]" in settled
+        assert "Décisif — " not in settled
+        assert "Contradictoire — " not in settled
+        assert "Corroborant — " not in settled
+        assert "Non discriminant — " in settled
         # the Dung-excluded argument keeps its corpus presence in both
         # states — only the ROLE line disappears (canary discipline).
         assert "arg_9" in settled
@@ -304,7 +306,7 @@ class TestActsConsumeTheHierarchy:
         prompt = build_act2_prompt(build_act2_evidence(_ns(_base())))
         assert "RÔLES DES RÉSULTATS DE SPÉCIALISTES" in prompt
         assert "aucun résultat de spécialiste" in prompt
-        assert "[DÉCISIF]" not in prompt
+        assert "Décisif" not in prompt  # #2046: no lead without a finding
 
     def test_prompt_section_stays_bounded(self):
         evidence = build_act2_evidence(_violation_state())

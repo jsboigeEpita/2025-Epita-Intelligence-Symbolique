@@ -18,6 +18,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, List, Mapping, Optional
 
+from .fr_accord import accord
+
 # Keys that carry corpus plaintext (directly or via derived fields). Stripped
 # defensively from any state dict before it is rendered into the appendix, even
 # when the caller asked for the full JSON. CLAUDE.md dataset-privacy rule.
@@ -481,18 +483,66 @@ def _dung_machinery_section(
                     lines.append(f"  - entrée brute : {entry[:120]}")
             else:
                 lines.append(
-                    f"- {len(raw)} entrée(s) non canonique(s) (textes bruts — "
-                    "affichées uniquement en mode complet)"
+                    f"- {accord(len(raw), 'entrée non canonique', 'entrées non canoniques')} "
+                    "(textes bruts — affichées uniquement en mode complet)"
                 )
         if fw_attacks:
+            # #2046: the join must not stack the segments' trailing periods
+            # with the separator (« .; » measured 165× on a real render) —
+            # each edge drops its final period, the list carries one at the end.
             edges = "; ".join(
-                f"{p[0]} → {p[1]}"
+                f"{p[0]} → {p[1]}".rstrip(".")
                 for p in fw_attacks
                 if isinstance(p, (list, tuple)) and len(p) >= 2
             )
             lines.append(f"- arêtes d'attaque : {edges}")
         lines.append("")
     return lines
+
+
+# #2046 — pipeline self-diagnosis motifs (the per-act readability self-checks,
+# the historical deterministic-repair note) belong to provenance, not to the
+# reader blockquote. The reader-side drop lives in ``pipeline_adapter`` with
+# the SAME key set: twin constants, file-disjoint by design (importing the
+# wiring module from here would close a renderer→appendix cycle) — the accord
+# between the two halves is pinned by test, like every twin in this package.
+_FABRICATION_NOTE_KEYS = frozenset(
+    {
+        "act1_framing_gate",
+        "act2_narrative_gate",
+        "act3_conclusion_gate",
+        "act3_scope_note_appended",
+    }
+)
+
+
+def _fabrication_notes_section(state: Mapping[str, Any]) -> List[str]:
+    """Render the self-diagnosis motifs as folded provenance (#2046)."""
+    rstd = state.get("restitution_acts_degraded")
+    notes: List[str] = []
+    if isinstance(rstd, dict):
+        for act_key in sorted(rstd):
+            motifs = rstd[act_key]
+            if not isinstance(motifs, dict):
+                continue
+            for motif_key in sorted(motifs):
+                if motif_key not in _FABRICATION_NOTE_KEYS:
+                    continue
+                text = str(motifs[motif_key]).strip()
+                if text:
+                    notes.append(f"- [{act_key} / {motif_key}] {text}")
+    if not notes:
+        return []
+    return [
+        "",
+        "### Notes de fabrication (autocontrôles et réparations)",
+        "",
+        "Notes internes du pipeline sur la fabrication du rapport — archivées "
+        "ici pour la traçabilité ; elles ne concernent pas le lecteur du récit.",
+        "",
+        *notes,
+        "",
+    ]
 
 
 def render_appendix(
@@ -553,6 +603,9 @@ def render_appendix(
     # #1908: the Dung machinery the narration references — same folded block,
     # after the dimensional table, before any opt-in full dump.
     lines.extend(_dung_machinery_section(state, include_full=include_full_state_json))
+
+    # #2046: the pipeline's self-diagnosis motifs — provenance, folded.
+    lines.extend(_fabrication_notes_section(state))
 
     if include_full_state_json:
         scrubbed = _strip_leak_keys(state)

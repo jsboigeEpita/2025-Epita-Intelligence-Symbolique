@@ -132,6 +132,11 @@ def _full_state() -> Dict[str, Any]:
 _UNRENDERED = frozenset(
     {
         "source_metadata",
+        # ``restitution_acts_degraded`` (#2046): carried so the appendix's
+        # fabrication-notes section (NOT a table row) can archive the
+        # pipeline's self-diagnosis motifs. A row counting motifs informs
+        # nobody; the folded subsection is the attestation.
+        "restitution_acts_degraded",
         # ``workflow_results`` left this set in #1911: the ``synthese_globale``
         # row now renders it (attested by its value-gates ledger, not by the
         # bag's generic content — the #1676 "a count of a bag informs nobody"

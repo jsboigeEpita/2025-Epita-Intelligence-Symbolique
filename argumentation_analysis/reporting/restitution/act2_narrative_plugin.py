@@ -49,6 +49,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     rejected_from_framework,
     select_primary_native,
 )
+from .fr_accord import accord
 from .global_projection import GlobalFinding, project_global_findings
 from .specialist_roles import (
     ROLE_LABELS,
@@ -60,6 +61,19 @@ from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
+
+# #2046 — the reader-facing lead for each finding kind. The bracket tag
+# (``[pl]``…) is internal vocabulary the conducted LLM recited verbatim into
+# prose (#2031's untreated brother channels); the readable name carries
+# instead — translate, never delete the axis identity.
+_KIND_READABLE = {
+    "pl": "logique propositionnelle",
+    "fol": "logique du premier ordre",
+    "modal": "logique modale",
+    "dung": "graphe de Dung (argumentation abstraite)",
+    "convergence": "convergence inter-axes",
+    "gate": "gate de synthèse",
+}
 
 # An async LLM callable: prompt in, completion text out (FB-29/38 injectable).
 LlmCallable = Callable[[str], Awaitable[str]]
@@ -801,10 +815,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 FormalFinding(
                     kind="pl",
                     verdict=(
-                        f"{inconsistent} inférence(s) PL inconsistantes sur "
-                        f"{consistent + inconsistent} vérifiée(s)"
+                        f"{accord(inconsistent, 'inférence PL inconsistante', 'inférences PL inconsistantes')} "
+                        f"sur {accord(consistent + inconsistent, 'vérifiée', 'vérifiées')}"
                         if inconsistent
-                        else f"{consistent} inférence(s) PL consistantes"
+                        else f"{accord(consistent, 'inférence PL consistante', 'inférences PL consistantes')}"
                     ),
                     detail="solveur Tweety (logique propositionnelle)",
                 )
@@ -823,10 +837,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 FormalFinding(
                     kind="fol",
                     verdict=(
-                        f"{inconsistent} théorie(s) FOL inconsistantes sur "
-                        f"{consistent + inconsistent} vérifiée(s)"
+                        f"{accord(inconsistent, 'théorie FOL inconsistante', 'théories FOL inconsistantes')} "
+                        f"sur {accord(consistent + inconsistent, 'vérifiée', 'vérifiées')}"
                         if inconsistent
-                        else f"{consistent} théorie(s) FOL consistantes"
+                        else f"{accord(consistent, 'théorie FOL consistante', 'théories FOL consistantes')}"
                     ),
                     detail="solveur Tweety (logique du premier ordre)",
                 )
@@ -889,10 +903,10 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                 FormalFinding(
                     kind="modal",
                     verdict=(
-                        f"{unsat} théorie(s) modales inconsistantes sur "
-                        f"{len(decided)} vérifiée(s)"
+                        f"{accord(unsat, 'théorie modale inconsistante', 'théories modales inconsistantes')} "
+                        f"sur {accord(len(decided), 'vérifiée', 'vérifiées')}"
                         if unsat
-                        else f"{sat} théorie(s) modales consistantes"
+                        else f"{accord(sat, 'théorie modale consistante', 'théories modales consistantes')}"
                     ),
                     detail="solveur modal (SPASS/Tweety)",
                 )
@@ -1071,9 +1085,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 faiblissent = [k for k in evaluated if a.virtues[k] <= 0.25]
                 lines.append(f"      Profil de vertus (caractère) : {vchar}.")
                 if evaluated:
+                    n_eval = len(evaluated)
                     observation = (
-                        f"      {len(evaluated)} dimension(s) sur "
-                        f"{_TOTAL_VIRTUES} étaient jugeables sur cet extrait"
+                        f"      {accord(n_eval, 'dimension', 'dimensions')} sur "
+                        f"{_TOTAL_VIRTUES} "
+                        f"{'était jugeable' if n_eval == 1 else 'étaient jugeables'} "
+                        f"sur cet extrait"
                     )
                     if tiennent:
                         observation += f" — tiennent : {', '.join(tiennent)}"
@@ -1131,12 +1148,16 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     # information already flows is #1019 read backwards.
     unattributed_block = ""
     if evidence.unattributed_fallacies:
+        n_unattr = evidence.unattributed_fallacies
+        il_fig = "Il ne figure" if n_unattr == 1 else "Ils ne figurent"
+        est_compte = "n'est pas compté" if n_unattr == 1 else "ne sont pas comptés"
         unattributed_block = (
-            f"DÉTECTIONS NON RATTACHÉES : {evidence.unattributed_fallacies} "
-            f"sophisme(s) détecté(s) sans argument cible résolvable. Ils ne "
-            f"figurent dans AUCUN mouvement ci-dessus et ne sont pas comptés "
+            f"DÉTECTIONS NON RATTACHÉES : "
+            f"{accord(n_unattr, 'sophisme détecté', 'sophismes détectés')} "
+            f"sans argument cible résolvable. {il_fig} "
+            f"dans AUCUN mouvement ci-dessus et {est_compte} "
             f"dans les dérapages localisés. Si tu les évoques, dis-le "
-            f"honnêtement — « non rattaché(s) à un argument identifié » — et "
+            f"honnêtement — sans argument cible identifié — et "
             f"ne leur invente NI cible NI mouvement d'accueil.\n\n"
         )
 
@@ -1144,7 +1165,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     formal_block = "AUCUN verdict formel vérifié dans le state."
     if evidence.formal_findings:
         formal_block = "\n".join(
-            f"  - [{f.kind}] {f.verdict} — ancrage : {f.detail}"
+            f"  - {_KIND_READABLE.get(f.kind, f.kind)} : {f.verdict} — ancrage : {f.detail}"
             for f in evidence.formal_findings
         )
 
@@ -1224,7 +1245,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         for a in evidence.role_assignments:
             if a.role == _role:
                 role_lines.append(
-                    f"  - [{ROLE_LABELS[_role]}] {a.statement} "
+                    f"  - {ROLE_LABELS[_role]} — {a.statement} "
                     f"(ancres : {', '.join(a.cites)})"
                 )
     roles_block = (
@@ -1240,7 +1261,8 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
     # is never read as a verdict.
     global_block = (
         "\n".join(
-            f"  - [{f.kind}] {f.statement} (ancres : {', '.join(f.cites)})"
+            f"  - {_KIND_READABLE.get(f.kind, f.kind)} — {f.statement} "
+            f"(ancres : {', '.join(f.cites)})"
             for f in evidence.global_findings
         )
         if evidence.global_findings
@@ -1295,11 +1317,12 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "extraits » pour la population du graphe — ce syntagme désigne "
         "l'inventaire complet de l'Acte I.\n"
         "- La hiérarchie RÔLES gouverne la citation d'un résultat de "
-        "spécialiste : un DÉCISIF doit changer ce que le récit conclut sur sa "
-        "cible ; un CORROBORANT appuie sans rien changer à lui seul ; un "
-        "CONTRADICTOIRE se dit comme une tension non résolue, jamais tranchée "
-        "en silence ; un NON-DISCRIMINANT ne peut JAMAIS être cité comme une "
-        "force ni une faiblesse — il a tourné sans rien distinguer.\n"
+        "spécialiste : un résultat décisif doit changer ce que le récit "
+        "conclut sur sa cible ; un résultat corroborant appuie sans rien "
+        "changer à lui seul ; un résultat contradictoire se dit comme une "
+        "tension non résolue, jamais tranchée en silence ; un résultat non "
+        "discriminant ne peut JAMAIS être cité comme une force ni une "
+        "faiblesse — il a tourné sans rien distinguer.\n"
         "- Si un mouvement n'a ni sophisme ni verdict formel (les soutiens), "
         "dis ce qui le tient (le caractère, la cohérence).\n"
         "- JARGON INTERNE INTERDIT dans la prose : ne recopie JAMAIS un "
@@ -1401,7 +1424,8 @@ async def build_act2_narrative(
     degraded: Dict[str, str] = {}
     if verdict.band != "PASS":
         degraded["act2_narrative_gate"] = (
-            f"Self-check §4 = {verdict.band}: " + "; ".join(verdict.reasons[:3])
+            f"Autocontrôle de lisibilité = {verdict.band}: "
+            + "; ".join(verdict.reasons[:3])
         )
     if not evidence.quality_axis_available:
         degraded["act2_narrative"] = (

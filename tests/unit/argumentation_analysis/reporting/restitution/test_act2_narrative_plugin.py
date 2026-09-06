@@ -209,7 +209,7 @@ class TestBuildEvidence:
         assert "pl" in kinds
         assert "dung" in kinds
         pl = next(f for f in ev.formal_findings if f.kind == "pl")
-        assert "inconsistantes" in pl.verdict
+        assert "inconsistante" in pl.verdict  # #2046: agreement computed (1 → singular)
 
 
 class TestFolHonestAbsent:
@@ -309,7 +309,9 @@ class TestReaderWriterContracts:
         ev = build_act2_evidence(state)
         pl = next((f for f in ev.formal_findings if f.kind == "pl"), None)
         assert pl is not None
-        assert "inconsistantes" in pl.verdict  # the False entry surfaces
+        assert (
+            "inconsistante" in pl.verdict
+        )  # the False entry surfaces (#2046: 1 → singular)
 
     def test_finding_c_pl_none_verdict_not_treated_as_inconsistent(self):
         # #1019: a None (unverified) verdict must NOT collapse to False.
@@ -328,7 +330,7 @@ class TestReaderWriterContracts:
         )
         ev = build_act2_evidence(state)
         pl = next((f for f in ev.formal_findings if f.kind == "pl"), None)
-        assert pl is not None and "consistantes" in pl.verdict
+        assert pl is not None and "consistante" in pl.verdict  # #2046: 1 → singular
 
     def test_finding_d_dung_semantics_parsed_from_name(self):
         # Writer folds semantics into name=verification_<sem>; no 'semantics' key.
@@ -1099,7 +1101,9 @@ class TestDungDetailPrivacy:
         assert "Annexe Dung[preferred]" in dung.detail
         assert "arg_" not in dung.detail
         # The appendix (engineering surface) reconstructs the canonical id/edge.
-        from argumentation_analysis.reporting.restitution.appendix import render_appendix
+        from argumentation_analysis.reporting.restitution.appendix import (
+            render_appendix,
+        )
 
         html = render_appendix({"dung_frameworks": _rich_state().dung_frameworks})
         assert "arg_2" in html
@@ -1152,9 +1156,10 @@ class TestUnattributedFallaciesReachTheReader:
         ev = build_act2_evidence(_state_with_unattributed(2))
         prompt = build_act2_prompt(ev)
         assert "NON RATTACHÉES" in prompt
-        assert "2 sophisme(s)" in prompt
+        assert "2 sophismes détectés" in prompt  # #2046: agreement computed
         # The honest wording the comment promised, now actually emitted.
-        assert "non rattaché(s) à un argument identifié" in prompt
+        # #2046: computed agreement — no « rattaché(s) » alternation.
+        assert "sans argument cible identifié" in prompt
 
     def test_silent_when_every_fallacy_is_attributed(self):
         """Anti-pendule: absence of unattributed detections is not a gap to fill.

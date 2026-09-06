@@ -345,7 +345,9 @@ class TestDetectVirtuousMode:
         # a virtue scored 0 is not "measured virtue" material
         s = _state(
             identified_arguments={"arg_1": "x"},
-            argument_quality_scores={"arg_1": {"overall": 0.0, "scores": {"clarte": 0.0}}},
+            argument_quality_scores={
+                "arg_1": {"overall": 0.0, "scores": {"clarte": 0.0}}
+            },
         )
         assert detect_virtuous_mode(s).quality_virtues_present is False
         assert detect_virtuous_mode(s).is_virtuous is False
@@ -356,7 +358,9 @@ class TestDetectVirtuousMode:
         s = _state(
             identified_arguments={"arg_1": leak},
             identified_fallacies={},
-            argument_quality_scores={"arg_1": {"overall": 5.0, "scores": {"clarte": 5.0}}},
+            argument_quality_scores={
+                "arg_1": {"overall": 5.0, "scores": {"clarte": 5.0}}
+            },
         )
         a = detect_virtuous_mode(s)
         assert leak not in a.reasoning

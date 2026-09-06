@@ -139,8 +139,12 @@ class TestActDegradationReachesTheReader:
 
     def test_mutating_the_state_changes_the_rendered_report(self):
         clean = self._rendered()
+        # #2046: a READER motif (the gate/self-check family now routes to the
+        # appendix's fabrication notes, pinned separately in
+        # test_reader_surface_vocabulary_2046) — this test pins the reader
+        # blockquote reach.
         degraded = self._rendered(
-            act3_conclusion={"act3_conclusion_gate": "G2 partiellement satisfaite"}
+            act3_conclusion={"act3_absent_dimensions": "G2 partiellement satisfaite"}
         )
         # The difference IS the property under test — not the presence alone.
         assert clean != degraded
@@ -150,6 +154,8 @@ class TestActDegradationReachesTheReader:
 
     def test_motifs_joined_sorted_by_motif_key(self):
         # Sorted, so the report never depends on a plugin's insertion order.
+        # #2046: the join drops each motif's final period and terminates the
+        # joined line — no « .; » stacking.
         acts = build_restitution_acts(
             _stub_state(
                 act3_conclusion=_ACT3,
@@ -158,7 +164,7 @@ class TestActDegradationReachesTheReader:
                 },
             )
         )
-        assert acts.degraded["act3_conclusion"] == "premier; dernier"
+        assert acts.degraded["act3_conclusion"] == "premier; dernier."
 
     def test_clean_act_is_absent_from_the_mapping(self):
         # Anti-pendule: nothing is degraded by default.
@@ -310,7 +316,8 @@ class TestRenderSpectacularRestitution:
 
         acts = build_restitution_acts(state)
 
-        assert acts.degraded["act2_narrative"] == "motif local plus précis"
+        # #2046: the join terminates the line with a single period.
+        assert acts.degraded["act2_narrative"] == "motif local plus précis."
         assert "synthetic-quota-error" in acts.degraded["act1_framing"]
 
     def test_gate_verdict_returned(self):

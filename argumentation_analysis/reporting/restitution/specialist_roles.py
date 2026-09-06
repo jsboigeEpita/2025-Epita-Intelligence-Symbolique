@@ -44,6 +44,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from .fr_accord import accord
+
 ROLE_DECISIF = "decisif"
 ROLE_CORROBORANT = "corroborant"
 ROLE_CONTRADICTOIRE = "contradictoire"
@@ -57,11 +59,14 @@ ROLE_ORDER = (
     ROLE_NON_DISCRIMINANT,
 )
 
+# #2046 — reader-facing leads, no bracket tags: the « [NON-DISCRIMINANT] »
+# notation read as machine output in the middle of a narrative. The label is
+# plain French now; the acts render it as a dash lead, never bracketed.
 ROLE_LABELS = {
-    ROLE_DECISIF: "DÉCISIF",
-    ROLE_CORROBORANT: "CORROBORANT",
-    ROLE_CONTRADICTOIRE: "CONTRADICTOIRE",
-    ROLE_NON_DISCRIMINANT: "NON-DISCRIMINANT",
+    ROLE_DECISIF: "Décisif",
+    ROLE_CORROBORANT: "Corroborant",
+    ROLE_CONTRADICTOIRE: "Contradictoire",
+    ROLE_NON_DISCRIMINANT: "Non discriminant",
 }
 
 # Bounded budget, same discipline as #1911: the hierarchy section must not
@@ -156,7 +161,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     if pl_counts["false"]:
         _add(
             ROLE_DECISIF,
-            f"L'axe PL a réfuté {pl_counts['false']} inférence(s) : la mise à "
+            f"L'axe PL a réfuté {accord(pl_counts['false'], 'inférence', 'inférences')} : la mise à "
             f"l'épreuve formelle établit qu'au moins une inférence testée ne "
             f"tient pas.",
             ("PL", "solveur Tweety"),
@@ -171,7 +176,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     if fol_counts["false"]:
         _add(
             ROLE_DECISIF,
-            f"L'axe FOL a réfuté {fol_counts['false']} théorie(s) : la mise à "
+            f"L'axe FOL a réfuté {accord(fol_counts['false'], 'théorie', 'théories')} : la mise à "
             f"l'épreuve formelle établit qu'au moins une théorie testée est "
             f"incohérente.",
             ("FOL", "solveur Tweety"),
@@ -184,7 +189,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     if modal_counts["false"]:
         _add(
             ROLE_DECISIF,
-            f"L'axe modal a réfuté {modal_counts['false']} théorie(s) : la mise "
+            f"L'axe modal a réfuté {accord(modal_counts['false'], 'théorie', 'théories')} : la mise "
             f"à l'épreuve formelle établit qu'au moins une théorie modale "
             f"testée est incohérente.",
             ("modal", "solveur modal"),
@@ -248,21 +253,21 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     if pl_counts["false"] == 0 and pl_counts["true"]:
         _add(
             ROLE_NON_DISCRIMINANT,
-            f"L'axe PL a vérifié {pl_counts['true']} inférence(s), toutes "
+            f"L'axe PL a vérifié {accord(pl_counts['true'], 'inférence', 'inférences')}, toutes "
             f"satisfaisables — le test ne distingue rien ici.",
             ("PL", "solveur Tweety"),
         )
     if fol_counts["false"] == 0 and fol_counts["true"]:
         _add(
             ROLE_NON_DISCRIMINANT,
-            f"L'axe FOL a vérifié {fol_counts['true']} théorie(s), toutes "
+            f"L'axe FOL a vérifié {accord(fol_counts['true'], 'théorie', 'théories')}, toutes "
             f"cohérentes — le test ne distingue rien ici.",
             ("FOL", "solveur Tweety"),
         )
     if modal_counts["false"] == 0 and modal_counts["true"]:
         _add(
             ROLE_NON_DISCRIMINANT,
-            f"L'axe modal a vérifié {modal_counts['true']} théorie(s), toutes "
+            f"L'axe modal a vérifié {accord(modal_counts['true'], 'théorie', 'théories')}, toutes "
             f"cohérentes — le test ne distingue rien ici.",
             ("modal", "solveur modal"),
         )

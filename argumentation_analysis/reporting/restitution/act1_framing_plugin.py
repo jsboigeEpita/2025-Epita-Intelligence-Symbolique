@@ -45,6 +45,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
 import yaml
 
+from .fr_accord import accord
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
@@ -483,7 +484,8 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
     else:
         spectrum_block = "\n".join(
-            f"  - {f.name_fr} — contexte(s) attendu(s) : {', '.join(f.matched_contexts)}"
+            f"  - {f.name_fr} — {accord(len(f.matched_contexts), 'contexte attendu', 'contextes attendus')} : "
+            f"{', '.join(f.matched_contexts)}"
             for f in evidence.expected_spectrum
         )
         spectrum_note = (
@@ -501,7 +503,10 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
     else:
         gt_block = "  (parties engagées non extraites — cadrage stratégique limité)"
-    gt_note = f"Inventaire argumentatif : {evidence.arg_count} argument(s) extrait(s)."
+    gt_note = (
+        f"Inventaire argumentatif : "
+        f"{accord(evidence.arg_count, 'argument extrait', 'arguments extraits')}."
+    )
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
@@ -628,8 +633,9 @@ async def build_act1_framing(
     verdict = gate.check_body(narrative)
     degraded: Dict[str, str] = {}
     if verdict.band != "PASS":
-        degraded["act1_framing_gate"] = f"Self-check §4 = {verdict.band}: " + "; ".join(
-            verdict.reasons[:3]
+        degraded["act1_framing_gate"] = (
+            f"Autocontrôle de lisibilité = {verdict.band}: "
+            + "; ".join(verdict.reasons[:3])
         )
     if not evidence.has_stakes:
         degraded["act1_framing"] = (

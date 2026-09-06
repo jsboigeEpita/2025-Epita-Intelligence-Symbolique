@@ -96,6 +96,22 @@ def _read_foundational_failure(state: Any) -> Optional[str]:
     return None
 
 
+# #2046 — pipeline self-diagnosis motifs leave the reader blockquote for the
+# appendix (per-act readability self-checks; the historical deterministic
+# repair note persisted by pre-#2035 states). Twin of
+# ``appendix._FABRICATION_NOTE_KEYS`` — file-disjoint by design (importing the
+# appendix from the wiring module would close a renderer→appendix cycle); the
+# accord between the two halves is pinned by test, like every twin here.
+_FABRICATION_NOTE_KEYS = frozenset(
+    {
+        "act1_framing_gate",
+        "act2_narrative_gate",
+        "act3_conclusion_gate",
+        "act3_scope_note_appended",
+    }
+)
+
+
 def _read_act_degraded(state: Any) -> Dict[str, str]:
     """Flatten ``state.restitution_acts_degraded`` into ``RestitutionActs.degraded``.
 
@@ -110,6 +126,13 @@ def _read_act_degraded(state: Any) -> Dict[str, str]:
 
     Motifs are joined sorted by motif key: a rendered report must not depend on
     the order in which a plugin happened to insert them.
+
+    #2046: the join must not stack each motif's final period with the
+    separator (« .; ») — one period is dropped per motif and the joined line
+    carries the terminal one. And the pipeline's self-diagnosis motifs (the
+    ``_FABRICATION_NOTE_KEYS`` family) stop reaching the reader here — the
+    appendix archives them (``appendix._fabrication_notes_section``), the
+    readable facts stay in the blockquote.
 
     Anti-pendule: an act with no motif stays absent from the mapping — nothing is
     degraded by default. An unexpected shape is *reported*, not silently dropped:
@@ -142,11 +165,16 @@ def _read_act_degraded(state: Any) -> Dict[str, str]:
                 type(motifs).__name__,
             )
             continue
-        text = "; ".join(
-            str(motifs[k]).strip() for k in sorted(motifs) if str(motifs[k]).strip()
-        )
+        parts = []
+        for k in sorted(motifs):
+            if k in _FABRICATION_NOTE_KEYS:
+                continue
+            motif = str(motifs[k]).strip()
+            if motif:
+                parts.append(motif[:-1] if motif.endswith(".") else motif)
+        text = "; ".join(parts)
         if text:
-            flattened[key] = text
+            flattened[key] = text + "." if not text.endswith((".", "!", "?")) else text
     return flattened
 
 

@@ -61,6 +61,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     decode_native_dung,
 )
 from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
+from .fr_accord import accord
 from .global_projection import GlobalFinding, project_global_findings
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
@@ -675,7 +676,10 @@ def _collect_weak_points(
         points.append(
             StructuringWeakPoint(
                 source="pl",
-                label=f"{pl_inc} inférence(s) propositionnelle(s) inconsistantes (solveur Tweety)",
+                label=(
+                    f"{accord(pl_inc, 'inférence propositionnelle inconsistante', 'inférences propositionnelles inconsistantes')} "
+                    f"(solveur Tweety)"
+                ),
                 target_arg_id="—",
             )
         )
@@ -683,7 +687,10 @@ def _collect_weak_points(
         points.append(
             StructuringWeakPoint(
                 source="fol",
-                label=f"{fol_inc} théorie(s) du premier ordre inconsistantes (solveur Tweety)",
+                label=(
+                    f"{accord(fol_inc, 'théorie du premier ordre inconsistante', 'théories du premier ordre inconsistantes')} "
+                    f"(solveur Tweety)"
+                ),
                 target_arg_id="—",
             )
         )
@@ -1036,7 +1043,7 @@ def _aspic_finding(state: Any) -> Optional[StructuredArgFinding]:
     tail = (
         ""
         if len(contested) <= _ASPIC_MEMBERS_SHOWN
-        else f" (et {len(contested) - len(shown)} autre(s))"
+        else f" (et {accord(len(contested) - len(shown), 'autre', 'autres')})"
     )
     return StructuredArgFinding(
         capability="aspic_plus_reasoning",
@@ -1237,7 +1244,8 @@ def _weighted_finding(state: Any) -> Optional[StructuredArgFinding]:
         capability="weighted_argumentation",
         label=_axis_label("weighted_argumentation"),
         statement=(
-            f"le cadre pondéré gradue {len(weights)} attaque(s) selon leur "
+            f"le cadre pondéré gradue "
+            f"{accord(len(weights), 'attaque', 'attaques')} selon leur "
             f"force (poids de {lo:.2f} à {hi:.2f}, moyenne {avg:.2f}) : "
             f"{flat}{tail}"
         ),
@@ -1334,16 +1342,19 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
     else:
         lead = (
             f"la rétractation minimale est de cardinal {card} — il faut renoncer "
-            f"à au moins {card} engagement(s) pour que le reste tienne"
+            f"à au moins {accord(card, 'engagement', 'engagements')} pour que le "
+            f"reste tienne"
         )
     parts: List[str] = [lead]
     if named:
         parts.append("le point de rupture porte sur : " + " | ".join(named))
     # B-3: the contradiction is confined — some beliefs survive every retraction.
     if untouched > 0:
+        survit = "survit intact" if untouched == 1 else "survivent intacts"
         parts.append(
-            f"la contradiction est confinée — {untouched} engagement(s) survivent "
-            "intact(s) : une contradiction réelle mais inerte, qui n'entraîne pas "
+            f"la contradiction est confinée — "
+            f"{accord(untouched, 'engagement', 'engagements')} {survit} : "
+            "une contradiction réelle mais inerte, qui n'entraîne pas "
             "la thèse"
         )
     return StructuredArgFinding(
@@ -1761,7 +1772,8 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         axes_missing = ", ".join(verdict.missing_axes) or "aucun"
         synthesis_block = (
             f"Bande de verdict : {verdict.band} "
-            f"(couverture analytique : {verdict.axes_count} axe(s) non-trivial(aux) "
+            f"(couverture analytique : "
+            f"{accord(verdict.axes_count, 'axe non-trivial', 'axes non-triviaux')} "
             f"sur 6).\n"
             f"  Axes touchés : {axes_present}.\n"
             f"  Axes manquants / non-concluables : {axes_missing}.\n"
@@ -2465,7 +2477,8 @@ async def build_act3_conclusion(
     gate_note = ""
     if failed_gates:
         gate_note = (
-            f"Gates G1–G4 : {', '.join(failed_gates)} non passé(s). La synthèse "
+            f"Gates G1–G4 : {', '.join(failed_gates)} "
+            f"{accord(len(failed_gates), 'non passé', 'non passés')}. La synthèse "
             "doit porter le wording de repli honnête (#1008 §3.3) — pas de "
             "verdict comparatif."
         )
@@ -2494,7 +2507,7 @@ async def build_act3_conclusion(
     if evidence.absent_dimensions:
         labels = ", ".join(d.label for d in evidence.absent_dimensions)
         degraded["act3_absent_dimensions"] = (
-            f"{len(evidence.absent_dimensions)} dimension(s) non évaluée(s) sur "
+            f"{accord(len(evidence.absent_dimensions), 'dimension non évaluée', 'dimensions non évaluées')} sur "
             f"ce corpus : {labels}."
         )
         if not _narrative_states_scope_limit(narrative, evidence.absent_dimensions):
@@ -2527,8 +2540,8 @@ async def build_act3_conclusion(
                 blocked, nothing_survived=not survivor
             )
             degraded["act3_claim_blocked"] = (
-                f"{len(blocked)} affirmation(s) retirée(s), sans support dans "
-                "l'état : "
+                f"{accord(len(blocked), 'affirmation retirée', 'affirmations retirées')}, "
+                "sans support dans l'état : "
                 + "; ".join(
                     f"{b.label} — « {_truncate(b.sentence, 90)} »" for b in blocked
                 )
@@ -2545,7 +2558,8 @@ async def build_act3_conclusion(
     verdict = gate.check_body(narrative)
     if verdict.band != "PASS":
         degraded["act3_conclusion_gate"] = (
-            f"Self-check §4 = {verdict.band}: " + "; ".join(verdict.reasons[:3])
+            f"Autocontrôle de lisibilité = {verdict.band}: "
+            + "; ".join(verdict.reasons[:3])
         )
     if gate_note:
         degraded["act3_conclusion_gates"] = gate_note

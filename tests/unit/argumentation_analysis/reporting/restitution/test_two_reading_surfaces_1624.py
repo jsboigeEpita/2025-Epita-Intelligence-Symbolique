@@ -239,6 +239,11 @@ ANNEXE_ONLY = frozenset(
         "final_conclusion",
         "formal_synthesis_reports",
         "narrative_synthesis",
+        # ``restitution_acts_degraded`` joined in #2046: the appendix's
+        # fabrication-notes section archives the pipeline's self-diagnosis
+        # motifs there; the prose modules never read the key (the reader-side
+        # drop lives in pipeline_adapter, the wiring module).
+        "restitution_acts_degraded",
         # ``workflow_results`` left this set in #1911: the global projection
         # (a prose module) reads the bag for the deep-synthesis value gates,
         # moving the key to the intersection (PROSE_BASELINE ∩ _STATE_KEYS).

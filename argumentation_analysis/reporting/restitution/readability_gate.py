@@ -47,6 +47,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from .acts import RestitutionActs
+from .fr_accord import accord
 
 # --- catalogues ---------------------------------------------------------------
 
@@ -417,8 +418,9 @@ class ReadabilityGate:
             if bare_lines:
                 preview = bare_lines[0][:90]
                 reasons.append(
-                    f"{title}: {len(bare_lines)} référence(s) de cadre « nue(s) » "
-                    f"(framework + score isolé, sans ancrage narratif — spec §4). "
+                    f"{title}: "
+                    f"{accord(len(bare_lines), 'référence de cadre « nue »', 'références de cadre « nues »')} "
+                    f"(framework + score isolé, sans ancrage narratif). "
                     f"Ex: « {preview} »."
                 )
 
@@ -429,7 +431,8 @@ class ReadabilityGate:
             total_taxcodes += len(act_codes)
             if act_codes:
                 reasons.append(
-                    f"{title}: {len(act_codes)} code(s) de taxonomie brut(s) "
+                    f"{title}: "
+                    f"{accord(len(act_codes), 'code de taxonomie brut', 'codes de taxonomie bruts')} "
                     f"en prose (adresse interne pointée, illisible pour le "
                     f"lecteur — #2031). Ex: « {act_codes[0]} »."
                 )
@@ -471,7 +474,7 @@ class ReadabilityGate:
             worst_band = _worsen(worst_band, "FAIL")
             reasons.append(
                 f"Corps: {len(bare_lines)} références de cadre nues (énumération "
-                f"manifeste, spec §4)."
+                f"manifeste)."
             )
         elif len(bare_lines) >= self.bare_warn_threshold:
             worst_band = _worsen(worst_band, "WARN")
@@ -493,7 +496,8 @@ class ReadabilityGate:
         elif len(body_codes) >= _TAXCODE_WARN_THRESHOLD:
             worst_band = _worsen(worst_band, "WARN")
             reasons.append(
-                f"Corps: {len(body_codes)} code(s) de taxonomie brut(s) résiduel(s)."
+                f"Corps: "
+                f"{accord(len(body_codes), 'code de taxonomie brut résiduel', 'codes de taxonomie bruts résiduels')}."
             )
 
         machinery = _count_machinery_dumps(body)
@@ -527,7 +531,7 @@ class ReadabilityGate:
                 reasons.append(
                     f"Reader-check (lecteur non-spécialiste) échoué sur "
                     f"{result.failed_questions}/{result.total_questions} "
-                    f"question(s) de compréhension."
+                    f"{accord(result.failed_questions, 'question de compréhension', 'questions de compréhension')}."
                 )
             else:
                 reasons.append(
