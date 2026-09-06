@@ -579,68 +579,12 @@ class TestRunOrchestrationPipeline:
         with pytest.raises(RuntimeError, match="non disponibles"):
             await _run_orchestration_pipeline("t", "c", "a", False, None, {})
 
-    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
-    async def test_selects_cluedo_for_mode(self):
-        import argumentation_analysis.pipelines.unified_pipeline as mod
-
-        mi = MagicMock()
-        mi.__class__.__name__ = "CluedoOrchestrator"
-        mi.orchestrate_investigation_analysis = AsyncMock(return_value={"r": 1})
-        with patch.object(
-            mod, "create_llm_service", return_value=MagicMock(), create=True
-        ), patch.object(
-            mod, "CluedoOrchestrator", MagicMock(return_value=mi), create=True
-        ):
-            r = await mod._run_orchestration_pipeline(
-                "text", "c", "cluedo", False, None, {"pipeline_results": {}}
-            )
-            assert "orchestration" in r["pipeline_results"]
-
-    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
-    async def test_selects_cluedo_for_keyword(self):
-        import argumentation_analysis.pipelines.unified_pipeline as mod
-
-        mi = MagicMock()
-        mi.__class__.__name__ = "CluedoOrchestrator"
-        mi.orchestrate_investigation_analysis = AsyncMock(return_value={"r": 1})
-        with patch.object(
-            mod, "create_llm_service", return_value=MagicMock(), create=True
-        ), patch.object(
-            mod, "CluedoOrchestrator", MagicMock(return_value=mi), create=True
-        ):
-            await mod._run_orchestration_pipeline(
-                "Le témoin de l'enquête",
-                "c",
-                "auto_select",
-                False,
-                None,
-                {"pipeline_results": {}},
-            )
-
-    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
-    async def test_selects_conversation_for_colon(self):
-        import argumentation_analysis.pipelines.unified_pipeline as mod
-
-        mi = MagicMock()
-        mi.__class__.__name__ = "ConversationOrchestrator"
-        mi.orchestrate_dialogue_analysis = AsyncMock(return_value={"r": 1})
-        with patch.object(
-            mod, "create_llm_service", return_value=MagicMock(), create=True
-        ), patch.object(
-            mod, "ConversationOrchestrator", MagicMock(return_value=mi), create=True
-        ):
-            await mod._run_orchestration_pipeline(
-                "Speaker: Hello",
-                "c",
-                "auto_select",
-                False,
-                None,
-                {"pipeline_results": {}},
-            )
-
-    # LogiqueComplexeOrchestrator + RealLLMOrchestrator tests removed (#885) —
-    # those orchestrators no longer exist; _run_orchestration_pipeline no longer
-    # dispatches to them.
+    # Cluedo/Conversation selection tests + LogiqueComplexe/RealLLM tests
+    # removed (#885, #1962) — those orchestrators never existed on this module
+    # (the import block targeted argumentation_analysis.orchestrators, a
+    # package that never was on disk), so the old tests mocked attributes
+    # with create=True that production could never bind; the dispatch tail is
+    # gone and _run_orchestration_pipeline now only fails loud above.
 
 
 class TestRunOriginalPipeline:
