@@ -199,6 +199,11 @@ PROSE_BASELINE = frozenset(
         "governance_decisions",
         "identified_arguments",
         "identified_fallacies",
+        # #1914 (Acte I slice) — ``build_act3_evidence`` reads the question
+        # the framing closed on (written by the act1 lanes) so the response
+        # beat answers it. A rendering-adjacent carrier, not an analytical
+        # dimension — but the prose surface reads it, so it belongs here.
+        "interpretive_question",
         "modal_analysis_results",
         "propositional_analysis_results",
         "source_metadata",
@@ -253,7 +258,17 @@ ANNEXE_ONLY = frozenset(
 # (all three acts read it) but it is a rendering flag — are entity names printed
 # in clear? — not an analytical dimension, so "disponible / mobilisée" has no
 # meaning for it. The justification lives at its site in ``state_adapter.py``.
-PROSE_ONLY = frozenset({"deanonymized"})
+PROSE_ONLY = frozenset(
+    {
+        "deanonymized",
+        # #1914 (Acte I slice) — the interpretive question the framing
+        # closed on. Same family as ``deanonymized``: a rendering carrier
+        # (posed by Acte I, answered by Acte III), not an analytical
+        # dimension, so an appendix "disponible / mobilisée" row has no
+        # meaning for it.
+        "interpretive_question",
+    }
+)
 
 
 def test_ast_prose_matches_baseline() -> None:

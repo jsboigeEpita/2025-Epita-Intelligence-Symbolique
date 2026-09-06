@@ -9284,6 +9284,9 @@ async def _invoke_act1_framing(
         "gate_band": gate_band,
         "degraded": bool(result.degraded),
         "degraded_reasons": dict(result.degraded),
+        # #1914 — the interpretive question the framing closed on; the act1
+        # state writer persists it onto the state for Acte III to read.
+        "interpretive_question": result.interpretive_question,
     }
 
 
