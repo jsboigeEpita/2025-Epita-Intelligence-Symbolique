@@ -12,7 +12,7 @@
 DemocraTech_Unified_Platform/
 ├── 🎯 Core Framework/
 │   ├── argumentation_analysis/                    # Framework principal agentic
-│   │   ├── orchestration/engine/main_orchestrator.py
+│   │   ├── run_orchestration.py
 │   │   ├── integrations/semantic_kernel_integration.py
 │   │   ├── services/jtms_service.py
 │   │   ├── agents/multi_agent_system.py

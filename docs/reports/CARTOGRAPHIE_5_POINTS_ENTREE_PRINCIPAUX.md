@@ -319,9 +319,9 @@ Demos specialisees pour le systeme d'agents Sherlock/Watson/Moriarty.
 
 ### Engine-Level Orchestrator
 ```
-argumentation_analysis/orchestration/engine/main_orchestrator.py
+argumentation_analysis/pipelines/orchestration/execution/engine.py
 ```
-Classe `MainOrchestrator` utilisee en interne par les strategies d'orchestration. Pas un point d'entree direct.
+Moteur d'execution des phases (`analyze_text_orchestrated`) utilise en interne par le pipeline unifie (`orchestration/unified_pipeline.py`). Pas un point d'entree direct.
 
 ### Validation Scripts
 ```
