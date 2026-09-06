@@ -35,7 +35,12 @@ class CyclicSelectionStrategy(SelectionStrategy):
         super().__init__()
         # Stockage direct dans __dict__ pour éviter les problèmes Pydantic
         self.__dict__["agents"] = agents
-        self.__dict__["agent_order"] = [agent.name for agent in agents]
+        # #1962 : repli défensif porté depuis la copie locale de
+        # cluedo_extended_orchestrator (un agent sans ``name`` retombe sur
+        # ``id``, jamais sur un AttributeError) — union des deux copies.
+        self.__dict__["agent_order"] = [
+            getattr(agent, "name", getattr(agent, "id", str(agent))) for agent in agents
+        ]
         self.__dict__["current_index"] = 0
         self.__dict__["adaptive_selection"] = adaptive_selection
         self.__dict__["turn_count"] = 0

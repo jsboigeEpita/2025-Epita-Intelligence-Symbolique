@@ -70,21 +70,16 @@ except ImportError as e:
     logging.warning(f"Pipeline original non disponible: {e}")
     ORIGINAL_PIPELINE_AVAILABLE = False
 
-# Imports des nouveaux orchestrateurs spécialisés
-try:
-    from argumentation_analysis.orchestrators.cluedo_orchestrator import (
-        CluedoOrchestrator,
-    )
-    from argumentation_analysis.orchestrators.conversation_orchestrator import (
-        ConversationOrchestrator,
-    )
-    # RealLLM and LogiqueComplexe removed (#885)
-    from argumentation_analysis.services.llm_service import create_llm_service
-
-    ORCHESTRATION_PIPELINE_AVAILABLE = True
-except ImportError as e:
-    logging.warning(f"Nouveaux orchestrateurs non disponibles: {e}")
-    ORCHESTRATION_PIPELINE_AVAILABLE = False
+# #1962 : le bloc d'import des « orchestrateurs spécialisés » visait
+# ``argumentation_analysis.orchestrators`` — un paquet qui n'a JAMAIS existé
+# sur disque. Le try/except échouait donc à chaque import (avec un warning
+# trompeur « non disponibles »), ORCHESTRATION_PIPELINE_AVAILABLE était
+# toujours False, et le mode "auto" dégradait silencieusement vers le
+# pipeline original. Les orchestrateurs réels vivent dans
+# ``argumentation_analysis/orchestration/`` (voir run_orchestration.py) ;
+# activer ce mode ici serait un changement de comportement, pas un cleanup —
+# le mode "orchestration" explicite reste refusé fail-loud ci-dessous.
+ORCHESTRATION_PIPELINE_AVAILABLE = False
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -256,7 +251,15 @@ def _detect_best_pipeline_mode(enable_orchestration: bool) -> str:
     """Détecte automatiquement le meilleur mode de pipeline."""
     if enable_orchestration and ORCHESTRATION_PIPELINE_AVAILABLE:
         return "orchestration"
-    elif ORIGINAL_PIPELINE_AVAILABLE:
+    if enable_orchestration:
+        # #1962 : la dégradation « auto » vers le pipeline original était
+        # silencieuse — le flag est documenté best-effort (« si disponible »),
+        # donc on dégrade, mais le fait est dit, pas tu.
+        logger.warning(
+            "Orchestration demandée (enable_orchestration=True) mais non "
+            "disponible — repli sur le pipeline original."
+        )
+    if ORIGINAL_PIPELINE_AVAILABLE:
         return "original"
     else:
         raise RuntimeError("Aucun pipeline disponible")
@@ -271,44 +274,28 @@ async def _run_orchestration_pipeline(
     results: Dict[str, Any],
     **kwargs,
 ) -> Dict[str, Any]:
-    """Exécute l'orchestration en sélectionnant un orchestrateur spécialisé."""
+    """Exécute l'orchestration en sélectionnant un orchestrateur spécialisé.
+
+    #1962 : le paquet ``argumentation_analysis.orchestrators`` visé par
+    l'ancien import n'a jamais existé — le mode "orchestration" explicite
+    est donc refusé fail-loud (jamais de dégradation silencieuse quand
+    l'appelant a nommé le mode). Les orchestrateurs réels vivent dans
+    ``argumentation_analysis/orchestration/`` (voir ``run_orchestration.py``).
+    """
     logger.info("[UNIFIED] Exécution via un orchestrateur spécialisé...")
 
     if not ORCHESTRATION_PIPELINE_AVAILABLE:
-        raise RuntimeError("Orchestrateurs spécialisés non disponibles.")
+        raise RuntimeError(
+            "Orchestrateurs spécialisés non disponibles "
+            "(argumentation_analysis.orchestrators n'existe pas — "
+            "utilisez run_orchestration.py pour l'orchestration réelle)."
+        )
 
-    llm_service = create_llm_service(use_mocks=use_mocks)
-    config = kwargs
-
-    # Logique de sélection de l'orchestrateur
-    orchestrator = None
-    if (
-        orchestration_mode == "cluedo"
-        or "enquête" in text.lower()
-        or "témoin" in text.lower()
-    ):
-        orchestrator = CluedoOrchestrator(llm_service, config)
-        analysis_method = orchestrator.orchestrate_investigation_analysis
-    elif orchestration_mode == "conversation" or ":" in text:
-        orchestrator = ConversationOrchestrator(llm_service, config)
-        analysis_method = orchestrator.orchestrate_dialogue_analysis
-    else:  # Fallback sur l'orchestrateur conversationnel générique
-        orchestrator = ConversationOrchestrator(llm_service, config)
-        analysis_method = orchestrator.orchestrate_dialogue_analysis
-
-    logger.info(f"Orchestrateur sélectionné: {orchestrator.__class__.__name__}")
-
-    # Exécution
-    orchestration_results = await analysis_method(text)
-
-    # Intégration des résultats
-    results["pipeline_results"]["orchestration"] = orchestration_results
-    results["specialized_orchestration"] = {
-        "orchestrator_used": orchestrator.__class__.__name__,
-        **orchestration_results,
-    }
-
-    return results
+    # Inatteignable tant que ORCHESTRATION_PIPELINE_AVAILABLE est False : la
+    # garde ci-dessus lève toujours. L'ancienne queue (sélection
+    # Cluedo/Conversation) référençait des noms jamais importés — code mort
+    # supprimé (#1962).
+    raise RuntimeError("Chemin d'orchestration non câblé.")
 
 
 async def _run_original_pipeline(

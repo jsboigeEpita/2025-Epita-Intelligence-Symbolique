@@ -22,19 +22,20 @@ La sélection entre ces modèles est dynamique, permettant au système de choisi
 
 ## Utilisation
 
-Le point d'entrée principal pour lancer une analyse via la ligne de commande est le module `argumentation_analysis.orchestration.engine.main_orchestrator`.
+Le point d'entrée principal pour lancer une analyse via la ligne de commande est le module `argumentation_analysis.main_orchestrator` (l'ancien `orchestration.engine.main_orchestrator`, doublon sans appelant production, a été supprimé — #1962).
 
 ### Commande d'Exécution
 
 Pour exécuter une analyse, utilisez la commande suivante à la racine du projet. Assurez-vous que votre environnement Python est correctement configuré et que les dépendances sont installées.
 
 ```bash
-python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "L'intelligence artificielle représente une avancée majeure pour l'humanité, mais elle soulève également des questions éthiques importantes concernant l'autonomie et la surveillance."
+python -m argumentation_analysis.main_orchestrator
 ```
 
 ### Arguments
 
-*   `--text` : (Requis) La chaîne de caractères contenant le texte que vous souhaitez analyser.
+*   `--skip-ui` : Saute l'interface utilisateur.
+*   `--text-file` : (Requis avec `--skip-ui`) Chemin vers un fichier texte à analyser.
 
 ## Configuration
 
@@ -55,10 +56,10 @@ Le moteur d'analyse s'appuie sur un système de logique formelle configurable. V
 **Exemple d'utilisation (PowerShell) :**
 ```powershell
 $env:ARG_ANALYSIS_SOLVER="prover9"
-python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "..."
+python -m argumentation_analysis.main_orchestrator
 ```
 
 **Exemple d'utilisation (Bash) :**
 ```bash
-ARG_ANALYSIS_SOLVER=prover9 python -m argumentation_analysis.orchestration.engine.main_orchestrator --text "..."
+ARG_ANALYSIS_SOLVER=prover9 python -m argumentation_analysis.main_orchestrator
 ```

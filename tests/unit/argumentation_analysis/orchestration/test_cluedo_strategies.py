@@ -1,5 +1,6 @@
 """
-Unit tests for argumentation_analysis/orchestration/cluedo_components/strategies.py
+Unit tests for argumentation_analysis/orchestration/strategies.py (#1962: repointed
+from the deleted cluedo_components copy — the two classes live only here now)
 
 Covers:
 - CyclicSelectionStrategy: init, cyclic next(), reset, fallback, adaptive, context injection
@@ -58,7 +59,7 @@ class TestCyclicSelectionStrategy:
     """Tests for CyclicSelectionStrategy."""
 
     def _make_strategy(self, agents=None, adaptive=False, oracle_state=None):
-        from argumentation_analysis.orchestration.cluedo_components.strategies import (
+        from argumentation_analysis.orchestration.strategies import (
             CyclicSelectionStrategy,
         )
 
@@ -194,7 +195,7 @@ class TestCyclicSelectionStrategy:
 
     async def test_apply_contextual_adaptations_returns_default(self):
         """Phase 1 implementation just returns the default agent."""
-        from argumentation_analysis.orchestration.cluedo_components.strategies import (
+        from argumentation_analysis.orchestration.strategies import (
             CyclicSelectionStrategy,
         )
 
@@ -243,7 +244,7 @@ class TestOracleTerminationStrategy:
     """Tests for OracleTerminationStrategy."""
 
     def _make_strategy(self, max_turns=15, max_cycles=5, oracle_state=None):
-        from argumentation_analysis.orchestration.cluedo_components.strategies import (
+        from argumentation_analysis.orchestration.strategies import (
             OracleTerminationStrategy,
         )
 
