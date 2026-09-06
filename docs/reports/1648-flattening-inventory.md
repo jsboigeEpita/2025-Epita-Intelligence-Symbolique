@@ -62,15 +62,15 @@ The container `state.dung_frameworks` is declared at
 
 | # | Module | Container | Writer (file:line) | Invoke (file:line) | Distinct info lost | Source vs re-read gap |
 |---|--------|-----------|--------------------|--------------------|--------------------|-----------------------|
-| 1 | **ABA** | `state.dung_frameworks` | `_write_aba_to_state` (`state_writers.py:831-845`) | `_invoke_aba` (`invoke_callables.py:3603-3646`) → `handler.analyze_aba_framework` (`agents/core/logic/aba_handler.py:59-128`) | **Contraries** (`Dict[str, str]` mapping assumption → contrary) consumed at `invoke_callables.py:3610,3640` but NEVER returned by handler (`aba_handler.py:115-125` returns `{semantics, extensions, assumptions, rules_count, statistics}` only). Also: ABA semantics is multi-extension (`preferred`/`stable`/`complete`/`well_founded`/`ideal`), the writer stores only ONE composite `{"aba_extensions": extensions}` key — distinct semantics names are collapsed into a single list. | **`attacks=[]` hard-coded** (`state_writers.py:843`). Native Dung `add_dung_framework` interprets empty attacks as "no attack relations" → extension trivially contains all arguments. See Section 2. |
-| 2 | **ADF** | `state.dung_frameworks` | `_write_adf_to_state` (`state_writers.py:848-861`) | `_invoke_adf` (`invoke_callables.py:3649-3668`) → `handler.analyze_adf` (`agents/core/logic/adf_handler.py:61-126`) | **Acceptance conditions** (the `Dict[str, str]` mapping `statement → "tautology"|"contradiction"|"negation:stmt"`). Consumed at `invoke_callables.py:3654,3662` (`_adf_conditions_from_context(args, context)`). The handler computes interpretations over the conditions but returns `{semantics, statements, interpretations, statistics}` — **conditions are NOT in the return dict** (loss at the handler level). **#2063 correction (2026-09-06): writer-side loss too** — the writer read `models`/`extensions`, keys the handler never writes, so `extensions["adf_models"]` was `[]` on every run while `interpretations`/`statistics`/`degraded`/`note` went to the floor. Fixed: reads `interpretations`, provenance in the `formalism_specific` sidecar. | **`attacks=[]` hard-coded** (`state_writers.py:859`). **Correct representation** for ADF: ADF has no binary attack relation, only acceptance conditions. See Section 2. Writer is technically correct on `attacks=[]`; the conditions loss is upstream — and until #2063 the writer ALSO dropped the interpretations it received (phantom key). |
-| 3 | **SetAF** | `state.dung_frameworks` | `_write_setaf_to_state` (`state_writers.py:1199-1209`) | `_invoke_setaf` (`invoke_callables.py:4126-4180`) → `handler.analyze_setaf` (`agents/core/logic/setaf_handler.py:69-134`) | **Joint (set) attacks** — the native data structure `List[{attackers: List[str], target: str}]`. The handler returns them in `output["attacks"]` (line 123), but the writer hard-codes `attacks=[]` with comment "set attacks don't map to binary attacks" (`state_writers.py:1207`). The information exists in the invoke return; the writer explicitly drops it. | Writer synthesises the extensions dict as `{"setaf_extensions": [...]}`. Any reader looking for Dung-style `attacks` sees `[]` — silent lossy projection. See Section 2. |
-| 4 | **Weighted** | `state.dung_frameworks` | `_write_weighted_to_state` (`state_writers.py:1212-1226`) | `_invoke_weighted` (`invoke_callables.py:4183-4249`) → `handler.analyze_weighted_framework` (`agents/core/logic/weighted_handler.py:73-153`) | **Attack weights** — the handler returns `output["attacks"]` as `List[{source, target, weight}]` (line 139-141). The writer extracts only `[src, tgt]` (drops `weight`). **Also lost: `weight_statistics`** (the handler returns `min_weight`, `max_weight`, `avg_weight` at lines 130-134, never consumed). | Writer produces attacks as `[src, tgt]` pairs — a list-shape that downstream readers expect, but the weight is invisible. `weight_statistics` is computed at the handler but discarded at the writer. |
-| 5 | **Social** | `state.dung_frameworks` | `_write_social_to_state` (`state_writers.py:1229-1240`) | `_invoke_social` (`invoke_callables.py:4252-4277`) → `handler.analyze_social_framework` (`agents/core/logic/social_handler.py:56-133`) | **Per-argument social strength scores** (the `Dict[str, float]` of `model.get(arg)`) and **vote tallies** (`Dict[arg, (pos, neg)]`). Both are computed by the handler (`social_handler.py:113` for scores, line 89-92 for votes). The writer stores them only inside `extensions={"social_ranking": [...], "social_scores": {...}}` — opaque to readers that aggregate `attacks`. | Reader-visible shape: `attacks` preserved as `[src, tgt]` (good), but a reader iterating `attacks` cannot tell a social-vote weighted graph from a Dung binary graph. |
-| 6 | **EAF (Epistemic)** | `state.dung_frameworks` | `_write_eaf_to_state` (`state_writers.py:1243-1252`) | `_invoke_eaf` (`invoke_callables.py:4317-4342`) → `handler.analyze_epistemic_framework` (`agents/core/logic/eaf_handler.py:71-130`) | **Epistemic beliefs** — the per-agent `Dict[agent, List[arg]]` mapping. Computed at `invoke_callables.py:4326` (`_eaf_beliefs_from_context`) and returned by the handler (`eaf_handler.py:118`). The writer discards them; only `extensions={"eaf_extensions": extensions}` survives. `statistics.agents_count` is computed (`eaf_handler.py:124`) and dropped. | Reader-visible shape: `attacks` preserved as `[src, tgt]` (good), but the EAF-specific epistemic dimension is invisible to readers that read `extensions["eaf_extensions"]` as a flat list of extensions. |
-| 7 | **DeLP** | `state.dung_frameworks` | `_write_delp_to_state` (`state_writers.py:1255-1265`) | `_invoke_delp` (`invoke_callables.py:4345-4384`) → `handler.analyze_delp` (`agents/core/logic/delp_handler.py:117-164`) | **The whole dialectical tree** (literal DeLP arguments with strict/defeasible rules, defeat relations, comparison criterion verdict). The handler returns `{program, program_size, criterion, query_results: [{query, answer, message}]}` — the writer stashes the query_results inside `extensions={"delp_query_results": ...}`. **Defeat relations between arguments are nowhere in the state** — DeLP's whole reason for existing. | **Both `arguments=[]` and `attacks=[]` hard-coded** (`state_writers.py:1262-1263`). Reader looking at `state.dung_frameworks["delp_analysis"]` sees an empty AF — the dialectical engine ran but the result is a single (answer, message) per query. |
-| 8 | **Dung-arbitration** (native Dung, less critical) | `state.dung_frameworks` | `_write_dung_arbitration_to_state` (`state_writers.py:1067-1125`) | `_invoke_dung_arbitration` (`invoke_callables.py:7974-8048`) → `arbitrate_detections` (logic-only, no JVM) | **Walton-Krabbe declared relations** and **same-span rivalry** (the attack-generation primitives at `invoke_callables.py:8028-8033`). The verdict survives as `attacks` + `extensions={"surviving_ids", "eliminated_ids", "honest_absent", "enabled", "input_count", "surviving_count"}` — comprehensive but inside a non-Dung semantics-keyed bag. | Honest projection (the verdict IS the format), but provenance ("how was the attack generated?") is lost — the `honest_absent` flag is preserved but the *reason* (no declared relations / no same-span rivalry) is not. |
-| 9 | **Dung-verification** (native Dung, less critical) | `state.dung_frameworks` | `_write_dung_extensions_to_state` (`state_writers.py:1037-1064`) | `_invoke_dung_extensions` (`invoke_callables.py:7057-7973`) | None — this IS the legitimate Dung writer; semantics keys match what readers expect. **NB**: it stores primary + additional semantics as separate `name=verification_<sem>` entries (line 1050, 1061). | None observed. Native Dung contract. |
+| 1 | **ABA** | `state.dung_frameworks` | `_write_aba_to_state` (`state_writers.py:831-845`) | `_invoke_aba` (`invoke_callables.py:3603-3646`) → `handler.analyze_aba_framework` (`agents/core/logic/aba_handler.py:59-128`) | **Contraries** (`Dict[str, str]` mapping assumption → contrary) consumed at `invoke_callables.py:3610,3640` but NEVER returned by handler (`aba_handler.py:115-125` returns `{semantics, extensions, assumptions, rules_count, statistics}` only). Also: ABA semantics is multi-extension (`preferred`/`stable`/`complete`/`well_founded`/`ideal`), the writer stores only ONE composite `{"aba_extensions": extensions}` key — distinct semantics names are collapsed into a single list. **[Corrected 2026-09-07, #1648 sonde]** The contraries claim is outdated on both halves: the handler DOES return `contraries` (measured payload key), and the Wave-2 sidecar carries `formalism_specific.contraries` value-equal into the state. Measured remaining losses: `rules_count` + `statistics` dropped at the writer; semantics still collapsed under the single `aba_extensions` key. | **`attacks=[]` hard-coded** (`state_writers.py:843`). Native Dung `add_dung_framework` interprets empty attacks as "no attack relations" → extension trivially contains all arguments. See Section 2. **[Corrected 2026-09-07, #1648 sonde]** Measured `attacks=[]` confirmed. |
+| 2 | **ADF** | `state.dung_frameworks` | `_write_adf_to_state` (`state_writers.py:848-861`) | `_invoke_adf` (`invoke_callables.py:3649-3668`) → `handler.analyze_adf` (`agents/core/logic/adf_handler.py:61-126`) | **Acceptance conditions** (the `Dict[str, str]` mapping `statement → "tautology"|"contradiction"|"negation:stmt"`). Consumed at `invoke_callables.py:3654,3662` (`_adf_conditions_from_context(args, context)`). The handler computes interpretations over the conditions but returns `{semantics, statements, interpretations, statistics}` — **conditions are NOT in the return dict** (loss at the handler level). **#2063 correction (2026-09-06): writer-side loss too** — the writer read `models`/`extensions`, keys the handler never writes, so `extensions["adf_models"]` was `[]` on every run while `interpretations`/`statistics`/`degraded`/`note` went to the floor. Fixed: reads `interpretations`, provenance in the `formalism_specific` sidecar. | **`attacks=[]` hard-coded** (`state_writers.py:859`). **Correct representation** for ADF: ADF has no binary attack relation, only acceptance conditions. See Section 2. Writer is technically correct on `attacks=[]`; the conditions loss is upstream — and until #2063 the writer ALSO dropped the interpretations it received (phantom key). **[Corrected 2026-09-07, #1648 sonde]** Post-#2063 behaviour now MEASURED end-to-end on the JVM path: `interpretations` reach `extensions.adf_models` value-equal, `statistics` reaches the `formalism_specific` sidecar, statements reach `arguments`; the `degraded`/`note` provenance keys are correctly absent on a non-degraded payload (presence-gated, nothing fabricated). Acceptance conditions confirmed absent from the handler return — the upstream gap stands. |
+| 3 | **SetAF** | `state.dung_frameworks` | `_write_setaf_to_state` (`state_writers.py:1199-1209`) | `_invoke_setaf` (`invoke_callables.py:4126-4180`) → `handler.analyze_setaf` (`agents/core/logic/setaf_handler.py:69-134`) | **Joint (set) attacks** — the native data structure `List[{attackers: List[str], target: str}]`. The handler returns them in `output["attacks"]` (line 123), but the writer hard-codes `attacks=[]` with comment "set attacks don't map to binary attacks" (`state_writers.py:1207`). The information exists in the invoke return; the writer explicitly drops it. **[Corrected 2026-09-07, #1648 sonde]** Outdated: the Wave-2 sidecar preserves them — measured `formalism_specific.set_attacks` value-equal with the handler's dict-shaped echo. Remaining measured losses: handler `statistics` dropped; `attacks=[]` by design. | Writer synthesises the extensions dict as `{"setaf_extensions": [...]}`. Any reader looking for Dung-style `attacks` sees `[]` — silent lossy projection. See Section 2. **[Corrected 2026-09-07, #1648 sonde]** Confirmed measured; #1698 retention counters (submitted/retained/dropped) DO reach the entry top-level. |
+| 4 | **Weighted** | `state.dung_frameworks` | `_write_weighted_to_state` (`state_writers.py:1212-1226`) | `_invoke_weighted` (`invoke_callables.py:4183-4249`) → `handler.analyze_weighted_framework` (`agents/core/logic/weighted_handler.py:73-153`) | **Attack weights** — the handler returns `output["attacks"]` as `List[{source, target, weight}]` (line 139-141). The writer extracts only `[src, tgt]` (drops `weight`). **Also lost: `weight_statistics`** (the handler returns `min_weight`, `max_weight`, `avg_weight` at lines 130-134, never consumed). **[Corrected 2026-09-07, #1648 sonde]** Both halves are outdated, and the measured loss is *worse* than described. On the real invoke→writer path the writer receives `attacks` as raw `(src, tgt, weight)` **triples**, not the handler's dicts: `_annotate_attack_retention` (#1698, `invoke_callables.py:3462`) overwrites the handler's dict-shaped echo with the filtered input triples. The writer's dict-only sanitiser then filters every triple out: measured state entry has `attacks=[]` (not even `[src, tgt]` pairs) and **no** `attack_weights` sidecar — the Wave-2 sidecar for Weighted is unreachable on the production path, Tweety-version-independent (the shape clobber is Python-side). `weight_statistics` IS consumed now (measured `formalism_specific.weight_statistics` value-equal). | Writer produces attacks as `[src, tgt]` pairs — a list-shape that downstream readers expect, but the weight is invisible. `weight_statistics` is computed at the handler but discarded at the writer. **[Corrected 2026-09-07, #1648 sonde]** Measured: pairs do NOT survive either (`attacks=[]`); only `weight_statistics` does. |
+| 5 | **Social** | `state.dung_frameworks` | `_write_social_to_state` (`state_writers.py:1229-1240`) | `_invoke_social` (`invoke_callables.py:4252-4277`) → `handler.analyze_social_framework` (`agents/core/logic/social_handler.py:56-133`) | **Per-argument social strength scores** (the `Dict[str, float]` of `model.get(arg)`) and **vote tallies** (`Dict[arg, (pos, neg)]`). Both are computed by the handler (`social_handler.py:113` for scores, line 89-92 for votes). The writer stores them only inside `extensions={"social_ranking": [...], "social_scores": {...}}` — opaque to readers that aggregate `attacks`. **[Corrected 2026-09-07, #1648 sonde]** Measured consistent: ranking + scores reach `extensions`, `attacks` preserved as pairs; raw **votes reach the state nowhere** (full-entry search) and `statistics` (voters count, handler) is dropped. No sidecar for Social. | Reader-visible shape: `attacks` preserved as `[src, tgt]` (good), but a reader iterating `attacks` cannot tell a social-vote weighted graph from a Dung binary graph. |
+| 6 | **EAF (Epistemic)** | `state.dung_frameworks` | `_write_eaf_to_state` (`state_writers.py:1243-1252`) | `_invoke_eaf` (`invoke_callables.py:4317-4342`) → `handler.analyze_epistemic_framework` (`agents/core/logic/eaf_handler.py:71-130`) | **Epistemic beliefs** — the per-agent `Dict[agent, List[arg]]` mapping. Computed at `invoke_callables.py:4326` (`_eaf_beliefs_from_context`) and returned by the handler (`eaf_handler.py:118`). The writer discards them; only `extensions={"eaf_extensions": extensions}` survives. `statistics.agents_count` is computed (`eaf_handler.py:124`) and dropped. **[Corrected 2026-09-07, #1648 sonde]** **NON MESURÉ** — the local probe runs Tweety 1.28 (see §1.5 env caveat) and `org.tweetyproject.arg.eaf` has **zero classes** in the 1.28 fat jar (measured `unzip -l | grep arg/eaf` = 0) — the module the fleet's 1.31 pin provides does not exist at 1.28. The writer structurally carries a `formalism_specific.epistemic_beliefs` sidecar (code-read, `state_writers.py:1664+`), but this site is **named non-measured, not counted preserved**. | Reader-visible shape: `attacks` preserved as `[src, tgt]` (good), but the EAF-specific epistemic dimension is invisible to readers that read `extensions["eaf_extensions"]` as a flat list of extensions. |
+| 7 | **DeLP** | `state.dung_frameworks` | `_write_delp_to_state` (`state_writers.py:1255-1265`) | `_invoke_delp` (`invoke_callables.py:4345-4384`) → `handler.analyze_delp` (`agents/core/logic/delp_handler.py:117-164`) | **The whole dialectical tree** (literal DeLP arguments with strict/defeasible rules, defeat relations, comparison criterion verdict). The handler returns `{program, program_size, criterion, query_results: [{query, answer, message}]}` — the writer stashes the query_results inside `extensions={"delp_query_results": ...}`. **Defeat relations between arguments are nowhere in the state** — DeLP's whole reason for existing. **[Corrected 2026-09-07, #1648 sonde]** Partially outdated: the Wave-2 sidecar preserves `delp_arguments` (program text, measured value-equal), `program_size` and `criterion`; `query_results` reach `extensions.delp_query_results`. The dialectical tree / defeat relations remain absent — confirmed measured. Handler `statistics` dropped. | **Both `arguments=[]` and `attacks=[]` hard-coded** (`state_writers.py:1262-1263`). Reader looking at `state.dung_frameworks["delp_analysis"]` sees an empty AF — the dialectical engine ran but the result is a single (answer, message) per query. **[Corrected 2026-09-07, #1648 sonde]** Measured `arguments=[]`, `attacks=[]` confirmed; program preserved only via the sidecar. |
+| 8 | **Dung-arbitration** (native Dung, less critical) | `state.dung_frameworks` | `_write_dung_arbitration_to_state` (`state_writers.py:1067-1125`) | `_invoke_dung_arbitration` (`invoke_callables.py:7974-8048`) → `arbitrate_detections` (logic-only, no JVM) | **Walton-Krabbe declared relations** and **same-span rivalry** (the attack-generation primitives at `invoke_callables.py:8028-8033`). The verdict survives as `attacks` + `extensions={"surviving_ids", "eliminated_ids", "honest_absent", "enabled", "input_count", "surviving_count"}` — comprehensive but inside a non-Dung semantics-keyed bag. | Honest projection (the verdict IS the format), but provenance ("how was the attack generated?") is lost — the `honest_absent` flag is preserved but the *reason* (no declared relations / no same-span rivalry) is not. **[Corrected 2026-09-07, #1648 sonde]** Measured (logic-only, no JVM): every verdict field reaches the state (`surviving_ids`, `eliminated_ids`, `attacks`, `honest_absent`, `enabled`, counts). Walton-Krabbe provenance untested by the probe — the probe supplied no declared relations, so the payload carried none; note the handler's `verdict` dict is written wholesale into `extensions`, so any provenance the handler DID emit would reach the state. |
+| 9 | **Dung-verification** (native Dung, less critical) | `state.dung_frameworks` | `_write_dung_extensions_to_state` (`state_writers.py:1037-1064`) | `_invoke_dung_extensions` (`invoke_callables.py:7057-7973`) | None — this IS the legitimate Dung writer; semantics keys match what readers expect. **NB**: it stores primary + additional semantics as separate `name=verification_<sem>` entries (line 1050, 1061). | None observed. Native Dung contract. **[Corrected 2026-09-07, #1648 sonde]** Confirmed measured on the JVM path: `semantics="multi"` produced 11 entries (primary + one `verification_<sem>` per semantics), `arguments`/`attacks`/`extensions` preserved, #1698 retention counters carried onto each entry. |
 
 ### 1.2 Sites writing to `state.fol_analysis_results`
 
@@ -80,7 +80,7 @@ The container `state.fol_analysis_results` is declared at
 
 | # | Module | Container | Writer (file:line) | Invoke (file:line) | Distinct info lost | Source vs re-read gap |
 |---|--------|-----------|--------------------|--------------------|--------------------|-----------------------|
-| 10 | **Description Logic (DL)** | `state.fol_analysis_results` | `_write_dl_to_state` (`state_writers.py:1144-1160`) | `_invoke_dl` (`invoke_callables.py:3971-4000`) → `handler.is_consistent` (`agents/core/logic/dl_handler.py:161-198`) | **The full DL ontology** — TBox (`List[Tuple[concept, equivalent_concept]]`), ABox concepts (`List[Tuple[individual, concept]]`), ABox roles (`List[Tuple[ind, role, ind]]`), and the **subsumption queries** (`query_subsumption` at `dl_handler.py:213`). The invoke receives them at `invoke_callables.py:3973-3975` and counts them in `tbox_size` / `abox_size` (`invoke_callables.py:3992-3993`), but the writer stores only `[f"DL: {message}"]` as `formulas` — sizes are dropped. | Writer synthesises a single fake-formula string `"DL: {message}"` (the consistency verdict's textual representation). Verdict (`consistent`) IS preserved correctly (None/True/False); the **structure** (TBox, ABox, subsumptions) is gone. **Survives honest-absent only by accident** — if `handler.is_consistent` raises, `_invoke_dl` raises `RuntimeError` and nothing is written (anti-#1019, good). But when `is_consistent` succeeds, the ontology disappears. |
+| 10 | **Description Logic (DL)** | `state.fol_analysis_results` | `_write_dl_to_state` (`state_writers.py:1144-1160`) | `_invoke_dl` (`invoke_callables.py:3971-4000`) → `handler.is_consistent` (`agents/core/logic/dl_handler.py:161-198`) | **The full DL ontology** — TBox (`List[Tuple[concept, equivalent_concept]]`), ABox concepts (`List[Tuple[individual, concept]]`), ABox roles (`List[Tuple[ind, role, ind]]`), and the **subsumption queries** (`query_subsumption` at `dl_handler.py:213`). The invoke receives them at `invoke_callables.py:3973-3975` and counts them in `tbox_size` / `abox_size` (`invoke_callables.py:3992-3993`), but the writer stores only `[f"DL: {message}"]` as `formulas` — sizes are dropped. **[Corrected 2026-09-07, #1648 sonde]** Outdated: the ontology DOES reach the state — the Wave-2 sidecar carries `formalism_specific.{tbox, abox_concepts, abox_roles}` measured value-equal (`input_ontology` re-emitted by the invoke). Measured remaining losses: `tbox_size`/`abox_size` and `statistics` dropped. | Writer synthesises a single fake-formula string `"DL: {message}"` (the consistency verdict's textual representation). Verdict (`consistent`) IS preserved correctly (None/True/False); the **structure** (TBox, ABox, subsumptions) is gone. **Survives honest-absent only by accident** — if `handler.is_consistent` raises, `_invoke_dl` raises `RuntimeError` and nothing is written (anti-#1019, good). But when `is_consistent` succeeds, the ontology disappears. **[Corrected 2026-09-07, #1648 sonde]** Measured: verdict + label preserved; structure preserved via sidecar; only sizes/statistics lost. |
 
 ### 1.3 Sites writing to `state.propositional_analysis_results`
 
@@ -90,9 +90,9 @@ The container `state.propositional_analysis_results` is declared at
 
 | # | Module | Container | Writer (file:line) | Invoke (file:line) | Distinct info lost | Source vs re-read gap |
 |---|--------|-----------|--------------------|--------------------|--------------------|-----------------------|
-| 11 | **Conditional Logic (CL)** | `state.propositional_analysis_results` | `_write_cl_to_state` (`state_writers.py:1163-1174`) | `_invoke_cl` (`invoke_callables.py:4003-4034`) → `handler.query` (`agents/core/logic/cl_handler.py:178-212`) | **The conditionals themselves** (the `ClBeliefSet` of `(conclusion | premise)` formulas). The invoke receives them at `invoke_callables.py:4005` (`conditionals = context.get("conditionals", [])`) and the handler parses them via `kb = handler.create_knowledge_base(conditionals)` (line 4017), but the writer stores only `[f"CL({num_conditionals} conditionals): {message}"]`. The count is in the formula string; the conditionals themselves are gone. CL's distinctive semantics (non-material conditionals, system-P/System-Z ranking) is invisible. | Writer synthesises a label `"CL(N conditionals): {msg}"` — the verdict (`entailed` → `satisfiable`) is preserved; structure is dropped. |
-| 12 | **SAT** | `state.propositional_analysis_results` | `_write_sat_to_state` (`state_writers.py:1177-1196`) | `_invoke_sat` (`invoke_callables.py:4037-4120`) | **MUS list** (in MUS mode): `output["mus_subsets"]` (line 4088). The writer preserves `mus_count` inside a label `"SAT/MUS: {n} minimal unsatisfiable subsets"` but the actual subsets are dropped. **In solve mode**, the model IS preserved (writer at line 1195 passes `model`). **Backend comparison** (`sat_backend_comparison`) is dropped (line 4119 builds it, writer never reads it). | In MUS mode: synthesises a label, drops the actual subsets. In solve mode: model preserved (writer at line 1195). |
-| 13 | **QBF** | `state.propositional_analysis_results` | `_write_qbf_to_state` (`state_writers.py:1268-1276`) | `_invoke_qbf` (`invoke_callables.py:4387-4415`) → `handler.analyze_qbf` (`agents/core/logic/qbf_handler.py:152-177`) | **Quantifiers** (the `List[{type: "forall"|"exists", vars: [...]}]` structure). The invoke receives them at `invoke_callables.py:4389`, the handler returns them at `qbf_handler.py:169` (`"quantifiers": quantifiers`), and **the writer drops them**. The whole point of QBF — alternating quantifiers over propositional matrix — is invisible. | Writer synthesises `[f"QBF: {formula}"]` from the formula string only. Verdict (`valid`) preserved; quantifier alternation lost. |
+| 11 | **Conditional Logic (CL)** | `state.propositional_analysis_results` | `_write_cl_to_state` (`state_writers.py:1163-1174`) | `_invoke_cl` (`invoke_callables.py:4003-4034`) → `handler.query` (`agents/core/logic/cl_handler.py:178-212`) | **The conditionals themselves** (the `ClBeliefSet` of `(conclusion | premise)` formulas). The invoke receives them at `invoke_callables.py:4005` (`conditionals = context.get("conditionals", [])`) and the handler parses them via `kb = handler.create_knowledge_base(conditionals)` (line 4017), but the writer stores only `[f"CL({num_conditionals} conditionals): {message}"]`. The count is in the formula string; the conditionals themselves are gone. CL's distinctive semantics (non-material conditionals, system-P/System-Z ranking) is invisible. **[Corrected 2026-09-07, #1648 sonde]** **NON MESURÉ** — under the local Tweety 1.28 the invoke raises `RuntimeError: Conditional Logic unavailable: JVM/Tweety required (too many values to unpack (expected 2))` with the JVM up: a 1.28-vs-1.31 API shape difference inside the handler. The writer structurally carries a `formalism_specific.conditionals` sidecar fed from `input_conditionals` (code-read, `state_writers.py:1461+`), but this site is **named non-measured, not counted preserved**. | Writer synthesises a label `"CL(N conditionals): {msg}"` — the verdict (`entailed` → `satisfiable`) is preserved; structure is dropped. |
+| 12 | **SAT** | `state.propositional_analysis_results` | `_write_sat_to_state` (`state_writers.py:1177-1196`) | `_invoke_sat` (`invoke_callables.py:4037-4120`) | **MUS list** (in MUS mode): `output["mus_subsets"]` (line 4088). The writer preserves `mus_count` inside a label `"SAT/MUS: {n} minimal unsatisfiable subsets"` but the actual subsets are dropped. **In solve mode**, the model IS preserved (writer at line 1195 passes `model`). **Backend comparison** (`sat_backend_comparison`) is dropped (line 4119 builds it, writer never reads it). **[Corrected 2026-09-07, #1648 sonde]** Solve mode measured against the real cadical backend: `satisfiable` + full `model` preserved; `statistics` (solver, num_clauses, solve_time) dropped at the writer — writer-side loss confirmed by re-read. MUS mode measured but **vacuous on this backend**: Z3-MARCO returned `mus_count=0, mus_subsets=[]` on three genuinely UNSAT inputs (`["p","~p"]`, `["p & ~p"]`, `["a | b","~a","~b"]`) — a handler-level anomaly worth its own look; the "subsets dropped" verdict stands only on the label evidence. `sat_backend_comparison` not elicited by the probe (single backend). | In MUS mode: synthesises a label, drops the actual subsets. In solve mode: model preserved (writer at line 1195). |
+| 13 | **QBF** | `state.propositional_analysis_results` | `_write_qbf_to_state` (`state_writers.py:1268-1276`) | `_invoke_qbf` (`invoke_callables.py:4387-4415`) → `handler.analyze_qbf` (`agents/core/logic/qbf_handler.py:152-177`) | **Quantifiers** (the `List[{type: "forall"|"exists", vars: [...]}]` structure). The invoke receives them at `invoke_callables.py:4389`, the handler returns them at `qbf_handler.py:169` (`"quantifiers": quantifiers`), and **the writer drops them**. The whole point of QBF — alternating quantifiers over propositional matrix — is invisible. **[Corrected 2026-09-07, #1648 sonde]** Outdated: quantifiers are NOT dropped — the Wave-2 sidecar carries `formalism_specific.qbf_quantifiers` (key name differs from the docstring's plain `quantifiers` — an inventory-by-name trap) measured value-equal. Measured remaining loss: `statistics` dropped. | Writer synthesises `[f"QBF: {formula}"]` from the formula string only. Verdict (`valid`) preserved; quantifier alternation lost. **[Corrected 2026-09-07, #1648 sonde]** Measured: `valid` → `satisfiable` + formula label + quantifiers preserved; only `statistics` lost. |
 
 ### 1.4 Count reconciliation (issue body says 11)
 
@@ -115,6 +115,132 @@ If the issue body's "11" excludes Dung-arbitration and Dung-verification, the
 count matches. If it includes both, the count is 13. The reader should treat
 "11" as the **strict** flatteners; the dispatcher should confirm with the
 coordinator.
+
+### 1.5 Probe verification (2026-09-07, #1648 DoD item 1)
+
+Every site above was re-derived by **executing** the real invoke, feeding its
+actual return dict to the real writer against a fresh `UnifiedAnalysisState`,
+then **reading the state back** and comparing field by field. Verdicts quoted
+in the `[Corrected 2026-09-07, #1648 sonde]` annotations come from these runs.
+The payload shown is the invoke's returned dict (never re-copied from its
+source code), and "preserved" always means *read back from the state object*.
+
+**Method.** Per site: `asyncio.run(<real _invoke_*>)` with a synthetic context
+supplying the translator-produced keys (opaque ids only — `asm_a`, `arg1`,
+`tom`/`jerry`; no corpus text), then the real `_write_*_to_state(output,
+state, ctx)`, then re-read `state.dung_frameworks` / `state.fol_analysis_results`
+/ `state.propositional_analysis_results`. The initializer warmup follows the
+production contract (#1784) — note sites 1-2 (`_invoke_aba`, `_invoke_adf`)
+predate #1784 and do **not** warm themselves: without the pipeline's warmup
+they fail with `JVMNotRunning` even on a JVM-capable machine. That is a
+call-order dependency worth its own issue.
+
+**Environment caveat (measured against Tweety 1.28, prod pins 1.31).**
+`jvm_setup` pins `1.31` (`config/settings.py` `JVMSettings.tweety_version`);
+this machine has only the 1.28 jars (no Maven to provision 1.31). The probe
+ran with `JVM_TWEETY_VERSION=1.28 JVM_TWEETY_LIBS_DIR=libs/java` (both are
+legitimate `JVM_`-prefixed settings overrides; `libs/java` holds the genuine
+fat jar, while `libs/tweety`'s 35 module jars all match the `-with-dependencies`
+name pattern and would fool `_build_tweety_classpath`'s fat-jar fast path into
+a one-jar classpath). The writer-contract questions this inventory asks —
+*which invoke keys reach the state* — are Python-side and version-independent;
+two sites are **not** measurable at 1.28 and are named below, never counted
+preserved.
+
+**Measured verdicts (11 of 13):**
+
+| Site | Verdict (re-read from state) |
+|---|---|
+| 1 ABA | `contraries` → `formalism_specific.contraries` (value-equal); extensions/arguments preserved; `rules_count`/`statistics` dropped; `attacks=[]` |
+| 2 ADF | `interpretations` → `extensions.adf_models` (value-equal); `statistics` → sidecar; conditions absent from handler return (upstream gap confirmed) |
+| 3 SetAF | `set_attacks` sidecar value-equal; `attacks=[]` by design; retention counters carried; `statistics` dropped |
+| 4 Weighted | **weights lost end-to-end**: `attacks=[]` in state, NO `attack_weights` sidecar (see below); `weight_statistics` sidecar value-equal |
+| 5 Social | ranking + scores → `extensions`; attacks preserved as pairs; **votes nowhere**; `statistics` dropped |
+| 7 DeLP | program/`program_size`/`criterion` → sidecar value-equal; `query_results` → extensions; defeat relations absent; `statistics` dropped |
+| 8 Arbitration | all verdict fields reach `extensions`; Walton-Krabbe provenance not elicited (no declared relations supplied) |
+| 9 Verification | 11 entries under `semantics="multi"`; arguments/attacks/extensions + retention counters preserved |
+| 10 DL | tbox/abox_concepts/abox_roles → sidecar value-equal; `tbox_size`/`abox_size`/`statistics` dropped |
+| 12 SAT | solve: `satisfiable`+`model` preserved, `statistics` dropped (cadical backend); MUS: count in label, subsets not in state — vacuous, see below |
+| 13 QBF | `qbf_quantifiers` sidecar value-equal; `valid`→`satisfiable`; `statistics` dropped |
+
+**NON MESURÉ (2 of 13), named per the dispatch contract:**
+
+- **Site 6 EAF** — `org.tweetyproject.arg.eaf` has zero classes in the 1.28
+  fat jar (`unzip -l | grep -c "arg/eaf"` = 0). The module exists only in the
+  versions the fleet's 1.31 pin provides.
+- **Site 11 CL** — with the JVM up, `_invoke_cl` raises
+  `RuntimeError: ... (too many values to unpack (expected 2))`: a 1.28-vs-1.31
+  API shape difference inside the CL handler.
+
+**Pasted probe output (key excerpts, verbatim).**
+
+Weighted — the production-path loss, invoke payload then state entry re-read:
+
+```
+[invoke] payload={"semantics": "grounded", "arguments": ["a", "b"], "attacks": [["a", "b", 0.7]], ...}
+  (handler built dicts {"source","target","weight"}; _annotate_attack_retention
+   #1698 invoke_callables.py:3462 overwrote output["attacks"] with the raw
+   input triples before the writer saw them)
+[state] entry={"name": "weighted_grounded", "arguments": ["a", "b"], "attacks": [],
+  "extensions": {"weighted_extensions": [[]]},
+  "formalism_specific": {"weight_statistics": {"min_weight": 0.7, "max_weight": 0.7, "avg_weight": 0.7}}, ...}
+[NO ] attack weights reach state
+[NO ] binary attack pairs reach state
+[YES] weight_statistics reach state  -> formalism_specific.weight_statistics
+```
+
+ABA — contraries preserved (contradicts the original row):
+
+```
+[invoke] payload={"semantics": "preferred", "extensions": [["asm_a", "asm_b"]],
+  "assumptions": ["asm_a", "asm_b"], "rules_count": 1,
+  "contraries": {"asm_a": "asm_b", "asm_b": "asm_a"}, "statistics": {...}}
+[state] entry={"name": "aba_preferred", "arguments": ["asm_a", "asm_b"], "attacks": [],
+  "extensions": {"aba_extensions": [["asm_a", "asm_b"]]},
+  "formalism_specific": {"contraries": {"asm_a": "asm_b", "asm_b": "asm_a"}}}
+[YES] contraries reach state  -> formalism_specific.contraries
+[NO ] rules_count/statistics reach state
+```
+
+SAT solve — writer-side `statistics` loss (real backend, not degraded):
+
+```
+[invoke] payload={"satisfiable": true, "model": {"p": true, "q": true, "~p": true, "r": true},
+  "statistics": {"solver": "cadical195", "num_clauses": 8, "num_variables": 6,
+                 "solve_time": 0.0015, "status": "SAT"}}
+[state] entry={"id": "pl_1", "formulas": ["SAT: SAT"], "satisfiable": true,
+  "model": {"p": true, "q": true, "~p": true, "r": true}}
+[YES] satisfiable reaches state   [YES] model reaches state
+[NO ] statistics reach state
+```
+
+QBF — quantifiers preserved under the renamed key:
+
+```
+[state] entry={"id": "pl_1", "formulas": ["QBF: p => q"], "satisfiable": true, "model": {},
+  "formalism_specific": {"qbf_quantifiers": [{"type": "forall", "vars": ["x"]},
+                                              {"type": "exists", "vars": ["y"]}]}}
+[YES] quantifiers reach state  -> formalism_specific.qbf_quantifiers
+```
+
+**New findings surfaced by the probe (not in the original inventory):**
+
+1. **Weighted Wave-2 sidecar is dead code on the production path.** The
+   handler returns `attacks` as `List[{source, target, weight}]` dicts
+   (`weighted_handler.py:139-141`), but `_annotate_attack_retention`
+   (#1698, `invoke_callables.py:3462`) overwrites `output["attacks"]` with the
+   filtered **input triples**, and the writer's dict-only sanitiser
+   (`state_writers.py:1600-1626`) then drops every triple. Net: neither the
+   binary pairs nor `attack_weights` ever reach the state, on any Tweety
+   version. (SetAF is unaffected: its input shape IS the dict shape.)
+2. **MUS backend anomaly.** Z3-MARCO returned `mus_count=0, mus_subsets=[]`
+   on three genuinely UNSAT inputs — the MUS-drop verdict above is label-only.
+3. **ABA/ADF call-order dependency.** `_invoke_aba`/`_invoke_adf` don't call
+   `ready_initializer()` (#1784 predates them); standalone invocation fails
+   with `JVMNotRunning` unless something else warmed the JVM first.
+4. **`statistics` is the systematic casualty** — dropped at the writer on
+   every site that emits one (ABA, SetAF, Weighted-aggregates-only, Social,
+   DeLP, DL, SAT, QBF).
 
 ---
 
@@ -194,6 +320,13 @@ loss. But the writer drops them entirely from the extensions dict too, so
 **The fix is structural.** A dedicated `set_attacks` field, or a
 `{"set_attacks": [...]}` key inside `extensions`, would preserve the data
 without breaking the Dung contract. Section 4 evaluates this option.
+
+> **[Corrected 2026-09-07, #1648 sonde]** The last two paragraphs are
+> historical: the Wave-2 sidecar shipped exactly this fix —
+> `entry["formalism_specific"]["set_attacks"]`, measured value-equal against
+> the handler's echo on the real invoke→writer path (§1.5). The joint attacks
+> are reachable from the state; only the binary `attacks=[]` projection
+> remains, by design.
 
 ### 2.4 DeLP — WHOLE FORMALISM IS GONE
 
@@ -388,6 +521,10 @@ Before the remedy is applied, the issue body's DoD must be addressed:
    one-shot test that diffs `invoke_output` against `state.<container>[<id>]`
    per capability and prints the gap. (This is the same anti-#1019 family as
    `feedback_injected_fakes_hide_real_shape_bugs.md`.)
+   **[Corrected 2026-09-07, #1648 sonde]** That one-shot diff has now been run
+   — 11 of 13 sites executed end-to-end (produce → write → re-read); verdicts
+   in §1.5, per-row corrections above. Two sites (EAF, CL) are non-measurable
+   on the local 1.28 jars and are named, not counted.
 
 2. **Reader impact measurement:** Section 3 inventories the readers. The
    **before/after** measurement on `pattern_mining.py:402-418` (`dung_unsupported`)
@@ -403,10 +540,19 @@ Before the remedy is applied, the issue body's DoD must be addressed:
      Either the handler returns `contraries` (and the writer projects the
      contrary-derived attacks), OR a `formalism_specific.contraries` carries
      them.
+     **[Corrected 2026-09-07, #1648 sonde]** Both halves are already true and
+     measured: the handler returns `contraries`, and the sidecar carries them
+     value-equal (§1.5). This bullet is resolved; the remaining ABA losses are
+     `rules_count`/`statistics`.
    - **SetAF: writer-side loss.** Handler returns the joint attacks. Fix is
      a `formalism_specific.set_attacks`.
+     **[Corrected 2026-09-07, #1648 sonde]** Shipped (Wave-2) and measured —
+     resolved.
    - **DeLP: structural.** A `formalism_specific` carrying the DeLP argument
      tree + defeat relations is the minimum viable preservation.
+     **[Corrected 2026-09-07, #1648 sonde]** Half-shipped and measured: the
+     sidecar carries the program text, `program_size` and `criterion`; defeat
+     relations remain absent.
 
 ---
 
