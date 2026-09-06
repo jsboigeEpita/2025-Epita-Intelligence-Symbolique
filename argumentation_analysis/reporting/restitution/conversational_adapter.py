@@ -124,6 +124,7 @@ async def generate_and_render_for_conversational_state(
             act1.status,
             getattr(act1, "degraded", None),
         )
+        _persist_interpretive_question(state, act1.interpretive_question)
     except Exception:  # noqa: BLE001 — one act failing must not abort the others
         logger.warning("Acte I framing failed (fail-loud, continuing): ", exc_info=True)
 
@@ -160,6 +161,31 @@ async def generate_and_render_for_conversational_state(
         )
 
     return render_spectacular_restitution(state, output_path=output_path)
+
+
+def _persist_interpretive_question(state: Any, question: str) -> None:
+    """Write the Acte I interpretive question onto the state (#1914).
+
+    The question is the carrier between the act that poses (Acte I closes on
+    the ``QUESTION INTERPRÉTATIVE`` marker line) and the act that answers
+    (``build_act3_evidence`` reads it back to bind the response beat). Empty
+    question = nothing persisted (honest absence); a state without the
+    attribute is skipped (logged), mirroring ``_persist_act``'s discipline.
+
+    **Twin**: ``state_writers._write_act1_framing_to_state`` writes the same
+    field on the pipeline lane — the two lanes must agree on the carrier.
+    """
+    if not question:
+        return
+    if not hasattr(state, "interpretive_question"):
+        logger.warning(
+            "State has no 'interpretive_question' attribute — question "
+            "dropped (%d chars)",
+            len(question),
+        )
+        return
+    setattr(state, "interpretive_question", question)
+    logger.info("Restitution interpretive question persisted (%d chars)", len(question))
 
 
 def _persist_act(

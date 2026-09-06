@@ -568,6 +568,12 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         # Empty until the act3_conclusion phase runs; the renderer reports the gap
         # honestly.
         self.act3_conclusion: str = ""
+        # #1914 — the interpretive question Acte I closes on (extracted from
+        # the narrative's marker line). Written by the act1 lanes, READ by
+        # build_act3_evidence so the conclusion's response beat answers the
+        # question the framing actually posed. Empty when Acte I posed none
+        # (no LLM / no marker line) — honest absence, never fabricated.
+        self.interpretive_question: str = ""
         # #1608 — per-act degradation motifs (the *why* an act ran degraded:
         # readability-gate band, virtuous-mode shift, etc.). The acts return
         # ``degraded`` as a dict of motifs (``ActNResult.degraded``); the act

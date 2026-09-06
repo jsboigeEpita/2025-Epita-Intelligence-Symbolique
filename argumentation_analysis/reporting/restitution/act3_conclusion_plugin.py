@@ -468,6 +468,11 @@ class Act3Evidence:
     # accompanying) + the zero-shot surplus split. None until
     # build_act3_evidence populates it (mirrors virtuous_mode).
     salience: Optional[ConclusionSalience] = None
+    # #1914 (Acte I slice) — the interpretive question the framing closed
+    # on, READ back from the state (written by both orchestration lanes
+    # after Acte I). Empty when Acte I posed none — honest absence; the
+    # prompt then forbids a retroactive question instead of fabricating one.
+    interpretive_question: str = ""
 
 
 @dataclass
@@ -1648,6 +1653,9 @@ def build_act3_evidence(state: Any) -> Act3Evidence:
         structured_findings=structured,
         global_findings=global_findings,
         salience=salience,
+        interpretive_question=str(
+            getattr(state, "interpretive_question", "") or ""
+        ).strip(),
     )
 
 
@@ -1944,6 +1952,22 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             "— n'en fabrique aucune)"
         )
 
+    # #1914 (Acte I slice) — the question the framing closed on. Rendered in
+    # BOTH states (#1941 discipline: a silence must never be misread) — when
+    # Acte I posed no question, the honest-absence wording renders and the
+    # consigne forbids inventing a retroactive one.
+    if evidence.interpretive_question:
+        question_block = (
+            f"  {evidence.interpretive_question}\n"
+            "  (posée par la mise en situation — cette conclusion doit y "
+            "répondre)"
+        )
+    else:
+        question_block = (
+            "  (aucune question interprétative n'a été posée en Acte I — "
+            "n'en fabrique pas une rétroactive)"
+        )
+
     # #1914 (Acte III slice) — the salience hierarchy. The structure carries
     # the ranking; the consigne binds the verdict beat to it. Renders in
     # both states so a silence is never read as a verdict.
@@ -2019,6 +2043,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
         f"[CE QUE LES CADRES STRUCTURÉS ÉTABLISSENT]\n{presence_block}\n\n"
         f"[CONVERGENCES GLOBALES — synthèse inter-axes, ancrées]\n{global_block}\n\n"
+        f"[LA QUESTION DE L'ACTE I — celle que la conclusion doit trancher]\n{question_block}\n\n"
         f"[HIÉRARCHIE DU VERDICT — ce qui porte la conclusion]\n{hierarchy_block}\n\n"
         f"[SURPLUS MULTI-AGENTS — au-delà d'une lecture simple]\n{surplus_block}\n\n"
         f"[DIMENSIONS NON ÉVALUÉES — à dire, jamais à taire]\n{absence_block}\n\n"
@@ -2068,6 +2093,12 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         "  l'accompagnement. Un label hors hiérarchie est du contexte : il peut\n"
         "  illustrer, jamais porter le verdict. Ne rejoue pas chaque label au\n"
         "  même niveau.\n"
+        "- QUESTION : si le bloc LA QUESTION DE L'ACTE I porte une question,\n"
+        "  le DEUXIÈME battement y répond EXPLICITEMENT : tranche-la au moyen\n"
+        "  de la hiérarchie du verdict (P1 d'abord), puis dis franchement ce\n"
+        "  qui reste ouvert. Une conclusion qui ne répond pas à la question\n"
+        "  posée en Acte I manque son objet. Si le bloc dit qu'aucune question\n"
+        "  n'a été posée, n'en formule pas une rétroactive.\n"
         "- QUATRE ORDRES DE JUGEMENT, jamais confondus : (1) VÉRITÉ FACTUELLE —\n"
         "  aucun axe de ce run ne l'établit : ne formule jamais qu'un propos est\n"
         "  factuellement vrai ou faux ; (2) ACCEPTABILITÉ ARGUMENTATIVE — ce que\n"

@@ -1914,6 +1914,16 @@ def _write_act1_framing_to_state(output: Any, state: Any, ctx: dict[str, Any]) -
     narrative = output.get("act1_framing", "")
     if isinstance(narrative, str) and narrative:
         state.act1_framing = narrative
+    # #1914 — the interpretive question the framing closed on rides the same
+    # output; persisted onto the state for build_act3_evidence to read (the
+    # carrier between the act that poses and the act that answers).
+    question = output.get("interpretive_question", "")
+    if (
+        isinstance(question, str)
+        and question
+        and hasattr(state, "interpretive_question")
+    ):
+        state.interpretive_question = question
     _persist_act_degraded_reasons(state, "act1_framing", output)  # #1608 motifs
 
 

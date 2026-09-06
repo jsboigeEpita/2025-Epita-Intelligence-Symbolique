@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
@@ -56,6 +57,17 @@ LlmCallable = Callable[[str], Awaitable[str]]
 _STAKE_CAP = 200
 _STAKEHOLDER_CAP = 120
 _META_CAP = 160
+# #1914 — cap for the extracted interpretive question (the carrier that
+# rides into the Acte III prompt): a runaway paragraph under the marker
+# must not balloon the conclusion's data block.
+_QUESTION_CAP = 400
+
+# #1914 — the closing marker line the conductor is instructed to emit, and
+# the extractor reads back. Markdown bold around it is tolerated.
+_QUESTION_LINE_RE = re.compile(
+    r"^\s*\**\s*QUESTION INTERPRÉTATIVE\s*[:：]\s*(.+?)\s*\**\s*$",
+    re.MULTILINE,
+)
 
 # Single source of truth: the taxonomy families YAML (same data the
 # TaxonomyExplorerPlugin loads). We read it directly to stay file-disjoint from
@@ -142,6 +154,12 @@ class Act1Result:
     # True when the framing was conducted with the virtuous anticipation shift
     # (spec §5): the spectrum is read as "what could derail but doesn't".
     is_virtuous: bool = False
+    # #1914 — the interpretive question the framing closes on, extracted
+    # from the marker line. Empty when the LLM emitted no marker or no LLM
+    # ran (honest absence — never a fabricated question). The orchestration
+    # lanes persist it onto the state; Acte III reads it back and binds its
+    # response beat to it.
+    interpretive_question: str = ""
 
 
 # --- taxonomy loader (minimal, file-disjoint) --------------------------------
@@ -300,9 +318,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
     metadata = getattr(state, "source_metadata", {}) or {}
     if not isinstance(metadata, dict):
         metadata = {}
-    metadata_view = {
-        str(k): _truncate(v, _META_CAP) for k, v in metadata.items() if v
-    }
+    metadata_view = {str(k): _truncate(v, _META_CAP) for k, v in metadata.items() if v}
 
     stakes_obj = getattr(state, "stakes_and_stakeholders", {}) or {}
     has_stakes = isinstance(stakes_obj, dict) and bool(
@@ -326,10 +342,7 @@ def build_act1_evidence(state: Any) -> Act1Evidence:
             if isinstance(sh, dict):
                 role = str(sh.get("role") or sh.get("name") or sh.get("id") or "")
                 interest = (
-                    sh.get("interest")
-                    or sh.get("description")
-                    or sh.get("stake")
-                    or ""
+                    sh.get("interest") or sh.get("description") or sh.get("stake") or ""
                 )
                 if role or interest:
                     stakeholders.append(
@@ -432,11 +445,11 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
 
     # --- Le texte (metadata) ---
     if evidence.metadata:
-        meta_block = "\n".join(
-            f"  - {k} : {v}" for k, v in evidence.metadata.items()
-        )
+        meta_block = "\n".join(f"  - {k} : {v}" for k, v in evidence.metadata.items())
     else:
-        meta_block = "  (aucune métadonnée renseignée — contexte limité au texte analysé)"
+        meta_block = (
+            "  (aucune métadonnée renseignée — contexte limité au texte analysé)"
+        )
 
     # --- Les enjeux ---
     if evidence.has_stakes:
@@ -488,9 +501,7 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         )
     else:
         gt_block = "  (parties engagées non extraites — cadrage stratégique limité)"
-    gt_note = (
-        f"Inventaire argumentatif : {evidence.arg_count} argument(s) extrait(s)."
-    )
+    gt_note = f"Inventaire argumentatif : {evidence.arg_count} argument(s) extrait(s)."
 
     opaque_block = f"{_OPAQUE_ID_DIRECTIVE}\n\n" if not evidence.deanonymized else ""
 
@@ -522,6 +533,16 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
         "- Pour le spectre, ancre chaque famille sur le contexte qui la rend\n"
         "  probable pour ce genre (ex. « dans un discours politique, l'appel à\n"
         "  l'autorité et l'attaque personnelle sont à guetter car… »).\n"
+        "- TERMINE l'Acte I en posant LA QUESTION INTERPRÉTATIVE de ce\n"
+        "  document : la question centrale que l'analyse (Acte II) instruit et\n"
+        "  que la conclusion (Acte III) devra trancher sur CE discours. Dérive-\n"
+        "  la des données vérifiées ci-dessus (genre, enjeux, parties engagées,\n"
+        "  spectre attendu) : elle doit être spécifique à ce document — une\n"
+        "  question réutilisable sur n'importe quel discours est un échec.\n"
+        "  Écris-la en DERNIÈRE ligne, au format exact :\n"
+        "  QUESTION INTERPRÉTATIVE : <la question en une phrase>\n"
+        "  Si des métadonnées manquent, ancre la question dans ce qui est\n"
+        "  vérifié ; n'invente JAMAIS de contexte pour la formuler.\n"
         "- Le récit doit VARIER selon le contenu réel ci-dessus : pas de prose\n"
         "  générique recyclable.\n"
         "- Rédige en français, markdown léger (titres thématiques en ###). "
@@ -532,9 +553,7 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
 # --- LLM-conducted weaving (fail-loud) ---------------------------------------
 
 
-async def weave_act1_framing(
-    evidence: Act1Evidence, llm_callable: LlmCallable
-) -> str:
+async def weave_act1_framing(evidence: Act1Evidence, llm_callable: LlmCallable) -> str:
     """Conduct the Acte I framing via the LLM (fail-loud, #1108)."""
     prompt = build_act1_prompt(evidence)
     try:
@@ -545,6 +564,20 @@ async def weave_act1_framing(
     if not raw:
         return ""
     return str(raw).strip()
+
+
+def _extract_interpretive_question(narrative: str) -> str:
+    """Extract the closing ``QUESTION INTERPRÉTATIVE :`` line (#1914).
+
+    The marker line stays in the narrative (the reader sees Acte I pose the
+    question); this reads it back into the structured carrier. Last
+    occurrence wins; no marker → empty string (honest absence — the carrier
+    never carries a fabricated question).
+    """
+    matches = _QUESTION_LINE_RE.findall(narrative or "")
+    if not matches:
+        return ""
+    return _truncate(matches[-1].strip().strip("*").strip(), _QUESTION_CAP)
 
 
 # --- orchestrator ------------------------------------------------------------
@@ -595,8 +628,8 @@ async def build_act1_framing(
     verdict = gate.check_body(narrative)
     degraded: Dict[str, str] = {}
     if verdict.band != "PASS":
-        degraded["act1_framing_gate"] = (
-            f"Self-check §4 = {verdict.band}: " + "; ".join(verdict.reasons[:3])
+        degraded["act1_framing_gate"] = f"Self-check §4 = {verdict.band}: " + "; ".join(
+            verdict.reasons[:3]
         )
     if not evidence.has_stakes:
         degraded["act1_framing"] = (
@@ -624,4 +657,5 @@ async def build_act1_framing(
         gate_verdict=verdict,
         degraded=degraded,
         is_virtuous=is_virtuous,
+        interpretive_question=_extract_interpretive_question(narrative),
     )
