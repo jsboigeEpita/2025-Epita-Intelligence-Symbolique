@@ -328,24 +328,27 @@ class TestSetafFlattening1648:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ADF — writer is correct (no binary attacks), but acceptance conditions
-# are lost upstream of the writer (Section 2.2). This test pins the
-# *current correct* behaviour on the writer and documents the upstream gap.
+# ADF — the writer read keys the handler never writes (#2063): ``models`` /
+# ``extensions`` vs the handler's ``interpretations``, so ``adf_models`` was
+# ``[]`` on every run. ``attacks=[]`` stays the correct projection (Section
+# 2.2, settled — do not reopen).
 # ─────────────────────────────────────────────────────────────────────────────
 
 
 class TestAdfFlattening1648:
     """ADF has no binary attacks — ``attacks=[]`` is the correct projection.
 
-    Section 2.2: the writer's ``attacks=[]`` is formally correct. The
-    distinctive ADF data (acceptance conditions, interpretations) is lost
-    upstream of the writer. This test pins the writer-side contract so a
-    future refactor that tries to "fix" ADF attacks breaks it visibly.
+    #2063: the writer used to read ``models``/``extensions`` — keys the
+    handler (``adf_handler.analyze_adf``) never writes — so
+    ``extensions["adf_models"]`` was ``[]`` on every run while the
+    interpretations went to the floor, along with ``statistics`` and the
+    honest-degradation flags. These tests assert VALUE: what the handler
+    produced must be read back from the state, and the provenance fields
+    must be reachable via the strictly-additive ``formalism_specific``
+    sidecar (the ABA Wave-2 model).
     """
 
-    def test_adf_attacks_stay_empty_and_acceptance_conditions_acknowledged(
-        self,
-    ) -> None:
+    def test_interpretations_are_read_back_by_value(self) -> None:
         state = _new_state()
         output = {
             "semantics": "grounded",
@@ -361,11 +364,85 @@ class TestAdfFlattening1648:
         assert (
             entry["attacks"] == []
         ), f"ADF writer unexpectedly produced attacks={entry['attacks']!r}"
-        # Distinct ADF data (interpretations) IS preserved via extensions.
-        # If a future refactor drops them, this assertion fires.
+        # Value, not presence: the handler's interpretations must be read
+        # back from the state. The old assertion tested key presence, which
+        # the writer satisfied with an empty list on this exact payload.
+        assert entry["extensions"].get("adf_models") == [
+            "{p=T,q=F}",
+            "{p=F,q=F}",
+        ], f"ADF writer dropped interpretations: extensions={entry['extensions']!r}"
+
+    def test_statistics_reach_the_state_via_sidecar(self) -> None:
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "statements": ["p", "q"],
+            "interpretations": ["{p=T,q=F}"],
+            "statistics": {
+                "statements_count": 2,
+                "conditions_count": 7,
+                "interpretations_count": 1,
+            },
+        }
+
+        _write_adf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        sidecar = entry.get("formalism_specific", {})
+        assert sidecar.get("statistics", {}).get("conditions_count") == 7, (
+            "ADF writer dropped statistics (conditions_count never reaches "
+            f"the state): formalism_specific={sidecar!r}"
+        )
+
+    def test_degraded_provenance_flags_reach_the_state(self) -> None:
+        # The handler's honest-degraded return (native SAT solver
+        # unavailable): degraded + note + statistics must be readable from
+        # the state, not swallowed with the interpretations.
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "statements": ["p"],
+            "interpretations": [],
+            "degraded": True,
+            "note": "ADF native SAT solver unavailable (see libs/native/README.md).",
+            "statistics": {
+                "statements_count": 1,
+                "conditions_count": 0,
+                "interpretations_count": 0,
+            },
+        }
+
+        _write_adf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        sidecar = entry.get("formalism_specific", {})
         assert (
-            "adf_models" in entry["extensions"]
-        ), f"ADF writer dropped interpretations: extensions={entry['extensions']!r}"
+            sidecar.get("degraded") is True
+        ), f"ADF writer dropped the degraded flag: formalism_specific={sidecar!r}"
+        assert sidecar.get("note") == (
+            "ADF native SAT solver unavailable (see libs/native/README.md)."
+        ), f"ADF writer dropped the note: formalism_specific={sidecar!r}"
+
+    def test_payload_without_interpretations_stores_empty_not_fabricated(
+        self,
+    ) -> None:
+        # Degenerate control: a payload carrying no interpretations and no
+        # provenance fields must store ``adf_models == []`` and attach NO
+        # sidecar — the writer neither invents data nor fabricates the
+        # provenance keys it was not given.
+        state = _new_state()
+        output = {
+            "semantics": "grounded",
+            "statements": ["p"],
+        }
+
+        _write_adf_to_state(output, state, {})
+
+        entry = next(iter(state.dung_frameworks.values()))
+        assert entry["extensions"].get("adf_models") == []
+        assert (
+            "formalism_specific" not in entry
+        ), f"ADF writer fabricated a sidecar: {entry.get('formalism_specific')!r}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
