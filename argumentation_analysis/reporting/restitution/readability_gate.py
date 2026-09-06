@@ -412,6 +412,14 @@ class ReadabilityGate:
                 worst_band = _worsen(worst_band, "FAIL")
                 continue
 
+            # (1b) degraded provenance — the act was emitted but its generator
+            # flagged it diminished; cite the stored motif, WARN not FAIL:
+            # degraded is a documented, still-readable mode (#2059).
+            motif = acts.degraded.get(acts.act_key(n), "")
+            if motif:
+                reasons.append(f"{title}: version dégradée — {motif}")
+                worst_band = _worsen(worst_band, "WARN")
+
             # (2) weaving — bare framework references per act
             bare_lines = [ln.strip() for ln in text.splitlines() if _line_is_bare(ln)]
             total_bare += len(bare_lines)
