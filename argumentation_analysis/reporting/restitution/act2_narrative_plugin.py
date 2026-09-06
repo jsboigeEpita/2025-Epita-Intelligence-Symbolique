@@ -50,6 +50,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
     select_primary_native,
 )
 from .fr_accord import accord
+from .formal_derivation import extract_tested_content
 from .global_projection import GlobalFinding, project_global_findings
 from .specialist_roles import (
     ROLE_LABELS,
@@ -224,6 +225,12 @@ class FormalFinding:
         str  # human-readable, e.g. "inconsistant (Tweety)", "rejet (Dung grounded)"
     )
     detail: str
+    # #1914 (constat 1, Acte II) : the derivation material — a bounded
+    # rendering of WHAT the axis actually tested, extracted from the record
+    # formulas. None = the decided records carry no real formula (placeholder
+    # counters) ; the weaving line then says so honestly instead of letting a
+    # bare count read as a proof.
+    tested: Optional[str] = None
 
 
 @dataclass
@@ -821,6 +828,12 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         else f"{accord(consistent, 'inférence PL consistante', 'inférences PL consistantes')}"
                     ),
                     detail="solveur Tweety (logique propositionnelle)",
+                    # #1914 : the refuted records' formulas are the derivation
+                    # (what failed) ; on an all-verified axis, a sample of what
+                    # passed. Placeholder-only records → None → honest absence.
+                    tested=extract_tested_content(
+                        pl, _pl_verdict, refuted=bool(inconsistent)
+                    ),
                 )
             )
 
@@ -843,6 +856,15 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         else f"{accord(consistent, 'théorie FOL consistante', 'théories FOL consistantes')}"
                     ),
                     detail="solveur Tweety (logique du premier ordre)",
+                    tested=extract_tested_content(
+                        fol,
+                        lambda r: (
+                            r.get("consistent")
+                            if isinstance(r.get("consistent"), bool)
+                            else None
+                        ),
+                        refuted=bool(inconsistent),
+                    ),
                 )
             )
         else:
@@ -909,6 +931,13 @@ def _collect_formal_findings(state: Any) -> List[FormalFinding]:
                         else f"{accord(sat, 'théorie modale consistante', 'théories modales consistantes')}"
                     ),
                     detail="solveur modal (SPASS/Tweety)",
+                    tested=extract_tested_content(
+                        modal,
+                        lambda r: (
+                            r.get("valid") if isinstance(r.get("valid"), bool) else None
+                        ),
+                        refuted=bool(unsat),
+                    ),
                 )
             )
         else:
@@ -1162,12 +1191,34 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         )
 
     # --- formal anchors (verified-in-state) ---
+    # #1914 (constat 1) : an anchor without its tested content reads as a
+    # badge — the reader cannot tell WHAT was tested. Each line now carries
+    # the derivation material (or its honest absence); the consigne below
+    # binds the conductor to weave testé → établi → conséquence.
     formal_block = "AUCUN verdict formel vérifié dans le state."
     if evidence.formal_findings:
-        formal_block = "\n".join(
-            f"  - {_KIND_READABLE.get(f.kind, f.kind)} : {f.verdict} — ancrage : {f.detail}"
-            for f in evidence.formal_findings
-        )
+        formal_lines = []
+        for f in evidence.formal_findings:
+            if f.kind in ("pl", "fol", "modal"):
+                # the solver-count findings are the badge surface — they carry
+                # the derivation (or its honest absence). Dung findings are
+                # NOT counters: their verdict sentence already IS a
+                # derivation (graph shape + consequence) — no marker there.
+                derivation = (
+                    f"testé : {f.tested}"
+                    if f.tested
+                    else "contenu testé non disponible dans l'état (compteur seul)"
+                )
+                formal_lines.append(
+                    f"  - {_KIND_READABLE.get(f.kind, f.kind)} : {f.verdict} — "
+                    f"{derivation} — ancrage : {f.detail}"
+                )
+            else:
+                formal_lines.append(
+                    f"  - {_KIND_READABLE.get(f.kind, f.kind)} : {f.verdict} — "
+                    f"ancrage : {f.detail}"
+                )
+        formal_block = "\n".join(formal_lines)
 
     # --- SV (#1182): délibération collective (governance + debate) ---
     # Both capabilities were completing in the 40 phases but invisible in the
@@ -1302,12 +1353,23 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         "l'argument, son caractère (vertus) si l'axe est disponible, ses dérapages "
         "(sophisme localisé + descente + contre-argument), et sa tenue formelle "
         "citée comme preuve.\n"
-        "- Le verdict formel (Tweety/Dung) appuie le battement — cite-le "
-        "EXACTEMENT tel que fourni dans TENUE FORMELLE ci-dessus, sans reformuler "
-        "ni inverter : si le verdict dit 'consistantes', écris 'cohérent/consistant', "
-        "JAMAIS 'inconsistant'. "
-        "INTERDIT de prétendre que Tweety confirme une 'inconsistance' si TENUE "
-        "FORMELLE ne contient pas le mot 'inconsistant'.\n"
+        "- Le verdict formel (Tweety/Dung) appuie le battement. Le MOT du "
+        "verdict se cite EXACTEMENT tel que fourni (si le verdict dit "
+        "'consistantes', écris 'cohérent/consistant', JAMAIS 'inconsistant' ; "
+        "INTERDIT de prétendre que Tweety confirme une 'inconsistance' si "
+        "TENUE FORMELLE ne contient pas le mot 'inconsistant') — mais la "
+        "LIGNE d'ancrage ne se recopie JAMAIS telle quelle dans le récit : "
+        "pas de guillemets-recopie de « … — ancrage : solveur … », la preuve "
+        "se tisse en prose.\n"
+        "- Un verdict formel cité dans le récit est une DÉRIVATION, pas un "
+        "badge : le lecteur doit recevoir CE QUI A ÉTÉ TESTÉ (le fragment "
+        "« testé : … » de TENUE FORMELLE, traduit dans tes mots en français "
+        "courant — jamais la formule brute ni les prédicats recopiés), "
+        "CE QUI A ÉTÉ ÉTABLI (la tenue ou l'échec), et CE QUE ÇA CHANGE "
+        "pour le jugement du mouvement concerné. "
+        "Si l'ancrage porte « contenu testé non disponible », dis-le tel quel : "
+        "un compteur sans contenu est une preuve procédurale, pas une "
+        "dérivation — INTERDIT de lui inventer une formule ou un contenu.\n"
         "  Pour Dung : le graphe est BÂTI à partir des arguments retenus "
         "pour le graphe (pas un oracle externe) — cadre-le comme une "
         "réorganisation du matériau extrait, pas comme une vérification "
