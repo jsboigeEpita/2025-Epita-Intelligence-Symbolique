@@ -657,19 +657,23 @@ class TestFileHandlerDefensiveGuard:
         assert len(plugin.logger.handlers) == handler_count_before
 
     async def test_string_none_no_file_created(
-        self, plugin, mock_llm_service, tmp_path
+        self, plugin, mock_llm_service, tmp_path, monkeypatch
     ):
         """Passing 'None' (string) must not create a file named 'None'."""
         mock_llm_service.get_chat_message_contents.side_effect = RuntimeError("stop")
         mock_llm_service.get_chat_message_content.side_effect = RuntimeError("stop")
+        # #2049 : "None" est un chemin RELATIF — un FileHandler fautif le
+        # résoudrait depuis le CWD du process, pas depuis tmp_path. On ancre
+        # la résolution dans tmp_path pour asserter exactement là où le
+        # fichier apparaîtrait si le garde manquait : ni vacante en CI
+        # (checkout neuf sans ./None) ni faux-rouge en local (résidu CWD).
+        monkeypatch.chdir(tmp_path)
 
         await plugin.run_guided_analysis(argument_text="text", trace_log_path="None")
 
-        none_file = tmp_path / "None"
-        # Also check CWD isn't polluted
-        import os
-
-        assert not os.path.exists("None"), "File named 'None' should not be created"
+        assert not (
+            tmp_path / "None"
+        ).exists(), "File named 'None' should not be created"
 
     async def test_empty_string_no_file_created(self, plugin, mock_llm_service):
         """Passing '' (empty string) must not create a file."""
