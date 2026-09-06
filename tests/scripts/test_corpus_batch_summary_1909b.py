@@ -28,12 +28,21 @@ Synthetic opaque identifiers only — no encrypted dataset, no LLM call.
 """
 
 import importlib.util
-import os
 from pathlib import Path
 
-os.environ.setdefault("OPAQUE_ID_SALT", "test-salt-1909b")
+import pytest
 
 from argumentation_analysis.evaluation.opaque_id import opaque_id
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_salt(monkeypatch):
+    """#2051 : le sel synthétique vivait en os.environ.setdefault au niveau
+    module — semé à l'import pour toute bande qui collecte ce fichier. En
+    fixture autouse, il est posé et retiré autour de CHAQUE test : même
+    valeur, zéro fuite vers les voisins de session."""
+    monkeypatch.setenv("OPAQUE_ID_SALT", "test-salt-1909b")
+
 
 SCRIPT = (
     Path(__file__).resolve().parents[2] / "scripts" / "dataset" / "run_corpus_batch.py"
