@@ -1140,8 +1140,13 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 # #2031: the dotted taxonomy address never enters the evidence
                 # — the reader gets the NAME (type + family); an internal
                 # address fed to the conducted LLM leaks into prose.
+                # #1914 (constat 4): the lead does not pre-judge — a joke, a
+                # slogan and a dehumanizing metaphor all exited this mold
+                # under the same attack word. The justification carries the
+                # device's discursive function; the consigne asks the
+                # conductor to name that function BEFORE judging fault.
                 lines.append(
-                    f"      Dérapage : « {fl.type} » (famille {fl.family}). "
+                    f"      Procédé : « {fl.type} » (famille {fl.family}). "
                     f"Justification : {fl.justification}"
                 )
             for ca in a.counter_args:
@@ -1350,9 +1355,20 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{quality_note}\n\n"
         "CONSIGNE DE RÉDACTION :\n"
         "- Pour chaque mouvement, écris un paragraphe qui tisse en UN battement : "
-        "l'argument, son caractère (vertus) si l'axe est disponible, ses dérapages "
-        "(sophisme localisé + descente + contre-argument), et sa tenue formelle "
+        "l'argument, son caractère (vertus) si l'axe est disponible, ses procédés "
+        "relevés (procédé + descente + contre-argument), et sa tenue formelle "
         "citée comme preuve.\n"
+        "- Un procédé relevé n'est pas un défaut par nature. Pour chacun, dis "
+        "d'abord CE QU'IL ACCOMPLIT dans le discours — ce que le locuteur "
+        "cherche à obtenir par lui ; la justification le porte le plus souvent "
+        "(« visant à… », « pour légitimer… ») : traduis-le en français courant, "
+        "sans recopier ses guillemets. PUIS juge s'il fragilise le "
+        "raisonnement : un procédé dont la justification établit une faute "
+        "GARDE son verdict de sophisme, nommé comme tel — l'objectif n'est pas "
+        "d'adoucir, c'est de ne pas confondre une figure (ce qui fait avancer "
+        "le discours) avec une faute (ce qui le casse). N'invente JAMAIS une "
+        "fonction que la justification ne porte pas : si elle ne dit que la "
+        "faute, dis la faute.\n"
         "- Le verdict formel (Tweety/Dung) appuie le battement. Le MOT du "
         "verdict se cite EXACTEMENT tel que fourni (si le verdict dit "
         "'consistantes', écris 'cohérent/consistant', JAMAIS 'inconsistant' ; "
