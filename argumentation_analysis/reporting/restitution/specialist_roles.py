@@ -45,6 +45,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
 from .fr_accord import accord
+from .formal_derivation import extract_tested_content
 
 ROLE_DECISIF = "decisif"
 ROLE_CORROBORANT = "corroborant"
@@ -70,9 +71,11 @@ ROLE_LABELS = {
 }
 
 # Bounded budget, same discipline as #1911: the hierarchy section must not
-# dominate the conducted prompt whatever the corpus size.
+# dominate the conducted prompt whatever the corpus size. #1914 : raised from
+# 160 so a decisive statement can carry its tested-content derivation without
+# being sliced mid-quote (an untruncated « à l'épreuve : … » beats a badge).
 _MAX_PER_ROLE = 3
-_STATEMENT_CAP = 160
+_STATEMENT_CAP = 240
 
 # Quality verdicts read the NORMALIZED fraction of the applicable maximum
 # (#1942): ``overall`` is a sum over the evaluated virtues, and post-#1923
@@ -150,25 +153,56 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     collected: Dict[str, List[RoleAssignment]] = {role: [] for role in ROLE_ORDER}
 
     def _add(role: str, statement: str, cites: tuple) -> None:
+        if len(statement) > _STATEMENT_CAP:
+            # #1914 : cut at the last sentence boundary, never mid-word — a
+            # half-sentence anchor invites the conductor to echo broken prose.
+            cut = statement[:_STATEMENT_CAP]
+            dot = cut.rfind(". ")
+            statement = cut[: dot + 1] if dot > 0 else cut.rstrip() + "…"
         collected[role].append(
-            RoleAssignment(role=role, statement=statement[:_STATEMENT_CAP], cites=cites)
+            RoleAssignment(role=role, statement=statement, cites=cites)
         )
 
     # --- decisif: a formal violation was established -------------------------
-    pl_counts = _settled_counts(
-        getattr(state, "propositional_analysis_results", None), _pl_verdict
-    )
+    # #1914 (constat 1) : the decisive statement carries WHAT was tested —
+    # the refuted records' formulas — so the citation is a derivation, not a
+    # badge. Placeholder-only records → tested stays None → the statement
+    # says the honest absence instead of dressing a counter as a proof.
+    def _decisif_statement(
+        axis: str, noun_sg: str, noun_pl: str, n_false: int, tested: Optional[str]
+    ) -> str:
+        head = f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)}"
+        if tested:
+            return (
+                f"{head} — à l'épreuve : {tested}. La mise à l'épreuve "
+                f"formelle établit que ce contenu testé ne tient pas."
+            )
+        return (
+            f"{head} : contenu testé non disponible dans l'état — la mise à "
+            f"l'épreuve formelle établit qu'au moins {accord(1, noun_sg, noun_pl)} "
+            f"testée ne tient pas."
+        )
+
+    pl_records = getattr(state, "propositional_analysis_results", None)
+    pl_counts = _settled_counts(pl_records, _pl_verdict)
     if pl_counts["false"]:
         _add(
             ROLE_DECISIF,
-            f"L'axe PL a réfuté {accord(pl_counts['false'], 'inférence', 'inférences')} : la mise à "
-            f"l'épreuve formelle établit qu'au moins une inférence testée ne "
-            f"tient pas.",
+            _decisif_statement(
+                "PL",
+                "inférence",
+                "inférences",
+                pl_counts["false"],
+                extract_tested_content(
+                    pl_records, _pl_verdict, refuted=True, max_atoms=2
+                ),
+            ),
             ("PL", "solveur Tweety"),
         )
 
+    fol_records = getattr(state, "fol_analysis_results", None)
     fol_counts = _settled_counts(
-        getattr(state, "fol_analysis_results", None),
+        fol_records,
         lambda r: (
             r.get("consistent") if isinstance(r.get("consistent"), bool) else None
         ),
@@ -176,22 +210,47 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     if fol_counts["false"]:
         _add(
             ROLE_DECISIF,
-            f"L'axe FOL a réfuté {accord(fol_counts['false'], 'théorie', 'théories')} : la mise à "
-            f"l'épreuve formelle établit qu'au moins une théorie testée est "
-            f"incohérente.",
+            _decisif_statement(
+                "FOL",
+                "théorie",
+                "théories",
+                fol_counts["false"],
+                extract_tested_content(
+                    fol_records,
+                    lambda r: (
+                        r.get("consistent")
+                        if isinstance(r.get("consistent"), bool)
+                        else None
+                    ),
+                    refuted=True,
+                    max_atoms=2,
+                ),
+            ),
             ("FOL", "solveur Tweety"),
         )
 
+    modal_records = getattr(state, "modal_analysis_results", None)
     modal_counts = _settled_counts(
-        getattr(state, "modal_analysis_results", None),
+        modal_records,
         lambda r: r.get("valid") if isinstance(r.get("valid"), bool) else None,
     )
     if modal_counts["false"]:
         _add(
             ROLE_DECISIF,
-            f"L'axe modal a réfuté {accord(modal_counts['false'], 'théorie', 'théories')} : la mise "
-            f"à l'épreuve formelle établit qu'au moins une théorie modale "
-            f"testée est incohérente.",
+            _decisif_statement(
+                "modal",
+                "théorie",
+                "théories",
+                modal_counts["false"],
+                extract_tested_content(
+                    modal_records,
+                    lambda r: (
+                        r.get("valid") if isinstance(r.get("valid"), bool) else None
+                    ),
+                    refuted=True,
+                    max_atoms=2,
+                ),
+            ),
             ("modal", "solveur modal"),
         )
 
