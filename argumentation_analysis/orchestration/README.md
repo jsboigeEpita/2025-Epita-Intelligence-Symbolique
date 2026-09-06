@@ -15,15 +15,11 @@ Ce paquet fournit les mécanismes pour transformer une flotte d'agents spéciali
 
 ## 2. Approches architecturales
 
-Deux approches principales d'orchestration coexistent au sein de ce paquet, offrant différents niveaux de flexibilité et de contrôle.
+Deux approches principales d'orchestration coexistent au sein du système, offrant différents niveaux de flexibilité et de contrôle.
 
-### 2.1. Orchestrateur Centralisé (`engine/main_orchestrator.py`)
+### 2.1. Moteur d'exécution (`pipelines/orchestration/execution/engine.py`)
 
-Cette approche s'appuie sur un orchestrateur principal qui maintient un état global et distribue les tâches aux agents. C'est un modèle plus simple et direct.
-
-*   **Concept** : Un chef d'orchestre unique dirige les agents.
-*   **Avantages** : Simple à comprendre, facile à déboguer, contrôle centralisé.
-*   **Inconvénients** : Peut devenir un goulot d'étranglement, moins flexible face à des scénarios très dynamiques.
+Cette approche s'appuie sur un moteur d'exécution activement câblé (`analyze_text_orchestrated`) qui distribue les tâches aux agents selon le workflow déclaré. L'ancien doublon `orchestration/engine/` (main_orchestrator/config/strategy) a été supprimé (#1962) — il n'avait aucun appelant en production.
 
 ### 2.2. Architecture Hiérarchique (`hierarchical/`)
 
