@@ -102,6 +102,48 @@ class TestRunSingle:
         assert (tmp_path / "sigs" / "signature_abcd1234.json").exists()
 
     @pytest.mark.asyncio
+    async def test_signature_carries_run_provenance(self, tmp_path):
+        """#2045 : la signature doit porter la provenance du run.
+
+        Un dump d'état adressé par un hash sans provenance n'est pas
+        attributable à un run (mesuré : 41 dumps balayés sans retrouver
+        celui d'un run rendu). La signature écrite au moment du dump doit
+        porter horodatage, SHA de code et identité de modèle.
+        """
+        mock_result = {
+            "state_snapshot": {"source_id": "doc_test"},
+        }
+
+        sig = await runner._run_single(
+            text="Test text",
+            source_name="Test Source",
+            opaque_id_str="abcd1234",
+            workflow="spectacular",
+            metadata={"discourse_type": "political"},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            pipeline_fn=_mock_pipeline(mock_result),
+            sanitize_fn=_mock_sanitize,
+        )
+
+        assert sig is not None
+        prov = sig.get("provenance")
+        assert isinstance(prov, dict), "signature sans bloc provenance (#2045)"
+        assert prov.get("run_started_utc"), "horodatage de run absent"
+        assert "code_sha" in prov, "version de code absente"
+        assert "chat_model_id" in prov, "identité de modèle absente"
+        assert prov.get("params", {}).get("workflow") == "spectacular"
+
+        # Le bloc est persisté dans le fichier, pas seulement en mémoire —
+        # c'est le fichier que le forensic lira.
+        on_disk = json.loads(
+            (tmp_path / "sigs" / "signature_abcd1234.json").read_text(encoding="utf-8")
+        )
+        assert "provenance" in on_disk
+        assert on_disk["provenance"]["run_started_utc"] == prov["run_started_utc"]
+
+    @pytest.mark.asyncio
     async def test_skip_existing_reuses_failure_outcome(self, tmp_path):
         """A skipped existing failure remains visible to aggregate exit status."""
         sigs = tmp_path / "sigs"

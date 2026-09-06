@@ -39,10 +39,13 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from argumentation_analysis.evaluation.run_provenance import provenance_block
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "argumentation_analysis" / "data"
 ENCRYPTED_PATH = DATA_DIR / "extract_sources.json.gz.enc"
 DEFAULT_KB = REPO_ROOT / "analysis_kb"
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -451,6 +454,7 @@ async def _run_single(
     checkpoint_mgr: Optional[Any] = None,
     pipeline_fn: Optional[Any] = None,
     sanitize_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None,
+    provenance: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """Process one document and write outputs.  Returns signature dict or None."""
 
@@ -671,6 +675,14 @@ async def _run_single(
         "outcome": analysis_outcome,
         "state": sanitized,
     }
+    # #2045 : provenance de run écrite au moment du dump — un dump sans
+    # provenance n'est pas attributable à un run (le lot la fournit pour
+    # grouper les dumps d'un même batch sous un même horodatage de départ).
+    if provenance is None:
+        provenance = provenance_block(
+            params={"workflow": workflow, "timeout_s": timeout}
+        )
+    signature["provenance"] = provenance
     if partial:
         signature["partial"] = True
     _with_document_classification(signature, analysis_outcome)
@@ -848,6 +860,22 @@ def main(argv: Optional[List[str]] = None) -> int:
         args.resume,
     )
 
+    # #2045 : provenance de lot partagée par tous les dumps de ce run — même
+    # horodatage de départ + paramètres de lot regroupent les dumps d'une
+    # même exécution sous une identité de run unique.
+    batch_provenance = provenance_block(
+        params={
+            "workflow": args.workflow,
+            "timeout_s": args.timeout,
+            "skip_existing": args.skip_existing,
+            "resume": args.resume,
+            "max_docs": args.max_docs,
+            "max_chars": args.max_chars,
+            "state_dumps_dir": state_dumps_dir.name,
+            "signatures_dir": args.output_dir.name,
+        }
+    )
+
     # Process documents serially
     signatures: List[Dict[str, Any]] = []
     for i, doc in enumerate(docs, 1):
@@ -864,6 +892,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 skip_existing=args.skip_existing,
                 timeout=args.timeout,
                 checkpoint_mgr=checkpoint_mgr,
+                provenance=batch_provenance,
             )
         )
         if sig is not None:

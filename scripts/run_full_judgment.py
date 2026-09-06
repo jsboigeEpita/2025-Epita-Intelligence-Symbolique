@@ -47,6 +47,12 @@ if _env_path.exists():
 
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions
+from argumentation_analysis.evaluation.run_provenance import (
+    chat_model_id,
+    code_sha,
+    file_sha256,
+    now_utc_iso,
+)
 
 CORPUS_SRC_IDX = {"A": 11, "B": 3, "C": 2}
 RESULTS_DIR = Path("argumentation_analysis/evaluation/results/full_judgment")
@@ -122,6 +128,7 @@ async def main_async(label: str, offset: int = 0, out_suffix: str = "") -> None:
 
     context = {"fallacy_tier": "full"}
     t0 = time.time()
+    run_started_utc = now_utc_iso()
     result = await run_unified_analysis(
         text=corpus["text"],
         workflow_name="spectacular",
@@ -188,6 +195,16 @@ async def main_async(label: str, offset: int = 0, out_suffix: str = "") -> None:
             len(getattr(report_obj, "markdown", "") or "") if report_obj else 0
         ),
         "state_key_sizes": _state_key_sizes(snap),
+        # #2045 : provenance de run — le méta nomme SON dump d'état (fichier +
+        # empreinte) et porte l'identité de run (horodatage, code, modèle) ;
+        # le lien dump↔run devient explicite au lieu d'être un devinage de tag.
+        "provenance": {
+            "run_started_utc": run_started_utc,
+            "code_sha": code_sha(),
+            "chat_model_id": chat_model_id(),
+            "state_file": f"judge_{tag}_state.json",
+            "state_sha256": file_sha256(RESULTS_DIR / f"judge_{tag}_state.json"),
+        },
     }
     (RESULTS_DIR / f"judge_{tag}_meta.json").write_text(
         json.dumps(meta, indent=2, ensure_ascii=False, default=str), encoding="utf-8"
