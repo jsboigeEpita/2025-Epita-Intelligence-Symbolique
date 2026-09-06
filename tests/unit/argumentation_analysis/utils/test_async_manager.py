@@ -284,3 +284,26 @@ class TestShutdown:
         m.run_hybrid(lambda: 42)
         m.shutdown()
         # Executor should be shut down
+
+    def test_shutdown_does_not_leave_a_dead_global_loop(self):
+        # #2040 : get_or_create_event_loop() installe la boucle du manager
+        # comme boucle courante du process ; shutdown() doit la détacher,
+        # sinon tout asyncio.get_event_loop() ultérieur hérite d'une boucle
+        # FERMÉE (fuite d'ordre mesurée : 30 tests plugins/ rouges quand
+        # utils/ les précède dans la même session pytest).
+        import asyncio
+
+        async def _value():
+            return 42
+
+        m = AsyncManager(max_workers=1)
+        m.run_hybrid(_value())
+        m.shutdown()
+
+        loop = asyncio.get_event_loop()
+        assert not loop.is_closed()
+
+        async def _probe():
+            return 7
+
+        assert loop.run_until_complete(_probe()) == 7
