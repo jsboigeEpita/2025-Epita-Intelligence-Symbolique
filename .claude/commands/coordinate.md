@@ -65,13 +65,41 @@ Adressage : toujours `machine-id:workspace-id` (ex `myia-po-2025:2025-Epita-Inte
 
 **Critères de merge (TOUS doivent être vrais)** :
 
-- [ ] PR créé par `myia-po-2025` ou `myia-po-2023` (workers — confirme `gh pr view N --json author`)
+- [ ] PR **non écrite sur cette machine** — voir « Contrôle d'autorat » ci-dessous. Ne PAS utiliser `--json author` : toute la flotte pousse sous `jsboigeEpita`, le champ est constant.
 - [ ] CI GREEN (`statusCheckRollup` : tests + lint pass)
 - [ ] Aucun reviewer en `CHANGES_REQUESTED` non-adressé (lire les reviews ET les comments inline)
 - [ ] Diff audit : pas de secrets (`gh pr diff N | grep -iE "(api.?key|token|secret|password|BEGIN.*PRIVATE|sk-[a-zA-Z0-9])"`)
 - [ ] Pas de plaintext dataset (`grep -iE "(raw_text|full_text|full_text_segment|raw_text_snippet)"` dans le diff)
 - [ ] Pas de modification de `.github/CODEOWNERS`, `.github/workflows/`, ou de fichiers de discipline (`.claude/rules/*`)
 - [ ] PR rebasé sur main récent (vérifier `mergeStateStatus` ; si `BEHIND`, demander rebase au worker)
+
+### Contrôle d'autorat — AVANT le merge, le squash l'efface
+
+Toute la flotte pousse sous une seule identité GitHub : `gh pr view --json author` rend
+`jsboigeEpita` sur 10 PRs sur 10, il ne discrimine rien. Ce qui discrimine est l'**email
+d'auteur des commits avant squash** — et `--squash` le réécrit en
+`…@users.noreply.github.com` (60 commits sur 60 de `main`). Ce contrôle passe donc **avant**
+le merge, ou jamais.
+
+```bash
+MINE=$(git config user.email)                                 # calibré sur CETTE machine
+gh pr view N --json commits --jq '[.commits[].authors[].email] | unique'
+```
+
+| Sortie | Lecture | Conduite |
+|---|---|---|
+| aucun email égal à `$MINE` | écrite ailleurs — worker | critère **rempli** |
+| au moins un égal à `$MINE` | écrite **ici** | critère **non rempli** — aucun contrôle indépendant n'existe sur cette PR. Merger reste possible, mais **le dire** (« merge assumé ») dans le dashboard |
+| liste vide ou appel en échec | instrument muet | **UNKNOWN — ce n'est pas un pass.** Ne pas merger sur cette base : review cross-worker, ou arbitrage user |
+
+⚠ **Le piège, commis en R946** : lire `jsboige@gmail.com` et conclure « ça ne discrimine
+pas ». C'est la sortie **correcte** du premier cas — l'instrument ne nomme pas la machine,
+il dit seulement *pas moi*, et c'est exactement ce que le critère demande. Ne jamais
+généraliser depuis **une** PR : la même commande sur 10 PRs rend deux emails distincts.
+
+⚠ Le calibrage vient de `git config user.email` **lu à l'exécution**, jamais d'une
+constante écrite ici. C'est ce qui rend l'échec sûr : si une config dérive, mes propres PRs
+se lisent comme miennes (conservateur) — jamais une PR à moi lue comme celle d'un worker.
 
 **Workflow merge** :
 
