@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import argumentation_analysis.core.environment
+
 """
 Test d'importation consolidée du système universel récupéré
 Valide l'intégrité et la cohérence des 553 fichiers Python récupérés
@@ -55,16 +56,14 @@ def test_critical_imports():
         print(f"❌ UnifiedConfig: {e}")
 
     # Test 2: Module de rapport principal récupéré
-    print("\n2. MODULE DE RAPPORT PRINCIPAL (75516 bytes):")
+    print("\n2. MODULE DE RAPPORT PRINCIPAL (package reporting):")
 
     try:
-        from argumentation_analysis.core.report_generation import (
-            generate_unified_report as core_report,
-        )
+        from argumentation_analysis.reporting import models as core_report
 
-        print("✅ Core report_generation importé (75516 bytes)")
+        print("✅ reporting.models importé")
     except Exception as e:
-        print(f"❌ Core report_generation: {e}")
+        print(f"❌ reporting.models: {e}")
 
     # Test 3: Autres modules critiques récupérés
     print("\n3. AUTRES MODULES CRITIQUES RÉCUPÉRÉS:")
@@ -156,7 +155,9 @@ def test_critical_imports():
         )
 
         registry = setup_registry()
-        print(f"✅ setup_registry instancié avec succès ({len(registry._agents)} agents)")
+        print(
+            f"✅ setup_registry instancié avec succès ({len(registry._agents)} agents)"
+        )
     except Exception as e:
         print(f"❌ Instanciation setup_registry: {e}")
 
