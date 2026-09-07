@@ -244,6 +244,62 @@ QBF — quantifiers preserved under the renamed key:
 
 ---
 
+### 1.6 Sites 6 (EAF) et 11 (CL) : mesurés sur Tweety 1.31 (2026-09-07, coord ai-01)
+
+Les deux sites laissés `NON MESURÉ` par la passe du 2026-09-07 l'étaient pour une raison **de localité, pas de nature** :
+`libs/tweety/` est gitignoré (`.gitignore:152`), donc le jeu modulaire 1.31 — 49 jars, `org.tweetyproject.arg.eaf-1.31.jar`
+inclus — existe sur `myia-ai-01` et pas nécessairement ailleurs. Sonde rejouée ici avec
+`JVM_TWEETY_VERSION=1.31` / `JVM_TWEETY_LIBS_DIR=libs/tweety`, JDK 17 portable, provenance des modules assertée
+(`invoke_callables.__file__`, `state_writers.__file__` — anti editable-resident).
+
+#### Site 6 — EAF
+
+```
+[invoke] cles retournees : ['arguments','attacks','epistemic_beliefs','extensions','extensions_count','semantics','statistics']
+[invoke] handler         : EAFHandler          <- handler Java, pas _python_eaf_fallback
+[state ] entry : {"arguments": ["arg1","arg2","arg3"],
+                  "attacks": [["arg1","arg2"],["arg2","arg3"]],
+                  "extensions": {"eaf_extensions": [["arg1","arg3"]]},
+                  "formalism_specific": {"epistemic_beliefs": {"agent_A": ["arg1"], "agent_B": ["arg1","arg3"]}},
+                  "name": "eaf_grounded"}
+  [YES] epistemic_beliefs  value-equal
+  [YES] attacks            value-equal
+  [NO ] statistics         produit {arguments_count, attacks_count, agents_count, handler} -> absent de l'etat
+```
+
+#### Site 11 — CL
+
+Première tentative reproduisant la levée du worker **sous 1.31** :
+`RuntimeError: Conditional Logic unavailable: JVM/Tweety required (too many values to unpack (expected 2))`.
+La reproduction sur l'autre version réfute l'attribution « différence d'API 1.28 » : la cause est la forme d'entrée.
+`create_knowledge_base` attend des **paires** ; une liste de chaînes fait déplier chaque chaîne.
+
+```
+[invoke] entailed : True | message : CL query (c | a): ACCEPTED
+[invoke] input_conditionals : [('b','a'), ('c','b')]
+[state ] propositional_analysis_results :
+  [{"formalism_specific": {"conditionals": [["b","a"],["c","b"]]},
+    "formulas": ["CL(2 conditionals): CL query (c | a): ACCEPTED"],
+    "id": "pl_1", "model": {}, "satisfiable": true}]
+  [YES] conditionals  -> formalism_specific.conditionals (tuple -> list)
+  [YES] entailed      -> satisfiable: true
+  [NO ] statistics    -> absent de l'etat
+```
+
+#### Piège d'instrument rencontré (consigné parce qu'il a failli produire deux faux négatifs)
+
+Le premier comparateur de cette sonde testait `str(x) in json.dumps(etat)`. Il a rendu `NO` pour `conditionals`
+(`('b','a')` ne matche pas `["b","a"]`) et pour `entailed` (`True` ne matche pas `true`). **Les deux étaient préservés.**
+Ce sont les *dumps d'état imprimés* qui ont réfuté les lignes de verdict de la sonde elle-même — d'où la règle :
+imprimer l'objet relu, jamais seulement le YES/NO qu'on en dérive.
+
+#### Conséquence
+
+Les 13 sites sont mesurés. Le finding 4 (« `statistics` est le sinistre systématique ») se vérifie sur les deux
+sites ajoutés : c'est **le seul** champ réellement perdu chez EAF comme chez CL.
+
+---
+
 ## 2. Hard-coded `attacks=[]` verdict (ABA / ADF / SETAF / DeLP)
 
 The issue body singles out ABA and ADF as "aggravated" because they hard-code
@@ -772,57 +828,3 @@ coordinating with the existing readers.
 *Inventory produced for Epic `#1644`, issue `#1648`. Read-only investigation;
 no production code modified. Dispatcher will commit as docs-only.*
 
-
-## §1.6 — Sites 6 (EAF) et 11 (CL) : mesurés sur Tweety 1.31 (2026-09-07, coord ai-01)
-
-Les deux sites laissés `NON MESURÉ` par la passe du 2026-09-07 l'étaient pour une raison **de localité, pas de nature** :
-`libs/tweety/` est gitignoré (`.gitignore:152`), donc le jeu modulaire 1.31 — 49 jars, `org.tweetyproject.arg.eaf-1.31.jar`
-inclus — existe sur `myia-ai-01` et pas nécessairement ailleurs. Sonde rejouée ici avec
-`JVM_TWEETY_VERSION=1.31` / `JVM_TWEETY_LIBS_DIR=libs/tweety`, JDK 17 portable, provenance des modules assertée
-(`invoke_callables.__file__`, `state_writers.__file__` — anti editable-resident).
-
-### Site 6 — EAF
-
-```
-[invoke] cles retournees : ['arguments','attacks','epistemic_beliefs','extensions','extensions_count','semantics','statistics']
-[invoke] handler         : EAFHandler          <- handler Java, pas _python_eaf_fallback
-[state ] entry : {"arguments": ["arg1","arg2","arg3"],
-                  "attacks": [["arg1","arg2"],["arg2","arg3"]],
-                  "extensions": {"eaf_extensions": [["arg1","arg3"]]},
-                  "formalism_specific": {"epistemic_beliefs": {"agent_A": ["arg1"], "agent_B": ["arg1","arg3"]}},
-                  "name": "eaf_grounded"}
-  [YES] epistemic_beliefs  value-equal
-  [YES] attacks            value-equal
-  [NO ] statistics         produit {arguments_count, attacks_count, agents_count, handler} -> absent de l'etat
-```
-
-### Site 11 — CL
-
-Première tentative reproduisant la levée du worker **sous 1.31** :
-`RuntimeError: Conditional Logic unavailable: JVM/Tweety required (too many values to unpack (expected 2))`.
-La reproduction sur l'autre version réfute l'attribution « différence d'API 1.28 » : la cause est la forme d'entrée.
-`create_knowledge_base` attend des **paires** ; une liste de chaînes fait déplier chaque chaîne.
-
-```
-[invoke] entailed : True | message : CL query (c | a): ACCEPTED
-[invoke] input_conditionals : [('b','a'), ('c','b')]
-[state ] propositional_analysis_results :
-  [{"formalism_specific": {"conditionals": [["b","a"],["c","b"]]},
-    "formulas": ["CL(2 conditionals): CL query (c | a): ACCEPTED"],
-    "id": "pl_1", "model": {}, "satisfiable": true}]
-  [YES] conditionals  -> formalism_specific.conditionals (tuple -> list)
-  [YES] entailed      -> satisfiable: true
-  [NO ] statistics    -> absent de l'etat
-```
-
-### Piège d'instrument rencontré (consigné parce qu'il a failli produire deux faux négatifs)
-
-Le premier comparateur de cette sonde testait `str(x) in json.dumps(etat)`. Il a rendu `NO` pour `conditionals`
-(`('b','a')` ne matche pas `["b","a"]`) et pour `entailed` (`True` ne matche pas `true`). **Les deux étaient préservés.**
-Ce sont les *dumps d'état imprimés* qui ont réfuté les lignes de verdict de la sonde elle-même — d'où la règle :
-imprimer l'objet relu, jamais seulement le YES/NO qu'on en dérive.
-
-### Conséquence
-
-Les 13 sites sont mesurés. Le finding 4 (« `statistics` est le sinistre systématique ») se vérifie sur les deux
-sites ajoutés : c'est **le seul** champ réellement perdu chez EAF comme chez CL.
