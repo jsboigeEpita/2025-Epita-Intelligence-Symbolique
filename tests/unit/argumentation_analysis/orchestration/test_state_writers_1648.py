@@ -19,6 +19,9 @@ from unittest.mock import patch
 import pytest
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
+from argumentation_analysis.orchestration.invoke_callables import (
+    _annotate_attack_retention,
+)
 from argumentation_analysis.orchestration.state_writers import (
     _write_aba_to_state,
     _write_adf_to_state,
@@ -461,6 +464,20 @@ class TestWeightedFlattening1648:
     """
 
     def test_weighted_writer_preserves_attack_weights(self) -> None:
+        """Pins the writer GIVEN dict-shaped attacks — and only that half.
+
+        This fixture hand-builds the ``{source, target, weight}`` dicts and
+        calls the writer directly, so it bypasses the production step where
+        the payload dies: ``_annotate_attack_retention``
+        (invoke_callables.py:3462) overwrites the handler's dicts with the
+        retained input triples BEFORE the writer boundary, and the writer's
+        dict-only sanitiser then drops them — measured state on the real
+        path: ``attacks=[]`` and no ``attack_weights`` sidecar (#2068). On
+        the real path this green is inert; the né-rouge pin for that loss
+        lives one layer down in ``TestWeightedRetentionFlattening1648``.
+        Staying green here is still correct: it guards the writer contract
+        for the day the producer is fixed.
+        """
         state = _new_state()
         output = {
             "semantics": "grounded",
@@ -533,6 +550,77 @@ class TestWeightedFlattening1648:
             {"source": "x", "target": "y", "weight": 0.3},
         ], sidecar
         # weight_statistics absent because none was provided.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Weighted — né-rouge pin at the PRODUCER layer (#1648 DoD item 5, #2068).
+# The writer tests above stay green given dicts; the payload dies one layer
+# earlier — see the docstring on test_weighted_writer_preserves_attack_weights.
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestWeightedRetentionFlattening1648:
+    """#1648 item 5 — the pin at the layer where the payload actually dies.
+
+    ``_invoke_weighted`` submits ``(source, target, weight)`` triples
+    (invoke_callables.py:4820-4837); ``WeightedHandler`` returns the attacks
+    back as ``{source, target, weight}`` dicts (weighted_handler.py:139-141);
+    then ``_annotate_attack_retention`` (#1698) overwrites
+    ``output["attacks"]`` with the retained SUBMITTED triples
+    (invoke_callables.py:3462). The writer's dict-only sanitiser
+    (state_writers.py:1600-1626) then drops every tuple: ``attacks=[]`` and
+    no ``attack_weights`` sidecar — the state #1648 item 1 measured (#2068).
+
+    The pinned property: a RETAINED attack keeps its weight under a form the
+    downstream consumer accepts. Today the annotation reports honest counts
+    (2 retained / 2 submitted — nothing dropped) while destroying the form,
+    so this fails on form, not on accounting. Hermetic by construction:
+    ``_annotate_attack_retention`` is a pure function — no JVM, no handler.
+    """
+
+    @pytest.mark.xfail(
+        strict=True,
+        reason=(
+            "#2068 — _annotate_attack_retention (invoke_callables.py:3462) "
+            "overwrites the handler's dict-shaped attacks with the retained "
+            "input triples, so _write_weighted_to_state's dict-only sanitiser "
+            "drops them all (state: attacks=[], no attack_weights sidecar). "
+            "The #2068 fix must remove this marker: XPASS => CI red."
+        ),
+    )
+    def test_retained_attack_keeps_its_weight_in_dict_form(self) -> None:
+        output: Dict[str, Any] = {
+            "semantics": "grounded",
+            "arguments": ["a", "b", "c"],
+            "attacks": [
+                {"source": "a", "target": "b", "weight": 0.9},
+                {"source": "b", "target": "c", "weight": 0.5},
+            ],
+        }
+        # The form _invoke_weighted actually submits (invoke_callables.py:4820).
+        submitted: List[Any] = [("a", "b", 0.9), ("b", "c", 0.5)]
+
+        result = _annotate_attack_retention(
+            output,
+            ["a", "b", "c"],
+            submitted,
+            framework_name="weighted_grounded",
+        )
+
+        # Premise (passes today): both edges were retained — #1698 reports
+        # the counts honestly. The loss asserted below is FORM, not count.
+        assert result["attacks_retained"] == 2, result
+        assert result["attacks_dropped"] == 0, result
+        assert result["attacks"], "no retained attacks to inspect"
+
+        # The pinned property: every retained attack keeps its weight in the
+        # dict shape the writer's sanitiser accepts (state_writers.py:1600).
+        for atk in result["attacks"]:
+            assert isinstance(atk, dict), (
+                "retained attack lost the dict form — its weight is "
+                f"unreachable downstream (got {type(atk).__name__}: {atk!r})"
+            )
+            assert "weight" in atk, f"dict without weight: {atk!r}"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
