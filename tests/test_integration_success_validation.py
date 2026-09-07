@@ -390,13 +390,20 @@ class TestIntegrationPerformance:
 
     @pytest.mark.asyncio
     async def test_mock_performance_acceptable(self):
-        """Test que les mocks ont des performances acceptables."""
+        """Le chemin mock fait un travail borné, sans amplification (#2066).
+
+        Garde par comptage — déterministe et insensible à la charge du runner.
+        L'ancienne assertion wall-clock ``execution_time < 1.0`` mesurait la
+        charge du runner, pas le code (flake du merge ``e3c52f98`` : 3.68 s
+        mesurés sur un runner chargé, rerun vert sans aucun changement) ;
+        elle est remplacée, pas élargie. Ce que le garde veut épingler — « le
+        chemin mock ne fait pas de travail réel » — s'assert par les
+        compteurs des mocks eux-mêmes : une passe exactement (pas de tempête
+        de retries), une vérification par claim extrait (pas d'amplification
+        N²), compte borné par le plafond d'extraction.
+        """
         orchestrator = create_mock_orchestrator(IntegrationTestScenarios.SUCCESS)
-
-        # Mesurer le temps d'exécution
-        import time
-
-        start_time = time.time()
+        analyzer = orchestrator.analyzer
 
         request = type(
             "MockRequest",
@@ -409,12 +416,19 @@ class TestIntegrationPerformance:
 
         response = await orchestrator.analyze_with_fact_checking(request)
 
-        end_time = time.time()
-        execution_time = end_time - start_time
-
-        # Les mocks devraient être rapides (< 1 seconde)
-        assert execution_time < 1.0
         assert response is not None
+
+        # Une passe exactement par étage — le chemin mock ne retente pas.
+        assert orchestrator.call_count == 1
+        assert analyzer.call_count == 1
+        assert analyzer.fact_extractor.call_count == 1
+        assert analyzer.taxonomy_manager.call_count == 1
+
+        # Une vérification par claim extrait, chacune enregistrée une fois,
+        # et le compte reste sous le plafond d'extraction du mock (10).
+        n_verifications = analyzer.verification_service.call_count
+        assert n_verifications == len(analyzer.verification_service.verification_history)
+        assert 0 <= n_verifications <= 10
 
         if hasattr(response, "processing_time"):
             assert response.processing_time >= 0.0
