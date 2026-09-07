@@ -415,6 +415,101 @@ both wrote into the same container.
 origin-lost pattern as FOL. The corpus-level PL-axis verdict is correct; the
 PL-vs-CL-vs-SAT-vs-QBF distinction is gone.
 
+### 3.4 Downstream usage inventory (2026-09-07, R944 dispatch — #1648 DoD item 2)
+
+Every access spelling to the three containers was enumerated **before** any
+counting (the `find_for_capability` discipline), each load-bearing reader was
+re-read at its current site, and the result is crossed with the item-1 measured
+losses. Line numbers below are current-main (re-verified this pass); §3.1-§3.3
+keep their historical numbers.
+
+**Surface first — access spellings (no alias exists).**
+
+1. **Attribute**: `getattr(state, "<container>", ...)` / `state.<container>` —
+   the restitution plugins, `native_dung`, `narrative_synthesis_plugin`,
+   `deep_synthesis_agent`, `conversational_orchestrator`,
+   `conversational_benchmark`, `specialist_roles`, `virtuous_identification`.
+2. **Dict-key on a serialized state**: `state.get(...)` / `snapshot.get(...)`
+   — `pattern_mining`, `html_report` (operate on dumped/snapshot states).
+3. **Pass-through whitelists** (transport, no analytical claim):
+   `state_adapter` spec-§2 axis keys (`:26-29`), `reprompt_trace:23`,
+   `conversational_benchmark:80-112` field lists, `deep_synthesis_agent:176-180`.
+4. **Nested leaf iterator**: `_iter_formalism_specific(state, leaf)`
+   (`act3_conclusion_plugin.py:1060`) over
+   `dung_frameworks[*].formalism_specific` — the sidecar surface.
+5. Writers (`add_dung_framework` & al.) excluded by construction.
+   A repo-wide grep for alias names (`dung_results`, …) finds none — the two
+   `interpret_dung_results` hits are a plugin function name, unrelated.
+
+**Counts (files touching the container name).**
+
+| Family | `dung_frameworks` | `fol_analysis_results` | `propositional_analysis_results` |
+|---|---|---|---|
+| Production (`argumentation_analysis/`, writers excluded) | **15** | **14** | **14** |
+| Scripts (`scripts/`, offline measurement on state dumps) | 9 | 8 | 8 |
+| Examples (`examples/`) | 2 | 1 | 1 |
+| Tests (`tests/`) | 58 | 50 | 48 |
+
+**Analytical readers — the claim each produces (verified this pass).**
+
+| Reader | Claim it produces | Reads | Flatteners' effect (measured/verified) |
+|---|---|---|---|
+| `evaluation/pattern_mining.py:79` (`DungTopologyDetector`) | topology metrics (n_args, density) | **first** entry `arguments`/`attacks`/`extensions` | first-wins; a flattener first ⇒ density on `attacks=[]` |
+| `evaluation/pattern_mining.py:429-447` (formal signals) | corpus-level `dung_unsupported` boolean | `attacks` of **all** entries, expects **dict** items (`atk.get("to"/"from")`) | **structurally dead**: every writer emits list-shaped attacks (`[src, tgt]`; sanitize preserves the shape) — the `isinstance(atk, dict)` branch never fires, so `dung_unsupported` can never turn true from this container, flattened or not |
+| `agents/core/synthesis/deep_synthesis_agent.py:589` (`_build_dung_structure`) | Dung structure for the narrative | **first** entry `name`/`arguments`/`attacks`/`extensions.{grounded,preferred,stable}` | flattener keys (`aba_extensions`, …) are not native semantics keys ⇒ read as "no extension" |
+| `agents/core/synthesis/deep_synthesis_agent.py:1276-1286` (context dump) | per-entry summary lines (capped) | same keys per entry | same — flatteners report `attacks=0`, `grounded_extension=[]` |
+| `visualization/html_report.py:516,547-553` | graph render | **first** entry | first-wins |
+| `plugins/narrative_synthesis_plugin.py:174-182` | count sentence « N extension(s) parmi M cadre(s) » | `len(v.get("extensions", []))` over **all** entries | a flattener's `extensions` is a dict ⇒ `len()` counts its keys (1) — each flattener inflates M by one and N by one |
+| `reporting/restitution/native_dung.py:166` (`decode_native_dung`) | accepted/rejected per argument | **only `verification_*`** entries (sidecars explicitly skipped, #1912) | flatteners inert by contract |
+| `reporting/restitution/act2_narrative_plugin.py:390` (`_collect_dung_trace`) | solver trace + rejection verdicts | primary native via `select_primary_native` | flatteners inert by contract |
+| `reporting/restitution/act3_conclusion_plugin.py:1060-1222` (`_iter_formalism_specific`) | #1667 axes 3/5 prose: ABA contrary pairs, SetAF coalitions, Weighted weight distribution | `formalism_specific.{contraries, set_attacks, attack_weights, weight_statistics}` | **the only sidecar consumer** — see cross-reference |
+| `reporting/restitution/appendix.py:167,280,329-330` (`_fol_axis_status`/`_pl_axis_status`) | axis tri-state (decidé/dégradé/indisponible) + `formules` counts | `consistent`/`satisfiable` + `formulas` | verdict counts correct; origin (DL vs FOL, CL/SAT/QBF vs PL) indistinguishable |
+| `reporting/restitution/specialist_roles.py:186,203`; `virtuous_identification.py:488,497` | role grounding / virtue verdicts | `pl`/`fol` entries' verdict fields | same verdict-preserved, origin-lost |
+| `orchestration/conversational_orchestrator.py:856-858,1422,1512-1518` | emptiness checks + formal-result listing | presence + verdict fields | count-level only |
+| `orchestration/trace_analyzer.py:199` | formal-trace inventory | `fol`/`pl` keys | transport |
+| `evaluation/conversational_benchmark.py:205+` | fill-rate metrics | `len(...)` per container | count-level |
+| `cli/output_formatter.py:212,289`; `reporting/multi_format_exporter.py:28` | counts / labels | container length | count-level |
+| `evaluation/sanitize_state.py:97-160` | privacy opacification (shape-preserving) | `arguments`, `attacks`, extension members, sidecar leaves (`contraries`, `set_attacks`, `attack_weights`, `epistemic_beliefs`, `delp_arguments`, …) | transport reader — must know every leaf to opacify it; produces no analytical claim |
+
+**[Corrected 2026-09-07, R944 pass]** §3.1's rows for
+`_dung_rejected_by_arg` (act2:332-375, act3:530-562, narrative_synthesis) are
+**historical**: the generic all-entries resolver was **deleted by #1912**
+(`act3_conclusion_plugin.py:625` — it read sidecar shapes as native acceptance
+and fabricated 221 false rejections on the real corpus, #1894 forensic). The
+surviving extension-level reads of flattened entries are exactly two:
+`narrative_synthesis_plugin.py:177` (count) and
+`deep_synthesis_agent.py:1278` (native-semantics keys only).
+
+**Cross-reference — item-1 measured losses × named consumers.**
+
+| Field (item-1 verdict) | Named production consumer | Status |
+|---|---|---|
+| Weighted `attack_weights` + binary pairs (**lost**, #2068) | **`act3_conclusion_plugin.py:1211`** — `_iter_formalism_specific(state, "attack_weights")` | **A live reader is starved**: act3's weight-distribution axis (#1667, `_WEIGHTED_DIST_ATTACK_CAP = 8`) reads the sidecar that the production path never fills. The single loss with an existing consumer |
+| Weighted `weight_statistics` (preserved) | `act3_conclusion_plugin.py:1222` | preserved **and** consumed |
+| ABA `contraries` (preserved) | `act3_conclusion_plugin.py:1107` | preserved and consumed (`_ABA_CONTRARY_PAIR_CAP = 3`) |
+| SetAF `set_attacks` (preserved) | `act3_conclusion_plugin.py:1151` | preserved and consumed (`_SETAF_JOINT_ATTACK_CAP = 3`) |
+| ABA `rules_count`, `statistics` (lost) | none | no consumer |
+| ADF acceptance conditions (upstream gap); `adf_models` (preserved post-#2063) | none for either | attainable, unconsumed |
+| Social raw votes, `statistics` (lost) | none (`social_ranking` in `workflows/formal_debate.py:80` is a **phase name**, not a key read) | no consumer |
+| DeLP defeat relations / dialectical tree (lost); `delp_arguments`+`criterion`+`program_size` (preserved) | none (only `sanitize_state` opacifies `delp_arguments`) | no consumer |
+| DL `tbox_size`/`abox_size`/`statistics` (lost); ontology sidecar (preserved) | none (only sanitize) | no consumer |
+| SAT `statistics`, `mus_subsets` (lost) | none | no consumer |
+| QBF `statistics` (lost); `qbf_quantifiers` (preserved) | none (only sanitize) | no consumer |
+| EAF `statistics` (lost, #2067); `epistemic_beliefs` (preserved, #2067) | none (only sanitize) | no consumer |
+| CL `statistics` (lost, #2067); conditionals (preserved, #2067) | none | no consumer |
+| per-entry `statistics` — the systematic casualty (14 sites) | **none** — the only `statistics` reader (`trace_analyzer.py:513`) reads report-level `statistics`, not these entries | transport-without-need **today** |
+
+**Reading of the cross-reference (input for item 4, not a remedy).** Exactly
+**one** measured loss has an existing downstream consumer (Weighted
+`attack_weights`, already tracked as #2068); exactly **three** sidecar leaves
+are both preserved and consumed (ABA contraries, SetAF set_attacks, Weighted
+`weight_statistics` — the #1667 axes). Every other preserved sidecar is
+attainable-but-unconsumed, and every other loss has no reader that misses it.
+The corpus-level aggregates (`dung_unsupported`, the narrative count sentence)
+are degraded by **shape**, not by the flattening per se — the dict-vs-list
+mismatch at `pattern_mining.py:438-441` predates and is independent of any
+remedy option.
+
 ---
 
 ## 4. Recommended single remedy
