@@ -11,8 +11,10 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 # Import des modèles de données depuis le module local
-# On suppose que ReportMetadata, ReportConfiguration, et UnifiedReportTemplate sont définis dans models.py
-from .models import ReportMetadata, ReportConfiguration, UnifiedReportTemplate
+# ReportMetadata/ReportConfiguration vivent dans models.py ;
+# UnifiedReportTemplate est défini dans document_assembler.py (pas dans models).
+from .models import ReportMetadata, ReportConfiguration
+from .document_assembler import UnifiedReportTemplate
 
 logger = logging.getLogger(__name__)
 

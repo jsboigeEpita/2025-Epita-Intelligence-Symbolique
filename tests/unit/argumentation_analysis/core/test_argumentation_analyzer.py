@@ -2,63 +2,32 @@
 """
 Tests for argumentation_analysis.core.argumentation_analyzer
 Covers ArgumentationAnalyzer: degraded mode, basic analysis, features, validation.
+
+Since #2076 the import chain is real — no sys.modules manufacturing. Degraded
+mode is exercised by forcing the analysis-service constructor to fail (the
+condition every degraded test in this file observes).
 """
 
-import sys
 import pytest
 from unittest.mock import MagicMock
-
-# The module imports UnifiedTextAnalysisPipeline from pipelines.unified_text_analysis
-# which has a deep import chain (bootstrap.get_fallacy_detector, etc.).
-# We inject mocks into sys.modules BEFORE importing the analyzer module.
-_mock_pipeline_mod = MagicMock()
-_mock_pipeline_mod.UnifiedTextAnalysisPipeline = MagicMock(
-    side_effect=Exception("pipeline unavailable")
-)
-_mock_pipeline_mod.UnifiedAnalysisConfig = MagicMock(
-    side_effect=Exception("config unavailable")
-)
-
-_mock_analysis_service_mod = MagicMock()
-_mock_analysis_service_mod.AnalysisService = MagicMock(
-    side_effect=Exception("service unavailable")
-)
-
-# Save originals if they exist
-_orig_pipeline = sys.modules.get(
-    "argumentation_analysis.pipelines.unified_text_analysis"
-)
-_orig_service = sys.modules.get(
-    "argumentation_analysis.services.web_api.services.analysis_service"
-)
-
-sys.modules["argumentation_analysis.pipelines.unified_text_analysis"] = (
-    _mock_pipeline_mod
-)
-sys.modules["argumentation_analysis.services.web_api.services.analysis_service"] = (
-    _mock_analysis_service_mod
-)
 
 from argumentation_analysis.core.argumentation_analyzer import (
     ArgumentationAnalyzer,
     Analyzer,
 )
 
-# Restore originals (or remove mocks) so other tests aren't affected
-if _orig_pipeline is not None:
-    sys.modules["argumentation_analysis.pipelines.unified_text_analysis"] = (
-        _orig_pipeline
-    )
-else:
-    sys.modules.pop("argumentation_analysis.pipelines.unified_text_analysis", None)
 
-if _orig_service is not None:
-    sys.modules["argumentation_analysis.services.web_api.services.analysis_service"] = (
-        _orig_service
-    )
-else:
-    sys.modules.pop(
-        "argumentation_analysis.services.web_api.services.analysis_service", None
+@pytest.fixture(autouse=True)
+def _degraded_components(monkeypatch):
+    """Force the degraded path deterministically.
+
+    The import chain above is the production one; only the construction of the
+    analysis service is made to fail, which is the premise every test relying on
+    ``analyzer.pipeline is None`` observes.
+    """
+    monkeypatch.setattr(
+        "argumentation_analysis.core.argumentation_analyzer.AnalysisService",
+        MagicMock(side_effect=RuntimeError("service unavailable")),
     )
 
 

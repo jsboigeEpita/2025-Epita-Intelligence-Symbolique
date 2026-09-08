@@ -81,7 +81,7 @@ from argumentation_analysis.pipelines.analysis_pipeline import (
 # Imports des agents et outils
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 
-from argumentation_analysis.core.bootstrap import get_fallacy_detector
+from argumentation_analysis.core.bootstrap import ProjectContext
 from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 
@@ -213,9 +213,13 @@ class UnifiedTextAnalysisPipeline:
     async def _initialize_orchestrator(self):
         """Initialise l'orchestrateur selon le mode de configuration."""
         if self.config.orchestration_mode == "real" and self.llm_service:
-            logger.info("[ORCH] Mode real → utilisation de run_unified_analysis (no-instance)")
+            logger.info(
+                "[ORCH] Mode real → utilisation de run_unified_analysis (no-instance)"
+            )
             self.orchestrator = None  # run_unified_analysis is a function, not a class
-            logger.info("[ORCH] run_unified_analysis prêt (appel direct dans _perform_orchestration_analysis)")
+            logger.info(
+                "[ORCH] run_unified_analysis prêt (appel direct dans _perform_orchestration_analysis)"
+            )
 
         elif self.config.orchestration_mode == "conversation":
             logger.info("[ORCH] Initialisation orchestrateur conversationnel...")
@@ -240,9 +244,10 @@ class UnifiedTextAnalysisPipeline:
         logger.info("[TOOLS] Utilisation des outils d'analyse réels uniquement")
 
         # Pas de try/except - on laisse les vraies erreurs apparaître
+        # (l'API bootstrap attend un ProjectContext, cf. bootstrap.py:660)
         self.analysis_tools = {
             "analysis_plugin": AnalysisToolsPlugin(
-                fallacy_detector=get_fallacy_detector()
+                fallacy_detector=ProjectContext().get_fallacy_detector()
             )
         }
 
@@ -552,9 +557,7 @@ class UnifiedTextAnalysisPipeline:
         try:
             if self.config.orchestration_mode == "real":
                 # Mode real: use run_unified_analysis directly
-                orch_result = await run_unified_analysis(
-                    text, workflow_name="standard"
-                )
+                orch_result = await run_unified_analysis(text, workflow_name="standard")
 
                 summary = orch_result.get("summary", {})
                 orchestration_results.update(
