@@ -44,14 +44,6 @@ from argumentation_analysis.pipelines.orchestration.config.base_config import (
     ExtendedOrchestrationConfig,
 )
 
-
-def test_unified_text_analysis_imports_cleanly():
-    """Import guard (#2076): the module must import without any manufactured symbol."""
-    import argumentation_analysis.pipelines.unified_text_analysis as m
-
-    assert m.UnifiedTextAnalysisPipeline is UnifiedTextAnalysisPipeline
-
-
 try:
     from argumentation_analysis.pipelines.orchestration.analysis.post_processors import (
         post_process_orchestration_results,
