@@ -20,26 +20,16 @@ from unittest.mock import MagicMock, AsyncMock
 
 import pytest
 
-
 # ============================================================================
-# IMPORT WORKAROUND: Patch broken import chains before touching orchestration.
-# 1. get_fallacy_detector missing from bootstrap
-# 2. torch DLL crash via spacy → thinc → torch
+# IMPORT GUARD: the get_fallacy_detector bootstrap patch that used to live here
+# was removed in #2076 — the root cause is fixed in production and the imports
+# below are plain. What remains is the Windows torch DLL guard (WinError 182):
+# if torch is already broken, inject a mock so spacy/thinc don't crash.
 # ============================================================================
 
 
 def _ensure_importable():
-    """Pre-inject mock modules to bypass broken import chains."""
-    # 1. Patch get_fallacy_detector in bootstrap
-    try:
-        from argumentation_analysis.core import bootstrap as _bootstrap_mod
-
-        if not hasattr(_bootstrap_mod, "get_fallacy_detector"):
-            _bootstrap_mod.get_fallacy_detector = MagicMock(return_value=MagicMock())
-    except ImportError:
-        pass
-
-    # 2. If torch is already broken (DLL crash), inject a mock so spacy/thinc don't crash
+    """Pre-inject a torch mock if the DLL is broken on this machine."""
     if "torch" not in sys.modules:
         try:
             import torch  # noqa: F401
@@ -134,7 +124,9 @@ class TestSelectOrchestrationStrategy:
             select_orchestration_strategy,
         )
 
-        cfg = _make_config(orchestration_mode_enum=OrchestrationMode.TACTICAL_COORDINATION)
+        cfg = _make_config(
+            orchestration_mode_enum=OrchestrationMode.TACTICAL_COORDINATION
+        )
         result = await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
         assert result == "tactical_coordination"
 
@@ -154,7 +146,9 @@ class TestSelectOrchestrationStrategy:
             select_orchestration_strategy,
         )
 
-        cfg = _make_config(orchestration_mode_enum=OrchestrationMode.CLUEDO_INVESTIGATION)
+        cfg = _make_config(
+            orchestration_mode_enum=OrchestrationMode.CLUEDO_INVESTIGATION
+        )
         result = await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
         assert result == "specialized_direct"
 
@@ -266,7 +260,9 @@ class TestSelectOrchestrationStrategy:
             analysis_type=AnalysisType.RHETORICAL,
             enable_hierarchical=False,
         )
-        result = await select_orchestration_strategy(_make_pipeline(config=cfg), "short")
+        result = await select_orchestration_strategy(
+            _make_pipeline(config=cfg), "short"
+        )
         assert result == "hybrid"
 
     @pytest.mark.asyncio
@@ -399,7 +395,9 @@ class TestExecuteHierarchicalFull:
         )
 
         sm = MagicMock()
-        sm.initialize_analysis = MagicMock(return_value={"objectives": ["obj1", "obj2"]})
+        sm.initialize_analysis = MagicMock(
+            return_value={"objectives": ["obj1", "obj2"]}
+        )
         pipeline = _make_pipeline(strategic_manager=sm)
         results = await execute_hierarchical_full_orchestration(pipeline, "text", {})
 
@@ -415,9 +413,7 @@ class TestExecuteHierarchicalFull:
         sm = MagicMock()
         sm.initialize_analysis = MagicMock(return_value={"objectives": ["o1"]})
         tc = MagicMock()
-        tc.process_strategic_objectives = AsyncMock(
-            return_value={"tasks_created": 3}
-        )
+        tc.process_strategic_objectives = AsyncMock(return_value={"tasks_created": 3})
         pipeline = _make_pipeline(strategic_manager=sm, tactical_coordinator=tc)
         results = await execute_hierarchical_full_orchestration(pipeline, "text", {})
 
@@ -476,7 +472,10 @@ class TestExecuteSpecializedOrchestration:
 
         pipeline = _make_pipeline(specialized_orchestrators={})
         results = await execute_specialized_orchestration(pipeline, "text", {})
-        assert results["specialized_orchestration"]["status"] == "no_orchestrator_available"
+        assert (
+            results["specialized_orchestration"]["status"]
+            == "no_orchestrator_available"
+        )
 
     @pytest.mark.asyncio
     async def test_cluedo_run_investigation(self):
@@ -543,7 +542,9 @@ class TestExecuteSpecializedOrchestration:
         pipeline = _make_pipeline(config=cfg, specialized_orchestrators=orchestrators)
         results = await execute_specialized_orchestration(pipeline, "text", {})
 
-        assert results["specialized_orchestration"]["results"]["status"] == "unsupported"
+        assert (
+            results["specialized_orchestration"]["results"]["status"] == "unsupported"
+        )
 
     @pytest.mark.asyncio
     async def test_exception_in_specialized(self):

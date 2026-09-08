@@ -15,9 +15,10 @@ NOTE: section 5 (orchestration/core/communication.py — initialize_communicatio
 was removed in #1574: the function had zero production callers and its naked-middleware
 fallback branch was dead code pinned green by its own tests.
 
-NOTE: unified_text_analysis.py has a broken import (get_fallacy_detector) which
-cascades to all orchestration subpackages. We use sys.modules mocking to pre-inject
-a fake module so all downstream imports succeed.
+NOTE: unified_text_analysis.py used to have a broken import (get_fallacy_detector)
+which cascaded to all orchestration subpackages; #2076 fixed the root cause. The
+imports below are plain — if the chain breaks again, this file goes red at
+collection instead of silently skipping.
 """
 
 import sys
@@ -28,55 +29,20 @@ import warnings
 from types import SimpleNamespace, ModuleType
 from unittest.mock import MagicMock, AsyncMock, patch, mock_open
 
-# ============================================================================
-# IMPORT WORKAROUND: unified_text_analysis.py fails to import because
-# `from argumentation_analysis.core.bootstrap import get_fallacy_detector` does
-# not exist as a module-level name. We must patch it BEFORE importing the module.
-# ============================================================================
+from argumentation_analysis.pipelines.unified_text_analysis import (
+    UnifiedAnalysisConfig,
+    UnifiedTextAnalysisPipeline,
+    run_unified_text_analysis_pipeline,
+    create_unified_config_from_legacy,
+)
 
-
-def _ensure_uta_importable():
-    """Ensure unified_text_analysis and orchestration subpackages can be imported.
-
-    Patches the bootstrap module to expose get_fallacy_detector as a module-level function
-    if it's not already there.
-    """
-    try:
-        from argumentation_analysis.core import bootstrap as _bootstrap_mod
-
-        if not hasattr(_bootstrap_mod, "get_fallacy_detector"):
-            _bootstrap_mod.get_fallacy_detector = MagicMock(return_value=MagicMock())
-    except ImportError:
-        pass
-
-
-_ensure_uta_importable()
-
-# Now attempt the imports; if they still fail, skip all tests in this file
-try:
-    from argumentation_analysis.pipelines.unified_text_analysis import (
-        UnifiedAnalysisConfig,
-        UnifiedTextAnalysisPipeline,
-        run_unified_text_analysis_pipeline,
-        create_unified_config_from_legacy,
-    )
-
-    UTA_AVAILABLE = True
-except ImportError:
-    UTA_AVAILABLE = False
-
-try:
-    from argumentation_analysis.pipelines.orchestration.config.enums import (
-        OrchestrationMode,
-        AnalysisType,
-    )
-    from argumentation_analysis.pipelines.orchestration.config.base_config import (
-        ExtendedOrchestrationConfig,
-    )
-
-    ORCH_CONFIG_AVAILABLE = True
-except ImportError:
-    ORCH_CONFIG_AVAILABLE = False
+from argumentation_analysis.pipelines.orchestration.config.enums import (
+    OrchestrationMode,
+    AnalysisType,
+)
+from argumentation_analysis.pipelines.orchestration.config.base_config import (
+    ExtendedOrchestrationConfig,
+)
 
 try:
     from argumentation_analysis.pipelines.orchestration.analysis.post_processors import (
@@ -801,10 +767,6 @@ class TestPrintFeatureStatus:
 # ============================================================================
 
 
-@pytest.mark.skipif(
-    not UTA_AVAILABLE,
-    reason="unified_text_analysis import failed (missing get_fallacy_detector)",
-)
 class TestUnifiedAnalysisConfig:
     def test_default(self):
         c = UnifiedAnalysisConfig()
@@ -838,7 +800,6 @@ class TestUnifiedAnalysisConfig:
         )
 
 
-@pytest.mark.skipif(not UTA_AVAILABLE, reason="unified_text_analysis import failed")
 class TestCreateConfigFromLegacy:
     def test_formal(self):
         assert create_unified_config_from_legacy(mode="formal").analysis_modes == [
@@ -869,7 +830,6 @@ class TestCreateConfigFromLegacy:
         assert c.use_mocks is True and c.logic_type == "modal"
 
 
-@pytest.mark.skipif(not UTA_AVAILABLE, reason="unified_text_analysis import failed")
 class TestUnifiedTextAnalysisPipeline:
     def _make(self, **kw):
         return UnifiedTextAnalysisPipeline(UnifiedAnalysisConfig(**kw))
@@ -1109,7 +1069,6 @@ class TestUnifiedTextAnalysisPipeline:
         p._perform_informal_analysis.assert_called_once()
 
 
-@pytest.mark.skipif(not UTA_AVAILABLE, reason="unified_text_analysis import failed")
 class TestRunPipelineFunction:
     @patch(f"{UTA_MODULE}.UnifiedTextAnalysisPipeline")
     async def test_default_config(self, mock_cls):
@@ -1140,9 +1099,6 @@ class TestRunPipelineFunction:
 # ============================================================================
 
 
-@pytest.mark.skipif(
-    not ORCH_CONFIG_AVAILABLE, reason="orchestration config import failed"
-)
 class TestOrchestrationModeEnum:
     def test_pipeline(self):
         assert OrchestrationMode.PIPELINE.value == "pipeline"
@@ -1161,9 +1117,6 @@ class TestOrchestrationModeEnum:
         assert len(OrchestrationMode) == 11
 
 
-@pytest.mark.skipif(
-    not ORCH_CONFIG_AVAILABLE, reason="orchestration config import failed"
-)
 class TestAnalysisTypeEnum:
     def test_comprehensive(self):
         assert AnalysisType.COMPREHENSIVE.value == "comprehensive"
@@ -1184,9 +1137,6 @@ class TestAnalysisTypeEnum:
 # ============================================================================
 
 
-@pytest.mark.skipif(
-    not ORCH_CONFIG_AVAILABLE, reason="orchestration config import failed"
-)
 class TestExtendedOrchestrationConfig:
     def test_default(self):
         c = ExtendedOrchestrationConfig()
