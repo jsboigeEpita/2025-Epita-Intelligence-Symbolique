@@ -6,10 +6,10 @@
 (proposal-only, PR + validation partenaire, barème privacy CoursIA) ».
 **Base** : main `45d825a8`.
 **Statut** : **proposition amont** — zéro commit dans `D:\CoursIA`. Le protocole
-et l'exemple synthétique sont livrés ici ; la partie empirique récente
-(campagne #2062, artefacts finalisés) est **en attente de réception** et ses
-créneaux sont marqués « à remplir » ci-dessous. Aucun chiffre n'est inventé
-pour les compléter.
+et l'exemple synthétique sont livrés ici ; la mesure de campagne (po-2025,
+artefacts finalisés #2062) a été **reçue le 2026-09-08 avec provenance** et
+intégrée en section 5 — un créneau reste ouvert (E3, confrontation du gate à
+la prose actuelle). Aucun chiffre n'a été inventé pour compléter les créneaux.
 
 ---
 
@@ -27,8 +27,9 @@ que parcourt chaque sortie — *appel → sortie → lecture → décision*.
 Cette note livre, dans l'ordre : le protocole complet du chapitre
 (résultats-indépendant), le contrat de vérification par lecteur, l'exemple
 synthétique public exécutable, les mesures **historiques** étiquetées et
-datées, les créneaux **en attente** de la mesure de campagne, et le
-contrat de validation partenaire.
+datées, la mesure de campagne **reçue le 2026-09-08** (provenance en
+section 5, un créneau encore ouvert), et le contrat de validation
+partenaire.
 
 ---
 
@@ -128,8 +129,10 @@ synthétiques précisément pour n'affirmer la classe d'aucune phase réelle.
 ⚠ **HISTORIQUE — mesures du fil #1605, 2026-08-06, base `c806a770`-ère,
 c'est-à-dire AVANT les correctifs #1629/#1630/#1631 et la campagne
 #2062.** Elles valent comme trace de méthode et comme point de départ ;
-elles ne décrivent pas l'état courant du pipeline. La confrontation à la
-prose et à l'état actuels est la partie en attente (section 5).
+elles ne décrivent pas l'état courant du pipeline. La mesure courante
+(campagne #2062, reçue le 2026-09-08) est en section 5 — plusieurs
+constats historiques y sont confirmés (théâtre persistante), d'autres
+révolus (stakes, FOL).
 
 | date | mesure | résultat headline |
 |---|---|---|
@@ -144,24 +147,25 @@ Le détail chiffré et les preuves citées vivent dans le fil de l'issue
 
 ---
 
-## 5. Créneaux en attente — mesure de campagne (po-2025, #2062)
+## 5. Mesure de campagne — reçue le 2026-09-08 (po-2025, #2062)
 
-La campagne #2062 a atterri **49/49** le 2026-09-08 (47 ok + 1 non-arg +
-1 failed classé ; provenance uniforme `f95b7af2`/luna sur les 4 segments
-— reçu, rapport po-2025 R956 sur le dashboard). La mesure #1605 sur ces
-artefacts finalisés (read-only, sans nouveau run LLM) est la partie
-empirique courante du chapitre. Créneaux à remplir **à réception,
-avec provenance** (hash, date, population) :
+**Provenance** : campagne #2062, base `f95b7af2`, modèle `openai/gpt-5.6-luna`
+(`--max-chars 0`), 49 dumps / 47 ok (2 non-ok : 1 non-argumentatif, 1
+`llm_unparseable-json` classé non-déterminisme), mesure read-only sans
+nouveau run LLM, livrée par po-2025 le 2026-09-08 (dashboard R956 + matrice
+complète `phase_matrix_1605.md` sous `.analysis_kb/restitutions_2062_luna/`,
+manifeste `manifest_1605_po2023.json` reçu par message privé). Les chiffres
+ci-dessous sont **reçus tels quels** — aucune interpolation.
 
-| créneau | mesure attendue | valeur |
-|---|---|---|
-| E1 | matrice verdict × trajet, phases et population énumérées sur les artefacts de campagne | **à remplir à réception** |
-| E2 | compte Dung zéro-relation | axe_dung : 17/49 zéro-relation (reçu avec la livraison de campagne, provenance ci-dessus) ; croisement avec la matrice : **à remplir à réception** |
-| E3 | confrontation du gate de conclusion à la prose **actuelle** (l'inertie R754 est historique, pas une conclusion) | **à remplir à réception** |
-| E4 | trajet des phases corrigées par #1629/#1630/#1631 (le sol a bougé depuis R757) | **à remplir à réception** |
+| créneau | valeur reçue |
+|---|---|
+| E1 — matrice verdict | **39 phases** (le workflow a évolué depuis la base R752 — ne pas figer « 40 ») : **substantive 33 / honest-absent 1 / unavailable 0 / théâtre 5**. Théâtre persistante depuis R752, preuve log/dump : `neural_detect` (liste vide 47/47), `text_to_kb`/`kb_to_tweety`/`tweety_interpretation` (sortie None — « component … has no invoke callable »), `delp_reasoning` (extension calculée sur cadre vide : args=0, attacks=0). Honest-absent : `weighted_reasoning` — registre `evaluated_empty` 32 + `degraded` 35/46, **le gate le nomme à l'Acte III** : une absence honnête nommée est un succès de la matrice, pas un échec du pipeline |
+| E2 — Dung zéro-relation | axe_dung : **17/49 zéro-relation** (livré avec la campagne). Entonnoir du conteneur persistant (mesuré) : `setaf_grounded`/`weighted_grounded` args présents mais **attacks=0** sur 46/46 (`add_dung_framework` = attaques binaires seulement). **Le registre `structured_arg_status` est le discriminant** : weighted dit `evaluated_empty` (honnête, nommé par le gate), setaf dit `evaluated` malgré attacks=0 (entonnoir silencieux) — vocabulaire `evaluated` / `no_genuine_relations` / `translator_failed` / `evaluated_empty` (+ `degraded`) |
+| E3 — gate vs prose **actuelle** | **OUVERT** — la livraison couvre la matrice de phases, pas le rejeu des substitutions du gate contre la prose courante. L'inertie R754 reste une mesure historique tant que ce créneau n'est pas rempli |
+| E4 — phases corrigées depuis R757 | **En partie reçu** : `stakes` **corrigé** (unavailable par construction → câblée, peuplée 47/47 — plus aucun unavailable par construction) ; FOL **décide firsthand 47/47** (11 incohérents / 36 cohérents, EProver — l'époque ParserException de R752 est révolue sur cette base) ; contamination d'axe à l'écriture **persistante** : `dl_reasoning` (substantive) range son verdict en prose dans le conteneur FOL (`fol_1 = "DL: Knowledge base is consistent."`, 47/47) — reçu tel quel ; noter que #1609 a corrigé la **lecture** d'axe (un invité ne crédite plus l'axe hôte), la cohabitation au niveau conteneur reste mesurée telle quelle |
 
-La partie empirique absente ne sera pas déclarée livrée : sans E1–E4,
-le chapitre reste une proposition de protocole, pas un compte-rendu.
+La partie empirique absente ne sera pas déclarée livrée : sans E3, la
+confrontation gate↔prose reste un créneau ouvert, et le chapitre l'énonce.
 
 ---
 
