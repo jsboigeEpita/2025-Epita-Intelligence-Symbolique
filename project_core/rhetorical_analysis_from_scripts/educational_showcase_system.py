@@ -63,7 +63,7 @@ from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
 from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
-from argumentation_analysis.agents.tools.analysis.enhanced.contextual_fallacy_analyzer import (
+from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
     EnhancedContextualFallacyAnalyzer,
 )
 from argumentation_analysis.paths import PROJECT_ROOT_DIR
@@ -76,21 +76,12 @@ from argumentation_analysis.core.source_management import (
 # Imports qui peuvent échouer sans bloquer l'exécution de base
 try:
     # Imports de l'écosystème refactorisé
-    from argumentation_analysis.pipelines.unified_text_analysis import (
-        UnifiedTextAnalysisPipeline,
-        UnifiedAnalysisConfig,
-    )
     from argumentation_analysis.orchestration.unified_pipeline import (
         run_unified_analysis,
     )
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
         ConversationLogger,
-    )
-    from argumentation_analysis.core.report_generation import (
-        UnifiedReportGenerator,
-        ReportConfiguration,
-        ReportMetadata,
     )
     from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
@@ -100,18 +91,6 @@ try:
     )
     from argumentation_analysis.models.extract_definition import ExtractDefinitions
     from argumentation_analysis.paths import DATA_DIR, LIBS_DIR
-    from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
-        PropositionalLogicAgent,
-    )
-    from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-        FirstOrderLogicAgent,
-    )
-    from argumentation_analysis.agents.tools.analysis.enhanced.complex_fallacy_analyzer import (
-        EnhancedComplexFallacyAnalyzer,
-    )
-    from argumentation_analysis.agents.tools.analysis.enhanced.fallacy_severity_evaluator import (
-        EnhancedFallacySeverityEvaluator,
-    )
     from argumentation_analysis.reporting.real_time_trace_analyzer import (
         RealTimeTraceAnalyzer,
         global_trace_analyzer,
@@ -124,11 +103,6 @@ try:
     EDUCATIONAL_COMPONENTS_AVAILABLE = True
 except ImportError as e:
     EDUCATIONAL_COMPONENTS_AVAILABLE = False
-    # Isole les composants optionnels pour permettre le fonctionnement même en cas d'erreur
-    PropositionalLogicAgent = None
-    FirstOrderLogicAgent = None
-    EnhancedComplexFallacyAnalyzer = None
-    EnhancedFallacySeverityEvaluator = None
     print(f"[WARNING] Certains composants éducatifs non disponibles: {e}")
 
 # Configuration des chemins pour le système éducatif
