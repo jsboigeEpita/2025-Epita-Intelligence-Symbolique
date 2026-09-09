@@ -67,9 +67,14 @@ class TestRetainedAttacksWeightedShape:
         assert _retained_attacks(arguments, submitted) == []
 
     def test_member_source_triple_kept_with_weight(self) -> None:
+        # #2068: a retained Weighted triple is normalized to the
+        # {source, target, weight} dict the writer's sanitiser accepts
+        # (the tuple form was the loss: the writer dropped it, attacks=[]).
         arguments = ["a", "b"]
         submitted = [("b", "a", 0.9)]
-        assert _retained_attacks(arguments, submitted) == [("b", "a", 0.9)]
+        assert _retained_attacks(arguments, submitted) == [
+            {"source": "b", "target": "a", "weight": 0.9}
+        ]
 
 
 class TestRetainedAttacksSetafShape:

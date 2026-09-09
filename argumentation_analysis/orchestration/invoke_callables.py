@@ -3386,17 +3386,55 @@ def _aba_rules_from_context(
 # design decision, which is gated on #1629).
 
 
+def _attack_content_signature(atk: Any) -> Any:
+    """Canonical, shape-normalized signature for retained-vs-dropped detection.
+
+    #2068: ``_retained_attacks`` normalizes a Weighted triple ``(src, tgt, w)``
+    to the ``{source, target, weight}`` dict the writer's sanitiser accepts, so
+    the retained set no longer holds the same object identity as the submitted
+    list. A content signature replaces the ``id()`` membership test that relied
+    on re-appending the very object submitted. SetAF / Dung / Social re-append
+    the same object, so their signature matches exactly as ``id()`` did.
+    """
+    if isinstance(atk, dict) and "attackers" in atk and "target" in atk:
+        return (
+            "setaf",
+            str(atk.get("target", "")),
+            tuple(str(a) for a in (atk.get("attackers") or [])),
+        )
+    if isinstance(atk, dict) and "source" in atk and "target" in atk:
+        try:
+            w = float(atk.get("weight", 0.0))
+        except (TypeError, ValueError):
+            w = 0.0
+        return ("weighted", str(atk["source"]), str(atk["target"]), w)
+    if isinstance(atk, (list, tuple)) and len(atk) >= 3:
+        try:
+            w = float(atk[2])
+        except (TypeError, ValueError):
+            w = 0.0
+        return ("weighted", str(atk[0]), str(atk[1]), w)
+    if isinstance(atk, (list, tuple)) and len(atk) >= 2:
+        return ("pair", str(atk[0]), str(atk[1]))
+    return ("other",)
+
+
 def _retained_attacks(arguments: List[str], submitted_attacks: List[Any]) -> List[Any]:
     """Attacks whose endpoints are all members of ``arguments``.
 
     Shapes (the four handlers' input contracts):
       - Dung/Social pair ``[src, tgt]``            -> src and tgt in inventory
-      - Weighted triple ``(src, tgt, w)``          -> src and tgt in inventory
+      - Weighted triple ``(src, tgt, w)``          -> src and tgt in inventory;
+        NORMALIZED to ``{source, target, weight}`` (#2068) so the output the
+        writer's dict-only sanitiser consumes keeps the weight.
+      - Weighted dict ``{source, target, weight}`` -> src and tgt in inventory
       - SetAF spec ``{"attackers": [...], "target"}`` -> target in inventory AND
         at least one attacker in inventory (the handler keeps the partial set).
 
     Anything else (malformed / unknown shape) is dropped — the caller must not
-    assert an attack it cannot ground (#1019).
+    assert an attack it cannot ground (#1019). The form ``output["attacks"]``
+    carries after this helper is decided HERE, once; producers and writers are
+    not patched at both ends to agree (#2068 anti-pendule).
     """
     arg_set = {str(a) for a in arguments}
     retained: List[Any] = []
@@ -3406,6 +3444,13 @@ def _retained_attacks(arguments: List[str], submitted_attacks: List[Any]) -> Lis
             attackers = atk.get("attackers") or []
             if target in arg_set and any(str(a) in arg_set for a in attackers):
                 retained.append(atk)
+        elif isinstance(atk, dict) and "source" in atk and "target" in atk:
+            if str(atk["source"]) in arg_set and str(atk["target"]) in arg_set:
+                retained.append(atk)
+        elif isinstance(atk, (list, tuple)) and len(atk) >= 3:
+            src, tgt = str(atk[0]), str(atk[1])
+            if src in arg_set and tgt in arg_set:
+                retained.append({"source": src, "target": tgt, "weight": float(atk[2])})
         elif isinstance(atk, (list, tuple)) and len(atk) >= 2:
             if str(atk[0]) in arg_set and str(atk[1]) in arg_set:
                 retained.append(atk)
@@ -3472,7 +3517,7 @@ def _annotate_attack_retention(
     # ``_retained_attacks`` appends the same candidate objects, so id()
     # membership is a faithful retained test across shapes.
     if isinstance(submitted_attacks, list):
-        retained_ids = {id(a) for a in retained}
+        retained_sigs = {_attack_content_signature(a) for a in retained}
         by_nature: Dict[str, List[int]] = {
             "fallacy": [0, 0],
             "ca": [0, 0],
@@ -3489,7 +3534,7 @@ def _annotate_attack_retention(
                 attacker = atk[0]
             nature = _attack_source_nature(attacker)
             by_nature[nature][0] += 1
-            if id(atk) not in retained_ids:
+            if _attack_content_signature(atk) not in retained_sigs:
                 by_nature[nature][1] += 1
         for nature, (sub, dropped) in by_nature.items():
             output[f"attacks_submitted_{nature}"] = sub
