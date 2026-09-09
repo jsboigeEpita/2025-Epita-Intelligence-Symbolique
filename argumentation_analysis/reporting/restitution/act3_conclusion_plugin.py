@@ -698,13 +698,25 @@ def _collect_weak_points(
 
 
 def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]:
-    """Surface the virtues where the discourse scores well (honest strengths).
+    """Surface the virtues where the discourse genuinely holds (honest strengths).
 
-    A strength is a virtue with a non-zero score on at least one argument.
-    Aggregated as the max across arguments (the discourse's best tenue on that
-    virtue) — surfaced so the LLM can acknowledge what holds, not only what
-    breaks (the balanced "appréciations" beat, spec §1.3).
+    #1907 cross-act residue: with no threshold, the top-N of a weak set
+    reached the conductor under a slot labelled ``[CE QUI TIENT — forces]``
+    while Act II said of the same axis that it does not discriminate (real
+    run: best score of the discourse 0.5, clarity floor 0.2). A force is
+    therefore a virtue that reached the quality instrument's TOP band on at
+    least one argument — the canonical scale is ``{0.0, 0.2, 0.5, 1.0}``
+    (``_snap_to_scale``, shared by the lexical and agentic detectors), where
+    0.5 is the instrument's own "partiel" wording: a partial is not "ce qui
+    tient". Values >= 1.0 from non-canonical writers still qualify.
+
+    Aggregated as the max across arguments (the discourse's best tenue on
+    that virtue). When no virtue qualifies, the empty list flows into the
+    prompt's pre-existing honest-absence wording — the axis stays *measured*
+    (Act II may still weave virtues as character); what empties is praise,
+    not measurement.
     """
+    _STRENGTH_MIN_SCORE = 1.0
     best: Dict[str, float] = {}
     for _arg, qs in quality.items():
         if not isinstance(qs, dict):
@@ -718,7 +730,7 @@ def _collect_quality_strengths(quality: Dict[str, Any]) -> List[QualityStrength]
         if not isinstance(spv, dict):
             continue
         for vname, vval in spv.items():
-            if isinstance(vval, (int, float)) and vval > 0:
+            if isinstance(vval, (int, float)) and float(vval) >= _STRENGTH_MIN_SCORE:
                 best[str(vname)] = max(best.get(str(vname), 0.0), float(vval))
     return [
         QualityStrength(virtue=k, score=v)
