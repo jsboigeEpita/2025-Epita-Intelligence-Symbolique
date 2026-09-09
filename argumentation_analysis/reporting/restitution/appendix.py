@@ -549,6 +549,7 @@ def render_appendix(
     state: Optional[Mapping[str, Any]],
     *,
     include_full_state_json: bool = False,
+    gate_block: Optional[str] = None,
 ) -> str:
     """Render the dimensional appendix as a folded Markdown ``<details>`` block.
 
@@ -558,6 +559,10 @@ def render_appendix(
         include_full_state_json: opt-in. When True, the leak-scrubbed state JSON
             is included (folded) for traceability. Meant for emission under a
             gitignored path only. Default False (counts-only provenance).
+        gate_block: optional pre-rendered gate self-diagnostic (the renderer's
+            verdict block). #1914: gate diagnostics are appendix material —
+            folded in as the first content on unfold, never on the reader
+            surface. The auditability is intact, only the position changes.
 
     Returns:
         A Markdown string beginning with ``<details>``. Empty string when
@@ -567,7 +572,8 @@ def render_appendix(
     if state is None:
         return (
             "\n<details>\n<summary>Annexe — provenance dimensionnelle</summary>\n\n"
-            "Annexe indisponible (shared-state non fourni au renderer). "
+            + (gate_block + "\n\n" if gate_block else "")
+            + "Annexe indisponible (shared-state non fourni au renderer). "
             "La narration ci-dessus se suffit à elle-même ; cette annexe n'aurait "
             "contenu que des agrégats de traçabilité.\n\n"
             "</details>\n"
@@ -579,16 +585,23 @@ def render_appendix(
         "\n<details>",
         "<summary>Annexe — provenance dimensionnelle ( repliée par défaut)</summary>",
         "",
-        "Agrégats de traçabilité uniquement — pas de contenu de corpus.",
-        "",
-        "La colonne *Mobilisation* dit si la conclusion a lu la dimension. Une "
-        "dimension disponible n'est pas nécessairement une dimension qui a nourri "
-        "le raisonnement : les deux surfaces de lecture de l'état sont distinctes "
-        "(#1624).",
-        "",
-        "| Dimension | Valeur | Mobilisation |",
-        "|---|---|---|",
     ]
+    if gate_block:
+        lines.append(gate_block)
+        lines.append("")
+    lines.extend(
+        [
+            "Agrégats de traçabilité uniquement — pas de contenu de corpus.",
+            "",
+            "La colonne *Mobilisation* dit si la conclusion a lu la dimension. Une "
+            "dimension disponible n'est pas nécessairement une dimension qui a nourri "
+            "le raisonnement : les deux surfaces de lecture de l'état sont distinctes "
+            "(#1624).",
+            "",
+            "| Dimension | Valeur | Mobilisation |",
+            "|---|---|---|",
+        ]
+    )
     for label, value in counts.items():
         # A dimension with no declaration is rendered "non déclarée" rather than
         # blank: a silent empty cell reads as "nothing to say", which is the

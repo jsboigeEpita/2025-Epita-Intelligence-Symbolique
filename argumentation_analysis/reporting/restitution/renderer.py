@@ -186,14 +186,16 @@ class RestitutionReportRenderer:
         source = (acts.source_id or "corpus_anonyme").strip()
         parts: list[str] = []
 
-        # header — opaque id only, privacy HARD
+        # header — opaque id only, privacy HARD. #1914: the fixed preamble
+        # names no toolchain (the enumeration was a reader-surface pipeline
+        # vocabulary leak, 49/49 renders); it points at the fold instead.
         parts.append(f"# Rapport de restitution — {source}")
         parts.append("")
         parts.append(
             "Récit en trois actes (mise en situation → analyse narrative → "
-            "conclusion actionnable). Les cadres formels et informels (Tweety, "
-            "Dung/ASPIC, taxonomie, vertus) sont les *preuves* citées en appui "
-            "du récit, jamais une énumération."
+            "conclusion actionnable). Les preuves spécialistes sont citées en "
+            "appui du récit, jamais une énumération ; leur détail vérifiable "
+            "est replié dans l'annexe ci-dessous."
         )
         parts.append("")
 
@@ -201,13 +203,16 @@ class RestitutionReportRenderer:
         parts.append(body)
         parts.append("")
 
-        # the gate verdict — surfaced for transparency (not hidden)
-        parts.append(self._render_verdict_block(verdict))
-        parts.append("")
-
-        # the folded dimensional appendix (provenance)
+        # the folded dimensional appendix (provenance). #1914: the gate
+        # self-diagnostic rides INSIDE the fold — auditability intact, reader
+        # surface clean (the contract lists gate diagnostics as appendix
+        # material; the verdict block is the first thing on unfold).
         parts.append(
-            render_appendix(state, include_full_state_json=include_full_state_json)
+            render_appendix(
+                state,
+                include_full_state_json=include_full_state_json,
+                gate_block=self._render_verdict_block(verdict),
+            )
         )
 
         return "\n".join(parts).rstrip() + "\n"
