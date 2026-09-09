@@ -3404,7 +3404,7 @@ def _attack_content_signature(atk: Any) -> Any:
         )
     if isinstance(atk, dict) and "source" in atk and "target" in atk:
         try:
-            w = float(atk.get("weight"))
+            w = float(atk.get("weight", 0.0))
         except (TypeError, ValueError):
             w = 0.0
         return ("weighted", str(atk["source"]), str(atk["target"]), w)
