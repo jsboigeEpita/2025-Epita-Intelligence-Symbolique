@@ -11,7 +11,14 @@ spécialiste sur la zone disputée ».
 - **Exécution :** dans un **git worktree temporaire détaché** (`git worktree add --detach <temp> 1bc80e5d`), dans le sous-dossier `MyIA.AI.Notebooks/SymbolicAI/Argument_Analysis/`. Le working tree de `D:\dev\CoursIA` (HEAD flottant `32cf333a6`, arbre sale) n'a **pas** été touché — aucun checkout in-place, aucun commit CoursIA.
 - **Environnement :** `python 3.10` (env `projet-is-roo-new`) + `rdflib 7.6.0` (importé depuis les site-packages de base, **sans installation** — rdflib est pur Python). Libs : `pandas`, `numpy`, `sklearn 1.7.2`, `networkx`. Aucun LLM, aucune API, aucune JVM, aucun `pip install`.
 - **Runner :** cellules de code exécutées **dans l'ordre**, dans un namespace partagé, stdout capturé par cellule (pas de dépendance à `nbconvert`/`jupyter` — absents de l'env).
+- **Trace de réexécution :** le stdout par cellule de cette exécution est committé à côté du présent document (`s6_recollement_exec_log.txt`) — la cellule 32 du log est la table de verdict citée en §2.
 - **Mutations :** deux variantes du notebook (voir §4), exécutées dans le même worktree.
+
+**Portée du snapshot.** Cette validation certifie le **snapshot `#13070`** (pin `1bc80e5d`) et lui seul.
+Le même notebook a ensuite été modifié par `#13606` puis par `#14355` (`116db0b0`) : **l'état courant
+du dépôt CoursIA post-`#14355` n'est pas certifié ici** — ni ses chiffres, ni l'exécution de ses
+cellules. Toute extension de la validation à cet état courant exigerait une ré-exécution au
+nouveau pin.
 
 ## 1. Exécution
 
