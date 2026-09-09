@@ -56,7 +56,11 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
 
-from .dung_reader import REJECTED_MEANS  # #1908: shared meaning with act2
+from .dung_reader import (  # #1908: shared meaning with act2
+    REJECTED_MEANS,
+    appendix_ref,
+    appendix_refs_in,
+)
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
     decode_native_dung,
 )
@@ -669,7 +673,10 @@ def _collect_weak_points(
                 target_arg_id=str(arg_id),
                 # #1908: the accepted/rejected meaning is shared with Act II —
                 # one helper (dung_reader), so the acts cannot diverge.
-                detail=REJECTED_MEANS,
+                # #1914 résidu b: the same graph finding bears the same stable
+                # ref in both acts — the rejection's proof is the machinery
+                # the annexe folds under that ref.
+                detail=f"{appendix_ref(semantics)} — {REJECTED_MEANS}",
             )
         )
     if pl_inc:
@@ -1842,6 +1849,31 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
             "robustesse formelle et la tenue des schemes)"
         )
 
+    # #1914 résidu b — same citation contract as Act II, on the weak-point
+    # lines that carry a ref. Conditional: no ref, no rule (never instruct
+    # the conductor about a citation that has nothing to cite), and the
+    # example interpolates a REAL ref (a bracketed placeholder would pollute
+    # the ref namespace a conductor scans).
+    annex_ref_rule = ""
+    _wp_refs = [
+        r for wp in evidence.weak_points for r in appendix_refs_in(wp.detail or "")
+    ]
+    if _wp_refs:
+        annex_ref_rule = (
+            "RÉFÉRENCES D'ANNEXE (la preuve repliée) — quand un point faible "
+            "porte une référence d'annexe Dung (entre crochets) :\n"
+            f"- Tu PEUX la citer TELLE QUELLE, entre parenthèses, sur le "
+            f"battement qui mobilise ce point faible : "
+            f"« … (voir {_wp_refs[0]}) ».\n"
+            "- Cite une référence SEULEMENT sur le battement concerné ; "
+            "jamais sans lui, jamais inventée ni modifiée : copie-la "
+            "exactement depuis le bloc ci-dessus.\n"
+            "- Une référence ne change PAS le rôle hiérarchique du point "
+            "faible (P1 / tension / accompagnement) : la HIÉRARCHIE DU "
+            "VERDICT gouverne ; la référence n'indique qu'où la preuve est "
+            "repliée.\n\n"
+        )
+
     # --- Que faire (actionnable) ---
     # #1668 conclusion-side: ``strategy`` is free text (an observed rhetorical
     # move), surfaced in parentheses only when present — an empty strategy
@@ -2062,6 +2094,7 @@ def build_act3_prompt(evidence: Act3Evidence) -> str:
         f"[VERDICT GATED — plafond de claim honnête]\n{synthesis_block}\n\n"
         f"[CE QUI TIENT — forces (qualité)]\n{strengths_lines}\n\n"
         f"[CE QUI NE TIENT PAS — faiblesses localisées]\n{weaknesses_lines}\n\n"
+        f"{annex_ref_rule}"
         f"[CONTRE-POINTS — ce qui affaiblit les revendications]\n{counters_lines}\n\n"
         f"[POINTS DE PRUDENCE — ancrages structurels]\n{target_lines}\n\n"
         f"[DÉLIBÉRATION COLLECTIVE — governance + débat]\n{deliberation_block}\n\n"
