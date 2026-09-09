@@ -477,6 +477,86 @@ class TestAnalyzeText:
         assert r["status"] == "partial_success"
         assert r.get("fallback_used") is True
 
+    @patch(f"{MODULE}._generate_unified_recommendations", return_value=["OK"])
+    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", False)
+    @patch(f"{MODULE}.ORIGINAL_PIPELINE_AVAILABLE", True)
+    async def test_fallback_runs_real_original_pipeline(self, mock_recs):
+        # #2079 : la récupération doit exécuter le VRAI _run_original_pipeline
+        # (mock seulement à la frontière run_unified_text_analysis_pipeline).
+        # Sans le setdefault du seed nu, ce test tourne rouge (KeyError).
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run = AsyncMock(return_value={"informal_analysis": {"fallacies": []}})
+        with patch.object(
+            mod, "run_unified_text_analysis_pipeline", mock_run, create=True
+        ):
+            r = await mod.analyze_text("Text", mode="orchestration")
+        assert r["status"] == "partial_success"
+        assert r.get("fallback_used") is True
+        assert r["pipeline_results"]["fallback"] == {
+            "informal_analysis": {"fallacies": []}
+        }
+
+    @patch(f"{MODULE}._generate_unified_recommendations", return_value=["OK"])
+    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", False)
+    @patch(f"{MODULE}.ORIGINAL_PIPELINE_AVAILABLE", True)
+    async def test_unknown_mode_reports_executed_mode(self, mock_recs):
+        # #2079 : sur le chemin cascade (mode inconnu), l'original tourne mais la
+        # métadonnée pipeline_mode gardait le mode demandé — elle doit refléter
+        # le pipeline réellement exécuté.
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run = AsyncMock(return_value={"informal_analysis": {"fallacies": []}})
+        with patch.object(
+            mod, "run_unified_text_analysis_pipeline", mock_run, create=True
+        ):
+            r = await mod.analyze_text("Text", mode="banana")
+        assert r["metadata"]["pipeline_mode"] == "original"
+        assert r["status"] == "success"
+
+    @patch(f"{MODULE}.ORIGINAL_PIPELINE_AVAILABLE", True)
+    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
+    @patch(
+        f"{MODULE}._run_orchestration_pipeline",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("Boom"),
+    )
+    async def test_recovery_reports_original_mode_keeps_fallback_flags(self, mock_orch):
+        # #2079 : la récupération réussie a exécuté le pipeline original —
+        # pipeline_mode doit le dire, sans effacer fallback_used ni
+        # partial_success qui signalent le mode demandé dégradé.
+        # _generate_unified_recommendations n'est atteinte que sur le
+        # chemin sans exception (:221 dans le try) : les recommandations
+        # du chemin recovery restent [] — inchangées par le correctif.
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run = AsyncMock(return_value={"informal_analysis": {"fallacies": []}})
+        with patch.object(
+            mod, "run_unified_text_analysis_pipeline", mock_run, create=True
+        ):
+            r = await mod.analyze_text("Text", mode="orchestration")
+        assert r["status"] == "partial_success"
+        assert r.get("fallback_used") is True
+        assert r["metadata"]["pipeline_mode"] == "original"
+        assert r["recommendations"] == []
+
+    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
+    @patch(f"{MODULE}._run_orchestration_pipeline", new_callable=AsyncMock)
+    async def test_unknown_mode_tolerates_metadataless_return(self, mock_run):
+        # #2079 : si un sous-pipeline rend une structure sans clé
+        # "metadata", la branche cascade ne doit pas crasher — sans le
+        # setdefault, le KeyError est avalé par le except englobant et le
+        # statut devient "error" au lieu de "success".
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run.return_value = {
+            "pipeline_results": {"orchestrated": {"done": True}},
+            "status": "in_progress",
+        }
+        r = await mod.analyze_text("Text", mode="banana")
+        assert r["status"] == "success"
+        assert r["metadata"]["pipeline_mode"] == "orchestration"
+
     @patch(
         f"{MODULE}._run_orchestration_pipeline",
         new_callable=AsyncMock,
@@ -608,6 +688,20 @@ class TestRunOriginalPipeline:
                 "t", "c", False, None, {"pipeline_results": {}}
             )
             assert r["informal_analysis"] == {"d": 1}
+
+    @patch(f"{MODULE}.ORIGINAL_PIPELINE_AVAILABLE", True)
+    async def test_tolerates_bare_seed(self):
+        # #2079 : la récupération de analyze_text passe `{}` comme seed à
+        # _run_original_pipeline. Le writer doit le tolérer (setdefault du
+        # conteneur) au lieu de lever KeyError: 'pipeline_results' (:328).
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run = AsyncMock(return_value={"informal_analysis": {"f": []}})
+        with patch.object(
+            mod, "run_unified_text_analysis_pipeline", mock_run, create=True
+        ):
+            r = await mod._run_original_pipeline("t", "c", False, None, {})
+        assert "original" in r["pipeline_results"]
 
 
 class TestRunHybridPipeline:

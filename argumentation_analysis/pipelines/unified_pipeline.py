@@ -187,7 +187,10 @@ async def analyze_text(
             )
 
         else:
-            # Fallback vers le mode disponible
+            # Fallback vers le mode disponible. #2079 : la métadonnée
+            # `pipeline_mode` gardait le mode demandé (y compris un mode
+            # inconnu) alors qu'un autre pipeline avait tourné — la corriger
+            # pour qu'elle reflète le mode réellement exécuté.
             if ORCHESTRATION_PIPELINE_AVAILABLE:
                 results = await _run_orchestration_pipeline(
                     text,
@@ -198,10 +201,12 @@ async def analyze_text(
                     results,
                     **kwargs,
                 )
+                results.setdefault("metadata", {})["pipeline_mode"] = "orchestration"
             elif ORIGINAL_PIPELINE_AVAILABLE:
                 results = await _run_original_pipeline(
                     text, analysis_type, use_mocks, source_info, results, **kwargs
                 )
+                results.setdefault("metadata", {})["pipeline_mode"] = "original"
             else:
                 raise RuntimeError("Aucun pipeline disponible")
 
@@ -234,6 +239,11 @@ async def analyze_text(
                 ]["original"]
                 results["status"] = "partial_success"
                 results["fallback_used"] = True
+                # #2079 : le fallback a réellement exécuté le pipeline
+                # original — pipeline_mode reflète ce qui a tourné, tandis
+                # que fallback_used/status=partial_success portent déjà la
+                # dégradation du mode demandé.
+                results["metadata"]["pipeline_mode"] = "original"
             except Exception as fallback_error:
                 logger.error(f"[UNIFIED] Échec du fallback: {fallback_error}")
 
@@ -324,7 +334,10 @@ async def _run_original_pipeline(
         text, config, source_info
     )
 
-    # Intégration des résultats
+    # Intégration des résultats. Le seed passé à cette fonction peut être nu
+    # (la récupération :226 lui passe `{}`) : poser le conteneur avant
+    # d'indexer, sinon `results["pipeline_results"]` lève KeyError (#2079).
+    results.setdefault("pipeline_results", {})
     results["pipeline_results"]["original"] = original_results
 
     # Copier les champs principaux pour compatibilité
