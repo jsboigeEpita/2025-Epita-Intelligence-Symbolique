@@ -66,6 +66,25 @@ def _on_disk_only(tracked_dirs: set[str]) -> list[str]:
     return sorted(d for d in disk if d != SUBTREE and d not in tracked_dirs)
 
 
+def _gitignored(rel_dir: str) -> bool:
+    """True when a VERSIONED .gitignore rule covers this directory.
+
+    The probe is a fictional FILE under the directory, not the directory
+    itself: directory-only patterns (``libs/``) cannot match a non-existent
+    path because git would have to stat() it to learn it is a directory —
+    from a clean worktree/clone the roots are absent and the directory probe
+    silently fails. A descendant path is under a directory by construction,
+    so the rules evaluate everywhere (#2091 review). No disk content is
+    required: check-ignore only evaluates the path against tracked rules.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "check-ignore", f"{rel_dir}/__probe__"],
+        capture_output=True,
+        text=True,
+    )
+    return out.returncode == 0 and bool(out.stdout.strip())
+
+
 def _ignore_status(rel_dir: str) -> str:
     out = subprocess.run(
         ["git", "-C", str(REPO), "check-ignore", rel_dir],
@@ -180,7 +199,8 @@ def main() -> int:
         print(f"- `{d}` — {n} fichiers vendorisés suivis, dont {jars} binaire(s) jar/exe/dll/bat")
     print()
 
-    print("## Présents sur disque mais NON suivis (artefacts locaux, hors inventaire)")
+    disk_roots = {d.replace(SUBTREE + "/", "").split("/")[0] for d in disk_only}
+    print("## Présents sur disque mais NON suivis (signal machine local — hors base de preuve)")
     print()
     for d in disk_only:
         vend = " — **vendorisé**" if d.replace(SUBTREE + "/", "").split("/")[0] in VENDORED_ROOTS else ""
@@ -219,15 +239,18 @@ def main() -> int:
     checks.append((ok2, msg2))
     disk_roots = {d.replace(SUBTREE + "/", "").split("/")[0] for d in disk_only}
     tracked_vendored = {d.replace(SUBTREE + "/", "").split("/")[0] for d in vendored_dirs}
-    ok3 = all(
-        (root in disk_roots or root in tracked_vendored) for root in VENDORED_ROOTS
-    )
+    vendored_rel = [f"{SUBTREE}/{r}" for r in VENDORED_ROOTS]
+    tracked_under_roots = [f for f in _git("ls-files", "--", *vendored_rel).splitlines() if f.strip()]
+    ignored_roots = [rel for rel in vendored_rel if _gitignored(rel)]
+    ok3 = (not tracked_under_roots) and len(ignored_roots) == len(vendored_rel)
     checks.append(
         (
             ok3,
-            f"exclusions vendorisées prouvées : suivies={len(vendored_dirs)} ("
-            f"{sorted(tracked_vendored)}), sur disque non suivies=libs+portable_jdk "
-            f"({sorted(disk_roots & set(VENDORED_ROOTS))})",
+            "exclusions vendorisées prouvées DEPUIS GIT UNIQUEMENT : "
+            f"{len(tracked_under_roots)} fichier suivi sous {vendored_rel} (attendu 0), "
+            f"règles .gitignore versionnées matchées par check-ignore pour "
+            f"{len(ignored_roots)}/{len(vendored_rel)} — aucune exigence sur le disque "
+            "local (reproductible depuis un worktree/clone propre)",
         )
     )
     ok4 = not any(
