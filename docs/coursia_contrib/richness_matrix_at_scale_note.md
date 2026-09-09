@@ -28,9 +28,9 @@ que parcourt chaque sortie — *appel → sortie → lecture → décision*.
 Cette note livre, dans l'ordre : le protocole complet du chapitre
 (résultats-indépendant), le contrat de vérification par lecteur, l'exemple
 synthétique public exécutable, les mesures **historiques** étiquetées et
-datées, la mesure de campagne **reçue le 2026-09-08 et corrigée en v2**
-(provenance, écarts v1→v2 et limites exactes en section 5 ; un créneau — E3 —
-encore ouvert), et le contrat de validation partenaire.
+datées, la mesure de campagne **reçue le 2026-09-08 et corrigée en v3**
+(provenance, taxonomie totale et limites exactes en section 5 ; un créneau
+— E3 — encore ouvert), et le contrat de validation partenaire.
 
 ---
 
@@ -152,15 +152,18 @@ Le détail chiffré et les preuves citées vivent dans le fil de l'issue
 
 ---
 
-## 5. Mesure de campagne — reçue le 2026-09-08 (po-2025, #2062), **corrigée en v2**
+## 5. Mesure de campagne — reçue le 2026-09-08 (po-2025, #2062), **corrigée en v3**
 
 **Provenance** : campagne #2062, base `f95b7af2`, modèle `openai/gpt-5.6-luna`
 (`--max-chars 0`), 49 dumps / 47 ok (2 non-ok : 1 non-argumentatif, 1
 `llm_unparseable-json` classé non-déterminisme LLM), mesure read-only sans
-nouveau run LLM. Livrée par po-2025 en **v1** puis **corrigée en v2** (message
-privé du 2026-09-08, PJ `phase_matrix_1605_v2.json` +
-`rules_and_evidence_1605_v2.md`). La présente section intègre la **v2** ;
-les écarts v1→v2 sont signalés au fil du texte. Les chiffres ci-dessous sont
+nouveau run LLM. Livrée par po-2025 en **v1**, corrigée **v2** puis **v3**
+(paquet du 2026-09-09 : instrument, sorties json+md, règles/changelog, et
+`manifest_v3.json` dont les SHA256 lient les sorties à leurs entrées
+exactes — les deux fichiers de sortie re-vérifiés au hash contre ce
+manifeste à la réception). La v3 a passé l'audit indépendant du
+coordinateur (favorable) ; ses huit réserves sont intégrées ci-dessous et
+signalées « réserve » au fil du texte. Les chiffres ci-dessous sont
 **reçus tels quels** — aucune interpolation.
 
 ### Le point transversal, et la limite exacte de la v1
@@ -168,45 +171,58 @@ les écarts v1→v2 sont signalés au fil du texte. Les chiffres ci-dessous sont
 La v1 comptait **« 33 substantive »** — un compte de **classe de verdict**
 (Axe 1 : la clé d'état canonique a été écrite). Cela ne démontre **pas** le
 trajet end-to-end : une phase peut écrire sa sortie et ne jamais la voir
-reprise en conclusion. La v2 sépare donc **trois étages**, jamais fusionnés
-(anti-pendule #1605) :
+reprise en conclusion. La v2 puis la v3 séparent donc **trois étages**,
+jamais fusionnés (anti-pendule #1605) :
 
 | étage | question | instrument |
 |---|---|---|
 | **1. production** | la clé d'état canonique a-t-elle été écrite ? | sondage direct des dumps — 39 phases, statut global 1826 completed / 7 failed / 0 skipped |
-| **2. décision-solveur** | le verdict d'axe se lit-il « décidé » ou « disponible » ? | colonne Valeur de la restitution (`appendix.py` tri-state décidé/disponible/indisponible) |
-| **3. reprise-en-conclusion** | l'Acte III a-t-il réellement *lu* la dimension ? | colonne Mobilisation |
+| **2. décision-solveur** | le verdict d'axe se lit-il « décidé » ou « disponible » ? | colonne Valeur de la restitution — verdict **parsé exact** (v3 lit le JSON de la cellule et le champ `verdict` verbatim) |
+| **3. reprise-en-conclusion** | la restitution déclare-t-elle la dimension mobilisée ? | colonne Mobilisation — **DÉCLARÉE par le rédacteur de la restitution, pas une trace instrumentée de consommation Acte III** |
 
-**Lecture des étages 2+3, sur les 47 ok** — c'est ici que la limite se révèle :
-seuls **FOL / PL / Modal** sont à la fois **décidés** et **mobilisés** → apport
-**end-to-end établi** pour ces trois axes. dung / aspic / bipolaire / revision
-sont **disponible** (flag de présence : `appendix.py` émet « disponible » si la
-clé est présente, ce n'est pas une décision de solveur) mais **mobilisés** :
-présents et cités, sans décision discrétionnaire derrière.
-**`synthese_formelle` (47/47) et `synthese_narrative` (46/47) sont produites
-mais NON mobilisées** — le cas « production sans reprise en conclusion », que la
-colonne Mobilisation atteste littéralement. **« 33 substantive » ne décrit donc
-que l'étage 1** ; l'apport à la conclusion n'est établi (décidé + mobilisé) que
-pour **FOL/PL/Modal**.
+**Lecture des étages 2+3, sur les 47 ok** — formulation bornée (réserve 5) :
+FOL / PL / Modal = verdict **décidé** 47/47 **et** mobilisation **déclarée**
+47/47 → « decided + declared mobilised », ce qui n'est **pas** une preuve
+d'influence causale sur la conclusion. dung / aspic / bipolaire / revision
+sont **disponibles** (flag de présence : `appendix.py` émet « disponible » si
+la clé est présente, ce n'est pas une décision de solveur) et déclarés
+mobilisés 46–47/47 — les cellules « — » de `c7464ef5` (aspic, revision) sont
+nommées dans le JSON v3. **`synthese_formelle` (47/47) et
+`synthese_narrative` (46/47, cellule « — » sur `3c7a164f_ext0`) sont
+produites mais déclarées NON mobilisées** — le cas « production sans reprise
+en conclusion ». Deux précisions d'honnêteté (réserve 2) :
+`arg_structuree` est déclarée mobilisée en mode **failure_only** (uniquement
+si l'axe échoue — pas une influence positive générale) ;
+`synthese_globale` est une **projection structurée**, pas la prose. **« 33
+substantive » (v1) ne décrit que l'étage 1** ; aucun étage ne se déduit
+d'un autre.
 
-### Écarts v1 → v2 (classes d'Axe 1 corrigées)
+### Écarts v1 → v3 (classes d'Axe 1, taxonomie totale 39/39)
 
-| phase | v1 | v2 | pourquoi |
+**Comptes v3** : substantive **35** / honest_absent **1** (weighted) / théâtre
+**3** (trio KB) / unavailable **0** — ce zéro est **mesuré** contre la liste
+des 39 phases déclarée par le run lui-même (ligne de log citée dans le
+JSON) ; les 8 capacités des writers non planifiées par ce workflow sont
+nommées (`code_caps_not_in_workflow`) et ne comptent pas comme unavailable.
+
+| phase | v1 | v3 | pourquoi |
 |---|---|---|---|
-| `neural_detect` | théâtre | **zéro mesuré, non-théâtre** | le log de passe dit « completed using 'self_hosted_fallacy_detector' (1.61s) » : l'inférence a **réellement tourné** et rendu 0 détection ; `_write_camembert_to_state` n'écrit `neural_fallacy_scores` que si `output.detections` est non vide → zéro **mesuré** (a tourné, rien trouvé), pas « la phase n'a pas tourné ». Leçon : un conteneur vide ne prouve pas l'absence d'inférence — il faut le log + le service + le seuil d'écriture |
-| `setaf_reasoning` | substantive à-qualifier | **perte de structure** | `attacks_submitted` non-nul (jusqu'à 25) mais `attacks=0` (46/46) : le conteneur binaire `add_dung_framework` perd les attaques collectives ; registre `evaluated` 29/46 — le solveur a tourné, la structure ne survit pas |
-| `weighted_reasoning` | honnête-absent | honnête-absent (**confirmé**) | même mécanique, mais registre `evaluated_empty` 32 + `degraded` 35/46 et **le gate le nomme à l'Acte III** (« force pondérée non évaluée », 35 WARN) — l'absence est dite |
-| `aba_reasoning` | substantive | **perte de structure non vérifiable** | n'expose pas de champ `attacks_submitted`, args fixes 3, att=0 (46/46) — une éventuelle perte d'attaques collectives est **invisible** au conteneur ; impossible de trancher depuis le dump. Cas le plus dangereux |
-| `delp_reasoning` | théâtre | vacuité (**confirmé**) | framework **vide** (0 arg, 0 att, 47/47) → extension calculée sur vide = vacuité |
-| `text_to_kb` / `kb_to_tweety` / `tweety_interpretation` | théâtre | théâtre (**confirmé**) | aucun `invoke callable` (log « component … has no invoke callable, output None »), clé d'état absente 47/47 |
-| `dung_extensions` | substantive | **réconcilié : non uniforme** | framework présent **43/47** ; **4 = `verification_unavailable`** (absent **nommé**, honnête-absent : 6cf07ed6_ext1/ext3, a798a020, c7464ef5) — dénominateur réconcilié, pas un manque |
+| `neural_detect` | théâtre | **substantive / `zero_measured`** | clé `neural_fallacy_scores` écrite **vide** 47/47 ; la preuve du zéro vient de la complétion + la ligne de log par doc (47/47), pas de la seule présence de clé (réserve 4). Leçon : un conteneur vide ne prouve ni l'absence ni la présence d'inférence — il faut le log + le service + le seuil d'écriture |
+| `delp_reasoning` | théâtre | **substantive / `vacuous_input`** (tranché) | framework écrit args=0/attacks=0 sur 47/47 → extension calculée sur vide = vacuité d'entrée, pas théâtre |
+| `setaf_reasoning` | substantive à-qualifier | **substantive / `structure_loss_at_container`** | registre `evaluated` 29/47 : les attaques collectives survivent comme **résultat vivant**, non représentables dans le conteneur binaire |
+| `weighted_reasoning` | honnête-absent | **honest_absent** (registre, nommé 46/47) | registre `structured_arg_status` : `evaluated_empty/degraded` **32** + `no_genuine_relations` **11** + `translator_failed/degraded` **3** (comptes du registre ; les logs ne servent qu'à la couverture 46/47 — ils donnent 33/10/3, delta 1 non expliqué, réserve 1). Interprétation corrigée : les attaques SONT proposées et validées (logs `Weighted translator yield`), ce sont les **result sets** du cadre pondéré qui sont vides — absence **nommée**, pas écrasement au conteneur. Sidecar pondéré réparé côté production par ailleurs (PR #2084) |
+| `aba_reasoning` | substantive | substantive / **perte invisible** | registre `evaluated` 40/47 mais pas de champ `attacks_submitted` — une perte d'attaques collectives serait invisible au conteneur. Cas le plus dangereux |
+| `fol_solver` / `modal_solver` | (absents de v2) | **substantive / `merged_container`** | chemin non-dégradé du writer : fusionnés dans les conteneurs hôtes fol/modal (v2 les avait perdus de la carte stage1) |
+| `cl_reasoning` / `qbf_reasoning` | (absents de v2) | **substantive** | invités dans la **liste** `propositional_analysis_results` (préfixes `CL(` / `QBF`) |
+| `text_to_kb` / `kb_to_tweety` / `tweety_interpretation` | théâtre | **théâtre (confirmé)** | complétés 47/47 mais clés d'état **absentes** 47/47 (pas null — réserve 5) ; aucun `invoke callable` |
+| `dung_extensions` | substantive | substantive / `named_absent_variant` | **43 écrits + 4 `verification_unavailable` nommés** (6cf07ed6_ext1/ext3, a798a020, c7464ef5) ; garde de disjonction par doc : 0 violation. Un qualifier d'une phase **substantive**, pas une phase honest_absent (réserve 7) |
 
 ### Créneaux
 
-| créneau | valeur **v2** |
+| créneau | valeur **v3** |
 |---|---|
-| E1 — matrice verdict | **39 phases** (le workflow a évolué depuis la base R752 — ne pas figer « 40 » ; la population mesurée de cette époque n'a pas `synthesis`/`sat_solving`). Classes d'Axe 1 **corrigées** (cf. tableau ci-dessus) ; **0 unavailable par construction = conventionnel** : conséquence du câblage de `stakes` (corrigé depuis R752, peuplé 47/47) — « zéro » dit qu'aucun axe n'est structurellement hors d'atteinte, **pas** que chaque axe décide |
-| E2 — entonnoir de structure | le discriminant est `attacks_submitted` (soumis par le solveur) vs `attacks` (ce qui **survit** au conteneur binaire) : setaf = perte de structure ; weighted = honnête-absent nommé ; ABA = perte invisible (pas de champ soumission) ; delp = vacuité ; `social_af` = substantive (attaques non-nulles 30/47, = soumises) ; `verification_grounded` (dung) = attaques non-nulles sur 29/43, zéro-attaques 14/43 |
+| E1 — matrice verdict | **39 phases** (le workflow a évolué depuis la base R752 — ne pas figer « 40 » ; la population mesurée de cette époque n'a pas `synthesis`/`sat_solving`). Classes d'Axe 1 **totales 39/39** : substantive **35** / honest_absent **1** / théâtre **3** / unavailable **0** — zéro **mesuré** contre la liste déclarée par le run (ligne de log citée), pas une convention ; les 8 capacités code non planifiées sont hors périmètre du run |
+| E2 — entonnoir de structure | discriminant **primaire** = registre `structured_arg_status` (v3 le lit intégralement) : weighted = absence **nommée** 46/47 ; setaf = `structure_loss_at_container` (29/47 résultats vivants) ; ABA = perte invisible (pas de champ soumission). L'entonnoir `attacks_submitted` vs `attacks` (v2) devient mesure **secondaire** ; `social_af` = substantive (attaques non-nulles 30/47) ; `verification_grounded` (dung) = attaques non-nulles sur 29/43, zéro-attaques 14/43 |
 | E3 — gate vs prose **actuelle** | **OUVERT** — la livraison couvre la matrice de phases, pas le rejeu des substitutions du gate contre la prose courante. L'inertie R754 reste une mesure historique tant que ce créneau n'est pas rempli |
 | E4 — phases corrigées depuis R757 | `stakes` **corrigé** (unavailable par construction → câblée, 47/47 ; plus aucun unavailable par construction) ; FOL **décide firsthand 47/47** (11 incohérents / 36 cohérents, EProver — l'époque ParserException de R752 est révolue sur cette base ; #1630 CLOSED) ; #1631 CLOSED ; **#1629 OUVERT** (graphe par index — cf. section 4) ; contamination d'axe à l'écriture **persistante** : `dl_reasoning` range son verdict en prose dans le conteneur FOL (`fol_1 = "DL: Knowledge base is consistent."`, 47/47) — reçu tel quel ; #1609 a corrigé la **lecture** d'axe (un invité ne crédite plus l'axe hôte), la cohabitation au niveau conteneur reste mesurée telle quelle |
 
@@ -224,6 +240,17 @@ pour **FOL/PL/Modal**.
 - **`40` vs `39`** : différence de **population** (l'ancien workflow avait
   `synthesis`/`sat_solving`), pas un artefact de comptage des `stakes` — qui
   sont une **correction**, pas un ajout.
+
+**Vérifiabilité et limites résiduelles.** Le manifeste SHA256 lie chaque
+sortie à ses entrées exactes ; l'instrument expose un mode `verify
+--against` (recompute en mémoire, n'écrit rien) rejouable partout, le mode
+`build` seulement là où les dumps résident — le `VERIFY PASS` du producteur
+(20 clés, rien écrit) est **rapporté**, pas rejoué ici faute de dumps
+(réserve 6). L'attribution des lignes de log (en-têtes `[i/N]`, appariement
+stdout/stderr par horodatage) est une comptabilité d'instrument, pas une
+trace indépendante (réserve 8). Enfin `dl_reasoning` range son verdict dans
+le conteneur FOL **sans marqueur distinctif** : `content_present` n'isole
+pas sa production (réserve 3).
 
 La partie empirique absente ne sera pas déclarée livrée : sans E3, la
 confrontation gate↔prose reste un créneau ouvert, et le chapitre l'énonce.
@@ -263,8 +290,11 @@ Côté CoursIA, la validation naturelle du chapitre :
 - **`substantive` (étage 1 — la sortie est écrite) ≠ « mobilisé » (étage 3 —
   repris en conclusion)** : le compte de classe est une vue de la production,
   pas du trajet. Sur la campagne #2062 (section 5), seuls FOL/PL/Modal sont
-  établis end-to-end (décidés **et** mobilisés) ; les synthèses sont produites
-  mais non mobilisées. Un compte « substantive » seul ne valide aucun trajet.
+  **décidés** (étage 2) **et déclarés mobilisés** (étage 3 — déclaration du
+  rédacteur de la restitution, pas une trace instrumentée) ; les synthèses
+  sont produites mais déclarées non mobilisées. Un compte « substantive »
+  seul ne valide aucun trajet — et « decided + declared mobilised » n'est
+  pas une preuve d'influence causale.
 - **Historique ≠ courant** : les mesures R752–R757 sont datées et
   périmées par les correctifs ultérieurs ; elles ne se présentent jamais
   comme l'état présent.
