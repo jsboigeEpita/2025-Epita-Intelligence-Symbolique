@@ -1,0 +1,96 @@
+# Independent re-execution trace - strate-6 notebook (snapshot #13070, pin 1bc80e5d)
+# Method: code cells executed in order in a shared namespace, stdout captured per cell
+#         (no jupyter/nbconvert in the env). Runner described in s6_recollement_validation.md.
+# Env: python 3.10 (projet-is-roo-new) + rdflib 7.6.0 from base site-packages, sklearn 1.7.2.
+# No LLM, no API, no JVM, no pip install. Temp detached worktree at the pin; CoursIA tree untouched.
+# Result: 18/18 code cells OK. Cell 32 below is the verdict table quoted in the validation doc section 2.
+
+=== cell 2 OK (289 chars) ===
+corpus: 1,407 feuilles | 7 classes
+Influence                 420
+Tricherie                 394
+Insuffisance              174
+Obstruction               126
+Erreur mathématique       102
+Erreur de raisonnement    102
+Abus de langage            89
+
+train=984 | test=423 (stratified, seed 42)
+=== cell 5 OK (202 chars) ===
+31 colonnes bannies (famille/backbone) hors de portée de toutes les lectures
+état: utilisé comme signal matériel (métadonnée d'édition), pas comme position dans l'arbre — distinct de depth/decimal_path
+=== cell 8 OK (182 chars) ===
+conversion en 0.6s -> argumentum_fallacies_converted.nt
+              annotation: 10,511
+          annotation_iri: 7,773
+              decl_Class: 1,513
+     decl_ObjectProperty: 10
+=== cell 9 OK (238 chars) ===
+graphe rdflib : 18,838 triples
+base IRI de l'ontologie : https://www.argumentum.games/argumentum_fallacies.owl#
+concepts argumentum declares : 1,406
+certificat #12290 (regex)    : concepts argumentum = 1 509, localnames distincts = 1 406
+=== cell 10 OK (98 chars) ===
+concepts avec prefLabel FR : 1,306 / 1,406
+concepts avec >= 5 annotations (hors backbone) : 1,306
+=== cell 11 OK (131 chars) ===
+jonction FR normalise : 1,388 / 1,407 feuilles CSV reliees
+certificat #12290     : intersection OWL/CSV = 1 293 (98,5% de l'union)
+=== cell 14 OK (42 chars) ===
+LEX  train acc = 0.979 | test acc = 0.530
+=== cell 17 OK (44 chars) ===
+STRUCT train acc = 0.430 | test acc = 0.390
+=== cell 20 OK (146 chars) ===
+graphe : 1,407 noeuds, 9,268 aretes symetrisees
+GRAPH train acc = 0.996 | test acc = 0.558
+test : mediane voisins train = 9, <3 voisins train : 0
+=== cell 23 OK (103 chars) ===
+RDF  train acc (revendique) = 0.382 | test acc (revendique) = 0.336
+revendications RDF : 1,388 / 1,407
+=== cell 24 OK (669 chars) ===
+    RDF: revendique 1,388 (98.6%) | test acc sur zone revendiquee = 0.336
+    LEX: revendique 1,407 (100.0%) | test acc sur zone revendiquee = 0.530
+ STRUCT: revendique 1,407 (100.0%) | test acc sur zone revendiquee = 0.390
+  GRAPH: revendique 1,407 (100.0%) | test acc sur zone revendiquee = 0.558
+
+Matrice de compatibilite (taux de contradiction sur le chevauchement des revendications) :
+            RDF      LEX   STRUCT    GRAPH
+    RDF    0.0%    61.6%    50.6%    61.0%
+    LEX   61.6%     0.0%    56.9%    11.3%
+ STRUCT   50.6%    56.9%     0.0%    56.7%
+  GRAPH   61.0%    11.3%    56.7%     0.0%
+
+taux d'incompatibilite moyen (paires, hors diagonale) = 49.7%
+=== cell 26 OK (589 chars) ===
+Competence par famille (accuracy train, par lecture, sur zone revendiquee) :
+famille                      RDF     LEX  STRUCT   GRAPH      n
+Abus de langage             0.56    0.94    0.06    0.94     62
+Erreur de raisonnement      0.01    0.93    0.13    1.00     71
+Erreur mathématique         0.00    0.97    0.20    1.00     71
+Influence                   0.58    1.00    0.71    1.00    294
+Insuffisance                0.04    0.98    0.14    1.00    122
+Obstruction                 0.01    0.94    0.17    1.00     88
+Tricherie                   0.59    0.99    0.56    1.00    276
+=== cell 29 OK (60 chars) ===
+specialiste seul (meilleur train) : GRAPH (train acc 0.996)
+=== cell 32 OK (599 chars) ===
+zone disputee (>=3 revendications, desaccord) : 1,076 / 1,407 dont test = 334
+
+regle                     test global  test dispute
+R1 majorite brute               52.2%         45.2%
+R2 precision globale            56.3%         50.3%
+GLU apprise (OOF)               61.0%         56.6%
+SPEC GRAPH seul                 55.8%         49.7%
+ORACLE (borne sup)              76.4%         75.7%
+lecture RDF seule               33.3%         21.6%
+lecture LEX seule               53.0%         46.1%
+lecture STRUCT seule            39.0%         28.4%
+lecture GRAPH seule             55.8%         49.7%
+=== cell 33 OK (70 chars) ===
+temoins R1-erre (GLU ou SPEC correct) dans la zone disputee test : 71
+=== cell 36 OK (21 chars) ===
+Exercice a completer
+=== cell 37 OK (21 chars) ===
+Exercice a completer
+=== cell 38 OK (21 chars) ===
+Exercice a completer
