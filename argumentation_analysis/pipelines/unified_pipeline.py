@@ -201,12 +201,12 @@ async def analyze_text(
                     results,
                     **kwargs,
                 )
-                results["metadata"]["pipeline_mode"] = "orchestration"
+                results.setdefault("metadata", {})["pipeline_mode"] = "orchestration"
             elif ORIGINAL_PIPELINE_AVAILABLE:
                 results = await _run_original_pipeline(
                     text, analysis_type, use_mocks, source_info, results, **kwargs
                 )
-                results["metadata"]["pipeline_mode"] = "original"
+                results.setdefault("metadata", {})["pipeline_mode"] = "original"
             else:
                 raise RuntimeError("Aucun pipeline disponible")
 
@@ -239,6 +239,11 @@ async def analyze_text(
                 ]["original"]
                 results["status"] = "partial_success"
                 results["fallback_used"] = True
+                # #2079 : le fallback a réellement exécuté le pipeline
+                # original — pipeline_mode reflète ce qui a tourné, tandis
+                # que fallback_used/status=partial_success portent déjà la
+                # dégradation du mode demandé.
+                results["metadata"]["pipeline_mode"] = "original"
             except Exception as fallback_error:
                 logger.error(f"[UNIFIED] Échec du fallback: {fallback_error}")
 

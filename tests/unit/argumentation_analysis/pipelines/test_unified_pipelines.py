@@ -514,6 +514,49 @@ class TestAnalyzeText:
         assert r["metadata"]["pipeline_mode"] == "original"
         assert r["status"] == "success"
 
+    @patch(f"{MODULE}.ORIGINAL_PIPELINE_AVAILABLE", True)
+    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
+    @patch(
+        f"{MODULE}._run_orchestration_pipeline",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("Boom"),
+    )
+    async def test_recovery_reports_original_mode_keeps_fallback_flags(self, mock_orch):
+        # #2079 : la récupération réussie a exécuté le pipeline original —
+        # pipeline_mode doit le dire, sans effacer fallback_used ni
+        # partial_success qui signalent le mode demandé dégradé.
+        # _generate_unified_recommendations n'est atteinte que sur le
+        # chemin sans exception (:221 dans le try) : les recommandations
+        # du chemin recovery restent [] — inchangées par le correctif.
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run = AsyncMock(return_value={"informal_analysis": {"fallacies": []}})
+        with patch.object(
+            mod, "run_unified_text_analysis_pipeline", mock_run, create=True
+        ):
+            r = await mod.analyze_text("Text", mode="orchestration")
+        assert r["status"] == "partial_success"
+        assert r.get("fallback_used") is True
+        assert r["metadata"]["pipeline_mode"] == "original"
+        assert r["recommendations"] == []
+
+    @patch(f"{MODULE}.ORCHESTRATION_PIPELINE_AVAILABLE", True)
+    @patch(f"{MODULE}._run_orchestration_pipeline", new_callable=AsyncMock)
+    async def test_unknown_mode_tolerates_metadataless_return(self, mock_run):
+        # #2079 : si un sous-pipeline rend une structure sans clé
+        # "metadata", la branche cascade ne doit pas crasher — sans le
+        # setdefault, le KeyError est avalé par le except englobant et le
+        # statut devient "error" au lieu de "success".
+        import argumentation_analysis.pipelines.unified_pipeline as mod
+
+        mock_run.return_value = {
+            "pipeline_results": {"orchestrated": {"done": True}},
+            "status": "in_progress",
+        }
+        r = await mod.analyze_text("Text", mode="banana")
+        assert r["status"] == "success"
+        assert r["metadata"]["pipeline_mode"] == "orchestration"
+
     @patch(
         f"{MODULE}._run_orchestration_pipeline",
         new_callable=AsyncMock,
