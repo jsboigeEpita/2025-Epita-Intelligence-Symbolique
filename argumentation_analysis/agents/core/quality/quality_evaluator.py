@@ -317,6 +317,40 @@ _LOCAL_MIN_SENTENCES = 2
 # guard that keeps this from drifting back into a degenerate band.
 _LOCAL_MIN_WORDS = 30
 
+# R2 clause-aware admission (#1907, coordinator arbitration R950). The word
+# gate above is the only discriminator for single-sentence units, and the
+# measured sub-30-word region still holds structure: 12/47 units carry a
+# refutation, an analogy or a causal chain (9 of the 12 in the 20-29 word
+# band). Rule R2 admits a CLAIM-band unit for the *structural* virtues when
+# it carries clause structure. Exactly these three virtues — never
+# ``redondance_faible``, whose sub-30-word band is degenerate (a flat 1.00 on
+# 47/47 measured units: admitting it reopens the +1.0 band the tri-state
+# closed), and never as a third gate of ``infer_context_level`` (which would
+# lift every LOCAL-level virtue at once).
+_CLAUSE_AWARE_VIRTUES = frozenset(
+    {"refutation_constructive", "analogie_pertinente", "structure_logique"}
+)
+
+
+def is_multi_clause(text: str) -> bool:
+    """R2 clause-structure test for a short single-sentence unit (#1907).
+
+    True when the unit carries at least one strong separator — ``;``, ``:``
+    or a connector from the existing ``connecteurs_structure_logique``
+    resource, reusing the detectors' own list and substring semantics (no
+    second taxonomy) — or at least two commas. Measured calibration on the
+    47-unit sub-30-word region: admits 11/12 structure-bearing units (the
+    12th carries no punctuation at all and stays honestly NOT_APPLICABLE —
+    a family bound of any punctuation-based rule) for 11/35 non-bearing
+    admissions, which are evaluated zeros, not fabricated scores.
+    """
+    lowered = (text or "").lower()
+    if ";" in lowered or ":" in lowered:
+        return True
+    if any(c in lowered for c in RESOURCES.get("connecteurs_structure_logique", [])):
+        return True
+    return lowered.count(",") >= 2
+
 
 def infer_context_level(text: str) -> ContextLevel:
     """Infer the unit shape when the caller did not declare one.
@@ -524,6 +558,11 @@ class ArgumentQualityEvaluator:
         The returned dict gains ``statuts_par_vertu`` (all 9 virtues),
         ``note_max_applicable`` (the ceiling actually reachable on this unit)
         and ``contexte_evalue``.
+
+        #1907 R2 (arbitration R950): within the CLAIM band, a unit that
+        carries clause structure (``is_multi_clause``) remains applicable to
+        the three structural virtues — a per-virtue admission, never a third
+        gate of ``infer_context_level``.
         """
         # Fail-loud gate (#1019 / NanoClaw review): if deps already failed,
         # raise immediately rather than looping through 9 detectors that
@@ -573,6 +612,18 @@ class ArgumentQualityEvaluator:
             # (Custom/injected detectors are unknown to the taxonomy and default
             # to CLAIM, i.e. always applicable — no behaviour change for them.)
             required = VIRTUE_CONTEXT_REQUIREMENTS.get(vertu, ContextLevel.CLAIM)
+            # #1907 R2 (arbitration R950): a CLAIM-band unit that carries
+            # clause structure stays judgeable by the structural virtues —
+            # the measured false negatives (12/47 sub-30-word units) sit
+            # exactly there. Per virtue only, so redondance_faible keeps its
+            # >= 30-word floor; inferred and declared levels are treated the
+            # same because applicability is a property of the unit.
+            if (
+                vertu in _CLAUSE_AWARE_VIRTUES
+                and context_level == ContextLevel.CLAIM
+                and is_multi_clause(text)
+            ):
+                required = ContextLevel.CLAIM
             if required > context_level:
                 statuses[vertu] = VirtueStatus.NOT_APPLICABLE
                 details[vertu] = (
