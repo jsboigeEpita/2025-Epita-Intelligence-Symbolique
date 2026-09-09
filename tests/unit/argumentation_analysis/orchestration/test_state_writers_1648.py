@@ -578,17 +578,10 @@ class TestWeightedRetentionFlattening1648:
     ``_annotate_attack_retention`` is a pure function — no JVM, no handler.
     """
 
-    @pytest.mark.xfail(
-        strict=True,
-        reason=(
-            "#2068 — _annotate_attack_retention (invoke_callables.py:3462) "
-            "overwrites the handler's dict-shaped attacks with the retained "
-            "input triples, so _write_weighted_to_state's dict-only sanitiser "
-            "drops them all (state: attacks=[], no attack_weights sidecar). "
-            "The #2068 fix must remove this marker: XPASS => CI red."
-        ),
-    )
     def test_retained_attack_keeps_its_weight_in_dict_form(self) -> None:
+        # #2068 landed: _retained_attacks now normalizes the Weighted triple to
+        # the {source, target, weight} dict, so this assertion passes (was an
+        # xfail(strict=True) pin — the marker was removed, XPASS no longer red).
         output: Dict[str, Any] = {
             "semantics": "grounded",
             "arguments": ["a", "b", "c"],
