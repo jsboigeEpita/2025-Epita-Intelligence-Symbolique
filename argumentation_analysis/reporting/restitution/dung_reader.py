@@ -14,6 +14,8 @@ protocol) moves to the appendix, referenced from the prose.
 
 from __future__ import annotations
 
+import re
+
 # The epistemic caveat, stated at the FIRST reader-facing mention of the
 # graph (Act II) — not deferred to Act III. Acceptance and rejection are
 # verdicts internal to the constructed graph.
@@ -94,6 +96,19 @@ def appendix_ref(semantics_label: str) -> str:
     """Stable opaque appendix reference, citable from Act II and Act III."""
     label = (semantics_label or "dung").strip().lower().replace(" ", "-")
     return f"Annexe Dung[{label}]"
+
+
+# #1914 résidu b — same format knowledge as the producer above, one module.
+_REF_RE = re.compile(r"Annexe Dung\[[^\]\n]+\]")
+
+
+def appendix_refs_in(text: str) -> list[str]:
+    """Every appendix ref literally present in ``text``, in order of appearance.
+
+    Lets a conductor (or a guard test) find the refs a prompt carries without
+    re-deriving the format — ``appendix_ref`` stays the single producer.
+    """
+    return _REF_RE.findall(text or "")
 
 
 def backend_provenance() -> str:
