@@ -1,6 +1,6 @@
 # Inventaire README `argumentation_analysis/` — lot 0 (#2088)
 
-**Date** : 2026-09-09 (rév. 2026-09-10 après revue coordinateur PR #2091) · **Branche** : `docs/2088-lot0-readme-inventory` · **Exécutant** : Claude Code @ myia-po-2025
+**Date** : 2026-09-09 (rév. 2 du 2026-09-10 après seconde revue coordinateur PR #2091) · **Branche** : `docs/2088-lot0-readme-inventory` · **Exécutant** : Claude Code @ myia-po-2025
 
 ## Méthode & reproductibilité
 
@@ -240,10 +240,13 @@ Table brute (L = lignes ; âge = dernier commit README ; activité = dernier com
 Chaque README a été lu et ses affirmations saillantes recoupées contre l'arbre réel
 (fichiers, symboles, chemins). Définitions déclarées :
 
-- **courant** : les éléments décrits (fichiers, classes, structure, procédures) ont été
-  recoupés présents et exacts ;
+- **courant** : le README couvre le répertoire **sans présenter un sous-ensemble comme la
+  totalité** — les éléments décrits sont recoupés présents ET les composants significatifs
+  non décrits sont inexistants ou négligeables (la présence des chemins cités ne suffit
+  pas : revue #2091, 2e tour) ;
 - **partiel** : le noyau décrit est exact mais le périmètre réel est plus large (briques
-  non couvertes) ou des chemins cités sont erronés de façon réparable ;
+  significatives non couvertes, énumération incomplète) ou des chemins cités sont erronés
+  de façon réparable ;
 - **périmé** : le README décrit des chemins, scripts ou procédures qui **n'existent plus**
   dans l'arbre suivi — le lecteur est activement trompé ;
 - **spécialisé seulement** : pas de `README.md` mais un `README_*.md` thématique.
@@ -252,36 +255,36 @@ Chaque README a été lu et ses affirmations saillantes recoupées contre l'arbr
 |---|---|---|
 | `agents/` | **périmé** | 9 liens cassés ; `tools/optimization/` et `runners/` cités n'existent pas dans l'arbre suivi (ls : `analysis`, `encryption`, `support` seulement) ; l'inventaire des familles d'agents listées couvre 4 des 16 feuilles réelles |
 | `agents/core/` | partiel | liste 4 familles (pm, informal, pl, extract) sur 13 présentes (abc, counter_argument, debate, governance, logic, oracle, political, quality, synthesis absentes de la liste) |
-| `agents/core/extract/` | courant | les 3 fichiers décrits (`extract_agent.py`, `extract_definitions.py`, `prompts.py`) existent tels quels — description complète pour un répertoire de 4 fichiers |
+| `agents/core/extract/` | courant | décrit les 3 modules réels (`extract_agent.py`, `extract_definitions.py`, `prompts.py`, `__init__` trivial) — couverture complète du répertoire |
 | `agents/core/informal/` | partiel | décrit 2 fichiers ; le module en porte 8 `.py` non couverts (`taxonomy_sophism_detector.py`, `dung_arbitration_stage.py`, `neuro_symbolic_arbitrator.py`, `detection_candidate_bridge.py`…) ; exemple d'import préfixé `agents.` obsolète |
 | `agents/core/logic/` | partiel | hiérarchie et composants exacts (BaseAgent/BaseLogicAgent, 3 agents, TweetyBridge, BeliefSet) ; 3 liens erronés d'un niveau (`../../abc/…` alors que abc/ est sous core/, pas sous agents/) |
 | `agents/core/pl/` | partiel | rôle et BNF exacts ; mais `PLAnalyzer` cité vit désormais dans `core/logic/propositional_logic_agent.py` (grep) — la fiche ne reflète pas la répartition pl/↔logic/ |
-| `agents/core/pm/` | courant | `prompt_define_tasks_v11` présent (2 occurrences dans `prompts.py`), `pm_definitions.py` présent — workflow décrit recoupé |
+| `agents/core/pm/` | partiel | « Composants Clés » couvre `pm_agent.py`/`pm_definitions.py`/`prompts.py` mais PAS `sherlock_enquete_agent.py` (5ᵉ module du répertoire, l'agent PM d'investigation) — énumération incomplète |
 | `agents/docs/` | partiel | notice générique « reports/ » ; le contenu réel = 2 docs spécialisés (README_optimisation_informal, README_test_orchestration_complete) non distingués |
-| `agents/templates/` | courant | structure standard template toujours en place (`student_template/` conforme) |
-| `agents/templates/student_template/` | courant | les 4 fichiers du template décrits (`agent.py`, `definitions.py`, `prompts.py`, `__init__.py`) existent |
+| `agents/templates/` | courant | « Structure » = `student_template/`, l'unique enfant réel — exact et complet |
+| `agents/templates/student_template/` | courant | les 4 fichiers décrits + le README = exactement les 5 fichiers réels du template |
 | `agents/tools/` | **périmé** | section « optimization/ » : ce répertoire n'existe plus dans l'arbre suivi (ls réel : analysis, encryption, support) |
 | `agents/tools/analysis/` | **périmé** | `enhanced/` cité (liens ×2) n'existe pas ; `rhetorical_result_analyzer.py` cité absent (seul `rhetorical_result_visualizer.py` présent) |
 | `agents/tools/analysis/new/` | **périmé** | lien `../enhanced/README.md` : `enhanced/` n'existe pas |
 | `config/` | partiel | l'arbre montré (` .env.template` + README) ne couvre pas les 4 fichiers suivis réels |
-| `core/` | courant | piliers décrits recoupés présents (`shared_state.py`, `state_manager_plugin.py`, llm/jvm) — les 26 fichiers du répertoire tournent autour de ces piliers |
+| `core/` | partiel | la section « Contenu » décrit 5 piliers (`shared_state`, `state_manager_plugin`, `strategies`, `jvm_setup`, `llm_service`) mais omet `capability_registry.py` (cœur de l'architecture Lego) et `communication/` — sous-ensemble présenté comme contenu |
 | `core/communication/` | partiel | concepts (Message/Channel/Pub-Sub) exacts ; `LocalChannel`/`local_channel.py` cité comme implémentation de référence : le fichier n'existe pas (seul `channel_interface.py` recoupé) |
-| `models/` | courant | `extract_definition.py` présent, structure conforme (3 fichiers) |
-| `orchestration/` | courant | pilote §6 : modes CLI, DSL, registry, writers tous prouvés par appelants file:line |
+| `models/` | courant | couvre les 3 fichiers réels du répertoire, `extract_definition.py` recoupé |
+| `orchestration/` | partiel | ne documente que 2 approches (moteur `pipelines/orchestration/execution/engine.py` + hiérarchique) ; omet conversationnel, Cluedo, sous-modes bridge/delegation, DSL/registry/writers — familles prouvées vivantes en §7 (`run_orchestration.py:363-387` expose 4 modes + 2 sous-modes) |
 | `orchestration/hierarchical/` | partiel | architecture 3 couches exacte (strategic/tactical/operational présents) ; les sous-modes `bridge`/`delegation` et `hierarchy_bridge.py` (RA-10 #1069) ne sont pas couverts |
 | `…/hierarchical/interfaces/` | partiel | `strategic_tactical.py` + `tactical_operational.py` présents conformes ; 1 lien erroné d'un niveau vers core/communication |
-| `…/hierarchical/operational/` | courant | `manager.py`, `adapters/`, registre de capacités décrits — tous recoupés présents |
-| `…/hierarchical/operational/adapters/` | courant | les 4 adaptateurs décrits (`extract`, `informal`, `pl`, `rhetorical_tools`) existent exactement |
-| `…/hierarchical/strategic/` | courant | `manager.py`, `planner.py`, `allocator.py` décrits = présents |
-| `…/hierarchical/tactical/` | courant | `manager.py`/`coordinator.py`, `monitor.py`, `resolver.py` décrits = présents |
-| `…/hierarchical/templates/` | courant | les 4 templates décrits (`agent`, `analysis_tool`, `analysis_type`, `strategy`) existent |
-| `pipelines/` | courant | la distinction pipelines vs orchestration décrite est conforme (le moteur vit bien dans `pipelines/orchestration/execution/engine.py`) |
-| `pipelines/orchestration/` | courant | structure décrite recoupée intégralement : `analysis/`, `config/`, `core/`, `execution/engine.py` + `strategies.py`, `orchestrators/` |
+| `…/hierarchical/operational/` | partiel | « Composants Clés » cite `manager.py`, `adapters/`, `agent_registry.py`, `state.py` mais omet `agent_interface.py` et `feedback_mechanism.py` (présents dans l'arbre suivi) |
+| `…/hierarchical/operational/adapters/` | courant | décrit exactement les 4 adaptateurs réels (`extract`, `informal`, `pl`, `rhetorical_tools`) — énumération complète |
+| `…/hierarchical/strategic/` | partiel | décrit le rôle conceptuel de la couche sans section composants — `manager.py`, `planner.py`, `allocator.py`, `state.py` non couverts |
+| `…/hierarchical/tactical/` | courant | « Composants Clés » couvre les 5 modules réels (`manager`, `coordinator`, `monitor`, `resolver`, `state`) — énumération complète |
+| `…/hierarchical/templates/` | courant | décrit exactement les 4 templates réels (`agent`, `analysis_tool`, `analysis_type`, `strategy`) — énumération complète |
+| `pipelines/` | partiel | rôle et distinction vs `orchestration/` exacts, mais les 7 modules racine (`unified_text_analysis.py`, `analysis_pipeline.py`, `embedding_pipeline.py`, `reporting_pipeline.py`, `advanced_rhetoric.py`…) ne sont pas énumérés — le README reste conceptuel |
+| `pipelines/orchestration/` | courant | énumère exactement ses 5 sous-répertoires réels (`analysis/`, `config/`, `core/`, `execution/`, `orchestrators/`) avec le rôle de chacun — couverture structurelle complète |
 | `plugin_framework/agents/` | **périmé** | le mécanisme décrit scanne « `src/agents` » — `src/` racine n'existe plus (consolidation #321) ; les loaders existent mais l'arbre décrit est faux |
 | `plugin_framework/core/plugins/` | **périmé** | même défaut : scan de « `src/core/plugins/` » disparu |
 | `scripts/` | **périmé** | les 2 scripts décrits (`repair_extract_markers.py`, `verify_extracts.py`) ne sont pas ceux du répertoire (contenu réel : `run_fix_missing_first_letter.py`, `run_verify_extracts_llm.py`, `simulate_balanced_participation.py`, `test_performance_extraits.py`) |
 | `services/` | partiel | noyau décrit exact (cache, crypto, definition, extract présents) ; la périphérie réelle non couverte (21 fichiers : `benchmark_service.py`, `fact_verification_service.py`, jtms/, local_llm, speech, web_api, mcp_server) |
-| `services/mcp_server/` | courant | `Dockerfile`, `main.py`, `tools/` recoupés présents — procédure docker conforme |
+| `services/mcp_server/` | partiel | procédure docker exacte, mais `server_config.py` et `session_manager.py` (modules racine) non couverts |
 | `services/web_api/` | **périmé** | procédure de lancement via `scripts/launch_webapp_background.py` : ce fichier n'existe pas |
 | `ui/` | **périmé** | 2 liens cassés dont la source d'amorçage `../../scripts/embed_all_sources.py` disparue ; le notebook cité absent |
 | `ui/extract_editor/` | **périmé** | l'outil central décrit `extract_marker_editor.ipynb` n'est pas dans l'arbre suivi (liens cassés) |
@@ -291,80 +294,116 @@ Chaque README a été lu et ses affirmations saillantes recoupées contre l'arbr
 **Spécialisé seulement** : `agents/tools/encryption` (README_encryption_system.md sans
 `README.md`) — promouvable en README.md lors de son lot.
 
-**Bilan** : 15 courants · 11 partiels · 11 périmés (37). Les 11 périmés trompent activement
-le lecteur (chemins/scripts/procédures morts) — ils sont prioritaires sur les partiels pour
-la rénovation, et les 26 liens cassés vivent presque tous dedans.
+**Bilan** : 8 courants · 18 partiels · 11 périmés (37). Les 11 périmés trompent activement
+le lecteur (chemins/scripts/procédures morts) et portent presque tous les 26 liens cassés ;
+les 18 partiels présentent un sous-ensemble comme totalité — l'écart le plus fréquent est
+l'énumération incomplète des modules réels du répertoire (7 verdicts abaissés au 2ᵉ tour de
+revue après relecture des README concernés).
 
-## 5. DAG enfants → parents et ordre topologique des lots
+## 5. DAG enfants → parents — vagues par profondeur réelle
 
 Règle de l'Epic #2088 : un README **parent** s'écrit après ceux de ses enfants — il doit
-pouvoir pointer vers des README enfants existants. Un nœud est *prêt* quand tous ses enfants
-substantiels sont documentés ou exclus.
+pouvoir pointer vers des README enfants existants. **Vague(nœud) = 1 + max(vague de ses
+enfants ayant du travail)**, où « travail » = README à créer (71) ou README à rénover
+(29 = 37 − 8 courants). Un parent léger/résiduel sur le chemin est **exclu explicitement**
+et compte comme dépendance satisfaite. Une même vague ne contient **jamais** un nœud et un
+de ses descendants.
 
-### Graphe de dépendances (71 sans README + parents concernés)
+### Exclusions explicites (dépendances satisfaites avant leurs parents)
 
-Chaque ligne : `enfant → parent` (le parent est bloqué tant que l'enfant n'est pas couvert).
+- `pipelines/orchestration/orchestrators/` — coquille résiduelle (fichiers déplacés) :
+  exclu AVANT que `pipelines/orchestration/` ne soit (re)documenté ; son unique enfant
+  substantiel `orchestrators/specialized/` est traité comme feuille.
+- `data/datasets/` — coquille légère (ne contient que `legacy_fixtures/`) : exclu, `data/`
+  dépend directement de `legacy_fixtures/`.
+- `evaluation/corpus/`, `agents/prompts/` (et sous-dossiers), `webapp/config/` — légers
+  (< 3 fichiers, 0 `.py`) : exclus, parents traités comme feuilles.
+- `agents/tools/encryption` : `README.md` absent mais `README_encryption_system.md` présent
+  — **promotion** en `README.md` dans la vague 1, pas une création.
+- `pipelines/orchestration/` (verdict courant) : aucune rénovation requise ; un simple
+  ajout de liens vers les README enfants créés en vague 1 peut accompagner la vague 2.
+
+### Vague 1 — feuilles profondes et rénovations sans enfant (74)
+
+Nouveaux README (62) :
 
 ```
-# sous agents/ (README parent existe mais périmé — rénovation après les feuilles)
-agents/core/abc, /counter_argument, /debate, /governance, /oracle, /political,
-  /quality, /synthesis, agents/channels, /concrete_agents, /extract, /plugins,
-  /tools/encryption (promouvable), /tools/support, /utils, /watson_jtms   → agents/
-# sous core/
-core/communication/tests, core/integration, core/interfaces, core/models,
-  core/setup, core/utils, core/utils/tests                                → core/
-# sous orchestration/
-orchestration/operational, orchestration/plugins                           → orchestration/
-# sous pipelines/
-pipelines/orchestration/analysis, /config, /core, /execution,
-  /orchestrators/specialized                                              → pipelines/orchestration/ → pipelines/
-# sous plugin_framework/
-plugin_framework/agents/personalities, /benchmarking, /core, /core/plugins/standard,
-  /core/plugins/standard/external_verification, /core/plugins/standard/taxonomy_explorer,
-  /core/plugins/workflows, /core/services                                 → plugin_framework/
-# sous plugins/
-plugins/analysis_tools, /analysis_tools/logic, /analysis_tools/tests,
-  plugins/semantic_kernel                                                 → plugins/
-# sous reporting/
-reporting/restitution                                                     → reporting/
-# sous services/
-services/ai_shield, /ai_shield/layers, /jtms, /mcp_server/tools,
-  /web_api/models, /web_api/routes, /web_api/services, /web_api/tests      → services/
-# sous utils/
-utils/core_utils, /dev_tools, /extract_repair/docs                        → utils/
-# sous data/
-data/datasets/legacy_fixtures                                             → data/
-# racines SANS enfant substantiel (feuilles au sens du DAG)
-adapters, analytics, api, cli, evaluation, integrations, kernel, nlp,
-  service_setup, visualization, webapp, workflows                          → (aucun parent interne)
+agents/ (16)          : core/abc, core/counter_argument, core/debate, core/governance,
+                        core/oracle, core/political, core/quality, core/synthesis,
+                        channels, concrete_agents, extract, plugins, tools/encryption
+                        (promotion), tools/support, utils, watson_jtms
+core/ (6)             : communication/tests, integration, interfaces, models, setup, utils/tests
+orchestration/ (2)    : operational, plugins
+pipelines/orchestration/ (5) : analysis, config, core, execution, orchestrators/specialized
+plugin_framework/ (6) : agents/personalities, benchmarking, core/services,
+                        core/plugins/standard/external_verification,
+                        core/plugins/standard/taxonomy_explorer, core/plugins/workflows
+plugins/ (3)          : semantic_kernel, analysis_tools/logic, analysis_tools/tests
+services/ (7)         : ai_shield/layers, jtms, mcp_server/tools,
+                        web_api/models, web_api/routes, web_api/services, web_api/tests
+reporting/ (1)        : restitution
+utils/ (3)            : core_utils, dev_tools, extract_repair/docs
+data/ (1)             : datasets/legacy_fixtures
+racines orphelines (12) : adapters, analytics, api, cli, evaluation, integrations,
+                        kernel, nlp, service_setup, visualization, webapp, workflows
 ```
 
-### Vagues topologiques
+Rénovations sans enfant à documenter (12) : `agents/core/informal`, `agents/core/logic`,
+`agents/core/pl`, `agents/core/pm`, `agents/docs`, `config`, `…/hierarchical/strategic`,
+`…/hierarchical/operational`, `…/hierarchical/interfaces`, `agents/tools/analysis/new`,
+`scripts`, `ui/extract_editor`.
 
-| Vague | Contenu | Effectif |
-|---|---|---|
-| **V1 — feuilles** | 55 feuilles sous racines + 12 racines-orphelines (sans enfant substantiel) | **67** |
-| **V2 — parents sans README** | `data`, `plugin_framework`, `plugins`, `reporting` — chacun n'a plus que des enfants V1 (ou déjà documentés : `plugin_framework/agents`) | **4** |
-| **V3 — rénovation des parents existants** | les 22 README non courants (11 périmés + 11 partiels), réécrits après que leurs feuilles existent | **22** |
+### Vague 2 — parents directs des feuilles (16)
 
-Fermeture vérifiée : 67 + 4 = 71 sans README ✓ ; V3 couvre les 37 − 15 courants = 22 ✓.
+Nouveaux README (7) : `core/utils`, `services/ai_shield`, `plugins/analysis_tools`,
+`plugin_framework/core/plugins/standard`, `plugin_framework/core`, `data`, `reporting`.
+
+Rénovations dont les enfants sont couverts en vague 1 (9) : `core/communication`
+(enfant `tests`), `agents/tools/analysis` (enfant `new`), `agents/core` (8 enfants créés +
+4 rénovés en v1), `services/web_api`, `services/mcp_server`, `ui`, `utils/extract_repair`,
+`plugin_framework/agents`, `orchestration/hierarchical`.
+
+### Vague 3 — grands parents (9)
+
+Nouveaux README (2) : `plugin_framework` (enfant `core` en v2), `plugins` (enfant
+`analysis_tools` en v2).
+
+Rénovations (7) : `agents/tools` (enfant `analysis` v2), `services` (enfants `ai_shield`
+v2, `web_api` v2, `mcp_server` v2), `utils` (enfant `extract_repair` v2), 
+`plugin_framework/core/plugins` (enfant `standard` v2), `orchestration` (enfants v1 +
+`hierarchical` v2), `core` (enfants `utils` v2, `communication` v2), `pipelines`
+(enfant `pipelines/orchestration` rafraîchi en v2).
+
+### Vague 4 — racines tardives (1)
+
+`agents/` (rénovation périmé) — bloquée sur : 16 enfants créés v1, `agents/core` v2,
+`agents/tools` v3, `agents/docs` v1.
+
+**Fermeture vérifiée** : nouveaux 62+7+2 = **71** ✓ ; rénovations 12+9+7+1 = **29** = 37 − 8
+courants ✓ ; chaque chaîne parent→enfant citée en revue (`core/utils/tests→core/utils`,
+`ai_shield/layers→ai_shield`, `analysis_tools/logic→analysis_tools`,
+`standard/*→standard→core/plugins→core→plugin_framework`, `pipelines/orchestration/*→…→pipelines`,
+`agents/core/*→agents/core→agents`) s'étale maintenant sur des vagues distinctes ✓.
 
 ## 6. Lots proposés (découpe des vagues en tranches livrables)
 
 | Lot | Vague | Contenu | Blocage |
 |---|---|---|---|
-| **A1** | V1 | 16 feuilles `agents/` + promotion `tools/encryption` | aucun |
-| **A2** | V1 | 8 feuilles `services/` (ai_shield ×2, jtms, mcp_server/tools, web_api ×4) | aucun |
-| **A3** | V1 | 8 feuilles `plugin_framework/` + 7 feuilles `core/` | aucun |
-| **A4** | V1 | 5 feuilles `pipelines/orchestration/` + 2 `orchestration/` | aucun |
-| **A5** | V1 | 4 feuilles `plugins/` + `reporting/restitution` + `data/datasets/legacy_fixtures` | aucun |
-| **A6** | V1 | 12 racines-orphelines (`adapters`, `analytics`, `api`, `cli`, `evaluation`, `integrations`, `kernel`, `nlp`, `service_setup`, `visualization`, `webapp`, `workflows`) | aucun |
-| **B1** | V2 | README parents `plugins`, `reporting` | bloqué sur A5 |
-| **B2** | V2 | README parents `data`, `plugin_framework` | bloqué sur A5 (data) / A3 (plugin_framework) |
-| **C1** | V3 | rénovation des 11 **périmés** (`agents`, `agents/tools`, `analysis` ×2, `plugin_framework/agents`, `plugin_framework/core/plugins`, `scripts`, `web_api`, `ui` ×2, `extract_repair`) — répare au passage les 26 liens cassés | bloqué sur les lots A/B couvrant leurs enfants |
-| **C2** | V3 | rénovation des 11 partiels | après C1 |
+| **A1** | 1 | 16 feuilles `agents/` (dont promotion `tools/encryption`) | aucun |
+| **A2** | 1 | 7 feuilles `services/` | aucun |
+| **A3** | 1 | 6 feuilles `plugin_framework/` + 6 feuilles `core/` | aucun |
+| **A4** | 1 | 5 feuilles `pipelines/orchestration/` + 2 `orchestration/` + exclusion explicite `orchestrators/` | aucun |
+| **A5** | 1 | 3 feuilles `plugins/` + `reporting/restitution` + `data/datasets/legacy_fixtures` + exclusions (`data/datasets/`, `evaluation/corpus/`) | aucun |
+| **A6** | 1 | 12 racines-orphelines | aucun |
+| **A7** | 1 | 12 rénovations feuilles (`agents/core/{informal,logic,pl,pm}`, `agents/docs`, `config`, `hierarchical/{strategic,operational,interfaces}`, `analysis/new`, `scripts`, `ui/extract_editor`) | aucun |
+| **B1** | 2 | parents directs : `core/utils`, `ai_shield`, `analysis_tools`, `pf/core/plugins/standard`, `pf/core`, `data`, `reporting` | bloqué sur A3 (core/pf), A4, A5 |
+| **B2** | 2 | 9 rénovations niveau 2 (`core/communication`, `tools/analysis`, `agents/core`, `web_api`, `mcp_server`, `ui`, `extract_repair`, `pf/agents`, `hierarchical`) | bloqué sur A1-A7 |
+| **C1** | 3 | `plugin_framework`, `plugins` + 7 rénovations grands-parents (`agents/tools`, `services`, `utils`, `pf/core/plugins`, `orchestration`, `core`, `pipelines`) | bloqué sur B1/B2 |
+| **C2** | 4 | rénovation `agents/` (racine) | bloqué sur C1 |
 
-Chaque lot est indépendant au sein de sa vague ; l'ordre A → B → C respecte le DAG.
+Les 26 liens cassés sont réparés par les rénovations qui les portent (A7 : `analysis/new`,
+`scripts`, `ui/extract_editor` ; B2 : `tools/analysis`, `web_api`, `ui`, `extract_repair` ;
+C1 : `agents/tools`, `services`, `utils`, `pipelines`… — cf. colonne §3).
 
 ## 7. Pilote — sous-arbre `orchestration/` (sans modifier son README)
 
@@ -375,14 +414,14 @@ tests — **jamais inférés du nom** ». Chaque ligne ci-dessous cite les preuv
 
 | README | Lignes | Verdict (§4) | Liens cassés |
 |---|---|---|---|
-| `orchestration/README.md` | 50 | courant | 0 |
+| `orchestration/README.md` | 50 | partiel (2 approches sur 4 modes + sous-modes omis) | 0 |
 | `orchestration/hierarchical/README.md` | 75 | partiel (sous-modes non couverts) | 0 |
 | `…/hierarchical/interfaces/README.md` | 87 | partiel (1 chemin erroné) | 1 |
-| `…/hierarchical/operational/README.md` | 22 | courant | 0 |
-| `…/hierarchical/operational/adapters/README.md` | 126 | courant | 0 |
-| `…/hierarchical/strategic/README.md` | 21 | courant | 0 |
-| `…/hierarchical/tactical/README.md` | 22 | courant | 0 |
-| `…/hierarchical/templates/README.md` | 65 | courant | 0 |
+| `…/hierarchical/operational/README.md` | 22 | partiel (`agent_interface.py`, `feedback_mechanism.py` non couverts) | 0 |
+| `…/hierarchical/operational/adapters/README.md` | 126 | courant (4 adaptateurs réels exactement) | 0 |
+| `…/hierarchical/strategic/README.md` | 21 | partiel (aucune section composants) | 0 |
+| `…/hierarchical/tactical/README.md` | 22 | courant (5 modules réels couverts) | 0 |
+| `…/hierarchical/templates/README.md` | 65 | courant (4 templates réels couverts) | 0 |
 
 ### Statuts d'intégration prouvés
 
@@ -390,7 +429,10 @@ tests — **jamais inférés du nom** ». Chaque ligne ci-dessous cite les preuv
 `run_orchestration.py:363-373` — `--mode` entre `pipeline|conversational|hierarchical|cluedo`,
 défaut `pipeline` ; descriptions `:375-377` ; mode hiérarchique sous-mode `--hierarchical-mode`
 `{bridge,delegation}` défaut `bridge` `:381-387` ; aiguillage `elif mode == "hierarchical"`
-`:714`. Le README orchestration (50 lignes, fraîcheur 3 j) reflète l'état du code.
+`:714`. Le README racine (50 lignes) ne documente que le moteur externe et l'hiérarchique —
+les familles conversationnelle, Cluedo, bridge/delegation et DSL/registry/writers ci-dessus
+sont **absentes de la fiche** (d'où son verdict partiel) : le pilote prouve les familles,
+pas leur couverture documentaire.
 
 **Pipeline / Lego (assertion : DAG de phases exécutées par le registry).** Preuves :
 `orchestration/workflow_dsl.py:254` `add_phase(capability=…)`, `:326` `build()` ;
@@ -434,8 +476,10 @@ noms voisins ; à consolider ou à distinguer explicitement dans la doc du lot A
 
 ### Verdict du pilote
 
-Le sous-arbre `orchestration/` est le mieux documenté du dépôt : racine fraîche (3 j) et
-courante au verdict lecture (7/8 courants ou partiels légers, 1 seul lien cassé). Le pattern
-à généraliser : chaque assertion d'intégration est vérifiable par appelant (CLI, DSL, registry,
-runner), et le verdict de contenu est prononcé après recoupement — c'est la méthode que les
-lots A/B/C appliqueront aux 71 sans README et 22 à rénover.
+Le sous-arbre `orchestration/` est le mieux documenté du dépôt (1 seul lien cassé, racine
+fraîche à 3 j), mais la fraîcheur n'est pas la couverture : sa racine est **partiel** au
+verdict lecture — les familles qu'il orchestre réellement (prouvées ci-dessus par appelants)
+sont majoritairement absentes de sa fiche. Le pattern à généraliser : chaque assertion
+d'intégration est vérifiable par appelant (CLI, DSL, registry, runner), et le verdict de
+contenu est prononcé après recoupement de la **couverture**, pas de la seule existence des
+chemins — c'est la méthode que les lots A/B/C appliqueront aux 71 sans README et 29 à rénover.
