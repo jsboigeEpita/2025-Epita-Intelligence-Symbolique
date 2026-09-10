@@ -309,6 +309,12 @@ enfants ayant du travail)**, où « travail » = README à créer (71) ou README
 et compte comme dépendance satisfaite. Une même vague ne contient **jamais** un nœud et un
 de ses descendants.
 
+**Contrôle mécanique (3e revue)** : les vagues ci-dessous ne sont plus groupées à la main
+mais dérivées par `scripts/docs/readme_waves_2088.py` — créations re-dérivées de git,
+rénovations/exclusions en constantes issues de §4/§5 — qui vérifie **chaque arête de
+travail : `vague(parent) > vague(enfant)`**. Sortie au head courant : **76/76 arêtes PASS**,
+fermetures 71/71 créations et 29/29 rénovations.
+
 ### Exclusions explicites (dépendances satisfaites avant leurs parents)
 
 - `pipelines/orchestration/orchestrators/` — coquille résiduelle (fichiers déplacés) :
@@ -355,35 +361,51 @@ Rénovations sans enfant à documenter (12) : `agents/core/informal`, `agents/co
 
 ### Vague 2 — parents directs des feuilles (16)
 
-Nouveaux README (7) : `core/utils`, `services/ai_shield`, `plugins/analysis_tools`,
-`plugin_framework/core/plugins/standard`, `plugin_framework/core`, `data`, `reporting`.
+Nouveaux README (6) : `core/utils`, `services/ai_shield`, `plugins/analysis_tools`,
+`plugin_framework/core/plugins/standard`, `data`, `reporting`.
 
 Rénovations dont les enfants sont couverts en vague 1 (9) : `core/communication`
 (enfant `tests`), `agents/tools/analysis` (enfant `new`), `agents/core` (8 enfants créés +
 4 rénovés en v1), `services/web_api`, `services/mcp_server`, `ui`, `utils/extract_repair`,
 `plugin_framework/agents`, `orchestration/hierarchical`.
 
-### Vague 3 — grands parents (9)
+Liens seulement (1) : `pipelines/orchestration` (verdict courant — aucun contenu à
+rénover, ajout de liens vers les README enfants créés en vague 1 ; son parent `pipelines`
+l'attend en vague 3).
 
-Nouveaux README (2) : `plugin_framework` (enfant `core` en v2), `plugins` (enfant
-`analysis_tools` en v2).
+### Vague 3 — grands parents (8)
+
+Nouveaux README (1) : `plugins` (enfant `analysis_tools` en v2).
 
 Rénovations (7) : `agents/tools` (enfant `analysis` v2), `services` (enfants `ai_shield`
-v2, `web_api` v2, `mcp_server` v2), `utils` (enfant `extract_repair` v2), 
+v2, `web_api` v2, `mcp_server` v2), `utils` (enfant `extract_repair` v2),
 `plugin_framework/core/plugins` (enfant `standard` v2), `orchestration` (enfants v1 +
 `hierarchical` v2), `core` (enfants `utils` v2, `communication` v2), `pipelines`
-(enfant `pipelines/orchestration` rafraîchi en v2).
+(enfant `pipelines/orchestration` touché en v2).
 
-### Vague 4 — racines tardives (1)
+### Vague 4 — arrière-grands parents (2)
 
-`agents/` (rénovation périmé) — bloquée sur : 16 enfants créés v1, `agents/core` v2,
+Création `plugin_framework/core` — ses enfants à travailler : `core/plugins` **rénové en
+vague 3** (c'est le défaut de la 2e version : `core` était placé v2 avant son enfant),
+plus les feuilles v1 `core/services`.
+
+Rénovation `agents/` (périmé) — bloquée sur : 16 enfants créés v1, `agents/core` v2,
 `agents/tools` v3, `agents/docs` v1.
 
-**Fermeture vérifiée** : nouveaux 62+7+2 = **71** ✓ ; rénovations 12+9+7+1 = **29** = 37 − 8
-courants ✓ ; chaque chaîne parent→enfant citée en revue (`core/utils/tests→core/utils`,
-`ai_shield/layers→ai_shield`, `analysis_tools/logic→analysis_tools`,
-`standard/*→standard→core/plugins→core→plugin_framework`, `pipelines/orchestration/*→…→pipelines`,
-`agents/core/*→agents/core→agents`) s'étale maintenant sur des vagues distinctes ✓.
+### Vague 5 — racine du sous-arbre plugin_framework (1)
+
+Création `plugin_framework` — son descendant à travailler le plus profond est `core`
+(v4) ; les feuilles v1 (`benchmarking`, `core/plugins/workflows`) et `agents` (v2)
+ne le bloquent pas plus tard que `core`.
+
+**Fermeture vérifiée (mécanique)** : nouveaux 62+6+1+1+1 = **71** ✓ ; rénovations
+12+9+7+1 = **29** = 37 − 8 courants ✓ ; chaque chaîne parent→enfant citée en revue
+(`core/utils/tests→core/utils`, `ai_shield/layers→ai_shield`,
+`analysis_tools/logic→analysis_tools`,
+`standard/*→standard→core/plugins→core→plugin_framework` en **1→2→3→4→5**,
+`pipelines/orchestration/*→…→pipelines`, `agents/core/*→agents/core→agents`)
+s'étale sur des vagues strictement croissantes — 76/76 arêtes PASS
+(`scripts/docs/readme_waves_2088.py`).
 
 ## 6. Lots proposés (découpe des vagues en tranches livrables)
 
@@ -396,10 +418,11 @@ courants ✓ ; chaque chaîne parent→enfant citée en revue (`core/utils/tests
 | **A5** | 1 | 3 feuilles `plugins/` + `reporting/restitution` + `data/datasets/legacy_fixtures` + exclusions (`data/datasets/`, `evaluation/corpus/`) | aucun |
 | **A6** | 1 | 12 racines-orphelines | aucun |
 | **A7** | 1 | 12 rénovations feuilles (`agents/core/{informal,logic,pl,pm}`, `agents/docs`, `config`, `hierarchical/{strategic,operational,interfaces}`, `analysis/new`, `scripts`, `ui/extract_editor`) | aucun |
-| **B1** | 2 | parents directs : `core/utils`, `ai_shield`, `analysis_tools`, `pf/core/plugins/standard`, `pf/core`, `data`, `reporting` | bloqué sur A3 (core/pf), A4, A5 |
+| **B1** | 2 | parents directs : `core/utils`, `ai_shield`, `analysis_tools`, `pf/core/plugins/standard`, `data`, `reporting` | bloqué sur A2 (`ai_shield/layers`), A3 (`core/`, `pf/`), A5 (`plugins/`, `data/`, `reporting/`) |
 | **B2** | 2 | 9 rénovations niveau 2 (`core/communication`, `tools/analysis`, `agents/core`, `web_api`, `mcp_server`, `ui`, `extract_repair`, `pf/agents`, `hierarchical`) | bloqué sur A1-A7 |
-| **C1** | 3 | `plugin_framework`, `plugins` + 7 rénovations grands-parents (`agents/tools`, `services`, `utils`, `pf/core/plugins`, `orchestration`, `core`, `pipelines`) | bloqué sur B1/B2 |
-| **C2** | 4 | rénovation `agents/` (racine) | bloqué sur C1 |
+| **C1** | 3 | `plugins` + 7 rénovations grands-parents (`agents/tools`, `services`, `utils`, `pf/core/plugins`, `orchestration`, `core`, `pipelines`) | bloqué sur B1/B2 |
+| **C2** | 4 | création `pf/core` + rénovation `agents/` (racine) | bloqué sur C1 (`pf/core` attend `core/plugins` v3 ; `agents/` attend `agents/tools` v3) |
+| **C3** | 5 | création `plugin_framework` (racine) | bloqué sur C2 (enfant `pf/core` v4) |
 
 Les 26 liens cassés sont réparés par les rénovations qui les portent (A7 : `analysis/new`,
 `scripts`, `ui/extract_editor` ; B2 : `tools/analysis`, `web_api`, `ui`, `extract_repair` ;
