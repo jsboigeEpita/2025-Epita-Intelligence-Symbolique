@@ -25,7 +25,11 @@ def _sample_state():
         "identified_fallacies": {"f_1": {"type": "ad hominem"}},
         "counter_arguments": [{"counter_content": "x"}],
         "argument_quality_scores": {"arg_1": {"overall": 2.0}},
-        "fol_analysis_results": {"consistent": True, "formulas": ["a", "b", "c"]},
+        # #1635: canonical list shape — the only form production writers emit
+        # (the mapping fixture fed a reader branch no producer ever wrote).
+        "fol_analysis_results": [
+            {"consistent": True, "formulas": ["a", "b", "c"], "message": None}
+        ],
         "propositional_analysis_results": {"something": 1},
         "modal_analysis_results": None,
         "dung_frameworks": [],
@@ -47,7 +51,12 @@ class TestProvenanceCounts:
         assert counts["sophismes_localises"] == 1
         assert counts["contre_arguments"] == 1
         assert counts["scores_qualite"] == 1
-        assert counts["axe_fol"] == {"consistent": True, "formules": 3}
+        assert counts["axe_fol"] == {
+            "verdict": "décidé",
+            "consistantes": 1,
+            "inconsistantes": 0,
+            "verifiees": 1,
+        }
         assert counts["axe_pl"] == "disponible"
         assert counts["axe_modale"] == "indisponible"
         assert counts["synthese_narrative"] == "présente"
@@ -142,27 +151,17 @@ class TestFolAxisStatusListShape:
         assert _fol_axis_status([]) == "indisponible"
         assert _fol_axis_status(None) == "indisponible"
 
-    def test_legacy_mapping_shape_preserved(self):
-        # Back-compat: the old Mapping shape still produces the old summary.
-        status = _fol_axis_status({"consistent": True, "formulas": ["a", "b"]})
-        assert status == {"consistent": True, "formules": 2}
-
-    def test_legacy_mapping_shape_does_not_decide_for_a_degraded_axis(self):
-        """#1634: the Mapping branch used ``bool(consistent)`` — the exact call
-        this function's own docstring says it does not make.
-
-        The list branch three lines below is tri-state honest; this one turned
-        a degraded ``None`` into a decided ``False``, so the annex asserted
-        "inconsistent" about a theory no reasoner had read. The decided cases
-        must be untouched, which is why they are asserted alongside.
+    def test_mapping_shape_is_indisponible_not_a_verdict(self):
+        """#1635: the Mapping branch is gone — no production writer puts a dict
+        in ``fol_analysis_results`` (the external-solver writers now append
+        canonical list entries). A dict reaching this reader is a producer bug:
+        the honest answer is "indisponible", never a plausible-looking verdict
+        for a shape nothing writes. The tri-state honesty the #1634 fix pinned
+        in the old branch is carried by the list tests above.
         """
-        degraded = _fol_axis_status({"consistent": None, "formulas": ["a"]})
-        inconsistent = _fol_axis_status({"consistent": False, "formulas": ["a"]})
-        assert degraded == {"consistent": None, "formules": 1}
-        assert inconsistent == {"consistent": False, "formules": 1}
-        assert (
-            degraded["consistent"] is not inconsistent["consistent"]
-        ), "a degraded axis reads as a decided inconsistency again (#1634)"
+        assert _fol_axis_status({"consistent": True, "formulas": ["a", "b"]}) == (
+            "indisponible"
+        )
 
 
 class TestModalAxisStatus:
@@ -199,11 +198,15 @@ class TestModalAxisStatus:
         )
 
     def test_external_solver_mapping_shape(self):
-        # SPASS external-solver path (state_writers external_valid)
-        status = _modal_axis_status(
-            {"external_solver": "spass", "external_valid": True}
+        """#1635: the external-solver Mapping branch is gone — the external
+        modal-solver writer now appends canonical list entries (see
+        test_external_solver_verdict_reaches_state_1635.py for the full
+        writer→state→reader chain). A dict reaching this reader is a producer
+        bug and reads as indisponible, not as a verdict."""
+        assert (
+            _modal_axis_status({"external_solver": "spass", "external_valid": True})
+            == "indisponible"
         )
-        assert status == {"verdict": "décidé", "consistante": True}
 
     def test_empty_and_none_are_indisponible(self):
         assert _modal_axis_status([]) == "indisponible"
