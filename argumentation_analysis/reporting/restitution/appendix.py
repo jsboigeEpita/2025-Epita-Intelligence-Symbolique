@@ -176,18 +176,14 @@ def _fol_axis_status(fol: Any) -> Any:
     tri-state honest status (decided / unavailable / indisponible) rather than a
     false-negative. ``bool(consistent)`` is NOT used — ``None`` (degraded) must not
     collapse to ``False`` (#1019/#1278).
+
+    #1635: the legacy ``Mapping`` branch is gone. Its only producers were test
+    fixtures — no production writer ever put a dict in ``fol_analysis_results``
+    (the external-solver writers' dict writes were dead code, and now land as
+    canonical list entries). A dict reaching this reader is a producer bug, and
+    "indisponible" is the honest answer rather than a plausible-looking verdict
+    for a shape nothing writes.
     """
-    if isinstance(fol, Mapping):
-        # #1634: this is the branch the docstring above says does NOT use
-        # ``bool(consistent)`` — and it did. The list branch below is tri-state
-        # honest; this legacy Mapping branch rendered a degraded ``None`` as a
-        # decided ``False``, i.e. the annex asserted "inconsistent" about a
-        # theory the reasoner never read.
-        raw = fol.get("consistent")
-        return {
-            "consistent": raw if raw in (True, False) else None,
-            "formules": _safe_len(fol.get("formulas")),
-        }
     if isinstance(fol, list) and fol:
         decided = [
             r
@@ -231,19 +227,14 @@ def _modal_axis_status(modal: Any) -> Any:
     axis (``valid=True`` via SPASS — capstone 3/3) was under-reported as merely
     "available", hiding formal work actually done while ``axe_fol`` surfaced its
     verdict richly. Surface the real tri-state verdict instead. ``valid`` is
-    tri-state (True/False/None) — never collapse None→False (#1019/#1279). State
-    stores modal results either as a per-belief-set *list* (capstone shape, the
-    shape Acte II reads) or as an external-solver *Mapping* (SPASS path,
-    state_writers ``external_valid``); both are read here. ``valid=True`` =
-    consistante (aligned with Acte II's reader).
+    tri-state (True/False/None) — never collapse None→False (#1019/#1279).
+    ``valid=True`` = consistante (aligned with Acte II's reader).
+
+    #1635: the external-solver *Mapping* branch (``external_valid`` /
+    ``external_degraded``) is gone — its only producers were test fixtures, and
+    the external modal-solver writer now appends the same canonical list entries
+    every other reader consumes.
     """
-    if isinstance(modal, Mapping):
-        v = modal.get("external_valid", modal.get("valid"))
-        if v is True or v is False:
-            return {"verdict": "décidé", "consistante": v}
-        if v is None and ("external_valid" in modal or "external_degraded" in modal):
-            return "indisponible (aucun verdict décidé — dégradé)"
-        return "disponible" if modal else "indisponible"
     if isinstance(modal, list) and modal:
         decided = [
             r for r in modal if isinstance(r, dict) and r.get("valid") in (True, False)

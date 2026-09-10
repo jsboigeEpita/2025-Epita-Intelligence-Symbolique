@@ -2095,52 +2095,75 @@ def _write_tweety_interpretation_to_state(
             state.formal_interpretation = interpretation
 
 
+def _external_provenance(output: dict[str, Any]) -> Optional[str]:
+    """Solver provenance line for the canonical entry's ``message`` (#1635).
+
+    The external-solver verdict now rides the same ``message`` field the
+    FOL/PL/modal writers use for honest status (#1278/#1279), so every
+    downstream consumer can tell an external-solver decision from a
+    pipeline-internal one without polling side-channel keys.
+    """
+    solver = output.get("solver") or "none"
+    raw_msg = output.get("message")
+    provenance = f"external solver ({solver})"
+    if isinstance(raw_msg, str) and raw_msg:
+        return f"{provenance}: {raw_msg}"
+    return provenance
+
+
 def _write_external_fol_solver_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write external FOL solver results to UnifiedAnalysisState (#504, #982)."""
+    """Write external FOL solver results to UnifiedAnalysisState (#504, #982, #1635).
+
+    The verdict lands as a canonical ``fol_analysis_results`` list entry via
+    ``add_fol_analysis_result`` — the one form every reader (appendix axis
+    status, Acte II) consumes. The previous writers had two branches, both dead
+    on a real run: the dict-state branch wrote ``external_fol_solver`` (a key no
+    reader polls) and the state branch was gated on
+    ``isinstance(state.fol_analysis_results, dict)``, always False for the
+    canonical ``List`` attribute. ``consistent`` stays tri-state (#1019): None
+    (degraded) appends an honest entry, it does not vanish.
+    """
     if not output or not isinstance(output, dict):
         return
-    solver = output.get("solver", "none")
-    consistent = output.get("consistent")
-    degraded = output.get("degraded", False)
-    if isinstance(state, dict):
-        state["external_fol_solver"] = {
-            "solver": solver,
-            "consistent": consistent,
-            "degraded": degraded,
-        }
-    else:
-        if hasattr(state, "fol_analysis_results") and isinstance(
-            state.fol_analysis_results, dict
-        ):
-            state.fol_analysis_results["external_solver"] = solver
-            state.fol_analysis_results["external_consistent"] = consistent
-            state.fol_analysis_results["external_degraded"] = degraded
+    formulas = output.get("formulas", [])
+    if not isinstance(formulas, list):
+        formulas = []
+    state.add_fol_analysis_result(
+        formulas,
+        output.get("consistent"),
+        [],
+        0.0,
+        message=_external_provenance(output),
+    )
 
 
 def _write_external_modal_solver_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
-    """Write external modal solver results to UnifiedAnalysisState (#504, #982)."""
+    """Write external modal solver results to UnifiedAnalysisState (#504, #982, #1635).
+
+    Canonical ``modal_analysis_results`` list entry via
+    ``add_modal_analysis_result``, mirroring the FOL twin: the old
+    ``external_modal_solver`` / ``external_valid`` dict writes were dead on a
+    real run (no reader, wrong ``isinstance`` gate). ``valid`` stays tri-state
+    (#1019/#1650): a degraded None appends, never collapses to False.
+    """
     if not output or not isinstance(output, dict):
         return
-    solver = output.get("solver", "none")
-    valid = output.get("valid")
-    degraded = output.get("degraded", False)
-    if isinstance(state, dict):
-        state["external_modal_solver"] = {
-            "solver": solver,
-            "valid": valid,
-            "degraded": degraded,
-        }
-    else:
-        if hasattr(state, "modal_analysis_results") and isinstance(
-            state.modal_analysis_results, dict
-        ):
-            state.modal_analysis_results["external_solver"] = solver
-            state.modal_analysis_results["external_valid"] = valid
-            state.modal_analysis_results["external_degraded"] = degraded
+    formulas = output.get("formulas", [])
+    if not isinstance(formulas, list):
+        formulas = []
+    modalities = output.get("modalities", [])
+    if not isinstance(modalities, list):
+        modalities = []
+    state.add_modal_analysis_result(
+        formulas,
+        output.get("valid"),
+        modalities,
+        message=_external_provenance(output),
+    )
 
 
 def _write_stakes_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
