@@ -35,8 +35,9 @@ After render, scan the Acte II narrative body: if a line cites a **formal
 authority** (Tweety, Dung, ASPIC, SPASS, EProver, PySAT, … or the generic
 « solveur »/« solver ») **and** asserts an inconsistency
 (``inconsist*`` / ``insatisfais*``), then the appendix's formal-axis aggregates
-must actually support an inconsistency (``inconsistantes > 0``,
-``insatisfiables > 0``, or a decided ``consistante: False``). If none does, the
+must actually support an inconsistency (``inconsistantes > 0`` or
+``insatisfiables > 0`` — every formal-axis status ``_provenance_counts`` emits
+records a decided inconsistency as a count). If none does, the
 claim is unsupported → the report is flagged **FAIL** with an auditable reason.
 
 The check is heuristic and cheap. It never needs LLM determinism and survives
@@ -93,9 +94,13 @@ def _axis_supports_inconsistance(axis: Any) -> bool:
     Covers every axis shape :func:`appendix._fol_axis_status` /
     :func:`_pl_axis_status` / :func:`_modal_axis_status` emit:
 
-    * FOL / modal-list: ``{"inconsistantes": n, …}``
+    * FOL / modal: ``{"inconsistantes": n, …}``
     * PL: ``{"insatisfiables": n, …}``
-    * modal-mapping: ``{"consistante": False}``
+
+    (#1635: the modal-mapping ``{"consistante": False}`` shape is gone with the
+    appendix Mapping branch — its only producer was a fixture test; the external
+    modal solver now lands as a canonical list entry that reports through
+    ``inconsistantes`` like every other axis.)
 
     A *degraded* axis (``None`` verdict) never counts — it is unverified, not
     inconsistent (#1019: ``None`` is never collapsed to a decided ``False``).
@@ -106,8 +111,6 @@ def _axis_supports_inconsistance(axis: Any) -> bool:
         if axis.get("inconsistantes"):
             return True
         if axis.get("insatisfiables"):
-            return True
-        if axis.get("consistante") is False:
             return True
     return False
 

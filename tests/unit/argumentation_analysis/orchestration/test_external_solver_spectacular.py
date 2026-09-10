@@ -4,8 +4,6 @@ Verifies that fol_solver and modal_solver phases exist in spectacular,
 are registered as services in the registry, and have state writers.
 """
 
-from unittest.mock import MagicMock, patch
-
 
 class TestExternalSolverSpectacular:
     """Verify external solver phases in spectacular workflow."""
@@ -71,12 +69,14 @@ class TestExternalSolverSpectacular:
         assert provider.invoke is not None
 
     def test_external_fol_solver_state_writer(self):
+        # #1635: real state, canonical list entry — the old version pinned a
+        # MagicMock + dict-branch write that never fired on a real run.
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
         from argumentation_analysis.orchestration.state_writers import (
             _write_external_fol_solver_to_state,
         )
 
-        state = MagicMock()
-        state.fol_analysis_results = {}
+        state = UnifiedAnalysisState("texte")
         output = {
             "formulas": ["P(a)", "Q(b)"],
             "consistent": True,
@@ -84,19 +84,20 @@ class TestExternalSolverSpectacular:
             "degraded": False,
         }
         _write_external_fol_solver_to_state(output, state, {})
-        assert state.fol_analysis_results == {
-            "external_solver": "eprover",
-            "external_consistent": True,
-            "external_degraded": False,
-        }
+        assert len(state.fol_analysis_results) == 1
+        entry = state.fol_analysis_results[0]
+        assert entry["consistent"] is True
+        assert entry["formulas"] == ["P(a)", "Q(b)"]
+        assert "eprover" in (entry.get("message") or "")
 
     def test_external_modal_solver_state_writer(self):
+        # #1635: real state, canonical list entry (twin of the FOL writer test).
+        from argumentation_analysis.core.shared_state import UnifiedAnalysisState
         from argumentation_analysis.orchestration.state_writers import (
             _write_external_modal_solver_to_state,
         )
 
-        state = MagicMock()
-        state.modal_analysis_results = {}
+        state = UnifiedAnalysisState("texte")
         output = {
             "formulas": ["[]p", "<>q"],
             "valid": True,
@@ -104,11 +105,11 @@ class TestExternalSolverSpectacular:
             "degraded": False,
         }
         _write_external_modal_solver_to_state(output, state, {})
-        assert state.modal_analysis_results == {
-            "external_solver": "spass",
-            "external_valid": True,
-            "external_degraded": False,
-        }
+        assert len(state.modal_analysis_results) == 1
+        entry = state.modal_analysis_results[0]
+        assert entry["valid"] is True
+        assert entry["formulas"] == ["[]p", "<>q"]
+        assert "spass" in (entry.get("message") or "")
 
     def test_invoke_external_fol_solver_fallback(self):
         """When no external solver is available, falls back to TweetyBridge."""

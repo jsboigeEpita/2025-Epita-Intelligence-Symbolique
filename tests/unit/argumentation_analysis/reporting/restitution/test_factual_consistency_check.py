@@ -46,11 +46,13 @@ def _fol_with_inconsistance_state() -> Dict[str, Any]:
     }
 
 
-def _modal_inconsistent_mapping_state() -> Dict[str, Any]:
-    """State where the modal axis (mapping shape) decided consistante=False."""
+def _modal_inconsistent_state() -> Dict[str, Any]:
+    """State where the modal axis decided a theory invalid (canonical list
+    shape — #1635 removed the mapping form; the external-solver writer now
+    appends these entries like every other modal producer)."""
     return {
         "fol_analysis_results": [],
-        "modal_analysis_results": {"valid": False},
+        "modal_analysis_results": [{"valid": False, "message": None}],
     }
 
 
@@ -105,10 +107,10 @@ def test_passes_when_inconsistance_claim_is_supported_by_fol():
     assert verdict.band == "PASS"
 
 
-def test_passes_when_inconsistance_claim_supported_by_modal_mapping():
+def test_passes_when_inconsistance_claim_supported_by_modal():
     verdict = check_factual_consistency(
         "Le solveur révèle l'inconsistance de la théorie modale.",
-        _modal_inconsistent_mapping_state(),
+        _modal_inconsistent_state(),
     )
     assert verdict.band == "PASS"
 
