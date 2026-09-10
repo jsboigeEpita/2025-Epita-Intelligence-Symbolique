@@ -40,6 +40,7 @@ from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     EPISTEMIC_CAVEAT,
     REJECTED_MEANS,
     appendix_ref,
+    appendix_refs_in,
     reader_consequence,
 )
 from .native_dung import (  # #1912: single shared decoder — see native_dung.py
@@ -1225,6 +1226,36 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
                 )
         formal_block = "\n".join(formal_lines)
 
+    # #1914 résidu b — the citation contract. The refs already ride the
+    # anchor lines, but the anti-recopy rule dominated and no consigne ever
+    # authorized citing one (measured: 0/49 acts cite the appendix). The
+    # directive is the precise exception: the ref is the ONE anchor fragment
+    # built to appear verbatim — everything else stays prose-woven. The
+    # example interpolates a REAL ref from the block (never a placeholder:
+    # a bracketed placeholder would pollute the ref namespace a conductor
+    # stub — or a reader — scans).
+    annex_ref_rule = ""
+    _formal_refs = appendix_refs_in(formal_block)
+    if _formal_refs:
+        annex_ref_rule = (
+            "RÉFÉRENCES D'ANNEXE (la preuve repliée) — quand une ancre TENUE "
+            "FORMELLE porte une référence d'annexe Dung (entre crochets) :\n"
+            f"- Tu PEUX citer cette référence TELLE QUELLE, entre "
+            f"parenthèses, sur le battement qui mobilise cette ancre : "
+            f"« … (voir {_formal_refs[0]}) ».\n"
+            "- La référence est la SEULE partie de la ligne d'ancrage qui "
+            "puisse être recopiée : le reste (solveur, composition, "
+            "protocole) reste interdit de recopie — la preuve se tisse en "
+            "prose, la référence ouvre le pli de l'annexe.\n"
+            "- Cite une référence SEULEMENT sur le battement qui mobilise "
+            "l'évidence correspondante ; jamais sans elle, jamais inventée "
+            "ni modifiée : copie-la exactement depuis TENUE FORMELLE.\n"
+            "- Une référence ne change PAS le rôle d'un résultat (décisif / "
+            "corroborant / contradictoire / non discriminant) : la hiérarchie "
+            "RÔLES gouverne ; la référence n'indique qu'où la preuve est "
+            "repliée.\n\n"
+        )
+
     # --- SV (#1182): délibération collective (governance + debate) ---
     # Both capabilities were completing in the 40 phases but invisible in the
     # report. We surface what exists — honestly sparse when the schemes-engine
@@ -1340,6 +1371,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"{unattributed_block}"
         f"TENUE FORMELLE (ancres vérifiées, à tisser comme PREUVE d'un battement) :\n"
         f"{formal_block}\n\n"
+        f"{annex_ref_rule}"
         f"DÉLIBÉRATION COLLECTIVE (governance + débat, à tisser dans le récit — "
         f"le verdict de gouvernance ou un échange de débat peut appuyer un "
         f"battement, jamais une sous-section isolée) :\n"
