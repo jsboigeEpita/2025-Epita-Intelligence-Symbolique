@@ -466,9 +466,10 @@ class EducationalProjectManager:
 
         try:
             context = f"Analyse pédagogique niveau {self.config.student_level} - Débat argumentatif"
-            informal_results = self.agents["informal"].analyze_fallacies_with_context(
-                text, context
-            )
+            # #2149 : `analyze_fallacies_with_context` n'existe sur aucune classe
+            # du dépôt — l'agent expose `analyze_context`, dont la clé de résultat
+            # est `contextual_fallacies`.
+            informal_results = self.agents["informal"].analyze_context(text, context)
 
             duration_ms = (time.time() - start_time) * 1000
 
@@ -476,12 +477,12 @@ class EducationalProjectManager:
                 "AgentRhetorique",
                 "analyse_sophismes",
                 f"texte:{len(text)}chars,contexte:{context[:30]}",
-                f"sophismes_detectes:{len(informal_results.get('fallacies', []))}",
+                f"sophismes_detectes:{len(informal_results.get('contextual_fallacies', []))}",
                 duration_ms,
             )
 
             # Message éducatif selon les résultats
-            fallacies_count = len(informal_results.get("fallacies", []))
+            fallacies_count = len(informal_results.get("contextual_fallacies", []))
             if fallacies_count > 0:
                 self.conversation_logger.log_agent_message(
                     "AgentRhetorique",
