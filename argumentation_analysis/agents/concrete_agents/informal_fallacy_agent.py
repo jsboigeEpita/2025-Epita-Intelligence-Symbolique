@@ -1,7 +1,7 @@
 # Fichier : argumentation_analysis/agents/concrete_agents/informal_fallacy_agent.py
 
 import importlib
-from typing import Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelArguments
@@ -18,6 +18,14 @@ from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer impor
 from argumentation_analysis.agents.core.informal.informal_definitions import (
     INFORMAL_AGENT_INSTRUCTIONS,
 )
+
+# #2121 — the configs this agent understands, named once. The plugin gates below
+# are the only consumers; an unrecognised name is refused rather than falling
+# through all of them. Before this, ``analysis_service`` (web API) passed the
+# invented ``"default_with_plugins"``, matched no gate, and served a plugin-less
+# agent while logging that it had been "configured successfully" — a #1019
+# false-green the caller had no way to see from the outside.
+INFORMAL_AGENT_CONFIGS = ("simple", "explore_only", "workflow_only", "full")
 
 
 class InformalFallacyAgent(BaseAgent):
@@ -46,12 +54,25 @@ class InformalFallacyAgent(BaseAgent):
             **kwargs,
         )
         self._chat_function = None
+        self._configured_plugins: List[str] = []
         self._add_plugins_from_config(config_name, taxonomy_file_path)
 
     def _add_plugins_from_config(
         self, config_name: str, taxonomy_file_path: Optional[str] = None
     ):
-        """Ajoute les plugins au kernel en fonction de la configuration."""
+        """Ajoute les plugins au kernel en fonction de la configuration.
+
+        Raises:
+            ValueError: if ``config_name`` is not one of
+                :data:`INFORMAL_AGENT_CONFIGS`. An unknown name used to mount
+                no plugin at all (see the module-level note above).
+        """
+        if config_name not in INFORMAL_AGENT_CONFIGS:
+            raise ValueError(
+                f"Unknown config_name {config_name!r}; expected one of "
+                f"{', '.join(INFORMAL_AGENT_CONFIGS)}."
+            )
+
         try:
             llm_service = self.kernel.get_service()
         except Exception:
@@ -64,10 +85,12 @@ class InformalFallacyAgent(BaseAgent):
             self.kernel.add_plugin(
                 IdentificationPlugin(), plugin_name="FallacyIdentificationPlugin"
             )
+            self._configured_plugins.append("FallacyIdentificationPlugin")
         if config_name in ["explore_only", "workflow_only", "full"]:
             self.kernel.add_plugin(
                 TaxonomyDisplayPlugin(), plugin_name="TaxonomyDisplayPlugin"
             )
+            self._configured_plugins.append("TaxonomyDisplayPlugin")
         if config_name in ["workflow_only", "full"]:
             try:
                 module = importlib.import_module(
@@ -82,19 +105,21 @@ class InformalFallacyAgent(BaseAgent):
                     ),
                     plugin_name="FallacyWorkflowPlugin",
                 )
+                self._configured_plugins.append("FallacyWorkflowPlugin")
             except (ModuleNotFoundError, AttributeError) as e:
                 self.logger.error(
                     f"Could not dynamically load FallacyWorkflowPlugin: {e}"
                 )
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
-        return {
-            "plugins": [
-                "FallacyIdPlugin",
-                "TaxonomyDisplayPlugin",
-                "FallacyWorkflowPlugin",
-            ]
-        }
+        """The plugins this agent actually mounted.
+
+        Reported from the mount record rather than a hand-written list: the
+        previous constant named ``FallacyIdPlugin``, which is not the name
+        under which the plugin is registered (``FallacyIdentificationPlugin``),
+        so it advertised a capability the kernel never held (#2121).
+        """
+        return {"plugins": list(self._configured_plugins)}
 
     async def get_response(self, text_to_analyze: str, **kwargs: Any) -> Any:
         return await self.analyze_text(text_to_analyze, **kwargs)

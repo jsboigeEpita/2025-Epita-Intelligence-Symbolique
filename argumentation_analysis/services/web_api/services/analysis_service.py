@@ -203,10 +203,17 @@ class AnalysisService:
                             # Il est géré en interne par la classe de l'agent.
                             self.informal_agent = factory.create_agent(
                                 agent_type=AgentType.INFORMAL_FALLACY,
-                                config_name="default_with_plugins",
+                                config_name="full",
                             )
+                            # Report the plugins the agent actually mounted. The
+                            # previous unconditional "[OK] ... configured
+                            # successfully" announced a plugin-less agent
+                            # whenever the config name matched no gate (#2121).
                             self.logger.info(
-                                "[OK] InformalAgent created and configured successfully via AgentFactory."
+                                "[OK] InformalAgent created via AgentFactory with plugins: %s",
+                                self.informal_agent.get_agent_capabilities().get(
+                                    "plugins", []
+                                ),
                             )
                         except Exception as factory_e:
                             self.logger.error(
