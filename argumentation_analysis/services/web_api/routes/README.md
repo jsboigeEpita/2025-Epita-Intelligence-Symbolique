@@ -7,8 +7,12 @@ N'est **plus** une couche HTTP. Les 4 fichiers sont des marqueurs d'archive de
 `# Archived: 2026-03-24 — Flask routes superseded by FastAPI (api/main.py) (#217)`
 et pointe vers l'archive complète
 `docs/archives/services_web_api_flask/routes/` (ex. `main_routes.py:1-3`).
-Le répertoire n'a **même plus de `__init__.py`** — ce n'est plus un package
-importable. La couche HTTP vivante est `api/main.py` (FastAPI).
+Le répertoire n'a **plus de `__init__.py`** : Python 3 le traite donc comme un
+**namespace package** — `import argumentation_analysis.services.web_api.routes`
+réussit silencieusement, et chaque sous-module (p.ex. `routes.main_routes`)
+s'importe aussi sans erreur, avec **zéro symbole public** (fichiers
+commentaire-only, docstring informative ≠ message d'échec). Aucun blueprint
+n'y vit : la couche HTTP vivante est `api/main.py` (FastAPI).
 
 ## Composants publics
 
@@ -60,5 +64,8 @@ Aucun. Les tests d'endpoints Flask sont archivés avec leurs fixtures
 ## Limites connues
 
 Le répertoire entier est une limite en soi : son contenu se résume aux
-pointeurs d'archive. Les tombstones existent pour qu'un import hérité
-échoue avec un message explicite plutôt qu'avec un `ModuleNotFoundError` sec.
+pointeurs d'archive. À la différence d'une suppression, un import hérité
+**ne fait pas échouer** : il réussit silencieusement en namespace package
+inerte (symboles publics `[]`) — un appelant historique qui attendrait un
+blueprint obtient `AttributeError` seulement au moment de l'accès, pas à
+l'import.
