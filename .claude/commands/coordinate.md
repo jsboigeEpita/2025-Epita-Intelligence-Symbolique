@@ -73,33 +73,64 @@ Adressage : toujours `machine-id:workspace-id` (ex `myia-po-2025:2025-Epita-Inte
 - [ ] Pas de modification de `.github/CODEOWNERS`, `.github/workflows/`, ou de fichiers de discipline (`.claude/rules/*`)
 - [ ] PR rebasé sur main récent (vérifier `mergeStateStatus` ; si `BEHIND`, demander rebase au worker)
 
-### Contrôle d'autorat — AVANT le merge, le squash l'efface
+### Contrôle d'autorat — provenance LOCALE d'abord, email en corroboration
 
 Toute la flotte pousse sous une seule identité GitHub : `gh pr view --json author` rend
-`jsboigeEpita` sur 10 PRs sur 10, il ne discrimine rien. Ce qui discrimine est l'**email
-d'auteur des commits avant squash** — et `--squash` le réécrit en
-`…@users.noreply.github.com` (60 commits sur 60 de `main`). Ce contrôle passe donc **avant**
-le merge, ou jamais.
+`jsboigeEpita` sur 10 PRs sur 10, il ne discrimine rien.
+
+⚠ **Et l'email d'auteur non plus n'est pas une empreinte de machine** (arbitrage user
+R977) : le keyring `gh` porte plusieurs identités, **des erreurs arrivent au moment de
+switcher**. L'email est l'identité *active au moment du commit*, donc il dérive dans les
+**deux** sens — un commit de worker peut porter le mien, un des miens peut porter le leur.
+Il ne peut pas porter seul le critère.
+
+**Instrument primaire — la provenance locale.** Il répond exactement à la question posée
+(« cette branche a-t-elle jamais existé **ici** ? ») et aucune identité distante ne peut le
+falsifier : si je l'avais écrite, elle serait passée par mon `HEAD`.
 
 ```bash
-MINE=$(git config user.email)                                 # calibré sur CETTE machine
+SLUG=$(gh pr view N --json headRefName --jq .headRefName)
+git branch -a --list "*${SLUG##*/}*"                    # vide attendu si ce n'est pas moi
+grep -c "${SLUG##*/}" .git/logs/HEAD                    # 0 attendu si ce n'est pas moi
+# CONTROLE POSITIF obligatoire — un slug d'une branche que J'AI reellement creee doit rendre > 0,
+# sinon le 0 ci-dessus ne prouve rien : [[feedback_negative_from_an_unproven_instrument]]
+```
+
+**Instrument de corroboration — l'email pré-squash.** `--squash` le réécrit en
+`…@users.noreply.github.com` (60 commits sur 60 de `main`) : ce contrôle passe **avant** le
+merge, ou jamais.
+
+```bash
+MINE=$(git config user.email)                                 # lu a l'execution, jamais une constante
 gh pr view N --json commits --jq '[.commits[].authors[].email] | unique'
 ```
 
-| Sortie | Lecture | Conduite |
-|---|---|---|
-| aucun email égal à `$MINE` | écrite ailleurs — worker | critère **rempli** |
-| au moins un égal à `$MINE` | écrite **ici** | critère **non rempli** — aucun contrôle indépendant n'existe sur cette PR. Merger reste possible, mais **le dire** (« merge assumé ») dans le dashboard |
-| liste vide ou appel en échec | instrument muet | **UNKNOWN — ce n'est pas un pass.** Ne pas merger sur cette base : review cross-worker, ou arbitrage user |
+| Provenance locale | Email | Lecture | Conduite |
+|---|---|---|---|
+| 0 occurrence | aucun = `$MINE` | les deux disent « pas moi » | critère **rempli** |
+| 0 occurrence | au moins un = `$MINE` | **désaccord** — probable switch `gh`, ou commit signé ailleurs | **UNKNOWN**, pas un pass : trancher par une 3ᵉ source (dates des commits vs mes sessions, `gh pr view --json createdAt`) |
+| > 0 occurrence | quelconque | écrite **ici** | critère **non rempli** — aucun contrôle indépendant. Merger reste possible, mais **le dire** (« merge assumé ») dans le dashboard |
+| commande en échec | — | instrument muet | **UNKNOWN — ce n'est pas un pass.** Review cross-worker, ou arbitrage user |
 
-⚠ **Le piège, commis en R946** : lire `jsboige@gmail.com` et conclure « ça ne discrimine
-pas ». C'est la sortie **correcte** du premier cas — l'instrument ne nomme pas la machine,
-il dit seulement *pas moi*, et c'est exactement ce que le critère demande. Ne jamais
-généraliser depuis **une** PR : la même commande sur 10 PRs rend deux emails distincts.
+⚠ **Le piège de R946** : lire `jsboige@gmail.com` et conclure « ça ne discrimine pas ».
+C'est la sortie **correcte** du premier cas — l'instrument ne nomme pas la machine, il dit
+seulement *pas moi*. Ne jamais généraliser depuis **une** PR.
 
-⚠ Le calibrage vient de `git config user.email` **lu à l'exécution**, jamais d'une
-constante écrite ici. C'est ce qui rend l'échec sûr : si une config dérive, mes propres PRs
-se lisent comme miennes (conservateur) — jamais une PR à moi lue comme celle d'un worker.
+⚠ **Le piège de R977, inverse et plus grave** : croire que l'échec de l'instrument est
+sûr. Il ne l'est pas. Une identité `gh` qui glisse fait lire **mes** commits comme ceux
+d'un worker — la direction qui **autorise** un merge, pas celle qui le bloque. C'est
+précisément pour ça que la provenance locale passe en premier : elle, elle ne glisse pas.
+
+⚠ **Limite honnête du reflog** : il **expire** (90 j par défaut). Un `0` sur une branche
+ancienne peut vouloir dire « jamais ici » **ou** « sorti du reflog » — deux choses que le
+compte ne distingue pas. Sur une PR récente (ouverte dans les jours qui précèdent) la
+question ne se pose pas ; au-delà, le `0` redevient **UNKNOWN** et il faut la 3ᵉ source.
+Calibrage mesuré R977 : branches réellement créées ici ⇒ 12 / 6 / 2 occurrences ; slug
+worker ⇒ 0 ; slug fabriqué ⇒ 0.
+
+⚠ Et ne pas s'attribuer la dégradation de l'instrument : la dérive lui est **native**, elle
+n'est pas un accident qu'on y aurait introduit ⇒ ne pas « réparer » en promettant de ne plus
+jamais utiliser `-c user.email`, ça ne change rien au fond.
 
 **Workflow merge** :
 
