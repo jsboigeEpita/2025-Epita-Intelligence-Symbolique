@@ -102,12 +102,32 @@ class ModelRegistry:
         for i in range(2, 10):
             key = os.environ.get(f"OPENAI_API_KEY_{i}", "")
             url = os.environ.get(f"OPENAI_BASE_URL_{i}", "")
+            # Two distinct things, historically collapsed into one variable:
+            #   OPENAI_ENDPOINT_NAME_i -> what a human reads (display_name)
+            #   OPENAI_MODEL_ID_i      -> what the API receives (model_id)
+            # Sending the label as the model id yields 404 "model does not
+            # exist" even when key and URL are perfectly valid.
             name = os.environ.get(f"OPENAI_ENDPOINT_NAME_{i}", f"endpoint-{i}")
+            model_id = os.environ.get(f"OPENAI_MODEL_ID_{i}", "")
             if key and url:
+                if not model_id:
+                    model_id = name
+                    logger.warning(
+                        "OPENAI_MODEL_ID_%d is not set: falling back to "
+                        "OPENAI_ENDPOINT_NAME_%d (%r) as the model id. If that is a "
+                        "display label rather than a model this endpoint actually "
+                        "serves, every call to endpoint-%d will fail with HTTP 404 "
+                        "while the key and URL look valid. Set OPENAI_MODEL_ID_%d.",
+                        i,
+                        i,
+                        name,
+                        i,
+                        i,
+                    )
                 registry.register(
                     f"endpoint-{i}",
                     ModelConfig(
-                        model_id=name,
+                        model_id=model_id,
                         base_url=url,
                         api_key=key,
                         display_name=name,
