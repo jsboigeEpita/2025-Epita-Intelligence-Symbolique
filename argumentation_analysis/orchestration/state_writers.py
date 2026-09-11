@@ -653,10 +653,13 @@ def _write_debate_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
     if isinstance(llm_debate, dict):
         key_exchanges = llm_debate.get("key_exchanges", [])
         if isinstance(key_exchanges, list):
-            # G8 (#1184): scheme-ground each exchange. The LLM produces point/
-            # rebuttal; we attach a deterministic Walton-scheme classification
-            # (fail-loud: no match → scheme stays None, never fabricated #1019).
-            # The debatable claim is the POINT (what Agent A defends) — that is
+            # G8 (#1184): scheme-ground each exchange. The prompt contract
+            # (#2135, invoke_callables.py) emits agent_a_point/agent_b_rebuttal;
+            # we store them as point/rebuttal — the stored-layer names the Act II
+            # reader consumes. judge_note is NOT stored: nothing reads it (#1019).
+            # We attach a deterministic Walton-scheme classification (fail-loud:
+            # no match → scheme stays None, never fabricated #1019). The
+            # debatable claim is the POINT (what Agent A defends) — that is
             # what the scheme classifies.
             try:
                 from argumentation_analysis.agents.core.debate.argumentation_schemes import (
@@ -666,8 +669,8 @@ def _write_debate_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None
                 classify_scheme = None  # type: ignore[assignment]
             for ex in key_exchanges:
                 if isinstance(ex, dict):
-                    point = str(ex.get("point", ""))
-                    rebuttal = str(ex.get("rebuttal", ""))
+                    point = str(ex.get("agent_a_point", ""))
+                    rebuttal = str(ex.get("agent_b_rebuttal", ""))
                     entry: dict[str, Any] = {"point": point, "rebuttal": rebuttal}
                     if classify_scheme is not None:
                         scheme = classify_scheme(point or rebuttal)

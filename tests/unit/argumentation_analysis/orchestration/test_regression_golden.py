@@ -196,14 +196,22 @@ MOCK_FOL_OUTPUT = {
 }
 
 MOCK_DEBATE_OUTPUT = {
-    # _write_debate_to_state reads "winner", "llm_debate_assessment.key_exchanges"
+    # _write_debate_to_state reads "winner", "llm_debate_assessment.key_exchanges";
+    # each exchange follows the PRODUCER prompt schema (#2135): agent_a_point /
+    # agent_b_rebuttal / judge_note — the writer maps them onto the stored
+    # point/rebuttal layer Act II consumes. judge_note is dropped (unread, #1019).
     "winner": "Opponent",
     "llm_debate_assessment": {
         "key_exchanges": [
-            {"point": "Reform is necessary", "rebuttal": "Reform model is flawed"},
             {
-                "point": "All countries did it",
-                "rebuttal": "National specificities differ",
+                "agent_a_point": "Reform is necessary",
+                "agent_b_rebuttal": "Reform model is flawed",
+                "judge_note": "Point holds",
+            },
+            {
+                "agent_a_point": "All countries did it",
+                "agent_b_rebuttal": "National specificities differ",
+                "judge_note": "Weak analogy",
             },
         ],
     },
@@ -461,6 +469,13 @@ class TestGoldenStatePipeline:
         assert (
             len(golden_state.debate_transcripts) >= 1
         ), f"Expected ≥1 debate transcript, got {len(golden_state.debate_transcripts)}"
+        # #2135: the transcript must carry NON-empty exchanges — a transcript
+        # whose exchanges are all empty point/rebuttal is what the key-name bug
+        # produced (and this count-only assertion used to pass through it).
+        exchanges = golden_state.debate_transcripts[0]["exchanges"]
+        assert exchanges and all(
+            ex.get("point") or ex.get("rebuttal") for ex in exchanges
+        ), f"Debate exchanges all empty: {exchanges}"
 
     async def test_standard_workflow_populates_governance(
         self, golden_registry, golden_state
