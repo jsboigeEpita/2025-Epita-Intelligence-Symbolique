@@ -39,6 +39,28 @@ _STRUCTURED_ARG_FORMALISM_NAME: Dict[str, str] = {
     "bipolar_argumentation": "Bipolar AF",
 }
 
+
+def _setaf_collective_count(attacks: Any) -> Optional[int]:
+    """Count SetAF attacks that are genuinely collective (#1647).
+
+    SetAF's reason to exist is the **joint** attack: a SET of arguments attacking
+    a target without any member attacking it alone (§A of #1647). Dung's
+    degenerate case is the singleton attacker set. Returns ``None`` when the
+    input is not a usable attack list, else the number of attacks whose
+    ``attackers`` hold at least two members.
+    """
+    if not isinstance(attacks, list):
+        return None
+    n = 0
+    for item in attacks:
+        if not isinstance(item, dict):
+            continue
+        attackers = item.get("attackers")
+        if isinstance(attackers, list) and len(attackers) >= 2:
+            n += 1
+    return n
+
+
 # Per-formalism reason string for the ``absent_no_translator`` fallback (#1608).
 # Reformulated to describe what was *observed* (ran on auto-shaped synthetic
 # input) rather than the #1236-era claim "no translator extracts …" — which was
@@ -72,6 +94,44 @@ _STRUCTURED_ARG_ABSENT_REASON: Dict[str, str] = {
         "supports: no genuine support relations were supplied from the source."
     ),
 }
+
+
+def _structured_arg_degenerate_reason(
+    capability: str, ctx: dict[str, Any]
+) -> Optional[str]:
+    """Reason string when a non-empty input lacks the axis' defining property.
+
+    #1647: SetAF can be fed a *non-empty* ``set_attacks`` list in which every
+    attacker set is a singleton — the pairwise attack graph lifted to singletons.
+    The framework then runs, returns a non-empty extension, and the ledger files
+    the axis ``evaluated``, a status whose own definition (``shared_state``
+    ``add_structured_arg_status``) promises "collective attacks". Measured on
+    three real corpora: 43 attacks, 43 singletons, zero collective, on every run.
+
+    The honest-absent string already names "lifted to singletons" — but only on
+    the *no input* branch. This closes the other branch: input present, defining
+    property absent. Returns ``None`` for every other capability and for an
+    input that does carry at least one collective attack (nothing to relabel).
+    """
+    if capability != "setaf_reasoning":
+        return None
+    attacks = ctx.get("set_attacks")
+    collective = _setaf_collective_count(attacks)
+    if collective is None or collective > 0 or not attacks:
+        return None
+    cause = ctx.get(_translation_cause_key(capability))
+    origin = (
+        "the translator found no genuine relations, so the key was shaped from "
+        "the canonical pairwise attack graph"
+        if cause == "no_genuine_relations"
+        else "the supplied input carried none"
+    )
+    return (
+        f"Genuine SetAF input was supplied, but none of its {len(attacks)} "
+        "attack(s) is collective: every attacker set is a singleton, so the "
+        f"framework ran on a restatement of Dung ({origin}). SetAF's defining "
+        "property — a set attacking jointly — is absent from this run."
+    )
 
 
 def _translation_cause_key(capability: str) -> str:
@@ -210,6 +270,21 @@ def _record_structured_arg_status(
         handler_degraded = bool(isinstance(output, dict) and output.get("degraded"))
         substantive = _structured_arg_substantive_members(output)
         if not handler_degraded and substantive:
+            # #1647: a non-empty input can still be missing the property that
+            # makes the axis singular (SetAF without a single collective
+            # attack). Filed as ``evaluated`` it is indistinguishable from a
+            # genuine run — the ledger only surfaces ``degraded`` entries, so
+            # this is what makes the degenerate case reach the restitution.
+            degenerate_reason = _structured_arg_degenerate_reason(capability, ctx)
+            if degenerate_reason is not None:
+                recorder(
+                    capability,
+                    "evaluated_degenerate",
+                    True,
+                    degenerate_reason,
+                    ext_count,
+                )
+                return
             recorder(
                 capability,
                 "evaluated",

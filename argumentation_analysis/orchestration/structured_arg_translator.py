@@ -937,9 +937,21 @@ async def translate_to_setaf_attacks(
     attacks = _validate_setaf_attacks(data, arg_by_id)
     _log_translation_yield("SetAF", data, ("attacks",), len(attacks))
     if attacks:
+        # #1647: this line used to say "derived %d genuine joint attack(s)" for
+        # a count that includes singleton attacker sets — the instrument named
+        # *joint* a property nothing in the path tested. Report the split
+        # instead; the singleton count is what a reader needs to see.
+        collective = sum(
+            1
+            for a in attacks
+            if isinstance(a.get("attackers"), list) and len(a["attackers"]) >= 2
+        )
         logger.info(
-            "SetAF translator: derived %d genuine joint attack(s) from text.",
+            "SetAF translator: derived %d attack(s) from text (%d singleton, "
+            "%d collective).",
             len(attacks),
+            len(attacks) - collective,
+            collective,
         )
         return TranslationResult(relations=attacks, cause=CAUSE_EVALUATED)
     return TranslationResult(relations=[], cause=CAUSE_NO_GENUINE_RELATIONS)

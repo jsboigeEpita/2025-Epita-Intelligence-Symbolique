@@ -1260,6 +1260,18 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
           *source* (the translator found nothing to translate); this one is a
           statement about the *reasoning step* on input that did exist.
 
+        - ``"evaluated_degenerate"`` (#1647) — genuine structured input WAS
+          supplied and the framework ran on it, but the input lacks the property
+          that makes the axis singular. SetAF is the measured case: a non-empty
+          ``set_attacks`` list in which every attacker set is a singleton is the
+          pairwise attack graph restated, so nothing a SetAF run adds over Dung
+          is present. ``degraded`` is ``True`` — the axis produced a plausible,
+          well-formed, non-empty result that carries none of the formalism's
+          distinctive contribution, and ``evaluated`` (which promises
+          "collective attacks") would have made it indistinguishable from a
+          genuine run. Only ever emitted when the defining property is
+          *measurably absent*, never inferred from a low count.
+
         ``extension_count`` is how many result sets came back, not how much they
         contain: ``[[]]`` is one extension and is reported as ``1``. It is a
         description, never a verdict — the ``evaluated`` / ``evaluated_empty``
