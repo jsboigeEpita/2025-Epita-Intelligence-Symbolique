@@ -39,6 +39,11 @@ _NL_SCRUB_KEYS = frozenset({
     "counter_content", "topic", "reason",
 })
 
+# Debate exchanges (nested one level below transcripts): the nominative pair
+# the writer stores (#2135). scheme/scheme_key/critical_question are closed
+# vocabularies and intentionally absent.
+_EXCHANGE_SCRUB_KEYS = frozenset({"point", "rebuttal"})
+
 CORPORA = {
     "A": ROOT / "outputs/scda_audit/corpus_dense_A",
     "B": ROOT / "outputs/scda_audit/corpus_dense_B",
@@ -173,15 +178,30 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
             for ca in counters
         ]
 
-    # Sixth pass: scrub debate_transcripts
+    # Sixth pass: scrub debate_transcripts — transcript-level keys AND the
+    # nested exchanges (#2135: the writer stores point/rebuttal inside
+    # exchanges; topic at transcript level). Closed-vocab scheme fields survive.
     debates = cleaned.get("debate_transcripts", [])
     if isinstance(debates, list):
-        cleaned["debate_transcripts"] = [
-            {k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
-             for k, v in dt.items()}
-            if isinstance(dt, dict) else dt
-            for dt in debates
-        ]
+        scrubbed_debates = []
+        for dt in debates:
+            if not isinstance(dt, dict):
+                scrubbed_debates.append(dt)
+                continue
+            dt = {
+                k: ("<scrubbed>" if k in _NL_SCRUB_KEYS and isinstance(v, str) else v)
+                for k, v in dt.items()
+            }
+            exchanges = dt.get("exchanges")
+            if isinstance(exchanges, list):
+                dt["exchanges"] = [
+                    {k: ("<scrubbed>" if k in _EXCHANGE_SCRUB_KEYS and isinstance(v, str) else v)
+                     for k, v in ex.items()}
+                    if isinstance(ex, dict) else ex
+                    for ex in exchanges
+                ]
+            scrubbed_debates.append(dt)
+        cleaned["debate_transcripts"] = scrubbed_debates
 
     # Seventh pass: scrub belief_sets content
     belief_sets = cleaned.get("belief_sets", {})
