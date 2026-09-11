@@ -2862,9 +2862,23 @@ async def _invoke_camembert_fallacy(
         master_kernel = Kernel()
         master_kernel.add_service(llm_service)
 
+        # #2141 temps 2: the funnel is selected, not assumed. Default
+        # "one_shot" preserves the behaviour this callable had before the
+        # parameter existed — no taxonomy source, so the wide-net resolves
+        # nothing and the run degenerates to a one-shot prompt. "funnel" hands
+        # the funnel its taxonomy, which is a deliberate opt-in: it turns one
+        # call into a wide-net plus up to MAX_BRANCHES descents.
+        from argumentation_analysis.utils.taxonomy_loader import (
+            get_taxonomy_regime,
+            get_taxonomy_source_for_regime,
+        )
+
+        _regime = get_taxonomy_regime()
+
         plugin = FallacyWorkflowPlugin(
             master_kernel=master_kernel,
             llm_service=llm_service,
+            taxonomy_file_path=get_taxonomy_source_for_regime(_regime),
         )
 
         # RA-4 #1049 item 3: inject strategic directives into LLM prompt
@@ -2915,12 +2929,15 @@ async def _invoke_camembert_fallacy(
             "total_fallacies": len(detected),
             "extraction_method": result.get("exploration_method", "self_hosted"),
         }
-        # #2141: read the plugin's bypass marker. This callable builds its
-        # FallacyWorkflowPlugin without a taxonomy source, so the wide-net
-        # funnel runs on an empty navigator and silently degrades to one-shot.
-        # Carrying the marker here turns a swallowed degradation into a value
-        # a downstream consumer can branch on, instead of a one-shot result
-        # indistinguishable from a deliberate one.
+        # #2141: carry the regime the run was actually produced under, so a
+        # consumer can tell a one-shot from a funnel run without re-deriving
+        # the call path. In the default "one_shot" regime the plugin also
+        # reports a bypass marker: this callable hands it no taxonomy source,
+        # so the wide-net runs on an empty navigator and silently degrades to
+        # one-shot. Carrying that marker here turns a swallowed degradation
+        # into a value a downstream consumer can branch on, instead of a
+        # one-shot result indistinguishable from a deliberate one.
+        _ret["analysis_regime"] = result.get("analysis_regime", _regime)
         if result.get("fallback_reason"):
             _ret["degraded"] = True
             _ret["degradation_reason"] = (

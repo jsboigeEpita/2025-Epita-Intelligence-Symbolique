@@ -326,6 +326,24 @@ class FallacyWorkflowPlugin:
         parsed["taxonomy_state"] = self.taxonomy_state
         return json.dumps(parsed, indent=2, ensure_ascii=False)
 
+    def _mark_regime(self, result_json: str, regime: str) -> str:
+        """#2141 temps 2: name the regime the result was actually produced under.
+
+        ``one_shot`` when a single full-taxonomy call produced it — whether that
+        was requested outright or reached by a funnel that resolved nothing.
+        ``funnel`` when the wide-net descent ran and produced it. A consumer can
+        read which regime it got without re-deriving the call path, which is what
+        makes the two regimes comparable instead of merely co-existing.
+        """
+        try:
+            parsed = json.loads(result_json)
+        except (json.JSONDecodeError, TypeError):
+            return result_json
+        if not isinstance(parsed, dict) or "fallacies" not in parsed:
+            return result_json
+        parsed["analysis_regime"] = regime
+        return json.dumps(parsed, indent=2, ensure_ascii=False)
+
     def _create_one_shot_kernel(self) -> Tuple[Kernel, OpenAIPromptExecutionSettings]:
         """Create a kernel for one-shot fallback analysis."""
         kernel = Kernel()
@@ -1290,7 +1308,9 @@ class FallacyWorkflowPlugin:
 
             # Direct one-shot mode if requested
             if use_one_shot:
-                return await self._run_one_shot(argument_text)
+                return self._mark_regime(
+                    await self._run_one_shot(argument_text), "one_shot"
+                )
 
             # Phase 1: Wide-net candidate selection (#578)
             candidate_pks = await self._wide_net_candidates(argument_text)
@@ -1298,7 +1318,8 @@ class FallacyWorkflowPlugin:
                 self.logger.info(
                     "Wide-net produced no candidates — falling back to one-shot"
                 )
-                return self._mark_fallback(await self._run_one_shot(argument_text))
+                _fallback = self._mark_fallback(await self._run_one_shot(argument_text))
+                return self._mark_regime(_fallback, "one_shot")
 
             self.logger.info(
                 f"Phase 1: {len(candidate_pks)} wide-net candidates: {candidate_pks}"
@@ -1414,7 +1435,7 @@ class FallacyWorkflowPlugin:
                 else:
                     result_json = json.dumps(result_obj, indent=2, ensure_ascii=False)
                 self._persist_trace(trace_log_path, analysis_result, argument_text)
-                return result_json
+                return self._mark_regime(result_json, "funnel")
 
             # Phase 4: Fallback to one-shot
             self.logger.info(
@@ -1450,7 +1471,7 @@ class FallacyWorkflowPlugin:
                         )
                 except (json.JSONDecodeError, TypeError):
                     pass
-            return one_shot_result
+            return self._mark_regime(one_shot_result, "one_shot")
 
         except Exception as e:
             self.logger.error(f"Analysis error: {e}", exc_info=True)

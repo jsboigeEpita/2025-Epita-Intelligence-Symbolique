@@ -201,9 +201,29 @@ class AnalysisService:
                             # Utiliser la méthode générique pour créer l'agent
                             # L'argument 'agent_name' n'est pas attendu par la factory pour ce type d'agent.
                             # Il est géré en interne par la classe de l'agent.
+                            #
+                            # #2141 temps 2: the funnel is an opt-in. The default
+                            # "one_shot" keeps the behaviour this site had before
+                            # the parameter existed — the taxonomy path resolved
+                            # and logged just above is NOT transmitted, so the
+                            # agent's funnel runs on an empty navigator. "funnel"
+                            # wires that path through (it was computed and logged
+                            # but never passed — the family of #2121).
+                            from argumentation_analysis.utils.taxonomy_loader import (
+                                get_taxonomy_regime,
+                                get_taxonomy_source_for_regime,
+                            )
+
+                            _regime = get_taxonomy_regime()
                             self.informal_agent = factory.create_agent(
                                 agent_type=AgentType.INFORMAL_FALLACY,
                                 config_name="full",
+                                taxonomy_file_path=get_taxonomy_source_for_regime(
+                                    _regime
+                                ),
+                            )
+                            self.logger.info(
+                                "[OK] InformalAgent taxonomy regime: %s", _regime
                             )
                             # Report the plugins the agent actually mounted. The
                             # previous unconditional "[OK] ... configured

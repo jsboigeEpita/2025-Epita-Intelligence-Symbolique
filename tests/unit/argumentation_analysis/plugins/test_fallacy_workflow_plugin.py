@@ -786,3 +786,31 @@ class TestTaxonomyState2141:
     def test_fallback_marker_is_absent_when_taxonomy_loaded(self, plugin):
         payload = json.dumps({"fallacies": [], "exploration_method": "one_shot"})
         assert plugin._mark_fallback(payload) == payload
+
+
+class TestAnalysisRegime2141:
+    """#2141 temps 2 — the retained regime is named in the output.
+
+    The two regimes (one-shot and wide-net funnel) can only be compared if a
+    consumer can tell which one produced the result it holds. Before this, the
+    caller had to re-derive the call path to know.
+    """
+
+    def test_one_shot_result_is_labelled_one_shot(self, plugin):
+        payload = json.dumps({"fallacies": [], "exploration_method": "one_shot"})
+        marked = json.loads(plugin._mark_regime(payload, "one_shot"))
+        assert marked["analysis_regime"] == "one_shot"
+
+    def test_funnel_result_is_labelled_funnel(self, plugin):
+        payload = json.dumps(
+            {"fallacies": [], "exploration_method": "wide_net_parallel"}
+        )
+        marked = json.loads(plugin._mark_regime(payload, "funnel"))
+        assert marked["analysis_regime"] == "funnel"
+
+    def test_payload_without_fallacies_is_left_untouched(self, plugin):
+        payload = json.dumps({"error": "boom"})
+        assert plugin._mark_regime(payload, "funnel") == payload
+
+    def test_unparsable_payload_is_left_untouched(self, plugin):
+        assert plugin._mark_regime("not json", "funnel") == "not json"

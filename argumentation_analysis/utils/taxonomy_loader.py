@@ -19,6 +19,7 @@ Limitations connues:
 import os
 import logging
 from pathlib import Path
+from typing import Optional
 from argumentation_analysis.paths import DATA_DIR
 
 # Configuration du logging
@@ -41,7 +42,7 @@ DEFAULT_TAXONOMY_FILE = DATA_DIR / "mock_taxonomy_cards.csv"
 USE_MOCK = False
 
 
-def get_taxonomy_path():
+def get_taxonomy_path() -> Path:
     """
     Obtient le chemin vers le fichier de taxonomie des sophismes.
 
@@ -117,6 +118,60 @@ def get_taxonomy_path():
         except Exception as e:
             logger.error(f"Erreur lors du téléchargement de la taxonomie: {e}")
             raise
+
+
+# #2141 temps 2: the wide-net funnel is a parameter, not a silent assumption.
+# What makes the master/slave funnel real is its *taxonomy source*: without one
+# the navigator resolves no candidate and every call degenerates to a one-shot
+# full-taxonomy prompt. This selector decides whether a call site hands the
+# funnel its taxonomy. The default reproduces the behaviour that predates the
+# parameter, so selecting "funnel" is a deliberate, measured opt-in — it turns
+# one call into a wide-net plus up to MAX_BRANCHES descents.
+TAXONOMY_REGIME_ENV = "TAXONOMY_REGIME"
+TAXONOMY_REGIMES = ("one_shot", "funnel")
+DEFAULT_TAXONOMY_REGIME = "one_shot"
+
+
+def get_taxonomy_regime() -> str:
+    """The retained fallacy-analysis regime, from ``TAXONOMY_REGIME``.
+
+    ``"one_shot"`` (default) — the call site hands the funnel no taxonomy, so
+    the run is a single full-taxonomy prompt.
+    ``"funnel"`` — the call site hands the funnel the resolved taxonomy, so the
+    wide-net candidate selection and its parallel descent actually run.
+
+    An unrecognised value is *ignored, not honoured*: it warns naming the
+    variable and the accepted values, then falls back to the default. Silently
+    degrading an unknown selector would make a typo look like a working config.
+    """
+    raw = os.environ.get(TAXONOMY_REGIME_ENV, "").strip().lower()
+    if not raw:
+        return DEFAULT_TAXONOMY_REGIME
+    if raw not in TAXONOMY_REGIMES:
+        logger.warning(
+            "%s=%r is not a known regime (accepted: %s) — falling back to %r",
+            TAXONOMY_REGIME_ENV,
+            raw,
+            ", ".join(TAXONOMY_REGIMES),
+            DEFAULT_TAXONOMY_REGIME,
+        )
+        return DEFAULT_TAXONOMY_REGIME
+    return raw
+
+
+def get_taxonomy_source_for_regime(regime: Optional[str] = None) -> Optional[str]:
+    """The taxonomy path a call site should hand the funnel, or ``None``.
+
+    ``one_shot`` yields ``None`` — the call site passes no source, exactly as it
+    did before this parameter existed. ``funnel`` yields the resolved path.
+    Call sites share this one function rather than each re-deriving the rule,
+    so the two sites cannot drift apart.
+    """
+    if regime is None:
+        regime = get_taxonomy_regime()
+    if regime != "funnel":
+        return None
+    return str(get_taxonomy_path())
 
 
 def validate_taxonomy_file():
