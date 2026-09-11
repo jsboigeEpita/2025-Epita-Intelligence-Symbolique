@@ -707,3 +707,82 @@ class TestFileHandlerDefensiveGuard:
         import os
 
         assert os.path.exists(log_file), "Log file should be created for valid path"
+
+
+# ---------------------------------------------------------------------------
+# 12. Taxonomy state discrimination (#2141)
+# ---------------------------------------------------------------------------
+
+
+class TestTaxonomyState2141:
+    """#2141 — the three degradation states must be told apart, in words.
+
+    Before the fix, one message ("loading failed **or** has no root nodes")
+    merged "tried and failed" with "never tried". A navigator that was never
+    handed a source was reported as a failed load — which is why the neural
+    path bypassed the funnel unnoticed. Each state now has its own message and
+    a readable ``taxonomy_state``.
+    """
+
+    def test_no_source_has_its_own_state_and_message(
+        self, mock_kernel, mock_llm_service, caplog
+    ):
+        with caplog.at_level(logging.WARNING):
+            plugin = FallacyWorkflowPlugin(
+                master_kernel=mock_kernel,
+                llm_service=mock_llm_service,
+            )
+        assert plugin.taxonomy_state == "none"
+        warnings = " ".join(r.message for r in caplog.records).lower()
+        assert "no source provided" in warnings
+        # The old wording blamed a load that never happened.
+        assert "loading failed" not in warnings
+
+    def test_load_failure_has_its_own_state_and_message(
+        self, mock_kernel, mock_llm_service, caplog
+    ):
+        with caplog.at_level(logging.ERROR):
+            plugin = FallacyWorkflowPlugin(
+                master_kernel=mock_kernel,
+                llm_service=mock_llm_service,
+                taxonomy_file_path="/nonexistent/path/taxonomy.csv",
+            )
+        assert plugin.taxonomy_state == "load_failed"
+        errors = " ".join(r.message for r in caplog.records).lower()
+        assert "load failed" in errors
+
+    def test_loaded_without_root_has_its_own_state_and_message(
+        self, mock_kernel, mock_llm_service, caplog
+    ):
+        rows = [{"PK": "42", "path": "42", "depth": "5", "text_fr": "Leaf"}]
+        with caplog.at_level(logging.WARNING):
+            plugin = FallacyWorkflowPlugin(
+                master_kernel=mock_kernel,
+                llm_service=mock_llm_service,
+                taxonomy_data=rows,
+            )
+        assert plugin.taxonomy_state == "empty_roots"
+        warnings = " ".join(r.message for r in caplog.records).lower()
+        assert "no root node" in warnings
+
+    def test_loaded_taxonomy_reports_loaded(self, plugin):
+        assert plugin.taxonomy_state == "loaded"
+
+    def test_fallback_marker_is_written_when_navigator_is_empty(
+        self, mock_kernel, mock_llm_service
+    ):
+        plugin = FallacyWorkflowPlugin(
+            master_kernel=mock_kernel,
+            llm_service=mock_llm_service,
+        )
+        marked = json.loads(
+            plugin._mark_fallback(
+                json.dumps({"fallacies": [], "exploration_method": "one_shot"})
+            )
+        )
+        assert marked["fallback_reason"] == "empty_taxonomy_navigator"
+        assert marked["taxonomy_state"] == "none"
+
+    def test_fallback_marker_is_absent_when_taxonomy_loaded(self, plugin):
+        payload = json.dumps({"fallacies": [], "exploration_method": "one_shot"})
+        assert plugin._mark_fallback(payload) == payload
