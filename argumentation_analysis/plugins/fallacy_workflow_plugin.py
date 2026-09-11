@@ -240,28 +240,53 @@ class FallacyWorkflowPlugin:
         self.language = "fr"
 
         data = taxonomy_data or []
+        load_error: Optional[str] = None
         if not data and taxonomy_file_path:
             try:
                 with open(taxonomy_file_path, mode="r", encoding="utf-8") as infile:
                     reader = csv.DictReader(infile)
                     data = purge_rows(list(reader))
             except FileNotFoundError:
-                self.logger.error(f"Taxonomy file not found at {taxonomy_file_path}")
+                load_error = f"file not found at {taxonomy_file_path}"
             except Exception as e:
-                self.logger.error(f"Error reading taxonomy file: {e}")
+                load_error = f"read error: {e}"
 
         self.taxonomy_navigator = TaxonomyNavigator(taxonomy_data=data)
         self.exploration_plugin = ExplorationPlugin(
             self.taxonomy_navigator, language=self.language
         )
 
-        if self.taxonomy_navigator.get_root_nodes():
+        # #2141: three degradation states, each said in its own words. The
+        # previous single message ("loading failed **or** has no root nodes")
+        # merged "tried and failed" with "never tried": a navigator that was
+        # never handed a source was reported as a failed load, so nothing
+        # distinguished a bypassed funnel from a broken one — and every neural
+        # run bypassed it silently. self.taxonomy_state is the readable form.
+        roots = self.taxonomy_navigator.get_root_nodes()
+        if roots:
+            self.taxonomy_state = "loaded"
             self.logger.info(
-                f"Taxonomy loaded: {len(data)} nodes, "
-                f"{len(self.taxonomy_navigator.get_root_nodes())} root categories"
+                f"Taxonomy loaded: {len(data)} nodes, {len(roots)} root categories"
+            )
+        elif load_error is not None:
+            self.taxonomy_state = "load_failed"
+            self.logger.error(
+                f"Taxonomy source provided but the load failed ({load_error}) — "
+                "the navigator is empty and the wide-net funnel will resolve no candidate."
+            )
+        elif not data and taxonomy_file_path is None and not taxonomy_data:
+            self.taxonomy_state = "none"
+            self.logger.warning(
+                "Taxonomy: no source provided (neither taxonomy_file_path nor "
+                "taxonomy_data) — no load was attempted, the navigator is empty by "
+                "construction, and the wide-net funnel will fall back to one-shot."
             )
         else:
-            self.logger.warning("Taxonomy loading failed or has no root nodes.")
+            self.taxonomy_state = "empty_roots"
+            self.logger.warning(
+                f"Taxonomy loaded {len(data)} rows but no root node (depth==1) — "
+                "the navigator has no category and the wide-net funnel will resolve no candidate."
+            )
 
     def _create_slave_kernel(self) -> Tuple[Kernel, OpenAIPromptExecutionSettings]:
         """Create a constrained kernel with only ExplorationPlugin available.
@@ -277,6 +302,29 @@ class FallacyWorkflowPlugin:
             function_choice_behavior=FunctionChoiceBehavior.Auto(auto_invoke=False)
         )
         return slave_kernel, slave_settings
+
+    def _mark_fallback(self, result_json: str) -> str:
+        """#2141: make a bypassed funnel readable to a consumer.
+
+        A one-shot result is reached by three routes — an explicit
+        ``use_one_shot`` request, a wide-net that failed to parse, and a
+        wide-net that ran but could resolve no candidate. Only the last means
+        the master/slave funnel was bypassed *because its navigator had
+        nothing to resolve against*. The marker names that case; when the
+        navigator loaded (``taxonomy_state == "loaded"``) the one-shot is a
+        genuine choice and no marker is added.
+        """
+        if self.taxonomy_state == "loaded":
+            return result_json
+        try:
+            parsed = json.loads(result_json)
+        except (json.JSONDecodeError, TypeError):
+            return result_json
+        if not isinstance(parsed, dict) or "fallacies" not in parsed:
+            return result_json
+        parsed["fallback_reason"] = "empty_taxonomy_navigator"
+        parsed["taxonomy_state"] = self.taxonomy_state
+        return json.dumps(parsed, indent=2, ensure_ascii=False)
 
     def _create_one_shot_kernel(self) -> Tuple[Kernel, OpenAIPromptExecutionSettings]:
         """Create a kernel for one-shot fallback analysis."""
@@ -1250,7 +1298,7 @@ class FallacyWorkflowPlugin:
                 self.logger.info(
                     "Wide-net produced no candidates — falling back to one-shot"
                 )
-                return await self._run_one_shot(argument_text)
+                return self._mark_fallback(await self._run_one_shot(argument_text))
 
             self.logger.info(
                 f"Phase 1: {len(candidate_pks)} wide-net candidates: {candidate_pks}"

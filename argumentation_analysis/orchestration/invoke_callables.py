@@ -2915,6 +2915,19 @@ async def _invoke_camembert_fallacy(
             "total_fallacies": len(detected),
             "extraction_method": result.get("exploration_method", "self_hosted"),
         }
+        # #2141: read the plugin's bypass marker. This callable builds its
+        # FallacyWorkflowPlugin without a taxonomy source, so the wide-net
+        # funnel runs on an empty navigator and silently degrades to one-shot.
+        # Carrying the marker here turns a swallowed degradation into a value
+        # a downstream consumer can branch on, instead of a one-shot result
+        # indistinguishable from a deliberate one.
+        if result.get("fallback_reason"):
+            _ret["degraded"] = True
+            _ret["degradation_reason"] = (
+                f"wide-net funnel bypassed ({result['fallback_reason']}, "
+                f"taxonomy_state={result.get('taxonomy_state', 'unknown')})"
+            )
+            _ret["taxonomy_state"] = result.get("taxonomy_state", "unknown")
         if _strat_ids_cam:
             _ret["strategic_objective_ids"] = _strat_ids_cam
         return _ret
