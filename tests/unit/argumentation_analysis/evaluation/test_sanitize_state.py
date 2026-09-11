@@ -761,7 +761,19 @@ class TestListShapedContainers1664:
         )
         state.add_debate_transcript(
             self.NL,
-            [{"proponent_move": self.NL, "opponent_move": self.OTHER_NL}],
+            [
+                {
+                    # Real writer shape (#2135): _write_debate_to_state stores
+                    # point/rebuttal + closed-vocabulary scheme fields. The old
+                    # proponent_move/opponent_move names were fabricated by no
+                    # producer — testing them proved nothing about real exports.
+                    "point": self.NL,
+                    "rebuttal": self.OTHER_NL,
+                    "scheme": "Opinion d'expert",
+                    "scheme_key": "expert_opinion",
+                    "critical_question": "L'expert est-il impartial dans ce domaine ?",
+                }
+            ],
             "proponent",
         )
         return state.get_state_snapshot()

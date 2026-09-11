@@ -169,8 +169,22 @@ def _canaried_state() -> UnifiedAnalysisState:
     )
     s.add_probabilistic_result([NL], {NL: 0.75})  # pass 5b + 5c (keys)
     s.add_bipolar_result("necessity", [NL], [[NL, NL2]])  # pass 5b
-    s.add_debate_transcript(  # pass 5 (.topic) + 5d (.exchanges moves)
-        NL, [{"proponent_move": NL, "opponent_move": NL2}], "proponent"
+    s.add_debate_transcript(  # pass 5 (.topic) + 5d (.exchanges point/rebuttal)
+        # #2135: the producer oracle plants what the REAL writer stores —
+        # point/rebuttal (+ closed-vocab scheme fields). The old
+        # proponent_move/opponent_move names were fabricated by no writer, so
+        # planting them let the 5d entry agree with itself while covering
+        # nothing a producer emits.
+        NL,
+        [
+            {
+                "point": NL,
+                "rebuttal": NL2,
+                "scheme": "Opinion d'expert",
+                "scheme_key": "expert_opinion",
+            }
+        ],
+        "proponent",
     )
     s.transcription_segments.append({"text": NL, "speaker": NL2})  # pass 5
     s.neural_fallacy_scores.append({"text_segment": NL})  # pass 5

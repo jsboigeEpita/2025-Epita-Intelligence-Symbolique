@@ -239,14 +239,16 @@ _OPAQUE_LIST_OF_DICTS_MAPPING_KEYS = {
 #   dialogue_results[*].trace[*]      = {round, speaker, action, argument, target}
 #       ``argument``/``target`` are claim texts (dialogue_handler.py:100-130);
 #       ``speaker``/``action`` are closed vocabularies and survive.
-#   debate_transcripts[*].exchanges[*] = {proponent_move, opponent_move, ...}
-#       ``_TEXT_STRIP_LISTS`` already declares those two sub-keys, but the real
-#       writer nests them one level down inside ``exchanges``
-#       (shared_state.py:860-872), so the declaration never had a target. This
-#       completes an intent already recorded rather than adding a new one.
+#   debate_transcripts[*].exchanges[*] = {point, rebuttal, scheme, ...}
+#       ``_write_debate_to_state`` stores point/rebuttal (the stored-layer
+#       names, fed by the prompt's agent_a_point/agent_b_rebuttal — #2135).
+#       The earlier proponent_move/opponent_move names were fabricated by no
+#       producer, so the declaration had no target until the real names landed
+#       here. ``scheme``/``scheme_key``/``critical_question`` are closed
+#       vocabularies and are intentionally NOT listed — they survive.
 _OPAQUE_NESTED_ITEM_SUBKEYS = {
     "dialogue_results": {"trace": {"argument", "target"}},
-    "debate_transcripts": {"exchanges": {"proponent_move", "opponent_move"}},
+    "debate_transcripts": {"exchanges": {"point", "rebuttal"}},
     # #1649 privacy follow-up: aspic_results[*].attacks = the qualified attacks
     # surfaced top-level by the #1681 writer (and now read by the #1699 reader).
     # Each attack dict = {target, attacker_premises, scope, attacker_rule}.

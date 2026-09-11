@@ -168,21 +168,37 @@ class TestVector1LLMParaphrase:
                 assert ca["counter_content"] == "<scrubbed>"
 
     def test_debate_transcripts_nl_scrubbed(self):
+        # #2135: transcripts follow the REAL writer shape — topic at transcript
+        # level, point/rebuttal nested inside exchanges (+ closed-vocab scheme
+        # fields that must survive). The old speaker/content fixture matched no
+        # producer, so the pass agreed with itself while exchanges traversed
+        # the export untouched.
         state = {
             "debate_transcripts": [
-                {"speaker": "proponent", "content": "a" * 100},
                 {
-                    "speaker": "opponent",
-                    "content": "b" * 100,
-                    "topic": "foreign policy",
-                },
+                    "id": "debate_0",
+                    "topic": "foreign policy " + "a" * 100,
+                    "exchanges": [
+                        {
+                            "point": "The speaker claims that " + "b" * 100,
+                            "rebuttal": "Opponent answers that " + "c" * 100,
+                            "scheme": "Opinion d'expert",
+                            "scheme_key": "expert_opinion",
+                        }
+                    ],
+                    "winner": "proponent",
+                }
             ]
         }
         result = _scrub_state_for_export(state)
-        for dt in result["debate_transcripts"]:
-            assert dt.get("content") == "<scrubbed>"
-            if "topic" in dt:
-                assert dt["topic"] == "<scrubbed>"
+        dt = result["debate_transcripts"][0]
+        assert dt["topic"] == "<scrubbed>"
+        ex = dt["exchanges"][0]
+        assert ex["point"] == "<scrubbed>"
+        assert ex["rebuttal"] == "<scrubbed>"
+        # Closed vocabularies survive (same policy as sanitize_state 5d).
+        assert ex["scheme"] == "Opinion d'expert"
+        assert ex["scheme_key"] == "expert_opinion"
 
     def test_belief_sets_long_content_scrubbed(self):
         state = {
