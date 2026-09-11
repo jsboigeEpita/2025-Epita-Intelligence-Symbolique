@@ -30,6 +30,20 @@ from argumentation_analysis.core.utils.file_utils import (
 )
 
 
+# Tests de la surface de la façade (#2146)
+def test_facade_does_not_re_export_third_party_modules():
+    """La façade ne doit pas fuir les paquets tiers importés par ses feuilles.
+
+    Avant #2146, quatre star-imports laissaient entrer tout nom public des
+    feuilles — y compris le paquet PyPI `markdown` — dans file_utils.
+    """
+    import argumentation_analysis.core.utils.file_utils as facade
+
+    assert not hasattr(facade, "markdown")
+    for name in facade.__all__:
+        assert getattr(facade, name, None) is not None, name
+
+
 # Tests pour sanitize_filename
 @pytest.mark.parametrize(
     "original, expected",
@@ -330,16 +344,17 @@ def test_save_markdown_to_html_success(tmp_path, mocker):
     html_output_path = tmp_path / "output.html"
 
     # Mocker markdown.markdown pour ne pas dépendre de la lib externe pour ce test unitaire
-    # et pour contrôler la sortie.
-    mock_markdown_converter = mocker.patch(
-        "argumentation_analysis.core.utils.file_utils.markdown.markdown"
+    # et pour contrôler la sortie. Cible = la feuille qui utilise réellement le paquet
+    # (la façade ne re-exporte plus `markdown` depuis #2146).
+    mock_markdown_module = mocker.patch(
+        "argumentation_analysis.core.utils.markdown_utils.markdown"
     )
     expected_html_core = "<h1>Titre</h1>\n<p>Ceci est un paragraphe avec du <strong>gras</strong> et de l'<em>italique</em>.</p>"
-    mock_markdown_converter.return_value = expected_html_core
+    mock_markdown_module.markdown.return_value = expected_html_core
 
     assert save_markdown_to_html(markdown_content, html_output_path) is True
     assert html_output_path.exists()
-    mock_markdown_converter.assert_called_once_with(
+    mock_markdown_module.markdown.assert_called_once_with(
         markdown_content, extensions=["tables", "fenced_code"]
     )
 
@@ -357,7 +372,7 @@ def test_save_markdown_to_html_conversion_error(tmp_path, mocker, caplog):
     html_output_path = tmp_path / "error.html"
 
     mocker.patch(
-        "argumentation_analysis.core.utils.file_utils.markdown.markdown",
+        "argumentation_analysis.core.utils.markdown_utils.markdown.markdown",
         side_effect=Exception("Simulated Markdown Error"),
     )
 
