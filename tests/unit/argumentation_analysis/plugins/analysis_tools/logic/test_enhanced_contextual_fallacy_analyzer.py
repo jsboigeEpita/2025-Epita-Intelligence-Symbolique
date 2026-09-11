@@ -13,13 +13,26 @@ from datetime import datetime
 from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
     EnhancedContextualFallacyAnalyzer,
 )
+from argumentation_analysis.core.interfaces.fallacy_detector import (
+    AbstractFallacyDetector,
+)
+
+
+class _ConformingDetector(AbstractFallacyDetector):
+    """Détecteur minimal respectant le contrat DÉCLARÉ de l'ABC (#2149)."""
+
+    def __init__(self, fallacies=None):
+        self._fallacies = fallacies if fallacies is not None else []
+
+    def detect(self, text: str) -> dict:
+        return {"fallacies": list(self._fallacies)}
 
 
 @pytest.fixture
 def mock_detector():
     """Create a mock fallacy detector."""
     detector = MagicMock()
-    detector.detect_fallacies.return_value = []
+    detector.detect.return_value = {"fallacies": []}
     return detector
 
 
@@ -344,7 +357,7 @@ class TestFilterByContextSemantic:
 
 class TestAnalyzeContext:
     def test_returns_expected_keys(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = []
+        mock_detector.detect.return_value = {"fallacies": []}
         result = analyzer.analyze_context("some text", "politique")
         assert "context_analysis" in result
         assert "potential_fallacies_count" in result
@@ -354,29 +367,74 @@ class TestAnalyzeContext:
         assert "analysis_timestamp" in result
 
     def test_with_detected_fallacies(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "attack",
-                "confidence": 0.7,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "attack",
+                    "confidence": 0.7,
+                },
+            ]
+        }
         result = analyzer.analyze_context("He attacked the person", "politique")
         assert result["potential_fallacies_count"] >= 1
         assert result["contextual_fallacies_count"] >= 1
 
     def test_stores_last_analysis_fallacies(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.5,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.5,
+                },
+            ]
+        }
         analyzer.analyze_context("text", "politique")
         assert len(analyzer.last_analysis_fallacies) >= 1
+
+    def test_analyze_context_works_with_real_conforming_detector(self):
+        """#2149 — né-rouge : le chemin vivant doit appeler un contrat qui existe.
+
+        `EnhancedContextualFallacyAnalyzer` déclare son paramètre
+        `fallacy_detector` comme un `AbstractFallacyDetector`, dont l'unique
+        contrat est `detect(text) -> dict`. Avant le correctif,
+        `_identify_potential_fallacies` appelait `detect_fallacies()`, méthode
+        qu'implémente **aucune** classe du dépôt : un détecteur réellement
+        conforme levait donc `AttributeError` au premier appel.
+
+        Le détecteur utilisé ici est volontairement RÉEL et conforme à l'ABC —
+        un `MagicMock` fabriquerait la méthode manquante et masquerait la
+        violation de contrat.
+        """
+        detector = _ConformingDetector(
+            [
+                {
+                    "fallacy_type": "Appel à l'autorité",
+                    "keyword": "experts",
+                    "context_text": "Les experts sont unanimes",
+                    "confidence": 0.7,
+                }
+            ]
+        )
+        analyzer = EnhancedContextualFallacyAnalyzer(fallacy_detector=detector)
+        analyzer.learning_data = {
+            "context_patterns": {},
+            "fallacy_patterns": {},
+            "feedback_history": [],
+            "confidence_adjustments": {},
+        }
+        analyzer.feedback_history = []
+        analyzer.context_embeddings_cache = {}
+        analyzer._save_learning_data = lambda: None
+
+        result = analyzer.analyze_context(
+            "Les experts sont unanimes : ce produit est sûr.", "commercial"
+        )
+        assert result["potential_fallacies_count"] == 1
+        assert "contextual_fallacies" in result
 
 
 # ============================================================
@@ -386,28 +444,32 @@ class TestAnalyzeContext:
 
 class TestProvideFeedback:
     def test_records_feedback(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.5,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.5,
+                },
+            ]
+        }
         analyzer.analyze_context("text", "politique")
         analyzer.provide_feedback("fallacy_0", True, "good detection")
         assert len(analyzer.feedback_history) == 1
         assert analyzer.feedback_history[0]["is_correct"] is True
 
     def test_positive_feedback_increases_confidence(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.5,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.5,
+                },
+            ]
+        }
         analyzer.analyze_context("text", "politique")
         analyzer.provide_feedback("fallacy_0", True)
         assert analyzer.learning_data["confidence_adjustments"][
@@ -415,14 +477,16 @@ class TestProvideFeedback:
         ] == pytest.approx(0.05)
 
     def test_negative_feedback_decreases_confidence(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Faux dilemme",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.5,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Faux dilemme",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.5,
+                },
+            ]
+        }
         analyzer.analyze_context("text", "politique")
         analyzer.provide_feedback("fallacy_0", False)
         assert analyzer.learning_data["confidence_adjustments"][
@@ -430,14 +494,16 @@ class TestProvideFeedback:
         ] == pytest.approx(-0.1)
 
     def test_feedback_clamped(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.5,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.5,
+                },
+            ]
+        }
         analyzer.analyze_context("text", "politique")
         # Push confidence down many times
         for _ in range(20):
@@ -522,19 +588,21 @@ class TestGetContextualFallacyExamples:
 
 class TestIdentifyContextualFallacies:
     def test_returns_list(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = []
+        mock_detector.detect.return_value = {"fallacies": []}
         result = analyzer.identify_contextual_fallacies("some argument", "politique")
         assert isinstance(result, list)
 
     def test_filters_by_confidence(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.1,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.1,
+                },
+            ]
+        }
         result = analyzer.identify_contextual_fallacies("some text", "politique")
         # In political context, Ad hominem gets +0.3 -> 0.4 still below 0.5?
         # Actually: 0.1 + 0.3 = 0.4, filtered out (< 0.5)
@@ -549,14 +617,16 @@ class TestIdentifyContextualFallacies:
         ), f"expected low-confidence fallacy filtered out, got {result}"
 
     def test_high_confidence_passed_through(self, analyzer, mock_detector):
-        mock_detector.detect_fallacies.return_value = [
-            {
-                "fallacy_type": "Ad hominem",
-                "keyword": "x",
-                "context_text": "t",
-                "confidence": 0.8,
-            },
-        ]
+        mock_detector.detect.return_value = {
+            "fallacies": [
+                {
+                    "fallacy_type": "Ad hominem",
+                    "keyword": "x",
+                    "context_text": "t",
+                    "confidence": 0.8,
+                },
+            ]
+        }
         result = analyzer.identify_contextual_fallacies("some text", "politique")
         # 0.8 + 0.3 = 1.0, well above 0.5 threshold
         assert len(result) == 1

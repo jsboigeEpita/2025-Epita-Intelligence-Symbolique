@@ -490,8 +490,22 @@ class EnhancedContextualFallacyAnalyzer:
     def _identify_potential_fallacies(self, text: str) -> List[Dict[str, Any]]:
         """
         Wrapper pour la méthode de détection du fallacy_detector sous-jacent.
+
+        Le détecteur injecté est déclaré `AbstractFallacyDetector`, dont le
+        contrat est `detect(text) -> dict` (#2149 : l'appel précédent visait
+        `detect_fallacies`, qu'aucun détecteur injectable du dépôt n'implémente).
+        Le dict est normalisé en liste, comme le fait déjà le consommateur de
+        production `orchestration/invoke_callables.py` (« fallacies » /
+        « detections » pour les adaptateurs, « detected_fallacies » pour
+        `ContextualFallacyDetector`).
         """
-        return self.fallacy_detector.detect_fallacies(text)
+        result = self.fallacy_detector.detect(text)
+        if isinstance(result, dict):
+            for key in ("fallacies", "detections", "detected_fallacies"):
+                if key in result:
+                    return list(result[key])
+            return []
+        return list(result)
 
     def _filter_by_context_semantic(
         self,
