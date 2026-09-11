@@ -1578,7 +1578,13 @@ class EnhancedComplexFallacyAnalyzer(BaseAnalyzer):
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
-    analyzer = EnhancedComplexFallacyAnalyzer()
+    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
+        ContextualFallacyAnalyzer,
+    )
+
+    analyzer = EnhancedComplexFallacyAnalyzer(
+        fallacy_detector=ContextualFallacyAnalyzer()
+    )
 
     # Exemple d'analyse de structure argumentative
     arguments = [

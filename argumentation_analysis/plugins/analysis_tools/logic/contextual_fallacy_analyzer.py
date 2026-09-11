@@ -949,7 +949,13 @@ class EnhancedContextualFallacyAnalyzer:
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
-    analyzer = EnhancedContextualFallacyAnalyzer()
+    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
+        ContextualFallacyAnalyzer,
+    )
+
+    analyzer = EnhancedContextualFallacyAnalyzer(
+        fallacy_detector=ContextualFallacyAnalyzer()
+    )
 
     # Exemple d'analyse contextuelle
     text = "Les experts sont unanimes : ce produit est sûr et efficace. Des millions de personnes l'utilisent déjà."

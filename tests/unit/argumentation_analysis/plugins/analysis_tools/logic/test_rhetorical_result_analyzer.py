@@ -186,6 +186,12 @@ def _make_analyzer():
 
 
 class TestEnhancedRhetoricalResultAnalyzerInit:
+    def test_complex_fallacy_analyzer_required(self):
+        # #2147 : sans analyseur injecté, l'échec doit survenir ICI, en nommant
+        # complex_fallacy_analyzer — pas en profondeur dans un repli par défaut.
+        with pytest.raises(TypeError, match="complex_fallacy_analyzer"):
+            EnhancedRhetoricalResultAnalyzer()
+
     def test_custom_dependencies(self):
         mock_fallacy = MagicMock()
         mock_severity = MagicMock()

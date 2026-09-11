@@ -21,7 +21,6 @@ from collections import Counter, defaultdict
 # Importer l'analyseur de résultats rhétoriques de base
 
 # Importer les analyseurs améliorés
-from .complex_fallacy_analyzer import EnhancedComplexFallacyAnalyzer
 from .fallacy_severity_evaluator import EnhancedFallacySeverityEvaluator
 
 # Configuration du logging
@@ -181,7 +180,7 @@ class EnhancedRhetoricalResultAnalyzer:
 
     def __init__(
         self,
-        complex_fallacy_analyzer: Optional[Any] = None,
+        complex_fallacy_analyzer: Any,
         severity_evaluator: Optional[Any] = None,
         recommendation_generator: Optional[Any] = None,
     ):
@@ -189,8 +188,8 @@ class EnhancedRhetoricalResultAnalyzer:
         Initialise l'analyseur de résultats rhétoriques amélioré.
 
         Args:
-            complex_fallacy_analyzer (Optional[Any]): Un analyseur de sophismes complexes.
-                                                      Si non fourni, une instance par défaut sera créée.
+            complex_fallacy_analyzer (Any): Un analyseur de sophismes complexes
+                                             (requis — il exige lui-même un détecteur injecté).
             severity_evaluator (Optional[Any]): Un évaluateur de gravité de sophismes.
                                                  Si non fourni, une instance par défaut sera créée.
             recommendation_generator (Optional[Any]): Un générateur de recommandations.
@@ -199,9 +198,7 @@ class EnhancedRhetoricalResultAnalyzer:
         self.logger = logger
 
         # Utiliser les analyseurs fournis ou initialiser des analyseurs par défaut
-        self.complex_fallacy_analyzer = (
-            complex_fallacy_analyzer or EnhancedComplexFallacyAnalyzer()
-        )
+        self.complex_fallacy_analyzer = complex_fallacy_analyzer
         self.severity_evaluator = (
             severity_evaluator or EnhancedFallacySeverityEvaluator()
         )
