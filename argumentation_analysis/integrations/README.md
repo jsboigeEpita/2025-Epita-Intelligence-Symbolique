@@ -2,7 +2,7 @@
 
 ## Rôle et frontière
 
-Un seul module : `semantic_kernel_integration.py` (677 lignes) — intégration **JTMS** à Semantic Kernel. **Sans `__init__.py`** (namespace package implicite) — donc **exclu du packaging** d'un build du package `argumentation_analysis` (répertoires sans `__init__` non collectés par setuptools).
+Un seul module : `semantic_kernel_integration.py` (677 lignes) — intégration **JTMS** à Semantic Kernel. **Sans `__init__.py`** : namespace package implicite, **importable et découvert par la configuration setuptools actuelle** (`[tool.setuptools.packages.find]` pyproject.toml:101 ne désactive pas les namespaces — `find_namespace_packages` contient `argumentation_analysis.integrations`, mesuré ; un `find_packages` strict ne le contiendrait pas).
 
 N'est **pas** l'intégration Semantic Kernel réelle du dépôt : celle-ci vit dans `core/bootstrap.py` (assemblage kernel), `agents/factory.py` (câblage agents), `plugins/semantic_kernel/jtms_plugin.py` (surface SK du JTMS utilisée par l'API) — aucun ne passe par ici.
 
@@ -39,5 +39,5 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `integrations/`. Re
 
 ## Limites connues
 
-- sans `__init__.py`, le répertoire n'est pas packagé : toute « intégration » ici est invisible pour un install du package ;
+- sans `__init__.py`, le répertoire reste **découvert par le packaging** (namespaces actifs) — il partirait donc dans un build malgré ses 0 importeurs ; le seul garde est la mesure « zéro consommateur » ci-dessus, pas le packaging ;
 - 677 lignes maintenues par le lint sans aucun consommateur — le formatage Black continue de toucher un module mort.
