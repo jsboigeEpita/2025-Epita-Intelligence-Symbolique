@@ -66,6 +66,9 @@ from argumentation_analysis.agents.core.synthesis.synthesis_agent import Synthes
 from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
     EnhancedContextualFallacyAnalyzer,
 )
+from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
+    ContextualFallacyAnalyzer,
+)
 from argumentation_analysis.paths import PROJECT_ROOT_DIR
 from argumentation_analysis.core.source_management import (
     UnifiedSourceManager,
@@ -353,7 +356,9 @@ class EducationalProjectManager:
 
             # Agent d'analyse rhétorique (toujours présent)
             if "sophismes_basiques" in concepts or "sophismes" in concepts:
-                self.agents["informal"] = EnhancedContextualFallacyAnalyzer()
+                self.agents["informal"] = EnhancedContextualFallacyAnalyzer(
+                    fallacy_detector=ContextualFallacyAnalyzer()
+                )
                 self.conversation_logger.log_agent_message(
                     "AgentRhetorique",
                     "Salut ! Je suis l'agent spécialisé dans l'analyse des sophismes et arguments fallacieux. Je vais vous aider à identifier les erreurs de raisonnement.",
@@ -411,7 +416,9 @@ class EducationalProjectManager:
             return True
 
         except Exception as e:
-            logger.error(f"Erreur lors de l'initialisation des agents: {e}")
+            logger.error(
+                f"Erreur lors de l'initialisation des agents: {e}", exc_info=True
+            )
             return False
 
     async def orchestrate_educational_analysis(
