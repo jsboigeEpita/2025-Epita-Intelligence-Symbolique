@@ -239,7 +239,7 @@ env:
 
 **Raisons techniques :**
 - ❌ GitHub Actions runners = cloud isolé
-- ❌ Impossible d'accéder aux services `https://api.micro.text-generation-webui.myia.io`
+- ❌ Impossible d'accéder aux services d'inférence auto-hébergés (réseau privé)
 - ❌ Sécurité : Ne JAMAIS exposer URLs internes en secrets publics
 
 **Alternative :**

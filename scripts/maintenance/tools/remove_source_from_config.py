@@ -1,11 +1,23 @@
 import argumentation_analysis.core.environment
 import json
+import os
+import sys
 from pathlib import Path
 
 # Définir les chemins des fichiers
 input_config_path = Path("_temp/config_fr_corrected.json")
-output_config_path = Path("_temp/config_lemonde_deleted.json")
-source_name_to_remove = "article_lemonde_elections_europeennes_2024"
+output_config_path = Path("_temp/config_source_removed.json")
+source_name_to_remove = os.environ.get("SOURCE_NAME_TO_REMOVE") or (
+    sys.argv[1] if len(sys.argv) > 1 else ""
+)
+if not source_name_to_remove:
+    print(
+        "Usage: remove_source_from_config.py <source_name> "
+        "(ou via la variable d'environnement SOURCE_NAME_TO_REMOVE). "
+        "Le nom de la source est un parametre d'execution : "
+        "il n'est pas code en dur ici."
+    )
+    exit(2)
 
 # S'assurer que le répertoire de sortie existe
 output_config_path.parent.mkdir(parents=True, exist_ok=True)
