@@ -36,7 +36,7 @@ class NarrativeTwist(Enum):
 
 
 @dataclass
-class RevealationTiming:
+class RevelationTiming:
     """Structure pour le timing optimal des révélations"""
 
     trigger_type: str  # "hypothesis_formed", "suggestion_made", "analysis_complete"
@@ -74,7 +74,7 @@ class PhaseDExtensions:
         self.narrative_twists: List[NarrativeMoment] = []
 
         # PHASE D: Timing dramatique
-        self.dramatic_timing_cues: Dict[str, RevealationTiming] = {}
+        self.dramatic_timing_cues: Dict[str, RevelationTiming] = {}
         self.suspense_buildup: List[Dict[str, Any]] = []
 
         # PHASE D: Polish conversationnel
@@ -93,7 +93,7 @@ class PhaseDExtensions:
 
         # Timing dramatique optimal
         self.dramatic_timing_cues = {
-            "sherlock_hypothesis": RevealationTiming(
+            "sherlock_hypothesis": RevelationTiming(
                 trigger_type="hypothesis_formed",
                 delay_turns=1,
                 suspense_phrases=[
@@ -104,7 +104,7 @@ class PhaseDExtensions:
                 ],
                 reveal_intensity=0.8,
             ),
-            "watson_analysis": RevealationTiming(
+            "watson_analysis": RevelationTiming(
                 trigger_type="analysis_complete",
                 delay_turns=0,
                 suspense_phrases=[
@@ -114,7 +114,7 @@ class PhaseDExtensions:
                 ],
                 reveal_intensity=0.6,
             ),
-            "suggestion_made": RevealationTiming(
+            "suggestion_made": RevelationTiming(
                 trigger_type="suggestion_made",
                 delay_turns=1,
                 suspense_phrases=[

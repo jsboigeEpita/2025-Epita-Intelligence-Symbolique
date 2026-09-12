@@ -36,7 +36,7 @@ from .phase_d_extensions import (
     PhaseDExtensions,
     RevealStrategy,
     NarrativeTwist,
-    RevealationTiming,
+    RevelationTiming,
     NarrativeMoment,
     extend_oracle_state_phase_d,
 )
@@ -70,7 +70,7 @@ __all__ = [
     "PhaseDExtensions",
     "RevealStrategy",
     "NarrativeTwist",
-    "RevealationTiming",
+    "RevelationTiming",
     "NarrativeMoment",
     "extend_oracle_state_phase_d",
 ]
