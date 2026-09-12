@@ -117,6 +117,25 @@ def main() -> int:
         print(f"canon introuvable: {args.canon}", file=sys.stderr)
         return 2
 
+    # Un canon qui ne declare aucune cle requise rend "complet" sans avoir rien
+    # compare : vide, tronque par une redirection cassee, ou toutes entrees
+    # commentees donnent le meme vert vacuous. Mesure a l'origine de ce garde :
+    # un `git show` mange par MSYS a cree un canon vide, et l'outil a valide un
+    # siege incomplet. L'absence d'exigence n'est pas une conformite.
+    required = [
+        k
+        for k, (_, commented) in parse(args.canon, keep_commented=True).items()
+        if not commented
+    ]
+    if not required:
+        print(
+            f"canon inutilisable: {args.canon} ne declare aucune cle requise "
+            "(vide, tronque, ou toutes les entrees commentees) — un « complet » "
+            "ici ne mesurerait rien",
+            file=sys.stderr,
+        )
+        return 2
+
     findings, optional, count, inventory = audit(args.env, args.canon)
 
     if args.inventory:

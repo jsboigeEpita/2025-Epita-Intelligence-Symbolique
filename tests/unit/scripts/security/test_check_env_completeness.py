@@ -6,6 +6,7 @@ détecteur rend ~8 faux positifs sur 10 et la flotte apprend à l'ignorer.
 """
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -101,3 +102,53 @@ def test_specimen_shapes(tmp_path, shape):
     canon = f'K="{shape}"\n'
     out = verdicts(tmp_path, f'K="{shape}"\n', canon=canon)
     assert any(v.startswith("SPECIMEN  K") for v in out)
+
+
+def run_main(tmp_path, env_body, canon_body):
+    """Le garde du canon vacuous vit dans main(), pas dans audit().
+
+    Un test qui passerait par `verdicts` ne le traverserait jamais : il
+    mesurerait audit() et certifierait main(). D'ou l'argv.
+    """
+    env = write(tmp_path, ".env", env_body)
+    ref = write(tmp_path, "canon", canon_body)
+    argv = ["check_env_completeness.py", "--env", str(env), "--canon", str(ref)]
+    old, sys.argv = sys.argv, argv
+    try:
+        return mod.main()
+    finally:
+        sys.argv = old
+
+
+LEGIT_ENV = (
+    'GLOBAL_LLM_SERVICE="OpenAI"\n'
+    'AZURE_OPENAI_API_KEY="vraie"\n'
+    'REQUIRED_KEY="sk-vraie"\n'
+)
+
+COMMENTS_ONLY = "# RIEN=1\n\n# QUE DES COMMENTAIRES\n"
+
+
+def test_real_canon_still_returns_complet(tmp_path, capsys):
+    """CONTROLE POSITIF du garde : un garde qui refuserait TOUT canon ferait
+    passer les deux cas vacuous ci-dessous sans rien mesurer."""
+    assert run_main(tmp_path, LEGIT_ENV, CANON) == 0
+    assert "complet" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "canon, forme",
+    [("", "vide"), (COMMENTS_ONLY, "commentaires seuls")],
+)
+def test_vacuous_canon_is_refused_not_green(tmp_path, capsys, canon, forme):
+    """Un canon sans aucune cle requise rendait `complet` exit 0.
+
+    Mesure d'origine : un `git show <ref>:<path>` mange par MSYS a produit un
+    canon vide par redirection, et l'outil a certifie « complet » un siege
+    incomplet. Zero exigence n'est pas une conformite — et ce vert-la est pire
+    qu'un rouge : il AUTORISE le geste suivant.
+    """
+    assert run_main(tmp_path, LEGIT_ENV, canon) == 2, forme
+    out = capsys.readouterr()
+    assert "canon inutilisable" in out.err
+    assert "complet" not in out.out
