@@ -221,6 +221,21 @@ class TestHelpers:
         ]
         assert DeepSynthesisAgent._count_populated_sections(report) == 2
 
+    def test_argument_map_entry_has_no_outgoing_attack_field(self):
+        """#2134: ``attacks`` promised arg→arg edges the state never carries.
+
+        Every attacker ever keyed in ``_build_argument_map`` is a synthetic
+        node (``fallacy_*`` / ``counter_*``) — the incoming direction
+        records that, and no argument→argument edge source exists anywhere
+        in the analysis state. The field was serialized as ``attacks: []``
+        on 100% of entries, which a dict reader could only misread as
+        "no argument attacks another". This guard keeps the direction out
+        until a real edge source exists.
+        """
+        entry = ArgumentMapEntry(arg_id="a1", stance="pro", description="d")
+        assert not hasattr(entry, "attacks")
+        assert set(vars(entry)) == {"arg_id", "stance", "description", "attacked_by"}
+
     def test_count_state_fields(self):
         state = _make_fixture_state()
         count = DeepSynthesisAgent._count_state_fields(state)

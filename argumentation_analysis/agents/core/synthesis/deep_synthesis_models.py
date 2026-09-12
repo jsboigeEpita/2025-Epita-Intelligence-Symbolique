@@ -27,12 +27,18 @@ class SourceOverview:
 
 @dataclass
 class ArgumentMapEntry:
-    """A single argument in the argument map (Section 2)."""
+    """A single argument in the argument map (Section 2).
+
+    No outgoing-attack field: the analysis state never carries
+    argument→argument edges — the only attackers ever keyed are synthetic
+    nodes (``fallacy_*`` / ``counter_*``), which the incoming direction
+    records. An ``attacks`` field promised a direction with no data
+    behind it (#2134).
+    """
 
     arg_id: str
     stance: str  # "pro" | "con" | "neutral"
     description: str
-    attacks: List[str] = field(default_factory=list)  # arg_ids this one attacks
     attacked_by: List[str] = field(default_factory=list)
 
 

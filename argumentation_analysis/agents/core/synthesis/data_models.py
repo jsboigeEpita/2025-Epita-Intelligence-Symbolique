@@ -152,12 +152,6 @@ class UnifiedReport:
     recommendations: List[str] = field(default_factory=list)
     """Suggestions pour améliorer ou réfuter l'argumentation."""
 
-    # --- Métriques Combinées ---
-    logic_informal_alignment: Optional[float] = None
-    """Score mesurant l'alignement entre la validité logique et la force persuasive."""
-    analysis_completeness: Optional[float] = None
-    """Score évaluant la complétude de l'analyse (ex: toutes les branches ont-elles été explorées?)."""
-
     # --- Métadonnées du rapport ---
     synthesis_timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
     """Horodatage de la création du rapport."""
@@ -178,8 +172,6 @@ class UnifiedReport:
             "overall_validity": self.overall_validity,
             "confidence_level": self.confidence_level,
             "recommendations": self.recommendations,
-            "logic_informal_alignment": self.logic_informal_alignment,
-            "analysis_completeness": self.analysis_completeness,
             "synthesis_timestamp": self.synthesis_timestamp,
             "total_processing_time_ms": self.total_processing_time_ms,
             "synthesis_version": self.synthesis_version,
