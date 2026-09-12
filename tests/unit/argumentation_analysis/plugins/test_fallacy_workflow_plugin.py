@@ -13,6 +13,7 @@ Tests cover:
 - IdentifiedFallacy model
 """
 
+import asyncio
 import json
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -814,3 +815,51 @@ class TestAnalysisRegime2141:
 
     def test_unparsable_payload_is_left_untouched(self, plugin):
         assert plugin._mark_regime("not json", "funnel") == "not json"
+class TestWideNetPhase1TimeoutBudget2157:
+
+
+    """#2157 — a wide-net Phase 1 budget overrun must be named, not silent.
+
+    str(asyncio.TimeoutError()) is the empty string, so the old single
+    catch-all logged "Wide-net Phase 1 failed: " — a funnel seat could
+    degrade to one-shot intermittently with no line naming the cause. The
+    budget is env-tunable; the default stays 60 s (raising it is a
+    measurement decision, not a fix — anti-pendule).
+    """
+
+    def test_budget_is_env_tunable_with_unchanged_default(self):
+        assert hasattr(
+            FallacyWorkflowPlugin, "WIDENET_PHASE1_TIMEOUT"
+        ), "#2157: the wide-net Phase 1 wall-clock budget is not tunable."
+        assert FallacyWorkflowPlugin.WIDENET_PHASE1_TIMEOUT == 60.0
+
+    async def test_timeout_warning_names_the_budget_and_knob(
+        self, plugin, mock_llm_service, caplog
+    ):
+        async def slow_call(**kwargs):
+            await asyncio.sleep(5.0)
+            return "[]"
+
+        mock_llm_service.get_chat_message_content = AsyncMock(side_effect=slow_call)
+        plugin.WIDENET_PHASE1_TIMEOUT = 0.05
+
+        with caplog.at_level(logging.WARNING):
+            result = await plugin._wide_net_candidates("texte de test")
+        assert result == []
+        message = " ".join(r.message for r in caplog.records)
+        assert "timed out after 0.05s" in message
+        assert "FALLACY_WIDENET_PHASE1_TIMEOUT" in message
+
+    async def test_non_timeout_failure_names_its_exception_class(
+        self, plugin, mock_llm_service, caplog
+    ):
+        mock_llm_service.get_chat_message_content = AsyncMock(
+            side_effect=ValueError("boom")
+        )
+
+        with caplog.at_level(logging.WARNING):
+            result = await plugin._wide_net_candidates("texte de test")
+        assert result == []
+        message = " ".join(r.message for r in caplog.records)
+        assert "ValueError" in message
+        assert "boom" in message
