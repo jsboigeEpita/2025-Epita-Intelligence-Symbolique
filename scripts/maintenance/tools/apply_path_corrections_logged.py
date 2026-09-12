@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 # Définition des chemins des fichiers d'entrée et de sortie
-input_config_path = Path("_temp/config_lemonde_deleted.json")
+input_config_path = Path("_temp/config_source_removed.json")
 output_config_path = Path("_temp/config_paths_corrected_v3.json")
 
 # S'assurer que le répertoire de sortie existe

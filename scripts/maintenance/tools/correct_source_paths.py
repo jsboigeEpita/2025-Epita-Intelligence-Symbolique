@@ -9,7 +9,7 @@ logging.basicConfig(
 )
 
 # Définir le chemin du fichier d'entrée
-input_config_path = Path("_temp/config_lemonde_deleted.json")
+input_config_path = Path("_temp/config_source_removed.json")
 # Définir le chemin du fichier de sortie
 output_config_path = Path("_temp/config_paths_corrected_v2.json")
 
