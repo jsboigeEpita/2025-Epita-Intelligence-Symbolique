@@ -272,8 +272,6 @@ class TestUnifiedReport:
         assert report.overall_validity is None
         assert report.confidence_level is None
         assert report.recommendations == []
-        assert report.logic_informal_alignment is None
-        assert report.analysis_completeness is None
         assert report.synthesis_version == "1.0.0"
         assert report.total_processing_time_ms == 0.0
 
@@ -300,8 +298,6 @@ class TestUnifiedReport:
             overall_validity=True,
             confidence_level=0.85,
             recommendations=recommendations,
-            logic_informal_alignment=0.90,
-            analysis_completeness=0.95,
             total_processing_time_ms=500.0,
         )
 
@@ -311,8 +307,6 @@ class TestUnifiedReport:
         assert report.overall_validity == True
         assert report.confidence_level == 0.85
         assert report.recommendations == recommendations
-        assert report.logic_informal_alignment == 0.90
-        assert report.analysis_completeness == 0.95
         assert report.total_processing_time_ms == 500.0
 
     def test_to_dict(self):
@@ -355,8 +349,6 @@ class TestUnifiedReport:
             "overall_validity",
             "confidence_level",
             "recommendations",
-            "logic_informal_alignment",
-            "analysis_completeness",
             "synthesis_timestamp",
             "total_processing_time_ms",
             "synthesis_version",
@@ -512,8 +504,6 @@ class TestDataModelsIntegration:
                 "Strengthen rhetorical elements",
                 "Maintain logical structure",
             ],
-            logic_informal_alignment=0.60,
-            analysis_completeness=0.90,
             total_processing_time_ms=270.0,
         )
 

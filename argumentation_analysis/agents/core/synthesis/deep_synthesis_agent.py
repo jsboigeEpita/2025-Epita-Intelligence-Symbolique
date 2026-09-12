@@ -440,11 +440,6 @@ class DeepSynthesisAgent(BaseAgent):
                     arg_id=arg_id,
                     stance=DeepSynthesisAgent._infer_stance(desc),
                     description=desc,
-                    # Left empty by construction: every key in ``attack_map`` is a
-                    # synthetic node (``fallacy_*`` / ``counter_*``), never an
-                    # ``identified_arguments`` member, so no argument is ever an
-                    # attacker here and the reverse direction has no data (#1647).
-                    attacks=[],
                     attacked_by=attacked_by,
                 )
             )

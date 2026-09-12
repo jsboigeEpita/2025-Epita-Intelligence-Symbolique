@@ -187,8 +187,6 @@ class TestUnifiedReport:
             overall_validity=True,
             confidence_level=0.95,
             recommendations=["Improve clarity"],
-            logic_informal_alignment=0.8,
-            analysis_completeness=0.9,
             total_processing_time_ms=500.0,
         )
         assert report.executive_summary == "Test summary"
@@ -264,17 +262,27 @@ class TestUnifiedReport:
         )
         assert report.synthesis_version == "1.0.0"
 
-    def test_logic_informal_alignment(self):
-        """Verify logic-informal alignment score."""
+    def test_no_score_field_without_a_producer(self):
+        """#2134: a report key no producer computes is an unwarranted claim.
+
+        ``logic_informal_alignment`` and ``analysis_completeness`` were
+        declared and serialized but never assigned in production — only
+        tests fabricated values for them. A dict reader received scores the
+        chain cannot support. The fields are removed; this guard keeps them
+        out (attribute and serialized key) until a real producer exists.
+        """
         logic = LogicAnalysisResult()
         informal = InformalAnalysisResult()
         report = UnifiedReport(
             original_text="Test",
             logic_analysis=logic,
             informal_analysis=informal,
-            logic_informal_alignment=0.85,
         )
-        assert report.logic_informal_alignment == 0.85
+        assert not hasattr(report, "logic_informal_alignment")
+        assert not hasattr(report, "analysis_completeness")
+        data = report.to_dict()
+        assert "logic_informal_alignment" not in data
+        assert "analysis_completeness" not in data
 
 
 # =====================================================================
