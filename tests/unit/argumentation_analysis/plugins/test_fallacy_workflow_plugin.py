@@ -815,9 +815,9 @@ class TestAnalysisRegime2141:
 
     def test_unparsable_payload_is_left_untouched(self, plugin):
         assert plugin._mark_regime("not json", "funnel") == "not json"
+
+
 class TestWideNetPhase1TimeoutBudget2157:
-
-
     """#2157 — a wide-net Phase 1 budget overrun must be named, not silent.
 
     str(asyncio.TimeoutError()) is the empty string, so the old single
