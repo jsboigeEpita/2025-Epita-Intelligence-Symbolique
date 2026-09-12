@@ -155,7 +155,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 
 ### Agent System (`argumentation_analysis/agents/core/`)
 
-- **`abc/agent_bases.py`** — `BaseAgent(ChatCompletionAgent, ABC)` and `BaseLogicAgent`. All agents inherit from `BaseAgent` which extends Semantic Kernel's `ChatCompletionAgent` (required for `AgentGroupChat` compatibility). Uses Pydantic V2 — private attributes use `PrivateAttr`, logger is `agent_logger` (not `_logger`).
+- **`abc/agent_bases.py`** — `BaseAgent(ChatCompletionAgent, ABC)` and `BaseLogicAgent`. All agents inherit from `BaseAgent` which extends Semantic Kernel's `ChatCompletionAgent` (required for `AgentGroupChat` compatibility). Uses Pydantic V2 — private attributes use `PrivateAttr`; the logger is `_agent_logger` (private, `PrivateAttr`), read through the public `logger` property.
 - **`logic/`** — FOL, Modal, Propositional logic agents + `TweetyBridge` (Java/JPype bridge to Tweety reasoner)
 - **`extract/`** — `FactExtractionAgent` for extracting verifiable claims
 - **`informal/`** — Informal logic + `TaxonomySophismDetector` (8-family fallacy classification)
@@ -240,7 +240,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 
 - **Java/JPype**: Tweety logic library accessed via `jpype1`. JVM must be initialized before use (`jvm_setup.py`). Tests marked `@pytest.mark.jpype` or `@pytest.mark.tweety`.
 - **Semantic Kernel**: All agents use SK's kernel for LLM orchestration. Agent plugins loaded via `core/plugin_loader.py`.
-- **Pydantic V2**: Data validation throughout. Recent migration from V1 — watch for `_logger` vs `agent_logger` attribute naming.
+- **Pydantic V2**: Data validation throughout. Recent migration from V1.
 
 ### Entry Points
 
@@ -278,7 +278,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 
 ## Key Conventions
 
-- **Pydantic V2 agents**: Use `agent_logger` (public attribute via `PrivateAttr`), not `_logger`. The `ChatCompletionAgent` inheritance is mandatory for `AgentGroupChat`.
+- **Pydantic V2 agents**: the logger is `_agent_logger`, a private `PrivateAttr`; access it through the public `logger` property (`self._agent_logger` directly only inside the base class). The `ChatCompletionAgent` inheritance is mandatory for `AgentGroupChat`.
 - **Import order in conftest.py**: torch/transformers must load before jpype on Windows. This prevents DLL crashes.
 - **Test markers**: Use appropriate markers from `pytest.ini` (50+ markers). Tests requiring API keys should use `@pytest.mark.requires_api` and will auto-skip.
 - **Async**: All async code uses `asyncio`. Tests use `asyncio_mode = auto`.
