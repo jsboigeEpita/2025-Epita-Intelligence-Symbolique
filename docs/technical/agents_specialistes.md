@@ -228,8 +228,8 @@ for viz_name, viz_path in saved_visualizations.items():
 ## Tests Associés
 
 Les tests pour ces outils, en particulier leurs versions "enhanced", peuvent être trouvés sous :
-- [`tests/agents/tools/analysis/enhanced/test_enhanced_contextual_fallacy_analyzer.py`](../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_contextual_fallacy_analyzer.py)
-- [`tests/agents/tools/analysis/enhanced/test_enhanced_fallacy_severity_evaluator.py`](../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_fallacy_severity_evaluator.py)
-- [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_complex_fallacy_analyzer.py)
+- [`tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_contextual_fallacy_analyzer.py`](../../tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_contextual_fallacy_analyzer.py)
+- [`tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_severity_evaluator.py`](../../tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_severity_evaluator.py)
+- [`tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_complex_fallacy_analyzer.py`](../../tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_complex_fallacy_analyzer.py)
 
 Il est recommandé de vérifier la couverture des tests pour les versions de base de `RhetoricalResultAnalyzer` et `RhetoricalResultVisualizer` et de les compléter si nécessaire.

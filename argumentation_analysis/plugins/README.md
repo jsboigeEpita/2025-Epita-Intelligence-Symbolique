@@ -121,7 +121,7 @@ Ce n'est pas un oubli silencieux : c'est une **dette tracée**. Le garde `tests/
 
 **Aucun artefact de données.** Le paquet ne persiste rien : les 91 `@kernel_function` retournent des chaînes JSON, et l'écriture d'état est **déléguée** — `orchestration/state_writers.py:2285-2333` (`CAPABILITY_STATE_WRITERS`) associe capacité → écrivain, dont `nl_extraction:2327`, `kb_to_tweety:2329`, `formal_result_interpretation:2330`. Ce sont exactement les trois capacités que les phases demandent (`workflows.py:978,985,993`).
 
-**Lecteurs humains** : `docs/architecture/PATTERN_NESTED_SK_KERNELS.md` (patron master/slave), `docs/architecture/CAPABILITY_DUALITY.md:32-40` (les plugins sur deux surfaces), `plugins/semantic_kernel/README.md` (fiche du sous-paquet), `plugins/analysis_tools/logic/README.md` et `plugins/analysis_tools/tests/README.md`.
+**Lecteurs humains** : `docs/architecture/PATTERN_NESTED_SK_KERNELS.md` (patron master/slave), `docs/architecture/CAPABILITY_DUALITY.md:32-40` (les plugins sur deux surfaces), `plugins/semantic_kernel/README.md` (fiche du sous-paquet) et `plugins/analysis_tools/logic/README.md`.
 
 **Lecteur machine** : `evaluation/plugin_benchmark.py` — le seul code qui *exécute* les plugins hors d'un run d'analyse (`PLUGIN_REGISTRY:447-500`, `_instantiate_plugin:505`, `_create_instance:534`). Sa gestion d'échec est **silencieuse** : `except Exception` → `logger.warning` → `self._plugin_cache[name] = None` (`:529-532`) ; `fallacy_workflow` est en outre *volontairement* non instanciable (`:565`, `raise RuntimeError("FallacyWorkflowPlugin requires SK kernel setup")`). Un plugin cassé et un plugin non configurable produisent le même `None`.
 

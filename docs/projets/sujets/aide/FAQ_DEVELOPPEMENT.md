@@ -106,8 +106,8 @@ Pour plus de détails, consultez le guide [`docs/guides/integration_api_web.md`]
 
 Ces analyses sont principalement effectuées par des composants tels que `ComplexFallacyAnalyzer` et `ContextualFallacyAnalyzer`. Pour voir comment ces analyseurs sont utilisés et testés, vous pouvez consulter :
 - Les tests unitaires spécifiques, par exemple :
-    - [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](../../../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_complex_fallacy_analyzer.py)
-    - [`tests/agents/tools/analysis/enhanced/test_enhanced_contextual_fallacy_analyzer.py`](../../../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_contextual_fallacy_analyzer.py)
+    - [`tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_complex_fallacy_analyzer.py`](../../../../tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_complex_fallacy_analyzer.py)
+    - [`tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_contextual_fallacy_analyzer.py`](../../../../tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_contextual_fallacy_analyzer.py)
 - Des exemples d'utilisation dans les scripts de démonstration ou les tests d'intégration qui font appel à la détection de sophismes.
 Le guide [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) peut également contenir des sections pertinentes sur l'architecture de ces composants.
 
@@ -507,7 +507,7 @@ Le fichier [`pytest.ini`](../../../../pytest.ini) s'applique également ici.
 **Q: Où trouver des exemples de tests ?**
 **R:** Vous trouverez de nombreux exemples de tests dans les répertoires suivants :
 -   [`tests/unit/`](../../../../tests/unit) : Pour les tests unitaires ciblant des fonctions ou classes isolées. Par exemple :
-    -   Tests des analyseurs de sophismes : [`tests/agents/tools/analysis/enhanced/test_enhanced_complex_fallacy_analyzer.py`](../../../../argumentation_analysis/plugins/analysis_tools/tests/test_enhanced_complex_fallacy_analyzer.py)
+    -   Tests des analyseurs de sophismes : [`tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_complex_fallacy_analyzer.py`](../../../../tests/unit/argumentation_analysis/plugins/analysis_tools/logic/test_enhanced_complex_fallacy_analyzer.py)
     -   Tests des utilitaires centraux : [`tests/project_core/`](../../../../tests/project_core)
 -   [`tests/integration/`](../../../../tests/integration) : Pour les tests vérifiant l'interaction entre plusieurs composants. Par exemple :
     -   Tests des endpoints de l'API (si l'API est structurée ainsi) : `services/web_api/tests/test_endpoints.py` (chemin hypothétique basé sur [`services/README.md`](../../../../services/README.md)) ou des tests d'intégration client API dans [`tests/integration/`](../../../../tests/integration).
