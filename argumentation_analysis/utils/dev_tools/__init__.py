@@ -12,7 +12,6 @@ from . import refactoring_utils
 from . import repair_utils
 from . import reporting_utils
 from . import verification_utils
-from . import visualization_utils
 
 __all__ = [
     "code_formatting_utils",
@@ -27,5 +26,4 @@ __all__ = [
     "repair_utils",
     "reporting_utils",
     "verification_utils",
-    "visualization_utils",
 ]
