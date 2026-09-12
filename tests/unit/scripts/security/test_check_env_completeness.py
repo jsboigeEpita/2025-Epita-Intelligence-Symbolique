@@ -77,6 +77,41 @@ def test_commented_canon_entry_is_optional_not_blocking(tmp_path):
     assert any(v == "ABSENTE   REQUIRED_KEY" for v in findings)
 
 
+def test_commented_canon_entry_stays_optional_when_the_seat_carries_it(tmp_path):
+    """Le statut optionnel vaut aussi quand la cle EST dans le .env.
+
+    Angle mort du garde precedent : il ne mesurait que l'etat « absente ».
+    Un siege qui a copie .env.example en .env porte le specimen des entrees
+    commentees, et les deux workers ont remonte le meme [ASK] Azure pour
+    cette raison -- une valeur que le canon ne demande pas etait reclamee.
+    """
+    findings, optional, _, _ = mod.audit(
+        write(tmp_path, ".env", 'OPTIONAL_KEY="change-me"\nREQUIRED_KEY="sk-vraie"\n'),
+        write(tmp_path, ".env.example", CANON),
+    )
+    assert not any("OPTIONAL_KEY" in v for v in findings), findings
+    assert any("OPTIONAL_KEY" in v and "[option]" in v for v in optional), optional
+
+
+def test_required_entry_at_the_specimen_still_blocks(tmp_path):
+    """CONTROLE POSITIF du test precedent : sortir les optionnelles du bloquant
+    ne doit pas desarmer le chemin requis, qui est la raison d'etre de l'outil."""
+    out = verdicts(tmp_path, 'REQUIRED_KEY="sk-..."\n')
+    assert any(v.startswith("SPECIMEN  REQUIRED_KEY") for v in out), out
+
+
+def test_empty_value_follows_the_same_two_regimes(tmp_path):
+    """VIDE suit le meme partage que SPECIMEN : bloquant si requise, informatif
+    si le canon l'a commentee."""
+    findings, optional, _, _ = mod.audit(
+        write(tmp_path, ".env", "OPTIONAL_KEY=\nREQUIRED_KEY=\n"),
+        write(tmp_path, ".env.example", CANON),
+    )
+    assert any(v.startswith("VIDE      REQUIRED_KEY") for v in findings), findings
+    assert not any("OPTIONAL_KEY" in v for v in findings), findings
+    assert any("OPTIONAL_KEY" in v for v in optional), optional
+
+
 def test_crlf_canon_does_not_break_comparison(tmp_path):
     """Le canon du dépôt est en CRLF : le \r ne doit pas casser l'égalité."""
     out = verdicts(
