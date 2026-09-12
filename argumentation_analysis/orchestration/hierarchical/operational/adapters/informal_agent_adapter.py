@@ -23,8 +23,23 @@ from argumentation_analysis.orchestration.hierarchical.operational.state import 
     OperationalState,
 )
 from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.agents.concrete_agents.informal_fallacy_agent import (
+    InformalFallacyAgent,
+)
 from argumentation_analysis.core.bootstrap import ProjectContext
-from semantic_kernel.agents.agent import Agent
+
+# #2132 — pont unique entre les plugins que l'agent monte réellement (registre
+# `InformalFallacyAgent._configured_plugins`) et le vocabulaire de capacités que
+# la chaîne de délégation demande (`tactical/coordinator.py` émet
+# « fallacy_detection »). L'ancienne table config→capacités dupliquait la
+# correspondance de `_add_plugins_from_config` et dérivait silencieusement ;
+# ce pont traduit un vocabulaire stable (ce que chaque plugin *signifie*) et
+# laisse le gating des configs à l'agent, qui en est la seule source de vérité.
+PLUGIN_TO_CAPABILITY = {
+    "FallacyIdentificationPlugin": "fallacy_detection",
+    "TaxonomyDisplayPlugin": "taxonomy_exploration",
+    "FallacyWorkflowPlugin": "fallacy_analysis_workflow",
+}
 
 
 class InformalAgentAdapter(OperationalAgent):
@@ -48,7 +63,7 @@ class InformalAgentAdapter(OperationalAgent):
             project_context: Le contexte du projet.
             config_name: La configuration de l'agent à créer (ex: 'simple', 'full').
         """
-        self.agent: Optional[Agent] = None
+        self.agent: Optional[InformalFallacyAgent] = None
         self.kernel: Optional[sk.Kernel] = None
         self.llm_service_id: Optional[str] = None
         self.project_context = project_context
@@ -72,7 +87,9 @@ class InformalAgentAdapter(OperationalAgent):
         self.llm_service_id = llm_service_id
 
         try:
-            self.logger.info("Création de l'agent d'analyse informelle via AgentFactory...")
+            self.logger.info(
+                "Création de l'agent d'analyse informelle via AgentFactory..."
+            )
             factory = AgentFactory(kernel=kernel, llm_service_id=llm_service_id)
             self.agent = factory.create_informal_fallacy_agent(
                 config_name=self.config_name,
@@ -90,21 +107,35 @@ class InformalAgentAdapter(OperationalAgent):
             return False
 
     def get_capabilities(self) -> List[str]:
-        """Retourne les capacités de cet agent."""
-        # Pourrait être rendu dynamique en inspectant les plugins de self.agent
-        if self.config_name == "simple":
-            return ["fallacy_detection"]
-        elif self.config_name == "explore_only":
-            return ["taxonomy_exploration"]
-        elif self.config_name == "workflow_only":
-            return ["fallacy_analysis_workflow", "taxonomy_exploration"]
-        elif self.config_name == "full":
-            return [
-                "fallacy_detection",
-                "fallacy_analysis_workflow",
-                "taxonomy_exploration",
-            ]
-        return []
+        """Capacités dérivées des plugins réellement montés par l'agent (#2132).
+
+        L'ancienne table config→capacités rendait ``[]`` silencieusement pour un
+        config inconnu — exactement la forme retirée de l'agent en #2121. La
+        liste est désormais traduite du registre réel
+        (``get_agent_capabilities()["plugins"]``) : si l'agent monte un autre
+        jeu de plugins, les capacités suivent sans seconde table à maintenir.
+        """
+        if self.agent is None:
+            raise RuntimeError(
+                "InformalAgentAdapter.get_capabilities() appelé avant "
+                "initialize() : les capacités se dérivent des plugins "
+                "réellement montés, et il n'y a pas encore d'agent. (Un "
+                "config_name inconnu fait échouer initialize() depuis #2121.)"
+            )
+        mounted = self.agent.get_agent_capabilities().get("plugins", [])
+        capabilities = set()
+        for plugin_name in mounted:
+            capability = PLUGIN_TO_CAPABILITY.get(plugin_name)
+            if capability is None:
+                self.logger.warning(
+                    "Plugin monté sans entrée dans PLUGIN_TO_CAPABILITY: %r — "
+                    "il est invisible pour can_process_task tant que le pont "
+                    "n'est pas complété (#2132).",
+                    plugin_name,
+                )
+                continue
+            capabilities.add(capability)
+        return sorted(capabilities)
 
     def can_process_task(self, task: Dict[str, Any]) -> bool:
         """Vérifie si l'agent peut traiter la tâche."""
