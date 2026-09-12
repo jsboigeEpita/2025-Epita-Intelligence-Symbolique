@@ -55,18 +55,28 @@ COUNTER_ARG_SNAPSHOT = {
     ],
 }
 
+# Shape mirrors the real writer (state_writers._write_debate_to_state +
+# shared_state.add_debate_transcript): debate_transcripts is a LIST of
+# {id, topic, exchanges: [{point, rebuttal, scheme?, ...}], winner}. The
+# previous mock encoded the reader's own broken dict shape — the test was
+# validating the reader against itself (#2135 finding 1).
 DEBATE_SNAPSHOT = {
-    "debate_transcripts": {
-        "winner": "Agent A",
-        "new_insights": ["The evidence strongly supports the main claim"],
-        "key_exchanges": [
-            {
-                "agent_a_point": "The data shows growth",
-                "agent_b_rebuttal": "But the sample is biased",
-                "judge_note": "Valid rebuttal, Agent B scores",
-            }
-        ],
-    },
+    "debate_transcripts": [
+        {
+            "id": "debate_0",
+            "topic": "Democracy is the best form of government for modern societies.",
+            "exchanges": [
+                {
+                    "point": "The data shows growth",
+                    "rebuttal": "But the sample is biased",
+                    "scheme": "Argument from Example",
+                    "scheme_key": "example",
+                    "critical_question": "Is the example representative?",
+                }
+            ],
+            "winner": "Agent A",
+        }
+    ],
 }
 
 GOVERNANCE_SNAPSHOT = {
@@ -231,14 +241,63 @@ class TestDebateEndpoint:
         assert resp.status_code == 200
         data = resp.json()
         assert data["winner"] == "Agent A"
-        assert len(data["new_insights"]) == 1
         assert len(data["key_exchanges"]) == 1
         assert data["key_exchanges"][0]["agent_a_point"] == "The data shows growth"
+        assert (
+            data["key_exchanges"][0]["agent_b_rebuttal"] == "But the sample is biased"
+        )
+
+    def test_debate_uses_the_last_transcript_when_several(self, client):
+        several = {
+            "debate_transcripts": [
+                {
+                    "id": "debate_0",
+                    "topic": "first run",
+                    "exchanges": [{"point": "old point", "rebuttal": "old rebuttal"}],
+                    "winner": "Agent B",
+                },
+                DEBATE_SNAPSHOT["debate_transcripts"][0],
+            ]
+        }
+        with patch(
+            "api.agent_routes._run_pipeline_phase",
+            _mock_pipeline_result(several),
+        ):
+            resp = client.post(
+                "/api/v1/agents/debate",
+                json={"text": "Democracy debate text long enough to pass validation."},
+            )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["winner"] == "Agent A"
+        assert data["key_exchanges"][0]["agent_a_point"] == "The data shows growth"
+
+    def test_debate_transcript_none_winner_is_empty_string(self, client):
+        none_winner = {
+            "debate_transcripts": [
+                {
+                    "id": "debate_0",
+                    "topic": "t",
+                    "exchanges": [{"point": "p", "rebuttal": "r"}],
+                    "winner": None,
+                }
+            ]
+        }
+        with patch(
+            "api.agent_routes._run_pipeline_phase",
+            _mock_pipeline_result(none_winner),
+        ):
+            resp = client.post(
+                "/api/v1/agents/debate",
+                json={"text": "Democracy debate text long enough to pass validation."},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["winner"] == ""
 
     def test_debate_empty(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result({"debate_transcripts": {}}),
+            _mock_pipeline_result({"debate_transcripts": []}),
         ):
             resp = client.post(
                 "/api/v1/agents/debate",
