@@ -51,7 +51,7 @@ class SherlockModernOrchestrator:
     Agents wired (7 total):
       1. ExtractAgent — claim identification
       2. InformalAnalysisAgent — fallacy detection (inconsistencies)
-      3. QualityScoringPlugin — reliability assessment
+      3. ArgumentQualityEvaluator — reliability assessment
       4. CounterArgumentAgent — cross-examination
       5. JTMS — belief propagation
       6. ATMS — hypothesis branching
@@ -226,7 +226,7 @@ class SherlockModernOrchestrator:
 
         self._add_step(
             phase="quality_evaluation",
-            agent="QualityScoringPlugin",
+            agent="ArgumentQualityEvaluator",
             findings={
                 "overall_score": overall,
                 "arguments_evaluated": len(scores),

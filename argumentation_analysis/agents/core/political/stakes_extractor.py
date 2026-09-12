@@ -7,7 +7,11 @@ Analyses discourse to identify:
 - Discursive arena: the context/platform of the discourse
 
 Uses LLM via OpenAI client with a structured JSON prompt.
-Privacy: outputs pseudonymised references (Speaker_A, Group_X), never raw text.
+Privacy: by default `deanonymized=True` (consistent with the working state), so the
+prompt asks for REAL stakeholder names from source metadata — pseudonymised
+references (Speaker_A, Group_X) are only emitted with `deanonymized=False`. Either
+way, outputs are working artifacts: they leave the machine only through
+`evaluation/sanitize_state.py` (`sanitize_state`, the unique export guard).
 """
 
 import json

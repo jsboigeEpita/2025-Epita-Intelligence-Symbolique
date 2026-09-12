@@ -18,7 +18,7 @@ Integrate 12 student projects into the core `argumentation_analysis/` framework 
 |------|------|
 | `core/capability_registry.py` | Unified registry for agents, plugins, services by capability |
 | `orchestration/workflow_dsl.py` | Declarative workflow builder — compose by capability, not by class |
-| `agents/core/abc/plugin.py` | Extended `LegoPlugin` interface with `provides`/`requires`/`parameters` |
+| `agents/core/abc/plugin.py` | Extended `LegoPlugin` interface with `provides`/`requires`/`parameters` — declared, not wired: no production consumer (its only importer, `core/plugin_loader.py`, is exercised by tests only); the plugin surface production actually loads is Semantic Kernel's (`orchestration/registry_setup.py`) |
 | `core/interfaces/analysis_service.py` | Abstract analysis service contract |
 
 ### Three Integration Patterns
