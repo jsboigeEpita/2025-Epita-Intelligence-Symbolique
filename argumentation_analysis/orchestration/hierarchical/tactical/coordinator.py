@@ -10,7 +10,6 @@ import uuid
 from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
-from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication.middleware import (
     MessageMiddleware,
     create_default_middleware,
@@ -239,7 +238,7 @@ class TaskCoordinator:
                 content={
                     "objective_id": objective_id,
                     "status": "completed",
-                    RESULTS_DIR: self.state.get_objective_results(objective_id),
+                    "results": self.state.get_objective_results(objective_id),
                 },
                 recipient_id="strategic_manager",
                 priority=MessagePriority.HIGH,

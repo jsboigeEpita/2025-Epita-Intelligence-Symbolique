@@ -6,8 +6,6 @@ spécifiques peuvent hériter. Il définit une interface commune pour l'initiali
 l'analyse, la validation des entrées et la récupération des résultats.
 """
 
-from argumentation_analysis.paths import RESULTS_DIR
-
 # Template d'outil d'analyse pour l'architecture hiérarchique
 
 
@@ -67,7 +65,9 @@ class BaseAnalysisTool:
         return {
             "tool": self.name,
             "status": "completed",
-            RESULTS_DIR: {},  # RESULTS_DIR est une constante Path, son utilisation comme clé ici pourrait être revue.
+            # Charge de résultats sous la clé chaîne "results" — sérialisable
+            # en JSON (#2180) ; l'ancienne clé Path cassait json.dumps.
+            "results": {},
         }
 
 

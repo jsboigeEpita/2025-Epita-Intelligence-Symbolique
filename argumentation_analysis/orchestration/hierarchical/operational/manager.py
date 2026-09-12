@@ -20,7 +20,6 @@ from argumentation_analysis.orchestration.hierarchical.operational.agent_registr
     OperationalAgentRegistry,
 )
 from argumentation_analysis.core.bootstrap import ProjectContext
-from argumentation_analysis.paths import RESULTS_DIR
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:

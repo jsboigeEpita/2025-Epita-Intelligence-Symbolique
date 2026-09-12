@@ -21,7 +21,6 @@ from argumentation_analysis.orchestration.hierarchical.strategic.state import (
     StrategicState,
 )
 from argumentation_analysis.core.reading_window import selected_text
-from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
     create_default_middleware,
