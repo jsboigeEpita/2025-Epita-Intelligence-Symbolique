@@ -10,7 +10,6 @@ import logging
 import asyncio
 import inspect
 from typing import Dict, List, Any, Optional
-from argumentation_analysis.config.settings import AppSettings
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
@@ -21,7 +20,6 @@ import json
 
 # Imports du moteur d'analyse (style b282af4 avec gestion d'erreur)
 try:
-    from argumentation_analysis.config.settings import AppSettings
     from argumentation_analysis.agents.factory import AgentFactory, AgentType
     from argumentation_analysis.agents.core.informal.informal_agent import (
         InformalAnalysisAgent,
@@ -178,21 +176,8 @@ class AnalysisService:
                             "[ERROR] Aucun service LLM n'a été fourni à AnalysisService."
                         )
 
-                    taxonomy_path_instance = None  # Renommé
-                    try:
-                        taxonomy_path_instance = get_taxonomy_path()
-                        self.logger.info(
-                            f"[OK] Taxonomy path obtained for AgentFactory: {taxonomy_path_instance}"
-                        )
-                    except Exception as tax_e:
-                        self.logger.error(
-                            f"[ERROR] Failed to get taxonomy path for AgentFactory: {tax_e}"
-                        )
-
                     if kernel and llm_service_instance:
                         try:
-                            # Créer une instance de settings par défaut pour la factory
-                            app_settings = AppSettings()
                             factory = AgentFactory(
                                 kernel=kernel,
                                 llm_service_id=llm_service_instance.service_id,
@@ -202,13 +187,12 @@ class AnalysisService:
                             # L'argument 'agent_name' n'est pas attendu par la factory pour ce type d'agent.
                             # Il est géré en interne par la classe de l'agent.
                             #
-                            # #2141 temps 2: the funnel is an opt-in. The default
-                            # "one_shot" keeps the behaviour this site had before
-                            # the parameter existed — the taxonomy path resolved
-                            # and logged just above is NOT transmitted, so the
-                            # agent's funnel runs on an empty navigator. "funnel"
-                            # wires that path through (it was computed and logged
-                            # but never passed — the family of #2121).
+                            # #2141 temps 2 / #2158: the funnel is an opt-in. The
+                            # default "one_shot" transmits NO taxonomy source, so
+                            # the agent's funnel runs on an empty navigator; the
+                            # regime decides via get_taxonomy_source_for_regime,
+                            # the single place that rule lives ("funnel" wires the
+                            # resolved path through).
                             from argumentation_analysis.utils.taxonomy_loader import (
                                 get_taxonomy_regime,
                                 get_taxonomy_source_for_regime,
