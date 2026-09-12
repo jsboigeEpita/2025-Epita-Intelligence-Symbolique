@@ -7,8 +7,6 @@ l'exécution de l'analyse, la validation de la configuration et la description
 de la structure des résultats attendus.
 """
 
-from argumentation_analysis.paths import RESULTS_DIR
-
 # Template de type d'analyse pour l'architecture hiérarchique
 
 
@@ -68,7 +66,9 @@ class BaseAnalysisType:
         """
         return {
             "analysis_type": self.name,
-            RESULTS_DIR: {  # RESULTS_DIR est une constante Path, son utilisation comme clé ici pourrait être revue.
+            # Charge de résultats sous la clé chaîne "results" — sérialisable
+            # en JSON (#2180) ; l'ancienne clé Path cassait json.dumps.
+            "results": {
                 # Structure à implémenter selon le type d'analyse
             },
         }

@@ -14,7 +14,6 @@ import uuid
 from argumentation_analysis.orchestration.hierarchical.operational.state import (
     OperationalState,
 )
-from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
     create_default_middleware,
@@ -157,9 +156,13 @@ class OperationalAgent(ABC):
             self.update_task_status(task.get("id"), "completed")
 
             # Formater le résultat
+            # Lecture orpheline retirée (#2180) : aucun process_task de
+            # l'arbre ne plaçait ses résultats sous la clé RESULTS_DIR — le
+            # ``.get`` rendait toujours []. Les retours concrets exposent
+            # déjà leurs résultats via ``format_result``.
             formatted_result = self.format_result(
                 task,
-                result.get(RESULTS_DIR, []),
+                [],
                 result.get("metrics", {}),
                 result.get("issues", []),
             )
