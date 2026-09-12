@@ -67,10 +67,10 @@ pytest tests/unit/ -v
 pytest tests/ -m "not slow" -v
 
 # Single test file
-pytest tests/unit/argumentation_analysis/test_synthesis_agent.py -v
+pytest tests/unit/argumentation_analysis/test_deep_synthesis_agent.py -v
 
 # Single test function
-pytest tests/unit/argumentation_analysis/test_synthesis_agent.py::TestSynthesisAgent::test_method -v
+pytest tests/unit/argumentation_analysis/test_deep_synthesis_agent.py::TestHelpers::test_fallacy_family -v
 
 # By marker (see pytest.ini for full list)
 pytest tests/ -m "llm_light" -v          # Light LLM tests (<30s, ~$0.01-0.05)
@@ -159,7 +159,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - **`logic/`** — FOL, Modal, Propositional logic agents + `TweetyBridge` (Java/JPype bridge to Tweety reasoner)
 - **`extract/`** — `FactExtractionAgent` for extracting verifiable claims
 - **`informal/`** — Informal logic + `TaxonomySophismDetector` (8-family fallacy classification)
-- **`synthesis/`** — `SynthesisAgent` for aggregating analysis results
+- **`synthesis/`** — `DeepSynthesisAgent`: 9-section state-grounded synthesis report (the former inert `SynthesisAgent` was removed, #2140)
 - **`oracle/`** — Cluedo dataset + `MoriartyInterrogatorAgent`
 - **`pm/`** — `SherlockEnqueteAgent` (investigation orchestration)
 - **`pl/`** — Propositional logic agent

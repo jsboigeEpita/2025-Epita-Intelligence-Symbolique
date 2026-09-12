@@ -564,21 +564,6 @@ class ConversationOrchestrator:
         except Exception as e:
             self.logger.warning(f"Cannot create real InformalAnalysisAgent: {e}")
 
-        # 2. SynthesisAgent
-        try:
-            from argumentation_analysis.agents.core.synthesis.synthesis_agent import (
-                SynthesisAgent as RealSynthesisAgent,
-            )
-
-            synth = RealSynthesisAgent(
-                kernel=self.kernel,
-                agent_name="SynthesisAgent",
-            )
-            self._real_agents["synthesis"] = synth
-            self.logger.info("Real SynthesisAgent created")
-        except Exception as e:
-            self.logger.warning(f"Cannot create real SynthesisAgent: {e}")
-
         if not self._real_agents:
             self.logger.error("No real agents could be created. Falling back to demo.")
             self.mode = "demo"
@@ -614,13 +599,6 @@ class ConversationOrchestrator:
                 "satisfiable": result.get("consistency_check", True),
                 "raw_result": result,
             }
-        elif agent_key == "synthesis":
-            return {
-                "unified_score": result.get("confidence_level", 0.5) or 0.5,
-                "overall_validity": str(result.get("overall_validity", "unknown")),
-                "recommendation": result.get("executive_summary", "N/A"),
-                "raw_result": result,
-            }
         return result
 
     async def _invoke_real_agent(self, agent_key: str, agent, text: str):
@@ -639,11 +617,6 @@ class ConversationOrchestrator:
                 return await agent.analyze_text(text)
             else:
                 raise AttributeError("FOLLogicAgent has no suitable analysis method")
-        elif agent_key == "synthesis":
-            report = await agent.synthesize_analysis(text)
-            if hasattr(report, "model_dump"):
-                return report.model_dump()
-            return vars(report) if hasattr(report, "__dict__") else {"raw": str(report)}
         else:
             raise ValueError(f"Unknown agent key: {agent_key}")
 
@@ -725,7 +698,8 @@ class ConversationOrchestrator:
         self.state.phase = "active"
         self.conv_logger.log_state_snapshot("initialization", self.state.to_dict())
 
-        agent_order = ["informal", "fol_logic", "synthesis"]
+        # "synthesis" n'existe plus : l'agent dédié était inerte (#2140).
+        agent_order = ["informal", "fol_logic"]
 
         for agent_key in agent_order:
             if agent_key not in self._real_agents:
