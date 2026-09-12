@@ -128,16 +128,15 @@ Le HTML embarque `<script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid
 **Deux suites, un seul régime sain.**
 
 ```bash
-# Suite canonique (collectée par défaut) — 185 collectés / 185 passés avec JVM désactivée
+# Suite canonique (collectée par défaut) — 200 collectés / 200 passés avec JVM désactivée
 python -m pytest tests/unit/argumentation_analysis/plugins/analysis_tools/logic/ -o addopts= --disable-jvm-session
-# Suite in-package — NON collectée par défaut, et cassée
-python -m pytest argumentation_analysis/plugins/analysis_tools/tests/ -o addopts=
 ```
 
 | Suite | Fichiers | `def test_` | Mesure d'exécution |
 |---|---|---|---|
-| `tests/unit/argumentation_analysis/plugins/analysis_tools/logic/` (**collectée**) | 4 (`rhetorical_result_analyzer` 76, `contextual_fallacy_analyzer` 55, `severity_evaluator` 37, `nlp_model_manager` 12) | **180** | **185 collectés → 185 passed** (52 s, avec `--disable-jvm-session`) ; **sans ce drapeau : 100 % *skipped*, run vide** (signature JVM `pytest_sessionstart`, garde #2021) |
-| `argumentation_analysis/plugins/analysis_tools/tests/` (**non collectée**) | 3 | 31 lignes `def test_` (dont **2 fixtures** mal nommées `test_arguments:34` / `test_fallacies:45`) → **33 collectés** | **13 passed, 20 ERROR au *setup*** — `severity_evaluator` passe seul ; `complex` et `contextual` sont à **0/10** |
+| `tests/unit/argumentation_analysis/plugins/analysis_tools/logic/` (**collectée**) | 6 (`rhetorical_result_analyzer` 77, `contextual_fallacy_analyzer` 56, `severity_evaluator` 37, `nlp_model_manager` 12, `detector_contract_call_sites_2149` 2, `complex_fallacy_analyzer` 11) | **195** | **200 collectés → 200 passed** (14 s, avec `--disable-jvm-session`) ; **sans ce drapeau : 100 % *skipped*, run vide** (signature JVM `pytest_sessionstart`, garde #2021) |
+
+La suite in-package `argumentation_analysis/plugins/analysis_tools/tests/` (3 fichiers, jamais collectée par `pytest.ini testpaths`) a été retirée en #2124 : ses volets `contextual` (10) et `severity` (11) étaient intégralement couverts par la suite canonique, et son volet `complex` (10) — le seul sans équivalent canonique — y a été porté contre l'API actuelle (constructeur `fallacy_detector` requis, #2147).
 
 **Ces tests mesurent le contrat, pas le chemin réel.** La suite canonique appelle les moteurs directement avec des dépendances injectées (p.ex. `test_rhetorical_result_analyzer.py:181-184` fournit toujours les trois analyseurs, ce qui **contourne** le défaut cassé de `:201-203`), ou mocke `AnalysisToolsPlugin` (`test_advanced_analyzer.py:26`, `MagicMock(spec=…)` — toute évolution de la surface rougit ce fichier). **Aucun test ne construit la façade réelle ni n'exécute `analyze_text` de bout en bout** ; `pipelines/advanced_rhetoric.py` est mocké au niveau module (`test_advanced_rhetoric.py:56`). Deux gardes de non-régression visent le proxy web : `tests/unit/api/test_starlette_proxy.py:54-59` et `tests/unit/test_interface_web_starlette.py:142-145` asservissent le fait que `interface_web.app` **n'importe pas** `nlp_model_manager`.
 
