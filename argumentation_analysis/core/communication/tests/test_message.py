@@ -19,8 +19,6 @@ from argumentation_analysis.core.communication.message import (
     EventMessage,
 )
 
-from argumentation_analysis.paths import DATA_DIR
-
 
 class TestMessageEnums(unittest.TestCase):
     """Tests pour les énumérations du module message."""
@@ -330,7 +328,7 @@ class TestInformationMessage(unittest.TestCase):
         # Vérifier le contenu spécifique aux informations
         self.assertEqual(info.content["info_type"], "analysis_result")
         self.assertEqual(
-            info.content[DATA_DIR],
+            info.content["data"],
             {"text_id": "text-123", "results": {"score": 0.85, "confidence": "high"}},
         )
 
