@@ -11,8 +11,6 @@ from typing import Dict, Any, Optional, List, Callable, Union
 import logging  # Ajout pour LocalChannel
 from .message import Message, MessageType, MessagePriority
 
-from argumentation_analysis.paths import DATA_DIR
-
 logger_channel = logging.getLogger(__name__)  # Logger pour ce module
 
 

@@ -225,9 +225,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             self.assertEqual(result.sender, "operational-agent-1")
             self.assertEqual(result.content["info_type"], "task_result")
             self.assertEqual(
-                result.content.get(DATA_DIR, result.content.get("result", {}))[
-                    "arguments"
-                ],
+                result.content["data"]["arguments"],
                 ["arg1", "arg2"],
             )
 
@@ -236,9 +234,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
                 report_type="analysis_complete",
                 content={
                     "text_id": "text-123",
-                    "arguments": result.content.get(
-                        DATA_DIR, result.content.get("result", {})
-                    )["arguments"],
+                    "arguments": result.content["data"]["arguments"],
                 },
                 recipient_id="strategic-agent-1",
                 priority=MessagePriority.NORMAL,
@@ -373,9 +369,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             self.assertIsNotNone(result)
             self.assertEqual(result.sender, "operational-agent-1")
             self.assertEqual(
-                result.content.get(DATA_DIR, result.content.get("result", {}))[
-                    "arguments"
-                ],
+                result.content["data"]["arguments"],
                 ["arg1", "arg2"],
             )
 
@@ -385,10 +379,8 @@ class TestHierarchicalCommunication(unittest.TestCase):
                 content={
                     "directive_id": directive.id,
                     "text_id": directive.content["parameters"]["text_id"],
-                    "arguments": result.content.get(
-                        DATA_DIR, result.content.get("result", {})
-                    )["arguments"],
-                    "confidence": result.content[DATA_DIR]["confidence"],
+                    "arguments": result.content["data"]["arguments"],
+                    "confidence": result.content["data"]["confidence"],
                 },
                 recipient_id="strategic-agent-1",
                 priority=MessagePriority.NORMAL,
@@ -435,7 +427,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Vérifier que l'accusé de réception a été reçu
         self.assertIsNotNone(ack)
         self.assertEqual(ack.sender, "tactical-agent-1")
-        self.assertEqual(ack.content[DATA_DIR]["directive_id"], directive_id)
+        self.assertEqual(ack.content["data"]["directive_id"], directive_id)
 
         # Recevoir une mise à jour de progression
         progress = None
@@ -461,7 +453,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
         # Vérifier que la mise à jour de progression a été reçue
         self.assertIsNotNone(progress)
         self.assertEqual(progress.sender, "tactical-agent-1")
-        self.assertEqual(progress.content[DATA_DIR]["progress"], 50)
+        self.assertEqual(progress.content["data"]["progress"], 50)
 
         # Recevoir le rapport final
         report = self.strategic_adapter.receive_report(
@@ -502,7 +494,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    DATA_DIR: {
+                    "data": {
                         "recommendation": "Focus on fallacies",
                         "priority": "high",
                         "additional_resources": ["resource1", "resource2"],
@@ -574,7 +566,7 @@ class TestHierarchicalCommunication(unittest.TestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    DATA_DIR: {
+                    "data": {
                         "solution": "Use pattern X",
                         "example": "example data",
                         "reference": "reference document",
@@ -759,7 +751,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    DATA_DIR: {
+                    "data": {
                         "recommendation": "Focus on fallacies",
                         "priority": "high",
                         "additional_resources": ["resource1", "resource2"],
@@ -825,7 +817,7 @@ class TestAsyncHierarchicalCommunication(unittest.IsolatedAsyncioTestCase):
             response = request.create_response(
                 content={
                     "status": "success",
-                    DATA_DIR: {
+                    "data": {
                         "solution": "Use pattern X",
                         "example": "example data",
                         "reference": "reference document",

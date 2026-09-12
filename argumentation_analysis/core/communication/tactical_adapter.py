@@ -16,8 +16,6 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import ChannelType
 from .middleware import MessageMiddleware
 
-from argumentation_analysis.paths import DATA_DIR
-
 
 class TacticalAdapter:
     """
@@ -242,9 +240,9 @@ class TacticalAdapter:
                     # Appliquer les critères de filtrage supplémentaires sur le contenu du message
                     if filter_criteria:
                         match = True
-                        # Accéder au contenu potentiellement sous DATA_DIR
+                        # Accéder au contenu potentiellement sous "data"
                         actual_content_payload = message.content.get(
-                            DATA_DIR, message.content
+                            "data", message.content
                         )
                         if not isinstance(
                             actual_content_payload, dict
@@ -257,7 +255,7 @@ class TacticalAdapter:
                                 actual_value = actual_content_payload[key]
                             elif (
                                 key in message.content
-                            ):  # Fallback au niveau supérieur si pas dans DATA_DIR
+                            ):  # Fallback au niveau supérieur si pas dans "data"
                                 actual_value = message.content[key]
                             else:  # Clé non trouvée
                                 match = False
@@ -357,8 +355,9 @@ class TacticalAdapter:
                 self.logger.info(
                     f"Received guidance from {recipient_id} for {request_type} request"
                 )
-                # DATA_DIR est la clé correcte utilisée dans les tests et la logique de message
-                return response.content.get(DATA_DIR)
+                # Charge utile sous la clé chaîne "data" — sérialisable en JSON
+                # (#2177) ; l'ancienne clé Path cassait Message.to_dict().
+                return response.content.get("data")
 
             return None
 
@@ -406,8 +405,9 @@ class TacticalAdapter:
                 self.logger.info(
                     f"Received guidance from {recipient_id} for {request_type} request"
                 )
-                # DATA_DIR est la clé correcte
-                return response.content.get(DATA_DIR)
+                # Charge utile sous la clé chaîne "data" — sérialisable en JSON
+                # (#2177) ; l'ancienne clé Path cassait Message.to_dict().
+                return response.content.get("data")
 
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -465,7 +465,7 @@ class TacticalAdapter:
             content={
                 "info_type": "collaboration",
                 "collaboration_type": collaboration_type,
-                DATA_DIR: content,
+                "data": content,
             },
             recipient=None,  # Destiné au groupe
             channel=ChannelType.COLLABORATION.value,
@@ -729,7 +729,7 @@ class TacticalAdapter:
             content={
                 "info_type": "tactical_update",
                 "update_type": update_type,
-                DATA_DIR: status,
+                "data": status,
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,
