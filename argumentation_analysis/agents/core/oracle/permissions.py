@@ -16,6 +16,11 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional, Set
 from enum import Enum
 
+# Classe canonique : la hiérarchie OracleError de error_handling (#2139).
+# L'ancienne définition locale (Exception) rendait l'isinstance de
+# error_handling.py:80 inatteignable pour l'exception réellement levée ici.
+from .error_handling import CluedoIntegrityError
+
 
 class PermissionDeniedError(Exception):
     """Exception levée lorsqu'une permission est refusée."""
@@ -343,12 +348,6 @@ class PermissionManager:
             "allowed_query_types": [qt.value for qt in rule.allowed_query_types],
             "reveal_policy": rule.reveal_policy,
         }
-
-
-class CluedoIntegrityError(Exception):
-    """Exception levée lors de violation des règles d'intégrité du Cluedo."""
-
-    pass
 
 
 def validate_cluedo_method_access(method_name: str, agent_name: str) -> None:
