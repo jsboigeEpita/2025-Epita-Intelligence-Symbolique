@@ -265,23 +265,31 @@ async def run_debate(request: TextRequest):
         raise HTTPException(status_code=500, detail=f"Debate failed: {e}")
 
     snapshot = result["snapshot"]
-    debate = snapshot.get("debate_transcripts", {})
+    # The state stores debate_transcripts as a LIST of {id, topic, exchanges,
+    # winner} (shared_state.add_debate_transcript); the writer stores each
+    # exchange as {point, rebuttal, scheme?, ...} (#2135 / #2142). This
+    # endpoint answers for one pipeline run, so the LAST transcript is the
+    # run's own.
+    transcripts = snapshot.get("debate_transcripts", [])
+    debate = transcripts[-1] if isinstance(transcripts, list) and transcripts else {}
 
     exchanges = []
     if isinstance(debate, dict):
-        for exc in debate.get("key_exchanges", []):
+        for exc in debate.get("exchanges", []):
             if isinstance(exc, dict):
                 exchanges.append(
                     DebateExchange(
-                        agent_a_point=exc.get("agent_a_point", ""),
-                        agent_b_rebuttal=exc.get("agent_b_rebuttal", ""),
-                        judge_note=exc.get("judge_note", ""),
+                        agent_a_point=exc.get("point", ""),
+                        agent_b_rebuttal=exc.get("rebuttal", ""),
+                        judge_note="",
                     )
                 )
 
     return DebateResponse(
-        winner=debate.get("winner", "") if isinstance(debate, dict) else "",
-        new_insights=debate.get("new_insights", []) if isinstance(debate, dict) else [],
+        winner=debate.get("winner") or "" if isinstance(debate, dict) else "",
+        # No writer produces debate insights anywhere — [] is the honest
+        # value, not a regression (the old reader read a key no state ever had).
+        new_insights=[],
         key_exchanges=exchanges,
         transcript=json.dumps(debate, ensure_ascii=False, default=str)[:2000],
         duration_seconds=round(time.time() - start, 1),
