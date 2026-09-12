@@ -75,49 +75,54 @@ class OperationalAgent(ABC):
 
         # Définir le callback pour les tâches
         def handle_task(message: Message) -> None:
-            task_type = message.content.get("task_type")
+            # Le chemin callback diffuse à tous les abonnés filtrés sans
+            # routage par destinataire, et le contrat du matcher n'a pas de
+            # clé `recipient` : le ciblage se tient côté consommateur (#2161).
+            if message.recipient != self.name:
+                return
+            command_type = message.content.get("command_type")
             task_data = message.content.get("parameters", {})
 
-            if task_type == "operational_task" and self.can_process_task(task_data):
+            if command_type == "operational_task" and self.can_process_task(task_data):
                 # Traiter la tâche de manière asynchrone
                 asyncio.create_task(self._process_task_async(task_data, message.sender))
 
         try:
-            # S'abonner aux tâches opérationnelles directes
+            # S'abonner aux tâches opérationnelles directes. Les clés du
+            # filtre sont celles du contrat du matcher, en `.value` — pas
+            # `recipient`/`type` (ignorées) ni un membre d'enum (jamais
+            # égal à la chaîne comparée), qui tenaient l'abonnement mort
+            # (#2161). L'abonnement par `topic` sur le canal collaboration
+            # est retiré : aucun publieur, et `topic` n'est reconnu par
+            # aucun matcher — il ne restait qu'une boucle qui résolvait les
+            # capacités à la construction (le fail-loud #2159 levait donc à
+            # chaque instanciation, avalé par l'except).
             hierarchical_channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
-            if hierarchical_channel:
-                hierarchical_channel.subscribe(
-                    subscriber_id=self.name,
-                    callback=handle_task,
-                    filter_criteria={
-                        "recipient": self.name,
-                        "type": MessageType.COMMAND,
-                        "sender_level": AgentLevel.TACTICAL,
-                    },
+            if not hierarchical_channel:
+                self.logger.warning(
+                    f"Agent {self.name}: canal hiérarchique absent — "
+                    f"abonnement aux tâches impossible"
                 )
-
-            # S'abonner aux tâches publiées pour les capacités que cet agent possède
-            capabilities = self.get_capabilities()
-            collaboration_channel = self.middleware.get_channel(
-                ChannelType.COLLABORATION
+                return
+            hierarchical_channel.subscribe(
+                subscriber_id=self.name,
+                callback=handle_task,
+                filter_criteria={
+                    "message_type": MessageType.COMMAND.value,
+                    "sender_level": AgentLevel.TACTICAL.value,
+                },
             )
-            if collaboration_channel:
-                for capability in capabilities:
-                    collaboration_channel.subscribe(
-                        subscriber_id=f"{self.name}_{capability}",
-                        callback=handle_task,
-                        filter_criteria={
-                            "topic": f"operational_tasks.{capability}",
-                            "sender_level": AgentLevel.TACTICAL,
-                        },
-                    )
-
-            self.logger.info(f"Agent {self.name} abonné aux tâches opérationnelles")
 
         except Exception as e:
+            # Nommer ce qui a échoué : un échec d'abonnement ne doit pas
+            # pouvoir se confondre avec un succès partiel (#2161).
             self.logger.error(
-                f"Erreur lors de l'abonnement aux tâches pour l'agent {self.name}: {e}"
+                f"Agent {self.name}: échec de l'abonnement hiérarchique aux "
+                f"tâches: {type(e).__name__}: {e}"
             )
+            return
+
+        self.logger.info(f"Agent {self.name} abonné aux tâches opérationnelles")
 
     async def _process_task_async(self, task: Dict[str, Any], sender_id: str) -> None:
         """

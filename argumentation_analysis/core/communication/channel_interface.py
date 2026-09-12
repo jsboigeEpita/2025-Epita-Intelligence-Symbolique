@@ -100,10 +100,24 @@ class Channel(abc.ABC):
         """Retourne des informations sur l'état et la configuration du canal."""
         pass
 
+    #: Les seules clés de filtre honorées par ce matcher. Une clé hors
+    #: contrat lève au lieu d'être ignorée : l'ignorance silencieuse est ce
+    #: qui a laissé passer des filtres morts pour vivants (#2161 — trois
+    #: défauts coexistaient sans un seul test rouge).
+    FILTER_KEYS = frozenset(
+        {"message_type", "sender", "priority", "sender_level", "content"}
+    )
+
     def matches_filter(self, message: Message, filter_criteria: Dict[str, Any]) -> bool:
         if not filter_criteria:
             return True
         for key, value in filter_criteria.items():
+            if key not in self.FILTER_KEYS:
+                raise ValueError(
+                    f"Unknown filter criteria key {key!r} — honored keys: "
+                    f"{sorted(self.FILTER_KEYS)}. A key the matcher ignores "
+                    "would silently widen the filter (#2161)."
+                )
             if key == "message_type":
                 if isinstance(value, list):
                     if message.type.value not in value:
@@ -125,9 +139,9 @@ class Channel(abc.ABC):
             elif key == "sender_level":
                 if isinstance(value, list):
                     if message.sender_level.value not in value:
-                        return False  # Assumant que sender_level a .value
+                        return False
                 elif message.sender_level.value != value:
-                    return False  # Assumant que sender_level a .value
+                    return False
             elif key == "content":  # Filtre de contenu simple
                 content_filter = value
                 for content_key, content_val in content_filter.items():
@@ -136,7 +150,6 @@ class Channel(abc.ABC):
                         or message.content[content_key] != content_val
                     ):
                         return False
-            # Ajouter d'autres logiques de filtrage si nécessaire
         return True
 
 

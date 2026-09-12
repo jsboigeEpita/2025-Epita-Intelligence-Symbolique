@@ -189,6 +189,40 @@ class TestMatchesFilter:
         f = {"message_type": "command", "sender": "sherlock", "priority": "high"}
         assert channel.matches_filter(msg, f) is True
 
+    def test_unknown_filter_key_raises_2161(self, channel):
+        """#2161 : une clé hors contrat doit être refusée, pas ignorée.
+
+        L'ignorance silencieuse est ce qui a laissé coexister trois filtres
+        morts (`recipient`, `type` membre d'enum, `topic`) sans aucun test
+        rouge — la chaîne de `elif` rendait True pour toute clé inconnue.
+        """
+        msg = _make_msg()
+        with pytest.raises(ValueError, match="recipient"):
+            channel.matches_filter(msg, {"recipient": "agent_2"})
+
+    def test_unknown_filter_key_names_itself_and_the_contract(self, channel):
+        msg = _make_msg()
+        with pytest.raises(ValueError, match="message_type"):
+            channel.matches_filter(msg, {"topic": "operational_tasks.x"})
+
+    def test_the_five_contract_keys_do_not_raise(self, channel):
+        """Contrôle positif : les cinq clés honorées passent sans lever."""
+        msg = _make_msg(
+            msg_type=MessageType.COMMAND,
+            sender="sherlock",
+            priority=MessagePriority.HIGH,
+            sender_level=AgentLevel.TACTICAL,
+            content={"info_type": "result"},
+        )
+        criteria = {
+            "message_type": "command",
+            "sender": "sherlock",
+            "priority": "high",
+            "sender_level": "tactical",
+            "content": {"info_type": "result"},
+        }
+        assert channel.matches_filter(msg, criteria) is True
+
     def test_multiple_criteria_one_fails(self, channel):
         msg = _make_msg(
             msg_type=MessageType.COMMAND,
