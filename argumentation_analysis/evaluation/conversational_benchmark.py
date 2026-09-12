@@ -30,7 +30,7 @@ logger = logging.getLogger("conversational_benchmark")
 # ── Benchmark texts ──────────────────────────────────────────────────────
 
 BENCHMARK_TEXTS = {
-    "kremlin_reform": (
+    "src3_reform": (
         "Le Premier ministre a déclaré que la réforme des retraites est nécessaire "
         "car tous les pays européens l'ont déjà faite. C'est un argument d'autorité "
         "qui ne tient pas compte des différences structurelles entre les systèmes. "

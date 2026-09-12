@@ -39,7 +39,7 @@ from argumentation_analysis.core.io_manager import load_extract_definitions
 CORPORA = {
     "A": {"src_idx": 11, "label": "corpus_dense_A", "desc": "Trump UN GA 2025 (~58K EN)"},
     "B": {"src_idx": 3, "label": "corpus_dense_B", "desc": "Hitler collection (~50K DE extract)"},
-    "C": {"src_idx": 2, "label": "corpus_dense_C", "desc": "Kremlin 21/02/2022 (~46K EN)"},
+    "C": {"src_idx": 2, "label": "corpus_dense_C", "desc": "Source_3 (~46K EN)"},
 }
 
 OUTPUTS_DIR = Path("outputs/scda_audit")
