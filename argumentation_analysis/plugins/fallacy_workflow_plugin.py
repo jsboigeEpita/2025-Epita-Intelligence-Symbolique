@@ -109,6 +109,11 @@ class FallacyWorkflowPlugin:
     # env so a pathological corpus can be bounded without a code change.
     DESCENT_TOTAL_CALL_BUDGET = int(os.getenv("FALLACY_DESCENT_CALL_BUDGET", "240"))
 
+    # #2157: wide-net Phase 1 wall-clock budget — the only one on the descent
+    # chain that was not env-tunable. Default UNCHANGED at 60 s: raising it is
+    # a measurement decision (issue #2157, piste 3), not a fix.
+    WIDENET_PHASE1_TIMEOUT = float(os.getenv("FALLACY_WIDENET_PHASE1_TIMEOUT", "60.0"))
+
     class _BranchSupersessionTracker:
         """Track confirmed fallacies for branch supersession during parallel exploration.
 
@@ -609,11 +614,20 @@ class FallacyWorkflowPlugin:
                 self.llm_service.get_chat_message_content(
                     chat_history=history, settings=settings, kernel=kernel
                 ),
-                timeout=60.0,
+                timeout=self.WIDENET_PHASE1_TIMEOUT,
             )
             raw = str(response).strip()
+        except asyncio.TimeoutError:
+            # str(TimeoutError()) == "" — a catch-all here logged an empty
+            # message, so a budget overrun silently degraded the funnel to
+            # one-shot (#2157). Same shape as the two named handlers below.
+            self.logger.warning(
+                f"Wide-net Phase 1 timed out after {self.WIDENET_PHASE1_TIMEOUT}s "
+                f"(FALLACY_WIDENET_PHASE1_TIMEOUT), falling back to one-shot"
+            )
+            return []
         except Exception as e:
-            self.logger.warning(f"Wide-net Phase 1 failed: {e}")
+            self.logger.warning(f"Wide-net Phase 1 failed: {type(e).__name__}: {e}")
             return []
 
         candidates_raw = []
