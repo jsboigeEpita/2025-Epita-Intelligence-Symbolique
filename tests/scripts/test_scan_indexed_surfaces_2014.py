@@ -34,10 +34,75 @@ scanner = _load_scanner()
 
 def _alphabetic_core() -> str:
     """A purely alphabetic pattern core, so the planted token is a clean identifier."""
-    for pattern in scanner.PERSON_PATTERNS:
+    for pattern in scanner.DETECTOR_PATTERNS:
         if re.fullmatch(r"[A-Za-z]+", pattern):
             return pattern
     pytest.skip("no purely alphabetic pattern core available to plant")
+
+
+def _source_pattern() -> str:
+    """A corpus-identifier pattern (#2119), derived at run time like the rest.
+
+    Never written here: the spelling lives in the one module that carries it
+    by design, keeping this file green under the tests/** sweep guard.
+    """
+    patterns = [
+        p
+        for p in scanner.DETECTOR_PATTERNS
+        if any(c.isdigit() for c in p) and "_" not in p
+    ]
+    assert patterns, "SOURCE_PATTERNS is empty: the corpus guard is vacuous"
+    return patterns[0]
+
+
+def _source_identifier_pattern() -> str:
+    """The corpus identifier that is itself identifier-shaped (underscores)."""
+    patterns = [
+        p for p in scanner.DETECTOR_PATTERNS if "_" in p and any(c.isdigit() for c in p)
+    ]
+    assert patterns, "no underscore-shaped corpus identifier pattern loaded"
+    return patterns[0]
+
+
+class TestCorpusSourcePatterns2119:
+    """#2119 — dataset corpus identifiers join person names in the gate.
+
+    The gate used to read PERSON_PATTERNS only: a corpus identifier in a
+    commit message or PR body passed clean. These tests plant tokens derived
+    from the shared patterns at run time — if SOURCE_PATTERNS is emptied or
+    the scanner stops loading it, the planted prose contains nothing the
+    detectors know and the assertions fail (the guard cannot pass vacuously).
+    """
+
+    def test_corpus_identifier_in_prose_reddens(self, tmp_path):
+        body = tmp_path / "body.md"
+        body.write_text(
+            f"benchmark row for {_source_pattern()} added\n", encoding="utf-8"
+        )
+        assert scanner.main(["--text-file", str(body)]) == 1
+
+    def test_corpus_identifier_shaped_form_reddens(self, tmp_path):
+        body = tmp_path / "body.md"
+        body.write_text(
+            f"- renamed `{_source_identifier_pattern()}_extract` fixture\n",
+            encoding="utf-8",
+        )
+        assert scanner.main(["--text-file", str(body)]) == 1
+
+    def test_scanner_detector_count_includes_corpus_identifiers(self):
+        """Wiring guard: the loaded list is person + corpus, not person alone."""
+        import importlib.util
+
+        spec = importlib.util.spec_from_file_location(
+            "_leak_patterns_2119",
+            REPO_ROOT / "argumentation_analysis" / "evaluation" / "leak_patterns.py",
+        )
+        leak = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(leak)
+        assert len(scanner.DETECTOR_PATTERNS) == len(leak.PERSON_PATTERNS) + len(
+            leak.SOURCE_PATTERNS
+        )
+        assert len(leak.SOURCE_PATTERNS) >= 2
 
 
 def test_identifier_shaped_name_is_caught(tmp_path):
@@ -62,7 +127,7 @@ def test_scanner_consumes_the_shared_frontier_not_a_local_copy(monkeypatch):
     """
     monkeypatch.setattr(scanner, "letter_boundary", lambda core: f"__{core}__")
     assert [rx.pattern for rx in scanner.compile_detectors()] == [
-        f"__{p}__" for p in scanner.PERSON_PATTERNS
+        f"__{p}__" for p in scanner.DETECTOR_PATTERNS
     ]
 
 

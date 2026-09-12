@@ -89,6 +89,25 @@ EVENT_PATTERNS = [
     r"Brest-Litovsk",
 ]
 
+# dataset corpus identifiers (#2119) — a document identifier is a third
+# category: not a person, not a state. The commit-message gate
+# (scan_indexed_surfaces.py) consumes these ALONGSIDE PERSON_PATTERNS, while
+# the synthesis-prose sweep keeps reading LEAK_PATTERNS only: STATE-class
+# words false-positive on commit messages (3/300 measured, #2119 R978) and a
+# gate that reddens wrongly is a gate people learn to route around. Corpus
+# identifiers are long and specific — zero false positives expected. The
+# spellings below are the source_name as the dataset carries it plus the
+# variants found by the form census on tracked files; the bare institution
+# word and derivative labels (ext0/reform/cache) are deliberately NOT here —
+# they are cleanup scope, not gate vocabulary.
+SOURCE_PATTERNS = [
+    r"Kremlin Discours 21/02/2022",
+    r"Kremlin Discours",
+    r"Discours du Kremlin",
+    r"Kremlin 21/02/2022",
+    r"article_lemonde_elections_europeennes_2024",
+]
+
 # Full detector list, order preserved from the original script (alternation
 # order affects which first match finditer reports).
 LEAK_PATTERNS = LEADER_PATTERNS + STATE_PATTERNS + PARTY_PATTERNS + EVENT_PATTERNS

@@ -66,10 +66,16 @@ def _load_patterns() -> tuple[list, object]:
         raise RuntimeError(f"cannot load shared patterns from {_PATTERNS_MODULE}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-    return list(module.PERSON_PATTERNS), module.letter_boundary
+    # #2119: the gate reads person names AND dataset corpus identifiers —
+    # STATE/PARTY/EVENT stay out: they false-positive on commit messages
+    # (3/300 measured) and a gate that reddens wrongly gets routed around.
+    return (
+        list(module.PERSON_PATTERNS) + list(module.SOURCE_PATTERNS),
+        module.letter_boundary,
+    )
 
 
-PERSON_PATTERNS, letter_boundary = _load_patterns()
+DETECTOR_PATTERNS, letter_boundary = _load_patterns()
 
 
 def compile_detectors() -> list[re.Pattern[str]]:
@@ -82,7 +88,7 @@ def compile_detectors() -> list[re.Pattern[str]]:
     """
     return [
         re.compile(letter_boundary(pattern), re.IGNORECASE)
-        for pattern in PERSON_PATTERNS
+        for pattern in DETECTOR_PATTERNS
     ]
 
 
@@ -96,7 +102,7 @@ def _identifier_shaped(text: str) -> bool:
     """True when a hit is adjacent to ``_`` — the form a word boundary misses."""
     return any(
         re.search(rf"(?<![A-Za-z]){core}_|_{core}(?![A-Za-z])", text, re.IGNORECASE)
-        for core in PERSON_PATTERNS
+        for core in DETECTOR_PATTERNS
     )
 
 
