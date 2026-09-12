@@ -13,7 +13,6 @@ from argumentation_analysis.core.communication.message import (
     AgentLevel,
 )
 from argumentation_analysis.core.communication.channel_interface import ChannelType
-from argumentation_analysis.paths import DATA_DIR
 
 # ── Fixtures ────────────────────────────────────────────────────────────
 
@@ -232,7 +231,7 @@ class TestRequestTacticalInfo:
 
     def test_returns_data_on_success(self, strategic, mock_middleware):
         response = MagicMock()
-        response.content = {DATA_DIR: {"status": "ok"}}
+        response.content = {"data": {"status": "ok"}}
         mock_middleware.send_request.return_value = response
         result = strategic.request_tactical_info("status", {}, "tactical_01")
         assert result == {"status": "ok"}
@@ -253,7 +252,7 @@ class TestRequestTacticalInfoAsync:
 
     async def test_returns_data(self, strategic, mock_middleware):
         response = MagicMock()
-        response.content = {DATA_DIR: {"val": 42}}
+        response.content = {"data": {"val": 42}}
         mock_middleware.send_request_async = AsyncMock(return_value=response)
         result = await strategic.request_tactical_info_async("q", {}, "t01")
         assert result == {"val": 42}
@@ -472,7 +471,7 @@ class TestRequestStrategicGuidance:
 
     def test_returns_data(self, tactical, mock_middleware):
         response = MagicMock()
-        response.content = {DATA_DIR: {"guidance": "proceed"}}
+        response.content = {"data": {"guidance": "proceed"}}
         mock_middleware.send_request.return_value = response
         result = tactical.request_strategic_guidance("clarification", {}, "s01")
         assert result == {"guidance": "proceed"}
@@ -493,7 +492,7 @@ class TestRequestStrategicGuidanceAsync:
 
     async def test_returns_data(self, tactical, mock_middleware):
         response = MagicMock()
-        response.content = {DATA_DIR: {"advice": "go"}}
+        response.content = {"data": {"advice": "go"}}
         mock_middleware.send_request_async = AsyncMock(return_value=response)
         result = await tactical.request_strategic_guidance_async("q", {}, "s01")
         assert result == {"advice": "go"}

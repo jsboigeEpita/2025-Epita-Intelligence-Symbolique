@@ -10,7 +10,7 @@ import uuid
 from argumentation_analysis.orchestration.hierarchical.tactical.state import (
     TacticalState,
 )
-from argumentation_analysis.paths import RESULTS_DIR, DATA_DIR
+from argumentation_analysis.paths import RESULTS_DIR
 from argumentation_analysis.core.communication.middleware import (
     MessageMiddleware,
     create_default_middleware,
@@ -296,12 +296,11 @@ class TaskCoordinator:
             self.logger.info(f"Directive stratégique reçue : {objective_type}")
             if objective_type == "strategic_decision":
                 # Le payload (decision_type/conclusion/evaluation) est niché
-                # sous la clé ``DATA_DIR`` (un Path) — lu de la même façon
-                # qu'écrit par le publieur (strategic_adapter.py:122). Le type
-                # ignore reflète ce couplage : ``content`` est typé
-                # ``Dict[str, Any]`` mais le publieur utilise le Path comme
-                # clé (défaut latent pré-existant, hors périmètre #1555).
-                payload = message.content.get(DATA_DIR, {}) or {}  # type: ignore[call-overload]
+                # sous la clé chaîne ``"data"`` — lue de la même façon
+                # qu'écrite par le publieur (strategic_adapter, #2177). Le
+                # ``type: ignore`` d'origine est parti avec la clé Path : une
+                # clé chaîne ne viole plus la surcharge de ``dict.get``.
+                payload = message.content.get("data", {}) or {}
                 self._log_action(
                     "strategic_decision_received",
                     (

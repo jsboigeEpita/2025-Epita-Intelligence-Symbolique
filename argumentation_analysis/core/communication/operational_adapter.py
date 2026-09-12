@@ -15,8 +15,6 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import ChannelType
 from .middleware import MessageMiddleware
 
-from argumentation_analysis.paths import DATA_DIR
-
 
 class OperationalAdapter:
     """
@@ -125,7 +123,7 @@ class OperationalAdapter:
                 "info_type": "task_result",
                 "task_id": task_id,
                 "result_type": result_type,
-                DATA_DIR: result,
+                "data": result,
             },
             recipient=recipient_id,
             channel=ChannelType.HIERARCHICAL.value,
@@ -185,7 +183,7 @@ class OperationalAdapter:
                 self.logger.info(
                     f"Received clarification from {recipient_id} for task {task_id}"
                 )
-                return response.content.get(DATA_DIR)
+                return response.content.get("data")
 
             self.logger.warning(f"Clarification request for task {task_id} timed out")
             return None
@@ -236,7 +234,7 @@ class OperationalAdapter:
                 self.logger.info(
                     f"Received clarification from {recipient_id} for task {task_id}"
                 )
-                return response.content.get(DATA_DIR)
+                return response.content.get("data")
 
             self.logger.warning(f"Clarification request for task {task_id} timed out")
             return None
@@ -294,7 +292,7 @@ class OperationalAdapter:
             content={
                 "info_type": "collaboration",
                 "collaboration_type": collaboration_type,
-                DATA_DIR: content,
+                "data": content,
             },
             recipient=None,  # Destiné au groupe
             channel=ChannelType.COLLABORATION.value,
@@ -436,8 +434,9 @@ class OperationalAdapter:
                 self.logger.info(
                     f"Received assistance from {recipient_id} for issue {issue_type}"
                 )
-                # DATA_DIR est la clé correcte utilisée dans les tests et la logique de message
-                self.last_assistance_response = response.content.get(DATA_DIR)
+                # Charge utile sous la clé chaîne "data" — sérialisable en JSON
+                # (#2177) ; l'ancienne clé Path cassait Message.to_dict().
+                self.last_assistance_response = response.content.get("data")
                 return self.last_assistance_response
 
             self.logger.warning(f"Assistance request for issue {issue_type} timed out")

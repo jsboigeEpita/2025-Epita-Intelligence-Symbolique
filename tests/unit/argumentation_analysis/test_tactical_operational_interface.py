@@ -20,7 +20,6 @@ from argumentation_analysis.orchestration.hierarchical.tactical.state import (
 from argumentation_analysis.orchestration.hierarchical.interfaces.tactical_operational import (
     TacticalOperationalInterface,
 )
-from argumentation_analysis.paths import DATA_DIR, RESULTS_DIR
 from argumentation_analysis.core.communication import (
     MessageMiddleware,
     TacticalAdapter,

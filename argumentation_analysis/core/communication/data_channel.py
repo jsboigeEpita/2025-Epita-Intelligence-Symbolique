@@ -19,8 +19,6 @@ from collections import defaultdict
 from .channel_interface import Channel, ChannelType, ChannelException
 from .message import Message, MessageType, MessagePriority, AgentLevel
 
-from argumentation_analysis.paths import DATA_DIR
-
 
 class DataStore:
     """

@@ -16,8 +16,6 @@ from .message import Message, MessageType, MessagePriority, AgentLevel
 from .channel_interface import ChannelType
 from .middleware import MessageMiddleware
 
-from argumentation_analysis.paths import DATA_DIR
-
 
 class StrategicAdapter:
     """
@@ -119,7 +117,7 @@ class StrategicAdapter:
             content={
                 "info_type": "global_objective",
                 "objective_type": objective_type,
-                DATA_DIR: content,
+                "data": content,
             },
             recipient=None,  # Broadcast
             channel=ChannelType.HIERARCHICAL.value,
@@ -325,7 +323,7 @@ class StrategicAdapter:
                 self.logger.info(
                     f"Received response to {request_type} request from {recipient_id}"
                 )
-                return response.content.get(DATA_DIR)
+                return response.content.get("data")
 
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -374,7 +372,7 @@ class StrategicAdapter:
                 self.logger.info(
                     f"Received response to {request_type} request from {recipient_id}"
                 )
-                return response.content.get(DATA_DIR)
+                return response.content.get("data")
 
             self.logger.warning(f"Request {request_type} to {recipient_id} timed out")
             return None
@@ -432,7 +430,7 @@ class StrategicAdapter:
             content={
                 "info_type": "collaboration",
                 "collaboration_type": collaboration_type,
-                DATA_DIR: content,
+                "data": content,
             },
             recipient=None,  # Destiné au groupe
             channel=ChannelType.COLLABORATION.value,
@@ -673,7 +671,7 @@ class StrategicAdapter:
             content={
                 "info_type": "announcement",
                 "announcement_type": announcement_type,
-                DATA_DIR: content,
+                "data": content,
             },
             recipient=None,  # Broadcast
             channel=ChannelType.HIERARCHICAL.value,
@@ -775,7 +773,7 @@ class StrategicAdapter:
             message_type=MessageType.RESPONSE,
             sender=self.agent_id,
             sender_level=AgentLevel.STRATEGIC,
-            content={"status": "success", DATA_DIR: guidance},
+            content={"status": "success", "data": guidance},
             recipient=None,  # Sera défini par le middleware
             channel=ChannelType.HIERARCHICAL.value,
             priority=priority,
