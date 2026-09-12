@@ -88,9 +88,19 @@ def audit(
             continue
         value = env[key][0]
         if not value:
-            findings.append(f"VIDE      {key}")
+            verdict = f"VIDE      {key}"
         elif value == canon_value and SPECIMEN.search(value):
-            findings.append(f"SPECIMEN  {key}  (len={len(value)})")
+            verdict = f"SPECIMEN  {key}  (len={len(value)})"
+        else:
+            continue
+        # Le statut optionnel vaut pour les DEUX etats d'entree, pas seulement
+        # l'absence : un siege qui a copie .env.example en .env porte le
+        # specimen des entrees commentees, et le declarer bloquant reclame une
+        # valeur que le canon ne demande pas. Reste informatif -- une valeur
+        # inerte merite d'etre vue, elle ne merite pas d'arreter le siege.
+        (optional if canon_commented else findings).append(
+            f"{verdict}  [option]" if canon_commented else verdict
+        )
 
     inventory = [
         f"  {k:<34} len={len(v[0]):<4} fp={fingerprint(v[0])}"
@@ -115,6 +125,25 @@ def main() -> int:
         return 2
     if not args.canon.exists():
         print(f"canon introuvable: {args.canon}", file=sys.stderr)
+        return 2
+
+    # Un canon qui ne declare aucune cle requise rend "complet" sans avoir rien
+    # compare : vide, tronque par une redirection cassee, ou toutes entrees
+    # commentees donnent le meme vert vacuous. Mesure a l'origine de ce garde :
+    # un `git show` mange par MSYS a cree un canon vide, et l'outil a valide un
+    # siege incomplet. L'absence d'exigence n'est pas une conformite.
+    required = [
+        k
+        for k, (_, commented) in parse(args.canon, keep_commented=True).items()
+        if not commented
+    ]
+    if not required:
+        print(
+            f"canon inutilisable: {args.canon} ne declare aucune cle requise "
+            "(vide, tronque, ou toutes les entrees commentees) — un « complet » "
+            "ici ne mesurerait rien",
+            file=sys.stderr,
+        )
         return 2
 
     findings, optional, count, inventory = audit(args.env, args.canon)

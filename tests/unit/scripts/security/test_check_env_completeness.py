@@ -6,6 +6,7 @@ détecteur rend ~8 faux positifs sur 10 et la flotte apprend à l'ignorer.
 """
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -76,6 +77,41 @@ def test_commented_canon_entry_is_optional_not_blocking(tmp_path):
     assert any(v == "ABSENTE   REQUIRED_KEY" for v in findings)
 
 
+def test_commented_canon_entry_stays_optional_when_the_seat_carries_it(tmp_path):
+    """Le statut optionnel vaut aussi quand la cle EST dans le .env.
+
+    Angle mort du garde precedent : il ne mesurait que l'etat « absente ».
+    Un siege qui a copie .env.example en .env porte le specimen des entrees
+    commentees, et les deux workers ont remonte le meme [ASK] Azure pour
+    cette raison -- une valeur que le canon ne demande pas etait reclamee.
+    """
+    findings, optional, _, _ = mod.audit(
+        write(tmp_path, ".env", 'OPTIONAL_KEY="change-me"\nREQUIRED_KEY="sk-vraie"\n'),
+        write(tmp_path, ".env.example", CANON),
+    )
+    assert not any("OPTIONAL_KEY" in v for v in findings), findings
+    assert any("OPTIONAL_KEY" in v and "[option]" in v for v in optional), optional
+
+
+def test_required_entry_at_the_specimen_still_blocks(tmp_path):
+    """CONTROLE POSITIF du test precedent : sortir les optionnelles du bloquant
+    ne doit pas desarmer le chemin requis, qui est la raison d'etre de l'outil."""
+    out = verdicts(tmp_path, 'REQUIRED_KEY="sk-..."\n')
+    assert any(v.startswith("SPECIMEN  REQUIRED_KEY") for v in out), out
+
+
+def test_empty_value_follows_the_same_two_regimes(tmp_path):
+    """VIDE suit le meme partage que SPECIMEN : bloquant si requise, informatif
+    si le canon l'a commentee."""
+    findings, optional, _, _ = mod.audit(
+        write(tmp_path, ".env", "OPTIONAL_KEY=\nREQUIRED_KEY=\n"),
+        write(tmp_path, ".env.example", CANON),
+    )
+    assert any(v.startswith("VIDE      REQUIRED_KEY") for v in findings), findings
+    assert not any("OPTIONAL_KEY" in v for v in findings), findings
+    assert any("OPTIONAL_KEY" in v for v in optional), optional
+
+
 def test_crlf_canon_does_not_break_comparison(tmp_path):
     """Le canon du dépôt est en CRLF : le \r ne doit pas casser l'égalité."""
     out = verdicts(
@@ -101,3 +137,53 @@ def test_specimen_shapes(tmp_path, shape):
     canon = f'K="{shape}"\n'
     out = verdicts(tmp_path, f'K="{shape}"\n', canon=canon)
     assert any(v.startswith("SPECIMEN  K") for v in out)
+
+
+def run_main(tmp_path, env_body, canon_body):
+    """Le garde du canon vacuous vit dans main(), pas dans audit().
+
+    Un test qui passerait par `verdicts` ne le traverserait jamais : il
+    mesurerait audit() et certifierait main(). D'ou l'argv.
+    """
+    env = write(tmp_path, ".env", env_body)
+    ref = write(tmp_path, "canon", canon_body)
+    argv = ["check_env_completeness.py", "--env", str(env), "--canon", str(ref)]
+    old, sys.argv = sys.argv, argv
+    try:
+        return mod.main()
+    finally:
+        sys.argv = old
+
+
+LEGIT_ENV = (
+    'GLOBAL_LLM_SERVICE="OpenAI"\n'
+    'AZURE_OPENAI_API_KEY="vraie"\n'
+    'REQUIRED_KEY="sk-vraie"\n'
+)
+
+COMMENTS_ONLY = "# RIEN=1\n\n# QUE DES COMMENTAIRES\n"
+
+
+def test_real_canon_still_returns_complet(tmp_path, capsys):
+    """CONTROLE POSITIF du garde : un garde qui refuserait TOUT canon ferait
+    passer les deux cas vacuous ci-dessous sans rien mesurer."""
+    assert run_main(tmp_path, LEGIT_ENV, CANON) == 0
+    assert "complet" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "canon, forme",
+    [("", "vide"), (COMMENTS_ONLY, "commentaires seuls")],
+)
+def test_vacuous_canon_is_refused_not_green(tmp_path, capsys, canon, forme):
+    """Un canon sans aucune cle requise rendait `complet` exit 0.
+
+    Mesure d'origine : un `git show <ref>:<path>` mange par MSYS a produit un
+    canon vide par redirection, et l'outil a certifie « complet » un siege
+    incomplet. Zero exigence n'est pas une conformite — et ce vert-la est pire
+    qu'un rouge : il AUTORISE le geste suivant.
+    """
+    assert run_main(tmp_path, LEGIT_ENV, canon) == 2, forme
+    out = capsys.readouterr()
+    assert "canon inutilisable" in out.err
+    assert "complet" not in out.out
