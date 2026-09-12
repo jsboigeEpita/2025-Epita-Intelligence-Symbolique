@@ -15,10 +15,17 @@ code as an identifier (#2012).
 This module MUST stay import-effect-free: no environment access, no
 filesystem, no logging, no third-party imports. Keep it stdlib-only.
 
-Privacy HARD: these ARE the real names — that is the point of a detector.
-Only their hit counts may be written to committed artifacts, never matched
-context. The patterns themselves already live in the indexed repo (they
-were extracted verbatim from scripts/run_fb34_opaqueness_check.py).
+Privacy HARD: these ARE real names — of the CLASS vocabulary only (public
+figures, states, parties: political-historical forms already present in
+the indexed repo before this module existed). Only their hit counts may
+be written to committed artifacts, never matched context.
+
+Class vs instance (#2168): this module must never carry a DOCUMENT
+IDENTIFIER — a ``source_name`` or any label mapping 1:1 to one encrypted
+document of our corpus. "It's a detector" is not a license: a detector
+enumerating corpus identifiers publishes the census the encryption
+protects. Detect instances by deriving tokens at runtime from the
+in-memory decrypted definitions, never by listing them here.
 """
 
 import re
