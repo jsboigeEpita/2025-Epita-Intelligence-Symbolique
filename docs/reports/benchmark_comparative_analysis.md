@@ -73,7 +73,7 @@ The 10 workflows tested span three architectural tiers:
 |-------|----------|----------|-------------|
 | 0 | Lincoln-Douglas Debate 1 (NPS) | English | Historical political debate transcript |
 | 1 | Lincoln-Douglas Debate 2 (NPS) | English | Historical political debate transcript |
-| 2 | Kremlin Discours 21/02/2022 | French | Political speech (geopolitical) |
+| 2 | Source_3 | French | Political speech (geopolitical) |
 | 5 | Assemblee Nationale | French | Parliamentary debate transcript |
 
 Documents were selected to test both English and French input handling, as well as varying argumentative density and rhetorical complexity.
@@ -542,40 +542,40 @@ timestamp,workflow_name,model_name,document_index,document_name,success,duration
 2026-03-06T13:08:09,light,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,0.594,3,3,0,0
 2026-03-06T13:08:09,standard,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,0.015,5,5,0,0
 2026-03-06T13:08:58,light,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,0.562,3,3,0,0
-2026-03-06T13:08:58,light,qwen-local,2,Kremlin Discours 21/02/2022,True,0.016,3,3,0,0
+2026-03-06T13:08:58,light,qwen-local,2,Source_3,True,0.016,3,3,0,0
 2026-03-06T13:08:58,light,qwen-local,5,Assemblee Nationale,True,0.0,3,3,0,0
 2026-03-06T13:08:58,standard,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,0.0,5,5,0,0
-2026-03-06T13:08:58,standard,qwen-local,2,Kremlin Discours 21/02/2022,True,0.016,5,5,0,0
+2026-03-06T13:08:58,standard,qwen-local,2,Source_3,True,0.016,5,5,0,0
 2026-03-06T13:08:58,standard,qwen-local,5,Assemblee Nationale,True,0.0,5,5,0,0
 2026-03-06T13:09:01,full,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,2.062,7,8,1,0
-2026-03-06T13:09:03,full,qwen-local,2,Kremlin Discours 21/02/2022,True,2.047,7,8,1,0
+2026-03-06T13:09:03,full,qwen-local,2,Source_3,True,2.047,7,8,1,0
 2026-03-06T13:09:05,full,qwen-local,5,Assemblee Nationale,True,2.063,7,8,1,0
 2026-03-06T13:09:05,formal_verification,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,0.375,8,10,2,0
-2026-03-06T13:09:05,formal_verification,qwen-local,2,Kremlin Discours 21/02/2022,True,0.0,8,10,2,0
+2026-03-06T13:09:05,formal_verification,qwen-local,2,Source_3,True,0.0,8,10,2,0
 2026-03-06T13:09:05,formal_verification,qwen-local,5,Assemblee Nationale,True,0.015,8,10,2,0
 2026-03-06T13:09:05,formal_debate,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,0.313,4,5,1,0
-2026-03-06T13:09:05,formal_debate,qwen-local,2,Kremlin Discours 21/02/2022,True,0.0,4,5,1,0
+2026-03-06T13:09:05,formal_debate,qwen-local,2,Source_3,True,0.0,4,5,1,0
 2026-03-06T13:09:05,formal_debate,qwen-local,5,Assemblee Nationale,True,0.0,4,5,1,0
 2026-03-06T13:09:07,fact_check,qwen-local,0,Lincoln-Douglas Debate 1 (NPS),True,2.062,5,6,1,0
-2026-03-06T13:09:09,fact_check,qwen-local,2,Kremlin Discours 21/02/2022,True,2.047,5,6,1,0
+2026-03-06T13:09:09,fact_check,qwen-local,2,Source_3,True,2.047,5,6,1,0
 2026-03-06T13:09:12,fact_check,qwen-local,5,Assemblee Nationale,True,2.063,5,6,1,0
 2026-03-08T13:11:25,light,default,0,Lincoln-Douglas Debate 1 (NPS),True,0.797,3,3,0,0
 2026-03-08T13:11:25,light,default,1,Lincoln-Douglas Debate 2 (NPS),True,0.0,3,3,0,0
-2026-03-08T13:11:25,light,default,2,Kremlin Discours 21/02/2022,True,0.0,3,3,0,0
+2026-03-08T13:11:25,light,default,2,Source_3,True,0.0,3,3,0,0
 2026-03-08T13:11:25,standard,default,0,Lincoln-Douglas Debate 1 (NPS),True,0.016,5,5,0,0
 2026-03-08T13:11:25,standard,default,1,Lincoln-Douglas Debate 2 (NPS),True,0.0,5,5,0,0
-2026-03-08T13:11:25,standard,default,2,Kremlin Discours 21/02/2022,True,0.0,5,5,0,0
+2026-03-08T13:11:25,standard,default,2,Source_3,True,0.0,5,5,0,0
 2026-03-08T13:11:27,full,default,0,Lincoln-Douglas Debate 1 (NPS),True,2.047,7,8,1,0
 2026-03-08T13:11:29,full,default,1,Lincoln-Douglas Debate 2 (NPS),True,2.046,7,8,1,0
-2026-03-08T13:11:31,full,default,2,Kremlin Discours 21/02/2022,True,2.047,7,8,1,0
+2026-03-08T13:11:31,full,default,2,Source_3,True,2.047,7,8,1,0
 2026-03-08T13:12:00,quality_gated,default,0,Lincoln-Douglas Debate 1 (NPS),True,0.719,2,3,0,1
-2026-03-08T13:12:00,quality_gated,default,2,Kremlin Discours 21/02/2022,True,0.016,2,3,0,1
+2026-03-08T13:12:00,quality_gated,default,2,Source_3,True,0.016,2,3,0,1
 2026-03-08T13:12:02,democratech,default,0,Lincoln-Douglas Debate 1 (NPS),True,2.047,8,9,1,0
-2026-03-08T13:12:05,democratech,default,2,Kremlin Discours 21/02/2022,True,2.078,8,9,1,0
+2026-03-08T13:12:05,democratech,default,2,Source_3,True,2.078,8,9,1,0
 2026-03-08T13:12:07,fact_check,default,0,Lincoln-Douglas Debate 1 (NPS),True,2.031,5,6,1,0
-2026-03-08T13:12:09,fact_check,default,2,Kremlin Discours 21/02/2022,True,2.031,5,6,1,0
+2026-03-08T13:12:09,fact_check,default,2,Source_3,True,2.031,5,6,1,0
 2026-03-08T13:12:20,debate_tournament,default,0,Lincoln-Douglas Debate 1 (NPS),True,0.735,6,6,0,0
-2026-03-08T13:12:20,debate_tournament,default,2,Kremlin Discours 21/02/2022,True,0.0,6,6,0,0
+2026-03-08T13:12:20,debate_tournament,default,2,Source_3,True,0.0,6,6,0,0
 ```
 
 ### A.2 Aggregated Per-Model/Workflow Table

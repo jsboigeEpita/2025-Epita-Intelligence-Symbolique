@@ -19,7 +19,7 @@ Le projet est composé de plusieurs scripts:
 - Python 3.8 ou supérieur
 - Bibliothèques Python: asyncio, matplotlib, json, logging
 - Accès aux agents d'analyse argumentative (PM, Informel, PL, Extract)
-- Accès au texte du discours du Kremlin (ou autre texte complexe)
+- Accès au texte de la source Source_3 (ou autre texte complexe)
 
 ## Installation
 
@@ -56,7 +56,7 @@ python test_orchestration_complete.py
 ```
 
 Ce script:
-- Charge le texte du discours du Kremlin
+- Charge le texte de la source Source_3
 - Initialise tous les agents (PM, Informel, PL, Extract)
 - Exécute l'orchestration complète
 - Capture la trace de conversation
@@ -133,7 +133,7 @@ Ces visualisations sont sauvegardées dans le répertoire de sortie spécifié.
 
 ## Texte Utilisé
 
-Le test utilise par défaut le discours du Kremlin du 21/02/2022, qui présente plusieurs caractéristiques intéressantes pour l'analyse argumentative:
+Le test utilise par défaut le texte de la source Source_3, qui présente plusieurs caractéristiques intéressantes pour l'analyse argumentative:
 
 - Texte long et complexe (plus de 46000 caractères)
 - Arguments sophistiqués mêlant histoire, géopolitique et sécurité
@@ -169,7 +169,7 @@ Ces fichiers permettent d'évaluer l'impact des améliorations apportées à l'a
    - Vérifier que tous les modules requis sont installés
 
 2. **Erreur de chargement du texte**:
-   - Vérifier que le fichier cache du discours du Kremlin existe
+   - Vérifier que le fichier cache de la source Source_3 existe
    - Vérifier le chemin d'accès au fichier cache
 
 3. **Erreur d'initialisation des agents**:
