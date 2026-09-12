@@ -57,162 +57,27 @@ try:
     logger.info("Import relatif réussi.")
 except ImportError as e:
     logger.warning(f"Import relatif échoué: {e}")
-    try:
-        # Fallback pour les imports absolus
-        logger.info("Tentative d'import absolu...")
-        from argumentation_analysis.ui.config import (
-            ENCRYPTION_KEY,
-            CONFIG_FILE,
-            CONFIG_FILE_JSON,
-        )
-        from argumentation_analysis.ui.utils import load_from_cache, reconstruct_url
-        from argumentation_analysis.ui.extract_utils import (
-            load_source_text,
-            extract_text_with_markers,
-            find_similar_text,
-            load_extract_definitions_safely,
-            save_extract_definitions_safely,
-        )
-        from argumentation_analysis.core.llm_service import create_llm_service
+    # Fallback pour les imports absolus. Si les deux échouent, l'ImportError
+    # se propage : ce module n'a pas de substitut simulé (#2126 — l'ancien
+    # palier de remplacement lisait un JSON disparu depuis la disposition
+    # pré-#323 et simulait silencieusement tout le reste).
+    logger.info("Tentative d'import absolu...")
+    from argumentation_analysis.ui.config import (
+        ENCRYPTION_KEY,
+        CONFIG_FILE,
+        CONFIG_FILE_JSON,
+    )
+    from argumentation_analysis.ui.utils import load_from_cache, reconstruct_url
+    from argumentation_analysis.ui.extract_utils import (
+        load_source_text,
+        extract_text_with_markers,
+        find_similar_text,
+        load_extract_definitions_safely,
+        save_extract_definitions_safely,
+    )
+    from argumentation_analysis.core.llm_service import create_llm_service
 
-        logger.info("Import absolu réussi.")
-    except ImportError as e:
-        logger.error(f"Import absolu échoué: {e}")
-
-        # Définir des fonctions de remplacement simples pour les tests
-        logger.warning("Utilisation de fonctions de remplacement pour les tests...")
-
-        # Constantes de configuration
-        ENCRYPTION_KEY = "test_key"
-        CONFIG_FILE = "C:/dev/2025-Epita-Intelligence-Symbolique/argumentation_analysis/data/extract_sources.json.gz.enc"
-        CONFIG_FILE_JSON = "C:/dev/2025-Epita-Intelligence-Symbolique/argumentation_analysis/data/extract_sources.json"
-
-        def load_from_cache(url, encryption_key=None):
-            logger.info(f"Simulation de chargement depuis le cache pour {url}")
-            return None, f"Erreur simulée: Impossible de charger {url}"
-
-        def reconstruct_url(source_info):
-            schema = source_info.get("schema", "https:")
-            host_parts = source_info.get("host_parts", [])
-            path = source_info.get("path", "")
-            host = ".".join(host_parts) if host_parts else ""
-            return f"{schema}//{host}{path}"
-
-        def load_source_text(source_info):
-            """Charge le texte source d'une définition."""
-            logger.info(
-                f"Chargement du texte source pour {source_info.get('source_name', 'Source inconnue')}"
-            )
-
-            # Reconstruire l'URL
-            url = reconstruct_url(source_info)
-
-            # Simuler le chargement depuis le cache
-            source_text = f"Texte source simulé pour {source_info.get('source_name')}"
-            return source_text, url
-
-        def extract_text_with_markers(
-            source_text, start_marker, end_marker, template_start=None
-        ):
-            """Extrait le texte avec les marqueurs."""
-            logger.info(
-                f"Extraction de texte avec les marqueurs: '{start_marker}' et '{end_marker}'"
-            )
-
-            # Appliquer le template si présent
-            if template_start and "{0}" in template_start:
-                first_letter = template_start.replace("{0}", "")
-                if start_marker and not start_marker.startswith(first_letter):
-                    start_marker = first_letter + start_marker
-                    logger.info(
-                        f"Marqueur de début corrigé avec template: '{start_marker}'"
-                    )
-
-            # Vérifier si les marqueurs sont présents
-            start_found = start_marker in source_text
-            end_found = end_marker in source_text
-
-            if start_found and end_found:
-                start_pos = source_text.find(start_marker)
-                end_pos = source_text.find(end_marker, start_pos + len(start_marker))
-
-                if start_pos >= 0 and end_pos > start_pos:
-                    extracted = source_text[start_pos : end_pos + len(end_marker)]
-                    return extracted, "success", True, True
-
-            return "", "error", start_found, end_found
-
-        def find_similar_text(text, pattern, context_size=50, max_results=5):
-            logger.info(f"Recherche de texte similaire à '{pattern}'")
-            return []
-
-        def load_extract_definitions_safely(
-            config_file, encryption_key=None, fallback_file=None
-        ):
-            logger.info(f"Chargement des définitions d'extraits depuis {config_file}")
-            try:
-                with open(
-                    fallback_file or "extract_repair/docs/extract_sources_updated.json",
-                    "r",
-                    encoding="utf-8",
-                ) as f:
-                    extract_definitions = json.load(f)
-                return extract_definitions, None
-            except Exception as e:
-                error_msg = (
-                    f"Erreur lors du chargement des définitions d'extraits: {str(e)}"
-                )
-                logger.error(error_msg)
-                return [], error_msg
-
-        def save_extract_definitions_safely(
-            extract_definitions, config_file, encryption_key=None, fallback_file=None
-        ):
-            logger.info(f"Sauvegarde des définitions d'extraits dans {config_file}")
-            try:
-                with open(
-                    fallback_file or "extract_repair/docs/extract_sources_updated.json",
-                    "w",
-                    encoding="utf-8",
-                ) as f:
-                    json.dump(extract_definitions, f, indent=4, ensure_ascii=False)
-                return True, None
-            except Exception as e:
-                error_msg = (
-                    f"Erreur lors de la sauvegarde des définitions d'extraits: {str(e)}"
-                )
-                logger.error(error_msg)
-                return False, error_msg
-
-        def create_llm_service():
-            logger.info("Création d'un service LLM simulé")
-            return DummyLLMService()
-
-        class DummyLLMService:
-            """Service LLM simulé pour les tests."""
-
-            def __init__(self):
-                self.service_id = "dummy_llm_service"
-
-            async def invoke(self, prompt):
-                logger.info(
-                    f"Invocation du service LLM simulé avec prompt: {prompt[:50]}..."
-                )
-                response = {
-                    "valid": True,
-                    "coherence": 5,
-                    "relevance": 4,
-                    "integrity": 5,
-                    "comments": "Ceci est une réponse simulée pour les tests.",
-                }
-                return ChatMessageContent(
-                    role="assistant", content=json.dumps(response)
-                )
-
-            def instantiate_prompt_execution_settings(self):
-                """Méthode requise par Semantic Kernel."""
-                logger.info("Création des paramètres d'exécution de prompt simulés")
-                return {}
+    logger.info("Import absolu réussi.")
 
 
 from semantic_kernel.functions import KernelArguments

@@ -100,63 +100,6 @@ def verify_encrypted_file():
     return True
 
 
-def update_gitignore():
-    """
-    Met à jour le fichier .gitignore à la racine du projet pour s'assurer que
-    les fichiers de configuration sensibles et temporaires spécifiés sont ignorés
-    par Git.
-
-    :return: True si le fichier .gitignore a été trouvé et mis à jour (si nécessaire),
-             False si le fichier .gitignore n'a pas été trouvé.
-    :rtype: bool
-    """
-    logger.info("Mise à jour du fichier .gitignore...")
-
-    # Chemin vers le fichier .gitignore
-    gitignore_path = Path(__file__).parent.parent / ".gitignore"
-
-    # Vérifier que le fichier .gitignore existe
-    if not gitignore_path.exists():
-        logger.error(f"Le fichier .gitignore n'existe pas: {gitignore_path}")
-        return False
-
-    # Lire le contenu du fichier .gitignore
-    with open(gitignore_path, "r", encoding="utf-8") as f:
-        gitignore_content = f.read()
-
-    # Liste des entrées à ajouter au .gitignore
-    entries_to_add = [
-        "# Fichiers de configuration sensibles (ajoutés par cleanup_sensitive_files.py)",
-        "extract_repair/docs/extract_sources_updated.json",
-        "extract_repair/docs/extract_sources_*.json",  # Pour les fichiers temporaires
-    ]
-
-    # Vérifier si les entrées sont déjà présentes dans le .gitignore
-    entries_added = []
-    for entry in entries_to_add:
-        if entry.startswith("#"):  # Ignorer les commentaires
-            continue
-        if entry not in gitignore_content:
-            entries_added.append(entry)
-
-    # Si des entrées doivent être ajoutées, mettre à jour le fichier .gitignore
-    if entries_added:
-        with open(gitignore_path, "a", encoding="utf-8") as f:
-            f.write("\n\n" + "\n".join(entries_to_add) + "\n")
-
-        logger.info(
-            f"[OK] Fichier .gitignore mis à jour avec {len(entries_added)} nouvelles entrées:"
-        )
-        for entry in entries_added:
-            logger.info(f"   - {entry}")
-    else:
-        logger.info(
-            "[OK] Toutes les entrées nécessaires sont déjà présentes dans le fichier .gitignore."
-        )
-
-    return True
-
-
 def delete_sensitive_files():
     """
     Supprime les fichiers de configuration en clair et les fichiers du cache de texte.
@@ -172,10 +115,6 @@ def delete_sensitive_files():
     # Liste des fichiers sensibles à supprimer
     sensitive_files = [
         CONFIG_FILE_JSON,  # data/extract_sources.json
-        Path(__file__).parent
-        / "extract_repair"
-        / "docs"
-        / "extract_sources_updated.json",
     ]
 
     # Répertoire du cache de texte
@@ -227,13 +166,6 @@ def main():
     if not verify_encrypted_file():
         logger.error(
             "❌ Le fichier chiffré ne peut pas être déchiffré. Abandon du nettoyage."
-        )
-        sys.exit(1)
-
-    # Mettre à jour le fichier .gitignore
-    if not update_gitignore():
-        logger.error(
-            "❌ Impossible de mettre à jour le fichier .gitignore. Abandon du nettoyage."
         )
         sys.exit(1)
 

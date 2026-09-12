@@ -1,12 +1,12 @@
-# `utils/dev_tools/` — outillage de maintenance du dépôt (13 modules)
+# `utils/dev_tools/` — outillage de maintenance du dépôt (12 modules)
 
 ## Rôle et frontière
 
-13 modules (4 155 lignes) d'outillage développement : formatage, validation, coverage, encodage, environnement, refactoring, réparation d'extraits, reporting, vérification. **Pas de logique métier d'analyse** — ce sont les outils qui maintiennent le dépôt, consommés par les scripts de maintenance.
+12 modules (3 696 lignes) d'outillage développement : formatage, validation, coverage, encodage, environnement, refactoring, réparation d'extraits, reporting, vérification. **Pas de logique métier d'analyse** — ce sont les outils qui maintiennent le dépôt, consommés par les scripts de maintenance.
 
 ## Composants publics
 
-`code_formatting_utils` (177 l.), `code_validation` (393 l.), `coverage_utils` (267 l.), `encoding_utils` (322 l.), `env_checks` (528 l.), `format_utils` (305 l.), `import_testing_utils` (130 l.), `project_structure_utils` (93 l.), `refactoring_utils` (518 l.), `repair_utils` (379 l. — `run_extract_repair_pipeline` :229), `reporting_utils` (158 l.), `verification_utils` (448 l.), `visualization_utils` (459 l.). `__init__.py` (31 l.) importe les 13 — aucun export fantôme (sous-modules vérifiés existants).
+`code_formatting_utils` (177 l.), `code_validation` (393 l.), `coverage_utils` (267 l.), `encoding_utils` (322 l.), `env_checks` (528 l.), `format_utils` (305 l.), `import_testing_utils` (130 l.), `project_structure_utils` (93 l.), `refactoring_utils` (518 l.), `repair_utils` (379 l. — `run_extract_repair_pipeline` :229), `reporting_utils` (158 l.), `verification_utils` (448 l.). `__init__.py` importe les 12 — aucun export fantôme (sous-modules vérifiés existants).
 
 ## Points d'entrée valides
 
@@ -21,7 +21,7 @@ Uniquement les **CLI de maintenance** (pas de route API, pas de phase workflow) 
 
 ## Statut d'intégration
 
-**mixte** — 7 modules ont des consommateurs scripts mesurés (liste ci-dessus) ; 5 sont test-only (`env_checks`, `import_testing_utils`, `project_structure_utils`, `refactoring_utils`, `reporting_utils`) ; **`visualization_utils` est mort** (0 importeur production ET test — le hit `scripts/reporting/compare_rhetorical_agents_simple.py:38` importe l'autre `core.utils.visualization_utils`, module différent). Le tout est auto-importé en bloc par `utils/__init__.py:39`.
+**mixte** — 7 modules ont des consommateurs scripts mesurés (liste ci-dessus) ; 5 sont test-only (`env_checks`, `import_testing_utils`, `project_structure_utils`, `refactoring_utils`, `reporting_utils`). Le tout est auto-importé en bloc par `utils/__init__.py:39` (qui charge le sous-paquet `dev_tools`, chaque module étant importé par son propre `__init__.py`).
 
 ## Artefacts et lecteurs
 
@@ -41,6 +41,6 @@ Parent : [`../README.md`](../README.md) (utils). Frères documentés : [`../core
 
 ## Limites connues
 
-- `visualization_utils` (459 l.) sans aucun importeur — candidat résiduel (décision coordinateur) ;
-- l'import en bloc `utils/__init__.py:39` charge les 13 modules (dont le mort) pour tout consommateur de `utils` ;
+- `visualization_utils` retiré en #2126 (0 importeur plein dépôt ; copie vivante autonome dans `scripts/reporting/visualize_test_coverage.py`, qui n'importait rien du module) ;
+- l'import en bloc `utils/__init__.py:39` charge les 12 modules pour tout consommateur de `utils` ;
 - plusieurs modules n'ont jamais d'autre exécution que leurs tests (les 5 test-only).
