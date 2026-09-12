@@ -19,7 +19,7 @@ Ce document explique le système d'encryption révisé qui permet d'embarquer le
 
 Le processus complet se déroule en plusieurs étapes:
 
-1. **Création du fichier de cache de Source_3** - Déjà fait par l'utilisateur avec `create_kremlin_cache.py`.
+1. **Création des fichiers de cache** - Le cache des textes (sous `_temp/text_cache/`) s'initialise depuis le fichier encrypté avec `argumentation_analysis/agents/initialize_cache.py` (producteur vivant — l'ancien script de cache dédié à une seule source a été retiré, #2182).
 2. **Création du fichier encrypté complet** - Le script `create_complete_encrypted_config.py` charge la configuration des extraits depuis `utils/extract_repair/docs/extract_sources_updated.json`, récupère les fichiers de cache correspondants, et crée un fichier encrypté qui inclut à la fois la configuration et les sources.
 3. **Vérification du fichier encrypté** - Le script `load_complete_encrypted_config.py` charge le fichier encrypté complet et restaure les fichiers de cache pour vérifier que tout fonctionne correctement.
 4. **Nettoyage des fichiers non nécessaires** - Le script `cleanup_after_encryption.py` supprime les fichiers de cache et autres fichiers temporaires qui ne sont plus nécessaires.
