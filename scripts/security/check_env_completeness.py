@@ -52,6 +52,11 @@ def parse(path: Path, keep_commented: bool) -> dict[str, tuple[str, bool]]:
     L'etat commente n'est pas un detail de presentation : dans le canon il
     separe la ligne de base que tout siege doit porter de l'option qu'il peut
     ignorer. Les confondre fait crier l'outil sur des surcharges facultatives.
+
+    Doubles occurrences : une occurrence non commentee ne peut pas etre
+    degradee en option par une ligne de doc commentee, quel que soit l'ordre
+    (.env.example re-ecrit ses cles dans un bloc de commentaire) ; a statut
+    egal la derniere gagne, comme python-dotenv a la lecture.
     """
     out: dict[str, tuple[str, bool]] = {}
     for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -60,7 +65,12 @@ def parse(path: Path, keep_commented: bool) -> dict[str, tuple[str, bool]]:
             continue
         m = ASSIGN.match(line)
         if m:
-            out.setdefault(m.group(1), (unquote(m.group(2)), commented))
+            entry = (unquote(m.group(2)), commented)
+            prev = out.get(m.group(1))
+            # prev=None -> premiere occurrence ; sinon ecraser sauf si la ligne
+            # courante est commentee et l'existante ne l'est pas.
+            if prev is None or not (entry[1] and not prev[1]):
+                out[m.group(1)] = entry
     return out
 
 
@@ -73,6 +83,17 @@ def audit(
 ) -> tuple[list[str], list[str], int, list[str]]:
     """Rend (ecarts bloquants, notes optionnelles, taille inventaire, inventaire)."""
     canon = parse(canon_path, keep_commented=True)
+    if not any(not commented for _, commented in canon.values()):
+        # Le garde vit ICI, pas dans main() : audit() est la fonction qui
+        # certifie, et un importeur direct ne traverse pas le CLI. Un canon
+        # vide, tronque par une redirection cassee, ou aux entrees toutes
+        # commentees rendrait « aucun ecart » sans avoir rien compare --
+        # l'absence d'exigence n'est pas une conformite.
+        raise ValueError(
+            f"canon inutilisable: {canon_path} ne declare aucune cle requise "
+            "(vide, tronque, ou toutes entrees commentees) — un « complet » "
+            "ici ne mesurerait rien"
+        )
     env = parse(env_path, keep_commented=False)
 
     findings: list[str] = []
@@ -127,26 +148,14 @@ def main() -> int:
         print(f"canon introuvable: {args.canon}", file=sys.stderr)
         return 2
 
-    # Un canon qui ne declare aucune cle requise rend "complet" sans avoir rien
-    # compare : vide, tronque par une redirection cassee, ou toutes entrees
-    # commentees donnent le meme vert vacuous. Mesure a l'origine de ce garde :
-    # un `git show` mange par MSYS a cree un canon vide, et l'outil a valide un
-    # siege incomplet. L'absence d'exigence n'est pas une conformite.
-    required = [
-        k
-        for k, (_, commented) in parse(args.canon, keep_commented=True).items()
-        if not commented
-    ]
-    if not required:
-        print(
-            f"canon inutilisable: {args.canon} ne declare aucune cle requise "
-            "(vide, tronque, ou toutes les entrees commentees) — un « complet » "
-            "ici ne mesurerait rien",
-            file=sys.stderr,
-        )
+    try:
+        findings, optional, count, inventory = audit(args.env, args.canon)
+    except ValueError as exc:
+        # Le garde vit dans audit() — la couche qui certifie. Le CLI ne fait
+        # que traduire son refus en code de sortie : un importeur direct de
+        # audit() etait certifie par la meme fonction que le terminal.
+        print(str(exc), file=sys.stderr)
         return 2
-
-    findings, optional, count, inventory = audit(args.env, args.canon)
 
     if args.inventory:
         print(f"inventaire ({count} clés, valeurs jamais affichées):")

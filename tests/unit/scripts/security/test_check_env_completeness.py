@@ -140,10 +140,9 @@ def test_specimen_shapes(tmp_path, shape):
 
 
 def run_main(tmp_path, env_body, canon_body):
-    """Le garde du canon vacuous vit dans main(), pas dans audit().
-
-    Un test qui passerait par `verdicts` ne le traverserait jamais : il
-    mesurerait audit() et certifierait main(). D'ou l'argv.
+    """Traverse le CLI : le garde du canon vacuous vit dans audit(), mais c'est
+    main() qui traduit son ValueError en exit 2 -- c'est cette traduction que
+    ce chemin mesure (le garde lui-meme est teste en direct plus bas).
     """
     env = write(tmp_path, ".env", env_body)
     ref = write(tmp_path, "canon", canon_body)
@@ -187,3 +186,57 @@ def test_vacuous_canon_is_refused_not_green(tmp_path, capsys, canon, forme):
     out = capsys.readouterr()
     assert "canon inutilisable" in out.err
     assert "complet" not in out.out
+
+
+def test_audit_itself_refuses_a_vacuous_canon(tmp_path):
+    """Le garde doit vivre dans audit(), pas seulement dans main().
+
+    audit() est la fonction qui CERTIFIE : un importeur direct (un futur gate,
+    un helper de test) ne traverse pas le CLI. Avant le deplacement, cet appel
+    rendait ([], ...) -- une certification vacuelle sans meme un signal.
+    """
+    env = write(tmp_path, ".env", LEGIT_ENV)
+    ref = write(tmp_path, "canon", COMMENTS_ONLY)
+    with pytest.raises(ValueError, match="canon inutilisable"):
+        mod.audit(env, ref)
+
+
+def test_commented_doc_line_cannot_hide_a_required_entry(tmp_path):
+    """Le canon re-ecrit ses cles dans un bloc de commentaire (.env.example,
+    lignes 127-129). Avec premiere-occurrence-gagne, une ligne de doc placee
+    AVANT la ligne requise transformait la cle en option : ABSENTE sans ecart
+    bloquant, invisible pour l'outil comme pour la flotte.
+    """
+    canon = (
+        "# bloc de doc place en tete :\n"
+        '# REQUIRED_KEY="sk-doc-example"\n'
+        'REQUIRED_KEY="sk-..."\n'
+    )
+    findings, optional, _, _ = mod.audit(
+        write(tmp_path, ".env", 'GLOBAL_LLM_SERVICE="OpenAI"\n'),
+        write(tmp_path, ".env.example", canon),
+    )
+    assert any(v == "ABSENTE   REQUIRED_KEY" for v in findings), findings
+    assert not any("REQUIRED_KEY" in v for v in optional), optional
+
+
+def test_governing_canon_value_is_the_uncommented_occurrence(tmp_path):
+    """La valeur de canon qui gouverne le verdict SPECIMEN est celle de
+    l'occurrence non commentee -- pas l'exemple de la ligne de doc commentee.
+    """
+    canon = '# K="doc-shape"\nK="sk-..."\n'
+    out = verdicts(tmp_path, 'K="doc-shape"\n', canon=canon)
+    assert not any(v.startswith("SPECIMEN  K") for v in out), out
+    out = verdicts(tmp_path, 'K="sk-..."\n', canon=canon)
+    assert any(v.startswith("SPECIMEN  K") for v in out), out
+
+
+def test_env_duplicate_last_occurrence_wins_like_python_dotenv(tmp_path):
+    """python-dotenv charge la DERNIERE occurrence ; l'outil lisait la
+    premiere. Un .env portant KEY=vraie puis KEY= (reliquat de template,
+    classique d'une reparation par ajout) rendait « complet » exit 0 pendant
+    que la runtime portait une cle vide -- le faux vert exact que l'outil
+    existe pour empecher.
+    """
+    out = verdicts(tmp_path, 'REQUIRED_KEY="sk-vraie"\nREQUIRED_KEY=\n')
+    assert any(v == "VIDE      REQUIRED_KEY" for v in out), out
