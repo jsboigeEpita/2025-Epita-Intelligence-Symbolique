@@ -31,23 +31,6 @@ foreach ($file in $filesToCopy) {
     }
 }
 
-# Vérifier si le fichier de cache de Source_3 existe
-$source3CachePath = Join-Path -Path $parentDir -ChildPath "text_cache\4cf2d4853745719f6504a54610237738ad016de4f64176c3e8f5218f8fd2c01b.txt"
-if (-not (Test-Path $source3CachePath)) {
-    Write-Host "\n--- Création du fichier de cache de Source_3 ---\n"
-    $createSource3CachePath = Join-Path -Path $currentDir -ChildPath "create_kremlin_cache.py"
-
-    # Exécuter le script depuis le répertoire parent
-    Push-Location $parentDir
-    try {
-        python $createSource3CachePath
-    } catch {
-        Write-Host "❌ Erreur lors de l'exécution du script 'create_kremlin_cache.py': $_"
-    }
-    Pop-Location
-} else {
-    Write-Host "\n✅ Le fichier de cache de Source_3 existe déjà: '$source3CachePath'"
-}
 
 # Demander à l'utilisateur s'il souhaite exécuter le script principal
 $runScript = Read-Host "\nSouhaitez-vous exécuter le script principal d'encryption? (o/n)"
