@@ -1,6 +1,8 @@
 # tests/unit/argumentation_analysis/core/communication/test_message.py
 """Tests for Message data structures and specialized message subclasses."""
 
+import json
+
 import pytest
 from datetime import datetime
 
@@ -384,6 +386,19 @@ class TestInformationMessage:
             recipient="tactical_agent",
         )
         assert msg.recipient == "tactical_agent"
+
+    def test_payload_key_is_serializable(self):
+        # #2104: the payload key must be the string "data" — a Path key makes
+        # to_dict() unserializable and content["data"] a KeyError.
+        msg = InformationMessage(
+            sender="op",
+            sender_level=AgentLevel.OPERATIONAL,
+            info_type="analysis_result",
+            data={"score": 0.9},
+        )
+        assert msg.content["data"] == {"score": 0.9}
+        round_trip = json.loads(json.dumps(msg.to_dict()))
+        assert round_trip["content"]["data"] == {"score": 0.9}
 
 
 # ── RequestMessage ──
