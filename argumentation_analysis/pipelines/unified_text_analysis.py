@@ -30,8 +30,6 @@ Données d'entrée:
           les outils d'analyse.
         -   `_perform_formal_analysis`: Convertit le texte en un ensemble de
           croyances logiques et vérifie la cohérence (nécessite la JVM).
-        -   `_perform_unified_analysis`: Utilise un `SynthesisAgent` pour
-          créer un rapport combinant les différentes facettes de l'analyse.
         -   `_perform_orchestration_analysis`: Délègue l'analyse à un
           orchestrateur plus complexe pour une interaction multi-agents.
     3.  **Génération de recommandations**: Synthétise les résultats pour
@@ -43,7 +41,6 @@ Artefacts produits:
         - `metadata`: Informations sur l'exécution de l'analyse.
         - `informal_analysis`: Résultats de la détection de sophismes.
         - `formal_analysis`: Résultats de l'analyse logique (cohérence, etc.).
-        - `unified_analysis`: Rapport de synthèse de l'agent dédié.
         - `orchestration_analysis`: Résultats de l'orchestrateur avancé.
         - `recommendations`: Liste de conseils basés sur l'analyse.
         - `conversation_log`: Log des interactions entre agents.
@@ -83,7 +80,6 @@ from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFac
 
 from argumentation_analysis.core.bootstrap import ProjectContext
 from argumentation_analysis.plugins.analysis_tools.plugin import AnalysisToolsPlugin
-from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 
 logger = logging.getLogger("UnifiedTextAnalysis")
 
@@ -105,7 +101,7 @@ class UnifiedAnalysisConfig:
         Initialise la configuration unifiée.
 
         Args:
-            analysis_modes: Modes d'analyse ["informal", "formal", "unified"]
+            analysis_modes: Modes d'analyse ["informal", "formal"]
             orchestration_mode: Mode orchestrateur ["pipeline", "real", "conversation"]
             logic_type: Type de logique ["fol", "modal", "propositional"]
             use_mocks: Utilisation de mocks pour les tests
@@ -121,8 +117,10 @@ class UnifiedAnalysisConfig:
         self.output_format = output_format
         self.enable_conversation_logging = enable_conversation_logging
 
-        # Validation des modes
-        valid_modes = {"informal", "formal", "unified"}
+        # Validation des modes. Le mode "unified" (synthèse via l'agent
+        # dédié) est retiré #2140 : l'agent était inerte et le mode ne
+        # promettait plus rien de réel.
+        valid_modes = {"informal", "formal"}
         self.analysis_modes = [
             mode for mode in self.analysis_modes if mode in valid_modes
         ]
@@ -158,10 +156,7 @@ class UnifiedTextAnalysisPipeline:
             logger.info("[INIT] Logger conversationnel active")
 
         # 1. Initialisation JVM si nécessaire
-        if (
-            "formal" in self.config.analysis_modes
-            or "unified" in self.config.analysis_modes
-        ):
+        if "formal" in self.config.analysis_modes:
             logger.info("[JVM] Initialisation de la JVM pour analyse formelle...")
             try:
                 self.jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
@@ -251,19 +246,6 @@ class UnifiedTextAnalysisPipeline:
             )
         }
 
-        # SynthesisAgent pour analyse unifiée
-        if self.llm_service and "unified" in self.config.analysis_modes:
-            kernel = sk.Kernel()
-            kernel.add_service(self.llm_service)
-            self.analysis_tools["synthesis_agent"] = SynthesisAgent(
-                kernel=kernel,
-                agent_name="UnifiedPipeline_SynthesisAgent",
-                enable_advanced_features=self.config.use_advanced_tools,
-            )
-            self.analysis_tools["synthesis_agent"].setup_agent_components(
-                self.llm_service.service_id
-            )
-
         logger.info("[TOOLS] Outils d'analyse réels initialisés avec succès")
 
     async def analyze_text_unified(
@@ -323,11 +305,6 @@ class UnifiedTextAnalysisPipeline:
             if "formal" in self.config.analysis_modes:
                 logger.info("[ANALYZE] Execution analyse formelle...")
                 results["formal_analysis"] = await self._perform_formal_analysis(text)
-
-            # Analyse unifiée (combinaison sophistiquée)
-            if "unified" in self.config.analysis_modes:
-                logger.info("[ANALYZE] Execution analyse unifiee...")
-                results["unified_analysis"] = await self._perform_unified_analysis(text)
 
             # Orchestration si activée
             if self.orchestrator and self.config.orchestration_mode != "pipeline":
@@ -495,50 +472,6 @@ class UnifiedTextAnalysisPipeline:
             formal_results["reason"] = str(e)
 
         return formal_results
-
-    async def _perform_unified_analysis(self, text: str) -> Dict[str, Any]:
-        """Effectue l'analyse unifiée avec SynthesisAgent."""
-        unified_results = {
-            "status": "Unknown",
-            "synthesis_report": "",
-            "combined_insights": [],
-            "meta_analysis": {},
-        }
-
-        synthesis_agent = self.analysis_tools.get("synthesis_agent")
-        if not synthesis_agent:
-            unified_results["status"] = "Skipped"
-            unified_results["reason"] = "SynthesisAgent non disponible"
-            return unified_results
-
-        try:
-            # Analyse unifiée avec le SynthesisAgent
-            synthesis_result = await synthesis_agent.synthesize_analysis(text=text)
-
-            if synthesis_result:
-                unified_results.update(
-                    {
-                        "status": "Success",
-                        "synthesis_report": synthesis_result.executive_summary,
-                        "combined_insights": synthesis_result.recommendations,
-                        "meta_analysis": {
-                            "overall_validity": synthesis_result.overall_validity,
-                            "confidence_level": synthesis_result.confidence_level,
-                        },
-                    }
-                )
-            else:
-                unified_results["status"] = "Failed"
-                unified_results["reason"] = (
-                    "L'analyse de synthèse n'a retourné aucun résultat."
-                )
-
-        except Exception as e:
-            logger.error(f"Erreur analyse unifiée: {e}")
-            unified_results["status"] = "Error"
-            unified_results["reason"] = str(e)
-
-        return unified_results
 
     async def _perform_orchestration_analysis(self, text: str) -> Dict[str, Any]:
         """Effectue l'analyse orchestrée."""
@@ -1077,7 +1010,10 @@ def create_unified_config_from_legacy(
     Crée une configuration unifiée depuis les paramètres legacy.
 
     Args:
-        mode: Mode d'analyse principal ("formal", "informal", "unified")
+        mode: Mode d'analyse principal ("formal", "informal", "unified",
+            "all") — les deux dernières valeurs legacy demandaient la
+            synthèse « unifiée » de l'agent dédié, retirée #2140 : elles
+            se replient sur les deux analyses réelles.
         use_mocks: Utilisation des mocks pour les tests
         orchestration_mode: Mode d'orchestrateur
         **kwargs: Paramètres additionnels
@@ -1089,8 +1025,8 @@ def create_unified_config_from_legacy(
     mode_mapping = {
         "formal": ["formal"],
         "informal": ["informal"],
-        "unified": ["informal", "formal", "unified"],
-        "all": ["informal", "formal", "unified"],
+        "unified": ["informal", "formal"],
+        "all": ["informal", "formal"],
     }
 
     analysis_modes = mode_mapping.get(mode, ["informal"])

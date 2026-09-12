@@ -113,18 +113,6 @@ class TestResultAdaptation:
         assert result["logical_score"] == 0.8
         assert result["consistency"] == 1.0
 
-    def test_adapt_synthesis_result(self, orch):
-        result = orch._adapt_real_result(
-            "synthesis",
-            {
-                "confidence_level": 0.65,
-                "overall_validity": True,
-                "executive_summary": "Good argument",
-            },
-        )
-        assert result["unified_score"] == 0.65
-        assert result["recommendation"] == "Good argument"
-
     def test_adapt_unknown_agent_returns_raw(self, orch):
         result = orch._adapt_real_result("unknown", {"key": "value"})
         assert result == {"key": "value"}
@@ -132,8 +120,8 @@ class TestResultAdaptation:
     def test_adapt_non_dict_result(self, orch):
         mock_result = MagicMock()
         mock_result.model_dump.return_value = {"field": 42}
-        result = orch._adapt_real_result("synthesis", mock_result)
-        assert result["unified_score"] == 0.5  # default
+        result = orch._adapt_real_result("unknown", mock_result)
+        assert result == {"field": 42}
 
     def test_adapt_string_result(self, orch):
         result = orch._adapt_real_result("informal", "not a dict")
@@ -163,26 +151,12 @@ class TestRealModeExecution:
         return agent
 
     @pytest.fixture
-    def mock_synthesis(self):
-        agent = AsyncMock()
-        agent.name = "SynthesisAgent"
-        report = MagicMock()
-        report.model_dump.return_value = {
-            "confidence_level": 0.7,
-            "overall_validity": True,
-            "executive_summary": "Test summary",
-        }
-        agent.synthesize_analysis = AsyncMock(return_value=report)
-        return agent
-
-    @pytest.fixture
-    def orch_real(self, mock_informal, mock_synthesis):
+    def orch_real(self, mock_informal):
         """Orchestrator in forced real mode with mocked agents."""
         orch = ConversationOrchestrator(mode="demo")
         orch.mode = "real"
         orch._real_agents = {
             "informal": mock_informal,
-            "synthesis": mock_synthesis,
         }
         return orch
 
@@ -194,12 +168,9 @@ class TestRealModeExecution:
         assert orch_real.state.agents_active >= 1
 
     @pytest.mark.asyncio
-    async def test_run_orchestration_async_calls_agents(
-        self, orch_real, mock_informal, mock_synthesis
-    ):
+    async def test_run_orchestration_async_calls_agents(self, orch_real, mock_informal):
         await orch_real.run_orchestration_async("Test text.")
         mock_informal.perform_complete_analysis.assert_called_once_with("Test text.")
-        mock_synthesis.synthesize_analysis.assert_called_once_with("Test text.")
 
     @pytest.mark.asyncio
     async def test_run_orchestration_async_state_updates(self, orch_real):
@@ -301,16 +272,6 @@ class TestInvokeRealAgent:
         agent.analyze_text = AsyncMock(return_value={"fallacies": []})
         result = await orch._invoke_real_agent("informal", agent, "text")
         assert result == {"fallacies": []}
-
-    @pytest.mark.asyncio
-    async def test_invoke_synthesis(self):
-        orch = ConversationOrchestrator(mode="demo")
-        report = MagicMock()
-        report.model_dump.return_value = {"confidence_level": 0.8}
-        agent = AsyncMock()
-        agent.synthesize_analysis = AsyncMock(return_value=report)
-        result = await orch._invoke_real_agent("synthesis", agent, "text")
-        assert result == {"confidence_level": 0.8}
 
     @pytest.mark.asyncio
     async def test_invoke_unknown_raises(self):

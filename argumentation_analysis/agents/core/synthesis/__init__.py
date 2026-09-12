@@ -1,23 +1,17 @@
+"""Synthesis package.
+
+The synthesis surface is ``DeepSynthesisAgent``: the 9-section
+template-driven, state-grounded report (FB-18, Tracks DD/GG/NN). The
+former eponymous ``SynthesisAgent`` was removed (#2140): its two agent
+fabriques could never succeed in production (no writer ever populated
+their caches) and its ``except`` blocks wrote the exception text into
+result fields — a failure traveling as data (#1019).
 """
-Module de synthèse unifiée pour l'agent de synthèse.
 
-Ce module implémente l'Agent de Synthèse Unifié selon l'architecture progressive
-définie dans docs/synthesis_agent_architecture.md. Il unifie les analyses formelles
-et informelles en une synthèse cohérente.
-
-Phase 1: SynthesisAgent Core - Coordination basique des agents existants
-"""
-
-from .synthesis_agent import SynthesisAgent
-from .data_models import LogicAnalysisResult, InformalAnalysisResult, UnifiedReport
 from .deep_synthesis_agent import DeepSynthesisAgent
 from .deep_synthesis_models import DeepSynthesisReport
 
 __all__ = [
-    "SynthesisAgent",
-    "LogicAnalysisResult",
-    "InformalAnalysisResult",
-    "UnifiedReport",
     "DeepSynthesisAgent",
     "DeepSynthesisReport",
 ]

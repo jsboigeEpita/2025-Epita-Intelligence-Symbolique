@@ -868,8 +868,10 @@ class TestUnifiedAnalysisConfig:
         assert c.orchestration_mode == "pipeline"
 
     def test_custom_modes(self):
+        # #2140: le mode "unified" (synthèse via l'agent dédié, inerte) est
+        # retiré — il est filtré comme tout mode inconnu.
         c = UnifiedAnalysisConfig(analysis_modes=["unified", "formal"])
-        assert "unified" in c.analysis_modes
+        assert c.analysis_modes == ["formal"]
 
     def test_invalid_modes_filtered(self):
         c = UnifiedAnalysisConfig(analysis_modes=["bogus", "informal"])
@@ -906,11 +908,15 @@ class TestCreateConfigFromLegacy:
         ]
 
     def test_unified(self):
+        # #2140: "unified" legacy se replie sur les deux analyses réelles.
         c = create_unified_config_from_legacy(mode="unified")
-        assert len(c.analysis_modes) == 3
+        assert c.analysis_modes == ["informal", "formal"]
 
     def test_all(self):
-        assert len(create_unified_config_from_legacy(mode="all").analysis_modes) == 3
+        assert create_unified_config_from_legacy(mode="all").analysis_modes == [
+            "informal",
+            "formal",
+        ]
 
     def test_unknown(self):
         assert create_unified_config_from_legacy(mode="xyz").analysis_modes == [
@@ -1049,39 +1055,6 @@ class TestUnifiedTextAnalysisPipeline:
         p.jvm_ready = True
         p.llm_service = None
         assert (await p._perform_formal_analysis("t"))["status"] == "Skipped"
-
-    async def test_unified_no_agent(self):
-        p = self._make()
-        p.analysis_tools = {}
-        assert (await p._perform_unified_analysis("t"))["status"] == "Skipped"
-
-    async def test_unified_with_agent(self):
-        p = self._make()
-        ma = AsyncMock()
-        mr = MagicMock(
-            executive_summary="S",
-            recommendations=["r"],
-            overall_validity=0.8,
-            confidence_level=0.9,
-        )
-        ma.synthesize_analysis.return_value = mr
-        p.analysis_tools = {"synthesis_agent": ma}
-        r = await p._perform_unified_analysis("t")
-        assert r["status"] == "Success" and r["synthesis_report"] == "S"
-
-    async def test_unified_returns_none(self):
-        p = self._make()
-        ma = AsyncMock()
-        ma.synthesize_analysis.return_value = None
-        p.analysis_tools = {"synthesis_agent": ma}
-        assert (await p._perform_unified_analysis("t"))["status"] == "Failed"
-
-    async def test_unified_raises(self):
-        p = self._make()
-        ma = AsyncMock()
-        ma.synthesize_analysis.side_effect = RuntimeError("E")
-        p.analysis_tools = {"synthesis_agent": ma}
-        assert (await p._perform_unified_analysis("t"))["status"] == "Error"
 
     async def test_orch_no_orchestrator(self):
         p = self._make()
