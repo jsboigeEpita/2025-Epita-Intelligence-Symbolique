@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, List, Optional, Type, Union
+from typing import Any, Iterable, List, Mapping, Optional, Type, Union
 from semantic_kernel import Kernel
 from semantic_kernel.functions import KernelFunction
 from semantic_kernel.agents import Agent, ChatCompletionAgent
@@ -44,10 +44,19 @@ _factory_logger = logging.getLogger("AgentFactory")
 # access to tools outside their expertise, improving tool-call accuracy.
 # ---------------------------------------------------------------------------
 
+# `toulmin` is deliberately absent from every speciality (#2145). Its only
+# @kernel_function raises NotImplementedError, so mounting it offers a live
+# agent a tool that cannot do anything but raise — and waste a turn — while the
+# prompt of `agents/tools/analysis/new/semantic_argument_analyzer.py` goes as
+# far as instructing the LLM to call it. The plugin, its registry entry, its
+# raise-pinning test and its benchmark case all stay: what was withdrawn is a
+# *promise*, not a file. `test_toulmin_mount_follows_its_body_2145` couples the
+# two, so implementing the body turns the guard red and forces the re-mount
+# decision instead of leaving a comment to rot.
 AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],
-    "informal_fallacy": ["french_fallacy", "fallacy_workflow", "toulmin"],
-    "extract": ["toulmin", "text_to_kb"],
+    "informal_fallacy": ["french_fallacy", "fallacy_workflow"],
+    "extract": ["text_to_kb"],
     "formal_logic": [
         "tweety_logic",
         "nl_to_logic",
@@ -164,6 +173,81 @@ _PLUGIN_REGISTRY = {
 }
 
 
+def _plugin_function_names(plugin: Any) -> list[str]:
+    """The @kernel_function names a plugin instance exposes, as SK sees them.
+
+    Read through a throwaway kernel rather than by introspecting decorators:
+    SK is the authority on what an agent will actually be offered, so ask it.
+
+    A plugin SK refuses to register exposes nothing *enumerable*, and said so
+    out loud — a detector that answers "no functions" when it could not read
+    is indistinguishable from one that measured an unambiguous plugin, which
+    is the failure mode this whole file is about. It must never raise either:
+    a diagnostic may not break the mount it observes.
+    """
+    probe = Kernel()
+    try:
+        probe.add_plugin(plugin, plugin_name="_collision_probe")
+    except Exception as e:
+        _factory_logger.warning(
+            "Could not enumerate the functions of %s (%s) — any collision it "
+            "has goes unreported for this mount",
+            type(plugin).__name__,
+            e,
+        )
+        return []
+    return sorted(probe.plugins["_collision_probe"].functions.keys())
+
+
+def _function_collisions(
+    owned: Mapping[str, Iterable[str]],
+) -> list[tuple[str, list[str]]]:
+    """Homonym function names among a mapping of plugin name → its functions.
+
+    Pure on purpose: the guard enumerates the collision surface through this
+    rather than by reading log lines.
+    """
+    owners: dict[str, list[str]] = {}
+    for plugin_name, fn_names in owned.items():
+        for fn_name in fn_names:
+            owners.setdefault(fn_name, []).append(plugin_name)
+    return [
+        (fn_name, sorted(names))
+        for fn_name, names in sorted(owners.items())
+        if len(names) > 1
+    ]
+
+
+def _report_function_collisions(
+    agent_speciality: str, mounted: list[tuple[str, Any]]
+) -> list[tuple[str, list[str]]]:
+    """Report homonym @kernel_function names among the plugins an agent gets.
+
+    A collision is not an error — SK addresses a function as
+    ``<plugin>-<function>``, so both survive — it is an *ambiguity*: the agent
+    is offered two tools with the same leaf name and nothing marks the
+    canonical one. The four pairs in this package (#2145) are the measured
+    case; the defect was that nothing said so out loud.
+
+    Returns the collisions found, so a guard can enumerate them instead of
+    trusting a log line nobody reads.
+    """
+    collisions = _function_collisions(
+        {plugin_name: _plugin_function_names(plugin) for plugin_name, plugin in mounted}
+    )
+    for fn_name, names in collisions:
+        _factory_logger.warning(
+            "Homonymous @kernel_function '%s' for speciality '%s': mounted by %s "
+            "— the agent is offered %d tools under the same name and nothing "
+            "marks the canonical one (#2145)",
+            fn_name,
+            agent_speciality,
+            names,
+            len(names),
+        )
+    return collisions
+
+
 def get_plugin_instances(
     agent_speciality: str,
     state: Any = None,
@@ -189,13 +273,16 @@ def get_plugin_instances(
     Returns:
         List of plugin instances (state plugin first if state provided).
     """
-    instances = []
+    instances: list[Any] = []
+    mounted: list[tuple[str, Any]] = []
 
     # State plugin: phase-scoped class or full StateManagerPlugin
     if state is not None:
         try:
             if state_plugin_class is not None:
-                instances.append(state_plugin_class(state=state))
+                instance = state_plugin_class(state=state)
+                instances.append(instance)
+                mounted.append(("state_manager", instance))
                 _factory_logger.debug(
                     "Using phase-scoped state plugin: %s", state_plugin_class.__name__
                 )
@@ -204,15 +291,28 @@ def get_plugin_instances(
                     "argumentation_analysis.core.state_manager_plugin"
                 )
                 plugin_cls = getattr(mod, "StateManagerPlugin")
-                instances.append(plugin_cls(state=state))
+                instance = plugin_cls(state=state)
+                instances.append(instance)
+                mounted.append(("state_manager", instance))
         except Exception as e:
-            _factory_logger.debug("State plugin not instantiated: %s", e)
+            _factory_logger.warning(
+                "State plugin not instantiated for '%s': %s — the agent runs "
+                "without the shared communication medium",
+                agent_speciality,
+                e,
+            )
 
     # Load speciality plugins
     plugin_names = AGENT_SPECIALITY_MAP.get(agent_speciality, [])
     for plugin_name in plugin_names:
         entry = _PLUGIN_REGISTRY.get(plugin_name)
         if entry is None:
+            _factory_logger.warning(
+                "Unknown plugin '%s' declared for speciality '%s' — no registry "
+                "entry, so it is silently absent from the agent",
+                plugin_name,
+                agent_speciality,
+            )
             continue
         module_path, class_name = entry
         try:
@@ -221,24 +321,31 @@ def get_plugin_instances(
             # Complex plugins need kernel + llm_service (e.g. FallacyWorkflowPlugin)
             if plugin_name == "fallacy_workflow":
                 if kernel is not None and llm_service is not None:
-                    instances.append(
-                        plugin_cls(master_kernel=kernel, llm_service=llm_service)
-                    )
+                    instance = plugin_cls(master_kernel=kernel, llm_service=llm_service)
+                    instances.append(instance)
+                    mounted.append((plugin_name, instance))
                 else:
-                    _factory_logger.debug(
-                        "Skipping '%s': requires kernel and llm_service", plugin_name
+                    _factory_logger.warning(
+                        "Plugin '%s' not given to '%s': requires kernel and "
+                        "llm_service — the agent is degraded",
+                        plugin_name,
+                        agent_speciality,
                     )
                     continue
             else:
-                instances.append(plugin_cls())
+                instance = plugin_cls()
+                instances.append(instance)
+                mounted.append((plugin_name, instance))
         except Exception as e:
-            _factory_logger.debug(
-                "Plugin '%s' not instantiated for '%s': %s",
+            _factory_logger.warning(
+                "Plugin '%s' not instantiated for '%s': %s — the agent runs "
+                "without it",
                 plugin_name,
                 agent_speciality,
                 e,
             )
 
+    _report_function_collisions(agent_speciality, mounted)
     return instances
 
 
@@ -263,7 +370,8 @@ def load_plugins_for_agent(
     Returns:
         List of loaded plugin names.
     """
-    loaded = []
+    loaded: list[str] = []
+    mounted: list[tuple[str, Any]] = []
 
     # Always load StateManager if state is available
     if state is not None:
@@ -272,10 +380,17 @@ def load_plugins_for_agent(
                 "argumentation_analysis.core.state_manager_plugin"
             )
             plugin_cls = getattr(mod, "StateManagerPlugin")
-            kernel.add_plugin(plugin_cls(state=state), plugin_name="state_manager")
+            instance = plugin_cls(state=state)
+            kernel.add_plugin(instance, plugin_name="state_manager")
             loaded.append("state_manager")
+            mounted.append(("state_manager", instance))
         except Exception as e:
-            _factory_logger.debug("StateManagerPlugin not loaded: %s", e)
+            _factory_logger.warning(
+                "StateManagerPlugin not loaded for '%s': %s — the agent runs "
+                "without the shared communication medium",
+                agent_speciality,
+                e,
+            )
 
     # Load speciality plugins
     plugin_names = AGENT_SPECIALITY_MAP.get(agent_speciality, [])
@@ -293,19 +408,27 @@ def load_plugins_for_agent(
                 if llm_service is not None:
                     instance = plugin_cls(master_kernel=kernel, llm_service=llm_service)
                 else:
-                    _factory_logger.debug(
-                        "Skipping '%s': requires llm_service", plugin_name
+                    _factory_logger.warning(
+                        "Plugin '%s' not loaded for '%s': requires llm_service — "
+                        "the agent is degraded",
+                        plugin_name,
+                        agent_speciality,
                     )
                     continue
             else:
                 instance = plugin_cls()
             kernel.add_plugin(instance, plugin_name=plugin_name)
             loaded.append(plugin_name)
+            mounted.append((plugin_name, instance))
         except Exception as e:
-            _factory_logger.debug(
-                "Plugin '%s' not loaded for '%s': %s", plugin_name, agent_speciality, e
+            _factory_logger.warning(
+                "Plugin '%s' not loaded for '%s': %s — the agent runs without it",
+                plugin_name,
+                agent_speciality,
+                e,
             )
 
+    _report_function_collisions(agent_speciality, mounted)
     _factory_logger.info("Plugins for '%s': %s", agent_speciality, loaded or ["(none)"])
     return loaded
 
