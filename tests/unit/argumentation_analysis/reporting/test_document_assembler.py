@@ -142,6 +142,12 @@ class TestMarkdownRendering:
     def test_default_title(self, template, metadata):
         result = template.render({}, metadata)
         assert "RAPPORT D'ANALYSE" in result
+        # Le composant source est repris en majuscules dans le titre par défaut.
+        assert "ORCHESTRATOR" in result
+
+    def test_empty_summary_shows_na(self, template, metadata):
+        result = template.render({"summary": {}}, metadata)
+        assert "N/A" in result
 
     def test_metadata_section(self, template, metadata):
         result = template.render({}, metadata)
@@ -341,6 +347,11 @@ class TestConsoleRendering:
         # Only first 3 shown, rest summarized
         assert "et 2 autres" in result
 
+    def test_empty_fallacies_count_zero(self, template, metadata):
+        data = {"informal_analysis": {"fallacies": []}}
+        result = template.render(data, metadata)
+        assert "[FALLACIES] Sophismes détectés: 0" in result
+
     def test_performance(self, template, metadata):
         data = {
             "performance_metrics": {
@@ -386,6 +397,18 @@ class TestJsonRendering:
         result = template.render(data, metadata)
         assert "Élevé" in result
 
+    def test_preserves_all_data(self, template, metadata):
+        data = {
+            "title": "Custom Title",
+            "informal_analysis": {"fallacies": [{"type": "Ad Hominem"}]},
+            "performance_metrics": {"total_execution_time_ms": 2345},
+        }
+        result = template.render(data, metadata)
+        parsed = json.loads(result)
+        assert parsed["title"] == "Custom Title"
+        assert "informal_analysis" in parsed
+        assert "performance_metrics" in parsed
+
 
 # ── HTML Rendering ──
 
@@ -415,6 +438,11 @@ class TestHtmlRendering:
         result = template.render({}, metadata)
         assert "pipeline" in result
         assert "LLM" in result
+
+    def test_component_badge(self, template, metadata):
+        result = template.render({}, metadata)
+        assert "component-badge" in result
+        assert "pipeline" in result
 
     def test_metadata_section_html(self, template, metadata):
         data = {"metadata": {"source_description": "A test source"}}

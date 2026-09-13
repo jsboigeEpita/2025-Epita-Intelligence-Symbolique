@@ -48,15 +48,14 @@ déclare un `__all__` de 15 noms. **Il n'existe aucun README.md à la racine du 
 (`ls argumentation_analysis/reporting/*.md` → aucun fichier) : l'assemblage n'est
 documenté nulle part au niveau parent.
 
-Les 16 modules et leur statut mesuré (sites d'appel production externes / internes au
+Les 15 modules et leur statut mesuré (sites d'appel production externes / internes au
 paquet / fichiers de test) :
 
 | Module | Lignes | Statut mesuré | Ancrage |
 |---|---|---|---|
 | `__init__.py` | 0 | **vide** — aucune surface | 0 octet |
-| `models.py` | 38 | **vivant, consommé interne** (3 sites) | `data_collector.py:16`, `orchestrator.py:4`, `section_formatter.py:38` |
-| `document_assembler.py` | 951 | **scaffold** — 0 prod externe, 2 internes | `data_collector.py:17`, `orchestrator.py:38` |
-| `section_formatter.py` | 1146 | **résiduel / doublon** — 0 prod, 0 interne | `section_formatter.py:45` |
+| `models.py` | 38 | **vivant, consommé interne** (3 sites) | `data_collector.py:16`, `orchestrator.py:4`, `document_assembler.py:21` |
+| `document_assembler.py` | 939 | **scaffold** — 0 prod externe, 2 internes | `data_collector.py:17`, `orchestrator.py:38` |
 | `data_collector.py` | 353 | **scaffold** — 1 interne, données factices | `orchestrator.py:26`, `data_collector.py:314-351` |
 | `orchestrator.py` | 73 | **résiduel** — 0 prod, 1 test de garde | `tests/.../test_import_guard_2076.py:30` |
 | `reporting.py` | 25 | **résiduel** — 0 consommateur, 0 test | `reporting.py:5` |
@@ -74,10 +73,10 @@ Développement des porteurs de sens :
 
 - **`models.py` — la seule convention partagée du paquet.** `ReportMetadata` (`models.py:15`)
   et `ReportConfiguration` (`models.py:28`) sont le vocabulaire commun ; trois modules
-  les importent. Mais `ReportMetadata` est **aussi redéfini localement** dans
-  `document_assembler.py:22` avec **des champs identiques** (source_component,
-  analysis_type, generated_at, version, generator, format_type, template_name) —
-  duplication de définition, pas seulement de nom.
+  les importent. `document_assembler.py` en portait une **copie locale aux champs
+  identiques** (`:22`) : elle a été retirée (#2143) au profit de l'import canonique
+  (`document_assembler.py:21`). Il ne reste qu'une définition — c'était une duplication
+  de définition, pas seulement de nom, et `is` les distinguait à tort.
 - **`multi_format_exporter.py` — le cœur de la chaîne d'export.** `MultiFormatExporter`
   (`:62`) couvre les 6 formats : `to_json:90`, `to_xml:98`, `to_markdown:154`,
   `to_csv_bundle:203`, `to_html:239`, `to_rich_terminal:319`. Il lit l'état par
@@ -100,7 +99,9 @@ Trois entrées réelles, toutes **hors du paquet** (le paquet ne porte aucun `__
    Il appelle `MultiFormatExporter` (`:371`), `ConversationBalanceAnalyzer` (`:407`),
    `CrossReferenceGraph` (`:419`), `RepromptTraceExtractor` (`:454`).
 2. `scripts/analysis/export_scda_state.py` — export d'un état unique vers un format.
-   `--format` ∈ {json,xml,md,csv,html,rich,all} (`:36-38`), `--out` **défaut `"."`** (`:40`).
+   `--format` ∈ {json,xml,md,csv,html,rich,all} (`:56-62`), `--out` **défaut
+   `outputs/scda_export`** (`:25`, gitignoré) ; l'export passe par le scrub partagé
+   (`export_state`, `:75`).
 3. `scripts/reporting/generate_rhetorical_analysis_summaries.py` — appelle
    `run_summary_generation_pipeline` (`:215`), la seule fonction de pipeline de
    `summary_generator.py:434`.
@@ -147,7 +148,7 @@ d'import** de test (`test_import_guard_2076.py:26,30`), qui vérifie que le modu
 s'importe, pas qu'il sert. `document_assembler` et `data_collector` sont donc « vivants par
 import, morts par usage ».
 
-**(c) Résiduel (5 modules).** `section_formatter`, `reporting`, `graph_generator`,
+**(c) Résiduel (4 modules).** `reporting`, `graph_generator`,
 `trace_analyzer`, et `orchestrator` (0 prod). Détail en « Limites connues ».
 
 ## Artefacts et lecteurs
@@ -164,11 +165,13 @@ import, morts par usage ».
 - L'amont, `outputs/scda_audit/`, est **gitignoré** (`.gitignore:171`).
 
 **Où vit la décontamination.** Elle est **entièrement chez l'appelant**, jamais dans le
-paquet : `generate_spectacular_bundle.py:30` `_PRIVACY_STRIP_FIELDS`, `:36` `_NL_SCRUB_KEYS`,
-`:45` `_EXCHANGE_SCRUB_KEYS`, `:74` `_strip_privacy`, `:122` `_scrub_state_for_export`,
-`:319` `_global_entity_scrub`. Séquence vérifiée : `:373` `_scrub_state_for_export(state_data)`
-→ `:374` `_DictStateProxy(safe_data)` → `:375` `MultiFormatExporter(proxy)` : l'exportateur
-ne voit **que** des données déjà nettoyées.
+paquet — et les deux appelants partagent **une seule** implémentation depuis #2143 :
+`argumentation_analysis/evaluation/state_export_scrub.py` (`:29` `_PRIVACY_STRIP_FIELDS`,
+`:42` `_NL_SCRUB_KEYS`, `:62` `_EXCHANGE_SCRUB_KEYS`, `:120` `_scrub_state_for_export`,
+`:416` `_global_entity_scrub`). Séquence vérifiée dans le bundle : `_scrub_state_for_export(state_data)`
+→ `_DictStateProxy(safe_data)` → `MultiFormatExporter(proxy)` : l'exportateur
+ne voit **que** des données déjà nettoyées. `export_scda_state.py` suit la même séquence
+(`export_state`, `:75`).
 
 **Contre-vérification.** `grep` de `raw_text|full_text|scrub|privacy` dans
 `multi_format_exporter.py` → **0 occurrence**. L'exportateur est brut par conception ;
@@ -180,31 +183,32 @@ ligne 2 = `arg_1,<scrubbed>` — identifiants opaques, valeur neutralisée.
 n'y a **aucune fonction de relecture** dans les 16 modules (les seules lectures sont
 `yaml` de config dans `data_collector.py:83,140`). Les lecteurs vivent dans
 `restitution/` (`renderer.py`, `appendix.py`, `readability_gate.py`) et dans
-`scripts/analysis/export_scda_state.py:14` (`_load_state`).
+`scripts/analysis/export_scda_state.py:33` (`_load_state`).
 
 ## Tests représentatifs
 
 Deux ensembles, très déséquilibrés :
 
-- **Premier niveau : 12 fichiers** dans `tests/unit/argumentation_analysis/reporting/`
+- **Premier niveau : 11 fichiers de test** dans `tests/unit/argumentation_analysis/reporting/`
   (`test_multi_format_exporter.py`, `test_conversation_balance.py`,
   `test_cross_reference_graph.py`, `test_document_assembler.py`,
-  `test_section_formatter.py`, `test_trace_analyzer.py`,
+  `test_one_report_template_2143.py`, `test_trace_analyzer.py`,
   `test_enhanced_real_time_trace_analyzer.py`, `test_enhanced_trace_analyzer.py`,
   `test_real_time_trace_analyzer.py`, `test_reprompt_trace.py`,
   `test_summary_generator.py`, plus un README et un `__init__.py`).
 - **Sous-paquet : 33 fichiers** dans `.../reporting/restitution/`.
 
-Quatre modules sont **testés sans être consommés** : `section_formatter`
-(`test_section_formatter.py:8`), `trace_analyzer` (3 fichiers), `document_assembler`
-(`test_document_assembler.py:10`), `orchestrator`. Le test devient alors la seule
-preuve de vie — un module dont la seule intégration est son test est un module
-dont la suppression ne casserait que son test (cf. la garde d'import
+Trois modules sont **testés sans être consommés** : `trace_analyzer` (3 fichiers),
+`document_assembler` (`test_document_assembler.py:10`), `orchestrator`. Le test devient
+alors la seule preuve de vie — un module dont la seule intégration est son test est un
+module dont la suppression ne casserait que son test (cf. la garde d'import
 `test_import_guard_2076.py:26,30` qui affirme exactement cela).
 
-`test_section_formatter.py` et `test_document_assembler.py` testent **la même classe
-sous le même nom** (`UnifiedReportTemplate`) dans deux modules différents — les deux
-suites passent, ce qui garantit que la duplication est fonctionnelle, pas accidentelle.
+Les deux suites qui testaient **la même classe sous le même nom** (`UnifiedReportTemplate`)
+dans deux modules différents ont été **fusionnées** (#2143) : les 5 assertions que seule
+`test_section_formatter.py` portait ont été versées dans `test_document_assembler.py`
+avant sa suppression, et `test_one_report_template_2143.py` re-dérive l'unicité de la
+définition.
 
 ## Frères et parent
 
@@ -230,20 +234,21 @@ zéro import croisé parent→enfant.
 
 Relevé d'anomalies, **aucune corrigée** (lecture seule).
 
-1. **Duplication lourde `section_formatter.py` / `document_assembler.py`.** Même nom de
-   classe (`:45` / `:38`), **mêmes 13 méthodes** (`__init__`, `render`, `_render_markdown`,
-   `_render_console`, `_render_json`, `_render_html`, `_extract_sk_retry_attempts`,
-   `_extract_error_context`, `_extract_tweety_errors`, `_generate_logic_failure_diagnostic`,
-   `_generate_contextual_recommendations`, `_count_modal_failures`,
-   `_is_generic_recommendation`), **créés par le même commit** `3aefda0e
-   feat(reporting): Refactor report_generation.py into new package`, et modifiés par
-   les mêmes deux commits de formatage ultérieurs. Diff sur le code hors commentaires :
-   **367 lignes divergentes** sur ~870/901. `document_assembler` est le survivant branché
-   (2 sites internes) ; `section_formatter` n'a **que** son test. → **#2143**.
-2. **`ReportMetadata` défini deux fois avec les mêmes champs** — `models.py:15` (le
-   canonique, importé 3 fois) et `document_assembler.py:22` (copie locale). Le commentaire
-   d'intention de `data_collector.py:15` (« UnifiedReportTemplate est défini dans
-   document_assembler.py (pas dans models) ») montre que la confusion a déjà coûté.
+1. ~~**Duplication lourde `section_formatter.py` / `document_assembler.py`.**~~ **Corrigé
+   (#2143).** Même nom de classe (`:45` / `:38`), mêmes 13 méthodes, **créés par le même
+   commit** `3aefda0e feat(reporting): Refactor report_generation.py into new package`.
+   Mesure avant fusion : recensement AST — 13/13 méthodes présentes des deux côtés,
+   **11 divergentes**, **202 lignes normalisées divergentes** (hors commentaires pleine
+   ligne, indentation et lignes vides) ; puis exécution différentielle sur 20 cas × 4
+   formats + 8 méthodes privées : markdown/console/json **octet pour octet identiques**,
+   HTML identique hors espaces inter-balises. Survivant : `document_assembler` (2 sites
+   internes) ; `section_formatter` (0 importeur, 0 consommateur interne) supprimé après
+   versement de ses 5 assertions uniques.
+2. ~~**`ReportMetadata` défini deux fois avec les mêmes champs**~~ **Corrigé (#2143).**
+   Le canonique est `models.py:15`, importé par `data_collector.py:16`, `orchestrator.py:4`
+   et désormais `document_assembler.py:21`. Le commentaire d'intention de
+   `data_collector.py:15` (« UnifiedReportTemplate est défini dans document_assembler.py
+   (pas dans models) ») reste vrai, mais n'a plus d'homonyme pour l'entretenir.
 3. **Docstring contredisant le code.** `data_collector.py:120` : « Nécessite
    UnifiedReportTemplate de `.models` » ; or la ligne 17 importe de `.document_assembler`.
    La ligne 15 commente la correction, la ligne 120 ne l'a pas reçue.
@@ -262,13 +267,14 @@ Relevé d'anomalies, **aucune corrigée** (lecture seule).
    noms de `enhanced_real_time_trace_analyzer` ; **2 ne sont jamais utilisés** dans le
    fichier (`enhanced_global_trace_analyzer`, `get_enhanced_pm_report` — 1 occurrence
    chacun = la ligne d'import). Les 5 autres sont réellement appelés.
-8. **`export_scda_state.py` a un défaut d'écriture non sûr.** `--out` par défaut à `"."`
-   (`:40`), puis écritures directes `out_dir / "state.json"` etc. (`:29-49`). Lancé depuis
-   la racine du dépôt sans `--out`, il dépose `state.json|xml|md|html|state_terminal.txt`
-   et un bundle CSV **dans le répertoire de travail suivi par git**. Rien dans le script
-   ne neutralise le contenu, et `MultiFormatExporter` — on l'a mesuré — ne décontamine
-   rien lui-même : c'est la seule entrée du paquet où la frontière de confidentialité
-   repose entièrement sur la discipline de l'opérateur. → **#2143**.
+8. ~~**`export_scda_state.py` a un défaut d'écriture non sûr.**~~ **Corrigé (#2143).**
+   `--out` vaut `outputs/scda_export` (`:25`), gitignoré par `.gitignore:171`, et le
+   contenu passe par le scrub partagé **avant** écriture (`export_state`, `:75`). Les
+   deux dimensions sont traitées séparément — destination **et** contenu. Gardes :
+   `tests/unit/scripts/analysis/test_export_scda_state_privacy.py` vérifie le défaut via
+   `git check-ignore` (avec un contrôle de non-aveuglement de l'instrument), et qu'un
+   état porteur de `raw_text` et d'une entité ressort sans l'un ni l'autre, agrégats
+   intacts.
 9. **`restitution/state_adapter.py.bak`** (5 516 octets, non suivi par git) traîne dans
    l'arbre de travail. **Correction d'une affirmation initiale** : il n'est **pas**
    capturable par un `git add -A` — `git check-ignore -v` le résout sur
@@ -287,3 +293,11 @@ Relevé d'anomalies, **aucune corrigée** (lecture seule).
 *36 `.py` dans le sous-arbre · 60 fichiers suivis dans `docs/reports/spectacular` · `
 .gitignore:103` couvre `*.bak`. Fiche produite en **lecture seule** — aucun fichier du dépôt*
 *modifié hors ce README.*
+
+*Révision #2143 (2026-09-13, branche `fix/2143-single-report-template`) : `section_formatter.py`
+et son test sont supprimés — le premier niveau passe de 16 à 15 `.py` ; `document_assembler.py`
+descend à 939 lignes et absorbe l'import canonique de `models.py` (`:21`) ; le scrub d'export
+devient partagé, **hors du paquet parent**, dans
+`argumentation_analysis/evaluation/state_export_scrub.py` (452 lignes), consommé par les deux
+scripts d'export. Les chiffres de la fiche du 2026-09-11 sont conservés ci-dessus tels quels :
+ils mesurent l'état antérieur.*

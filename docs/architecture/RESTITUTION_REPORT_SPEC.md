@@ -172,7 +172,6 @@ The current report path lives in the [`argumentation_analysis/reporting/`](../..
 
 - `reporting.py:render_markdown_report(template_path, data)` — template-driven markdown emission.
 - `document_assembler.py` — `UnifiedReportTemplate` + `ReportMetadata`, assembles sections into a final document.
-- `section_formatter.py` — per-section formatting.
 
 These currently produce the dimension-dump artifact (phase tables, corpus-by-corpus engineering provenance — see [`FB37_CAPSTONE_SPECTACULAR_REPORT.md`](../reports/FB37_CAPSTONE_SPECTACULAR_REPORT.md) for the concrete "illisible" shape). **R6's job is to assemble the 3 acts** (from R2/R3/R4 generators) into a single readable Markdown, **replacing** the dimensional dump as the default spectacular output, and to run the **readability gate** (§4 weaving rule: reject framework refs without a narrative anchor). The dimensional render may be retained as an *engineering appendix* (provenance), but it is no longer the report the reader meets first.
 
@@ -206,7 +205,7 @@ These currently produce the dimension-dump artifact (phase tables, corpus-by-cor
 - **#1008** — [`SPECTACULAR_ANALYSIS_SPEC.md`](SPECTACULAR_ANALYSIS_SPEC.md): verdict→prose (§2), waouh-contract G1–G4 (§3), full capability→state-key traceability (§4), yardstick D1–D10 (§5), generation protocol (§6). **The foundation this spec extends.**
 - **#1082 / FB-20** — [`FB20_PHASE4_TERMINAL_REPORT.md`](../reports/FB20_PHASE4_TERMINAL_REPORT.md): the terminal report whose synthesis chain (FB-31 fail-loud, FB-33 template removal) feeds Acte III.
 - **Shared-state schema** — `argumentation_analysis/core/shared_state.py` (`UnifiedAnalysisState`): all keys in §2 verified present.
-- **Current render package** — `argumentation_analysis/reporting/` (`reporting.py`, `document_assembler.py`, `section_formatter.py`): what R6 replaces.
+- **Current render package** — `argumentation_analysis/reporting/` (`reporting.py`, `document_assembler.py`; the homonymous `section_formatter.py` was removed in #2143): what R6 replaces.
 - **Epic #1134** — GitHub issue #1134 (Restitution): the parent epic and 3-act mandate.
 - **Roadmap #78** — GitHub issue #78 (project roadmap): this report is the product surface (Democratech).
 

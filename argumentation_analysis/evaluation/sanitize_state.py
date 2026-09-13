@@ -9,9 +9,16 @@ names and readable logic symbols live in the working state and in the
 gitignored local artefacts (``evaluation/results/``). This function is the
 single chokepoint through which a state snapshot must pass before reaching
 git, a dashboard, a PR, or an API: it is where nominative content is scrubbed
-at the boundary. Anti-penduple: this is the *only* scrubber — the scattered
-ones (``generate_spectacular_bundle._scrub_state_for_export``,
-``appendix._strip_leak_keys``) are consolidation targets, not siblings.
+at the boundary. Anti-penduple: this is the only guard for a *snapshot*, and a
+catch-all scrub is not a substitute for it. One sibling policy survives, and it
+is now one implementation instead of a scattered one: the SCDA export scrub
+lives at ``evaluation.state_export_scrub._scrub_state_for_export`` and is shared
+by both of its callers (#2143). It is deliberately **not** absorbed here — it is
+a denylist + ``<scrubbed>`` + entity sweep, where this module is
+allowlist-driven and aggregate-preserving; the two agree on all measured state
+and diverge on ``extracts[*].name`` for a stated reason, documented at the
+eighth pass of that module. ``appendix._strip_leak_keys`` remains a
+consolidation target.
 
 Coverage is ALLOWLIST-DRIVEN, and that is a deliberate design: a catch-all
 "scrub every long string" pass would erase the structural aggregates
