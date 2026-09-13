@@ -163,7 +163,9 @@ def setup_registry(
             # phase (GE-4 #1462) — separate registry strings had no router
             # value: any phase asking them resolved to this same invoke.
             capabilities=["governance_simulation"],
-            metadata={"description": "5-voting-rule + 2-consensus-protocol governance agent (see governance_methods.py; the 8 social-choice functions live in social_choice.py)"},
+            metadata={
+                "description": "5-voting-rule + 2-consensus-protocol governance agent (see governance_methods.py; the 8 social-choice functions live in social_choice.py)"
+            },
             invoke=_invoke_governance,
         )
         registered.append("governance_agent")
@@ -721,7 +723,7 @@ def setup_registry(
         registry.register_service(
             name="stakes_extractor_service",
             service_class=type("StakesExtractorService", (), {}),
-            capabilities=["stakes_extraction", "stakeholder_analysis"],
+            capabilities=["stakes_extraction"],
             metadata={
                 "description": "Extracts discourse stakes, stakeholders, rhetorical register, and discursive arena",
             },

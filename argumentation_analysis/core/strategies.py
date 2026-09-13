@@ -34,9 +34,12 @@ from semantic_kernel.agents.strategies.termination.termination_strategy import (
 # Importer la classe d'état
 from .shared_state import RhetoricalAnalysisState, record_unresolved_designation
 
-# Type hinting
+# Type hinting — the agents flowing through selection/termination ARE SK
+# agents (BaseAgent extends ChatCompletionAgent extends this Agent), so the
+# annotation names SK's class directly. The previous import pointed at
+# ``abc.agent_bases``, which exports no ``Agent`` symbol (#2137).
 if TYPE_CHECKING:
-    from argumentation_analysis.agents.core.abc.agent_bases import Agent
+    from semantic_kernel.agents.agent import Agent
 
 # Loggers
 termination_logger = logging.getLogger("Orchestration.Termination")
