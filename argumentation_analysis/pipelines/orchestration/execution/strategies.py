@@ -107,12 +107,23 @@ async def select_orchestration_strategy(
         ValueError: si la stratégie calculée n'est dispatchable par aucune
             branche du moteur d'exécution (engine.py). Refus de repli
             silencieux vers l'hybride (#2109).
+        ValueError: si le mode demandé est absent de mode_strategy_map —
+            un mode non prévu est arbitré explicitement (entrée ou refus),
+            jamais résolu vers 'fallback' (#2205).
     """
     config = pipeline.config
     if config.orchestration_mode_enum != OrchestrationMode.AUTO_SELECT:
-        # Mode manuel
-        logger.info("Path taken: Manual selection")
+        # Mode manuel. La carte couvre les 10 modes non-AUTO_SELECT ;
+        # AUTO_SELECT passe par le else ci-dessous. Sans défaut : un mode
+        # absent de la carte lève (#2205) — l'ancien `.get(..., "fallback")`
+        # convertissait tout mode non prévu, y compris un futur membre
+        # d'enum, en pipeline original sans le signaler.
         mode_strategy_map = {
+            # L'exécuteur "fallback" EST le pipeline original
+            # (execute_fallback_orchestration → _fallback_pipeline) : pour
+            # le mode PIPELINE l'identité est exacte — seul le nom de la
+            # stratégie est malheureux (#2205).
+            OrchestrationMode.PIPELINE: "fallback",
             OrchestrationMode.HIERARCHICAL_FULL: "hierarchical_full",
             OrchestrationMode.STRATEGIC_ONLY: "strategic_only",
             OrchestrationMode.TACTICAL_COORDINATION: "tactical_coordination",
@@ -120,8 +131,22 @@ async def select_orchestration_strategy(
             OrchestrationMode.CLUEDO_INVESTIGATION: "specialized_direct",
             OrchestrationMode.LOGIC_COMPLEX: "specialized_direct",
             OrchestrationMode.ADAPTIVE_HYBRID: "hybrid",
+            # Aucun exécuteur pour ces deux modes (le wrapper REAL a été
+            # retiré en #885 ; aucune branche conversation dans le moteur) :
+            # la garde #2109 ci-dessous refuse en nommant la stratégie —
+            # refus loud plutôt que substitution silencieuse vers le
+            # pipeline original (#2205).
+            OrchestrationMode.REAL: "real",
+            OrchestrationMode.CONVERSATION: "conversation",
         }
-        strategy = mode_strategy_map.get(config.orchestration_mode_enum, "fallback")
+        strategy = mode_strategy_map.get(config.orchestration_mode_enum)
+        if strategy is None:
+            raise ValueError(
+                f"Mode d'orchestration {config.orchestration_mode_enum!r} absent "
+                "de mode_strategy_map : un mode non prévu doit être arbitré "
+                "(entrée explicite ou refus), jamais résolu silencieusement "
+                "vers 'fallback' (#2205)."
+            )
     else:
         # Sélection automatique basée sur le type d'analyse
         logger.info("Path taken: AUTO_SELECT logic")
