@@ -8,6 +8,11 @@ Covers 3 leak vectors discovered in Rounds 176/179/180:
 
 Entity names in test fixtures are intentionally present to verify scrubbing.
 Rule 4 (opaque IDs in commits) applies to PR body and commit messages, not test code.
+
+The CLASS vocabulary may be written here (it maps onto no document). The
+corpus's INSTANCE vocabulary may not, not even as a fixture (#2168, rule 7):
+it is derived at run time, and the fixture below feeds the scrubber a
+*synthetic* census through the same derivation the production path uses.
 """
 
 import copy
@@ -15,14 +20,46 @@ import json
 from typing import Any, Dict
 import pytest
 
+import scripts.analysis.generate_spectacular_bundle as bundle
 from scripts.analysis.generate_spectacular_bundle import (
     _scrub_state_for_export,
     _global_entity_scrub,
     _ENTITY_PATTERN,
     _ENTITY_SUBSTR_PATTERN,
+    _compile_instance_pattern,
     _NL_SCRUB_KEYS,
     _PRIVACY_STRIP_FIELDS,
 )
+from argumentation_analysis.evaluation.corpus_instance_tokens import (
+    CorpusUnavailableError,
+    derive_instance_tokens,
+)
+
+# A synthetic census. Nothing here maps onto a real document: the point is a
+# vocabulary the test knows exactly, so the derivation can be armed without a
+# single real label entering this tracked file.
+_SYNTHETIC_CENSUS = (
+    {"source_name": "Sentinelmark Zephyrous 21/02/2026"},
+    {"source_name": "Alderidge - Quorum Bauble 2026"},
+)
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_instance_census(monkeypatch):
+    """Derive the scrubber's instance vocabulary from the synthetic census.
+
+    ``_instance_pattern`` is memoised in the module: reset it around every
+    test, or the first test's vocabulary would serve the rest. Without this
+    fixture the pass would reach for the real encrypted corpus — which is
+    exactly what production does, and exactly what a unit test must not
+    depend on.
+    """
+    monkeypatch.setattr(
+        bundle,
+        "_load_instance_tokens",
+        lambda: derive_instance_tokens(_SYNTHETIC_CENSUS),
+    )
+    monkeypatch.setattr(bundle, "_INSTANCE_PATTERN", None)
 
 
 def _build_dag_state_via_real_writers():
@@ -499,7 +536,6 @@ class TestVector4Integration:
             "otan",
             "maidan",
             "crimea",
-            "kremlin",
             "pentagon",
             "white_house",
         ]
@@ -635,7 +671,6 @@ class TestVector5DAGArgumentsDescription:
             "israel",
             "nato",
             "crimea",
-            "kremlin",
         ]
         for fragment in entity_fragments:
             assert (
@@ -1054,3 +1089,112 @@ class TestVector7Pass8ExtractsContainerShape:
         dict_result = _scrub_state_for_export({"extracts": {"ext_1": dict(entry)}})
         assert list_result["extracts"][0]["content"] == "<scrubbed>"
         assert dict_result["extracts"]["ext_1"]["content"] == "<scrubbed>"
+
+
+# ---------------------------------------------------------------------------
+# Vector 8 (#2187) — the corpus's instance vocabulary is DERIVED, never listed
+# ---------------------------------------------------------------------------
+
+
+def _metadata_state(value: str) -> Dict[str, Any]:
+    """State carrying ``value`` in a field no other pass claims.
+
+    ``analysis_metadata`` is not an analysis dimension and ``source_note`` is
+    not an NL scrub key, so nothing but the final entity pass can redact it —
+    which is what makes the assertions below attributable to the derivation.
+    """
+    return {"analysis_metadata": {"source_note": value}}
+
+
+class TestInstanceVocabularyIsDerived:
+    """Rule 7: the labels that map onto a document live in no tracked file.
+
+    The scrubber used to carry one of them in its pattern list, written as if
+    it were a generic institution next to ``pentagon``/``white_house``/
+    ``united_nations``. It is now derived at run time from the definitions
+    decrypted in memory, so the tracked list keeps class vocabulary only and
+    instance coverage follows the census for present *and future* sources.
+    """
+
+    @pytest.mark.parametrize(
+        "planted",
+        [
+            "Sentinelmark argued the opposite",
+            "title_sentinelmark_zephyrous",
+            "Sentinelmark Zephyrous 21/02/2026",
+        ],
+    )
+    def test_a_derived_label_is_scrubbed(self, planted):
+        """Prose, snake_case identifier, and the whole label — all redacted."""
+        result = _scrub_state_for_export(_metadata_state(planted))
+        assert result["analysis_metadata"]["source_note"] == "<scrubbed>", (
+            "the derived instance vocabulary did not reach the string — the "
+            "pass is no longer armed (#2187)."
+        )
+
+    @pytest.mark.parametrize(
+        "planted",
+        [
+            "Sentinelmark argued the opposite",
+            "title_sentinelmark_zephyrous",
+        ],
+    )
+    def test_without_the_derivation_the_same_string_survives(self, planted):
+        """Control: attribute the redaction above to the derivation itself.
+
+        Run the same state through the same pass with an EMPTY instance
+        vocabulary. If the string survives here, the assertion above cannot be
+        passing for an unrelated reason (a shorter threshold, another pass) —
+        and the derivation is not decorative.
+        """
+        result = _scrub_state_for_export(
+            _metadata_state(planted),
+            instance_re=_compile_instance_pattern(frozenset()),
+        )
+        assert result["analysis_metadata"]["source_note"] == planted
+
+    def test_an_empty_vocabulary_matches_nothing(self):
+        """The empty-alternation trap: ``(?:)`` would match every string."""
+        pattern = _compile_instance_pattern(frozenset())
+        assert not pattern.search("Sentinelmark argued the opposite")
+        assert not pattern.search("")
+
+    def test_derivation_yields_capitalised_runs_and_the_whole_name(self):
+        tokens = derive_instance_tokens(
+            [{"source_name": "Sentinelmark Zephyrous 21/02/2026"}]
+        )
+        assert "sentinelmark" in tokens
+        assert "zephyrous" in tokens
+        assert "sentinelmark zephyrous 21/02/2026" in tokens
+
+    def test_derivation_ignores_lower_case_words_and_short_runs(self):
+        """Positive/negative control on the instrument itself.
+
+        A census title's function words are lower case; an instrument that
+        returned every word would redact ordinary prose, and one that returned
+        nothing would prove nothing. Measured on a title that carries both.
+        """
+        tokens = derive_instance_tokens(
+            [{"source_name": "Alderidge - Inaugural Address 2026"}]
+        )
+        assert "alderidge" in tokens  # the label
+        assert "inaugural" in tokens  # a capitalised title word
+        assert "2026" not in tokens  # a bare year is not a word
+        assert "de" not in derive_instance_tokens(
+            [{"source_name": "Discours de politique générale"}]
+        )
+
+    def test_derivation_of_a_census_without_names_is_empty(self):
+        assert derive_instance_tokens([]) == frozenset()
+        assert derive_instance_tokens([{}, {"source_name": "   "}]) == frozenset()
+
+    def test_load_fails_loud_without_a_passphrase(self, monkeypatch):
+        """No silent degradation to a detector that matches nothing (#2187)."""
+        from argumentation_analysis.evaluation import corpus_instance_tokens
+
+        monkeypatch.setattr(
+            "argumentation_analysis.core.utils.crypto_utils.load_encryption_key",
+            lambda *a, **k: None,
+        )
+        with pytest.raises(CorpusUnavailableError, match="passphrase"):
+            corpus_instance_tokens.load_instance_tokens()
