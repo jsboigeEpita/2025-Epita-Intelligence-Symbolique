@@ -70,6 +70,18 @@ from .strategies import (
     execute_fallback_orchestration,
     execute_hybrid_orchestration,
 )
+
+# Table de dispatch explicite des stratégies d'orchestration. Toute valeur
+# hors de cette table fait lever ValueError au dispatch — l'ancien `else`
+# routait silencieusement vers l'hybride (#2109). La cohérence avec
+# strategies.DISPATCHABLE_STRATEGIES est gardée par
+# test_strategy_dispatch_coherence_2109.py.
+STRATEGY_EXECUTORS = {
+    "hierarchical_full": execute_hierarchical_full_orchestration,
+    "specialized_direct": execute_specialized_orchestration,
+    "fallback": execute_fallback_orchestration,
+    "hybrid": execute_hybrid_orchestration,
+}
 from ..analysis.post_processors import post_process_orchestration_results
 from ..analysis.traces import save_orchestration_trace
 
@@ -112,16 +124,14 @@ async def analyze_text_orchestrated(
         )
         logger.info(f"[ORCHESTRATION] Stratégie sélectionnée: {orchestration_strategy}")
 
-        if orchestration_strategy == "hierarchical_full":
-            results = await execute_hierarchical_full_orchestration(
-                pipeline, text, results
+        executor = STRATEGY_EXECUTORS.get(orchestration_strategy)
+        if executor is None:
+            raise ValueError(
+                f"Stratégie d'orchestration inconnue du moteur d'exécution : "
+                f"{orchestration_strategy!r} (dispatchables : "
+                f"{sorted(STRATEGY_EXECUTORS)}). (#2109)"
             )
-        elif orchestration_strategy == "specialized_direct":
-            results = await execute_specialized_orchestration(pipeline, text, results)
-        elif orchestration_strategy == "fallback":
-            results = await execute_fallback_orchestration(pipeline, text, results)
-        else:  # hybrid
-            results = await execute_hybrid_orchestration(pipeline, text, results)
+        results = await executor(pipeline, text, results)
 
         results = await post_process_orchestration_results(pipeline, results)
         results["status"] = "success"

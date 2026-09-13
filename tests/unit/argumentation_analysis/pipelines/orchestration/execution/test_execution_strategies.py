@@ -110,16 +110,20 @@ class TestSelectOrchestrationStrategy:
 
     @pytest.mark.asyncio
     async def test_manual_strategic_only(self):
+        """STRATEGIC_ONLY n'a pas d'exécuteur dans engine.py → ValueError
+        (#2109), pas de repli silencieux vers hybrid."""
         from argumentation_analysis.pipelines.orchestration.execution.strategies import (
             select_orchestration_strategy,
         )
 
         cfg = _make_config(orchestration_mode_enum=OrchestrationMode.STRATEGIC_ONLY)
-        result = await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
-        assert result == "strategic_only"
+        with pytest.raises(ValueError, match="strategic_only"):
+            await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
 
     @pytest.mark.asyncio
     async def test_manual_tactical_coordination(self):
+        """TACTICAL_COORDINATION n'a pas d'exécuteur dans engine.py → ValueError
+        (#2109)."""
         from argumentation_analysis.pipelines.orchestration.execution.strategies import (
             select_orchestration_strategy,
         )
@@ -127,18 +131,20 @@ class TestSelectOrchestrationStrategy:
         cfg = _make_config(
             orchestration_mode_enum=OrchestrationMode.TACTICAL_COORDINATION
         )
-        result = await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
-        assert result == "tactical_coordination"
+        with pytest.raises(ValueError, match="tactical_coordination"):
+            await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
 
     @pytest.mark.asyncio
     async def test_manual_operational_direct(self):
+        """OPERATIONAL_DIRECT n'a pas d'exécuteur dans engine.py → ValueError
+        (#2109)."""
         from argumentation_analysis.pipelines.orchestration.execution.strategies import (
             select_orchestration_strategy,
         )
 
         cfg = _make_config(orchestration_mode_enum=OrchestrationMode.OPERATIONAL_DIRECT)
-        result = await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
-        assert result == "operational_direct"
+        with pytest.raises(ValueError, match="operational_direct"):
+            await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
 
     @pytest.mark.asyncio
     async def test_manual_cluedo_returns_specialized(self):
@@ -231,7 +237,8 @@ class TestSelectOrchestrationStrategy:
 
     @pytest.mark.asyncio
     async def test_auto_comprehensive_service_manager(self):
-        """COMPREHENSIVE with initialized service_manager → service_manager strategy."""
+        """COMPREHENSIVE + service_manager initialisé calcule 'service_manager',
+        qui n'a pas d'exécuteur dans engine.py → ValueError (#2109)."""
         from argumentation_analysis.pipelines.orchestration.execution.strategies import (
             select_orchestration_strategy,
         )
@@ -243,10 +250,10 @@ class TestSelectOrchestrationStrategy:
         )
         sm = MagicMock()
         sm._initialized = True
-        result = await select_orchestration_strategy(
-            _make_pipeline(config=cfg, service_manager=sm), "short"
-        )
-        assert result == "service_manager"
+        with pytest.raises(ValueError, match="service_manager"):
+            await select_orchestration_strategy(
+                _make_pipeline(config=cfg, service_manager=sm), "short"
+            )
 
     @pytest.mark.asyncio
     async def test_auto_default_hybrid(self):
