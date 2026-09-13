@@ -1,4 +1,5 @@
 import argumentation_analysis.core.environment
+import hashlib
 import json
 import logging
 from pathlib import Path
@@ -7,6 +8,33 @@ from pathlib import Path
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
+
+def _fingerprint(value: str) -> str:
+    """sha256[:16] of a config value — the only form a migration target takes here.
+
+    Rule 7 (#2168/#2187): a label mapping 1:1 to one encrypted document never
+    enters a tracked file, and this repo is GitHub-indexed. A migration script
+    that enumerates the records it targets publishes the census the encryption
+    protects — "the script needs the label to match" is not a license. Each
+    target is therefore keyed by the digest of the value its config entry
+    carries, and the predicate is exactly the one it replaced. Stated rather
+    than hidden: a descriptive label is dictionary-recoverable from its digest,
+    so this removes PUBLICATION, not knowledge.
+    """
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:16]
+
+
+# Targets keyed by digest, never by the label. The first map is keyed on the
+# ``source_name`` two entries carried; the second on the ``source_id`` a third
+# carries. Priority follows the original if/elif chain: a name match wins.
+_NEW_PATH_BY_SOURCE_NAME = {
+    "51fa94b1b628bc4a": "discours_attal_20240130.txt",
+    "eafce0b03af0ab29": "rapport_ia_2024.txt",
+}
+_NEW_PATH_BY_SOURCE_ID = {
+    "45b64451b8432c0f": "https://www.gutenberg.org/files/1657/1657-0.txt",
+}
 
 # Définir le chemin du fichier d'entrée
 input_config_path = Path("_temp/config_source_removed.json")
@@ -34,36 +62,16 @@ for source in sources_data:
     modified = False
     old_path = source.get("path", "N/A")
 
-    if source_name == "assemblee_nationale_2024_pg_attal":
-        new_path = "discours_attal_20240130.txt"
-        if source.get("path") != new_path:
-            logging.info(
-                f"Modification de la source ID: {source_id}, Nom: {source_name}"
-            )
-            logging.info(f"  Ancien chemin: {old_path}")
-            logging.info(f"  Nouveau chemin: {new_path}")
-            source["path"] = new_path
-            modified = True
-    elif source_name == "rapport_ia_commission_2024":
-        new_path = "rapport_ia_2024.txt"
-        if source.get("path") != new_path:
-            logging.info(
-                f"Modification de la source ID: {source_id}, Nom: {source_name}"
-            )
-            logging.info(f"  Ancien chemin: {old_path}")
-            logging.info(f"  Nouveau chemin: {new_path}")
-            source["path"] = new_path
-            modified = True
-    elif source_id == "Source_Ibsen_Vildanden":
-        new_path = "https://www.gutenberg.org/files/1657/1657-0.txt"
-        if source.get("path") != new_path:
-            logging.info(
-                f"Modification de la source ID: {source_id}, Nom: {source_name}"
-            )
-            logging.info(f"  Ancien chemin: {old_path}")
-            logging.info(f"  Nouveau chemin: {new_path}")
-            source["path"] = new_path
-            modified = True
+    new_path = _NEW_PATH_BY_SOURCE_NAME.get(_fingerprint(source_name or ""))
+    if new_path is None:
+        new_path = _NEW_PATH_BY_SOURCE_ID.get(_fingerprint(source_id or ""))
+
+    if new_path is not None and source.get("path") != new_path:
+        logging.info(f"Modification de la source ID: {source_id}, Nom: {source_name}")
+        logging.info(f"  Ancien chemin: {old_path}")
+        logging.info(f"  Nouveau chemin: {new_path}")
+        source["path"] = new_path
+        modified = True
 
     if not modified:
         logging.info(
