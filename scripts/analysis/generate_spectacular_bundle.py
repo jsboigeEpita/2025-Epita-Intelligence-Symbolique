@@ -119,8 +119,16 @@ def _iter_dimension_entries(dim: Any) -> Iterator[Dict[str, Any]]:
             yield item_val
 
 
-def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Full privacy scrub: strip raw text + scrub NL in analysis dimensions."""
+def _scrub_state_for_export(
+    state_data: Dict[str, Any], instance_re: Any = None
+) -> Dict[str, Any]:
+    """Full privacy scrub: strip raw text + scrub NL in analysis dimensions.
+
+    ``instance_re`` defaults to the corpus's derived instance vocabulary
+    (``_instance_pattern``). Pass one explicitly only to run the pass against
+    a different vocabulary — the guard does it to show a leak surviving
+    without the derivation.
+    """
     # First pass: strip top-level privacy fields
     cleaned = {k: v for k, v in state_data.items() if k not in _PRIVACY_STRIP_FIELDS}
 
@@ -295,16 +303,25 @@ def _scrub_state_for_export(state_data: Dict[str, Any]) -> Dict[str, Any]:
                 item_val["name"] = "<scrubbed>"
 
     # Final pass: global regex scrub on ALL remaining strings (values AND keys)
-    cleaned = _global_entity_scrub(cleaned)
+    cleaned = _global_entity_scrub(cleaned, instance_re=instance_re)
 
     return cleaned
 
 
-# Entity patterns that must never appear in exports
+# Entity patterns that must never appear in exports.
+#
+# CLASS vocabulary only (rule 7): generic public vocabulary — public figures,
+# states, parties — which is safe to enumerate in a tracked file because it
+# maps onto no particular document. The INSTANCE vocabulary (the labels that
+# map onto a document of our census) used to sit in this list too; it is now
+# derived at run time — see ``_instance_pattern`` and
+# ``argumentation_analysis.evaluation.corpus_instance_tokens``. Rule 7:
+# "a detector that enumerates corpus identifiers publishes the census the
+# encryption protects" (#2168, #2187).
 _ENTITY_PATTERN = re.compile(
     r"(?i)\b(trump|biden|obama|harris|clinton|poutine|putin|zelensky|macron|attal|netanyahu)"
     r"|\b(iran|ukraine|russia|china|israel|otan|onu|nato|maidan|crimea|bolchevik|bolchévik)"
-    r"|\b(kremlin|pentagon|white\s*house|united\s*nations|un\s*general\s*assembly)"
+    r"|\b(pentagon|white\s*house|united\s*nations|un\s*general\s*assembly)"
     r"|\b(russie|chinese|américaine)\b",
 )
 
@@ -312,29 +329,93 @@ _ENTITY_PATTERN = re.compile(
 _ENTITY_SUBSTR_PATTERN = re.compile(
     r"(?i)(trump|biden|obama|harris|clinton|poutine|putin|zelensky|macron|attal|netanyahu"
     r"|iran|ukraine|russia|china|israel|otan|onu|nato|maidan|crimea|bolchevik"
-    r"|kremlin|pentagon|white_house|united_nations)"
+    r"|pentagon|white_house|united_nations)"
 )
 
+#: Matches nothing. Used when the instance vocabulary is empty (a test that
+#: must prove a leak survives without the derivation), so an empty alternation
+#: can never degrade into a pattern that matches every string.
+_NEVER_MATCHES = re.compile(r"(?!x)x")
 
-def _global_entity_scrub(data: Any, depth: int = 0) -> Any:
+_INSTANCE_PATTERN: Optional[re.Pattern] = None
+
+
+def _load_instance_tokens() -> frozenset:
+    """Seam over the derivation, so the heavy import stays out of this module.
+
+    Tests patch *this* name to feed a synthetic census — never a real label
+    written down for the occasion.
+    """
+    from argumentation_analysis.evaluation.corpus_instance_tokens import (
+        load_instance_tokens,
+    )
+
+    return load_instance_tokens()
+
+
+def _compile_instance_pattern(tokens: Iterable[str]) -> re.Pattern:
+    """Instance alternatives, on the same letter frontier as the class ones.
+
+    A letter boundary (not ``\\b``) so a label is caught in prose *and* inside
+    the snake_case identifiers it takes when it enters code (#2012).
+    """
+    alternatives = "|".join(
+        re.escape(token) for token in sorted(tokens, key=len, reverse=True)
+    )
+    if not alternatives:
+        return _NEVER_MATCHES
+    return re.compile(rf"(?<![A-Za-z])(?:{alternatives})(?![A-Za-z])", re.IGNORECASE)
+
+
+def _instance_pattern() -> re.Pattern:
+    """The corpus's instance vocabulary, derived in memory and cached.
+
+    Fails loud (``CorpusUnavailableError``) rather than scrubbing with a
+    truncated vocabulary: an export produced under a silently weakened
+    redaction is worse than no export.
+    """
+    global _INSTANCE_PATTERN
+    if _INSTANCE_PATTERN is None:
+        _INSTANCE_PATTERN = _compile_instance_pattern(_load_instance_tokens())
+    return _INSTANCE_PATTERN
+
+
+def _global_entity_scrub(data: Any, depth: int = 0, instance_re: Any = None) -> Any:
     """Recursively replace any string containing entity names with <scrubbed>.
-    Also scrubs dict keys that contain entity names (even in snake_case identifiers)."""
+    Also scrubs dict keys that contain entity names (even in snake_case identifiers).
+
+    ``instance_re`` carries the corpus's derived instance vocabulary. It is
+    resolved once by the caller (``_scrub_state_for_export``) and threaded
+    through rather than re-resolved per node; passing it explicitly is also
+    what lets a test run the pass with an empty vocabulary and observe the
+    leak the derivation is there to catch.
+    """
+    if instance_re is None:
+        instance_re = _instance_pattern()
     if depth > 15:
         return data
     if isinstance(data, str):
-        if _ENTITY_PATTERN.search(data) or _ENTITY_SUBSTR_PATTERN.search(data):
+        if (
+            _ENTITY_PATTERN.search(data)
+            or _ENTITY_SUBSTR_PATTERN.search(data)
+            or instance_re.search(data)
+        ):
             return "<scrubbed>"
         return data
     if isinstance(data, dict):
         result = {}
         for k, v in data.items():
-            safe_key = _global_entity_scrub(k, depth + 1) if isinstance(k, str) else k
+            safe_key = (
+                _global_entity_scrub(k, depth + 1, instance_re)
+                if isinstance(k, str)
+                else k
+            )
             if isinstance(safe_key, str) and safe_key == "<scrubbed>":
                 safe_key = f"key_{len(result)}"
-            result[safe_key] = _global_entity_scrub(v, depth + 1)
+            result[safe_key] = _global_entity_scrub(v, depth + 1, instance_re)
         return result
     if isinstance(data, list):
-        return [_global_entity_scrub(item, depth + 1) for item in data]
+        return [_global_entity_scrub(item, depth + 1, instance_re) for item in data]
     return data
 
 
