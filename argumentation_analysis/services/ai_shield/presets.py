@@ -4,6 +4,8 @@ Based on soutenance description:
 - basic: Heuristic only (fast, zero cost)
 - advanced: All layers (heuristic + LLM + output filter)
 - output_only: Output filter only (for post-LLM validation)
+- strict: All layers with lower thresholds, and the only profile whose
+  declared policy is fail-closed (#2144)
 """
 
 from typing import Dict, Optional
@@ -55,7 +57,7 @@ def load_preset(
     """Load a pre-configured shield preset.
 
     Args:
-        preset_name: "basic", "advanced", or "output_only".
+        preset_name: "basic", "advanced", "output_only", or "strict".
         api_key: OpenAI API key for LLM validator layer.
         fail_open: Tri-state (#2144). None (default) = the preset's declared
             policy in PRESET_FAIL_OPEN (`strict` fails closed, the others fail

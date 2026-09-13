@@ -25,7 +25,15 @@ def app():
 
 
 @pytest.fixture
-def client(app):
+def client(app, monkeypatch):
+    """Client en mode dev **explicite** (#2144).
+
+    Sans `SHIELD_ENDPOINT_TOKEN`, l'endpoint refuse de servir : les tests
+    métier doivent donc poser l'opt-in, qui est précisément ce que
+    `TestShieldEndpointAuth` fait varier de son côté.
+    """
+    monkeypatch.delenv("SHIELD_ENDPOINT_TOKEN", raising=False)
+    monkeypatch.setenv("SHIELD_ALLOW_ANONYMOUS", "1")
     return TestClient(app, raise_server_exceptions=False)
 
 
@@ -260,75 +268,99 @@ class TestShieldEndpoint:
 
 
 class TestShieldEndpointAuth:
-    """Verify X-Shield-Token auth guard on POST /api/shield/validate."""
+    """Auth guard on POST /api/shield/validate (#2144, items 4 et 5).
 
-    def test_no_auth_required_when_token_unset(self, client):
-        """Dev mode: no SHIELD_ENDPOINT_TOKEN → no auth required."""
-        # By default in tests, SHIELD_ENDPOINT_TOKEN is not set
-        resp = client.post(
+    Le défaut d'origine : sans `SHIELD_ENDPOINT_TOKEN`, `_verify_token`
+    retournait sans lever — un déploiement qui oubliait la variable exposait un
+    endpoint ouvert dont la réponse par défaut était « tout va bien ». Le
+    pass-through est désormais un **opt-in explicite**.
+    """
+
+    def _client(self, app, monkeypatch, *, token=None, anonymous=None):
+        monkeypatch.delenv("SHIELD_ENDPOINT_TOKEN", raising=False)
+        monkeypatch.delenv("SHIELD_ALLOW_ANONYMOUS", raising=False)
+        if token is not None:
+            monkeypatch.setenv("SHIELD_ENDPOINT_TOKEN", token)
+        if anonymous is not None:
+            monkeypatch.setenv("SHIELD_ALLOW_ANONYMOUS", anonymous)
+        return TestClient(app, raise_server_exceptions=False)
+
+    def test_unconfigured_endpoint_refuses_to_serve(self, app, monkeypatch):
+        """Ni token ni opt-in → 503. Jamais un pass-through silencieux."""
+        c = self._client(app, monkeypatch)
+        resp = c.post("/api/shield/validate", json={"text": "Normal text"})
+        assert resp.status_code == 503
+        assert "SHIELD_ENDPOINT_TOKEN" in resp.json()["detail"]
+
+    def test_explicit_anonymous_optin_allows_serving(self, app, monkeypatch):
+        """L'opt-in dev explicite est le SEUL chemin qui autorise l'anonyme."""
+        c = self._client(app, monkeypatch, anonymous="1")
+        resp = c.post("/api/shield/validate", json={"text": "Normal text"})
+        assert resp.status_code == 200
+
+    def test_optin_must_be_truthy(self, app, monkeypatch):
+        """Une valeur non vraie n'est pas un opt-in : `0` ne vaut pas `1`."""
+        c = self._client(app, monkeypatch, anonymous="0")
+        resp = c.post("/api/shield/validate", json={"text": "Normal text"})
+        assert resp.status_code == 503
+
+    def test_token_set_requires_matching_header(self, app, monkeypatch):
+        """Token posé : sans en-tête → 401, et le message nomme l'en-tête."""
+        c = self._client(app, monkeypatch, token="test-secret-token")
+        resp = c.post("/api/shield/validate", json={"text": "Normal text"})
+        assert resp.status_code == 401
+        assert "X-Shield-Token" in resp.json()["detail"]
+
+    def test_valid_token_accepted(self, app, monkeypatch):
+        """Un en-tête correct passe l'auth."""
+        c = self._client(app, monkeypatch, token="test-secret-token")
+        resp = c.post(
             "/api/shield/validate",
             json={"text": "Normal text"},
+            headers={"X-Shield-Token": "test-secret-token"},
         )
         assert resp.status_code == 200
 
-    def test_auth_required_when_token_set(self):
-        """When SHIELD_ENDPOINT_TOKEN is set, requests without token get 401."""
-        import api.shield_endpoints as mod
+    def test_invalid_token_rejected(self, app, monkeypatch):
+        """Un en-tête faux reçoit 401."""
+        c = self._client(app, monkeypatch, token="test-secret-token")
+        resp = c.post(
+            "/api/shield/validate",
+            json={"text": "Normal text"},
+            headers={"X-Shield-Token": "wrong-token"},
+        )
+        assert resp.status_code == 401
 
-        # Simulate token configured
-        original = mod._SHIELD_TOKEN
-        mod._SHIELD_TOKEN = "test-secret-token"
-        try:
-            _app = FastAPI()
-            _app.include_router(shield_router, prefix="/api")
-            c = TestClient(_app, raise_server_exceptions=False)
+    def test_token_rotates_without_restart(self, app, monkeypatch):
+        """Item 5 : le token est relu par requête.
 
-            # No token header → 401
-            resp = c.post("/api/shield/validate", json={"text": "Normal text"})
-            assert resp.status_code == 401
-            assert "X-Shield-Token" in resp.json()["detail"]
-        finally:
-            mod._SHIELD_TOKEN = original
+        Le bloc voisin relisait déjà la clé pour cette raison (rotation à
+        chaud) ; le token exigeait un redémarrage. Ce test tourne sur le **même
+        process et le même client** : seule la valeur d'environnement change.
+        """
+        c = self._client(app, monkeypatch, token="first-token")
+        ok = c.post(
+            "/api/shield/validate",
+            json={"text": "Normal text"},
+            headers={"X-Shield-Token": "first-token"},
+        )
+        assert ok.status_code == 200
 
-    def test_valid_token_accepted(self):
-        """Correct X-Shield-Token header should pass auth."""
-        import api.shield_endpoints as mod
+        monkeypatch.setenv("SHIELD_ENDPOINT_TOKEN", "second-token")
 
-        original = mod._SHIELD_TOKEN
-        mod._SHIELD_TOKEN = "test-secret-token"
-        try:
-            _app = FastAPI()
-            _app.include_router(shield_router, prefix="/api")
-            c = TestClient(_app, raise_server_exceptions=False)
+        stale = c.post(
+            "/api/shield/validate",
+            json={"text": "Normal text"},
+            headers={"X-Shield-Token": "first-token"},
+        )
+        assert stale.status_code == 401
 
-            resp = c.post(
-                "/api/shield/validate",
-                json={"text": "Normal text"},
-                headers={"X-Shield-Token": "test-secret-token"},
-            )
-            assert resp.status_code == 200
-        finally:
-            mod._SHIELD_TOKEN = original
-
-    def test_invalid_token_rejected(self):
-        """Wrong X-Shield-Token header should get 401."""
-        import api.shield_endpoints as mod
-
-        original = mod._SHIELD_TOKEN
-        mod._SHIELD_TOKEN = "test-secret-token"
-        try:
-            _app = FastAPI()
-            _app.include_router(shield_router, prefix="/api")
-            c = TestClient(_app, raise_server_exceptions=False)
-
-            resp = c.post(
-                "/api/shield/validate",
-                json={"text": "Normal text"},
-                headers={"X-Shield-Token": "wrong-token"},
-            )
-            assert resp.status_code == 401
-        finally:
-            mod._SHIELD_TOKEN = original
+        rotated = c.post(
+            "/api/shield/validate",
+            json={"text": "Normal text"},
+            headers={"X-Shield-Token": "second-token"},
+        )
+        assert rotated.status_code == 200
 
 
 # ──── Preset fail-open policy on the REST door (#2144 items 1+4) ────
@@ -434,3 +466,36 @@ class TestShieldEndpointPresetPolicy:
             )
         assert resp.status_code == 200
         assert resp.json()["passed"] is True
+
+
+# ──── Le type d'erreur de couche atteint la réponse (#2144 item 3) ────
+
+
+class TestLayerErrorTypeOnTheRestDoor:
+    """Un signal qui s'arrête au `Shield` n'est pas actionnable pour un appelant
+    HTTP : le type de l'exception doit traverser la réponse."""
+
+    def test_layer_error_type_reaches_the_response(self, client):
+        from argumentation_analysis.services.ai_shield.shield import Shield, ShieldLayer
+
+        class BoomLayer(ShieldLayer):
+            def validate(self, text, **kwargs):
+                raise ValueError("layer boom")
+
+        fake = Shield(layers=[BoomLayer("boom")], fail_open=True)
+        with patch(
+            "argumentation_analysis.services.ai_shield.load_preset",
+            return_value=fake,
+        ):
+            resp = client.post("/api/shield/validate", json={"text": "Normal text"})
+
+        assert resp.status_code == 200
+        layer = resp.json()["layer_results"][0]
+        assert layer["error_type"] == "ValueError"
+
+    def test_healthy_layer_leaves_the_field_empty(self, client):
+        """Contrôle : « pas de menace » ne doit pas porter de type d'erreur."""
+        resp = client.post("/api/shield/validate", json={"text": "Normal text"})
+        assert resp.status_code == 200
+        layer = resp.json()["layer_results"][0]
+        assert layer["error_type"] is None

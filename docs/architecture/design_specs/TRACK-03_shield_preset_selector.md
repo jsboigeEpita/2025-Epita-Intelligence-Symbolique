@@ -39,7 +39,7 @@ def load_preset(preset_name: str = "basic", api_key=None, fail_open: bool = Fals
 | Invoke callable | ✅ | `invoke_callables.py:6118` — `_invoke_ai_shield()` |
 | Shared state | ✅ | `shared_state.py:452` — `state.ai_shield_results` |
 | REST endpoint | ✅ | `api/shield_endpoints.py` — `POST /api/shield/validate` |
-| Auth guard | ✅ | `X-Shield-Token` / `SHIELD_ENDPOINT_TOKEN` (dev=open, prod=locked) |
+| Auth guard | ✅ | `X-Shield-Token` / `SHIELD_ENDPOINT_TOKEN`, relu **par requête** (rotation à chaud). Sans token la route **refuse de servir** (`503`) sauf opt-in dev explicite `SHIELD_ALLOW_ANONYMOUS=1` — plus de pass-through implicite (#2144) |
 
 ### 1.3 Gaps
 
@@ -147,7 +147,8 @@ async def full_analysis(
 
 - **`basic` preset**: Zero LLM cost. Heuristic-only. Safe for CI.
 - **`advanced`/`strict`**: Call LLM for validation → API cost. `strict` has `fail_open=False` → blocks on error.
-- **`SHIELD_ENDPOINT_TOKEN`**: Existing auth guard on REST endpoint. CLI bypasses this (local execution).
+- **`SHIELD_ENDPOINT_TOKEN`**: Existing auth guard on REST endpoint, read **per request** (hot rotation). CLI bypasses this (local execution).
+- **`SHIELD_ALLOW_ANONYMOUS`**: Explicit dev opt-in. Without it, an unset `SHIELD_ENDPOINT_TOKEN` makes the route **refuse to serve** (`503`) instead of passing through — a deployment that forgets the token is closed, not open (#2144).
 - **Privacy**: Shield's `OutputFilterLayer` checks for credential/PII leaks in LLM responses — complementary to existing `_scrub_state_for_export`.
 
 ---

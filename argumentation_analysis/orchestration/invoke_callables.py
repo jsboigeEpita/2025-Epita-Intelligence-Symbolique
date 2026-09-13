@@ -10422,6 +10422,8 @@ async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[st
                 "score": lr.score,
                 "passed": lr.passed,
                 "reason": lr.reason,
+                # Type de l'exception si la couche a levé (#2144, item 3).
+                "error_type": lr.error_type,
             }
             for lr in result.layer_results
         ],

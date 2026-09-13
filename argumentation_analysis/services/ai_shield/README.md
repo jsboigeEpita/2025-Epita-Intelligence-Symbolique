@@ -111,6 +111,16 @@ directe non authentifiée par défaut, auth lue une fois). Les items **4, 7, 10,
 recouvrent **#2095** (repli interne masquant une panne, appel LLM synchrone, verdict sans
 effet, `ai_shield_results` sans lecteur). Les items **6, 12, 13** restent locaux.
 
+> **État au 2026-09-14 — les six items #2144 sont fermés.** Le relevé ci-dessous est daté du
+> 2026-09-11 et reste la mesure telle qu'elle a été prise ; ces six entrées ne décrivent donc
+> plus l'état courant. **1, 2, 3** par la PR #2209 (`2ae088b3`) : politique fail-open à source
+> unique (`PRESET_FAIL_OPEN`), champ `fail_open` tri-state, argument explicite honoré pour
+> `strict`. **5, 8, 9** par le grain #2144 de R992 : le type de l'exception de couche est
+> exposé (`LayerResult.error_type`), le token est relu **par requête**, et la route directe
+> est **fail-closed** — elle refuse de servir sans token, sauf opt-in dev explicite
+> (`SHIELD_ALLOW_ANONYMOUS`). Les items **4, 6, 7, 10, 11, 12, 13** restent ouverts tels que
+> décrits.
+
 1. **Docstring contredisant le code (presets)** — l'en-tête `presets.py:3-7` annonce 3 profils (`basic`, `advanced`, `output_only`) et la docstring de `load_preset` en cite 3 (`presets.py:29`) ; le code en implémente **4**, `strict` existant (`presets.py:65-74`) et étant un choix CLI valide (`run_orchestration.py:450`).
 2. **Paramètre ignoré** — `load_preset(preset_name, api_key, fail_open)` propage `fail_open` dans `basic`/`advanced`/`output_only` (`presets.py:38,47,58`) mais écrit le **littéral `False`** pour `strict` (`presets.py:68`) : l'appelant ne peut pas rendre `strict` tolérant, l'argument est silencieusement perdu.
 3. **Divergence CLI ↔ REST sur `strict`** — le CLI pose `"fail_open": shield_preset != "strict"` (`run_orchestration.py:217`), donc `strict` arrive **fail-closed** ; la route `/api/workflow/custom` ne pose **que** `{"preset": ...}` (`api/proposal_endpoints.py:223`), si bien que `_invoke_ai_shield` retombe sur son défaut `fail_open=True` (`invoke_callables.py:10357`) : le même preset `strict` est **fail-open via REST** et fail-closed via CLI.

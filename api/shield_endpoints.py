@@ -7,8 +7,11 @@ Routes:
     POST /api/shield/validate — Validate text against adversarial patterns
 
 Security:
-    If SHIELD_ENDPOINT_TOKEN is set in the environment, callers must provide
-    it via the X-Shield-Token header. If unset (dev mode), no auth required.
+    Callers must provide SHIELD_ENDPOINT_TOKEN via the X-Shield-Token header.
+    When the variable is unset the endpoint refuses to serve (503) unless
+    SHIELD_ALLOW_ANONYMOUS is explicitly set truthy — an opt-in, so a
+    deployment that forgets the token is closed rather than open (#2144).
+    The token is read per request and rotates without a restart.
     This prevents unauthorized credit-drain on the OPENAI_API_KEY used by the
     shield's LLM-backed layers. See Hermes review concern on PR #874.
 """
@@ -26,17 +29,44 @@ shield_router = APIRouter(prefix="/shield", tags=["AI Shield"])
 
 # ──── Auth guard ────
 
-_SHIELD_TOKEN: Optional[str] = os.environ.get("SHIELD_ENDPOINT_TOKEN")
-# NOTE: os.environ.get("OPENAI_API_KEY") is called per-request below because
-# the key may rotate at runtime without restart. This is intentional.
+# Opt-in dev explicite (#2144, item 4). L'absence de `SHIELD_ENDPOINT_TOKEN`
+# ne vaut plus « pas d'auth » : un déploiement qui oubliait la variable
+# exposait un endpoint ouvert et non bloquant. Sans token le service refuse de
+# servir, sauf si cette variable le dit explicitement.
+_DEV_ANON_ENV = "SHIELD_ALLOW_ANONYMOUS"
+_TRUTHY = frozenset({"1", "true", "yes", "on"})
+
+
+def _dev_anonymous_allowed() -> bool:
+    """Vrai seulement si l'opérateur l'a demandé explicitement."""
+    return (os.environ.get(_DEV_ANON_ENV) or "").strip().lower() in _TRUTHY
 
 
 def _verify_token(x_shield_token: Optional[str]) -> None:
-    """Raise 401 if SHIELD_ENDPOINT_TOKEN is configured and token doesn't match."""
-    if _SHIELD_TOKEN is None:
-        return  # Dev mode — no auth required
-    if x_shield_token != _SHIELD_TOKEN:
-        raise HTTPException(status_code=401, detail="Invalid or missing X-Shield-Token header")
+    """Refuse l'appel sauf si le client prouve qu'il peut utiliser l'endpoint.
+
+    Le token est relu **par requête** (#2144, item 5) : le bloc voisin relisait
+    déjà la clé pour cette raison (rotation à chaud), alors que le token exigeait
+    un redémarrage — asymétrie du même bloc, supprimée.
+
+    503 et non 401 quand rien n'est configuré : le client ne peut rien y faire,
+    c'est le serveur qui est mal configuré.
+    """
+    token = os.environ.get("SHIELD_ENDPOINT_TOKEN")
+    if not token:
+        if _dev_anonymous_allowed():
+            return
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "AI Shield endpoint is not configured: set SHIELD_ENDPOINT_TOKEN, "
+                f"or set {_DEV_ANON_ENV}=1 to serve it anonymously (development only)."
+            ),
+        )
+    if x_shield_token != token:
+        raise HTTPException(
+            status_code=401, detail="Invalid or missing X-Shield-Token header"
+        )
 
 
 # ──── Request/Response Models ────
@@ -60,6 +90,9 @@ class LayerResultResponse(BaseModel):
     score: float
     passed: bool
     reason: str = ""
+    # Type de l'exception si la couche a levé (#2144, item 3). Un signal qui
+    # s'arrête au `Shield` n'est pas actionnable pour un appelant HTTP.
+    error_type: Optional[str] = None
 
 
 class ShieldValidateResponse(BaseModel):
@@ -163,6 +196,7 @@ async def shield_validate(
                 score=lr.score,
                 passed=lr.passed,
                 reason=lr.reason,
+                error_type=lr.error_type,
             )
             for lr in result.layer_results
         ],

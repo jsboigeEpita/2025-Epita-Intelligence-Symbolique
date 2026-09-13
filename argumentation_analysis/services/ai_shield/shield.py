@@ -22,6 +22,14 @@ class LayerResult:
     passed: bool
     details: Dict[str, Any] = field(default_factory=dict)
     reason: str = ""
+    # Nom du type de l'exception quand la couche a **levé** (#2144, item 3).
+    # Sans ce champ, `ReasoningStarvedError` re-levée par le validateur LLM
+    # n'arrivait ici que comme texte dans `details["error"]` : un appelant qui
+    # n'inspecte pas le dictionnaire ne distinguait pas « couche en panne » de
+    # « pas de menace », les deux rendant `passed=True` sous fail-open — le
+    # mécanisme par lequel la garde #1929 était neutralisée en aval.
+    # Dérivé à l'exécution (`type(e).__name__`), jamais une liste de noms.
+    error_type: Optional[str] = None
 
 
 @dataclass
@@ -151,6 +159,7 @@ class Shield:
                     passed=self.fail_open,
                     details={"error": str(e)},
                     reason=f"Layer error: {e}",
+                    error_type=type(e).__name__,
                 )
                 layer_results.append(error_result)
                 if not self.fail_open:

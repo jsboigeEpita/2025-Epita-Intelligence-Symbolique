@@ -363,3 +363,61 @@ class TestPresetFailOpenPolicy:
         assert resolve_fail_open("basic", False) is False
         with pytest.raises(ValueError, match="Unknown preset"):
             resolve_fail_open("nonexistent")
+
+
+# ── Le type d'erreur de couche survit comme type (#2144 item 3) ──
+
+
+class TestLayerErrorType:
+    """`ReasoningStarvedError`, re-levée correctement par le validateur LLM,
+    était réduite un niveau au-dessus à une valeur de dictionnaire : le nom
+    survivait comme texte, pas comme type. Sous fail-open, « pas de menace » et
+    « couche en panne » rendaient alors tous deux `passed=True`, et seul un
+    appelant qui inspectait `details` pouvait les séparer."""
+
+    def test_starved_error_keeps_its_type(self):
+        from argumentation_analysis.core.utils.llm_completion_guard import (
+            ReasoningStarvedError,
+        )
+
+        class StarvedLayer(ShieldLayer):
+            def validate(self, text, **kwargs):
+                raise ReasoningStarvedError("budget consumed by reasoning")
+
+        shield = Shield(layers=[StarvedLayer("starved")], fail_open=True)
+        layer = shield.validate_input("test").layer_results[0]
+
+        assert layer.error_type == "ReasoningStarvedError"
+        # `details["error"]` porte le MESSAGE, pas le nom du type : sans le
+        # champ typé l'information n'était pas mal rangée, elle était perdue.
+        assert layer.details["error"] == "budget consumed by reasoning"
+        assert "ReasoningStarvedError" not in layer.details["error"]
+
+    def test_an_error_is_distinguishable_from_no_threat(self):
+        class BoomLayer(ShieldLayer):
+            def validate(self, text, **kwargs):
+                raise RuntimeError("boom")
+
+        failing = Shield(layers=[BoomLayer("boom")], fail_open=True)
+        failing_layer = failing.validate_input("test").layer_results[0]
+        assert failing_layer.passed is True
+        assert failing_layer.error_type == "RuntimeError"
+
+        # Contrôle : même verdict de surface sur une couche saine, mais aucun
+        # type d'erreur — c'est bien ce champ qui sépare les deux chemins.
+        clean = Shield(layers=[HeuristicLayer()], fail_open=True)
+        clean_result = clean.validate_input("What is 2+2?")
+        assert clean_result.passed is True
+        assert all(lr.error_type is None for lr in clean_result.layer_results)
+
+    def test_fail_closed_error_also_carries_the_type(self):
+        """La politique fail-closed ne doit pas effacer le type non plus."""
+
+        class BoomLayer(ShieldLayer):
+            def validate(self, text, **kwargs):
+                raise RuntimeError("boom")
+
+        shield = Shield(layers=[BoomLayer("boom")], fail_open=False)
+        result = shield.validate_input("test")
+        assert result.blocked is True
+        assert result.layer_results[0].error_type == "RuntimeError"
