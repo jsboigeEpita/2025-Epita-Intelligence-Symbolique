@@ -140,7 +140,10 @@ async def shield_validate(
             result = shield.validate_input(request.text)
     except Exception as exc:
         logger.error(f"Shield validation failed: {exc}")
-        if request.fail_open:
+        # Même politique que le repli de chargement : `request.fail_open` seul
+        # serait falsy sur un champ omis (`None`) et fermerait la porte pour les
+        # presets ouverts (#2144).
+        if effective_fail_open:
             return ShieldValidateResponse(
                 blocked=False,
                 passed=True,
