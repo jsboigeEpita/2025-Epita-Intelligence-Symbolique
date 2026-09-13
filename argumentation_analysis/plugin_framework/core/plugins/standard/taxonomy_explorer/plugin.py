@@ -207,7 +207,7 @@ class TaxonomyExplorerPlugin(BasePlugin):
 
             # Logique de calcul reprise de l'ancien service
             context_relevance = (
-                self._calculate_context_relevance(text, family_info)
+                self._calculate_contextual_relevance(text, family_info)
                 if family_info
                 else 0.0
             )

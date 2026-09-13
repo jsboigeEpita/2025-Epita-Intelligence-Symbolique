@@ -90,9 +90,15 @@ class InformalAnalysisPlugin:
     Plugin natif pour Semantic Kernel dédié à l'analyse de sophismes.
     """
 
-    def __init__(self, kernel: Kernel, taxonomy_file_path: Optional[str] = None):
+    def __init__(
+        self, kernel: Optional[Kernel] = None, taxonomy_file_path: Optional[str] = None
+    ):
         """
         Initialise le plugin hybride.
+
+        ``kernel`` is stored but never read by this class — the taxonomy-only
+        entry points (``TaxonomySophismDetector`` / ``get_global_detector``)
+        construct the plugin for its CSV accessor alone, so it is optional.
         """
         self.kernel = kernel
         self._logger = logging.getLogger("InformalAnalysisPlugin")
