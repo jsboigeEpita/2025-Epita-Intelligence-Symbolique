@@ -266,10 +266,6 @@ class TestJVMSettings:
         assert isinstance(s.tweety_libs_dir, Path)
         assert isinstance(s.native_libs_dir, Path)
 
-    def test_has_azure_openai_nested(self):
-        s = JVMSettings()
-        assert isinstance(s.azure_openai, AzureOpenAISettings)
-
 
 # ============================================================
 # AppSettings — structure and defaults
@@ -277,6 +273,14 @@ class TestJVMSettings:
 
 
 class TestAppSettings:
+    def test_azure_block_lives_on_app_settings(self):
+        # #2198: the block was declared under JVMSettings while #2115's reader
+        # looked for it here. That misplacement is what made the azure branch
+        # dead from birth; this pin is re-derived against the corrected
+        # location. It follows the block — it does not defend the old home.
+        s = AppSettings()
+        assert isinstance(s.azure_openai, AzureOpenAISettings)
+
     def test_debug_mode_default(self):
         s = AppSettings()
         assert s.debug_mode is False

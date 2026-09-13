@@ -146,7 +146,6 @@ class JVMSettings(BaseSettings):
     ext_tools_dir: Path = Path("ext_tools")
     clingo_version: str = "5.4.0"
 
-    azure_openai: AzureOpenAISettings = AzureOpenAISettings()
     # env_file is not inherited: without it JVM_TWEETY_PINNED_MODULES set in
     # .env -- the channel this project documents -- silently resolves to the
     # empty string, parse_pin_spec('') returns {} without complaint, and the
@@ -170,6 +169,14 @@ class AppSettings(BaseSettings):
     ui: UISettings = UISettings()
     service_manager: ServiceManagerSettings = ServiceManagerSettings()
     jvm: JVMSettings = JVMSettings()
+    # The Azure block is not a JVM concern and never was: #2115's reader wrote
+    # ``settings.azure_openai`` (where a provider block belongs) while the field
+    # had been declared under ``JVMSettings`` — the branch was dead from birth.
+    # #2198 moved the field to match the intent, rather than teaching every
+    # future reader the misplacement. Its own ``env_prefix``/aliases
+    # (``AZURE_OPENAI_*``) govern resolution, so nesting never selected which
+    # variables populate it.
+    azure_openai: AzureOpenAISettings = AzureOpenAISettings()
 
     # App-level settings
     debug_mode: bool = Field(False, alias="DEBUG")

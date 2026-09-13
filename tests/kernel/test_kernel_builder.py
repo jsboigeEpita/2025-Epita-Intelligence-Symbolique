@@ -1,11 +1,13 @@
 """KernelBuilder — the provider branch each ``default_llm_service_id`` selects.
 
 The azure branch of ``create_kernel`` read ``settings.azure_openai``, a name
-``AppSettings`` does not carry: the field was declared inside ``JVMSettings``
+``AppSettings`` did not carry: the field was declared inside ``JVMSettings``
 (``config/settings.py``), so the attribute access raised ``AttributeError``
 before the branch's own "key not configured" guard. Selecting azure could
 therefore never work — the exception surfaced as "the Azure key is missing"
-no matter what the environment held (#2115).
+no matter what the environment held (#2115). #2198 then moved the block onto
+``AppSettings``, where the reader had always looked for it, so the two
+spellings that coexisted during #2115 are down to one.
 """
 
 from pydantic import SecretStr
@@ -28,7 +30,7 @@ def _settings_with_provider(provider: str) -> AppSettings:
 def test_azure_provider_builds_the_azure_service():
     """Selecting azure reaches AzureChatCompletion, not an AttributeError."""
     base = AppSettings()
-    azure = base.jvm.azure_openai.model_copy(
+    azure = base.azure_openai.model_copy(
         update={
             "api_key": SecretStr("test-key"),
             "endpoint": "https://example.openai.azure.com/",
@@ -40,7 +42,7 @@ def test_azure_provider_builds_the_azure_service():
             "service_manager": base.service_manager.model_copy(
                 update={"default_llm_service_id": "azure"}
             ),
-            "jvm": base.jvm.model_copy(update={"azure_openai": azure}),
+            "azure_openai": azure,
         }
     )
 
@@ -49,7 +51,7 @@ def test_azure_provider_builds_the_azure_service():
     service = kernel.get_service("azure")
     assert service is not None, (
         "the azure branch produced no service — check that it reads the block "
-        "where it actually lives (settings.jvm.azure_openai, #2115)"
+        "where it lives (settings.azure_openai, #2198)"
     )
 
 
