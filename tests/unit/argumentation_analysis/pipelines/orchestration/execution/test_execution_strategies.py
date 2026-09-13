@@ -16,6 +16,7 @@ into sys.modules BEFORE importing anything from the orchestration package.
 """
 
 import sys
+from enum import Enum
 from unittest.mock import MagicMock, AsyncMock
 
 import pytest
@@ -273,16 +274,90 @@ class TestSelectOrchestrationStrategy:
         assert result == "hybrid"
 
     @pytest.mark.asyncio
-    async def test_unknown_mode_returns_fallback(self):
-        """Unknown OrchestrationMode falls back to 'fallback' in mode_strategy_map."""
+    async def test_manual_pipeline_returns_fallback(self):
+        """PIPELINE → 'fallback' : identité documentée, pas un repli muet.
+
+        L'exécuteur "fallback" EST le pipeline original
+        (execute_fallback_orchestration → _fallback_pipeline.analyze_text_unified)
+        — pour le mode PIPELINE (défaut de ExtendedOrchestrationConfig) la
+        correspondance est exacte ; seul le nom de la stratégie est
+        malheureux. Arbitré explicite, entrée dans la carte (#2205).
+        """
         from argumentation_analysis.pipelines.orchestration.execution.strategies import (
             select_orchestration_strategy,
         )
 
-        # PIPELINE is a valid enum but not in mode_strategy_map
         cfg = _make_config(orchestration_mode_enum=OrchestrationMode.PIPELINE)
         result = await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
         assert result == "fallback"
+
+    @pytest.mark.asyncio
+    async def test_manual_real_raises(self):
+        """REAL n'a pas d'exécuteur (wrapper retiré #885) → ValueError nommant
+        'real' via la garde #2109, pas de substitution muette vers fallback (#2205)."""
+        from argumentation_analysis.pipelines.orchestration.execution.strategies import (
+            select_orchestration_strategy,
+        )
+
+        cfg = _make_config(orchestration_mode_enum=OrchestrationMode.REAL)
+        with pytest.raises(ValueError, match="real"):
+            await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
+
+    @pytest.mark.asyncio
+    async def test_manual_conversation_raises(self):
+        """CONVERSATION n'a pas de branche dans le moteur (le wrapper existe,
+        aucune entrée STRATEGY_EXECUTORS ne le dispatche) → ValueError nommant
+        'conversation' — pas de substitution muette vers fallback (#2205)."""
+        from argumentation_analysis.pipelines.orchestration.execution.strategies import (
+            select_orchestration_strategy,
+        )
+
+        cfg = _make_config(orchestration_mode_enum=OrchestrationMode.CONVERSATION)
+        with pytest.raises(ValueError, match="conversation"):
+            await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
+
+    @pytest.mark.asyncio
+    async def test_unknown_mode_raises_not_silent_fallback(self):
+        """Le trou que la garde #2109 laissait ouvert : un mode absent de la
+        carte (ici un membre d'enum fabriqué, futur 12ᵉ OrchestrationMode)
+        doit lever en nommant le mode — jamais résoudre vers 'fallback' (#2205).
+
+        Contrôle né-rouge : le mode fabriqué prouve que l'absence de défaut
+        dans `.get` est un refus, pas un accident de couverture.
+        """
+        from argumentation_analysis.pipelines.orchestration.execution.strategies import (
+            select_orchestration_strategy,
+        )
+
+        FabricatedMode = Enum("FabricatedMode", {"TWELFTH_UNWIRED": "twelfth_unwired"})
+        cfg = _make_config(orchestration_mode_enum=FabricatedMode.TWELFTH_UNWIRED)
+        with pytest.raises(ValueError, match="absent de mode_strategy_map"):
+            await select_orchestration_strategy(_make_pipeline(config=cfg), "text")
+
+    @pytest.mark.asyncio
+    async def test_no_mode_silently_resolves_to_fallback(self):
+        """Invariant #2205 balayé sur les 11 modes : en sélection manuelle,
+        seul PIPELINE peut produire 'fallback' (identité documentée). Tout
+        autre mode aboutissant à 'fallback' serait une substitution muette
+        de l'intention de l'appelant. Un refus ValueError est légitime."""
+        from argumentation_analysis.pipelines.orchestration.execution.strategies import (
+            select_orchestration_strategy,
+        )
+
+        for mode in OrchestrationMode:
+            if mode is OrchestrationMode.AUTO_SELECT:
+                continue
+            cfg = _make_config(orchestration_mode_enum=mode)
+            try:
+                result = await select_orchestration_strategy(
+                    _make_pipeline(config=cfg), "text"
+                )
+            except ValueError:
+                continue
+            assert result != "fallback" or mode is OrchestrationMode.PIPELINE, (
+                f"{mode} résout silencieusement vers 'fallback' — "
+                "substitution muette de l'intention (#2205)"
+            )
 
 
 # =====================================================================
