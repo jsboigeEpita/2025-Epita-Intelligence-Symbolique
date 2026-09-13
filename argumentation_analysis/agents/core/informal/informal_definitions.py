@@ -238,7 +238,9 @@ class InformalAnalysisPlugin:
                 int(current_row["depth"]) if pd.notna(current_row.get("depth")) else 0
             ),
             "Name": current_row.get("Name", ""),
-            "nom_vulgarise": current_row.get("nom_vulgarise", ""),
+            # Clé de sortie `nom_vulgarise` (contrat, non accentuée) ≠ colonne CSV
+            # `nom_vulgarisé` (accentuée) : les confondre est le défaut de 0b77c3e50 (#2196).
+            "nom_vulgarise": current_row.get("nom_vulgarisé", ""),
             "famille": current_row.get("Famille", ""),
             "description_courte": current_row.get("text_fr", ""),
         }
@@ -284,7 +286,7 @@ class InformalAnalysisPlugin:
             for _, child_row in children_df.iterrows():
                 child_info = {
                     "pk": int(child_row.name),
-                    "nom_vulgarise": child_row.get("nom_vulgarise", ""),
+                    "nom_vulgarise": child_row.get("nom_vulgarisé", ""),
                     "description_courte": child_row.get("text_fr", ""),
                     "famille": child_row.get("Famille", ""),
                     "has_children": False,
@@ -353,7 +355,7 @@ class InformalAnalysisPlugin:
             parent_row = parent_df.iloc[0]
             result["parent"] = {
                 "pk": int(parent_row.name),
-                "nom_vulgarise": parent_row.get("nom_vulgarise", ""),
+                "nom_vulgarise": parent_row.get("nom_vulgarisé", ""),
                 "description_courte": parent_row.get("text_fr", ""),
                 "famille": parent_row.get("Famille", ""),
             }
@@ -401,7 +403,7 @@ class InformalAnalysisPlugin:
             for _, child_row_detail in child_nodes_for_details.iterrows():
                 child_info_detail = {
                     "pk": int(child_row_detail.name),
-                    "nom_vulgarise": child_row_detail.get("nom_vulgarise", ""),
+                    "nom_vulgarise": child_row_detail.get("nom_vulgarisé", ""),
                     "description_courte": child_row_detail.get("text_fr", ""),
                     "famille": child_row_detail.get("Famille", ""),
                 }
@@ -415,7 +417,7 @@ class InformalAnalysisPlugin:
         try:
             df = self._get_taxonomy_dataframe()
             return "\n".join(
-                f"- {row.get('nom_vulgarise', 'N/A')}: {row.get('text_fr', 'N/A')}"
+                f"- {row.get('nom_vulgarisé', 'N/A')}: {row.get('text_fr', 'N/A')}"
                 for _, row in df.iterrows()
             )
         except Exception as e:
@@ -532,9 +534,9 @@ class InformalAnalysisPlugin:
             return json.dumps({"error": "Taxonomie non disponible."})
 
         condition_nom_vulgarise = pd.Series(False, index=df.index)
-        if "nom_vulgarise" in df.columns:
+        if "nom_vulgarisé" in df.columns:
             condition_nom_vulgarise = (
-                df["nom_vulgarise"]
+                df["nom_vulgarisé"]
                 .fillna("")
                 .astype(str)
                 .str.contains(fallacy_name, case=False, na=False)
@@ -572,7 +574,7 @@ class InformalAnalysisPlugin:
                 else found_fallacy.index[0]
             )
             name_found = found_fallacy.iloc[0].get(
-                "nom_vulgarise", found_fallacy.iloc[0].get("text_fr", fallacy_name)
+                "nom_vulgarisé", found_fallacy.iloc[0].get("text_fr", fallacy_name)
             )
 
             self._logger.info(
@@ -696,9 +698,9 @@ class InformalAnalysisPlugin:
             return json.dumps({"error": "Taxonomie non disponible."})
 
         condition_nom_vulgarise = pd.Series(False, index=df.index)
-        if "nom_vulgarise" in df.columns:
+        if "nom_vulgarisé" in df.columns:
             condition_nom_vulgarise = (
-                df["nom_vulgarise"]
+                df["nom_vulgarisé"]
                 .fillna("")
                 .astype(str)
                 .str.contains(fallacy_name, case=False, na=False)
@@ -734,7 +736,7 @@ class InformalAnalysisPlugin:
                 else found_fallacy.index[0]
             )
             name_found = found_fallacy.iloc[0].get(
-                "nom_vulgarise", found_fallacy.iloc[0].get("text_fr", fallacy_name)
+                "nom_vulgarisé", found_fallacy.iloc[0].get("text_fr", fallacy_name)
             )
 
             self._logger.info(f"Exemple trouvé pour '{name_found}' (PK: {pk_found}).")

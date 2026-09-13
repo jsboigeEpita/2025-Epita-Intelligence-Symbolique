@@ -39,6 +39,13 @@ def informal_plugin_with_test_df(mocker):
         - Initialise le plugin, qui appelle en interne la logique de préparation des données
     (_internal_load_and_prepare_dataframe), assurant ainsi que le DataFrame est
     correctement indexé et que les types de données sont normalisés.
+
+    La colonne porte l'orthographe **accentuée** `nom_vulgarisé` : c'est le nom que
+    la taxonomie livrée porte réellement (les six CSV du dépôt qui portent le champ
+    l'écrivent accentués). Ce mock déclarait `nom_vulgarise`, la faute même que le
+    plugin commettait — il validait donc le code cassé (#2196). Les assertions sur
+    `["nom_vulgarise"]`, elles, portent sur la **clé de sortie** du contrat et
+    restent non accentuées : les deux noms ont deux propriétaires distincts.
     """
     test_df = pd.DataFrame(
         {
@@ -55,7 +62,7 @@ def informal_plugin_with_test_df(mocker):
                 "Cat B",
                 "Sophisme B1",
             ],
-            "nom_vulgarise": [
+            "nom_vulgarisé": [
                 "Catégorie A",
                 "Sophisme A Un",
                 "Sophisme A Deux",
