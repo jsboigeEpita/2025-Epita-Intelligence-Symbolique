@@ -189,9 +189,16 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > `governance_simulation`, `counter_argument_generation`, `deep_synthesis` — internal
 > features (scoring, virtues, voting methods) are not separate registry entries.
 > `tests/unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py`
-> guards both invariants: any new unwired definer reddens, and so does a declared
-> capability with zero production demanders. When adding a capability, add it to the surface
-> `setup_registry` populates, **and give it a consumer** — a phase asking for it.
+> guards the surface: any new unwired definer reddens, and so does any **new**
+> declared capability with zero production demanders. The orphans the tree
+> already carries are named debt, not silence: each sits in the guard's
+> `PENDING_TRIAGE` map with the issue owning its triage (#1604 — formal/Tweety
+> specialists; #2137 — services remainder; 20 pairs / 14 components, measured
+> 2026-09-13 on `d24cb83a` — the figure moves with every triage that lands,
+> re-measure before quoting). The map shrinks as those issues land and never
+> grows to absorb new silence; a stale entry reddens on its own. When adding a
+> capability, add it to the surface `setup_registry` populates, **and give it
+> a consumer** — a phase asking for it.
 
 > ⚠ **"Requested" means `add_phase(capability="…")`, not a `find_*` grep.**
 > Phases are what consume capabilities: `workflow_dsl.py` resolves `phase.capability` through
