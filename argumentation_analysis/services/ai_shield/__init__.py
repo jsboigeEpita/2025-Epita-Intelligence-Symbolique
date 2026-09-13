@@ -24,6 +24,17 @@ from argumentation_analysis.services.ai_shield.shield import (
     ShieldResult,
     ShieldLayer,
 )
-from argumentation_analysis.services.ai_shield.presets import load_preset
+from argumentation_analysis.services.ai_shield.presets import (
+    PRESET_FAIL_OPEN,
+    load_preset,
+    resolve_fail_open,
+)
 
-__all__ = ["Shield", "ShieldResult", "ShieldLayer", "load_preset"]
+__all__ = [
+    "Shield",
+    "ShieldResult",
+    "ShieldLayer",
+    "load_preset",
+    "resolve_fail_open",
+    "PRESET_FAIL_OPEN",
+]

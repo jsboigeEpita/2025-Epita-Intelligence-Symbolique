@@ -10376,7 +10376,10 @@ async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[st
     Writes results to state.ai_shield_results and adds a trace entry.
     """
     try:
-        from argumentation_analysis.services.ai_shield import load_preset
+        from argumentation_analysis.services.ai_shield import (
+            PRESET_FAIL_OPEN,
+            load_preset,
+        )
     except ImportError as exc:
         logger.debug(f"AI Shield not available (import failed: {exc})")
         return {"shield_available": False, "blocked": False, "error": str(exc)}
@@ -10384,7 +10387,8 @@ async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[st
     # Configure from context or use default preset
     shield_config = context.get("shield_config", {})
     preset_name = shield_config.get("preset", "basic")
-    fail_open = shield_config.get("fail_open", True)
+    # Politique non posée = sémantique du preset, jamais un True implicite (#2144)
+    fail_open = shield_config.get("fail_open")
 
     # LLM validator needs API key — pass through if available
     api_key = os.environ.get("OPENAI_API_KEY")
@@ -10392,7 +10396,16 @@ async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[st
         shield = load_preset(preset_name, api_key=api_key, fail_open=fail_open)
     except Exception as exc:
         logger.warning(f"AI Shield preset load failed: {exc}")
-        return {"shield_available": False, "blocked": False, "error": str(exc)}
+        # Échec de chargement : la politique du preset décide, pas un repli muet.
+        # Preset inconnu ⇒ fermé (on ne devine pas la politique d'un preset absent) (#2144)
+        effective_fail_open = (
+            fail_open
+            if fail_open is not None
+            else PRESET_FAIL_OPEN.get(preset_name, False)
+        )
+        if effective_fail_open:
+            return {"shield_available": False, "blocked": False, "error": str(exc)}
+        return {"shield_available": False, "blocked": True, "error": str(exc)}
 
     # Validate input (runs all enabled layers)
     result = shield.validate_input(input_text)

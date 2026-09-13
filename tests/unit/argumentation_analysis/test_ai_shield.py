@@ -316,3 +316,50 @@ class TestPresets:
             "Please analyze this argument about climate change"
         )
         assert result.passed is True
+
+
+# ── Preset fail-open policy (#2144) ──
+
+
+class TestPresetFailOpenPolicy:
+    """La politique fail-open vit à UN endroit (PRESET_FAIL_OPEN) et l'argument
+    explicite prime — `strict` inclus (#2144, items 1+2)."""
+
+    def test_strict_preset_fails_closed_by_default(self):
+        """`strict` est fail-closed sans argument — sa raison d'être."""
+        shield = load_preset("strict")
+        assert shield.fail_open is False
+
+    def test_non_strict_presets_fail_open_by_default(self):
+        """Les autres presets résolvent vers leur politique déclarée (ouverte)."""
+        assert load_preset("basic").fail_open is True
+        assert load_preset("advanced").fail_open is True
+        assert load_preset("output_only").fail_open is True
+
+    def test_fail_open_argument_is_honored_for_strict(self):
+        """Item 2 : l'argument n'est plus silencieusement ignoré pour `strict`.
+
+        Avant #2144, `load_preset("strict", fail_open=True)` rendait quand même
+        `fail_open=False` — le paramètre était accepté puis perdu.
+        """
+        assert load_preset("strict", fail_open=True).fail_open is True
+
+    def test_fail_open_false_is_honored_for_non_strict(self):
+        """Réciproquement, un preset ouvert peut être fermé explicitement."""
+        assert load_preset("basic", fail_open=False).fail_open is False
+
+    def test_resolve_fail_open_is_the_single_source(self):
+        """Le résolveur et le preset lisent la même table."""
+        from argumentation_analysis.services.ai_shield import (
+            PRESET_FAIL_OPEN,
+            resolve_fail_open,
+        )
+
+        for preset, declared in PRESET_FAIL_OPEN.items():
+            assert resolve_fail_open(preset) is declared
+            assert load_preset(preset).fail_open is declared
+        # L'explicite prime sur la déclaration, dans les deux sens
+        assert resolve_fail_open("strict", True) is True
+        assert resolve_fail_open("basic", False) is False
+        with pytest.raises(ValueError, match="Unknown preset"):
+            resolve_fail_open("nonexistent")

@@ -6,7 +6,7 @@ Based on soutenance description:
 - output_only: Output filter only (for post-LLM validation)
 """
 
-from typing import Optional
+from typing import Dict, Optional
 
 from argumentation_analysis.services.ai_shield.shield import Shield
 from argumentation_analysis.services.ai_shield.layers.heuristic import HeuristicLayer
@@ -17,26 +17,60 @@ from argumentation_analysis.services.ai_shield.layers.output_filter import (
     OutputFilterLayer,
 )
 
+# Politique fail-open déclarée par preset — SOURCE UNIQUE (#2144).
+# `fail_open=None` signifie « la politique déclarée ici ». La sémantique d'un
+# preset vit à un seul endroit pour que les portes d'entrée (CLI, REST
+# workflow, endpoint direct) ne puissent pas diverger : `strict` est le seul
+# profil dont la garantie est « ne laisse rien passer en cas de panne ».
+PRESET_FAIL_OPEN: Dict[str, bool] = {
+    "basic": True,
+    "advanced": True,
+    "output_only": True,
+    "strict": False,
+}
+
+
+def resolve_fail_open(preset_name: str, fail_open: Optional[bool] = None) -> bool:
+    """Politique fail-open effective : l'explicite prime, sinon la déclaration du preset.
+
+    Raises:
+        ValueError: preset inconnu et aucune politique explicite — on refuse de
+            deviner la politique d'un preset qui n'existe pas.
+    """
+    if fail_open is not None:
+        return fail_open
+    if preset_name not in PRESET_FAIL_OPEN:
+        raise ValueError(
+            f"Unknown preset '{preset_name}'. "
+            f"Available: {', '.join(PRESET_FAIL_OPEN)}"
+        )
+    return PRESET_FAIL_OPEN[preset_name]
+
 
 def load_preset(
     preset_name: str = "basic",
     api_key: Optional[str] = None,
-    fail_open: bool = False,
+    fail_open: Optional[bool] = None,
 ) -> Shield:
     """Load a pre-configured shield preset.
 
     Args:
         preset_name: "basic", "advanced", or "output_only".
         api_key: OpenAI API key for LLM validator layer.
-        fail_open: If True, allow input when layers error.
+        fail_open: Tri-state (#2144). None (default) = the preset's declared
+            policy in PRESET_FAIL_OPEN (`strict` fails closed, the others fail
+            open). True/False overrides it for any preset, `strict` included —
+            the argument used to be silently ignored for `strict`.
 
     Returns:
         Configured Shield instance.
     """
+    effective_fail_open = resolve_fail_open(preset_name, fail_open)
+
     if preset_name == "basic":
         return Shield(
             name="basic",
-            fail_open=fail_open,
+            fail_open=effective_fail_open,
             layers=[
                 HeuristicLayer(threshold=0.5),
             ],
@@ -45,7 +79,7 @@ def load_preset(
     elif preset_name == "advanced":
         return Shield(
             name="advanced",
-            fail_open=fail_open,
+            fail_open=effective_fail_open,
             layers=[
                 HeuristicLayer(threshold=0.5),
                 LLMValidatorLayer(threshold=0.6, api_key=api_key),
@@ -56,7 +90,7 @@ def load_preset(
     elif preset_name == "output_only":
         return Shield(
             name="output_only",
-            fail_open=fail_open,
+            fail_open=effective_fail_open,
             layers=[
                 OutputFilterLayer(threshold=0.4),
             ],
@@ -65,7 +99,7 @@ def load_preset(
     elif preset_name == "strict":
         return Shield(
             name="strict",
-            fail_open=False,
+            fail_open=effective_fail_open,
             layers=[
                 HeuristicLayer(threshold=0.3),  # Lower threshold = stricter
                 LLMValidatorLayer(threshold=0.4, api_key=api_key),
@@ -76,5 +110,5 @@ def load_preset(
     else:
         raise ValueError(
             f"Unknown preset '{preset_name}'. "
-            f"Available: basic, advanced, output_only, strict"
+            f"Available: {', '.join(PRESET_FAIL_OPEN)}"
         )

@@ -46,7 +46,13 @@ class ShieldValidateRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Text to validate")
     preset: str = Field("basic", description="Shield preset: basic, advanced, output_only, strict")
     direction: str = Field("input", description="Validation direction: input or output")
-    fail_open: bool = Field(True, description="Pass if shield fails to load")
+    fail_open: Optional[bool] = Field(
+        None,
+        description=(
+            "Pass if the shield fails to load. None (default) = the preset's "
+            "declared policy — `strict` fails closed, the others fail open (#2144)"
+        ),
+    )
 
 
 class LayerResultResponse(BaseModel):
@@ -80,25 +86,45 @@ async def shield_validate(
     _verify_token(x_shield_token)
 
     try:
-        from argumentation_analysis.services.ai_shield import load_preset
+        from argumentation_analysis.services.ai_shield import (
+            PRESET_FAIL_OPEN,
+            load_preset,
+        )
     except ImportError as exc:
         logger.warning(f"AI Shield not available: {exc}")
-        if request.fail_open:
-            return ShieldValidateResponse(
-                blocked=False,
-                passed=True,
-                shield_available=False,
-                reason=f"Shield unavailable: {exc}",
+        # Paquet absent : aucune table de politique n'est lisible — cas non
+        # tranché par #2144. On conserve le comportement d'origine (pass-through
+        # sauf refus explicite), sans supposer la politique d'un preset.
+        if request.fail_open is False:
+            raise HTTPException(
+                status_code=503, detail=f"AI Shield service unavailable: {exc}"
             )
-        raise HTTPException(status_code=503, detail=f"AI Shield service unavailable: {exc}")
+        return ShieldValidateResponse(
+            blocked=False,
+            passed=True,
+            shield_available=False,
+            reason=f"Shield unavailable: {exc}",
+        )
 
     api_key = os.environ.get("OPENAI_API_KEY")  # Per-request: key may rotate at runtime
 
+    # Politique effective (#2144) : l'explicite prime, sinon la déclaration du
+    # preset — même table que `load_preset`, source unique. Un `None` n'est plus
+    # converti en `True` implicite : c'est ce qui faisait de `strict` une
+    # politique fail-open sur cette porte.
+    effective_fail_open = (
+        request.fail_open
+        if request.fail_open is not None
+        else PRESET_FAIL_OPEN.get(request.preset, False)
+    )
+
     try:
-        shield = load_preset(request.preset, api_key=api_key, fail_open=request.fail_open)
+        shield = load_preset(
+            request.preset, api_key=api_key, fail_open=request.fail_open
+        )
     except Exception as exc:
         logger.error(f"Shield preset load failed: {exc}")
-        if request.fail_open:
+        if effective_fail_open:
             return ShieldValidateResponse(
                 blocked=False,
                 passed=True,
@@ -114,7 +140,10 @@ async def shield_validate(
             result = shield.validate_input(request.text)
     except Exception as exc:
         logger.error(f"Shield validation failed: {exc}")
-        if request.fail_open:
+        # Même politique que le repli de chargement : `request.fail_open` seul
+        # serait falsy sur un champ omis (`None`) et fermerait la porte pour les
+        # presets ouverts (#2144).
+        if effective_fail_open:
             return ShieldValidateResponse(
                 blocked=False,
                 passed=True,

@@ -130,6 +130,43 @@ class TestAIShieldInvoke:
         assert len(state.ai_shield_results) == 1
         assert state.ai_shield_results[0]["blocked"] is False
 
+    @pytest.mark.asyncio
+    async def test_invoke_strict_load_failure_blocks(self):
+        """Échec de chargement du preset `strict` : la porte workflow bloque (#2144 item 4).
+
+        Avant #2144, le repli rendait `blocked: False` inconditionnellement —
+        `strict` passait donc au travers quand le preset ne chargeait pas.
+        """
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_ai_shield,
+        )
+
+        with patch(
+            "argumentation_analysis.services.ai_shield.load_preset",
+            side_effect=RuntimeError("preset boom"),
+        ):
+            result = await _invoke_ai_shield("text", {"shield_config": {"preset": "strict"}})
+
+        assert result["shield_available"] is False
+        assert result["blocked"] is True
+
+    @pytest.mark.asyncio
+    async def test_invoke_non_strict_load_failure_still_passes(self):
+        """Contrôle : la politique décide du sens du repli, ce n'est pas un
+        basculement global vers le blocage (#2144)."""
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_ai_shield,
+        )
+
+        with patch(
+            "argumentation_analysis.services.ai_shield.load_preset",
+            side_effect=RuntimeError("preset boom"),
+        ):
+            result = await _invoke_ai_shield("text", {"shield_config": {"preset": "basic"}})
+
+        assert result["shield_available"] is False
+        assert result["blocked"] is False
+
 
 # ──── REST Endpoint (#842) ────
 
@@ -292,3 +329,108 @@ class TestShieldEndpointAuth:
             assert resp.status_code == 401
         finally:
             mod._SHIELD_TOKEN = original
+
+
+# ──── Preset fail-open policy on the REST door (#2144 items 1+4) ────
+
+
+class TestShieldEndpointPresetPolicy:
+    """`strict` demandé par HTTP ne doit pas produire une politique fail-open.
+
+    Avant #2144 : le champ `fail_open` valait `True` par défaut, donc un
+    opérateur demandant `strict` sans le poser obtenait la politique inverse de
+    celle du même preset en ligne de commande.
+    """
+
+    def _boom(self):
+        return patch(
+            "argumentation_analysis.services.ai_shield.load_preset",
+            side_effect=RuntimeError("preset boom"),
+        )
+
+    def test_strict_preset_load_failure_does_not_pass(self, client):
+        """`strict` + échec de chargement → refus, pas un 200 « tout va bien »."""
+        with self._boom():
+            resp = client.post(
+                "/api/shield/validate",
+                json={"text": "Normal text", "preset": "strict"},
+            )
+        assert resp.status_code == 500
+
+    def test_non_strict_preset_load_failure_still_passes(self, client):
+        """Contrôle : un preset ouvert garde son repli ouvert."""
+        with self._boom():
+            resp = client.post(
+                "/api/shield/validate",
+                json={"text": "Normal text", "preset": "basic"},
+            )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["passed"] is True
+        assert data["shield_available"] is False
+
+    def test_explicit_fail_open_true_is_honored_for_strict(self, client):
+        """L'explicite prime sur la déclaration, même pour `strict` (#2144 item 2)."""
+        with self._boom():
+            resp = client.post(
+                "/api/shield/validate",
+                json={"text": "Normal text", "preset": "strict", "fail_open": True},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["passed"] is True
+
+    def test_omitting_fail_open_is_not_an_implicit_true(self, client):
+        """Le champ omis ne se convertit plus en `True` implicite : sa valeur
+        est `None` côté modèle, résolue par la politique du preset."""
+        from api.shield_endpoints import ShieldValidateRequest
+
+        assert ShieldValidateRequest(text="x").fail_open is None
+        assert (
+            ShieldValidateRequest(text="x", preset="strict", fail_open=True).fail_open
+            is True
+        )
+
+    def _boom_validation(self):
+        """Le preset charge, mais la validation lève."""
+        fake = MagicMock()
+        fake.validate_input.side_effect = RuntimeError("validation boom")
+        return patch(
+            "argumentation_analysis.services.ai_shield.load_preset",
+            return_value=fake,
+        )
+
+    def test_validation_failure_on_open_preset_still_passes(self, client):
+        """Échec de *validation* (pas de chargement) : un preset ouvert garde son
+        repli ouvert.
+
+        Le tri-state rend le champ omis à `None`, qui est falsy : un repli lisant
+        `request.fail_open` brut au lieu de la politique résolue fermerait la porte
+        pour tous les presets ouverts — la régression exacte que ce test garde.
+        """
+        with self._boom_validation():
+            resp = client.post(
+                "/api/shield/validate",
+                json={"text": "Normal text", "preset": "basic"},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["passed"] is True
+
+    def test_validation_failure_on_strict_does_not_pass(self, client):
+        """`strict` + échec de validation → refus : sa garantie vaut pour tous les
+        échecs, pas seulement celui du chargement."""
+        with self._boom_validation():
+            resp = client.post(
+                "/api/shield/validate",
+                json={"text": "Normal text", "preset": "strict"},
+            )
+        assert resp.status_code == 500
+
+    def test_validation_failure_explicit_fail_open_primes_on_strict(self, client):
+        """L'explicite prime aussi sur ce repli-là (#2144 item 2)."""
+        with self._boom_validation():
+            resp = client.post(
+                "/api/shield/validate",
+                json={"text": "Normal text", "preset": "strict", "fail_open": True},
+            )
+        assert resp.status_code == 200
+        assert resp.json()["passed"] is True
