@@ -41,6 +41,23 @@ def letter_boundary(core: str) -> str:
     return rf"(?<![A-Za-z]){core}(?![A-Za-z])"
 
 
+# --- Class vocabulary: entries are never elided toward the corpus (#2202) ---
+#
+# These lists are CLASS vocabulary and their entries are added for class
+# reasons. They are NEVER removed on the grounds that the corpus does not
+# contain them. Eliding them toward the census is the operation that turns them
+# INTO a census: the survivors would be exactly the entries the corpus holds,
+# and no line of that diff would look like a leak. What makes these lists safe
+# is not their content but their not having been pruned — which is why the
+# margin below is measured and recorded rather than curated.
+#
+# Margin, measured 2026-09-13 by matching every pattern against the tokens
+# derived at runtime from the encrypted corpus: LEADER_PATTERNS 17 of 19
+# absent, STATE_PATTERNS 12 of 12 absent. This is #2187's mirror image: there,
+# the moved token was an INSTITUTION whose presence in a detector was itself
+# the signal; here a reader cannot tell which entries the corpus holds.
+# RE-MEASURE BEFORE QUOTING — the figure moves with every corpus revision.
+#
 # leaders / heads of state — the 19 person patterns the tests/ sweep uses
 LEADER_PATTERNS = [
     r"Putin",
@@ -64,7 +81,8 @@ LEADER_PATTERNS = [
     r"Zelenskiy",
 ]
 
-# states / regions
+# states / regions — same invariant as above: never elided toward the census
+# on the grounds of absence (#2202; margin and re-measure clause above).
 STATE_PATTERNS = [
     r"Ukraine",
     r"Ukrainien(?:ne)?s?",
