@@ -72,9 +72,11 @@ _DEFAULT_LLM: Optional[LLMCallable] = None
 def set_default_llm_callable(llm: Optional[LLMCallable]) -> None:
     """Register the process-wide default LLM callable for agentic detectors.
 
-    Production wires the OpenRouter-toggle-aware client here (see
-    ``invoke_callables._get_quality_llm`` / FB-21 toggle). Tests pass a stub
-    via the detector constructor and leave this unset.
+    Experimental surface (#1105 / FB-29): nothing wires this in production
+    today — the lexical path (``evaluate(text)`` without ``agentic_llm``) is
+    what runs. The callable arrives either here or per-detector via ``llm=``;
+    only tests and the research harness
+    (``scripts/run_fb29_agentic_headtohead.py``) currently pass one.
     """
     global _DEFAULT_LLM
     _DEFAULT_LLM = llm
@@ -203,6 +205,7 @@ Réponds UNIQUEMENT avec un objet JSON valide :
 
 # --- JSON parsing (loose, code-fence tolerant) ------------------------------
 
+
 def _parse_json_strict(text: str) -> Optional[Dict[str, Any]]:
     """Parse a JSON object from LLM output, tolerating code fences/prose.
 
@@ -237,6 +240,7 @@ def _snap_to_scale(val: Any) -> Optional[float]:
 
 # --- Chain step runner -------------------------------------------------------
 
+
 def _run_chain_step(
     llm: LLMCallable,
     prompt: str,
@@ -269,6 +273,7 @@ def _run_chain_step(
 
 # --- Public detectors -------------------------------------------------------
 
+
 def detect_refutation_constructive_agentic(
     text: str, llm: Optional[LLMCallable] = None
 ) -> Tuple[float, str]:
@@ -288,9 +293,7 @@ def detect_refutation_constructive_agentic(
         # exhibit. This is a measured zero, not a synthetic fallback.
         return 0.0, "Aucune position adverse identifiée (step1: décomposition)."
     opposing = str(step1.get("opposing_claim", ""))[:200]
-    step2 = _run_chain_step(
-        resolved, _REFUT_STEP2_PROMPT, text, prev_step=opposing
-    )
+    step2 = _run_chain_step(resolved, _REFUT_STEP2_PROMPT, text, prev_step=opposing)
     verdict = str(step2.get("engagement_verdict", "pas_de_refutation"))[:60]
     step3 = _run_chain_step(
         resolved,
@@ -331,9 +334,7 @@ def detect_analogie_pertinente_agentic(
         f"source='{str(step1.get('source_domain', ''))[:80]}'; "
         f"target='{str(step1.get('target_domain', ''))[:80]}'"
     )
-    step2 = _run_chain_step(
-        resolved, _ANALOGY_STEP2_PROMPT, text, prev_step=domains
-    )
+    step2 = _run_chain_step(resolved, _ANALOGY_STEP2_PROMPT, text, prev_step=domains)
     mapping = str(step2.get("mapping", "surface_seule"))[:120]
     step3 = _run_chain_step(
         resolved,
@@ -447,9 +448,7 @@ def detect_clarte_agentic(
     if not step1.get("has_clarity_obstacle"):
         return 1.0, "Aucun obstacle à la clarté identifié (step1: localisation)."
     obstacles = str(step1.get("obstacles", ""))[:200]
-    step2 = _run_chain_step(
-        resolved, _CLARTE_STEP2_PROMPT, text, prev_step=obstacles
-    )
+    step2 = _run_chain_step(resolved, _CLARTE_STEP2_PROMPT, text, prev_step=obstacles)
     verdict = str(step2.get("clarity_verdict", "aucun_obstacle"))[:60]
     step3 = _run_chain_step(
         resolved,
@@ -645,9 +644,7 @@ def detect_structure_logique_agentic(
         f"prémisses='{str(step1.get('premises', ''))[:150]}'; "
         f"conclusion='{str(step1.get('conclusion', ''))[:120]}'"
     )
-    step2 = _run_chain_step(
-        resolved, _STRUCTURE_STEP2_PROMPT, text, prev_step=chain
-    )
+    step2 = _run_chain_step(resolved, _STRUCTURE_STEP2_PROMPT, text, prev_step=chain)
     verdict = str(step2.get("structure_verdict", "saut_logique"))[:60]
     step3 = _run_chain_step(
         resolved,
@@ -741,9 +738,7 @@ def detect_exhaustivite_agentic(
     subject = str(step1.get("subject", ""))[:120]
     expected = str(step1.get("expected_dimensions", ""))[:200]
     dims = f"sujet='{subject}'; dimensions_attendues='{expected}'"
-    step2 = _run_chain_step(
-        resolved, _EXHAUST_STEP2_PROMPT, text, prev_step=dims
-    )
+    step2 = _run_chain_step(resolved, _EXHAUST_STEP2_PROMPT, text, prev_step=dims)
     verdict = str(step2.get("coverage_verdict", "monodimensionnel_seul"))[:60]
     missing = str(step2.get("missing_dimensions", ""))[:150]
     step3 = _run_chain_step(
@@ -837,9 +832,7 @@ def detect_redondance_faible_agentic(
     resolved = _resolve_llm(llm)
     step1 = _run_chain_step(resolved, _REDOND_STEP1_PROMPT, text)
     points = str(step1.get("distinct_points", ""))[:250]
-    step2 = _run_chain_step(
-        resolved, _REDOND_STEP2_PROMPT, text, prev_step=points
-    )
+    step2 = _run_chain_step(resolved, _REDOND_STEP2_PROMPT, text, prev_step=points)
     verdict = str(step2.get("redundancy_verdict", "redondance_sémantique"))[:60]
     located = str(step2.get("located_redundancy", ""))[:150]
     step3 = _run_chain_step(
