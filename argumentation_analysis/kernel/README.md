@@ -11,7 +11,7 @@ N'est **pas** le chemin de construction du kernel en production : le kernel rée
 `KernelBuilder.create_kernel(settings: AppSettings) -> sk.Kernel` (`kernel_builder.py:18`, staticmethod) — dispatch sur `settings.service_manager.default_llm_service_id` (:22) :
 
 - `"openai"` : `OpenAIChatCompletion(service_id="openai", ai_model_id=settings.openai.chat_model_id, api_key=…)` (:26-30) ; `ValueError` si clé absente (:32) ;
-- `"azure"` : `AzureChatCompletion(deployment_name/endpoint/api_key depuis settings.azure_openai)` (:35-40) ; `ValueError` (:42-44) ;
+- `"azure"` : `AzureChatCompletion(deployment_name/endpoint/api_key depuis settings.azure_openai)` (:40-47) ; `ValueError` (:48-51) ;
 - sinon : `ValueError` (:46).
 
 ## Points d'entrée valides
@@ -44,6 +44,6 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `kernel/`. Frère f
 
 ## Limites connues
 
-- **Branche azure structurellement cassée** : `settings.azure_openai` (:34, :37-39) n'existe pas sur `AppSettings` actuel (`hasattr(AppSettings(), 'azure_openai') == False`, vérifié live) → `AttributeError` latent si le service global est réglé sur `"azure"` ; contraste avec la branche openai qui utilise l'attribut correct (`chat_model_id` :28) ;
-- `tests/kernel/test_kernel_builder.py` vide (0 octet) — placeholder jamais rempli ;
+- **Branche azure — réparée, puis remise d'aplomb** : #2115 a corrigé le *lecteur* (il lisait `settings.azure_openai`, nom qu'`AppSettings` ne portait pas : `AttributeError` avalée en « clé absente », branche morte depuis sa naissance) ; #2198 a corrigé le *placement* — le bloc remonte de `JVMSettings` vers `AppSettings`, qui est la racine du défaut. Une seule orthographe subsiste (:40).
+- `tests/kernel/test_kernel_builder.py` n'est plus un placeholder vide : #2115 y a posé 3 tests (branche azure atteint `AzureChatCompletion`, contrôle openai, provider inconnu nommé).
 - `__init__.py` vide : le package n'exporte rien, l'import doit cibler `kernel_builder` explicitement.

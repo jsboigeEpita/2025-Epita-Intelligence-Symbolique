@@ -8,10 +8,11 @@ defects, both silent:
   (the field lives at ``settings.service_manager.default_model_id``) — the
   ``AttributeError`` was swallowed by the surrounding ``except Exception``,
   so EVERY run (mock included) built ``llm_service = None``;
-- ``kernel/kernel_builder.py`` read ``settings.azure_openai``, but the block
-  lives at ``settings.jvm.azure_openai`` — the azure branch therefore raised
+- ``kernel/kernel_builder.py`` read ``settings.azure_openai`` while the block
+  sat under ``JVMSettings`` — the azure branch therefore raised
   ``AttributeError`` before its own "key not configured" check, and could
-  never run.
+  never run. (#2198 moved the block onto ``AppSettings``, so the chain that
+  reader wanted is now the chain that exists; the pin below records that.)
 
 The census below is deliberately NOT an allow-list: it walks every module in
 ``argumentation_analysis/`` that imports the ``settings`` singleton and
@@ -166,18 +167,19 @@ def test_the_guard_detects_a_phantom():
     assert not resolved, "the resolver accepted a fabricated phantom attribute"
 
 
-@pytest.mark.parametrize(
-    "chain",
-    [
-        ("settings", "default_model_id"),  # #2115 cas 1 — top-level phantom
-        ("settings", "azure_openai"),  # #2115 cas 2 — misnested field
-    ],
-)
-def test_the_two_historical_phantoms_stay_detected(chain):
-    """The two defects of record are exactly what the guard rejects."""
-    resolved, _verifiable = _resolve(chain)
+def test_the_historical_phantom_stays_detected():
+    """#2115's case 1 is still a phantom, and the guard still rejects it.
+
+    #2115's case 2 (``settings.azure_openai``) is deliberately no longer a
+    phantom: #2198 moved the block onto ``AppSettings``, so that chain resolves
+    by design. It left this pin rather than being kept alive under a shim —
+    which is what the pin's own message prescribed for a chain that resolves
+    again. Case 1 is untouched: ``default_model_id`` still belongs at
+    ``settings.service_manager.default_model_id``.
+    """
+    resolved, _verifiable = _resolve(("settings", "default_model_id"))
     assert not resolved, (
-        f"{'.'.join(chain)} resolves again — either the field was (re)added "
-        f"at the top level, in which case remove this pin, or a shim was "
-        f"introduced to silence the guard"
+        "settings.default_model_id resolves again — the field belongs at "
+        "settings.service_manager.default_model_id, so either a top-level "
+        "shim was introduced to silence the guard, or the schema drifted back"
     )
