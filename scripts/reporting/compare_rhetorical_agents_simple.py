@@ -50,13 +50,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger("CompareRhetoricalAgents")
 
-# Les fonctions count_fallacies, extract_confidence_scores, et analyze_contextual_richness
-# ont été déplacées vers argumentation_analysis.utils.metrics_calculator.
-# La fonction generate_performance_visualizations a été déplacée vers project_core.utils.visualization_utils.
-# La fonction generate_performance_report a été déplacée vers project_core.utils.reporting_utils
-# et renommée en generate_performance_comparison_markdown_report.
-# Les appels dans main() utiliseront les fonctions importées.
-
 
 def main():
     """Fonction principale du script."""
