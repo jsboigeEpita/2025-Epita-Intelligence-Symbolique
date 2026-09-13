@@ -11,28 +11,16 @@ et les assembler en un document final.
 import json
 import logging
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, List, Any, Optional
-from dataclasses import dataclass
+
+# Le modèle canonique vit dans `.models` (importé par `data_collector` et
+# `orchestrator`). La copie locale homonyme qui vivait ici a été retirée
+# (#2143) : deux classes aux mêmes champs laissent deux réponses à
+# « quelle ReportMetadata ? », et une vérification d'identité les distingue
+# à tort.
+from .models import ReportMetadata
 
 logger = logging.getLogger(__name__)
-
-
-@dataclass
-class ReportMetadata:
-    """Métadonnées standardisées pour tous les rapports."""
-
-    source_component: str  # Composant source (orchestrator, pipeline, etc.)
-    analysis_type: str  # Type d'analyse (conversation, LLM, rhetoric, etc.)
-    generated_at: datetime
-    version: str = "1.0.0"
-    generator: str = (
-        "UnifiedReportGeneration"  # Peut être ajusté si ce module devient le générateur
-    )
-    format_type: str = (
-        "markdown"  # Ce champ est dans ReportMetadata mais semble plus lié à la config du template
-    )
-    template_name: str = "default"  # Idem
 
 
 class UnifiedReportTemplate:

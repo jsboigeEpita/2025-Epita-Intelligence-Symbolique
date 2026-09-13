@@ -20,8 +20,8 @@ import json
 from typing import Any, Dict
 import pytest
 
-import scripts.analysis.generate_spectacular_bundle as bundle
-from scripts.analysis.generate_spectacular_bundle import (
+import argumentation_analysis.evaluation.state_export_scrub as scrub
+from argumentation_analysis.evaluation.state_export_scrub import (
     _scrub_state_for_export,
     _global_entity_scrub,
     _ENTITY_PATTERN,
@@ -55,11 +55,11 @@ def _synthetic_instance_census(monkeypatch):
     depend on.
     """
     monkeypatch.setattr(
-        bundle,
+        scrub,
         "_load_instance_tokens",
         lambda: derive_instance_tokens(_SYNTHETIC_CENSUS),
     )
-    monkeypatch.setattr(bundle, "_INSTANCE_PATTERN", None)
+    monkeypatch.setattr(scrub, "_INSTANCE_PATTERN", None)
 
 
 def _build_dag_state_via_real_writers():
