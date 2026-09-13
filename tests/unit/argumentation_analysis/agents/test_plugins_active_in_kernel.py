@@ -215,11 +215,24 @@ class TestFactoryPluginLoading:
             set(plugins)
         ), f"Missing from formal_logic: {expected - set(plugins)}"
 
-    def test_informal_fallacy_speciality_includes_toulmin(self):
-        from argumentation_analysis.agents.factory import AGENT_SPECIALITY_MAP
+    def test_informal_fallacy_speciality_does_not_mount_toulmin(self):
+        """#2145: the mount follows the body, and the body raises.
 
-        plugins = AGENT_SPECIALITY_MAP.get("informal_fallacy", [])
-        assert "toulmin" in plugins
+        This test used to assert the opposite. `ToulminPlugin.analyze_argument`
+        raises `NotImplementedError` (pinned by
+        `tests/unit/argumentation_analysis/plugins/test_tweety_plugins.py`), so
+        mounting it offered a live agent a tool that could only burn a turn.
+        The plugin stays registered — what was withdrawn is a promise, not a
+        capability. The mount/body coupling is guarded by
+        `test_plugin_mount_health_2145.py::test_toulmin_mount_follows_its_body_2145`.
+        """
+        from argumentation_analysis.agents.factory import (
+            AGENT_SPECIALITY_MAP,
+            _PLUGIN_REGISTRY,
+        )
+
+        assert "toulmin" not in AGENT_SPECIALITY_MAP.get("informal_fallacy", [])
+        assert "toulmin" in _PLUGIN_REGISTRY, "the plugin itself was not deleted"
 
     def test_project_manager_includes_narrative_synthesis(self):
         from argumentation_analysis.agents.factory import AGENT_SPECIALITY_MAP

@@ -101,19 +101,26 @@ class TestAgentConfig:
         assert AGENT_SPECIALITY_MAP[speciality] == ["narrative_synthesis"]
 
     def test_extract_is_scoped_to_extraction(self):
-        """ExtractAgent carries only its extraction-scoped plugins (Toulmin
-        argument structuring + KB building); it must NOT carry formal-logic or
-        fallacy-detection capabilities.
+        """ExtractAgent carries only its extraction-scoped plugins (KB
+        building); it must NOT carry formal-logic or fallacy-detection
+        capabilities.
 
         Legacy contract asserted ``== []`` (#1336): obsolete since ExtractAgent
-        gained ``toulmin`` + ``text_to_kb`` (its signature extraction plugins).
-        Converted to a fail-loud pin on the exact plugin set + a negative
-        isolation check against the logic/fallacy domains.
+        gained ``text_to_kb``. Converted to a fail-loud pin on the exact plugin
+        set + a negative isolation check against the logic/fallacy domains.
+
+        This pin used to read ``{"toulmin", "text_to_kb"}``. #2145 withdrew the
+        ``toulmin`` mount — its only ``@kernel_function`` raises, so offering it
+        gave the agent a tool that could only burn a turn. The plugin stays
+        registered; what was withdrawn is a promise. The mount/body coupling is
+        guarded by
+        ``test_plugin_mount_health_2145.py::test_toulmin_mount_follows_its_body_2145``.
         """
         speciality = AGENT_CONFIG["ExtractAgent"]["speciality"]
         plugins = set(AGENT_SPECIALITY_MAP[speciality])
-        assert plugins == {"toulmin", "text_to_kb"}
+        assert plugins == {"text_to_kb"}
         assert not (plugins & {"tweety_logic", "french_fallacy", "fallacy_workflow"})
+        assert "toulmin" not in plugins, "the mount follows the body (#2145)"
 
     def test_informal_has_fallacy_plugin(self):
         speciality = AGENT_CONFIG["InformalAgent"]["speciality"]
