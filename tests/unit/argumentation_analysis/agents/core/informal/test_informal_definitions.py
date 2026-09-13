@@ -34,12 +34,18 @@ pytestmark = pytest.mark.use_real_numpy
 
 @pytest.fixture
 def sample_taxonomy_data():
-    """Fixture pour les données de taxonomie de base."""
+    """Fixture pour les données de taxonomie de base.
+
+    La colonne est **accentuée** (`nom_vulgarisé`) parce que c'est le nom que la
+    taxonomie livrée porte réellement — la fixture doit refléter l'en-tête réel,
+    sans quoi elle partage le défaut du code et le valide (#2196 : ce mock
+    déclarait `nom_vulgarise`, la faute même que le plugin commettait).
+    """
     return [
-        {"PK": 0, "parent_pk": "<NA>", "nom_vulgarise": "Root Fallacy"},
-        {"PK": 1, "parent_pk": 0, "nom_vulgarise": "Fallacy of Relevance"},
-        {"PK": 2, "parent_pk": 1, "nom_vulgarise": "Ad Hominem"},
-        {"PK": 3, "parent_pk": 1, "nom_vulgarise": "Red Herring"},
+        {"PK": 0, "parent_pk": "<NA>", "nom_vulgarisé": "Root Fallacy"},
+        {"PK": 1, "parent_pk": 0, "nom_vulgarisé": "Fallacy of Relevance"},
+        {"PK": 2, "parent_pk": 1, "nom_vulgarisé": "Ad Hominem"},
+        {"PK": 3, "parent_pk": 1, "nom_vulgarisé": "Red Herring"},
     ]
 
 
@@ -87,10 +93,11 @@ def test_internal_get_node_details(informal_plugin_mocked, mock_taxonomy_df):
     details_pk1 = informal_plugin_mocked._internal_get_node_details(1, mock_taxonomy_df)
     assert details_pk1 is not None
     assert details_pk1["parent_pk"] == 0
-    assert details_pk1["nom_vulgarise"] == "Fallacy of Relevance"
+    # Le dict racine recopie chaque colonne sous son nom réel : accentuée (#2196).
+    assert details_pk1["nom_vulgarisé"] == "Fallacy of Relevance"
 
     details_pk2 = informal_plugin_mocked._internal_get_node_details(2, mock_taxonomy_df)
-    assert details_pk2["nom_vulgarise"] == "Ad Hominem"
+    assert details_pk2["nom_vulgarisé"] == "Ad Hominem"
 
     details_non_existent = informal_plugin_mocked._internal_get_node_details(
         99, mock_taxonomy_df
@@ -100,7 +107,8 @@ def test_internal_get_node_details(informal_plugin_mocked, mock_taxonomy_df):
 
 def test_internal_explore_hierarchy(informal_plugin_mocked, mock_taxonomy_df):
     """Test exploring the hierarchy from a given node."""
-    # This method also expects 'nom_vulgarise' which is in the sample data
+    # La clé de sortie `nom_vulgarise` (contrat, non accentuée) est alimentée par
+    # la colonne accentuée du mock (#2196).
     hierarchy_pk0 = informal_plugin_mocked._internal_explore_hierarchy(
         0, mock_taxonomy_df
     )
@@ -146,7 +154,7 @@ def test_get_fallacy_details_real(informal_plugin_real):
     """Test the public detail retrieval method with a real file."""
     details_json_pk2 = informal_plugin_real.get_fallacy_details("2")
     details = json.loads(details_json_pk2)
-    assert details["nom_vulgarise"] == "Ad Hominem"
+    assert details["nom_vulgarisé"] == "Ad Hominem"
     assert details["parent_pk"] == 1
 
     # Test non-existent PK
