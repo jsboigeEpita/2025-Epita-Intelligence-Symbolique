@@ -79,6 +79,13 @@ from argumentation_analysis.pipelines.orchestration.config.base_config import (
 
 logger = logging.getLogger(__name__)
 
+# Stratégies que le moteur d'exécution (engine.py) sait dispatcher. Toute
+# valeur calculée par select_orchestration_strategy hors de cet ensemble lève
+# ValueError — jamais de repli silencieux vers l'hybride (#2109).
+DISPATCHABLE_STRATEGIES = frozenset(
+    {"hierarchical_full", "specialized_direct", "fallback", "hybrid"}
+)
+
 
 async def select_orchestration_strategy(
     pipeline: "UnifiedOrchestrationPipeline",
@@ -95,10 +102,15 @@ async def select_orchestration_strategy(
 
     Returns:
         Nom de la stratégie d'orchestration sélectionnée
+
+    Raises:
+        ValueError: si la stratégie calculée n'est dispatchable par aucune
+            branche du moteur d'exécution (engine.py). Refus de repli
+            silencieux vers l'hybride (#2109).
     """
     config = pipeline.config
-    # Mode manuel
     if config.orchestration_mode_enum != OrchestrationMode.AUTO_SELECT:
+        # Mode manuel
         logger.info("Path taken: Manual selection")
         mode_strategy_map = {
             OrchestrationMode.HIERARCHICAL_FULL: "hierarchical_full",
@@ -110,37 +122,43 @@ async def select_orchestration_strategy(
             OrchestrationMode.ADAPTIVE_HYBRID: "hybrid",
         }
         strategy = mode_strategy_map.get(config.orchestration_mode_enum, "fallback")
-        return strategy
+    else:
+        # Sélection automatique basée sur le type d'analyse
+        logger.info("Path taken: AUTO_SELECT logic")
+        if not config.auto_select_orchestrator:
+            logger.info("Path taken: Fallback (auto_select disabled)")
+            strategy = "fallback"
+        else:
+            # Critères de sélection
+            strategy = "hybrid"  # Fallback par défaut
 
-    # Sélection automatique basée sur le type d'analyse
-    logger.info("Path taken: AUTO_SELECT logic")
-    if not config.auto_select_orchestrator:
-        logger.info("Path taken: Fallback (auto_select disabled)")
-        return "fallback"
+            if config.analysis_type.value == AnalysisType.INVESTIGATIVE.value:
+                logger.info("Path taken: Auto -> specialized_direct (INVESTIGATIVE)")
+                strategy = "specialized_direct"
+            elif config.analysis_type.value == AnalysisType.LOGICAL.value:
+                logger.info("Path taken: Auto -> specialized_direct (LOGICAL)")
+                strategy = "specialized_direct"
+            elif config.enable_hierarchical and len(text) > 1000:
+                logger.info("Path taken: Auto -> hierarchical_full (long text)")
+                strategy = "hierarchical_full"
+            elif (
+                config.analysis_type.value == AnalysisType.COMPREHENSIVE.value
+                and pipeline.service_manager
+                and pipeline.service_manager._initialized
+            ):
+                logger.info("Path taken: Auto -> service_manager (COMPREHENSIVE)")
+                strategy = "service_manager"
 
-    # Critères de sélection
-    strategy = "hybrid"  # Fallback par défaut
+            if strategy == "hybrid":
+                logger.info("Path taken: Auto -> hybrid (default fallback case)")
 
-    if config.analysis_type.value == AnalysisType.INVESTIGATIVE.value:
-        logger.info("Path taken: Auto -> specialized_direct (INVESTIGATIVE)")
-        strategy = "specialized_direct"
-    elif config.analysis_type.value == AnalysisType.LOGICAL.value:
-        logger.info("Path taken: Auto -> specialized_direct (LOGICAL)")
-        strategy = "specialized_direct"
-    elif config.enable_hierarchical and len(text) > 1000:
-        logger.info("Path taken: Auto -> hierarchical_full (long text)")
-        strategy = "hierarchical_full"
-    elif (
-        config.analysis_type.value == AnalysisType.COMPREHENSIVE.value
-        and pipeline.service_manager
-        and pipeline.service_manager._initialized
-    ):
-        logger.info("Path taken: Auto -> service_manager (COMPREHENSIVE)")
-        strategy = "service_manager"
-
-    if strategy == "hybrid":
-        logger.info("Path taken: Auto -> hybrid (default fallback case)")
-
+    if strategy not in DISPATCHABLE_STRATEGIES:
+        raise ValueError(
+            f"La stratégie d'orchestration '{strategy}' n'est dispatchable par "
+            f"aucune branche du moteur d'exécution (engine.py) — dispatchables : "
+            f"{sorted(DISPATCHABLE_STRATEGIES)}. Refus de repli silencieux vers "
+            f"l'hybride (#2109)."
+        )
     return strategy
 
 
