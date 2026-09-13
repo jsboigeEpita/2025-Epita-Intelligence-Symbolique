@@ -98,10 +98,13 @@ def test_initialize_services_nominal_case(
     mock_init_jvm.assert_called_once_with()
     assert services.get("jvm_ready") is True
 
-    # create_llm_service est appelé avec force_mock=True car mock_settings.use_mock_llm = True
+    # #2115: the assertion used to compare against ``mock_settings.default_model_id``
+    # — an auto-created MagicMock attribute. Any name passed, so the assertion
+    # certified the phantom the production code was reading. Pinned to the real
+    # nested path now.
     mock_create_llm.assert_called_once_with(
         service_id="default_llm_service",
-        model_id=mock_settings.default_model_id,
+        model_id=mock_settings.service_manager.default_model_id,
         force_mock=True,
     )
     # L'objet retourné doit être celui de la fixture mock_create_llm
@@ -185,7 +188,7 @@ def test_initialize_services_llm_fails_raises_exception(
 
     mock_create_llm.assert_called_once_with(
         service_id="default_llm_service",
-        model_id=mock_settings.default_model_id,
+        model_id=mock_settings.service_manager.default_model_id,
         force_mock=True,
     )
     assert services.get("llm_service") is None
@@ -234,3 +237,43 @@ def test_initialize_services_libs_dir_is_none(
 # Note: Tester les échecs d'import de LIBS_DIR est complexe car cela se produit au moment de l'import du module
 # analysis_services.py lui-même. Les tests ci-dessus simulent LIBS_DIR ayant une valeur (ou None)
 # au moment où initialize_analysis_services est exécutée.
+
+
+# --- #2115 : la lecture du model_id, sur l'objet settings RÉEL ----------------
+
+
+def test_llm_service_is_built_with_real_settings(
+    mock_load_dotenv, mock_find_dotenv, mock_init_jvm
+):
+    """The service is built when ``settings`` is the real object (#2115).
+
+    Every other test in this module patches ``settings`` with a MagicMock —
+    which is precisely why the defect survived: a mock returns an
+    auto-attribute for ANY name and never raises ``AttributeError``. Keeping
+    ``settings`` real is the point of this test.
+
+    ``create_llm_service`` auto-mocks itself under pytest, so reaching it is
+    enough — no network, no key required.
+    """
+    services = initialize_analysis_services()
+
+    assert services.get("llm_service") is not None, (
+        "llm_service is None: the model-id read raised AttributeError and the "
+        "surrounding ``except Exception`` swallowed it — every run silently "
+        "lost its LLM service (#2115)."
+    )
+
+
+def test_llm_service_receives_the_nested_model_id(
+    mock_load_dotenv, mock_find_dotenv, mock_init_jvm, mocker
+):
+    """The model_id passed is the one the real settings actually carry."""
+    from argumentation_analysis.config.settings import settings as real_settings
+
+    spy = mocker.patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock())
+
+    initialize_analysis_services()
+
+    assert spy.call_args.kwargs["model_id"] == (
+        real_settings.service_manager.default_model_id
+    )

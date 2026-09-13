@@ -62,10 +62,12 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
     # 2. Création du Service LLM (contrôlé par la config)
     logging.info("Création du service LLM...")
     try:
-        # Le paramètre force_mock est directement déduit de la configuration
+        # ``default_model_id`` lives on the nested service-manager settings, not
+        # on AppSettings: reading it at the top level raised AttributeError,
+        # swallowed below as "llm_service is None" on EVERY run (#2115).
         llm_service = create_llm_service(
             service_id="default_llm_service",
-            model_id=settings.default_model_id,
+            model_id=settings.service_manager.default_model_id,
             force_mock=settings.use_mock_llm,
         )
         services["llm_service"] = llm_service

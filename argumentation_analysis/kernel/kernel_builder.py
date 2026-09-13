@@ -31,12 +31,18 @@ class KernelBuilder:
             else:
                 raise ValueError("La clé API OpenAI n'est pas configurée.")
         elif llm_service_name == "azure":
-            if settings.azure_openai.api_key and settings.azure_openai.endpoint:
+            # The Azure block lives under ``settings.jvm`` — not because it is a
+            # JVM concern, but because that is where the field was declared
+            # (`config/settings.py`, appended to JVMSettings). Reading
+            # ``settings.azure_openai`` raised AttributeError here, swallowed as
+            # "the key is not configured" — this branch could never run (#2115).
+            azure = settings.jvm.azure_openai
+            if azure.api_key and azure.endpoint:
                 service = AzureChatCompletion(
                     service_id="azure",
-                    deployment_name=settings.azure_openai.deployment_name,
-                    endpoint=str(settings.azure_openai.endpoint),
-                    api_key=settings.azure_openai.api_key.get_secret_value(),
+                    deployment_name=azure.deployment_name,
+                    endpoint=str(azure.endpoint),
+                    api_key=azure.api_key.get_secret_value(),
                 )
             else:
                 raise ValueError(
