@@ -23,6 +23,24 @@ from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
 logger = logging.getLogger("TaxonomySophismDetector")
 
 
+def _clean_cell(value: Any) -> str:
+    """Normalise une cellule de la taxonomie en chaîne, cellule vide incluse.
+
+    Sur la taxonomie livrée, `nom_vulgarisé` est vide (``NaN``) sur 1368 des
+    1408 lignes. Or ``str(nan)`` vaut ``'nan'`` — une chaîne *truthy* : sans
+    normalisation, chaque ligne sans nom devient un motif qui matche tout texte
+    contenant ``nan``, y compris **à l'intérieur d'un mot** («fi*nan*ce»,
+    «mainte*nan*t»), et ressort comme détection à 0,7 de confiance (#2190).
+
+    ``None`` et ``NaN`` valent donc cellule absente, pas motif textuel.
+    """
+    if value is None:
+        return ""
+    if not isinstance(value, str) and pd.isna(value):
+        return ""
+    return str(value)
+
+
 class TaxonomySophismDetector:
     """
     Centralise la logique de détection et d'exploration des sophismes.
@@ -86,12 +104,12 @@ class TaxonomySophismDetector:
             for _, row in main_branches.iterrows():
                 branch = {
                     "taxonomy_key": int(row.name),  # PK
-                    "name": row.get("Name", ""),
-                    "nom_vulgarise": row.get("nom_vulgarisé", ""),
-                    "famille": row.get("Famille", ""),
-                    "description_courte": row.get("text_fr", ""),
+                    "name": _clean_cell(row.get("Name")),
+                    "nom_vulgarise": _clean_cell(row.get("nom_vulgarisé")),
+                    "famille": _clean_cell(row.get("Famille")),
+                    "description_courte": _clean_cell(row.get("text_fr")),
                     "depth": int(row.get("depth", 0)),
-                    "path": row.get("path", ""),
+                    "path": _clean_cell(row.get("path")),
                 }
                 branches.append(branch)
 
@@ -190,9 +208,9 @@ class TaxonomySophismDetector:
                 matches = []
 
                 # Vérifier les correspondances avec les noms
-                name = str(row.get("Name", "")).lower()
-                nom_vulgarise = str(row.get("nom_vulgarisé", "")).lower()
-                description = str(row.get("text_fr", "")).lower()
+                name = _clean_cell(row.get("Name")).lower()
+                nom_vulgarise = _clean_cell(row.get("nom_vulgarisé")).lower()
+                description = _clean_cell(row.get("text_fr")).lower()
 
                 # Correspondance avec le nom vulgarisé (plus probable)
                 if nom_vulgarise and nom_vulgarise in text_lower:
@@ -216,16 +234,18 @@ class TaxonomySophismDetector:
 
                 # Si on a des correspondances significatives
                 if confidence >= 0.3:
-                    sophism = {
+                    sophism: Dict[str, Any] = {
                         "taxonomy_key": int(pk),
-                        "name": row.get("Name", ""),
-                        "nom_vulgarise": render_alias(pk, row.get("nom_vulgarisé", "")),
-                        "famille": row.get("Famille", ""),
-                        "description": row.get("text_fr", ""),
+                        "name": _clean_cell(row.get("Name")),
+                        "nom_vulgarise": _clean_cell(
+                            render_alias(pk, _clean_cell(row.get("nom_vulgarisé")))
+                        ),
+                        "famille": _clean_cell(row.get("Famille")),
+                        "description": _clean_cell(row.get("text_fr")),
                         "confidence": min(confidence, 1.0),
                         "matches": matches,
                         "depth": int(row.get("depth", 0)),
-                        "path": row.get("path", ""),
+                        "path": _clean_cell(row.get("path")),
                         "detection_method": "taxonomy_lexical",
                     }
                     detected_sophisms.append(sophism)
@@ -295,9 +315,9 @@ class TaxonomySophismDetector:
             for _, sibling in siblings.iterrows():
                 sibling_info = {
                     "taxonomy_key": int(sibling.name),
-                    "name": sibling.get("Name", ""),
-                    "nom_vulgarise": sibling.get("nom_vulgarisé", ""),
-                    "description_courte": sibling.get("text_fr", ""),
+                    "name": _clean_cell(sibling.get("Name")),
+                    "nom_vulgarise": _clean_cell(sibling.get("nom_vulgarisé")),
+                    "description_courte": _clean_cell(sibling.get("text_fr")),
                 }
                 siblings_list.append(sibling_info)
 
@@ -363,10 +383,10 @@ class TaxonomySophismDetector:
                 score = 0.0
 
                 # Recherche dans les différents champs
-                name = str(row.get("Name", "")).lower()
-                nom_vulgarise = str(row.get("nom_vulgarisé", "")).lower()
-                description = str(row.get("text_fr", "")).lower()
-                famille = str(row.get("Famille", "")).lower()
+                name = _clean_cell(row.get("Name")).lower()
+                nom_vulgarise = _clean_cell(row.get("nom_vulgarisé")).lower()
+                description = _clean_cell(row.get("text_fr")).lower()
+                famille = _clean_cell(row.get("Famille")).lower()
 
                 if pattern_lower in nom_vulgarise:
                     score += 0.8
@@ -378,15 +398,17 @@ class TaxonomySophismDetector:
                     score += 0.3
 
                 if score > 0:
-                    sophism = {
+                    sophism: Dict[str, Any] = {
                         "taxonomy_key": int(pk),
-                        "name": row.get("Name", ""),
-                        "nom_vulgarise": render_alias(pk, row.get("nom_vulgarisé", "")),
-                        "famille": row.get("Famille", ""),
-                        "description": row.get("text_fr", ""),
+                        "name": _clean_cell(row.get("Name")),
+                        "nom_vulgarise": _clean_cell(
+                            render_alias(pk, _clean_cell(row.get("nom_vulgarisé")))
+                        ),
+                        "famille": _clean_cell(row.get("Famille")),
+                        "description": _clean_cell(row.get("text_fr")),
                         "match_score": score,
                         "depth": int(row.get("depth", 0)),
-                        "path": row.get("path", ""),
+                        "path": _clean_cell(row.get("path")),
                     }
                     matching_sophisms.append(sophism)
 
