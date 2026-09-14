@@ -1,0 +1,78 @@
+{
+  "meta": {
+    "source_module": "argumentation_analysis.agents.core.debate.argumentation_schemes",
+    "classifier": "classify_scheme",
+    "note": "Exemples synthétiques domaine-public. Source de vérité unique partagée entre le notebook argumentation_schemes.ipynb et la garde round-trip tests/unit/coursia/argumentation_schemes/. Un exemple positif porte expected_key = clé du schéma attendu ; un exemple négatif doit rendre None (honnêteté du classifieur : les mots-clés sont accentués, les textes le sont donc aussi).",
+    "created_for": "#1961 Phase 5"
+  },
+  "positives": [
+    {
+      "text": "Selon un spécialiste reconnu, la molécule est sans danger pour l'usage concerné.",
+      "expected_key": "expert_opinion",
+      "why": "La paire « selon » + « spécialiste » signe l'argument d'autorité."
+    },
+    {
+      "text": "L'étude repose sur une mesure directe et un échantillon représentatif de la population.",
+      "expected_key": "empirical_evidence",
+      "why": "La paire « étude » + « mesure » signe l'argument empirique."
+    },
+    {
+      "text": "La majorité des chercheurs parviennent à un accord sur ce point.",
+      "expected_key": "consensus",
+      "why": "La paire « majorité » + « accord » signe l'appel au consensus."
+    },
+    {
+      "text": "À l'instar du pilote maritime, comparable à un navigateur solitaire, le gestionnaire décide seul.",
+      "expected_key": "analogy",
+      "why": "La paire « à l'instar » + « comparable » signe l'analogie."
+    },
+    {
+      "text": "Cette cause profonde produit un effet mesurable sur le rendement.",
+      "expected_key": "cause_effect",
+      "why": "La paire « cause » + « effet » signe le lien causal."
+    },
+    {
+      "text": "Le coût total reste faible au regard du bénéfice annuel obtenu.",
+      "expected_key": "economic_argument",
+      "why": "La paire « coût » + « bénéfice » signe le calcul économique."
+    },
+    {
+      "text": "Compte tenu du risque identifié, la prévention s'impose dès maintenant.",
+      "expected_key": "precautionary_principle",
+      "why": "La paire « risque » + « prévention » signe le principe de précaution."
+    },
+    {
+      "text": "Cette atteinte aux droits fondamentaux constitue une violation caractérisée.",
+      "expected_key": "moral_argument",
+      "why": "La paire « droits » + « atteinte » signe l'argument moral."
+    },
+    {
+      "text": "Il existe un précédent historique : la même configuration a déjà été observée.",
+      "expected_key": "historical_precedent",
+      "why": "La paire « précédent » + « historique » signe l'argument par précédent."
+    },
+    {
+      "text": "La règle l'implique ; par conséquent, si la prémisse est établie, la conclusion vaut.",
+      "expected_key": "modus_ponens",
+      "why": "La paire « par conséquent » + « si » signe la déduction — signal le plus faible, testé en dernier."
+    }
+  ],
+  "negatives": [
+    {
+      "text": "Bonjour, il fait beau aujourd'hui.",
+      "why": "Aucune signature lexicale d'aucun schéma."
+    },
+    {
+      "text": "Le rapport compte douze pages et trois annexes.",
+      "why": "Description neutre, non argumentative."
+    },
+    {
+      "text": "L'expert est attendu à la conférence.",
+      "why": "Mot-clé isolé (« expert » sans « domaine » ni « source ») : le classifieur exige la paire complète — précision plutôt que rappel."
+    },
+    {
+      "text": "",
+      "why": "Texte vide : retour immédiat None, jamais d'étiquette fabriquée."
+    }
+  ]
+}
