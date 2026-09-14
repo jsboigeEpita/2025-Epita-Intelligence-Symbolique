@@ -52,6 +52,39 @@ from argumentation_analysis.orchestration.workflows import *  # noqa: F401,F403
 logger = logging.getLogger("UnifiedPipeline")
 
 
+def _shield_verdict(state: Any) -> Optional[Dict[str, Any]]:
+    """The AI Shield's verdict for this run, read from the state (#2095 item 5).
+
+    `state.ai_shield_results` was written by `_invoke_ai_shield` and read by
+    nobody in production — the verdict the shield reached never reached the
+    caller, so a `blocked` input was visible only in the log line. This is the
+    reader, and it is READ-ONLY: it never appends, so a shield phase invoked
+    twice in one workflow (e.g. `input_validation` plus `output_filtering`)
+    leaves exactly the entries the invoker wrote. Copying the writer would have
+    doubled them on every run.
+
+    Returns the LATEST entry — entries are appended in run order, so the last
+    one is the verdict the pipeline acted on. None when the shield never ran
+    (phase absent, or skipped for want of a provider).
+    """
+    results = getattr(state, "ai_shield_results", None)
+    if not isinstance(results, list) or not results:
+        return None
+    latest = results[-1]
+    if not isinstance(latest, dict):
+        return None
+    return {
+        "blocked": latest.get("blocked"),
+        "overall_score": latest.get("overall_score"),
+        "reason": latest.get("reason"),
+        "error_types": [
+            layer.get("error_type")
+            for layer in latest.get("layer_results", [])
+            if isinstance(layer, dict) and layer.get("error_type")
+        ],
+    }
+
+
 def _analysis_outcome(phase_results: Dict[str, Any]) -> Dict[str, str]:
     """Normalize the foundational analysis outcome from the extraction contract."""
     extraction = next(
@@ -399,6 +432,9 @@ async def run_unified_analysis(
         "capabilities_used": capabilities_used,
         "capabilities_degraded": capabilities_degraded,
         "capabilities_missing": capabilities_missing,
+        # #2095 item 5: the shield's verdict, read from the state instead of
+        # being written and forgotten.
+        "shield_verdict": _shield_verdict(state) if state is not None else None,
     }
 
     # Include state in results if available

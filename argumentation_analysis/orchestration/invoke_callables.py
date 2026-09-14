@@ -10407,8 +10407,13 @@ async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[st
             return {"shield_available": False, "blocked": False, "error": str(exc)}
         return {"shield_available": False, "blocked": True, "error": str(exc)}
 
-    # Validate input (runs all enabled layers)
-    result = shield.validate_input(input_text)
+    # Validate input (runs all enabled layers).
+    # #2095 item 3: `validate_input` drives a BLOCKING OpenAI client, so it must
+    # not run on the event loop. Offloading here — the single async production
+    # boundary — keeps the whole `ShieldLayer.validate` ABC synchronous instead
+    # of forcing every layer (heuristic, output filter, tests, third parties) to
+    # become async for one blocking leaf.
+    result = await asyncio.to_thread(shield.validate_input, input_text)
 
     output = {
         "shield_available": True,
