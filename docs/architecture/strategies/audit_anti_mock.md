@@ -228,7 +228,7 @@ except ImportError as e:
 ### Fichiers de Tests
 
 - **test_strategies_real.py** : Suite complète des tests authentiques
-- **test_setup_extract_agent_real.py** : Tests de configuration réelle
+- **test_extract_agent_construction.py** : Construction réelle de `ExtractAgent`
 - **test_utils_real.py** : Utilitaires de test sans mocks
 
 ### Configurations

@@ -2,8 +2,7 @@
 
 Sous-paquet de `plugin_framework/`. **11 fichiers `.py`, 1 201 lignes** dans le sous-arbre
 (3 fichiers / 214 lignes au premier niveau : `__init__.py`, `contracts.py`,
-`decorators.py`). Il porte les **contrats** (ce qu'est un plugin) — et **plus aucun
-chargeur** : les deux mécanismes de découverte concurrents ont été retirés (#2099),
+`decorators.py`). Il porte les **contrats** (ce qu'est un plugin) — et **plus aucunchargeur** : les deux mécanismes de découverte concurrents ont été retirés (#2099),
 aucun n'ayant d'appelant de production.
 
 ## Rôle et frontière
@@ -39,7 +38,6 @@ ne voyait pas les plugins réels). Voir le README parent, section *Le retrait #2
 **Aucun.** Le sous-paquet est consommé par les plugins réels (import direct du
 contrat et des modèles) et par les tests. Le script `main.py` qui prétendait
 l'appeler a été retiré (#2102 §1, voir le README parent).
-
 ## Amont / aval
 
 - **Amont** : néant — plus aucun mécanisme ne scanne le système de fichiers.
@@ -76,11 +74,11 @@ et les plugins réels s'instancient par import direct avec une capacité exécut
 **Parent** : `plugin_framework/` (lui-même résiduel). **Enfants** :
 `plugins/standard/` (les plugins déclaratifs), `services/` (le guichet).
 
-**Homonyme à ne pas confondre** : `argumentation_analysis/agents/core/plugin_loader.py`
-est un **autre** chargeur, celui des plugins d'agents — c'est lui qui exige les champs
-`name` / `entrypoint_module` / `entrypoint_class`. Deux fichiers nommés
-`plugin_loader.py` coexistaient dans le même dépôt, deux formats, deux sorts — le
-présent n'existe plus.
+**Homonymes retirés** : `argumentation_analysis/agents/core/plugin_loader.py` — l'autre
+chargeur, celui des plugins d'agents (`name` / `entrypoint_module` / `entrypoint_class`) —
+a été **supprimé** (#2145) : aucun appelant de production, et l'unique `manifest.json` du
+dépôt était irrecevable par son format. Le `plugin_loader.py` de ce paquet a disparu de
+même (#2099) : les deux homonymes du dépôt sont éteints.
 
 ## Limites connues
 

@@ -56,13 +56,13 @@ La méthodologie a suivi les étapes suivantes, toutes encapsulées dans le scri
     -   Gestion des erreurs de parsing JSON (nettoyage des ```json ... ```) provenant du modèle LLM.
 
 ### 3.2. `ExplorationPlugin` (Étape "Map")
-- **Source** : [`argumentation_analysis/plugins/ExplorationPlugin/`](../../argumentation_analysis/plugins/ExplorationPlugin/)
+- **Source** : [`docs/archives/plugins_overflow/ExplorationPlugin/`](../archives/plugins_overflow/ExplorationPlugin/)
 - **Validation** :
     -   Le prompt a correctement guidé le modèle pour qu'il se concentre sur **un seul type de sophisme** à la fois.
     -   Le format de sortie JSON a été respecté, incluant `name`, `definition`, `confidence`, `evidence`, et `explanation`.
 
 ### 3.3. `SynthesisPlugin` (Étape "Reduce")
-- **Source** : [`argumentation_analysis/plugins/SynthesisPlugin/`](../../argumentation_analysis/plugins/SynthesisPlugin/)
+- **Source** : [`docs/archives/plugins_overflow/SynthesisPlugin/`](../archives/plugins_overflow/SynthesisPlugin/)
 - **Validation** :
     -   Le prompt a correctement guidé le modèle pour agréger les résultats de plusieurs analyses individuelles en un seul document JSON.
     -   Le plugin a réussi à conserver toutes les informations de chaque sophisme identifié, sans perte de données.

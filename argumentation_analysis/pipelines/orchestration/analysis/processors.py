@@ -1,53 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Processeurs d'Analyse Modulaires pour Pipelines.
+"""Niveau opérationnel et synthèse — deux fonctions libres, aucune classe.
 
-Objectif:
-    Ce module fournit une collection de "processeurs" (`Processors`), qui sont
-    les briques de construction fondamentales pour les pipelines d'analyse
-    argumentative. Chaque processeur est une classe autonome encapsulant une
-    étape de traitement spécifique et réutilisable. En les assemblant, on peut
-    construire des workflows d'analyse complexes et personnalisés.
+Ce module ne définit **aucune classe de processeur**. Il porte :
 
-Concept Clé:
-    Chaque processeur implémente une interface commune (par exemple, une méthode
-    `process(state)` ou `__call__(state)`). Il prend en entrée l'état actuel de
-    l'analyse (souvent un dictionnaire ou un objet `RhetoricalAnalysisState`),
-    effectue sa tâche, et retourne l'état mis à jour avec ses résultats.
-    Cette conception favorise la modularité, la testabilité et la
-    réutilisabilité.
+- `execute_operational_tasks` — fabrique **jusqu'à 5 tâches factices**
+  (`"Résultat de la tâche opérationnelle {i+1}"`, `execution_time: 0.5` codé
+  dur) : c'est une simulation, pas une exécution ;
+- `synthesize_hierarchical_results` — moyenne de trois scores heuristiques.
 
-Processeurs Principaux (Exemples cibles):
-    -   `ExtractProcessor`:
-        Charge un agent d'extraction pour identifier et extraire les
-        propositions, prémisses, et conclusions du texte brut.
-    -   `InformalAnalysisProcessor`:
-        Utilise l'agent d'analyse informelle pour détecter les sophismes
-        dans les arguments extraits.
-    -   `FormalAnalysisProcessor`:
-        Fait appel à un agent logique pour convertir le texte en un ensemble
-        de croyances, vérifier la cohérence et exécuter des requêtes.
-    -   `SynthesisProcessor`:
-        Prend les résultats des analyses informelle et formelle et utilise
-        un agent de synthèse pour générer un rapport consolidé.
-    -   `DeduplicationProcessor`:
-        Analyse les résultats pour identifier et fusionner les arguments ou
-        les sophismes redondants.
+La docstring d'origine annonçait cinq classes (`ExtractProcessor`,
+`InformalAnalysisProcessor`, `FormalAnalysisProcessor`, `SynthesisProcessor`,
+`DeduplicationProcessor`) et un exemple d'assemblage sur un `ExecutionEngine` —
+aucun de ces symboles n'existe dans ce dépôt. Elle est retirée, pas réécrite
+(#2110).
 
-Utilisation:
-    Ces processeurs sont destinés à être utilisés par un moteur d'exécution de
-    pipeline (comme `ExecutionEngine`). Le moteur les exécute séquentiellement,
-    en passant l'état de l'un à l'autre.
-
-    Exemple (conceptuel):
-    ```python
-    engine = ExecutionEngine(state)
-    engine.add(ExtractProcessor())
-    engine.add(InformalAnalysisProcessor())
-    engine.add(SynthesisProcessor())
-    final_state = await engine.run()
-    ```
+Le paramètre `pipeline` n'est lu par aucune des deux fonctions — contrat
+implicite.
 """
 
 import logging

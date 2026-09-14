@@ -2,7 +2,7 @@
 
 Ce paquet est une **racine d'assemblage** : plus aucun script, trois sous-arbres
 (`agents/`, `benchmarking/`, `core/`). Mesuré après les retraits #2099/#2102 :
-**14 fichiers `.py`, 1 365 lignes** dans le sous-arbre (aucun `.py` au premier
+**14 fichiers `.py`, 1 372 lignes** dans le sous-arbre (aucun `.py` au premier
 niveau).
 
 **Le mécanisme de découverte de ce paquet est retiré, pas réparé (#2099).** La

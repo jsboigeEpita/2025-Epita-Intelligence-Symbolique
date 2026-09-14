@@ -10,7 +10,7 @@ N'est **pas** (trois homonymes à ne pas confondre) :
 - `argumentation_analysis/orchestration/service_manager.py:147` (`OrchestrationServiceManager`) ;
 - le chargeur de plugins — `core/plugin_loader.py` (dont les limites sont documentées ci-dessous).
 
-Contenu : `orchestration_service.py` seul (66 lignes), **sans `__init__.py`** (namespace package implicite).
+Contenu : `orchestration_service.py` seul (61 lignes), **sans `__init__.py`** (namespace package implicite).
 
 ## Composants publics
 
@@ -18,18 +18,16 @@ Contenu : `orchestration_service.py` seul (66 lignes), **sans `__init__.py`** (n
 
 - `__init__(plugin_registry: Dict[str, Any])` (:14) — dict {nom → instance} **fourni par l'appelant** (les mécanismes de découverte sont retirés, #2099 ; l'intégration le construit directement depuis les manifestes des fixtures) ;
 - `handle_request(request)` (:24) — routage par `request.mode` ;
-- `_handle_direct_plugin_call` (:38) — split de `target` sur `"."` (:45), lookup registre (:50), `getattr` (:57), invocation `function(**request.payload)` (:60), toute exception attrapée → `OrchestrationResponse(status="error")` (:65).
+- `_handle_direct_plugin_call` (:34) — split de `target` sur `"."` (:41), lookup registre (:43), `getattr` (:53), invocation `function(**request.payload)` (:56), toute exception attrapée → `OrchestrationResponse(status="error")` (:61).
 
 ## Points d'entrée valides
 
 - `benchmarking/benchmark_service.py:7,81` — fonctionnel (voir [`benchmarking/`](../../benchmarking/README.md)) ;
 - hors `plugin_framework/` : aucun. Le runner `run_benchmark.py` a été retiré (#2099), le fossile `main.py` aussi (#2102 §1).
-
 ## Amont / aval
 
 - Amont : `core/contracts.py` (`OrchestrationRequest` :5, `OrchestrationResponse` :29).
 - Aval : `benchmarking/benchmark_service.py`, `tests/unit/argumentation_analysis/test_plugin_framework.py` et `tests/integration/triage/test_workflow_execution.py`.
-
 ## Statut d'intégration
 
 **spécialisé** — utilisé uniquement au sein du circuit fermé plugin_framework (registre fourni par l'appelant → ce guichet → BenchmarkService). La production consomme les plugins réels **par import direct, sans passer par ce guichet** : `agents/tools/analysis/fallacy_family_analyzer.py:20,24` et `orchestration/fact_checking_orchestrator.py:28,31` importent `taxonomy_explorer` et `external_verification` directement.
@@ -46,8 +44,7 @@ Aucun — objet purement en mémoire (dict registre), n'écrit rien.
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/test_plugin_framework.py::TestOrchestrationService tests/integration/triage/test_workflow_execution.py -v
 ```
 
-- `TestOrchestrationService` (`test_plugin_framework.py:465`, 9 tests) — routing, erreurs registre/capacité, cibles malformées, exceptions plugin ;
-- intégration (`test_workflow_execution.py`, registre construit directement) — chaîne réelle avec plugins factices.
+- `TestOrchestrationService` (`test_plugin_framework.py:465`, 9 tests) — routing, erreurs registre/capacité, cibles malformées, exceptions plugin ;- intégration (`test_workflow_execution.py`, registre construit directement) — chaîne réelle avec plugins factices.
 
 ## Frères et parent
 

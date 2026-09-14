@@ -99,9 +99,9 @@ Cette section catalogue les briques logicielles qui effectuent le travail d'anal
 Composants de bas niveau pouvant être utilisés par différentes architectures.
 
 *   **Plugins Sémantiques Modulaires** :
-    *   `argumentation_analysis/plugins/GuidingPlugin/` : Un plugin de "triage" qui identifie les grandes catégories de sophismes probables dans un texte, afin de guider l'analyse.
-    *   `argumentation_analysis/plugins/ExplorationPlugin/` : Un plugin d'analyse ciblée qui recherche des sophismes dans une catégorie spécifique. Conçu pour travailler de pair avec le `GuidingPlugin`.
-    *   `argumentation_analysis/plugins/SynthesisPlugin/` : **[N'était pas documenté]** Un plugin qui agrège les résultats de plusieurs `ExplorationPlugin` lancés en parallèle. Il représente l'étape de "convergence" du cycle "Guide-Explore-Synthesize".
+    *   `docs/archives/plugins_overflow/GuidingPlugin/` : Un plugin de "triage" qui identifie les grandes catégories de sophismes probables dans un texte, afin de guider l'analyse.
+    *   `docs/archives/plugins_overflow/ExplorationPlugin/` : Un plugin d'analyse ciblée qui recherche des sophismes dans une catégorie spécifique. Conçu pour travailler de pair avec le `GuidingPlugin`.
+    *   `docs/archives/plugins_overflow/SynthesisPlugin/` : **[N'était pas documenté]** Un plugin qui agrège les résultats de plusieurs `ExplorationPlugin` lancés en parallèle. Il représente l'étape de "convergence" du cycle "Guide-Explore-Synthesize".
 *   **Services Fondamentaux** :
     *   `argumentation_analysis/services/fallacy_taxonomy_service.py` : Service central et essentiel pour accéder et gérer la taxonomie des sophismes. *À conserver absolument.*
     *   `argumentation_analysis/services/fallacy_family_definitions.py`: Fournit des métadonnées sur les familles de sophismes (sévérité, mots-clés, etc.). *Rôle important, à conserver.*

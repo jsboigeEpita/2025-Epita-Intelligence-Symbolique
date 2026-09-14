@@ -586,7 +586,7 @@ Cette étape majeure se concentre sur la migration des composants logiques ident
 
 #### 2.3.1. Analyse de l'Existant (Synthèse du Grounding)
 
-*   **Composants Source :** `argumentation_analysis/plugins/GuidingPlugin/`, `argumentation_analysis/plugins/ExplorationPlugin/`, `argumentation_analysis/plugins/SynthesisPlugin/`.
+*   **Composants Source :** `docs/archives/plugins_overflow/GuidingPlugin/`, `docs/archives/plugins_overflow/ExplorationPlugin/`, `docs/archives/plugins_overflow/SynthesisPlugin/` (archivés depuis `argumentation_analysis/plugins/`, #2145).
 *   **Architecture "Legacy" :** Ces plugins fonctionnaient de concert, mais leur orchestration était implicite, gérée par un code client externe non standardisé.
 *   **Problématiques Identifiées :**
     1.  **Couplage Implicite :** Le succès du cycle dépendait de l'ordre d'appel correct par un client externe.

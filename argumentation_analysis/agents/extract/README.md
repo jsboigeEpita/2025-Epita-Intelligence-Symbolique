@@ -61,10 +61,13 @@ Parent : [`../README.md`](../README.md). Cible : [`../core/`](../core/README.md)
   `test_module_import_by_name`, helper inexistant : il mourait en `NameError`
   avant sa **première** vérification, donc il ne tenait rien du tout. Réparé,
   il rend 15/15.
-- Reste hors périmètre (constat de chemin, aucune modification) :
-  `tests/unit/argumentation_analysis/test_setup_extract_agent_real.py` est
-  **vert en ne mesurant rien** — son `ExtractAgent(name=..., description=...)`
-  lève un `TypeError` (le vrai constructeur exige `kernel`) que
-  `except Exception: return False` avale, et `unittest` ignore la valeur de
-  retour. Le fichier porte en outre le nom du fantôme.
+- Corrigé (#2218) — `tests/unit/argumentation_analysis/test_setup_extract_agent_real.py`
+  était **vert en ne mesurant rien** : sa forme fantôme
+  `ExtractAgent(name=..., description=...)` levait un `TypeError` (le vrai
+  constructeur exige `kernel`) que `except Exception: return False` avalait, et
+  `unittest` ne lit jamais la valeur de retour. Il est remplacé par
+  `tests/unit/argumentation_analysis/test_extract_agent_construction.py`
+  (3 fonctions pytest, construction réelle) — le fichier portait en outre le nom
+  du fantôme `setup_extract_agent`, inexistant dans le dépôt. Falsifiabilité
+  **mesurée** : la forme fantôme rougit 1 test, un kernel nu en rougit 2.
 - La charge de maintenance est réelle mais minuscule (36 lignes, zéro logique).

@@ -11,12 +11,12 @@ N'est **pas** :
 
 ## Composants publics
 
-Tout le contenu utile est `benchmark_service.py` (143 lignes ; `__init__.py` vide) :
+Tout le contenu utile est `benchmark_service.py` (171 lignes ; `__init__.py` vide) :
 
 - `BenchmarkService` (`benchmark_service.py:13`) ;
 - `__init__(orchestration_service)` (:20) — reçoit le guichet [`core/services/orchestration_service.py`](../core/services/README.md) ;
-- `record_metric(metric_type, value)` (:30) — métriques tamponnées, associées à la prochaine suite ;
-- `run_suite(plugin_name, capability_name, requests)` (:48) — boucle : `OrchestrationRequest(mode="direct_plugin_call", target="plugin.capacité")`, chrono `perf_counter` autour de `handle_request`, statistiques avg/min/max **sur les réussites seules**, somme des métriques numériques, retour `BenchmarkSuiteResult`.
+- `record_metric(metric_type, value)` (:35) — pendant un run, la valeur s'attache à ce run (identité explicite `request_id`, #2102 §4) ; hors de tout run, elle reste tamponnée et n'est **jamais** rattachée (vidée au départ de la suite suivante) ;
+- `run_suite(plugin_name, capability_name, requests)` (:63) — boucle : `OrchestrationRequest(mode="direct_plugin_call", target="plugin.capacité")`, chrono `perf_counter` autour de `handle_request`, statistiques avg/min/max **sur les réussites seules**, somme des métriques numériques, retour `BenchmarkSuiteResult`.
 
 ## Points d'entrée valides
 
@@ -26,7 +26,7 @@ Hors de `plugin_framework/` : **aucun importeur** (api/, orchestration/, interfa
 
 ## Amont / aval
 
-- Amont : `core/contracts.py` (`BenchmarkResult` :91, `BenchmarkSuiteResult` :115, `OrchestrationRequest` :5) et `core/services/orchestration_service.py:7`.
+- Amont : `core/contracts.py` (`BenchmarkResult` :91, `BenchmarkSuiteResult` :115, `OrchestrationRequest` :5) et `core/services/orchestration_service.py:2-5`.
 - Aval : `core/decorators.py`, les deux fichiers de tests cités ci-dessous.
 
 ## Statut d'intégration
@@ -45,7 +45,7 @@ son script (#2099).
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/test_plugin_framework.py::TestBenchmarkService tests/unit/argumentation_analysis/test_plugin_framework.py::TestTrackTokensDecorator tests/integration/triage/test_workflow_execution.py -v
 ```
 
-- `TestBenchmarkService` (`test_plugin_framework.py:715`, 14 tests) — agrégation, métriques, stats sur réussites ;
+- `TestBenchmarkService` (`test_plugin_framework.py:715`, 16 tests) — agrégation, métriques (identité par run, agrégat plat), stats sur réussites ;
 - `TestTrackTokensDecorator` (:571, 7 tests) — décorateur seul (aucun plugin réel décoré) ;
 - `tests/integration/triage/test_workflow_execution.py` (classe :50 ; tests :98, :164, :213) — chaîne réelle registre (construit directement depuis les fixtures) → OrchestrationService → BenchmarkService.
 

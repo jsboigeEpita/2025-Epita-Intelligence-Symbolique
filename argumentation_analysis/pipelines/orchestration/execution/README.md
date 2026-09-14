@@ -2,14 +2,14 @@
 
 ## Rôle et frontière
 
-- `engine.py` contient **une seule fonction** : `analyze_text_orchestrated` (:81-145) — sélectionne une stratégie, dispatche, post-traite, sauvegarde la trace.
-- `strategies.py` contient 6 fonctions async libres : `select_orchestration_strategy` (:83), `execute_hierarchical_full_orchestration` (:147), `execute_specialized_orchestration` (:200), `execute_fallback_orchestration` (:253), `execute_hybrid_orchestration` (:279), `select_specialized_orchestrator` (:317).
+- `engine.py` contient **une seule fonction** : `analyze_text_orchestrated` (:59-121) — sélectionne une stratégie, dispatche, post-traite, sauvegarde la trace.
+- `strategies.py` contient 6 fonctions async libres : `select_orchestration_strategy` (:50), `execute_hierarchical_full_orchestration` (:150), `execute_specialized_orchestration` (:203), `execute_fallback_orchestration` (:256), `execute_hybrid_orchestration` (:282), `select_specialized_orchestrator` (:320).
 
-N'est **pas** le moteur d'exécution réel du dépôt : le pipeline unifié moderne (`argumentation_analysis/orchestration/unified_pipeline.py`) exécute ses phases via le `WorkflowExecutor` de `workflow_dsl.py` — zéro référence à ce sous-paquet. L'affirmation inverse de `docs/architecture/architecture_map.md:20` est périmée. Les docstrings décrivent des classes (`ExecutionEngine` engine.py:4-57, `SequentialStrategy`/`ParallelStrategy` strategies.py:20-38) **qui n'existent dans aucun fichier**.
+N'est **pas** le moteur d'exécution réel du dépôt : le pipeline unifié moderne (`argumentation_analysis/orchestration/unified_pipeline.py`) exécute ses phases via le `WorkflowExecutor` de `workflow_dsl.py` — zéro référence à ce sous-paquet. L'affirmation inverse de `docs/architecture/architecture_map.md:20` est **corrigée** (#2110). Les docstrings décrivaient des classes (`ExecutionEngine`, `SequentialStrategy`/`ParallelStrategy`) **qui n'existent dans aucun fichier** — elles sont retirées (#2110).
 
 ## Composants publics
 
-Voir Rôle — deux fichiers, 7 fonctions au total. La sélection AUTO_SELECT applique des heuristiques : INVESTIGATIVE/LOGICAL → `specialized_direct` (:124-129), texte > 1000 caractères → `hierarchical_full` (:130-132), COMPREHENSIVE + service_manager initialisé → `service_manager` (:133-139), défaut `hybrid`.
+Voir Rôle — deux fichiers, 7 fonctions au total. La sélection AUTO_SELECT applique des heuristiques : INVESTIGATIVE/LOGICAL → `specialized_direct` (:120-125), texte > 1000 caractères → `hierarchical_full` (:126-128), COMPREHENSIVE + service_manager initialisé → `service_manager` (:129-135), défaut `hybrid`.
 
 ## Points d'entrée valides
 
@@ -18,7 +18,7 @@ Voir Rôle — deux fichiers, 7 fonctions au total. La sélection AUTO_SELECT ap
 ## Amont / aval
 
 - Amont : [`config/`](../config/README.md) (enums + `ExtendedOrchestrationConfig`, dont `save_orchestration_trace: bool = True`), [`analysis/`](../analysis/README.md) (post-traitement + traces).
-- Aval : `save_orchestration_trace` écrit `results/orchestration_trace_{analysis_id}.json` (gitignoré), conditionné par `pipeline.config.save_orchestration_trace` (engine.py:138) — **seul artefact possible**.
+- Aval : `save_orchestration_trace` écrit `results/orchestration_trace_{analysis_id}.json` (gitignoré), conditionné par `pipeline.config.save_orchestration_trace` (engine.py:114) — **seul artefact possible**.
 
 ## Statut d'intégration
 
@@ -38,11 +38,11 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) — périmé sur 2 points (docstrings laissant croire aux classes vivantes ; `analysis_orchestrator.py`:19 inexistant). Frères : [`../analysis/`](../analysis/README.md), [`../config/`](../config/README.md), [`../core/`](../core/README.md), [`../orchestrators/specialized/`](../orchestrators/specialized/README.md).
+Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : plus d'`analysis_orchestrator.py` annoncé, plus de docstrings laissant croire aux classes vivantes. Frères : [`../analysis/`](../analysis/README.md), [`../config/`](../config/README.md), [`../core/`](../core/README.md), [`../orchestrators/specialized/`](../orchestrators/specialized/README.md).
 
 ## Limites connues
 
 - **Dispatch silencieux** : `select_orchestration_strategy` peut retourner `strategic_only`/`tactical_coordination`/`operational_direct` (:105-107) et `service_manager` (:139), mais le dispatcheur engine.py:115-124 ne connaît que `hierarchical_full`/`specialized_direct`/`fallback`/else→hybrid — ces 4 valeurs tombent **silencieusement** dans `execute_hybrid_orchestration` ;
-- type hint forward-ref `"UnifiedOrchestrationPipeline"` jamais importé (engine.py:82, strategies.py:84…) — inoffensif à l'exécution, casse `get_type_hints` ;
-- docstrings fossiles décrivant des classes inexistantes (les exemples engine.py:42-43 importent des classes jamais écrites) ;
+- type hint forward-ref `"UnifiedOrchestrationPipeline"` jamais importé (engine.py:60, strategies.py:51…) — inoffensif à l'exécution, casse `get_type_hints` ;
+- le bullet « Dispatch silencieux » ci-dessus est **périmé depuis #2109** : le moteur ne retombe plus sur l'hybride, il lève `ValueError` (garde `STRATEGY_EXECUTORS`, engine.py:94-99) — suivi par #2223 ;
 - paramètre `pipeline` = contrat implicite jamais implémenté (méthodes `_trace_orchestration`, `_execute_operational_tasks`… définies nulle part).
