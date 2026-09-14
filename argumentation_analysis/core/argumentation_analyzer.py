@@ -7,6 +7,7 @@ de services et d'autres composants pour fournir une analyse complète et unifié
 """
 
 from typing import Dict, Any, Optional, List
+import asyncio
 import logging
 
 # Import des composants existants
@@ -18,6 +19,11 @@ from argumentation_analysis.pipelines.unified_text_analysis import (
 from argumentation_analysis.services.web_api.services.analysis_service import (
     AnalysisService,
 )
+from argumentation_analysis.services.web_api.models.request_models import (
+    AnalysisRequest,
+    AnalysisOptions,
+)
+from argumentation_analysis.core.llm_service import create_llm_service
 
 
 class ArgumentationAnalyzer:
@@ -48,7 +54,9 @@ class ArgumentationAnalyzer:
         Args:
             config (Optional[Dict[str, Any]]):
                 Un dictionnaire de configuration pour surcharger les paramètres par défaut.
-                Exemples de clés : 'enable_fallacy_detection', 'enable_rhetorical_analysis'.
+                Exemples de clés : 'enable_fallacy_detection',
+                'enable_rhetorical_analysis', 'enable_logic_analysis'
+                (mappées sur les modes "informal"/"formal" de UnifiedAnalysisConfig).
         """
         self.config = config or {}
         self.logger = logging.getLogger(__name__)
@@ -59,25 +67,32 @@ class ArgumentationAnalyzer:
     def _init_components(self):
         """Initialise les composants internes."""
         try:
-            # Configuration unifiée
-            self.analysis_config = UnifiedAnalysisConfig(
-                enable_fallacy_detection=self.config.get(
-                    "enable_fallacy_detection", True
-                ),
-                enable_rhetorical_analysis=self.config.get(
-                    "enable_rhetorical_analysis", True
-                ),
-                enable_logic_analysis=self.config.get("enable_logic_analysis", True),
-                enable_semantic_analysis=self.config.get(
-                    "enable_semantic_analysis", True
-                ),
-            )
+            # Configuration unifiée — #2097 : les quatre clés enable_* passées
+            # ici n'existent pas sur UnifiedAnalysisConfig (TypeError avalée
+            # par le except : le mode dégradé tuait aussi le service, sain ou
+            # non). Mapping réel : "informal" couvre fallacy + rhetorical,
+            # "formal" couvre logic ; "enable_semantic_analysis" n'a pas
+            # d'équivalent et n'est plus accepté.
+            modes = []
+            if self.config.get("enable_fallacy_detection", True) or self.config.get(
+                "enable_rhetorical_analysis", True
+            ):
+                modes.append("informal")
+            if self.config.get("enable_logic_analysis", True):
+                modes.append("formal")
+            self.analysis_config = UnifiedAnalysisConfig(analysis_modes=modes)
 
             # Pipeline unifié
             self.pipeline = UnifiedTextAnalysisPipeline(self.analysis_config)
 
-            # Service d'analyse
-            self.analysis_service = AnalysisService()
+            # Service d'analyse — #2097 : le ctor nu `AnalysisService()` levait
+            # TypeError (llm_service requis) avalée par le except ci-dessous →
+            # mode dégradé silencieux sur tout siège sain. Câblage en miroir de
+            # mcp_server/main.py (#1864) : un service LLM par consommateur via
+            # la fabrique canonique, pas de défaut `= None` (ça déplacerait la
+            # panne du démarrage vers le premier appel réel).
+            analysis_llm = create_llm_service(service_id="argumentation_analyzer")
+            self.analysis_service = AnalysisService(llm_service=analysis_llm)
 
             self.logger.info("ArgumentationAnalyzer initialisé avec succès")
 
@@ -122,18 +137,41 @@ class ArgumentationAnalyzer:
         try:
             results = {"status": "success", "text": text, "analysis": {}}
 
-            # Utilisation du pipeline unifié si disponible
+            # Utilisation du pipeline unifié si disponible — #2097 : le
+            # pipeline réel expose ``initialize()`` puis
+            # ``analyze_text_unified(text)`` (les deux async) ; l'ancien appel
+            # ``analyze_text(text)`` visait une méthode inexistante et tuait
+            # toute l'analyse dans le except externe, service compris. Chaque
+            # composant se dégrade désormais individuellement.
             if self.pipeline:
-                pipeline_results = self.pipeline.analyze_text(text)
-                results["analysis"]["unified"] = pipeline_results
+                try:
 
-            # Utilisation du service d'analyse si disponible
+                    async def _run_pipeline() -> Dict[str, Any]:
+                        if not self.pipeline.initialized:
+                            if not await self.pipeline.initialize():
+                                raise RuntimeError(
+                                    "initialisation du pipeline unifié échouée"
+                                )
+                        return await self.pipeline.analyze_text_unified(text)
+
+                    results["analysis"]["unified"] = asyncio.run(_run_pipeline())
+                except Exception as e:
+                    self.logger.warning(f"Erreur pipeline unifié : {e}")
+
+            # Utilisation du service d'analyse si disponible — #2097 : le
+            # service réel expose ``async analyze_text(request: AnalysisRequest)`` ;
+            # l'ancien appel ``analyze_text(text, options)`` levait TypeError au
+            # premier appel — la panne déplacée du démarrage vers l'usage,
+            # exactement ce que #1864 interdit. La façade est synchrone :
+            # ``asyncio.run`` est le pont ; depuis un event loop vivant il
+            # lève et le service se dégrade proprement (warning + fallback).
             if self.analysis_service:
                 try:
-                    service_results = self.analysis_service.analyze_text(
-                        text, options or {}
+                    request = AnalysisRequest(
+                        text=text, options=AnalysisOptions(**(options or {}))
                     )
-                    results["analysis"]["service"] = service_results
+                    response = asyncio.run(self.analysis_service.analyze_text(request))
+                    results["analysis"]["service"] = response.model_dump(mode="json")
                 except Exception as e:
                     self.logger.warning(f"Erreur service d'analyse : {e}")
 

@@ -93,10 +93,12 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
 
 ## Limites connues
 
-- `core/argumentation_analyzer.py:80` instancie `AnalysisService()` **sans**
+- ~~`core/argumentation_analyzer.py:80` instancie `AnalysisService()` **sans**
   le `llm_service` positionnel requis (`analysis_service.py:84`) → TypeError
   avalée par le try/except (:84-88), `analysis_service=None` silencieux en
-  mode dégradé.
+  mode dégradé.~~ **Corrigé (#2097)** : l'analyseur construit son service via
+  `create_llm_service` (miroir #1864) ; les kwargs `enable_*` inexistants qui
+  tuaient `_init_components` en amont sont mappés sur les modes réels.
 - Branche formelle de la validation désactivée : la condition
   (`validation_service.py:84-92`) exige `request.logic_type`, champ que
   `ValidationRequest` ne définit plus — ne s'exécute jamais.
