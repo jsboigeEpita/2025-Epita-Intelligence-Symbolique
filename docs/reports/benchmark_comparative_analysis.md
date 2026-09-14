@@ -54,7 +54,7 @@ The 10 workflows tested span three architectural tiers:
 
 | Workflow | Phases | Category | Purpose |
 |----------|--------|----------|---------|
-| `democratech` | 9 (4 optional, 1 conditional) | Deliberation | Full democratic deliberation: debate + vote + recheck |
+| `democratech` | 10 (5 optional, 1 conditional) | Deliberation | Full democratic deliberation: debate + vote + recheck |
 | `debate_tournament` | 6 (1 loop) | Adversarial | Multi-round debate with convergence + jury vote |
 | `fact_check` | 6 (3 optional) | Verification | Claim verification via JTMS belief tracking |
 
@@ -62,8 +62,8 @@ The 10 workflows tested span three architectural tiers:
 
 | Workflow | Phases | Category | Purpose |
 |----------|--------|----------|---------|
-| `formal_verification` | 17 (9 optional, 1 conditional) | Logic | Full formal pipeline: PL + FOL + Modal + Dung + ASPIC + ADF + Bipolar + DL + CL + DeLP + QBF + JTMS + Belief Revision + Synthesis |
-| `formal_debate` | 8 (3 optional) | Logic | ASPIC+ formalization + dialogue + ranking + governance |
+| `formal_verification` | 18 (9 optional, 1 conditional) | Logic | Full formal pipeline: PL + FOL + Modal + Dung + ASPIC + ADF + Bipolar + SETAF + DL + CL + DeLP + QBF + JTMS + ATMS + Belief Revision + Synthesis |
+| `formal_debate` | 9 (3 optional) | Logic | ASPIC+ formalization + dialogue + ranking + governance |
 
 **Note**: The `belief_dynamics` and `argument_strength` workflows exist in the catalog but were not included in this benchmark run.
 

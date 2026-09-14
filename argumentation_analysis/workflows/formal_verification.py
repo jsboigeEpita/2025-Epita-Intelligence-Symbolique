@@ -1,22 +1,27 @@
 """
 Formal Verification Workflow (#71) — Full pipeline using all logic agents + Tweety handlers.
 
-14-phase pipeline (4 optional):
+Phases in build order — optional in brackets. The mechanical count and optionality
+are pinned by `test_formal_verification.py::test_phase_count` and deliberately not
+repeated here: a number in prose drifts the next time a phase is added.
   1. Extraction: heuristic claim extraction from text
   2. PL Analysis: propositional logic satisfiability check
   3. FOL Analysis: first-order logic consistency check (parallel with PL)
-  4. Modal Analysis: modal logic necessity/possibility detection (optional)
+  4. Modal Analysis: modal logic necessity/possibility detection [optional]
   5. Dung Extensions: argument framework + extension computation
   6. ASPIC+ Analysis: structured argumentation via ASPIC+
   7. Ranking: formal argument ranking semantics
-  8. ADF Analysis: abstract dialectical frameworks (optional, #85)
-  9. Bipolar Analysis: bipolar AF with support relations (optional, #85)
- 10. DL Analysis: description logic ontological reasoning (optional, #86)
- 11. CL Analysis: conditional logic non-monotonic reasoning (optional, #86)
- 12. JTMS Tracking: belief maintenance for consistency monitoring
- 13. ATMS Tracking: assumption-based environment tracking (optional, #292)
- 14. Belief Revision: AGM-style revision if inconsistency detected (conditional)
- 15. Formal Synthesis: aggregate all formal results into unified validity report
+  8. ADF Analysis: abstract dialectical frameworks [optional, #85]
+  9. Bipolar Analysis: bipolar AF with support relations [optional, #85]
+ 10. SETAF Analysis: collective-attack (supra-argumentative) extensions [optional, #87]
+ 11. DL Analysis: description logic ontological reasoning [optional, #86]
+ 12. CL Analysis: conditional logic non-monotonic reasoning [optional, #86]
+ 13. DeLP Analysis: defeasible logic programming [optional, #89]
+ 14. QBF Analysis: quantified Boolean verification [optional, #90]
+ 15. JTMS Tracking: belief maintenance for consistency monitoring
+ 16. ATMS Tracking: assumption-based environment tracking [optional, #292]
+ 17. Belief Revision: AGM-style revision if inconsistency detected (conditional)
+ 18. Formal Synthesis: aggregate all formal results into unified validity report
 
 Use cases: legal contract analysis, formal spec verification, scientific reasoning audit.
 """
@@ -53,7 +58,7 @@ def _has_inconsistency(ctx: Dict[str, Any]) -> bool:
 
 
 def build_formal_verification_workflow() -> WorkflowDefinition:
-    """Build the 10-phase formal verification workflow.
+    """Build the formal verification workflow.
 
     Phase dependencies form a diamond pattern:
         extraction

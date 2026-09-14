@@ -1,11 +1,15 @@
 """
 Argument Strength workflow: quantify argument strength with formal methods.
 
-A 4-phase pipeline that combines informal and formal evaluation:
-1. quality_baseline       — 9-virtue quality evaluation
-2. formal_ranking         — Rank arguments via ranking semantics
-3. uncertainty_analysis   — Probabilistic acceptance (optional)
-4. vulnerability_scan     — Counter-argument vulnerability check
+Combines informal and formal evaluation — optional in brackets
+(count pinned by `test_formal_workflows.py`, not repeated here):
+1. extract                  — Claim extraction
+2. quality_baseline         — 9-virtue quality evaluation
+3. formal_ranking           — Rank arguments via ranking semantics
+4. bipolar_strength [optional] — Bipolar AF support+attack strength (#85)
+5. weighted_strength [optional] — Weighted AF quantitative strength (#87)
+6. uncertainty_analysis [optional] — Probabilistic acceptance
+7. vulnerability_scan       — Counter-argument vulnerability check
 """
 
 import logging

@@ -54,7 +54,7 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `workflows/`. Frèr
 
 ## Limites connues
 
-- docstrings « N-phase » périmées dans 4 fichiers (phases optionnelles ajoutées sans mise à jour) : `formal_verification.py:4` « 14-phase » et `:56` « 10-phase » pour **17** réelles ; `belief_dynamics.py:4` « 5 » vs 6 ; `argument_strength.py:4` « 4 » vs 7 ; `formal_debate.py:4` « 5 » vs 9 ;
+- docstrings « N-phase » corrigées (#2118) : les 4 fichiers listent désormais les phases réelles **sans chiffre** — le compte mécanique vit dans les tests (`test_formal_verification.py::test_phase_count` = 18, `test_formal_workflows.py` = 6/7/9, `test_democratech.py` = 10) ; un chiffre en prose dérive à chaque ajout de phase ;
 - mapping de noms non documenté : clé catalogue `comprehensive` vs `workflow_name="comprehensive_analysis"` (:157) — fonctionne uniquement parce que `custom_workflow` court-circuite le lookup (`unified_pipeline.py:230-231`) ; idem `fact_check` vs module `fact_check_pipeline` ;
-- benchmark doc périmé : `docs/reports/benchmark_comparative_analysis.md:55` compte democratech à 9 phases (10 depuis #1477), `:70` formal_verification à 17 ;
+- benchmark doc harmonisé (#2118) : `docs/reports/benchmark_comparative_analysis.md` aligné sur le décompte mécanique (democratech 10, formal_verification 18, formal_debate 9) ;
 - enregistrement catalogue sous `try/except` silencieux (warning log seulement) : un workflow qui échoue à builder disparaît du catalogue sans erreur.
