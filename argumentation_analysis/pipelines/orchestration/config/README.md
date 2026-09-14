@@ -4,7 +4,7 @@
 
 Le vocabulaire et la configuration de l'orchestration hiérarchique : 2 enums (11 modes, 8 types d'analyse) + 1 classe de config étendant `UnifiedAnalysisConfig`.
 
-N'est **pas** un système de « définitions de pipelines = liste ordonnée de processeurs » (`../README.md:17`) — rien ici n'assemble de processeurs. Les enums `OrchestrationMode`/`AnalysisType` n'existent qu'ici dans le dépôt ; à ne pas confondre avec les modes CLI de `run_orchestration.py` ni le vocabulaire de [`orchestration/`](../../../orchestration/README.md) racine.
+N'est **pas** un système de « définitions de pipelines = liste ordonnée de processeurs » (annonce du README parent, corrigée en #2110) — rien ici n'assemble de processeurs. Les enums `OrchestrationMode`/`AnalysisType` n'existent qu'ici dans le dépôt ; à ne pas confondre avec les modes CLI de `run_orchestration.py` ni le vocabulaire de [`orchestration/`](../../../orchestration/README.md) racine.
 
 ## Composants publics
 

@@ -76,11 +76,11 @@ et les plugins réels s'instancient par import direct avec une capacité exécut
 **Parent** : `plugin_framework/` (lui-même résiduel). **Enfants** :
 `plugins/standard/` (les plugins déclaratifs), `services/` (le guichet).
 
-**Homonyme à ne pas confondre** : `argumentation_analysis/agents/core/plugin_loader.py`
-est un **autre** chargeur, celui des plugins d'agents — c'est lui qui exige les champs
-`name` / `entrypoint_module` / `entrypoint_class`. Deux fichiers nommés
-`plugin_loader.py` coexistaient dans le même dépôt, deux formats, deux sorts — le
-présent n'existe plus.
+**Homonymes retirés** : `argumentation_analysis/agents/core/plugin_loader.py` — l'autre
+chargeur, celui des plugins d'agents (`name` / `entrypoint_module` / `entrypoint_class`) —
+a été **supprimé** (#2145) : aucun appelant de production, et l'unique `manifest.json` du
+dépôt était irrecevable par son format. Le `plugin_loader.py` de ce paquet a disparu de
+même (#2099) : les deux homonymes du dépôt sont éteints.
 
 ## Limites connues
 

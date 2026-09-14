@@ -1,60 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Moteur d'Exécution de Pipeline.
+"""Moteur d'exécution de l'orchestration — une fonction libre, sans appelant.
 
-Objectif:
-    Ce module définit la classe `ExecutionEngine`, le cœur de l'architecture
-    de pipeline. L'`ExecutionEngine` est le chef d'orchestre qui prend une
-    séquence de processeurs (`Processors` et `PostProcessors`) et les exécute
-    dans le bon ordre, en gérant le flux de données et l'état de l'analyse.
+Ce module ne définit **aucune classe**. Sa seule entrée est
+`analyze_text_orchestrated` : sélection d'une stratégie
+(`strategies.select_orchestration_strategy`), dispatch par la table
+`STRATEGY_EXECUTORS`, post-traitement du résultat, sauvegarde de la trace.
 
-Concept Clé:
-    L'`ExecutionEngine` est initialisé avec un état de base (généralement
-    contenant le texte d'entrée). Il maintient une liste de processeurs
-    enregistrés. Lorsqu'il est exécuté, il applique chaque processeur
-    séquentiellement, passant l'état mis à jour d'un processeur au suivant.
-    Il s'appuie sur des stratégies d'exécution (définies dans `strategies.py`)
-    pour déterminer comment exécuter les processeurs (ex: séquentiellement,
-    en parallèle, conditionnellement).
+Il n'est **pas** le moteur d'exécution du dépôt : le pipeline unifié moderne
+exécute ses phases via le `WorkflowExecutor` de `orchestration/workflow_dsl.py`
+(:356). Ce sous-paquet n'a **aucun appelant de production** — le chemin est
+refusé en amont (`pipelines/unified_pipeline.py:82`
+`ORCHESTRATION_PIPELINE_AVAILABLE = False` ; refus `:297-308`).
 
-Fonctionnalités Principales:
-    -   **Gestion de l'État**: Maintient et met à jour un objet d'état
-        (`RhetoricalAnalysisState` ou un dictionnaire) tout au long du pipeline.
-    -   **Enregistrement des Processeurs**: Fournit des méthodes pour ajouter
-        des étapes d'analyse (`add_processor`) et des étapes de
-        post-traitement (`add_post_processor`).
-    -   **Exécution Stratégique**: Utilise un objet `Strategy` pour contrôler
-        le flux d'exécution, permettant une flexibilité maximale (séquentiel,
-        parallèle, etc.).
-    -   **Gestion des Erreurs**: Encapsule la logique de gestion des erreurs
-        pour rendre les pipelines plus robustes.
-    -   **Traçabilité**: Peut intégrer un système de logging ou de traçage pour
-        suivre le déroulement de l'analyse à chaque étape.
+La docstring d'origine décrivait une classe `ExecutionEngine` avec
+`add_processor` / `add_post_processor` et une méthode `run()` — aucun de ces
+symboles n'a jamais existé dans ce dépôt. Elle est retirée, pas réécrite
+(#2110).
 
-Utilisation:
-    L'utilisateur du moteur assemble un pipeline en instanciant l'engine et
-    en y ajoutant les briques de traitement souhaitées.
-
-    Exemple (conceptuel):
-    ```python
-    from .strategies import SequentialStrategy
-    from ..analysis.processors import ExtractProcessor, InformalAnalysisProcessor
-    from ..analysis.post_processors import ResultFormattingProcessor
-
-    # 1. Initialiser l'état et le moteur avec une stratégie
-    initial_state = {"text": "Le texte à analyser..."}
-    engine = ExecutionEngine(initial_state, strategy=SequentialStrategy())
-
-    # 2. Enregistrer les étapes du pipeline
-    engine.add_processor(ExtractProcessor())
-    engine.add_processor(InformalAnalysisProcessor())
-    engine.add_post_processor(ResultFormattingProcessor(format="json"))
-
-    # 3. Exécuter le pipeline
-    final_results = await engine.run()
-    print(final_results)
-    ```
+Le dispatch est fail-loud : toute stratégie absente de `STRATEGY_EXECUTORS`
+lève `ValueError`, jamais de repli silencieux vers l'hybride (#2109).
 """
 
 import logging
