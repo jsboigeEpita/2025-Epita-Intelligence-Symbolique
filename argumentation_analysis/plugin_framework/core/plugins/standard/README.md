@@ -1,14 +1,14 @@
 # `plugin_framework/core/plugins/standard/` — deux plugins déclaratifs, expérimentaux
 
-Le répertoire que le chargeur du framework est censé énumérer. **5 fichiers `.py`,
-919 lignes** dans le sous-arbre ; son premier niveau est un unique `__init__.py` de
+Le répertoire que le chargeur du framework était censé énumérer — le mécanisme est
+retiré (#2099), les plugins y vivent par **import direct**. **5 fichiers `.py`,
+911 lignes** dans le sous-arbre ; son premier niveau est un unique `__init__.py` de
 **0 octet**.
 
 ## Rôle et frontière
 
 Il héberge deux plugins « standard » — `external_verification/` et `taxonomy_explorer/` —
-chacun décrit par un `plugin.yaml` et un `plugin.py`, et un manifeste commun
-`plugin_manifest.json`.
+chacun décrit par un `plugin.yaml` et un `plugin.py`.
 
 Frontière : ces plugins ne sont **pas branchés sur le registre de capacités** vivant.
 Leur seule consommation réelle est **leur donnée** : `taxonomy_explorer/data/fallacy_families.yaml`
@@ -19,20 +19,21 @@ est lue par le détecteur de sophismes du système (`agents/`), indépendamment 
 | Composant | Statut mesuré |
 |---|---|
 | `external_verification/plugin.py` | **expérimental** — importé pour ses types, jamais construit |
-| `taxonomy_explorer/plugin.py` | **expérimental** — idem ; porte en outre un appel mort (n°1 ci-dessous) |
+| `taxonomy_explorer/plugin.py` | **expérimental** — idem ; sous-classe réelle du contrat canonique depuis #2099 |
 | `taxonomy_explorer/data/fallacy_families.yaml` | **vivant** — c'est la **seule** pièce du répertoire réellement consommée par la production |
-| `plugin_manifest.json` | **mort** — rejeté par son unique lecteur (voir README parent `core/`) |
-| `plugin.yaml` (×2) | **déclaré sans lecteur** — aucune occurrence de ce nom hors docstring |
+| `plugin.yaml` (×2) | **déclaré sans lecteur** — aucune occurrence de ce nom hors docstring ; conservé comme documentation des capacités |
 | `standard/__init__.py` | **0 octet** — aucune surface |
 
 ## Points d'entrée valides
 
-**Aucun** par le framework. Le chemin vivant est indirect : la donnée YAML est lue par le
-détecteur de familles de sophismes, pas par un chargeur de plugins.
+**Aucun** par le framework (plus de chargeur, #2099). Le chemin vivant est l'import
+direct : `agents/tools/analysis/fallacy_family_analyzer.py:20,24` et
+`orchestration/fact_checking_orchestrator.py:28,31` — et la donnée YAML lue par le
+détecteur de familles de sophismes.
 
 ## Amont / aval
 
-- **Amont** : découverte filesystem (`core/plugin_loader.py`) — qui échoue.
+- **Amont** : néant — plus aucun mécanisme de découverte (#2099).
 - **Aval** : `argumentation_analysis/agents/` pour la donnée YAML ; rien pour le code des
   plugins.
 
@@ -46,15 +47,14 @@ instanciés en production. Le répertoire illustre le framework davantage qu'il 
 Aucun artefact écrit **par les plugins eux-mêmes**. Une donnée lue
 (`fallacy_families.yaml`) — la seule pièce qui compte, et elle est lue hors du framework.
 
-Ce répertoire est en revanche la **cible d'une écriture externe transitoire** : le runner
-du paquet parent y fabrique un plugin `hello_world/` au runtime, puis le supprime
-(`run_benchmark.py:35-44`, `:114-115`). Normalement rien n'en subsiste ; une interruption
-entre les deux laisse un résidu non ignoré par git. Cf. README parent, *Limites connues* n°7.
+L'écriture externe transitoire qui ciblait ce répertoire (le runner du paquet parent y
+fabriquait un plugin `hello_world/` au runtime) a disparu avec son script (#2099).
 
 ## Tests représentatifs
 
-Les tests couvrent les contrats et le parsing ; ils n'exercent pas le chargement réel
-(le chargeur ne résout pas, cf. README parent).
+Les tests couvrent les contrats et le parsing ; depuis #2099 ils gardent aussi le
+chemin vivant — les plugins réels s'instancient et une capacité s'exécute par import
+direct (`tests/unit/argumentation_analysis/test_plugin_framework.py::TestRealPluginsByDirectImport`).
 
 ## Frères et parent
 
@@ -63,17 +63,9 @@ framework. Les plugins **vivants** du système sont dans `argumentation_analysis
 
 ## Limites connues
 
-1. **Appel vers une méthode qui n'existe pas.** `taxonomy_explorer/plugin.py:210` appelle
-   `self._calculate_context_relevance(...)` ; la seule définition du fichier est
-   `_calculate_contextual_relevance` (`:293`). Écart **appel/définition**, pas variante de
-   nommage : au runtime, c'est un `AttributeError`. Vérifié par recherche des deux
-   orthographes dans tout le dépôt — l'orthographe appelée n'a **aucune** définition.
-2. **`BasePlugin` recopié localement.** `taxonomy_explorer/plugin.py:21` définit sa propre
-   classe `BasePlugin` au lieu d'importer le contrat — la duplication rend le contrat
-   inopérant (deux objets différents portent le même nom).
-3. **Imports jamais consommés** : `aiohttp` (`:8`) et `taxonomy_plugin` (`:142`) sont
-   importés sans être utilisés — deux dépendances déclarées pour rien.
-4. **Le manifeste commun ne peut pas être lu** par le seul lecteur du format (champs
-   incompatibles, cf. README `core/`).
-5. **Chaque plugin porte son README feuille**, mais aucun ne décrit le framework qui les
+1. **Chaque plugin porte son README feuille**, mais aucun ne décrit le framework qui les
    charge — d'où le présent README parent.
+
+Historique résolu : l'appel mort `_calculate_context_relevance` et les imports jamais
+consommés (`aiohttp`, `taxonomy_plugin`) ont été corrigés par #2189 (#2100) ; le
+`BasePlugin` local factice et le manifeste commun illisible ont été retirés par #2099.

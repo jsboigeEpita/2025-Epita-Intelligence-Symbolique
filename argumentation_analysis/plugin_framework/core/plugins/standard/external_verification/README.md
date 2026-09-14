@@ -36,7 +36,7 @@ Imports module-level production (chargement du module, pas construction d'instan
 
 **expérimental** — importé pour ses types mais jamais construit en production par défaut ; ses I/O externes sont simulés. Corroboré par l'audit `docs/reports/subjects_audit/C-06_indexation_automatisation.md` (E1 HIGH : « brancher un ExternalVerificationPlugin fonctionnel ») alors que `docs/architecture/fallacy_operational_plan.md:688-689` annonce la migration « TERMINÉ ».
 
-De plus, **aucun des deux chargeurs ne peut l'activer** : `core/plugin_loader.py:33` construit des modules `src.core.plugins.standard.*` (préfixe mort post-#34, ImportError avalée :51-54) ; `core/plugins/plugin_loader.py:33-38` scanne des `plugin_manifest.json` alors que ce plugin déclare `plugin.yaml`.
+De plus, **il n'existe plus de chargeur pour l'activer** : les trois mécanismes de découverte du paquet ont été retirés (#2099, aucun appelant de production — les deux chargeurs cités historiquement ne pouvaient de toute façon pas le voir). Il rejoint le système par import direct, comme son frère `taxonomy_explorer`.
 
 ## Artefacts et lecteurs
 

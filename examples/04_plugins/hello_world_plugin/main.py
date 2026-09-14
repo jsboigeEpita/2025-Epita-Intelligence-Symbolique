@@ -1,8 +1,7 @@
 from typing import Dict, Any
 
 # On suppose que le CWD est la racine du projet pour cet import relatif
-from argumentation_analysis.plugin_framework.core.plugin_loader import BasePlugin
-from argumentation_analysis.plugin_framework.core.contracts import PluginManifest
+from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
 
 
 class HelloWorldPlugin(BasePlugin):
@@ -10,8 +9,9 @@ class HelloWorldPlugin(BasePlugin):
     Implémentation du plugin 'Hello World'.
     """
 
-    def __init__(self, manifest: PluginManifest):
-        super().__init__(manifest)
+    def __init__(self):
+        super().__init__()
+        self.name = "hello_world"
 
     def execute(self, capability_name: str, inputs: Dict[str, Any]) -> Dict[str, Any]:
         """

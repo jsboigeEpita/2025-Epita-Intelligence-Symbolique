@@ -5,13 +5,15 @@ Tests cover:
 - core/contracts.py — Pydantic models (OrchestrationRequest, OrchestrationResponse,
   Capability, PluginManifest, BenchmarkResult, BenchmarkSuiteResult)
 - core/plugins/interfaces.py — BasePlugin ABC
-- core/plugin_loader.py — PluginLoader discovery
+- retrait #2099 — the three consumer-less discovery mechanisms are withdrawn
+  (core/plugin_loader.py, core/plugins/plugin_loader.py, agents/agent_loader.py);
+  the real plugins join the system by direct import (guard below)
 - core/services/orchestration_service.py — OrchestrationService routing
 - core/decorators.py — track_tokens decorator
 - benchmarking/benchmark_service.py — BenchmarkService suite runner
-- agents/agent_loader.py — AgentLoader discovery and loading
 """
 
+import importlib
 import json
 import os
 import time
@@ -30,14 +32,12 @@ from argumentation_analysis.plugin_framework.core.contracts import (
     PluginManifest,
 )
 from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
-from argumentation_analysis.plugin_framework.core.plugin_loader import PluginLoader
 from argumentation_analysis.plugin_framework.core.services.orchestration_service import (
     OrchestrationService,
 )
 from argumentation_analysis.plugin_framework.benchmarking.benchmark_service import (
     BenchmarkService,
 )
-from argumentation_analysis.plugin_framework.agents.agent_loader import AgentLoader
 
 # ============================================================================
 # contracts.py — OrchestrationRequest
@@ -404,152 +404,61 @@ class TestBasePlugin:
 
 
 # ============================================================================
-# plugin_loader.py — PluginLoader
+# retrait #2099 — discovery mechanisms without a consumer
 # ============================================================================
 
 
-class TestPluginLoader:
-    """Tests for PluginLoader.discover()."""
+class TestDiscoveryMechanismsWithdrawn:
+    """#2099 : les trois mécanismes de découverte sont retirés, pas réparés.
 
-    def test_nonexistent_path_skipped(self, tmp_path):
-        loader = PluginLoader([str(tmp_path / "nonexistent")])
-        result = loader.discover()
-        assert result == {}
+    Mesuré sur `4c733b93` (base de ce retrait) : aucun des trois modules
+    n'avait d'appelant de production — le loader #1 (`core/plugin_loader.py`)
+    n'était appelé que par `main.py` et `run_benchmark.py`, deux fossiles du
+    même paquet ; le loader #2 (`core/plugins/plugin_loader.py`) et
+    `AgentLoader` (`agents/agent_loader.py`) n'étaient appelés que par les
+    tests. Les plugins réels rejoignent le système par import direct — garde
+    positive dans la classe suivante.
+    """
 
-    def test_empty_directory(self, tmp_path):
-        loader = PluginLoader([str(tmp_path)])
-        result = loader.discover()
-        assert result == {}
+    WITHDRAWN_MODULES = (
+        "argumentation_analysis.plugin_framework.core.plugin_loader",
+        "argumentation_analysis.plugin_framework.core.plugins.plugin_loader",
+        "argumentation_analysis.plugin_framework.agents.agent_loader",
+    )
 
-    def test_file_in_directory_ignored(self, tmp_path):
-        """Only subdirectories are scanned, not files."""
-        (tmp_path / "somefile.py").write_text("x = 1")
-        loader = PluginLoader([str(tmp_path)])
-        result = loader.discover()
-        assert result == {}
+    @pytest.mark.parametrize("module_name", WITHDRAWN_MODULES)
+    def test_withdrawn_module_no_longer_imports(self, module_name):
+        with pytest.raises(ImportError):
+            importlib.import_module(module_name)
 
-    def test_import_error_handled_gracefully(self, tmp_path):
-        """Subdirectory exists but import fails -> no crash, empty registry."""
-        subdir = tmp_path / "myplugin"
-        subdir.mkdir()
-        loader = PluginLoader([str(tmp_path)])
-        # The import will fail because module src.core.plugins.standard.myplugin doesn't exist
-        result = loader.discover()
-        assert result == {}
 
-    def test_discover_valid_plugin_via_mock(self, tmp_path):
-        """Mock importlib.import_module to return a module with a BasePlugin subclass."""
-        subdir = tmp_path / "test_plugin"
-        subdir.mkdir()
+class TestRealPluginsByDirectImport:
+    """Le chemin vivant survit au retrait : import direct, contrat canonique.
 
-        class FakePlugin(BasePlugin):
-            pass
+    Né-rouge exécuté avant le fix (#2099 constat 5) :
+    `issubclass(TaxonomyExplorerPlugin, BasePlugin)` rendait False — le plugin
+    portait une classe `BasePlugin` locale factice. Il importe désormais le
+    contrat canonique `core/plugins/interfaces.py`, comme son frère
+    `external_verification`.
+    """
 
-        # Set __module__ to match what PluginLoader expects
-        FakePlugin.__module__ = "src.core.plugins.standard.test_plugin"
+    def test_taxonomy_explorer_honours_the_canonical_contract(self):
+        from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import (
+            TaxonomyExplorerPlugin,
+        )
 
-        fake_module = MagicMock()
-        fake_module.__name__ = "src.core.plugins.standard.test_plugin"
-        # Make inspect.getmembers find our class
-        fake_module.FakePlugin = FakePlugin
+        assert issubclass(TaxonomyExplorerPlugin, BasePlugin)
 
-        with patch(
-            "argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module"
-        ) as mock_import:
-            mock_import.return_value = fake_module
+    async def test_real_plugin_instantiates_and_executes_a_capability(self):
+        from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import (
+            TaxonomyExplorerPlugin,
+        )
 
-            # We need inspect.getmembers to work on our mock module
-            with patch(
-                "argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers"
-            ) as mock_members:
-                mock_members.return_value = [("FakePlugin", FakePlugin)]
+        plugin = TaxonomyExplorerPlugin()
+        families = await plugin.list_families()
 
-                loader = PluginLoader([str(tmp_path)])
-                result = loader.discover()
-
-        assert "FakePlugin" in result
-        assert isinstance(result["FakePlugin"], FakePlugin)
-
-    def test_base_plugin_itself_not_registered(self, tmp_path):
-        """BasePlugin class itself should not be registered even if found."""
-        subdir = tmp_path / "base_mod"
-        subdir.mkdir()
-
-        fake_module = MagicMock()
-
-        with patch(
-            "argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module"
-        ) as mock_import:
-            mock_import.return_value = fake_module
-            with patch(
-                "argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers"
-            ) as mock_members:
-                # Return BasePlugin itself — should be filtered out
-                bp = BasePlugin
-                bp.__module__ = "src.core.plugins.standard.base_mod"
-                mock_members.return_value = [("BasePlugin", bp)]
-
-                loader = PluginLoader([str(tmp_path)])
-                result = loader.discover()
-
-        assert "BasePlugin" not in result
-
-    def test_multiple_paths(self, tmp_path):
-        """Loader handles multiple plugin paths."""
-        path1 = tmp_path / "dir1"
-        path2 = tmp_path / "dir2"
-        path1.mkdir()
-        path2.mkdir()
-        loader = PluginLoader([str(path1), str(path2)])
-        result = loader.discover()
-        assert result == {}
-
-    def test_duplicate_plugin_not_overwritten(self, tmp_path):
-        """First discovered plugin with a given name wins."""
-        subdir1 = tmp_path / "plug1"
-        subdir1.mkdir()
-        subdir2 = tmp_path / "plug2"
-        subdir2.mkdir()
-
-        class FakePlugin(BasePlugin):
-            pass
-
-        FakePlugin.__module__ = "src.core.plugins.standard.plug1"
-
-        class FakePlugin2(BasePlugin):
-            pass
-
-        # Same class name but different module
-        FakePlugin2.__name__ = "FakePlugin"
-        FakePlugin2.__module__ = "src.core.plugins.standard.plug2"
-
-        with patch(
-            "argumentation_analysis.plugin_framework.core.plugin_loader.importlib.import_module"
-        ) as mock_import:
-            with patch(
-                "argumentation_analysis.plugin_framework.core.plugin_loader.inspect.getmembers"
-            ) as mock_members:
-                call_count = [0]
-
-                def side_effect_import(name):
-                    m = MagicMock()
-                    return m
-
-                def side_effect_members(module, predicate=None):
-                    call_count[0] += 1
-                    if call_count[0] == 1:
-                        return [("FakePlugin", FakePlugin)]
-                    return [("FakePlugin", FakePlugin2)]
-
-                mock_import.side_effect = side_effect_import
-                mock_members.side_effect = side_effect_members
-
-                loader = PluginLoader([str(tmp_path)])
-                result = loader.discover()
-
-        assert "FakePlugin" in result
-        # Should be first instance (FakePlugin, not FakePlugin2)
-        assert type(result["FakePlugin"]) is FakePlugin
+        assert len(families) > 0
+        assert all({"family_id", "name_fr"} <= set(f) for f in families)
 
 
 # ============================================================================
@@ -995,145 +904,3 @@ class TestBenchmarkService:
 
         # tokens: [10, 20] -> sum = 30
         assert result.aggregated_custom_metrics.get("tokens") == 30
-
-
-# ============================================================================
-# agents/agent_loader.py — AgentLoader
-# ============================================================================
-
-
-class TestAgentLoader:
-    """Tests for AgentLoader.discover_agents() and load_agent()."""
-
-    def test_discover_nonexistent_path(self, tmp_path):
-        loader = AgentLoader()
-        result = loader.discover_agents(str(tmp_path / "nonexistent"))
-        assert result == []
-
-    def test_discover_empty_directory(self, tmp_path):
-        loader = AgentLoader()
-        result = loader.discover_agents(str(tmp_path))
-        assert result == []
-
-    def test_discover_single_manifest(self, tmp_path):
-        agent_dir = tmp_path / "my_agent"
-        agent_dir.mkdir()
-        manifest_file = agent_dir / "agent_manifest.json"
-        manifest_file.write_text("{}")
-
-        loader = AgentLoader()
-        result = loader.discover_agents(str(tmp_path))
-        assert len(result) == 1
-        assert str(manifest_file) == result[0]
-
-    def test_discover_nested_manifests(self, tmp_path):
-        """os.walk finds manifests in nested subdirectories."""
-        d1 = tmp_path / "a" / "b"
-        d1.mkdir(parents=True)
-        (d1 / "agent_manifest.json").write_text("{}")
-
-        d2 = tmp_path / "c"
-        d2.mkdir()
-        (d2 / "agent_manifest.json").write_text("{}")
-
-        loader = AgentLoader()
-        result = loader.discover_agents(str(tmp_path))
-        assert len(result) == 2
-
-    def test_discover_ignores_non_manifest_files(self, tmp_path):
-        (tmp_path / "other.json").write_text("{}")
-        (tmp_path / "manifest.json").write_text("{}")  # Wrong name
-
-        loader = AgentLoader()
-        result = loader.discover_agents(str(tmp_path))
-        assert result == []
-
-    def test_load_agent_valid_manifest(self, tmp_path):
-        manifest_data = {
-            "manifest_version": "1.0",
-            "agent_name": "test_agent",
-            "version": "0.1.0",
-            "entry_point": "test_agent.main.TestAgent",
-        }
-        path = tmp_path / "agent_manifest.json"
-        path.write_text(json.dumps(manifest_data))
-
-        loader = AgentLoader()
-        result = loader.load_agent(str(path))
-        assert result is not None
-        assert result["agent_name"] == "test_agent"
-        assert result["manifest_version"] == "1.0"
-
-    def test_load_agent_missing_file(self, tmp_path):
-        loader = AgentLoader()
-        result = loader.load_agent(str(tmp_path / "nonexistent.json"))
-        assert result is None
-
-    def test_load_agent_invalid_json(self, tmp_path):
-        path = tmp_path / "agent_manifest.json"
-        path.write_text("not valid json {{{")
-
-        loader = AgentLoader()
-        result = loader.load_agent(str(path))
-        assert result is None
-
-    def test_load_agent_missing_required_keys(self, tmp_path):
-        """Manifest with missing required keys returns None."""
-        manifest_data = {
-            "manifest_version": "1.0",
-            "agent_name": "incomplete",
-            # Missing 'version' and 'entry_point'
-        }
-        path = tmp_path / "agent_manifest.json"
-        path.write_text(json.dumps(manifest_data))
-
-        loader = AgentLoader()
-        result = loader.load_agent(str(path))
-        assert result is None
-
-    def test_load_agent_extra_keys_accepted(self, tmp_path):
-        """Manifest with extra keys is still valid."""
-        manifest_data = {
-            "manifest_version": "1.0",
-            "agent_name": "agent",
-            "version": "1.0.0",
-            "entry_point": "agent.main.Agent",
-            "extra_field": "bonus",
-        }
-        path = tmp_path / "agent_manifest.json"
-        path.write_text(json.dumps(manifest_data))
-
-        loader = AgentLoader()
-        result = loader.load_agent(str(path))
-        assert result is not None
-        assert result["extra_field"] == "bonus"
-
-    def test_load_agent_empty_json_object(self, tmp_path):
-        """Empty JSON object has no required keys -> returns None."""
-        path = tmp_path / "agent_manifest.json"
-        path.write_text("{}")
-
-        loader = AgentLoader()
-        result = loader.load_agent(str(path))
-        assert result is None
-
-    def test_discover_and_load_integration(self, tmp_path):
-        """End-to-end: discover then load."""
-        agent_dir = tmp_path / "my_agent"
-        agent_dir.mkdir()
-        manifest_data = {
-            "manifest_version": "1.0",
-            "agent_name": "my_agent",
-            "version": "2.0.0",
-            "entry_point": "my_agent.main.MyAgent",
-        }
-        manifest_path = agent_dir / "agent_manifest.json"
-        manifest_path.write_text(json.dumps(manifest_data))
-
-        loader = AgentLoader()
-        discovered = loader.discover_agents(str(tmp_path))
-        assert len(discovered) == 1
-
-        loaded = loader.load_agent(discovered[0])
-        assert loaded is not None
-        assert loaded["agent_name"] == "my_agent"

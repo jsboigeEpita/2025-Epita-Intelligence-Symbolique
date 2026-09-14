@@ -13,15 +13,7 @@ from typing import Dict, List, Any, Optional
 import yaml
 from pydantic import BaseModel
 
-
-# Les interfaces de plugins doivent être importées depuis leur emplacement standard.
-# Le chemin exact pourrait varier, mais nous suivons le plan.
-# from core.plugins.interfaces import BasePlugin
-# En attendant la structure finale, on utilise une classe de base factice.
-class BasePlugin:
-    def __init__(self):
-        self.name = "BasePlugin"
-
+from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
 
 # L'ancien détecteur est une dépendance clé. Son chemin doit être stable.
 from argumentation_analysis.agents.core.informal.taxonomy_sophism_detector import (
