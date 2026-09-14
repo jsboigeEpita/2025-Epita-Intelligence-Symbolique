@@ -115,7 +115,7 @@ plugin `hello_world/` au runtime) a **disparu avec son script**.
 
 ## Tests représentatifs
 
-**68 tests** sur l'unique fichier de la zone,
+**70 tests collectés** (68 fonctions + paramétrisation des modules retirés) sur l'unique fichier de la zone,
 `tests/unit/argumentation_analysis/test_plugin_framework.py` (`--disable-jvm-session`
 requis, sinon orage de skips #2021) : contrats (`contracts.py`, décorateurs), guichet,
 benchmark, **gardes de retrait et chemin vivant par import direct**. La chaîne
