@@ -30,7 +30,7 @@ def demo_tests_unitaires(logger: DemoLogger, config: Dict[str, Any]) -> bool:
 
     # Tests des composants principaux
     tests_core = [
-        "tests/unit/argumentation_analysis/test_setup_extract_agent_real.py",
+        "tests/unit/argumentation_analysis/test_extract_agent_construction.py",
         "tests/unit/argumentation_analysis/test_shared_state.py",
         "tests/unit/argumentation_analysis/test_utils_real.py",
     ]
@@ -245,7 +245,7 @@ def run_demo_rapide(**kwargs) -> bool:
 
     # Tests essentiels qui réussissent à 100% - VERSION AUTHENTIQUE
     tests_essentiels = [
-        "tests/unit/argumentation_analysis/test_setup_extract_agent_real.py",
+        "tests/unit/argumentation_analysis/test_extract_agent_construction.py",
         "tests/unit/argumentation_analysis/test_shared_state.py",
         "tests/unit/argumentation_analysis/test_utils_real.py",
     ]
