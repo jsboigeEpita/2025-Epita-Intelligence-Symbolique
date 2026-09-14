@@ -69,10 +69,10 @@ invisible : **le test mesure le contrat, pas le chemin**.
 **Parent** : `plugin_framework/` (lui-même résiduel). **Enfant** :
 `core/plugins/standard/` (les plugins déclaratifs).
 
-**Homonyme à ne pas confondre** : `argumentation_analysis/agents/core/plugin_loader.py`
-est un **autre** chargeur, celui des plugins d'agents — c'est lui qui exige les champs
-`name` / `entrypoint_module` / `entrypoint_class`. Deux fichiers nommés `plugin_loader.py`
-dans le même dépôt, deux formats, deux sorts.
+**Homonyme retiré** : `argumentation_analysis/agents/core/plugin_loader.py` — l'autre
+chargeur, celui des plugins d'agents (`name` / `entrypoint_module` / `entrypoint_class`) —
+a été **supprimé** (#2145) : aucun appelant de production, et l'unique `manifest.json` du
+dépôt était irrecevable par son format.
 
 ## Limites connues
 
@@ -83,9 +83,9 @@ dans le même dépôt, deux formats, deux sorts.
    `try/except ImportError` du chargeur absorbe l'échec.
 2. **Le manifeste est rejeté par son unique lecteur.** `plugin_manifest.json` porte
    `manifest_version`, `plugin_name`, `version`, `author`, `description`, `entry_point` ;
-   le lecteur (`agents/core/plugin_loader.py:67-72`) exige `name`, `entrypoint_module`,
-   `entrypoint_class`. **Zéro champ en commun** : la lecture lève `PluginManifestError`.
-   Et ce lecteur est lui-même sans appelant de production.
+   l'ancien lecteur (`agents/core/plugin_loader.py`, retiré #2145) exigeait `name`,
+   `entrypoint_module`, `entrypoint_class`. **Zéro champ en commun** : la lecture levait
+   `PluginManifestError`. Ce lecteur était lui-même sans appelant de production.
 3. **Deux conventions, aucune vivante** : ni la découverte filesystem ni la découverte par
    manifeste ne produit de plugin chargeable.
 4. **`__init__.py` vide** : le carrefour n'expose aucune surface, ce qui interdit tout

@@ -35,6 +35,9 @@ from argumentation_analysis.agents.factory import (
     get_plugin_instances,
     load_plugins_for_agent,
 )
+from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import (
+    SemanticArgumentAnalyzer,
+)
 from argumentation_analysis.plugins.toulmin_plugin import ToulminPlugin
 
 FACTORY_LOGGER = "AgentFactory"
@@ -234,4 +237,39 @@ def test_toulmin_benchmark_case_still_reports_the_death():
     assert cases[0]["expected"] == {"returns_json": True}, (
         "It expects a JSON result from a function that raises — that permanent "
         "red is the point, and must not be softened into a passing expectation."
+    )
+
+
+def test_analyzer_does_not_promise_a_raising_tool_2145():
+    """The #2212 arbitration, extended to the analyzer's own kernel.
+
+    The analyzer drives a finetuned model that produces the Toulmin JSON
+    itself (`run()` parses it); the plugin it used to mount on its own
+    kernel could only ever raise, and its prompt went as far as ordering
+    the LLM to call that dead tool. While the body raises, the analyzer
+    must neither mount the tool nor name it. When the body is implemented
+    this guard stops constraining — going back to tool-calling becomes a
+    free decision, not an obligation.
+
+    Executed, not deduced: the analyzer is really instantiated and the
+    template is read from the live kernel object.
+    """
+    if not _toulmin_body_raises():
+        return
+
+    analyzer = SemanticArgumentAnalyzer()
+    mounted = set(analyzer.kernel.plugins)
+    assert (
+        "Toulmin" not in mounted
+    ), f"The analyzer mounts a plugin whose only function raises: {sorted(mounted)}"
+
+    template = analyzer.prompt_function.prompt_template.prompt_template_config.template
+    assert "Toulmin.analyze_argument" not in template, (
+        "The prompt still orders the LLM to call a tool that cannot do "
+        "anything but raise (#2145)."
+    )
+    # Anti-pendulum: what was withdrawn is the dead detour, not the analysis.
+    assert "Toulmin" in template, (
+        "The analyzer must still ask for the Toulmin analysis — withdrawing "
+        "the tool detour withdrew a promise, not the purpose (#2145)."
     )
