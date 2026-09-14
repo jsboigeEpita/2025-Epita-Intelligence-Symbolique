@@ -7,6 +7,16 @@ Provides assumption-based reasoning via environment tracking.
 Unlike JTMS which tracks a single truth value per belief, ATMS tracks
 the set of minimal assumption environments under which each node can be derived.
 
+Label contract (#2094, decision documented after re-measurement):
+    Labels are computed only when a justification is inserted
+    (`add_justification`) and are stripped only by an explicit
+    `invalidate_environment`. There is no hypothesis-withdrawal API and no
+    re-propagation: an environment removed by invalidation stays removed until
+    a new justification re-derives it, and nothing restores labels on its own.
+    `invalidate_environment` clears the contradiction node (⊥) too, so a
+    nogood is NOT durably recorded — consumers needing durable contradiction
+    memory keep their own registry (see `hypothesis_tracker._contradicted_by`).
+
 Classes:
     ATMSNode — A node with a label (set of valid environments)
     ATMSJustification — A rule relating in-nodes and out-nodes to a conclusion
@@ -111,7 +121,9 @@ class ATMS:
 
         Computes the Cartesian product of in-node labels, merges environments,
         filters by out-node blocking and consistency, then adds valid
-        environments to the conclusion's label.
+        environments to the conclusion's label. This is the only operation
+        that grows labels — propagation happens at insertion time only
+        (#2094 label contract).
         """
         for name in in_names + out_names + [conclusion_name]:
             if name not in self.nodes:
@@ -159,7 +171,14 @@ class ATMS:
                     self.invalidate_environment(merged_env)
 
     def invalidate_environment(self, env: FrozenSet[str]) -> None:
-        """Remove an inconsistent environment and all its supersets from all nodes."""
+        """Remove an inconsistent environment and all its supersets from all nodes.
+
+        This includes ⊥ itself: the nogood is not durably recorded, and
+        `is_consistent(env)` reads True again afterwards (#2094). Durability
+        here is structural, not memorial — nothing re-propagates, so the
+        stripped environments stay gone until a new justification re-derives
+        them.
+        """
         for node in self.nodes.values():
             node.label = {
                 node_env for node_env in node.label if not env.issubset(node_env)
