@@ -2,7 +2,7 @@
 
 Le répertoire que le chargeur du framework était censé énumérer — le mécanisme est
 retiré (#2099), les plugins y vivent par **import direct**. **5 fichiers `.py`,
-912 lignes** dans le sous-arbre ; son premier niveau est un unique `__init__.py` de
+911 lignes** dans le sous-arbre ; son premier niveau est un unique `__init__.py` de
 **0 octet**.
 
 ## Rôle et frontière
