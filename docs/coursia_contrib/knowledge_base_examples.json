@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "source_module": "argumentation_analysis.agents.core.debate.knowledge_base",
+    "class": "KnowledgeBase",
+    "convention": "La négation d'une proposition est la chaîne '¬' + contenu (find_attacking_arguments cherche une conclusion ainsi préfixée ; is_consistent détecte P et ¬P cohabitants).",
+    "note": "Scénarios synthétiques domaine-public. Source de vérité unique partagée entre le notebook knowledge_base.ipynb et la garde round-trip tests/unit/coursia/knowledge_base/. Chaque base porte des arguments (prémisses + conclusion + schéma optionnel) et des requêtes dont le résultat attendu est mesuré.",
+    "created_for": "#1961 Phase 5"
+  },
+  "kbs": [
+    {
+      "name": "deux_camps",
+      "description": "Deux arguments opposés sur la concentration en télétravail : la base contient une proposition ET sa négation.",
+      "arguments": [
+        {
+          "label": "arg_isolement",
+          "premises": ["Le télétravail isole les collaborateurs"],
+          "conclusion": "Le télétravail réduit la concentration",
+          "scheme": "cause_effect"
+        },
+        {
+          "label": "arg_pauses",
+          "premises": ["Les pauses régulières restaurent la concentration"],
+          "conclusion": "¬Le télétravail réduit la concentration",
+          "scheme": null
+        }
+      ],
+      "queries": [
+        {"kind": "supporting", "prop": "Le télétravail réduit la concentration", "expected": 1},
+        {"kind": "attacking", "prop": "Le télétravail réduit la concentration", "expected": 1},
+        {"kind": "entails", "prop": "Le télétravail isole les collaborateurs", "expected": true},
+        {"kind": "entails", "prop": "Le télétravail augmente la productivité", "expected": false},
+        {"kind": "consistent", "expected": false}
+      ]
+    },
+    {
+      "name": "un_seul_camp",
+      "description": "Un seul argument : aucune négation cohabitante, la base est cohérente.",
+      "arguments": [
+        {
+          "label": "arg_isolement",
+          "premises": ["Le télétravail isole les collaborateurs"],
+          "conclusion": "Le télétravail réduit la concentration",
+          "scheme": "cause_effect"
+        }
+      ],
+      "queries": [
+        {"kind": "supporting", "prop": "Le télétravail réduit la concentration", "expected": 1},
+        {"kind": "attacking", "prop": "Le télétravail réduit la concentration", "expected": 0},
+        {"kind": "consistent", "expected": true}
+      ]
+    }
+  ]
+}
