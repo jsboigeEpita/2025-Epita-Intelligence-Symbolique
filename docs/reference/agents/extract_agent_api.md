@@ -20,8 +20,9 @@ L'Agent d'Extraction est implémenté comme un plugin Semantic Kernel qui expose
 ```mermaid
 classDiagram
     class ExtractAgent {
-        +setup_extract_agent(kernel, llm_service)
-        +EXTRACT_INSTRUCTIONS
+        +__init__(kernel, agent_name, llm_service_id, plugins)
+        +setup_agent_components(llm_service_id)
+        +extract_from_name(source_info, extract_name, source_text)
     }
     
     class StateManager {
@@ -59,35 +60,48 @@ classDiagram
 La classe principale qui encapsule les fonctionnalités de l'Agent d'Extraction.
 
 ```python
-class ExtractAgent:
+class ExtractAgent(BaseAgent):
     """
     Agent d'extraction intelligent pour l'analyse argumentative.
     """
-    
-    def __init__(self, kernel=None):
+
+    def __init__(
+        self,
+        kernel: sk.Kernel,
+        agent_name: str = "ExtractAgent",
+        llm_service_id: str = None,
+        plugins: list = None,
+        find_similar_text_func: Optional[Callable] = None,
+        extract_text_func: Optional[Callable] = None,
+    ):
         """
         Initialise une nouvelle instance de l'agent d'extraction.
-        
+
         Args:
-            kernel: Le kernel Semantic Kernel à utiliser
+            kernel: Le kernel Semantic Kernel à utiliser (requis)
+            agent_name: Nom de l'agent
+            llm_service_id: Id du service LLM enregistré dans le kernel
+            plugins: Plugins à monter ; `ExtractAgentPlugin` par défaut
+            find_similar_text_func: Injecteur de recherche de texte (testabilité)
+            extract_text_func: Injecteur d'extraction physique (testabilité)
         """
-        self.kernel = kernel
 ```
 
-### Fonction de Configuration
+### Configuration
+
+Il n'existe **pas** de fonction `setup_extract_agent` : l'agent se construit
+directement, puis ses composants se configurent via
+`BaseAgent.setup_agent_components`. Le kernel est un argument **requis** de
+`__init__`.
 
 ```python
-def setup_extract_agent(kernel, llm_service):
-    """
-    Configure le kernel Semantic Kernel pour l'agent d'extraction.
-    
-    Args:
-        kernel: Le kernel Semantic Kernel à configurer
-        llm_service: Le service LLM à utiliser
-        
-    Returns:
-        tuple: Un tuple contenant (kernel, agent)
-    """
+from semantic_kernel import Kernel
+
+from argumentation_analysis.agents.core.extract import ExtractAgent
+
+kernel = Kernel()
+agent = ExtractAgent(kernel=kernel, agent_name="ExtractAgent")
+agent.setup_agent_components(llm_service_id="<id du service LLM>")
 ```
 
 ### ExtractResult
@@ -382,18 +396,20 @@ sequenceDiagram
 
 ```python
 import asyncio
-from core.llm_service import create_llm_service
-from agents.core.extract import setup_extract_agent
+
+from semantic_kernel import Kernel
+
+from argumentation_analysis.agents.core.extract import ExtractAgent
 
 async def main():
-    # Créer le service LLM
-    llm_service = create_llm_service()
-    
+    kernel = Kernel()
+
     # Initialiser l'agent d'extraction
-    kernel, extract_agent = await setup_extract_agent(kernel, llm_service)
-    
+    extract_agent = ExtractAgent(kernel=kernel, agent_name="ExtractAgent")
+    extract_agent.setup_agent_components(llm_service_id="<id du service LLM>")
+
     # Utiliser l'agent d'extraction...
-    
+
 asyncio.run(main())
 ```
 
