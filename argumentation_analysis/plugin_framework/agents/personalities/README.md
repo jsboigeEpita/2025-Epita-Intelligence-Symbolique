@@ -33,11 +33,11 @@ Aucun artefact, aucun lecteur.
 
 ## Tests représentatifs
 
-Aucun test ne couvre ce répertoire. Le plus proche est `tests/unit/argumentation_analysis/test_plugin_framework.py::TestAgentLoader` (:1005), qui teste `agents/agent_loader.py` — un autre mécanisme que cette coquille.
+Aucun test ne couvre ce répertoire. Le mécanisme voisin `agents/agent_loader.py` (AgentLoader) a été retiré (#2099) avec sa classe de test `TestAgentLoader` — il ne reste plus rien à en rapprocher.
 
 ## Frères et parent
 
-- Parent : [`agents/README.md`](../README.md) — documente le mécanisme AgentLoader/manifest ; ne mentionne pas `personalities/`.
+- Parent : [`agents/README.md`](../README.md) — documente le retrait du mécanisme AgentLoader/manifest (#2099) ; ne mentionne pas `personalities/`.
 - Frère : `agents/simple_analyst/` — un manifeste seul (`agent_manifest.json`), sans README.
 
 ## Limites connues

@@ -1,42 +1,44 @@
 # Plugin Architecture
 
-This directory contains the core components of the plugin system, designed for modularity and extensibility.
+This directory holds the canonical plugin contract of the `plugin_framework`
+subsystem (`interfaces.py`) and the two declarative plugins under `standard/`.
 
 ## Key Components
 
-### 1. `PluginLoader`
+### 1. `BasePlugin` (`interfaces.py`) — the canonical contract
 
-The `PluginLoader` (`plugin_loader.py`) is the cornerstone of the system. It is responsible for discovering and loading all available plugins at runtime.
+`BasePlugin` is a marker ABC (empty body). A plugin of this framework subclasses
+it and is joined to the system **by direct import**: the two production sites are
+`agents/tools/analysis/fallacy_family_analyzer.py:20,24` and
+`orchestration/fact_checking_orchestrator.py:28,31`, which import
+`taxonomy_explorer` and `external_verification` directly.
 
--   **Discovery:** The loader scans the subdirectories within `src/core/plugins/` (specifically `standard/` and `workflows/`) for `plugin_manifest.json` files.
--   **Loading:** It reads the metadata from each manifest to understand the plugin's properties and entry points.
+There is **no discovery mechanism**. The three loaders this package used to carry
+(`core/plugin_loader.py`, `core/plugins/plugin_loader.py`,
+`agents/agent_loader.py`) were withdrawn (#2099) after a consumer map showed none
+of them had a production caller: loader #1 was called only by two fossils of the
+same package (`main.py`, non-executable; `run_benchmark.py`, whose only loaded
+plugin was the fake one it wrote into the source tree at runtime), loaders #2 and
+#3 only by tests. The unit guard
+`tests/unit/argumentation_analysis/test_plugin_framework.py::TestDiscoveryMechanismsWithdrawn`
+pins the withdrawal (ImportError on each removed module), and
+`::TestRealPluginsByDirectImport` pins the surviving path.
 
-This mechanism ensures that the system can be extended simply by adding a new plugin in its own directory with a valid manifest, without needing to modify the core application logic.
+### 2. `standard/` — the two declarative plugins
 
-### 2. Plugin Manifest (`plugin_manifest.json`)
+`taxonomy_explorer/` and `external_verification/`, each described by a
+`plugin.yaml` (documentary declaration — no code reads it) and imported directly
+where used. See `standard/README.md`.
 
-The manifest is a JSON file that acts as the "identity card" for each plugin. It provides essential metadata that the `PluginLoader` uses to register and manage the plugin.
+## Withdrawn conventions — do not re-add without a consumer
 
-Every plugin **must** have a `plugin_manifest.json` file at its root.
-
-#### Manifest Structure
-
-```json
-{
-  "manifest_version": "1.0",
-  "plugin_name": "UniquePluginName",
-  "version": "0.1.0",
-  "author": "Author Name",
-  "description": "A brief description of what this plugin does.",
-  "entry_point": "main.py" 
-}
-```
-
--   **`manifest_version`**: The version of the manifest schema itself.
--   **`plugin_name`**: A unique identifier for the plugin.
--   **`version`**: The semantic version of the plugin's code.
--   **`author`**: The author or team responsible for the plugin.
--   **`description`**: A human-readable summary of the plugin's purpose.
--   **`entry_point`**: The main Python file that contains the plugin's implementation (e.g., the class inheriting from `BasePlugin`).
-
-This declarative approach, driven by the manifest, is central to the system's design, promoting loose coupling and clear separation of concerns.
+- **`plugin_manifest.json`** — the JSON manifest format (`manifest_version`,
+  `plugin_name`, `version`, `entry_point`, …) had no production reader, and the
+  single real manifest (`standard/plugin_manifest.json`) pointed at a `main.py`
+  that never existed on disk. Removed with its loaders (#2099). The fixtures
+  under `tests/fixtures/plugins/` keep the format **as test data only** — read by
+  plain `json` in `tests/integration/triage/test_workflow_execution.py`, not by a
+  loader.
+- **YAML→JSON conversion** — rejected: no real consumer justifies rewriting the
+  `plugin.yaml` declarations. They stay as the documented capability list of each
+  plugin.

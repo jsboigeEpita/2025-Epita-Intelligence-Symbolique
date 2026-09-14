@@ -1,23 +1,30 @@
-# `plugin_framework/` — l'ancien framework de plugins, mort en production
+# `plugin_framework/` — l'ancien framework de plugins, retiré de la découverte
 
-Ce paquet est une **racine d'assemblage** : 2 scripts (`main.py`, `run_benchmark.py`) et
-trois sous-arbres (`agents/`, `benchmarking/`, `core/`). Mesuré : **21 fichiers `.py`,
-1 752 lignes** dans le sous-arbre (2 fichiers / 189 lignes au premier niveau).
+Ce paquet est une **racine d'assemblage** : 1 script (`main.py`) et trois
+sous-arbres (`agents/`, `benchmarking/`, `core/`). Mesuré après le retrait #2099 :
+**17 fichiers `.py`, 1 416 lignes** dans le sous-arbre (1 fichier / 70 lignes au
+premier niveau).
 
-**Aucun de ces deux scripts n'atteint son objet.** Ils s'importent, s'exécutent, et
-échouent sur leur propre contrat. Le paquet est le **prédécesseur** de
-`argumentation_analysis/plugins/` (voir *Frères et parent*) : le framework de plugins
-vivant est ailleurs.
+**Le mécanisme de découverte de ce paquet est retiré, pas réparé (#2099).** La
+carte des consommateurs mesurée sur `4c733b93` n'a nommé **aucun** appelant de
+production pour aucun des trois chargeurs : le loader #1 n'était appelé que par
+deux fossiles du même paquet, les loaders #2/#3 par les seuls tests. Les deux
+plugins réels (`taxonomy_explorer`, `external_verification`) rejoignent le système
+**par import direct** — ce chemin survit et est gardé par des tests positifs. Le
+framework de plugins **vivant** est ailleurs : `argumentation_analysis/plugins/`
+(voir *Frères et parent*).
 
 ## Rôle et frontière
 
-Le paquet prétend découvrir, charger et exécuter des *plugins* déclaratifs (un `plugin.yaml`,
-un `plugin_manifest.json`, une classe `BasePlugin`). Il porte **deux conventions de
-découverte concurrentes** — un chargeur par système de fichiers (`core/plugin_loader.py`)
-et un chargeur par manifeste YAML — sans qu'aucune ne fonctionne.
+Le paquet portait la découverte, le chargement et l'exécution de plugins
+déclaratifs (`plugin.yaml`, `plugin_manifest.json`, `BasePlugin`). Depuis #2099 il
+ne porte plus **aucun mécanisme de découverte** : ce qui reste est le contrat
+(`core/plugins/interfaces.py`), les modèles Pydantic (`core/contracts.py`), un
+guichet d'orchestration minimal et un mesureur de suite — tous alimentés par un
+registre fourni par l'appelant.
 
-Frontière : le paquet **ne fournit rien au reste du système**. `api/` ne l'importe jamais
-(0 occurrence). Aucune capacité du `CapabilityRegistry` ne vient d'ici.
+Frontière : le paquet **ne fournit rien au reste du système**. `api/` ne l'importe
+jamais (0 occurrence). Aucune capacité du `CapabilityRegistry` ne vient d'ici.
 
 **Le paquet racine n'a pas d'`__init__.py`** : ce n'est pas un paquet Python régulier,
 seulement un répertoire. Ses enfants (`core/`, `agents/`, `benchmarking/`) en ont un.
@@ -29,27 +36,32 @@ donc atteints par chemin complet :
 
 | Nom | Fichier | Statut mesuré |
 |---|---|---|
-| `PluginLoader` | `core/plugin_loader.py` | **mort** — le chargeur ne peut pas résoudre (voir *Limites connues* n°1) |
+| `BasePlugin` | `core/plugins/interfaces.py` | **contrat canonique** — sous-classé par les deux plugins réels (garde `issubclass` exécutée) |
 | `BasePlugin`, `PluginMetadata`, `ParameterSpec` | `core/contracts.py` | **importé pour ses types**, jamais construit en production |
 | décorateurs | `core/decorators.py` | idem — surface de types |
-| `AgentLoader` | `agents/agent_loader.py` | 0 appelant production |
+| `OrchestrationService` | `core/services/orchestration_service.py` | guichet minimal, registre fourni par l'appelant |
 | `BenchmarkService` | `benchmarking/benchmark_service.py` | 0 appelant production |
+
+**Retirés (#2099)** : `core/plugin_loader.py`, `core/plugins/plugin_loader.py`,
+`agents/agent_loader.py`, `run_benchmark.py`, le manifeste
+`core/plugins/standard/plugin_manifest.json` et
+`agents/simple_analyst/agent_manifest.json` — voir la section *Retrait* ci-dessous.
 
 ## Points d'entrée valides
 
-**Aucun.** Les deux scripts sont des entrées *déclarées*, pas *valides* :
+**Aucun.** Le script restant est une entrée *déclarée*, pas *valides* :
 
-- `main.py` — **8 appels sur 8 invalides à l'exécution** (`TypeError`, `AttributeError`,
-  `ValidationError` selon l'appel : il invoque des signatures qui n'existent pas).
-- `run_benchmark.py` — sort en `sys.exit(1)` (`:49-54`) : le registre qu'il interroge est
-  vide, donc il n'a rien à mesurer.
+- `main.py` — fossile désynchronisé d'au moins deux générations d'API ; depuis le
+  retrait du loader, son import échoue **bruyamment** (`ImportError`), ce qui est
+  plus honnête qu'un script qui prétend s'exécuter. Sa refonte sur l'API survivante
+  ou sa suppression est arbitré par #2102 (grain suivant).
 
-Aucun des deux n'est référencé par `.github/workflows/` (0 occurrence) : même une entrée
-manuelle ne les exécuterait pas de façon fiable.
+Il n'est référencé par `.github/workflows/` (0 occurrence) : même une entrée
+manuelle ne l'exécuterait pas de façon fiable.
 
 ## Amont / aval
 
-- **Amont** : le système de fichiers (`core/plugins/standard/`), lu par deux chargeurs.
+- **Amont** : néant — plus aucun mécanisme ne scanne le système de fichiers.
 - **Aval** : néant. Les seuls consommateurs sont des **tests** et les README frères.
 
 Le paquet ne reçoit ni état d'analyse ni configuration d'orchestration. Il n'est branché
@@ -57,34 +69,47 @@ sur rien.
 
 ## Statut d'intégration
 
-**Résiduel — l'ensemble du paquet.** Trois raisons mesurées, chacune suffisante :
+**Résiduel — l'ensemble du paquet.** Le retrait #2099 a supprimé les trois raisons
+majeures qui tenaient le statut à « résiduel » (préfixe `src.` mort, manifeste rejeté,
+`plugin.yaml` sans lecteur) en supprimant les mécanismes eux-mêmes : un mécanisme sans
+consommateur ne se répare pas, il se retire. Ce qui reste (contrat, modèles, guichet)
+est propre, testé, et sans consommateur de production.
 
-1. le chargeur par système de fichiers construit un nom de module (`src.…`) que le dépôt
-   ne contient plus ;
-2. le manifeste (`core/plugins/standard/plugin_manifest.json`) est **rejeté par le seul
-   lecteur du format**, lui-même sans appelant de production ;
-3. `plugin.yaml` n'a **aucun lecteur** dans le dépôt — la seule occurrence de la chaîne
-   est la docstring qui le décrit (`core/contracts.py:64`).
+## Le retrait #2099 — qu'est-ce qui a été supprimé, et pourquoi
+
+| Fichier retiré | Rôle | Raison (mesurée sur `4c733b93`) |
+|---|---|---|
+| `core/plugin_loader.py` | découverte filesystem (loader #1) | appelé uniquement par `main.py` (inexécutable) et `run_benchmark.py` ; construisait des modules `src.…` morts depuis #321 et avalait l'`ImportError` |
+| `core/plugins/plugin_loader.py` | découverte par manifeste JSON (loader #2) | zéro appelant production ; ne voyait pas les 2 plugins réels (porteurs de `plugin.yaml`), et l'unique manifeste réel pointait vers un `main.py` inexistant |
+| `agents/agent_loader.py` | découverte d'agents par manifeste | zéro appelant production ; l'unique manifeste pointait vers un `agent.py` inexistant |
+| `run_benchmark.py` | runner de benchmark | **écrivait un plugin factice dans l'arborescence source au runtime** (#2102 §2) — supprimer le script supprime l'écriture ; aucun importateur |
+| `core/plugins/standard/plugin_manifest.json` | manifeste du loader #2 | `entry_point: "main.py"` inexistant sur disque |
+| `agents/simple_analyst/agent_manifest.json` | manifeste de l'AgentLoader | `entry_point: "agent.py"` inexistant sur disque |
+
+Gardes : `tests/unit/argumentation_analysis/test_plugin_framework.py`
+(`TestDiscoveryMechanismsWithdrawn` — les modules retirés lèvent `ImportError` ;
+`TestRealPluginsByDirectImport` — les plugins réels s'instancient et une capacité
+réelle s'exécute par le chemin de production).
 
 ## Artefacts et lecteurs
 
 Le paquet ne produit **aucun artefact de sortie**, et **aucune surface d'export**. Il ne
-lit que des déclarations de plugin (`plugin.yaml`, `plugin_manifest.json`,
-`taxonomy_explorer/data/fallacy_families.yaml`).
+lit plus que des déclarations documentaires (`plugin.yaml` ×2,
+`taxonomy_explorer/data/fallacy_families.yaml` — cette dernière étant la seule pièce
+réellement consommée par la production, hors framework).
 
-En revanche il **écrit dans sa propre arborescence source**, en effet de bord :
-`run_benchmark.py:36-44` fabrique un plugin factice
-`core/plugins/standard/hello_world/__init__.py` au runtime, et le supprime en fin de
-script (`:114-115`). Ce n'est pas une sortie, c'est une mutation transitoire du dépôt —
-voir *Limites connues* n°7.
+L'écriture transitoire dans l'arborescence source (`run_benchmark.py` fabriquant un
+plugin `hello_world/` au runtime) a **disparu avec son script**.
 
 ## Tests représentatifs
 
-**82 passed** sur l'unique fichier de la zone,
+**67 tests** sur l'unique fichier de la zone,
 `tests/unit/argumentation_analysis/test_plugin_framework.py` (`--disable-jvm-session`
-requis, sinon orage de skips #2021). Ces tests couvrent le **contrat** des classes
-(`contracts.py`, décorateurs), pas le chemin de découverte — c'est pourquoi ils restent
-verts alors que le chargeur ne résout rien.
+requis, sinon orage de skips #2021) : contrats (`contracts.py`, décorateurs), guichet,
+benchmark, **gardes de retrait et chemin vivant par import direct**. La chaîne
+d'intégration `tests/integration/triage/test_workflow_execution.py` construit désormais
+son registre directement depuis les manifestes des fixtures (`json` + `importlib`),
+sans chargeur.
 
 ## Frères et parent
 
@@ -105,28 +130,18 @@ exécuté — cf. #2102 §6.
 
 ## Limites connues
 
-Relevé mesuré, **rien corrigé ici** (lot documentaire).
+Relevé mesuré, **rien corrigé ici** (hors retrait documenté ci-dessus).
 
-1. **Le chargeur ne peut pas résoudre — cause racine identifiée.** `core/plugin_loader.py:33`
-   construit `module_name = f"src.core.plugins.standard.{item}"`. Le paquet `src/` a été
-   **supprimé du dépôt** par la consolidation (#321) : il n'existe plus à la racine.
-   Conséquence mesurée : la découverte rend un **registre vide** (`REGISTRY length = 0`,
-   3 × `No module named 'src'`). Le préfixe codé en dur est la cause, pas un symptôme.
-2. **`main.py` est un squelette non exécutable** : 8 appels sur 8 invalides au runtime.
-3. **`plugin_type` n'est jamais lu** (`core/contracts.py:69`) : c'est l'unique occurrence
+1. **`main.py` est un squelette non exécutable** dont l'import est désormais en échec
+   bruyant (`ImportError` sur le loader retiré) — arbitrage refonte/suppression en
+   #2102.
+2. **`plugin_type` n'est jamais lu** (`core/contracts.py`) : c'est l'unique occurrence
    du champ dans tout le dépôt — déclaré, jamais consommé.
-4. **Deux conventions de découverte coexistent**, aucune fonctionnelle : chargeur
-   filesystem et chargeur manifeste. Le manifeste est en outre rejeté par son unique
-   lecteur (voir plus bas).
-5. **README frère contredisant le code** : `benchmarking/README.md` décrit un runner
-   fonctionnel ; mesuré, `run_benchmark.py` sort en `sys.exit(1)` (`:49-54`) sur un
-   registre vide.
-6. **Ce paquet n'est pas un paquet Python** : pas d'`__init__.py` à sa racine.
-7. **`run_benchmark.py` mute le dépôt au runtime — résidu possible.** `:36-44` crée
-   `core/plugins/standard/hello_world/__init__.py` **dans l'arborescence source**, puis
-   `:114-115` le retire (`os.remove` + `shutil.rmtree`). Le chemin n'est **pas** couvert
-   par `.gitignore` (`git check-ignore` ne le matche pas) : toute exception entre la
-   création et le nettoyage laisse un fichier que `git status` montre comme ajoutable.
-   Mesuré : le répertoire est **absent** aujourd'hui et n'est pas suivi par git — le
-   nettoyage fonctionne quand le script va au bout ; c'est le cas d'échec qui est le
-   risque. Même constat que l'issue #2102 (§2).
+3. **Ce paquet n'est pas un paquet Python** : pas d'`__init__.py` à sa racine.
+4. **Deux `BenchmarkService` homonymes** coexistent dans le dépôt (celui-ci et
+   `services/benchmark_service.py`, APIs incompatibles) — cf. #2102.
+5. **Association métrique↔exécution par index** dans `benchmarking/benchmark_service.py`
+   — fragile si le code décoré enregistre un nombre de `record_metric` différent du
+   nombre d'exécutions — cf. #2102.
+6. **`workflow_execution` déclaré au contrat, jamais implémenté** — réponse d'erreur
+   systématique — cf. #2102.

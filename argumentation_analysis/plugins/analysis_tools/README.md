@@ -147,7 +147,7 @@ La suite in-package `argumentation_analysis/plugins/analysis_tools/tests/` (3 fi
 - **Parent** : `argumentation_analysis/plugins/` — README présent sur cette branche (`docs/readme/2088-parents`, non suivi), qui recense 36 `.py` / 12 609 l. récursif et mentionne explicitement `analysis_tools/` comme l'un de ses deux sous-paquets à fiche propre. Ce paquet ne figure dans **aucune** des deux surfaces d'enregistrement du parent (`agents/factory.py:73-104`, `orchestration/registry_setup.py`) : **invisible du registre de capacités**.
 - **Frères directs, mesurés** : `semantic_kernel/` (1 module `jtms_plugin.py`, **5 `@kernel_function`** vérifiés AST, monté sur route API dédiée — l'anti-modèle exact de `analysis_tools`) et trois répertoires de **prompts SK natifs sans aucun `.py`** : `ExplorationPlugin/Explore/`, `GuidingPlugin/GuidingPlugin/`, `SynthesisPlugin/Synthesize/` (chacun `config.json` + `skprompt.txt`).
 - **Frères structurels** (mêmes rôles, autre arbre) : `argumentation_analysis/agents/tools/analysis/` — versions **non** « Enhanced ». Toute affirmation « le `ContextualFallacyAnalyzer` est consommé par X » doit qualifier l'arbre.
-- **Faux frère** : `agents/core/plugin_loader.py` (`PluginLoader`) — c'est lui, et lui seul, qui cherche le format `manifest.json` ; son homonyme `plugin_framework/core/plugins/plugin_loader.py:33` cherche un autre nom de fichier (`plugin_manifest.json`).
+- **Faux frère** : `agents/core/plugin_loader.py` (`PluginLoader`) — c'est lui, et lui seul, qui cherche le format `manifest.json` ; son ancien homonyme `plugin_framework/core/plugins/plugin_loader.py` (qui cherchait `plugin_manifest.json`) a été retiré (#2099).
 
 ---
 

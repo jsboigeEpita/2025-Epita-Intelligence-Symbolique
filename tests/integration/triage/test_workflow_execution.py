@@ -4,9 +4,9 @@ Test d'intégration de bout en bout pour la validation de l'exécution de workfl
 de la gestion des erreurs, et du framework de benchmark via la nouvelle architecture de services.
 
 Ce test a pour objectif de valider plusieurs aspects fondamentaux de l'architecture :
-1.  **Découverte et Chargement de Plugins :** Vérifie que le `PluginLoader` est capable
-    de trouver et de charger dynamiquement des plugins de test depuis le système de
-    fichiers en se basant sur leurs manifestes.
+1.  **Chargement de Plugins :** Construit le registre de plugins directement depuis
+    les manifestes JSON des fixtures (le mécanisme de découverte automatique a été
+    retiré — #2099 ; les fixtures restent la donnée du test, lues par json+importlib).
 2.  **Orchestration de Services :** Assure que l'`OrchestrationService` peut recevoir
     des requêtes, identifier le plugin et la capacité cibles, et exécuter la
     logique métier correspondante.
@@ -25,6 +25,7 @@ pour construire des chaînes de traitement prédictibles, y compris des scénari
 et des campagnes de benchmark complètes.
 """
 
+import json
 import unittest
 import os
 import sys
@@ -37,9 +38,6 @@ project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-from argumentation_analysis.plugin_framework.core.plugins.plugin_loader import (
-    PluginLoader,
-)
 from argumentation_analysis.plugin_framework.core.services.orchestration_service import (
     OrchestrationService,
 )
@@ -52,10 +50,9 @@ from argumentation_analysis.plugin_framework.core.contracts import Orchestration
 class TestWorkflowExecution(unittest.TestCase):
     """
     Cette suite de tests valide la chaîne complète :
-    PluginLoader -> OrchestrationService -> BenchmarkService.
-    Elle simule le chargement de plugins de test, l'exécution d'un workflow
-    simple qui les enchaîne, et la validation des résultats et des métriques
-    de performance.
+    registre (construit directement) -> OrchestrationService -> BenchmarkService.
+    Elle charge des plugins de test, exécute un workflow simple qui les
+    enchaîne, et valide les résultats et les métriques de performance.
     """
 
     def setUp(self):
@@ -63,30 +60,32 @@ class TestWorkflowExecution(unittest.TestCase):
         Initialise l'environnement de test avant chaque exécution.
         Charge les plugins de test et instancie les services nécessaires.
         """
-        self.plugin_loader = PluginLoader()
         self.plugins_path = os.path.join(project_root, "tests", "fixtures", "plugins")
 
-        # 1. Découvrir et charger les plugins
+        # 1. Charger les plugins depuis leurs manifestes (json + importlib, sans chargeur)
         self.plugin_registry: Dict[str, Any] = {}
-        manifest_paths = self.plugin_loader.discover_plugins(self.plugins_path)
+        for plugin_dir in sorted(os.listdir(self.plugins_path)):
+            manifest_path = os.path.join(
+                self.plugins_path, plugin_dir, "plugin_manifest.json"
+            )
+            if not os.path.isfile(manifest_path):
+                continue
+            with open(manifest_path, encoding="utf-8") as f:
+                manifest = json.load(f)
 
-        for manifest_path in manifest_paths:
-            manifest = self.plugin_loader.load_plugin(manifest_path)
-            if manifest:
-                plugin_name = manifest["plugin_name"]
-                entry_point = manifest["entry_point"]
-                class_name = manifest["class_name"]
+            plugin_name = manifest["plugin_name"]
+            entry_point = manifest["entry_point"]
+            class_name = manifest["class_name"]
 
-                # Charger dynamiquement la classe du plugin
-                plugin_dir = os.path.dirname(manifest_path)
-                module_path = os.path.join(plugin_dir, entry_point)
+            # Charger dynamiquement la classe du plugin
+            module_path = os.path.join(os.path.dirname(manifest_path), entry_point)
 
-                spec = importlib.util.spec_from_file_location(plugin_name, module_path)
-                if spec and spec.loader:
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    plugin_class = getattr(module, class_name)
-                    self.plugin_registry[plugin_name] = plugin_class()
+            spec = importlib.util.spec_from_file_location(plugin_name, module_path)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                plugin_class = getattr(module, class_name)
+                self.plugin_registry[plugin_name] = plugin_class()
 
         # 2. Initialiser les services avec les plugins chargés
         self.orchestration_service = OrchestrationService(
