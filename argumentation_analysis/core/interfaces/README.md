@@ -11,7 +11,7 @@ N'est **pas** les services eux-mêmes (`core/llm_service.py`), ni les adapters, 
 | Module | Contrat | Méthodes abstraites |
 |---|---|---|
 | `fallacy_detector.py:4` | `AbstractFallacyDetector` | `detect(text) -> dict` (:5) |
-| `analysis_service.py:13` | `AbstractAnalysisService` | `analyze_text` (async, :21), `is_available` (:38), `get_status_details` (:43) |
+| `analysis_service.py:20` | `AbstractAnalysisService` | `analyze_text` (async, :30), `is_available` (:47), `get_status_details` (:52) |
 
 ## Points d'entrée valides — asymétrie totale entre les deux contrats
 
@@ -24,7 +24,7 @@ N'est **pas** les services eux-mêmes (`core/llm_service.py`), ni les adapters, 
 
 L'aval de ces implémentations est réel : `AnalysisToolsPlugin` est instancié dans `pipelines/unified_text_analysis.py` et `orchestration/hierarchical/operational/adapters/rhetorical_tools_adapter.py`.
 
-**`analysis_service` : zéro importeur, zéro implémenteur** — les seules mentions sont des docstrings (`adapters/__init__.py:5-6`) et une doc de skill. La docstring du module promet des « futures integrations via le CapabilityRegistry » jamais advenues (né de #35 « Phase 0+1 Lego foundations »).
+**`analysis_service` : zéro importeur, zéro implémenteur** — les seules mentions sont des docstrings et une doc de skill. La docstring du module **promettait** des « futures integrations via le CapabilityRegistry » jamais advenues (né de #35 « Phase 0+1 Lego foundations ») : depuis le 2026-09-14 (#2105) elle **dit la vérité mesurée** (contrat non adopté, conservé comme point d'extension), et `adapters/__init__.py:8` ne le cite plus comme interface implémentée. La surface hors dépôt qui le cite encore (`.claude/skills/integrate-component/SKILL.md`) est nommée pour le coordinateur.
 
 ## Amont / aval
 
@@ -34,7 +34,7 @@ L'aval de ces implémentations est réel : `AnalysisToolsPlugin` est instancié 
 ## Statut d'intégration
 
 - `fallacy_detector.py` : **actif** — 5 importeurs production, 2 implémentations vivantes, tests qui assertent `isinstance(adapter, AbstractFallacyDetector)`.
-- `analysis_service.py` : **résiduel** — contrat orphelin, jamais consommé.
+- `analysis_service.py` : **résiduel, désormais marqué** — contrat orphelin, jamais consommé ; sa docstring le déclare explicitement depuis le 2026-09-14 (#2105) au lieu de promettre une intégration future.
 
 ## Artefacts et lecteurs
 
@@ -55,5 +55,5 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `interfaces/`. Frè
 ## Limites connues
 
 - `AbstractFallacyDetector.detect` documenté « returns a dictionary containing the detected fallacies » sans schéma défini — chaque implémentation fixe le sien (l'adapter français documente sa conversion) ;
-- `analysis_service.py:21` méthode async dans un ABC jamais implémenté ;
+- `analysis_service.py:30` méthode async dans un ABC jamais implémenté ;
 - déplacer `fallacy_detector.py` casserait 5 imports production — le contrat ne vit que par ses implémentations côté `adapters/`.

@@ -4,7 +4,7 @@
 
 Un seul fichier (`service_manager.py`) : un **wrapper de délégation de 2 fonctions** vers le vrai gestionnaire de services, l'homonyme racine [`orchestration/service_manager.py`](../../../orchestration/README.md) (`OrchestrationServiceManager` :147, `initialize()` :282, `analyze_text()` :479).
 
-N'est **pas** le « core » contenant « les structures de données de base, comme les `PipelineData` » (`../README.md:15`) — `PipelineData` est introuvable dans tout le dépôt (grep 0 match). Ne pas confondre avec `plugin_framework/core/services/` (autre wrapper de guichet, documenté dans la vague feuilles #2088) non plus.
+N'est **pas** le « core » contenant « les structures de données de base, comme les `PipelineData` » (annonce du README parent, corrigée en #2110) — `PipelineData` est introuvable dans tout le dépôt (grep 0 match). Ne pas confondre avec `plugin_framework/core/services/` (autre wrapper de guichet, documenté dans la vague feuilles #2088) non plus.
 
 ## Composants publics
 
@@ -36,7 +36,7 @@ Aucun test n'existe pour ce module (grep exhaustif).
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) — décrit un `PipelineData` inexistant. Frères : [`../analysis/`](../analysis/README.md), [`../config/`](../config/README.md), [`../execution/`](../execution/README.md).
+Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : son `PipelineData` n'a jamais existé. Frères : [`../analysis/`](../analysis/README.md), [`../config/`](../config/README.md), [`../execution/`](../execution/README.md).
 
 ## Limites connues
 

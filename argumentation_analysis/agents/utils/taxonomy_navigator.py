@@ -1,4 +1,3 @@
-import csv
 import json
 from typing import List, Dict, Any, Optional
 
@@ -7,7 +6,10 @@ from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
 
 class TaxonomyNavigator:
     """
-    Handles loading and navigating a taxonomy from a CSV or JSON file.
+    Navigates an already-loaded taxonomy.
+
+    The constructor takes loaded rows (`List[Dict[str, Any]]`), not a path —
+    loading from CSV/JSON belongs to the caller (#2041).
     """
 
     def __init__(self, taxonomy_data: List[Dict[str, Any]]):

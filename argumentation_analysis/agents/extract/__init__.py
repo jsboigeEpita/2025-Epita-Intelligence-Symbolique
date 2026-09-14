@@ -12,20 +12,20 @@ try:
     from ..core.extract.extract_definitions import *
     from ..core.extract.prompts import *
 
-    # Exposer explicitement la classe ExtractAgent et la fonction setup_extract_agent
-    # pour les importations de la forme:
-    # from argumentation_analysis.agents.extract import extract_agent
+    # Exposer la classe ExtractAgent et le module `extract_agent` sous les trois
+    # formes d'accès : attribut de package, `import ...extract.extract_agent`, et
+    # `from ...extract import extract_agent`. Le commentaire d'origine annonçait
+    # une fonction `setup_extract_agent` qui n'a jamais existé (#2122).
     from ..core.extract.extract_agent import ExtractAgent
 
-    # Créer un alias pour le module extract_agent
     import sys
 
-    # Importer le module directement par son chemin relatif
-    from ..core.extract import extract_agent as core_extract_agent_module
+    from ..core.extract import extract_agent as extract_agent
 
-    sys.modules["argumentation_analysis.agents.extract.extract_agent"] = (
-        core_extract_agent_module
-    )
+    # `sys.modules` couvre les deux formes d'import ; l'attribut de package
+    # couvre `pkg.extract_agent`, que la seule entrée `sys.modules` ne pose pas
+    # (c'est le machinery d'import qui pose l'attribut, pas cette affectation).
+    sys.modules["argumentation_analysis.agents.extract.extract_agent"] = extract_agent
 except ImportError as e:
     import logging
 

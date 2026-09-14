@@ -2,7 +2,7 @@
 
 ## Rôle et frontière
 
-3 modules, 790 lignes (`agent_bases.py` 668, `plugin.py` 106, `__init__.py` 16). Le paquet ne contient **aucune logique d'agent** : il définit les contrats que les 13 agents concrets du dépôt héritent. `BaseAgent` (:54) étend `ChatCompletionAgent` de Semantic Kernel — l'héritage est **requis** pour `AgentGroupChat` (commentaire historique :32-36). `BaseLogicAgent` (:262) le spécialise pour le raisonnement formel (pipeline belief-set → requêtes → interprétation).
+2 modules, 684 lignes (`agent_bases.py` 668, `__init__.py` 16) — `plugin.py` (ABC plugin `BasePlugin`/`LegoPlugin`/`ParameterSpec`) a été retiré (#2145) : son seul importeur production était `core/plugin_loader.py`, lui-même sans appelant de production. Le paquet ne contient **aucune logique d'agent** : il définit les contrats que les 13 agents concrets du dépôt héritent. `BaseAgent` (:54) étend `ChatCompletionAgent` de Semantic Kernel — l'héritage est **requis** pour `AgentGroupChat` (commentaire historique :32-36). `BaseLogicAgent` (:262) le spécialise pour le raisonnement formel (pipeline belief-set → requêtes → interprétation).
 
 Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety au-delà d'un type de retour. Il garantit qu'un agent a un kernel, un nom, un prompt, un service LLM, et — pour les agents logiques — un `TweetyBridge`.
 
@@ -16,15 +16,12 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 - Contrat abstrait **mesuré** : 10 méthodes — `text_to_belief_set` :365, `generate_queries` :383, `execute_query` :404, `interpret_results` :424, `validate_formula` :453, `is_consistent` :468, `_create_belief_set_from_data` :661, + les 3 héritées.
 - `setup_agent_components` :345, `_handle_translation_task` :512 et `_handle_query_task` :560 sont **concrets** (non abstraits).
 
-**`plugin.py`** — interface plugin *distincte* de celle du registry : `BasePlugin(ABC)` :6 (`name`/`execute` abstraits), `ParameterSpec` :22, `LegoPlugin` :32 (`provides`/`requires`/`parameters`, `get_capabilities()` :64, `check_requirements()` :81, `is_available()` :93).
-
-**`__init__.py:16`** — `__all__ = ["agent_bases"]` uniquement ; `plugin` n'est pas ré-exporté.
+**`__init__.py:16`** — `__all__ = ["agent_bases"]`.
 
 ## Points d'entrée valides
 
-1. **Héritage direct** — `from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent` (`core/pm/pm_agent.py:13`, `core/debate/debate_agent.py:79`, `core/synthesis/synthesis_agent.py:22`…), puis `MyAgent(kernel=kernel, agent_name="…")`. 16 sites d'import production mesurés (`grep -rn 'abc\.agent_bases\|abc\.plugin' argumentation_analysis/` = 18 lignes, moins 1 ligne commentée `orchestration/cluedo_extended_orchestrator.py:21` et 1 import mort sous `TYPE_CHECKING` — voir Limites).
+1. **Héritage direct** — `from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent` (`core/pm/pm_agent.py:13`, `core/debate/debate_agent.py:79`, `core/synthesis/synthesis_agent.py:22`…), puis `MyAgent(kernel=kernel, agent_name="…")`. 15 sites d'import production mesurés (`grep -rn 'abc\.agent_bases' argumentation_analysis/` = 17 lignes, moins 1 ligne commentée `orchestration/cluedo_extended_orchestrator.py:21` et 1 commentaire #2137 — voir Limites).
 2. **Fabrique logique** — `LogicAgentFactory.create_agent(logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> Optional[BaseLogicAgent]` (`core/logic/logic_factory.py:41`, mapping `_agent_classes` :31). C'est le point d'entrée production pour instancier un agent logique sans nommer sa classe.
-3. **Contrôle de type d'un plugin** — `PluginLoader.load_plugins_from_directory(plugins_directory: str) -> dict[str, BasePlugin]` (`core/plugin_loader.py:19`) rejette tout entrypoint qui n'est pas une sous-classe : `issubclass(plugin_class, BasePlugin)` :140.
 
 ## Amont / aval
 
@@ -37,8 +34,6 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 | Famille | Statut | Preuve mesurée |
 |---|---|---|
 | `BaseAgent` / `BaseLogicAgent` | **actif-critique** | 16 imports production ; 13 classes concrètes en héritent ; `tests/unit/argumentation_analysis/test_architecture_compliance.py:51,63` asserte `isinstance(agent, BaseAgent)` sur `CounterArgumentAgent` et `DebateAgent` ; `agent_bases` fait partie du MRO de tout agent du pipeline Lego |
-| `plugin.BasePlugin` | **résiduel** | 1 seul importeur production (`core/plugin_loader.py:6`), et `PluginLoader` lui-même n'est importé que par 2 fichiers de test ; la surface plugin réellement câblée est SK (`registry_setup.py:363,382,407,426,444`) et n'utilise pas cette ABC |
-| `plugin.LegoPlugin` / `ParameterSpec` | **résiduel** | **zéro** importeur production (grep sur `argumentation_analysis/`) ; seuls `tests/unit/argumentation_analysis/test_plugin_loader.py:17-18` les importent. `capability_registry.py:60` ne fait que *mentionner* « compatibilite LegoPlugin » dans une docstring d'alias |
 
 ## Artefacts et lecteurs
 
@@ -61,8 +56,11 @@ Parent : [`../`](../README.md) (`agents/core/`, sans README propre à ce niveau 
 
 ## Limites connues
 
-- **Import mort sous `TYPE_CHECKING`** : `core/strategies.py:39` fait `from …abc.agent_bases import Agent`, or `agent_bases.py` ne définit ni n'importe `Agent` (vérifié par AST et `getattr`). Inoffensif à l'exécution (bloc `TYPE_CHECKING`), faux pour tout vérificateur de types. [inféré : jamais exécuté, donc jamais testé]
-- **Nom `BasePlugin` défini 3 fois** dans des paquets différents : `abc/plugin.py:6`, `agents/core/orchestration_service.py:20` (classe nue, sans ABC), `plugin_framework/core/plugins/interfaces.py:4` (marqueur `pass`). `api/main.py:6` consomme celui d'`orchestration_service`, `fact_checking_orchestrator.py:27` celui de `plugin_framework` : aucune n'est la classe de `abc/plugin.py`.
+- **Nom `BasePlugin` défini 2 fois** dans des paquets différents : `agents/core/orchestration_service.py:20` (classe nue, sans ABC) et `plugin_framework/core/plugins/interfaces.py:4` (marqueur `pass`). `api/main.py:6` consomme celui d'`orchestration_service`, `fact_checking_orchestrator.py:27` celui de `plugin_framework` — le tiers (`abc/plugin.py`, sans consommateur) a été retiré (#2145).
 - **Docstring contradictoire** : `agent_bases.py:63-65` affirme que le contrat « impose d'implémenter » `setup_agent_components` et `invoke_single`. Mesure : `setup_agent_components` **n'existe pas sur `BaseAgent`** et n'est abstrait nulle part ; les seuls abstraits sont `get_agent_capabilities`, `get_response`, `invoke_single`.
 - **Commentaire de test périmé** : `tests/agents/core/informal/test_informal_agent_authentic.py:81` affirme que `get_agent_capabilities()` et `get_agent_info()` « n'existent plus » — les deux existent (:156, :171).
 - Pydantic V2 : le logger est `_agent_logger` (`PrivateAttr` :81) exposé via la **property** `logger` :141. Il n'existe **aucun** attribut public `agent_logger` (mesure `dir(BaseAgent)`).
+
+---
+
+*Révision — 2026-09-14, `#2145` (grain finition). `plugin.py` (`BasePlugin`/`LegoPlugin`/`ParameterSpec`) et l'entrée « Contrôle de type d'un plugin » ont été retirés avec le chargeur qui les consommait (`agents/core/plugin_loader.py`, 0 appelant de production, format de manifeste incompatible avec l'unique `manifest.json` du dépôt). La limite « import mort sous `TYPE_CHECKING` » de `core/strategies.py` était périmée — #2137 l'avait déjà corrigée en important `Agent` depuis Semantic Kernel ; l'item est retiré, non réécrit. Compteurs re-mesurés après retrait (2 modules / 684 lignes / 15 sites d'import production).*

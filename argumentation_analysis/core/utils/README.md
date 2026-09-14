@@ -8,7 +8,7 @@ Le paquet se présente comme une couche d'utilitaires transverses, mais **aucune
 
 1. **Feuilles réelles**, modules de fonctions pures ou quasi (crypto, logging, réseau, CLI, reporting, chargement/sauvegarde de fichiers) : `crypto_utils.py:33`, `logging_utils.py:12`, `network_utils.py:247`, `cli_utils.py:35`, `reporting_utils.py:360`, `file_loaders.py:23`.
 2. **Façade d'agrégation** — `file_utils.py` ne définit **aucune** fonction (`ast` sur le corps du module : 0 `def`), il empile quatre star-imports (`file_utils.py:42-45` : `file_loaders`, `file_savers`, `markdown_utils`, `path_operations`). Aucune de ces feuilles ne déclare `__all__`, donc **tout nom public fuit dans l'espace de noms de la façade**, y compris le paquet PyPI `markdown` importé par `markdown_utils.py:10` — fait mesuré de première main : `tests/unit/argumentation_analysis/utils/core_utils/test_file_utils.py:335` patche `argumentation_analysis.core.utils.file_utils.markdown.markdown`.
-3. **Fossiles et stub** — `error_management.py` (150 l.) est auto-déclaré « simplifiée pour les tests » (`:7`, `:59`) et réussit toute récupération par simulation en dur (`time.sleep(0.001); return True`, `:85-86`, `:103-104`, `:119-120`). Le paquet héberge aussi un **doublon fonctionnel interne** (`run_shell_command` défini deux fois, voir Limites) et un module dont le littéral docstring précède ses imports.
+3. **Fossiles et stub** — `error_management.py` (157 l.) est auto-déclaré « simplifiée pour les tests » (`:7`, `:59`) et réussit toute récupération par simulation en dur (`time.sleep(0.001); return True`, `:85-86`, `:103-104`, `:119-120`). Le paquet héberge aussi un **doublon fonctionnel interne** (`run_shell_command` défini deux fois, voir Limites) et un module dont le littéral docstring précède ses imports.
 
 La frontière avec le **paquet frère `argumentation_analysis/utils/`** (37 entrées à la racine) n'est **pas étanche** : trois noms de modules existent des deux côtés (`path_operations`, `reporting_utils`, `system_utils`), et deux implémentations sont vérifiées dupliquées (`ensure_directory_exists`, `generate_performance_visualizations` — voir Frères et parent). Un comptage par `grep` du nom nu confond donc les deux paquets ; **tous les chiffres de ce README sont résolus par import**, pas par nom de fichier.
 
@@ -21,7 +21,7 @@ La frontière avec le **paquet frère `argumentation_analysis/utils/`** (37 entr
 | `cli_utils` | `cli_utils.py` (290) | vivant ; **5 parseurs actifs** (`:35`, `:87`, `:116`, `:157`, `:246`) + 1 commenté (`:82-86`) ; `DEPRECATED_ORATOR_ALIAS` `:16` |
 | `code_manipulation_utils` | `code_manipulation_utils.py` (100) | vivant, mono-consommateur ; non exporté |
 | `crypto_utils` | `crypto_utils.py` (418) | **vivant, pivot de flotte** ; `FIXED_SALT:30`, `derive_encryption_key:33`, `load_encryption_key:68` |
-| `error_management` | `error_management.py` (150) | **stub test-only** ; `StateManager:8`, `ErrorRecoveryManager:60` ; non exporté |
+| `error_management` | `error_management.py` (157) | **stub test-only** ; `StateManager:8`, `ErrorRecoveryManager:60` ; non exporté |
 | `file_loaders` | `file_loaders.py` (213) | vivant (2 directs + 4 noms via façade) ; `load_json_file:23`, `load_csv_file:150`, `load_document_content:186` |
 | `file_savers` | `file_savers.py` (147) | **aucun consommateur réel** ; `save_json_file:24` ; seul « appel » = commentaires |
 | `file_utils` | `file_utils.py` (51) | **façade vivante**, 0 `def` ; star-imports `:42-45` |
@@ -81,7 +81,7 @@ Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en disti
 
 | Module | Importeur unique |
 |---|---|
-| `error_management` | `tests/.../test_error_management.py:6` (+ la suite colocée `core/utils/tests/test_error_recovery_manager.py`) |
+| `error_management` | `tests/.../test_error_management.py:6` (seul importeur ; la suite colocée, mesurée aveugle, a été retirée le 2026-09-14, #2105) |
 | `file_savers` | `tests/.../test_file_savers.py:8` — les seuls « appels » de production sont **commentés** (`pipelines/analysis_pipeline.py:283-284`) |
 | `file_validation_utils` | `tests/.../test_file_validation_utils.py:8` |
 | `json_utils` | `tests/.../test_json_utils.py:8` |
@@ -113,7 +113,7 @@ Verdict mesuré, en trois régimes nets — **22 modules se partitionnent exacte
 - **Transitifs seulement (2)** — atteints uniquement par la façade : `path_operations` (`sanitize_filename`), `markdown_utils` (`save_markdown_to_html`).
 - **Inertes (8)** — 0 consommateur de production, direct ou transitif : `error_management` (stub), `file_savers`, `file_validation_utils`, `json_utils`, `parsing_utils`, `string_utils`, `system_utils`, `text_utils`.
 
-Autrement dit : **14 modules sur 22 sont réellement atteignables en production**, dont **1 par un import mort** et **2 seulement via une façade de compatibilité**. Les modules inertes sont néanmoins couverts par la suite canonique (374 tests) — ils sont *testés* sans être *appelés*, ce qui est le mode de panne propre à ce paquet : **le vert des tests ne mesure pas l'intégration**.
+Autrement dit : **14 modules sur 22 sont réellement atteignables en production**, dont **1 par un import mort** et **2 seulement via une façade de compatibilité**. Les modules inertes sont néanmoins couverts par la suite canonique (**355** fonctions `test_`, re-mesurées le 2026-09-14 par `ast` ; le relevé du 2026-09-11 annonçait 374, chiffre non reproductible) — ils sont *testés* sans être *appelés*, ce qui est le mode de panne propre à ce paquet : **le vert des tests ne mesure pas l'intégration**.
 
 ## Artefacts et lecteurs
 
@@ -127,17 +127,16 @@ Oui, le paquet écrit et lit des fichiers — mais **presque uniquement par sa m
 
 ## Tests représentatifs
 
-- **Suite canonique** : `tests/unit/argumentation_analysis/utils/core_utils/` — **20 fichiers, 374 fonctions `test_`** (comptées par `ast`). Plus gros contributeurs : `test_file_utils.py` (39), `test_path_operations.py` (32), `test_error_management.py` (31).
+- **Suite canonique** : `tests/unit/argumentation_analysis/utils/core_utils/` — **19 fichiers, 355 fonctions `test_`** (comptées par `ast`, re-mesurées le 2026-09-14 ; le relevé du 2026-09-11 annonçait 20 fichiers / 374 fonctions, non reproductible sur l'arbre). Plus gros contributeurs : `test_file_utils.py` (40), `test_error_management.py` (32), `test_path_operations.py` (32).
 - **Fichier isolé** : `tests/unit/argumentation_analysis/core/utils/test_llm_completion_guard_1929.py` — 6 tests, hors du dossier principal.
 - **Ce que les tests mesurent** : majoritairement le **contrat des feuilles** en isolation (mock, `tmp_path`), pas le chemin réel d'intégration. Le cas d'école est `test_file_utils.py:335` : il patche `file_utils.markdown.markdown`, c'est-à-dire le **nom du paquet PyPI qui a fui** dans la façade — le test épingle un détail d'implémentation de la fuite, pas la façade comme contrat.
 - **Trou de couverture** : `grep -rl "visualization_utils" tests/` = **0 résultat**. Le module n'est couvert par aucun test ; le seul fichier proche (`tests/unit/argumentation_analysis/utils/test_visualization_generator.py`) teste l'implémentation **du paquet frère**, pas celle-ci.
-- **Suite colocée non collectée** : `core/utils/tests/test_error_recovery_manager.py` — 5 fonctions `test_`, **0 `assert`** pour **22 `print`** : vert garanti. `pytest.ini:2` (`testpaths = tests`) fait qu'un `pytest` nu ne la collecte pas. Sa jumelle collectée (`tests/.../test_error_management.py`) porte, elle, de vraies assertions.
-- **20 fichiers de test pour 22 modules** : manquent `visualization_utils` (0 partout) et `llm_completion_guard` (testé ailleurs, dans le dossier `core/utils/`).
+- **Suite colocée retirée le 2026-09-14 (#2105)** : `core/utils/tests/` (3 fichiers) a été supprimé. Sa suite portait 5 fonctions `test_` et **0 `assert`** (22 `print`), n'était pas collectée (`pytest.ini:2`, `testpaths = tests`) et **ne mesurait rien** : sous une mutation du module qui fait rougir la suite canonique (**4 failed**), elle restait **5 passed**. Sa couverture réelle vivait déjà dans `tests/.../test_error_management.py`.
+- **Couverture par fichier** : 19 fichiers de test dans ce dossier (re-mesuré le 2026-09-14) pour 22 modules ; `visualization_utils` reste sans aucune couverture (`grep` = 0) et `llm_completion_guard` est testé hors dossier.
 
 ## Frères et parent
 
 - **Parent** : [`argumentation_analysis/core/`](../README.md) — et ce fichier est le **premier README du paquet lui-même** (aucun `.md` à la racine de `core/utils/` avant lui).
-- **Sous-dossier documenté** : `core/utils/tests/README.md` (suite colocée).
 - **Shim** : `argumentation_analysis/utils/core_utils/` — `__init__.py` de 11 lignes, star-import de `core/utils/` + `DeprecationWarning`. **0 importeur** : la migration vers le chemin canonique est achevée, le shim est resté derrière.
 - **Frère homonyme et collisions vérifiées** : `argumentation_analysis/utils/` — 39 entrées hors `__pycache__` (35 `.py` à la racine, `README.md`, et 3 sous-dossiers : `core_utils/` le shim, `dev_tools/`, `extract_repair/`). Trois noms de modules sont **identiques des deux côtés** (`path_operations.py`, `reporting_utils.py`, `system_utils.py`), et deux implémentations sont **dupliquées mot pour mot dans leur rôle** :
   - `ensure_directory_exists` — `core/utils/filesystem_utils.py:14` vs `argumentation_analysis/utils/system_utils.py:18` ;
@@ -162,9 +161,9 @@ déjà — voir la mesure dans l'item lui-même. Le shim `utils/core_utils/` rel
    **Mesure** : `scan_indexed_surfaces.py --text-file cli_utils.py` **le détecte** (`LEAK line 16, hits=1`) — le terme est un leader déjà présent dans les motifs partagés (`evaluation/leak_patterns.py`, `LEADER_PATTERNS`), donc toute **nouvelle** occurrence serait bloquée par le gate commit (#2014). Le cas est donc **gardé, pas toléré** : ce qui reste ouvert est la ligne préexistante elle-même, pas l'absence de garde. À ne pas confondre avec les noms **absents** des motifs (#2119).
 7. **Façade à fuite de noms** — `file_utils.py:42-45` : quatre star-imports sans `__all__` côté feuilles. Tout nom public des quatre feuilles entre dans l'espace de noms `file_utils`, y compris `markdown` (paquet PyPI) et les constantes `PATH_TYPE_*` de `path_operations`. Fait mesuré : `test_file_utils.py:335` patche `file_utils.markdown.markdown`.
 8. **Effets de bord et coût d'import** — importer `core.utils` (ou n'importe quelle feuille via `__init__`) tire `matplotlib.pyplot`, `pandas`, `httpx`, `cryptography`, `unidecode` ; `file_utils.py:26-35` ajoute un handler de logging et `:49-51` journalise à chaque import.
-9. **Stub silencieusement vert** — `error_management.py` réussit toute récupération (`:85-86`, `:103-104`, `:119-120`) ; sa suite colocée n'asserte rien (0 `assert`, 22 `print`) et n'est pas collectée.
+9. **Stub test-only, à suite double** — `error_management.py` simule toute récupération (`time.sleep(0.001); return True`, `:85-86`, `:103-104`, `:119-120`) et n'a **aucun consommateur de production**. Sa suite colocée (0 `assert`) a été **retirée** le 2026-09-14 (#2105) après mesure de sa cécité ; sa suite canonique, elle, voit les régressions (sous mutation : 4 failed). **Défaut mesuré et corrigé le 2026-09-14** : `recover_from_errors` marquait la **mauvaise** erreur (index de la sous-liste filtrée appliqué à la liste complète) — une erreur *non* récupérable passait pour traitée pendant que la récupérable restait non traitée, et la méthode rendait `True`. Aucune des deux suites ne couvrait ce cas ; sa suite canonique en porte désormais la régression.
 10. **Docstring morte** — `text_utils.py` place ses `import` et `logger = ...` (`:1-4`) **avant** le littéral docstring (`:5-11`) : ce bloc n'est donc pas `__doc__` du module, contrairement à tous ses voisins.
-11. **Documentation contredisant le code** — `core/utils/tests/README.md:46` annonce « 27 fichiers .py » pour le paquet parent ; mesuré : **23 `.py`** à la racine (22 modules + `__init__.py`), +2 dans `tests/`. L'écart n'est expliqué par aucun fichier du dépôt.
+11. **Documentation contredisant le code (close le 2026-09-14)** — le README colocé `core/utils/tests/README.md` annonçait « 27 fichiers .py » pour le paquet parent, mesuré **23 `.py`** à la racine (22 modules + `__init__.py`). Ce README a été **retiré avec la suite aveugle qu'il décrivait** (#2105) : l'écart n'est plus affiché nulle part.
 12. **Modules non exportés** — `code_manipulation_utils`, `error_management`, `llm_completion_guard` ne figurent ni dans les `from . import` (`__init__.py:3-21`) ni dans `__all__` (`:23-43`) : atteignables seulement par chemin explicite, ce qui les rend invisibles à un inventaire dérivé de `dir(core.utils)`.
 
 ---

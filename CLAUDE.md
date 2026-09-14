@@ -246,7 +246,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 ### Key Integration Points
 
 - **Java/JPype**: Tweety logic library accessed via `jpype1`. JVM must be initialized before use (`jvm_setup.py`). Tests marked `@pytest.mark.jpype` or `@pytest.mark.tweety`.
-- **Semantic Kernel**: All agents use SK's kernel for LLM orchestration. Agent plugins loaded via `core/plugin_loader.py`.
+- **Semantic Kernel**: All agents use SK's kernel for LLM orchestration. Agent plugins are loaded via `agents/factory.py` (`AGENT_SPECIALITY_MAP` / `_PLUGIN_REGISTRY`).
 - **Pydantic V2**: Data validation throughout. Recent migration from V1.
 
 ### Entry Points

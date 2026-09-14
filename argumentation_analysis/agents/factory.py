@@ -15,7 +15,6 @@ from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer impor
     ComplexFallacyAnalyzer,
 )
 from .plugins.project_management_plugin import ProjectManagementPlugin
-from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from .utils.tracer import TracedAgent
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,
@@ -46,12 +45,14 @@ _factory_logger = logging.getLogger("AgentFactory")
 
 # `toulmin` is deliberately absent from every speciality (#2145). Its only
 # @kernel_function raises NotImplementedError, so mounting it offers a live
-# agent a tool that cannot do anything but raise — and waste a turn — while the
-# prompt of `agents/tools/analysis/new/semantic_argument_analyzer.py` goes as
-# far as instructing the LLM to call it. The plugin, its registry entry, its
-# raise-pinning test and its benchmark case all stay: what was withdrawn is a
-# *promise*, not a file. `test_toulmin_mount_follows_its_body_2145` couples the
-# two, so implementing the body turns the guard red and forces the re-mount
+# agent a tool that cannot do anything but raise — and waste a turn. The
+# analyzer that mounted it on its own kernel no longer does either: its prompt
+# asks the finetuned model for the Toulmin JSON directly
+# (`test_analyzer_does_not_promise_a_raising_tool_2145`). The plugin, its
+# registry entry, its raise-pinning test and its benchmark case all stay: what
+# was withdrawn is a *promise*, not a file.
+# `test_toulmin_mount_follows_its_body_2145` couples the speciality map to the
+# body, so implementing the body turns the guard red and forces the re-mount
 # decision instead of leaving a comment to rot.
 AGENT_SPECIALITY_MAP = {
     "project_manager": ["narrative_synthesis"],

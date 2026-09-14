@@ -17,6 +17,7 @@ backward compatibility.
 """
 
 import logging
+from dataclasses import replace
 from typing import Dict, Any, List, Optional, Set, Tuple
 
 from argumentation_analysis.core.capability_registry import (
@@ -50,6 +51,72 @@ from argumentation_analysis.orchestration.registry_setup import (  # noqa: F401
 from argumentation_analysis.orchestration.workflows import *  # noqa: F401,F403
 
 logger = logging.getLogger("UnifiedPipeline")
+
+
+def _shield_verdict(state: Any) -> Optional[Dict[str, Any]]:
+    """The AI Shield's verdict for this run, read from the state (#2095 item 5).
+
+    `state.ai_shield_results` was written by `_invoke_ai_shield` and read by
+    nobody in production — the verdict the shield reached never reached the
+    caller, so a `blocked` input was visible only in the log line. This is the
+    reader, and it is READ-ONLY: it never appends, so a shield phase invoked
+    twice in one workflow (e.g. `input_validation` plus `output_filtering`)
+    leaves exactly the entries the invoker wrote. Copying the writer would have
+    doubled them on every run.
+
+    Returns the LATEST entry — entries are appended in run order, so the last
+    one is the verdict the pipeline acted on. None when the shield never ran
+    (phase absent, or skipped for want of a provider).
+    """
+    results = getattr(state, "ai_shield_results", None)
+    if not isinstance(results, list) or not results:
+        return None
+    latest = results[-1]
+    if not isinstance(latest, dict):
+        return None
+    return {
+        "blocked": latest.get("blocked"),
+        "overall_score": latest.get("overall_score"),
+        "reason": latest.get("reason"),
+        "error_types": [
+            layer.get("error_type")
+            for layer in latest.get("layer_results", [])
+            if isinstance(layer, dict) and layer.get("error_type")
+        ],
+    }
+
+
+def _inject_shield_phase(workflow: WorkflowDefinition) -> WorkflowDefinition:
+    """Gate every root of ``workflow`` behind a ``shield`` phase (#896, #2095).
+
+    The barrier is structural, not notional: each ROOT phase (empty
+    ``depends_on``) is copied with ``depends_on=["shield"]``, so the
+    executor's level computation puts ``shield`` alone at level 0 and every
+    original root one level later. A ``blocked`` verdict then reaches the
+    roots through the terminal-dependency skip branch (#2095 item 4). Before
+    this gate the shield was a root sibling — the original roots started in
+    the SAME level, so it "validated input before any LLM call" only in a
+    comment, and a verdict could not stop phases that had already started.
+    Non-roots need no edge: they already wait on a root, which now waits on
+    the shield.
+
+    The phase stays ``optional=True``: without a provider it is SKIPPED, a
+    skip is not terminal, and the roots still run (#2095). Roots are COPIED
+    (``dataclasses.replace``), never mutated — the workflow handed in keeps
+    its own graph, which may be a shared pre-built definition.
+    """
+    builder = WorkflowBuilder("shielded_" + workflow.name)
+    builder.add_phase(
+        name="shield",
+        capability="input_validation",
+        optional=True,
+    )
+    for phase in workflow.phases:
+        if phase.depends_on:
+            builder._phases.append(phase)
+        else:
+            builder._phases.append(replace(phase, depends_on=["shield"]))
+    return builder.build()
 
 
 def _analysis_outcome(phase_results: Dict[str, Any]) -> Dict[str, str]:
@@ -310,16 +377,7 @@ async def run_unified_analysis(
     # any LLM call. The phase is optional and fails gracefully.
     if context and context.get("shield_config"):
         try:
-            builder = WorkflowBuilder("shielded_" + workflow.name)
-            builder.add_phase(
-                name="shield",
-                capability="input_validation",
-                optional=True,
-            )
-            # Copy all original phases after shield
-            for phase in workflow.phases:
-                builder._phases.append(phase)
-            workflow = builder.build()
+            workflow = _inject_shield_phase(workflow)
             logger.info(
                 "Shield phase injected (preset=%s)",
                 context["shield_config"].get("preset"),
@@ -399,6 +457,9 @@ async def run_unified_analysis(
         "capabilities_used": capabilities_used,
         "capabilities_degraded": capabilities_degraded,
         "capabilities_missing": capabilities_missing,
+        # #2095 item 5: the shield's verdict, read from the state instead of
+        # being written and forgotten.
+        "shield_verdict": _shield_verdict(state) if state is not None else None,
     }
 
     # Include state in results if available
