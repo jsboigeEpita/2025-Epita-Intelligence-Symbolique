@@ -17,9 +17,11 @@ Ce paquet fournit les mécanismes pour transformer une flotte d'agents spéciali
 
 Deux approches principales d'orchestration coexistent au sein du système, offrant différents niveaux de flexibilité et de contrôle.
 
-### 2.1. Moteur d'exécution (`pipelines/orchestration/execution/engine.py`)
+### 2.1. Moteur d'exécution (`WorkflowExecutor`, `workflow_dsl.py`)
 
-Cette approche s'appuie sur un moteur d'exécution activement câblé (`analyze_text_orchestrated`) qui distribue les tâches aux agents selon le workflow déclaré. L'ancien doublon `orchestration/engine/` (main_orchestrator/config/strategy) a été supprimé (#1962) — il n'avait aucun appelant en production.
+Le moteur d'exécution des phases est le **`WorkflowExecutor`** (`workflow_dsl.py:356` — « exécute un `WorkflowDefinition` en résolvant les capabilities via un `CapabilityRegistry` »), instancié par `run_unified_analysis()` (`unified_pipeline.py:205`, construction à `:373`). Chaque phase du `WorkflowDSL` est résolue par capability au moment de l'exécution ; bande exécutée : `tests/unit/argumentation_analysis/orchestration/test_dag_parallelism.py` + `test_critical_coverage.py` → 43 passed.
+
+Le sous-paquet `pipelines/orchestration/execution/` (`analyze_text_orchestrated`) **n'est pas ce moteur et n'est pas câblé** : zéro appelant production (grep plein dépôt — seuls sa définition, son ré-export `Engine` et les READMEs de son propre paquet le nomment), et le chemin est refusé en amont — `pipelines/unified_pipeline.py:82` hardcode `ORCHESTRATION_PIPELINE_AVAILABLE = False` et `_run_orchestration_pipeline` (`:278`) lève `RuntimeError` (« Orchestrateurs spécialisés non disponibles » ; refus exécuté, pas lu). L'ancien doublon `orchestration/engine/` (main_orchestrator/config/strategy) a été supprimé (#1962) — il n'avait aucun appelant en production.
 
 ### 2.2. Architecture Hiérarchique (`hierarchical/`)
 
