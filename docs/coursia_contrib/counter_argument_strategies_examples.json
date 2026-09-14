@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "source_module": "argumentation_analysis.agents.core.counter_argument.strategies",
+    "class": "RhetoricalStrategies",
+    "note": "Exemples synthétiques domaine-public. Source de vérité unique partagée entre le notebook counter_argument_strategies.ipynb et la garde round-trip tests/unit/coursia/counter_argument_strategies/. suggest : heuristique de contenu puis table par type d'argument. best_by_type : premier candidat du mapping par type de contre-argument. apply : génération gabarit — le fragment attendu doit apparaître dans le texte généré.",
+    "created_for": "#1961 Phase 5"
+  },
+  "argument_variants": {
+    "base": {
+      "content": "Le télétravail réduit nécessairement la productivité, car l'isolement détruit la concentration.",
+      "premises": ["Le télétravail isole les collaborateurs"],
+      "conclusion": "Le télétravail réduit la productivité",
+      "argument_type": "deductive"
+    },
+    "premise_tous": {
+      "content": "Le télétravail réduit la productivité de toute l'équipe.",
+      "premises": ["Tous les employés perdent leur concentration"],
+      "conclusion": "Le télétravail réduit la productivité",
+      "argument_type": "deductive"
+    },
+    "no_premises": {
+      "content": "Le télétravail réduit la productivité.",
+      "premises": [],
+      "conclusion": "Le télétravail réduit la productivité",
+      "argument_type": "deductive"
+    },
+    "conclusion_toujours": {
+      "content": "Le télétravail réduit toujours la productivité, sans exception.",
+      "premises": ["L'isolement détruit la concentration"],
+      "conclusion": "Le télétravail réduit toujours la productivité",
+      "argument_type": "deductive"
+    }
+  },
+  "suggest": [
+    {"argument_type": "deductive", "content": "Les statistiques montrent une baisse de rendement.", "expected": "STATISTICAL_EVIDENCE", "why": "Le contenu contient « statistiques » — l'heuristique de contenu prime sur le type."},
+    {"argument_type": "deductive", "content": "Les données de l'étude sont claires.", "expected": "STATISTICAL_EVIDENCE", "why": "« données » déclenche la même branche."},
+    {"argument_type": "inductive", "content": "Tous les cas observés convergent.", "expected": "ANALOGICAL_COUNTER", "why": "« tous » déclenche l'analogie AVANT la table par type (inductif aurait donné l'autorité)."},
+    {"argument_type": "deductive", "content": "Chaque équipe réagit de la même façon.", "expected": "ANALOGICAL_COUNTER", "why": "« chaque » comme « tous » : généralisation → contre-analogie."},
+    {"argument_type": "deductive", "content": "Une règle stricte s'impose ici.", "expected": "REDUCTIO_AD_ABSURDUM", "why": "Contenu neutre : la table par type mène — déductif → reductio."},
+    {"argument_type": "inductive", "content": "Une règle stricte s'impose ici.", "expected": "AUTHORITY_APPEAL", "why": "Inductif → appel à l'autorité."},
+    {"argument_type": "abductive", "content": "Une règle stricte s'impose ici.", "expected": "ANALOGICAL_COUNTER", "why": "Abductif → contre-analogie."},
+    {"argument_type": "autre", "content": "Une règle stricte s'impose ici.", "expected": "SOCRATIC_QUESTIONING", "why": "Type inconnu du gabarit : défaut = questionnement socratique."}
+  ],
+  "best_by_type": [
+    {"counter_type": "DIRECT_REFUTATION", "expected": "STATISTICAL_EVIDENCE"},
+    {"counter_type": "COUNTER_EXAMPLE", "expected": "ANALOGICAL_COUNTER"},
+    {"counter_type": "ALTERNATIVE_EXPLANATION", "expected": "ANALOGICAL_COUNTER"},
+    {"counter_type": "PREMISE_CHALLENGE", "expected": "SOCRATIC_QUESTIONING"},
+    {"counter_type": "REDUCTIO_AD_ABSURDUM", "expected": "REDUCTIO_AD_ABSURDUM"}
+  ],
+  "apply": [
+    {"strategy": "SOCRATIC_QUESTIONING", "counter_type": "PREMISE_CHALLENGE", "variant": "premise_tous", "expected_fragment": "no exceptions to", "why": "Prémisse généralisante (« tous ») : le questionnement socratique attaque l'exception."},
+    {"strategy": "SOCRATIC_QUESTIONING", "counter_type": "PREMISE_CHALLENGE", "variant": "base", "expected_fragment": "On what basis do you establish", "why": "Prémisse non généralisante : on demande le fondement."},
+    {"strategy": "SOCRATIC_QUESTIONING", "counter_type": "DIRECT_REFUTATION", "variant": "base", "expected_fragment": "reconcile your conclusion", "why": "Réfutation directe : confronter la conclusion aux cas documentés."},
+    {"strategy": "SOCRATIC_QUESTIONING", "counter_type": "COUNTER_EXAMPLE", "variant": "no_premises", "expected_fragment": "What evidence supports this claim?", "why": "Aucune prémisse : la question porte sur la preuve de l'affirmation."},
+    {"strategy": "REDUCTIO_AD_ABSURDUM", "counter_type": "REDUCTIO_AD_ABSURDUM", "variant": "conclusion_toujours", "expected_fragment": "we should also accept", "why": "Conclusion universaliste (« toujours ») : l'absurde s'enchaîne."},
+    {"strategy": "STATISTICAL_EVIDENCE", "counter_type": "DIRECT_REFUTATION", "variant": "base", "expected_fragment": "[template/placeholder]", "why": "Le gabarit statistique REFUSE d'inventer des chiffres — placeholder explicite, donnée réelle requise."},
+    {"strategy": "AUTHORITY_APPEAL", "counter_type": "PREMISE_CHALLENGE", "variant": "base", "expected_fragment": "questions this premise", "why": "L'autorité attaque la prémisse."},
+    {"strategy": "ANALOGICAL_COUNTER", "counter_type": "COUNTER_EXAMPLE", "variant": "base", "expected_fragment": "similar to saying", "why": "Contre-exemple par analogie."}
+  ]
+}
