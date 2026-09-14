@@ -32,6 +32,14 @@ except ImportError:
     logger.debug("pyvis not available, visualization disabled")
 
 
+def _validity_label(value: Optional[bool]) -> str:
+    """Render a tri-state validity for display: `None` is « unknown », never
+    « invalid » — same contrast `Belief.__str__` already draws (#2094)."""
+    if value is None:
+        return "unknown"
+    return "valid" if value else "invalid"
+
+
 class Belief:
     """A named belief with tri-state truth value and justification support."""
 
@@ -156,14 +164,36 @@ class JTMS:
             self.beliefs[name] = belief
 
     def remove_belief(self, belief_name: str):
-        """Remove a belief and clean up its implications."""
+        """Remove a belief and tear down every justification touching it.
+
+        Both directions are detached (#2094): justifications concluding toward
+        the removed belief leave their premises' `implications`, and
+        justifications where the removed belief was a premise leave both the
+        conclusion's `justifications` and the co-premises' `implications`.
+        A dangling reference would let a later propagation walk — and trace
+        (#2094: `_retraction_trace`) — a conclusion that no longer exists.
+        """
         if belief_name not in self.beliefs:
             raise KeyError(f"Unknown belief: {belief_name}")
 
-        for justification in self.beliefs[belief_name].implications:
-            self.beliefs[repr(justification.conclusion)].remove_justification(
-                justification
-            )
+        belief = self.beliefs[belief_name]
+
+        # Justifications concluding toward the removed belief: premises keep
+        # no reference to a vanished conclusion.
+        for justification in belief.justifications:
+            for premise in justification.in_list + justification.out_list:
+                if premise is not belief and justification in premise.implications:
+                    premise.remove_implication(justification)
+
+        # Justifications where the removed belief is a premise: tear the rule
+        # down completely — from the conclusion AND from the co-premises.
+        for justification in list(belief.implications):
+            conclusion = justification.conclusion
+            if justification in conclusion.justifications:
+                conclusion.remove_justification(justification)
+            for premise in justification.in_list + justification.out_list:
+                if premise is not belief and justification in premise.implications:
+                    premise.remove_implication(justification)
 
         self.beliefs.pop(belief_name)
 
@@ -260,22 +290,25 @@ class JTMS:
 
         explanations = []
         for j in belief.justifications:
-            in_status = [
-                f"{b.name} ({'valid' if b.valid else 'invalid'})" for b in j.in_list
-            ]
-            out_status = [
-                f"{b.name} ({'valid' if b.valid else 'invalid'})" for b in j.out_list
-            ]
+            in_status = [f"{b.name} ({_validity_label(b.valid)})" for b in j.in_list]
+            out_status = [f"{b.name} ({_validity_label(b.valid)})" for b in j.out_list]
 
             valid = all(b.valid for b in j.in_list) and all(
                 not b.valid for b in j.out_list
             )
+            # Tri-state verdict: an indeterminate premise makes the
+            # justification « Unknown », only a refuting premise makes it
+            # « Invalid » (#2094).
+            refuted = any(b.valid is False for b in j.in_list) or any(
+                b.valid is True for b in j.out_list
+            )
+            result = "Valid" if valid else ("Invalid" if refuted else "Unknown")
 
             block = (
                 f"Justification:\n"
                 f"  IN: {', '.join(in_status) or '-'}\n"
                 f"  OUT: {', '.join(out_status) or '-'}\n"
-                f"  Result: {'Valid' if valid else 'Invalid'}\n"
+                f"  Result: {result}\n"
             )
             explanations.append(block)
 
@@ -291,9 +324,16 @@ class JTMS:
         net.barnes_hut()
 
         for belief in self.beliefs.values():
-            color = (
-                "orange" if belief.non_monotonic else "green" if belief.valid else "red"
-            )
+            # Tri-state color: `None` (indeterminate) is grey, never red —
+            # same display fix as explain_belief (#2094).
+            if belief.non_monotonic:
+                color = "orange"
+            elif belief.valid is True:
+                color = "green"
+            elif belief.valid is False:
+                color = "red"
+            else:
+                color = "grey"
             explanation = self.explain_belief(belief.name)
             net.add_node(belief.name, label=belief.name, color=color, title=explanation)
 

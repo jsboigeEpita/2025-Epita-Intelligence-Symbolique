@@ -90,12 +90,24 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
 
 ## Limites connues
 
-- Affichage tri-état incohérent : `jtms_core.py:264,267` rendent
-  `'valid' if b.valid else 'invalid'` — une croyance de validité `None`
-  (indéterminée) s'affiche « invalid ».
-- `JTMS.remove_belief` (`jtms_core.py:158-169`) nettoie les implications de
-  la croyance retirée mais pas les justifications qui la concluaient : les
-  croyances prémisses conservent dans leurs `implications` des références
-  vers une conclusion disparue.
-- L'ATMS ne re-propage pas les labels après retrait d'une hypothèse — les
-  environnements listés peuvent devenir périmés jusqu'à recalcul explicite.
+- Contrat ATMS (**décision documentée**, #2094 — la phrase originale « l'ATMS
+  ne re-propage pas les labels après retrait d'une hypothèse » décrivait une
+  opération qui n'existe pas) : les labels ne sont calculés qu'à l'insertion
+  d'une justification (`add_justification`) et ne sont retirés que par un
+  `invalidate_environment` explicite. Il n'existe ni API de retrait
+  d'hypothèse ni re-propagation. `invalidate_environment` retire l'env et ses
+  sur-ensembles de **tous** les nœuds, `⊥` compris : un nogood n'est pas
+  mémorisé (`is_consistent(nogood)` redevient vrai), et invalider le
+  singleton d'une hypothèse la rend sous-dérivable (son propre label est
+  retiré et rien ne le ressème). C'est pourquoi `hypothesis_tracker.py` tient
+  son propre registre (`_contradicted_by`). Épinglé par
+  `tests/property/test_atms_invariants.py` (stabilité des labels hors
+  insertion ; oubli du nogood par `⊥`).
+- Corrigé (#2094) — affichage tri-état : `explain_belief` et `visualize`
+  rendent désormais `None` comme indéterminé (« unknown » / gris), alignés
+  sur `Belief.__str__` qui rend UNKNOWN.
+- Corrigé (#2094) — `remove_belief` : démontage symétrique — les
+  justifications concluant vers la croyance supprimée quittent les
+  `implications` des prémisses, et celles dont elle était prémisse quittent
+  la conclusion ET les co-prémisses ; une propagation postérieure ne peut
+  plus traverser (ni tracer) une conclusion disparue.

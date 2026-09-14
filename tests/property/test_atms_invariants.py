@@ -5,6 +5,9 @@ Uses hypothesis to randomly generate belief networks and verify universal proper
 2. Environment monotonicity: adding justifications never removes existing environments
 3. Nogood enforcement: after a contradiction, no node has an env containing the nogood
 4. Hypothesis branching: distinct assumption sets produce distinct environment labels
+5. Label stability: without a new justification, no call changes any label (#2094)
+6. Nogood registry quirk: invalidate_environment clears ⊥ too — nogoods are not
+   durably recorded, which is why HypothesisTracker keeps its own registry (#2094)
 """
 
 import pytest
@@ -239,3 +242,58 @@ class TestATMSHypothesisBranching:
         assert len(envs) >= 1
         for env in envs:
             assert any(a in env for a in assumptions)
+
+
+class TestATMSLabelStability:
+    """Contrat documenté (#2094 item 3) : les labels ne changent qu'à
+    l'insertion d'une justification ou sur invalidate_environment explicite.
+
+    L'issue #2094 décrivait « l'ATMS ne re-propage pas les labels après retrait
+    d'une hypothèse » — la re-mesure montre qu'il n'existe NI retrait
+    d'hypothèse NI recalcul dans l'API : cette propriété épingle le contrat
+    réel (stabilité hors insertion) au lieu d'inventer un moteur de
+    re-propagation pour satisfaire la phrase."""
+
+    @given(atms_data=atms_with_envs())
+    @settings(max_examples=30, deadline=2000)
+    @pytest.mark.property
+    def test_labels_frozen_without_new_justification(self, atms_data):
+        atms, assumptions, derived = atms_data
+        if not assumptions:
+            return
+
+        atms.invalidate_environment(frozenset(assumptions[:1]))
+        snapshot = {name: set(node.label) for name, node in atms.nodes.items()}
+
+        # La surface de lecture entière ne re-propage ni ne restaure rien.
+        for name in list(atms.nodes):
+            atms.get_environments(name)
+            atms.explain_node(name)
+        atms.show()
+        atms.is_consistent(frozenset(assumptions))
+        atms.get_assumptions()
+
+        after = {name: set(node.label) for name, node in atms.nodes.items()}
+        assert snapshot == after
+
+
+class TestATMSNogoodRegistryQuirk:
+    """Épingle de décision (#2094 item 3) : invalidate_environment retire
+    l'environnement de TOUS les nœuds, ⊥ compris — le nogood n'est PAS
+    mémorisé par ⊥, et is_consistent(nogood) redevient vrai.
+
+    C'est la raison pour laquelle hypothesis_tracker.py tient son propre
+    registre (_contradicted_by) au lieu de lire ⊥. Rendre les nogoods durables
+    est une décision sémantique consciente : si ce test rougit, c'est qu'elle
+    a été prise — relire les consommateurs (hypothesis_tracker, multi-context)
+    avant de merger."""
+
+    def test_contradiction_node_forgets_the_nogood(self):
+        atms = ATMS()
+        atms.add_assumption("a")
+        atms.add_assumption("b")
+        atms.add_justification(["a", "b"], [], CONTRADICTION_SYMBOL)
+
+        nogood = frozenset({"a", "b"})
+        assert atms.get_environments(CONTRADICTION_SYMBOL) == set()
+        assert atms.is_consistent(nogood) is True
