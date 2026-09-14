@@ -176,3 +176,23 @@ class TestErrorRecoveryManager:
         sm.get_errors()[0]["handled"] = True
         result = erm.recover_from_errors()
         assert result is True
+
+    def test_recover_marks_the_right_error_when_unrecoverable_precedes_it(
+        self, erm, sm
+    ):
+        # Regression (found 2026-09-14): recover_from_errors() iterated the
+        # FILTERED sublist from get_recoverable_errors() but handed its index to
+        # mark_error_as_handled(), which indexes state["errors"] — so with an
+        # unrecoverable error first, the unrecoverable one was flagged handled,
+        # the recoverable one never was, and the method still returned True.
+        # No prior case placed an unrecoverable error before a recoverable one.
+        sm.add_error("fatal", "crash", recoverable=False)
+        sm.add_error("network", "Connection timeout", recoverable=True)
+        assert erm.recover_from_errors() is True
+        errors = sm.get_errors()
+        assert (
+            errors[0].get("handled") is None
+        ), "unrecoverable error must not be marked handled"
+        assert (
+            errors[1]["handled"] is True
+        ), "the recoverable error is the one that was handled"

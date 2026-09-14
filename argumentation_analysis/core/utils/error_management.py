@@ -136,15 +136,22 @@ class ErrorRecoveryManager:
             print("Aucune erreur récupérable à traiter.")
             return True
 
+        # mark_error_as_handled() indexes state["errors"], NOT the filtered
+        # sublist: iterating `recoverable_errors` made the sublist index mark
+        # the wrong error as soon as an unrecoverable one preceded a recoverable
+        # one — the unrecoverable error was flagged handled, the recoverable one
+        # stayed unhandled, and this method still returned True (2026-09-14).
+        all_errors = self.state_manager.get_errors()
         success = True
-        for i, error in enumerate(recoverable_errors):
-            if not error.get("handled", False):
-                print(
-                    f"Tentative de récupération de l'erreur {i}: {error['type']} - {error['message']}"
-                )
-                if self.handle_error(error):
-                    self.state_manager.mark_error_as_handled(i)
-                else:
-                    success = False
+        for index, error in enumerate(all_errors):
+            if not error.get("recoverable", True) or error.get("handled", False):
+                continue
+            print(
+                f"Tentative de récupération de l'erreur {index}: {error['type']} - {error['message']}"
+            )
+            if self.handle_error(error):
+                self.state_manager.mark_error_as_handled(index)
+            else:
+                success = False
 
         return success

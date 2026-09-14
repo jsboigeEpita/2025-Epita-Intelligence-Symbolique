@@ -528,7 +528,24 @@ class WorkflowExecutor:
                             for name in terminal_dependencies
                             if results[name].status != PhaseStatus.FAILED
                         )
-                        if succeeded_deps and not failed_deps:
+                        # #2095: a shield `blocked` verdict is a THIRD sense on
+                        # this line. It is a terminal COMPLETED dependency like
+                        # the #1909 stop, so without this branch it would be
+                        # reported with the "non-argumentative input" wording —
+                        # a log that names the wrong reason.
+                        shield_blocked_deps = sorted(
+                            name
+                            for name in succeeded_deps
+                            if self._terminal_verdict(results[name].output)
+                        )
+                        if shield_blocked_deps:
+                            reason = (
+                                "Blocked by shield verdict: "
+                                + ", ".join(shield_blocked_deps)
+                                + " refused the input (#2095); descendants must "
+                                "not consume it."
+                            )
+                        elif succeeded_deps and not failed_deps:
                             reason = (
                                 "Skipped: non-argumentative input — "
                                 + ", ".join(succeeded_deps)
@@ -708,6 +725,25 @@ class WorkflowExecutor:
             if argument_count == 0:
                 return "non_argumentative"
         return None
+
+    @staticmethod
+    def _terminal_verdict(output: Any) -> bool:
+        """True when a COMPLETED phase carries a semantic stop (#2095).
+
+        The AI Shield's `blocked` verdict must stop its descendants: they would
+        otherwise consume an input the shield refused. `optional=True` on the
+        shield phase means "no provider → skip gracefully" — that path returns
+        SKIPPED and never reaches here — and a fail-open layer error yields
+        `blocked=False`, so a missing provider is never confused with a
+        negative verdict.
+
+        Keyed on the `blocked` key rather than on the capability name: measured
+        2026-09-14, this key has exactly ONE producer FUNCTION in the tree
+        (`invoke_callables._invoke_ai_shield`, 4 return sites), so a capability
+        list here would be a second declaration of the same fact — and two
+        declarations drift.
+        """
+        return isinstance(output, dict) and output.get("blocked") is True
 
     async def _invoke_with_retry(
         self,
@@ -946,6 +982,9 @@ class WorkflowExecutor:
                     output=output,
                     duration_seconds=duration,
                     attempts=attempts,
+                    # #2095: a shield `blocked` verdict is a semantic stop, not
+                    # an ordinary success — descendants must not run.
+                    terminal=self._terminal_verdict(output),
                 ),
                 output,
             )

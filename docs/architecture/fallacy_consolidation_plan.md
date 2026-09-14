@@ -252,15 +252,15 @@ Composants transverses utilisés par différentes architectures.
 
 ### 5.1. Plugins Sémantiques Modulaires ("Guide-Explore-Synthesize")
 
-*   **Chemin :** `argumentation_analysis/plugins/GuidingPlugin/`
+*   **Chemin :** `docs/archives/plugins_overflow/GuidingPlugin/`
 *   **Rôle :** Plugin de triage pour identifier les axes d'analyse.
 *   **Action :** Conserver comme un **Plugin Standard** de planification avancée. À intégrer dans le catalogue de stratégies du planificateur.
 
-*   **Chemin :** `argumentation_analysis/plugins/ExplorationPlugin/`
+*   **Chemin :** `docs/archives/plugins_overflow/ExplorationPlugin/`
 *   **Rôle :** Plugin d'analyse ciblée sur une catégorie de sophisme.
 *   **Action :** Conserver comme un **Plugin Standard** fondamental. Le planificateur doit pouvoir l'invoquer dynamiquement.
 
-*   **Chemin :** `argumentation_analysis/plugins/SynthesisPlugin/`
+*   **Chemin :** `docs/archives/plugins_overflow/SynthesisPlugin/`
 *   **Rôle :** Agrège les résultats des explorations parallèles.
 *   **Action :** Conserver comme un **Plugin Standard** clé pour la convergence des analyses. À généraliser pour pouvoir synthétiser différents types de résultats.
 

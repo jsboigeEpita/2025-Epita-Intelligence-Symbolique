@@ -1,6 +1,6 @@
-# `argumentation_analysis/plugins/analysis_tools/` — façade d'orchestration rhétorique **non-Semantic-Kernel**, ses six moteurs « Enhanced » et une surface déclarative inerte
+# `argumentation_analysis/plugins/analysis_tools/` — façade d'orchestration rhétorique **non-Semantic-Kernel** et ses six moteurs « Enhanced »
 
-Façade Python ordinaire (`plugin.py`) plus six moteurs métier : **13 `.py`, 5 498 lignes** en récursif, dont **zéro `@kernel_function`** (AST sur les 13 fichiers, pas `grep`). Le nom dit « plugin » et `manifest.json` déclare trois capacités, mais le paquet n'est montable sur aucun kernel : il est appelé comme un objet Python. La façade est atteinte par **deux chaînes** seulement ; `manifest.json` est rejeté par le seul lecteur de son format, et **20 des 33 tests in-package échouent au *setup***.
+Façade Python ordinaire (`plugin.py`) plus six moteurs métier : **13 `.py`, 5 498 lignes** en récursif, dont **zéro `@kernel_function`** (AST sur les 13 fichiers, pas `grep`). Le nom dit « plugin », mais le paquet n'est montable sur aucun kernel : il est appelé comme un objet Python. La façade est atteinte par **deux chaînes** seulement ; le descripteur `manifest.json` qui déclarait trois capacités a été **retiré** (#2145 — rejeté par le seul lecteur de son format, lui-même sans appelant de production, voir *Limites connues* §2), et **20 des 33 tests in-package échouent au *setup***.
 
 > Le titre historiquement associé à ce paquet (« façade SK ») est faux par construction : `@kernel_function` = **0/13 fichiers**. Deux des trois méthodes publiques de la façade ont un corps vide (`pass`), et **trois moteurs refusent la construction sans argument** — vérifié à l'exécution, pas seulement au graphe d'appels.
 
@@ -21,7 +21,7 @@ Façade Python ordinaire (`plugin.py`) plus six moteurs métier : **13 `.py`, 5 
 
 | Portée | Contenu | Lignes |
 |---|---|---|
-| Direct | `__init__.py` (**0 octet**), `plugin.py` (127), `manifest.json` (1 203 o) | 127 |
+| Direct | `__init__.py` (**0 octet**), `plugin.py` (127) | 127 |
 | `logic/` | `__init__.py` (24) + 6 moteurs (4 571) | **4 595** |
 | `tests/` | `__init__.py` (0 o) + 3 fichiers | 776 |
 | **Récursif** | 13 `.py` | **5 498** |
@@ -58,7 +58,6 @@ Façade Python ordinaire (`plugin.py`) plus six moteurs métier : **13 `.py`, 5 
 | Façade (chemin nominal) | `argumentation_analysis.plugins.analysis_tools.plugin.AnalysisToolsPlugin` | construite par 3 sites de production (`pipelines/unified_text_analysis.py:249`, `rhetorical_tools_adapter.py:72`, `pipelines/advanced_rhetoric.py:60`) |
 | Moteurs en direct | `…analysis_tools.logic.contextual_fallacy_analyzer` / `.fallacy_severity_evaluator` | `services/web_api/services/fallacy_service.py:16-20` — **contourne la façade** |
 | Export paquet | `…analysis_tools.logic` (`__init__.py:11-24`) | 6 noms |
-| Descripteur | `analysis_tools/manifest.json` | **aucun lecteur valide** |
 | `__main__` de démonstration | `logic/complex_fallacy_analyzer.py:1580`, `contextual_fallacy_analyzer.py:951`, `fallacy_severity_evaluator.py:433`, `rhetorical_result_visualizer.py:533` | 4 blocs gardés — **2 sont cassés** (voir *Limites connues* §1) |
 
 **Aucune entrée de registre de capacités, aucune entrée HTTP, aucune entrée CLI.** Mesuré sur les deux surfaces d'enregistrement : `orchestration/registry_setup.py` **ne contient aucune occurrence** de `analysis_tools` (la seule ligne proche, `:726`, est une description « rhetorical register » sans rapport) ; `agents/factory.py` `_PLUGIN_REGISTRY:73-104` ne le liste pas. Un composant peut donc être importable **et** invisible du registre — c'est ici le régime exact.
@@ -98,12 +97,11 @@ La façade est donc vivante par **deux** chaînes, pas quatre ; `advanced_rhetor
 | 6 moteurs `logic/` | **vivants** (les 6 sont importables ; 4 sont réellement exercés via la façade, 2 seulement par import direct) | `logic/__init__.py:11-15` |
 | `evaluate_argument_list`, `generate_visual_report` | **déclarés, corps vide** | `plugin.py:110-114`, `:120-127` |
 | `self.visualizer` | **champ mort** | `plugin.py:53` — instancié, jamais lu hors des deux `pass` |
-| `manifest.json` | **inerte, rejeté par son lecteur** | `§ Limites 2` |
 | `analysis_tools/__init__.py` | **vide** | 0 octet |
 | `tests/` in-package | **cassé (20/33 en ERROR au setup)** | `§ Tests` |
 | Chaînes `advanced_rhetoric` / `advanced_analyzer` | **mortes** | `§ Amont / aval` |
 
-Le cas le plus net : **le descripteur dit trois capacités, le code en tient une.** Un consommateur qui se fierait à `manifest.json` obtiendrait `None` là où il attend un `Dict`, pour deux des trois entrées. **Relevé, non corrigé.**
+Le cas le plus net restait descriptif : **le descripteur disait trois capacités, le code en tenait une** — un consommateur qui s'y serait fié aurait obtenu `None` là où il attendait un `Dict`, pour deux des trois entrées. Le descripteur est retiré (#2145) ; les deux corps vides restent (§3).
 
 ---
 
@@ -119,7 +117,7 @@ Le cas le plus net : **le descripteur dit trois capacités, le code en tient une
 
 Le HTML embarque `<script src='https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js'>` (`:444`) : l'artefact **dépend d'un CDN à l'ouverture**. `<racine>` est bien la racine du dépôt, pas le parent du paquet — `parent_dir = current_dir.parent.parent.parent.parent` (`:24-25`) remonte 4 niveaux depuis `logic/`.
 
-**Lecteurs.** `docs/technical/complex_fallacy_analyzer.md` (documente le moteur principal, cite `logic/complex_fallacy_analyzer.py` comme source de vérité) ; `logic/README.md` et `tests/README.md` dans l'arbre. **Aucun lecteur du `manifest.json`.** Le paquet **ne lit** ni n'écrit aucun fichier de données du dépôt : ses seules écritures sont les images/HTML ci-dessus.
+**Lecteurs.** `docs/technical/complex_fallacy_analyzer.md` (documente le moteur principal, cite `logic/complex_fallacy_analyzer.py` comme source de vérité) ; `logic/README.md` et `tests/README.md` dans l'arbre. Le paquet **ne lit** ni n'écrit aucun fichier de données du dépôt : ses seules écritures sont les images/HTML ci-dessus (l'ancien `manifest.json`, sans lecteur, est retiré).
 
 ---
 
@@ -145,9 +143,9 @@ La suite in-package `argumentation_analysis/plugins/analysis_tools/tests/` (3 fi
 ## Frères et parent
 
 - **Parent** : `argumentation_analysis/plugins/` — README présent sur cette branche (`docs/readme/2088-parents`, non suivi), qui recense 36 `.py` / 12 609 l. récursif et mentionne explicitement `analysis_tools/` comme l'un de ses deux sous-paquets à fiche propre. Ce paquet ne figure dans **aucune** des deux surfaces d'enregistrement du parent (`agents/factory.py:73-104`, `orchestration/registry_setup.py`) : **invisible du registre de capacités**.
-- **Frères directs, mesurés** : `semantic_kernel/` (1 module `jtms_plugin.py`, **5 `@kernel_function`** vérifiés AST, monté sur route API dédiée — l'anti-modèle exact de `analysis_tools`) et trois répertoires de **prompts SK natifs sans aucun `.py`** : `ExplorationPlugin/Explore/`, `GuidingPlugin/GuidingPlugin/`, `SynthesisPlugin/Synthesize/` (chacun `config.json` + `skprompt.txt`).
+- **Frères directs, mesurés** : `semantic_kernel/` (1 module `jtms_plugin.py`, **5 `@kernel_function`** vérifiés AST, monté sur route API dédiée — l'anti-modèle exact de `analysis_tools`). Les trois répertoires de prompts SK natifs (`ExplorationPlugin/Explore/`, `GuidingPlugin/GuidingPlugin/`, `SynthesisPlugin/Synthesize/`) ont été **archivés** vers `docs/archives/plugins_overflow/` (#2145, précédent #321).
 - **Frères structurels** (mêmes rôles, autre arbre) : `argumentation_analysis/agents/tools/analysis/` — versions **non** « Enhanced ». Toute affirmation « le `ContextualFallacyAnalyzer` est consommé par X » doit qualifier l'arbre.
-- **Faux frère** : `agents/core/plugin_loader.py` (`PluginLoader`) — c'est lui, et lui seul, qui cherche le format `manifest.json` ; son homonyme `plugin_framework/core/plugins/plugin_loader.py:33` cherche un autre nom de fichier (`plugin_manifest.json`).
+- **Faux frère retiré** : l'ancien `agents/core/plugin_loader.py` (`PluginLoader`) — seul lecteur du format `manifest.json`, sans appelant de production — a été **retiré** (#2145) en même temps que le descripteur. Son homonyme `plugin_framework/core/plugins/plugin_loader.py:33` cherche un autre nom de fichier (`plugin_manifest.json`).
 
 ---
 
@@ -159,8 +157,8 @@ la suite n'est pas « non collectée », elle est **collectée et cassée** (13 
 Les items **2, 3, 4, 7, 9** restent locaux.
 
 1. **Trois chemins de construction sans argument sont cassés** — mesuré à l'exécution, pas déduit : `EnhancedContextualFallacyAnalyzer()` → `TypeError: missing 1 required positional argument: 'fallacy_detector'`. Sites : `logic/contextual_fallacy_analyzer.py:952` (`__main__`), `logic/complex_fallacy_analyzer.py:1581` (`__main__`), et **`logic/rhetorical_result_analyzer.py:201-203`** où le repli `complex_fallacy_analyzer or EnhancedComplexFallacyAnalyzer()` reproduit l'erreur — `EnhancedRhetoricalResultAnalyzer()` sans argument lève également. Le seul moteur constructible sans dépendance est `EnhancedFallacySeverityEvaluator` (`:36`). **Relevé, non corrigé.**
-2. **`manifest.json` est rejeté par le seul lecteur de son format.** `agents/core/plugin_loader.py:67` exige `name`, `entrypoint_module`, `entrypoint_class` ; le descripteur porte `entry_point` (un **fichier** : `"plugin.py"`) et **aucun** des deux derniers → `PluginManifestError` (`:70-72`). Ce lecteur n'a lui-même **aucun appelant de production** (seulement `tests/unit/argumentation_analysis/agents/core/test_plugin_loader.py`). Inerte par les deux bouts.
-3. **Deux capacités déclarées sans corps** : `evaluate_argument_list` (`plugin.py:110-114`) et `generate_visual_report` (`:120-127`), toutes deux annoncées dans `manifest.json`.
+2. ~~**`manifest.json` est rejeté par le seul lecteur de son format.**~~ → **CORRIGÉ par retrait (#2145)** : le descripteur **et** son seul lecteur possible (`agents/core/plugin_loader.py`, 0 appelant de production) ont été retirés ensemble. La voie était inerte par les deux bouts — inutile de réparer un format que personne ne lit.
+3. **Deux capacités déclarées sans corps** : `evaluate_argument_list` (`plugin.py:110-114`) et `generate_visual_report` (`:120-127`) — autrefois annoncées dans le `manifest.json` retiré, désormais visibles seulement à la lecture de la classe.
 4. **`self.visualizer` mort** (`plugin.py:53`) : le producteur de **tous** les artefacts du paquet n'est jamais appelé par la façade, qui ne sait donc produire aucune visualisation.
 5. **Chargement NLP désactivé** (`plugin.py:39`, ligne commentée) et `load_models_sync` (`nlp_model_manager.py:82`) sans **aucun appelant** dans le dépôt : `nlp_model_manager.get_model:134` retourne structurellement `None` + *warning* (`:144-149`). Le singleton est importé (`plugin.py:21`) mais jamais utilisé.
 6. **Un call-site de production lève et l'erreur est avalée.** `educational_showcase_system.py:356` construit `EnhancedContextualFallacyAnalyzer()` sans détecteur dans un `try` (`:345`) dont l'`except Exception` (`:413-415`) journalise et `return False` : l'agent rhétorique n'est **jamais** créé et l'échec est silencieux pour l'appelant.
@@ -173,3 +171,7 @@ Les items **2, 3, 4, 7, 9** restent locaux.
 ---
 
 *Fiche produite le **2026-09-11** sur la branche `docs/readme/2088-parents` (aucun changement de branche), par mesure directe : AST Python sur les 13 `.py` du sous-paquet, `git grep` sur les fichiers suivis, lecture des call-sites un par un, et deux exécutions pytest (`--collect-only` puis run réel, avec et sans `--disable-jvm-session`). La fiche de départ a été traitée comme une hypothèse et non comme une source : ses affirmations réfutées sont listées dans le rapport de tâche, non reprises ici. **Aucun fichier du dépôt modifié hors ce README** — ni `git add`, ni commit.*
+
+---
+
+*Révision — 2026-09-14, `#2145` (grain finition). `manifest.json` retiré avec son chargeur (`agents/core/plugin_loader.py`, 0 appelant de production) : lignes du descripteur supprimées des tables, limite §2 marquée corrigée par retrait, frères SK archivés vers `docs/archives/plugins_overflow/` (précédent #321). Compteurs `.py` inchangés (le descripteur n'était pas un `.py`). Les trois moteurs et la façade ne sont pas touchés.*

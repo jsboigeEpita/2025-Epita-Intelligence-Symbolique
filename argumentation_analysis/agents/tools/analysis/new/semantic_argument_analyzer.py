@@ -5,7 +5,6 @@ from openai import AsyncOpenAI
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import KernelArguments
 from argumentation_analysis.core.models.toulmin_model import ToulminAnalysisResult
-from argumentation_analysis.plugins.toulmin_plugin import ToulminPlugin
 
 
 class SemanticArgumentAnalyzer:
@@ -22,12 +21,22 @@ class SemanticArgumentAnalyzer:
         # Migration API Semantic Kernel: add_chat_service -> add_service
         service = OpenAIChatCompletion(ai_model_id=model_name, async_client=client)
         self.kernel.add_service(service)
-        self.kernel.add_plugin(ToulminPlugin(), plugin_name="Toulmin")
 
+        # No plugin detour (#2145): ToulminPlugin's only function raises
+        # NotImplementedError, so ordering the LLM to call it could only
+        # burn a turn. The finetuned model produces the Toulmin JSON itself;
+        # `run()` parses it into ToulminAnalysisResult.
         self.prompt_function = self.kernel.add_function(
             function_name="toulmin_analysis",
             plugin_name="ToulminOrchestrator",
-            prompt="Analyse le texte suivant et utilise l'outil 'Toulmin.analyze_argument' pour extraire les composants.\nTexte : {{$input}}",
+            prompt=(
+                "Analyse le texte suivant selon le modèle argumentatif de Toulmin. "
+                "Extrais les composants (claim, data, warrant, et si présents "
+                "backing, qualifier, rebuttal) avec, pour chacun, le texte, un "
+                "score de confiance et les indices des phrases d'origine. "
+                "Réponds uniquement en JSON conforme au modèle ToulminAnalysisResult.\n"
+                "Texte : {{$input}}"
+            ),
         )
 
     async def run(self, argument_text: str) -> ToulminAnalysisResult:
