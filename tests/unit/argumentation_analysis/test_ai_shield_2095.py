@@ -376,6 +376,177 @@ class TestBlockedVerdictStopsThePipeline:
         assert spy == ["quality"]
 
 
+# --- item 4, production form: the barrier must exist in the INJECTED workflow ---
+
+# The tests above pin the executor's skip branch on graphs whose shield edge
+# was written by hand. Production never writes that edge by hand: it calls
+# `_inject_shield_phase`, which for a long time appended `shield` as a root
+# SIBLING — same DAG level as the original roots, no `depends_on` edge
+# anywhere — so the terminal verdict was inert outside these tests (R995
+# review). The class below exercises the workflow that function actually
+# returns.
+
+
+def _inject(original: Any) -> Any:
+    """The injector #2095's rework introduces — imported HERE, not at module
+    level, so that on the pre-fix tree the failure is per-test and not a
+    single collection error that would mask which tests measure what."""
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        _inject_shield_phase,
+    )
+
+    return _inject_shield_phase(original)
+
+
+def _multi_root_original() -> Any:
+    """A workflow shaped like production: two independent roots plus a child.
+
+    Every phase is a root or hangs off one — exactly the shape the injector
+    must gate without touching the non-roots.
+    """
+    return (
+        WorkflowBuilder("original_2095")
+        .add_phase("root_a", capability="argument_quality")
+        .add_phase("root_b", capability="adversarial_debate")
+        .add_phase("child", capability="governance_simulation", depends_on=["root_a"])
+        .build()
+    )
+
+
+def _multi_root_registry(shield_output: Any, spy: List[str]) -> Any:
+    async def shield_invoke(text: str, context: Dict[str, Any]) -> Any:
+        spy.append("shield")
+        return shield_output
+
+    async def root_a_invoke(text: str, context: Dict[str, Any]) -> Any:
+        spy.append("root_a")
+        return {"score": 0.5}
+
+    async def root_b_invoke(text: str, context: Dict[str, Any]) -> Any:
+        spy.append("root_b")
+        return {"winner": "root_b"}
+
+    async def child_invoke(text: str, context: Dict[str, Any]) -> Any:
+        spy.append("child")
+        return {"consensus": 0.9}
+
+    registry = CapabilityRegistry()
+    for name, caps, fn in (
+        ("synthetic_shield", ["input_validation"], shield_invoke),
+        ("synthetic_root_a", ["argument_quality"], root_a_invoke),
+        ("synthetic_root_b", ["adversarial_debate"], root_b_invoke),
+        ("synthetic_child", ["governance_simulation"], child_invoke),
+    ):
+        registry.register_agent(
+            name=name,
+            agent_class=type(name, (), {}),
+            capabilities=caps,
+            invoke=fn,
+        )
+    return registry
+
+
+class TestShieldInjectionIsARealBarrier:
+    def test_every_root_is_gated_and_only_the_roots(self) -> None:
+        """The injected workflow carries the edge the old comment only claimed.
+
+        Before the rework the injector appended `shield` beside the roots and
+        said "after shield" in a comment; the DAG contained no such order. The
+        proof is the execution order of the workflow it returns: shield alone
+        at level 0, the original roots one level later.
+        """
+        injected = _inject(_multi_root_original())
+
+        assert injected.get_execution_order() == [
+            ["shield"],
+            ["root_a", "root_b"],
+            ["child"],
+        ]
+        # Non-roots are untouched: they inherit the gate transitively.
+        child = injected.get_phase("child")
+        assert child is not None and child.depends_on == ["root_a"]
+
+    def test_the_original_workflow_is_not_mutated(self) -> None:
+        """The handed-in definition may be shared — gate copies, never writes.
+
+        A mutated original would leak `depends_on=["shield"]` into every later
+        run of a pre-built workflow, even ones that never enable the shield.
+        """
+        original = _multi_root_original()
+        _inject(original)
+
+        for name in ("root_a", "root_b"):
+            phase = original.get_phase(name)
+            assert (
+                phase is not None and phase.depends_on == []
+            ), f"{name} was mutated in place — the injector must copy roots"
+        assert original.get_execution_order() == [["root_a", "root_b"], ["child"]]
+
+    async def test_blocked_verdict_prevents_every_original_root_from_starting(
+        self,
+    ) -> None:
+        """The forbidden continuation, on the workflow production builds.
+
+        Two independent roots, so the assertion is "no root ran", not "the one
+        root I wired didn't". The child must fall with them: it has no
+        substrate once its dependency was skipped.
+        """
+        spy: List[str] = []
+        executor = WorkflowExecutor(_multi_root_registry(SHIELD_BLOCKED_OUTPUT, spy))
+
+        results = await executor.execute(
+            _inject(_multi_root_original()), input_data=SYNTHETIC_INPUT
+        )
+
+        assert results["shield"].status == PhaseStatus.COMPLETED
+        assert results["shield"].terminal is True
+        for name in ("root_a", "root_b", "child"):
+            assert (
+                results[name].status == PhaseStatus.SKIPPED
+            ), f"{name} must not consume an input the shield refused"
+        assert spy == ["shield"]
+
+    async def test_a_clean_verdict_lets_the_injected_roots_run(self) -> None:
+        """Counterweight: the barrier keys on the verdict, not on the phase.
+
+        A shield that ran and passed must leave the gated pipeline running —
+        otherwise enabling the shield would disable the analysis.
+        """
+        spy: List[str] = []
+        executor = WorkflowExecutor(_multi_root_registry(SHIELD_CLEAN_OUTPUT, spy))
+
+        results = await executor.execute(
+            _inject(_multi_root_original()), input_data=SYNTHETIC_INPUT
+        )
+
+        for name in ("shield", "root_a", "root_b", "child"):
+            assert results[name].status == PhaseStatus.COMPLETED
+        assert results["shield"].terminal is False
+        assert sorted(spy) == ["child", "root_a", "root_b", "shield"]
+
+    async def test_a_skipped_shield_lets_the_injected_roots_run(self) -> None:
+        """`optional=True` survives the barrier: no provider is not a verdict.
+
+        This is the DoD's named confusion, now at the injection boundary: the
+        gate must open for a phase that could not run, and only close on one
+        that ran and refused.
+        """
+        spy: List[str] = []
+        registry = _multi_root_registry(SHIELD_BLOCKED_OUTPUT, spy)
+        registry.unregister("synthetic_shield")
+        executor = WorkflowExecutor(registry)
+
+        results = await executor.execute(
+            _inject(_multi_root_original()), input_data=SYNTHETIC_INPUT
+        )
+
+        assert results["shield"].status == PhaseStatus.SKIPPED
+        assert results["shield"].terminal is False
+        for name in ("root_a", "root_b", "child"):
+            assert results[name].status == PhaseStatus.COMPLETED
+        assert "shield" not in spy
+
+
 # --- item 5: the verdict has a reader ---------------------------------------
 
 

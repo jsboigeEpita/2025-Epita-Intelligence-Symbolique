@@ -17,6 +17,7 @@ backward compatibility.
 """
 
 import logging
+from dataclasses import replace
 from typing import Dict, Any, List, Optional, Set, Tuple
 
 from argumentation_analysis.core.capability_registry import (
@@ -83,6 +84,39 @@ def _shield_verdict(state: Any) -> Optional[Dict[str, Any]]:
             if isinstance(layer, dict) and layer.get("error_type")
         ],
     }
+
+
+def _inject_shield_phase(workflow: WorkflowDefinition) -> WorkflowDefinition:
+    """Gate every root of ``workflow`` behind a ``shield`` phase (#896, #2095).
+
+    The barrier is structural, not notional: each ROOT phase (empty
+    ``depends_on``) is copied with ``depends_on=["shield"]``, so the
+    executor's level computation puts ``shield`` alone at level 0 and every
+    original root one level later. A ``blocked`` verdict then reaches the
+    roots through the terminal-dependency skip branch (#2095 item 4). Before
+    this gate the shield was a root sibling — the original roots started in
+    the SAME level, so it "validated input before any LLM call" only in a
+    comment, and a verdict could not stop phases that had already started.
+    Non-roots need no edge: they already wait on a root, which now waits on
+    the shield.
+
+    The phase stays ``optional=True``: without a provider it is SKIPPED, a
+    skip is not terminal, and the roots still run (#2095). Roots are COPIED
+    (``dataclasses.replace``), never mutated — the workflow handed in keeps
+    its own graph, which may be a shared pre-built definition.
+    """
+    builder = WorkflowBuilder("shielded_" + workflow.name)
+    builder.add_phase(
+        name="shield",
+        capability="input_validation",
+        optional=True,
+    )
+    for phase in workflow.phases:
+        if phase.depends_on:
+            builder._phases.append(phase)
+        else:
+            builder._phases.append(replace(phase, depends_on=["shield"]))
+    return builder.build()
 
 
 def _analysis_outcome(phase_results: Dict[str, Any]) -> Dict[str, str]:
@@ -343,16 +377,7 @@ async def run_unified_analysis(
     # any LLM call. The phase is optional and fails gracefully.
     if context and context.get("shield_config"):
         try:
-            builder = WorkflowBuilder("shielded_" + workflow.name)
-            builder.add_phase(
-                name="shield",
-                capability="input_validation",
-                optional=True,
-            )
-            # Copy all original phases after shield
-            for phase in workflow.phases:
-                builder._phases.append(phase)
-            workflow = builder.build()
+            workflow = _inject_shield_phase(workflow)
             logger.info(
                 "Shield phase injected (preset=%s)",
                 context["shield_config"].get("preset"),

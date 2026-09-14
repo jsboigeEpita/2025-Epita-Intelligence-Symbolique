@@ -36,18 +36,18 @@ Activation production : CLI `run_orchestration.py --shield-preset`
 (défaut **`off`** — `run_orchestration.py:180` ; construction du
 `shield_config` seulement si le preset diffère de `off`, `:214-217`), puis
 exécution par `_invoke_ai_shield`
-(`orchestration/invoke_callables.py:10339`). Le bouclier est donc
+(`orchestration/invoke_callables.py:10369`). Le bouclier est donc
 **opt-in**, inactif par défaut.
 
 ## Amont / aval
 
 - **Amont** : `../presets.py` (composition), `../shield.py` (base
-  `ShieldLayer` + agrégation), `orchestration/invoke_callables.py:10339`
+  `ShieldLayer` + agrégation), `orchestration/invoke_callables.py:10369`
   (invocation).
 - **Aval** : résultats agrégés dans `state.ai_shield_results`
   (`core/shared_state.py:613`, append `invoke_callables.py:10439-10440`).
   Depuis #2095 ce champ a un **lecteur de production** :
-  `unified_pipeline._shield_verdict` (`unified_pipeline.py:55`) le relit sans
+  `unified_pipeline._shield_verdict` (`unified_pipeline.py:56`) le relit sans
   jamais y ajouter, et le verdict sort du pipeline sous la clé
   `shield_verdict` (`:437`).
 
@@ -55,7 +55,7 @@ exécution par `_invoke_ai_shield`
 
 | Famille | Statut | Preuve |
 |---|---|---|
-| `HeuristicLayer` | **actif** (opt-in) | composé dans les 3 presets le mobilisant (`presets.py:38,48-49,69-70`), exécution production `_invoke_ai_shield` (`invoke_callables.py:10339`) |
+| `HeuristicLayer` | **actif** (opt-in) | composé dans les 3 presets le mobilisant (`presets.py:38,48-49,69-70`), exécution production `_invoke_ai_shield` (`invoke_callables.py:10369`) |
 | `LLMValidatorLayer` | **actif** (opt-in) | composé dans `advanced` et `strict` (`presets.py:49,70`) ; sans `api_key` il **lève** au lieu de rendre un score (`llm_validator.py:87-91`) — c'est la politique `fail_open` du `Shield` qui décide ensuite (#2095) |
 | `OutputFilterLayer` | **actif** (opt-in) | composé dans `advanced`, `output_only` et `strict` (`presets.py:50,58,71`) |
 
@@ -68,7 +68,7 @@ le défaut `off` fait qu'aucun run standard n'exécute ces couches.
 `Shield` qui agrège ; trace et résultats poussés dans
 `state.ai_shield_results` et l'entrée de trace du pipeline
 (`invoke_callables.py:10439-10449`). Ces mêmes `LayerResult` sont ensuite
-relus par `unified_pipeline._shield_verdict` (`unified_pipeline.py:55`) —
+relus par `unified_pipeline._shield_verdict` (`unified_pipeline.py:56`) —
 en lecture seule.
 
 ## Tests représentatifs
@@ -104,8 +104,12 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
 >   motif.
 > - **Verdict sans effet** : un verdict `blocked` rend la phase **terminale**
 >   (`workflow_dsl.py:987`, helper `:730`) ; les phases dépendantes sont
->   SKIPPED et le motif nomme le bouclier (`:541`), pas la classification
->   #1909 qui emprunte le même chemin.
+>   SKIPPED et le motif nomme le bouclier (`:543`), pas la classification
+>   #1909 qui emprunte le même chemin. Reprise R995 : l'effet est **réel en
+>   production** parce que l'injection barre le DAG — chaque racine du
+>   workflow reçoit `depends_on=["shield"]` (`_inject_shield_phase`,
+>   `unified_pipeline.py:89-119`) ; avant, le bouclier était frère des racines
+>   au niveau 0 et le verdict ne pouvait rien arrêter.
 
 - Repli « propre » sur erreur générique : une exception du validateur LLM
   retourne `score=0.0` (`llm_validator.py:159-165` d'alors) alors que le preset
