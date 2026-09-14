@@ -334,6 +334,12 @@ class OrchestrationValidator:
         """Test 8: Validation des plugins d'orchestration."""
         test_name = "orchestration_plugins"
         try:
+            from argumentation_analysis.core.enquete_states import (
+                EnquetePoliciereState,
+            )
+            from argumentation_analysis.core.logique_complexe_states import (
+                EinsteinsRiddleState,
+            )
             from argumentation_analysis.orchestration.plugins.enquete_state_manager_plugin import (
                 EnqueteStateManagerPlugin,
             )
@@ -341,16 +347,30 @@ class OrchestrationValidator:
                 LogiqueComplexePlugin,
             )
 
-            # Test d'instanciation des plugins
-            enquete_plugin = EnqueteStateManagerPlugin()
-            logique_plugin = LogiqueComplexePlugin()
+            # Both plugins require a real state (#2112) — a bare instantiation
+            # raises TypeError and the test used to swallow it into a
+            # permanent failure the report then contradicted.
+            enquete_plugin = EnqueteStateManagerPlugin(
+                state=EnquetePoliciereState(
+                    description_cas="Cas de validation orchestration",
+                    initial_context={},
+                )
+            )
+            enquete_case = enquete_plugin.get_case_description()
+
+            logique_plugin = LogiqueComplexePlugin(
+                state_instance=EinsteinsRiddleState()
+            )
+            enigme = logique_plugin.get_enigme_description()
 
             self.log_test_result(
                 test_name,
                 True,
                 {
                     "enquete_plugin": True,
+                    "enquete_get_case_description": len(enquete_case) > 0,
                     "logique_complexe_plugin": True,
+                    "logique_get_enigme_description": len(enigme) > 0,
                     "total_plugins": 2,
                 },
             )
@@ -494,40 +514,29 @@ class OrchestrationValidator:
                     f.write(f"- {error}\n")
                 f.write("\n")
 
-            f.write("""## Capacites d'Orchestration Validees
+            # Seuil unique, celui de la console main() : deux surfaces, un verdict.
+            rate = self.results["metrics"]["success_rate"]
+            total = self.results["metrics"]["total_tests"]
+            failed = self.results["metrics"]["failed_tests"]
+            if rate >= 80:
+                verdict = "[OK] VALIDE POUR PRODUCTION"
+                conclusion = (
+                    "L'API Orchestration est fonctionnelle et validee pour "
+                    "l'usage en production (taux de reussite mesure : "
+                    f"{rate:.1f}%)."
+                )
+            else:
+                verdict = (
+                    f"[ATTENTION] VALIDATION INCOMPLETE — {failed} test(s) "
+                    f"en echec sur {total} (taux mesure : {rate:.1f}%)"
+                )
+                conclusion = (
+                    "La validation ne permet PAS de conclure a la disponibilite "
+                    "en production. La section 'Details des Tests' fait foi : "
+                    "chaque [FAIL] y est une mesure, pas une opinion."
+                )
 
-### 1. Orchestrateurs Principaux
-- CluedoExtendedOrchestrator [OK]
-- ServiceManager [OK]  
-- ConversationOrchestrator [OK]
-- GroupChatOrchestrator [OK]
-
-### 2. Orchestration Hierarchique
-- Interfaces Strategic-Tactical [OK]
-- Interfaces Tactical-Operational [OK]
-- Gestionnaires multi-niveaux [OK]
-
-### 3. Adaptateurs d'Agents
-- ExtractAgentAdapter [OK]
-- InformalAgentAdapter [OK]
-- PLAgentAdapter [OK]
-- RhetoricalToolsAdapter [OK]
-
-### 4. Services LLM
-- Creation de service [OK]
-- Mode mock disponible [OK]
-- Configuration automatique [OK]
-
-### 5. Integration JVM
-- Initialisation JVM testee [OK]
-- Gestion des erreurs de version [OK]
-- Degradation gracieuse [OK]
-
-### 6. Plugins d'Orchestration
-- EnqueteStateManagerPlugin [OK]
-- LogiqueComplexePlugin [OK]
-
-## Recommandations
+            f.write(f"""## Recommandations
 
 ### Ameliorations Identifiees
 1. **Version Java**: Mettre a jour le JDK portable vers Java 15+ pour compatibilite Tweety
@@ -543,13 +552,9 @@ class OrchestrationValidator:
 
 ## Conclusion
 
-L'API Orchestration est **fonctionnelle et validee** pour l'usage en production. 
-Tous les composants principaux sont operationnels et l'architecture est solide.
+{conclusion}
 
-Les problèmes identifies sont mineurs et n'empêchent pas le fonctionnement 
-du système d'orchestration multi-agents.
-
-**Statut global**: [OK] VALIDe POUR PRODUCTION
+**Statut global**: {verdict}
 """)
 
         self.logger.info(f"Rapport genere: {report_file}")
