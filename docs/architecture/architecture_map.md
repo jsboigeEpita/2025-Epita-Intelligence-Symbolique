@@ -17,7 +17,7 @@ Le module est organisé en plusieurs répertoires principaux, chacun avec un rô
 
 ## 2. Flux de Travail de l'Orchestration
 
-Le flux de travail est initié par l'entrée CLI `argumentation_analysis/run_orchestration.py` (`--mode pipeline|conversational|hierarchical|cluedo`, `--workflow light|standard|full|collaborative`) ou par l'API REST `api/main.py`. L'exécution est portée par le pipeline unifié (`orchestration/unified_pipeline.py`), dont le moteur d'exécution des phases est `pipelines/orchestration/execution/engine.py` (`analyze_text_orchestrated`).
+Le flux de travail est initié par l'entrée CLI `argumentation_analysis/run_orchestration.py` (`--mode pipeline|conversational|hierarchical|cluedo`, `--workflow light|standard|full|collaborative`) ou par l'API REST `api/main.py`. L'exécution est portée par le pipeline unifié (`orchestration/unified_pipeline.py`), dont le moteur d'exécution des phases est le `WorkflowExecutor` de `orchestration/workflow_dsl.py` (:356), instancié à `orchestration/unified_pipeline.py:306`. Le sous-paquet `pipelines/orchestration/` n'est **pas** ce moteur : il n'a aucun appelant de production et son chemin est refusé (`pipelines/unified_pipeline.py:82`, `ORCHESTRATION_PIPELINE_AVAILABLE = False`).
 
 ### 2.1. Point d'Entrée
 
