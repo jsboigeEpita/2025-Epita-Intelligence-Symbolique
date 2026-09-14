@@ -2,7 +2,7 @@
 
 ## Rôle et frontière
 
-« Guichet de service unique » minimaliste du sous-système `plugin_framework` : route des `OrchestrationRequest` vers les instances de plugins d'un registre. **Seul** le mode `direct_plugin_call` est implémenté (`orchestration_service.py:30-36`) ; tout autre mode reçoit une réponse d'erreur explicite.
+« Guichet de service unique » minimaliste du sous-système `plugin_framework` : route des `OrchestrationRequest` vers les instances de plugins d'un registre. **Seul** le mode `direct_plugin_call` est implémenté (`orchestration_service.py:32`) ; tout autre mode reçoit une réponse d'erreur explicite.
 
 N'est **pas** (trois homonymes à ne pas confondre) :
 
@@ -46,7 +46,7 @@ Aucun — objet purement en mémoire (dict registre), n'écrit rien.
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/test_plugin_framework.py::TestOrchestrationService tests/integration/triage/test_workflow_execution.py -v
 ```
 
-- `TestOrchestrationService` (`test_plugin_framework.py:469`, 10 tests) — routing, erreurs registre/capacité, cibles malformées, exceptions plugin ;
+- `TestOrchestrationService` (`test_plugin_framework.py:465`, 9 tests) — routing, erreurs registre/capacité, cibles malformées, exceptions plugin ;
 - intégration (`test_workflow_execution.py`, registre construit directement) — chaîne réelle avec plugins factices.
 
 ## Frères et parent

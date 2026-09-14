@@ -45,9 +45,9 @@ son script (#2099).
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/test_plugin_framework.py::TestBenchmarkService tests/unit/argumentation_analysis/test_plugin_framework.py::TestTrackTokensDecorator tests/integration/triage/test_workflow_execution.py -v
 ```
 
-- `TestBenchmarkService` (`test_plugin_framework.py:727`, 12 tests) — agrégation, métriques, stats sur réussites ;
-- `TestTrackTokensDecorator` (:583, 7 tests) — décorateur seul (aucun plugin réel décoré) ;
-- `tests/integration/triage/test_workflow_execution.py` (classe :52 ; tests :96, :162, :211) — chaîne réelle registre (construit directement depuis les fixtures) → OrchestrationService → BenchmarkService.
+- `TestBenchmarkService` (`test_plugin_framework.py:715`, 14 tests) — agrégation, métriques, stats sur réussites ;
+- `TestTrackTokensDecorator` (:571, 7 tests) — décorateur seul (aucun plugin réel décoré) ;
+- `tests/integration/triage/test_workflow_execution.py` (classe :50 ; tests :98, :164, :213) — chaîne réelle registre (construit directement depuis les fixtures) → OrchestrationService → BenchmarkService.
 
 ## Frères et parent
 

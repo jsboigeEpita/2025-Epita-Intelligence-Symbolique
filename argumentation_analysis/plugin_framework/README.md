@@ -2,7 +2,7 @@
 
 Ce paquet est une **racine d'assemblage** : plus aucun script, trois sous-arbres
 (`agents/`, `benchmarking/`, `core/`). Mesuré après les retraits #2099/#2102 :
-**14 fichiers `.py`, 1 363 lignes** dans le sous-arbre (aucun `.py` au premier
+**14 fichiers `.py`, 1 365 lignes** dans le sous-arbre (aucun `.py` au premier
 niveau).
 
 **Le mécanisme de découverte de ce paquet est retiré, pas réparé (#2099).** La
@@ -115,7 +115,7 @@ plugin `hello_world/` au runtime) a **disparu avec son script**.
 
 ## Tests représentatifs
 
-**67 tests** sur l'unique fichier de la zone,
+**68 tests** sur l'unique fichier de la zone,
 `tests/unit/argumentation_analysis/test_plugin_framework.py` (`--disable-jvm-session`
 requis, sinon orage de skips #2021) : contrats (`contracts.py`, décorateurs), guichet,
 benchmark, **gardes de retrait et chemin vivant par import direct**. La chaîne

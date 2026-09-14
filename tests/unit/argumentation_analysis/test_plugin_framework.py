@@ -938,3 +938,63 @@ class TestBenchmarkService:
 
         assert all("orphan" not in r.custom_metrics for r in result.results)
         assert "orphan" not in result.aggregated_custom_metrics
+
+    def test_repeated_metric_aggregates_flat_not_list_of_lists(self):
+        """#2102 §4 (review) : une métrique répétée ne devient pas une liste-de-listes.
+
+        Né-rouge exécuté avant le fix : `tokens` enregistré DEUX fois dans le
+        run 1 fait de la valeur du run une liste (`[10, 15]`) ; l'agrégation
+        empilait alors cette liste à côté du scalaire du run 2 →
+        `[[10, 15], 20]`, que le `sum` numérique ne pouvait plus atteindre.
+        L'échec était silencieux : pas d'exception, juste un agrégat faux.
+        """
+        orch = self._make_orchestration_service()
+        calls = [0]
+
+        def handle_with_repeated_metric(req):
+            calls[0] += 1
+            if calls[0] == 1:
+                bench.record_metric("tokens", 10)
+                bench.record_metric("tokens", 15)
+            else:
+                bench.record_metric("tokens", 20)
+            return OrchestrationResponse(status="success", result={})
+
+        orch.handle_request.side_effect = handle_with_repeated_metric
+        bench = BenchmarkService(orch)
+
+        result = bench.run_suite("p", "c", [{"a": 1}, {"a": 2}])
+        aggregate = result.aggregated_custom_metrics["tokens"]
+
+        assert aggregate == 45, (
+            f"L'agrégat d'une métrique répétée doit être plat et sommé, "
+            f"pas une liste-de-listes : {aggregate!r}"
+        )
+
+    def test_out_of_run_metrics_are_really_cleared_not_only_ignored(self):
+        """#2102 §4 (review) : le clearing hors-run est exécuté, pas supposé.
+
+        Le garde voisin prouve la non-attachement et la non-agrégation ; il ne
+        touche pas le tampon lui-même — un orphelin qui y resterait pourrait
+        fuir par un autre chemin. Ici on lit `custom_metrics` après la suite
+        (vidé), et on prouve qu'un orphelin enregistré avant la SECONDE suite
+        n'apparaît dans aucune des deux.
+        """
+        orch = self._make_orchestration_service()
+        orch.handle_request.side_effect = lambda req: OrchestrationResponse(
+            status="success", result={}
+        )
+        bench = BenchmarkService(orch)
+
+        bench.record_metric("orphan_before", 7)
+        bench.run_suite("p", "c", [{"a": 1}])
+        assert bench.custom_metrics == {}, (
+            "Le tampon hors-run doit être vidé au départ de la suite, pas "
+            f"seulement ignoré : {bench.custom_metrics!r}"
+        )
+
+        bench.record_metric("orphan_after", 9)
+        second = bench.run_suite("p", "c", [{"a": 1}])
+        assert "orphan_before" not in second.aggregated_custom_metrics
+        assert "orphan_after" not in second.aggregated_custom_metrics
+        assert bench.custom_metrics == {}

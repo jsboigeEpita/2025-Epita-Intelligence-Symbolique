@@ -1,8 +1,8 @@
 # `plugin_framework/core/` — le carrefour du contrat, sans mécanisme de découverte
 
-Sous-paquet de `plugin_framework/`. **12 fichiers `.py`, 1 203 lignes** dans le sous-arbre
-(3 fichiers / 214 lignes au premier niveau : `contracts.py`, `decorators.py`,
-`interfaces.py`). Il porte les **contrats** (ce qu'est un plugin) — et **plus aucun
+Sous-paquet de `plugin_framework/`. **11 fichiers `.py`, 1 201 lignes** dans le sous-arbre
+(3 fichiers / 214 lignes au premier niveau : `__init__.py`, `contracts.py`,
+`decorators.py`). Il porte les **contrats** (ce qu'est un plugin) — et **plus aucun
 chargeur** : les deux mécanismes de découverte concurrents ont été retirés (#2099),
 aucun n'ayant d'appelant de production.
 

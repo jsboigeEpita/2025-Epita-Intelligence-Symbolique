@@ -140,9 +140,16 @@ class BenchmarkService:
         aggregated_metrics: Dict[str, Any] = {}
         for res in individual_results:
             for key, value in res.custom_metrics.items():
-                if key not in aggregated_metrics:
-                    aggregated_metrics[key] = []
-                aggregated_metrics[key].append(value)
+                bucket = aggregated_metrics.setdefault(key, [])
+                # Une même métrique enregistrée plusieurs fois DANS un run
+                # arrive ici en liste (le run garde ses deux valeurs, #2102 §4) :
+                # l'aplatir, sinon l'agrégat devient une liste-de-listes que le
+                # `sum` numérique ci-dessous ne peut plus atteindre — échec
+                # silencieux, agrégat faux sans exception.
+                if isinstance(value, list):
+                    bucket.extend(value)
+                else:
+                    bucket.append(value)
 
         # Calculer la somme pour les métriques numériques
         for key, values in aggregated_metrics.items():
