@@ -34,7 +34,7 @@ Voir Aval — un JSON de trace optionnel sous `results/` (gitignoré).
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/pipelines/orchestration/execution/test_execution_strategies.py tests/unit/argumentation_analysis/pipelines/test_import_guard_2076.py -v
 ```
 
-32 tests, 6 classes (`TestSelectOrchestrationStrategy` :95, `TestSelectSpecializedOrchestrator` :286, `TestExecuteHierarchicalFull` :388, `TestExecuteSpecializedOrchestration` :464, `TestExecuteFallbackOrchestration` :580, `TestExecuteHybridOrchestration` :630) — 100 % mocks.
+**42 tests exécutés (36 + 6 gardes de cohérence #2109)** : `test_execution_strategies.py`, 6 classes (`TestSelectOrchestrationStrategy` :96, `TestSelectSpecializedOrchestrator` :368, `TestExecuteHierarchicalFull` :470, `TestExecuteSpecializedOrchestration` :546, `TestExecuteFallbackOrchestration` :662, `TestExecuteHybridOrchestration` :712) — 100 % mocks — plus `test_strategy_dispatch_coherence_2109.py` (table `STRATEGY_EXECUTORS` ↔ `DISPATCHABLE_STRATEGIES`).
 
 ## Frères et parent
 
@@ -42,7 +42,6 @@ Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : plus d'`analy
 
 ## Limites connues
 
-- **Dispatch silencieux** : `select_orchestration_strategy` peut retourner `strategic_only`/`tactical_coordination`/`operational_direct` (:105-107) et `service_manager` (:139), mais le dispatcheur engine.py:115-124 ne connaît que `hierarchical_full`/`specialized_direct`/`fallback`/else→hybrid — ces 4 valeurs tombent **silencieusement** dans `execute_hybrid_orchestration` ;
+- **Dispatch fail-loud (#2109, #2205)** — le moteur dispatche par **table explicite** `STRATEGY_EXECUTORS` (engine.py:45) et refuse toute stratégie absente de la table par `ValueError` (engine.py:95) ; `strategies.py` porte la garde symétrique : `DISPATCHABLE_STRATEGIES` = les 4 noms dispatchables (strategies.py:45), refus à strategies.py:140-144, et un mode d'orchestration absent de `mode_strategy_map` lève lui aussi (:104-110, #2205). **Aucune valeur ne retombe sur l'hybride** : `strategic_only`/`tactical_coordination`/`operational_direct`/`service_manager` (calculables par le sélecteur AUTO_SELECT, :121-135) comme `real`/`conversation` (mappés :101-102) lèvent tous. La cohérence table↔garde est testée (`test_strategy_dispatch_coherence_2109.py`, 6 tests). L'ancienne description d'un « dispatch silencieux » vers l'hybride décrivait le comportement pré-#2109 — elle est retirée ;
 - type hint forward-ref `"UnifiedOrchestrationPipeline"` jamais importé (engine.py:60, strategies.py:51…) — inoffensif à l'exécution, casse `get_type_hints` ;
-- le bullet « Dispatch silencieux » ci-dessus est **périmé depuis #2109** : le moteur ne retombe plus sur l'hybride, il lève `ValueError` (garde `STRATEGY_EXECUTORS`, engine.py:94-99) — suivi par #2223 ;
 - paramètre `pipeline` = contrat implicite jamais implémenté (méthodes `_trace_orchestration`, `_execute_operational_tasks`… définies nulle part).
