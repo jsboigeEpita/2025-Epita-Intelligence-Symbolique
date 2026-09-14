@@ -1,68 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Stratégies d'Exécution pour le Moteur de Pipeline.
+"""Stratégies d'orchestration — six fonctions libres, aucune classe.
 
-Objectif:
-    Ce module est conçu pour héberger différentes classes de "Stratégies"
-    d'exécution. Une stratégie définit la logique de haut niveau sur la
-    manière dont les processeurs d'un pipeline doivent être exécutés. En
-    découplant l'`ExecutionEngine` de la stratégie d'exécution, on gagne en
-    flexibilité pour créer des workflows simples ou très complexes.
+Ce module ne définit **aucune classe de stratégie**. Il porte :
 
-Concept Clé:
-    Chaque stratégie est une classe qui implémente une interface commune,
-    typiquement une méthode `execute(state, processors)`. L'`ExecutionEngine`
-    délègue entièrement sa logique d'exécution à l'objet `Strategy` qui lui
-    est fourni lors de son initialisation. La stratégie est responsable de
-    l'itération à travers les processeurs et de la gestion du flux de contrôle.
+- `select_orchestration_strategy` — choisit le *nom* d'une stratégie (carte des
+  10 modes non-AUTO_SELECT, puis heuristiques AUTO_SELECT) et **refuse** par
+  `ValueError` tout nom absent de `DISPATCHABLE_STRATEGIES` (#2109 / #2205) ;
+- les quatre exécuteurs que `engine.STRATEGY_EXECUTORS` dispatche :
+  `execute_hierarchical_full_orchestration`, `execute_specialized_orchestration`,
+  `execute_fallback_orchestration`, `execute_hybrid_orchestration` ;
+- `select_specialized_orchestrator` — sélection sur le dict
+  `pipeline.specialized_orchestrators`, peuplé nulle part en production.
 
-Stratégies Principales (Exemples cibles):
-    -   `SequentialStrategy`:
-        La stratégie la plus fondamentale. Elle exécute chaque processeur de
-        la liste l'un après l'autre, dans l'ordre où ils ont été ajoutés.
-    -   `ParallelStrategy`:
-        Pour les tâches indépendantes, cette stratégie exécute un ensemble de
-        processeurs en parallèle en utilisant `asyncio.gather`, ce qui peut
-        considérablement accélérer le pipeline.
-    -   `ConditionalStrategy`:
-        Une stratégie plus avancée qui prend une condition et deux autres
-        stratégies (une pour le `if`, une pour le `else`). Elle exécute l'une
-        ou l'autre en fonction de l'état actuel de l'analyse.
-    -   `FallbackStrategy`:
-        Tente d'exécuter une stratégie primaire. Si une exception se produit,
-        elle l'attrape et exécute une stratégie secondaire de secours.
-    -   `HybridStrategy`:
-        Combine plusieurs stratégies pour créer des workflows complexes, par
-        exemple en exécutant certains groupes de tâches en parallèle et d'autres
-        séquentiellement.
+La docstring d'origine annonçait cinq classes (`SequentialStrategy`,
+`ParallelStrategy`, `ConditionalStrategy`, `FallbackStrategy`,
+`HybridStrategy`) et une interface commune `execute(state, processors)` — aucun
+de ces symboles n'a jamais existé dans ce dépôt. Elle est retirée, pas
+réécrite (#2110).
 
-Utilisation:
-    Une instance de stratégie est passée au constructeur de l'`ExecutionEngine`
-    pour dicter son comportement.
-
-    Exemple (conceptuel):
-    ```python
-    from .engine import ExecutionEngine
-    from .strategies import SequentialStrategy, ParallelStrategy
-    from ..analysis.processors import (
-        ExtractProcessor,
-        InformalAnalysisProcessor,
-        FormalAnalysisProcessor
-    )
-
-    # Créer un moteur avec une stratégie séquentielle
-    engine = ExecutionEngine(initial_state, strategy=SequentialStrategy())
-    engine.add_processor(ExtractProcessor())
-    engine.add_processor(InformalAnalysisProcessor())
-    await engine.run()
-
-    # Utiliser une stratégie parallèle pour des tâches indépendantes
-    parallel_engine = ExecutionEngine(state, strategy=ParallelStrategy())
-    parallel_engine.add_processor(CheckSourcesProcessor())
-    parallel_engine.add_processor(CheckAuthorReputationProcessor())
-    await parallel_engine.run()
-    ```
+Le paramètre `pipeline` est un contrat implicite : les méthodes qu'il appelle
+(`_trace_orchestration`, `_execute_operational_tasks`…) ne sont définies dans
+aucun fichier du dépôt — seulement sur les mocks des tests.
 """
 
 import logging
