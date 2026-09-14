@@ -25,17 +25,18 @@ Le module est organisé en plusieurs composants :
 ### Initialisation de l'agent
 
 ```python
-import asyncio
-from agents.extract import setup_extract_agent
+from semantic_kernel import Kernel
 
-async def main():
-    # Initialiser l'agent d'extraction
-    kernel, extract_agent = await setup_extract_agent()
-    
-    # Utiliser l'agent...
-    
-asyncio.run(main())
+from argumentation_analysis.agents.core.extract import ExtractAgent
+
+kernel = Kernel()
+extract_agent = ExtractAgent(kernel=kernel, agent_name="ExtractAgent")
+extract_agent.setup_agent_components(llm_service_id="<id du service LLM>")
 ```
+
+`kernel` est le seul argument requis ; `agent_name`, `llm_service_id`, `plugins`
+et les deux injecteurs (`find_similar_text_func`, `extract_text_func`) sont
+optionnels. `setup_agent_components` vient de `BaseAgent`.
 
 ### Extraction à partir d'une dénomination
 

@@ -15,7 +15,6 @@ from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer impor
     ComplexFallacyAnalyzer,
 )
 from .plugins.project_management_plugin import ProjectManagementPlugin
-from .plugins.taxonomy_display_plugin import TaxonomyDisplayPlugin
 from .utils.tracer import TracedAgent
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,

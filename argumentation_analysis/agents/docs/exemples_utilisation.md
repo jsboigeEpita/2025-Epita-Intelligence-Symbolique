@@ -113,21 +113,21 @@ if __name__ == "__main__":
 
 ```python
 import asyncio
-from agents.core.extract.extract_definitions import setup_extract_agent
-from core.llm_service import create_llm_service
 
-async def extract_arguments(text):
-    """Extrait les arguments d'un texte avec l'agent d'extraction."""
-    # Créer le service LLM
-    llm_service = create_llm_service()
-    
-    # Initialiser l'agent
-    kernel, agent = await setup_extract_agent(llm_service)
-    
-    # Extraire les arguments
-    extracts = await agent.extract_arguments(text)
-    
-    return extracts
+from semantic_kernel import Kernel
+
+from argumentation_analysis.agents.core.extract import ExtractAgent
+
+async def extract_from_text(source_info, text, extract_name):
+    """Extrait un passage nommé d'un texte avec l'agent d'extraction."""
+    kernel = Kernel()
+    agent = ExtractAgent(kernel=kernel, agent_name="ExtractAgent")
+    agent.setup_agent_components(llm_service_id="<id du service LLM>")
+
+    # source_info décrit la source ; le texte peut être passé pour éviter un rechargement
+    result = await agent.extract_from_name(source_info, extract_name, text)
+
+    return result
 
 # Exemple d'utilisation
 if __name__ == "__main__":
@@ -135,7 +135,8 @@ if __name__ == "__main__":
     La liberté d'expression est un droit fondamental. Sans elle, la démocratie ne peut pas fonctionner.
     Cependant, cette liberté doit être encadrée pour éviter les abus.
     """
-    asyncio.run(extract_arguments(text))
+    source_info = {"source_name": "exemple.txt", "text": text}
+    asyncio.run(extract_from_text(source_info, text, "La liberté d'expression"))
 ```
 
 ## Utilisation des Outils

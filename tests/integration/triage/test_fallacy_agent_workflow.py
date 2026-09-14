@@ -1,4 +1,4 @@
-# Fichier : tests/integration/test_fallacy_agent_workflow.py
+# Fichier : tests/integration/triage/test_fallacy_agent_workflow.py
 import pytest
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
