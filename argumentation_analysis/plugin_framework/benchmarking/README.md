@@ -11,7 +11,7 @@ N'est **pas** :
 
 ## Composants publics
 
-Tout le contenu utile est `benchmark_service.py` (143 lignes ; `__init__.py` vide) :
+Tout le contenu utile est `benchmark_service.py` (142 lignes ; `__init__.py` vide) :
 
 - `BenchmarkService` (`benchmark_service.py:13`) ;
 - `__init__(orchestration_service)` (:20) — reçoit le guichet [`core/services/orchestration_service.py`](../core/services/README.md) ;

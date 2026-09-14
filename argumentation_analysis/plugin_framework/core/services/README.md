@@ -10,7 +10,7 @@ N'est **pas** (trois homonymes à ne pas confondre) :
 - `argumentation_analysis/orchestration/service_manager.py:147` (`OrchestrationServiceManager`) ;
 - le chargeur de plugins — `core/plugin_loader.py` (dont les limites sont documentées ci-dessous).
 
-Contenu : `orchestration_service.py` seul (66 lignes), **sans `__init__.py`** (namespace package implicite).
+Contenu : `orchestration_service.py` seul (65 lignes), **sans `__init__.py`** (namespace package implicite).
 
 ## Composants publics
 
