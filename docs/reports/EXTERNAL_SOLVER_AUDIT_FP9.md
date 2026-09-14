@@ -40,12 +40,13 @@ Firsthand E2E-verified by ai-01 R454 (inconsistent → `(False, '(EProver): inco
 
 ### Clingo (ASP) — ✅ UNAFFECTED (pre-existing Python bypass)
 
-**Not the same bug.** `core/integration/tweety_clingo_utils.py` already bypasses the buggy
+**Not the same bug.** `argumentation_analysis/core/integration/tweety_clingo_utils.py` already bypasses the buggy
 `ClingoSolver` Java API:
-- `check_clingo_installed_python_way(clingo_exe_path, jpype)` (line 14) — subprocess `--version` check.
-- `get_clingo_models_python_way(clingo_exe_path, ...)` (line 44) — subprocess to the binary directly.
+- `check_clingo_installed_python_way(clingo_exe_path, jpype_instance)` — subprocess `--version` check.
+- `get_clingo_models_python_way(clingo_exe_path, ...)` — subprocess to the binary directly.
 
-Documented at line 11: *"Fonctions Helper pour contourner les appels ClingoSolver défectueux."*
+Documented in the module header: *"Fonctions Helper pour contourner les appels ClingoSolver défectueux."*
+(line anchors removed — they drifted past a reformat; the function names are the stable handle)
 Binary present on po-2023: `ext_tools/clingo/clingo.exe` (3.4 MB), auto-downloaded by `download_clingo`.
 
 **Conclusion:** ASP was never victim of the static-method drift because it never went through the
