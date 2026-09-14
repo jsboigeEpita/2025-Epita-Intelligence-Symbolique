@@ -208,3 +208,12 @@ Les services peuvent être étendus pour prendre en charge de nouvelles fonction
 - Amélioration des algorithmes de recherche de texte similaire
 - Intégration avec des services d'analyse d'argumentation
 - Optimisation des performances pour les grands corpus de texte
+
+## Homonyme à ne pas confondre
+
+`benchmark_service.py` (ce paquet) définit un `BenchmarkService` de mesure de
+latence autonome (`measure_latency`, dict `metrics`), testé isolément — **distinct**
+de l'homonyme `plugin_framework/benchmarking/benchmark_service.py` (suites de
+requêtes via `OrchestrationService`, décorateur `track_tokens`). Arbitrés par
+consommateurs (#2102 §3) : aucun des deux n'a d'appelant de production ; le triage
+du présent paquet appartient à #2137.

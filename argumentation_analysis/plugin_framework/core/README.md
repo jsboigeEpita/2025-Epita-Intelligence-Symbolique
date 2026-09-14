@@ -37,8 +37,8 @@ ne voyait pas les plugins réels). Voir le README parent, section *Le retrait #2
 ## Points d'entrée valides
 
 **Aucun.** Le sous-paquet est consommé par les plugins réels (import direct du
-contrat et des modèles) et par les tests. Le seul script qui l'appelait en
-production-nominale (`main.py`) est un fossile (voir le README parent).
+contrat et des modèles) et par les tests. Le script `main.py` qui prétendait
+l'appeler a été retiré (#2102 §1, voir le README parent).
 
 ## Amont / aval
 
@@ -88,5 +88,7 @@ présent n'existe plus.
    import de commodité et rend chaque usage explicite — mais aussi toute vérification
    « ce module exporte-t-il quelque chose ? ».
 2. **`plugin_type` déclaré, jamais lu** (`contracts.py`) — unique occurrence du dépôt.
-3. **`workflow_execution` déclaré au contrat, jamais implémenté** — réponse d'erreur
-   systématique au guichet — cf. #2102.
+
+Historique résolu : le mode fantôme `workflow_execution` (déclaré au contrat, jamais
+implémenté) a été retiré du Literal (#2102 §5) — sa construction est rejetée par la
+validation, le guichet ne porte plus de branche morte.

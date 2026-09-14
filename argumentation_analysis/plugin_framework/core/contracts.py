@@ -8,7 +8,7 @@ class OrchestrationRequest(BaseModel):
     Définit le contrat d'entrée pour toute interaction avec le guichet de service.
     """
 
-    mode: Literal["direct_plugin_call", "workflow_execution"] = Field(
+    mode: Literal["direct_plugin_call"] = Field(
         ...,
         description="Le mode opérationnel qui détermine comment la requête sera traitée.",
     )

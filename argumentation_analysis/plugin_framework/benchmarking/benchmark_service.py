@@ -1,5 +1,5 @@
 import time
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from argumentation_analysis.plugin_framework.core.contracts import (
     BenchmarkResult,
     BenchmarkSuiteResult,
@@ -26,12 +26,22 @@ class BenchmarkService:
         """
         self.orchestration_service = orchestration_service
         self.custom_metrics: Dict[str, List[Any]] = {}
+        # Identité explicite métrique↔exécution (#2102 §4) : une métrique
+        # enregistrée pendant un run s'attache au request_id de CE run,
+        # jamais à la position du run dans la suite.
+        self._active_run_id: Optional[str] = None
+        self._run_metrics: Dict[str, Dict[str, List[Any]]] = {}
 
     def record_metric(self, metric_type: str, value: Any):
         """
         Enregistre une métrique personnalisée pendant l'exécution d'un benchmark.
-        Les métriques sont stockées temporairement et associées à la prochaine
-        exécution de `run_suite`.
+
+        L'association à une exécution est portée par une identité explicite :
+        une valeur enregistrée pendant qu'un run de `run_suite` est en vol
+        s'attache au `request_id` de ce run ; une valeur enregistrée hors de
+        tout run est seulement tamponnée dans `custom_metrics` (inspectable),
+        puis effacée au prochain `run_suite` — elle ne s'attache jamais à un
+        run par position.
 
         Args:
             metric_type: Le nom de la métrique (ex: 'input_tokens').
@@ -40,10 +50,15 @@ class BenchmarkService:
         if metric_type not in self.custom_metrics:
             self.custom_metrics[metric_type] = []
         self.custom_metrics[metric_type].append(value)
+        if self._active_run_id is not None:
+            run_bucket = self._run_metrics.setdefault(self._active_run_id, {})
+            run_bucket.setdefault(metric_type, []).append(value)
 
     def _clear_metrics(self):
         """Réinitialise les métriques personnalisées."""
         self.custom_metrics = {}
+        self._run_metrics = {}
+        self._active_run_id = None
 
     def run_suite(
         self,
@@ -70,6 +85,7 @@ class BenchmarkService:
         target = f"{plugin_name}.{capability_name}"
 
         for i, request_payload in enumerate(requests):
+            request_id = f"benchmark-run-{len(individual_results) + 1}"
             request = OrchestrationRequest(
                 mode="direct_plugin_call",
                 target=target,
@@ -78,7 +94,11 @@ class BenchmarkService:
             )
 
             start_time = time.perf_counter()
-            response = self.orchestration_service.handle_request(request)
+            self._active_run_id = request_id
+            try:
+                response = self.orchestration_service.handle_request(request)
+            finally:
+                self._active_run_id = None
             end_time = time.perf_counter()
 
             duration_ms = (end_time - start_time) * 1000
@@ -87,14 +107,16 @@ class BenchmarkService:
             if is_success:
                 successful_durations.append(duration_ms)
 
-            # Associer les métriques enregistrées à ce résultat
-            run_metrics = {}
-            for key, values in self.custom_metrics.items():
-                if i < len(values):
-                    run_metrics[key] = values[i]
+            # Métriques de CE run, par identité (request_id) — un run qui
+            # n'enregistre rien n'emprunte jamais la valeur d'un autre (#2102 §4).
+            recorded = self._run_metrics.pop(request_id, {})
+            run_metrics = {
+                key: (values[0] if len(values) == 1 else values)
+                for key, values in recorded.items()
+            }
 
             result = BenchmarkResult(
-                request_id=f"benchmark-run-{len(individual_results) + 1}",
+                request_id=request_id,
                 is_success=is_success,
                 duration_ms=duration_ms,
                 output=response.result,

@@ -23,13 +23,12 @@ Contenu : `orchestration_service.py` seul (66 lignes), **sans `__init__.py`** (n
 ## Points d'entrée valides
 
 - `benchmarking/benchmark_service.py:7,81` — fonctionnel (voir [`benchmarking/`](../../benchmarking/README.md)) ;
-- `plugin_framework/main.py:11,44,52` — **fossile, ne peut pas s'exécuter** (voir Limites) ; depuis #2099 son import du loader retiré échoue bruyamment ;
-- hors `plugin_framework/` : aucun. Le runner `run_benchmark.py` a été retiré (#2099).
+- hors `plugin_framework/` : aucun. Le runner `run_benchmark.py` a été retiré (#2099), le fossile `main.py` aussi (#2102 §1).
 
 ## Amont / aval
 
 - Amont : `core/contracts.py` (`OrchestrationRequest` :5, `OrchestrationResponse` :29).
-- Aval : `benchmarking/benchmark_service.py`, `main.py` (mort), `tests/unit/argumentation_analysis/test_plugin_framework.py` et `tests/integration/triage/test_workflow_execution.py`.
+- Aval : `benchmarking/benchmark_service.py`, `tests/unit/argumentation_analysis/test_plugin_framework.py` et `tests/integration/triage/test_workflow_execution.py`.
 
 ## Statut d'intégration
 
@@ -57,7 +56,11 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Limites connues
 
-- `plugin_framework/main.py` est désynchronisé d'au moins deux générations d'API et crasherait immédiatement : `PluginLoader(plugin_dirs=)` + `discover_plugins()`/`load_plugins()`/`loader.plugins` (API inexistantes), `OrchestrationService(plugin_loader=loader)` (paramètre réel `plugin_registry` :14), `execute_request` (méthode réelle `handle_request` :24), `OrchestrationRequest(plugin_name=, inputs=)` (champs réels `mode/target/payload`), `response.request_id`/`.outputs` (champs réels `status/result/error_message`) ;
 - pas de `__init__.py` dans `core/services/` ;
-- mode `workflow_execution` déclaré au contrat (`contracts.py:11`) mais jamais implémenté — réponse d'erreur systématique ;
-- un `target` contenant plusieurs points casse le split (:45) — comportement couvert comme erreur attendue par les tests (:627-634).
+- un `target` contenant plusieurs points casse le split (:41) — comportement couvert comme erreur attendue par les tests (:524).
+
+Historique résolu : le fossile `main.py` (≥2 générations d'API en retard, 9 appels
+inertes) a été retiré (#2102 §1) ; le mode fantôme `workflow_execution` (déclaré au
+contrat, jamais implémenté, réponse d'erreur systématique) a été retiré du Literal
+(#2102 §5) — sa construction est rejetée par la validation Pydantic, le guichet ne
+porte plus de branche morte.

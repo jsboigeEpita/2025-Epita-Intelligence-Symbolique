@@ -56,5 +56,19 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Limites connues
 
-- Deux classes `BenchmarkService` homonymes dans le dépôt (celle-ci :13 vs `services/benchmark_service.py:5`, APIs incompatibles) ;
-- association métrique↔exécution **par index** (`benchmark_service.py:92-94`, `if i < len(values)`) — fragile si le code décoré enregistre un nombre de `record_metric` différent du nombre d'exécutions.
+- Deux classes `BenchmarkService` homonymes dans le dépôt (celle-ci :13 vs
+  `services/benchmark_service.py:5`, APIs incompatibles). **Arbitrage #2102 §3, par
+  consommateurs** : les deux n'ont que des tests — celle-ci est exercée par la chaîne
+  bout-en-bout OrchestrationService→BenchmarkService (fixtures réelles) et par le
+  décorateur `track_tokens` ; la jumelle `services/` est un assistant de latence
+  autonome testé isolément. Aucun renommage : zéro consommateur de production ne les
+  confond, le coût du renommage n'a pas de bénéficiaire. La disambiguïsation est
+  documentée des deux côtés (ici et `services/README.md`) ; le triage du jumeau
+  `services/` appartient à #2137 (reste `services/`).
+
+Historique résolu : l'association métrique↔exécution **par index** (glissement d'une
+valeur d'un run vers le suivant dès que le code décoré enregistre un nombre de
+`record_metric` différent du nombre d'exécutions) a été remplacée par une **identité
+explicite** (#2102 §4) — une valeur enregistrée pendant un run s'attache au
+`request_id` de ce run ; le glissement est gardé rouge
+(`test_run_suite_metric_attaches_to_its_own_run_not_by_index`).
