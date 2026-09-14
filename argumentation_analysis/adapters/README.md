@@ -55,7 +55,7 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `adapters/`. Frère
 ## Limites connues
 
 - `register_dung_student_provider`/`invoke_dung_student` : code mort production — l'accès réel instancie la classe directement ;
-- docstring `__init__.py:5` promet `AbstractAnalysisService` — aucun adapter ne l'implémente (surpromesse doc) ;
+- ~~docstring `__init__.py:5` promet `AbstractAnalysisService` — aucun adapter ne l'implémente (surpromesse doc)~~ → **close le 2026-09-14 (#2105)** : la docstring (`__init__.py:8`) dit désormais que `AbstractAnalysisService` n'est **pas** implémenté par les adapters ;
 - CamemBERT : ~160 lignes + tests dédiés pour un tier jamais déployé ;
 - `dung_student_provider.py:186` : résumé `extensions.get("preferred", extensions.get("grounded", {}))` silencieusement vide si les deux sémantiques échouent (erreurs capturées :143, :154) ;
 - chargement CSV à l'import :175 : un CSV corrompu change la surface de labels sans erreur visible.
