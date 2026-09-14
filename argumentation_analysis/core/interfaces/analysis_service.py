@@ -1,9 +1,16 @@
 """
-Interface abstraite pour les services d'analyse.
+Interface abstraite pour les services d'analyse — contrat NON ADOPTE.
 
-Definit le contrat que tout service d'analyse doit implementer,
-qu'il s'agisse du service authentique (LLM), du mock, ou de
-futures integrations via le CapabilityRegistry.
+Mesure 2026-09-14 : `AbstractAnalysisService` n'a **aucun implementeur et
+aucun importeur** dans le depot. Le service reellement servi par l'API est
+`api/dependencies.AnalysisService`, qui definit sa propre classe et n'importe
+pas ce module. L'integration « via le CapabilityRegistry » annoncee ici n'a
+jamais eu lieu ; `adapters/` ne l'implemente pas non plus.
+
+Ce module est conserve comme point d'extension documente, PAS comme surface
+cablee : le README de `core/interfaces/` le classe « residuel », et une surface
+hors depot (`.claude/skills/integrate-component/SKILL.md`) le cite encore comme
+interface d'adaptation. Qui l'implemente met cette note a jour.
 """
 
 from abc import ABC, abstractmethod
@@ -14,8 +21,9 @@ class AbstractAnalysisService(ABC):
     """
     Interface abstraite pour les services d'analyse argumentative.
 
-    Tout service d'analyse (mock, LLM authentique, hybride) doit
-    implementer cette interface pour etre composable dans les workflows.
+    ATTENTION : aucun service ne l'implemente aujourd'hui (voir la docstring
+    du module). La docstring d'origine affirmait que tout service « doit »
+    l'implementer pour etre composable — c'est faux mesure : rien ne l'importe.
     """
 
     @abstractmethod
