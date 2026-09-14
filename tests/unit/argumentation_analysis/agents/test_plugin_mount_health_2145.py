@@ -13,8 +13,10 @@ Three contracts, one per dimension of the dispatch:
 2. homonym `@kernel_function` names among the plugins mounted for one
    speciality are detected and reported — the agent sees two tools with the
    same leaf name and nothing marks the canonical one;
-3. `toulmin` is mounted nowhere while its only function raises, and the day
-   the body lands the guard reddens and forces the re-mount decision.
+3. the plugin whose body raises is mounted nowhere — detected by the
+   *identity* of its callables, never by its name, which any alias defeats —
+   and the day the body lands the guard reddens and forces the re-mount
+   decision.
 
 Instrument discipline: a detector that returns nothing has not proved
 anything, so every zero here is paired with a positive control.
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from typing import Any
 
 import pytest
 from semantic_kernel import Kernel
@@ -185,6 +188,68 @@ def _toulmin_body_raises() -> bool:
     return False
 
 
+def _raising_surface() -> tuple[set[Any], set[str]]:
+    """(callables, leaf names) of the plugin whose body raises, derived by mounting it.
+
+    Deriving beats spelling. The review's point is that a guard keyed on the
+    literal `"Toulmin"` misses a re-mount under any other alias; reading the
+    mounted plugin instead survives a different plugin name *and* a different
+    function name. `KernelFunctionFromMethod` exposes its bound method
+    publicly (`method`), so the callable itself is reachable — that identity
+    is the authority, not a string.
+    """
+    kernel = Kernel()
+    plugin = kernel.add_plugin(ToulminPlugin(), plugin_name="probe_raising_body")
+    return _mounted_callables(kernel), set(plugin.functions)
+
+
+def _mounted_callables(kernel: Kernel) -> set[Any]:
+    """Every method-backed tool a kernel really holds (prompt tools hold none)."""
+    mounted: set[Any] = set()
+    for plugin in kernel.plugins.values():
+        for function in plugin.functions.values():
+            method = getattr(function, "method", None)
+            if method is not None:
+                mounted.add(getattr(method, "__func__", method))
+    return mounted
+
+
+def test_raising_tool_detector_sees_through_an_alias():
+    """Control: the detector must catch the re-mount a name check let through.
+
+    Measured on a throwaway kernel — this is exactly the gap the review named.
+    The previous assertion read the plugin *name*, so mounting the same
+    raising plugin as `toulmin_tool` (or any other alias) kept it green; the
+    assertions below hold both halves at once: the alias really does hide the
+    old name, and the widened detector sees the callable anyway.
+    """
+    raising, raising_names = _raising_surface()
+    assert raising, "the probe found no callable — its zero would prove nothing"
+    assert raising_names, "the probe found no function name"
+
+    aliased = Kernel()
+    aliased.add_plugin(ToulminPlugin(), plugin_name="toulmin_tool")
+    assert "Toulmin" not in aliased.plugins, (
+        "the control is only meaningful while the alias hides the name the old "
+        "check keyed on."
+    )
+    assert _mounted_callables(aliased) & raising, (
+        "the detector is name-blind: it must see the raising callable however "
+        "the plugin is aliased (#2145 review)."
+    )
+
+    benign = Kernel()
+    benign.add_function(
+        function_name="toulmin_analysis",
+        plugin_name="ToulminOrchestrator",
+        prompt="Analyse selon Toulmin. {{$input}}",
+    )
+    assert _mounted_callables(benign) & raising == set(), (
+        "the negative control must be empty — a prompt tool holds no method, "
+        "and must never be mistaken for the raising plugin."
+    )
+
+
 def test_toulmin_body_check_is_an_execution_not_an_assumption():
     """Control: the probe above must actually run the function."""
     assert callable(ToulminPlugin().analyze_argument)
@@ -240,6 +305,27 @@ def test_toulmin_benchmark_case_still_reports_the_death():
     )
 
 
+def _asks_for_the_toulmin_analysis(template: str) -> bool:
+    """True when the prompt asks for the analysis — not merely names its output.
+
+    `ToulminAnalysisResult` is the *shape of the reply*; a template that only
+    named it would be ordering nothing. Stripping it first is what makes this
+    predicate discriminate — the substring test alone was satisfied by the
+    output model's name, which is the vacuity the review named.
+    """
+    return "toulmin" in template.replace("ToulminAnalysisResult", "").lower()
+
+
+def test_the_purpose_check_is_not_satisfied_by_the_output_model_name():
+    """Control: the review's vacuity must be impossible, in both directions."""
+    assert _asks_for_the_toulmin_analysis(
+        "Analyse le texte selon le modèle argumentatif de Toulmin."
+    ), "the positive control must be able to answer yes"
+    assert not _asks_for_the_toulmin_analysis(
+        "Réponds uniquement en JSON conforme au modèle ToulminAnalysisResult."
+    ), "naming the output model is not asking for an analysis (#2145 review)."
+
+
 def test_analyzer_does_not_promise_a_raising_tool_2145():
     """The #2212 arbitration, extended to the analyzer's own kernel.
 
@@ -251,25 +337,33 @@ def test_analyzer_does_not_promise_a_raising_tool_2145():
     this guard stops constraining — going back to tool-calling becomes a
     free decision, not an obligation.
 
-    Executed, not deduced: the analyzer is really instantiated and the
-    template is read from the live kernel object.
+    Executed, not deduced: the analyzer is really instantiated, and the
+    mounted tools are matched by the *identity* of their callables rather
+    than by the plugin's name — an alias must not buy silence.
     """
     if not _toulmin_body_raises():
         return
 
     analyzer = SemanticArgumentAnalyzer()
-    mounted = set(analyzer.kernel.plugins)
-    assert (
-        "Toulmin" not in mounted
-    ), f"The analyzer mounts a plugin whose only function raises: {sorted(mounted)}"
+    raising, raising_names = _raising_surface()
+
+    mounted = _mounted_callables(analyzer.kernel)
+    offenders = sorted(m.__qualname__ for m in mounted & raising)
+    assert not offenders, (
+        f"The analyzer mounts a tool whose only body raises ({offenders}) — "
+        "however the plugin is aliased, a live agent gets a tool that can only "
+        f"burn a turn. Mounted plugins: {sorted(analyzer.kernel.plugins)}"
+    )
 
     template = analyzer.prompt_function.prompt_template.prompt_template_config.template
-    assert "Toulmin.analyze_argument" not in template, (
-        "The prompt still orders the LLM to call a tool that cannot do "
-        "anything but raise (#2145)."
+    promised = sorted(n for n in raising_names if n in template)
+    assert not promised, (
+        f"The prompt still orders the LLM to call {promised} — functions of a "
+        "plugin that cannot do anything but raise. The model is asked "
+        "directly, not routed through a dead tool (#2145)."
     )
     # Anti-pendulum: what was withdrawn is the dead detour, not the analysis.
-    assert "Toulmin" in template, (
+    assert _asks_for_the_toulmin_analysis(template), (
         "The analyzer must still ask for the Toulmin analysis — withdrawing "
         "the tool detour withdrew a promise, not the purpose (#2145)."
     )
