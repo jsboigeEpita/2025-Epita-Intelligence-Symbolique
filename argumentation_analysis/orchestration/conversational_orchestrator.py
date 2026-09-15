@@ -2897,7 +2897,7 @@ async def _resolve_phase_conflicts(
 ) -> List[Dict[str, Any]]:
     """Detect and resolve conflicts between agent contributions after a phase (#214).
 
-    Uses ConflictResolver from jtms_communication_hub to reconcile conflicting beliefs
+    Uses ConflictResolver from services.jtms.conflict_resolution to reconcile conflicting beliefs
     from different agents (e.g., InformalAgent says "fallacy" vs QualityAgent says "good").
 
     Args:

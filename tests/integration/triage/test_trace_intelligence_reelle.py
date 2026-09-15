@@ -37,13 +37,11 @@ logger = logging.getLogger(__name__)
 
 
 def test_imports_agents_reels():
-    """Teste l'importation des agents Sherlock et Watson."""
+    """Teste l'importation de l'agent Sherlock (bras vivant)."""
     try:
         from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
-        from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
 
         assert SherlockJTMSAgent is not None
-        assert WatsonJTMSAgent is not None
     except ImportError as e:
         pytest.fail(f"Échec de l'import des agents réels: {e}")
 
@@ -52,13 +50,9 @@ def test_imports_jtms_base_reels():
     """Teste l'importation des composants de base du JTMS."""
     try:
         from argumentation_analysis.agents.jtms_agent_base import JTMSAgentBase
-        from argumentation_analysis.agents.jtms_communication_hub import (
-            JTMSCommunicationHub,
-        )
         from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
         assert JTMSAgentBase is not None
-        assert JTMSCommunicationHub is not None
         assert CluedoOracleState is not None
     except ImportError as e:
         pytest.fail(f"Échec de l'import des composants JTMS de base: {e}")
