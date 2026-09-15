@@ -73,14 +73,14 @@ Ce rapport détaille l'analyse de la structure actuelle du projet, mettant en lu
 
 *   **`docs/`**: Répertoire principal pour la documentation.
     *   Contient `cleaning_reports/` (ex: `final_cleanup_summary_report.md`), et le sous-répertoire `architecture/` (contenant ce rapport et d'autres analyses architecturales).
-*   **Fichiers `README.md`**: Présents à plusieurs niveaux (racine, `scripts/`, `tests/`, `argumentation_analysis/`, `config/`, `argumentation_analysis/libs/`).
+*   **Fichiers `README.md`**: Présents à plusieurs niveaux (racine, `scripts/`, `tests/`, `argumentation_analysis/`, `config/`).
 *   **Autres fichiers Markdown à la racine**: `GETTING_STARTED.md`, `GUIDE_INSTALLATION_ETUDIANTS.md`, `README_ETAT_ACTUEL.md`.
 *   **`LICENSE`**.
 
 ### 2.7. Bibliothèques (JARs et autres)
 
-*   **`libs/` (racine)**: Contient les JARs TweetyProject et le JDK portable. Semble être la source principale pour le classpath global.
-*   **`argumentation_analysis/libs/`**: Contient également une collection de JARs TweetyProject et un sous-répertoire `native/`. Clairement une redondance avec `libs/` racine.
+*   **`libs/` (racine)**: Contient les JARs TweetyProject, le JDK portable et les DLLs SAT trackées (`libs/native/`). C'est la source canonique du classpath global — tous les lecteurs vérifiés y résolvent (#2106).
+*   **`argumentation_analysis/libs/`** *(historique)*: Racine parallèle créée par `provision_tools.py`, mesurée 2026-09-14 à 621 Mo **0 fichier tracké, 0 lecteur** (housse tweety vide) — le provisionneur a été repointé vers `libs/` racine et le résidu purgé par machine (#2106).
 
 ## 3. Analyse des Composants Clés et de l'Orchestration
 
@@ -126,7 +126,7 @@ Cette section évalue les aspects fonctionnels et architecturaux du système, en
     *   Deux fichiers `pytest.ini` (racine, `config/`).
     *   La configuration du module `argumentation_analysis` est dans `argumentation_analysis/config/`, tandis qu'une configuration plus globale est dans `config/` à la racine.
 3.  **Duplication de Répertoires et de Contenu**:
-    *   `libs/` (racine) et `argumentation_analysis/libs/` contiennent tous deux les JARs Tweety, ce qui est une redondance majeure.
+    *   `argumentation_analysis/libs/` fut une redondance majeure de `libs/` racine (JARs dupliqués) — résolue par #2106 : repoint du provisionneur unique vers la racine et purge du résidu local (mesuré : 0 tracked, 0 lecteur).
     *   Présence de sous-répertoires nommés identiquement (`config/`, `examples/`, `results/`, `scripts/`) à la racine et dans `argumentation_analysis/`, ce qui peut prêter à confusion sur leur rôle exact et leur contenu.
 4.  **Dispersion des Tests et de leur Exécution**:
     *   Malgré la standardisation dans `tests/`, la présence de `argumentation_analysis/tests/` persiste.
@@ -145,7 +145,7 @@ Cette section évalue les aspects fonctionnels et architecturaux du système, en
 *   **Risques de Conflits et d'Incohérence**:
     *   Des versions différentes de dépendances dans les multiples `requirements*.txt` peuvent conduire à des environnements de développement et de test inconsistants.
     *   Des configurations `pytest` contradictoires dans les deux `pytest.ini` peuvent affecter l'exécution des tests.
-    *   La duplication des JARs Tweety est une source majeure de problèmes potentiels (conflits de version, utilisation de la mauvaise bibliothèque).
+    *   La duplication historique des JARs Tweety (`argumentation_analysis/libs/`) était une source de conflits potentiels — résolue par #2106 (provisionning repointé vers `libs/` racine, résidu purgé).
     *   Des définitions d'orchestration ou de communication contradictoires ou obsolètes peuvent exister si les documents ne sont pas parfaitement alignés avec le code et entre eux.
 *   **Maintenance Accrue**: La nécessité de maintenir à jour des fichiers dupliqués (dépendances, configurations, bibliothèques) et de gérer une architecture d'orchestration non stabilisée augmente la charge de travail et le risque d'erreurs ou d'oublis.
 *   **Courbe d'Apprentissage Plus Raide**: Les nouveaux développeurs mettront plus de temps à appréhender la structure du projet, ses conventions, et le modèle d'orchestration réel.
@@ -163,7 +163,7 @@ Pour améliorer la clarté, la maintenabilité et la robustesse du projet, les r
 2.  **Centraliser et Formaliser l'Orchestration** :
     *   Envisager l'implémentation d'un [`orchestration_service.py`](../../argumentation_analysis/agents/core/orchestration_service.py:1) qui servirait de point d'entrée et de gestionnaire principal du flux d'analyse, en s'appuyant sur le `MessageMiddleware`.
 3.  **Rationaliser la Structure des Fichiers (Poursuite)** :
-    *   **Bibliothèques** : Éliminer la duplication de `argumentation_analysis/libs/` en faveur de `libs/` racine (ou vice-versa, mais un seul emplacement).
+    *   **Bibliothèques** : ~~Éliminer la duplication de `argumentation_analysis/libs/` en faveur de `libs/` racine~~ **Fait (#2106)** : provisionnement unifié sur `libs/` racine.
     *   **Configuration** : Unifier les fichiers `pytest.ini` et `requirements.txt` autant que possible, en gardant une distinction claire pour les dépendances de test.
     *   **Scripts à la racine** : Déplacer les scripts de diagnostic et d'expérimentation vers leurs répertoires logiques (`tests/`, `scripts/validation/`, `examples/`).
     *   **Tests** : Finaliser la migration de tous les tests vers le répertoire `tests/` racine et supprimer `argumentation_analysis/tests/` et `argumentation_analysis/run_tests.py` si redondants.

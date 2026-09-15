@@ -40,10 +40,10 @@ CONFIG_DIR = ROOT_DIR / CONFIG_DIR_NAME
 DATA_DIR = ROOT_DIR / DATA_DIR_NAME  # Données spécifiques au module
 LIBS_DIR = (
     PROJECT_ROOT_DIR / LIBS_DIR_NAME / "tweety"
-)  # Les libs Tweety sont dans libs/tweety/
+)  # Les JARs Tweety (le nom LIBS_DIR est historique : la valeur est libs/tweety)
 NATIVE_LIBS_DIR = (
-    LIBS_DIR / "tweety" / "native"
-)  # Les DLLs natives sont dans libs/tweety/native
+    PROJECT_ROOT_DIR / LIBS_DIR_NAME / "native"
+)  # Les DLLs SAT trackées sont dans libs/native (racine), pas libs/tweety/native
 RESULTS_DIR = (
     PROJECT_ROOT_DIR / RESULTS_DIR_NAME
 )  # Les résultats sont souvent au niveau projet
@@ -75,9 +75,8 @@ def ensure_directories_exist():
         DATA_DIR,
         PROJECT_ROOT_DIR
         / LIBS_DIR_NAME,  # Assurer que le répertoire parent 'libs' existe
-        LIBS_DIR,  # Sera 'libs/'
-        LIBS_DIR / "tweety",  # Assurer que 'libs/tweety' existe pour les DLLs natives
-        NATIVE_LIBS_DIR,  # Sera 'libs/tweety/native'
+        LIBS_DIR,  # Sera 'libs/tweety' (JARs)
+        NATIVE_LIBS_DIR,  # Sera 'libs/native' (DLLs SAT trackées)
         RESULTS_DIR,
         PORTABLE_JDK_PARENT_DIR_FROM_PATHS,  # Assurer que portable_jdk existe
         TEMP_DIR_FROM_PATHS,  # Assurer que _temp existe
