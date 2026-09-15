@@ -4,7 +4,7 @@
 
 Bibliothèque de **définitions** : chaque fichier expose `build_X_workflow() -> WorkflowDefinition` (DSL `WorkflowBuilder` de [`orchestration/workflow_dsl.py`](../orchestration/workflow_dsl.py)) + un wrapper `run_X()` async déléguant à `run_unified_analysis`. **Aucune exécution propre, aucun effet de bord** — pure construction de DAG de phases par capability.
 
-**Disambiguïsation des 3 « workflows »** : ce répertoire = 8 macro-workflows (« Track D macro » + « Track A formal ») ; `orchestration/workflows.py` = le **catalogue** (~20 workflows dont light/standard/full/spectacular, qui importe lazy les 8 d'ici, :1222-1267) ; `plugin_framework/core/plugins/workflows/` = coquille vide (`__init__.py` 0 octet).
+**Disambiguïsation des « workflows »** : ce répertoire = 8 macro-workflows (« Track D macro » + « Track A formal ») ; `orchestration/workflows.py` = le **catalogue** (~20 workflows dont light/standard/full/spectacular, qui importe lazy les 8 d'ici, :1222-1267). L'ancienne coquille `plugin_framework/core/plugins/workflows/` a été retirée (#2102 §6).
 
 ## Composants publics (8 paires build/run)
 

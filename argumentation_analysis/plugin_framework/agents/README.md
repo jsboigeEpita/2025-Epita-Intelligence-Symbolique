@@ -9,8 +9,9 @@ The manifest-based agent discovery that used to live here (`agent_loader.py` +
 - the single real manifest (`simple_analyst/agent_manifest.json`) pointed at an
   `agent.py` that never existed on disk.
 
-What remains in this subtree: `__init__.py` (empty) and `personalities/` — an
-empty reserved slot whose disposition is tracked by #2102 §6.
+What remains in this subtree: `__init__.py` (empty). The `personalities/` reserved
+slot (0-byte `__init__.py` + README, zero importers) was withdrawn with the rest
+(#2102 §6).
 
 Agents actually used in production are not discovered: they are built by
 `argumentation_analysis/agents/factory.py` and registered in the

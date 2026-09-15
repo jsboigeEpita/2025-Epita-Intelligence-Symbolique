@@ -57,16 +57,12 @@ class TestOrchestrationRequest:
         assert req.payload == {}
         assert req.session_id is None
 
-    def test_valid_workflow_execution(self):
-        req = OrchestrationRequest(
-            mode="workflow_execution",
-            target="my_workflow",
-            payload={"key": "value"},
-            session_id="sess-123",
-        )
-        assert req.mode == "workflow_execution"
-        assert req.payload == {"key": "value"}
-        assert req.session_id == "sess-123"
+    def test_withdrawn_workflow_execution_mode_rejected(self):
+        """#2102 §5 : le mode fantôme 'workflow_execution' (déclaré, jamais
+        implémenté) est retiré du contrat — sa construction est rejetée,
+        plus acceptée-puis-erreur au guichet."""
+        with pytest.raises(ValidationError):
+            OrchestrationRequest(mode="workflow_execution", target="my_workflow")
 
     def test_invalid_mode_rejected(self):
         with pytest.raises(ValidationError):
@@ -499,14 +495,6 @@ class TestOrchestrationService:
         assert resp.status == "success"
         plugin.do_thing.assert_called_once_with()
 
-    def test_workflow_execution_not_supported(self):
-        svc = self._make_service()
-        req = OrchestrationRequest(mode="workflow_execution", target="wf1")
-        resp = svc.handle_request(req)
-
-        assert resp.status == "error"
-        assert "n'est pas support" in resp.error_message
-
     def test_missing_plugin_error(self):
         svc = self._make_service()
         req = OrchestrationRequest(mode="direct_plugin_call", target="nonexistent.func")
@@ -904,3 +892,109 @@ class TestBenchmarkService:
 
         # tokens: [10, 20] -> sum = 30
         assert result.aggregated_custom_metrics.get("tokens") == 30
+
+    def test_run_suite_metric_attaches_to_its_own_run_not_by_index(self):
+        """#2102 §4 : identité explicite métrique↔exécution.
+
+        Né-rouge exécuté avant le fix : le run 1 enregistrait DEUX valeurs et
+        le run 2 aucune — la deuxième valeur glissait dans le run 2
+        (association par index). Désormais, une valeur enregistrée pendant un
+        run appartient à ce run (liste si plusieurs), et un run muet n'emprunte
+        jamais la valeur d'un autre.
+        """
+        orch = self._make_orchestration_service()
+        calls = [0]
+
+        def handle_with_metrics(req):
+            calls[0] += 1
+            if calls[0] == 1:
+                bench.record_metric("tokens", 100)
+                bench.record_metric("tokens", 200)
+            # run 2 : aucune métrique enregistrée
+            return OrchestrationResponse(status="success", result={})
+
+        orch.handle_request.side_effect = handle_with_metrics
+        bench = BenchmarkService(orch)
+
+        result = bench.run_suite("p", "c", [{"a": 1}, {"a": 2}])
+
+        assert result.results[0].custom_metrics["tokens"] == [100, 200]
+        assert "tokens" not in result.results[1].custom_metrics
+
+    def test_recorded_metric_outside_any_run_never_attaches(self):
+        """#2102 §4 : une métrique enregistrée hors de tout run reste tamponnée
+        dans custom_metrics et n'est attachée à AUCUN run de la suite suivante
+        (elle est effacée au départ du run_suite)."""
+        orch = self._make_orchestration_service()
+
+        def handle(req):
+            return OrchestrationResponse(status="success", result={})
+
+        orch.handle_request.side_effect = handle
+        bench = BenchmarkService(orch)
+        bench.record_metric("orphan", 7)
+
+        result = bench.run_suite("p", "c", [{"a": 1}])
+
+        assert all("orphan" not in r.custom_metrics for r in result.results)
+        assert "orphan" not in result.aggregated_custom_metrics
+
+    def test_repeated_metric_aggregates_flat_not_list_of_lists(self):
+        """#2102 §4 (review) : une métrique répétée ne devient pas une liste-de-listes.
+
+        Né-rouge exécuté avant le fix : `tokens` enregistré DEUX fois dans le
+        run 1 fait de la valeur du run une liste (`[10, 15]`) ; l'agrégation
+        empilait alors cette liste à côté du scalaire du run 2 →
+        `[[10, 15], 20]`, que le `sum` numérique ne pouvait plus atteindre.
+        L'échec était silencieux : pas d'exception, juste un agrégat faux.
+        """
+        orch = self._make_orchestration_service()
+        calls = [0]
+
+        def handle_with_repeated_metric(req):
+            calls[0] += 1
+            if calls[0] == 1:
+                bench.record_metric("tokens", 10)
+                bench.record_metric("tokens", 15)
+            else:
+                bench.record_metric("tokens", 20)
+            return OrchestrationResponse(status="success", result={})
+
+        orch.handle_request.side_effect = handle_with_repeated_metric
+        bench = BenchmarkService(orch)
+
+        result = bench.run_suite("p", "c", [{"a": 1}, {"a": 2}])
+        aggregate = result.aggregated_custom_metrics["tokens"]
+
+        assert aggregate == 45, (
+            f"L'agrégat d'une métrique répétée doit être plat et sommé, "
+            f"pas une liste-de-listes : {aggregate!r}"
+        )
+
+    def test_out_of_run_metrics_are_really_cleared_not_only_ignored(self):
+        """#2102 §4 (review) : le clearing hors-run est exécuté, pas supposé.
+
+        Le garde voisin prouve la non-attachement et la non-agrégation ; il ne
+        touche pas le tampon lui-même — un orphelin qui y resterait pourrait
+        fuir par un autre chemin. Ici on lit `custom_metrics` après la suite
+        (vidé), et on prouve qu'un orphelin enregistré avant la SECONDE suite
+        n'apparaît dans aucune des deux.
+        """
+        orch = self._make_orchestration_service()
+        orch.handle_request.side_effect = lambda req: OrchestrationResponse(
+            status="success", result={}
+        )
+        bench = BenchmarkService(orch)
+
+        bench.record_metric("orphan_before", 7)
+        bench.run_suite("p", "c", [{"a": 1}])
+        assert bench.custom_metrics == {}, (
+            "Le tampon hors-run doit être vidé au départ de la suite, pas "
+            f"seulement ignoré : {bench.custom_metrics!r}"
+        )
+
+        bench.record_metric("orphan_after", 9)
+        second = bench.run_suite("p", "c", [{"a": 1}])
+        assert "orphan_before" not in second.aggregated_custom_metrics
+        assert "orphan_after" not in second.aggregated_custom_metrics
+        assert bench.custom_metrics == {}

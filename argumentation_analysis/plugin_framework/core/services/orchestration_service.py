@@ -25,15 +25,11 @@ class OrchestrationService:
         """
         Traite une requête d'orchestration et la route en fonction de son mode.
         """
-        # Dans cette itération, nous ne gérons que le mode 'direct_plugin_call'
-        # comme requis pour le benchmark.
-        if request.mode == "direct_plugin_call":
-            return self._handle_direct_plugin_call(request)
-        else:
-            return OrchestrationResponse(
-                status="error",
-                error_message=f"Le mode d'orchestration '{request.mode}' n'est pas supporté.",
-            )
+        # Le contrat ne déclare que 'direct_plugin_call' : le mode fantôme
+        # 'workflow_execution' (déclaré, jamais implémenté) a été retiré (#2102 §5).
+        # Une valeur de mode inconnue est rejetée par la validation Pydantic du
+        # contrat, avant d'atteindre ce guichet.
+        return self._handle_direct_plugin_call(request)
 
     def _handle_direct_plugin_call(
         self, request: OrchestrationRequest

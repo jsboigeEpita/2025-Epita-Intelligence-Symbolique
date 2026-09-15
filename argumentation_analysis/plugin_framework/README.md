@@ -1,9 +1,9 @@
 # `plugin_framework/` — l'ancien framework de plugins, retiré de la découverte
 
-Ce paquet est une **racine d'assemblage** : 1 script (`main.py`) et trois
-sous-arbres (`agents/`, `benchmarking/`, `core/`). Mesuré après le retrait #2099 :
-**17 fichiers `.py`, 1 417 lignes** dans le sous-arbre (1 fichier / 70 lignes au
-premier niveau).
+Ce paquet est une **racine d'assemblage** : plus aucun script, trois sous-arbres
+(`agents/`, `benchmarking/`, `core/`). Mesuré après les retraits #2099/#2102 :
+**14 fichiers `.py`, 1 372 lignes** dans le sous-arbre (aucun `.py` au premier
+niveau).
 
 **Le mécanisme de découverte de ce paquet est retiré, pas réparé (#2099).** La
 carte des consommateurs mesurée sur `4c733b93` n'a nommé **aucun** appelant de
@@ -49,15 +49,11 @@ donc atteints par chemin complet :
 
 ## Points d'entrée valides
 
-**Aucun.** Le script restant est une entrée *déclarée*, pas *valides* :
-
-- `main.py` — fossile désynchronisé d'au moins deux générations d'API ; depuis le
-  retrait du loader, son import échoue **bruyamment** (`ImportError`), ce qui est
-  plus honnête qu'un script qui prétend s'exécuter. Sa refonte sur l'API survivante
-  ou sa suppression est arbitré par #2102 (grain suivant).
-
-Il n'est référencé par `.github/workflows/` (0 occurrence) : même une entrée
-manuelle ne l'exécuterait pas de façon fiable.
+**Aucun.** Le dernier script (`main.py`) a été retiré (#2102 §1) : fossile
+désynchronisé d'au moins deux générations d'API (9 appels sur des API inexistantes),
+sans importateur, jamais référencé par `.github/workflows/`. Le réécrire sur l'API
+survivante aurait dupliqué la construction de registre que
+`tests/integration/triage/test_workflow_execution.py` couvre déjà.
 
 ## Amont / aval
 
@@ -86,6 +82,22 @@ est propre, testé, et sans consommateur de production.
 | `core/plugins/standard/plugin_manifest.json` | manifeste du loader #2 | `entry_point: "main.py"` inexistant sur disque |
 | `agents/simple_analyst/agent_manifest.json` | manifeste de l'AgentLoader | `entry_point: "agent.py"` inexistant sur disque |
 
+## Le retrait #2102 — le reliquat
+
+| Fichier retiré | Rôle | Raison |
+|---|---|---|
+| `main.py` | script d'assemblage (fossile) | 9 appels sur des API inexistantes (`PluginLoader(plugin_dirs=)`, `execute_request`, `response.request_id`…) ; aucun importateur, jamais référencé par CI ; le réécrire dupliquerait le test d'intégration |
+| `agents/personalities/__init__.py` + `README.md` | coquille vide | `__init__.py` 0 octet, 0 importeur — emplacement réservé par un plan jamais exécuté (#2102 §6) |
+| `core/plugins/workflows/__init__.py` + `README.md` | coquille vide | idem |
+
+Les trois autres items de #2102 sont corrigés en place :
+l'écriture runtime (§2) a disparu avec `run_benchmark.py` (ci-dessus) ; les
+`BenchmarkService` jumeaux (§3) sont arbitrés par consommateurs — voir
+`benchmarking/README.md` ; l'association métrique↔exécution (§4) est portée par
+une identité explicite (`request_id`), le glissement par index est gardé rouge ;
+le mode fantôme `workflow_execution` (§5) est retiré du contrat (construction
+rejetée par la validation, garde en test).
+
 Gardes : `tests/unit/argumentation_analysis/test_plugin_framework.py`
 (`TestDiscoveryMechanismsWithdrawn` — les modules retirés lèvent `ImportError` ;
 `TestRealPluginsByDirectImport` — les plugins réels s'instancient et une capacité
@@ -103,7 +115,7 @@ plugin `hello_world/` au runtime) a **disparu avec son script**.
 
 ## Tests représentatifs
 
-**67 tests** sur l'unique fichier de la zone,
+**70 tests collectés** (68 fonctions + paramétrisation des modules retirés) sur l'unique fichier de la zone,
 `tests/unit/argumentation_analysis/test_plugin_framework.py` (`--disable-jvm-session`
 requis, sinon orage de skips #2021) : contrats (`contracts.py`, décorateurs), guichet,
 benchmark, **gardes de retrait et chemin vivant par import direct**. La chaîne
@@ -121,27 +133,17 @@ sa préfiguration abandonnée. Ne pas confondre les deux quand on cherche « le 
 plugins » : un `grep plugin` mesure indifféremment l'ancien (mort) et le nouveau (vivant).
 
 **Enfants** : `core/` (carrefour des conventions), `core/plugins/standard/` (les plugins
-déclaratifs), `agents/`, `benchmarking/`.
-
-**Enfants vides** : `core/plugins/workflows/` et `agents/personalities/` ne contiennent
-qu'un `__init__.py` de **0 octet** et un README, **sans aucun importeur** dans le dépôt
-(vérifié par recherche des deux chemins). Deux emplacements réservés par un plan jamais
-exécuté — cf. #2102 §6.
+déclaratifs), `agents/`, `benchmarking/`. Les anciennes coquilles vides
+(`core/plugins/workflows/`, `agents/personalities/`) ont été retirées (#2102 §6).
 
 ## Limites connues
 
-Relevé mesuré, **rien corrigé ici** (hors retrait documenté ci-dessus).
+Relevé mesuré, **rien corrigé ici** (hors retraits documentés ci-dessus).
 
-1. **`main.py` est un squelette non exécutable** dont l'import est désormais en échec
-   bruyant (`ImportError` sur le loader retiré) — arbitrage refonte/suppression en
-   #2102.
-2. **`plugin_type` n'est jamais lu** (`core/contracts.py`) : c'est l'unique occurrence
+1. **`plugin_type` n'est jamais lu** (`core/contracts.py`) : c'est l'unique occurrence
    du champ dans tout le dépôt — déclaré, jamais consommé.
-3. **Ce paquet n'est pas un paquet Python** : pas d'`__init__.py` à sa racine.
-4. **Deux `BenchmarkService` homonymes** coexistent dans le dépôt (celui-ci et
-   `services/benchmark_service.py`, APIs incompatibles) — cf. #2102.
-5. **Association métrique↔exécution par index** dans `benchmarking/benchmark_service.py`
-   — fragile si le code décoré enregistre un nombre de `record_metric` différent du
-   nombre d'exécutions — cf. #2102.
-6. **`workflow_execution` déclaré au contrat, jamais implémenté** — réponse d'erreur
-   systématique — cf. #2102.
+2. **Ce paquet n'est pas un paquet Python** : pas d'`__init__.py` à sa racine.
+3. **Deux `BenchmarkService` homonymes** coexistent dans le dépôt (celui-ci et
+   `services/benchmark_service.py`, APIs incompatibles) — arbitrés par consommateurs
+   (chacun n'a que des tests), la disambiguïsation est documentée des deux côtés et le
+   sort du jumeau `services/` relève du triage #2137.

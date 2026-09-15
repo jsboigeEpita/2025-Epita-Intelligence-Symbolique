@@ -1,9 +1,8 @@
 # `plugin_framework/core/` — le carrefour du contrat, sans mécanisme de découverte
 
-Sous-paquet de `plugin_framework/`. **12 fichiers `.py`, 1 205 lignes** dans le sous-arbre
-(3 fichiers / 214 lignes au premier niveau : `contracts.py`, `decorators.py`,
-`interfaces.py`). Il porte les **contrats** (ce qu'est un plugin) — et **plus aucun
-chargeur** : les deux mécanismes de découverte concurrents ont été retirés (#2099),
+Sous-paquet de `plugin_framework/`. **11 fichiers `.py`, 1 201 lignes** dans le sous-arbre
+(3 fichiers / 214 lignes au premier niveau : `__init__.py`, `contracts.py`,
+`decorators.py`). Il porte les **contrats** (ce qu'est un plugin) — et **plus aucunchargeur** : les deux mécanismes de découverte concurrents ont été retirés (#2099),
 aucun n'ayant d'appelant de production.
 
 ## Rôle et frontière
@@ -37,9 +36,8 @@ ne voyait pas les plugins réels). Voir le README parent, section *Le retrait #2
 ## Points d'entrée valides
 
 **Aucun.** Le sous-paquet est consommé par les plugins réels (import direct du
-contrat et des modèles) et par les tests. Le seul script qui l'appelait en
-production-nominale (`main.py`) est un fossile (voir le README parent).
-
+contrat et des modèles) et par les tests. Le script `main.py` qui prétendait
+l'appeler a été retiré (#2102 §1, voir le README parent).
 ## Amont / aval
 
 - **Amont** : néant — plus aucun mécanisme ne scanne le système de fichiers.
@@ -88,5 +86,7 @@ même (#2099) : les deux homonymes du dépôt sont éteints.
    import de commodité et rend chaque usage explicite — mais aussi toute vérification
    « ce module exporte-t-il quelque chose ? ».
 2. **`plugin_type` déclaré, jamais lu** (`contracts.py`) — unique occurrence du dépôt.
-3. **`workflow_execution` déclaré au contrat, jamais implémenté** — réponse d'erreur
-   systématique au guichet — cf. #2102.
+
+Historique résolu : le mode fantôme `workflow_execution` (déclaré au contrat, jamais
+implémenté) a été retiré du Literal (#2102 §5) — sa construction est rejetée par la
+validation, le guichet ne porte plus de branche morte.

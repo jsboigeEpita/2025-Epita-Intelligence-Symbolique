@@ -11,12 +11,12 @@ N'est **pas** :
 
 ## Composants publics
 
-Tout le contenu utile est `benchmark_service.py` (142 lignes ; `__init__.py` vide) :
+Tout le contenu utile est `benchmark_service.py` (171 lignes ; `__init__.py` vide) :
 
 - `BenchmarkService` (`benchmark_service.py:13`) ;
 - `__init__(orchestration_service)` (:20) — reçoit le guichet [`core/services/orchestration_service.py`](../core/services/README.md) ;
-- `record_metric(metric_type, value)` (:30) — métriques tamponnées, associées à la prochaine suite ;
-- `run_suite(plugin_name, capability_name, requests)` (:48) — boucle : `OrchestrationRequest(mode="direct_plugin_call", target="plugin.capacité")`, chrono `perf_counter` autour de `handle_request`, statistiques avg/min/max **sur les réussites seules**, somme des métriques numériques, retour `BenchmarkSuiteResult`.
+- `record_metric(metric_type, value)` (:35) — pendant un run, la valeur s'attache à ce run (identité explicite `request_id`, #2102 §4) ; hors de tout run, elle reste tamponnée et n'est **jamais** rattachée (vidée au départ de la suite suivante) ;
+- `run_suite(plugin_name, capability_name, requests)` (:63) — boucle : `OrchestrationRequest(mode="direct_plugin_call", target="plugin.capacité")`, chrono `perf_counter` autour de `handle_request`, statistiques avg/min/max **sur les réussites seules**, somme des métriques numériques, retour `BenchmarkSuiteResult`.
 
 ## Points d'entrée valides
 
@@ -26,7 +26,7 @@ Hors de `plugin_framework/` : **aucun importeur** (api/, orchestration/, interfa
 
 ## Amont / aval
 
-- Amont : `core/contracts.py` (`BenchmarkResult` :91, `BenchmarkSuiteResult` :115, `OrchestrationRequest` :5) et `core/services/orchestration_service.py:7`.
+- Amont : `core/contracts.py` (`BenchmarkResult` :91, `BenchmarkSuiteResult` :115, `OrchestrationRequest` :5) et `core/services/orchestration_service.py:2-5`.
 - Aval : `core/decorators.py`, les deux fichiers de tests cités ci-dessous.
 
 ## Statut d'intégration
@@ -45,9 +45,9 @@ son script (#2099).
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/test_plugin_framework.py::TestBenchmarkService tests/unit/argumentation_analysis/test_plugin_framework.py::TestTrackTokensDecorator tests/integration/triage/test_workflow_execution.py -v
 ```
 
-- `TestBenchmarkService` (`test_plugin_framework.py:727`, 12 tests) — agrégation, métriques, stats sur réussites ;
-- `TestTrackTokensDecorator` (:583, 7 tests) — décorateur seul (aucun plugin réel décoré) ;
-- `tests/integration/triage/test_workflow_execution.py` (classe :52 ; tests :96, :162, :211) — chaîne réelle registre (construit directement depuis les fixtures) → OrchestrationService → BenchmarkService.
+- `TestBenchmarkService` (`test_plugin_framework.py:715`, 16 tests) — agrégation, métriques (identité par run, agrégat plat), stats sur réussites ;
+- `TestTrackTokensDecorator` (:571, 7 tests) — décorateur seul (aucun plugin réel décoré) ;
+- `tests/integration/triage/test_workflow_execution.py` (classe :50 ; tests :98, :164, :213) — chaîne réelle registre (construit directement depuis les fixtures) → OrchestrationService → BenchmarkService.
 
 ## Frères et parent
 
@@ -56,5 +56,19 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Limites connues
 
-- Deux classes `BenchmarkService` homonymes dans le dépôt (celle-ci :13 vs `services/benchmark_service.py:5`, APIs incompatibles) ;
-- association métrique↔exécution **par index** (`benchmark_service.py:92-94`, `if i < len(values)`) — fragile si le code décoré enregistre un nombre de `record_metric` différent du nombre d'exécutions.
+- Deux classes `BenchmarkService` homonymes dans le dépôt (celle-ci :13 vs
+  `services/benchmark_service.py:5`, APIs incompatibles). **Arbitrage #2102 §3, par
+  consommateurs** : les deux n'ont que des tests — celle-ci est exercée par la chaîne
+  bout-en-bout OrchestrationService→BenchmarkService (fixtures réelles) et par le
+  décorateur `track_tokens` ; la jumelle `services/` est un assistant de latence
+  autonome testé isolément. Aucun renommage : zéro consommateur de production ne les
+  confond, le coût du renommage n'a pas de bénéficiaire. La disambiguïsation est
+  documentée des deux côtés (ici et `services/README.md`) ; le triage du jumeau
+  `services/` appartient à #2137 (reste `services/`).
+
+Historique résolu : l'association métrique↔exécution **par index** (glissement d'une
+valeur d'un run vers le suivant dès que le code décoré enregistre un nombre de
+`record_metric` différent du nombre d'exécutions) a été remplacée par une **identité
+explicite** (#2102 §4) — une valeur enregistrée pendant un run s'attache au
+`request_id` de ce run ; le glissement est gardé rouge
+(`test_run_suite_metric_attaches_to_its_own_run_not_by_index`).
