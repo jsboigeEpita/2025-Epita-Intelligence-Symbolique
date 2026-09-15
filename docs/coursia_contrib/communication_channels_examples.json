@@ -1,0 +1,452 @@
+{
+  "meta": {
+    "source_module": "argumentation_analysis.core.communication",
+    "classes": [
+      "Message",
+      "CommandMessage",
+      "InformationMessage",
+      "EventMessage",
+      "Channel",
+      "LocalChannel",
+      "HierarchicalChannel",
+      "CollaborationChannel",
+      "DataChannel",
+      "MessageMiddleware",
+      "create_default_middleware",
+      "Topic",
+      "PublishSubscribeProtocol",
+      "RequestResponseProtocol",
+      "RequestTimeoutError"
+    ],
+    "note": "Exemples synthétiques domaine-public (aucun corpus, aucun LLM, aucune JVM). Source de vérité unique partagée entre le notebook communication_channels.ipynb et la garde round-trip tests/unit/coursia/communication_channels/. Toutes les valeurs attendues sont mesurées sur le moteur réel.",
+    "created_for": "#1961 Phase 3"
+  },
+  "inventory": {
+    "files_distilled": [
+      "message.py",
+      "channel_interface.py",
+      "hierarchical_channel.py",
+      "collaboration_channel.py",
+      "data_channel.py",
+      "pub_sub.py",
+      "request_response.py",
+      "middleware.py"
+    ],
+    "message_types": [
+      "command",
+      "information",
+      "request",
+      "response",
+      "event",
+      "control",
+      "publication",
+      "subscription"
+    ],
+    "priorities": [
+      "low",
+      "normal",
+      "high",
+      "critical"
+    ],
+    "agent_levels": [
+      "strategic",
+      "tactical",
+      "operational",
+      "system"
+    ],
+    "channel_types": [
+      "hierarchical",
+      "collaboration",
+      "data",
+      "negotiation",
+      "feedback",
+      "system",
+      "local"
+    ],
+    "channel_abstract_methods": [
+      "get_channel_info",
+      "get_pending_messages",
+      "receive_message",
+      "send_message",
+      "subscribe",
+      "unsubscribe"
+    ],
+    "filter_keys": [
+      "content",
+      "message_type",
+      "priority",
+      "sender",
+      "sender_level"
+    ],
+    "default_middleware_channel_ids": [
+      "data_main",
+      "hierarchical_main"
+    ],
+    "max_inline_data_size": 10240,
+    "topic_max_history": 100
+  },
+  "message_cases": [
+    {
+      "scenario": "id_prefix",
+      "expected": "command",
+      "why": "L'identifiant est dérivé du type : « command-<hex8> » — le préfixe dit déjà la nature du message."
+    },
+    {
+      "scenario": "priority_order_inverted_timestamps",
+      "expected": [
+        "critical",
+        "high",
+        "normal",
+        "low"
+      ],
+      "why": "__lt__ est inversé : plus la priorité est HAUTE, plus le message est « petit » — sorted() sort CRITICAL en premier même arrivé en dernier."
+    },
+    {
+      "scenario": "equal_priority_oldest_first",
+      "expected": [
+        "2026-01-01T12:00:00",
+        "2026-01-01T12:00:05"
+      ],
+      "why": "À priorité égale, le plus ancien passe d'abord (FIFO) — l'ordonnancement est total."
+    },
+    {
+      "scenario": "dict_round_trip_equal_and_correlated",
+      "expected_equal": true,
+      "expected_reply_correlation": false,
+      "why": "to_dict/from_dict préserve l'identité (l'égalité porte sur id+priorité+horodatage) — la sérialisation ne casse rien."
+    },
+    {
+      "scenario": "create_response_reversal",
+      "expected_sender": "tactical-1",
+      "expected_recipient": "strategic-1",
+      "expected_type": "response",
+      "expected_reply_to": "request-demo",
+      "expected_is_response_to": true,
+      "why": "create_response inverse les rôles : l'émetteur devient le destinataire de la requête, et reply_to relie la réponse à la requête."
+    },
+    {
+      "scenario": "specialised_defaults",
+      "command_priority": "high",
+      "command_requires_ack": true,
+      "command_content_keys": [
+        "command_type",
+        "parameters"
+      ],
+      "event_recipient": null,
+      "event_priority": "high",
+      "info_recipient": null,
+      "why": "Chaque constructeur spécialisé porte ses défauts : une COMMANDE est HIGH et exige un accusé ; un ÉVÉNEMENT est diffusé (destinataire None) et HIGH ; une INFORMATION est broadcast NORMAL."
+    }
+  ],
+  "filter_cases": [
+    {
+      "name": "scalar_type_match",
+      "why": "Le contrat parle en CHAÎNES : « command », pas l'énuméré.",
+      "expected": true
+    },
+    {
+      "name": "scalar_type_no_match",
+      "why": "Un type qui ne correspond pas exclut le message.",
+      "expected": false
+    },
+    {
+      "name": "list_type",
+      "why": "Une liste = un OU logique sur les valeurs.",
+      "expected": true
+    },
+    {
+      "name": "enum_member_is_not_a_string",
+      "why": "Piège mesuré : passer l'ÉNUMÉRÉ au lieu de la chaîne ne lève pas — il ne matche JAMAIS (\"command\" != MessageType.COMMAND). Silencieux.",
+      "expected": false
+    },
+    {
+      "name": "content_subkey",
+      "why": "Le filtre de contenu compare des sous-clés à égalité exacte.",
+      "expected": true
+    },
+    {
+      "name": "content_subkey_no_match",
+      "why": "Sous-clé différente → exclu.",
+      "expected": false
+    },
+    {
+      "name": "unknown_key_raises",
+      "why": "#2161 : une clé hors contrat LÈVE au lieu d'être ignorée — l'ignorance silencieuse laissait passer des filtres morts pour vivants.",
+      "raises": "ValueError",
+      "error_mentions": true
+    },
+    {
+      "name": "sender_and_priority_combined",
+      "why": "Les clés se combinent en ET logique.",
+      "expected": true
+    }
+  ],
+  "topic_filter_cases": [
+    {
+      "name": "topic_has_no_message_type_key",
+      "expected": true,
+      "why": "Le filtre du Topic IGNORE « message_type » (clé inexistante dans son matcher) : un filtre qui semble exclure les EVENT ne les exclut pas. Deux sémantiques coexistent — mesurées toutes deux."
+    },
+    {
+      "name": "topic_silently_ignores_unknown_keys",
+      "expected": true,
+      "why": "Là où le canal LÈVE (#2161), le Topic rend True silencieusement. Contrat strict côté canaux, contrat muet côté topics — le garde épingle les deux."
+    },
+    {
+      "name": "topic_sender_still_honored",
+      "expected": false,
+      "why": "sender/priority/sender_level/content restent honorés par le Topic."
+    }
+  ],
+  "routing_cases": [
+    {
+      "message_type": "command",
+      "info_type": null,
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "hierarchical",
+      "why": "Une commande part sur le canal hiérarchique."
+    },
+    {
+      "message_type": "information",
+      "info_type": "status_update",
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "hierarchical",
+      "why": "Une information ordinaire reste hiérarchique."
+    },
+    {
+      "message_type": "information",
+      "info_type": "analysis_result",
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "data",
+      "why": "« analysis_result » (sous-chaîne) détourne l'information vers le canal DATA."
+    },
+    {
+      "message_type": "request",
+      "info_type": null,
+      "request_type": "get_analysis",
+      "explicit_channel": null,
+      "expected": "hierarchical",
+      "why": "Requête ordinaire → hiérarchique."
+    },
+    {
+      "message_type": "request",
+      "info_type": null,
+      "request_type": "assistance",
+      "explicit_channel": null,
+      "expected": "collaboration",
+      "why": "« assistance » (sous-chaîne) route vers COLLABORATION — voir le piège mesuré plus bas."
+    },
+    {
+      "message_type": "response",
+      "info_type": null,
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "hierarchical",
+      "why": "Une réponse suit le canal de la requête : hiérarchique."
+    },
+    {
+      "message_type": "publication",
+      "info_type": null,
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "data",
+      "why": "Une publication part sur DATA."
+    },
+    {
+      "message_type": "event",
+      "info_type": null,
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "hierarchical",
+      "why": "#1571 : EVENT ne route plus vers FEEDBACK (aucun canal implémenté) — retombée sur le bus hiérarchique par défaut."
+    },
+    {
+      "message_type": "control",
+      "info_type": null,
+      "request_type": null,
+      "explicit_channel": null,
+      "expected": "hierarchical",
+      "why": "CONTROL non plus : les routes mortes sont SOUSTRAITES, pas câblées sur des transports vides (anti-théâtre)."
+    },
+    {
+      "message_type": "information",
+      "info_type": "status_update",
+      "request_type": null,
+      "explicit_channel": "data",
+      "expected": "data",
+      "why": "Un canal explicite dans le message PRIME la table de routage."
+    }
+  ],
+  "middleware_cases": [
+    {
+      "name": "bare_middleware_is_a_silent_bus",
+      "expected": false,
+      "why": "#1471 : un MessageMiddleware() nu n'enregistre AUCUN canal — send_message rend False (« Channel not found ») et le bus se tait. Toujours create_default_middleware()."
+    },
+    {
+      "name": "default_registers_exactly_two_channels",
+      "expected": [
+        "data_main",
+        "hierarchical_main"
+      ],
+      "why": "Le câblage canonique déclare exactement hierarchical_main + data_main — source unique, pas de register_channel dupliqué aux points d'appel."
+    },
+    {
+      "name": "assistance_routes_to_unregistered_collaboration",
+      "expected": false,
+      "why": "Piège mesuré : la TABLE route « assistance » vers COLLABORATION, mais le middleware par défaut n'enregistre PAS ce canal — l'envoi échoue (False)."
+    },
+    {
+      "name": "registering_collaboration_fixes_it",
+      "expected": true,
+      "why": "Même message après enregistrement d'un CollaborationChannel : la table et le câblage coïncident enfin."
+    }
+  ],
+  "hierarchical_cases": [
+    {
+      "name": "recipient_required",
+      "expected": false,
+      "why": "Pas de destinataire → False : le canal hiérarchique ne fait pas de broadcast."
+    },
+    {
+      "name": "priority_queue_critical_first",
+      "expected": [
+        "critical",
+        "normal",
+        "low"
+      ],
+      "why": "File à priorité : CRITICAL=0 sort avant NORMAL=2 avant LOW=3, quel que soit l'ordre d'arrivée."
+    },
+    {
+      "name": "pending_is_non_destructive",
+      "expected": [
+        3,
+        3,
+        3,
+        0
+      ],
+      "why": "get_pending_messages ne CONSOMME pas (3 puis 3) ; seul clear_queue vide (3 puis 0)."
+    },
+    {
+      "name": "direction_stats_keyed_on_recipient_prefix",
+      "expected": {
+        "strategic_to_tactical": 1,
+        "tactical_to_strategic": 0,
+        "tactical_to_operational": 0,
+        "operational_to_tactical": 1,
+        "same_level": 1
+      },
+      "why": "La direction est déduite du PRÉFIXE du destinataire (« tactical… ») croisé avec le niveau de l'émetteur — le reste tombe dans same_level."
+    }
+  ],
+  "pending_semantics_cases": [
+    {
+      "name": "local_drains_hierarchical_preserves",
+      "local": [
+        2,
+        0
+      ],
+      "hierarchical": [
+        3,
+        3
+      ],
+      "why": "Même méthode abstraite, deux sémantiques OPPOSÉES mesurées : LocalChannel CONSOMME la file (2 puis 0), HierarchicalChannel la préserve (3 puis 3). Le contrat de l'interface ne dit pas lequel — le code des canaux tranche."
+    }
+  ],
+  "collaboration_cases": [
+    {
+      "name": "group_membership_enforced_on_send",
+      "outsider_send": false,
+      "member_send": true,
+      "history_len": 1,
+      "why": "Écrire dans un groupe exige d'en être MEMBRE — le non-membre est refusé (False) et l'historique reste vide de son message."
+    },
+    {
+      "name": "group_history_is_a_shared_log",
+      "watson_first_read": "info-clue-0001",
+      "watson_second_read": "info-clue-0001",
+      "sherlock_read": null,
+      "why": "L'historique de groupe n'a pas de marque de lecture : Watson relit le MÊME message, et Sherlock (l'émetteur) ne reçoit rien — ses propres messages lui sont masqués."
+    },
+    {
+      "name": "direct_messages_are_read_once",
+      "first": "info-direct-0001",
+      "second": null,
+      "why": "Le message direct porte un drapeau « lu » : la deuxième réception rend None (le destinataire n'appartient à aucun groupe — pas de retombée du journal partagé)."
+    }
+  ],
+  "data_cases": [
+    {
+      "name": "claim_check_in_flight",
+      "inline_none": null,
+      "reference_present": true,
+      "why": "Au-delà de max_inline_data_size (10240), la charge voyage À CÔTÉ du message : data=None dans le vol, une référence (data_id + version) à la place."
+    },
+    {
+      "name": "transparent_rehydration",
+      "equal": true,
+      "reference_gone": true,
+      "why": "À la réception, la référence est RÉSOLUE : le destinataire relit la charge complète sans jamais avoir vu la mécanique."
+    },
+    {
+      "name": "versioning_latest_vs_pinned",
+      "latest_revision": 2,
+      "pinned_revision": 1,
+      "versions_count": 2,
+      "latest_stage": "synthesis",
+      "why": "Chaque écriture crée une VERSION ; sans préciser, on lit la dernière — avec un version_id, l'historique exact."
+    }
+  ],
+  "pubsub_cases": [
+    {
+      "name": "publish_returns_recipients",
+      "expected": [
+        "veille-1"
+      ],
+      "callback_hits": 1,
+      "why": "publish REND la liste des abonnés livrés — la livraison aux callbacks du topic est synchrone et comptable."
+    },
+    {
+      "name": "broadcast_fans_out_to_global_listener",
+      "expected": true,
+      "why": "#1500 : chaque publication traverse aussi middleware._handle_message — un listener global reçoit les broadcasts (le send_message mort pour recipient=None est réparé)."
+    },
+    {
+      "name": "subscribe_emits_nothing",
+      "expected": 0,
+      "why": "#1571 : s'abonner n'ÉMET plus de message SUBSCRIPTION — l'ancien envoie routait vers un canal « system » sans implémentation, indélivrable, échec avalé. L'abonnement EST le travail."
+    },
+    {
+      "name": "late_subscriber_reads_history",
+      "expected": [
+        1,
+        2
+      ],
+      "why": "L'historique du topic (borné) sert les abonnés TARDIFS : get_recent_messages(2) rend les deux dernières publications."
+    }
+  ],
+  "request_response_cases": [
+    {
+      "name": "unanswered_request_raises_timeout",
+      "expected": "RequestTimeoutError",
+      "elapsed_s": 0.31,
+      "why": "Une requête sans répondant LÈVE RequestTimeoutError — elle ne rend pas None : l'échec est nommé (#1355 : le None masquait la course des deux horloges)."
+    },
+    {
+      "name": "reply_to_correlation",
+      "correlated": true,
+      "completed": true,
+      "stored": "ok",
+      "why": "handle_response apparie par reply_to : l'événement « complété » est armé et la réponse rangée pour le demandeur."
+    },
+    {
+      "name": "orphan_response_parked_as_early",
+      "handled": true,
+      "early_count": 1,
+      "why": "Une réponse sans requête en attente n'est PAS jetée : elle est parquée en « réponse anticipée » (5 min) — la réponse qui arrive avant la requête survit."
+    }
+  ]
+}
