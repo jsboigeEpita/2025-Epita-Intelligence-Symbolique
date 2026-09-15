@@ -96,3 +96,30 @@ def test_report_blessing_is_earned_2112(script):
         "honnête."
     )
     assert "[OK] PASS" in report
+
+
+def test_project_root_points_at_the_repository_root_2217():
+    """#2217 — PROJECT_ROOT is the repository root, not ``scripts/``.
+
+    Né-rouge exécuté sur l'arbre pré-fix : la constante valait
+    ``Path(__file__).parent.parent`` = ``scripts/`` — un niveau trop court.
+    Le rapport et les logs atterrissaient alors sous ``scripts/reports/`` et
+    ``scripts/logs/`` (le rapport n'étant pas couvert par le ``/reports/``
+    ancré du ``.gitignore``, il polluait ``git status`` à chaque exécution).
+
+    This loads the module WITHOUT the sandbox fixture, because the fixture
+    overwrites ``PROJECT_ROOT`` — the guard must read the constant as the
+    script defines it.
+    """
+    spec = importlib.util.spec_from_file_location(
+        "orchestration_validation_root_2217", SCRIPT_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    assert module.PROJECT_ROOT == SCRIPT_PATH.parents[2], (
+        f"PROJECT_ROOT résout vers {module.PROJECT_ROOT} — la racine du dépôt "
+        f"(répertoire portant pytest.ini) est {SCRIPT_PATH.parents[2]}. "
+        "Un niveau trop court fait écrire le rapport sous scripts/ (#2217)."
+    )
+    assert (module.PROJECT_ROOT / "pytest.ini").is_file()

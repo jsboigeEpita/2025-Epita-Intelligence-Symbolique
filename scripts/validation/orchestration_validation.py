@@ -32,7 +32,11 @@ from datetime import datetime
 from pathlib import Path
 
 # Configuration des chemins
-PROJECT_ROOT = Path(__file__).parent.parent
+# 3 niveaux : scripts/validation/orchestration_validation.py -> dépôt (#2217).
+# Deux niveaux résolvaient vers scripts/, faisant écrire rapport et logs sous
+# scripts/reports/ et scripts/logs/ — le rapport, non couvert par le /reports/
+# ancré du .gitignore, polluait git status à chaque exécution.
+PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 
