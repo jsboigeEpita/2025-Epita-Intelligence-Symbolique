@@ -81,11 +81,28 @@ def empty_result():
 # ── Helper function tests ──
 
 
+class TestSectionsTable:
+    """#2118 (décision R1003) : la section ATMS déclarée-never-filled est retirée.
+
+    Le workflow produit bien ``atms_tracking``, mais aucun producteur ne pousse
+    ces données au formateur (grep vide, mesuré #2242) — une section déclarée
+    jamais remplie bénit ce qu'elle ne mesure pas (#2205).
+    """
+
+    def test_no_atms_section(self):
+        names = [name for _, name in SECTIONS]
+        assert "ATMS" not in names
+
+    def test_numbering_is_dense_after_removal(self):
+        assert [num for num, _ in SECTIONS] == list(range(1, len(SECTIONS) + 1))
+        assert len(SECTIONS) == 9
+
+
 class TestSectionRef:
     def test_valid_section_numbers(self):
         assert "see Section 1 (Extraction)" == _section_ref(1)
         assert "see Section 3 (Fallacies)" == _section_ref(3)
-        assert "see Section 10 (Narrative)" == _section_ref(10)
+        assert "see Section 9 (Narrative)" == _section_ref(9)
 
     def test_unknown_section_number(self):
         assert "see Section 99" == _section_ref(99)
@@ -313,9 +330,10 @@ class TestSectionRenderers:
 
 class TestCrossReferences:
     def test_sections_list_complete(self):
-        assert len(SECTIONS) == 10
+        # 9 sections depuis le retrait d'ATMS (#2118, décision R1003)
+        assert len(SECTIONS) == 9
         numbers = [n for n, _ in SECTIONS]
-        assert numbers == list(range(1, 11))
+        assert numbers == list(range(1, 10))
 
     def test_quality_refs_fallacies(self):
         """Quality section should cross-ref to fallacies (#3)."""
