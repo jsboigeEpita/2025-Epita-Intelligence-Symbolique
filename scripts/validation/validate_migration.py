@@ -222,7 +222,7 @@ class MigrationValidator:
                 [
                     sys.executable,
                     "-c",
-                    "from project_core.pipelines.unified_web_orchestrator import UnifiedWebOrchestrator; print('Import réussi')",
+                    "from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator; print('Import réussi')",
                 ],
                 capture_output=True,
                 text=True,

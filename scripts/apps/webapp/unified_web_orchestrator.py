@@ -71,6 +71,10 @@ except ImportError as e:
         f"[WARNING] Gestionnaire centralisé des ports non disponible ({e}), utilisation des ports par défaut"
     )
 
+# #2117 : config par défaut ancrée au module (l'ancien défaut relatif
+# dépendait du cwd de lancement).
+DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "config" / "webapp_config.yml"
+
 
 class WebAppStatus(Enum):
     """États de l'application web"""
@@ -108,12 +112,19 @@ class WebAppInfo:
     start_time: Optional[datetime] = None
 
 
-class UnifiedWebOrchestrator:
+class WebAppValidationOrchestrator:
     """
-    Orchestrateur unifié pour applications web Python
+    Orchestrateur du cycle de vie webapp pour la vérification et l'E2E.
+
+    #2117 : ce module et ``argumentation_analysis/webapp/orchestrator.py``
+    définissaient tous deux ``UnifiedWebOrchestrator`` avec des constructeurs
+    incompatibles. Le nom reste porté par l'orchestrateur de l'arbre canonique
+    (consommé par le pipeline E2E et la suite de 33 tests) ; ce jumeau —
+    consommé par ``scripts/verification/run_api_validation.py`` et les tests
+    E2E — porte désormais son rôle dans son nom.
 
     Fonctionnalités principales :
-    - Démarrage/arrêt backend Flask avec failover de ports
+    - Démarrage/arrêt backend FastAPI avec failover de ports
     - Démarrage/arrêt frontend React (optionnel)
     - Exécution tests Playwright intégrés
     - Tracing complet des opérations
@@ -121,7 +132,12 @@ class UnifiedWebOrchestrator:
     - Configuration centralisée
     """
 
-    def __init__(self, config_path: str = "config/webapp_config.yml"):
+    def __init__(self, config_path: Optional[str] = None):
+        if config_path is None:
+            # #2117 : l'ancien défaut relatif "config/webapp_config.yml" ne
+            # désignait ce module config que par accident de cwd (depuis la
+            # racine, il ouvrait la copie racine).
+            config_path = str(DEFAULT_CONFIG_PATH)
         self.config_path = Path(config_path)
         self.config = self._load_config()
         self.logger = self._setup_logging()
@@ -829,7 +845,7 @@ def main():
     )
     parser.add_argument(
         "--config",
-        default="config/webapp_config.yml",
+        default=str(DEFAULT_CONFIG_PATH),
         help="Chemin du fichier de configuration",
     )
     parser.add_argument(
@@ -869,7 +885,7 @@ def main():
     args = parser.parse_args()
 
     # Création orchestrateur
-    orchestrator = UnifiedWebOrchestrator(args.config)
+    orchestrator = WebAppValidationOrchestrator(args.config)
 
     # Détermination du mode headless avec priorité à la ligne de commande
     if args.headless is not None:

@@ -53,9 +53,9 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `webapp/`. Docs dé
 
 ## Limites connues
 
-- chemin de config mort : `run_web_e2e_pipeline.py:192` vise `scripts/webapp/config/webapp_config.yml` — **inexistant** → fallback silencieux `_load_config` (config par défaut créée sans avertissement) ;
-- **double orchestrateur homonyme** : `scripts/apps/webapp/unified_web_orchestrator.py` (970 l.) définit aussi `UnifiedWebOrchestrator` — consommé par `scripts/verification/run_api_validation.py:27` et 3 fichiers `tests/e2e/` ;
-- 3 copies divergentes de `webapp_config.yml` : `argumentation_analysis/webapp/config/` (défaut CLI), `config/` racine (commentaires #1853/#1857), `scripts/apps/webapp/config/` ;
-- docstring périmée : `orchestrator.py:615` « backend **Flask** » alors que la cible est FastAPI depuis #1853 ;
-- 3 fichiers de test **vides** (0 octet) dans `tests/integration/webapp/` (`test_playwright_integration.py`, `test_port_failover_integration.py`, `test_signal_handling.py` — jamais remplis depuis le commit initial) ;
-- `:1841-1842` : `asyncio.get_event_loop()` + `run_until_complete` — API dépréciée (Python 3.10+/3.12).
+- ~~chemin de config mort : `run_web_e2e_pipeline.py:192` vise `scripts/webapp/config/webapp_config.yml` — **inexistant** → fallback silencieux `_load_config`~~ **Corrigé (#2117)** : le pipeline passe `argumentation_analysis/webapp/config/webapp_config.yml` (le défaut réel du CLI).
+- ~~**double orchestrateur homonyme** : `scripts/apps/webapp/unified_web_orchestrator.py` (970 l.) définit aussi `UnifiedWebOrchestrator`~~ **Corrigé (#2117)** : le jumeau scripts/ est renommé `WebAppValidationOrchestrator` (rôle vérification/E2E, config ancrée au module) ; le nom `UnifiedWebOrchestrator` reste porté par ce module canonique. `tests/e2e/web_interface/validate_jtms_web_interface.py`, qui construisait `args=` (contrat canonique) via l'import du jumeau, importe désormais ce module.
+- copies de `webapp_config.yml` : chacune a son consommateur mesuré post-#2117 — `argumentation_analysis/webapp/config/` (défaut CLI canonique), `config/` racine (`validate_migration.py`, e2e `test_interfaces_integration.py`, rapport refactoring), `scripts/apps/webapp/config/` (défaut ancré de `WebAppValidationOrchestrator`) ;
+- ~~docstring périmée : `orchestrator.py:615` « backend **Flask** »~~ **Corrigé (#2117)** : FastAPI (#1853) ;
+- 3 fichiers de test **vides** (0 octet) dans `tests/integration/webapp/` (`test_playwright_integration.py`, `test_port_failover_integration.py`, `test_signal_handling.py` — jamais remplis depuis le commit initial) — hors grain #2117 ;
+- ~~`:1841-1842` : `asyncio.get_event_loop()` + `run_until_complete`~~ **Corrigé (#2117)** : `asyncio.run`. Résidu latent découvert, non corrigé : `_setup_signal_handlers` (:669, appelé en `__init__`) utilise `get_running_loop()` — construction hors boucle sur non-Windows lèverait `RuntimeError` (invisible en CI Windows).

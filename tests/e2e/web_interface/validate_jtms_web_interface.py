@@ -23,7 +23,13 @@ from typing import Dict, Any, List
 
 # Import du runner JavaScript non-bloquant
 from tests.e2e.runners.playwright_js_runner import PlaywrightJSRunner
-from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+
+# #2117 : ce validateur construit l'orchestrateur avec un argparse.Namespace
+# (args=…) et appelle start_webapp(headless=…, frontend_enabled=…) — le
+# contrat de l'orchestrateur de l'arbre canonique. L'import pointait par
+# erreur sur le jumeau scripts/ (ctor config_path) : TypeError dès la
+# construction.
+from argumentation_analysis.webapp.orchestrator import UnifiedWebOrchestrator
 
 
 class JTMSWebValidator:

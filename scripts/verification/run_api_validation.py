@@ -5,7 +5,7 @@ Script de Validation d'API
 ==========================
 
 Ce script exécute une campagne de test exhaustive sur les endpoints des API
-FastAPI et Flask, en utilisant UnifiedWebOrchestrator pour gérer le cycle de
+FastAPI et Flask, en utilisant WebAppValidationOrchestrator pour gérer le cycle de
 vie des serveurs.
 
 Il génère un rapport de test détaillé au format Markdown.
@@ -24,7 +24,7 @@ project_root = Path(__file__).resolve().parents[2]
 if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
-from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+from scripts.apps.webapp.unified_web_orchestrator import WebAppValidationOrchestrator
 
 REPORT_FILE = (
     project_root / "docs" / "verification_s2" / "03_web_apps_apis_test_results.md"
@@ -122,7 +122,7 @@ class ApiTester:
 
 
 async def run_fastapi_tests(
-    orchestrator: UnifiedWebOrchestrator, reporter: ReportGenerator
+    orchestrator: WebAppValidationOrchestrator, reporter: ReportGenerator
 ):
     """Démarre FastAPI et exécute la suite de tests."""
     reporter.add_section_header("1. API FastAPI (`api/main.py`)")
@@ -165,7 +165,7 @@ async def run_fastapi_tests(
 async def main():
     """Point d'entrée principal du script de validation."""
     reporter = ReportGenerator(REPORT_FILE)
-    orchestrator = UnifiedWebOrchestrator()
+    orchestrator = WebAppValidationOrchestrator()
 
     try:
         await run_fastapi_tests(orchestrator, reporter)

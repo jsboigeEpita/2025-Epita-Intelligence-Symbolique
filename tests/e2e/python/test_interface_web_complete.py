@@ -38,7 +38,9 @@ if str(project_root) not in sys.path:
     sys.path.insert(0, str(project_root))
 
 try:
-    from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator
+    from scripts.apps.webapp.unified_web_orchestrator import (
+        WebAppValidationOrchestrator,
+    )
 
     ORCHESTRATOR_AVAILABLE = True
     print("[INFO] Orchestrateur unifié disponible")
@@ -138,7 +140,7 @@ async def run_with_orchestrator():
     print("TEST INTERFACE WEB - ORCHESTRATEUR UNIFIÉ")
     print("=" * 60)
 
-    orchestrator = UnifiedWebOrchestrator()
+    orchestrator = WebAppValidationOrchestrator()
 
     try:
         print("\n[STEP 1] Démarrage backend Flask...")
