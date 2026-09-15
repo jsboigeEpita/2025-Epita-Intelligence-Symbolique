@@ -1,0 +1,488 @@
+{
+  "asset": "belief_revision",
+  "issue": 1961,
+  "phase": 4,
+  "inventory": {
+    "argumentation_analysis/services/jtms/jtms_core.py": 354,
+    "argumentation_analysis/services/jtms/atms_core.py": 242,
+    "argumentation_analysis/services/jtms/conflict_resolution.py": 238,
+    "argumentation_analysis/agents/core/logic/dung_native.py": 299,
+    "argumentation_analysis/agents/core/logic/qbf_native.py": 466
+  },
+  "jtms_cases": [
+    {
+      "name": "propagation_and_retraction",
+      "setup": "A= premise, justification [A]->B, set A True then False",
+      "b_after_a_true": "B -> VALID",
+      "b_after_a_false": "B -> UNKNOWN"
+    },
+    {
+      "name": "strict_mode_and_autocreate",
+      "unknown_belief_set": "KeyError: 'Unknown belief: X'",
+      "strict_add_justification": "KeyError: 'Unknown belief: A'",
+      "nonstrict_autocreated_beliefs": [
+        "P",
+        "Q"
+      ]
+    },
+    {
+      "name": "out_list_blocks_when_premise_valid",
+      "c_when_b_unknown": "C -> VALID",
+      "c_when_b_valid": "C -> UNKNOWN"
+    },
+    {
+      "name": "scc_cycle_marks_non_monotonic_and_locks_unknown",
+      "cycle_members": [
+        "A",
+        "B"
+      ],
+      "a_valid_after_direct_set": true,
+      "note": "compute_truth_statement returns None early when non_monotonic — direct set via set_truth_value bypasses compute, so valid keeps the set value until next compute"
+    },
+    {
+      "name": "explain_belief_tri_state_verdicts",
+      "unknown_premise": "  Result: Valid",
+      "refuted_by_out_premise": "  Result: Invalid",
+      "valid_when_out_falsy": "  Result: Valid"
+    },
+    {
+      "name": "retraction_trace_cascade",
+      "trace": [
+        {
+          "trigger": "A",
+          "retracted": [
+            "A"
+          ],
+          "cascaded": [
+            "C",
+            "B"
+          ],
+          "reason": "directly set to None"
+        }
+      ]
+    },
+    {
+      "name": "remove_belief_tears_down_justifications",
+      "beliefs_after": [
+        "B"
+      ],
+      "b_justifications_after": 0
+    }
+  ],
+  "atms_cases": [
+    {
+      "name": "assumption_label_and_product_environment",
+      "p_envs": [
+        [
+          "p"
+        ]
+      ],
+      "r_envs": [
+        [
+          "p",
+          "q"
+        ]
+      ]
+    },
+    {
+      "name": "invalidation_strips_and_never_repropagates",
+      "t_envs_before": [
+        [
+          "x"
+        ]
+      ],
+      "t_envs_after_invalidation": [],
+      "assumption_x_envs_after": [],
+      "contract": "#2094: invalidate_environment is the ONLY removal; nothing re-derives without a new justification"
+    },
+    {
+      "name": "contradiction_nogood_not_durable",
+      "consistent_mn_before_nogood": true,
+      "consistent_mn_after_nogood": true,
+      "contradiction_node_label_after": [],
+      "n_envs_after": [
+        [
+          "n"
+        ]
+      ],
+      "m_envs_after": [],
+      "mechanism": "the product over n's non-minimal label {{n},{m}} yields two envs: {m,n} then {m}; each ⊥ insertion fires invalidate_environment, and the LAST one ({m}) strips {m} and its supersets from EVERY node — including assumption m's own label",
+      "contract": "#2094: invalidate_environment clears ⊥ too — is_consistent reads True again; durable nogood memory belongs to consumers"
+    },
+    {
+      "name": "out_node_blocks_superset_environments",
+      "blocked_envs": [
+        [
+          "s"
+        ]
+      ],
+      "note": "w derivable under {u}; any env superset of {u} is blocked for the conclusion"
+    },
+    {
+      "name": "unknown_node_raises",
+      "result": "KeyError: \"Node 'zz' not found in ATMS.\""
+    },
+    {
+      "name": "explain_node_shape",
+      "explain": {
+        "name": "e",
+        "is_assumption": false,
+        "environments": [
+          [
+            "d"
+          ]
+        ],
+        "justifications": [
+          {
+            "in_nodes": [
+              "d"
+            ],
+            "out_nodes": []
+          }
+        ]
+      }
+    }
+  ],
+  "conflict_cases": [
+    {
+      "name": "confidence_based",
+      "resolved": true,
+      "chosen_agent": "agent_1",
+      "reasoning": "Highest confidence: 0.80 by agent_1"
+    },
+    {
+      "name": "evidence_based_score_beats_confidence",
+      "chosen_agent": "agent_1",
+      "reasoning": "Best evidence score: 2.00 by agent_1"
+    },
+    {
+      "name": "unknown_strategy_silently_falls_back",
+      "strategy_used": "confidence_based",
+      "chosen_agent": "agent_1"
+    },
+    {
+      "name": "consensus_quorum_and_tie",
+      "two_agents_resolved": false,
+      "two_agents_reasoning": "Consensus requires 3+ agents",
+      "three_agents_reasoning": "Consensus: 2 for vs 1 against",
+      "tie_resolved": false,
+      "tie_reasoning": "Consensus tie"
+    },
+    {
+      "name": "agent_expertise_substring_and_fallback",
+      "expert_chosen": "sherlock_agent",
+      "expert_reasoning": "Expert sherlock for domain evidence",
+      "no_expert_fallback_agent": "agent_y",
+      "no_expert_fallback_reasoning": "Highest confidence: 0.70 by agent_y"
+    },
+    {
+      "name": "temporal_iso_string_comparison",
+      "latest_chosen": "new",
+      "no_timestamp_fallback_agent": "b"
+    },
+    {
+      "name": "history_stats",
+      "stats": {
+        "total_conflicts": 10,
+        "resolved": 8,
+        "unresolved": 2,
+        "by_strategy": {
+          "confidence_based": 2,
+          "evidence_based": 1,
+          "consensus": 3,
+          "agent_expertise": 2,
+          "temporal": 2
+        }
+      }
+    }
+  ],
+  "dung_cases": [
+    {
+      "name": "triangle_odd_cycle_nothing_accepted",
+      "grounded": [],
+      "preferred": [
+        []
+      ],
+      "stable": [],
+      "note": "odd cycle: no singleton defends itself (attacker not counter-attacked), stable requires attacking ALL outsiders"
+    },
+    {
+      "name": "reinstatement_a_defends_c",
+      "grounded": [
+        "a",
+        "c"
+      ],
+      "preferred": [
+        [
+          "a",
+          "c"
+        ]
+      ],
+      "stable": [
+        [
+          "a",
+          "c"
+        ]
+      ]
+    },
+    {
+      "name": "nixon_diamond_measured",
+      "attacks": [
+        [
+          "quaker",
+          "hawk"
+        ],
+        [
+          "republican",
+          "pacifist"
+        ],
+        [
+          "hawk",
+          "pacifist"
+        ],
+        [
+          "pacifist",
+          "hawk"
+        ]
+      ],
+      "all_extensions": {
+        "grounded": [
+          [
+            "quaker",
+            "republican"
+          ]
+        ],
+        "preferred": [
+          [
+            "quaker",
+            "republican"
+          ]
+        ],
+        "stable": [
+          [
+            "quaker",
+            "republican"
+          ]
+        ],
+        "complete": [
+          [
+            "quaker",
+            "republican"
+          ]
+        ],
+        "admissible": [
+          [],
+          [
+            "quaker"
+          ],
+          [
+            "republican"
+          ],
+          [
+            "quaker",
+            "republican"
+          ]
+        ]
+      },
+      "status_hawk": {
+        "in_grounded": false,
+        "credulously_accepted": false,
+        "skeptically_accepted": false,
+        "in_stable": false
+      },
+      "status_pacifist": {
+        "in_grounded": false,
+        "credulously_accepted": false,
+        "skeptically_accepted": false,
+        "in_stable": false
+      },
+      "note": "4-argument variant: quaker and republican are unattacked premises; hawk and pacifist destroy each other AND are each attacked by an unattacked argument — rejected under every semantics, unlike the classic 2-extension diamond. The docstring ('quaker→not_pacifist, republican→not_hawk') does not match these edges — drift named in #2252."
+    },
+    {
+      "name": "framework_properties",
+      "triangle": {
+        "num_arguments": 3,
+        "num_attacks": 3,
+        "has_cycles": true,
+        "self_attacking": [],
+        "unattacked": []
+      },
+      "self_attacking": {
+        "num_arguments": 1,
+        "num_attacks": 1,
+        "has_cycles": true,
+        "self_attacking": [
+          "s"
+        ],
+        "unattacked": []
+      }
+    },
+    {
+      "name": "enumeration_cap_970",
+      "grounded_still_works": [
+        "x0",
+        "x10",
+        "x12",
+        "x14",
+        "x2",
+        "x4",
+        "x6",
+        "x8"
+      ],
+      "stable_raises": "Framework has 16 arguments, exceeding enumeration limit (15). Stable extensions computation is unavailable. (#970)"
+    },
+    {
+      "name": "characteristic_function",
+      "reinstatement_F_empty": [
+        "a"
+      ],
+      "reinstatement_F_a": [
+        "a",
+        "c"
+      ]
+    }
+  ],
+  "qbf_cases": [
+    {
+      "name": "tautology",
+      "analysis": {
+        "formula": "x | !x",
+        "quantifiers": [
+          {
+            "type": "forall",
+            "vars": [
+              "x"
+            ]
+          }
+        ],
+        "valid": true,
+        "message": "QBF VALID: x | !x",
+        "statistics": {
+          "quantifier_count": 1,
+          "variable_count": 1,
+          "search_space": 2,
+          "handler": "qbf_native",
+          "reasoner": "naive_enumeration"
+        }
+      }
+    },
+    {
+      "name": "contradiction",
+      "analysis": {
+        "formula": "x & !x",
+        "quantifiers": [
+          {
+            "type": "exists",
+            "vars": [
+              "x"
+            ]
+          }
+        ],
+        "valid": false,
+        "message": "QBF INVALID: x & !x",
+        "statistics": {
+          "quantifier_count": 1,
+          "variable_count": 1,
+          "search_space": 2,
+          "handler": "qbf_native",
+          "reasoner": "naive_enumeration"
+        }
+      }
+    },
+    {
+      "name": "mixed_quantifiers_valid",
+      "analysis": {
+        "formula": "x => y",
+        "quantifiers": [
+          {
+            "type": "forall",
+            "vars": [
+              "x"
+            ]
+          },
+          {
+            "type": "exists",
+            "vars": [
+              "y"
+            ]
+          }
+        ],
+        "valid": true,
+        "message": "QBF VALID: x => y",
+        "statistics": {
+          "quantifier_count": 2,
+          "variable_count": 2,
+          "search_space": 4,
+          "handler": "qbf_native",
+          "reasoner": "naive_enumeration"
+        }
+      }
+    },
+    {
+      "name": "parser_no_parentheses_support",
+      "repr_of_a_and_paren_expr": "((a & (b) | c))",
+      "note": "(b | c) is NOT parsed as an Or — the parenthesis characters become part of a variable name"
+    },
+    {
+      "name": "parser_implication_right_associative",
+      "repr": "(a => (b => c))"
+    },
+    {
+      "name": "parser_or_left_fold",
+      "repr": "((a | b) | c)"
+    },
+    {
+      "name": "unassigned_variable_defaults_false",
+      "eval_empty_assignment": false
+    },
+    {
+      "name": "credulous_witness",
+      "result": {
+        "target": "a",
+        "accepted": true,
+        "witness_extension": [
+          "a"
+        ],
+        "reason": "Found admissible extension containing a",
+        "method": "credulous_qbf"
+      }
+    },
+    {
+      "name": "skeptical_via_preferred",
+      "result": {
+        "target": "a",
+        "accepted": false,
+        "preferred_extensions": [
+          [
+            "a",
+            "c"
+          ],
+          [
+            "b",
+            "c"
+          ]
+        ],
+        "reason": "a is NOT in all preferred extensions",
+        "method": "skeptical_qbf"
+      }
+    },
+    {
+      "name": "absent_target",
+      "result": {
+        "target": "nope",
+        "accepted": false,
+        "reason": "Argument 'nope' not in framework",
+        "method": "skeptical_qbf"
+      }
+    },
+    {
+      "name": "too_large_returns_none",
+      "result": {
+        "target": "y0",
+        "accepted": null,
+        "reason": "Framework too large (16 args) for naive enumeration",
+        "method": "credulous_qbf"
+      }
+    }
+  ]
+}
