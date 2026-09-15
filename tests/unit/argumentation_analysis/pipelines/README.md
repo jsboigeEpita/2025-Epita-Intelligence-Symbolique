@@ -26,9 +26,9 @@ L'objectif est de valider la robustesse et la fiabilité de ces flux d'orchestra
     -   **Agrégation et Sauvegarde** : Vérifie que les résultats de toutes les analyses individuelles sont collectés et sauvegardés dans un unique fichier JSON.
     -   **Gestion des Erreurs** : S'assure que l'échec de l'analyse d'un seul extrait n'arrête pas tout le pipeline, mais est enregistré comme une erreur pour cet extrait spécifique. Teste également la gestion des erreurs lors de la sauvegarde finale.
 
-### `embedding_pipeline` et `reporting_pipeline`
+### `reporting_pipeline`
 
--   Les fichiers de test pour ces pipelines (`test_embedding_pipeline.py`, `test_reporting_pipeline.py`) sont actuellement **commentés**. Ils contiennent des fixtures pour mocker les dépendances, mais les tests eux-mêmes sont désactivés. Cela suggère que ces pipelines ont subi une refonte et que les tests correspondants n'ont pas encore été mis à jour.
+-   `test_reporting_pipeline.py` est **commenté** (fixtures de mock présentes, tests désactivés — le pipeline a subi une refonte sans mise à jour des tests). `test_embedding_pipeline.py` et le pipeline qu'il visait ont été **retirés** (#2116 A1) : il ne collectait plus aucun test et le pipeline n'avait aucun importeur production. La capacité embeddings locale reste gardée par `tests/unit/argumentation_analysis/nlp/test_embedding_capacity_guard_2116.py`.
 
 ## Dépendances Clés
 
