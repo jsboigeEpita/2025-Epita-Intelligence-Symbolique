@@ -1,0 +1,489 @@
+{
+  "asset": "dev_tools",
+  "issue": 1961,
+  "phase": 1,
+  "inventory": {
+    "total_modules": 12,
+    "module_lines": {
+      "code_formatting_utils.py": 177,
+      "code_validation.py": 393,
+      "coverage_utils.py": 267,
+      "encoding_utils.py": 322,
+      "env_checks.py": 528,
+      "format_utils.py": 305,
+      "import_testing_utils.py": 130,
+      "project_structure_utils.py": 93,
+      "refactoring_utils.py": 518,
+      "repair_utils.py": 379,
+      "reporting_utils.py": 158,
+      "verification_utils.py": 448
+    },
+    "init_lines": 29,
+    "core_eight": [
+      "code_formatting_utils.py",
+      "code_validation.py",
+      "coverage_utils.py",
+      "encoding_utils.py",
+      "env_checks.py",
+      "format_utils.py",
+      "import_testing_utils.py",
+      "project_structure_utils.py"
+    ],
+    "untargeted": [
+      "refactoring_utils.py",
+      "repair_utils.py",
+      "reporting_utils.py",
+      "verification_utils.py"
+    ]
+  },
+  "encoding_cases": [
+    {
+      "name": "utf8_file_passes_through",
+      "returns": true,
+      "content_after": "caf\u00e9 d\u00e9j\u00e0 vu\n",
+      "expected_content": "caf\u00e9 d\u00e9j\u00e0 vu\n"
+    },
+    {
+      "name": "cp1252_recovered_as_utf8",
+      "returns": true,
+      "content_after": "caf\u00e9",
+      "expected_content": "caf\u00e9"
+    },
+    {
+      "name": "latin1_always_decodes",
+      "returns": true,
+      "content_after": "\u0081\u008d\u008f\u0090\u009d",
+      "expected_content": "\u0081\u008d\u008f\u0090\u009d",
+      "note": "these bytes are invalid utf-8 AND undefined in cp1252 \u2014 latin-1 maps every byte, so the chain never fails"
+    },
+    {
+      "name": "missing_file_is_false",
+      "returns": false
+    },
+    {
+      "name": "project_scan_flags_only_utf8_broken_py",
+      "flagged_basenames": [
+        "bad.py"
+      ],
+      "expected_basenames": [
+        "bad.py"
+      ],
+      "note": "venv/ is excluded and .txt is not scanned"
+    }
+  ],
+  "java_env_cases": [
+    {
+      "name": "path_only_no_home",
+      "java_version_runs": true,
+      "java_home_set": false,
+      "java_home_has_bin_exe": false,
+      "verdict": false
+    },
+    {
+      "name": "home_and_path",
+      "java_version_runs": true,
+      "java_home_set": true,
+      "java_home_has_bin_exe": true,
+      "verdict": true
+    },
+    {
+      "name": "home_without_bin_exe",
+      "java_version_runs": true,
+      "java_home_set": true,
+      "java_home_has_bin_exe": false,
+      "verdict": false
+    },
+    {
+      "name": "java_not_found_valid_home",
+      "java_version_runs": false,
+      "java_home_set": true,
+      "java_home_has_bin_exe": true,
+      "verdict": false
+    }
+  ],
+  "java_env_rule": "verdict = java_ok AND java_home_valid \u2014 java reachable through PATH alone is NOT enough",
+  "deps_cases": [
+    {
+      "name": "all_installed",
+      "verdict": true
+    },
+    {
+      "name": "missing_package",
+      "verdict": false
+    },
+    {
+      "name": "vcs_and_include_lines_skipped",
+      "verdict": true
+    },
+    {
+      "name": "comments_only_is_true",
+      "verdict": true
+    },
+    {
+      "name": "file_missing_is_false",
+      "verdict": false
+    },
+    {
+      "name": "constraint_loss_marks_false",
+      "verdict": false
+    }
+  ],
+  "map_module_cases": [
+    {
+      "name": "exact_match",
+      "package": "tests.unit",
+      "expected": "Tests - Unit",
+      "returns": "Tests - Unit"
+    },
+    {
+      "name": "longest_prefix_wins",
+      "package": "argumentation_analysis.utils.dev_tools",
+      "expected": "Argumentation Analysis Utilities",
+      "returns": "Argumentation Analysis Utilities"
+    },
+    {
+      "name": "deeper_prefix_beats_shorter",
+      "package": "core.communication.hierarchical_channel",
+      "expected": "Legacy Core Communication",
+      "returns": "Legacy Core Communication"
+    },
+    {
+      "name": "prefix_has_no_dotted_boundary",
+      "package": "tests.unit_legacy",
+      "expected": "Tests - Unit",
+      "note": "startswith is a string test: tests.unit_legacy starts with tests.unit",
+      "returns": "Tests - Unit"
+    },
+    {
+      "name": "unmapped_never_reaches_autre",
+      "package": "unknown.top.pkg",
+      "expected": "Global/Non-Specific",
+      "note": "the empty-string key is a catch-all prefix (startswith('') is always True), so the documented 'Autre' fallback is unreachable",
+      "returns": "Global/Non-Specific"
+    },
+    {
+      "name": "empty_package",
+      "package": "",
+      "expected": "Global/Non-Specific",
+      "returns": "Global/Non-Specific"
+    },
+    {
+      "name": "dot_root",
+      "package": ".",
+      "expected": "Global/Non-Specific",
+      "returns": "Global/Non-Specific"
+    },
+    {
+      "name": "custom_override",
+      "package": "argumentation_analysis.utils",
+      "custom": {
+        "argumentation_analysis.utils": "Override Utils"
+      },
+      "expected": "Override Utils",
+      "returns": "Override Utils"
+    },
+    {
+      "name": "custom_extend_prefix",
+      "package": "my.custom.deep",
+      "custom": {
+        "my.custom": "My Custom"
+      },
+      "expected": "My Custom",
+      "returns": "My Custom"
+    }
+  ],
+  "import_cases": [
+    {
+      "name": "by_name_stdlib",
+      "module": "json",
+      "success": true,
+      "msg_prefix": "\u2713 Module 'json' import\u00e9 avec succ\u00e8s par nom."
+    },
+    {
+      "name": "by_name_missing",
+      "module": "module_inexistant_zz_42",
+      "success": false,
+      "msg_prefix": "\u2717 Erreur d'importation (ImportError)"
+    },
+    {
+      "name": "by_path_ok",
+      "success": true,
+      "msg_prefix": "\u2713 Module 'ok_module' (depuis",
+      "sys_path_restored": true
+    },
+    {
+      "name": "init_py_inserts_package_dir_not_parent",
+      "success": false,
+      "msg_prefix": "\u2717 Erreur d'importation (ImportError) pour 'fake_pkg'",
+      "note": "the __init__.py branch derives the package NAME from the dir but inserts the package dir itself into sys.path \u2014 importing needs the PARENT; standalone temp packages fail"
+    },
+    {
+      "name": "by_path_syntax_error_is_not_importerror",
+      "success": false,
+      "msg_prefix": "\u2717 Erreur inattendue"
+    },
+    {
+      "name": "non_py_path_rejected",
+      "success": false,
+      "msg_prefix": "\u2717 Chemin de module invalide"
+    }
+  ],
+  "apostrophe_cases": [
+    {
+      "name": "basic_quoting",
+      "first_run": true,
+      "content_after_first": "\"C'est\" un test \"d'\u00e9valuation\" simple.\n",
+      "expected_after_first": "\"C'est\" un test \"d'\u00e9valuation\" simple.\n"
+    },
+    {
+      "name": "second_run_is_idempotent",
+      "second_run": true,
+      "content_after_second": "\"C'est\" un test \"d'\u00e9valuation\" simple.\n",
+      "expected_after_second": "\"C'est\" un test \"d'\u00e9valuation\" simple.\n"
+    },
+    {
+      "name": "longest_alternative_first",
+      "returns": true,
+      "content_after": "\"jusqu'au\" bout et \"jusqu'\u00e0\" la fin\n",
+      "expected": "\"jusqu'au\" bout et \"jusqu'\u00e0\" la fin\n",
+      "note": "jusqu'au (8 chars) is tried before jusqu'\u00e0 (7 chars) \u2014 the map is sorted longest-first"
+    },
+    {
+      "name": "no_word_boundary_overmatch",
+      "returns": true,
+      "content_after": "\"jusqu'au\"baine\n",
+      "expected": "\"jusqu'au\"baine\n",
+      "note": "the alternation has no \\b: jusqu'au matches inside jusqu'aubaine"
+    },
+    {
+      "name": "missing_file_is_false",
+      "returns": false
+    }
+  ],
+  "syntax_cases": [
+    {
+      "name": "syntax_ok",
+      "ok": true,
+      "message": "[OK] La syntaxe du fichier est correcte.",
+      "context": []
+    },
+    {
+      "name": "syntax_error_context",
+      "ok": false,
+      "message_contains": "Erreur de syntaxe",
+      "message": "\u274c Erreur de syntaxe : unterminated string literal (detected at line 2) (<unknown>, line 2)",
+      "context": [
+        "   1: def hi():",
+        ">> 2:     print('oops)",
+        "   3: "
+      ],
+      "error_line_marked": ">> 2:     print('oops)"
+    },
+    {
+      "name": "syntax_missing_file",
+      "ok": false,
+      "message_contains": "Fichier non trouv\u00e9"
+    },
+    {
+      "name": "error_token_flagged",
+      "ok": false,
+      "error_tokens": [
+        {
+          "line": 2,
+          "col": 0,
+          "message": "Token d'erreur: '$'"
+        }
+      ]
+    },
+    {
+      "name": "token_error_unterminated_string",
+      "ok": false,
+      "error_tokens": [
+        {
+          "line": 1,
+          "col": 4,
+          "message": "('EOF in multi-line string', (1, 4))"
+        }
+      ],
+      "message_contains": "Erreur de tokenization"
+    }
+  ],
+  "dir_reference_cases": [
+    {
+      "name": "counts_and_exclusions",
+      "counts": {
+        "config_refs": 2,
+        "data_refs": 2
+      },
+      "expected_counts": {
+        "config_refs": 2,
+        "data_refs": 2
+      },
+      "files": {
+        "config_refs": {
+          "file1.py": 2
+        },
+        "data_refs": {
+          "file1.py": 1,
+          "file2.py": 1
+        }
+      },
+      "expected_files": {
+        "config_refs": {
+          "file1.py": 2
+        },
+        "data_refs": {
+          "file1.py": 1,
+          "file2.py": 1
+        }
+      },
+      "examples": {
+        "config_refs": [
+          {
+            "file": "file1.py",
+            "line": 1,
+            "content": "a = 'config/settings.json'"
+          },
+          {
+            "file": "file1.py",
+            "line": 2,
+            "content": "b = 'config/other.yaml'"
+          }
+        ],
+        "data_refs": [
+          {
+            "file": "file1.py",
+            "line": 3,
+            "content": "c = 'data/input.csv'"
+          },
+          {
+            "file": "file2.py",
+            "line": 1,
+            "content": "d = 'data/x'"
+          }
+        ]
+      },
+      "note": "docs/ is excluded and file3.txt is not scanned (extension filter)"
+    },
+    {
+      "name": "examples_capped_at_five",
+      "count": 7,
+      "expected_count": 7,
+      "n_examples": 5,
+      "expected_n_examples": 5
+    }
+  ],
+  "coverage_cases": [
+    {
+      "name": "parse_ok",
+      "data": {
+        "global_line_rate": 73.5,
+        "global_branch_rate": 50.0,
+        "lines_valid": 200,
+        "lines_covered": 147,
+        "branches_valid": 40,
+        "branches_covered": 20,
+        "packages": {
+          "alpha": {
+            "line_rate": 80.0,
+            "branch_rate": 40.0
+          },
+          "beta": {
+            "line_rate": 61.234500000000004,
+            "branch_rate": 20.0
+          }
+        }
+      }
+    },
+    {
+      "name": "parse_missing_file",
+      "returns": null
+    },
+    {
+      "name": "parse_malformed_xml",
+      "returns": null
+    },
+    {
+      "name": "initial_history_fabricates_minus_5pct_30_days_ago",
+      "returns": true,
+      "n_entries": 2,
+      "previous_entry": {
+        "global_line_rate": 68.5,
+        "global_branch_rate": 50.0,
+        "lines_valid": 200,
+        "lines_covered": 51,
+        "branches_valid": 10,
+        "branches_covered": 4,
+        "packages": {
+          "alpha": {
+            "line_rate": 75.0,
+            "branch_rate": 40.0
+          },
+          "beta": {
+            "line_rate": 56.2,
+            "branch_rate": 20.0
+          }
+        }
+      },
+      "previous_timestamp_is_string": true,
+      "current_entry_equals_input": true
+    },
+    {
+      "name": "save_appends",
+      "n_entries": 2,
+      "entries": [
+        {
+          "global_line_rate": 10.0,
+          "timestamp": "2026-01-02 08:00:00"
+        },
+        {
+          "global_line_rate": 12.0,
+          "timestamp": "2026-01-03 08:00:00"
+        }
+      ]
+    },
+    {
+      "name": "corrupted_history_is_reset_not_crashed",
+      "n_entries": 1,
+      "entries": [
+        {
+          "global_line_rate": 5.0,
+          "timestamp": "2026-01-04 08:00:00"
+        }
+      ],
+      "note": "a JSONDecodeError in the history file silently discards the old content"
+    }
+  ],
+  "format_tool_cases": [
+    {
+      "name": "default_args_are_in_place_double_aggressive",
+      "returns": true,
+      "n_subprocess_calls": 2,
+      "version_probe": [
+        "autopep8",
+        "--version"
+      ],
+      "format_command_head": [
+        "autopep8",
+        "--in-place",
+        "--aggressive",
+        "--aggressive"
+      ],
+      "format_command_last_arg_is_target": true
+    },
+    {
+      "name": "custom_args_replace_defaults_entirely",
+      "returns": true,
+      "format_command_head": [
+        "autopep8",
+        "--diff"
+      ],
+      "note": "passing autopep8_args drops --in-place: the file is NOT modified"
+    },
+    {
+      "name": "missing_file_fails_before_any_subprocess",
+      "returns": false,
+      "n_subprocess_calls": 0
+    }
+  ]
+}
