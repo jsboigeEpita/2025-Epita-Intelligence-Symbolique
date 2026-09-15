@@ -532,7 +532,15 @@ class ConversationOrchestrator:
                 SimulatedAgent("InformalAgent", "informal"),
                 SimulatedAgent("ModalLogicAgent", "modal"),
             ]
+        elif self.mode in ("demo", "trace", "enhanced"):
+            self._setup_simulated_agents()
         else:
+            # #2111/#2205: an unrecognized mode must not fall back silently.
+            self.logger.warning(
+                f"Unknown orchestration mode {self.mode!r}; falling back to "
+                "simulated agents. Known modes: real, micro, demo, trace, "
+                "enhanced."
+            )
             self._setup_simulated_agents()
 
         self.logger.info(f"Mode {self.mode}: {len(self.agents)} agents configurés")

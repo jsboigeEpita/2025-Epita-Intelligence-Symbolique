@@ -35,12 +35,9 @@ from .analysis.processors import (
 from .analysis.post_processors import post_process_orchestration_results
 from .analysis.traces import save_orchestration_trace
 
-# 5. Orchestrateurs Spécialisés (Wrappers)
-from .orchestrators.specialized.cluedo_orchestrator import CluedoOrchestratorWrapper
-from .orchestrators.specialized.conversation_orchestrator import (
-    ConversationOrchestratorWrapper,
-)
-# LogicOrchestratorWrapper and RealLLMOrchestratorWrapper removed (#885)
+# 5. Orchestrateurs Spécialisés (Wrappers) — withdrawn (#2111): the two
+# wrappers had zero instantiation in production and tests; the shell
+# orchestrators/ directory went with them.
 
 __all__ = [
     # Config
@@ -57,7 +54,4 @@ __all__ = [
     "synthesize_hierarchical_results",
     "post_process_orchestration_results",
     "save_orchestration_trace",
-    # Specialized Orchestrators
-    "CluedoOrchestratorWrapper",
-    "ConversationOrchestratorWrapper",
 ]
