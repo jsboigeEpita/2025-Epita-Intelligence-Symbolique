@@ -612,7 +612,8 @@ class UnifiedWebOrchestrator:
     Orchestrateur unifié pour applications web Python
 
     Fonctionnalités principales :
-    - Démarrage/arrêt backend Flask avec failover de ports
+    - Démarrage/arrêt backend FastAPI avec failover de ports (#1853 : la cible
+      est l'app FastAPI live, sonde sur le callable)
     - Démarrage/arrêt frontend React (optionnel)
     - Exécution tests Playwright intégrés
     - Tracing complet des opérations
@@ -1837,9 +1838,9 @@ def main():
                 await orchestrator.shutdown()
         return success
 
-    # Exécution asynchrone
-    loop = asyncio.get_event_loop()
-    success = loop.run_until_complete(run_command())
+    # Exécution asynchrone — #2117 : get_event_loop()+run_until_complete est
+    # déprécié (Python 3.10+) ; asyncio.run crée et ferme la boucle proprement.
+    success = asyncio.run(run_command())
 
     exit_code = 0 if success else 1
     orchestrator.logger.info(f"Code de sortie final : {exit_code}")

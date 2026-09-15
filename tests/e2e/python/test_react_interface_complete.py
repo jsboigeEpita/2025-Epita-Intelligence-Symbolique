@@ -68,9 +68,9 @@ def start_backend_api():
     orchestrator_cmd = [
         sys.executable,
         "-c",
-        "from scripts.apps.webapp.unified_web_orchestrator import UnifiedWebOrchestrator; "
+        "from scripts.apps.webapp.unified_web_orchestrator import WebAppValidationOrchestrator; "
         "import asyncio; "
-        "orchestrator = UnifiedWebOrchestrator(); "
+        "orchestrator = WebAppValidationOrchestrator(); "
         "asyncio.run(orchestrator.start_webapp(headless=True, frontend_enabled=False)); "
         "import time; "
         "time.sleep(300);",  # Maintenir l'API active

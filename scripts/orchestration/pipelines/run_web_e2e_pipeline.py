@@ -188,8 +188,16 @@ async def main_async():
     backend_port = int(os.environ.get("BACKEND_PORT", 8095))
     frontend_port = int(os.environ.get("FRONTEND_PORT", 8085))
 
-    # Configuration de l'orchestrateur centralisé
-    config_path = project_root / "scripts" / "webapp" / "config" / "webapp_config.yml"
+    # Configuration de l'orchestrateur centralisé — #2117 : l'ancien chemin
+    # scripts/webapp/config/ n'existe pas depuis la migration #34 ; l'orchestrateur
+    # basculait silencieusement sur sa config par défaut (_load_config).
+    config_path = (
+        project_root
+        / "argumentation_analysis"
+        / "webapp"
+        / "config"
+        / "webapp_config.yml"
+    )
     # Créer un objet de configuration simulant argparse.Namespace pour l'orchestrateur
     # pour instancier UnifiedWebOrchestrator en dehors de son contexte CLI.
     orchestrator_args = SimpleNamespace(
