@@ -176,9 +176,7 @@ class DungStudentProvider:
             extensions["complete"] = {"error": str(e)[:200]}
 
         # Statistics
-        semantics_computed = len(
-            [v for v in extensions.values() if "count" in v]
-        )
+        semantics_computed = len([v for v in extensions.values() if "count" in v])
 
         return {
             "provider": self.provider_name,
@@ -211,62 +209,10 @@ class DungStudentProvider:
         )
 
 
-# ── Adapter callable for CapabilityRegistry ──────────────────────────────
-
-
-async def invoke_dung_student(
-    input_text: str, context: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Adapter callable matching the _invoke_* signature.
-
-    Extracts arguments and attacks from context (same pattern as
-    _invoke_dung_extensions in invoke_callables.py), then delegates
-    to DungStudentProvider.
-    """
-    # Reuse the extraction helpers from invoke_callables
-    from argumentation_analysis.orchestration.invoke_callables import (
-        _extract_arguments_from_context,
-        _generate_attacks_from_args,
-    )
-
-    arguments = _extract_arguments_from_context(input_text, context)
-    attacks = _generate_attacks_from_args(arguments, context)
-
-    provider = DungStudentProvider()
-    return await provider.compute_extensions(arguments, attacks)
-
-
-def register_dung_student_provider(registry) -> None:
-    """Register the student Dung provider in a CapabilityRegistry.
-
-    Usage::
-
-        from argumentation_analysis.adapters.dung_student_provider import (
-            register_dung_student_provider,
-        )
-        register_dung_student_provider(registry)
-    """
-    provider = DungStudentProvider()
-
-    if not provider.is_available():
-        logger.info(
-            "DungStudentProvider not registered (JVM or library unavailable)"
-        )
-        return
-
-    registry.register_service(
-        name="dung_extensions_student",
-        capabilities=["dung_extensions"],
-        description="Dung AF extensions via abs_arg_dung student library (4 semantics)",
-        callable=invoke_dung_student,
-        metadata={
-            "provider": "abs_arg_dung_student",
-            "quality_score": provider.quality_score,
-            "semantics_supported": SUPPORTED_SEMANTICS,
-            "sanctuary": True,  # Never modifies abs_arg_dung/ source
-        },
-    )
-    logger.info("DungStudentProvider registered in CapabilityRegistry")
+# The registry adapter functions (invoke_dung_student,
+# register_dung_student_provider) were withdrawn (#2116 A2): 0 production
+# callers — the live access path instantiates DungStudentProvider directly
+# (orchestration/invoke_callables.py).
 
 
 # ── Known issues (documented, NOT patched in-place) ──────────────────────

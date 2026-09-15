@@ -1,4 +1,5 @@
 """Tests for abs_arg_dung adapter (DungStudentProvider)."""
+
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -59,36 +60,6 @@ class TestDungStudentProvider:
         assert result["provider"] == "abs_arg_dung_student"
         assert result["status"] == "unavailable"
 
-    @pytest.mark.asyncio
-    async def test_adapter_callable_signature(self):
-        """invoke_dung_student should accept (input_text, context)."""
-        from argumentation_analysis.adapters.dung_student_provider import (
-            invoke_dung_student,
-        )
-
-        # Mock the extraction helpers to avoid needing full pipeline context
-        with patch(
-            "argumentation_analysis.adapters.dung_student_provider.DungStudentProvider.is_available",
-            return_value=False,
-        ):
-            result = await invoke_dung_student("some text", {})
-        assert result["provider"] == "abs_arg_dung_student"
-
-    def test_register_only_when_available(self):
-        """register_dung_student_provider should skip if unavailable."""
-        registry = MagicMock()
-        provider = DungStudentProvider()
-
-        with patch.object(provider.__class__, "is_available", return_value=False):
-            # Need to patch the instantiation inside register_dung_student_provider
-            with patch(
-                "argumentation_analysis.adapters.dung_student_provider.DungStudentProvider.is_available",
-                return_value=False,
-            ):
-                from argumentation_analysis.adapters.dung_student_provider import (
-                    register_dung_student_provider,
-                )
-
-                register_dung_student_provider(registry)
-        # Registry should NOT have been called since provider is unavailable
-        registry.register_service.assert_not_called()
+    # The tests of the withdrawn functions (invoke_dung_student,
+    # register_dung_student_provider) went with them (#2116 A2); the
+    # withdrawal itself is guarded by test_dung_provider_dead_functions_2116.
