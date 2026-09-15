@@ -138,11 +138,11 @@ class TweetyBridge:
     def _find_default_jar_dir(self) -> str:
         """
         Trouve le répertoire des JARs par défaut, en supposant une structure de projet standard.
-        Le répertoire 'libs/tweety/native' est recherché depuis le répertoire de ce script.
+        Le répertoire 'libs/tweety' (racine du dépôt) est recherché depuis le répertoire de ce script.
         """
         script_dir = os.path.dirname(__file__)
-        # Le chemin relatif vers le répertoire des JARs natifs
-        # argumentation_analysis/agents/core/logic/ -> argumentation_analysis/libs/tweety/native
+        # Le chemin relatif vers le répertoire des JARs
+        # argumentation_analysis/agents/core/logic/ -> libs/tweety (racine du dépôt, 4 niveaux au-dessus)
         relative_jar_path = os.path.join(script_dir, "../../../..", "libs", "tweety")
         return os.path.normpath(relative_jar_path)
 

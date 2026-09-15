@@ -9,6 +9,18 @@ logging.basicConfig(
 logger = logging.getLogger("provision_tools")
 
 
+def tools_target_dir(project_root: Path) -> Path:
+    """Portable tools live at the repo-root ``libs/``.
+
+    Same directory as the majority installer
+    (``project_core/environment/tool_installer.py``) and every verified reader
+    (``jvm_setup``, ``paths``, prover9 runner). #2106: provisioning into
+    ``argumentation_analysis/libs/`` created a parallel root with zero tracked
+    files and zero readers.
+    """
+    return project_root / "libs"
+
+
 def provision():
     """
     Provisions and sets up all required portable tools like JDK.
@@ -21,7 +33,7 @@ def provision():
 
         from argumentation_analysis.core.setup.manage_portable_tools import setup_tools
 
-        tools_dir = project_root / "argumentation_analysis" / "libs"
+        tools_dir = tools_target_dir(project_root)
         tools_dir.mkdir(exist_ok=True)
 
         logger.info(f"--- Starting Portable Tools Provisioning ---")
