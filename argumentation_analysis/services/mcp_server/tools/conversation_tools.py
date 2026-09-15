@@ -165,13 +165,33 @@ async def _execute_round(
     catalog = get_workflow_catalog()
     workflow = catalog.get(session.workflow_name, catalog.get("standard"))
 
+    text = text_override or session.text
+
+    # #2096 : session.state n'était jamais assigné — state_writers morts et
+    # chaque round repartait de zéro. Le premier tour crée l'état unifié
+    # (miroir de run_unified_analysis, unified_pipeline.py:269-273) ; les
+    # writers le mutent en place, et l'objet vit dans la session : les tours
+    # suivants le reprennent tel quel.
+    if session.state is None:
+        try:
+            from argumentation_analysis.core.shared_state import (
+                UnifiedAnalysisState,
+            )
+
+            session.state = UnifiedAnalysisState(text)
+        except ImportError:
+            logger.warning(
+                "UnifiedAnalysisState indisponible ; continuité d'état "
+                "inter-rounds désactivée pour la session %s",
+                session.session_id,
+            )
+
     strategy = WorkflowTurnStrategy(
         workflow=workflow,
         registry=registry,
         state_writers=CAPABILITY_STATE_WRITERS if session.state else None,
     )
 
-    text = text_override or session.text
     context = {
         "turn_number": round_number,
         "session_id": session.session_id,
