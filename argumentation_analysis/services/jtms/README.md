@@ -12,8 +12,8 @@ d'agents multiples (5 stratégies, #214). Intégré du projet étudiant
 `1.4.1-JTMS`, étendu par #214.
 
 La frontière exclut : les agents JTMS (`agents/jtms_agent_base.py`,
-`agents/sherlock_jtms_agent.py`, `agents/watson_jtms/`), le hub de
-communication (`agents/jtms_communication_hub.py`) et les plugins
+`agents/sherlock_jtms_agent.py` ; le bras mort `agents/watson_jtms/` et le hub
+`agents/jtms_communication_hub.py` ont été retirés, #2122 A4) et les plugins
 d'exposition (`plugins/atms_plugin.py`, plugins d'état). Ce répertoire ne
 fournit que la logique que ces consommateurs orchestrent.
 
@@ -43,8 +43,9 @@ fournit que la logique que ces consommateurs orchestrent.
 - **Amont (consommateurs prouvés)** : `orchestration/registry_setup.py`
   (services), `orchestration/invoke_callables.py` (invokers +
   `ExtendedBelief`), `plugins/atms_plugin.py:31` (4 `@kernel_function`),
-  `agents/sherlock_jtms_agent.py:17`, `agents/watson_jtms/agent.py`,
-  `agents/jtms_communication_hub.py`,
+  `agents/sherlock_jtms_agent.py:17`
+  (`agents/watson_jtms/agent.py` et `agents/jtms_communication_hub.py`
+  consommateurs retirés avec le bras mort, #2122 A4),
   `agents/core/oracle/hypothesis_tracker.py:19` (ATMS),
   `core/state_manager_plugin.py` et `core/phase_scoped_state.py`
   (`ExtendedBelief`), `orchestration/conversational_orchestrator.py:2912,2915`

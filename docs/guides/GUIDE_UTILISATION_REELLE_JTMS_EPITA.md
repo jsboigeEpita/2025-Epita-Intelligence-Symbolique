@@ -48,7 +48,7 @@ service = JTMSService()
 
 # Agents (importables, création nécessite configuration)
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
-from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
+# (WatsonJTMSAgent retiré avec le bras mort watson_jtms, #2122 A4)
 
 # Interface web (opérationnelle, 5 routes)
 from interface_web.app import app

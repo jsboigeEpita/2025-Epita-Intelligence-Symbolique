@@ -13,26 +13,9 @@ def test_import_sherlock_jtms_agent():
         pytest.fail(f"Impossible d'importer SherlockJTMSAgent: {e}")
 
 
-def test_import_watson_jtms_agent():
-    """Vérifie que WatsonJTMSAgent peut être importé."""
-    try:
-        from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
-
-        assert WatsonJTMSAgent is not None
-    except ImportError as e:
-        pytest.fail(f"Impossible d'importer WatsonJTMSAgent: {e}")
-
-
-def test_import_jtms_communication_hub():
-    """Vérifie que JTMSCommunicationHub peut être importé."""
-    try:
-        from argumentation_analysis.agents.jtms_communication_hub import (
-            JTMSCommunicationHub,
-        )
-
-        assert JTMSCommunicationHub is not None
-    except ImportError as e:
-        pytest.fail(f"Impossible d'importer JTMSCommunicationHub: {e}")
+# test_import_watson_jtms_agent et test_import_jtms_communication_hub retirés
+# avec le bras mort watson (#2122 A4) : garde dédiée
+# tests/unit/argumentation_analysis/test_watson_arm_withdrawal_2122.py.
 
 
 def test_import_jtms_agent_base():
