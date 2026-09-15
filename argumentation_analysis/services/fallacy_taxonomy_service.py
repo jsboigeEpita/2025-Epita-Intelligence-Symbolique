@@ -3,7 +3,8 @@
 Service de taxonomie des sophismes — module de compatibilité.
 
 Ce module fournit une interface de service pour la taxonomie des sophismes,
-déléguant au plugin TaxonomyExplorerPlugin et au TaxonomySophismDetector.
+déléguant au TaxonomySophismDetector (il n'importe aucun plugin du
+plugin_framework).
 
 Historique: Le module original (PR #8, Candy Nguyen) a été refactoré en plugin
 (commit 80008c43, 2025-07-31). Ce shim restaure l'API de service attendue par

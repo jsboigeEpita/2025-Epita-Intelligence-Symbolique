@@ -2,55 +2,48 @@
 
 ## Rôle et frontière
 
-Plugin de vérification factuelle multi-sources d'affirmations : statuts de vérification à 7 états, fiabilité par domaine, cache mémoire 24 h (`plugin.py:140`), sémaphore de concurrence (:209). Déclaré par `plugin.yaml` (entrypoint `plugin.py`, classe `ExternalVerificationPlugin`, dépendance `aiohttp` :13, capacité `verify_claims` :16).
+Plugin de vérification factuelle multi-sources d'affirmations : statuts de vérification à 7 états, fiabilité par domaine, cache mémoire 24 h, sémaphore de concurrence. Déclaré par `plugin.yaml` (entrypoint `plugin.py`, classe `ExternalVerificationPlugin`, capacité `verify_claims`).
 
 N'est **pas** :
 
-- un module branché à de vraies APIs — les recherches Tavily/SearXNG sont **simulées** : `_search_tavily` (:356) et `_search_searxng` (:368) retournent des fixtures `example-tavily.com` (:360, :363) alors même que des clés API sont lues ;
-- le porteur canonique des statuts — `VerificationStatus` est dupliqué avec divergence dans le shim aval `services/fact_verification_service.py:22-41` ;
+- un module branché à de vraies APIs — les recherches sont **simulées** et le disent : `_search_sources` journalise un WARNING quand des clés API sont configurées (le cas où la simulation pourrait se lire à tort comme une recherche réelle) et retourne les fixtures explicites de `_simulate_search` ;
+- le porteur canonique des statuts — depuis #2101, les enums `VerificationStatus`/`SourceReliability` et la carte de fiabilité par domaine viennent de la **source unique** `services/fact_verification_service.py` (surface de production mesurée), que ce plugin importe ;
 - un plugin découvrable — aucun chargeur ne peut l'activer (voir Statut).
 
 ## Composants publics
 
 Tous dans `plugin.py` :
 
-- `VerificationStatus` (:30, enum 7 états), `SourceReliability` (:42, 5 niveaux), `VerificationSource` (:53), `FactVerificationResult` (:84) ;
-- `ExternalVerificationPlugin(BasePlugin)` (:118) — importe le **vrai** `BasePlugin` de `core/plugins/interfaces.py` (contrairement à son frère `taxonomy_explorer`) ;
-- capacité principale `verify_claims` (:200) ; pipeline : `_verify_one_claim` (:246) → recherche simulée (:356-368) → `_analyze_sources` (:399) / `_calculate_relevance` (:430) / `_analyze_source_stance` (:451) → `_determine_verification_status` (:489) → `_analyze_fallacy_implications` (:563).
+- enums **importés** de `services/fact_verification_service.py` (`VerificationStatus`, `SourceReliability` + `SOURCE_RELIABILITY_MAP`), `VerificationSource`, `FactVerificationResult` ;
+- `ExternalVerificationPlugin(BasePlugin)` — importe le **vrai** `BasePlugin` de `core/plugins/interfaces.py` (contrairement à son frère `taxonomy_explorer`) ; constructeur `(api_config)` sans injection de taxonomie (#2101 : l'injection `taxonomy_plugin` n'était jamais consommée) ;
+- capacité principale `verify_claims` ; pipeline : `_verify_one_claim` → recherche simulée annoncée → `_analyze_sources` / `_calculate_relevance` / `_analyze_source_stance` → `_determine_verification_status` → `_analyze_fallacy_implications`.
 
 ## Points d'entrée valides
 
-Imports module-level production (chargement du module, pas construction d'instance) :
-
-- `orchestration/fact_checking_orchestrator.py:31-33` — récupération via `plugin_registry.get("external_verification")` (:132) quand un registre est fourni ;
-- `agents/tools/analysis/fallacy_family_analyzer.py:24-25` — injection optionnelle au constructeur (:127-129).
-
-**Aucune instanciation en production** (les tests mockent le registre) ; aucun mécanisme de chargement dynamique ne l'active.
+**Aucun importeur de production** — depuis #2101, les deux derniers imports module-level (orchestrateur, analyzer) ont été retirés : le premier était mort (nom jamais référencé), le second soutenait une annotation de type mensongère (l'objet runtime est le service shim, jamais ce plugin). Le plugin rejoint un futur consommateur par import direct — le branchement réel est l'arbitrage E1 (audit C-06).
 
 ## Amont / aval
 
-- Amont : `FactualClaim`/`ClaimVerifiability` de `agents/tools/analysis/fact_claim_extractor.py` (`plugin.py:19-22`) ; une instance `TaxonomyExplorerPlugin` est attendue au constructeur (:125).
-- Aval : `FactCheckingOrchestrator` et `FallacyFamilyAnalyzer` si injectés ; le shim `services/fact_verification_service.py` (docstring « déléguant au plugin » :6) **n'importe pas ce plugin** et ré-implemente en parallèle.
+- Amont : `FactualClaim` de `agents/tools/analysis/fact_claim_extractor.py` ; enums + carte de fiabilité de `services/fact_verification_service.py` (source unique #2101).
+- Aval : personne en production ; garde né-rouge `tests/unit/argumentation_analysis/services/test_external_verification_honesty_2101.py`.
 
 ## Statut d'intégration
 
-**expérimental** — importé pour ses types mais jamais construit en production par défaut ; ses I/O externes sont simulés. Corroboré par l'audit `docs/reports/subjects_audit/C-06_indexation_automatisation.md` (E1 HIGH : « brancher un ExternalVerificationPlugin fonctionnel ») alors que `docs/architecture/fallacy_operational_plan.md:688-689` annonce la migration « TERMINÉ ».
+**expérimental** — jamais construit en production ; ses I/O externes sont simulées et annoncées. Corroboré par l'audit `docs/reports/subjects_audit/C-06_indexation_automatisation.md` (E1 HIGH : « brancher un ExternalVerificationPlugin fonctionnel ») alors que `docs/architecture/fallacy_operational_plan.md:688-689` annonce la migration « TERMINÉ ».
 
 De plus, **il n'existe plus de chargeur pour l'activer** : les trois mécanismes de découverte du paquet ont été retirés (#2099, aucun appelant de production — les deux chargeurs cités historiquement ne pouvaient de toute façon pas le voir). Il rejoint le système par import direct, comme son frère `taxonomy_explorer`.
 
 ## Artefacts et lecteurs
 
-Aucun fichier écrit ; cache mémoire uniquement (expiration 24 h :140, plafond 100 entrées).
+Aucun fichier écrit ; cache mémoire uniquement (expiration 24 h, plafond 100 entrées).
 
 ## Tests représentatifs
 
-Aucun test unitaire direct de la classe (toujours mockée). Les suites qui l'entourent :
+Garde d'honnêteté directe de la classe (construction sans injection morte, simulation annoncée, source unique des enums, dépendances mortes absentes) : `tests/unit/argumentation_analysis/services/test_external_verification_honesty_2101.py`. Les suites qui l'entourent :
 
 ```bash
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/orchestration/test_fact_checking_orchestrator.py -v
 ```
-
-(registre mocké :74-75 ; chemins d'erreur registry :313-329) et `tests/test_orchestration_integration.py:214`.
 
 ## Frères et parent
 
@@ -60,9 +53,11 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Limites connues
 
-- `import aiohttp` (:8) jamais utilisé — dépendance déclarée (`plugin.yaml:13`) pour rien ;
-- `taxonomy_plugin` injecté (:125) puis stocké (:142) mais **jamais consommé** dans le fichier ;
-- recherches simulées malgré les clés API lues — les résultats factices alimentent tout le pipeline en aval ;
-- duplication divergente `VerificationStatus`/`SourceReliability` avec `services/fact_verification_service.py:22-104` (maps de fiabilité inversées l'une par rapport à l'autre).
+Corrigées par #2101 (mesuré sur `9dc3fd86`, corrigé sur cette branche) :
 
-Ces anomalies sont signalées en issues séparées ; rien n'est corrigé ici.
+- ~~`import aiohttp` jamais utilisé — dépendance déclarée (`plugin.yaml`) pour rien~~ — import et déclaration retirés ;
+- ~~`taxonomy_plugin` injecté puis stocké mais jamais consommé~~ — paramètre retiré du constructeur ;
+- ~~recherches simulées malgré les clés API lues — les résultats factices alimentent tout le pipeline en aval~~ — les fixtures provider-shaped (`example-tavily.com`) sont retirées : une seule simulation explicite, annoncée WARNING si clés configurées ;
+- ~~duplication divergente `VerificationStatus`/`SourceReliability` avec `services/fact_verification_service.py` (maps inversées)~~ — le shim est la source unique, le plugin importe et dérive sa vue par inversion.
+
+Reste ouvert : le branchement réseau réel (arbitrage E1, audit C-06) — la simulation est désormais assumée, pas cachée.

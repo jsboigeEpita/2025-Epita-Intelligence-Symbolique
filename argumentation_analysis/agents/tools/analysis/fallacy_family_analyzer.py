@@ -8,7 +8,7 @@ intégrant la détection, la classification et la vérification factuelle.
 
 import logging
 import asyncio
-from typing import Dict, List, Any, Optional, Tuple, Set
+from typing import Dict, List, Any, Optional, Tuple, Set, Protocol
 from dataclasses import dataclass
 from enum import Enum
 from datetime import datetime
@@ -21,11 +21,21 @@ from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_expl
     TaxonomyExplorerPlugin,
     ClassifiedFallacy,
 )
-from argumentation_analysis.plugin_framework.core.plugins.standard.external_verification.plugin import (
-    ExternalVerificationPlugin,
-)
 
 logger = logging.getLogger(__name__)
+
+
+class ClaimsVerifier(Protocol):
+    """Type structurel du vérificateur de faits (#2101).
+
+    L'objet réellement injecté à l'exécution est le service shim
+    ``services/fact_verification_service.FactVerificationService`` (ou tout
+    objet exposant ``verify_claims``). Typer le paramètre avec la classe du
+    plugin ``ExternalVerificationPlugin`` — jamais construite — décrivait
+    un runtime qui n'existe pas.
+    """
+
+    async def verify_claims(self, claims: List[Any]) -> List[Any]: ...
 
 
 class AnalysisDepth(Enum):
@@ -126,7 +136,7 @@ class FallacyFamilyAnalyzer:
     def __init__(
         self,
         taxonomy_plugin: Optional[TaxonomyExplorerPlugin] = None,
-        verification_plugin: Optional[ExternalVerificationPlugin] = None,
+        verification_plugin: Optional[ClaimsVerifier] = None,
         api_config: Optional[Dict[str, Any]] = None,
     ):
         """
