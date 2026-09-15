@@ -183,8 +183,12 @@ Le workflow CI a été déclenché par le push. Pour vérifier le statut :
 
 **Documents pertinents identifiés :**
 
-1. **[`tests/integration/test_unified_investigation.py:55`](../../tests/integration/test_unified_investigation.py:55)**
+1. **[`tests/integration/test_unified_investigation.py`](../../tests/integration/test_unified_investigation.py)** *(ancre de ligne retirée, #2258)*
    - **Citation :** `# un fichier .env à la racine du projet pour cela.`
+   - **⚠ Non vérifiable aujourd'hui :** ce fichier est un tombstone de **3 lignes** depuis
+     2026-02-17 (« ARCHIVED … No tests remain in this file »). La ligne 55 n'existe plus et la
+     citation ci-dessus **n'est plus retrouvable à la source**. Elle est conservée comme trace de
+     ce que la recherche avait trouvé — pas comme référence consultable.
    - **Interprétation :** Les tests d'intégration **peuvent** utiliser `.env` localement
 
 2. **[`tests/conftest.py:756`](../../tests/conftest.py:756)**

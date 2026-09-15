@@ -614,15 +614,25 @@ timestamp,workflow_name,model_name,document_index,document_name,success,duration
 
 | Workflow | Source File | Phase Count | DSL Features Used |
 |----------|------------|-------------|-------------------|
-| light | `orchestration/unified_pipeline.py:1835` | 3 | Linear dependencies |
-| standard | `orchestration/unified_pipeline.py:1850` | 5 | Optional phases, branching |
-| full | `orchestration/unified_pipeline.py:1883` | 8 | Optional phases, branching |
-| quality_gated | `orchestration/unified_pipeline.py:1932` | 3 | Conditional phase, loop with convergence |
+| light | `orchestration/workflows.py`, `build_light_workflow()` | 3 | Linear dependencies |
+| standard | `orchestration/workflows.py`, `build_standard_workflow()` | 15 | Optional phases, branching |
+| full | `orchestration/workflows.py`, `build_full_workflow()` | 17 | Optional phases, branching |
+| quality_gated | `orchestration/workflows.py`, `build_quality_gated_counter_workflow()` | 4 | Conditional phase, loop with convergence |
 | democratech | `workflows/democratech.py` | 9 | Optional, conditional, metadata |
 | debate_tournament | `workflows/debate_tournament.py` | 6 | Loop with convergence function |
 | fact_check | `workflows/fact_check_pipeline.py` | 6 | Optional phases, metadata |
 | formal_verification | `workflows/formal_verification.py` | 17 | Diamond deps, conditional, optional, metadata |
 | formal_debate | `workflows/formal_debate.py` | 8 | Optional phases, metadata |
+
+> **Re-anchored and re-measured (#2258).** The four builders in the first block moved out of
+> `orchestration/unified_pipeline.py`, which no longer defines any workflow (it carries only
+> shield/outcome helpers); the line anchors that used to point there were **4× past its end**
+> (491 lines). They are now named by their builder functions.
+>
+> The phase counts in that block are **runtime** counts, re-measured at the builders on
+> 2026-09-15 — `build_*()` then `len(wf.phases)` — **not** counts of `.add_phase` calls in the
+> source: `build_quality_gated_counter_workflow` makes 2 such calls yet yields 4 phases, so the
+> textual count under-reports. The previous values (5 / 8 / 3) were stale.
 
 ---
 
