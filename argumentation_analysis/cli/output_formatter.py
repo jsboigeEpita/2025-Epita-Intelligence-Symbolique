@@ -13,8 +13,14 @@ Usage:
     # From run_orchestration.py --rich-output
     render_spectacular_result(result)
 
-Sections: Extraction / Formal Logic / Fallacies / JTMS / ATMS / Dung /
+Sections: Extraction / Formal Logic / Fallacies / JTMS / Dung /
 Counter-arguments / Debate / Quality / Narrative (#364).
+
+Known limit (#2118, decision R1003): ATMS results exist only as the workflow
+output ``atms_tracking`` — no producer ever pushed them to this formatter, so
+the declared-but-never-filled ATMS section was removed rather than given a
+render branch (a section that never fills blesses what it does not measure,
+#2205). If ATMS ever surfaces here, re-add it WITH a producer.
 """
 
 import json
@@ -37,12 +43,11 @@ SECTIONS = [
     (2, "Formal Logic"),
     (3, "Fallacies"),
     (4, "JTMS"),
-    (5, "ATMS"),
-    (6, "Dung"),
-    (7, "Counter-arguments"),
-    (8, "Debate"),
-    (9, "Quality"),
-    (10, "Narrative"),
+    (5, "Dung"),
+    (6, "Counter-arguments"),
+    (7, "Debate"),
+    (8, "Quality"),
+    (9, "Narrative"),
 ]
 
 
@@ -182,7 +187,7 @@ def _render_fallacies(console, state: Dict[str, Any]):
     if neural:
         console.print(
             f"  {len(neural)} neural detection scores "
-            f"({_section_ref(9)} for quality impact)"
+            f"({_section_ref(8)} for quality impact)"
         )
 
 
@@ -213,7 +218,7 @@ def _render_dung(console, state: Dict[str, Any]):
     if not frameworks:
         return
 
-    console.print(f"\n[bold]6. Dung[/bold] ({_section_ref(6)})")
+    console.print(f"\n[bold]5. Dung[/bold] ({_section_ref(5)})")
     for fname, fdata in list(frameworks.items())[:5]:
         if isinstance(fdata, dict):
             exts = fdata.get("extensions", {})
@@ -231,7 +236,7 @@ def _render_counter_arguments(console, state: Dict[str, Any]):
     if not counters:
         return
 
-    console.print(f"\n[bold]7. Counter-arguments[/bold] ({_section_ref(7)})")
+    console.print(f"\n[bold]6. Counter-arguments[/bold] ({_section_ref(6)})")
     for ca in counters[:5]:
         strategy = ca.get("strategy", "?")
         content = _truncate(
@@ -246,7 +251,7 @@ def _render_debate(console, state: Dict[str, Any]):
     if not debates and not gov:
         return
 
-    console.print(f"\n[bold]8. Debate[/bold] ({_section_ref(8)})")
+    console.print(f"\n[bold]7. Debate[/bold] ({_section_ref(7)})")
     if debates:
         console.print(f"  {len(debates)} debate rounds")
     if gov:
@@ -261,7 +266,7 @@ def _render_quality(console, state: Dict[str, Any]):
     if not scores:
         return
 
-    console.print(f"\n[bold]9. Quality[/bold] ({_section_ref(9)})")
+    console.print(f"\n[bold]8. Quality[/bold] ({_section_ref(8)})")
     for arg_id, quality in list(scores.items())[:5]:
         if isinstance(quality, dict):
             overall = quality.get("overall", "?")
@@ -277,7 +282,7 @@ def _render_narrative(console, state: Dict[str, Any], result: Dict[str, Any]):
     if not conclusion:
         return
 
-    console.print(f"\n[bold]10. Narrative[/bold] ({_section_ref(10)})")
+    console.print(f"\n[bold]9. Narrative[/bold] ({_section_ref(9)})")
     console.print(Panel(str(conclusion), border_style="green"))
 
     # Cross-references
@@ -287,7 +292,7 @@ def _render_narrative(console, state: Dict[str, Any], result: Dict[str, Any]):
     if state.get("jtms_beliefs"):
         refs.append(_section_ref(4))
     if state.get("dung_frameworks"):
-        refs.append(_section_ref(6))
+        refs.append(_section_ref(5))
     if refs:
         console.print(f"  [dim]Supporting evidence: {'; '.join(refs)}[/dim]")
 
