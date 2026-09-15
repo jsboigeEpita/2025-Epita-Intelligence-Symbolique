@@ -291,13 +291,11 @@ The project has **4 separate web applications** with overlapping functionality:
 ### 1. Deleted `analysis_runner.py` — Broken Import Chain
 The most critical finding. `analysis_runner.py` was replaced by `analysis_runner_v2.py` but 5+ files still reference the old name. This breaks the two main CLI entry points for rhetorical analysis.
 
-**Affected files**:
+**Affected files** (four entries dropped, #2258 — three pointed into
+`agents/test_scripts/` and `agents/runners/test/orchestration/`, directories that no longer
+exist, and the notebook path no longer resolves at all; the finding stands on the entries below):
 - `argumentation_analysis/main_orchestrator.py:214`
 - `argumentation_analysis/run_orchestration.py:133`
-- `argumentation_analysis/agents/test_scripts/orchestration/test_orchestration_scale.py:99`
-- `argumentation_analysis/agents/runners/test/orchestration/test_orchestration_scale.py:101`
-- `argumentation_analysis/agents/runners/test/orchestration/test_orchestration_complete.py:200`
-- `argumentation_analysis/notebooks/main_orchestrator.ipynb:402`
 
 ### 2. Hardcoded Model IDs
 Several scripts hardcode LLM model IDs instead of reading from config/environment:
