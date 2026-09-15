@@ -70,14 +70,13 @@ API FastAPI complète avec endpoints pour :
 - **Import/Export** : POST `/jtms/export`, `/jtms/import`
 - **Plugin SK** : GET `/jtms/plugin/status`, `/jtms/sk/*` (endpoints de convenance)
 
-#### Intégration SK (`integrations/semantic_kernel_integration.py`)
-Intégration complète avec templates de raisonnement :
-
-- `JTMSKernelIntegration` - Classe principale d'intégration
-- `analyze_argument_with_llm()` - Analyse d'arguments avec LLM
-- `resolve_contradiction_with_llm()` - Résolution de contradictions
-- `explain_belief_with_llm()` - Explications enrichies
-- `multi_agent_reasoning()` - Coordination multi-agents
+#### Intégration SK (`integrations/semantic_kernel_integration.py`) — **retirée (#2116)**
+Ce second montage SK (0 importeur production, seule la surface
+`plugins/semantic_kernel/jtms_plugin.py` est réellement montée) a été retiré
+avec son île `integrations/`. Les fonctions LLM qu'il exposait
+(`analyze_argument_with_llm()`, `resolve_contradiction_with_llm()`,
+`explain_belief_with_llm()`, `multi_agent_reasoning()`) n'avaient aucun
+consommateur hors de l'île elle-même.
 
 ### 🚀 Phase 4 - Demos et Tests
 
@@ -138,15 +137,9 @@ async def startup():
 
 ### Configuration Semantic Kernel
 
-```python
-from argumentation_analysis.integrations.semantic_kernel_integration import create_jtms_kernel
-
-# Avec OpenAI
-integration = create_jtms_kernel(openai_api_key="your_key", model_name="gpt-4")
-
-# Mode minimal (sans LLM)
-integration = create_minimal_jtms_integration()
-```
+L'ancien montage via `integrations.semantic_kernel_integration.create_jtms_kernel`
+a été retiré (#2116, 0 importeur production) — la surface SK vivante est
+`plugins/semantic_kernel/jtms_plugin.py` (voir la section Plugin SK).
 
 ## Exemples d'utilisation
 
@@ -316,8 +309,6 @@ argumentation_analysis/
 ├── plugins/
 │   └── semantic_kernel/
 │       └── jtms_plugin.py          # Plugin SK natif
-├── integrations/
-│   └── semantic_kernel_integration.py # Intégration SK complète
 ├── api/
 │   ├── jtms_models.py              # Modèles Pydantic
 │   └── jtms_endpoints.py           # Endpoints FastAPI

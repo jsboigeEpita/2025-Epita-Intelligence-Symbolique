@@ -40,11 +40,8 @@ def test_axe_b_jtms_imports():
     except ImportError as e:
         errors.append(f"Erreur import jtms_models: {e}")
 
-    try:
-        from argumentation_analysis.integrations import semantic_kernel_integration
-
-        assert semantic_kernel_integration is not None
-    except ImportError as e:
-        errors.append(f"Erreur import semantic_kernel_integration: {e}")
+    # integrations/semantic_kernel_integration (residual SK montage, 0 production
+    # importer) was withdrawn in #2116 — the SK JTMS surface that production
+    # actually mounts is already covered by the jtms_plugin block above.
 
     assert not errors, "Des erreurs d'import ont été trouvées:\\n" + "\\n".join(errors)
