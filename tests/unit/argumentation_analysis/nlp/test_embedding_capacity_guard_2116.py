@@ -9,20 +9,37 @@ candidate without a red test.
 
 Real embeddings on synthetic input — no mocks. The model is the module's own
 docstring example (``all-MiniLM-L6-v2``, 384 dimensions).
+
+Where the measurement runs: it needs a working torch stack. CI runners cannot
+load torch DLLs at all (#1651 — probe VERDICT 4/8: torch_cpu/fbgemm/shm/
+torch_python, winerror 182, deterministic on 3/3 runs 2026-09-15), so
+sentence-transformers is deliberately NOT provisioned there — provisioning it
+made this file's and ``test_embedding_utils.py``'s module-level imports reach
+``import torch`` at COLLECTION time and abort the whole run (PR #2267 run 2).
+In CI the capacity tests skip with that reason; on any machine where the
+stack loads (dev boxes) they measure for real.
 """
 
 import importlib.util
 
 import pytest
 
-from argumentation_analysis.nlp.embedding_utils import get_embeddings_for_chunks
-
 ST_MODEL = "all-MiniLM-L6-v2"
 EXPECTED_DIMS = 384
+
+ST_SKIP_REASON = (
+    "sentence-transformers unavailable: not provisioned in CI because the "
+    "runner image cannot load torch DLLs (#1651 — probe VERDICT 4/8, "
+    "winerror 182, deterministic on 3/3 runs 2026-09-15); the capability "
+    "is measured wherever the stack loads"
+)
 
 
 @pytest.fixture(scope="module")
 def real_embeddings():
+    pytest.importorskip("sentence_transformers", reason=ST_SKIP_REASON)
+    from argumentation_analysis.nlp.embedding_utils import get_embeddings_for_chunks
+
     return get_embeddings_for_chunks(
         ["argument alpha", "counter beta", "synthesis gamma"], ST_MODEL
     )
