@@ -13,7 +13,11 @@ ensure_env()
 OU ENCORE PLUS SIMPLE :
 import argumentation_analysis.core.environment
 
-Le module s'auto-exécute à l'import et active l'environnement si nécessaire.
+À l'import, le module charge le ``.env`` de la racine du dépôt dans ``os.environ``
+(#2130) — c'est ce que les consommateurs attendent de « Auto-activation environnement
+intelligent ». Le garde Conda (vérification de l'environnement activé, qui lève hors
+shell activé) n'est PAS un effet d'import : il appartient à l'appel explicite
+``ensure_env()``.
 
 Auteur: Intelligence Symbolique EPITA
 Date: 09/06/2025
@@ -172,15 +176,29 @@ def get_simple_import() -> str:
 
 # Auto-exécution à l'import pour usage ultra-simple
 if __name__ != "__main__":
-    # Le module est importé, auto-activation/vérification.
-    # ========================== ATTENTION - PROTECTION CRITIQUE ==========================
-    # La ligne suivante `ensure_env()` est ESSENTIELLE pour la sécurité et la stabilité
-    # de tous les scripts. Elle garantit que le code s'exécute dans
-    # l'environnement Conda approprié ('projet-is').
-    #
-    # NE JAMAIS DÉSACTIVER, COMMENTER OU SUPPRIMER CETTE LIGNE.
-    # =====================================================================================
-    pass
+    # Le module est importé : charger le .env (#2130). Ce bloc fut un chemin mort —
+    # il promettait un `ensure_env()` « ESSENTIEL » autour d'un `pass`, et les
+    # consommateurs importants le module pour l'auto-activation ne chargeaient rien
+    # (SELF_HOSTED_LLM_* absents d'os.environ, phases auto-hébergées « not configured »
+    # sur des sièges au .env pourtant rempli). Seule la partie dotenv est câblée ici :
+    # le garde Conda de ensure_env() lève RuntimeError hors shell activé et n'appartient
+    # pas à un effet d'import. Les sessions pytest ne sont pas affectées : conftest
+    # mocke python-dotenv par défaut (MOCK_DOTENV_IN_TESTS).
+    try:
+        from project_core.managers.environment_manager import EnvironmentManager
+
+        _em = EnvironmentManager()
+        if not _em.dotenv_loaded:
+            print(
+                "[auto_env] WARNING: aucun .env chargé — les variables qu'il "
+                "déclare (SELF_HOSTED_LLM_*, OPENAI*, …) sont absentes du "
+                "processus (#2130)."
+            )
+        del _em
+    except (
+        Exception
+    ) as _exc:  # noqa: BLE001 — un import ne doit jamais faire tomber le process
+        print(f"[auto_env] WARNING: échec du chargement .env à l'import : {_exc}")
 
 
 if __name__ == "__main__":
