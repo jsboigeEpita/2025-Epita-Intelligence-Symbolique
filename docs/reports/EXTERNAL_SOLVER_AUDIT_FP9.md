@@ -13,9 +13,11 @@ was removed in Tweety 1.28+ (now **instance** methods). Every call raised `Attri
 swallowed by `except Exception: logger.debug(...)` → no external solver was ever wired, yet the pipeline
 reported the configured solver name as if active (formal theater, #1019).
 
-The fix introduced a module-level `EXTERNAL_TOOL_PATHS` registry (`jvm_setup.py:54`) populated by
-`_configure_external_tools` (`jvm_setup.py:660-759`), and an EProver **consumer** in `fol_handler.py`
-that reads the registry and passes the path to the `EFOLReasoner(path)` ctor.
+The fix introduced an `EXTERNAL_TOOL_PATHS` registry (`jvm_setup.py`, module-level declaration)
+populated by `_configure_external_tools` (same module), and an EProver **consumer** in
+`agents/core/logic/fol_handler.py` that reads the registry through the module-level
+`_get_eprover_path()` helper and passes the path to the `EFOLReasoner(path)` ctor. (Line anchors
+removed: they drifted past reformats — the symbol names are the stable handle, #2239.)
 
 ## Audit question
 
@@ -34,7 +36,8 @@ whether ASP is also unwired (same potential bug). User mandate: 'there must be o
 
 ### EProver (FOL) — ✅ FIXED (#1202, `029bdf7c`)
 
-`fol_handler.py:24-26` reads `EXTERNAL_TOOL_PATHS.get("eprover")`; `_fol_*_with_eprover` builds
+`agents/core/logic/fol_handler.py`, module-level `_get_eprover_path()` reads
+`EXTERNAL_TOOL_PATHS.get("eprover")`; `_fol_*_with_eprover` builds
 `EFOLReasoner(path)`; sync `check_consistency` dispatches on `settings.solver == EPROVER`.
 Firsthand E2E-verified by ai-01 R454 (inconsistent → `(False, '(EProver): inconsistent')`).
 
@@ -52,9 +55,15 @@ Binary present on po-2023: `ext_tools/clingo/clingo.exe` (3.4 MB), auto-download
 **Conclusion:** ASP was never victim of the static-method drift because it never went through the
 Tweety Java reasoner for execution — only for parsing. No action needed.
 
-### SPASS (Modal) — ❌ RESIDUAL BUG (this audit, #1205)
+### SPASS (Modal) — ❌ RESIDUAL BUG at audit date → ✅ **fixed after this audit** (#1205)
 
-**Same no-arg ctor bug that EProver had pre-fix.** `modal_handler.py:36-48`:
+> **Status note (#2239):** the no-arg-ctor bug described below was **resolved by #1205** after
+> this audit was written. `modal_handler.py` now carries the fix (registry-read + fail-loud,
+> with an in-source `#1205` comment naming the former `SPASSMlReasoner()` no-arg call). The
+> section is retained as the audit's original finding — read it as historical, not current-state.
+
+**Same no-arg ctor bug that EProver had pre-fix.** `modal_handler.py`
+(`agents/core/logic/`, method `_get_spass_reasoner`):
 
 ```python
 def _get_spass_reasoner(self):
@@ -70,11 +79,12 @@ def _get_spass_reasoner(self):
     return self._spass_reasoner
 ```
 
-- The detected SPASS path (`EXTERNAL_TOOL_PATHS["spass"]`, `jvm_setup.py:716-722`) is **never passed**
+- The detected SPASS path (`EXTERNAL_TOOL_PATHS["spass"]`, `jvm_setup.py` — the `spass_path`
+  detection block in `download_external_tools`) is **never passed**
   to the ctor.
 - Under Tweety 1.28+, `SPASSMlReasoner` ctor requires the binary path (same API-drift family as
   `EFOLReasoner`). `SPASSMlReasoner()` raises → `except` swallows → `RuntimeError` →
-  `_get_active_reasoner` (`modal_handler.py:50-54`) returns the degraded `SimpleMlReasoner`, or the
+  `_get_active_reasoner` (method, same module) returns the degraded `SimpleMlReasoner`, or the
   orchestrator degrades the whole modal axis to `None`.
 - Net: **the SPASS path is never wired**, mirroring the EProver theater R454 exactly.
 - Corroboration: ai-01 R452 firsthand observed `modalities: none_detected` / `valid: None` on a
@@ -88,7 +98,7 @@ def _get_spass_reasoner(self):
 | Solver | po-2023 | Notes |
 |--------|---------|-------|
 | EProver | ❌ absent | `ext_tools/` gitignored; ai-01 has it locally (R454) |
-| SPASS | ❌ absent | manual install per `jvm_setup.py:399` |
+| SPASS | ❌ absent | manual install per `jvm_setup.py` (`download_external_tools` — `spass_path` block) |
 | Clingo | ✅ present | auto-download works |
 | Prover9 | ✅ bundled in `libs/prover9/bin/prover9.exe` (518 KB, **committed**) | FP-8 runner (#1203) tested against it |
 
@@ -131,7 +141,8 @@ Plus a contract test pinning dispatch + fail-loud (mirror EProver contract tests
 Of the 3 external formal solvers:
 - **EProver (FOL)**: ✅ fixed (#1202).
 - **Clingo (ASP)**: ✅ unaffected (pre-existing Python subprocess bypass).
-- **SPASS (Modal)**: ❌ residual no-arg ctor bug (#1205) — the last external-solver theater of the
-  static-method-API-drift class flagged by po-2025's PROPOSAL.
+- **SPASS (Modal)**: ❌ residual no-arg ctor bug **at audit date** — the last external-solver theater of the
+  static-method-API-drift class flagged by po-2025's PROPOSAL — **✅ resolved by #1205 after the audit** (see the
+  status note on the SPASS section).
 
 This closes the **modal axis wiring gap** of Epic #1191 (blind-spot elimination).
