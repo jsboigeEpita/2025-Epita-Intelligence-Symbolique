@@ -37,13 +37,17 @@ def update_encrypted_config():
 
     # Vérifier si le fichier JSON corrigé existe
     if not json_file_path.exists():
-        print(f"❌ Erreur: Le fichier JSON corrigé '{json_file_path}' n'existe pas.")
+        print(
+            f"❌ Erreur: Le fichier JSON corrigé '{json_file_path}' n'existe pas. "
+            f"Il est produit par argumentation_analysis/utils/restore_config.py "
+            f"(absent du dépôt par conception : il porte du contenu dataset en clair)."
+        )
         return False
 
     # Vérifier si la clé de chiffrement est disponible
     if not encryption_key:
         print(
-            f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'TEXT_CONFIG_PASSPHRASE'."
+            f"❌ Erreur: La clé de chiffrement n'est pas disponible. Vérifiez la variable d'environnement 'ENCRYPTION_KEY'."
         )
         return False
 
