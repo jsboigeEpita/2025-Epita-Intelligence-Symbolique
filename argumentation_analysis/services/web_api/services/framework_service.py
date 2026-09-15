@@ -14,6 +14,12 @@ from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 class FrameworkService:
     """
     Fournit la logique métier pour l'analyse des frameworks d'argumentation.
+
+    Moteur : TweetyBridge (AFHandler). Une seconde surface Dung existe, par
+    conception — ``api/services.py::DungAnalysisService`` (app FastAPI
+    ``api/``), mue par l'implémentation étudiante ``EnhancedDungAgent``
+    d'``abs_arg_dung``. Deux apps, deux moteurs, même capacité : les deux sont
+    vivantes et consommées (#2097-4).
     """
 
     def __init__(self):

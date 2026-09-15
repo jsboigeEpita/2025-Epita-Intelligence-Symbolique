@@ -497,7 +497,7 @@ class MCPService:
                 text=text, logic_type=logic_type, options=options or {}
             )
 
-            result = await self.services.logic_service.create_belief_set(request)
+            result = await self.services.logic_service.text_to_belief_set(request)
             return result.model_dump()
 
         except ValidationError as e:

@@ -5,7 +5,7 @@ Covers all Pydantic models: FallacyDetection, ArgumentStructure, AnalysisRespons
 ValidationResult, ValidationResponse, FallacyResponse, ArgumentNode, Extension,
 FrameworkVisualization, FrameworkResponse, ErrorResponse, LogicQueryResult,
 LogicBeliefSet, LogicBeliefSetResponse, LogicQueryResponse,
-LogicGenerateQueriesResponse, LogicInterpretationResponse, SuccessResponse.
+LogicGenerateQueriesResponse, SuccessResponse.
 """
 
 import pytest
@@ -29,7 +29,6 @@ from argumentation_analysis.services.web_api.models.response_models import (
     LogicBeliefSetResponse,
     LogicQueryResponse,
     LogicGenerateQueriesResponse,
-    LogicInterpretationResponse,
     SuccessResponse,
 )
 
@@ -490,34 +489,6 @@ class TestLogicGenerateQueriesResponse:
         assert resp.queries == []
         assert resp.processing_time == 0.0
         assert resp.generation_options == {}
-
-
-# ============================================================
-# LogicInterpretationResponse
-# ============================================================
-
-
-class TestLogicInterpretationResponse:
-    def test_creation(self):
-        resp = LogicInterpretationResponse(
-            success=True,
-            belief_set_id="bs1",
-            logic_type="propositional",
-            interpretation="The results show...",
-        )
-        assert resp.interpretation == "The results show..."
-
-    def test_defaults(self):
-        resp = LogicInterpretationResponse(
-            success=True,
-            belief_set_id="bs1",
-            logic_type="propositional",
-            interpretation="X",
-        )
-        assert resp.queries == []
-        assert resp.results == []
-        assert resp.processing_time == 0.0
-        assert resp.interpretation_options == {}
 
 
 # ============================================================
