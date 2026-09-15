@@ -2,8 +2,17 @@
 """
 Service de vérification factuelle — module de compatibilité.
 
-Ce module fournit une interface de service pour la vérification factuelle,
-déléguant au plugin ExternalVerificationPlugin sous-jacent.
+Ce module fournit une interface de service pour la vérification factuelle.
+Il est autonome : il ne délègue à aucun plugin (aucun import de
+plugin_framework). En l'état, ``verify_claim`` retourne un résultat
+UNVERIFIABLE de faible confiance — c'est un stub explicite, pas une
+vérification réelle (le branchement réseau est un arbitrage séparé,
+audit C-06 E1).
+
+Ce module est la **source unique** des enums ``VerificationStatus`` /
+``SourceReliability`` et de la carte de fiabilité par domaine
+(#2101) : le plugin ``external_verification`` les consomme, il ne les
+redéfinit pas.
 
 Historique: Le module original (PR #8, Candy Nguyen) a été refactoré en plugin
 (commit 80008c43, 2025-07-31). Ce shim restaure l'API de service attendue par
@@ -41,6 +50,53 @@ class SourceReliability(Enum):
     UNKNOWN = "unknown"
 
 
+# Source unique de la fiabilité par domaine (#2101) — l'ordre d'insertion est
+# significatif : la première clé matchée (par sous-chaîne) l'emporte.
+SOURCE_RELIABILITY_MAP: Dict[str, SourceReliability] = {
+    "wikipedia.org": SourceReliability.HIGHLY_RELIABLE,
+    "britannica.com": SourceReliability.HIGHLY_RELIABLE,
+    "reuters.com": SourceReliability.HIGHLY_RELIABLE,
+    "apnews.com": SourceReliability.HIGHLY_RELIABLE,
+    "bbc.com": SourceReliability.HIGHLY_RELIABLE,
+    "lemonde.fr": SourceReliability.HIGHLY_RELIABLE,
+    "liberation.fr": SourceReliability.HIGHLY_RELIABLE,
+    "franceinfo.fr": SourceReliability.HIGHLY_RELIABLE,
+    "sciencedirect.com": SourceReliability.HIGHLY_RELIABLE,
+    "nature.com": SourceReliability.HIGHLY_RELIABLE,
+    "science.org": SourceReliability.HIGHLY_RELIABLE,
+    "pubmed.ncbi.nlm.nih.gov": SourceReliability.HIGHLY_RELIABLE,
+    "insee.fr": SourceReliability.HIGHLY_RELIABLE,
+    "gouvernement.fr": SourceReliability.HIGHLY_RELIABLE,
+    "europa.eu": SourceReliability.HIGHLY_RELIABLE,
+    "who.int": SourceReliability.HIGHLY_RELIABLE,
+    "huffingtonpost.fr": SourceReliability.MODERATELY_RELIABLE,
+    "lefigaro.fr": SourceReliability.MODERATELY_RELIABLE,
+    "lexpress.fr": SourceReliability.MODERATELY_RELIABLE,
+    "nouvelobs.com": SourceReliability.MODERATELY_RELIABLE,
+    "cnews.fr": SourceReliability.MODERATELY_RELIABLE,
+    "francetvinfo.fr": SourceReliability.MODERATELY_RELIABLE,
+    "rfi.fr": SourceReliability.MODERATELY_RELIABLE,
+    "france24.com": SourceReliability.MODERATELY_RELIABLE,
+    "20minutes.fr": SourceReliability.MODERATELY_RELIABLE,
+    "ouest-france.fr": SourceReliability.MODERATELY_RELIABLE,
+    "sudouest.fr": SourceReliability.MODERATELY_RELIABLE,
+    "blog": SourceReliability.QUESTIONABLE,
+    "forum": SourceReliability.QUESTIONABLE,
+    "reddit.com": SourceReliability.QUESTIONABLE,
+    "quora.com": SourceReliability.QUESTIONABLE,
+    "yahoo.com": SourceReliability.QUESTIONABLE,
+    "answers.com": SourceReliability.QUESTIONABLE,
+    "wikihow.com": SourceReliability.QUESTIONABLE,
+    "fake-news": SourceReliability.UNRELIABLE,
+    "conspiracy": SourceReliability.UNRELIABLE,
+    "hoax": SourceReliability.UNRELIABLE,
+    "satirical": SourceReliability.UNRELIABLE,
+    "clickbait": SourceReliability.UNRELIABLE,
+    "tabloid": SourceReliability.UNRELIABLE,
+    "unverified": SourceReliability.UNRELIABLE,
+}
+
+
 @dataclass
 class VerificationResult:
     """Résultat de vérification d'une affirmation."""
@@ -66,42 +122,15 @@ class FactVerificationService:
     """
     Service de vérification factuelle.
 
-    Fournit la vérification des affirmations factuelles via recherche
-    multi-source et évaluation de la fiabilité des sources.
+    Stub explicite : sans API externe câblée, ``verify_claim`` retourne
+    UNVERIFIABLE (confiance 0.3, aucune source) — il ne simule pas de
+    résultats de recherche.
     """
 
     def __init__(self, api_config: Optional[Dict[str, Any]] = None):
         self.logger = logging.getLogger("FactVerificationService")
         self.api_config = api_config or {}
-        self.source_reliability_map = {
-            "wikipedia.org": SourceReliability.HIGHLY_RELIABLE,
-            "britannica.com": SourceReliability.HIGHLY_RELIABLE,
-            "reuters.com": SourceReliability.HIGHLY_RELIABLE,
-            "apnews.com": SourceReliability.HIGHLY_RELIABLE,
-            "bbc.com": SourceReliability.HIGHLY_RELIABLE,
-            "lemonde.fr": SourceReliability.HIGHLY_RELIABLE,
-            "liberation.fr": SourceReliability.HIGHLY_RELIABLE,
-            "franceinfo.fr": SourceReliability.HIGHLY_RELIABLE,
-            "sciencedirect.com": SourceReliability.HIGHLY_RELIABLE,
-            "nature.com": SourceReliability.HIGHLY_RELIABLE,
-            "science.org": SourceReliability.HIGHLY_RELIABLE,
-            "pubmed.ncbi.nlm.nih.gov": SourceReliability.HIGHLY_RELIABLE,
-            "insee.fr": SourceReliability.HIGHLY_RELIABLE,
-            "gouvernement.fr": SourceReliability.HIGHLY_RELIABLE,
-            "europa.eu": SourceReliability.HIGHLY_RELIABLE,
-            "who.int": SourceReliability.HIGHLY_RELIABLE,
-            "huffingtonpost.fr": SourceReliability.MODERATELY_RELIABLE,
-            "lefigaro.fr": SourceReliability.MODERATELY_RELIABLE,
-            "lexpress.fr": SourceReliability.MODERATELY_RELIABLE,
-            "nouvelobs.com": SourceReliability.MODERATELY_RELIABLE,
-            "cnews.fr": SourceReliability.MODERATELY_RELIABLE,
-            "francetvinfo.fr": SourceReliability.MODERATELY_RELIABLE,
-            "rfi.fr": SourceReliability.MODERATELY_RELIABLE,
-            "france24.com": SourceReliability.MODERATELY_RELIABLE,
-            "20minutes.fr": SourceReliability.MODERATELY_RELIABLE,
-            "ouest-france.fr": SourceReliability.MODERATELY_RELIABLE,
-            "sudouest.fr": SourceReliability.MODERATELY_RELIABLE,
-        }
+        self.source_reliability_map = dict(SOURCE_RELIABILITY_MAP)
         self.logger.info("FactVerificationService initialisé")
 
     def _assess_source_reliability(self, domain: str) -> SourceReliability:

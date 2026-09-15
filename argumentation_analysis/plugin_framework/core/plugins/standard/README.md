@@ -67,5 +67,7 @@ framework. Les plugins **vivants** du système sont dans `argumentation_analysis
    charge — d'où le présent README parent.
 
 Historique résolu : l'appel mort `_calculate_context_relevance` et les imports jamais
-consommés (`aiohttp`, `taxonomy_plugin`) ont été corrigés par #2189 (#2100) ; le
-`BasePlugin` local factice et le manifeste commun illisible ont été retirés par #2099.
+consommés (`aiohttp`, `taxonomy_plugin`) de `taxonomy_explorer` ont été corrigés par
+#2189 (#2100) ; les propres morts d'`external_verification` (import `aiohttp`,
+injection `taxonomy_plugin`, fixtures provider-shaped, enums dupliqués) par #2101 ;
+le `BasePlugin` local factice et le manifeste commun illisible ont été retirés par #2099.

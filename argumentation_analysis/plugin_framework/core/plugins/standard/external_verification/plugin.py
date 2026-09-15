@@ -1,15 +1,23 @@
 # -*- coding: utf-8 -*-
 """
 Plugin pour la vérification factuelle externe.
+
+⚠️ Les recherches externes sont **SIMULÉES** : aucune API Tavily/SearXNG
+n'est câblée — ``verify_claims`` s'appuie sur des fixtures explicites
+(``_simulate_search``) et le dit à chaque appel (WARNING si des clés API
+sont configurées, car c'est le cas où la simulation pourrait se lire à
+tort comme une recherche réelle). Le branchement réseau réel est un
+arbitrage séparé (audit C-06 E1).
+
+Les enums de statut et de fiabilité viennent de la source unique
+``services/fact_verification_service.py`` (#2101) — la surface de
+production mesurée.
 """
 
 import logging
 import asyncio
-import aiohttp
-import json
 from typing import Dict, List, Any, Optional, Tuple
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime, timedelta
 
 # Import des composants de base des plugins
@@ -18,35 +26,14 @@ from argumentation_analysis.plugin_framework.core.plugins.interfaces import Base
 # Import des composants de l'ancien service
 from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
     FactualClaim,
-    ClaimVerifiability,
 )
-from argumentation_analysis.plugin_framework.core.plugins.standard.taxonomy_explorer.plugin import (
-    TaxonomyExplorerPlugin,
+from argumentation_analysis.services.fact_verification_service import (
+    SOURCE_RELIABILITY_MAP,
+    SourceReliability,
+    VerificationStatus,
 )
 
 logger = logging.getLogger(__name__)
-
-
-class VerificationStatus(Enum):
-    """Statuts de vérification des affirmations."""
-
-    VERIFIED_TRUE = "verified_true"
-    VERIFIED_FALSE = "verified_false"
-    PARTIALLY_TRUE = "partially_true"
-    DISPUTED = "disputed"
-    UNVERIFIABLE = "unverifiable"
-    INSUFFICIENT_INFO = "insufficient_info"
-    ERROR = "error"
-
-
-class SourceReliability(Enum):
-    """Niveaux de fiabilité des sources."""
-
-    HIGHLY_RELIABLE = "highly_reliable"
-    MODERATELY_RELIABLE = "moderately_reliable"
-    QUESTIONABLE = "questionable"
-    UNRELIABLE = "unreliable"
-    UNKNOWN = "unknown"
 
 
 @dataclass
@@ -117,17 +104,15 @@ class FactVerificationResult:
 
 class ExternalVerificationPlugin(BasePlugin):
     """
-    Plugin de vérification factuelle des affirmations.
+    Plugin de vérification factuelle des affirmations — recherches SIMULÉES.
+
+    Les I/O externes ne sont pas câblées : ``verify_claims`` produit des
+    résultats à partir de fixtures explicites, annoncées à chaque appel.
     """
 
-    def __init__(
-        self,
-        taxonomy_plugin: TaxonomyExplorerPlugin,
-        api_config: Optional[Dict[str, Any]] = None,
-    ):
+    def __init__(self, api_config: Optional[Dict[str, Any]] = None):
         """
         Initialise le plugin de vérification factuelle.
-        :param taxonomy_plugin: Instance du plugin de taxonomie.
         :param api_config: Configuration des APIs de recherche externes
         """
         super().__init__()
@@ -139,63 +124,13 @@ class ExternalVerificationPlugin(BasePlugin):
         self._verification_cache = {}
         self._cache_expiry = timedelta(hours=24)
 
-        self.taxonomy_plugin = taxonomy_plugin
-
         self.logger.info("ExternalVerificationPlugin initialisé")
 
     def _initialize_source_reliability(self):
-        """Initialise les niveaux de fiabilité des sources."""
-        self.source_reliability_map = {
-            "HIGHLY_RELIABLE": [
-                "wikipedia.org",
-                "britannica.com",
-                "reuters.com",
-                "apnews.com",
-                "bbc.com",
-                "lemonde.fr",
-                "liberation.fr",
-                "franceinfo.fr",
-                "sciencedirect.com",
-                "nature.com",
-                "science.org",
-                "pubmed.ncbi.nlm.nih.gov",
-                "insee.fr",
-                "gouvernement.fr",
-                "europa.eu",
-                "who.int",
-            ],
-            "MODERATELY_RELIABLE": [
-                "huffingtonpost.fr",
-                "lefigaro.fr",
-                "lexpress.fr",
-                "nouvelobs.com",
-                "cnews.fr",
-                "francetvinfo.fr",
-                "rfi.fr",
-                "france24.com",
-                "20minutes.fr",
-                "ouest-france.fr",
-                "sudouest.fr",
-            ],
-            "QUESTIONABLE": [
-                "blog",
-                "forum",
-                "reddit.com",
-                "quora.com",
-                "yahoo.com",
-                "answers.com",
-                "wikihow.com",
-            ],
-            "UNRELIABLE": [
-                "fake-news",
-                "conspiracy",
-                "hoax",
-                "satirical",
-                "clickbait",
-                "tabloid",
-                "unverified",
-            ],
-        }
+        """Dérive la vue niveau→domaines de la source unique (#2101)."""
+        self.source_reliability_map: Dict[str, List[str]] = {}
+        for domain, level in SOURCE_RELIABILITY_MAP.items():
+            self.source_reliability_map.setdefault(level.name, []).append(domain)
 
     async def verify_claims(
         self, claims: List[FactualClaim]
@@ -321,24 +256,22 @@ class ExternalVerificationPlugin(BasePlugin):
             )
 
     async def _search_sources(self, claim: FactualClaim) -> List[Dict[str, Any]]:
-        # ... (le reste des méthodes privées _search_sources, _build_search_query, etc. reste identique)
-        """Recherche des sources pour vérifier une affirmation."""
+        """Recherche des sources pour vérifier une affirmation.
 
+        Aucune recherche réelle n'est câblée : le résultat est TOUJOURS la
+        simulation, annoncée explicitement (#2101).
+        """
         search_query = self._build_search_query(claim)
-        sources = []
-
-        if self.api_config.get("tavily_api_key"):
-            tavily_sources = await self._search_tavily(search_query)
-            sources.extend(tavily_sources)
-
-        if self.api_config.get("searxng_url"):
-            searxng_sources = await self._search_searxng(search_query)
-            sources.extend(searxng_sources)
-
-        if not sources:
-            sources = self._simulate_search(search_query)
-
-        return sources[:10]
+        if self.api_config.get("tavily_api_key") or self.api_config.get("searxng_url"):
+            self.logger.warning(
+                "ExternalVerificationPlugin: clés APIs configurées mais aucune "
+                "recherche réelle n'est câblée — résultats SIMULÉS (fixtures)"
+            )
+        else:
+            self.logger.info(
+                "ExternalVerificationPlugin: recherche SIMULÉE (aucune API câblée)"
+            )
+        return self._simulate_search(search_query)[:10]
 
     def _build_search_query(self, claim: FactualClaim) -> str:
         query_parts = []
@@ -352,30 +285,6 @@ class ExternalVerificationPlugin(BasePlugin):
         if claim.temporal_references:
             query_parts.append(claim.temporal_references[0])
         return " ".join(query_parts)
-
-    async def _search_tavily(self, query: str) -> List[Dict[str, Any]]:
-        self.logger.debug(f"Recherche Tavily simulée pour: {query}")
-        return [
-            {
-                "url": f"https://example-tavily.com/{query[:10]}",
-                "title": f"Tavily: {query[:30]}",
-                "snippet": "...",
-                "domain": "example-tavily.com",
-                "published_date": "2024-01-01",
-            }
-        ]
-
-    async def _search_searxng(self, query: str) -> List[Dict[str, Any]]:
-        self.logger.debug(f"Recherche SearXNG simulée pour: {query}")
-        return [
-            {
-                "url": f"https://example-searxng.com/{query[:10]}",
-                "title": f"SearXNG: {query[:30]}",
-                "snippet": "...",
-                "domain": "example-searxng.com",
-                "published_date": "2024-03-01",
-            }
-        ]
 
     def _simulate_search(self, query: str) -> List[Dict[str, Any]]:
         self.logger.debug(f"Simulation de recherche pour: {query}")

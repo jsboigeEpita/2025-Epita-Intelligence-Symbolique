@@ -2,15 +2,12 @@ metadata:
   name: "external_verification"
   version: "1.0.0"
   author: "Core Team"
-  description: "Plugin pour la vérification factuelle externe d'affirmations."
+  description: "Plugin de vérification factuelle d'affirmations — recherches SIMULÉES (aucune API externe câblée)."
 
 spec:
   type: "standard"
   entrypoint: "plugin.py"
   class_name: "ExternalVerificationPlugin"
-
-  dependencies:
-    - "aiohttp"
 
   capabilities:
     - name: "verify_claims"
