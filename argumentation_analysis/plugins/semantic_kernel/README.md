@@ -24,7 +24,7 @@ Consommateur secondaire : `evaluation/plugin_benchmark.py:461`.
 
 ## Statut d'intégration
 
-**actif** — montage API mesuré (routes listées ci-dessus), 41 tests unitaires. À ne pas confondre avec [`../../integrations/`](../../integrations/README.md) (`semantic_kernel_integration.py`, résiduel, 0 importeur) : **c'est ici** que vit la surface SK JTMS réellement montée.
+**actif** — montage API mesuré (routes listées ci-dessus), 41 tests unitaires. L'ancien second montage `argumentation_analysis/integrations/semantic_kernel_integration.py` (résiduel, 0 importeur) a été **retiré** (#2116) : **c'est ici** que vit la surface SK JTMS réellement montée.
 
 ## Artefacts et lecteurs
 
