@@ -26,7 +26,7 @@ dépôt n'importe `pipelines.orchestration`.
 | [`execution/`](execution/README.md) | `engine.py` (121 l.) : **1 fonction libre** `analyze_text_orchestrated` ; `strategies.py` (337 l.) : **6 fonctions async libres**. **Zéro classe.** | résiduel, non câblé |
 | [`analysis/`](analysis/README.md) | 3 modules, **6 fonctions libres** (post-traitement, tâches opérationnelles simulées, traçage) | résiduel / compatibilité |
 | [`core/`](core/README.md) | `service_manager.py` (134 l.) : **1 wrapper de délégation de 2 fonctions** | résiduel intégral (0 importeur, 0 test) |
-| [`orchestrators/specialized/`](orchestrators/specialized/README.md) | 2 **wrappers de compatibilité** (`Cluedo` 68 l., `Conversation` 43 l.) | orphelins (0 instanciation) |
+| ~~`orchestrators/specialized/`~~ | **retiré (#2111)** : 2 wrappers de compatibilité, 0 instanciation prod+test | — |
 
 `__init__.py` (:63) ré-exporte ces noms — dont `Engine = analyze_text_orchestrated`
 (:28), jamais consommé. Le paquet reste au vert par ses **seuls tests** (mocks, plus

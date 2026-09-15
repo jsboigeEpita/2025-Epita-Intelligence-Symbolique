@@ -38,7 +38,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : plus d'`analysis_orchestrator.py` annoncé, plus de docstrings laissant croire aux classes vivantes. Frères : [`../analysis/`](../analysis/README.md), [`../config/`](../config/README.md), [`../core/`](../core/README.md), [`../orchestrators/specialized/`](../orchestrators/specialized/README.md).
+Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : plus d'`analysis_orchestrator.py` annoncé, plus de docstrings laissant croire aux classes vivantes. Frères : [`../analysis/`](../analysis/README.md), [`../config/`](../config/README.md), [`../core/`](../core/README.md). L'ancien frère `orchestrators/specialized/` a été retiré (#2111).
 
 ## Limites connues
 

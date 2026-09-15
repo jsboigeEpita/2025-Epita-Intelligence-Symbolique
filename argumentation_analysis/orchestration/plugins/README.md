@@ -25,7 +25,7 @@ Plugin énigme d'Einstein wrappant `EinsteinsRiddleState` ; force la formalisati
 **`EnqueteStateManagerPlugin` : monté en production par la chaîne Cluedo extended** —
 
 - montage kernel : `cluedo_extended_orchestrator.py:233-234` (`add_plugin(state_plugin, "EnqueteStatePlugin")`, import :87-89) ;
-- appelants de cet orchestrateur : `run_orchestration.py:814-819` (`--mode cluedo` → `run_cluedo_oracle_game`), `service_manager.py:81-83` (alias `CluedoOrchestrator`, lui-même consommé par `api/dependencies.py:3-4` et `pipelines/orchestration/__init__.py:21-22`), `cluedo_runner.py:8`, `pipelines/orchestration/orchestrators/specialized/cluedo_orchestrator.py:15`.
+- appelants de cet orchestrateur : `run_orchestration.py:814-819` (`--mode cluedo` → `run_cluedo_oracle_game`), `service_manager.py:81-83` (alias `CluedoOrchestrator`, lui-même consommé par `api/dependencies.py:3-4` et `pipelines/orchestration/__init__.py:21-22`), `cluedo_runner.py:8`. L'appelant wrapper `pipelines/.../orchestrators/specialized/cluedo_orchestrator.py` a été retiré (#2111).
 
 **`LogiqueComplexePlugin` : aucun monteur production** — le seul référent hors tests est `scripts/validation/orchestration_validation.py:344-345`, qui l'instancie **sans l'argument `state_instance` requis** : `TypeError` attrapée par le try/except (:357-358) — le « Test 8 » du script ne peut jamais passer, alors que le gabarit de rapport statique affiche « [OK] » (:527-528).
 
