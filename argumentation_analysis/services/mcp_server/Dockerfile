@@ -15,7 +15,8 @@ COPY environment.yml .
 RUN conda env create -f environment.yml
 
 # Make RUN commands use the new environment
-SHELL ["conda", "run", "-n", "projet-is-v2", "/bin/bash", "-c"]
+# #2096 : env renommée projet-is (environment.yml:1) — projet-is-v2 n'existe plus
+SHELL ["conda", "run", "-n", "projet-is", "/bin/bash", "-c"]
 
 # Set working directory
 WORKDIR /app
@@ -30,4 +31,6 @@ RUN pip install jpype1
 RUN pip install mcp
 
 # Command to run the MCP server
-CMD ["conda", "run", "--no-capture-output", "-n", "projet-is-v2", "python", "services/mcp_server/main.py"]
+# #2096 : chemin racine pré-migration #34 — le module vit sous
+# argumentation_analysis/services/mcp_server/ depuis la consolidation
+CMD ["conda", "run", "--no-capture-output", "-n", "projet-is", "python", "argumentation_analysis/services/mcp_server/main.py"]

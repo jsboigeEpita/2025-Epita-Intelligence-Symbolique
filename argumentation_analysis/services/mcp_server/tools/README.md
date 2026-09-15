@@ -33,7 +33,7 @@ main.py:686), appelé depuis `MCPService.__init__` (main.py:130).
 L'enregistrement est **fail-silent par design** : main.py:714-715 avale toute
 exception (« V2 tools not registered ») pour préserver les 10 outils v1.
 Lancement du serveur : script direct `../main.py:734-738` (affiche
-« 23 outils ») ou Docker (`../Dockerfile:33` — chemin périmé, cf. limites).
+« 23 outils ») ou Docker (`../Dockerfile:36` — chemin et env corrigés #2096).
 Aucun importateur production de `MCPService` dans le repo (seuls
 `__init__.py:3` et les tests).
 
@@ -91,14 +91,18 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
 
 - Fail-silent v2 (`main.py:714`) : une régression d'import dans `tools/`
   dégrade silencieusement le serveur à 10 outils.
-- `session.state` n'est jamais assigné dans le repo (défaut `None`,
+- ~~`session.state` n'est jamais assigné dans le repo (défaut `None`,
   `session_manager.py:22`) : les `state_writers`
   (conversation_tools.py:171) et `state=session.state` (:180) sont toujours
   `None` — aucune continuité d'état inter-rounds, `CAPABILITY_STATE_WRITERS`
-  mort sur ce chemin.
-- `../Dockerfile:33` lance `python services/mcp_server/main.py` (chemin
+  mort sur ce chemin.~~ **Corrigé (#2096)** : le premier tour crée
+  l'`UnifiedAnalysisState` (miroir de `run_unified_analysis`) et le pose dans
+  la session ; les tours suivants le reprennent, writers vivants.
+- ~~`../Dockerfile:33` lance `python services/mcp_server/main.py` (chemin
   racine inexistant depuis la migration #34) sous l'env conda `projet-is-v2`
-  périmée — l'image Docker ne peut pas démarrer le serveur.
+  périmée — l'image Docker ne peut pas démarrer le serveur.~~ **Corrigé
+  (#2096)** : chemin `argumentation_analysis/services/mcp_server/main.py`,
+  env `projet-is` (environment.yml:1).
 - La docstring de `generate_counter_argument` (specialized_tools.py:64-65)
   liste des types de contre-argument qui ne correspondent à aucune des deux
   énumérations réelles (`agents/core/counter_argument/definitions.py:15-22,34-41`).
