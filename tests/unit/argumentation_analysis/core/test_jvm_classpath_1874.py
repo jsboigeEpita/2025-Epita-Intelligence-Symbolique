@@ -208,3 +208,55 @@ def test_the_configured_version_wins_over_alphabetical_order(tmp_path, monkeypat
     monkeypatch.setattr(js.settings.jvm, "tweety_version", "1.28")
     cp = _build_tweety_classpath(tmp_path)
     assert len(cp) == 1 and "1.28" in cp[0], f"configured version ignored: {cp}"
+
+
+# --------------------------------------------------------------------------- #2246
+# Piste A (arbitrated): the legacy 1.28 layout deposits ~34 MODULE fat jars
+# (each module + its dependencies) that ALL carry ``-1.28-`` in their name. The
+# single-jar branch returned only the alphabetically-first (``action``), whose
+# transitive closure carries logics.pl and arg.dung but NOT arg.aspic -- the
+# JVM booted, then the first ASPIC JClass raised TypeError. When several uber
+# jars share the version tag, they all go on the classpath; and any reduction
+# to one jar among several must be logged -- the silence was half the bug.
+
+
+def test_multiple_version_matching_fat_jars_all_go_on_the_classpath(
+    tmp_path, monkeypatch
+):
+    import argumentation_analysis.core.jvm_setup as js
+
+    _mkjars(
+        tmp_path,
+        "org.tweetyproject.action-1.28-with-dependencies.jar",
+        "org.tweetyproject.arg.aspic-1.28-with-dependencies.jar",
+        "org.tweetyproject.logics.pl-1.28-with-dependencies.jar",
+    )
+    monkeypatch.setattr(js.settings.jvm, "tweety_version", "1.28")
+    cp = _build_tweety_classpath(tmp_path)
+    names = [Path(p).name for p in cp]
+    assert len(cp) == 3, (
+        "#2246: 3 version-matching module fat jars must all load -- returning "
+        f"only the first amputates the rest. got {names}"
+    )
+    assert any("arg.aspic" in n for n in names), "the aspic module was amputated"
+
+
+def test_classpath_reduction_is_never_silent(tmp_path, monkeypatch, caplog):
+    """Fallback to 1 fat jar among several (none carries the configured version)
+    must SAY so -- measured silence was the repro's second half."""
+    import logging
+
+    import argumentation_analysis.core.jvm_setup as js
+
+    _mkjars(
+        tmp_path,
+        "org.tweetyproject.tweety-full-1.28-with-dependencies.jar",
+        "org.tweetyproject.tweety-full-1.29-with-dependencies.jar",
+    )
+    monkeypatch.setattr(js.settings.jvm, "tweety_version", "1.31")
+    with caplog.at_level(logging.WARNING, logger="Orchestration.JPype.Setup"):
+        cp = _build_tweety_classpath(tmp_path)
+    assert len(cp) == 1 and "1.29" in cp[0]
+    assert (
+        "réduit" in caplog.text
+    ), f"#2246: the reduction to 1 jar among 2 must be logged, got: {caplog.text!r}"

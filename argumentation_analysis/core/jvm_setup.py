@@ -824,6 +824,11 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     size). So the fast-path is taken only when the candidate actually **carries
     Tweety classes**, which is the same rule ``_jar_carrying`` applies in the #1798
     tests: select by content, never by name.
+
+    #2246: a version tag matching MORE than one uber jar means the directory holds
+    the legacy module layout (each module + its dependencies, all fat-named) --
+    they all go on the classpath, and any reduction to a single jar among several
+    is logged, never silent.
     """
     all_jars = sorted(tweety_libs_dir.glob("*.jar"), key=lambda p: p.name)
     named_fat = [jar for jar in all_jars if "with-dependencies" in jar.name.lower()]
@@ -838,11 +843,44 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
             rejected.stat().st_size if rejected.exists() else 0,
         )
     if uber_jars:
-        # Prefer the configured version; `sorted()[-1]` alone is not version order
-        # (it breaks at 1.9 vs 1.10, where "1.9" sorts last).
-        for jar in sorted(uber_jars):
-            if f"-{settings.jvm.tweety_version}-" in jar.name:
-                return [str(jar.resolve())]
+        # #2246 (piste A, arbitré): several uber jars can share the version tag --
+        # the legacy 1.28 layout deposits ~34 module ``*-with-dependencies`` jars
+        # that all match ``-1.28-``. Returning only the alphabetically-first
+        # amputates every module outside that jar's transitive closure (arg.aspic
+        # measured absent). When the version matches more than one, they ALL go
+        # on the classpath; any reduction to one jar among several is logged.
+        matching = [
+            jar
+            for jar in sorted(uber_jars)
+            if f"-{settings.jvm.tweety_version}-" in jar.name
+        ]
+        if matching:
+            if len(matching) > 1:
+                logger.info(
+                    "#2246: %d fat jar(s) portent -%s-: classpath complet des %d "
+                    "(disposition en jars de module).",
+                    len(matching),
+                    settings.jvm.tweety_version,
+                    len(matching),
+                )
+            elif len(uber_jars) > 1:
+                logger.warning(
+                    "#2246: classpath réduit à 1 fat jar sur %d — seul celui-ci "
+                    "porte -%s-.",
+                    len(uber_jars),
+                    settings.jvm.tweety_version,
+                )
+            return [str(jar.resolve()) for jar in matching]
+        # No jar carries the configured version: prefer the highest name
+        # (`sorted()[-1]` alone is not version order — it breaks at 1.9 vs 1.10,
+        # where "1.9" sorts last) and SAY the classpath is reduced (#2246: the
+        # reduction must never be silent again).
+        logger.warning(
+            "#2246: classpath réduit à 1 fat jar sur %d — aucun ne porte -%s- "
+            "(fallback sur le dernier par ordre alphabétique).",
+            len(uber_jars),
+            settings.jvm.tweety_version,
+        )
         return [str(sorted(uber_jars)[-1].resolve())]
     # A named-fat jar rejected just above is unusable, so it does not belong on the
     # fallback classpath either. Only those are dropped: a `copy-dependencies`
