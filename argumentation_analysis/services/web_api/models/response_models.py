@@ -349,34 +349,6 @@ class LogicGenerateQueriesResponse(BaseModel):
     )
 
 
-class LogicInterpretationResponse(BaseModel):
-    """Réponse pour l'interprétation des résultats de requêtes logiques."""
-
-    success: bool = Field(..., description="Succès de l'interprétation")
-    interpretation_timestamp: datetime = Field(
-        default_factory=datetime.now, description="Timestamp de l'interprétation"
-    )
-
-    # Interprétation
-    belief_set_id: str = Field(..., description="ID de l'ensemble de croyances")
-    logic_type: str = Field(..., description="Type de logique")
-    queries: List[str] = Field(default_factory=list, description="Requêtes exécutées")
-    results: List[LogicQueryResult] = Field(
-        default_factory=list, description="Résultats des requêtes"
-    )
-    interpretation: str = Field(
-        ..., description="Interprétation textuelle des résultats"
-    )
-
-    # Métadonnées
-    processing_time: float = Field(
-        default=0.0, ge=0.0, description="Temps de traitement"
-    )
-    interpretation_options: Dict[str, Any] = Field(
-        default_factory=dict, description="Options utilisées"
-    )
-
-
 class SuccessResponse(BaseModel):
     """Réponse de succès standardisée."""
 

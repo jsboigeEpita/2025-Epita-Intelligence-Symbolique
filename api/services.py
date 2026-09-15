@@ -12,6 +12,11 @@ class DungAnalysisService:
     """
     Service pour analyser les frameworks d'argumentation de Dung.
     Utilise l'implémentation de l'étudiant (`EnhancedDungAgent`) comme moteur principal.
+
+    Une seconde surface Dung existe, par conception — le service MCP
+    ``argumentation_analysis/services/web_api/services/framework_service.py``
+    (moteur TweetyBridge/AFHandler). Deux apps, deux moteurs, même capacité :
+    les deux sont vivantes et consommées (#2097-4).
     """
 
     def __init__(self):

@@ -119,17 +119,6 @@ class TestValidationService:
         mock_logic_service = Mock()
         mock_logic_service.is_healthy.return_value = True
 
-        # Simuler une coroutine pour validate_argument_from_components
-        async def mock_validate_argument(request):
-            # Comportement simple pour le test : valide si la conclusion est "B"
-            if request.conclusion == "B":
-                return True
-            return False
-
-        mock_logic_service.validate_argument_from_components = Mock(
-            wraps=mock_validate_argument
-        )
-
         from argumentation_analysis.services.web_api.services.validation_service import (
             ValidationService,
         )

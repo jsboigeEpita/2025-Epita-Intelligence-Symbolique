@@ -334,14 +334,3 @@ class LogicGenerateQueriesRequest(BaseModel):
                 f"Type de logique invalide. Utilisez: {', '.join(valid_types)}"
             )
         return v
-
-
-class FrameworkAnalysisRequest(BaseModel):
-    """Requête pour l'analyse d'un framework de Dung."""
-
-    arguments: List[str] = Field(
-        ..., min_length=1, description="Liste des IDs d'arguments"
-    )
-    attacks: List[List[str]] = Field(
-        default_factory=list, description="Liste des attaques [source_id, target_id]"
-    )

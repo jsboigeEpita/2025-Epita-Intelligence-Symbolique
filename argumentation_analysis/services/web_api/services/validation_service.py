@@ -81,49 +81,7 @@ class ValidationService:
         start_time = time.time()
 
         try:
-            # Branche 1: Validation formelle via LogicService si logic_type est fourni
-            # Correction : Utilisation de argument_type au lieu de logic_type qui n'existe pas.
-            # La condition a été modifiée pour ne jamais s'exécuter pour l'instant, car la logique
-            # de validation formelle n'est pas l'objectif ici. L'erreur était une AttributeError.
-            if (
-                hasattr(request, "logic_type")
-                and request.logic_type
-                and request.logic_type != "heuristic"
-            ):
-                is_formally_valid = (
-                    await self.logic_service.validate_argument_from_components(request)
-                )
-
-                result = ValidationResult(
-                    is_valid=is_formally_valid,
-                    validity_score=1.0 if is_formally_valid else 0.0,
-                    soundness_score=0.0,  # La solidité n'est pas évaluée ici
-                    premise_analysis=[],
-                    conclusion_analysis={},
-                    logical_structure={
-                        "argument_type": request.argument_type,
-                        "method": "formal",
-                    },
-                    issues=(
-                        []
-                        if is_formally_valid
-                        else [
-                            "L'argument n'est pas logiquement valide selon le moteur formel."
-                        ]
-                    ),
-                    suggestions=[],
-                )
-
-                return ValidationResponse(
-                    success=True,
-                    premises=request.premises,
-                    conclusion=request.conclusion,
-                    argument_type=request.argument_type,
-                    result=result,
-                    processing_time=time.time() - start_time,
-                )
-
-            # Branche 2: Validation heuristique (comportement existant)
+            # Validation heuristique
             # Vérification des entrées
             if not request.premises:
                 raise ValueError(
