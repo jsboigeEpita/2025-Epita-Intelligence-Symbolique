@@ -13,12 +13,11 @@ was removed in Tweety 1.28+ (now **instance** methods). Every call raised `Attri
 swallowed by `except Exception: logger.debug(...)` → no external solver was ever wired, yet the pipeline
 reported the configured solver name as if active (formal theater, #1019).
 
-The fix introduced a module-level `EXTERNAL_TOOL_PATHS` registry (`jvm_setup.py`,
-function `get_jvm_options`/registry declaration) populated by
-`_configure_external_tools` (same module), and an EProver **consumer** in `fol_handler.py`
-(`agents/core/logic/fol_handler.py`) that reads the registry and passes the path to the
-`EFOLReasoner(path)` ctor. (Line anchors removed: they drifted past reformats — the
-function/registry names are the stable handle, #2239.)
+The fix introduced an `EXTERNAL_TOOL_PATHS` registry (`jvm_setup.py`, module-level declaration)
+populated by `_configure_external_tools` (same module), and an EProver **consumer** in
+`agents/core/logic/fol_handler.py` that reads the registry through the module-level
+`_get_eprover_path()` helper and passes the path to the `EFOLReasoner(path)` ctor. (Line anchors
+removed: they drifted past reformats — the symbol names are the stable handle, #2239.)
 
 ## Audit question
 
@@ -37,7 +36,7 @@ whether ASP is also unwired (same potential bug). User mandate: 'there must be o
 
 ### EProver (FOL) — ✅ FIXED (#1202, `029bdf7c`)
 
-`fol_handler.py` (`agents/core/logic/`, module-level `_eprover_path`) reads
+`agents/core/logic/fol_handler.py`, module-level `_get_eprover_path()` reads
 `EXTERNAL_TOOL_PATHS.get("eprover")`; `_fol_*_with_eprover` builds
 `EFOLReasoner(path)`; sync `check_consistency` dispatches on `settings.solver == EPROVER`.
 Firsthand E2E-verified by ai-01 R454 (inconsistent → `(False, '(EProver): inconsistent')`).
@@ -85,7 +84,7 @@ def _get_spass_reasoner(self):
   to the ctor.
 - Under Tweety 1.28+, `SPASSMlReasoner` ctor requires the binary path (same API-drift family as
   `EFOLReasoner`). `SPASSMlReasoner()` raises → `except` swallows → `RuntimeError` →
-  `_get_active_reasoner` (same module, `_get_active_reasoner`) returns the degraded `SimpleMlReasoner`, or the
+  `_get_active_reasoner` (method, same module) returns the degraded `SimpleMlReasoner`, or the
   orchestrator degrades the whole modal axis to `None`.
 - Net: **the SPASS path is never wired**, mirroring the EProver theater R454 exactly.
 - Corroboration: ai-01 R452 firsthand observed `modalities: none_detected` / `valid: None` on a
