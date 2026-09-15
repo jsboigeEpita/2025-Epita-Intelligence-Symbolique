@@ -46,7 +46,7 @@ La frontière avec le **paquet frère `argumentation_analysis/utils/`** (37 entr
 **Aucun exécutable propre au paquet.** Trois voies réelles, une quatrième dépréciée :
 
 1. **Import direct** — `from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key` (`argumentation_analysis/core/io_manager.py:13`). C'est la voie dominante.
-2. **Façade** — `from argumentation_analysis.core.utils.file_utils import load_json_file, sanitize_filename, load_document_content` (`argumentation_analysis/pipelines/embedding_pipeline.py:59-62`). Six noms réels atteignent la production par ce chemin (voir Amont / aval).
+2. **Façade** — `from argumentation_analysis.core.utils.file_utils import load_json_file, ...` (`argumentation_analysis/pipelines/reporting_pipeline.py:74`, `scripts/reporting/compare_rhetorical_agents_simple.py:32`). Quatre noms réels atteignent la production par ce chemin (voir Amont / aval) — l'ancien troisième consommateur `embedding_pipeline.py` a été retiré (#2116 A1).
 3. **Suite canonique** (`pytest.ini:2` `testpaths = tests`) :
    ```
    pytest tests/unit/argumentation_analysis/utils/core_utils/ -v
@@ -56,7 +56,7 @@ La frontière avec le **paquet frère `argumentation_analysis/utils/`** (37 entr
 
 ## Amont / aval
 
-Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en distinguant **production** (`argumentation_analysis/`, `scripts/`, `project_core/`, `examples/`) et **`tests/`**. 85 sites de production au total.
+Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en distinguant **production** (`argumentation_analysis/`, `scripts/`, `project_core/`, `examples/`) et **`tests/`**. 84 sites de production au total.
 
 **Amont (dépendances externes chargées à l'import du paquet)** : `cryptography`, `httpx` (`network_utils.py`), `markdown` (`markdown_utils.py:10`), `unidecode` (`path_operations.py`), `matplotlib.pyplot` + `pandas` (`visualization_utils.py`). Comme `__init__.py:3-21` importe les 19 modules, **importer `core.utils` — même pour un seul utilitaire — tire matplotlib et pandas**.
 
@@ -68,7 +68,7 @@ Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en disti
 | `logging_utils` | **10** | aa 6, scripts 4 | `pipelines/analysis_pipeline.py:37`, `agents/core/logic/tweety_initializer.py:22` |
 | `cli_utils` | **6** | aa 3, scripts 3 | `utils/run_verify_extracts.py:38`, `scripts/orchestration/run_extract_repair.py:38` |
 | `shell_utils` | **5** | project_core 4, scripts 1 | `project_core/core_from_scripts/environment_manager.py:14`, `.../validation_engine.py:6`, `.../strategies/base_strategy.py:4`, `project_core/managers/repository_manager.py:8`, `scripts/setup/fix_dependencies.py:24` |
-| `file_utils` (façade) | **3** | aa 2, scripts 1 | `pipelines/embedding_pipeline.py:59`, `pipelines/reporting_pipeline.py:74`, `scripts/reporting/compare_rhetorical_agents_simple.py:32` |
+| `file_utils` (façade) | **2** | aa 1, scripts 1 | `pipelines/reporting_pipeline.py:74`, `scripts/reporting/compare_rhetorical_agents_simple.py:32` |
 | `file_loaders` | 2 (+4 noms via façade) | aa 1, scripts 1 | `agents/core/informal/informal_definitions.py:44` (`load_csv_file`), `scripts/data_preparation/generate_taxonomy_subsets.py:11` |
 | `network_utils` | 2 | aa 2 | `core/llm_service.py:23` (`get_resilient_async_client`, appelé `:285`), `services/fetch_service.py:19-21` (`retry_on_network_error`, `network_breaker`) |
 | `reporting_utils` | 2 | aa 1, scripts 1 | `pipelines/reporting_pipeline.py:80-82`, `scripts/reporting/compare_rhetorical_agents_simple.py:41` |
@@ -87,7 +87,7 @@ Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en disti
 | `json_utils` | `tests/.../test_json_utils.py:8` |
 | `markdown_utils` | `tests/.../test_markdown_utils.py:7` (mais `save_markdown_to_html` est atteint via la façade, cf. ci-dessous) |
 | `parsing_utils` | `tests/.../test_parsing_utils.py:7` — l'unique autre mention du dépôt est un message d'erreur (`scripts/utils/analyze_directory_usage.py:106`) |
-| `path_operations` | `tests/.../test_path_operations.py:7` (mais `sanitize_filename` est atteint via la façade) |
+| `path_operations` | `tests/.../test_path_operations.py:7` (`sanitize_filename` n'a plus de consommateur production depuis le retrait d'`embedding_pipeline`, #2116 A1) |
 | `string_utils` | `tests/.../test_string_utils.py:6` |
 | `system_utils` | `tests/.../test_system_utils.py:16` |
 | `text_utils` | `tests/.../test_text_utils.py:3` |
@@ -96,12 +96,12 @@ Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en disti
 
 | Nom | Feuille | Site de production |
 |---|---|---|
-| `load_json_file` | `file_loaders.py:23` | `embedding_pipeline.py:59`, `reporting_pipeline.py:74`, `compare_rhetorical_agents_simple.py:32` |
+| `load_json_file` | `file_loaders.py:23` | `reporting_pipeline.py:74`, `compare_rhetorical_agents_simple.py:32` |
 | `load_text_file` | `file_loaders.py` | `reporting_pipeline.py:74` |
 | `load_csv_file` | `file_loaders.py:150` | `reporting_pipeline.py:74` |
-| `load_document_content` | `file_loaders.py:186` | `embedding_pipeline.py:59` |
-| `sanitize_filename` | `path_operations.py:38` | `embedding_pipeline.py:59` |
 | `save_markdown_to_html` | `markdown_utils.py:26` | `reporting_pipeline.py:74` |
+
+(`load_document_content` et `sanitize_filename` ne figurent plus ici : leur unique site de production était `embedding_pipeline.py:59`, retiré #2116 A1.)
 
 `file_savers` fuite intégralement dans la façade (`save_json_file`, `save_text_file`, `save_temp_extracts_json`) sans qu'aucun de ces noms soit consommé hors tests.
 
@@ -110,8 +110,8 @@ Mesure résolue par `ast` sur tout le dépôt, hors `libs/` (vendored), en disti
 Verdict mesuré, en trois régimes nets — **22 modules se partitionnent exactement** :
 
 - **Vivants (12)** — ≥1 import de production direct : `crypto_utils` (pivot de flotte, 50 sites, consommé par `core/` lui-même), `logging_utils`, `cli_utils`, `shell_utils`, `file_utils` (façade), `file_loaders`, `network_utils`, `reporting_utils`, `llm_completion_guard`, `code_manipulation_utils`, `visualization_utils`, plus `filesystem_utils` (import mort : le module *apparaît* importé en production sans l'être — le classer vivant serait une lecture fausse).
-- **Transitifs seulement (2)** — atteints uniquement par la façade : `path_operations` (`sanitize_filename`), `markdown_utils` (`save_markdown_to_html`).
-- **Inertes (8)** — 0 consommateur de production, direct ou transitif : `error_management` (stub), `file_savers`, `file_validation_utils`, `json_utils`, `parsing_utils`, `string_utils`, `system_utils`, `text_utils`.
+- **Transitifs seulement (1)** — atteints uniquement par la façade : `markdown_utils` (`save_markdown_to_html`). (`path_operations` a rejoint les inertes : son unique nom de production, `sanitize_filename`, a perdu son consommateur avec le retrait d'`embedding_pipeline`, #2116 A1.)
+- **Inertes (9)** — 0 consommateur de production, direct ou transitif : `error_management` (stub), `file_savers`, `file_validation_utils`, `json_utils`, `parsing_utils`, `path_operations`, `string_utils`, `system_utils`, `text_utils`.
 
 Autrement dit : **14 modules sur 22 sont réellement atteignables en production**, dont **1 par un import mort** et **2 seulement via une façade de compatibilité**. Les modules inertes sont néanmoins couverts par la suite canonique (**355** fonctions `test_`, re-mesurées le 2026-09-14 par `ast` ; le relevé du 2026-09-11 annonçait 374, chiffre non reproductible) — ils sont *testés* sans être *appelés*, ce qui est le mode de panne propre à ce paquet : **le vert des tests ne mesure pas l'intégration**.
 
