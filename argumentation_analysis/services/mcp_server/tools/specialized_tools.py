@@ -61,8 +61,9 @@ def register_specialized_tools(mcp: Any, get_registry: Any) -> None:
     async def generate_counter_argument(text: str) -> Dict[str, Any]:
         """Generate counter-arguments using 5 rhetorical strategies.
 
-        Strategies include reductio ad absurdum, counter-example, distinction,
-        reformulation, and concession. Returns parsed arguments with evaluations.
+        Strategies include socratic questioning, reductio ad absurdum,
+        analogical counter, authority appeal, and statistical evidence.
+        Returns parsed arguments with evaluations.
 
         Args:
             text: The argument to counter.

@@ -712,7 +712,9 @@ class MCPService:
 
             self.logger.info("V2 tools registered successfully (13 additional tools)")
         except Exception as e:
-            self.logger.warning(f"V2 tools not registered: {e}")
+            self.logger.warning(
+                f"V2 tools not registered: {e} — serving base tools only (degraded)"
+            )
 
     def run(
         self,
