@@ -433,8 +433,10 @@ def test_dung_reinstatement_and_characteristic_function(examples):
 
 
 def test_dung_nixon_diamond_variant(examples):
+    # The preset was renamed mutual_destruction (#2252): the stored case is the
+    # measured 4-arg variant, unchanged in semantics — only the name moved.
     stored = case(examples["dung_cases"], "nixon_diamond_measured")
-    nix = DungFramework.nixon_diamond()
+    nix = DungFramework.mutual_destruction()
     assert nix.get_all_extensions() == stored["all_extensions"]
     assert nix.get_argument_status("hawk") == stored["status_hawk"]
     assert nix.get_argument_status("pacifist") == stored["status_pacifist"]

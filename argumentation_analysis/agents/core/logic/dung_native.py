@@ -277,8 +277,17 @@ class DungFramework:
         return fw
 
     @classmethod
-    def nixon_diamond(cls) -> "DungFramework":
-        """Nixon Diamond: quaker→not_pacifist, republican→not_hawk."""
+    def mutual_destruction(cls) -> "DungFramework":
+        """Mutual destruction: quaker→hawk, republican→pacifist, hawk↔pacifist.
+
+        Not the classic Nixon diamond: quaker and republican are unattacked
+        (both in the grounded extension), hawk and pacifist are rejected under
+        every semantics, and there is exactly ONE stable extension. The name
+        encodes what the edges do (#2252). The canonical two-extension Nixon
+        diamond lives under its own name in ``abs_arg_dung`` — see
+        ``abs_arg_dung.backends.generators.generate_classic_examples`` (key
+        ``"nixon_diamond"``).
+        """
         fw = cls()
         for a in ["quaker", "republican", "pacifist", "hawk"]:
             fw.add_argument(a)
