@@ -49,7 +49,6 @@ from agents.core.extract.extract_agent import ExtractAgent
 # Imports des outils
 from agents.tools.optimization.informal.improve_informal_agent import improve_agent
 from agents.tools.analysis.informal.analyse_traces_informal import analyze_traces
-from agents.tools.encryption.create_complete_encrypted_config import encrypt_config
 
 # Imports des scripts
 from agents.runners.test.informal.test_informal_agent import test_informal_agent

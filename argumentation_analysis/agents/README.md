@@ -23,7 +23,6 @@ Ce README sert de point d'entrée pour une instance VSCode dédiée au développ
 * **[`tools/`](./tools/README.md)** 🛠️ : Outils et utilitaires utilisés par les agents
   * **[`tools/optimization/`](./tools/optimization/README.md)** ⚙️ : Outils d'optimisation des agents
   * **[`tools/analysis/`](./tools/analysis/README.md)** 📊 : Outils d'analyse des résultats des agents
-  * **[`tools/encryption/`](./tools/encryption/README.md)** 🔒 : Système d'encryption pour sécuriser les données sensibles
 
 ### Scripts d'Exécution
 

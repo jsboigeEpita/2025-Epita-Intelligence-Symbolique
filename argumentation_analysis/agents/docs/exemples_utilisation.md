@@ -194,36 +194,6 @@ if __name__ == "__main__":
     analyze_informal_agent_performance()
 ```
 
-### Outils d'Encryption
-
-```python
-from agents.tools.encryption.create_complete_encrypted_config import encrypt_config
-from agents.tools.encryption.load_complete_encrypted_config import load_encrypted_config
-
-def manage_encrypted_config():
-    """Gère la configuration encryptée."""
-    # Données à encrypter
-    config_data = {
-        "api_key": "sk-1234567890abcdef",
-        "endpoint": "https://api.example.com",
-        "model": "gpt-4"
-    }
-    
-    # Encrypter la configuration
-    encrypted_path = encrypt_config(config_data, "my_secure_password")
-    print(f"Configuration encryptée sauvegardée dans: {encrypted_path}")
-    
-    # Charger la configuration encryptée
-    loaded_config = load_encrypted_config(encrypted_path, "my_secure_password")
-    print(f"Configuration chargée: {loaded_config}")
-    
-    return loaded_config
-
-# Exemple d'utilisation
-if __name__ == "__main__":
-    manage_encrypted_config()
-```
-
 ## Utilisation des Scripts d'Exécution
 
 ### Scripts de Test
