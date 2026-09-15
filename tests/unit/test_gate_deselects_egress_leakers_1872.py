@@ -27,23 +27,21 @@ import pytest
 
 FILES = [
     "tests/integration/triage/test_sherlock_watson_moriarty_real_gpt.py",
-    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py",
     "tests/integration/triage/test_realite_pure_jtms.py",
     "tests/integration/triage/test_informal_agent_tool_choice.py",
     "tests/integration/workers/worker_sherlock_watson_moriarty.py",
 ]
 
-# Every genuine-verdict LLM test in those five files. The #1867 measurement
+# Every genuine-verdict LLM test in those four files. The #1867 measurement
 # attributed a POST to the first three subsets; the siblings are marked with
 # the same marker so the gate never runs a half-marked file.
+# test_orchestration_agentielle_complete_reel.py and its three node-ids were
+# delisted with the watson dead-arm withdrawal (#2122 A4) — the file's purpose
+# was the real sherlock+watson pair and went with the watson agent; the two
+# watson node-ids of test_realite_pure_jtms.py likewise.
 LEAKER_NODEIDS = {
     "tests/integration/triage/test_sherlock_watson_moriarty_real_gpt.py::test_sherlock_watson_moriarty_real_gpt_in_subprocess",
-    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py::test_sherlock_jtms_hypotheses",
-    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py::test_watson_jtms_validation",
-    "tests/integration/triage/test_orchestration_agentielle_complete_reel.py::test_orchestration_collaborative",
     "tests/integration/triage/test_realite_pure_jtms.py::test_interaction_sherlock_reelle",
-    "tests/integration/triage/test_realite_pure_jtms.py::test_validation_watson_reelle",
-    "tests/integration/triage/test_realite_pure_jtms.py::test_collaboration_orchestration_reelle",
     "tests/integration/triage/test_informal_agent_tool_choice.py::test_informal_agent_forced_tool_choice",
 }
 

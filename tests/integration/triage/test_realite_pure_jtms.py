@@ -26,14 +26,11 @@ except Exception as e:
 # === IMPORTS PRINCIPAUX ===
 import logging
 import asyncio
-from datetime import datetime
 
 import pytest
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.agents.sherlock_jtms_agent import SherlockJTMSAgent
-from argumentation_analysis.agents.watson_jtms_agent import WatsonJTMSAgent
-from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 from argumentation_analysis.config.settings import AppSettings
 
 # Configuration de base
@@ -66,20 +63,8 @@ def sherlock_agent(kernel):
     )
 
 
-@pytest.fixture(scope="module")
-def watson_agent(kernel):
-    """Fixture pour l'agent Watson JTMS."""
-    return WatsonJTMSAgent(kernel=kernel, agent_name="Watson_Test_Real")
-
-
-@pytest.fixture
-def group_chat(sherlock_agent, watson_agent):
-    """Fixture pour une session de GroupChat."""
-    gc = GroupChatOrchestration()
-    session_id = f"test_real_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    agents_dict = {"sherlock": sherlock_agent, "watson": watson_agent}
-    gc.initialize_session(session_id, agents_dict)
-    return gc
+# watson_agent/group_chat fixtures et les tests watson retirés avec le bras
+# mort watson (#2122 A4) — l'agent Watson et le hub n'existent plus.
 
 
 # --- Tests d'import et de structure ---
@@ -137,57 +122,5 @@ def test_interaction_sherlock_reelle(sherlock_agent):
             "error"
         ), f"Sherlock a retourné une erreur: {result}"
         assert result.get("confidence", 0) > 0, "La confiance de Sherlock est nulle."
-
-    asyncio.run(_async_test())
-
-
-@pytest.mark.requires_api
-def test_validation_watson_reelle(watson_agent):
-    """Teste une interaction de base avec l'agent Watson."""
-
-    async def _async_test():
-        validation_chain = [
-            {"step": 1, "proposition": "Porte ouverte", "evidence": "confirmed"}
-        ]
-        # Correction: Ajout de la croyance au JTMS de Watson avant la validation
-        for step in validation_chain:
-            proposition = step.get("proposition")
-            if proposition and step.get("evidence") == "confirmed":
-                watson_agent.add_belief(proposition, "TRUE")
-                logger.info(
-                    f"Croyance '{proposition}' ajoutée au JTMS de Watson pour le test."
-                )
-
-        result = await watson_agent.validate_reasoning_chain(validation_chain)
-        assert result and not result.get(
-            "error"
-        ), f"Watson a retourné une erreur: {result}"
-        assert result.get("confidence", 0) > 0, "La confiance de Watson est nulle."
-
-    asyncio.run(_async_test())
-
-
-@pytest.mark.requires_api
-def test_collaboration_orchestration_reelle(group_chat, sherlock_agent, watson_agent):
-    """Teste un cycle de collaboration simple entre Sherlock et Watson."""
-
-    async def _async_test():
-        # Sherlock formule une hypothèse
-        sherlock_result = await sherlock_agent.formulate_hypothesis(
-            context="Test collab"
-        )
-        group_chat.add_message("sherlock", "Hypothèse initiale", sherlock_result)
-
-        # Watson valide la chaîne
-        validation_chain = [
-            {"step": 1, "proposition": "Hypothèse de Sherlock", "evidence": "proposed"}
-        ]
-        watson_result = await watson_agent.validate_reasoning_chain(validation_chain)
-        group_chat.add_message("watson", "Validation de l'hypothèse", watson_result)
-
-        summary = group_chat.get_conversation_summary()
-        assert (
-            summary.get("total_messages", 0) >= 2
-        ), "La collaboration n'a pas eu lieu (messages < 2)."
 
     asyncio.run(_async_test())
