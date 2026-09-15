@@ -19,6 +19,7 @@ Limite assumee : les references `chemin.py` SANS numero de ligne ne sont pas cou
 (une ancre sans ligne n'est pas une affirmation de position), ni les `.ipynb`.
 """
 
+import os
 import re
 from collections import defaultdict
 from functools import lru_cache
@@ -48,11 +49,27 @@ PATH_PREFIXES = ("", "argumentation_analysis", "scripts")
 
 @lru_cache(maxsize=1)
 def _basename_index() -> dict[str, tuple[Path, ...]]:
+    """Index basename -> chemins, en parcourant le depot SANS suivre les liens.
+
+    `rglob` ne convient pas ici : il suit les liens de repertoire et ne permet pas
+    d'elaguer avant la descente. npm cree un auto-lien dans `node_modules`
+    (`<paquet>/node_modules/<nom-du-paquet>` -> racine du paquet) pour les
+    auto-references `exports` ; `rglob` le suit, la recursion ne s'arrete qu'a la limite
+    de chemin de Windows et leve `OSError [WinError 1921]`. C'est ce qui a rougi la CI
+    (#2258, run 34960002692) alors que l'arbre de dev local ne porte pas ce lien.
+
+    Ce qui compte est l'elagage de `SKIP_DIRS` AVANT la descente, ce que `os.walk`
+    autorise et `rglob` non. Piege mesure : sur une jonction Windows, `os.path.islink()`
+    et `DirEntry.is_symlink()` rendent tous deux `False`, donc `followlinks=False` ne
+    l'arrete PAS — sans elagage par nom la marche termine, mais en comptant 128 fichiers
+    au lieu de 2 (silencieusement faux, donc pire qu'un rouge).
+    """
     idx: dict[str, list[Path]] = defaultdict(list)
-    for p in REPO_ROOT.rglob("*.py"):
-        if any(part in SKIP_DIRS for part in p.parts):
-            continue
-        idx[p.name].append(p)
+    for dirpath, dirnames, filenames in os.walk(REPO_ROOT, followlinks=False):
+        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+        for filename in filenames:
+            if filename.endswith(".py"):
+                idx[filename].append(Path(dirpath) / filename)
     return {name: tuple(paths) for name, paths in idx.items()}
 
 
@@ -131,6 +148,21 @@ def test_no_report_anchor_points_past_the_end_of_its_file():
         "ancre(s) morte(s) dans docs/reports/ — reparer vers une poignee mesuree, ou "
         "marquer la reference comme fossile si sa cible a disparu :\n  "
         + "\n  ".join(dead)
+    )
+
+
+def test_the_basename_index_is_not_silently_empty():
+    """Controle de non-vacuite de l'index lui-meme (mesure 2026-09-15 : 5773 chemins).
+
+    Si le parcours ne rend plus rien, toutes les ancres citees par basename deviennent
+    MISSING-FILE : le garde rougirait pour la mauvaise raison, ou — si la resolution
+    tombait sur le chemin direct — passerait sur un index vide. Un plancher explicite
+    distingue « aucun fichier » de « plus rien a scanner »."""
+    total = sum(len(paths) for paths in _basename_index().values())
+    assert total >= 3000, (
+        f"index de basename reduit a {total} chemins .py — le parcours ne voit plus le "
+        f"depot (elagage trop large ? arbre monte differemment ?). Re-mesurer AVANT de "
+        f"faire confiance au verdict des ancres."
     )
 
 
