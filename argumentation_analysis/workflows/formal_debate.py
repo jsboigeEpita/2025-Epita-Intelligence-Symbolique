@@ -1,12 +1,17 @@
 """
 Formal Debate workflow: structured argumentation with formal reasoning.
 
-A 5-phase pipeline that formalizes arguments before structured debate:
-1. quality_baseline       — Evaluate initial argument quality
-2. formalization          — Formalize arguments as ASPIC+ rules
-3. structured_dialogue    — Execute formal dialogue protocol
-4. strength_ranking       — Rank arguments by formal strength
-5. final_vote             — Multi-method governance vote on outcome
+Formalizes arguments before structured debate — optional in brackets
+(count pinned by `test_formal_workflows.py`, not repeated here):
+1. extract                  — Claim extraction
+2. quality_baseline         — Evaluate initial argument quality
+3. formalization            — Formalize arguments as ASPIC+ rules
+4. aba_formalization [optional] — Assumption-based argumentation alternative (#85)
+5. structured_dialogue      — Execute formal dialogue protocol
+6. strength_ranking         — Rank arguments by formal strength
+7. epistemic_analysis [optional] — Epistemic AF, belief-aware debate (#88)
+8. social_ranking [optional] — Social AF, voting-based ranking (#87)
+9. final_vote               — Multi-method governance vote on outcome
 """
 
 import logging

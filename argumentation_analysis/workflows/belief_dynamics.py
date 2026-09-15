@@ -1,12 +1,14 @@
 """
 Belief Dynamics workflow: adversarial testing with belief revision.
 
-A 5-phase pipeline that revises beliefs after adversarial debate:
-1. adversarial_test   — Stress-test arguments via adversarial debate
-2. belief_update      — Revise beliefs based on debate outcome
-3. belief_tracking    — Track revised beliefs in JTMS
-4. consensus_check    — Multi-method governance vote on revised position
-5. quality_recheck    — Re-evaluate quality (conditional: low consensus)
+Phases that revise beliefs after adversarial debate — optional in brackets
+(count pinned by `test_formal_workflows.py`, not repeated here):
+1. extract             — Claim extraction
+2. adversarial_test    — Stress-test arguments via adversarial debate
+3. belief_update       — Revise beliefs based on debate outcome
+4. belief_tracking     — Track revised beliefs in JTMS
+5. consensus_check     — Multi-method governance vote on revised position
+6. quality_recheck [optional] — Re-evaluate quality (conditional: low consensus)
 """
 
 import logging
