@@ -15,16 +15,16 @@ L'`__init__.py` documente `embedding_utils` (:14) mais son export est commenté 
 
 ## Points d'entrée valides
 
-Un seul importeur : [`pipelines/embedding_pipeline.py:70`](../pipelines/embedding_pipeline.py) — qui importe `get_embeddings_for_chunks` directement depuis `embedding_utils` (contournant l'`__init__` vide). **Mais** `embedding_pipeline.py` lui-même n'a **aucun importeur production** (grep plein dépôt) — la chaîne s'arrête un maillon plus haut. `utils/dev_tools/project_structure_utils.py:24` ne fait que nommer le package dans un mapping descriptif.
+**Zéro importeur production** depuis le retrait du maillon orphelin `pipelines/embedding_pipeline.py` (#2116, décision A1) — ce pipeline était l'unique importeur et n'avait lui-même aucun consommateur. Le package est conservé comme **seul détenteur local de la capacité embeddings** (l'alternative externe est le service HTTP Kernel Memory, `services/semantic_index_service.py`), capacité **épinglée par test direct** (voir Tests représentatifs). `utils/dev_tools/project_structure_utils.py:24` ne fait que nommer le package dans un mapping descriptif.
 
 ## Amont / aval
 
-- Amont : service d'embeddings (OpenAI), chunks de textes.
-- Aval : `pipelines/embedding_pipeline.py` (orphelin à son tour) ; fichiers d'embeddings si `save_embeddings_data` est appelé.
+- Amont : service d'embeddings (OpenAI ou Sentence Transformers local), chunks de textes.
+- Aval : personne en production ; fichiers d'embeddings si `save_embeddings_data` est appelé.
 
 ## Statut d'intégration
 
-**résiduel (à un maillon)** — l'unique importeur production est lui-même sans consommateur ; couverture réelle uniquement par les tests.
+**dormant gardé** — aucun importeur production, mais la capacité est mesurée par une garde à embeddings réels (dimensions + pluralité sur entrée synthétique) : le module ne peut pas redevenir un candidat retrait silencieux sans faire rouge.
 
 ## Artefacts et lecteurs
 
@@ -33,17 +33,17 @@ Un seul importeur : [`pipelines/embedding_pipeline.py:70`](../pipelines/embeddin
 ## Tests représentatifs
 
 ```bash
-conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/nlp/ tests/unit/argumentation_analysis/pipelines/test_embedding_pipeline.py -v
+conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/nlp/ -v
 ```
 
-(suite dédiée `tests/unit/argumentation_analysis/nlp/test_embedding_utils.py` + tests du pipeline consommateur).
+(suite dédiée `tests/unit/argumentation_analysis/nlp/test_embedding_utils.py` + **garde de capacité** `test_embedding_capacity_guard_2116.py` : embeddings réels via Sentence Transformers `all-MiniLM-L6-v2`, 384 dimensions, pluralité assertée — aucun mock).
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) — ne mentionne pas `nlp/`. Frères : [`pipelines/`](../pipelines/README.md) (le consommateur orphelin), [`adapters/`](../adapters/README.md) (NLP de détection).
+Parent : [`../README.md`](../README.md) — ne mentionne pas `nlp/`. Frères : [`pipelines/`](../pipelines/README.md) (l'ancien maillon orphelin a été retiré, #2116 A1), [`adapters/`](../adapters/README.md) (NLP de détection).
 
 ## Limites connues
 
 - `__init__.py` : export commenté référençant un symbole inexistant (`generate_embeddings`) — fossile d'API renommée, trompeur à la lecture ;
-- chaîne morte à un maillon : `nlp` ← `embedding_pipeline` ← personne ;
+- chaîne morte résorbée (#2116 A1) : le maillon orphelin `embedding_pipeline` est retiré, le package est dormant-gardé (garde de capacité) ;
 - aucun export effectif : tout import doit cibler `argumentation_analysis.nlp.embedding_utils` explicitement.
