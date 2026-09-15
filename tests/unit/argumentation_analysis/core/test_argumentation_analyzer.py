@@ -9,11 +9,14 @@ condition every degraded test in this file observes).
 """
 
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from argumentation_analysis.core.argumentation_analyzer import (
     ArgumentationAnalyzer,
     Analyzer,
+)
+from argumentation_analysis.services.web_api.models.request_models import (
+    AnalysisRequest,
 )
 
 
@@ -146,16 +149,19 @@ class TestAnalyzeText:
     def test_with_pipeline_available(self):
         analyzer = ArgumentationAnalyzer()
         mock_pipeline = MagicMock()
-        mock_pipeline.analyze_text.return_value = {"fallacies": []}
+        mock_pipeline.initialized = True
+        mock_pipeline.analyze_text_unified = AsyncMock(return_value={"fallacies": []})
         analyzer.pipeline = mock_pipeline
         result = analyzer.analyze_text("text to analyze")
         assert "unified" in result["analysis"]
-        mock_pipeline.analyze_text.assert_called_once_with("text to analyze")
+        mock_pipeline.analyze_text_unified.assert_awaited_once_with("text to analyze")
 
     def test_with_analysis_service_available(self):
         analyzer = ArgumentationAnalyzer()
         mock_service = MagicMock()
-        mock_service.analyze_text.return_value = {"quality": "high"}
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {"quality": "high"}
+        mock_service.analyze_text = AsyncMock(return_value=mock_response)
         analyzer.analysis_service = mock_service
         result = analyzer.analyze_text("text")
         assert "service" in result["analysis"]
@@ -163,22 +169,31 @@ class TestAnalyzeText:
     def test_service_error_handled_gracefully(self):
         analyzer = ArgumentationAnalyzer()
         mock_service = MagicMock()
-        mock_service.analyze_text.side_effect = RuntimeError("service down")
+        mock_service.analyze_text = AsyncMock(side_effect=RuntimeError("service down"))
         analyzer.analysis_service = mock_service
         analyzer.pipeline = MagicMock()
-        analyzer.pipeline.analyze_text.return_value = {"ok": True}
+        analyzer.pipeline.initialized = True
+        analyzer.pipeline.analyze_text_unified = AsyncMock(return_value={"ok": True})
         result = analyzer.analyze_text("text")
         assert result["status"] == "success"
         # Service failed but pipeline succeeded
         assert "unified" in result["analysis"]
 
     def test_options_passed_to_service(self):
+        """#2097 : la façade construit une vraie AnalysisRequest (pydantic
+        ignore les clés inconnues) — l'ancien ``(text, dict)`` encodait
+        l'appel cassé."""
         analyzer = ArgumentationAnalyzer()
         mock_service = MagicMock()
-        mock_service.analyze_text.return_value = {}
+        mock_response = MagicMock()
+        mock_response.model_dump.return_value = {}
+        mock_service.analyze_text = AsyncMock(return_value=mock_response)
         analyzer.analysis_service = mock_service
-        analyzer.analyze_text("text", options={"depth": "full"})
-        mock_service.analyze_text.assert_called_once_with("text", {"depth": "full"})
+        analyzer.analyze_text("text", options={"detect_fallacies": False})
+        (request,), _ = mock_service.analyze_text.call_args
+        assert isinstance(request, AnalysisRequest)
+        assert request.text == "text"
+        assert request.options.detect_fallacies is False
 
 
 # ============================================================
