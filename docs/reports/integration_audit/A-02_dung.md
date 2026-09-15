@@ -42,7 +42,7 @@ Le projet étudiant `abs_arg_dung/` (2 790 LOC, 14 fichiers, auteur "Wassim", 20
 | Import/Export TGF/DOT | ❌ Perdu | Nulle part | `FrameworkIO` de `io_utils.py` non migré |
 | CLI interactif | ❌ Perdu (remplacé) | API REST | Normal — API = superset du CLI |
 | Génération aléatoire de frameworks | ❌ Perdu | Nulle part | `FrameworkGenerator.generate_random_framework` non utilisé |
-| Exemples classiques (triangle, nixon_diamond) | ✅ Partiel | `dung_native.py` a `triangle()`, `nixon_diamond()` | Le reinstatement est aussi présent |
+| Exemples classiques (triangle, nixon_diamond) | ✅ Partiel | `dung_native.py` a `triangle()`, `mutual_destruction()` (ex-`nixon_diamond`, renommé #2252) | Le reinstatement est aussi présent ; le vrai diamant de Nixon vit dans `abs_arg_dung` |
 | Benchmark suite | ❌ Perdu | Nulle part | Pas critique pour le fonctionnement |
 | Vérification inclusion sémantiques | ❌ Perdu | Nulle part | `get_semantics_relationships()` théorique |
 | Démo interactive | ❌ Perdu | Nulle part | Pas critique |
