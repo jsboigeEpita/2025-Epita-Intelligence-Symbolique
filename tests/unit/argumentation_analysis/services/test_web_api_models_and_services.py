@@ -26,7 +26,6 @@ from argumentation_analysis.services.web_api.models.request_models import (
     Argument,
     FrameworkOptions,
     FrameworkRequest,
-    FrameworkAnalysisRequest,
     LogicBeliefSetRequest,
     LogicQueryRequest,
 )
@@ -320,14 +319,6 @@ class TestFrameworkRequestModel:
         ]
         with pytest.raises(ValidationError, match="non trouvé"):
             FrameworkRequest(arguments=args)
-
-    def test_framework_analysis_request(self):
-        req = FrameworkAnalysisRequest(
-            arguments=["a1", "a2", "a3"],
-            attacks=[["a1", "a2"], ["a2", "a3"]],
-        )
-        assert len(req.arguments) == 3
-        assert len(req.attacks) == 2
 
 
 class TestLogicRequestModels:

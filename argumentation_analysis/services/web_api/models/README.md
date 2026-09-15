@@ -8,7 +8,7 @@ métier [../services/](../services/) et des outils MCP v1. La couche HTTP
 d'origine est archivée (#217, `../__init__.py:4-13`).
 
 La frontière exclut : les contrats de l'API FastAPI moderne (`api/models.py`,
-qui définit son **propre** `FrameworkAnalysisRequest` — cf. limites), la
+qui définit son **propre** `FrameworkAnalysisRequest`), la
 logique métier (frère `../services/`), la couche Flask (archive
 `docs/archives/services_web_api_flask/`).
 
@@ -21,15 +21,15 @@ logique métier (frère `../services/`), la couche Flask (archive
 | Analyse | `AnalysisOptions`, `AnalysisRequest` | :19, :35 |
 | Validation | `ValidationRequest` | :51 |
 | Sophismes | `FallacyOptions`, `FallacyRequest` | :88, :112 |
-| Framework Dung | `Argument` (unicité IDs + références attacks/supports :190-210), `FrameworkOptions`, `FrameworkRequest`, `FrameworkAnalysisRequest` | :128, :155, :180, :339 |
+| Framework Dung | `Argument` (unicité IDs + références attacks/supports :190-210), `FrameworkOptions`, `FrameworkRequest` | :128, :155, :180 |
 | Logique | `LogicOptions`, `LogicBeliefSetRequest`, `LogicQueryRequest`, `LogicGenerateQueriesRequest` | :216, :230, :259, :298 |
 
 **`response_models.py`** : `AnalysisResponse` (:48), `ValidationResponse`
 (:108), `FallacyResponse` (:130), `FrameworkResponse` (:199),
 `LogicQueryResult` (:261, tri-état `Optional[bool]` :265),
 `LogicQueryResponse` (:308), `LogicGenerateQueriesResponse` (:330),
-`LogicInterpretationResponse` (:352), `ErrorResponse` (:244),
-`SuccessResponse` (:380) et leurs sous-structures. `__init__.py:8-21`
+`ErrorResponse` (:244),
+`SuccessResponse` (:352) et leurs sous-structures. `__init__.py:8-21`
 ré-exporte 9 noms.
 
 ## Points d'entrée valides
@@ -57,8 +57,6 @@ serveur MCP v1 (`../../mcp_server/main.py:42-59,387`). L'API FastAPI
 | `Argument` | **actif** | seul survivant framework côté production (outil MCP `build_framework`, main.py:387-404) |
 | `FrameworkRequest` / `FrameworkOptions` | **compatibilité** (test-only) | plus aucun consommateur production depuis #1864 — bypass documenté main.py:404-414 (`build_framework(FrameworkRequest)` était une « interface fantôme ») ; tests `test_web_api_models_and_services.py:252-322` |
 | `FrameworkResponse` | **résiduel** | importé jamais utilisé (main.py:57) |
-| `FrameworkAnalysisRequest` (web_api) | **résiduel** | test-only (:325) ; la route vivante utilise l'homonyme `api/models.py:48` |
-| `LogicInterpretationResponse` | **résiduel** | unique consommateur `logic_service.interpret_results` (logic_service.py:312,371), lui-même sans appelant production |
 | `SuccessResponse` / `ErrorResponse` | **résiduel** | consommateurs uniquement archives (`framework_routes.py:13,43`) et tests |
 
 ## Artefacts et lecteurs
@@ -75,7 +73,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
   tests/unit/services/web_api/ -v
 ```
 
-(47 tests directs `test_response_models.py`, 113 dans
+(45 tests directs `test_response_models.py`, 112 dans
 `test_web_api_models_and_services.py`, 24 relocalisés #1859.)
 
 ## Frères et parent
@@ -86,12 +84,9 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
 
 ## Limites connues
 
-- Collision de noms `FrameworkAnalysisRequest` : deux contrats distincts
-  portent le même nom (`request_models.py:339` vs `api/models.py:48`,
-  consommé par `api/endpoints.py:90`) — ambiguïté à l'import.
-- Chaîne morte documentée : `logic_service.interpret_results`
-  (logic_service.py:312) + `LogicInterpretationResponse` — méthode publique
-  sans aucun appelant production (ni outil MCP ni route).
+- Résolues #2097 : le jumeau web_api `FrameworkAnalysisRequest` (zéro
+  consommateur production) et la chaîne morte `interpret_results` +
+  `LogicInterpretationResponse` ont été retirés.
 - Imports morts dans `request_models.py:8-16` (`Dict`, `Any`, `validator` V1,
   `ExtractDefinitions`) — tolérés par `.flake8` (F401 ignoré), donc invisibles
   au lint.

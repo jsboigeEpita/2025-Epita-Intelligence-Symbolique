@@ -33,7 +33,6 @@ from ..models.request_models import (
     LogicQueryRequest,
     LogicGenerateQueriesRequest,
     LogicOptions,
-    ValidationRequest,
 )
 from ..models.response_models import (
     LogicBeliefSet,
@@ -41,7 +40,6 @@ from ..models.response_models import (
     LogicQueryResult,
     LogicQueryResponse,
     LogicGenerateQueriesResponse,
-    LogicInterpretationResponse,
 )
 
 
@@ -309,91 +307,6 @@ class LogicService:
             processing_time = time.time() - start_time
             self.logger.info(f"Génération terminée en {processing_time:.2f} secondes")
 
-    async def interpret_results(
-        self,
-        belief_set_id: str,
-        logic_type: str,
-        text: str,
-        queries: List[str],
-        results: List[LogicQueryResult],
-        options: Optional[LogicOptions] = None,
-    ) -> LogicInterpretationResponse:
-        """
-        Interprète les résultats de requêtes logiques.
-
-        Args:
-            belief_set_id: L'ID de l'ensemble de croyances
-            logic_type: Le type de logique
-            text: Le texte source
-            queries: Les requêtes exécutées
-            results: Les résultats des requêtes
-            options: Les options d'interprétation
-
-        Returns:
-            Une réponse contenant l'interprétation des résultats
-        """
-        self.logger.info(
-            f"Interprétation des résultats pour l'ensemble de croyances '{belief_set_id}'"
-        )
-        start_time = time.time()
-
-        try:
-            # Récupérer l'ensemble de croyances
-            belief_set_data = self._get_belief_set(belief_set_id)
-            if not belief_set_data:
-                raise ValueError(f"Ensemble de croyances non trouvé: {belief_set_id}")
-
-            # Vérifier que le type de logique correspond
-            if belief_set_data["logic_type"] != logic_type:
-                raise ValueError(
-                    f"Type de logique incompatible: attendu '{belief_set_data['logic_type']}', reçu '{logic_type}'"
-                )
-
-            # Créer l'agent logique approprié
-            agent = LogicAgentFactory.create_agent(logic_type, self.kernel)
-            if not agent:
-                raise ValueError(
-                    f"Impossible de créer un agent pour le type de logique '{logic_type}'"
-                )
-
-            # Créer l'objet BeliefSet approprié
-            belief_set = self._create_belief_set_from_data(belief_set_data)
-
-            # Extraire les résultats formatés
-            formatted_results = [result.formatted_result for result in results]
-
-            # Interpréter les résultats
-            interpretation = await agent.interpret_results(
-                text, belief_set, queries, formatted_results
-            )
-
-            # Créer la réponse
-            response = LogicInterpretationResponse(
-                success=True,
-                belief_set_id=belief_set_id,
-                logic_type=logic_type,
-                queries=queries,
-                results=results,
-                interpretation=interpretation,
-                processing_time=time.time() - start_time,
-                interpretation_options=options.dict() if options else {},
-            )
-
-            return response
-
-        except Exception as e:
-            self.logger.error(
-                f"Erreur lors de l'interprétation des résultats: {str(e)}",
-                exc_info=True,
-            )
-            raise ValueError(f"Erreur lors de l'interprétation des résultats: {str(e)}")
-
-        finally:
-            processing_time = time.time() - start_time
-            self.logger.info(
-                f"Interprétation terminée en {processing_time:.2f} secondes"
-            )
-
     def _get_belief_set(self, belief_set_id: str) -> Optional[Dict[str, Any]]:
         """
         Récupère un ensemble de croyances par son ID.
@@ -454,29 +367,3 @@ class LogicService:
             return f"La requête '{query}' est acceptée par l'ensemble de croyances. Cela signifie que la formule est une conséquence logique des axiomes définis dans l'ensemble de croyances."
         else:
             return f"La requête '{query}' est rejetée par l'ensemble de croyances. Cela signifie que la formule n'est pas une conséquence logique des axiomes définis dans l'ensemble de croyances."
-
-    async def validate_argument_from_components(
-        self, request: ValidationRequest
-    ) -> bool:
-        """
-        Valide un argument logique à partir de ses composants (prémisses, conclusion).
-        """
-        self.logger.info(f"Validation d'argument de type '{request.logic_type}'")
-        try:
-            agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
-            if not agent:
-                raise ValueError(
-                    f"Impossible de créer un agent pour le type de logique '{request.logic_type}'"
-                )
-
-            # La méthode validate_argument est maintenant directement sur l'agent
-            is_valid = await agent.validate_argument(
-                request.premises, request.conclusion
-            )
-            return is_valid
-
-        except Exception as e:
-            self.logger.error(
-                f"Erreur lors de la validation de l'argument: {str(e)}", exc_info=True
-            )
-            return False

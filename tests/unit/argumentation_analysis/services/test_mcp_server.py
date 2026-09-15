@@ -791,7 +791,7 @@ class TestMCPServiceLogicTools:
         svc = _make_mcp_service()
         mock_result = MagicMock()
         mock_result.model_dump.return_value = {"belief_set_id": "bs1"}
-        svc.services.logic_service.create_belief_set = AsyncMock(
+        svc.services.logic_service.text_to_belief_set = AsyncMock(
             return_value=mock_result
         )
         result = await svc.create_belief_set("p => q", "propositional")
@@ -799,7 +799,7 @@ class TestMCPServiceLogicTools:
 
     async def test_create_belief_set_error(self):
         svc = _make_mcp_service()
-        svc.services.logic_service.create_belief_set = AsyncMock(
+        svc.services.logic_service.text_to_belief_set = AsyncMock(
             side_effect=Exception("fail")
         )
         result = await svc.create_belief_set("text", "propositional")
