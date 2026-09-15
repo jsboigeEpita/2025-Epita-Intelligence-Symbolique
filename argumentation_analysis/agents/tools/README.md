@@ -6,7 +6,12 @@ Ce répertoire contient les outils et utilitaires utilisés par les agents du sy
 
 - `optimization/` - Outils d'optimisation pour améliorer les performances des agents
 - `analysis/` - Outils d'analyse pour évaluer les résultats et les performances
-- `encryption/` - Système d'encryption pour sécuriser les données sensibles
+
+> L'outillage d'encryption historique (`encryption/`) a été retiré (#2120) : il
+> était inexécutable (import absent, chaîne de clé morte) et doublait la surface
+> vivante — [`core/io_manager.py`](../../core/io_manager.py) pour le chargement
+> du dataset chiffré et [`scripts/security/verify_encrypted_dataset_completeness.py`](../../../../scripts/security/verify_encrypted_dataset_completeness.py)
+> pour la vérification avant suppression.
 
 ## Utilisation
 
@@ -31,16 +36,6 @@ Exemples d'utilisation :
 - Génération de rapports de performance
 - Visualisation des résultats
 - Détection d'anomalies dans les analyses
-
-### Système d'encryption
-
-Le système d'encryption permet de sécuriser les données sensibles utilisées par les agents, comme les clés d'API ou les configurations.
-
-Exemples d'utilisation :
-- Encryption des fichiers de configuration
-- Chargement sécurisé des configurations
-- Nettoyage des données sensibles
-- Vérification de l'intégrité des fichiers encryptés
 
 ## Intégration
 

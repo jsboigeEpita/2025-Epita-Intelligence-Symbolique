@@ -68,7 +68,7 @@ Manage the encrypted dataset used for testing and demonstrations:
 
 ## Related Files
 
-- `argumentation_analysis/agents/tools/encryption/` — encryption scripts
+- `argumentation_analysis/core/io_manager.py` — dataset encryption load/save (the former agents encryption-tooling island was retired, #2120)
 - `tests/extract_sources_with_full_text.enc` — main encrypted dataset (1.4 MB)
 - `tests/extract_sources_backup.enc` — backup (2.8 KB)
 - `.gitignore` — must exclude `*.json.gz` and decrypted files
