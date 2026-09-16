@@ -10,7 +10,7 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 
 **`agent_bases.py`**
 
-- `BaseAgent(ChatCompletionAgent, ABC)` :54 — `__init__` :84 `(kernel, agent_name, system_prompt=None, description=None, **kwargs)` ; propriétés `logger` :141, `agent_name` :147, `system_prompt` :152 ; `get_agent_info()` :171 ; `invoke()` :238 (transforme `invoke_single` en flux) ; `invoke_stream()` :246.
+- `BaseAgent(ChatCompletionAgent, ABC)` :54 — `__init__` :84 `(kernel, agent_name, system_prompt=None, description=None, **kwargs)` ; propriétés `logger` :141, `agent_name` :147, `system_prompt` :152 ; `invoke()` :238 (transforme `invoke_single` en flux) ; `invoke_stream()` :246. `get_agent_info()` a été retiré (#2137 : 0 lecteur production, le registre porte l'info agent).
 - Contrat abstrait **mesuré** (`__abstractmethods__`) : exactement 3 méthodes — `get_agent_capabilities` :156, `get_response` :209, `invoke_single` :223.
 - `BaseLogicAgent(BaseAgent, ABC)` :262 — `__init__` :290 `(kernel, agent_name, logic_type_name, system_prompt=None, **kwargs)` ; propriétés `logic_type` :314, `tweety_bridge` :324 (lève `RuntimeError` :340 si non initialisé) ; `setup_agent_components()` :345 ; `process_task()` :484 async.
 - Contrat abstrait **mesuré** : 10 méthodes — `text_to_belief_set` :365, `generate_queries` :383, `execute_query` :404, `interpret_results` :424, `validate_formula` :453, `is_consistent` :468, `_create_belief_set_from_data` :661, + les 3 héritées.
@@ -37,7 +37,7 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 
 ## Artefacts et lecteurs
 
-Aucun artefact persisté : ce paquet ne produit ni fichier ni état, il produit des **classes**. La seule surface descriptive est `BaseAgent.get_agent_info()` :171 (nom, classe, prompt, `llm_service_id`, capacités) — **aucun lecteur production mesuré**, seul le test :537 l'appelle.
+Aucun artefact persisté : ce paquet ne produit ni fichier ni état, il produit des **classes**. La surface descriptive `BaseAgent.get_agent_info()` (nom, classe, prompt, `llm_service_id`, capacités) a été **retirée (#2137)** : aucun lecteur production mesuré, seul son propre test l'appelait.
 
 ## Tests représentatifs
 
@@ -46,7 +46,7 @@ Aucun artefact persisté : ce paquet ne produit ni fichier ni état, il produit 
   tests/unit/argumentation_analysis/agents/core/abc/ -o addopts= --disable-jvm-session -v
 ```
 
-**20 `def test_` sur 1 fichier** (`grep -c 'def test_'`), **20 passed en 2,42 s** (mesuré le 2026-09-11). Le fichier mocke le kernel (`MagicMock(spec=Kernel)`) — aucun appel LLM, aucune JVM. Couvre : instanciation refusée des ABC, `id`/`name`/`description`, nommage du logger, méthodes abstraites exigées, `invoke`/`invoke_stream` rendant un générateur async, `get_agent_info`.
+**19 `def test_` sur 1 fichier** (`grep -c 'def test_'` ; 20 avant le retrait du test `get_agent_info`, #2137), **19 passed** (mesuré le 2026-09-11 pour 20). Le fichier mocke le kernel (`MagicMock(spec=Kernel)`) — aucun appel LLM, aucune JVM. Couvre : instanciation refusée des ABC, `id`/`name`/`description`, nommage du logger, méthodes abstraites exigées, `invoke`/`invoke_stream` rendant un générateur async.
 
 13 autres fichiers de test mentionnent ce chemin (`grep -rln`), mais ils testent les **agents dérivés**, pas les classes de base — ne pas leur attribuer la couverture de l'ABC.
 
@@ -58,9 +58,11 @@ Parent : [`../`](../README.md) (`agents/core/`, sans README propre à ce niveau 
 
 - **Nom `BasePlugin` défini 2 fois** dans des paquets différents : `agents/core/orchestration_service.py:20` (classe nue, sans ABC) et `plugin_framework/core/plugins/interfaces.py:4` (marqueur `pass`). `api/main.py:6` consomme celui d'`orchestration_service`, `fact_checking_orchestrator.py:27` celui de `plugin_framework` — le tiers (`abc/plugin.py`, sans consommateur) a été retiré (#2145).
 - **Docstring contradictoire** : `agent_bases.py:63-65` affirme que le contrat « impose d'implémenter » `setup_agent_components` et `invoke_single`. Mesure : `setup_agent_components` **n'existe pas sur `BaseAgent`** et n'est abstrait nulle part ; les seuls abstraits sont `get_agent_capabilities`, `get_response`, `invoke_single`.
-- **Commentaire de test périmé** : `tests/agents/core/informal/test_informal_agent_authentic.py:81` affirme que `get_agent_capabilities()` et `get_agent_info()` « n'existent plus » — les deux existent (:156, :171).
+- `get_agent_info()` retiré (#2137) — le commentaire de test `tests/agents/core/informal/test_informal_agent_authentic.py:81` est désormais exact et a été mis à jour pour ne nommer que ce qui est vrai.
 - Pydantic V2 : le logger est `_agent_logger` (`PrivateAttr` :81) exposé via la **property** `logger` :141. Il n'existe **aucun** attribut public `agent_logger` (mesure `dir(BaseAgent)`).
 
 ---
 
 *Révision — 2026-09-14, `#2145` (grain finition). `plugin.py` (`BasePlugin`/`LegoPlugin`/`ParameterSpec`) et l'entrée « Contrôle de type d'un plugin » ont été retirés avec le chargeur qui les consommait (`agents/core/plugin_loader.py`, 0 appelant de production, format de manifeste incompatible avec l'unique `manifest.json` du dépôt). La limite « import mort sous `TYPE_CHECKING` » de `core/strategies.py` était périmée — #2137 l'avait déjà corrigée en important `Agent` depuis Semantic Kernel ; l'item est retiré, non réécrit. Compteurs re-mesurés après retrait (2 modules / 684 lignes / 15 sites d'import production).*
+
+*Révision — 2026-09-16, `#2137` (triage agents/core) : `get_agent_info()` retiré (0 lecteur production ; le registre porte l'info agent) avec son test dédié.*

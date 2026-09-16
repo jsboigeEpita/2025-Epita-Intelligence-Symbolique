@@ -11,9 +11,7 @@ from argumentation_analysis.agents.core.governance.metrics import (
     efficiency,
     satisfaction,
     stability,
-    per_agent_satisfaction,
     summarize_results,
-    validate_scenario,
 )
 
 # ── consensus_rate ──
@@ -175,21 +173,8 @@ class TestStability:
         assert stability([{"winner": "A"}]) == 1.0
 
 
-# ── per_agent_satisfaction ──
-
-
-class TestPerAgentSatisfaction:
-    def test_normal(self):
-        r = {
-            "agent_names": ["Alice", "Bob"],
-            "satisfaction": [0.8, 0.6],
-        }
-        result = per_agent_satisfaction(r)
-        assert result == {"Alice": 0.8, "Bob": 0.6}
-
-    def test_missing_keys(self):
-        assert per_agent_satisfaction({}) == {}
-        assert per_agent_satisfaction(None) == {}
+# TestPerAgentSatisfaction withdrawn with per_agent_satisfaction (#2137):
+# zero callers in the repo.
 
 
 # ── summarize_results ──
@@ -231,90 +216,5 @@ class TestSummarizeResults:
         assert isinstance(summary["fairness"], float)
 
 
-# ── validate_scenario ──
-
-
-class TestValidateScenario:
-    def test_valid(self):
-        scenario = {
-            "agents": [
-                {"name": "A", "preferences": ["opt1", "opt2"]},
-                {"name": "B", "preferences": ["opt2", "opt1"]},
-            ],
-            "options": ["opt1", "opt2"],
-        }
-        valid, msg = validate_scenario(scenario)
-        assert valid is True
-        assert msg == ""
-
-    def test_missing_agents(self):
-        valid, msg = validate_scenario({"options": ["a"]})
-        assert valid is False
-        assert "Missing" in msg
-
-    def test_missing_options(self):
-        valid, msg = validate_scenario({"agents": [{"name": "A", "preferences": []}]})
-        assert valid is False
-
-    def test_none_scenario(self):
-        valid, msg = validate_scenario(None)
-        assert valid is False
-
-    def test_duplicate_agent_name(self):
-        scenario = {
-            "agents": [
-                {"name": "A", "preferences": ["opt1"]},
-                {"name": "A", "preferences": ["opt1"]},
-            ],
-            "options": ["opt1"],
-        }
-        valid, msg = validate_scenario(scenario)
-        assert valid is False
-        assert "Duplicate" in msg
-
-    def test_invalid_preference(self):
-        scenario = {
-            "agents": [{"name": "A", "preferences": ["nonexistent"]}],
-            "options": ["opt1"],
-        }
-        valid, msg = validate_scenario(scenario)
-        assert valid is False
-        assert "invalid preference" in msg
-
-    def test_agent_missing_name(self):
-        scenario = {
-            "agents": [{"preferences": ["opt1"]}],
-            "options": ["opt1"],
-        }
-        valid, msg = validate_scenario(scenario)
-        assert valid is False
-        assert "required fields" in msg
-
-    def test_valid_adjacency_matrix(self):
-        scenario = {
-            "agents": [
-                {"name": "A", "preferences": ["opt1"]},
-                {"name": "B", "preferences": ["opt1"]},
-            ],
-            "options": ["opt1"],
-            "context": {
-                "adjacency": [[0, 1], [1, 0]],
-            },
-        }
-        valid, msg = validate_scenario(scenario)
-        assert valid is True
-
-    def test_invalid_adjacency_matrix(self):
-        scenario = {
-            "agents": [
-                {"name": "A", "preferences": ["opt1"]},
-                {"name": "B", "preferences": ["opt1"]},
-            ],
-            "options": ["opt1"],
-            "context": {
-                "adjacency": [[0, 1]],  # only 1 row for 2 agents
-            },
-        }
-        valid, msg = validate_scenario(scenario)
-        assert valid is False
-        assert "Adjacency" in msg
+# TestValidateScenario withdrawn with validate_scenario (#2137): zero
+# callers — its only consumers were simulation.py (withdrawn) and tests.

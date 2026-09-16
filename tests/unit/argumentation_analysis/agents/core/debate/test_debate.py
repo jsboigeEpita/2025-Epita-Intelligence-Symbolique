@@ -6,8 +6,7 @@ Tests validate:
 - CapabilityRegistry registration
 - Debate definitions (enums, dataclasses)
 - Argument scoring (8 metrics)
-- Walton-Krabbe protocols (transitions, termination)
-- Knowledge base (propositions, arguments, consistency)
+- Walton-Krabbe vocabulary (types, acts — protocol classes withdrawn #2137)
 - DebatePlugin (@kernel_function methods)
 - DebateAgent BaseAgent interface (setup_agent_components, capabilities)
 - Debate agent (fallback, LLM abstraction via SK kernel)
@@ -61,8 +60,6 @@ class TestDebateImport:
             DialogueType,
             SpeechAct,
             Proposition,
-            InquiryProtocol,
-            PersuasionProtocol,
         )
         from argumentation_analysis.agents.core.debate.protocols import (
             FormalArgument,
@@ -114,33 +111,19 @@ class TestDebateImport:
         assert EnhancedArgumentationAgent is DebateAgent
 
     def test_import_protocols(self):
-        """Protocols module imports all Walton-Krabbe types."""
+        """Protocols module imports the Walton-Krabbe vocabulary."""
         from argumentation_analysis.agents.core.debate.protocols import (
             DialogueType,
             SpeechAct,
             Proposition,
             FormalArgument,
             DialogueMove,
-            DialogueProtocol,
-            InquiryProtocol,
-            PersuasionProtocol,
         )
 
         assert len(DialogueType) == 6
         assert len(SpeechAct) == 9
 
-    def test_import_knowledge_base(self):
-        """Knowledge base imports."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-
-        assert callable(KnowledgeBase)
-
-
-# ---------------------------------------------------------------------------
-# Registration tests
-# ---------------------------------------------------------------------------
+    # test_import_knowledge_base withdrawn with knowledge_base.py (#2137).
 
 
 class TestDebateRegistration:
@@ -431,7 +414,7 @@ class TestDebateDefinitions:
         assert len(state.agents) == 2
 
     def test_agent_personalities(self):
-        """All 8 personalities have description, strengths, weaknesses."""
+        """All 8 personalities have a description (strengths/weaknesses withdrawn #2137)."""
         from argumentation_analysis.agents.core.debate.debate_definitions import (
             AGENT_PERSONALITIES,
         )
@@ -439,8 +422,6 @@ class TestDebateDefinitions:
         assert len(AGENT_PERSONALITIES) == 8
         for name, profile in AGENT_PERSONALITIES.items():
             assert "description" in profile
-            assert "strengths" in profile
-            assert "weaknesses" in profile
 
 
 # ---------------------------------------------------------------------------
@@ -560,240 +541,9 @@ class TestArgumentAnalyzer:
         assert m1.evidence_quality > m2.evidence_quality
 
 
-# ---------------------------------------------------------------------------
-# Walton-Krabbe protocol tests (unchanged)
-# ---------------------------------------------------------------------------
-
-
-class TestWaltonKrabbeProtocols:
-    """Test Walton-Krabbe dialogue protocols."""
-
-    def test_inquiry_protocol_transitions(self):
-        """Inquiry protocol has correct transition rules."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            InquiryProtocol,
-            SpeechAct,
-        )
-
-        protocol = InquiryProtocol()
-        # QUESTION -> CLAIM is allowed
-        assert protocol.is_valid_move(SpeechAct.QUESTION, SpeechAct.CLAIM)
-        # CLAIM -> SUPPORT is allowed
-        assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.SUPPORT)
-        # CLAIM -> RETRACT is NOT allowed in inquiry
-        assert not protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.RETRACT)
-
-    def test_persuasion_protocol_transitions(self):
-        """Persuasion protocol has correct transition rules."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            PersuasionProtocol,
-            SpeechAct,
-        )
-
-        protocol = PersuasionProtocol()
-        # CLAIM -> CHALLENGE is allowed
-        assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.CHALLENGE)
-        # CHALLENGE -> ARGUE is allowed
-        assert protocol.is_valid_move(SpeechAct.CHALLENGE, SpeechAct.ARGUE)
-        # CHALLENGE -> RETRACT is allowed (withdraw claim under challenge)
-        assert protocol.is_valid_move(SpeechAct.CHALLENGE, SpeechAct.RETRACT)
-
-    def test_inquiry_termination_consensus(self):
-        """Inquiry terminates when last 3 moves are UNDERSTAND/CONCEDE."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            InquiryProtocol,
-            SpeechAct,
-            DialogueMove,
-            Proposition,
-        )
-
-        protocol = InquiryProtocol()
-        prop = Proposition(content="Test")
-        history = [
-            DialogueMove(speaker="a", act=SpeechAct.CLAIM, content=prop),
-            DialogueMove(speaker="b", act=SpeechAct.UNDERSTAND, content=prop),
-            DialogueMove(speaker="a", act=SpeechAct.UNDERSTAND, content=prop),
-            DialogueMove(speaker="b", act=SpeechAct.UNDERSTAND, content=prop),
-        ]
-        assert protocol.is_terminal_state(history)
-
-    def test_persuasion_termination_concede(self):
-        """Persuasion terminates on CONCEDE."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            PersuasionProtocol,
-            SpeechAct,
-            DialogueMove,
-            Proposition,
-        )
-
-        protocol = PersuasionProtocol()
-        prop = Proposition(content="Test")
-        history = [
-            DialogueMove(speaker="a", act=SpeechAct.CLAIM, content=prop),
-            DialogueMove(speaker="b", act=SpeechAct.CONCEDE, content=prop),
-        ]
-        assert protocol.is_terminal_state(history)
-
-    def test_get_allowed_responses(self):
-        """Get allowed responses for a given speech act."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            InquiryProtocol,
-            SpeechAct,
-        )
-
-        protocol = InquiryProtocol()
-        responses = protocol.get_allowed_responses(SpeechAct.QUESTION)
-        assert SpeechAct.CLAIM in responses
-        assert SpeechAct.ARGUE in responses
-
-    def test_dialogue_type_enum(self):
-        """All 6 dialogue types exist."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            DialogueType,
-        )
-
-        assert DialogueType.INQUIRY.value == "inquiry"
-        assert DialogueType.PERSUASION.value == "persuasion"
-        assert DialogueType.NEGOTIATION.value == "negotiation"
-        assert DialogueType.DELIBERATION.value == "deliberation"
-        assert DialogueType.INFORMATION_SEEKING.value == "information_seeking"
-        assert DialogueType.ERISTIC.value == "eristic"
-
-    def test_proposition_equality(self):
-        """Propositions with same content are equal."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-        )
-
-        p1 = Proposition(content="It is raining")
-        p2 = Proposition(content="It is raining")
-        assert p1 == p2
-        assert hash(p1) == hash(p2)
-
-    def test_formal_argument_str(self):
-        """FormalArgument string representation."""
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-            FormalArgument,
-        )
-
-        arg = FormalArgument(
-            premises=[Proposition(content="A"), Proposition(content="B")],
-            conclusion=Proposition(content="C"),
-        )
-        s = str(arg)
-        assert "A" in s
-        assert "B" in s
-        assert "C" in s
-
-
-# ---------------------------------------------------------------------------
-# Knowledge base tests (unchanged)
-# ---------------------------------------------------------------------------
-
-
-class TestKnowledgeBase:
-    """Test the knowledge base for argumentation."""
-
-    def test_add_proposition(self):
-        """Add proposition to knowledge base."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-        )
-
-        kb = KnowledgeBase()
-        p = Proposition(content="It is raining")
-        kb.add_proposition(p)
-        assert kb.entails(p)
-
-    def test_add_argument_registers_premises(self):
-        """Adding argument auto-registers premises and conclusion."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-            FormalArgument,
-        )
-
-        kb = KnowledgeBase()
-        p1 = Proposition(content="Clouds are dark")
-        p2 = Proposition(content="It is raining")
-        arg = FormalArgument(premises=[p1], conclusion=p2)
-        kb.add_argument(arg)
-
-        assert kb.entails(p1)
-        assert kb.entails(p2)
-        assert len(kb.get_all_arguments()) == 1
-
-    def test_find_supporting_arguments(self):
-        """Find arguments supporting a proposition."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-            FormalArgument,
-        )
-
-        kb = KnowledgeBase()
-        p1 = Proposition(content="Evidence")
-        p2 = Proposition(content="Conclusion")
-        arg = FormalArgument(premises=[p1], conclusion=p2)
-        kb.add_argument(arg)
-
-        supporters = kb.find_supporting_arguments(p2)
-        assert len(supporters) == 1
-
-    def test_find_attacking_arguments(self):
-        """Find arguments negating a proposition."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-            FormalArgument,
-        )
-
-        kb = KnowledgeBase()
-        target = Proposition(content="It is sunny")
-        neg = Proposition(content="\u00acIt is sunny")
-        arg = FormalArgument(premises=[Proposition(content="Clouds")], conclusion=neg)
-        kb.add_argument(arg)
-
-        attackers = kb.find_attacking_arguments(target)
-        assert len(attackers) == 1
-
-    def test_consistency_check(self):
-        """Consistent KB has no contradictions."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-        )
-
-        kb = KnowledgeBase()
-        kb.add_proposition(Proposition(content="A"))
-        kb.add_proposition(Proposition(content="B"))
-        assert kb.is_consistent()
-
-    def test_inconsistency_detected(self):
-        """Inconsistent KB detects contradiction (P and not-P)."""
-        from argumentation_analysis.agents.core.debate.knowledge_base import (
-            KnowledgeBase,
-        )
-        from argumentation_analysis.agents.core.debate.protocols import (
-            Proposition,
-        )
-
-        kb = KnowledgeBase()
-        kb.add_proposition(Proposition(content="A"))
-        kb.add_proposition(Proposition(content="\u00acA"))
-        assert not kb.is_consistent()
+# TestWaltonKrabbeProtocols / TestKnowledgeBase withdrawn with their targets
+# (#2137): the 3 protocol classes were dead twins of the JVM dialogue_handler;
+# knowledge_base.py had zero importers.
 
 
 # ---------------------------------------------------------------------------

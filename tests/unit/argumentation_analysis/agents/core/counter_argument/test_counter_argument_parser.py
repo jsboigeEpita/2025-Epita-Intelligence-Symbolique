@@ -6,8 +6,6 @@ import pytest
 from argumentation_analysis.agents.core.counter_argument.parser import (
     ArgumentParser,
     VulnerabilityAnalyzer,
-    parse_llm_response,
-    parse_structured_text,
 )
 from argumentation_analysis.agents.core.counter_argument.definitions import (
     Argument,
@@ -477,65 +475,8 @@ class TestIdentifyVulnerabilities:
         assert scores == sorted(scores, reverse=True)
 
 
-# ── parse_llm_response ──
-
-
-class TestParseLlmResponse:
-    def test_valid_json(self):
-        result = parse_llm_response('{"key": "value"}')
-        assert result == {"key": "value"}
-
-    def test_json_list(self):
-        result = parse_llm_response("[1, 2, 3]")
-        assert result == [1, 2, 3]
-
-    def test_invalid_json_structured(self):
-        result = parse_llm_response("key: value\nother: data")
-        assert result["key"] == "value"
-        assert result["other"] == "data"
-
-    def test_empty_json_object(self):
-        result = parse_llm_response("{}")
-        assert result == {}
-
-
-# ── parse_structured_text ──
-
-
-class TestParseStructuredText:
-    def test_single_kv(self):
-        result = parse_structured_text("name: Alice")
-        assert result["name"] == "Alice"
-
-    def test_multiple_kv(self):
-        result = parse_structured_text("name: Alice\nage: 30")
-        assert result["name"] == "Alice"
-        assert result["age"] == "30"
-
-    def test_multiline_value(self):
-        text = "description: Line one\n  continued line"
-        result = parse_structured_text(text)
-        assert "Line one" in result["description"]
-
-    def test_empty_text(self):
-        result = parse_structured_text("")
-        assert result == {}
-
-    def test_blank_lines_skipped(self):
-        text = "key: val\n\nother: data"
-        result = parse_structured_text(text)
-        assert result["key"] == "val"
-        assert result["other"] == "data"
-
-    def test_keys_lowercased(self):
-        result = parse_structured_text("Name: Alice")
-        assert "name" in result
-
-    def test_no_colon_lines_appended(self):
-        text = "key: first line\nsecond line\nother: x"
-        result = parse_structured_text(text)
-        assert "first line" in result["key"]
-        assert "second line" in result["key"]
+# TestParseLlmResponse / TestParseStructuredText withdrawn with their targets
+# (#2137): parse_llm_response and parse_structured_text had zero callers.
 
 
 # ── _extract_key_words (VulnerabilityAnalyzer) ──

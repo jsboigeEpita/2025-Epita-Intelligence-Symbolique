@@ -8,9 +8,8 @@ Adapted from 2.3.3-generation-contre-argument/counter_agent/agent/parser.py.
 """
 
 import re
-import json
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Tuple, Optional
 
 from .definitions import Argument, Vulnerability, CounterArgumentType
 
@@ -403,42 +402,7 @@ class VulnerabilityAnalyzer:
         return [word for word in text.split() if word not in stop_words]
 
 
-def parse_llm_response(response: str) -> Dict[str, Any]:
-    """Parse LLM response as JSON or structured text."""
-    try:
-        return json.loads(response)
-    except json.JSONDecodeError:
-        return parse_structured_text(response)
-
-
-def parse_structured_text(text: str) -> Dict[str, Any]:
-    """Parse key: value structured text into dict."""
-    result = {}
-    current_key = None
-    current_value = []
-
-    for line in text.strip().split("\n"):
-        line = line.strip()
-        if not line:
-            continue
-        match = re.match(r"^([^:]+):\s*(.*)$", line)
-        if match:
-            if current_key:
-                result[current_key] = (
-                    "\n".join(current_value)
-                    if len(current_value) > 1
-                    else current_value[0] if current_value else ""
-                )
-                current_value = []
-            current_key = match.group(1).lower()
-            value = match.group(2).strip()
-            if value:
-                current_value.append(value)
-        elif current_key:
-            current_value.append(line)
-
-    if current_key and current_value:
-        result[current_key] = (
-            "\n".join(current_value) if len(current_value) > 1 else current_value[0]
-        )
-    return result
+# parse_llm_response / parse_structured_text were withdrawn (#2137): zero
+# callers in the repo (the nl_to_logic homonyms are distinct private methods) —
+# relics of the student project's raw LLM-response parsing, made useless by
+# the Semantic Kernel migration.

@@ -534,33 +534,8 @@ class TestAgentBasesIntegration:
         assert caps["reasoning"] is True
         assert "propositional" in caps["supported_logics"]
 
-    def test_agent_get_agent_info(self):
-        """Verify get_agent_info returns complete agent information."""
-        kernel = self._create_mock_kernel_with_service()
-
-        class InfoAgent(BaseAgent):
-            def setup_agent_components(self, **kwargs):
-                self._llm_service_id = kwargs.get("llm_service_id", "default")
-
-            async def invoke_single(self, **kwargs):
-                return {}
-
-            async def get_response(self, *args, **kwargs):
-                return await self.invoke_single(**kwargs)
-
-            def get_agent_capabilities(self):
-                return {"version": "1.0", "features": ["test"]}
-
-        agent = InfoAgent(
-            kernel, "InfoAgent", system_prompt="Test prompt", llm_service_id="custom"
-        )
-        info = agent.get_agent_info()
-
-        assert info["name"] == "InfoAgent"
-        assert info["class"] == "InfoAgent"
-        assert info["system_prompt"] == "Test prompt"
-        assert info["llm_service_id"] == "custom"
-        assert info["capabilities"]["version"] == "1.0"
+    # test_agent_get_agent_info withdrawn with get_agent_info (#2137): the
+    # method had zero production reader — the registry carries agent info.
 
     def test_agent_properties(self):
         """Verify agent properties work correctly."""

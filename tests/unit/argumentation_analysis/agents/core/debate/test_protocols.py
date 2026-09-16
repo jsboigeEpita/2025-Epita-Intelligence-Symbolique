@@ -1,5 +1,6 @@
 # tests/unit/argumentation_analysis/agents/core/debate/test_protocols.py
-"""Tests for Walton-Krabbe dialogue protocols, speech acts, and propositions."""
+"""Tests for the Walton-Krabbe vocabulary — types, acts, propositions,
+arguments, moves (protocol classes withdrawn #2137)."""
 
 import pytest
 from argumentation_analysis.agents.core.debate.protocols import (
@@ -8,8 +9,6 @@ from argumentation_analysis.agents.core.debate.protocols import (
     Proposition,
     FormalArgument,
     DialogueMove,
-    InquiryProtocol,
-    PersuasionProtocol,
 )
 
 # ── Enums ──
@@ -164,134 +163,5 @@ class TestDialogueMove:
         assert move.target == "move-1"
 
 
-# ── InquiryProtocol ──
-
-
-class TestInquiryProtocol:
-    @pytest.fixture
-    def protocol(self):
-        return InquiryProtocol()
-
-    def test_type(self, protocol):
-        assert protocol.type == DialogueType.INQUIRY
-
-    def test_question_allows_claim(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.QUESTION, SpeechAct.CLAIM)
-
-    def test_question_allows_argue(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.QUESTION, SpeechAct.ARGUE)
-
-    def test_claim_allows_challenge(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.CHALLENGE)
-
-    def test_invalid_transition(self, protocol):
-        assert not protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.RETRACT)
-
-    def test_get_allowed_responses(self, protocol):
-        responses = protocol.get_allowed_responses(SpeechAct.CLAIM)
-        assert SpeechAct.SUPPORT in responses
-        assert SpeechAct.CHALLENGE in responses
-
-    def test_get_allowed_responses_empty(self, protocol):
-        # RETRACT has explicit transitions in inquiry
-        responses = protocol.get_allowed_responses(SpeechAct.RETRACT)
-        # RETRACT is not in the allowed transitions (only REFUTE and CONCEDE have entries)
-        assert responses == []  # RETRACT not in inquiry transitions
-
-    def test_termination_all_concessions(self, protocol):
-        """3 consecutive UNDERSTAND/CONCEDE moves → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.UNDERSTAND, "ok"),
-            DialogueMove("B", SpeechAct.CONCEDE, "agreed"),
-            DialogueMove("A", SpeechAct.UNDERSTAND, "confirmed"),
-        ]
-        assert protocol.is_terminal_state(moves)
-
-    def test_termination_max_moves(self, protocol):
-        """More than 25 moves → terminal."""
-        moves = [DialogueMove("A", SpeechAct.CLAIM, f"arg{i}") for i in range(26)]
-        assert protocol.is_terminal_state(moves)
-
-    def test_not_terminal_few_moves(self, protocol):
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, "start"),
-            DialogueMove("B", SpeechAct.CHALLENGE, "why?"),
-        ]
-        assert not protocol.is_terminal_state(moves)
-
-    def test_termination_double_understand(self, protocol):
-        """Two consecutive UNDERSTAND at end → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, "x"),
-            DialogueMove("B", SpeechAct.SUPPORT, "y"),
-            DialogueMove("A", SpeechAct.CLAIM, "z"),
-            DialogueMove("B", SpeechAct.UNDERSTAND, "ok"),
-            DialogueMove("A", SpeechAct.UNDERSTAND, "ok"),
-        ]
-        assert protocol.is_terminal_state(moves)
-
-    def test_loop_detection(self, protocol):
-        """6 moves with repeating act pairs → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, "x"),
-            DialogueMove("B", SpeechAct.CHALLENGE, "y"),
-            DialogueMove("A", SpeechAct.CLAIM, "x2"),
-            DialogueMove("B", SpeechAct.CHALLENGE, "y2"),
-            DialogueMove("A", SpeechAct.CLAIM, "x3"),
-            DialogueMove("B", SpeechAct.CHALLENGE, "y3"),
-        ]
-        assert protocol.is_terminal_state(moves)
-
-
-# ── PersuasionProtocol ──
-
-
-class TestPersuasionProtocol:
-    @pytest.fixture
-    def protocol(self):
-        return PersuasionProtocol()
-
-    def test_type(self, protocol):
-        assert protocol.type == DialogueType.PERSUASION
-
-    def test_claim_allows_challenge(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.CHALLENGE)
-
-    def test_claim_allows_concede(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.CLAIM, SpeechAct.CONCEDE)
-
-    def test_challenge_allows_argue(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.CHALLENGE, SpeechAct.ARGUE)
-
-    def test_argue_allows_refute(self, protocol):
-        assert protocol.is_valid_move(SpeechAct.ARGUE, SpeechAct.REFUTE)
-
-    def test_termination_on_concede(self, protocol):
-        """Last move is CONCEDE → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, "thesis"),
-            DialogueMove("B", SpeechAct.CONCEDE, "you win"),
-        ]
-        assert protocol.is_terminal_state(moves)
-
-    def test_termination_max_moves(self, protocol):
-        """More than 30 moves → terminal."""
-        moves = [DialogueMove("A", SpeechAct.CLAIM, f"arg{i}") for i in range(31)]
-        assert protocol.is_terminal_state(moves)
-
-    def test_termination_double_retract(self, protocol):
-        """Two consecutive RETRACT → terminal."""
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, "x"),
-            DialogueMove("B", SpeechAct.CLAIM, "y"),
-            DialogueMove("A", SpeechAct.RETRACT, "nvm"),
-            DialogueMove("B", SpeechAct.RETRACT, "nvm too"),
-        ]
-        assert protocol.is_terminal_state(moves)
-
-    def test_not_terminal(self, protocol):
-        moves = [
-            DialogueMove("A", SpeechAct.CLAIM, "thesis"),
-            DialogueMove("B", SpeechAct.CHALLENGE, "prove it"),
-        ]
-        assert not protocol.is_terminal_state(moves)
+# TestInquiryProtocol / TestPersuasionProtocol withdrawn with the protocol
+# classes (#2137): dead twins of the living JVM dialogue_handler.

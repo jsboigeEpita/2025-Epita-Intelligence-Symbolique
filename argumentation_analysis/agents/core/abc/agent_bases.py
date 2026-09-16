@@ -168,23 +168,8 @@ class BaseAgent(ChatCompletionAgent, ABC):
         """
         pass
 
-    def get_agent_info(self) -> Dict[str, Any]:
-        """
-        Retourne un dictionnaire d'informations sur l'agent.
-
-        Inclut le nom, la classe, le prompt système, l'ID du service LLM
-        et les capacités de l'agent.
-
-        :return: Un dictionnaire contenant les informations de l'agent.
-        :rtype: Dict[str, Any]
-        """
-        return {
-            "name": self.name,
-            "class": self.__class__.__name__,
-            "system_prompt": self.system_prompt,
-            "llm_service_id": self._llm_service_id,
-            "capabilities": self.get_agent_capabilities(),
-        }
+    # get_agent_info was withdrawn (#2137): declared on the base contract but
+    # with zero production reader — the registry carries the agent's info.
 
     # def get_channel_keys(self) -> List[str]:
     #     """
