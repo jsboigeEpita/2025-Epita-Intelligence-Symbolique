@@ -21,6 +21,7 @@ from argumentation_analysis.agents.tools.analysis.fact_claim_extractor import (
 from argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer import (
     FallacyFamilyAnalyzer,
     get_family_analyzer,
+    get_taxonomy_plugin,
     AnalysisDepth,
     ComprehensiveAnalysisResult,
 )
@@ -31,15 +32,6 @@ logger = logging.getLogger(__name__)
 
 # Backward compatibility functions for service-layer access.
 # These exist as module-level names to support unittest.mock.patch() in tests.
-def get_taxonomy_manager():
-    """Get the taxonomy manager singleton (compat shim)."""
-    from argumentation_analysis.services.fallacy_taxonomy_service import (
-        get_taxonomy_manager as _get_tm,
-    )
-
-    return _get_tm()
-
-
 def get_verification_service():
     """Get the fact verification service singleton (compat shim)."""
     from argumentation_analysis.services.fact_verification_service import (
@@ -125,7 +117,10 @@ class FactCheckingOrchestrator:
             self.taxonomy_plugin = self.plugin_registry.get("taxonomy_explorer")
             self.verification_plugin = self.plugin_registry.get("external_verification")
         else:
-            self.taxonomy_plugin = get_taxonomy_manager()
+            # Le singleton plugin réel — la surface que l'analyzer consomme
+            # (detect_and_classify + families mapping, #2270). Le service
+            # FallacyTaxonomyManager ne porte pas cette surface.
+            self.taxonomy_plugin = get_taxonomy_plugin()
             self.verification_plugin = get_verification_service()
 
         # Backward compat aliases

@@ -142,15 +142,18 @@ class FallacyFamilyAnalyzer:
         """
         Initialise l'analyseur par famille.
 
-        :param taxonomy_plugin: Instance du plugin de taxonomie (ou None pour singleton).
-        :param verification_plugin: Instance du plugin de vérification (ou None pour singleton).
+        :param taxonomy_plugin: Instance du plugin de taxonomie
+            (ou None pour le singleton plugin réel — l'analyzer consomme la
+            surface plugin : ``detect_and_classify`` + ``families`` mapping).
+        :param verification_plugin: Vérificateur de faits (``ClaimsVerifier``)
+            — par défaut le singleton service ``FactVerificationService`` (#2101).
         :param api_config: Configuration des APIs pour le fact-checking.
         """
         self.logger = logging.getLogger("FallacyFamilyAnalyzer")
 
         # Resolve via singletons if not injected directly
         if taxonomy_plugin is None:
-            taxonomy_plugin = get_taxonomy_manager()
+            taxonomy_plugin = get_taxonomy_plugin()
         if verification_plugin is None:
             verification_plugin = get_verification_service()
 
@@ -450,7 +453,7 @@ class FallacyFamilyAnalyzer:
         }
 
         for context_type, indicators in context_indicators.items():
-            if context_type in family_contexts:
+            if context_type in family_info.common_contexts:
                 for indicator in indicators:
                     if indicator in text_lower:
                         relevance += 0.1
@@ -748,15 +751,6 @@ class FallacyFamilyAnalyzer:
 
 # Backward compatibility functions for service-layer access.
 # These exist as module-level names to support unittest.mock.patch() in tests.
-def get_taxonomy_manager():
-    """Get the taxonomy manager singleton (compat shim)."""
-    from argumentation_analysis.services.fallacy_taxonomy_service import (
-        get_taxonomy_manager as _get_tm,
-    )
-
-    return _get_tm()
-
-
 def get_verification_service():
     """Get the fact verification service singleton (compat shim)."""
     from argumentation_analysis.services.fact_verification_service import (
@@ -764,6 +758,20 @@ def get_verification_service():
     )
 
     return _get_vs()
+
+
+# Instance globale du plugin de taxonomie — l'objet que la voie sans injection
+# construit (#2270) : l'analyzer consomme la surface plugin (detect_and_classify
+# + families mapping), pas la surface du service FallacyTaxonomyManager.
+_global_taxonomy_plugin = None
+
+
+def get_taxonomy_plugin() -> "TaxonomyExplorerPlugin":
+    """Get the TaxonomyExplorerPlugin singleton (the consumed surface, #2270)."""
+    global _global_taxonomy_plugin
+    if _global_taxonomy_plugin is None:
+        _global_taxonomy_plugin = TaxonomyExplorerPlugin()
+    return _global_taxonomy_plugin
 
 
 # Instance globale de l'analyseur
@@ -777,7 +785,8 @@ def get_family_analyzer(
     """
     Récupère ou crée une instance de l'analyseur par famille.
 
-    :param taxonomy_plugin: Instance du plugin de taxonomie à injecter. Si None, utilise singleton.
+    :param taxonomy_plugin: Plugin de taxonomie à injecter. Si None, le
+        singleton plugin réel est construit (voir ``get_taxonomy_plugin``).
     :param api_config: Configuration optionnelle des APIs
     :return: Instance de l'analyseur
     """
