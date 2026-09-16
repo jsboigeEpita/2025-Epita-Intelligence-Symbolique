@@ -305,9 +305,8 @@ class TestSelectOrchestrationStrategy:
 
     @pytest.mark.asyncio
     async def test_manual_conversation_raises(self):
-        """CONVERSATION n'a pas de branche dans le moteur (le wrapper existe,
-        aucune entrée STRATEGY_EXECUTORS ne le dispatche) → ValueError nommant
-        'conversation' — pas de substitution muette vers fallback (#2205)."""
+        """CONVERSATION n'a pas de stratégie dispatchable → ValueError nommant
+        'conversation', sans substitution muette vers fallback (#2205)."""
         from argumentation_analysis.pipelines.orchestration.execution.strategies import (
             select_orchestration_strategy,
         )

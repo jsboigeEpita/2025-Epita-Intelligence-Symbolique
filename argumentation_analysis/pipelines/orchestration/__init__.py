@@ -1,9 +1,6 @@
 # argumentation_analysis/pipelines/orchestration/__init__.py
 
-"""
-Ce package rend les composants clés de la nouvelle architecture d'orchestration
-directement accessibles, assurant la rétrocompatibilité et une transition en douceur.
-"""
+"""Residual configuration and service aliases for pipeline orchestration."""
 
 # 1. Configuration Essentielle
 from .config.base_config import ExtendedOrchestrationConfig
@@ -24,18 +21,7 @@ try:
 except ImportError:
     ServiceManager = None
 
-# 3. Moteur d'Éxécution Principal
-from .execution.engine import analyze_text_orchestrated as Engine
-
-# 4. Processeurs et Post-Processeurs d'Analyse
-from .analysis.processors import (
-    execute_operational_tasks,
-    synthesize_hierarchical_results,
-)
-from .analysis.post_processors import post_process_orchestration_results
-from .analysis.traces import save_orchestration_trace
-
-# 5. Orchestrateurs Spécialisés (Wrappers) — withdrawn (#2111): the two
+# 3. Orchestrateurs Spécialisés (Wrappers) — withdrawn (#2111): the two
 # wrappers had zero instantiation in production and tests; the shell
 # orchestrators/ directory went with them.
 
@@ -47,11 +33,4 @@ __all__ = [
     # Core
     "Middleware",
     "ServiceManager",
-    # Execution
-    "Engine",
-    # Analysis
-    "execute_operational_tasks",
-    "synthesize_hierarchical_results",
-    "post_process_orchestration_results",
-    "save_orchestration_trace",
 ]
