@@ -19,7 +19,6 @@ import logging
 import pytest
 from unittest.mock import MagicMock, AsyncMock, patch
 
-
 # =====================================================================
 # 1. Quality — overall > 0 on non-trivial input
 # =====================================================================
@@ -50,7 +49,9 @@ class TestQualityValueGate:
             "Quality evaluator returned note_moyenne == 0 on rich argument text. "
             "A regression zeroing all virtue scores would pass CI silently."
         )
-        assert result["note_finale"] > 0, "note_finale must be > 0 for non-trivial input"
+        assert (
+            result["note_finale"] > 0
+        ), "note_finale must be > 0 for non-trivial input"
 
     def test_at_least_one_virtue_above_zero(self):
         """Not all 9 virtue scores should be exactly 0 on structured text."""
@@ -63,9 +64,9 @@ class TestQualityValueGate:
         result = evaluer_argument(text)
         scores = list(result["scores_par_vertu"].values())
         nonzero = [s for s in scores if s > 0]
-        assert len(nonzero) >= 1, (
-            f"All 9 virtue scores are 0 on text with sources + connectors: {scores}"
-        )
+        assert (
+            len(nonzero) >= 1
+        ), f"All 9 virtue scores are 0 on text with sources + connectors: {scores}"
 
     def test_quality_state_shape_has_nontrivial_overall(self):
         """When stored in UnifiedAnalysisState, overall > 0 for a rich argument.
@@ -144,9 +145,9 @@ class TestModalLogicValueGate:
             f"Modal fallback returned valid={result.get('valid')} instead of None. "
             "When no solver is available, must report unavailability, not valid=True (#961/#1097)."
         )
-        assert result.get("solver") == "unavailable", (
-            f"Modal fallback solver={result.get('solver')}, expected 'unavailable' (#961/#1097)."
-        )
+        assert (
+            result.get("solver") == "unavailable"
+        ), f"Modal fallback solver={result.get('solver')}, expected 'unavailable' (#961/#1097)."
 
     async def test_heuristic_does_not_fabricate_valid_true(self):
         """The fallback must never return valid=True when it cannot verify.
@@ -207,27 +208,43 @@ class TestDebateValueGate:
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
         kernel = Kernel()
-        kernel.add_service(OpenAIChatCompletion(
-            service_id="test", api_key="test-key", ai_model_id="gpt-4"
-        ))
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="test", api_key="test-key", ai_model_id="gpt-4"
+            )
+        )
 
         agents = [
-            DebateAgent(kernel=kernel, agent_name="Alice", personality="Scholar", position="for"),
-            DebateAgent(kernel=kernel, agent_name="Bob", personality="Skeptic", position="against"),
+            DebateAgent(
+                kernel=kernel, agent_name="Alice", personality="Scholar", position="for"
+            ),
+            DebateAgent(
+                kernel=kernel,
+                agent_name="Bob",
+                personality="Skeptic",
+                position="against",
+            ),
         ]
         moderator = EnhancedDebateModerator()
 
-        with patch.object(agents[0], "_generate_via_kernel", new_callable=AsyncMock,
-                          side_effect=RuntimeError("No LLM")), \
-             patch.object(agents[1], "_generate_via_kernel", new_callable=AsyncMock,
-                          side_effect=RuntimeError("No LLM")):
+        with patch.object(
+            agents[0],
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ), patch.object(
+            agents[1],
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
             state = await moderator.run_debate("Should AI be regulated?", agents)
 
         assert state.winner is not None, "Debate concluded without a winner"
         agent_names = {a.agent_name for a in agents}
-        assert state.winner in agent_names, (
-            f"Winner '{state.winner}' is not among agents {agent_names}"
-        )
+        assert (
+            state.winner in agent_names
+        ), f"Winner '{state.winner}' is not among agents {agent_names}"
 
     async def test_debate_arguments_have_content(self):
         """Each argument in the debate must have non-empty content text."""
@@ -239,27 +256,45 @@ class TestDebateValueGate:
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
         kernel = Kernel()
-        kernel.add_service(OpenAIChatCompletion(
-            service_id="test", api_key="test-key", ai_model_id="gpt-4"
-        ))
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id="test", api_key="test-key", ai_model_id="gpt-4"
+            )
+        )
 
         agents = [
-            DebateAgent(kernel=kernel, agent_name="Alice", personality="Scholar", position="for"),
-            DebateAgent(kernel=kernel, agent_name="Bob", personality="Skeptic", position="against"),
+            DebateAgent(
+                kernel=kernel, agent_name="Alice", personality="Scholar", position="for"
+            ),
+            DebateAgent(
+                kernel=kernel,
+                agent_name="Bob",
+                personality="Skeptic",
+                position="against",
+            ),
         ]
         moderator = EnhancedDebateModerator()
 
-        with patch.object(agents[0], "_generate_via_kernel", new_callable=AsyncMock,
-                          side_effect=RuntimeError("No LLM")), \
-             patch.object(agents[1], "_generate_via_kernel", new_callable=AsyncMock,
-                          side_effect=RuntimeError("No LLM")):
-            state = await moderator.run_debate("Should we invest in green tech?", agents)
+        with patch.object(
+            agents[0],
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ), patch.object(
+            agents[1],
+            "_generate_via_kernel",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("No LLM"),
+        ):
+            state = await moderator.run_debate(
+                "Should we invest in green tech?", agents
+            )
 
         assert len(state.arguments) > 0, "Debate produced zero arguments"
         for i, arg in enumerate(state.arguments):
-            assert arg.content and len(arg.content.strip()) > 0, (
-                f"Argument #{i} has empty content — debate fallback produces degenerate args"
-            )
+            assert (
+                arg.content and len(arg.content.strip()) > 0
+            ), f"Argument #{i} has empty content — debate fallback produces degenerate args"
 
 
 # =====================================================================
@@ -296,8 +331,15 @@ class TestNarrativeSynthesisValueGate:
 
         # Count references to populated fields in narrative text
         ref_keywords = [
-            "qualite", "sophisme", "croyance", "hypothese", "jtms",
-            "atms", "retraction", "logique", "dung",
+            "qualite",
+            "sophisme",
+            "croyance",
+            "hypothese",
+            "jtms",
+            "atms",
+            "retraction",
+            "logique",
+            "dung",
         ]
         found = sum(1 for kw in ref_keywords if kw in result.lower())
         assert found >= 2, (
@@ -314,14 +356,20 @@ class TestNarrativeSynthesisValueGate:
 
         state = UnifiedAnalysisState("Test discourse.")
         state.add_fallacy("straw_man", "Distortion", "arg_2")
-        state.add_counter_argument("arg_2", "Counter via example", "counter_example", 0.8)
+        state.add_counter_argument(
+            "arg_2", "Counter via example", "counter_example", 0.8
+        )
 
         result = build_narrative(state)
 
         # Must reference at least one of the populated fields
         specific_refs = [
-            "sophisme", "straw_man", "homme de paille", "contre-argument",
-            "contestat", "counter",
+            "sophisme",
+            "straw_man",
+            "homme de paille",
+            "contre-argument",
+            "contestat",
+            "counter",
         ]
         has_specific = any(ref in result.lower() for ref in specific_refs)
         assert has_specific, (
@@ -385,15 +433,15 @@ class TestFactExtractionValueGate:
         )
         claims = extractor.extract_factual_claims(text, max_claims=10)
 
-        assert len(claims) >= 1, (
-            "FactClaimExtractor returned 0 claims on text with 3 verifiable assertions"
-        )
+        assert (
+            len(claims) >= 1
+        ), "FactClaimExtractor returned 0 claims on text with 3 verifiable assertions"
 
         # At least one claim must have non-empty claim_text
         has_nontrivial = any(len(c.claim_text.strip()) > 10 for c in claims)
-        assert has_nontrivial, (
-            "All extracted claims have empty or trivial claim_text (<10 chars)"
-        )
+        assert (
+            has_nontrivial
+        ), "All extracted claims have empty or trivial claim_text (<10 chars)"
 
     def test_claim_has_type_and_confidence(self):
         """Each claim must have a claim_type and confidence > 0."""
@@ -413,7 +461,9 @@ class TestFactExtractionValueGate:
 
         for claim in claims:
             assert claim.claim_type is not None, "Claim has no claim_type"
-            assert claim.confidence >= 0, f"Claim has negative confidence: {claim.confidence}"
+            assert (
+                claim.confidence >= 0
+            ), f"Claim has negative confidence: {claim.confidence}"
 
     def test_no_degenerate_fragments_on_plain_text(self):
         """Plain non-factual text should not produce false-positive claims
@@ -476,9 +526,9 @@ class TestCounterArgValueGate:
         assert isinstance(result, str)
         assert len(result) > 0, "Statistical evidence strategy returned empty string"
         # MUST NOT contain fabricated precise percentages
-        assert "15%" not in result, (
-            "Statistical counter still contains fabricated '15%' statistic (#960)"
-        )
+        assert (
+            "15%" not in result
+        ), "Statistical counter still contains fabricated '15%' statistic (#960)"
 
     def test_statistical_counter_tagged_as_template(self):
         """Template-fallback output must be tagged as placeholder."""
@@ -534,9 +584,9 @@ class TestCounterArgValueGate:
             result = strategies.apply_strategy(
                 strat, arg, CounterArgumentType.DIRECT_REFUTATION
             )
-            assert isinstance(result, str) and len(result) > 0, (
-                f"Strategy {strat.name} returned empty output after #960 fix"
-            )
+            assert (
+                isinstance(result, str) and len(result) > 0
+            ), f"Strategy {strat.name} returned empty output after #960 fix"
 
     async def test_counter_argument_marks_degraded_when_llm_enrichment_fails(self):
         """#1597 — a phase that completed without its LLM must say so.
@@ -561,7 +611,9 @@ class TestCounterArgValueGate:
             _invoke_counter_argument,
         )
 
-        ctx = {"phase_extract_output": {"arguments": [{"text": "claim needing rebuttal"}]}}
+        ctx = {
+            "phase_extract_output": {"arguments": [{"text": "claim needing rebuttal"}]}
+        }
         # Force the LLM path (client present) then make generation raise — the
         # exact production failure mode (network/key/parse). CI-stable: no .env
         # dependency (we mock the client provider, not the ctor).
@@ -691,9 +743,9 @@ class TestDeLPValueGate:
             f"got {result.get('message')!r} (#1215)."
         )
         # No fabricated results / verdict.
-        assert result.get("results") is None, (
-            f"DeLP must not fabricate results when unavailable: {result.get('results')}"
-        )
+        assert (
+            result.get("results") is None
+        ), f"DeLP must not fabricate results when unavailable: {result.get('results')}"
 
 
 class TestBipolarValueGate:
@@ -821,10 +873,7 @@ class TestDebateScoringI18n:
 
         analyzer = ArgumentAnalyzer()
         en_text = "Because A is true, therefore B follows. Since C, thus D."
-        fr_text = (
-            "Parce que A est vrai, donc B en découle. "
-            "Puisque C, ainsi D."
-        )
+        fr_text = "Parce que A est vrai, donc B en découle. " "Puisque C, ainsi D."
         en_score = analyzer._assess_logical_coherence(en_text)
         fr_score = analyzer._assess_logical_coherence(fr_text)
         # FR score should be in the same ballpark as EN (within 0.2)
@@ -841,8 +890,12 @@ class TestDebateScoringI18n:
         """
         # Replicate the conclusion-detection logic from debate_agent.py
         conclusion_connectors = [
-            "therefore", "thus", "hence",
-            "donc", "par conséquent", "c'est pourquoi",
+            "therefore",
+            "thus",
+            "hence",
+            "donc",
+            "par conséquent",
+            "c'est pourquoi",
         ]
         text = "Les données sont claires. Donc nous devons agir maintenant."
         found_conclusion = False
@@ -852,9 +905,9 @@ class TestDebateScoringI18n:
                 continue
             if any(c in sentence.lower() for c in conclusion_connectors):
                 found_conclusion = True
-                assert "Donc nous devons" in sentence or "donc" in sentence.lower(), (
-                    f"FR conclusion with 'donc' not detected in sentence: '{sentence}' (#967)."
-                )
+                assert (
+                    "Donc nous devons" in sentence or "donc" in sentence.lower()
+                ), f"FR conclusion with 'donc' not detected in sentence: '{sentence}' (#967)."
         assert found_conclusion, (
             "No FR conclusion detected in text with 'Donc'. "
             "Connector list may be missing French entries (#967)."
@@ -893,7 +946,9 @@ class TestDungValueGate:
             _python_dung_fallback,
         )
 
-        with pytest.raises(RuntimeError, match="Dung extension computation unavailable"):
+        with pytest.raises(
+            RuntimeError, match="Dung extension computation unavailable"
+        ):
             _python_dung_fallback(
                 arguments=["A", "B", "C"],
                 attacks=[["A", "B"], ["B", "C"]],
@@ -906,105 +961,77 @@ class TestDungValueGate:
 
 
 class TestGovernanceValueGate:
-    """Assert governance simulation produces a real winner and satisfaction.
+    """Assert governance voting produces a real winner and satisfaction.
 
-    The simulate_governance function runs 7 governance methods (5 voting
-    rules + 2 distributed-consensus protocols; Byzantine and Raft are
-    protocols, not scrutins — see governance_methods.py, #1981). On
-    synthetic agents with clear preferences, it must pick a winner and
-    compute per-agent satisfaction scores.
+    #2137: simulate_governance (coalitions/Shapley) was withdrawn — the
+    living production path runs the GOVERNANCE_METHODS voting rules on
+    Agent voters (invoke_callables._invoke_governance → _aggregate_governance_votes).
+    The gate keeps its #965 intent on that surface: a winner is picked and
+    per-agent satisfaction is computed and non-trivial.
     """
 
     def _make_agents(self):
-        """Create 3 synthetic governance agents with simple preferences."""
-        from unittest.mock import MagicMock
+        """Create 3 governance Agents with simple preferences."""
+        from argumentation_analysis.agents.core.governance import Agent
 
-        agents = []
-        for name, prefs, trust_val in [
-            ("Agent_A", ["Option_1", "Option_2", "Option_3"], 0.9),
-            ("Agent_B", ["Option_2", "Option_1", "Option_3"], 0.5),
-            ("Agent_C", ["Option_1", "Option_3", "Option_2"], 0.9),
-        ]:
-            agent = MagicMock()
-            agent.name = name
-            agent.preferences = prefs
-            agent.trust = {a.name: 0.5 for a in agents}
-            agent.trust[name] = 1.0
-            agent.coalition = None
-            agent.personality = "neutral"
-            agent.decide = MagicMock(return_value=prefs[0])
-            agent.update_memory = MagicMock()
-            # Set cross-trust for coalition detection
-            for existing in agents:
-                agent.trust[existing.name] = trust_val
-                existing.trust[name] = trust_val
-            agents.append(agent)
-        return agents
+        return [
+            Agent(
+                name="Agent_A",
+                personality="stubborn",
+                preferences=["Option_1", "Option_2", "Option_3"],
+            ),
+            Agent(
+                name="Agent_B",
+                personality="stubborn",
+                preferences=["Option_2", "Option_1", "Option_3"],
+            ),
+            Agent(
+                name="Agent_C",
+                personality="stubborn",
+                preferences=["Option_1", "Option_3", "Option_2"],
+            ),
+        ]
 
     def test_governance_produces_winner(self):
-        """simulate_governance must return a non-None winner."""
-        from argumentation_analysis.agents.core.governance.simulation import (
-            simulate_governance,
+        """The living voting rules must pick a winner among the options."""
+        from argumentation_analysis.agents.core.governance import (
+            GOVERNANCE_METHODS,
         )
 
         agents = self._make_agents()
-        result = simulate_governance(
-            agents,
-            {"options": ["Option_1", "Option_2", "Option_3"]},
-            "majority",
-        )
+        options = ["Option_1", "Option_2", "Option_3"]
+        winner = GOVERNANCE_METHODS["majority"](agents, options, {})
 
-        assert result["winner"] is not None, (
-            "Governance simulation returned None winner"
-        )
-        assert result["winner"] in ["Option_1", "Option_2", "Option_3"], (
-            f"Winner '{result['winner']}' not in options"
-        )
+        assert winner is not None, "Governance voting returned None winner"
+        assert winner in options, f"Winner '{winner}' not in options"
 
     def test_governance_satisfaction_non_trivial(self):
         """Satisfaction scores must be computed (not all zero)."""
-        from argumentation_analysis.agents.core.governance.simulation import (
-            simulate_governance,
+        from argumentation_analysis.agents.core.governance import (
+            GOVERNANCE_METHODS,
+        )
+        from argumentation_analysis.agents.core.governance.metrics import (
+            satisfaction,
         )
 
         agents = self._make_agents()
-        result = simulate_governance(
-            agents,
-            {"options": ["Option_1", "Option_2", "Option_3"]},
-            "majority",
-        )
+        options = ["Option_1", "Option_2", "Option_3"]
+        winner = GOVERNANCE_METHODS["majority"](agents, options, {})
 
-        satisfaction = result["satisfaction"]
-        assert len(satisfaction) == 3, (
-            f"Expected 3 satisfaction scores, got {len(satisfaction)}"
-        )
-        avg_satisfaction = sum(satisfaction) / len(satisfaction)
+        # Same satisfaction model as the production summary: rank of the
+        # winner in each agent's preferences, normalized.
+        per_agent = [
+            1.0 - (a.preferences.index(winner) / len(a.preferences)) for a in agents
+        ]
+        result = {"satisfaction": per_agent}
+        avg_satisfaction = satisfaction(result)
         assert avg_satisfaction > 0, (
-            f"All satisfaction scores are 0 — winner={result['winner']}, "
-            f"satisfaction={satisfaction}"
+            f"All satisfaction scores are 0 — winner={winner}, "
+            f"satisfaction={per_agent}"
         )
 
-    def test_governance_coalitions_formed(self):
-        """When agents trust each other (>0.8), coalitions must form."""
-        from argumentation_analysis.agents.core.governance.simulation import (
-            simulate_governance,
-        )
-
-        agents = self._make_agents()
-        # Agent_A and Agent_C trust each other at 0.9 → should form coalition
-        result = simulate_governance(
-            agents,
-            {"options": ["Option_1", "Option_2", "Option_3"]},
-            "majority",
-        )
-
-        coalitions = result.get("coalitions", [])
-        if coalitions:
-            # At least one coalition has >1 member
-            max_coalition = max(len(c) for c in coalitions)
-            assert max_coalition >= 1, (
-                f"Coalitions formed but all singletons: {coalitions}"
-            )
+    # test_governance_coalitions_formed withdrawn with simulate_governance
+    # (#2137): coalition formation lived only in the withdrawn simulator.
 
 
 # =====================================================================
@@ -1072,12 +1099,12 @@ class TestJTMSValueGate:
 
         jtms.set_belief_validity("A", True)
 
-        assert jtms.beliefs["B"].valid is True, (
-            "A→B: B should be True after A is set True"
-        )
-        assert jtms.beliefs["C"].valid is True, (
-            "A→B→C: C should be True after chain propagation from A"
-        )
+        assert (
+            jtms.beliefs["B"].valid is True
+        ), "A→B: B should be True after A is set True"
+        assert (
+            jtms.beliefs["C"].valid is True
+        ), "A→B→C: C should be True after chain propagation from A"
 
 
 # ============================================================
@@ -1100,9 +1127,9 @@ class TestDungDFSCycleDetection:
 
         fw = DungFramework.triangle()
         props = fw.framework_properties()
-        assert props["has_cycles"] is True, (
-            f"Triangle framework should have cycles, got {props['has_cycles']} (#970)."
-        )
+        assert (
+            props["has_cycles"] is True
+        ), f"Triangle framework should have cycles, got {props['has_cycles']} (#970)."
 
     def test_acyclic_no_false_cycle(self):
         """Reinstatement (a→b→c, no back-edge) must report has_cycles=False."""
@@ -1110,9 +1137,9 @@ class TestDungDFSCycleDetection:
 
         fw = DungFramework.reinstatement()
         props = fw.framework_properties()
-        assert props["has_cycles"] is False, (
-            f"Reinstatement framework should NOT have cycles, got {props['has_cycles']} (#970)."
-        )
+        assert (
+            props["has_cycles"] is False
+        ), f"Reinstatement framework should NOT have cycles, got {props['has_cycles']} (#970)."
 
 
 class TestDungExponentialGuard:
@@ -1167,13 +1194,13 @@ class TestDungExponentialGuard:
 
         # Grounded is polynomial — must NOT raise
         ext = fw.grounded_extension()
-        assert isinstance(ext, frozenset), (
-            f"Grounded extension should be frozenset, got {type(ext)} (#970)."
-        )
+        assert isinstance(
+            ext, frozenset
+        ), f"Grounded extension should be frozenset, got {type(ext)} (#970)."
         # In a chain a0→a1→a2→...→aN, grounded = {a0}
-        assert "arg_0" in ext, (
-            f"arg_0 should be in grounded extension of chain, got {ext} (#970)."
-        )
+        assert (
+            "arg_0" in ext
+        ), f"arg_0 should be in grounded extension of chain, got {ext} (#970)."
 
 
 # ============================================================
@@ -1248,12 +1275,12 @@ class TestKemenyYoungSafeFallback:
             ["B", "A", "C"],
         ]
         ranking, score, approximate = kemeny_young_safe(ballots, ["A", "B", "C"])
-        assert approximate is False, (
-            f"3 candidates should use exact Kemeny, got approximate={approximate} (#971)."
-        )
-        assert ranking[0] == "A", (
-            f"A should win with 2 first-preference ballots, got {ranking} (#971)."
-        )
+        assert (
+            approximate is False
+        ), f"3 candidates should use exact Kemeny, got approximate={approximate} (#971)."
+        assert (
+            ranking[0] == "A"
+        ), f"A should win with 2 first-preference ballots, got {ranking} (#971)."
         assert score > 0
 
     def test_fallback_for_large_sets(self):
@@ -1272,12 +1299,12 @@ class TestKemenyYoungSafeFallback:
             f"{len(options)} candidates should trigger Copeland fallback, "
             f"got approximate={approximate} (#971)."
         )
-        assert ranking[0] == "C0", (
-            f"C0 should win with unanimous preferences, got {ranking} (#971)."
-        )
-        assert score == -1, (
-            f"Fallback score should be -1 (sentinel), got {score} (#971)."
-        )
+        assert (
+            ranking[0] == "C0"
+        ), f"C0 should win with unanimous preferences, got {ranking} (#971)."
+        assert (
+            score == -1
+        ), f"Fallback score should be -1 (sentinel), got {score} (#971)."
 
     def test_exact_kemeny_raises_for_large_sets(self):
         """Direct kemeny_young() must still raise ValueError for >8."""
@@ -1479,13 +1506,13 @@ class TestFOLValueGate:
         ):
             result = await _invoke_fol_reasoning(text, context)
 
-        assert result.get("consistent") is None, (
-            f"Degraded FOL must keep consistent=None, got {result.get('consistent')!r}."
-        )
+        assert (
+            result.get("consistent") is None
+        ), f"Degraded FOL must keep consistent=None, got {result.get('consistent')!r}."
         message = result.get("message", "")
-        assert "unavailable" in message, (
-            f"FOL degraded message must state unavailability, got {message!r} (#1278)."
-        )
+        assert (
+            "unavailable" in message
+        ), f"FOL degraded message must state unavailability, got {message!r} (#1278)."
 
     @pytest.mark.requires_api
     async def test_fol_consistent_is_bool_when_tweety_available(self):
@@ -1666,12 +1693,12 @@ class TestSATValueGate:
         }
         result = await _invoke_sat("p and q", context)
 
-        assert "satisfiable" in result, (
-            f"SAT result missing 'satisfiable' key: {list(result.keys())} (#1005)."
-        )
-        assert isinstance(result["satisfiable"], bool), (
-            f"SAT 'satisfiable' should be bool, got {type(result['satisfiable'])} (#1005)."
-        )
+        assert (
+            "satisfiable" in result
+        ), f"SAT result missing 'satisfiable' key: {list(result.keys())} (#1005)."
+        assert isinstance(
+            result["satisfiable"], bool
+        ), f"SAT 'satisfiable' should be bool, got {type(result['satisfiable'])} (#1005)."
 
     async def test_sat_model_non_empty_when_satisfiable(self):
         """Nit A (#1009): when SAT=True, model must be non-empty (not vacuous)."""
@@ -1683,14 +1710,14 @@ class TestSATValueGate:
 
         if result.get("satisfiable"):
             model = result.get("model")
-            assert model is not None, (
-                f"SAT satisfiable=True but model is None — vacuous gate (#1009)."
-            )
+            assert (
+                model is not None
+            ), f"SAT satisfiable=True but model is None — vacuous gate (#1009)."
             # model may be dict (Z3-style) or list — assert non-empty
             if isinstance(model, (dict, list)):
-                assert len(model) > 0, (
-                    f"SAT satisfiable=True but model is empty — vacuous gate (#1009)."
-                )
+                assert (
+                    len(model) > 0
+                ), f"SAT satisfiable=True but model is empty — vacuous gate (#1009)."
 
 
 class TestEAFValueGate:
@@ -1718,7 +1745,9 @@ class TestEAFValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            with pytest.raises(RuntimeError, match="Epistemic AF analysis .* unavailable"):
+            with pytest.raises(
+                RuntimeError, match="Epistemic AF analysis .* unavailable"
+            ):
                 await _invoke_eaf("test", {"arguments": ["alpha", "beta", "gamma"]})
 
 
@@ -1747,9 +1776,9 @@ class TestQBFValueGate:
         ):
             result = await _invoke_qbf("forall x exists y: P(x,y)", {})
 
-        assert result.get("fallback") == "error", (
-            f"QBF error fallback should set fallback='error', got {result.get('fallback')} (#1005)."
-        )
+        assert (
+            result.get("fallback") == "error"
+        ), f"QBF error fallback should set fallback='error', got {result.get('fallback')} (#1005)."
         assert result.get("valid") is None, (
             f"QBF unavailable must report valid=None (undetermined, not False), "
             f"got {result.get('valid')} (#1650)."
@@ -1844,7 +1873,9 @@ class TestProbabilisticValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            with pytest.raises(RuntimeError, match="Probabilistic argumentation unavailable"):
+            with pytest.raises(
+                RuntimeError, match="Probabilistic argumentation unavailable"
+            ):
                 await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
 
     async def test_probabilistic_fallback_honestly_flagged(self):
@@ -1864,7 +1895,9 @@ class TestProbabilisticValueGate:
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
             side_effect=RuntimeError("No JVM for test"),
         ):
-            with pytest.raises(RuntimeError, match="Probabilistic argumentation unavailable"):
+            with pytest.raises(
+                RuntimeError, match="Probabilistic argumentation unavailable"
+            ):
                 await _invoke_probabilistic("test", {"arguments": ["a", "b"]})
 
 
@@ -1894,9 +1927,12 @@ class TestDialogueValueGate:
             side_effect=RuntimeError("No JVM for test"),
         ):
             with pytest.raises(RuntimeError, match="Dialogue protocol unavailable"):
-                await _invoke_dialogue("test argument text", {
-                    "arguments": ["pro-arg-1", "pro-arg-2"],
-                })
+                await _invoke_dialogue(
+                    "test argument text",
+                    {
+                        "arguments": ["pro-arg-1", "pro-arg-2"],
+                    },
+                )
 
 
 class TestBeliefRevisionValueGate:
@@ -1966,7 +2002,9 @@ class TestBeliefRevisionValueGate:
             "argumentation_analysis.core.jvm_setup.is_jvm_started",
             return_value=True,
         ):
-            with pytest.raises(RuntimeError, match="Belief revision .* failed with JVM up"):
+            with pytest.raises(
+                RuntimeError, match="Belief revision .* failed with JVM up"
+            ):
                 await _invoke_belief_revision("test", context)
 
 
@@ -1994,17 +2032,16 @@ class TestATMSValueGate:
         }
         result = await _invoke_atms("test argument text", context)
 
-        assert isinstance(result, dict), (
-            f"ATMS must return dict, got {type(result)} (#1005)."
-        )
+        assert isinstance(
+            result, dict
+        ), f"ATMS must return dict, got {type(result)} (#1005)."
         # Must have at minimum nodes or environments
         has_structure = any(
-            k in result
-            for k in ("nodes", "environments", "atms_contexts", "labeling")
+            k in result for k in ("nodes", "environments", "atms_contexts", "labeling")
         )
-        assert has_structure, (
-            f"ATMS returned no structural keys: {list(result.keys())} (#1005)."
-        )
+        assert (
+            has_structure
+        ), f"ATMS returned no structural keys: {list(result.keys())} (#1005)."
 
     async def test_atms_value_non_trivial(self):
         """Audit (#1009): ATMS must produce non-zero node count from input args."""
@@ -2026,9 +2063,9 @@ class TestATMSValueGate:
             f"ATMS produced 0 assumptions from 1 argument — vacuous gate (#1009). "
             f"Keys: {list(result.keys())}"
         )
-        assert result.get("node_count", 0) > 0, (
-            f"ATMS produced 0 nodes from 1 arg + 1 claim — vacuous gate (#1009)."
-        )
+        assert (
+            result.get("node_count", 0) > 0
+        ), f"ATMS produced 0 nodes from 1 arg + 1 claim — vacuous gate (#1009)."
 
 
 class TestASPICValueGate:
@@ -2060,10 +2097,13 @@ class TestASPICValueGate:
             side_effect=RuntimeError("No JVM for test"),
         ):
             with pytest.raises(RuntimeError, match="ASPIC\\+ analysis unavailable"):
-                await _invoke_aspic("test argument text", {
-                    "phase_extract_output": {
-                        "claims": [{"text": "claim 1"}],
-                        "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
+                await _invoke_aspic(
+                    "test argument text",
+                    {
+                        "phase_extract_output": {
+                            "claims": [{"text": "claim 1"}],
+                            "arguments": [{"text": "arg 1"}, {"text": "arg 2"}],
+                        },
+                        "phase_hierarchical_fallacy_output": {"fallacies": []},
                     },
-                    "phase_hierarchical_fallacy_output": {"fallacies": []},
-                })
+                )
