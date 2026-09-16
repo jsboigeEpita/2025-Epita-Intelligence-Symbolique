@@ -41,7 +41,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md). Frères : [`../analysis/`](../analysis/README.md) et [`../execution/`](../execution/README.md). L'ancien frère `core/` a été retiré (#2113).
+Parent : [`../README.md`](../README.md). Frère : [`../execution/`](../execution/README.md). Les anciens frères `analysis/` et `core/` ont été retirés (#2113).
 
 ## Limites connues
 

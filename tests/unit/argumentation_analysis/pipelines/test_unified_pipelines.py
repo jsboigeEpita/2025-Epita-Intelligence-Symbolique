@@ -7,9 +7,6 @@ Covers:
   2. unified_text_analysis.py — UnifiedTextAnalysisPipeline, UnifiedAnalysisConfig, helpers
   3. orchestration/config/enums.py — OrchestrationMode, AnalysisType enums
   4. orchestration/config/base_config.py — ExtendedOrchestrationConfig
-  5. orchestration/analysis/post_processors.py — post_process_orchestration_results
-  6. orchestration/analysis/processors.py — execute_operational_tasks, synthesize_hierarchical_results
-  7. orchestration/analysis/traces.py — trace_orchestration, get_communication_log, save_orchestration_trace
 
 NOTE: section 5 (orchestration/core/communication.py — initialize_communication_middleware)
 was removed in #1574: the function had zero production callers and its naked-middleware
@@ -27,7 +24,7 @@ import pytest
 import asyncio
 import warnings
 from types import SimpleNamespace, ModuleType
-from unittest.mock import MagicMock, AsyncMock, patch, mock_open
+from unittest.mock import MagicMock, AsyncMock, patch
 
 from argumentation_analysis.pipelines.unified_text_analysis import (
     UnifiedAnalysisConfig,
@@ -43,25 +40,6 @@ from argumentation_analysis.pipelines.orchestration.config.enums import (
 from argumentation_analysis.pipelines.orchestration.config.base_config import (
     ExtendedOrchestrationConfig,
 )
-
-try:
-    from argumentation_analysis.pipelines.orchestration.analysis.post_processors import (
-        post_process_orchestration_results,
-    )
-    from argumentation_analysis.pipelines.orchestration.analysis.processors import (
-        execute_operational_tasks,
-        synthesize_hierarchical_results,
-    )
-    from argumentation_analysis.pipelines.orchestration.analysis.traces import (
-        trace_orchestration,
-        get_communication_log,
-        save_orchestration_trace,
-    )
-
-    ANALYSIS_AVAILABLE = True
-except ImportError:
-    ANALYSIS_AVAILABLE = False
-
 
 MODULE = "argumentation_analysis.pipelines.unified_pipeline"
 UTA_MODULE = "argumentation_analysis.pipelines.unified_text_analysis"
@@ -1260,191 +1238,3 @@ class TestExtendedOrchestrationConfig:
 
     def test_trace_default(self):
         assert ExtendedOrchestrationConfig().save_orchestration_trace is True
-
-
-# ============================================================================
-# SECTION 6: orchestration/analysis/post_processors.py tests
-# ============================================================================
-
-
-@pytest.mark.skipif(not ANALYSIS_AVAILABLE, reason="analysis import failed")
-class TestPostProcessResults:
-    async def test_high_score(self):
-        p = MagicMock()
-        p.middleware = None
-        r = await post_process_orchestration_results(
-            p,
-            {
-                "hierarchical_coordination": {"overall_score": 0.9},
-                "specialized_orchestration": {
-                    "results": {"status": "completed"},
-                    "orchestrator_used": "T",
-                },
-            },
-        )
-        assert any("performante" in x.lower() for x in r["recommendations"])
-
-    async def test_specialized(self):
-        p = MagicMock()
-        p.middleware = None
-        r = await post_process_orchestration_results(
-            p,
-            {
-                "hierarchical_coordination": {"overall_score": 0.5},
-                "specialized_orchestration": {
-                    "results": {"status": "completed"},
-                    "orchestrator_used": "TestO",
-                },
-            },
-        )
-        assert any("TestO" in x for x in r["recommendations"])
-
-    async def test_default(self):
-        p = MagicMock()
-        p.middleware = None
-        r = await post_process_orchestration_results(
-            p, {"hierarchical_coordination": {}, "specialized_orchestration": {}}
-        )
-        assert len(r["recommendations"]) >= 1
-
-    async def test_comm_log(self):
-        p = MagicMock()
-        p.middleware = MagicMock()
-        p._get_communication_log.return_value = [{"m": 1}]
-        r = await post_process_orchestration_results(
-            p, {"hierarchical_coordination": {}, "specialized_orchestration": {}}
-        )
-        assert "communication_log" in r
-
-
-# ============================================================================
-# SECTION 7: orchestration/analysis/processors.py tests
-# ============================================================================
-
-
-@pytest.mark.skipif(not ANALYSIS_AVAILABLE, reason="analysis import failed")
-class TestExecuteOperationalTasks:
-    async def test_capped_at_5(self):
-        r = await execute_operational_tasks(MagicMock(), "t", {"tasks_created": 8})
-        assert r["tasks_executed"] == 5
-
-    async def test_fewer(self):
-        r = await execute_operational_tasks(MagicMock(), "t", {"tasks_created": 2})
-        assert r["tasks_executed"] == 2
-
-    async def test_zero(self):
-        r = await execute_operational_tasks(MagicMock(), "t", {"tasks_created": 0})
-        assert r["tasks_executed"] == 0 and r["summary"]["success_rate"] == 0.0
-
-    async def test_success_rate(self):
-        r = await execute_operational_tasks(MagicMock(), "t", {"tasks_created": 3})
-        assert r["summary"]["success_rate"] == 1.0
-
-    async def test_task_structure(self):
-        r = await execute_operational_tasks(MagicMock(), "t", {"tasks_created": 1})
-        assert r["task_results"][0]["status"] == "completed"
-
-
-@pytest.mark.skipif(not ANALYSIS_AVAILABLE, reason="analysis import failed")
-class TestSynthesizeHierarchical:
-    async def test_high(self):
-        r = await synthesize_hierarchical_results(
-            MagicMock(),
-            {
-                "strategic_analysis": {"objectives": list("abcd")},
-                "tactical_coordination": {"tasks_created": 10},
-                "operational_results": {"summary": {"success_rate": 1.0}},
-            },
-        )
-        assert r["coordination_effectiveness"] > 0.8
-
-    async def test_low(self):
-        r = await synthesize_hierarchical_results(
-            MagicMock(),
-            {
-                "strategic_analysis": {"objectives": []},
-                "tactical_coordination": {"tasks_created": 0},
-                "operational_results": {"summary": {"success_rate": 0.0}},
-            },
-        )
-        assert r["coordination_effectiveness"] == 0.0
-
-    async def test_empty(self):
-        r = await synthesize_hierarchical_results(MagicMock(), {})
-        assert "coordination_effectiveness" in r
-
-
-# ============================================================================
-# SECTION 8: orchestration/analysis/traces.py tests
-# ============================================================================
-
-
-@pytest.mark.skipif(not ANALYSIS_AVAILABLE, reason="analysis import failed")
-class TestTraceOrchestration:
-    def test_appends(self):
-        p = MagicMock()
-        p.config.save_orchestration_trace = True
-        p.orchestration_trace = []
-        trace_orchestration(p, "evt", {"k": "v"})
-        assert (
-            len(p.orchestration_trace) == 1
-            and p.orchestration_trace[0]["event_type"] == "evt"
-        )
-
-    def test_disabled(self):
-        p = MagicMock()
-        p.config.save_orchestration_trace = False
-        p.orchestration_trace = []
-        trace_orchestration(p, "evt", {})
-        assert len(p.orchestration_trace) == 0
-
-    def test_data_preserved(self):
-        p = MagicMock()
-        p.config.save_orchestration_trace = True
-        p.orchestration_trace = []
-        trace_orchestration(p, "a", {"x": 1})
-        assert p.orchestration_trace[0]["data"] == {"x": 1}
-
-
-@pytest.mark.skipif(not ANALYSIS_AVAILABLE, reason="analysis import failed")
-class TestGetCommunicationLogFunc:
-    def test_from_middleware(self):
-        p = MagicMock()
-        p.middleware.get_message_history.return_value = [{"m": 1}]
-        assert len(get_communication_log(p)) == 1
-
-    def test_no_middleware(self):
-        p = MagicMock()
-        p.middleware = None
-        assert get_communication_log(p) == []
-
-    def test_error(self):
-        p = MagicMock()
-        p.middleware.get_message_history.side_effect = RuntimeError("F")
-        assert get_communication_log(p) == []
-
-
-@pytest.mark.skipif(not ANALYSIS_AVAILABLE, reason="analysis import failed")
-class TestSaveTrace:
-    @patch("argumentation_analysis.pipelines.orchestration.analysis.traces.RESULTS_DIR")
-    async def test_saves(self, mock_dir):
-        mock_dir.__truediv__ = MagicMock(return_value="fp.json")
-        p = MagicMock()
-        p.config.orchestration_mode_enum = OrchestrationMode.PIPELINE
-        p.config.analysis_type = AnalysisType.COMPREHENSIVE
-        p.config.enable_hierarchical = True
-        p.config.enable_specialized_orchestrators = True
-        p.orchestration_trace = []
-        with patch("builtins.open", mock_open()) as mf:
-            await save_orchestration_trace(
-                p, "id", {"status": "ok", "execution_time": 1, "recommendations": []}
-            )
-            mf.assert_called_once()
-
-    @patch("argumentation_analysis.pipelines.orchestration.analysis.traces.RESULTS_DIR")
-    async def test_error_graceful(self, mock_dir):
-        mock_dir.__truediv__ = MagicMock(side_effect=RuntimeError("E"))
-        p = MagicMock()
-        p.config.orchestration_mode_enum = MagicMock(value="p")
-        p.config.analysis_type = MagicMock(value="c")
-        await save_orchestration_trace(p, "id", {})  # Should not raise

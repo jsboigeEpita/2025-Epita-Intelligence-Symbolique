@@ -8,9 +8,9 @@ Ce module ne définit **aucune classe de stratégie**. Il porte :
 - `select_orchestration_strategy` — choisit le *nom* d'une stratégie (carte des
   10 modes non-AUTO_SELECT, puis heuristiques AUTO_SELECT) et **refuse** par
   `ValueError` tout nom absent de `DISPATCHABLE_STRATEGIES` (#2109 / #2205) ;
-- les quatre exécuteurs que `engine.STRATEGY_EXECUTORS` dispatche :
-  `execute_hierarchical_full_orchestration`, `execute_specialized_orchestration`,
-  `execute_fallback_orchestration`, `execute_hybrid_orchestration` ;
+- quatre exécuteurs résiduels : `execute_hierarchical_full_orchestration`,
+  `execute_specialized_orchestration`, `execute_fallback_orchestration`,
+  `execute_hybrid_orchestration` ;
 - `select_specialized_orchestrator` — sélection sur le dict
   `pipeline.specialized_orchestrators`, peuplé nulle part en production.
 

@@ -17,7 +17,7 @@ Contrairement au paquet `orchestration`, qui gère une collaboration dynamique e
 
 ## 3. Relation avec `pipelines/orchestration`
 
-Le sous-paquet `pipelines/orchestration` contient le **moteur d'exécution** (`engine`) et la **logique de séquencement** (`processors`) spécifiques aux pipelines. Il ne doit pas être confondu avec le paquet principal `orchestration`. Ici, "orchestration" est utilisé dans un sens plus restreint : l'ordonnancement des étapes d'une pipeline, et non la coordination d'agents intelligents.
+Le sous-paquet `pipelines/orchestration` conserve uniquement un vocabulaire de configuration et des stratégies historiques sans appelant production. Son ancien moteur `execution/engine.py` et ses helpers `analysis/` ont été retirés dans #2113 : le chemin était orphelin et déjà refusé explicitement par `pipelines/unified_pipeline.py`. Il ne doit pas être confondu avec le paquet principal `orchestration`, qui porte le `WorkflowExecutor` vivant.
 
 ## 4. Schéma d'une Pipeline Typique
 
