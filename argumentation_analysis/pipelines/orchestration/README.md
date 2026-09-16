@@ -4,7 +4,7 @@
 
 Ancien moteur d'orchestration de `pipelines/` : il **choisit une stratégie**
 (hiérarchique / spécialisée / fallback / hybride), la dispatche, post-traite le
-résultat et écrit une trace. **11 fichiers `.py`**, cinq sous-répertoires.
+résultat et écrit une trace. **8 fichiers `.py`**, trois sous-répertoires.
 
 N'est **pas** le moteur d'orchestration vivant du dépôt — il ne l'a jamais été :
 
@@ -22,10 +22,10 @@ dépôt n'importe `pipelines.orchestration`.
 
 | Sous-répertoire | Ce qu'il contient réellement | Statut |
 |---|---|---|
-| [`config/`](config/README.md) | 2 enums (`OrchestrationMode` 11 valeurs, `AnalysisType` 8) + `ExtendedOrchestrationConfig` (`enums.py` 33 l., `base_config.py` 96 l.) | vocabulary-bearer — le point le plus solide |
+| [`config/`](config/README.md) | 2 enums (`OrchestrationMode` 11 valeurs, `AnalysisType` 8) + `ExtendedOrchestrationConfig` | vocabulary-bearer — le flag mort `use_new_orchestrator` a été retiré (#2113) |
 | [`execution/`](execution/README.md) | `engine.py` (121 l.) : **1 fonction libre** `analyze_text_orchestrated` ; `strategies.py` (337 l.) : **6 fonctions async libres**. **Zéro classe.** | résiduel, non câblé |
 | [`analysis/`](analysis/README.md) | 3 modules, **6 fonctions libres** (post-traitement, tâches opérationnelles simulées, traçage) | résiduel / compatibilité |
-| [`core/`](core/README.md) | `service_manager.py` (134 l.) : **1 wrapper de délégation de 2 fonctions** | résiduel intégral (0 importeur, 0 test) |
+| ~~`core/`~~ | **retiré (#2113)** : wrapper de délégation, 0 importeur, 0 test ; son bug masqueur est mort avec lui | — |
 | ~~`orchestrators/specialized/`~~ | **retiré (#2111)** : 2 wrappers de compatibilité, 0 instanciation prod+test | — |
 
 `__init__.py` (:63) ré-exporte ces noms — dont `Engine = analyze_text_orchestrated`

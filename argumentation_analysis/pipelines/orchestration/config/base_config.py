@@ -31,7 +31,6 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
         specialized_orchestrator_priority: List[str] = None,
         save_orchestration_trace: bool = True,
         middleware_config: Dict[str, Any] = None,
-        use_new_orchestrator: bool = True,
     ):
         """
         Initialise la configuration étendue.
@@ -48,7 +47,6 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
             specialized_orchestrator_priority: Ordre de priorité des orchestrateurs spécialisés
             save_orchestration_trace: Sauvegarde la trace d'orchestration
             middleware_config: Configuration du middleware
-            use_new_orchestrator: Active le nouveau MainOrchestrator
         """
         # Initialiser la configuration de base
         super().__init__(
@@ -93,4 +91,3 @@ class ExtendedOrchestrationConfig(UnifiedAnalysisConfig):
         ]
         self.save_orchestration_trace = save_orchestration_trace
         self.middleware_config = middleware_config or {}
-        self.use_new_orchestrator = use_new_orchestrator

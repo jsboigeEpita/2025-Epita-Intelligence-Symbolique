@@ -51,7 +51,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 
 ## Frères et parent
 
-Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : sa description d'origine annonçait ici des processeurs qui n'ont jamais existé. Frères : [`../config/`](../config/README.md), [`../core/`](../core/README.md), [`../execution/`](../execution/README.md) (documentés dans ce même lot).
+Parent : [`../README.md`](../README.md) — **corrigé (#2110)** : sa description d'origine annonçait ici des processeurs qui n'ont jamais existé. Frères : [`../config/`](../config/README.md) et [`../execution/`](../execution/README.md). L'ancien frère `core/` a été retiré (#2113).
 
 ## Limites connues
 
