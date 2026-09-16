@@ -334,7 +334,7 @@ class TestFallacyFamilyAnalyzer:
     def test_fallacy_family_analyzer_initialization(self):
         """Test l'initialisation de l'analyseur."""
         with patch(
-            "argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer.get_taxonomy_manager"
+            "argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer.get_taxonomy_plugin"
         ) as mock_manager, patch(
             "argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer.FactClaimExtractor"
         ) as mock_extractor, patch(
@@ -376,7 +376,7 @@ class TestFactCheckingOrchestrator:
         ) as mock_extractor, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_verification_service"
         ) as mock_verifier, patch(
-            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_manager"
+            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_plugin"
         ) as mock_manager, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_family_analyzer"
         ) as mock_analyzer:
@@ -415,7 +415,7 @@ class TestFactCheckingOrchestrator:
         ) as mock_extractor, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_verification_service"
         ) as mock_verifier, patch(
-            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_manager"
+            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_plugin"
         ) as mock_manager, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_family_analyzer"
         ) as mock_analyzer:
@@ -446,7 +446,7 @@ class TestFactCheckingOrchestrator:
         ) as mock_extractor, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_verification_service"
         ) as mock_verifier, patch(
-            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_manager"
+            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_plugin"
         ) as mock_manager, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_family_analyzer"
         ) as mock_analyzer:
@@ -499,7 +499,7 @@ class TestIntegrationFunctionality:
     def test_singleton_pattern_family_analyzer(self):
         """Test du pattern singleton pour l'analyseur par famille."""
         with patch(
-            "argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer.get_taxonomy_manager"
+            "argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer.get_taxonomy_plugin"
         ) as mock_manager, patch(
             "argumentation_analysis.agents.tools.analysis.fallacy_family_analyzer.FactClaimExtractor"
         ) as mock_extractor, patch(
@@ -526,7 +526,7 @@ class TestIntegrationFunctionality:
         ) as mock_extractor, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_verification_service"
         ) as mock_verifier, patch(
-            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_manager"
+            "argumentation_analysis.orchestration.fact_checking_orchestrator.get_taxonomy_plugin"
         ) as mock_manager, patch(
             "argumentation_analysis.orchestration.fact_checking_orchestrator.get_family_analyzer"
         ) as mock_analyzer:

@@ -294,7 +294,7 @@ class TestOrchestratorInit:
     def test_init_without_registry_uses_singletons(self):
         mock_tm = MagicMock()
         mock_vs = MagicMock()
-        with patch(f"{MOD}.get_taxonomy_manager", return_value=mock_tm), patch(
+        with patch(f"{MOD}.get_taxonomy_plugin", return_value=mock_tm), patch(
             f"{MOD}.get_verification_service", return_value=mock_vs
         ), patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
             f"{MOD}.FactClaimExtractor"
@@ -817,18 +817,6 @@ class TestApiConfig:
 class TestModuleLevelFunctions:
     """Tests for singleton factory and convenience functions."""
 
-    def test_get_taxonomy_manager_shim(self):
-        with patch(
-            "argumentation_analysis.services.fallacy_taxonomy_service.get_taxonomy_manager",
-            return_value="tm_instance",
-        ):
-            from argumentation_analysis.orchestration.fact_checking_orchestrator import (
-                get_taxonomy_manager,
-            )
-
-            result = get_taxonomy_manager()
-            assert result == "tm_instance"
-
     def test_get_verification_service_shim(self):
         with patch(
             "argumentation_analysis.services.fact_verification_service.get_verification_service",
@@ -844,7 +832,7 @@ class TestModuleLevelFunctions:
     def test_singleton_factory_creates_once(self):
         mock_tm = MagicMock()
         mock_vs = MagicMock()
-        with patch(f"{MOD}.get_taxonomy_manager", return_value=mock_tm), patch(
+        with patch(f"{MOD}.get_taxonomy_plugin", return_value=mock_tm), patch(
             f"{MOD}.get_verification_service", return_value=mock_vs
         ), patch(f"{MOD}.get_family_analyzer") as mock_gfa, patch(
             f"{MOD}.FactClaimExtractor"
