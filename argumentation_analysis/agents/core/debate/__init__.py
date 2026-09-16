@@ -9,11 +9,14 @@ Provides two complementary debate systems:
    - 8-metric argument scoring (logic, evidence, relevance, etc.)
    - Audience simulation and comprehensive winner determination
 
-2. **Walton-Krabbe Dialogue Protocols** (from local_db_arg/):
+2. **Walton-Krabbe dialogue vocabulary** (from local_db_arg/):
    - Formal dialogue types (inquiry, persuasion, negotiation, etc.)
-   - Speech act transitions with termination conditions
-   - Knowledge base with consistency checking
+   - Speech acts, propositions, formal arguments, moves
    - 10 argumentation schemes
+
+#2137: the three protocol classes (DialogueProtocol / InquiryProtocol /
+PersuasionProtocol — transition-rule twins of the living JVM
+``logic/dialogue_handler.py``) and ``knowledge_base.py`` were withdrawn.
 
 Integration from student project 1_2_7_argumentation_dialogique (GitHub #42).
 """
@@ -37,9 +40,6 @@ from .protocols import (
     DialogueType,
     SpeechAct,
     Proposition,
-    DialogueProtocol,
-    InquiryProtocol,
-    PersuasionProtocol,
 )
 
 __all__ = [
@@ -57,9 +57,6 @@ __all__ = [
     "DialogueType",
     "SpeechAct",
     "Proposition",
-    "DialogueProtocol",
-    "InquiryProtocol",
-    "PersuasionProtocol",
 ]
 
 # #1842: no register_with_capability_registry here. The debate capability

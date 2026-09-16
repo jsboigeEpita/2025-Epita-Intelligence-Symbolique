@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Tests for argumentation_analysis.agents.core.counter_argument.parser
-Covers ArgumentParser, VulnerabilityAnalyzer, parse_llm_response, parse_structured_text.
+Covers ArgumentParser, VulnerabilityAnalyzer (parse_llm_response / parse_structured_text
+withdrawn #2137 — zero callers).
 """
 
 import pytest
@@ -9,8 +10,6 @@ import pytest
 from argumentation_analysis.agents.core.counter_argument.parser import (
     ArgumentParser,
     VulnerabilityAnalyzer,
-    parse_llm_response,
-    parse_structured_text,
 )
 from argumentation_analysis.agents.core.counter_argument.definitions import (
     Argument,
@@ -609,67 +608,5 @@ class TestAnalyzeVulnerabilities:
         assert len(vulns) == 0
 
 
-# ============================================================
-# parse_llm_response
-# ============================================================
-
-
-class TestParseLlmResponse:
-    def test_valid_json(self):
-        result = parse_llm_response('{"key": "value"}')
-        assert result == {"key": "value"}
-
-    def test_valid_json_nested(self):
-        result = parse_llm_response('{"a": [1, 2], "b": {"c": 3}}')
-        assert result["a"] == [1, 2]
-        assert result["b"]["c"] == 3
-
-    def test_invalid_json_falls_back(self):
-        result = parse_llm_response("key: value\nother: data")
-        assert result["key"] == "value"
-        assert result["other"] == "data"
-
-    def test_empty_json(self):
-        result = parse_llm_response("{}")
-        assert result == {}
-
-
-# ============================================================
-# parse_structured_text
-# ============================================================
-
-
-class TestParseStructuredText:
-    def test_simple_key_value(self):
-        result = parse_structured_text("name: Alice\nage: 30")
-        assert result["name"] == "Alice"
-        assert result["age"] == "30"
-
-    def test_multiline_value(self):
-        result = parse_structured_text(
-            "description: first line\nsecond line\nother: value"
-        )
-        assert "first line" in result["description"]
-        assert "second line" in result["description"]
-        assert result["other"] == "value"
-
-    def test_empty_string(self):
-        result = parse_structured_text("")
-        assert result == {}
-
-    def test_no_colon(self):
-        result = parse_structured_text("no colon here")
-        assert result == {}
-
-    def test_keys_lowercased(self):
-        result = parse_structured_text("Name: Alice")
-        assert "name" in result
-
-    def test_blank_lines_skipped(self):
-        result = parse_structured_text("key: val\n\nother: data")
-        assert result["key"] == "val"
-        assert result["other"] == "data"
-
-    def test_colon_in_value(self):
-        result = parse_structured_text("time: 10:30")
-        assert result["time"] == "10:30"
+# TestParseLlmResponse / TestParseStructuredText withdrawn with their targets
+# (#2137): parse_llm_response and parse_structured_text had zero callers.

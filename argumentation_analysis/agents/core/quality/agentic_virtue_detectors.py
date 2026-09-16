@@ -1,5 +1,12 @@
 """Agentic multi-step virtue detectors (FB-29 #1105, Epic #947).
 
+**EXPERIMENTAL — NOT WIRED IN PRODUCTION (#2137 marquage).** Nothing on the
+production path passes an ``llm`` callable: the lexical detectors in
+``quality_evaluator.py`` are what the pipeline runs. These detectors are
+exercised by tests and the research harness
+(``scripts/run_fb29_agentic_headtohead.py``) only. Wiring them into the
+pipeline is the scope of #1105/FB-29, not of this module.
+
 The deterministic detectors in ``quality_evaluator.py`` are *lexical* — they
 grep for a fixed marker list (``marqueurs_refutation``, ``patterns_analogies``).
 FB-28 (#1103) proved these score 0.0 on dense political-corpus arguments even
@@ -66,33 +73,21 @@ class AgenticDetectorError(RuntimeError):
 
 # --- LLM callable resolution ------------------------------------------------
 
-_DEFAULT_LLM: Optional[LLMCallable] = None
-
-
-def set_default_llm_callable(llm: Optional[LLMCallable]) -> None:
-    """Register the process-wide default LLM callable for agentic detectors.
-
-    Experimental surface (#1105 / FB-29): nothing wires this in production
-    today — the lexical path (``evaluate(text)`` without ``agentic_llm``) is
-    what runs. The callable arrives either here or per-detector via ``llm=``;
-    only tests and the research harness
-    (``scripts/run_fb29_agentic_headtohead.py``) currently pass one.
-    """
-    global _DEFAULT_LLM
-    _DEFAULT_LLM = llm
+# set_default_llm_callable (process-wide default) was withdrawn (#2137): it
+# had zero callers — production, test or harness. The ONE injection point is
+# the per-detector ``llm=`` parameter.
 
 
 def _resolve_llm(explicit: Optional[LLMCallable]) -> LLMCallable:
     """Return the LLM callable to use, or raise AgenticDetectorError."""
-    llm = explicit or _DEFAULT_LLM
-    if llm is None:
+    if explicit is None:
         raise AgenticDetectorError(
-            "Agentic virtue detector has no LLM callable. Wire one via "
-            "set_default_llm_callable() (production) or pass llm= to the "
-            "detector (tests). Fail-loud per #1019 — not returning synthetic "
+            "Agentic virtue detector has no LLM callable. Pass llm= to the "
+            "detector — the per-detector parameter is the only injection "
+            "point. Fail-loud per #1019 — not returning synthetic "
             "zeros as if measured."
         )
-    return llm
+    return explicit
 
 
 # --- Prompt templates (multi-step chains) -----------------------------------

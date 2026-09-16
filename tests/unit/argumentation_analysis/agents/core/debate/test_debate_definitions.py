@@ -301,28 +301,13 @@ class TestAgentPersonalities:
     def test_all_have_required_keys(self):
         for name, personality in AGENT_PERSONALITIES.items():
             assert "description" in personality, f"{name} missing description"
-            assert "strengths" in personality, f"{name} missing strengths"
-            assert "weaknesses" in personality, f"{name} missing weaknesses"
 
     def test_descriptions_nonempty(self):
         for name, personality in AGENT_PERSONALITIES.items():
             assert len(personality["description"]) > 10, f"{name} has short description"
 
-    def test_strengths_are_valid_metric_names(self):
-        valid_metrics = {f.name for f in ArgumentMetrics.__dataclass_fields__.values()}
-        for name, personality in AGENT_PERSONALITIES.items():
-            for strength in personality["strengths"]:
-                assert (
-                    strength in valid_metrics
-                ), f"{name} has invalid strength '{strength}'"
-
-    def test_weaknesses_are_valid_metric_names(self):
-        valid_metrics = {f.name for f in ArgumentMetrics.__dataclass_fields__.values()}
-        for name, personality in AGENT_PERSONALITIES.items():
-            for weakness in personality["weaknesses"]:
-                assert (
-                    weakness in valid_metrics
-                ), f"{name} has invalid weakness '{weakness}'"
+    # strengths/weaknesses field tests withdrawn with the fields (#2137):
+    # get_agent_capabilities lists only the archetype names — no reader.
 
     def test_known_personalities(self):
         expected = [
@@ -337,11 +322,3 @@ class TestAgentPersonalities:
         ]
         for name in expected:
             assert name in AGENT_PERSONALITIES
-
-    def test_each_has_at_least_one_strength(self):
-        for name, personality in AGENT_PERSONALITIES.items():
-            assert len(personality["strengths"]) >= 1
-
-    def test_each_has_at_least_one_weakness(self):
-        for name, personality in AGENT_PERSONALITIES.items():
-            assert len(personality["weaknesses"]) >= 1

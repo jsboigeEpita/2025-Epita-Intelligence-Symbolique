@@ -78,8 +78,8 @@ class TestInformalAnalysisAgentAuthentic:
             f"[AUTHENTIC] Plugins chargés dans le kernel de l'agent: {list(agent.kernel.plugins.keys())}"
         )
 
-        # Les méthodes get_agent_capabilities() et get_agent_info() n'existent plus
-        # sur le ChatCompletionAgent. On vérifie les attributs directement.
+        # get_agent_info() n'existe plus (#2137). get_agent_capabilities() reste
+        # le contrat BaseAgent ; ici on vérifie les attributs directement.
         assert agent.instructions is not None
         assert len(agent.instructions) > 10
         assert (

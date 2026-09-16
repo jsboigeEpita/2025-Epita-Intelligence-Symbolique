@@ -10,7 +10,6 @@ from argumentation_analysis.agents.core.counter_argument.definitions import (
     Vulnerability,
     CounterArgument,
     EvaluationResult,
-    ValidationResult,
 )
 
 # ── Enums ──
@@ -178,36 +177,6 @@ class TestEvaluationResult:
         assert len(ev.recommendations) == 2
 
 
-# ── ValidationResult ──
-
-
-class TestValidationResult:
-    def test_valid_attack(self):
-        vr = ValidationResult(
-            is_valid_attack=True,
-            original_survives=False,
-            counter_succeeds=True,
-            logical_consistency=True,
-        )
-        assert vr.is_valid_attack is True
-        assert vr.original_survives is False
-        assert vr.formal_representation is None
-
-    def test_with_formal_rep(self):
-        vr = ValidationResult(
-            is_valid_attack=True,
-            original_survives=True,
-            counter_succeeds=False,
-            logical_consistency=True,
-            formal_representation="P -> Q, ~Q |- ~P",
-        )
-        assert vr.formal_representation == "P -> Q, ~Q |- ~P"
-
-    def test_invalid_attack(self):
-        vr = ValidationResult(
-            is_valid_attack=False,
-            original_survives=True,
-            counter_succeeds=False,
-            logical_consistency=False,
-        )
-        assert vr.logical_consistency is False
+# TestValidationResult withdrawn with ValidationResult (#2137): the dataclass
+# was declared-but-never-instantiated; the production validation verdict is
+# the dict contract (_build_counter_argument_validation, #1180).

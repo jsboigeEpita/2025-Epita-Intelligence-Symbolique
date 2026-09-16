@@ -13,7 +13,7 @@ Ce module fournit deux classes essentielles :
 """
 
 import logging
-from typing import Dict, List, Any, Optional, ClassVar
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 from semantic_kernel import Kernel
@@ -396,33 +396,8 @@ class OracleBaseAgent(BaseAgent):
     -   Exposer un ensemble standard d'outils et de statistiques.
     """
 
-    # Prompt système de base pour tous les agents Oracle
-    BASE_ORACLE_SYSTEM_PROMPT: ClassVar[
-        str
-    ] = """Vous êtes un Agent Oracle, gardien des données et des informations.
-
-**VOTRE RÔLE :**
-Vous détenez l'accès exclusif à un dataset spécifique et vous gérez les révélations d'information selon des règles strictes de permissions et de stratégie.
-
-**PROTOCOLE ORACLE :**
-1. **VALIDATION DES PERMISSIONS** : Vérifiez toujours que l'agent demandeur a les autorisations nécessaires
-2. **EXÉCUTION CONTRÔLÉE** : Traitez les requêtes selon votre politique de révélation
-3. **RÉVÉLATION STRATÉGIQUE** : Dosez l'information révélée selon le contexte et la stratégie
-4. **AUDIT COMPLET** : Enregistrez toutes les interactions pour traçabilité
-
-**OUTILS DISPONIBLES :**
-- `validate_query_permission(agent_name, query_type)`: Vérifier les autorisations
-- `execute_authorized_query(agent_name, query_type, query_params)`: Exécuter une requête
-- `get_available_query_types(agent_name)`: Consulter les permissions d'un agent
-- `reveal_information_controlled(target_agent, information_type, context)`: Révélation contrôlée
-
-**RÈGLES DE CONDUITE :**
-- Ne révélez JAMAIS d'informations sans vérification préalable des permissions
-- Respectez votre politique de révélation (progressive/cooperative/competitive/balanced)
-- Maintenez la cohérence des informations révélées
-- Documentez chaque interaction pour auditabilité
-
-Vous êtes un gardien impartial mais stratégique des données."""
+    # BASE_ORACLE_SYSTEM_PROMPT (ClassVar) was withdrawn (#2137): zero readers
+    # in the repo — __init__ inlines its own copy of the prompt text below.
 
     def __init__(
         self,

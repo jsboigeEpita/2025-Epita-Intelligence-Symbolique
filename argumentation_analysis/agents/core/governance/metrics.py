@@ -92,11 +92,7 @@ def stability(results_list):
     return int(len(set(winners)) == 1) if winners else 0.0
 
 
-def per_agent_satisfaction(results):
-    """Returns dict of agent_name: satisfaction for the run."""
-    if not results or "agent_names" not in results or "satisfaction" not in results:
-        return {}
-    return dict(zip(results["agent_names"], results["satisfaction"]))
+# per_agent_satisfaction was withdrawn (#2137): zero callers in the repo.
 
 
 def summarize_results(results):
@@ -118,37 +114,5 @@ def summarize_results(results):
         }
 
 
-def validate_scenario(scenario):
-    """Validate a scenario dict for completeness.
-
-    Returns (is_valid, error_message).
-    """
-    if not scenario or "agents" not in scenario or "options" not in scenario:
-        return False, "Missing agents or options."
-    agent_names = set()
-    for agent in scenario["agents"]:
-        if "name" not in agent or "preferences" not in agent:
-            return False, f"Agent missing required fields: {agent}"
-        if agent["name"] in agent_names:
-            return False, f"Duplicate agent name: {agent['name']}"
-        agent_names.add(agent["name"])
-        for opt in agent["preferences"]:
-            if opt not in scenario["options"]:
-                return (
-                    False,
-                    f"Agent {agent['name']} has invalid preference: {opt}",
-                )
-    context = scenario.get("context", {})
-    if "adjacency" in context:
-        adj = context["adjacency"]
-        n = len(scenario["agents"])
-        if not (
-            isinstance(adj, list)
-            and all(isinstance(row, list) and len(row) == n for row in adj)
-            and len(adj) == n
-        ):
-            return (
-                False,
-                "Adjacency matrix must be square and match number of agents.",
-            )
-    return True, ""
+# validate_scenario was withdrawn (#2137): zero callers in the repo — its only
+# consumers were simulation.py (withdrawn with it) and its own tests.

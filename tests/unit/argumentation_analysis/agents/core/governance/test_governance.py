@@ -8,7 +8,7 @@ Tests validate:
   methods" — see governance_methods.py for the category split; Byzantine
   and Raft are consensus protocols, not scrutins (#1981))
 - Agent creation and decision-making
-- Simulation and metrics
+- Metrics (simulation.py withdrawn #2137)
 - Conflict resolution
 """
 
@@ -23,19 +23,11 @@ class TestGovernanceImport:
         """Governance package imports without errors."""
         from argumentation_analysis.agents.core.governance import (
             Agent,
-            BDIAgent,
-            ReactiveAgent,
-            AgentFactory,
             GOVERNANCE_METHODS,
-            simulate_governance,
         )
 
         assert Agent is not None
-        assert BDIAgent is not None
-        assert ReactiveAgent is not None
-        assert AgentFactory is not None
         assert len(GOVERNANCE_METHODS) == 7
-        assert callable(simulate_governance)
 
     def test_import_methods(self):
         """All 7 governance methods are importable (5 voting rules + 2 consensus protocols)."""
@@ -72,7 +64,6 @@ class TestGovernanceImport:
             satisfaction,
             stability,
             summarize_results,
-            validate_scenario,
         )
 
         assert callable(consensus_rate)
@@ -269,7 +260,11 @@ class TestGovernanceAgents:
 
     def test_bdi_agent(self):
         """BDI agent has beliefs, desires, and intentions."""
-        from argumentation_analysis.agents.core.governance import BDIAgent
+        # BDIAgent stays in governance_agent.py; its package re-export was
+        # withdrawn (#2137) — import it from its defining module.
+        from argumentation_analysis.agents.core.governance.governance_agent import (
+            BDIAgent,
+        )
 
         agent = BDIAgent(
             name="bdi_test",
@@ -284,7 +279,9 @@ class TestGovernanceAgents:
 
     def test_bdi_agent_intention(self):
         """BDI agent follows intentions when set."""
-        from argumentation_analysis.agents.core.governance import BDIAgent
+        from argumentation_analysis.agents.core.governance.governance_agent import (
+            BDIAgent,
+        )
 
         agent = BDIAgent(
             name="bdi_test",
@@ -297,7 +294,9 @@ class TestGovernanceAgents:
 
     def test_reactive_agent(self):
         """Reactive agent decides based on rules or fallback."""
-        from argumentation_analysis.agents.core.governance import ReactiveAgent
+        from argumentation_analysis.agents.core.governance.governance_agent import (
+            ReactiveAgent,
+        )
 
         agent = ReactiveAgent(
             name="reactive_test",
@@ -309,7 +308,11 @@ class TestGovernanceAgents:
 
     def test_agent_factory(self):
         """AgentFactory creates agents from config dicts."""
-        from argumentation_analysis.agents.core.governance import AgentFactory
+        # The governance AgentFactory (not the agents/factory.py homonym);
+        # package re-export withdrawn #2137.
+        from argumentation_analysis.agents.core.governance.governance_agent import (
+            AgentFactory,
+        )
 
         configs = [
             {"name": "alice", "options": ["A", "B"], "preferences": ["A", "B"]},
@@ -460,30 +463,9 @@ class TestGovernanceMetrics:
         assert "fairness" in summary
         assert "efficiency" in summary
 
-    def test_validate_scenario_valid(self):
-        """Valid scenario passes validation."""
-        from argumentation_analysis.agents.core.governance.metrics import (
-            validate_scenario,
-        )
-
-        scenario = {
-            "agents": [
-                {"name": "a1", "preferences": ["X", "Y"], "options": ["X", "Y"]},
-                {"name": "a2", "preferences": ["Y", "X"], "options": ["X", "Y"]},
-            ],
-            "options": ["X", "Y"],
-        }
-        is_valid, msg = validate_scenario(scenario)
-        assert is_valid is True
-
-    def test_validate_scenario_invalid(self):
-        """Invalid scenario fails validation."""
-        from argumentation_analysis.agents.core.governance.metrics import (
-            validate_scenario,
-        )
-
-        is_valid, msg = validate_scenario({})
-        assert is_valid is False
+    # test_validate_scenario_valid / _invalid withdrawn with validate_scenario
+    # (#2137): zero callers — its only consumers were simulation.py (withdrawn)
+    # and these tests.
 
 
 class TestConflictResolution:
@@ -543,43 +525,5 @@ class TestConflictResolution:
         assert resolution["success_probability"] is None  # None until #971
 
 
-class TestSimulation:
-    """Test governance simulation functions."""
-
-    def test_simulate_governance_basic(self):
-        """Basic governance simulation runs end-to-end."""
-        from argumentation_analysis.agents.core.governance import AgentFactory
-        from argumentation_analysis.agents.core.governance.simulation import (
-            simulate_governance,
-        )
-
-        configs = [
-            {"name": "a1", "preferences": ["X", "Y"], "personality": "stubborn"},
-            {"name": "a2", "preferences": ["Y", "X"], "personality": "stubborn"},
-            {"name": "a3", "preferences": ["X", "Y"], "personality": "stubborn"},
-        ]
-        agents = AgentFactory.create_agents(configs)
-        scenario_data = {"options": ["X", "Y"]}
-        result = simulate_governance(agents, scenario_data, "majority")
-        assert result is not None
-        assert "winner" in result
-
-    def test_shapley_value(self):
-        """Shapley value computation returns per-agent values."""
-        from argumentation_analysis.agents.core.governance import Agent
-        from argumentation_analysis.agents.core.governance.simulation import (
-            shapley_value,
-        )
-
-        agents = [
-            Agent(name="a1", personality="stubborn", preferences=["X"]),
-            Agent(name="a2", personality="stubborn", preferences=["X"]),
-            Agent(name="a3", personality="stubborn", preferences=["X"]),
-        ]
-
-        def payoff(names):
-            return 1.0 if len(names) >= 2 else 0.0
-
-        values = shapley_value(agents, agents, payoff)
-        assert len(values) == 3
-        assert all(isinstance(v, (int, float)) for v in values.values())
+# TestSimulation withdrawn with simulation.py (#2137): simulate_governance and
+# shapley_value had zero production callers.

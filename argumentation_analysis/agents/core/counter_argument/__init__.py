@@ -15,7 +15,6 @@ from .definitions import (
     CounterArgumentType,
     EvaluationResult,
     RhetoricalStrategy,
-    ValidationResult,
     Vulnerability,
 )
 from .evaluator import CounterArgumentEvaluator
@@ -35,7 +34,6 @@ __all__ = [
     "CounterArgumentType",
     "EvaluationResult",
     "RhetoricalStrategy",
-    "ValidationResult",
     "Vulnerability",
 ]
 

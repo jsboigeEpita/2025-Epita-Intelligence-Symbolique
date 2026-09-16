@@ -9,7 +9,7 @@ Adapted from 2.3.3-generation-contre-argument/counter_agent/agent/definitions.py
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List
 
 
 class CounterArgumentType(Enum):
@@ -90,12 +90,7 @@ class EvaluationResult:
     recommendations: List[str] = field(default_factory=list)
 
 
-@dataclass
-class ValidationResult:
-    """Formal logic validation result."""
-
-    is_valid_attack: bool
-    original_survives: bool
-    counter_succeeds: bool
-    logical_consistency: bool
-    formal_representation: Optional[str] = None
+# ValidationResult was withdrawn (#2137): declared and exported but never
+# instantiated anywhere — the production validation verdict is a dict of the
+# same shape built by invoke_callables._build_counter_argument_validation
+# (the delivered #1180 contract), not this dataclass.

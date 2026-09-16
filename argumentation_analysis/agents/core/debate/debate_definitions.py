@@ -86,46 +86,32 @@ class DebateState:
     start_time: str = field(default_factory=lambda: datetime.now().isoformat())
 
 
-# 8 personality archetypes for debate agents
+# 8 personality archetypes for debate agents.
+# strengths/weaknesses lists withdrawn (#2137): get_agent_capabilities
+# lists only the names — no reader of the fields existed.
 AGENT_PERSONALITIES = {
     "The Scholar": {
         "description": "Academic and evidence-based. Relies on research, studies, and peer-reviewed sources.",
-        "strengths": ["evidence_quality", "logical_coherence"],
-        "weaknesses": ["emotional_appeal"],
     },
     "The Pragmatist": {
         "description": "Focuses on practical implications and real-world consequences.",
-        "strengths": ["relevance_score", "readability_score"],
-        "weaknesses": ["novelty_score"],
     },
     "The Devil's Advocate": {
         "description": "Challenges assumptions and conventional wisdom. Points out contradictions.",
-        "strengths": ["novelty_score", "logical_coherence"],
-        "weaknesses": ["emotional_appeal"],
     },
     "The Idealist": {
         "description": "Argues from moral principles and ethical foundations.",
-        "strengths": ["emotional_appeal", "persuasiveness"],
-        "weaknesses": ["evidence_quality"],
     },
     "The Skeptic": {
         "description": "Questions everything and demands rigorous proof.",
-        "strengths": ["fact_check_score", "logical_coherence"],
-        "weaknesses": ["emotional_appeal"],
     },
     "The Populist": {
         "description": "Represents common sense. Speaks in accessible language.",
-        "strengths": ["readability_score", "emotional_appeal"],
-        "weaknesses": ["evidence_quality"],
     },
     "The Economist": {
         "description": "Analyzes through cost-benefit analysis and market principles.",
-        "strengths": ["evidence_quality", "logical_coherence"],
-        "weaknesses": ["emotional_appeal"],
     },
     "The Philosopher": {
         "description": "Deep abstract reasoning with thought experiments.",
-        "strengths": ["novelty_score", "logical_coherence"],
-        "weaknesses": ["readability_score"],
     },
 }

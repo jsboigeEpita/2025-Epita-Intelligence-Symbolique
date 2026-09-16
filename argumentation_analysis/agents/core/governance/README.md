@@ -2,7 +2,7 @@
 
 ## Rôle et frontière
 
-7 modules (1 266 l. avec `__init__`) — le paquet qui **agrège des préférences** et **simule des collectifs** : scrutins d'agrégation, protocoles de consensus distribué, fonctions de choix social classiques, archétypes d'agents électeurs, détection/médiation de conflits, métriques de consensus. C'est la couche « décider ensemble » ; elle ne produit pas d'analyse du texte, elle consomme des **scores d'arguments** (les 9 vertus qualité) comme électeurs et rend un verdict de vote.
+6 modules (970 l. avec `__init__` ; 7 modules / 1 266 l. avant le retrait de `simulation.py`, #2137) — le paquet qui **agrège des préférences** et **simule des collectifs** : scrutins d'agrégation, protocoles de consensus distribué, fonctions de choix social classiques, archétypes d'agents électeurs, détection/médiation de conflits, métriques de consensus. C'est la couche « décider ensemble » ; elle ne produit pas d'analyse du texte, elle consomme des **scores d'arguments** (les 9 vertus qualité) comme électeurs et rend un verdict de vote.
 
 Le paquet vient du projet étudiant `2.1.6_multiagent_governance_prototype` (GitHub #43), intégré sous architecture BaseAgent/SK (#35) : il est **exposé via un plugin** (`argumentation_analysis/plugins/governance_plugin.py`), pas via `BaseAgent` — voir « Limites connues ».
 
@@ -24,15 +24,13 @@ Le registre des catégories a été corrigé en #1981 : `byzantine` et `raft` so
 
 `Agent` :20 (personnalité, préférences, réseau de confiance, mémoire, coalitions, Q-learning :57/:67), `BDIAgent` :194, `ReactiveAgent` :220, `AgentFactory` :237 (`create_agents` :241, `PERSONALITIES` :17). Ce sont des **objets Python simples** (pas de `BaseAgent`, pas de kernel).
 
-**Simulation** — `simulation.py` (257 l.)
-
-`simulate_governance` :69, `simulate_manipulation` :187, `manipulability_analysis` :231, `shapley_value` :18, `distributed_gossip_consensus` :47.
+**Simulation** — `simulation.py` **retiré (#2137)** : 257 lignes (coalitions/Shapley, gossip, `simulate_governance`, `manipulability_analysis`), zéro appelant de production — seuls `__init__` (ré-export) et ses tests l'exerçaient. Parti avec `test_governance_simulation.py`.
 
 **Conflits** — `conflict_resolution.py` (61 l.) : `detect_conflicts` :8, `resolve_conflict` :25, `collaborative_mediation` :37, `competitive_mediation` :46, `compromise_mediation` :55.
 
-**Métriques** — `metrics.py` (154 l.) : `consensus_rate` :12 (tolérant aux 3 formes de `votes`, #1273), `gini` :48, `fairness_index` :62, `efficiency` :69, `satisfaction` :80, `stability` :87, `per_agent_satisfaction` :95, `summarize_results` :102, `validate_scenario` :121.
+**Métriques** — `metrics.py` (116 l.) : `consensus_rate` :12 (tolérant aux 3 formes de `votes`, #1273), `gini` :48, `fairness_index` :62, `efficiency` :69, `satisfaction` :80, `stability` :87, `summarize_results` :102. `per_agent_satisfaction` et `validate_scenario` ont été retirés (#2137) : zéro appelant — leurs seuls consommateurs étaient `simulation.py` (retiré) et leurs tests. `gini`/`efficiency`/`stability` **restent** : contrairement au relevé 12-09, ils ne sont pas orphelins — `fairness_index` appelle `gini` (:66) et `summarize_results` appelle `efficiency` (:108/:116) et `stability` (:110).
 
-`__init__.py` (43 l.) exporte **13 noms** (`__all__` :24-38), tous vérifiés réels : `Agent`, `BDIAgent`, `ReactiveAgent`, `AgentFactory`, `GOVERNANCE_METHODS`, `simulate_governance`, `manipulability_analysis`, `detect_conflicts`, `resolve_conflict`, `consensus_rate`, `fairness_index`, `satisfaction`, `summarize_results`. **Zéro fantôme**, mais 5 fonctions de `metrics.py` (`gini`, `efficiency`, `stability`, `per_agent_satisfaction`, `validate_scenario`) restent hors `__all__`.
+`__init__.py` (42 l.) exporte **8 noms** (`__all__`) : `Agent`, `GOVERNANCE_METHODS`, `detect_conflicts`, `resolve_conflict`, `consensus_rate`, `fairness_index`, `satisfaction`, `summarize_results`. Les ré-exports de `BDIAgent`/`ReactiveAgent`/`AgentFactory` ont été retirés (#2137) — les classes restent importables depuis `governance_agent`.
 
 ## Points d'entrée valides
 
@@ -62,15 +60,15 @@ Le plugin est aussi déclaré dans la carte de chargement paresseux `agents/fact
 | `conflict_resolution.py` | **actif** | `governance_plugin.py:52/:66` appelés par `invoke_callables.py:1977/:1981` |
 | `metrics.py` | **actif** | `governance_plugin.py:85-92` (`consensus_rate`, `fairness_index`, `satisfaction`) |
 | `plugins/governance_plugin.py` | **actif** | `invoke_callables.py:1928-1931` |
-| `simulation.py` | **résiduel** | 0 appelant de production : seuls `__init__.py:20/:30-31` (ré-export) et `tests/.../test_governance_simulation.py` (20 tests) |
+| ~~`simulation.py`~~ | **retiré (#2137)** | 0 appelant de production : seuls `__init__` (ré-export) et `tests/.../test_governance_simulation.py` l'exerçaient |
 
-Statut global du paquet : **actif** — 8 familles de points d'entrée production mesurées, 235 `def test_` sur 10 fichiers.
+Statut global du paquet : **actif** — 8 familles de points d'entrée production mesurées, 200 `def test_` sur 9 fichiers.
 
 Le paquet est **`actif` mais pas `actif-critique`** : dans 5 des 11 phases il est `optional=True`, et `_invoke_governance` a une branche *honnêtement dégradée* (:1997-2003) quand le profil n'est pas dérivable.
 
 ## Artefacts et lecteurs
 
-Verdict formel `winners_per_method` + `distinct_winners` + `inter_method_disagreement` (:1892-1900) — **jamais réconcilié en un nombre unique** (discipline anti-réconciliation, cf. multi-prover FOL). Cet artefact alimente `governance_decisions` dans l'état, lu par la route HTTP et la restitution. `simulation.py` produirait des rapports de manipulabilité (`manipulability_analysis` :231), mais aucun lecteur production ne les déclenche.
+Verdict formel `winners_per_method` + `distinct_winners` + `inter_method_disagreement` (:1892-1900) — **jamais réconcilié en un nombre unique** (discipline anti-réconciliation, cf. multi-prover FOL). Cet artefact alimente `governance_decisions` dans l'état, lu par la route HTTP et la restitution.
 
 ## Tests représentatifs
 
@@ -79,7 +77,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentati
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py -v
 ```
 
-**235 `def test_`** sur **10 fichiers** — 204 sur les 7 fichiers de `tests/unit/argumentation_analysis/agents/core/governance/` (`test_governance.py` 42, `test_governance_metrics.py` 47, `test_social_choice.py` 37, `test_governance_methods.py` 27, `test_conflict_resolution.py` 25, `test_governance_simulation.py` 20, `test_governance_category_register_1981.py` 6) + 31 croisés (`test_governance_plugin.py` 15, `test_auto_evaluate_governance.py` 9, `test_governance_ge4_1462.py` 7). Compté par `grep -c "def test_"` sur le chemin, pas par collecte pytest.
+**200 `def test_`** sur **9 fichiers** (235/10 avant les retraits #2137) — 169 sur les 6 fichiers de `tests/unit/argumentation_analysis/agents/core/governance/` (`test_social_choice.py` 37, `test_governance.py` 38, `test_governance_metrics.py` 36, `test_governance_methods.py` 27, `test_conflict_resolution.py` 25, `test_governance_category_register_1981.py` 6) + 31 croisés (`test_governance_plugin.py` 15, `test_auto_evaluate_governance.py` 9, `test_governance_ge4_1462.py` 7). Compté par `grep -c "def test_"` sur le chemin, pas par collecte pytest.
 
 ## Frères et parent
 
@@ -87,10 +85,10 @@ Parent : `agents/core/` ([`../README.md`](../README.md)). Plugin hôte : [`../..
 
 ## Limites connues
 
-- **`simulation.py` est résiduel** : 257 lignes, 5 fonctions, exporté dans `__all__`, et **zéro appelant de production** — ni `invoke_callables`, ni le plugin, ni une route. Seuls les tests l'exercent. L'export public dans `__init__.py:30-31` laisse croire à une API vivante.
+- **`simulation.py` retiré (#2137)** : 257 lignes, 5 fonctions, zéro appelant de production — ni `invoke_callables`, ni le plugin, ni une route. Seuls les tests l'exerçaient. Parti avec son fichier de tests et les ré-exports `__init__` (`simulate_governance`, `manipulability_analysis`).
 - **Ce n'est pas un `BaseAgent`** : `governance_agent.py` ne contient que des objets Python (`Agent`/`BDIAgent`/`ReactiveAgent` + une factory). L'intégration SK passe entièrement par le plugin. Le registre enregistre néanmoins `agent_class=Agent` dans un slot `ComponentType.AGENT` (`registry_setup.py:158-160`) — le slot reçoit ici une classe non-SK, ce qui n'est vérifié par aucun contrat explicite.
-- **Classes sans appelant production** : `BDIAgent`, `ReactiveAgent`, `AgentFactory` — ré-exportés (`__init__.py:18`) mais seul `Agent` est consommé en production. Atteignables uniquement par les tests.
-- **Fonctions de `metrics.py` orphelines** : `gini` :48, `efficiency` :69, `stability` :87, `per_agent_satisfaction` :95, `validate_scenario` :121 — zéro appelant production, hors `__all__`. Le plugin n'importe que `consensus_rate`/`fairness_index`/`satisfaction`.
+- **Ré-exports retirés (#2137)** : `BDIAgent`, `ReactiveAgent`, `AgentFactory` ne sont plus exportés par `__init__` (seul `Agent` est consommé en production). Les classes restent dans `governance_agent.py` — hors périmètre du triage #2137, qui ne retirait que les re-exports morts du paquet.
+- **Métriques** : `per_agent_satisfaction` et `validate_scenario` retirés (#2137, zéro appelant). Le relevé 12-09 qualifiait aussi `gini`/`efficiency`/`stability` d'orphelines — **périmé** : `fairness_index` appelle `gini` (:66), `summarize_results` appelle `efficiency` (:108/:116) et `stability` (:110) ; les trois restent, consommées intra-module. Le plugin n'importe que `consensus_rate`/`fairness_index`/`satisfaction`.
 - **`plurality_voting` est un alias littéral** : `governance_methods.py:40-42` retourne `majority_voting(...)`. Les « 5 règles de vote » comptent 5 **noms** mais 4 comportements distincts — et `condorcet_method` :76 retombe sur `borda_count` en l'absence de gagnant de Condorcet, donc deux clés du dict peuvent rendre le même résultat.
 - **Choix social partiellement câblé** : l'agrégation production (`invoke_callables.py:1864-1881`) appelle 5 fonctions (approval, stv, copeland, schulze, condorcet_winner). `kemeny_young_safe` et `pairwise_matrix` ne sont atteignables que via les `@kernel_function` du plugin (`social_choice_vote` :122, `find_condorcet_winner` :171), elles-mêmes jamais appelées directement par production — seulement par un LLM les invoquant sur un kernel.
 - **Champ déclaré non rempli** : `conflict_resolution.py:40/:50/:58` — `success_probability` vaut toujours `None`, commenté « Not measured — placeholder (#971) ». Le champ a une forme de mesure et n'en porte aucune.

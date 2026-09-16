@@ -41,7 +41,6 @@ class TestCounterArgumentImport:
             CounterArgumentType,
             EvaluationResult,
             RhetoricalStrategy,
-            ValidationResult,
             Vulnerability,
         )
 
@@ -53,12 +52,9 @@ class TestCounterArgumentImport:
         from argumentation_analysis.agents.core.counter_argument.parser import (
             ArgumentParser,
             VulnerabilityAnalyzer,
-            parse_llm_response,
-            parse_structured_text,
         )
 
         assert callable(ArgumentParser)
-        assert callable(parse_llm_response)
 
     def test_import_strategies(self):
         from argumentation_analysis.agents.core.counter_argument.strategies import (
@@ -708,35 +704,5 @@ class TestCounterArgumentAgent:
         assert "argument" in result
 
 
-# ── Parser utility tests ─────────────────────────────────────────
-
-
-class TestParserUtilities:
-    """Test LLM response parsing utilities."""
-
-    def test_parse_json_response(self):
-        from argumentation_analysis.agents.core.counter_argument.parser import (
-            parse_llm_response,
-        )
-
-        result = parse_llm_response('{"key": "value"}')
-        assert result == {"key": "value"}
-
-    def test_parse_structured_text(self):
-        from argumentation_analysis.agents.core.counter_argument.parser import (
-            parse_structured_text,
-        )
-
-        text = "Type: deductive\nConfidence: high"
-        result = parse_structured_text(text)
-        assert "type" in result
-        assert result["type"] == "deductive"
-        assert result["confidence"] == "high"
-
-    def test_parse_fallback_to_structured(self):
-        from argumentation_analysis.agents.core.counter_argument.parser import (
-            parse_llm_response,
-        )
-
-        result = parse_llm_response("Key: value\nOther: data")
-        assert "key" in result
+# TestParserUtilities withdrawn with its targets (#2137): the parser's
+# parse_llm_response / parse_structured_text had zero callers.
