@@ -201,10 +201,33 @@ def _get_openai_client() -> Tuple[Any, str]:
             "OPENROUTER_CHAT_MODEL_ID",
             os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
         )
+        logger.info(
+            "LLM config resolved: provider=OpenRouter endpoint=%s model=%s source=OPENROUTER_API_KEY+OPENROUTER_BASE_URL",
+            base_url,
+            model_id,
+        )
     else:
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        raw_key = os.environ.get("OPENAI_API_KEY")
+        if raw_key is not None and raw_key.strip() == "":
+            logger.warning(
+                "OPENAI_API_KEY is set to an empty string (#2281) — treated as "
+                "not configured. Remove the line from .env (empty ≠ absent)."
+            )
+        api_key = raw_key or ""
+        raw_base_url = os.environ.get("OPENAI_BASE_URL")
+        if raw_base_url is not None and raw_base_url.strip() == "":
+            logger.warning(
+                "OPENAI_BASE_URL is set to an empty string (#2281) — using the "
+                "default endpoint. Remove the line from .env (empty ≠ absent)."
+            )
+            raw_base_url = None
+        base_url = raw_base_url or "https://api.openai.com/v1"
         model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+        logger.info(
+            "LLM config resolved: provider=OpenAI endpoint=%s model=%s source=OPENAI_API_KEY",
+            base_url,
+            model_id,
+        )
 
     if not api_key:
         return None, ""

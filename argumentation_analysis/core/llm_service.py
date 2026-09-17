@@ -153,6 +153,26 @@ def get_determinism_params(model_id: Optional[str] = None) -> Dict[str, Any]:
     return params
 
 
+def _log_resolved_llm_config(api_key: str, base_url: str, model_id: str, source: str) -> None:
+    """Log the resolved LLM config in one line — makes silent divergence visible (#2281).
+
+    Args:
+        api_key: the resolved key (empty means none configured)
+        base_url: the resolved endpoint
+        model_id: the resolved model id
+        source: human-readable origin (e.g. "OPENROUTER_API_KEY+OPENROUTER_BASE_URL", "OPENAI_API_KEY")
+    """
+    provider = "OpenRouter" if base_url and "openrouter" in base_url else "OpenAI"
+    logger.info(
+        "LLM config resolved: provider=%s endpoint=%s model=%s source=%s key=%s",
+        provider,
+        base_url or "(default)",
+        model_id,
+        source,
+        "present" if api_key else "ABSENT",
+    )
+
+
 def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str, str]:
     """Resolve the chat endpoint honoring the OpenRouter toggle.
 
@@ -173,6 +193,11 @@ def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str
         is configured (callers treat this as "no LLM available"). When the
         OpenRouter toggle is on, ``base_url`` is the OpenRouter endpoint and
         ``model_id`` is the provider-prefixed ``OPENROUTER_CHAT_MODEL_ID``.
+
+    An explicitly-set-but-empty value is treated as not configured, with a
+    WARNING naming the variable (#2281 — empty ≠ absent, the drift must be
+    visible without turning "no LLM" into a crash; probes degrade, the
+    startup factory :func:`create_llm_service` refuses).
     """
     openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -184,18 +209,34 @@ def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str
             os.environ.get("OPENAI_CHAT_MODEL_ID", default_model),
         )
         model_id = substitute_obsolete_model(model_id, "OPENROUTER_CHAT_MODEL_ID")
+        _log_resolved_llm_config(api_key, base_url, model_id, "OPENROUTER_API_KEY+OPENROUTER_BASE_URL")
         return api_key, base_url, model_id
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+    raw_key = os.environ.get("OPENAI_API_KEY")
+    if raw_key is not None and raw_key.strip() == "":
+        logger.warning(
+            "OPENAI_API_KEY is set to an empty string (#2281) — treated as not "
+            "configured. Remove the line from .env (empty ≠ absent)."
+        )
+    api_key = raw_key or ""
+    raw_base_url = os.environ.get("OPENAI_BASE_URL")
+    if raw_base_url is not None and raw_base_url.strip() == "":
+        logger.warning(
+            "OPENAI_BASE_URL is set to an empty string (#2281) — using the "
+            "default endpoint. Remove the line from .env (empty ≠ absent)."
+        )
+        raw_base_url = None
+    base_url = raw_base_url or "https://api.openai.com/v1"
     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", default_model)
-    return api_key, base_url, substitute_obsolete_model(model_id)
+    model_id = substitute_obsolete_model(model_id)
+    _log_resolved_llm_config(api_key, base_url, model_id, "OPENAI_API_KEY")
+    return api_key, base_url, model_id
 
 
 # La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service
 # pour la logique principale.
 def create_llm_service(
     service_id: str,
-    model_id: str = None,
+    model_id: Optional[str] = None,
     service_type: str = "OpenAIChatCompletion",
     force_mock: bool = False,
     force_authentic: bool = False,
@@ -274,6 +315,11 @@ def create_llm_service(
         )
     else:
         api_key = os.environ.get("OPENAI_API_KEY")
+        if api_key == "":
+            raise ValueError(
+                "OPENAI_API_KEY is set to an empty string (#2281). "
+                "Remove the line from .env or provide a real key — empty ≠ absent."
+            )
     org_id = os.environ.get("OPENAI_ORG_ID")
 
     if not api_key:
@@ -281,6 +327,14 @@ def create_llm_service(
             "Aucune clé API LLM définie. Définissez OPENAI_API_KEY, ou "
             "OPENROUTER_API_KEY + OPENROUTER_BASE_URL pour router via OpenRouter."
         )
+
+    # Log the resolved config so silent divergence is visible (#2281)
+    _log_resolved_llm_config(
+        api_key,
+        openrouter_base_url or "https://api.openai.com/v1",
+        model_id,
+        "OPENROUTER_API_KEY+OPENROUTER_BASE_URL" if use_openrouter else "OPENAI_API_KEY",
+    )
 
     resilient_client = get_resilient_async_client()
     # Typed as the SK base so the authentic OpenAI/Azure instance, and the
