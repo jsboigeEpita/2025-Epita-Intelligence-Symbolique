@@ -44,9 +44,17 @@ class TestProvenanceBlock:
     def test_carries_run_identity(self, monkeypatch):
         monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "test-model")
         block = provenance_block(params={"workflow": "spectacular"})
-        assert set(block) == {"run_started_utc", "code_sha", "chat_model_id", "params"}
+        # Contrat #2045 + #2282 : identité de run + environnement sondé du run.
+        assert set(block) == {
+            "run_started_utc",
+            "code_sha",
+            "chat_model_id",
+            "params",
+            "environment",
+        }
         assert block["chat_model_id"] == "test-model"
         assert block["params"] == {"workflow": "spectacular"}
+        assert "jvm" in block["environment"]
 
     def test_params_omitted_when_absent(self):
         assert "params" not in provenance_block()

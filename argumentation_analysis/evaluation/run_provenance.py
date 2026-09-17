@@ -53,11 +53,20 @@ def chat_model_id() -> Optional[str]:
 
 
 def provenance_block(params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-    """Bloc de provenance de run à écrire à côté d'un dump d'état (#2045)."""
+    """Bloc de provenance de run à écrire à côté d'un dump d'état (#2045).
+
+    Inclut le manifest environnemental (#2282) : chaque axe optionnel est
+    probé (started/not_started + reason) et stampé à côté de la signature.
+    Une campagne qui a rendu sur une JVM morte est nommée comme telle, pas
+    lue comme « ok » (#2276).
+    """
+    from argumentation_analysis.evaluation.env_manifest import environment_manifest
+
     block: Dict[str, Any] = {
         "run_started_utc": now_utc_iso(),
         "code_sha": code_sha(),
         "chat_model_id": chat_model_id(),
+        "environment": environment_manifest(),
     }
     if params:
         block["params"] = dict(params)
