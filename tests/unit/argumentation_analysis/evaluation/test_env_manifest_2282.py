@@ -154,3 +154,81 @@ class TestTorchProbeResilience:
         assert result["torch_available"] is False
         assert "torch_note" in result
         assert "AttributeError" in result["torch_note"] or "torch" in result["torch_note"]
+
+
+class TestEnvironmentStampRendering:
+    """The stdout stamp must be LOUD in the summary (#2282 DoD).
+
+    The stamp cannot silently disappear: a not-started JVM renders with its
+    reason in the campaign summary surface, a started one says what it runs
+    on. Guards the render seam (the probe itself stays unmocked).
+    """
+
+    def test_not_started_renders_loud_with_reason(self):
+        from argumentation_analysis.evaluation.env_manifest import (
+            render_environment_stamp,
+        )
+
+        env = {
+            "jvm": {
+                "jvm_started": False,
+                "jvm_started_note": "JVM not running",
+                "jars_resolvable": False,
+                "jars_note": "0 jars in libs and no Maven",
+                "jar_count_in_libs_tweety": 0,
+                "tweety_version_target": "1.31",
+            },
+            "llm_endpoints": {
+                "openai_configured": True,
+                "openrouter_configured": False,
+                "self_hosted_configured": False,
+            },
+            "torch": {"torch_available": False, "torch_note": "torch unusable: ImportError"},
+            "overrides": {"pinned_overrides": {"OPENAI_CHAT_MODEL_ID": "gpt-5.6-luna"}},
+        }
+        out = render_environment_stamp(env)
+        assert "ENVIRONMENT" in out
+        assert "jvm: not_started" in out
+        assert "JVM not running" in out
+        assert "0 jars" in out
+        assert "overrides: OPENAI_CHAT_MODEL_ID=gpt-5.6-luna" in out
+        assert "torch: unavailable" in out
+
+    def test_started_renders_what_it_runs_on(self):
+        from argumentation_analysis.evaluation.env_manifest import (
+            render_environment_stamp,
+        )
+
+        env = {
+            "jvm": {
+                "jvm_started": True,
+                "jvm_started_note": "JVM running at probe time",
+                "jar_count_in_libs_tweety": 76,
+                "tweety_version_target": "1.31",
+            },
+            "llm_endpoints": {
+                "openai_configured": True,
+                "openrouter_configured": True,
+                "self_hosted_configured": False,
+            },
+            "torch": {
+                "torch_available": True,
+                "torch_version": "2.2.2",
+                "cuda_available": False,
+            },
+            "overrides": {"pinned_overrides": {}},
+        }
+        out = render_environment_stamp(env)
+        assert "jvm: started" in out
+        assert "76 jars" in out
+        assert "openai, openrouter" in out
+        assert "torch: available (2.2.2" in out
+        assert "overrides: none" in out
+
+    def test_probe_reports_jvm_started_key(self):
+        from argumentation_analysis.evaluation.env_manifest import _probe_jvm
+
+        result = _probe_jvm()
+        assert "jvm_started" in result
+        assert isinstance(result["jvm_started"], bool)
+        assert "jvm_started_note" in result

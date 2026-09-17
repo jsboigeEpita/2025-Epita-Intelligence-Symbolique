@@ -16,7 +16,12 @@ from argumentation_analysis.config.settings import settings
 
 
 def _probe_jvm() -> Dict[str, Any]:
-    """Probe the JVM/Tweety axis: jars present? version pinned? Maven available?"""
+    """Probe the JVM/Tweety axis: jars present? version pinned? Maven available?
+
+    ``jvm_started`` reflects the JVM state AT PROBE TIME — call the manifest
+    at run end and it says whether the JVM actually started during the run
+    (#2282 DoD: the stamp must be run-level, not a phase rollup).
+    """
     libs_dir = Path(settings.jvm.tweety_libs_dir)
     tweety_version = settings.jvm.tweety_version
     pinned = os.environ.get("JVM_TWEETY_VERSION")
@@ -29,12 +34,23 @@ def _probe_jvm() -> Dict[str, Any]:
     # Legacy fat-jar layout: jars live in libs/ root (tweetyproject.org builds)
     maven_available = shutil.which("mvn") is not None
 
+    try:
+        import jpype
+
+        jvm_started = jpype.isJVMStarted()
+        jvm_started_note = "JVM running at probe time" if jvm_started else "JVM not running"
+    except ImportError:
+        jvm_started = False
+        jvm_started_note = "jpype not importable — JVM state unknown, reported not started"
+
     result: Dict[str, Any] = {
         "tweety_version_target": tweety_version,
         "jvm_tweety_version_pinned": pinned if pinned else None,
         "jar_count_in_libs_tweety": jar_count,
         "maven_available": maven_available,
         "libs_tweety_dir_exists": libs_dir.exists(),
+        "jvm_started": jvm_started,
+        "jvm_started_note": jvm_started_note,
     }
 
     if jar_count > 0:
@@ -140,3 +156,70 @@ def environment_manifest() -> Dict[str, Any]:
         "torch": _probe_torch(),
         "overrides": _probe_overrides(),
     }
+
+
+def render_environment_stamp(env: Dict[str, Any]) -> str:
+    """Render the run-level environment stamp as plain text for stdout (#2282).
+
+    stdout is the run-visible surface (#1874/#1903): the stamp must appear in
+    the campaign summary, not in a log line to go fish for. ``not_started``
+    states render with their reason — a dead axis is LOUD, a live axis says
+    what it is running on.
+    """
+    jvm = env.get("jvm", {})
+    llm = env.get("llm_endpoints", {})
+    torch_axis = env.get("torch", {})
+    overrides = env.get("overrides", {}).get("pinned_overrides", {})
+
+    lines = ["==== ENVIRONMENT (run-level, #2282) ===="]
+    if jvm.get("jvm_started"):
+        lines.append(
+            "jvm: started ({note}; {jars} jars, target={target})".format(
+                note=jvm.get("jvm_started_note", ""),
+                jars=jvm.get("jar_count_in_libs_tweety", 0),
+                target=jvm.get("tweety_version_target", "?"),
+            )
+        )
+    else:
+        lines.append(
+            "jvm: not_started — {note}; resolvable={resolvable} ({res_note})".format(
+                note=jvm.get("jvm_started_note", "unknown"),
+                resolvable=jvm.get("jars_resolvable", False),
+                res_note=jvm.get("jars_note", ""),
+            )
+        )
+    providers = [
+        name
+        for name, key in (
+            ("openai", "openai_configured"),
+            ("openrouter", "openrouter_configured"),
+            ("self_hosted", "self_hosted_configured"),
+        )
+        if llm.get(key)
+    ]
+    lines.append(
+        "llm: configured=[{providers}]{self_hosted}".format(
+            providers=", ".join(providers) if providers else "none",
+            self_hosted=(
+                " endpoint={}".format(llm["self_hosted_endpoint"])
+                if llm.get("self_hosted_endpoint")
+                else ""
+            ),
+        )
+    )
+    if torch_axis.get("torch_available"):
+        lines.append(
+            "torch: available ({version}, cuda={cuda})".format(
+                version=torch_axis.get("torch_version", "?"),
+                cuda=torch_axis.get("cuda_available"),
+            )
+        )
+    else:
+        lines.append("torch: unavailable — {note}".format(note=torch_axis.get("torch_note", "?")))
+    lines.append(
+        "overrides: {overrides}".format(
+            overrides=", ".join(f"{k}={v}" for k, v in sorted(overrides.items())) or "none"
+        )
+    )
+    lines.append("==== END ENVIRONMENT ====")
+    return "\n".join(lines)

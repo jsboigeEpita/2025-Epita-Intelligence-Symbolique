@@ -39,6 +39,10 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from argumentation_analysis.evaluation.env_manifest import (
+    environment_manifest,
+    render_environment_stamp,
+)
 from argumentation_analysis.evaluation.run_provenance import provenance_block
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -921,7 +925,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     summary = summarize_batch(outcome_counts, skipped_too_long, len(omitted_sources))
     # stdout is the run-visible surface (#1874/#1903): the five buckets and
-    # the gate verdict in plain text, not a logger line.
+    # the gate verdict in plain text, not a logger line. The environment
+    # stamp (#2282) is probed HERE — after the run — so jvm_started says
+    # whether the JVM actually started during it, and a dead axis is LOUD
+    # in the summary, not only in a signature file.
+    print(render_environment_stamp(environment_manifest()), flush=True)
     print(render_batch_summary(summary), flush=True)
     print(render_batch_verdict(summary), flush=True)
     return 1 if summary["failed"] else 0
