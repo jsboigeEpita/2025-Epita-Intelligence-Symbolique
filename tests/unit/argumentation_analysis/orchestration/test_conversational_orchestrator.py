@@ -573,7 +573,7 @@ class TestRunConversationalAnalysis:
     @pytest.mark.requires_api
     @pytest.mark.asyncio
     async def test_pipeline_requires_api_key(self):
-        """Should raise RuntimeError if OPENAI_API_KEY is missing.
+        """Should raise ValueError if OPENAI_API_KEY is empty or missing.
 
         NOTE: marked ``requires_api`` to exclude this test from the per-push
         gate (``-m "not requires_api"``). Despite its intent (assert a guard
@@ -586,11 +586,14 @@ class TestRunConversationalAnalysis:
         the entire #1336 tally (issue #1341 2nd blocker, CI run 28569404549).
         The test is preserved (not weakened) for the on-demand API lane; the
         underlying hermeticity bug is tracked separately. See issue #1341.
+
+        #2281: empty string now raises ValueError (config error), not
+        RuntimeError (runtime error) — the guard fires at config resolution.
         """
         with patch.dict("os.environ", {}, clear=True):
             # Remove all env vars to simulate missing key
             with patch.dict("os.environ", {"OPENAI_API_KEY": ""}, clear=False):
-                with pytest.raises(RuntimeError, match="OPENAI_API_KEY"):
+                with pytest.raises(RuntimeError, match="OPENAI_API_KEY.*empty"):
                     await run_conversational_analysis(text="test")
 
     @pytest.mark.asyncio

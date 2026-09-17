@@ -201,10 +201,30 @@ def _get_openai_client() -> Tuple[Any, str]:
             "OPENROUTER_CHAT_MODEL_ID",
             os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
         )
+        logger.info(
+            "LLM config resolved: provider=OpenRouter endpoint=%s model=%s source=OPENROUTER_API_KEY+OPENROUTER_BASE_URL",
+            base_url,
+            model_id,
+        )
     else:
         api_key = os.environ.get("OPENAI_API_KEY", "")
+        if api_key == "":
+            raise ValueError(
+                "OPENAI_API_KEY is set to an empty string (#2281). "
+                "Remove the line from .env or provide a real key — empty ≠ absent."
+            )
         base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        if base_url == "":
+            raise ValueError(
+                "OPENAI_BASE_URL is set to an empty string (#2281). "
+                "Remove the line from .env or provide a real URL — empty ≠ absent."
+            )
         model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+        logger.info(
+            "LLM config resolved: provider=OpenAI endpoint=%s model=%s source=OPENAI_API_KEY",
+            base_url,
+            model_id,
+        )
 
     if not api_key:
         return None, ""
