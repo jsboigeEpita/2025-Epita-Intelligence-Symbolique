@@ -53,23 +53,43 @@ class TestResolveChatEndpointHonesty:
         assert "endpoint=https://api.openai.com/v1" in caplog.text
         assert "source=OPENAI_API_KEY" in caplog.text
 
-    def test_empty_openai_api_key_raises(self):
-        """OPENAI_API_KEY='' must fail loud — empty is not absent (#2281)."""
+    def test_empty_openai_api_key_degrades_with_warning(self, caplog):
+        """OPENAI_API_KEY='' degrades to unavailable + loud warning (#2281).
+
+        Probes degrade — absent and empty both mean "no LLM", but empty is a
+        config drift and must be named in a WARNING, not silently swallowed.
+        """
         from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
         env = {"OPENAI_API_KEY": ""}
         with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ValueError, match="OPENAI_API_KEY.*empty string"):
-                resolve_chat_endpoint()
+            with caplog.at_level("WARNING"):
+                api_key, base_url, model_id = resolve_chat_endpoint()
+        assert api_key == ""
+        assert base_url == "https://api.openai.com/v1"
+        assert "OPENAI_API_KEY is set to an empty string" in caplog.text
 
-    def test_empty_openai_base_url_raises(self):
-        """OPENAI_BASE_URL='' must fail loud — empty is not absent (#2281)."""
+    def test_absent_openai_api_key_stays_silent(self, caplog):
+        """Absent key is the normal 'no LLM' state — no warning (#2281)."""
+        from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+        with patch.dict(os.environ, {}, clear=True):
+            with caplog.at_level("WARNING"):
+                api_key, _, _ = resolve_chat_endpoint()
+        assert api_key == ""
+        assert "empty string" not in caplog.text
+
+    def test_empty_openai_base_url_warns_and_uses_default(self, caplog):
+        """OPENAI_BASE_URL='' falls back to the default endpoint + warning (#2281)."""
         from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
         env = {"OPENAI_API_KEY": "test-key", "OPENAI_BASE_URL": ""}
         with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ValueError, match="OPENAI_BASE_URL.*empty string"):
-                resolve_chat_endpoint()
+            with caplog.at_level("WARNING"):
+                api_key, base_url, model_id = resolve_chat_endpoint()
+        assert api_key == "test-key"
+        assert base_url == "https://api.openai.com/v1"
+        assert "OPENAI_BASE_URL is set to an empty string" in caplog.text
 
     def test_obsolete_model_substituted_and_logged(self, caplog):
         """gpt-5-mini → gpt-5.6-luna substitution must name the env var."""
@@ -89,18 +109,21 @@ class TestResolveChatEndpointHonesty:
 
 
 class TestGetOpenAIClientHonesty:
-    """The raw-SDK path must also log and refuse empty strings."""
+    """The raw-SDK path must also log; probes degrade on empty (#2281)."""
 
-    def test_empty_openai_api_key_raises(self):
-        """_get_openai_client must refuse OPENAI_API_KEY='' (#2281)."""
+    def test_empty_openai_api_key_degrades_with_warning(self, caplog):
+        """_get_openai_client returns (None, '') on OPENAI_API_KEY='' + warning (#2281)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_openai_client,
         )
 
         env = {"OPENAI_API_KEY": ""}
         with patch.dict(os.environ, env, clear=True):
-            with pytest.raises(ValueError, match="OPENAI_API_KEY.*empty string"):
-                _get_openai_client()
+            with caplog.at_level("WARNING"):
+                client, model_id = _get_openai_client()
+        assert client is None
+        assert model_id == ""
+        assert "OPENAI_API_KEY is set to an empty string" in caplog.text
 
     def test_logs_resolved_config(self, caplog):
         """_get_openai_client must log its effective config."""

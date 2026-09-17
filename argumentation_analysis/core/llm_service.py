@@ -194,9 +194,10 @@ def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str
         OpenRouter toggle is on, ``base_url`` is the OpenRouter endpoint and
         ``model_id`` is the provider-prefixed ``OPENROUTER_CHAT_MODEL_ID``.
 
-    Raises:
-        ValueError: when an explicitly-set API key or base_url is an empty string
-            (#2281 — empty ≠ absent, it masks configuration drift).
+    An explicitly-set-but-empty value is treated as not configured, with a
+    WARNING naming the variable (#2281 — empty ≠ absent, the drift must be
+    visible without turning "no LLM" into a crash; probes degrade, the
+    startup factory :func:`create_llm_service` refuses).
     """
     openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -210,18 +211,21 @@ def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str
         model_id = substitute_obsolete_model(model_id, "OPENROUTER_CHAT_MODEL_ID")
         _log_resolved_llm_config(api_key, base_url, model_id, "OPENROUTER_API_KEY+OPENROUTER_BASE_URL")
         return api_key, base_url, model_id
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    if api_key == "":
-        raise ValueError(
-            "OPENAI_API_KEY is set to an empty string (#2281). "
-            "Remove the line from .env or provide a real key — empty ≠ absent."
+    raw_key = os.environ.get("OPENAI_API_KEY")
+    if raw_key is not None and raw_key.strip() == "":
+        logger.warning(
+            "OPENAI_API_KEY is set to an empty string (#2281) — treated as not "
+            "configured. Remove the line from .env (empty ≠ absent)."
         )
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    if base_url == "":
-        raise ValueError(
-            "OPENAI_BASE_URL is set to an empty string (#2281). "
-            "Remove the line from .env or provide a real URL — empty ≠ absent."
+    api_key = raw_key or ""
+    raw_base_url = os.environ.get("OPENAI_BASE_URL")
+    if raw_base_url is not None and raw_base_url.strip() == "":
+        logger.warning(
+            "OPENAI_BASE_URL is set to an empty string (#2281) — using the "
+            "default endpoint. Remove the line from .env (empty ≠ absent)."
         )
+        raw_base_url = None
+    base_url = raw_base_url or "https://api.openai.com/v1"
     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", default_model)
     model_id = substitute_obsolete_model(model_id)
     _log_resolved_llm_config(api_key, base_url, model_id, "OPENAI_API_KEY")
