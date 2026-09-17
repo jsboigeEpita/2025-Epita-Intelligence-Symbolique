@@ -1,6 +1,21 @@
 # Known Issues — Projet Intelligence Symbolique
 
-Last updated: 2026-06-30
+Last updated: 2026-09-17
+
+---
+
+## Living Known Issues (measured, each with an owner)
+
+This section lists **currently-broken or never-exercised surfaces**, each measured on a stated date. It exists so the file cannot become a resolved-only graveyard again (#2282: the 2026-06-30 state listed zero living issues while the JVM campaign axis had been dead for ~10 days). Full dated axis×surface audit: `docs/reports/ENV_AUDIT_2026-09-17.md`.
+
+| Axis / surface | State | Measured | Owner |
+|---|---|---|---|
+| Campaign worktrees carry no `libs/` and no provisioning — real-LLM runs can render on a dead JVM (the #2062 outage mechanism) | run-level manifest now stamps `jvm: started/not_started` next to every run signature (PR #2284, #2282 D1); preflight hardening proposed | 2026-09-17 | #2282 |
+| `requires_api` test band (90 tests / 41 files) is never selected in CI (`ci.yml` runs `not requires_api`) and has 6 collection errors | never run; execution-path proposal awaiting arbitration | 2026-09-17 | #1603 DoD 4 |
+| Self-hosted LLM axis configured but never exercised by real runs; endpoint + key measured **alive (HTTP 200 on /models)** from po-2023 on 2026-09-17 — the inherited "401" reading is stale, at least from that machine | alive-but-unexercised | 2026-09-17 | #2130 |
+| LLM config resolution can silently serve an endpoint/model different from the operator's intent (empty-string pins, third resolution mode, activation requiring BOTH OpenRouter vars) | repair in flight: honest startup logging + empty-string refusal | 2026-09-17 | #2281 / PR #2283 |
+| CI runner cannot load `torch` (deterministic) — neural/capacity tests must stay out of module-level torch imports; capacity measured outside CI | excluded by condition, documented | 2026-09-13 | #1651 |
+| Stale-API local Tweety sets (1.28 modules, 1.29 fat) must never be served to 1.31-migrated code | API floor on the local fallback (this PR); sets archived out of classpath on po-2023 with preservation proof | 2026-09-17 | #2278 follow-up |
 
 ---
 
