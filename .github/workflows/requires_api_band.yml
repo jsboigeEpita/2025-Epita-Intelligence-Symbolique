@@ -1,0 +1,231 @@
+name: requires_api band (scheduled real-LLM lane)
+
+# Scheduled lane for the test band the per-push gate CANNOT run: the tests
+# marked `requires_api` make real LLM calls, so ci.yml deselects them
+# (`-m "not slow and not requires_api"`, ci.yml "Run automated tests").
+# Until this workflow existed, that band ran ONLY on whatever machine a
+# human happened to use -- which is exactly how the #2282 JVM incident
+# stayed invisible: CI was green certifying code-without-keys while the
+# keys-without-CI side drifted. This lane is the missing half of the pair.
+#
+# Cost (intent, re-measure after the first run and pin here): the llm_light
+# band is ~90 tests at ~$0.01-0.05 each => roughly $1-5 per run, once a
+# week. The full band (workflow_dispatch with full-band=true) is an
+# on-demand operator action, not scheduled, so it cannot silently balloon.
+#
+# First scheduled run: Saturday 05:37 UTC -- off the :00 mark deliberately,
+# per cluster convention on API-hitting cadences.
+
+on:
+  schedule:
+    - cron: "37 5 * * 6"
+  workflow_dispatch:
+    inputs:
+      full-band:
+        description: "Run the ENTIRE requires_api band (slow tests included), not just llm_light"
+        type: boolean
+        default: false
+
+# Scheduled runs must never supersede each other mid-run: a cancelled
+# real-LLM run is money spent with no report.
+concurrency:
+  group: requires-api-band
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  requires-api:
+    runs-on: windows-latest
+    timeout-minutes: 180  # light band ~1h expected; full-band dispatch gets the headroom
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          # Privacy gate needs the history to diff origin/main..HEAD
+          fetch-depth: 0
+
+      - name: Privacy gate — scan indexed surfaces
+        shell: pwsh
+        run: python scripts/security/scan_indexed_surfaces.py --commits origin/main..HEAD
+
+      - name: Check API keys availability
+        id: check_secrets
+        # #1799 pattern: the fail-loud summary below can only fire if this
+        # var exists even when an upstream step died. Keep `if: always()`.
+        if: always()
+        shell: pwsh
+        run: |
+          if ("${{ secrets.OPENAI_API_KEY }}" -ne "") {
+            echo "API_KEYS_CONFIGURED=true" >> $env:GITHUB_ENV
+            Write-Host "✅ API keys are configured"
+          } else {
+            echo "API_KEYS_CONFIGURED=false" >> $env:GITHUB_ENV
+            Write-Host "⚠️ OPENAI_API_KEY not configured - lane cannot run (it exists precisely to run WITH keys)"
+          }
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15
+        with:
+          python-version: "3.10"
+          environment-file: environment.yml
+          activate-environment: projet-is
+          use-mamba: true
+          auto-update-conda: false
+
+      # --- Java toolchain: same cache/provision/verify chain as the gate ---
+      - name: Compute Java toolchain cache key
+        if: env.API_KEYS_CONFIGURED == 'true'
+        id: javakey
+        shell: pwsh
+        run: |
+          $key = conda run -n projet-is --no-capture-output python scripts/ci/tweety_cache_key.py
+          if (-not $key) { Write-Host "::error::cle de cache vide"; exit 1 }
+          Write-Host "Cle: $key"
+          echo "key=$key" >> $env:GITHUB_OUTPUT
+
+      - name: Restore Java toolchain
+        if: env.API_KEYS_CONFIGURED == 'true'
+        id: javacache
+        uses: actions/cache@v4
+        with:
+          path: |
+            libs/tweety
+            portable_jdk
+          key: java-${{ runner.os }}-${{ steps.javakey.outputs.key }}
+
+      - name: Provision Tweety classpath
+        if: env.API_KEYS_CONFIGURED == 'true' && steps.javacache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python scripts/ci/provision_tweety.py
+
+      - name: Verify Java toolchain is usable
+        if: env.API_KEYS_CONFIGURED == 'true'
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python scripts/ci/verify_tweety.py
+
+      - name: Run requires_api tests
+        if: env.API_KEYS_CONFIGURED == 'true'
+        # Same argv as the per-push gate (the #1341-measured collectable
+        # scope), with the marker inverted: this lane selects exactly what
+        # the gate deselects. Files marked requires_api that live OUTSIDE
+        # this argv are not in this lane either -- admitting a new directory
+        # requires its own measurement, per the #1341 convention.
+        #
+        # Collection errors here are a LOUD red, not noise: A0 (#2282) is
+        # repairing the 6 known ones; if one resurfaces, this lane is the
+        # instrument that says so.
+        shell: pwsh
+        run: |
+          $marker = "requires_api and llm_light"
+          if ("${{ inputs.full-band }}" -eq "true") { $marker = "requires_api" }
+          Write-Host "Band marker: $marker"
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+
+      - name: Generate test summary (fail-loud)
+        if: always()
+        shell: pwsh
+        run: |
+          Write-Host ""
+          Write-Host "═══════════════════════════════════════════════"
+          Write-Host "📊 REQUIRES_API BAND SUMMARY"
+          Write-Host "═══════════════════════════════════════════════"
+
+          if (Test-Path pytest_report.xml) {
+            # #1556: counters live on <testsuite>, not the <testsuites> root.
+            [xml]$xml = Get-Content pytest_report.xml
+            $suites = @($xml.testsuites.testsuite)
+            $total = 0; $errors = 0; $failures = 0; $skipped = 0
+            foreach ($s in $suites) {
+              $total    += [int]$s.tests
+              $errors   += [int]$s.errors
+              $failures += [int]$s.failures
+              $skipped  += [int]$s.skipped
+            }
+            $passed = $total - $errors - $failures - $skipped
+
+            Write-Host "✅ Passed:  $passed / $total"
+            Write-Host "❌ Failed:  $($errors + $failures) / $total"
+            Write-Host "⏭️  Skipped:  $skipped / $total"
+
+            # Dead-band guard (sibling of #1385/#1799): this lane exists to
+            # run a NON-EMPTY set of real-LLM tests. 0 collected with keys
+            # configured means the band rotted -- marker renamed, pytest.ini
+            # reorganized, files moved out of the argv -- and a green badge
+            # on an empty band is the assertion-that-cannot-fail
+            # anti-pattern. Fail loud and say what to check.
+            if ($env:API_KEYS_CONFIGURED -eq 'true' -and $total -eq 0) {
+              Write-Host "❌ FAIL-LOUD: 0 tests collected with keys configured."
+              Write-Host "   The requires_api band is EMPTY -- check marker spelling in pytest.ini,"
+              Write-Host "   llm_light marker existence, and that the files still live under the argv scope."
+              exit 1
+            }
+
+            if ($skipped -gt 0) {
+              Write-Host ""
+              Write-Host "ℹ️  $skipped skips on a keys-configured run -- inspect the junit artifact:"
+              Write-Host "   legitimate skips exist (per-test preconditions) but a skip storm is the"
+              Write-Host "   exact signature this lane was built to catch (#2282)."
+            }
+          } else {
+            # #1799 fork, adapted: on THIS lane there is no honest-absence
+            # case. Unlike the per-push gate, a run without keys is not
+            # "expected for forks" -- it is a configuration failure of the
+            # lane itself (scheduled runs on the main repo always have keys).
+            if ($env:API_KEYS_CONFIGURED -eq 'true') {
+              Write-Host "❌ FAIL-LOUD (#1799): keys were configured and pytest was expected to run, but no pytest_report.xml exists."
+              Write-Host "   The suite did NOT run (setup timeout, pytest hang, or conda run died)."
+              Write-Host "   'Not measured', not 'measured and green'."
+              exit 1
+            } else {
+              Write-Host "❌ FAIL-LOUD: this lane ran WITHOUT API keys. There is no honest-skip story here:"
+              Write-Host "   the OPENAI_API_KEY secret is missing/blocked for scheduled runs on this repo."
+              exit 1
+            }
+          }
+          Write-Host "═══════════════════════════════════════════════"
+
+      - name: Fail-loud guard — JVM-startup skip family (#1385/#1873 pattern)
+        # Match the FAMILY of conftest JVM-skip signatures ("Saut du test car
+        # ...JVM"), never one literal, never the raw skip rate. On this lane
+        # even ONE JVM skip with keys configured is an environment defect by
+        # definition (#2282): the toolchain steps above verified the JVM
+        # before pytest started.
+        if: always() && env.API_KEYS_CONFIGURED == 'true'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path pytest_report.xml)) {
+            Write-Host "ℹ️ No pytest_report.xml — JVM guard skipped (failure already captured upstream)."
+            exit 0
+          }
+          [xml]$xml = Get-Content pytest_report.xml
+          $jvmSkips = @()
+          foreach ($s in @($xml.testsuites.testsuite)) {
+            foreach ($tc in @($s.testcase)) {
+              foreach ($sk in @($tc.skipped)) {
+                if ($sk.message -match 'JVM') { $jvmSkips += "$($tc.classname)::$($tc.name)" }
+              }
+            }
+          }
+          if ($jvmSkips.Count -gt 0) {
+            Write-Host "❌ FAIL-LOUD (#1385 family): $($jvmSkips.Count) test(s) skipped on a JVM signature:"
+            $jvmSkips | Select-Object -First 10 | ForEach-Object { Write-Host "   - $_" }
+            Write-Host "   The Verify Java toolchain step passed before pytest ran -- a JVM skip now means"
+            Write-Host "   the runtime degraded DURING the run (classpath drift, JVM crash). This is the #2282 canary."
+            exit 1
+          }
+          Write-Host "✅ 0 JVM-signature skips."
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requires-api-band-results
+          path: |
+            pytest_report.xml
+            llm_egress_report.json
