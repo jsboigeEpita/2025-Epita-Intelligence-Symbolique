@@ -411,6 +411,11 @@ def is_already_assembled(
 _VERSION_TAG_RE = re.compile(r"-(\d+\.\d+(?:\.\d+)?)(?:[.-])")
 
 
+def version_key(version: str) -> Tuple[int, ...]:
+    """Comparison key for a Tweety version string ("1.28" -> (1, 28))."""
+    return tuple(int(part) for part in version.split("."))
+
+
 def detect_local_version(target_dir: Path) -> Optional[str]:
     """Highest version holding a complete, usable classpath in ``target_dir``.
 
@@ -424,7 +429,9 @@ def detect_local_version(target_dir: Path) -> Optional[str]:
     Candidate versions are read from jar filenames; completeness is decided by
     ``is_already_assembled`` itself, so every silent-false shape it guards
     against (``INCOMPLETE_MARKER``, stub fat jars, version-blind counts)
-    applies here unchanged.
+    applies here unchanged. Completeness is a jar-count/fat-content notion
+    ONLY: whether the set's API matches what the calling code expects is the
+    caller's rule (see ``jvm_setup._resolve_effective_tweety_version``).
     """
     if not target_dir.is_dir():
         return None
@@ -433,10 +440,7 @@ def detect_local_version(target_dir: Path) -> Optional[str]:
         for match in _VERSION_TAG_RE.finditer(jar.name):
             candidates.add(match.group(1))
 
-    def _version_key(version: str) -> Tuple[int, ...]:
-        return tuple(int(part) for part in version.split("."))
-
-    for version in sorted(candidates, key=_version_key, reverse=True):
+    for version in sorted(candidates, key=version_key, reverse=True):
         if is_already_assembled(target_dir, version=version):
             return version
     return None

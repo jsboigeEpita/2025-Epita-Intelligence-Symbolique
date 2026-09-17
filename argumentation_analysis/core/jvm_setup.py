@@ -903,11 +903,15 @@ def _resolve_effective_tweety_version() -> str:
     * a machine that *can* assemble (Maven present) also keeps the configured
       version: preferring a stale local set would undo #1874's guarantee that
       the machine moves on with the config.
-    * a machine that *cannot* assemble and holds no set at the configured
-      version falls back to the highest complete local set when one exists.
-      Before this, such a machine returned ``False`` from ``initialize_jvm``
-      while holding a perfectly usable classpath -- the workaround everyone
-      carried as a pinned env var (``JVM_TWEETY_VERSION=1.28``).
+    * otherwise, the highest complete local set is served ONLY when its
+      version is >= the configured one. The configured version is the API
+      level the code was migrated to (#1959 e.g. moved bipolar to the 1.31
+      class names); a complete-but-older set is jar-count-complete, not
+      API-complete -- serving it re-opens the #1874 trap one level down.
+      Measured 2026-09-17: a 1.29 fat jar (old bipolar API) was served to
+      1.31-migrated code -- the JVM booted, then the first bipolar class
+      resolution pathologically scanned the classpath for minutes before
+      failing. An older set is refused loudly; a newer one is served loudly.
 
     Mutates ``settings.jvm.tweety_version`` on fallback so every live reader
     (``_build_tweety_classpath`` above all) matches the classpath actually
@@ -923,10 +927,23 @@ def _resolve_effective_tweety_version() -> str:
     local = tweety_assembly.detect_local_version(LIBS_DIR)
     if local is None or local == configured:
         return configured
+    if tweety_assembly.version_key(local) < tweety_assembly.version_key(configured):
+        logger.warning(
+            "#2278 follow-up: ensemble local complet v%s REFUSÉ — antérieur à la "
+            "version configurée v%s (le code est migré sur l'API v%s ; servir une "
+            "API périmée est le piège #1874). Provisioning de v%s tenté ; sans "
+            "Maven ni canal, le démarrage échouera loud — installez Maven ou "
+            "assemblez la version configurée.",
+            local,
+            configured,
+            configured,
+            configured,
+        )
+        return configured
     logger.warning(
         "#2277/#2276: version configurée v%s sans ensemble local et sans Maven "
-        "pour en assembler un ; la version locale complète v%s sera servie. "
-        "Épinglez JVM_TWEETY_VERSION pour interdire ce repli.",
+        "pour en assembler un ; la version locale complète v%s (API >= configurée) "
+        "sera servie. Épinglez JVM_TWEETY_VERSION pour interdire ce repli.",
         configured,
         local,
     )

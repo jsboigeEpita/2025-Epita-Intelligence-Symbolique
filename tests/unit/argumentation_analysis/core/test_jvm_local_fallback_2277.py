@@ -114,16 +114,32 @@ class TestResolverContract:
         assert jvm_setup._resolve_effective_tweety_version() == "1.31"
         assert settings.jvm.tweety_version == "1.31"  # not mutated
 
-    def test_unpinned_without_maven_falls_back_and_mutates_settings(
+    def test_unpinned_without_maven_serves_newer_local_set_and_mutates(
         self, monkeypatch, tmp_path
     ):
         fresh = _unpinned_settings(monkeypatch)
         _no_maven(monkeypatch)
         monkeypatch.setattr(jvm_setup, "LIBS_DIR", tmp_path)
-        _fake_fat_jar(tmp_path, "1.28")
-        assert jvm_setup._resolve_effective_tweety_version() == "1.28"
+        _fake_fat_jar(tmp_path, "1.32")
+        assert jvm_setup._resolve_effective_tweety_version() == "1.32"
         # the mutation is the point: _build_tweety_classpath reads settings live
-        assert fresh.tweety_version == "1.28"
+        assert fresh.tweety_version == "1.32"
+
+    def test_unpinned_without_maven_refuses_stale_api_local_set(
+        self, monkeypatch, tmp_path
+    ):
+        """The measured #2278 follow-up: a complete-but-older local set must NOT
+        be served. Configured 1.31 = the API level the code was migrated to
+        (#1959 moved bipolar to the 1.31 class names); a 1.29 fat jar carries
+        the old API — serving it boots a JVM whose first bipolar class
+        resolution then scans the classpath for minutes before failing."""
+        fresh = _unpinned_settings(monkeypatch)
+        _no_maven(monkeypatch)
+        monkeypatch.setattr(jvm_setup, "LIBS_DIR", tmp_path)
+        _fake_fat_jar(tmp_path, "1.29")
+        _fake_fat_jar(tmp_path, "1.28")  # stale too, even though complete
+        assert jvm_setup._resolve_effective_tweety_version() == "1.31"
+        assert fresh.tweety_version == "1.31"  # not mutated
 
     def test_no_local_set_keeps_configured(self, monkeypatch, tmp_path):
         _unpinned_settings(monkeypatch)
@@ -143,7 +159,7 @@ class TestInitializeJvmWiring:
         _unpinned_settings(monkeypatch)
         _no_maven(monkeypatch)
         monkeypatch.setattr(jvm_setup, "LIBS_DIR", tmp_path)
-        _fake_fat_jar(tmp_path, "1.28")
+        _fake_fat_jar(tmp_path, "1.32")
 
         recorded = []
         monkeypatch.setattr(
@@ -156,4 +172,4 @@ class TestInitializeJvmWiring:
         monkeypatch.setattr(jvm_setup.jpype, "isJVMStarted", lambda: False)
 
         jvm_setup.initialize_jvm()  # returns False (no java home) — irrelevant here
-        assert recorded == ["1.28"]
+        assert recorded == ["1.32"]
