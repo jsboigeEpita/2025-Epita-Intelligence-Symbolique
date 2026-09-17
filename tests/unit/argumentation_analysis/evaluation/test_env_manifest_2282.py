@@ -131,3 +131,26 @@ class TestProvenanceBlockWithManifest:
         assert isinstance(jvm["jar_count_in_libs_tweety"], int)
         assert jvm["jar_count_in_libs_tweety"] >= 0
         assert isinstance(jvm["jars_resolvable"], bool)
+
+
+class TestTorchProbeResilience:
+    """A broken/stub torch module must be REPORTED, not raise (#2282 CI red).
+
+    CI leaves an attribute-less torch in sys.modules (DLL winerror 182) —
+    accessing torch.__version__ raises AttributeError, which the probe must
+    surface as torch_available=False, not propagate.
+    """
+
+    def test_stub_torch_without_version_is_reported_unavailable(self, monkeypatch):
+        import sys
+        import types
+
+        stub = types.ModuleType("torch")  # bare module: no __version__, no cuda
+        monkeypatch.setitem(sys.modules, "torch", stub)
+
+        from argumentation_analysis.evaluation.env_manifest import _probe_torch
+
+        result = _probe_torch()
+        assert result["torch_available"] is False
+        assert "torch_note" in result
+        assert "AttributeError" in result["torch_note"] or "torch" in result["torch_note"]

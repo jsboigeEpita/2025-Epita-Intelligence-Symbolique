@@ -84,7 +84,13 @@ def _probe_llm_endpoints() -> Dict[str, Any]:
 
 
 def _probe_torch() -> Dict[str, Any]:
-    """Probe the torch / sentence-transformers axis (#1651 axis)."""
+    """Probe the torch / sentence-transformers axis (#1651 axis).
+
+    Catches every import-time failure, not just ImportError: a torch whose
+    DLL fails to load (CI winerror 182) or a stub module left in sys.modules
+    raises AttributeError on attribute access — the probe must report that
+    environment as torch_available=False with the reason, never propagate.
+    """
     try:
         import torch
 
@@ -93,10 +99,10 @@ def _probe_torch() -> Dict[str, Any]:
             "torch_version": torch.__version__,
             "cuda_available": torch.cuda.is_available(),
         }
-    except ImportError:
+    except Exception as e:  # noqa: BLE001 — a probe reports, never raises
         return {
             "torch_available": False,
-            "torch_note": "torch not installed — neural phases will skip",
+            "torch_note": f"torch unusable: {type(e).__name__}: {e}",
         }
 
 
