@@ -62,6 +62,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import tempfile
@@ -400,6 +401,45 @@ def is_already_assembled(
             fat.stat().st_size,
         )
     return count_module_jars(target_dir, version=version) >= minimum
+
+
+# A version tag inside a jar filename: "-1.28-" / "-1.28." in
+# ``org.tweetyproject.arg.dung-1.28-with-dependencies.jar``. Third-party
+# ``guava-33.4.8-jre.jar`` names match the digit shape too -- harmless, the
+# completeness arbitration below is ``is_already_assembled`` itself and no
+# third-party version accumulates a full Tweety classpath.
+_VERSION_TAG_RE = re.compile(r"-(\d+\.\d+(?:\.\d+)?)(?:[.-])")
+
+
+def detect_local_version(target_dir: Path) -> Optional[str]:
+    """Highest version holding a complete, usable classpath in ``target_dir``.
+
+    The mirror question of ``is_already_assembled(version=...)``: not "is
+    *this* version assembled?" but "which versions are?". Serves the local
+    fallback decision in ``jvm_setup`` (#2277/#2276: an unpinned machine
+    without Maven holds a complete assembled set at vX while the configured
+    default is vY -- X != Y must not make ``initialize_jvm`` refuse to boot on
+    a classpath that is right there).
+
+    Candidate versions are read from jar filenames; completeness is decided by
+    ``is_already_assembled`` itself, so every silent-false shape it guards
+    against (``INCOMPLETE_MARKER``, stub fat jars, version-blind counts)
+    applies here unchanged.
+    """
+    if not target_dir.is_dir():
+        return None
+    candidates = set()
+    for jar in target_dir.glob("*.jar"):
+        for match in _VERSION_TAG_RE.finditer(jar.name):
+            candidates.add(match.group(1))
+
+    def _version_key(version: str) -> Tuple[int, ...]:
+        return tuple(int(part) for part in version.split("."))
+
+    for version in sorted(candidates, key=_version_key, reverse=True):
+        if is_already_assembled(target_dir, version=version):
+            return version
+    return None
 
 
 # ------------------------------------------------------------------------- I/O

@@ -892,6 +892,48 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     return jar_entries
 
 
+def _resolve_effective_tweety_version() -> str:
+    """The version ``initialize_jvm`` should boot on, with a local fallback (#2277).
+
+    Rules, in order:
+
+    * an explicitly pinned version (env ``JVM_TWEETY_VERSION`` or ``.env`` --
+      anything that landed in ``model_fields_set`` at construction) is strict:
+      never overridden. #1874's protection, unchanged.
+    * a machine that *can* assemble (Maven present) also keeps the configured
+      version: preferring a stale local set would undo #1874's guarantee that
+      the machine moves on with the config.
+    * a machine that *cannot* assemble and holds no set at the configured
+      version falls back to the highest complete local set when one exists.
+      Before this, such a machine returned ``False`` from ``initialize_jvm``
+      while holding a perfectly usable classpath -- the workaround everyone
+      carried as a pinned env var (``JVM_TWEETY_VERSION=1.28``).
+
+    Mutates ``settings.jvm.tweety_version`` on fallback so every live reader
+    (``_build_tweety_classpath`` above all) matches the classpath actually
+    served. The assignment marks the field as set, which is deliberate
+    idempotence: a second ``initialize_jvm`` in the same process treats the
+    resolved version as pinned and resolves to the same value.
+    """
+    configured = settings.jvm.tweety_version
+    if "tweety_version" in settings.jvm.model_fields_set:
+        return configured
+    if tweety_assembly.maven_executable() is not None:
+        return configured
+    local = tweety_assembly.detect_local_version(LIBS_DIR)
+    if local is None or local == configured:
+        return configured
+    logger.warning(
+        "#2277/#2276: version configurée v%s sans ensemble local et sans Maven "
+        "pour en assembler un ; la version locale complète v%s sera servie. "
+        "Épinglez JVM_TWEETY_VERSION pour interdire ce repli.",
+        configured,
+        local,
+    )
+    settings.jvm.tweety_version = local
+    return local
+
+
 def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     """
     Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
@@ -935,7 +977,8 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
         _JVM_WAS_SHUTDOWN = False
 
         logger.info("--- Début du processus de démarrage de la JVM ---")
-        if not download_tweety_jars():
+        effective_version = _resolve_effective_tweety_version()
+        if not download_tweety_jars(version=effective_version):
             logger.critical("Échec du téléchargement des JARs Tweety. Arrêt.")
             return False
 
