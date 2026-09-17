@@ -1,8 +1,9 @@
 """#1760 — the PM steers in a room whose description doesn't match it.
 
 ``phase_configs`` freezes 3 macro-phases with a hard-coded casting of 3-4
-agents while ``AGENT_CONFIG["ProjectManager"]`` hands the PM a static map of
-8 and a free-steering mandate. The PM designates real, wired agents that are
+agents while ``AGENT_CONFIG["ProjectManager"]`` hands the PM a capability map
+of 8 (registry-derived since T1 #1735) and a free-steering mandate. The PM
+designates real, wired agents that are
 simply absent from the room it sits in — #1751 made the absorption
 observable (``designation_unresolved`` markers); this lane carries the fix.
 
@@ -157,14 +158,20 @@ class TestHonouredDesignationStaysHonoured:
 
     def test_capability_map_still_names_all_eight(self):
         """The map is the PM's steering knowledge — pre-existing content that
-        the fix must not amputate."""
+        the fix must not amputate. Since T1 #1735 the map is derived from the
+        registry: the derivation, not the hand-written template, must cover
+        every specialist."""
         from argumentation_analysis.orchestration.conversational_orchestrator import (
-            AGENT_CONFIG,
+            derive_pm_capability_map,
         )
+        from argumentation_analysis.orchestration.registry_setup import setup_registry
 
-        instructions = AGENT_CONFIG["ProjectManager"]["instructions"]
+        rendered = derive_pm_capability_map(setup_registry())
         for name in CAPABILITY_MAP_AGENTS:
-            assert name in instructions
+            assert name in rendered, (
+                f"{name} vanished from the derived capability map — the "
+                "derivation amputated the PM's steering knowledge"
+            )
 
 
 class TestAllAgentsRoom:
