@@ -212,20 +212,10 @@ AGENT_CONFIG = {
             "MAINTENANT (ex. 'InformalAgent a trouve une contradiction sur arg_3, je convoque "
             "FormalAgent pour la formaliser'). trigger parmi : initial, deepening, synergy, convergence.\n"
             "4. Designe l'agent via designate_next_agent(nom_exact) et pose-lui une question precise.\n\n"
-            "CARTE DES CAPACITES — ces synergies existent, c'est a toi d'en juger l'opportunite "
-            "(personne ne te l'impose) :\n"
-            "- ExtractAgent — extrait les arguments (add_identified_argument). [Fait : les "
-            "specialistes travaillent sur l'etat partage ; tant que l'extraction n'a rien "
-            "enregistre, l'etat est vide et rien d'autre n'a de substrate.]\n"
-            "- InformalAgent — sophismes (run_guided_analysis, add_identified_fallacy).\n"
-            "- FormalAgent — coherence logique (inconsistances signalees).\n"
-            "- QualityAgent — peut evaluer EN CONTEXTE les sophismes detectes "
-            "(evaluate_with_cross_kb_context).\n"
-            "- CounterAgent — peut cibler les arguments faibles.\n"
-            "- DebateAgent — positions adversariales ; GovernanceAgent — consensus, conflits, "
-            "vote (detect_conflicts, social_choice_vote).\n"
-            "- JTMS — croyances et retractations (jtms_create_belief, jtms_check_consistency) ; "
-            "une retractation peut invalider un fil.\n\n"
+            "NOTE : [Fait : les specialistes travaillent sur l'etat partage ; tant que "
+            "l'extraction n'a rien enregistre, l'etat est vide et rien d'autre n'a de "
+            "substrate.]\n\n"
+            "{capability_map}\n\n"
             "BUDGET : tu as au plus {budget_turns} tours (pipeline-global) pour couvrir "
             "l'analyse. La couverture prime sur l'epuisement du budget, mais le budget est DUR — "
             "si tu l'atteins sans converger, le depassement est tracé (pas silencieux).\n\n"
@@ -467,6 +457,134 @@ AGENT_CONFIG = {
 }
 
 # ---------------------------------------------------------------------------
+# T1 #1735 — the PM's capability map, DERIVED from CapabilityRegistry.
+#
+# The map below used to be hand-written prose naming 7 specialists (the TODO
+# deleted by 233a11a8 said "cette liste sera potentiellement fournie
+# dynamiquement" — this is that). The pattern transplanted is the one the
+# hierarchical tactical layer already uses (RegistryBackedOperationalRegistry,
+# hierarchy_bridge.py): the steering layer learns WHO CAN DO WHAT from the
+# registry, not from a frozen list. The bridge is a small declarative domain
+# vocabulary per speciality — new registry capabilities whose names fall in a
+# domain appear in the map without any code change (that dynamism is what the
+# #1735 T1 guard asserts).
+# ---------------------------------------------------------------------------
+
+# Domain keywords per speciality: a registry capability belongs to a
+# specialist's line when its name CONTAINS one of these substrings.
+_SPECIALIST_DOMAIN_KEYWORDS: Dict[str, Tuple[str, ...]] = {
+    "extract": ("extract", "kb_construction"),
+    "informal_fallacy": ("fallacy", "sophism", "rhetoric"),
+    "formal_logic": (
+        "logic",
+        "aspic",
+        "aba",
+        "adf",
+        "dung",
+        "setaf",
+        "bipolar",
+        "sat",
+        "tweety",
+        "formal",
+        "belief_revision",
+        "ranking",
+        "probabilistic",
+        "dialogue",
+        "social_argumentation",
+        "epistemic",
+        "weighted",
+    ),
+    "quality": ("quality", "virtue"),
+    "counter_argument": ("counter",),
+    "debate": ("debate", "adversarial"),
+    "governance": ("governance", "vote", "consensus", "social_choice"),
+}
+
+# Transverse services any specialist can invoke through StateManagerPlugin —
+# surfaced as their own line so the PM knows they are not a room member.
+_TRANSVERSE_KEYWORDS: Tuple[str, ...] = (
+    "belief_maintenance",
+    "truth_maintenance",
+    "jtms",
+)
+
+
+def derive_pm_capability_map(registry: Any) -> str:
+    """T1 #1735: render the PM's capability map from CapabilityRegistry data.
+
+    Pure function over ``registry.get_all_registrations()``: for each
+    conversational specialist, the capabilities whose name matches the
+    speciality's domain keywords are listed on their line. Hors-cascade axes
+    (aspic_plus_reasoning, sat_solving, ...) appear here because they are
+    registered capabilities — the hand-written map never named them.
+    """
+    registrations = registry.get_all_registrations()
+    all_caps: List[Tuple[str, str]] = []
+    for reg in registrations:
+        description = ""
+        metadata = getattr(reg, "metadata", None) or {}
+        if isinstance(metadata, dict):
+            description = str(metadata.get("description", "") or "")
+        for cap in getattr(reg, "capabilities", None) or []:
+            all_caps.append((str(cap), description))
+
+    transverse: List[str] = []
+    for cap, _ in all_caps:
+        if any(k in cap for k in _TRANSVERSE_KEYWORDS) and cap not in transverse:
+            transverse.append(cap)
+
+    lines: List[str] = []
+    for agent_name, config in AGENT_CONFIG.items():
+        speciality = config["speciality"]
+        if speciality == "project_manager":
+            continue
+        keywords = _SPECIALIST_DOMAIN_KEYWORDS.get(speciality, ())
+        caps = sorted(
+            {
+                cap
+                for cap, _ in all_caps
+                if cap not in transverse and any(k in cap for k in keywords)
+            }
+        )
+        listed = ", ".join(caps) if caps else "(aucune capacite registry trouvee)"
+        lines.append(f"- {agent_name} — {listed}")
+    if transverse:
+        lines.append(
+            f"- JTMS (transverse, invoquable par tous via StateManagerPlugin) — "
+            f"{', '.join(sorted(transverse))}"
+        )
+
+    n_caps = len({cap for cap, _ in all_caps})
+    header = (
+        f"CARTE DES CAPACITES — derivee du CapabilityRegistry "
+        f"({len(registrations)} composants, {n_caps} capacites) ; designe l'agent "
+        f"porte-parole du domaine dont tu as besoin et nomme l'axe dans ta "
+        f"motivation :\n"
+    )
+    return header + "\n".join(lines)
+
+
+_DERIVED_CAPABILITY_MAP: Optional[str] = None
+
+
+def _get_capability_map(capability_registry: Optional[Any]) -> str:
+    """The PM map for a build: explicit registry wins, else lazy setup_registry.
+
+    The module-level cache memoizes the setup_registry() build only — an
+    explicitly passed registry is always re-derived (tests inject fresh
+    registries with runtime-registered capabilities).
+    """
+    global _DERIVED_CAPABILITY_MAP
+    if capability_registry is not None:
+        return derive_pm_capability_map(capability_registry)
+    if _DERIVED_CAPABILITY_MAP is None:
+        from argumentation_analysis.orchestration.registry_setup import setup_registry
+
+        _DERIVED_CAPABILITY_MAP = derive_pm_capability_map(setup_registry())
+    return _DERIVED_CAPABILITY_MAP
+
+
+# ---------------------------------------------------------------------------
 # #1760 — steering room policies. The PM's capability map names 8 specialists,
 # but phase_configs freezes rooms of 3-4: the PM designates real, wired agents
 # that are simply not in the room it sits in (#1751 made that observable;
@@ -505,22 +623,31 @@ def _pm_room_section(present_agents: List[str]) -> str:
     )
 
 
-def _pm_instructions_with_room(budget_turns: int, present_agents: List[str]) -> str:
+def _pm_instructions_with_room(
+    budget_turns: int,
+    present_agents: List[str],
+    capability_registry: Optional[Any] = None,
+) -> str:
     """Voie 1 (#1760): PM instructions + the room truth for the current phase.
 
     Rebuilt from the AGENT_CONFIG template each phase (single source of truth)
-    so the room section never accumulates across phases. The capability map of
-    8 stays (anti-pendule: amputating it to kill impossible designations would
-    restore the very steering loss the mandate condemns).
+    so the room section never accumulates across phases. The capability map is
+    the T1 #1735 registry-derived one (anti-pendule: amputating it to kill
+    impossible designations would restore the very steering loss the mandate
+    condemns).
     """
     base = AGENT_CONFIG["ProjectManager"]["instructions"].format(
-        budget_turns=budget_turns
+        budget_turns=budget_turns,
+        capability_map=_get_capability_map(capability_registry),
     )
     return base + _pm_room_section(present_agents)
 
 
 def _apply_room_truth_to_pm(
-    pm_agent: Optional[Any], present_agents: List[str], budget_turns: int
+    pm_agent: Optional[Any],
+    present_agents: List[str],
+    budget_turns: int,
+    capability_registry: Optional[Any] = None,
 ) -> None:
     """Voie 1 (#1760): tell the PM, at phase entry, who is actually in the room.
 
@@ -530,7 +657,9 @@ def _apply_room_truth_to_pm(
     """
     if pm_agent is None:
         return
-    pm_agent.instructions = _pm_instructions_with_room(budget_turns, present_agents)
+    pm_agent.instructions = _pm_instructions_with_room(
+        budget_turns, present_agents, capability_registry=capability_registry
+    )
 
 
 def _resolve_room_agents(
@@ -588,6 +717,7 @@ def create_conversational_agents(
     agent_names: Optional[List[str]] = None,
     agent_state_class: Optional[Dict[str, type]] = None,
     pm_budget_turns: Optional[int] = None,
+    capability_registry: Optional[Any] = None,
 ) -> List[ChatCompletionAgent]:
     """Create agents with specialized plugins for conversational mode.
 
@@ -610,6 +740,9 @@ def create_conversational_agents(
         pm_budget_turns: CONV-C #1334 — pipeline-global tour budget surfaced to
             the PM as the ``{budget_turns}`` placeholder in its instructions
             (design doc §6). None falls back to a conservative default.
+        capability_registry: T1 #1735 — registry the PM's capability map is
+            derived from (``{capability_map}`` placeholder). None builds one
+            lazily via setup_registry().
     """
     from argumentation_analysis.agents.factory import get_plugin_instances
 
@@ -639,12 +772,16 @@ def create_conversational_agents(
         )
 
         # CONV-C #1334: the PM instructions carry a {budget_turns} placeholder
-        # (design doc §5/§6) surfacing the pipeline-global cap to the conductor.
-        # Format it once at build time; non-PM agents have no placeholder.
+        # (design doc §5/§6) surfacing the pipeline-global cap to the conductor,
+        # plus the {capability_map} placeholder (T1 #1735) rendered from the
+        # registry. Format once at build time; non-PM agents have no placeholder.
         instructions = config["instructions"]
         if name == "ProjectManager":
             budget = pm_budget_turns if pm_budget_turns else 30
-            instructions = instructions.format(budget_turns=budget)
+            instructions = instructions.format(
+                budget_turns=budget,
+                capability_map=_get_capability_map(capability_registry),
+            )
 
         agent = ChatCompletionAgent(
             kernel=kernel,
@@ -698,6 +835,7 @@ async def run_conversational_analysis(
     max_wall_seconds: Optional[float] = None,
     render_restitution: bool = False,
     room_policy: str = ROOM_POLICY_PHASE_CASTING,
+    capability_registry: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Run a full conversational analysis on the input text.
 
@@ -754,6 +892,9 @@ async def run_conversational_analysis(
             ``"all_agents"`` builds the room with every created agent, so no
             designation can be structurally impossible. The default stays the
             baseline until the #1760 comparative measurement says otherwise.
+        capability_registry: T1 #1735 — registry the PM's capability map is
+            derived from. None builds one lazily via setup_registry() and
+            memoizes it module-wide.
 
     Returns dict with state snapshot, conversation history, and metrics.
     """
@@ -789,6 +930,7 @@ async def run_conversational_analysis(
             max_wall_seconds=max_wall_seconds,
             render_restitution=render_restitution,
             room_policy=room_policy,
+            capability_registry=capability_registry,
         )
 
 
@@ -902,6 +1044,7 @@ async def _run_conversational_analysis_inner(
     max_wall_seconds: Optional[float] = None,
     render_restitution: bool = False,
     room_policy: str = ROOM_POLICY_PHASE_CASTING,
+    capability_registry: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Inner implementation of run_conversational_analysis, already inside llm_budget_scope."""
     start_time = time.time()
@@ -1009,6 +1152,7 @@ async def _run_conversational_analysis_inner(
         agent_names,
         agent_state_class=agent_state_class,
         pm_budget_turns=max_total_turns,
+        capability_registry=capability_registry,
     )
     agent_by_name = {a.name: a for a in all_agents}
 
@@ -1169,6 +1313,7 @@ async def _run_conversational_analysis_inner(
                 agent_by_name.get("ProjectManager"),
                 [a.name for a in room_agents],
                 max_total_turns,
+                capability_registry=capability_registry,
             )
 
         # Per-phase turn limit (falls back to global max_turns_per_phase),
@@ -1345,6 +1490,7 @@ async def _run_conversational_analysis_inner(
                             agent_by_name.get("ProjectManager"),
                             [a.name for a in reanalysis_room],
                             max_total_turns,
+                            capability_registry=capability_registry,
                         )
                     logger.info(
                         f"=== Phase: {phase_name} ({len(reanalysis_room)} agents, "

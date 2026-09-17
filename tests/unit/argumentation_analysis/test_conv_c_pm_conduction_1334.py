@@ -47,8 +47,9 @@ def test_pm_prompt_requires_motivated_designation():
     assert "record_designation(agent, motivation, trigger)" in instr
     assert "OBLIGATOIRE" in instr
     assert "designate_next_agent(nom_exact)" in instr
-    # capability map present (PM reasons about synergies, none imposed)
-    assert "CARTE DES CAPACITES" in instr
+    # capability map present as the {capability_map} placeholder (T1 #1735:
+    # rendered from the registry at build time — no hand-written map anymore)
+    assert "{capability_map}" in instr
 
 
 def test_pm_prompt_surfaces_budget_placeholder():
@@ -59,9 +60,10 @@ def test_pm_prompt_surfaces_budget_placeholder():
 def test_pm_prompt_budget_placeholder_formats_cleanly():
     """The template formats without stray braces for any budget value."""
     instr = AGENT_CONFIG["ProjectManager"]["instructions"]
-    filled = instr.format(budget_turns=25)
+    filled = instr.format(budget_turns=25, capability_map="CARTE (test)")
     assert "{budget_turns}" not in filled
     assert "25 tours" in filled
+    assert "{capability_map}" not in filled
     # no other brace placeholders leak
     assert "{" not in filled
     assert "}" not in filled
