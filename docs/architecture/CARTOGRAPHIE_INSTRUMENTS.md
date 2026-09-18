@@ -95,6 +95,30 @@ sur l'argv de la lane → 8 tests ; `-m "requires_api"` même argv → 59 ; sur 
 
 ---
 
+## Objectif : « rejouer des cassettes LLM à coût nul »
+
+**Deux workflows, sans référence croisée** (#2305). Mesuré le **18/09** en rejouant
+l'historique de runs, pas en lisant une PR.
+
+| Instrument | Credential | Preuve d'egress | Dernière exécution attestée |
+|---|---|---|---|
+| job `replay-band` de `requires_api_band.yml` (#2301) — **fait foi** | **dummy délibérée, non-secret** : `OPENAI_API_KEY: replay-band-no-live-anti-1019` | gate d'anti-vacuité (`live==0, hit>=1, miss_replay==0`) **+** étape dédiée « Egress guard — 0 outgoing LLM request, MEASURED » | **aucune** — ajouté le 18/09, premier tir au cron `37 5 * * 6` |
+| `replay-llm-lane.yml` — **supplanté**, conservé comme sonde | **aucune clé provisionnée** | gate d'anti-vacuité seule | **3 runs, tous du 17/08, aucun vert** (1 failure, 2 cancelled) |
+
+⚠ **L'écart de credential va dans le sens inverse de l'intuition.** « Aucune clé » paraît la
+garantie la plus forte — rien à quoi retomber. Mais la garde `requires_api` **skippe** les
+tests quand la clé est absente : un lane sans clé ne prouve pas que le replay tient, il
+prouve que les tests n'ont pas tourné. C'est la vacuité exacte que la gate `hit >= 1` existe
+pour attraper, et c'est pourquoi **le skip est plus dangereux que le rouge**. La dummy key
+de `replay-band` satisfait la garde de skip — les tests **s'exécutent** — tout en rendant
+tout appel live un 401.
+
+`replay-llm-lane.yml` reste la seule surface acceptant un `lane_args` arbitraire (sonde d'un
+test isolé sans lancer la bande). **« Jamais vert » n'est pas une preuve de non-utilité** :
+trois runs d'un même après-midi d'août décrivent une mise au point (Cleanup Gate).
+
+---
+
 ## Objectif : « comparer les modes d'orchestration entre eux »
 
 | Instrument | Nature | Dernière mesure firsthand |
