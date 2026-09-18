@@ -69,16 +69,13 @@ class RegistryBackedOperationalRegistry:
 
         Returns a single provider (any type) or ``None`` if none is registered.
 
-        #1553: the underlying ``CapabilityRegistry`` indexes capabilities as a
-        ``Dict[str, Set[str]]`` and does NOT guarantee registration order — so
-        when several providers share a capability, ``providers[0]`` is
-        arbitrary (depends on ``hash()``, salted per-process). This bridge and
-        the DSL consume capabilities whose providers were curated to be unique
-        (e.g. ``hierarchical_fallacy_detection`` resolves to exactly one
-        complete path since #1553), which makes ``providers[0]`` deterministic
-        *for those*. Do NOT assume determinism for a capability with multiple
-        registered providers — register a deterministic selector or collapse
-        the providers first.
+        #1553 historically warned that ``providers[0]`` was arbitrary (set
+        iteration, salted per-process) and told callers not to assume
+        determinism on multi-provider capabilities. #2312 closed that at the
+        source: ``CapabilityRegistry.find_for_capability`` now returns a
+        DECLARED deterministic order — invoke-bearing providers first, then
+        alphabetical by name — so ``providers[0]`` here is the invocable
+        provider with the smallest name, whatever the process hash salt.
         """
         providers = self._registry.find_for_capability(capability)
         return providers[0] if providers else None
