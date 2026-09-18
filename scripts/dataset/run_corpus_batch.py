@@ -697,6 +697,12 @@ async def _run_single(
         provenance = provenance_block(
             params={"workflow": workflow, "timeout_s": timeout}
         )
+    # #2282 : the batch provenance is probed BEFORE the loop, so its
+    # jvm_started is necessarily False (nothing has booted yet). Re-probe
+    # the environment at signature time — the doc's own end state — while
+    # keeping the batch identity (run_started_utc, params, #2045).
+    provenance = dict(provenance)
+    provenance["environment"] = environment_manifest()
     signature["provenance"] = provenance
     if partial:
         signature["partial"] = True
