@@ -42,7 +42,7 @@ role at all; its honest absence stays in the existing channels
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from .fr_accord import accord
 from .formal_derivation import extract_tested_content
@@ -166,26 +166,34 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
     # --- decisif: a formal violation was established -------------------------
     # #1914 (constat 1) : the decisive statement carries WHAT was tested —
     # the refuted records' formulas — so the citation is a derivation, not a
-    # badge. Placeholder-only records → tested stays None → the statement
-    # says the honest absence instead of dressing a counter as a proof.
+    # badge. #2307 (tri-state #1019): a refutation whose tested content is
+    # unavailable (placeholder-only records — the dead-JVM shape) is not a
+    # refutation; the axis earns no role, the same honest absence as an axis
+    # that never ran. Before, the role stayed decisive while the statement
+    # apologized for its missing content — an outage flattered the #1644
+    # surplus gate.
     def _decisif_statement(
-        axis: str, noun_sg: str, noun_pl: str, n_false: int, tested: Optional[str]
+        axis: str, noun_sg: str, noun_pl: str, n_false: int, tested: str
     ) -> str:
-        head = f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)}"
-        if tested:
-            return (
-                f"{head} — à l'épreuve : {tested}. La mise à l'épreuve "
-                f"formelle établit que ce contenu testé ne tient pas."
-            )
         return (
-            f"{head} : contenu testé non disponible dans l'état — la mise à "
-            f"l'épreuve formelle établit qu'au moins {accord(1, noun_sg, noun_pl)} "
-            f"testée ne tient pas."
+            f"L'axe {axis} a réfuté {accord(n_false, noun_sg, noun_pl)} — à "
+            f"l'épreuve : {tested}. La mise à l'épreuve formelle établit que "
+            f"ce contenu testé ne tient pas."
+        )
+
+    def _refuted_tested_content(
+        records: Any, verdict_reader: Callable[[Dict[str, Any]], Optional[bool]]
+    ) -> Optional[str]:
+        if not records:
+            return None
+        return extract_tested_content(
+            records, verdict_reader, refuted=True, max_atoms=2
         )
 
     pl_records = getattr(state, "propositional_analysis_results", None)
     pl_counts = _settled_counts(pl_records, _pl_verdict)
-    if pl_counts["false"]:
+    pl_tested = _refuted_tested_content(pl_records, _pl_verdict)
+    if pl_counts["false"] and pl_tested:
         _add(
             ROLE_DECISIF,
             _decisif_statement(
@@ -193,21 +201,18 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "inférence",
                 "inférences",
                 pl_counts["false"],
-                extract_tested_content(
-                    pl_records, _pl_verdict, refuted=True, max_atoms=2
-                ),
+                pl_tested,
             ),
             ("PL", "solveur Tweety"),
         )
 
+    def _fol_verdict(r: Dict[str, Any]) -> Optional[bool]:
+        return r.get("consistent") if isinstance(r.get("consistent"), bool) else None
+
     fol_records = getattr(state, "fol_analysis_results", None)
-    fol_counts = _settled_counts(
-        fol_records,
-        lambda r: (
-            r.get("consistent") if isinstance(r.get("consistent"), bool) else None
-        ),
-    )
-    if fol_counts["false"]:
+    fol_counts = _settled_counts(fol_records, _fol_verdict)
+    fol_tested = _refuted_tested_content(fol_records, _fol_verdict)
+    if fol_counts["false"] and fol_tested:
         _add(
             ROLE_DECISIF,
             _decisif_statement(
@@ -215,26 +220,18 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "théorie",
                 "théories",
                 fol_counts["false"],
-                extract_tested_content(
-                    fol_records,
-                    lambda r: (
-                        r.get("consistent")
-                        if isinstance(r.get("consistent"), bool)
-                        else None
-                    ),
-                    refuted=True,
-                    max_atoms=2,
-                ),
+                fol_tested,
             ),
             ("FOL", "solveur Tweety"),
         )
 
+    def _modal_verdict(r: Dict[str, Any]) -> Optional[bool]:
+        return r.get("valid") if isinstance(r.get("valid"), bool) else None
+
     modal_records = getattr(state, "modal_analysis_results", None)
-    modal_counts = _settled_counts(
-        modal_records,
-        lambda r: r.get("valid") if isinstance(r.get("valid"), bool) else None,
-    )
-    if modal_counts["false"]:
+    modal_counts = _settled_counts(modal_records, _modal_verdict)
+    modal_tested = _refuted_tested_content(modal_records, _modal_verdict)
+    if modal_counts["false"] and modal_tested:
         _add(
             ROLE_DECISIF,
             _decisif_statement(
@@ -242,14 +239,7 @@ def classify_specialist_roles(state: Any) -> List[RoleAssignment]:
                 "théorie",
                 "théories",
                 modal_counts["false"],
-                extract_tested_content(
-                    modal_records,
-                    lambda r: (
-                        r.get("valid") if isinstance(r.get("valid"), bool) else None
-                    ),
-                    refuted=True,
-                    max_atoms=2,
-                ),
+                modal_tested,
             ),
             ("modal", "solveur modal"),
         )

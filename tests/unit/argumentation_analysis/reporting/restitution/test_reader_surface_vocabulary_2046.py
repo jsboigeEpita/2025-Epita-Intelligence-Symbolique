@@ -93,10 +93,12 @@ def _act2_state(
     )
     st.propositional_analysis_results = [
         {"id": f"pl_{i}", "satisfiable": True} for i in range(pl_sat)
-    ] + [{"id": f"plx_{i}", "satisfiable": False} for i in range(pl_unsat)]
+    ] + [{"id": f"plx_{i}", "satisfiable": False,
+              "formulas": ["device_is_broken"]} for i in range(pl_unsat)]
     st.fol_analysis_results = [
         {"id": f"fol_{i}", "consistent": True} for i in range(fol_sat)
-    ] + [{"id": f"folx_{i}", "consistent": False} for i in range(fol_unsun or 0)]
+    ] + [{"id": f"folx_{i}", "consistent": False,
+              "formulas": ["mortal(socrates)"]} for i in range(fol_unsun or 0)]
     st.modal_analysis_results = [
         {"id": f"m_{i}", "valid": True} for i in range(modal_valid)
     ] + [{"id": f"mx_{i}", "valid": False} for i in range(modal_invalid)]
