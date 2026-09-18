@@ -887,13 +887,15 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                 or not isinstance(anchor.get("offset"), int)
                 or not isinstance(anchor.get("length"), int)
                 or anchor["offset"] < 0
-                or anchor["length"] < 0
+                # #2315 rebase: a zero-length anchor designates nothing —
+                # the span must be non-empty (main accepted >= 0).
+                or anchor["length"] <= 0
                 or isinstance(anchor.get("offset"), bool)
                 or isinstance(anchor.get("length"), bool)
             ):
                 raise ValueError(
                     f"add_trace_entry: anchor invalide {anchor!r} — attendu "
-                    "{'offset': int >= 0, 'length': int >= 0} (#2295)"
+                    "{'offset': int >= 0, 'length': int > 0} (#2295)"
                 )
         # Dict[str, Any]: the entry mixes str leaves, a List[str] (reacts_to)
         # and the optional int dict (anchor) — the trace container is already
