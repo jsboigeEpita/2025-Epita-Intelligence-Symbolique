@@ -120,11 +120,12 @@ rapports commités dans `docs/reports/`, mtimes des artefacts locaux gitignorés
 | `fallacy_benchmark.py` | qualité de **détection de sophismes** (modes dont C contraint) | `scripts/run_fallacy_benchmark.py`, qui écrit `docs/reports/fallacy_benchmark_results.json` | artefact commité **11/03/2026** ⚠ non re-mesuré · le module reste compilation-courant via les sweeps taxonomie (#1930, #2036/#2043 — 06/09), qui ne sont **pas** des runs |
 | `multi_model_benchmark.py` | orchestration multi-modèles + vLLM (créé 19/03) | **aucun** — le wrapper `scripts/run_benchmark_multimodel.py` compose les atomes directement, sans importer le module | aucune trouvée · dernier toucher 19/08 (#1794, sweep env-loaders) |
 | `plugin_benchmark.py` | benchmark **au niveau plugin** (navigateur d'exploration CSV) | aucun (CLI) | aucune trouvée · dernier toucher 06/09 (#2041/#2044) = réparation de famille de crash par audit, pas un run |
-| `conversational_benchmark.py` | **conversationnel vs séquentiel** (#308) | **aucun** — `scripts/run_baselines.py` porte sa propre `run_conversational_benchmark()` **locale** (code distinct, homonyme), qui appelle `run_conversational_analysis` directement | aucune trouvée · dernier toucher 12/09 (#2170, sweep IDs opaques) |
+| `conversational_benchmark.py` | **conversationnel vs séquentiel** (#308) | **aucun** — vérifié 18/09 : `ConversationalBenchmarkRunner` n'est instancié que sous `tests/` ; les seules autres mentions du module sont de la documentation (`evaluation/README.md`, 4 rapports d'audit) | aucune trouvée · dernier toucher 12/09 (#2170, sweep IDs opaques) |
 | `run_baseline_benchmark.py` | cadre de baseline par capacité | aucun (CLI) | aucune trouvée · dernier toucher = son origine `feat(` du **13/03**, puis black ; cité seulement dans un audit de tests |
 
-**Doublons réels et qui fait foi.** Deux axes portent chacun trois implémentations qui ne se
-connaissent pas :
+**Doublons réels et qui fait foi.** Deux axes portent des implémentations qui ne se
+connaissent pas — trois pour le premier, deux pour le second (compte corrigé le 18/09, voir
+le piège mesuré plus bas) :
 
 - **Axe « comparer des modèles »** : le module `multi_model_benchmark` (sans appelant), le
   wrapper `scripts/run_benchmark_multimodel.py` et les atomes
@@ -132,16 +133,34 @@ connaissent pas :
   seule surface de l'axe avec une exécution attestée (le rapport commité de mars). Le module
   est une couche d'orchestration que plus rien n'appelle.
 - **Axe « comparer le conversationnel »** : `conversational_benchmark.py` (module sans
-  appelant), la fonction locale homonyme de `scripts/run_baselines.py` (code distinct), et
-  `scripts/compare_orchestration_modes.py` (#1735). **Fait foi :
+  appelant) et `scripts/compare_orchestration_modes.py` (#1735). **Fait foi :
   `compare_orchestration_modes.py`** — seul instrument de l'axe calibré et mesuré récemment
-  (campagne #1735, rungs 180–1200 s, septembre 2026) ; les deux autres n'ont pas d'exécution
+  (campagne #1735, rungs 180–1200 s, septembre 2026) ; le module n'a pas d'exécution
   attestée.
 
-⚠ **Piège de grep mesuré** : `run_conversational_benchmark` a **deux définitions** dans le
-dépôt (le module `evaluation/conversational_benchmark.py` expose la sienne, et
-`scripts/run_baselines.py:164` la réimplémente localement) — deux codes distincts, aucune
-relation. Un grep sur le nom ne dit pas lequel a tourné.
+⚠ **Piège mesuré sur cette carte même, le 18/09** : une première rédaction de cette section
+datait cet axe d'un troisième larron — « `scripts/run_baselines.py:164` réimplémente une
+`run_conversational_benchmark()` homonyme ». **Faux, et faux de trois façons**, vérifié au
+contrôle (positif et négatif) avant correction :
+
+1. **Le chemin.** `scripts/run_baselines.py` n'existe pas et n'a jamais existé
+   (`git log --all --diff-filter=D` rend vide). Le fichier réel est
+   `.analysis_kb/run_baselines.py`.
+2. **Le statut.** `.analysis_kb/` est **gitignoré** (`.gitignore:201`). C'est un brouillon
+   local de la machine qui a mesuré, pas une surface du dépôt — aucun lecteur de cette carte
+   ne peut l'ouvrir. Une entrée de cartographie qui cite un artefact injoignable décrit la
+   machine de l'auteur, pas le dépôt.
+3. **Le littéral.** `run_conversational_benchmark` n'apparaît **nulle part**, ni dans les
+   fichiers suivis (`git grep` vide) ni sur le disque (`grep -r` vide) — y compris dans le
+   fichier accusé, qui définit `run_single_baseline` / `run_all_baselines` et dont la ligne
+   164 appelle `run_unified_analysis`. Le module `conversational_benchmark.py`, lui, n'expose
+   pas de fonction de ce nom : il expose la classe `ConversationalBenchmarkRunner`.
+
+La leçon utile n'est pas celle qui était écrite. Ce n'est pas « un grep sur le nom ne dit pas
+lequel a tourné » — c'est qu'**un doublon affirmé se vérifie en ouvrant les deux côtés**. Ici
+un seul côté existait. Et le geste qui l'a révélé est le contrôle positif : le même grep, sur
+un littéral connu présent, rend un résultat ; sur celui-ci, rien. Un zéro rendu par un
+instrument qu'on n'a pas prouvé ne vaut rien — dans les deux sens.
 
 ⚠ **Une boussole n'est pas un fait** (leçon JVM, cf. objectif « modules spécialisés ») :
 `test_fallacy_benchmark::test_mode_c_constrained` existe dans la bande replay #1603 — mais
