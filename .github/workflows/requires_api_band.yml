@@ -40,10 +40,12 @@ name: requires_api band (scheduled real-LLM lane)
 # fixture satisfied while leaving nothing real to fall through to: any live
 # attempt burns on 401 AND trips the egress guard.
 #
-# MEASURED SPLIT (2026-09-18, po-2023, post-repair record + classification
-# replay, updated by #2300): of the 52 non-light tests, 23 replay green from
-# cassettes with hit=76, miss_replay=0, live=0 and egress total 0 (counter
-# report, 59 s); 29 stay OUT, each with a measured reason (bypass traffic the
+# MEASURED SPLIT (re-measured 2026-09-19, po-2023, on e15bbe96 base, exact
+# argv, 3x: 2 runs + 1 collect — supersedes the 2026-09-18 figures, which
+# were not reproducible on an identical base and are withdrawn): of the 51
+# non-light tests, 21 replay green from cassettes with miss_replay=0,
+# live=0 and egress total 0 (counter report, ~40-60 s); 30 stay OUT, each
+# with a measured reason (bypass traffic the
 # cache cannot serve: 23; fatal miss -- cassette refused by the privacy audit
 # or nondeterministic chain: 2; #2296 open defect: noted; env-flip tests that
 # mutate LLM_CACHE_MODE mid-process: 3). #2300 returned its 2 tests (winner
@@ -381,8 +383,10 @@ jobs:
         #     (currency-word exemption). The delegation test's nondeterministic
         #     wide-net branch (2 SK-path keys never recorded; flaky 2/3 red
         #     on main pre-#2300) is now cassette-covered on both branches.
-        # Validated locally on the exact argv: 23 passed, hit=76,
-        # miss_replay=0, live=0, egress total 0 (counter), gate OK.
+        # Validated on the exact argv: 21 passed, miss_replay=0, live=0,
+        # egress total 0 (counter), gate OK — re-measured 2x on 2026-09-19
+        # (base e15bbe96 and with #2295 stacked); the earlier "23 passed,
+        # hit=76" was not reproducible on an identical base and is withdrawn.
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
