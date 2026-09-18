@@ -215,7 +215,9 @@ async def run_deliberation_workflow(
     # break the deliberation itself (BO-2 #1472 WS last-mile — the routes + manager
     # existed but NOTHING in the execution path ever emitted, so a connected client
     # received only pongs: theatre #1019 at the WS boundary).
-    await _broadcast_ws(delib_id, lambda m: m.broadcast_status(delib_id, "running", workflow))
+    await _broadcast_ws(
+        delib_id, lambda m: m.broadcast_status(delib_id, "running", workflow)
+    )
 
     try:
         # Try to run via UnifiedPipeline
@@ -235,14 +237,10 @@ async def run_deliberation_workflow(
         store.update_deliberation(delib_id, DeliberationStatus.FAILED, error=str(e))
         store.update_status(proposal_id, ProposalStatus.PENDING)
         await _broadcast_ws(delib_id, lambda m: m.broadcast_error(delib_id, str(e)))
-        await _broadcast_ws(
-            delib_id, lambda m: m.broadcast_status(delib_id, "failed")
-        )
+        await _broadcast_ws(delib_id, lambda m: m.broadcast_status(delib_id, "failed"))
 
 
-async def _broadcast_ws(
-    delib_id: str, emit: Callable[[Any], Awaitable[None]]
-) -> None:
+async def _broadcast_ws(delib_id: str, emit: Callable[[Any], Awaitable[None]]) -> None:
     """Best-effort broadcast to the WS session for ``delib_id``.
 
     Swallows any error: a streaming glitch must never propagate into the
@@ -267,19 +265,20 @@ async def _broadcast_ws_deliberation_result(
     democratic_vote phase output is a plain dict. A missing/degraded verdict is
     broadcast honestly (``decided_firsthand=False``) rather than fabricated.
     """
-    gov_output = (
-        results.get("phases", {})
-        .get("democratic_vote", {})
-        .get("output", {})
-    )
+    gov_output = results.get("phases", {}).get("democratic_vote", {}).get("output", {})
     verdict = gov_output.get("governance_verdict") or {}
     await _broadcast_ws(
         delib_id,
         lambda m: m.broadcast_deliberation_result(
             delib_id,
             proposal_id,
-            winner=verdict.get("condorcet_winner"),
-            decided_firsthand=bool(gov_output.get("governance_decided_firsthand", False)),
+            # #2300 — the aggregate's fallback canon (condorcet → majority →
+            # plurality), same as the state writer's vote_result: the raw
+            # strict variant rendered "no winner" on a genuine pairwise tie.
+            winner=verdict.get("winner"),
+            decided_firsthand=bool(
+                gov_output.get("governance_decided_firsthand", False)
+            ),
             degraded=bool(gov_output.get("degraded", False)),
             summary={
                 "governance_verdict": verdict,

@@ -70,17 +70,27 @@ DATE_RE = re.compile(r"\b(19[3-9]\d|20[0-2]\d)\b")
 # A year match glued to a currency symbol is a monetary amount, not a date
 # ("€2000 to run a tournament", "budget de 2000 €"). Measured on the #1603
 # harvest: governance/debate scenario responses carry budget figures that the
-# bare date regex refused. Symbols only — "2000 EUR" (letters) stays flagged.
+# bare date regex refused. #2300 extends the markers beyond symbols to
+# unambiguous currency words: the symbols-only line refused every cassette of
+# the two deliberation tests on « 2000 euros » — the natural French spelling
+# of an amount — blocking the replay band on a measured false-positive class.
+# Words are limited to denomination words that are never prose-ambiguous
+# ("livres" also means books — excluded).
 CURRENCY_SYMBOLS = "€$£¥"
+CURRENCY_WORD_RE = re.compile(
+    r"^(?:euros?|eur|dollars?|usd|gbp|yens?)\b", re.IGNORECASE
+)
 _AMOUNT_SPACES = "   "
 
 
 def _is_monetary_amount(text: str, match: re.Match) -> bool:
     before = text[: match.start()].rstrip(_AMOUNT_SPACES)
     after = text[match.end() :].lstrip(_AMOUNT_SPACES)
-    return (bool(before) and before[-1] in CURRENCY_SYMBOLS) or (
-        bool(after) and after[0] in CURRENCY_SYMBOLS
-    )
+    if before and before[-1] in CURRENCY_SYMBOLS:
+        return True
+    if after and after[0] in CURRENCY_SYMBOLS:
+        return True
+    return bool(after and CURRENCY_WORD_RE.match(after))
 
 
 # Response-metadata fields where the year/name heuristics are meaningless:

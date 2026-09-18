@@ -1912,12 +1912,31 @@ def _aggregate_governance_votes(
     n_decided = len(decided)
     disagreement = len(distinct_winners) > 1
 
+    # #2300 — the rendered winner, defined ONCE at the aggregate: the strict
+    # Condorcet winner if one exists, else majority, else plurality (the GE-4
+    # canon vote_result already applied). Until now only vote_result carried
+    # the fallback: the demo and the WS broadcast read the raw strict
+    # ``condorcet_winner`` and rendered "no winner" on a genuine 1-1 pairwise
+    # tie (measured: 2 electors, arg_1 vs arg_3 split 1-1, 11 other methods
+    # decided). ``winner_basis`` keeps the honest trace of which tier decided.
+    condorcet_w = social_winners.get("condorcet_winner")
+    if condorcet_w:
+        winner, winner_basis = condorcet_w, "condorcet"
+    elif winners.get("majority"):
+        winner, winner_basis = winners["majority"], "majority"
+    elif winners.get("plurality"):
+        winner, winner_basis = winners["plurality"], "plurality"
+    else:
+        winner, winner_basis = None, None
+
     return {
         "winners_per_method": winners,
         "n_methods_decided": n_decided,
         "distinct_winners": distinct_winners,
         "inter_method_disagreement": disagreement,
-        "condorcet_winner": social_winners.get("condorcet_winner"),
+        "condorcet_winner": condorcet_w,
+        "winner": winner,
+        "winner_basis": winner_basis,
         "stochastic_methods": stochastic_methods,
         "derivation": "formal-vote-aggregation (virtue electors)",
     }
@@ -2170,17 +2189,14 @@ async def _invoke_governance(
         logger.warning(f"LLM governance assessment failed: {e}")
 
     # GE-4 #1462 — reconstruct a backward-compatible, HONEST vote_result from
-    # the formal aggregation (per-method winners as the 'votes' list; the winner
-    # is the Condorcet winner if one exists, else the plurality winner). This
-    # supersedes the former fabricated self-deprecating ballots.
+    # the formal aggregation (per-method winners as the 'votes' list; the
+    # winner comes from the aggregate's own fallback canon — #2300 moved its
+    # single definition into _aggregate_governance_votes). This supersedes the
+    # former fabricated self-deprecating ballots.
     vote_result = None
     if not governance_verdict.get("degraded"):
         wpm = governance_verdict.get("winners_per_method", {})
-        winner = (
-            governance_verdict.get("condorcet_winner")
-            or wpm.get("majority")
-            or wpm.get("plurality")
-        )
+        winner = governance_verdict.get("winner")
         votes = [v for v in wpm.values() if v is not None]
         vote_result = {
             "winner": winner,

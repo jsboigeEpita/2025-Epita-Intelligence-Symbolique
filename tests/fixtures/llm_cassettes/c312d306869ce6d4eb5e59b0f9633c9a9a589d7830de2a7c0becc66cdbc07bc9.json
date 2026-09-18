@@ -1,0 +1,70 @@
+{
+  "key": "c312d306869ce6d4eb5e59b0f9633c9a9a589d7830de2a7c0becc66cdbc07bc9",
+  "value": {
+    "id": "gen-1789757915-qqtYht02XvxgAMstP0ch",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"Un tournoi avec buffet et prix peut mobiliser tout le budget sans garantir une augmentation durable du nombre d’adhérents ; une partie des participants risque de venir uniquement pour l’événement, tandis que le matériel existant continuera de se dégrader.\",\n    \"strategy_used\": \"mise en doute de l’efficacité et des effets durables\",\n    \"target_argument\": \"Option A\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument repose sur une visibilité supposée bénéfique, mais il ne démontre ni le nombre de nouveaux membres attendus ni la pérennité de l’impact, tout en négligeant les besoins matériels immédiats.\"\n  },\n  {\n    \"counter_argument\": \"Même neuf, le matériel pédagogique ne suffira pas nécessairement à développer le club si aucune action de communication ou d’animation n’accompagne l’investissement ; le club risque d’améliorer ses équipements sans attirer de nouveaux pratiquants.\",\n    \"strategy_used\": \"identification d’un angle mort\",\n    \"target_argument\": \"Option B\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"Cette objection montre que l’option traite l’usure du matériel, mais pas le renouvellement ou l’élargissement du public, ce qui peut limiter ses bénéfices globaux.\"\n  },\n  {\n    \"counter_argument\": \"Le partage équitable risque de rendre les deux volets insuffisants : le tournoi pourrait être trop modeste pour produire une réelle visibilité et le matériel acheté trop limité pour répondre efficacement à l’usure actuelle.\",\n    \"strategy_used\": \"dilemme du compromis insuffisant\",\n    \"target_argument\": \"Option C\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"La division du budget ne garantit pas un équilibre efficace ; elle peut au contraire réduire l’impact de chaque objectif lorsque chacun exige un financement conséquent.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null,
+          "reasoning": "**Ensuring valid output**\n\nI need to focus on producing an exact JSON array, one for each likely argument in French. It's important to explore counterarguments and clarify which argument I'm targeting. I'll ensure to include the names of the strategies too. Valid JSON is crucial here—no extra elements or mistakes should creep in. Keeping everything organized and precise is key to delivering a clear response. I'm trying to make sure all parts fit together smoothly!",
+          "reasoning_details": [
+            {
+              "type": "reasoning.summary",
+              "summary": "**Ensuring valid output**\n\nI need to focus on producing an exact JSON array, one for each likely argument in French. It's important to explore counterarguments and clarify which argument I'm targeting. I'll ensure to include the names of the strategies too. Valid JSON is crucial here—no extra elements or mistakes should creep in. Keeping everything organized and precise is key to delivering a clear response. I'm trying to make sure all parts fit together smoothly!",
+              "format": "openai-responses-v1",
+              "index": 0
+            },
+            {
+              "type": "reasoning.encrypted",
+              "data": "gAAAAABqrYnd2q3dxfdKbobRw_h9IqkD5p_VxHK9tKN2vdl_ua1FBcdxtE6EUZYaJDWhPyEaobmCxf9xanKxgZlxcbEpjEAv6Gvi6MgfVN-lgAECqTwOEuPMkjf_5sWj5plVrynW5A47cDOdcoUlteKDcWrsNCm9t0GBj8TSK5XUPHhd7ZLn4Ff3ldpLpovh1y2qBUKyg0yF1Mzg0W_cO0gUGss7c7R4732_a9FokZCB9mnZlEcQ4Um_MNmt7PLZFuGXm_UZpVMp4tayD53vAqyvrTypXmePMNLIRKHdhDk2n1t_ZAp5_Fa3pcTXwEVxUe24CUn4CQG_an48re42cRNOsYUzkrPsaJVdeHlWGaUOBa4aukA54qYXB27Bmsu2eEBiIAn4X6AWOeCi8uoO7lPVXFfGId6MVHQlj27aC0Mqwg7PawpljDrIvRU1zDUIEMmDKQXW_9Ocn4gmMxfKnSK1iadnbKmCilXRDgHW330krMAbBeK7pJKYSUitS18l5M25gscXLjVl-P0P8xe5BTMckMJHGsgaqBvBUOEBBhrOz5x4ayimTSKnrIeZyeTWH07K5mCxD8cOBMr8bAQY2UkHLHBK426qRNXinhEUmGL4bE8v-COqaJmwWrjQ2iJmhxXKzykHil7n1fThtcaY48rNNSa5vecHTo6WO_lSCbm9Lmoir_pn39p1yZWeqGYPi7HkzJMky2PbvtQTeWKJ-aJJOVOxGgTO5wJt-0WD-aLEWj1GsmSXWnK0EmDs4nD1iQQPJIHmgxDlA51aGOowd4zSmFrRDlJb1zTvxSEIpzrJNIkExzOcZC77VDM9SqtQdXo9O2KzBWEpXGm9vp0WR5Cj_1xElBmqTz-rZ_eMUOB2Q77S2BG9uUW1pQwrUKjLl2E42vHgci3kmN-L-khXHCgZmvaJXYI1X5aHYdxRFSir-l_PsLbJT330Mgz1MZIYNgXEmW4fAt7-NItfrFMmwsk022cZ2loRlMwY4n_G0kUnzcMW_Ls0FxHlRg64WNXfkAX2f0EjmBE349bWjkAH5AxowhwGEdTtp-thgh_bTZrL-fam3HLUOsamwargOMX3VtrAMFHHGi4TfzpiL8Y8_wOycHiqXS174ekkU0Z50QryUuFzogfSmpQpE5YvOwYntMfklfYir721u4XP1VdT2V8JYbqyfHjMi0_Au9N1DMOaDnibsBvzDpbWiPICXcx8rGpcSkuVLroo5_aEGjdeRt3R0sWIUtuNN_oEiKWKdm07yHS5z-3iCH70-AWl9f8yjuJPGiQDmfdpH0owtZBISoGbzay7VLyjJH923L1epAuQrSjvfC41bBht1TpUuBi6EGw5m31dUqUo1H-ahEBl-kGWazWK3Sb9-j6GywTpBCn02VmxtcjRsFx31GsQrSPJP7OYFArwUeaDwj2VWAca7ReskMpaKSPrtcibeF4Kf5L2dabI8sBiYXkyuBEn0N11ko02JmKnJvmYE8KoF7sqAz6tGAOV3HYJRWrCdkzCu4Kn3_fhEdPv21aKHL_7AvkjTYllEWL9qVMamrW5zGYxQuz6YUgDhRRmVw==.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC01LjYtbHVuYS0yMDI2MDcwOXxvcGVuYWkifQ",
+              "format": "openai-responses-v1",
+              "id": "rs_0857266e11a932f7016aad89dc047487d1b852fccd81d98b8a",
+              "index": 1
+            }
+          ]
+        },
+        "native_finish_reason": "completed"
+      }
+    ],
+    "created": 1789757915,
+    "model": "openai/gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 437,
+      "prompt_tokens": 237,
+      "total_tokens": 674,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": null,
+        "audio_tokens": 0,
+        "reasoning_tokens": 36,
+        "rejected_prediction_tokens": null,
+        "image_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost": 0,
+      "is_byok": true,
+      "cost_details": {
+        "upstream_inference_cost": 0.0005718,
+        "upstream_inference_prompt_cost": 4.74e-05,
+        "upstream_inference_completions_cost": 0.0005244
+      }
+    },
+    "provider": "OpenAI"
+  }
+}
