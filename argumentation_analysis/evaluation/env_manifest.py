@@ -37,7 +37,10 @@ def _probe_jvm() -> Dict[str, Any]:
     try:
         import jpype
 
-        jvm_started = jpype.isJVMStarted()
+        # bool() coercion: jpype.isJVMStarted() is a bool on real jpype, but
+        # conftest's --disable-jvm-session replaces jpype with a MagicMock
+        # whose return is truthy non-bool — the stamp must stay a bool either way.
+        jvm_started = bool(jpype.isJVMStarted())
         jvm_started_note = "JVM running at probe time" if jvm_started else "JVM not running"
     except ImportError:
         jvm_started = False
