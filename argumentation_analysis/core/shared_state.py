@@ -895,7 +895,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
                     f"add_trace_entry: anchor invalide {anchor!r} — attendu "
                     "{'offset': int >= 0, 'length': int >= 0} (#2295)"
                 )
-        entry = {
+        # Dict[str, Any]: the entry mixes str leaves, a List[str] (reacts_to)
+        # and the optional int dict (anchor) — the trace container is already
+        # List[Dict[str, Any]] (line 611).
+        entry: Dict[str, Any] = {
             "phase": phase,
             "agent": agent,
             "reacts_to": reacts_to,
