@@ -220,7 +220,12 @@ class TestDecisifRoleCarriesDerivation:
         assert decisif, "a settled PL refutation must classify decisif"
         assert "à l'épreuve : « device is broken »" in decisif[0].statement
 
-    def test_decisif_statement_says_honest_absence_for_placeholders(self):
+    def test_placeholder_refutation_earns_no_decisive_role_2307(self):
+        """#2307 reversed this contract: a placeholder-only refutation used
+        to classify decisive while its statement apologized for the missing
+        content — the dead-JVM shape that flattered the #1644 surplus gate.
+        A refutation without tested content earns NO role (tri-state #1019).
+        """
         state = SimpleNamespace(
             propositional_analysis_results=None,
             fol_analysis_results=[
@@ -235,5 +240,4 @@ class TestDecisifRoleCarriesDerivation:
         decisif = [
             a for a in assignments if a.role == ROLE_DECISIF and "FOL" in a.cites
         ]
-        assert decisif
-        assert "contenu testé non disponible" in decisif[0].statement
+        assert decisif == []
