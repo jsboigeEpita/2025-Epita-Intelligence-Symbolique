@@ -6237,7 +6237,16 @@ async def _invoke_fact_extraction(
                 if use_json_mode:
                     llm_kwargs["response_format"] = {"type": "json_object"}
                 if use_max_tokens:
-                    llm_kwargs["max_tokens"] = _EXTRACTION_MAX_TOKENS
+                    # #1936 sampling policy: reasoning families (gpt-5*, o1*,
+                    # o3*) reject the max_tokens spelling with a 400. Before
+                    # this, every extraction call on gpt-5.6-luna died as
+                    # BadRequestError and silently degraded through the #1290
+                    # heuristic fallback (measured #1603: unrecordable in
+                    # replay, and the degraded chain starves belief_sets).
+                    if _is_reasoning_model(model_id):
+                        llm_kwargs["max_completion_tokens"] = _EXTRACTION_MAX_TOKENS
+                    else:
+                        llm_kwargs["max_tokens"] = _EXTRACTION_MAX_TOKENS
                 response = await _guarded_chat_completion(
                     client,
                     model=model_id,

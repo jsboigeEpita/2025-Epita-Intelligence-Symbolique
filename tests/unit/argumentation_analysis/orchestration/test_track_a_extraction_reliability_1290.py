@@ -86,6 +86,67 @@ class TestStrictJsonModeOnSuccess:
 
 
 # ---------------------------------------------------------------------------
+# #1603 — the max_tokens spelling follows the #1936 reasoning-model policy
+# ---------------------------------------------------------------------------
+
+
+class TestMaxTokensSpellingFollowsModelFamily:
+    """gpt-5*/o1*/o3* families 400-reject the max_tokens spelling (policy
+    #1936). Before this guard, every extraction call on the default
+    gpt-5.6-luna died as BadRequestError and silently degraded through the
+    heuristic fallback — measured firsthand on the #1603 cassette harvest
+    (the first extraction call was unrecordable: the API never answered)."""
+
+    def test_reasoning_model_uses_max_completion_tokens(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _EXTRACTION_MAX_TOKENS,
+            _invoke_fact_extraction,
+        )
+
+        with (
+            patch(
+                f"{INVOKE_PATH}._get_openai_client",
+                return_value=(MagicMock(), "gpt-5.6-luna"),
+            ),
+            patch(
+                f"{INVOKE_PATH}._guarded_chat_completion",
+                new=AsyncMock(return_value=_resp(_VALID_JSON)),
+            ) as mock_call,
+            patch(f"{INVOKE_PATH}._get_determinism_params", return_value={}),
+        ):
+            result = _run(_invoke_fact_extraction("some text", {"_state_object": None}))
+
+        assert result["extraction_status"] == "ok"
+        kwargs = mock_call.call_args.kwargs
+        assert kwargs.get("max_completion_tokens") == _EXTRACTION_MAX_TOKENS
+        assert "max_tokens" not in kwargs
+
+    def test_non_reasoning_model_keeps_max_tokens(self):
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _EXTRACTION_MAX_TOKENS,
+            _invoke_fact_extraction,
+        )
+
+        with (
+            patch(
+                f"{INVOKE_PATH}._get_openai_client",
+                return_value=(MagicMock(), "some-local-model"),
+            ),
+            patch(
+                f"{INVOKE_PATH}._guarded_chat_completion",
+                new=AsyncMock(return_value=_resp(_VALID_JSON)),
+            ) as mock_call,
+            patch(f"{INVOKE_PATH}._get_determinism_params", return_value={}),
+        ):
+            result = _run(_invoke_fact_extraction("some text", {"_state_object": None}))
+
+        assert result["extraction_status"] == "ok"
+        kwargs = mock_call.call_args.kwargs
+        assert kwargs.get("max_tokens") == _EXTRACTION_MAX_TOKENS
+        assert "max_completion_tokens" not in kwargs
+
+
+# ---------------------------------------------------------------------------
 # DoD #2 — bounded retry recovers a transiently-malformed output
 # ---------------------------------------------------------------------------
 
