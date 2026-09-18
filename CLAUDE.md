@@ -10,24 +10,31 @@ Multi-agent argumentation analysis system for EPITA (student project platform). 
 
 ## Build & Environment Setup
 
-**IMPORTANT**: You must activate a Conda environment before running anything. Without it, imports will fail.
+**IMPORTANT**: The repo is cloned across machines whose conda envs differ. Run everything inside the **most recent environment available locally** — check what your machine actually has (`conda env list`) rather than assuming a name.
+
+| Machine | Envs available (measured) | Notes |
+|---|---|---|
+| `myia-po-2023` | `projet-is` (only) | invoke the interpreter directly: `/c/Tools/miniconda3/envs/projet-is/python.exe` |
+| `myia-po-2025`, `myia-ai-01` | `projet-is-roo-new` (SK 1.40, Pydantic 2.11, JPype 1.6), `projet-is` (SK 1.35, Pydantic 2.11) | dev env preferred |
 
 ```bash
 # List available environments
 conda env list
 
-# Activate dev environment (preferred — most recent deps)
-conda activate projet-is-roo-new    # SK 1.40, Pydantic 2.11, JPype 1.6
+# Activate dev environment where it exists (preferred — most recent deps)
+conda activate projet-is-roo-new
 
-# Alternative (CI environment)
-conda activate projet-is            # SK 1.35, Pydantic 2.11
+# Fallback (present on every machine)
+conda activate projet-is
 
 # From Claude Code / non-interactive shells (conda activate won't work):
-conda run -n projet-is-roo-new --no-capture-output <command>
+conda run -n projet-is-roo-new --no-capture-output <command>   # or -n projet-is where roo-new is absent
 
 # Full environment setup from scratch (Windows PowerShell)
 ./setup_project_env.ps1
 ```
+
+> ⚠ **User-site shadowing (po-2023, measured 2026-09-18)**: `%APPDATA%\Python\Python310\site-packages` precedes the env's site-packages in `sys.path`, and the env's own `site-packages` is not writable without elevation — pip therefore installs to the user-site (this is how `pytest-timeout` and `mcp` 2.x live there). A package present in the user-site with an older API silently shadows the spec in `environment.yml` (measured: user-site `mcp` 1.26 hid `MCPServer` from `mcp>=2.0` code — #2282 A0). After provisioning, verify the resolved version, not just that the import succeeds.
 
 ### API Keys
 
