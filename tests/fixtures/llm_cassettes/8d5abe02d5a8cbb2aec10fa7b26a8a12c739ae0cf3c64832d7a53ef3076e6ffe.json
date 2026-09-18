@@ -1,0 +1,16 @@
+{
+  "key": "8d5abe02d5a8cbb2aec10fa7b26a8a12c739ae0cf3c64832d7a53ef3076e6ffe",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Comparaison incomplète\",\"taxonomy_pk\":\"835\",\"explanation\":\"La comparaison est critiquée parce qu’elle omet des différences structurelles pertinentes entre les systèmes de retraite, ce qui la rend incomplète.\",\"confidence\":0.98}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbiufnfKeTCNbjTMfm39zj0Bq1G",
+        "created": 1789733030,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22935 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22932) completion_tokens=145 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=81, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

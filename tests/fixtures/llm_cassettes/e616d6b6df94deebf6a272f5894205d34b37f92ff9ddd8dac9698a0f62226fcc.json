@@ -1,0 +1,16 @@
+{
+  "key": "e616d6b6df94deebf6a272f5894205d34b37f92ff9ddd8dac9698a0f62226fcc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Conspirationnisme\",\"taxonomy_pk\":\"1194\",\"explanation\":\"L’énoncé affirme sans preuve que les entreprises pharmaceutiques dissimulent collectivement les effets secondaires des vaccins, en postulant une intention concertée pour expliquer l’absence ou la contestation d’informations.\",\"confidence\":0.98}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRiTBEXdle0vv8Oj4XXxSHMXHUfN",
+        "created": 1789733449,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22930 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22927) completion_tokens=138 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=61, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "key": "2d404cb58a4f6adc4941fc7abb1eaa4ce23049ccbc2c6fe804078068b05bb7a3",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Preuve par assertion\",\"taxonomy_pk\":\"1297\",\"explanation\":\"La supériorité du coût des appels et procédures est simplement affirmée, sans données, source ni démonstration permettant de l’établir.\",\"confidence\":0.78}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRjviGBCUT9wUgPqVuHD8eK0f4Bc",
+        "created": 1789733539,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22949 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22946) completion_tokens=282 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=217, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

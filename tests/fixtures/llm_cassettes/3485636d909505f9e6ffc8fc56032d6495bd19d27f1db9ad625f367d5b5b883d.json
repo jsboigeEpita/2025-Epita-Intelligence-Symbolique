@@ -1,0 +1,16 @@
+{
+  "key": "3485636d909505f9e6ffc8fc56032d6495bd19d27f1db9ad625f367d5b5b883d",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Fausse équivalence\",\"taxonomy_pk\":\"843\",\"explanation\":\"L’argument assimile les changements climatiques naturels du passé au changement climatique actuel, sans tenir compte de leurs causes, de leur rythme ni de leur ampleur. Le fait que le climat ait déjà changé ne réfute donc pas l’influence humaine actuelle.\",\"confidence\":0.92}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRlNhT6SvdhUcxDEC425bkDM1DAJ",
+        "created": 1789733629,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22925 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22922) completion_tokens=598 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

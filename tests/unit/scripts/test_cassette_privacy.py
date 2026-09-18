@@ -34,6 +34,38 @@ def test_historical_year_in_prose_is_blocked() -> None:
     assert any("historical-year hint" in v for v in viol)
 
 
+def test_currency_amount_does_not_trip_date_heuristic() -> None:
+    # Regression #1603 harvest: governance-scenario responses carry budget
+    # figures ("€2000 to run an inter-city tournament", "un budget de 2000 €").
+    # A monetary amount is not a date — the refusal was a false positive.
+    assert (
+        audit_value(
+            {"content": "Position: Spend €2000 to run an inter-city tournament."},
+            source="t",
+        )
+        == []
+    )
+    assert (
+        audit_value(
+            {"content": "Le club propose un budget de 2000 € pour l'année."},
+            source="t",
+        )
+        == []
+    )
+
+
+def test_year_before_currency_word_stays_blocked() -> None:
+    # The exemption is symbols-only by design: a letter currency code or a
+    # bare year in prose keeps tripping — loosening further would be a
+    # privacy regression, not a fix.
+    viol = audit_value(
+        {"content": "Le plan de 2000 EUR fut adopté, comme en 2021 ailleurs."},
+        source="t",
+    )
+    assert any("historical-year hint 2000" in v for v in viol)
+    assert any("historical-year hint 2021" in v for v in viol)
+
+
 def test_versioned_model_id_does_not_trip_date_heuristic() -> None:
     # Regression #1603: raw-path cassettes carry model="gpt-5-mini-2025-08-07"
     # (>= 20 chars, contains the current year) — the metadata exemption must

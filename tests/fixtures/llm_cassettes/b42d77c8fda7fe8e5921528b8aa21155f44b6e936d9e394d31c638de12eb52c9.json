@@ -1,0 +1,16 @@
+{
+  "key": "b42d77c8fda7fe8e5921528b8aa21155f44b6e936d9e394d31c638de12eb52c9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Appel à l'autorité scientifique\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.93\n  },\n  {\n    \"fallacy_name\": \"Appel au consensus\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Certitude excessive ou dogmatisme\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive sur les sceptiques\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.84\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive sur les personnes qui minimisent la crise\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.87\n  },\n  {\n    \"fallacy_name\": \"Empoisonnement du puits\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Ad hominem circonstanciel\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.8\n  },\n  {\n    \"fallacy_name\": \"Épouvantail du point de vue sceptique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.74\n  },\n  {\n    \"fallacy_name\": \"Affirmation non étayée de l'unanimité des modèles\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Équivoque sur le terme « unanimes »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Précision trompeuse\",\n    \"root_category\": \"Erreur mathématique\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Affirmation non étayée du caractère sans précédent\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.8\n  },\n  {\n    \"fallacy_name\": \"Simplification causale excessive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.62\n  },\n  {\n    \"fallacy_name\": \"Glissement de l'énoncé descriptif à la nécessité normative\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.83\n  },\n  {\n    \"fallacy_name\": \"Non sequitur entre nécessité et avantage économique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.81\n  },\n  {\n    \"fallacy_name\": \"Prédiction économique non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.85\n  },\n  {\n    \"fallacy_name\": \"Appel aux conséquences favorables\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.7\n  },\n  {\n    \"fallacy_name\": \"Appel à la peur par le cadrage en « crise »\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.66\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRksK61cmNIF08Zy7XioPnXC1zNI",
+        "created": 1789733598,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=310 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=1566 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=821, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

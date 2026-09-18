@@ -1,0 +1,43 @@
+{
+  "key": "9a46199a0613604ee0a8f3932c7e49369f4225497507636f30771a305f4140d4",
+  "value": {
+    "id": "chatcmpl-EPRk84PKiz2F4IuZT9sxc25Fp7Blk",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"sorts\": {\n    \"Sanction\": [\n      \"peinedemort\",\n      \"emprisonnementavie\"\n    ],\n    \"Crime\": [\n      \"crimesgraves\",\n      \"meurtremasse\"\n    ],\n    \"Case\": [\n      \"casextremes\"\n    ],\n    \"Purpose\": [\n      \"dissuasion\"\n    ],\n    \"System\": [\n      \"systemejudiciaire\"\n    ],\n    \"Technology\": [\n      \"avanceesadn\"\n    ],\n    \"Risk\": [\n      \"risqueerreur\"\n    ],\n    \"Person\": [\n      \"criminelsirrecuperables\"\n    ],\n    \"Society\": [\n      \"societe\"\n    ],\n    \"Procedure\": [\n      \"appels\",\n      \"procedures\"\n    ],\n    \"Error\": [\n      \"erreur\"\n    ]\n  },\n  \"predicates\": {\n    \"Necessary\": [\n      \"Sanction\"\n    ],\n    \"AppliedIn\": [\n      \"Sanction\",\n      \"Case\"\n    ],\n    \"DetersAgainst\": [\n      \"Sanction\",\n      \"Crime\"\n    ],\n    \"MostSerious\": [\n      \"Crime\"\n    ],\n    \"CanErr\": [\n      \"System\"\n    ],\n    \"Reduces\": [\n      \"Technology\",\n      \"Risk\"\n    ],\n    \"Irrecoverable\": [\n      \"Person\"\n    ],\n    \"RepresentsDangerTo\": [\n      \"Person\",\n      \"Society\"\n    ],\n    \"PermanentDanger\": [\n      \"Person\"\n    ],\n    \"Irreversible\": [\n      \"Sanction\"\n    ],\n    \"MakesErrorFatal\": [\n      \"Sanction\",\n      \"Error\"\n    ],\n    \"MoreCostlyThan\": [\n      \"Procedure\",\n      \"Sanction\"\n    ]\n  },\n  \"constants\": {\n    \"peinedemort\": \"la peine de mort\",\n    \"emprisonnementavie\": \"l'emprisonnement à vie\",\n    \"crimesgraves\": \"les crimes les plus graves\",\n    \"meurtremasse\": \"le meurtre de masse\",\n    \"casextremes\": \"certains cas extrêmes\",\n    \"dissuasion\": \"la dissuasion\",\n    \"systemejudiciaire\": \"le système judiciaire\",\n    \"avanceesadn\": \"les avancées en ADN\",\n    \"risqueerreur\": \"le risque d'erreur judiciaire\",\n    \"criminelsirrecuperables\": \"certains criminels irrécupérables\",\n    \"societe\": \"la société\",\n    \"appels\": \"les appels\",\n    \"procedures\": \"les procédures\",\n    \"erreur\": \"une erreur judiciaire\"\n  }\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733552,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1606,
+      "prompt_tokens": 286,
+      "total_tokens": 1892,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 1024,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

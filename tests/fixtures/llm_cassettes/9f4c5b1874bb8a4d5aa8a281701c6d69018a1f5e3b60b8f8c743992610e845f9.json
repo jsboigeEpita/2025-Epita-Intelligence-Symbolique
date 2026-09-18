@@ -1,0 +1,43 @@
+{
+  "key": "9f4c5b1874bb8a4d5aa8a281701c6d69018a1f5e3b60b8f8c743992610e845f9",
+  "value": {
+    "id": "chatcmpl-EPRlnBiXYN4BZZuxc54ucvGqxwYKH",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[{\"counter_argument\":\"Même si le climat a changé rapidement à certaines périodes passées, les données paléoclimatiques ont une résolution limitée et ne permettent pas toujours de comparer directement ces vitesses à celles observées aujourd’hui ; l’argument de la rapidité actuelle reste donc pertinent, mais il doit être formulé avec prudence plutôt que présenté comme définitivement sans précédent.\",\"strategy_used\":\"nuance et remise en cause de la prémisse\",\"target_argument\":\"L’argument selon lequel le changement climatique passé omet la vitesse sans précédent du changement actuel\",\"strength\":\"moderate\",\"reasoning\":\"Cette réponse reconnaît que la vitesse actuelle peut être exceptionnelle tout en contestant la certitude excessive de l’affirmation, car les comparaisons avec les changements passés dépendent de données indirectes et de résolutions inégales.\"}]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733655,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 238,
+      "prompt_tokens": 127,
+      "total_tokens": 365,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 60,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

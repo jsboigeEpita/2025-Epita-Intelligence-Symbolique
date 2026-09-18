@@ -1,0 +1,16 @@
+{
+  "key": "85447f11696eda0cc571ff69d97c2a1c2d4867de042dd219bcb2840bc58558bd",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel au doute et à la crainte\",\"taxonomy_pk\":\"338\",\"explanation\":\"L’argument cherche à imposer une action immédiate en suscitant la peur d’un effondrement futur, sans fournir ici de justification ou d’éléments établissant que cette catastrophe surviendra effectivement dans cinq ans.\",\"confidence\":0.9}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbkvhs8AuHLJYnHeHrn6YyPAs50",
+        "created": 1789733032,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22947 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22944) completion_tokens=447 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=363, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

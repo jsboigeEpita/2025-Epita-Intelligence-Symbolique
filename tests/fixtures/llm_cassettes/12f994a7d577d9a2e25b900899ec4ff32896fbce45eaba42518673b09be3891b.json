@@ -1,0 +1,16 @@
+{
+  "key": "12f994a7d577d9a2e25b900899ec4ff32896fbce45eaba42518673b09be3891b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel à la nature\",\"taxonomy_pk\":\"108\",\"explanation\":\"Le gouvernement présente l’allongement de la durée du travail comme naturel et allant de soi, laissant entendre que son caractère prétendument naturel suffit à le rendre légitime ou souhaitable.\",\"confidence\":0.95}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbjJS5Ru4cL7wlpnXkcwfqLshPb",
+        "created": 1789733031,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22932 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22929) completion_tokens=188 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=116, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

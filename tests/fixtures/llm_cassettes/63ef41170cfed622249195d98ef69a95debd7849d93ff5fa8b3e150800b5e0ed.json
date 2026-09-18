@@ -1,0 +1,43 @@
+{
+  "key": "63ef41170cfed622249195d98ef69a95debd7849d93ff5fa8b3e150800b5e0ed",
+  "value": {
+    "id": "chatcmpl-EPRfZDvGc8QxoDgAmumnOGEGKOxae",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.62,\"fairness_assessment\":\"La méthode permet de comparer équitablement les trois options et de prendre en compte les préférences divergentes plutôt que de privilégier uniquement l'argument du débat gagnant. Une pondération par critères — impact durable, visibilité et rapport coût-bénéfice — renforcerait l'équité.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent 1\",\"position\":\"Soutient l'option A, un tournoi inter-villes avec buffet et prix afin d'accroître rapidement la visibilité du club.\",\"influence\":0.33},{\"agent\":\"Agent 2\",\"position\":\"Soutient l'option B, l'investissement intégral dans du matériel pédagogique et des échiquiers neufs pour produire des bénéfices durables.\",\"influence\":0.37},{\"agent\":\"Agent 3\",\"position\":\"Soutient l'option C, un compromis partageant le budget entre un tournoi réduit et l'achat de matériel.\",\"influence\":0.30}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois options répondent à des objectifs légitimes mais incompatibles à court terme : rayonnement, investissement durable et équilibre budgétaire. Un vote préférentiel ou une évaluation multicritère social-choice devrait être organisé, avec l'option C comme base de compromis et la possibilité d'adopter B si la durabilité est prioritaire. La décision devrait inclure des critères transparents et une réévaluation après l'événement ou l'achat de matériel.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733269,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 402,
+      "prompt_tokens": 573,
+      "total_tokens": 975,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 64,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

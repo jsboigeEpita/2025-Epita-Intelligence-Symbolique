@@ -1,0 +1,16 @@
+{
+  "key": "ba40cdf8eb383646b33362b83a75e7568afe4aa9870e47262a700fce1ceec2fb",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Appel à l’émotion\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Diversion du sujet (red herring)\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Ignoratio elenchi (conclusion non pertinente)\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.89\n  },\n  {\n    \"fallacy_name\": \"Fausse dichotomie entre émotion et analyse technique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Empoisonnement du puits\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Disqualification d’un argument par son origine émotionnelle (sophisme génétique)\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.8\n  },\n  {\n    \"fallacy_name\": \"Appel aux motivations plutôt qu’aux arguments\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Homme de paille\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.67\n  },\n  {\n    \"fallacy_name\": \"Réductionnisme affectif\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.63\n  },\n  {\n    \"fallacy_name\": \"Affirmation gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.87\n  },\n  {\n    \"fallacy_name\": \"Pétition de principe implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.54\n  },\n  {\n    \"fallacy_name\": \"Confusion entre pertinence émotionnelle et absence de pertinence rationnelle\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.77\n  },\n  {\n    \"fallacy_name\": \"Prétérition de considérations substantielles sur les enfants\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.61\n  },\n  {\n    \"fallacy_name\": \"Cadrage biaisé du débat\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.75\n  },\n  {\n    \"fallacy_name\": \"Déplacement de la charge de la preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.49\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbXcmbzizvd9M9FHb3Yd3m4zIkD",
+        "created": 1789733019,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=248 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=1164 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

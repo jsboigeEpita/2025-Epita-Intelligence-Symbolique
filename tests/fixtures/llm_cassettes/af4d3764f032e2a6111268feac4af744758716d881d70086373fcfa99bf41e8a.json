@@ -1,0 +1,16 @@
+{
+  "key": "af4d3764f032e2a6111268feac4af744758716d881d70086373fcfa99bf41e8a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel aux têtes blondes\",\"taxonomy_pk\":\"320\",\"explanation\":\"L’invocation des enfants mobilise la compassion et l’affect plutôt que des arguments techniques sur le financement, détournant ainsi l’attention du fond du débat.\",\"confidence\":0.99}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbkoexEKAl2dkAnoG5AkMwcKxSJ",
+        "created": 1789733032,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22950 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22947) completion_tokens=144 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=74, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

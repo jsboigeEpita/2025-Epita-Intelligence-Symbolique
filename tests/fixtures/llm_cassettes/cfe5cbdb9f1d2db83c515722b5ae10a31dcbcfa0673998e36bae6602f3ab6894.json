@@ -1,0 +1,43 @@
+{
+  "key": "cfe5cbdb9f1d2db83c515722b5ae10a31dcbcfa0673998e36bae6602f3ab6894",
+  "value": {
+    "id": "chatcmpl-EPRhLr2HLuyRkJ13DKROsAPGLHwH6",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\":[{\"text\":\"Le changement climatique constitue une réalité scientifique incontestable.\",\"source_quote\":\"Le changement climatique est une realite scientifique incontestable.\"},{\"text\":\"Les sceptiques soutiennent que le climat a toujours changé.\",\"source_quote\":\"Les sceptiques affirment que le climat a toujours change\"},{\"text\":\"La position défendue est que l’argument du changement climatique passé omet la vitesse sans précédent du changement actuel.\",\"source_quote\":\"mais ils omettent la vitesse sans precedent du changement actuel.\"},{\"text\":\"Les modèles prédictifs convergent vers l’idée que les activités humaines ont un impact sur le climat.\",\"source_quote\":\"Les modeles predictifs sont unanimes sur l'impact des activites humaines.\"},{\"text\":\"Les personnes qui minimisent la crise climatique s’appuient souvent sur des données sélectionnées pour défendre leur position.\",\"source_quote\":\"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives pour soutenir leur position.\"},{\"text\":\"La transition énergétique est nécessaire et présente aussi un avantage économique à long terme.\",\"source_quote\":\"La transition energetique est non seulement necessaire mais aussi economiquement avantageuse a long terme.\"}],\"claims\":[{\"text\":\"La température globale a augmenté de 1,1 degré depuis l’ère préindustrielle.\",\"source_quote\":\"Les mesures de temperature globale montrent une augmentation de 1.1 degres depuis l'ere preindustrielle.\"},{\"text\":\"Le changement climatique actuel se produit à une vitesse sans précédent.\",\"source_quote\":\"la vitesse sans precedent du changement actuel.\"},{\"text\":\"Les modèles prédictifs attribuent un impact aux activités humaines sur le climat.\",\"source_quote\":\"Les modeles predictifs sont unanimes sur l'impact des activites humaines.\"},{\"text\":\"Les minimisateurs de la crise climatique utilisent souvent des données sélectives.\",\"source_quote\":\"Ceux qui minimisent la crise climatique utilisent souvent des donnees selectives\"},{\"text\":\"La transition énergétique est économiquement avantageuse à long terme.\",\"source_quote\":\"economiquement avantageuse a long terme.\"}],\"summary\":\"Le texte défend la réalité scientifique du changement climatique, met en contraste cette position avec celle des sceptiques et critique la sélection de données par les minimisateurs. Il mobilise des données de température, l’autorité des modèles prédictifs et un argument économique en faveur de la transition énergétique.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733379,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 629,
+      "prompt_tokens": 419,
+      "total_tokens": 1048,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 137,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

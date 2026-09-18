@@ -1,0 +1,16 @@
+{
+  "key": "0395f5af801ee60088cb979fe86d0fcc158463cbd6e7912456e0fd17b803624b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Aucune erreur logique manifeste\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive potentielle\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.2\n  },\n  {\n    \"fallacy_name\": \"Simplification causale potentielle\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.24\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté sur le sens de « taux de vaccination élevés »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.35\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté sur le sens de « protègent »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.42\n  },\n  {\n    \"fallacy_name\": \"Omission de conditions pertinentes\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.3\n  },\n  {\n    \"fallacy_name\": \"Surinterprétation possible de l’immunité collective\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.2\n  },\n  {\n    \"fallacy_name\": \"Confusion potentielle entre réduction du risque et protection absolue\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.36\n  },\n  {\n    \"fallacy_name\": \"Glissement du niveau collectif au niveau individuel\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.18\n  },\n  {\n    \"fallacy_name\": \"Argument implicite par l’appel à la vulnérabilité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.12\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRiEnbUspXXqAAnpgnM81PygyVDT",
+        "created": 1789733434,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=246 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=935 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

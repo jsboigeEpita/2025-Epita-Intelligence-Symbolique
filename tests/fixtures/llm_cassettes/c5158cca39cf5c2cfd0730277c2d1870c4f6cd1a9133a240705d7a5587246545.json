@@ -1,0 +1,16 @@
+{
+  "key": "c5158cca39cf5c2cfd0730277c2d1870c4f6cd1a9133a240705d7a5587246545",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Affirmation gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Absence de justification de la nécessité\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Absence de preuve de l'avantage économique\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Appel implicite à la nécessité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.76\n  },\n  {\n    \"fallacy_name\": \"Non sequitur entre nécessité et avantage économique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Confusion entre nécessité et désirabilité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.7\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive sur les effets économiques\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Appel aux conséquences positives\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.64\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté du terme « transition énergétique »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté du terme « nécessaire »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté du terme « avantage économique »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.92\n  },\n  {\n    \"fallacy_name\": \"Imprécision temporelle avec « à long terme »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Omission des coûts et effets économiques négatifs possibles\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.81\n  },\n  {\n    \"fallacy_name\": \"Omission des hypothèses et conditions de validité\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Absence de comparaison avec les alternatives\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Prédiction économique non étayée\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Citation incomplète ou tronquée\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.57\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRlCKAxCWIZAzVrFmCSBF1FWtwwG",
+        "created": 1789733618,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=232 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=1131 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=435, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

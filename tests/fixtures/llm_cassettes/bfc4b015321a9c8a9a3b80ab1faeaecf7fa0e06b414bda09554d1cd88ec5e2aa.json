@@ -1,0 +1,16 @@
+{
+  "key": "bfc4b015321a9c8a9a3b80ab1faeaecf7fa0e06b414bda09554d1cd88ec5e2aa",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Affirmation gratuite\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Absence de sources vérifiables\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Appel à l’autorité scientifique\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.45\n  },\n  {\n    \"fallacy_name\": \"Appel à une autorité anonyme ou indéterminée\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Simplification causale excessive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.62\n  },\n  {\n    \"fallacy_name\": \"Causalité monocausale\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.58\n  },\n  {\n    \"fallacy_name\": \"Confusion entre contribution causale et causalité exclusive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.48\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.34\n  },\n  {\n    \"fallacy_name\": \"Confusion entre corrélation, antériorité et causalité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.27\n  },\n  {\n    \"fallacy_name\": \"Sélection unilatérale des effets favorables\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.31\n  },\n  {\n    \"fallacy_name\": \"Citation tronquée ou hors contexte\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.42\n  },\n  {\n    \"fallacy_name\": \"Glissement sémantique autour de « a permis »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Vaguité de l’expression « réduire fortement »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté du terme « la vaccination »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.46\n  },\n  {\n    \"fallacy_name\": \"Assimilation implicite entre éradication et réduction\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.29\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRiEls7NPJrP0k6lkDsU2nvcq9bN",
+        "created": 1789733434,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=239 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=1127 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

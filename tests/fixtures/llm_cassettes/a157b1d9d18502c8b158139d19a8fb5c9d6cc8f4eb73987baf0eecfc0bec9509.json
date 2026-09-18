@@ -1,0 +1,43 @@
+{
+  "key": "a157b1d9d18502c8b158139d19a8fb5c9d6cc8f4eb73987baf0eecfc0bec9509",
+  "value": {
+    "id": "chatcmpl-EPRbpOnGs7QmN23NjaP8Uyzm25895",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"propositions\": [\n    \"prime_minister_declared_pension_reform_necessary\",\n    \"pension_reform_is_necessary\",\n    \"all_european_countries_have_already_implemented_pension_reform\",\n    \"authority_argument_ignores_structural_differences_between_systems\",\n    \"system_will_collapse_within_five_years_without_immediate_action\",\n    \"trade_unions_claim_government_uses_naturalistic_fallacy\",\n    \"working_longer_is_presented_as_natural\",\n    \"finance_minister_presented_deficit_figures\",\n    \"deficit_will_reach_2_3_percent_of_gdp_by_2030\",\n    \"deficit_projection_assumes_1_8_percent_annual_growth\",\n    \"growth_assumptions_are_optimistic\",\n    \"opposition_accuses_government_of_straw_man_argument\",\n    \"nobody_proposed_abolishing_pensions\",\n    \"pensions_were_only_proposed_to_be_reformed_differently\",\n    \"thinking_of_your_children_is_an_emotional_appeal\",\n    \"emotional_appeal_diverts_debate_from_technical_financing_questions\"\n  ]\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733037,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 715,
+      "prompt_tokens": 300,
+      "total_tokens": 1015,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 455,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

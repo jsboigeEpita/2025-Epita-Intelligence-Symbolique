@@ -1,0 +1,43 @@
+{
+  "key": "04a0de55dc234f5f3aa8eac637988176c1095d76513c78b7d4fb0b3b74084c7f",
+  "value": {
+    "id": "chatcmpl-EPRipsTnBJVJtUs5eDDYLhOPHm5wO",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"formulas\": [\n    \"IndispensableFor(vaccines, publicHealth)\",\n    \"ShowsEradication(scientificStudies, vaccination, smallpox) && ShowsReduction(scientificStudies, vaccination, polio)\",\n    \"Dangerous(vaccines)\"\n  ]\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733471,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 190,
+      "prompt_tokens": 821,
+      "total_tokens": 1011,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 121,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

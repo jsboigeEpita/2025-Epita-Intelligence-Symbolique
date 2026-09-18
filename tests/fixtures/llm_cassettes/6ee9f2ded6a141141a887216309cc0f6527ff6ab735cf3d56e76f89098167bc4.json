@@ -1,0 +1,43 @@
+{
+  "key": "6ee9f2ded6a141141a887216309cc0f6527ff6ab735cf3d56e76f89098167bc4",
+  "value": {
+    "id": "chatcmpl-EPRbp455yr1QzcMRNXLQ0ZPiukweM",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"sorts\": {\n    \"Person\": [\n      \"premierMinistre\",\n      \"ministreFinances\"\n    ],\n    \"Institution\": [\n      \"gouvernement\",\n      \"syndicats\",\n      \"opposition\"\n    ],\n    \"CountryGroup\": [\n      \"paysEuropeens\"\n    ],\n    \"Policy\": [\n      \"reformeRetraites\",\n      \"suppressionRetraites\",\n      \"reformeDifferente\"\n    ],\n    \"SocialSystem\": [\n      \"systemeRetraites\"\n    ],\n    \"Argument\": [\n      \"argumentAutorite\",\n      \"appelPeur\",\n      \"sophismeNaturaliste\",\n      \"hommePaille\",\n      \"appelEmotion\"\n    ],\n    \"Action\": [\n      \"agirMaintenant\",\n      \"travaillerPlusLongtemps\",\n      \"supprimerRetraites\"\n    ],\n    \"Projection\": [\n      \"projectionDeficit\"\n    ],\n    \"Hypothesis\": [\n      \"hypothesesCroissance\"\n    ],\n    \"EconomicIndicator\": [\n      \"deficit\",\n      \"PIB\"\n    ],\n    \"Duration\": [\n      \"cinqAns\"\n    ],\n    \"Year\": [\n      \"an2030\"\n    ],\n    \"Percentage\": [\n      \"deuxVirguleTroisPourcent\",\n      \"unVirguleHuitPourcent\"\n    ],\n    \"Thing\": [\n      \"questionsTechniquesFinancement\"\n    ]\n  },\n  \"predicates\": {\n    \"Necessary\": [\n      \"Policy\"\n    ],\n    \"EuropeanCountry\": [\n      \"CountryGroup\"\n    ],\n    \"AlreadyImplemented\": [\n      \"CountryGroup\",\n      \"Policy\"\n    ],\n    \"Declared\": [\n      \"Person\",\n      \"Argument\"\n    ],\n    \"ArgumentFromAuthority\": [\n      \"Argument\"\n    ],\n    \"IgnoresStructuralDifferences\": [\n      \"Argument\",\n      \"SocialSystem\"\n    ],\n    \"StructuralDifference\": [\n      \"SocialSystem\",\n      \"SocialSystem\"\n    ],\n    \"ActNow\": [\n      \"Action\"\n    ],\n    \"CollapseWithin\": [\n      \"SocialSystem\",\n      \"Duration\"\n    ],\n    \"AppealToFear\": [\n      \"Argument\"\n    ],\n    \"UsesArgument\": [\n      \"Institution\",\n      \"Argument\"\n    ],\n    \"NaturalisticFallacy\": [\n      \"Argument\"\n    ],\n    \"WorkLonger\": [\n      \"Action\"\n    ],\n    \"PresentedAsNaturalOrder\": [\n      \"Action\"\n    ],\n    \"Presented\": [\n      \"Person\",\n      \"Projection\"\n    ],\n    \"DeficitReaches\": [\n      \"Projection\",\n      \"Percentage\",\n      \"Year\"\n    ],\n    \"GrossDomesticProduct\": [\n      \"EconomicIndicator\"\n    ],\n    \"BasedOn\": [\n      \"Projection\",\n      \"Hypothesis\"\n    ],\n    \"GrowthRate\": [\n      \"Hypothesis\",\n      \"Percentage\"\n    ],\n    \"Optimistic\": [\n      \"Hypothesis\"\n    ],\n    \"StrawMan\": [\n      \"Argument\"\n    ],\n    \"Proposed\": [\n      \"Institution\",\n      \"Action\"\n    ],\n    \"RetirementAbolition\": [\n      \"Action\"\n    ],\n    \"ReformRetirementDifferently\": [\n      \"Action\"\n    ],\n    \"AppealToEmotion\": [\n      \"Argument\"\n    ],\n    \"DistractsFrom\": [\n      \"Argument\",\n      \"Thing\"\n    ]\n  },\n  \"constants\": {\n    \"premierMinistre\": \"le Premier ministre\",\n    \"ministreFinances\": \"le ministre des finances\",\n    \"gouvernement\": \"le gouvernement\",\n    \"syndicats\": \"les syndicats\",\n    \"opposition\": \"l'opposition\",\n    \"paysEuropeens\": \"l'ensemble des pays européens\",\n    \"reformeRetraites\": \"la réforme des retraites\",\n    \"suppressionRetraites\": \"la suppression des retraites\",\n    \"reformeDifferente\": \"une réforme différente des retraites\",\n    \"systemeRetraites\": \"le système des retraites\",\n    \"argumentAutorite\": \"l'argument d'autorité\",\n    \"appelPeur\": \"l'appel à la peur\",\n    \"sophismeNaturaliste\": \"le sophisme naturaliste\",\n    \"hommePaille\": \"l'homme de paille\",\n    \"appelEmotion\": \"l'appel à l'émotion\",\n    \"agirMaintenant\": \"agir maintenant\",\n    \"travaillerPlusLongtemps\": \"travailler plus longtemps\",\n    \"supprimerRetraites\": \"supprimer les retraites\",\n    \"projectionDeficit\": \"la projection du déficit\",\n    \"hypothesesCroissance\": \"les hypothèses de croissance\",\n    \"deficit\": \"le déficit\",\n    \"PIB\": \"le produit intérieur brut\",\n    \"cinqAns\": \"cinq ans\",\n    \"an2030\": \"l'année 2030\",\n    \"deuxVirguleTroisPourcent\": \"2,3 %\",\n    \"unVirguleHuitPourcent\": \"1,8 % par an\",\n    \"questionsTechniquesFinancement\": \"les questions techniques de financement\"\n  }\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733037,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1600,
+      "prompt_tokens": 384,
+      "total_tokens": 1984,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 512,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}
