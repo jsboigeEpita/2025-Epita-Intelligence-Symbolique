@@ -106,6 +106,77 @@ demande ≈ 500 s pour atteindre 15/15 phases sur un corpus court.
 
 ---
 
+## Objectif : « comparer des modèles ou des workflows entre eux » (benchmarks)
+
+**Six surfaces sous `argumentation_analysis/evaluation/`**, cartographiées le **18/09/2026**
+(dispatch #2299) par trois gestes firsthand : census des importateurs (grep sur tout le dépôt,
+hors `tests/`), datation `git log --all` par surface, et preuves d'exécution (en-têtes de
+rapports commités dans `docs/reports/`, mtimes des artefacts locaux gitignorés dans
+`evaluation/results/`).
+
+| Instrument | Ce qu'il répond | Appelant hors `tests/` | Dernière exécution attestée |
+|---|---|---|---|
+| `benchmark_runner.py` — atomes `BenchmarkRunner`, `ResultCollector`, `ModelRegistry` | la **cellule** corpus × modèle × workflow ; bibliothèque de collection (`BenchmarkResult`) | 5 modules `evaluation/` (`multi_model_benchmark`, `run_agentic_eval`, `run_baseline_benchmark`, `run_iteration`, `result_collector`) + le wrapper `scripts/run_benchmark_multimodel.py` | via le wrapper : `docs/reports/benchmark_evaluation_report.md` (**08/03/2026**) ⚠ non re-mesuré · dernier toucher substantiel 19/03 (643e2dc2) |
+| `fallacy_benchmark.py` | qualité de **détection de sophismes** (modes dont C contraint) | `scripts/run_fallacy_benchmark.py`, qui écrit `docs/reports/fallacy_benchmark_results.json` | artefact commité **11/03/2026** ⚠ non re-mesuré · le module reste compilation-courant via les sweeps taxonomie (#1930, #2036/#2043 — 06/09), qui ne sont **pas** des runs |
+| `multi_model_benchmark.py` | orchestration multi-modèles + vLLM (créé 19/03) | **aucun** — le wrapper `scripts/run_benchmark_multimodel.py` compose les atomes directement, sans importer le module | aucune trouvée · dernier toucher 19/08 (#1794, sweep env-loaders) |
+| `plugin_benchmark.py` | benchmark **au niveau plugin** (navigateur d'exploration CSV) | aucun (CLI) | aucune trouvée · dernier toucher 06/09 (#2041/#2044) = réparation de famille de crash par audit, pas un run |
+| `conversational_benchmark.py` | **conversationnel vs séquentiel** (#308) | **aucun** — `scripts/run_baselines.py` porte sa propre `run_conversational_benchmark()` **locale** (code distinct, homonyme), qui appelle `run_conversational_analysis` directement | aucune trouvée · dernier toucher 12/09 (#2170, sweep IDs opaques) |
+| `run_baseline_benchmark.py` | cadre de baseline par capacité | aucun (CLI) | aucune trouvée · dernier toucher = son origine `feat(` du **13/03**, puis black ; cité seulement dans un audit de tests |
+
+**Doublons réels et qui fait foi.** Deux axes portent chacun trois implémentations qui ne se
+connaissent pas :
+
+- **Axe « comparer des modèles »** : le module `multi_model_benchmark` (sans appelant), le
+  wrapper `scripts/run_benchmark_multimodel.py` et les atomes
+  `benchmark_runner`. **Fait foi : le wrapper** `scripts/run_benchmark_multimodel.py` —
+  seule surface de l'axe avec une exécution attestée (le rapport commité de mars). Le module
+  est une couche d'orchestration que plus rien n'appelle.
+- **Axe « comparer le conversationnel »** : `conversational_benchmark.py` (module sans
+  appelant), la fonction locale homonyme de `scripts/run_baselines.py` (code distinct), et
+  `scripts/compare_orchestration_modes.py` (#1735). **Fait foi :
+  `compare_orchestration_modes.py`** — seul instrument de l'axe calibré et mesuré récemment
+  (campagne #1735, rungs 180–1200 s, septembre 2026) ; les deux autres n'ont pas d'exécution
+  attestée.
+
+⚠ **Piège de grep mesuré** : `run_conversational_benchmark` a **deux définitions** dans le
+dépôt (le module `evaluation/conversational_benchmark.py` expose la sienne, et
+`scripts/run_baselines.py:164` la réimplémente localement) — deux codes distincts, aucune
+relation. Un grep sur le nom ne dit pas lequel a tourné.
+
+⚠ **Une boussole n'est pas un fait** (leçon JVM, cf. objectif « modules spécialisés ») :
+`test_fallacy_benchmark::test_mode_c_constrained` existe dans la bande replay #1603 — mais
+son exécution en test ne prouve rien d'un run de benchmark. Symétriquement, « aucun appelant
+production » n'est **pas** une preuve de non-utilité (Cleanup Gate) : les cinq surfaces sans
+appelant restent en place, datées ci-dessus ; aucune ne porte de `feat(` récent comme
+dernier toucher — la plus suspecte est `run_baseline_benchmark.py`, dont le dernier toucher
+est son propre `feat(` d'origine (13/03).
+
+---
+
+## Objectif : « noter la qualité d'un run par un juge LLM »
+
+Cartographié le **18/09/2026** (dispatch #2299), mêmes gestes que la section benchmarks.
+
+| Instrument | Ce qu'il répond | Appelant hors `tests/` | Dernière exécution attestée |
+|---|---|---|---|
+| `judge.py` — `LLMJudge`, `JudgeScore` | **socle** de scoring LLM partagé | 5 importeurs (`capability_eval`, `run_agentic_eval`, `run_baseline_benchmark`, `run_llm_judge`, `__init__`) + le wrapper multimodel (pour `JudgeScore`) — mais `capability_eval` n'est importé nulle part hors `evaluation/` : la chaîne se termine en CLIs | via le wrapper multimodel (**08/03/2026**) ⚠ non re-mesuré · sweeps récents le tenant compilation-courant : #1786 (17/08, fenêtre calculée), #1934 (28/08) |
+| `run_llm_judge.py` | CLI de scoring qualité (#Mission11) | aucun | aucune trouvée · dernier toucher 20/03 (cc726a98, fix critique) |
+| `run_agentic_eval.py` | conversation **agentique mono-passe vs multi-tours** (#97) | aucun | aucune trouvée · dernier toucher = origine 21/03, puis lint seul |
+
+**Fait foi : `judge.py`** comme bibliothèque — c'est le socle que tous les CLIs de l'axe
+importent. Mais la seule exécution attestée de tout l'axe date de mars (le rapport du
+wrapper). **Un quatrième juge, hors du triptyque et découvert par le census, fait mieux** :
+`scripts/run_full_judgment.py` — qui **n'importe pas** `LLMJudge` (il s'appuie sur
+`run_provenance` + `unified_pipeline`) et a produit les artefacts locaux
+`evaluation/results/full_judgment/` du **05/09/2026**. Les juges réellement exécutés en
+septembre ne passent donc pas par `judge.py`.
+
+**Trou mesuré** : l'axe « juge » a quatre surfaces vivantes au sens large mais **aucune
+exécution attestée de `judge.py` lui-même depuis mars 2026** — toute conclusion citant un
+score « du juge LLM » comme état courant doit nommer lequel des quatre a tourné.
+
+---
+
 ## Objectif : « le dataset fuit-il ? »
 
 | Instrument | Nature | Dernière mesure firsthand |
@@ -125,11 +196,7 @@ Nommées pour que leur absence soit lisible, pas silencieuse :
   `agentic_virtue_detectors`, `QualityScoringPlugin`, #1907) — **combien d'instruments
   réellement, non établi** ;
 - détection de sophismes (taxonomie 8 familles, plugin FR 3 étages, détection neuronale
-  #2130 muette en runs réels) ;
-- benchmarks : `benchmark_runner`, `fallacy_benchmark`, `multi_model_benchmark`,
-  `plugin_benchmark`, `conversational_benchmark`, `run_baseline_benchmark` — **six
-  surfaces au moins, relations non établies** ;
-- juges LLM : `judge.py`, `run_llm_judge.py`, `run_agentic_eval.py` — idem.
+  #2130 muette en runs réels).
 
-Ces quatre zones sont l'ordre de travail suggéré : la dernière (benchmarks + juges) est
-celle où la juxtaposition est la plus probable, à en juger par le nombre de points d'entrée.
+Les benchmarks et juges LLM (ex-zone non cartographiée) sont couverts ci-dessus depuis le
+18/09 (#2299). Ces deux zones restantes sont l'ordre de travail suggéré.
