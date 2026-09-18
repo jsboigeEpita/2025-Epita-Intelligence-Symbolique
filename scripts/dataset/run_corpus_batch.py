@@ -946,5 +946,46 @@ def main(argv: Optional[List[str]] = None) -> int:
     return 1 if summary["failed"] else 0
 
 
+def _run_with_environment_stamp_on_abort() -> int:
+    """Emit the #2282 environment stamp even when the run dies early.
+
+    The stamp at the end of ``main()`` is deliberately placed *after* the
+    batch so ``jvm_started`` reports the JVM of the run that actually
+    happened -- that position is load-bearing and is not moved here.
+
+    But it made the instrument unreachable in the one case it was built
+    for: a run that aborts is exactly when the environment is the prime
+    suspect (#2276 -- 11 phases failed on a dead JVM), and an abort used
+    to print nothing about the environment at all. Measured firsthand on
+    ai-01, 18/09: a mini-campaign died at corpus expansion on an unset
+    ``OPAQUE_ID_SALT`` and emitted zero environment information.
+
+    So the abort path probes too, under its own banner -- never the same
+    text as the end-of-run stamp, so an abort stamp can never be read as
+    a completed run's. The original exception always propagates.
+    """
+    try:
+        return main()
+    except SystemExit:
+        raise
+    except BaseException:
+        print(
+            "==== RUN ABORTED (#2282) — environment probed AT THE ABORT, "
+            "not after a completed run ====",
+            flush=True,
+        )
+        try:
+            print(render_environment_stamp(environment_manifest()), flush=True)
+        except BaseException as stamp_exc:  # pragma: no cover - probe of a broken env
+            # A guard that depends on what it probes must not replace the
+            # real traceback with its own failure: say so, then re-raise
+            # the original.
+            print(
+                f"environment stamp unavailable at abort: {stamp_exc!r}",
+                flush=True,
+            )
+        raise
+
+
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(_run_with_environment_stamp_on_abort())
