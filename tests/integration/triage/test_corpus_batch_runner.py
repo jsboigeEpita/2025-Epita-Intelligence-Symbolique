@@ -187,6 +187,96 @@ class TestRunSingle:
         assert isinstance(prov["environment"]["jvm"].get("jvm_started"), bool)
 
     @pytest.mark.asyncio
+    async def test_signature_persists_zero_shot_surplus(self, tmp_path):
+        """#2298 : la signature porte la projection structurée du surplus.
+
+        Tri-état : un état vivant rend une projection mesurée (même vide) ;
+        un run sans objet d'état rend ``unavailable_reason`` — jamais une
+        case vide indiscernable d'un instrument débranché.
+        """
+        from types import SimpleNamespace
+
+        async def _pipe_with_state(*a, **k):
+            return {
+                "analysis_outcome": {"status": "ok"},
+                "state_snapshot": {"source_id": "doc_test"},
+                "unified_state": SimpleNamespace(),
+            }
+
+        sig = await runner._run_single(
+            text="Test text",
+            source_name="Test Source",
+            opaque_id_str="surplus_doc",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            pipeline_fn=_pipe_with_state,
+            sanitize_fn=_mock_sanitize,
+        )
+        assert sig is not None
+        proj = sig["zero_shot_surplus"]
+        assert "unavailable_reason" not in proj
+        assert "carries_non_procedural_surplus" in proj
+
+        async def _pipe_partial(*a, **k):
+            raise asyncio.TimeoutError()
+
+        sig2 = await runner._run_single(
+            text="Test text",
+            source_name="Test Source",
+            opaque_id_str="surplus_partial",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            timeout=1,
+            pipeline_fn=_pipe_partial,
+            sanitize_fn=_mock_sanitize,
+        )
+        assert sig2 is not None
+        assert (
+            sig2["zero_shot_surplus"]["unavailable_reason"]
+            == "no state object (partial run)"
+        )
+
+    def test_surplus_aggregate_non_vacuity(self):
+        """#2298 : un agrégat vide DIT sa vacuité mesurée, avec ventilation."""
+
+        thin = {
+            "zero_shot_surplus": {
+                "established_items": [],
+                "established_by_nature": {},
+                "procedural_items": 2,
+                "carries_non_procedural_surplus": False,
+            }
+        }
+        out = runner.render_surplus_aggregate([thin, thin])
+        assert "0/2 documents carry non-procedural surplus" in out
+        assert "measured absence" in out, "an empty aggregate says it"
+
+        rich = {
+            "zero_shot_surplus": {
+                "established_items": [
+                    {"nature": "decisif_formel", "cites": ["FOL"]}
+                ],
+                "established_by_nature": {"decisif_formel": 1},
+                "procedural_items": 0,
+                "carries_non_procedural_surplus": True,
+            }
+        }
+        out2 = runner.render_surplus_aggregate([rich, thin])
+        assert "1/2 documents carry non-procedural surplus" in out2
+        assert "decisif_formel=1" in out2
+
+        partial = {"zero_shot_surplus": {"unavailable_reason": "no state object (partial run)"}}
+        out3 = runner.render_surplus_aggregate([rich, partial])
+        assert "1/1 documents carry" in out3
+        assert "1 document(s) unavailable" in out3
+
+    @pytest.mark.asyncio
     async def test_skip_existing_reuses_failure_outcome(self, tmp_path):
         """A skipped existing failure remains visible to aggregate exit status."""
         sigs = tmp_path / "sigs"

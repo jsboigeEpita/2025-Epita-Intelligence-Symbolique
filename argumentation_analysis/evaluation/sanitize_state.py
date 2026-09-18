@@ -655,4 +655,46 @@ def sanitize_state(state: dict[str, Any] | Any) -> dict[str, Any]:
         if field in data:
             data[field] = _scrub_struct(data[field], list_keys)
 
+    # 9. #2298 — validate the zero-shot surplus projection's closed shape.
+    #    The projection is privacy-safe by construction (natures + opaque
+    #    anchors, no statements — a decisive statement can carry a source
+    #    excerpt). This pass is the declared classification the allowlist
+    #    contract demands: if the shape ever drifts (a statement sneaks in,
+    #    an unexpected key), the field is replaced by a marker instead of
+    #    traversing intact.
+    if "zero_shot_surplus" in data:
+        data["zero_shot_surplus"] = _validate_surplus_projection(
+            data["zero_shot_surplus"]
+        )
+
     return data
+
+
+_SURPLUS_PROJECTION_KEYS = {
+    "established_items",
+    "established_by_nature",
+    "procedural_items",
+    "carries_non_procedural_surplus",
+    "unavailable_reason",
+}
+
+
+def _validate_surplus_projection(value: Any) -> Any:
+    """Closed-shape check for the persisted surplus projection (#2298)."""
+
+    if not isinstance(value, dict) or not set(value) <= _SURPLUS_PROJECTION_KEYS:
+        return {"scrubbed": "non-conform surplus projection (shape)"}
+    items = value.get("established_items")
+    if not isinstance(items, list):
+        return {"scrubbed": "non-conform surplus projection (items)"}
+    for item in items:
+        if not isinstance(item, dict) or set(item) != {"nature", "cites"}:
+            return {"scrubbed": "non-conform surplus projection (item keys)"}
+        if not isinstance(item["nature"], str) or not isinstance(item["cites"], list):
+            return {"scrubbed": "non-conform surplus projection (item types)"}
+    by_nature = value.get("established_by_nature")
+    if not isinstance(by_nature, dict) or not all(
+        isinstance(k, str) and isinstance(v, int) for k, v in by_nature.items()
+    ):
+        return {"scrubbed": "non-conform surplus projection (ventilation)"}
+    return value

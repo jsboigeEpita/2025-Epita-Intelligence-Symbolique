@@ -44,7 +44,7 @@ traceability contract as #1911's ``GlobalFinding`` and #1914's
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterable, List, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 from .fr_accord import accord
 from .specialist_roles import (
@@ -83,6 +83,12 @@ KIND_VULNERABILITY = "vulnerabilite"
 KIND_TENSION = "tension"
 KIND_STRENGTH = "force"
 
+# #2298 — the established-surplus natures (the aggregation key of the
+# persisted projection): how each item was established, not what it says.
+NATURE_DECISIF_FORMEL = "decisif_formel"
+NATURE_STRUCTURAL = "structural"
+NATURE_CONVERGENCE_NON_LLM = "convergence_non_llm"
+
 
 @dataclass(frozen=True)
 class SalienceItem:
@@ -100,10 +106,16 @@ class SalienceItem:
 
 @dataclass(frozen=True)
 class SurplusItem:
-    """One thing the run established beyond a strong zero-shot reading."""
+    """One thing the run established beyond a strong zero-shot reading.
+
+    ``nature`` — how it was established (``decisif_formel``, ``structural``,
+    ``convergence_non_llm``), the aggregation key for the persisted
+    projection (#2298).
+    """
 
     statement: str
     cites: Tuple[str, ...]
+    nature: str = ""
 
 
 @dataclass(frozen=True)
@@ -220,6 +232,7 @@ def _assess_surplus(
                 SurplusItem(
                     statement=_truncate(role.statement, _STATEMENT_CAP),
                     cites=tuple(role.cites),
+                    nature=NATURE_DECISIF_FORMEL,
                 )
             )
     for finding in structured_findings:
@@ -233,6 +246,7 @@ def _assess_surplus(
                 SurplusItem(
                     statement=statement,
                     cites=(label,) if label else ("cadre_structure",),
+                    nature=NATURE_STRUCTURAL,
                 )
             )
     for finding in global_findings:
@@ -244,7 +258,13 @@ def _assess_surplus(
             continue
         statement = _truncate(getattr(finding, "statement", ""), _STATEMENT_CAP)
         if statement:
-            established.append(SurplusItem(statement=statement, cites=cites))
+            established.append(
+                SurplusItem(
+                    statement=statement,
+                    cites=cites,
+                    nature=NATURE_CONVERGENCE_NON_LLM,
+                )
+            )
     established = established[:_MAX_SURPLUS]
 
     procedural: List[str] = []
@@ -313,3 +333,61 @@ def assess_conclusion_salience(
         roles, structured_findings, global_findings, counters_total
     )
     return ConclusionSalience(ranked=ranked, surplus=surplus)
+
+
+def surplus_projection(surplus: SurplusAssessment) -> Dict[str, Any]:
+    """#2298 — the structured, privacy-safe projection of the surplus split.
+
+    Categories and counts, never prose: each established item persists its
+    NATURE and its opaque anchors — its ``statement`` is deliberately dropped
+    (a decisive statement can carry a source excerpt; the projection must
+    not open a bypass around the signature scrub). The procedural half is
+    counts only. ``carries_non_procedural_surplus`` makes a measured-thin
+    document distinguishable from an unwired instrument (non-vacuity).
+    """
+    items = [
+        {"nature": item.nature, "cites": list(item.cites)}
+        for item in surplus.established
+    ]
+    by_nature: Dict[str, int] = {}
+    for item in items:
+        by_nature[item["nature"]] = by_nature.get(item["nature"], 0) + 1
+    return {
+        "established_items": items,
+        "established_by_nature": by_nature,
+        "procedural_items": len(surplus.procedural_only),
+        "carries_non_procedural_surplus": bool(items),
+    }
+
+
+def projection_from_state(state: Any) -> Dict[str, Any]:
+    """#2298 — derive the persisted projection from a live state object.
+
+    Re-derives exactly what the Acte III render derived (same deterministic
+    reader, no LLM, no JVM), so the persisted aggregate and the rendered
+    prose cannot drift. Three-valued on absence (#1019): a run without a
+    state object (partial) is named, never conflated with a measured-empty
+    surplus.
+    """
+    if state is None:
+        return {
+            "established_items": [],
+            "established_by_nature": {},
+            "procedural_items": 0,
+            "carries_non_procedural_surplus": False,
+            "unavailable_reason": "no state object (partial run)",
+        }
+    # Lazy import: the plugin imports this module, so the reverse import
+    # must stay inside the function (same pattern as _unchallenged_strengths).
+    from .act3_conclusion_plugin import build_act3_evidence
+
+    evidence = build_act3_evidence(state)
+    if evidence.salience is None:
+        return {
+            "established_items": [],
+            "established_by_nature": {},
+            "procedural_items": 0,
+            "carries_non_procedural_surplus": False,
+            "unavailable_reason": "salience not derived on this run",
+        }
+    return surplus_projection(evidence.salience.surplus)

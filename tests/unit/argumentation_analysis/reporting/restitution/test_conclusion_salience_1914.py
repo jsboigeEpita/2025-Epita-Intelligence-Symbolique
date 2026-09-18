@@ -310,6 +310,72 @@ class TestSurplus:
         assert len(sal.surplus.established) <= cs._MAX_SURPLUS
 
 
+class TestSurplusProjection:
+    """#2298 — the persisted projection: natures + anchors, never prose.
+
+    A decisive statement can carry a source excerpt; the projection must not
+    open a bypass around the signature scrub. And a measured-thin document
+    must say so — an empty aggregate indistinguishable from an unwired
+    instrument is the non-vacuity failure the DoD names.
+    """
+
+    def test_projection_carries_no_statement(self):
+        sal = cs.assess_conclusion_salience(
+            _violation_state(),
+            structured_findings=[
+                StructuredArgFinding(
+                    capability="bipolar_argumentation",
+                    label="les relations de soutien",
+                    statement="un cycle de soutien",
+                )
+            ],
+        )
+        assert sal.surplus.established, "fixture must yield established surplus"
+        proj = cs.surplus_projection(sal.surplus)
+        dumped = str(proj)
+        assert "statement" not in dumped, "no statement field may leak"
+        assert "cycle" not in dumped, "no statement content may leak"
+        for item in proj["established_items"]:
+            assert item["nature"], "each item carries its nature"
+            assert item["cites"], "each item carries its anchors"
+
+    def test_projection_natures_ventilate(self):
+        finding = GlobalFinding(
+            kind="convergence",
+            statement="arg_1 : méthodes convergent",
+            cites=("arg_1", "rejet Dung"),
+        )
+        sal = cs.assess_conclusion_salience(
+            _violation_state(), global_findings=[finding]
+        )
+        proj = cs.surplus_projection(sal.surplus)
+        by = proj["established_by_nature"]
+        # the fixture's two decisive roles: FOL refutation + Dung exclusion
+        assert by.get(cs.NATURE_DECISIF_FORMEL) == 2
+        assert by.get(cs.NATURE_CONVERGENCE_NON_LLM) == 1
+        assert sum(by.values()) == len(proj["established_items"])
+        assert proj["carries_non_procedural_surplus"] is True
+
+    def test_thin_document_says_it_not_hides_it(self):
+        sal = cs.assess_conclusion_salience(_settled_state(), counters_total=4)
+        assert sal.surplus.established == []  # measured thin, fixture-guaranteed
+        proj = cs.surplus_projection(sal.surplus)
+        assert proj["established_items"] == []
+        assert proj["carries_non_procedural_surplus"] is False
+        assert proj["procedural_items"] >= 1
+        assert "unavailable_reason" not in proj, (
+            "a measured-empty surplus is not an unavailable one (#1019)"
+        )
+
+    def test_projection_from_state_is_tri_valued(self):
+        none_proj = cs.projection_from_state(None)
+        assert none_proj["unavailable_reason"] == "no state object (partial run)"
+        assert none_proj["carries_non_procedural_surplus"] is False
+        live = cs.projection_from_state(_violation_state())
+        assert "unavailable_reason" not in live
+        assert live["carries_non_procedural_surplus"] is True
+
+
 class TestReaderChair:
     """The acceptance criterion: a report whose only multi-agent surplus is
     counters/labels must not claim a changed interpretive conclusion."""
