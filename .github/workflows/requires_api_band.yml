@@ -8,10 +8,24 @@ name: requires_api band (scheduled real-LLM lane)
 # stayed invisible: CI was green certifying code-without-keys while the
 # keys-without-CI side drifted. This lane is the missing half of the pair.
 #
-# Cost (intent, re-measure after the first run and pin here): the llm_light
-# band is ~90 tests at ~$0.01-0.05 each => roughly $1-5 per run, once a
-# week. The full band (workflow_dispatch with full-band=true) is an
-# on-demand operator action, not scheduled, so it cannot silently balloon.
+# SCOPE, measured 2026-09-18 on a CLEAN collection (the earlier figures were
+# taken while 6 MCP collection errors interrupted the run -- repaired in
+# #2288 + the same env defect on the coordinator machine):
+#   -m "requires_api and llm_light", this argv .... 8 tests   (scheduled)
+#   -m "requires_api",               this argv .... 59 tests  (full-band dispatch)
+#   -m "requires_api",               tests/ whole .. 90 tests
+# So this lane sees 59 of the band's 90 tests. The 31 it does NOT see live in
+# 10 files outside the argv -- tests/integration/triage/ (6 files),
+# tests/bench/test_spectacular_perf.py (excluded by design, 15+ min LLM),
+# tests/agents/core/logic/test_modal_logic_agent_authentic.py,
+# tests/integration/test_api_connectivity.py, test_growth_hook_corpus_a_597.py.
+# Naming the gap is deliberate: a lane that silently covered 66% while its
+# header said "the entire band" is the theater this lane exists to end.
+# Widening the argv is a USER decision (#1867) and is filed in the registry.
+#
+# Cost: 8 tests x ~$0.01-0.05 => roughly $0.08-0.40 per scheduled run.
+# Full-band dispatch is an on-demand operator action, never scheduled, so it
+# cannot silently balloon.
 #
 # First scheduled run: Saturday 05:37 UTC -- off the :00 mark deliberately,
 # per cluster convention on API-hitting cadences.
@@ -22,7 +36,7 @@ on:
   workflow_dispatch:
     inputs:
       full-band:
-        description: "Run the ENTIRE requires_api band (slow tests included), not just llm_light"
+        description: "Run the whole requires_api band WITHIN this argv (59 tests measured 2026-09-18), not just the 8 llm_light ones"
         type: boolean
         default: false
 
