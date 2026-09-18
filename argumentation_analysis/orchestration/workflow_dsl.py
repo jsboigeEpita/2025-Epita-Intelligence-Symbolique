@@ -879,7 +879,13 @@ class WorkflowExecutor:
                 None,
             )
 
-        provider = providers[0]
+        # A phase runs through provider.invoke. When a capability is served
+        # by both an agent-side SK plugin (no invoke) and a pipeline service,
+        # the set-ordered providers list surfaces either one first — hash
+        # order varies per process (measured 2026-09-18: 1 of 4 processes
+        # picked the no-invoke plugin, #2296) — and the phase completed with
+        # a None output. Prefer the runnable provider.
+        provider = next((p for p in providers if p.invoke is not None), providers[0])
         try:
             phase_input = input_data
             if phase.input_transform is not None:

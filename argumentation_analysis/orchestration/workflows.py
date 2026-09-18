@@ -201,6 +201,24 @@ def build_standard_workflow() -> WorkflowDefinition:
             depends_on=["nl_to_logic"],
             optional=True,
         )
+        # Belief-set production (#506) — the golden min_belief_sets threshold
+        # has tested this chain since a9dce5e26, but standard never wired the
+        # only two capabilities whose writers call add_belief_set; the red was
+        # masked by the requires_api skip until #1603 recorded real-key
+        # cassettes (#2296). Same wiring as spectacular (afa5b3236).
+        .add_phase(
+            "text_to_kb",
+            capability="nl_extraction",
+            depends_on=["extract"],
+            optional=True,
+        )
+        .add_phase(
+            "kb_to_tweety",
+            capability="kb_to_tweety",
+            depends_on=["text_to_kb"],
+            optional=True,
+            timeout_seconds=180,
+        )
         .add_phase(
             "dung_extensions",
             capability="dung_extensions",
