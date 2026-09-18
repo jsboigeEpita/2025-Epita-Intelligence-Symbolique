@@ -850,17 +850,51 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
         cleaned = {k: v for k, v in metadata.items() if k not in _FORBIDDEN}
         self.source_metadata = cleaned
 
+    # #2295 — Walton-Krabbe move vocabulary for anchored trace entries.
+    # Closed set: an out-of-vocabulary move is a caller bug and fails loud
+    # (never silently degraded to an entry without the move, #1019).
+    TRACE_MOVE_VOCABULARY = ("assert", "concede", "retract", "challenge", "withdraw")
+
     def add_trace_entry(
         self,
         phase: str,
         agent: str,
         reacts_to: List[str],
         summary: str,
+        anchor: Optional[Dict[str, int]] = None,
+        move: Optional[str] = None,
     ) -> None:
-        """Record a specialist commentary entry (Track UU #724)."""
+        """Record a specialist commentary entry (Track UU #724).
+
+        #2295 — optional ``anchor``/``move`` carry the argumentative sequence:
+        ``anchor`` is ``{"offset": int, "length": int}`` in the source text
+        (same shape spirit as the #1737 reading-window primitive; the entry
+        speaks FROM a measured span, never a fabricated offset 0), and
+        ``move`` is one of ``TRACE_MOVE_VOCABULARY``. Both absent on legacy
+        entries — the 17 existing writers are untouched.
+        """
         summary = summary[:280]
         import time as _time
 
+        if move is not None and move not in self.TRACE_MOVE_VOCABULARY:
+            raise ValueError(
+                f"add_trace_entry: move '{move}' hors vocabulaire fermé "
+                f"{self.TRACE_MOVE_VOCABULARY} (#2295)"
+            )
+        if anchor is not None:
+            if (
+                not isinstance(anchor, dict)
+                or not isinstance(anchor.get("offset"), int)
+                or not isinstance(anchor.get("length"), int)
+                or anchor["offset"] < 0
+                or anchor["length"] < 0
+                or isinstance(anchor.get("offset"), bool)
+                or isinstance(anchor.get("length"), bool)
+            ):
+                raise ValueError(
+                    f"add_trace_entry: anchor invalide {anchor!r} — attendu "
+                    "{'offset': int >= 0, 'length': int >= 0} (#2295)"
+                )
         entry = {
             "phase": phase,
             "agent": agent,
@@ -868,6 +902,10 @@ class UnifiedAnalysisState(RhetoricalAnalysisState):
             "summary": summary,
             "timestamp": _time.strftime("%Y-%m-%dT%H:%M:%SZ", _time.gmtime()),
         }
+        if anchor is not None:
+            entry["anchor"] = {"offset": anchor["offset"], "length": anchor["length"]}
+        if move is not None:
+            entry["move"] = move
         self.analysis_trace.append(entry)
         state_logger.info(
             f"Trace: [{agent}] ({phase}, reacts_to={reacts_to}) → {summary[:60]}..."
