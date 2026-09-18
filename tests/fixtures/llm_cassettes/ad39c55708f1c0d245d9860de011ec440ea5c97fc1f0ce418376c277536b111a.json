@@ -1,0 +1,43 @@
+{
+  "key": "ad39c55708f1c0d245d9860de011ec440ea5c97fc1f0ce418376c277536b111a",
+  "value": {
+    "id": "chatcmpl-EPRldFOgsgHVnxxz0vFXLkfafqUgP",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\":[\"climate_change_is_an_undeniable_scientific_reality\",\"global_temperature_has_increased_by_1_1_degrees_since_preindustrial_times\",\"climate_has_always_changed && current_climate_change_speed_is_unprecedented\",\"predictive_models_agree_on_human_activity_impact\",\"predictive_models_agree_on_human_activity_impact => human_activities_impact_climate\",\"climate_crisis_minimizers_use_selective_data\",\"climate_crisis_minimizers_use_selective_data => selective_data_supports_climate_crisis_minimizers_position\",\"energy_transition_is_necessary && energy_transition_is_economically_advantageous_in_the_long_term\"]}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733645,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 639,
+      "prompt_tokens": 362,
+      "total_tokens": 1001,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 488,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

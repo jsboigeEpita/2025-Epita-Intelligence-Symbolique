@@ -1,0 +1,16 @@
+{
+  "key": "44ad7e0947b28591a57b1da11597ec9c9c492af0280d303efd15414799266a08",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Preuve par assertion\",\"taxonomy_pk\":\"1297\",\"explanation\":\"L’énoncé présente le changement climatique comme une réalité « incontestable » sans fournir de justification ni de preuve dans le texte, remplaçant ainsi l’argumentation par une affirmation catégorique.\",\"confidence\":0.96}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRlMs3eMAP5rvdTDwgDmiLhHKbLP",
+        "created": 1789733628,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22921 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22918) completion_tokens=205 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=131, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

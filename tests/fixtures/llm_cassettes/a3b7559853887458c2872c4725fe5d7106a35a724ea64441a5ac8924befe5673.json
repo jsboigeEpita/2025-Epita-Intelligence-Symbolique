@@ -1,0 +1,16 @@
+{
+  "key": "a3b7559853887458c2872c4725fe5d7106a35a724ea64441a5ac8924befe5673",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel au nombre\",\"taxonomy_pk\":\"102\",\"explanation\":\"La réforme est présentée comme nécessaire uniquement parce que tous les pays européens l’auraient déjà adoptée, sans démontrer sa pertinence pour le système concerné ni tenir compte des différences structurelles.\",\"confidence\":0.97}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbTXW4uw2YId5sIDD8JHjnw5Lps",
+        "created": 1789733015,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=23118 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=23115) completion_tokens=203 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=129, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

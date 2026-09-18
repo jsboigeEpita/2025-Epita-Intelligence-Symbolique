@@ -27,6 +27,30 @@ name: requires_api band (scheduled real-LLM lane)
 # Full-band dispatch is an on-demand operator action, never scheduled, so it
 # cannot silently balloon.
 #
+# TWO-BAND SHAPE (#1603, dispatch R1021): the LIVE band below stays the 8
+# llm_light tests with the real key and is NEVER widened to replay -- it is
+# the probe that must keep touching the API. A lane gone fully replay would
+# stop seeing a dead key, a moved endpoint or a retired model: exactly the
+# false green #2286 was built to remove. The replay-band job covers the
+# non-light requires_api tests from COMMITTED cassettes at zero marginal
+# cost, under the anti-vacuity gate (live==0, hit>=1, miss_replay==0) and a
+# MEASURED egress==0 guard. Cassettes are recorded by the manual, billing
+# record-llm-cassettes.yml job -- the only workflow that ever pays for the
+# replay half. A dummy key (not a secret) keeps the requires_api skip
+# fixture satisfied while leaving nothing real to fall through to: any live
+# attempt burns on 401 AND trips the egress guard.
+#
+# MEASURED SPLIT (2026-09-18, po-2023, post-repair record + classification
+# replay): of the 51 non-light tests, 20 replay green from cassettes with
+# hit=52, miss_replay=0, live=0 and egress total 0 (counter report, 36 s);
+# 31 stay OUT, each with a measured reason (bypass traffic the cache cannot
+# serve: 23; fatal miss -- cassette refused by the privacy audit or
+# nondeterministic chain: 4; #2296/#2300 open defects: noted; env-flip
+# tests that mutate LLM_CACHE_MODE mid-process: 3). The deselect list and
+# the full reasons live in the replay-band step below. The 23-test bypass
+# family is the cassette infra's known boundary (#1789: SK-agent phases and
+# direct-client tests bypass the cache wrap by construction).
+#
 # First scheduled run: Saturday 05:37 UTC -- off the :00 mark deliberately,
 # per cluster convention on API-hitting cadences.
 
@@ -243,3 +267,160 @@ jobs:
           path: |
             pytest_report.xml
             llm_egress_report.json
+
+  # ─────────────────────────────────────────────────────────────────────
+  # REPLAY BAND (#1603): the non-light requires_api tests against committed
+  # cassettes, at zero marginal cost. Runs in parallel with the live band --
+  # its failure never blocks the live probe's report and vice versa.
+  #
+  # Local measurement that shaped this job (2026-09-18, po-2023): the first
+  # probe (dummy key, empty cache) came back hit=0 -- and the root was NOT
+  # the cache: every extraction call had been 400ing since the default model
+  # moved to gpt-5.6-luna (max_tokens spelling, repaired in the #1603 PR --
+  # see invoke_callables.py). Post-repair, the classification replay on the
+  # exact lane argv measures: 20 passed, hit=52, miss_replay=0, live=0,
+  # egress total 0, gate OK. Part of the traffic BYPASSES the cache by
+  # construction (SK-agent phases, direct-client tests) and is DESELECTED
+  # below with the measured reason -- recorded in the PR, never silently
+  # dropped.
+  # ─────────────────────────────────────────────────────────────────────
+  replay-band:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      # Dummy, deliberately NOT a secret: satisfies the requires_api skip
+      # fixture (which checks key PRESENCE) while leaving nothing real to
+      # call. Any live attempt burns on 401 AND trips the egress guard.
+      OPENAI_API_KEY: replay-band-no-live-anti-1019
+      TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Miniconda
+        uses: conda-incubator/setup-miniconda@v2
+        timeout-minutes: 15
+        with:
+          python-version: "3.10"
+          environment-file: environment.yml
+          activate-environment: projet-is
+          use-mamba: true
+          auto-update-conda: false
+
+      # --- Java toolchain: same chain as the live band (JVM-face tests) ---
+      - name: Compute Java toolchain cache key
+        id: javakey
+        shell: pwsh
+        run: |
+          $key = conda run -n projet-is --no-capture-output python scripts/ci/tweety_cache_key.py
+          if (-not $key) { Write-Host "::error::cle de cache vide"; exit 1 }
+          echo "key=$key" >> $env:GITHUB_OUTPUT
+
+      - name: Restore Java toolchain
+        id: javacache
+        uses: actions/cache@v4
+        with:
+          path: |
+            libs/tweety
+            portable_jdk
+          key: java-${{ runner.os }}-${{ steps.javakey.outputs.key }}
+
+      - name: Provision Tweety classpath
+        if: steps.javacache.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python scripts/ci/provision_tweety.py
+
+      - name: Verify Java toolchain is usable
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python scripts/ci/verify_tweety.py
+
+      - name: Count committed cassettes (guard against a vacuous lane)
+        shell: pwsh
+        run: |
+          $n = (Get-ChildItem tests/fixtures/llm_cassettes -Filter *.json | Measure-Object).Count
+          Write-Host "Committed cassettes: $n"
+          if ($n -lt 1) {
+            Write-Host "FAIL-LOUD: no cassettes committed -- the replay band would be vacuous (hit would be 0)."
+            exit 1
+          }
+
+      - name: Import cassettes into the runtime replay DB
+        shell: pwsh
+        run: |
+          python scripts/cassettes/import.py tests/fixtures/llm_cassettes .cache/llm_replay_band --purge
+          python scripts/cassettes/cost_report.py .cache/llm_replay_band | Select-Object -First 3
+
+      - name: Replay band (dummy key -- nothing real to fall through to)
+        shell: pwsh
+        timeout-minutes: 90
+        env:
+          LLM_CACHE_MODE: replay
+          LLM_CACHE_DIR: .cache/llm_replay_band
+          REPLAY_GATE: '1'
+          REPLAY_STATS_OUT: replay_stats.json
+        # The 15 deselect flags below cover 31 of the 51 non-light tests,
+        # each with a MEASURED reason (classification replay, dummy key,
+        # po-2023 2026-09-18, post max_tokens-repair record):
+        #   - BYPASS, 23 tests: their traffic never consults the cache, so on
+        #     a dummy key they attempt real egress (measured: golden standard
+        #     family 18 attempts/test, FOL value-gate 4, sk-path 3, fallacy
+        #     benchmark 2, judge 1, config_real_gpt 1x3) — they would trip the
+        #     egress guard below, and cassettes cannot cover them by design.
+        #   - FATAL MISS, 4 tests: their cache keys have no cassette (responses
+        #     refused by the blocking privacy audit, or nondeterministic
+        #     chained prompts) — LLMCacheMiss is fail-loud by contract.
+        #   - #2296 (3 of the bypass set also fail on belief_sets: 0 < 1 with
+        #     a real key) and #2300 (2 tests, winner None once the silent
+        #     degradation was repaired) are the open defects that own their
+        #     return into this band.
+        #   - ENV-FLIP, 2 tests (+ sk-path above): they set LLM_CACHE_MODE
+        #     mid-process for their own record/replay cycle — incompatible
+        #     with a global replay session.
+        # Validated locally on the exact argv: 20 passed, hit=52,
+        # miss_replay=0, live=0, egress total 0 (counter), gate OK, 36 s.
+        run: |
+          $marker = "requires_api and not llm_light"
+          Write-Host "Band marker: $marker"
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/integration/orchestration/test_democratech_demo.py::TestDemocratechDemo::test_demo_renders_firsthand_verdict_per_prop" --deselect "tests/integration/api/test_websocket_deliberation_genuine.py::TestWebSocketDeliberationGenuineVerdict::test_ws_client_receives_genuine_governance_verdict" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
+
+      - name: Anti-vacuity gate (live==0, hit>=1, miss_replay==0)
+        if: always()
+        shell: pwsh
+        run: python -m scripts.cassettes.replay_gate_check replay_stats.json
+
+      - name: Egress guard — 0 outgoing LLM request, MEASURED (#1603 DoD)
+        # The dummy key makes any live attempt a 401, but "attempted" is
+        # already a violation: this band's contract is zero egress. The
+        # egress counter (#1787) is the measurer; an absent report is NOT a
+        # zero (its own motto: 0 without the counter running is
+        # indistinguishable from an unwired counter).
+        if: always()
+        shell: pwsh
+        run: |
+          $reports = Get-ChildItem -Filter "llm_egress_report*.json"
+          if (-not $reports) {
+            Write-Host "FAIL-LOUD: no egress report found -- the counter did not run; absence is not zero."
+            exit 1
+          }
+          $total = 0
+          foreach ($r in $reports) {
+            $j = Get-Content $r.FullName -Raw | ConvertFrom-Json
+            Write-Host "$($r.Name): total=$($j.total)"
+            $total += [int]$j.total
+          }
+          if ($total -gt 0) {
+            Write-Host "FAIL-LOUD: replay band made $total outgoing LLM request(s) -- replay must hold with zero egress."
+            exit 1
+          }
+          Write-Host "OK: 0 outgoing LLM requests across $($reports.Count) report(s)."
+
+      - name: Upload replay artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: replay-band-results
+          path: |
+            replay_stats.json
+            pytest_report_replay.xml
+            llm_egress_report*.json
+          if-no-files-found: warn

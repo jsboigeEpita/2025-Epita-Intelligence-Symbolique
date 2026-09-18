@@ -1,0 +1,43 @@
+{
+  "key": "97ea6c833451e17c907db323eb59e90b6c41c2046d87f8eee9c1e7ad99739a40",
+  "value": {
+    "id": "chatcmpl-EPRiXUgnXi4iFw96XIlW7eykx3igu",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"sorts\": {\n    \"Vaccine\": [\n      \"vaccines\"\n    ],\n    \"HealthDomain\": [\n      \"publicHealth\"\n    ],\n    \"Study\": [\n      \"scientificStudies\"\n    ],\n    \"Vaccination\": [\n      \"vaccination\"\n    ],\n    \"Disease\": [\n      \"smallpox\",\n      \"polio\"\n    ],\n    \"Person\": [\n      \"vaccineCritics\",\n      \"peopleUnableToBeVaccinated\"\n    ],\n    \"Research\": [\n      \"clinicalResearch\"\n    ],\n    \"PharmaceuticalProduct\": [\n      \"pharmaceuticalProducts\"\n    ],\n    \"Effect\": [\n      \"sideEffects\"\n    ],\n    \"Argument\": [\n      \"argument\"\n    ],\n    \"Theory\": [\n      \"conspiracyTheory\"\n    ],\n    \"VaccinationRate\": [\n      \"highVaccinationRates\"\n    ],\n    \"Immunity\": [\n      \"herdImmunity\"\n    ]\n  },\n  \"predicates\": {\n    \"IndispensableFor\": [\n      \"Vaccine\",\n      \"HealthDomain\"\n    ],\n    \"ShowsEradication\": [\n      \"Study\",\n      \"Vaccination\",\n      \"Disease\"\n    ],\n    \"ShowsReduction\": [\n      \"Study\",\n      \"Vaccination\",\n      \"Disease\"\n    ],\n    \"Dangerous\": [\n      \"Vaccine\"\n    ],\n    \"ClaimsDangerous\": [\n      \"Person\",\n      \"Vaccine\"\n    ],\n    \"Ignores\": [\n      \"Person\",\n      \"Research\"\n    ],\n    \"Hides\": [\n      \"PharmaceuticalProduct\",\n      \"Effect\"\n    ],\n    \"IsConspiracyTheory\": [\n      \"Argument\"\n    ],\n    \"Unfounded\": [\n      \"Argument\"\n    ],\n    \"Generates\": [\n      \"VaccinationRate\",\n      \"Immunity\"\n    ],\n    \"Protects\": [\n      \"Immunity\",\n      \"Person\"\n    ],\n    \"CannotBeVaccinated\": [\n      \"Person\"\n    ]\n  },\n  \"constants\": {\n    \"vaccines\": \"vaccins en général\",\n    \"publicHealth\": \"la santé publique\",\n    \"scientificStudies\": \"les études scientifiques\",\n    \"vaccination\": \"la vaccination\",\n    \"smallpox\": \"la variole\",\n    \"polio\": \"la polio\",\n    \"vaccineCritics\": \"ceux qui affirment que les vaccins sont dangereux\",\n    \"clinicalResearch\": \"les décennies de recherche clinique\",\n    \"pharmaceuticalProducts\": \"les produits pharmaceutiques\",\n    \"sideEffects\": \"les effets secondaires\",\n    \"argument\": \"l'argument selon lequel les produits pharmaceutiques cachent les effets secondaires\",\n    \"conspiracyTheory\": \"la théorie du complot\",\n    \"highVaccinationRates\": \"les taux de vaccination élevés\",\n    \"peopleUnableToBeVaccinated\": \"ceux qui ne peuvent pas être vaccinés\",\n    \"herdImmunity\": \"l'immunité collective\"\n  }\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733453,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1983,
+      "prompt_tokens": 264,
+      "total_tokens": 2247,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 1345,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

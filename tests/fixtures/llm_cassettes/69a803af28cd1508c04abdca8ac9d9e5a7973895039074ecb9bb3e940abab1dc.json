@@ -1,0 +1,16 @@
+{
+  "key": "69a803af28cd1508c04abdca8ac9d9e5a7973895039074ecb9bb3e940abab1dc",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Argument d’autorité personnelle\",\"taxonomy_pk\":\"74\",\"explanation\":\"L’énoncé s’appuie sur les chiffres présentés par le ministre des finances comme justification de la prévision, sans fournir ni examiner les données, méthodes ou hypothèses qui la fondent.\",\"confidence\":0.68}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbjQAJjOkMv6LYUxml2Yj3nZor4",
+        "created": 1789733031,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22948 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22945) completion_tokens=303 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=229, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

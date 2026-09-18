@@ -103,7 +103,7 @@ jobs:
           # dashboard tests are NOT deselected: the React build parity
           # steps above make them pass (measured: first record run failed
           # them without the build, the CI pipeline builds it).
-          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "${{ inputs.lane }}" --ignore=tests/unit/services/test_mcp_server_v2 --allow-dotenv ${{ inputs.extra_args }} --deselect "tests/unit/argumentation_analysis/test_llm_service.py::TestLLMService::test_create_llm_service_openai_authentic" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ -m "${{ inputs.lane }}" --allow-dotenv ${{ inputs.extra_args }} --deselect "tests/unit/argumentation_analysis/test_llm_service.py::TestLLMService::test_create_llm_service_openai_authentic" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
       - name: Export cassettes + blocking privacy audit
         shell: pwsh

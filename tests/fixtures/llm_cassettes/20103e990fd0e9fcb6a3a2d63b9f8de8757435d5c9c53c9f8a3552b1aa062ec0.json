@@ -1,0 +1,16 @@
+{
+  "key": "20103e990fd0e9fcb6a3a2d63b9f8de8757435d5c9c53c9f8a3552b1aa062ec0",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel au doute et à la crainte\",\"taxonomy_pk\":\"338\",\"explanation\":\"L’argument cherche à justifier la peine de mort en mettant l’accent sur la menace permanente et le danger supposé de certains criminels, suscitant ainsi la crainte plutôt qu’en établissant directement la nécessité ou l’efficacité de cette peine.\",\"confidence\":0.88}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRjuUXl8hFx9QtQQFlsHYqH0UJlW",
+        "created": 1789733538,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22949 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22946) completion_tokens=263 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=174, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

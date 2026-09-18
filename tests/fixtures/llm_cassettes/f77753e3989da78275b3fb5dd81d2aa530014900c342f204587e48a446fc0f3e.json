@@ -1,0 +1,43 @@
+{
+  "key": "f77753e3989da78275b3fb5dd81d2aa530014900c342f204587e48a446fc0f3e",
+  "value": {
+    "id": "chatcmpl-EPRipQ3539CN6gPnKWeGIBYHM7l1W",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"formulas\":[\"!Dangerous(vaccines)\",\"Hides(pharmaceuticalProducts, sideEffects)\",\"Unfounded(argument)\"]}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733471,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1068,
+      "prompt_tokens": 845,
+      "total_tokens": 1913,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 1024,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "key": "827be9a25e9afa57d2928b3ca6f01502ebe4fc6f0b07595cc662fa509fdaa197",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Autorité anonyme\",\"taxonomy_pk\":\"91\",\"explanation\":\"L’énoncé invoque des « études scientifiques » sans préciser lesquelles ni fournir de données vérifiables, faisant reposer la justification sur une autorité indéterminée. Toutefois, la formulation ne constitue pas nécessairement un sophisme si les études peuvent être citées et vérifiées.\",\"confidence\":0.62}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRiRpAPZNjxxyWTHWgOdGxpVu0NW",
+        "created": 1789733447,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22941 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22938) completion_tokens=317 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=225, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

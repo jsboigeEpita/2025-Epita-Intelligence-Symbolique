@@ -1,0 +1,16 @@
+{
+  "key": "1ad82223bdc99a9d9c81582908928d40afc6310ef4d6a74fe06ed6cd028fd964",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Argument d’autorité\",\"taxonomy_pk\":\"71\",\"explanation\":\"Le texte invoque les décennies de recherche clinique comme fondement de la sécurité vaccinale, mais cette référence à l’autorité scientifique n’est fallacieuse que si elle remplace l’examen des données précises. La formulation fournie ne permet pas d’identifier un sophisme plus spécifique.\",\"confidence\":0.38}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRiSKFOtN9H1y8HCR8PcJZvOkAuf",
+        "created": 1789733448,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22927 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22924) completion_tokens=496 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=403, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

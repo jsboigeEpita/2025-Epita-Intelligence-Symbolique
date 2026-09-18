@@ -1,0 +1,16 @@
+{
+  "key": "f337423d5f6f5d979dbdb68f9246ad5fcdf2803c4d3b0c8465e712fa570f77df",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Assertion sans preuve\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Vaguité ou généralité floue\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Appel à la complexité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.58\n  },\n  {\n    \"fallacy_name\": \"Déplacement de la charge de la preuve\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.55\n  },\n  {\n    \"fallacy_name\": \"Présupposition d'une pertinence causale\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.62\n  },\n  {\n    \"fallacy_name\": \"Non sequitur implicite\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.48\n  },\n  {\n    \"fallacy_name\": \"Fausse invalidation par différence\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.46\n  },\n  {\n    \"fallacy_name\": \"Diversion ou faux-fuyant\",\n    \"root_category\": \"Obstruction\",\n    \"confidence\": 0.42\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive sur les systèmes européens\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.35\n  },\n  {\n    \"fallacy_name\": \"Déplacement des buts de la comparaison\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.34\n  },\n  {\n    \"fallacy_name\": \"Désignation partisane de l'argument adverse\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.27\n  },\n  {\n    \"fallacy_name\": \"Caricature implicite de la comparaison adverse\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.23\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbXInqDRSwSO8bSKMSlaFDVUZh0",
+        "created": 1789733019,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=233 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=987 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "key": "dfe2ab62dbea5d3f60285fd769e0415dad7d1041ca633714a72023e544adba93",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Généralisation hâtive sur le groupe des sceptiques\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.84\n  },\n  {\n    \"fallacy_name\": \"Caricature ou réduction abusive de la position adverse\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.68\n  },\n  {\n    \"fallacy_name\": \"Équivoque sur le terme « toujours »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté entre changement climatique passé et changement climatique actuel\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Non sequitur implicite : le changement passé ne réfute pas nécessairement l'influence humaine actuelle\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.79\n  },\n  {\n    \"fallacy_name\": \"Fausse équivalence entre variabilité naturelle et changement climatique anthropique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Ignoratio elenchi : déplacement de la question des causes vers le simple fait du changement\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.77\n  },\n  {\n    \"fallacy_name\": \"Sélection implicite d'un seul aspect de l'histoire climatique\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.62\n  },\n  {\n    \"fallacy_name\": \"Assertion non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Appel implicite à l'évidence supposée d'un fait général\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Étiquetage polémique par le terme « sceptiques »\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.57\n  },\n  {\n    \"fallacy_name\": \"Effet de citation sans apport probant\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.83\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRlCzRQCI4h0kUQhRSine44c7Klv",
+        "created": 1789733618,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=223 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=1052 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

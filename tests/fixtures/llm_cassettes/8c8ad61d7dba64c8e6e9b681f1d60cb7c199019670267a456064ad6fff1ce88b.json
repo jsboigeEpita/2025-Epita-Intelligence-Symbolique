@@ -1,0 +1,16 @@
+{
+  "key": "8c8ad61d7dba64c8e6e9b681f1d60cb7c199019670267a456064ad6fff1ce88b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Balayer d’un revers de main\",\"taxonomy_pk\":\"1293\",\"explanation\":\"L’affirmation est simplement rejetée comme une « théorie du complot sans fondement », sans fournir d’argument ni d’élément établissant pourquoi elle serait infondée.\",\"confidence\":0.93}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRiRT0fOR0RmFVDEHkkcIkwQ9dhU",
+        "created": 1789733447,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22937 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22934) completion_tokens=228 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=153, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

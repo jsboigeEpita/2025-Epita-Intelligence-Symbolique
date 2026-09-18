@@ -1,0 +1,16 @@
+{
+  "key": "9a18ed04a1290f1accb2f5f217f703d14848076d4056848888981a22030cffc7",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel au biais\",\"taxonomy_pk\":\"1384\",\"explanation\":\"Le texte discrédite les personnes qui minimisent la crise climatique en affirmant qu’elles utilisent des données sélectives, plutôt que de réfuter directement leurs arguments. Cette accusation de biais peut détourner l’attention de l’examen des preuves elles-mêmes.\",\"confidence\":0.82}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRl8qDU58xPcWAE9OqRD5WEXdXLO",
+        "created": 1789733614,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=23012 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=23009) completion_tokens=327 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=241, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

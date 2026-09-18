@@ -1,0 +1,16 @@
+{
+  "key": "63a6cbd8224b8c9aa10f5fb61ede6e94e44287880d6dba3e949fdc41c6610984",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Preuve par assertion\",\"taxonomy_pk\":\"1297\",\"explanation\":\"La nécessité de la peine de mort est simplement affirmée, sans fournir de prémisse, de preuve ni de justification établissant pourquoi elle serait nécessaire dans les cas évoqués.\",\"confidence\":0.94}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRjwWdEd0WeJTlsxSRg5WY5PkNGT",
+        "created": 1789733540,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22926 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22923) completion_tokens=241 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=172, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

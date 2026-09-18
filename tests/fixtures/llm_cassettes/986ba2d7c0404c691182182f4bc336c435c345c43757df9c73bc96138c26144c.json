@@ -1,0 +1,43 @@
+{
+  "key": "986ba2d7c0404c691182182f4bc336c435c345c43757df9c73bc96138c26144c",
+  "value": {
+    "id": "chatcmpl-EPRj1n9eKAHlUi6dOFjnPqXCCO2Gn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"attacks\":[{\"source\":\"arg4\",\"target\":\"arg3\",\"rationale\":\"Les décennies de recherche clinique fournissent des éléments qui contredisent l’affirmation que les vaccins sont dangereux.\"},{\"source\":\"arg6\",\"target\":\"arg5\",\"rationale\":\"L’affirmation selon laquelle les produits pharmaceutiques cachent les effets secondaires est explicitement présentée comme dépourvue de fondement.\"}]}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733483,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 188,
+      "prompt_tokens": 509,
+      "total_tokens": 697,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 89,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

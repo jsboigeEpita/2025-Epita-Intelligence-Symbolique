@@ -1,0 +1,43 @@
+{
+  "key": "a5efa7af883895c11afb4512064196e34d4afea1c065f45dbd1fbbde5db599ca",
+  "value": {
+    "id": "chatcmpl-EPRiX263cI3Xn8KV0XFFyWmdQrPbx",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\n  \"propositions\": [\n    \"vaccines_are_indispensable_for_public_health\",\n    \"vaccination_eradic​ated_smallpox\",\n    \"vaccination_reduced_polio_considerably\",\n    \"some_people_claim_that_vaccines_are_dangerous\",\n    \"clinical_research_on_vaccines_spans_decades\",\n    \"pharmaceutical_companies_hide_side_effects\",\n    \"the_conspiracy_theory_about_hidden_side_effects_is_unfounded\",\n    \"high_vaccination_rates_protect_people_who_cannot_be_vaccinated\",\n    \"herd_immunity_provides_protection\"\n  ]\n}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733453,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 653,
+      "prompt_tokens": 180,
+      "total_tokens": 833,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 512,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

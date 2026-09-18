@@ -1,0 +1,16 @@
+{
+  "key": "a43e45780388ce2f5417d06fb11b72616d55a9154e5e50be64ab8a69dc56e20c",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "[\n  {\n    \"fallacy_name\": \"Appel à la nature\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Sophisme naturaliste\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Appel à l'évidence ou au bon sens\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.96\n  },\n  {\n    \"fallacy_name\": \"Appel à la normalité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.92\n  },\n  {\n    \"fallacy_name\": \"Appel au consensus implicite\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.8\n  },\n  {\n    \"fallacy_name\": \"Appel à l'autorité institutionnelle\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.72\n  },\n  {\n    \"fallacy_name\": \"Appel au statu quo ou à la tradition\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.75\n  },\n  {\n    \"fallacy_name\": \"Argument de l'inévitabilité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Fatalisme ou déterminisme indu\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Passage abusif du descriptif au normatif\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Pétition de principe\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.78\n  },\n  {\n    \"fallacy_name\": \"Présupposition de la légitimité de la mesure\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Généralisation abusive\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.7\n  },\n  {\n    \"fallacy_name\": \"Équivoque sur l'expression « dans l'ordre des choses »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Réification d'un ordre supposé des choses\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.89\n  },\n  {\n    \"fallacy_name\": \"Euphémisation ou cadrage orienté\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Naturalisation d'un choix politique\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.96\n  },\n  {\n    \"fallacy_name\": \"Effacement des alternatives possibles\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.84\n  },\n  {\n    \"fallacy_name\": \"Argument d'affirmation non étayée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.88\n  }\n]",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRbXgmz1GA5X0UX6lFWVQ9o3CNbp",
+        "created": 1789733019,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=230 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=0) completion_tokens=1197 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=445, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}

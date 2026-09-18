@@ -1,0 +1,43 @@
+{
+  "key": "b7d04abb6f0df1b2e39d7116d23c6899065c440f887572d7307ad68a5227d0dd",
+  "value": {
+    "id": "chatcmpl-EPRaxeHZHEKWCs5cURL1xI6iPPp7A",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"arguments\":[{\"text\":\"Le Premier ministre soutient que la réforme des retraites est nécessaire parce que tous les pays européens l'ont déjà adoptée; il s'appuie ainsi sur une comparaison internationale comme justification.\",\"source_quote\":\"la réforme des retraites est nécessaire car tous les pays européens l'ont déjà faite\"},{\"text\":\"L'argument opposé est que cette comparaison doit tenir compte des différences structurelles entre les systèmes de retraite européens.\",\"source_quote\":\"ne tient pas compte des différences structurelles entre les systèmes\"},{\"text\":\"Le gouvernement soutient qu'il faut agir immédiatement en présentant l'effondrement du système dans cinq ans comme conséquence de l'inaction.\",\"source_quote\":\"si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans\"},{\"text\":\"Le gouvernement présente le fait de travailler plus longtemps comme une évolution naturelle et allant de soi.\",\"source_quote\":\"travailler plus longtemps est « dans l'ordre des choses »\"},{\"text\":\"Les données budgétaires sont mobilisées pour étayer l'analyse de la situation financière future du système de retraite.\",\"source_quote\":\"le ministre des finances a présenté des chiffres montrant que le déficit atteindra 2.3% du PIB d'ici 2030\"},{\"text\":\"L'opposition soutient que le débat porte sur la manière de réformer les retraites, et non sur leur suppression.\",\"source_quote\":\"personne n'a proposé de supprimer les retraites, seulement de les réformer différemment\"},{\"text\":\"L'appel à penser aux enfants mobilise une considération affective qui, selon le texte, détourne l'attention des questions techniques de financement.\",\"source_quote\":\"pensez à vos enfants » constitue un appel à l'émotion qui détourne le débat\"}],\"claims\":[{\"text\":\"Tous les pays européens ont déjà réformé leur système de retraites.\",\"source_quote\":\"tous les pays européens l'ont déjà faite\"},{\"text\":\"Les systèmes de retraite présentent des différences structurelles entre les pays.\",\"source_quote\":\"les différences structurelles entre les systèmes\"},{\"text\":\"Sans action immédiate, le système de retraite s'effondrerait dans cinq ans.\",\"source_quote\":\"si nous n'agissons pas maintenant, le système s'effondrera dans cinq ans\"},{\"text\":\"Le ministre des finances prévoit que le déficit atteindra 2,3 % du PIB d'ici 2030.\",\"source_quote\":\"le déficit atteindra 2.3% du PIB d'ici 2030\"},{\"text\":\"La projection du déficit repose sur une hypothèse de croissance annuelle de 1,8 %.\",\"source_quote\":\"cette projection repose sur des hypothèses de croissance optimistes de 1.8% par an\"},{\"text\":\"Aucune proposition mentionnée dans le débat ne vise à supprimer les retraites.\",\"source_quote\":\"personne n'a proposé de supprimer les retraites\"},{\"text\":\"Certaines propositions visent à réformer les retraites selon une approche différente.\",\"source_quote\":\"seulement de les réformer différemment\"},{\"text\":\"L'argument fondé sur la considération des enfants détourne la discussion des questions techniques de financement.\",\"source_quote\":\"détourne le débat des questions techniques de financement\"}],\"summary\":\"Le texte présente les justifications gouvernementales de la réforme, les objections des syndicats et de l'opposition, ainsi que plusieurs stratégies rhétoriques: comparaison internationale, urgence, naturalisation d'une mesure et appel à l'émotion. Il avance également des projections chiffrées sur le déficit et la croissance.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789732983,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1378,
+      "prompt_tokens": 525,
+      "total_tokens": 1903,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 642,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

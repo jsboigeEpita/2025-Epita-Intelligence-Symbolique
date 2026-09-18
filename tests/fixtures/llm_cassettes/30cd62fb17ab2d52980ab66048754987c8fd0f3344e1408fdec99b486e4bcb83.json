@@ -1,0 +1,43 @@
+{
+  "key": "30cd62fb17ab2d52980ab66048754987c8fd0f3344e1408fdec99b486e4bcb83",
+  "value": {
+    "id": "chatcmpl-EPRgCggnO5Wdske5XVSXgOot6TrHV",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"A ranked, criteria-based vote is fairest because the three options represent legitimate but competing user needs; an equal split should not be presumed fair without evidence of demand, costs, and accessibility impacts.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Supports allocating the entire subsidy to expanding the youth book collection.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Supports allocating the entire subsidy to creating a freely accessible computer and digital space.\",\"influence\":0.33},{\"agent\":\"agent_3\",\"position\":\"Supports dividing the subsidy equally between books and the digital space.\",\"influence\":0.34}],\"recommended_resolution\":\"collaborative\",\"governance_reasoning\":\"The debate identifies meaningful tradeoffs rather than irreconcilable interests. Use participatory social choice: gather user-needs and cost data, allow stakeholders to rank options, and select the option with the strongest overall support, potentially refining option C into a needs-based rather than automatically equal allocation.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789733308,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 318,
+      "prompt_tokens": 542,
+      "total_tokens": 860,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 80,
+        "rejected_prediction_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0
+      }
+    }
+  }
+}

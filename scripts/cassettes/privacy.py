@@ -67,6 +67,22 @@ SOURCE_NAME_HINTS = (
 # Historical political date range — corpus contains (year: 1933-2026).
 DATE_RE = re.compile(r"\b(19[3-9]\d|20[0-2]\d)\b")
 
+# A year match glued to a currency symbol is a monetary amount, not a date
+# ("€2000 to run a tournament", "budget de 2000 €"). Measured on the #1603
+# harvest: governance/debate scenario responses carry budget figures that the
+# bare date regex refused. Symbols only — "2000 EUR" (letters) stays flagged.
+CURRENCY_SYMBOLS = "€$£¥"
+_AMOUNT_SPACES = "   "
+
+
+def _is_monetary_amount(text: str, match: re.Match) -> bool:
+    before = text[: match.start()].rstrip(_AMOUNT_SPACES)
+    after = text[match.end() :].lstrip(_AMOUNT_SPACES)
+    return (bool(before) and before[-1] in CURRENCY_SYMBOLS) or (
+        bool(after) and after[0] in CURRENCY_SYMBOLS
+    )
+
+
 # Response-metadata fields where the year/name heuristics are meaningless:
 # the OpenAI `model` id is versioned ("gpt-5-mini-2025-08-07") and would trip
 # the date rule on every raw-path cassette; `id`/`created`/`system_fingerprint`
@@ -124,12 +140,14 @@ def audit_value(value: Any, *, source: str = "<unknown>") -> list[str]:
                         f"{source}: source-name hint {name!r} found at {path}"
                     )
                     break  # one report per node is enough
-            for year in DATE_RE.findall(node):
+            for m in DATE_RE.finditer(node):
+                if _is_monetary_amount(node, m):
+                    continue
                 # 1933..2026 are the politically sensitive corpus years.
                 # Earlier (1920s debates etc.) would slip by design — broader
                 # range adds false positives on test fixtures.
                 violations.append(
-                    f"{source}: historical-year hint {year} found at {path}"
+                    f"{source}: historical-year hint {m.group(1)} found at {path}"
                 )
 
     walk(value, "")

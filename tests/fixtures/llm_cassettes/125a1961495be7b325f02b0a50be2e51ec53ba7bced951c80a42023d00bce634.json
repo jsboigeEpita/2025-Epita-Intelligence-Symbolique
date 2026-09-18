@@ -1,0 +1,16 @@
+{
+  "key": "125a1961495be7b325f02b0a50be2e51ec53ba7bced951c80a42023d00bce634",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "{\"fallacy_name\":\"Appel au nombre\",\"taxonomy_pk\":\"102\",\"explanation\":\"Le texte présente l’unanimité supposée des modèles comme un argument suffisant en faveur de la conclusion, en s’appuyant sur le nombre ou la convergence des sources plutôt que sur l’examen des preuves et du raisonnement sous-jacents.\",\"confidence\":0.78}",
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-EPRlN5YuWZyW16qRr6MQCoYmehz1B",
+        "created": 1789733629,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=22938 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22935) completion_tokens=292 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=208, rejected_prediction_tokens=0)"
+      }
+    }
+  ]
+}
