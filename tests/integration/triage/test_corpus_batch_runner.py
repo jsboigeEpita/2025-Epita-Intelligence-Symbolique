@@ -144,6 +144,49 @@ class TestRunSingle:
         assert on_disk["provenance"]["run_started_utc"] == prov["run_started_utc"]
 
     @pytest.mark.asyncio
+    async def test_signature_reprobes_environment_at_doc_end(self, tmp_path):
+        """#2282 : la signature re-sonde l'environment à son écriture.
+
+        Le provenance de lot est sondé AVANT la boucle : son jvm_started
+        est nécessairement False (rien n'a booté). Si la signature le
+        réutilise tel quel, un run sain estampille sa propre signature
+        jvm_started=False — le stamp loud ment sur le run qu'il atteste
+        (mesuré : run sain 74 jars, phases Tweety exécutées, signature
+        jvm_started=False car probe de début de lot).
+        """
+        batch_prov = {
+            "chat_model_id": "m",
+            "code_sha": "s",
+            "params": {"workflow": "spectacular", "timeout_s": 30},
+            "run_started_utc": "2026-09-18T00:00:00Z",
+            "environment": {"jvm": {"jvm_started": False, "probe": "batch-start"}},
+        }
+
+        sig = await runner._run_single(
+            text="Test text",
+            source_name="Test Source",
+            opaque_id_str="env_probe_doc",
+            workflow="spectacular",
+            metadata={},
+            state_dumps_dir=tmp_path / "dumps",
+            signatures_dir=tmp_path / "sigs",
+            skip_existing=False,
+            pipeline_fn=_mock_pipeline({"state_snapshot": {}}),
+            sanitize_fn=_mock_sanitize,
+            provenance=batch_prov,
+        )
+
+        assert sig is not None
+        prov = sig["provenance"]
+        # L'identité de lot (#2045) est préservée
+        assert prov["run_started_utc"] == "2026-09-18T00:00:00Z"
+        assert prov["params"]["workflow"] == "spectacular"
+        # L'environment est re-sondé à la fin du doc, pas partagé avec le lot
+        assert prov["environment"] is not batch_prov["environment"]
+        assert prov["environment"]["jvm"].get("probe") is None
+        assert isinstance(prov["environment"]["jvm"].get("jvm_started"), bool)
+
+    @pytest.mark.asyncio
     async def test_skip_existing_reuses_failure_outcome(self, tmp_path):
         """A skipped existing failure remains visible to aggregate exit status."""
         sigs = tmp_path / "sigs"
