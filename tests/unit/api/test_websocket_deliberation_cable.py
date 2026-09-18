@@ -61,6 +61,10 @@ def _sanitized_result_shape() -> dict:
             "governance_verdict": {
                 "degraded": False,
                 "condorcet_winner": "arg_1",
+                # #2300 — the aggregate now carries the fallback-canon winner
+                # (+ basis); the broadcast reads this, not the raw strict variant.
+                "winner": "arg_1",
+                "winner_basis": "condorcet",
                 "winners_per_method": {"borda": "arg_1", "copeland": "arg_1"},
             },
         },
