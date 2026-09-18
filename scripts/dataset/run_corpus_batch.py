@@ -19,6 +19,17 @@ Usage:
     # Resume an interrupted batch
     python scripts/dataset/run_corpus_batch.py --resume
 
+Runbook B — pre-campaign canary (#2282, coord arbitration 2026-09-18):
+    Every run stamps its environment on stdout next to the results, and in
+    each signature file. Before launching (or trusting) a campaign:
+    1. Probe the environment axis you depend on:
+        python -c "from argumentation_analysis.evaluation.env_manifest import environment_manifest as m; print(m()['jvm'])"
+    2. A stamp ``jvm: not_started`` on a JVM-facing campaign means the formal
+       phases ran dead (#2276): STOP&REPAIR — fix the environment (jars in
+       libs/tweety or Maven for provisioning), never pin around it.
+    3. After the run, the summary stamp is the canary verdict: a not-started
+       JVM next to green-looking buckets is a dead run regardless of ``ok``.
+
 Output layout (all gitignored):
     .analysis_kb/
     ├── checkpoints/   <opaque_id>.checkpoint.json
@@ -39,6 +50,10 @@ import time
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from argumentation_analysis.evaluation.env_manifest import (
+    environment_manifest,
+    render_environment_stamp,
+)
 from argumentation_analysis.evaluation.run_provenance import provenance_block
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -921,7 +936,11 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     summary = summarize_batch(outcome_counts, skipped_too_long, len(omitted_sources))
     # stdout is the run-visible surface (#1874/#1903): the five buckets and
-    # the gate verdict in plain text, not a logger line.
+    # the gate verdict in plain text, not a logger line. The environment
+    # stamp (#2282) is probed HERE — after the run — so jvm_started says
+    # whether the JVM actually started during it, and a dead axis is LOUD
+    # in the summary, not only in a signature file.
+    print(render_environment_stamp(environment_manifest()), flush=True)
     print(render_batch_summary(summary), flush=True)
     print(render_batch_verdict(summary), flush=True)
     return 1 if summary["failed"] else 0
