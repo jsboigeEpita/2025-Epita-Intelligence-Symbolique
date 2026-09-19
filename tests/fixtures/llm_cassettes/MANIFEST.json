@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "record_run_id": "35474667181",
+  "record_sha": "333ee1d4a6cd7d8b64925f5ae5b70b08bdc8e706",
+  "recorded_at": "2026-09-19T22:55:09Z",
+  "cassette_count": 33,
+  "keys_sha256": "d8f062b8747c2422418281f7808c04090d8e05af07fcd80108cb44e159a2e517",
+  "env_signature": {
+    "spacy": "3.8.14",
+    "thinc": "8.3.13",
+    "srsly": "2.5.3",
+    "fr-core-news-sm": "3.8.0",
+    "openai": "3.3.0",
+    "numpy": "1.25.0"
+  }
+}

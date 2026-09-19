@@ -134,6 +134,48 @@ class TestImportGate:
         assert rc == 0
 
 
+class TestRefreshManifest:
+    """The surgical SK-patch path (#2323): record_sk_cassette.py changes the
+    cassette set, so the manifest must re-bind in the same transaction."""
+
+    def test_refresh_rebinds_after_a_patch(self, fixtures_dir: Path) -> None:
+        _write_manifest(fixtures_dir)
+        _make_cassette(fixtures_dir, "c" * 64, marker="sk-patch")  # surgical add
+        # Before refresh: the gate reddens (count/digest drift) — that is the
+        # defect refresh_manifest exists to close.
+        assert cassette_import.verify_manifest(fixtures_dir) != []
+        assert (
+            cassette_export.refresh_manifest(fixtures_dir, note="SK refresh #1950")
+            is True
+        )
+        assert cassette_import.verify_manifest(fixtures_dir) == []
+        manifest = json.loads(
+            (fixtures_dir / cassette_import.MANIFEST_NAME).read_text(encoding="utf-8")
+        )
+        assert manifest["cassette_count"] == 3
+        assert len(manifest["sk_patches"]) == 1
+        assert manifest["sk_patches"][0]["note"] == "SK refresh #1950"
+
+    def test_refresh_declares_the_patching_env(self, fixtures_dir: Path) -> None:
+        _write_manifest(fixtures_dir)
+        _make_cassette(fixtures_dir, "c" * 64, marker="sk-patch")
+        cassette_export.refresh_manifest(fixtures_dir, note="patch")
+        manifest = json.loads(
+            (fixtures_dir / cassette_import.MANIFEST_NAME).read_text(encoding="utf-8")
+        )
+        # The patch env is recorded for provenance (SK keys embed prompt
+        # wording, not env-computed scores — so it is declared, not gated).
+        assert (
+            manifest["sk_patches"][0]["recorded_env"] == cassette_export.env_signature()
+        )
+
+    def test_refresh_without_manifest_warns_and_refuses(
+        self, fixtures_dir: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        assert cassette_export.refresh_manifest(fixtures_dir, note="x") is False
+        assert "not provenance-tracked" in capsys.readouterr().err
+
+
 class TestExportEmitsManifest:
     def test_export_writes_manifest_under_github_run_id(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

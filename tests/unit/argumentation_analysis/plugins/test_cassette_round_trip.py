@@ -47,6 +47,11 @@ FIXTURES_DIR = REPO / "tests" / "fixtures" / "llm_cassettes"
 
 RECORD_SCRIPT = "python scripts/cassettes/record_sk_cassette.py"
 
+# The provenance manifest (#2323) is NOT a cassette: it shares the fixtures dir
+# but holds run/env metadata, not {"key", "value"}. Every cassette-shaped glob
+# must exclude it (same exclusion as import.py's _fixture_keys).
+MANIFEST_NAME = "MANIFEST.json"
+
 
 def _cassette_stems(*, value_is: str | None = None) -> list[str]:
     """Return cassette file stems (sha256 keys), sorted by stem.
@@ -63,7 +68,7 @@ def _cassette_stems(*, value_is: str | None = None) -> list[str]:
     cassette. No caller selects an element any more — B loads them all — but a
     stable order keeps failure output reproducible.
     """
-    stems = [p.stem for p in FIXTURES_DIR.glob("*.json")]
+    stems = [p.stem for p in FIXTURES_DIR.glob("*.json") if p.name != MANIFEST_NAME]
     if value_is is not None:
         want = list if value_is == "list" else dict
         stems = [
@@ -87,14 +92,17 @@ class TestCommittedCassettesAreWellFormed:
 
         If this fails, either the cassettes were never recorded or they were
         committed to a different path. See
-        ``tests/fixtures/llm_cassettes/README.md``.
+        ``tests/fixtures/llm_cassettes/README.md``. The manifest does not
+        count: a manifest alone would make this vacuously green (#2323).
         """
-        cassettes = list(FIXTURES_DIR.glob("*.json"))
+        cassettes = [p for p in FIXTURES_DIR.glob("*.json") if p.name != MANIFEST_NAME]
         assert cassettes, f"No cassettes found in {FIXTURES_DIR}"
 
     def test_cassette_value_is_well_formed(self):
         """Each cassette is ``{"key": sha256, "value": list | dict}``."""
         for path in FIXTURES_DIR.glob("*.json"):
+            if path.name == MANIFEST_NAME:
+                continue
             data = json.loads(path.read_text(encoding="utf-8"))
             assert isinstance(data, dict), path
             assert "key" in data and "value" in data, path
@@ -152,11 +160,19 @@ class TestExportImportScriptsRoundTrip:
     """
 
     @pytest.mark.parametrize("shape", ["list", "dict"])
-    def test_round_trip_preserves_a_synthetic_value(self, shape: str, tmp_path: Path):
+    def test_round_trip_preserves_a_synthetic_value(
+        self, shape: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ):
         """A synthetic value reaches a fresh DB identical to the source.
 
         Probes the two scripts as plain subprocesses (matches the workflow
-        committed by po-2025 in #1603), once per cassette shape.
+        committed by po-2025 in #1603), once per cassette shape. The export
+        runs under a synthetic ``GITHUB_RUN_ID`` (#2323) so it emits the
+        provenance manifest the record job emits — and the import step must
+        then pass the manifest gate, exactly like the CI replay lanes. Without
+        the manifest the import would exit 3; that is the gate working, not a
+        transport defect, so the probe exercises the real job shape instead of
+        bypassing it.
         """
         import diskcache  # type: ignore[import-not-found]
 
@@ -176,7 +192,10 @@ class TestExportImportScriptsRoundTrip:
         finally:
             src.close()
 
-        # 2. Export (DB -> JSON onto a fresh dir).
+        # 2. Export (DB -> JSON onto a fresh dir), in the record-job shape:
+        #    subprocesses inherit os.environ, so these env vars reach export.py.
+        monkeypatch.setenv("GITHUB_RUN_ID", "synthetic-round-trip-probe")
+        monkeypatch.setenv("GITHUB_SHA", "0" * 40)
         ret = subprocess.run(
             [
                 sys.executable,
@@ -189,6 +208,10 @@ class TestExportImportScriptsRoundTrip:
         )
         assert ret.returncode == 0, f"export failed: {ret.stderr}"
         assert (exported_dir / f"{key}.json").exists()
+        assert (exported_dir / MANIFEST_NAME).exists(), (
+            "export under GITHUB_RUN_ID emitted no manifest — the record job's "
+            "provenance birth certificate is missing (#2323)"
+        )
 
         # 3. Import (JSON -> DB).
         ret = subprocess.run(

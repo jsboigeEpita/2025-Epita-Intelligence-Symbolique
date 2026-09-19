@@ -1,64 +1,48 @@
 {
   "key": "9fc5caab494710e61bc746a9846b9bbb994359bdc365eaf4f17faf2328d103fd",
   "value": {
-    "id": "gen-1789757896-N19nwc1b9RF50q9IkOKx",
+    "id": "chatcmpl-EPyU9CCRZCRlxP2MdcPGmaxymsy1x",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L’option A consiste à consacrer les 2000 euros à un tournoi inter-villes comprenant un buffet et des prix, afin d’accroître la visibilité du club et d’attirer de nouveaux membres.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, ce qui augmentera la visibilite du club et recrutera de nouveaux membres.\"},{\"text\":\"L’option B consiste à investir la totalité du budget dans du matériel pédagogique neuf, notamment des échiquiers, des horloges et des supports de cours, pour répondre à l’usure du matériel actuel.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours, car les echiquiers actuels sont uses.\"},{\"text\":\"L’option C propose de partager équitablement le budget entre un tournoi réduit et l’achat de matériel pédagogique, afin de combiner visibilité et pédagogie.\",\"source_quote\":\"Option C : un format hybride, 1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique, equilibre entre visibilite et pedagogie.\"}],\"claims\":[{\"text\":\"Le club d’échecs dispose d’un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif de 2000 euros.\"},{\"text\":\"Trois options budgétaires distinctes sont proposées au club.\",\"source_quote\":\"Trois options divergentes s'affrontent.\"},{\"text\":\"L’option A est budgétée à 2000 euros et comprend un tournoi inter-villes, un buffet et des prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"L’organisation du tournoi inter-villes est présentée comme susceptible d’augmenter la visibilité du club.\",\"source_quote\":\"ce qui augmentera la visibilite du club\"},{\"text\":\"L’organisation du tournoi inter-villes est présentée comme susceptible de recruter de nouveaux membres.\",\"source_quote\":\"et recrutera de nouveaux membres.\"},{\"text\":\"L’option B prévoit d’affecter 2000 euros à du matériel pédagogique, comprenant des échiquiers neufs, des horloges et des supports de cours.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours\"},{\"text\":\"Les échiquiers actuellement utilisés par le club sont usés.\",\"source_quote\":\"car les echiquiers actuels sont uses.\"},{\"text\":\"L’option C répartit le budget en deux parts égales de 1000 euros.\",\"source_quote\":\"1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique\"},{\"text\":\"Dans l’option C, le tournoi prévu est réduit par rapport au tournoi inter-villes de l’option A.\",\"source_quote\":\"1000 euros pour un tournoi reduit\"},{\"text\":\"L’option C est présentée comme un équilibre entre l’accroissement de la visibilité et le développement de la pédagogie.\",\"source_quote\":\"equilibre entre visibilite et pedagogie.\"}],\"summary\":\"Le texte présente trois positions concurrentes sur l’affectation d’un budget de 2000 euros : privilégier la visibilité par un tournoi, moderniser le matériel pédagogique, ou combiner les deux objectifs. Il mobilise principalement une comparaison de scénarios et des liens causaux annoncés entre les dépenses et leurs effets attendus.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes avec buffet et prix, afin d'accroître la visibilité du club et de recruter de nouveaux membres.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, ce qui augmentera la visibilite du club et recrutera de nouveaux membres\"},{\"text\":\"L'option B privilégie l'investissement intégral du budget dans du matériel pédagogique, notamment parce que les échiquiers actuels sont usés.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours, car les echiquiers actuels sont uses\"},{\"text\":\"L'option C propose de répartir le budget à parts égales entre un tournoi réduit et le matériel pédagogique, afin de concilier visibilité et pédagogie.\",\"source_quote\":\"un format hybride, 1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique, equilibre entre visibilite et pedagogie\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif de 2000 euros.\"},{\"text\":\"Trois options distinctes sont proposées pour utiliser le budget.\",\"source_quote\":\"Trois options divergentes s'affrontent.\"},{\"text\":\"L'option A prévoit de consacrer 2000 euros à un tournoi inter-villes comprenant un buffet et des prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Selon l'option A, le tournoi augmentera la visibilité du club et recrutera de nouveaux membres.\",\"source_quote\":\"ce qui augmentera la visibilite du club et recrutera de nouveaux membres\"},{\"text\":\"L'option B prévoit d'investir 2000 euros dans du matériel pédagogique, des échiquiers neufs, des horloges et des supports de cours.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique, echiquiers neufs, horloges et supports de cours\"},{\"text\":\"Les échiquiers actuellement utilisés par le club sont usés.\",\"source_quote\":\"les echiquiers actuels sont uses\"},{\"text\":\"L'option C prévoit une répartition égale de 1000 euros pour un tournoi réduit et de 1000 euros pour le matériel pédagogique.\",\"source_quote\":\"1000 euros pour un tournoi reduit et 1000 euros pour le materiel pedagogique\"}],\"summary\":\"Le texte présente trois positions concurrentes pour l'utilisation d'un budget de 2000 euros : privilégier la visibilité et le recrutement par un tournoi, améliorer prioritairement les équipements pédagogiques, ou rechercher un compromis par une répartition égale. Il mobilise la comparaison directe des options et l'opposition entre visibilité et pédagogie.\"}",
           "refusal": null,
           "role": "assistant",
-          "annotations": null,
+          "annotations": [],
           "audio": null,
           "function_call": null,
-          "tool_calls": null,
-          "reasoning": null,
-          "reasoning_details": [
-            {
-              "type": "reasoning.encrypted",
-              "data": "gAAAAABqrYnKGWNAeCw0gMMgS_hq2ZWWp3TlZ_Q9tsPvzjXVOGAK3c4vjd8GJ40_E1Af8_U5rOzksqEOxLKG1iTHwU3LvhSo0qXfiXFrx7rF-s3KFlPQVNG4p3zgy_41_iwERTOu4K1M0xNF2M4ZxKWkfL2b4s-xIG724EI7LDqirmjCiay8dbb0EvDZjyV6P2xAJM3auniVERLJXjaRUyX0EdoNiqzBjPuyVjmBWgLTmMhD4nFz2POdxo1xBEZgrP2-yp8Ss_eq5APZAnwac3ajmpWzYA-dsj9TvJWJgeWp9t7GupGAa3aqjnP9YCHFnwXzJKUzSMb8MCAFe3IKGfnmYn8CMA1SMoGgCilbQx0Xva0DCpMtZc9W4x4i8WBjVinREzKtIQ_2NnYzZD7M1PhaYNRun360TOySESzsWgKrYvK6O1XdIFp1Y5c97nAHcMXg7RhwIde-QgRUXJzLjRlxT992de5AzIG4Ym-OfqZTnBsU8JULUTmZRwW_A5i9qdjRg1RXGNRclEVX_LLjboEnZqW02MMIC3gH4CG6hi8WC2WqLIMP0Wn4Pbg6LV3qUhpXr4LtReoRE-54JHefJ0pzvEVe1khLlLbpZmz3Eea4eZcTxnP0W0kfPP10XuWUGHPOMrU5ogFIL0QDTJ5M8EGRRu-nsS8TnwEc2gXDDejOCz7a9-0rYwSEWErls8B-OdZuTCx_80HVCE5g9MsSpGxV6punI5oB0s-yT0728q6Q7VVt3Xj-qz9UTqShjpgrEp5VEN_H74UXSnVZhtfHA1aErdvCp7joUwllXo4RMaAovmJSXMpJkQu4QpGVskGoWAGTORW2cOAD4pWzVHZGm31uHZZ7j5BuanofVOa3idD18upGL4X3efiwJGMO2Ct2JYyO0hXuK0EtdAKVskl12l80PzbRHRYQQzs3yofGMqifFRIzH8dqUjZqs6IQlMGUGfNYcVgzOnDxOmgMVUACvifaUUvF1Aux4woxxae2DYqxKs741mq_VI_XKk4i6pdRb4eJ9JNdlT-jN6nNPIHUGEtTUd_exdY-fldOj4aeil2ypklp7MRy0xfJqulbepF8s-3PBZmnoOTz3-a8tuY2V4jxN_3Rs40vyZEPPijF7IkmDCqfvT37RKaLJNyUp7WZn1LTTrRcVfiDNDhJuF-d2b6OliaHxWqQ8RYe7O5hMBkwNjO9U_x5jwNUZDlFPFfK0ufVD0ZiGGDivhnQZazaXCQY0S4yARpl_c0q-FC9Gr-0qhYgYH_Ebl3ODZ6WGQjUlVn2OOahRWhyxlW6mwGOIFOJvfJKoeUkLvAWeCqvKpfsTvX0PUZnTt7UyRMuw3zUuouNLV2ln9ZVW_1dnGN_B7zA-z7kGw_zKqWI6NvGXBmrWIwO6cFMji7meIFHgyeGCkE8oNowyUnTqGFnXc8hydR3hzd9jNQF7NF_h4PJXFFgJ2e7AvJ3qzKcKYzBJFJ-p2F-O2yS8Xp76r4XT_9WJ9xyAOHtdu4Jn1zSEKlM-5UZpEbMixbNpDn0sizpNO6IN0fClgWLbei0aXUbMkRdjRGc5_cTiYJ_Cv8dLbHQg8-TJmOpouds3JwfnZnScLbRbqOA-SvMORPE8cZZrwB-oZ6QNsuQNpO7YvB3c1X6FU-rEVRiO1QndEI0MEjocWHpJa7j5xPmuCMY15WCgOswd9vLbLe9gxQK0dh1rQCYq1qo4a55eyM022ePylzWmzTes65lXFkqbJfB75sDIoUeJlQmxR-80oiihPwB5StWBNtCA8EMvQrq8NxfslQ1nwrQDdQalKxTVF0sQ9Etv5yoBr5Qup2R1DA1n9nAlNir-ibYmH2sZHJ_XGyam6d0SckRhL9_6SCdwdCcmIYMw4BnldW2a6SV615lE8RFADQ4fHaD2t3lSV-zjsPZR6JnEMxvX1K0mZCwQproPufKbsLEwDNwOaQqO54T4NdC__OtfR5I5Xhw55X0k1hWiGcsASqp9ZCr8eEdMTzrv5y4U1wGr9FnyEMlJZb_1qGaBHM_xdwd7gCRzb85ZEvMOXGmZV19hQy98nf-TUhHUEaAqLFLOOJTA9hPQ5HVBORGCl1m3s9h7VlKFZJQrrDZ8Zf3e7ZwZdHdkFvjyDeBSazKHG12ydH1Ez63oH8uFU3aXBnNsYoAsOWbeV3aQKa8uUIgRjB9L2USBX6Dq9cAXRGVKgGKJ5Xo-ov3T3JCR163BtySaTcc6OlxibT48pyqh0lud6WFxcN3NdKnoOQBT-69hVSRVe57AVPvcB0vWSdhiaGjMjh40RnRDMBLu7YMSnUEr7Q3EkCyP-OauUGf9EQbiY67arYkRJhj7xf-YXNPnNY2Hk3N3reLx6yKIq9_r5mqjDq4V1OfeJBbAkYs.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC01LjYtbHVuYS0yMDI2MDcwOXxvcGVuYWkifQ",
-              "format": "openai-responses-v1",
-              "id": "rs_07923bd433eb6208016aad89c8b06487d1b98184697c7be2bd",
-              "index": 0
-            }
-          ]
-        },
-        "native_finish_reason": "completed"
+          "tool_calls": null
+        }
       }
     ],
-    "created": 1789757896,
-    "model": "openai/gpt-5.6-luna",
+    "created": 1789859413,
+    "model": "gpt-5.6-luna",
     "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 905,
+      "completion_tokens": 781,
       "prompt_tokens": 443,
-      "total_tokens": 1348,
+      "total_tokens": 1224,
       "completion_tokens_details": {
-        "accepted_prediction_tokens": null,
+        "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 157,
-        "rejected_prediction_tokens": null,
-        "image_tokens": 0
+        "reasoning_tokens": 161,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
       },
       "prompt_tokens_details": {
         "audio_tokens": 0,
-        "cached_tokens": 0,
         "cache_write_tokens": 0,
-        "video_tokens": 0
-      },
-      "cost": 0,
-      "is_byok": true,
-      "cost_details": {
-        "upstream_inference_cost": 0.0011746,
-        "upstream_inference_prompt_cost": 8.86e-05,
-        "upstream_inference_completions_cost": 0.001086
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
       }
-    },
-    "provider": "OpenAI"
+    }
   }
 }

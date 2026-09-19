@@ -3,13 +3,13 @@
   "value": [
     {
       "role": "assistant",
-      "content": "{\"fallacy_name\":\"Crédentialisme\",\"taxonomy_pk\":\"1391\",\"explanation\":\"L’argument traite le statut d’expert comme une preuve suffisante et disqualifie l’avis des non-experts indépendamment de la qualité de leurs raisons ou de leurs preuves.\",\"confidence\":0.93}",
+      "content": "{\"fallacy_name\":\"Autorité invincible\",\"taxonomy_pk\":\"76\",\"explanation\":\"L’argument tient pour vraie une proposition au seul motif que les experts seraient unanimes, puis disqualifie toute opinion non experte sans examiner les raisons avancées. L’autorité et le consensus sont ainsi traités comme une preuve infaillible.\",\"confidence\":0.96}",
       "metadata": {
         "logprobs": null,
-        "id": "gen-1789758907-jKnuiqCs4khZaOAVagCM",
-        "created": 1789758907,
+        "id": "chatcmpl-EPyT0sQVkTx5fnDgEL79X5y44a4Bm",
+        "created": 1789859342,
         "system_fingerprint": null,
-        "usage": "prompt_tokens=22929 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=22926, video_tokens=0) completion_tokens=474 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=None, audio_tokens=0, reasoning_tokens=405, rejected_prediction_tokens=None, image_tokens=0)"
+        "usage": "prompt_tokens=22929 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cache_write_tokens=22926, cached_tokens=0, image_tokens=None, text_tokens=None) completion_tokens=330 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=245, rejected_prediction_tokens=0, text_tokens=None)"
       }
     }
   ]

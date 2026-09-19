@@ -79,6 +79,57 @@ def keys_digest(keys: list[str]) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
+def refresh_manifest(fixtures_dir: Path, *, note: str) -> bool:
+    """Re-bind an existing manifest to the dir's current cassette set (#2323).
+
+    The one legitimate writer besides a record job is the surgical SK-path
+    refresh (``record_sk_cassette.py`` — the record job cannot record the SK
+    path: pytest mocks it, #1603 constat A). Such a patch changes the cassette
+    set, which would leave the manifest's count/digest stale and the import
+    gate red. This function re-computes them over the dir AS IT NOW STANDS and
+    declares the patch in ``sk_patches`` (with the patching env's signature —
+    SK-path cache keys embed prompt wording, not spacy-computed scores, so the
+    patch env is recorded for provenance but not gated: ``env_signature``
+    stays the record job's, which the raw-path cassettes still are).
+
+    Returns False (and warns) when the dir carries no manifest — a manifest-less
+    dir is not this function's to bless; record via the job first.
+    """
+    import time
+
+    manifest_path = fixtures_dir / MANIFEST_NAME
+    if not manifest_path.exists():
+        print(
+            f"refresh_manifest: no {MANIFEST_NAME} in {fixtures_dir} — this dir "
+            "is not provenance-tracked; run the record-llm-cassettes job and "
+            "commit its export WITH the manifest before patching it (#2323).",
+            file=sys.stderr,
+        )
+        return False
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    keys = sorted(
+        p.stem for p in fixtures_dir.glob("*.json") if p.name != MANIFEST_NAME
+    )
+    patch = {
+        "note": note,
+        "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "recorded_env": env_signature(),
+        "cassette_count": len(keys),
+        "keys_sha256": keys_digest(keys),
+    }
+    manifest.setdefault("sk_patches", []).append(patch)
+    manifest["cassette_count"] = len(keys)
+    manifest["keys_sha256"] = patch["keys_sha256"]
+    manifest_path.write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+    print(
+        f"refresh_manifest: {manifest_path} re-bound ({len(keys)} cassettes, "
+        f"patch #{len(manifest['sk_patches'])}: {note})"
+    )
+    return True
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument(

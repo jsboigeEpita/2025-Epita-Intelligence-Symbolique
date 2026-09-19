@@ -44,8 +44,12 @@ conda run -n projet-is-roo-new --no-capture-output \
 ```
 
 It records with `force_authentic=True` into a scratch DB, then exports through
-`export.py` (blocking privacy audit) and prints the new `<sha256>.json`. Then
-delete the file it supersedes and commit.
+`export.py` (blocking privacy audit) and prints the new `<sha256>.json`. It
+then re-binds the directory's `MANIFEST.json` to the new cassette set,
+declaring the patch in `sk_patches` (with the patching env's signature — SK
+keys embed prompt wording, not env-computed scores). If you then delete the
+superseded sibling, close the transaction with the script's
+`--refresh-manifest-only` mode so the manifest matches what you commit.
 
 ⚠ Makes a real LLM call (order of $0.0005). Run it only when
 `TestCommittedCassettesStillReplay::test_replay_path_uses_cache` reddens with
@@ -54,22 +58,28 @@ the DRIFT message — that red means the prompt moved, not that the code broke.
 ### Raw path (pipeline consumers: extract / governance / quality / fallacy /
 counter-arg)
 
-These are never mocked, so a plain record run over the pipeline lane does
-capture them:
+Since #2323 the ONLY supported raw-path recorder is the **record job**
+(`.github/workflows/record-llm-cassettes.yml`, workflow_dispatch — it bills
+real API usage). The local-harvest procedure that used to live here is
+exactly the drift door #2320 walked through (a worker-box env computed the
+keys; CI had to match them by luck), so it is gone: `import.py` refuses any
+fixtures dir without a matching `MANIFEST.json` (exit 3, PROVENANCE GATE
+FAILED), and a local export emits no manifest by construction.
 
-```bash
-# 1. Run the pipeline tests with `record` mode into a clean DB:
-LLM_CACHE_MODE=record LLM_CACHE_DIR=.cache/llm_record \
-  conda run -n projet-is-roo-new pytest <pipeline test path>
-
-# 2. Export the DB to JSON, audits privacy:
-python scripts/cassettes/export.py .cache/llm_record tests/fixtures/llm_cassettes
-
-# 3. Commit the new <sha256>.json files (a PR diff shows them).
+```text
+1. Dispatch the record job with the replay band's exact argv (lane marker +
+   the band's paths + its --deselect list — the recorder's population must
+   equal the replayer's; see the lane input docs in the workflow).
+2. Download the `llm-cassettes` artifact.
+3. Replace this directory's cassettes with the artifact's export, INCLUDING
+   its MANIFEST.json (run id + env signature + cassette-set digest), and
+   commit — the commit message cites the run id.
 ```
 
-⚠ #1603: the broad record pass is **not** hermetic yet (it produced 5 leaks and
-3 false positives). Do not re-record the raw-path bands before that is fixed.
+The manifest is verified on every replay (both CI replay lanes import
+through `import.py`): a missing manifest, a count/digest drift (cassette
+added/removed/edited after export), or an env drift on a key-relevant
+package reddens before any test runs.
 
 Replaying (the default — CI lane and reproducibility):
 
