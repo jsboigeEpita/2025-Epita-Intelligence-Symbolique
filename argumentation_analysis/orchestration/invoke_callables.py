@@ -27,6 +27,7 @@ from argumentation_analysis.core.llm_service import (
     resolve_active_model_id as _resolve_model_id,
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
+from argumentation_analysis.services.llm_cache import LLMCacheMiss
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -768,6 +769,10 @@ async def _llm_enrich_quality(
         end = text_content.rfind("}") + 1
         if start >= 0 and end > start:
             return json.loads(text_content[start:end])  # type: ignore[no-any-return]
+    except LLMCacheMiss:
+        # #2320: a replay miss is a lane defect (missing/drifting cassette),
+        # never a product degradation — it must traverse, not be dropped.
+        raise
     except Exception as e:
         logger.debug(f"LLM quality enrichment skipped: {e}")
     return None
@@ -888,8 +893,12 @@ async def _generate_counters_for_targets(
                     retry_raw = retry.choices[0].message.content or ""
                     retry_parsed = _parse_counter_array(retry_raw)
                     counters.extend(retry_parsed)
+                except LLMCacheMiss:
+                    raise
                 except Exception as retry_err:
                     logger.warning(f"Counter-argument retry failed: {retry_err}")
+        except LLMCacheMiss:
+            raise
         except Exception as e:
             logger.warning(
                 f"Counter-argument batch [{start}:{start + batch_size}] failed: {e}"
@@ -1007,6 +1016,8 @@ async def _generate_counter_arguments_from_state(state: Any) -> Dict[str, Any]:
                         added += 1
                     except Exception as e:
                         logger.debug(f"add_counter_argument retry failed: {e}")
+            except LLMCacheMiss:
+                raise
             except Exception as e:
                 logger.warning(f"GG-bis coverage retry failed: {e}")
 
@@ -1071,6 +1082,8 @@ async def _run_formal_logic_from_state(
                     pl_out.get("model", {}) or {},
                 )
                 result["pl_added"] = len(formulas)
+        except LLMCacheMiss:
+            raise
         except Exception as e:
             logger.warning(f"Conversational PL enrichment failed: {e}")
 
@@ -1094,6 +1107,8 @@ async def _run_formal_logic_from_state(
                 if isinstance(sig, list) and sig:
                     state.fol_signature = sig
                 result["fol_added"] = len(formulas)
+        except LLMCacheMiss:
+            raise
         except Exception as e:
             logger.warning(f"Conversational FOL enrichment failed: {e}")
 
@@ -1142,6 +1157,8 @@ async def _run_quality_sweep_from_state(state: Any) -> Dict[str, int]:
     }
     try:
         q_out = await _invoke_quality_evaluator("", context)
+    except LLMCacheMiss:
+        raise
     except Exception as e:
         logger.warning(f"Conversational quality sweep failed: {e}")
         return result
@@ -1282,6 +1299,8 @@ async def _invoke_counter_argument(
             llm_counters = await _generate_counters_for_targets(
                 client, model_id, targets
             )
+    except LLMCacheMiss:
+        raise
     except Exception as e:
         logger.warning(f"LLM counter-argument enrichment failed: {e}")
         llm_enrichment_failed = True
@@ -1713,6 +1732,8 @@ async def _invoke_debate_analysis(
                 base_scores["llm_debate_assessment"] = llm_debate
                 if not base_scores.get("winner"):
                     base_scores["winner"] = llm_debate.get("winner")
+    except LLMCacheMiss:
+        raise
     except Exception as e:
         logger.warning(f"LLM debate assessment failed: {e}")
 
@@ -2185,6 +2206,8 @@ async def _invoke_governance(
             end = text_content.rfind("}") + 1
             if start >= 0 and end > start:
                 llm_governance = json.loads(text_content[start:end])
+    except LLMCacheMiss:
+        raise
     except Exception as e:
         logger.warning(f"LLM governance assessment failed: {e}")
 
@@ -6323,6 +6346,15 @@ async def _invoke_fact_extraction(
                     f"fact extraction: LLM returned no parseable JSON "
                     f"(attempt {attempt}/{_EXTRACTION_MAX_ATTEMPTS}, {last_reason})"
                 )
+            except LLMCacheMiss:
+                # Replay-only (#2320): a cache miss is DETERMINISTIC — the key
+                # derives from the request content, so retrying the identical
+                # request re-misses identically. Retrying burned
+                # _EXTRACTION_MAX_ATTEMPTS misses per extraction and the
+                # #1290 heuristic fallback then masked the broken lane
+                # (extraction_status=failed is loud, but the lane verdict said
+                # green — constat D, #1603). The miss traverses.
+                raise
             except Exception as e:
                 msg = str(e)
                 low = msg.lower()
@@ -6612,6 +6644,8 @@ async def _invoke_propositional_logic(
                             *_pl_coros, return_exceptions=True
                         )
                         for _idx, _res in enumerate(_pl_results):
+                            if isinstance(_res, LLMCacheMiss):
+                                raise _res  # #2320 — a replay miss traverses
                             if isinstance(_res, BaseException):
                                 logger.debug(f"PL Pass 2 batch {_idx} failed: {_res}")
                                 continue
@@ -6666,8 +6700,12 @@ async def _invoke_propositional_logic(
                                 logger.info(
                                     f"PL whole-text pass: {wide_net_extras} extra formulas"
                                 )
+                        except LLMCacheMiss:
+                            raise  # #2320 — replay miss traverses
                         except Exception as wt_err:
                             logger.debug(f"PL whole-text pass unavailable: {wt_err}")
+            except LLMCacheMiss:
+                raise  # #2320 — replay miss traverses
             except Exception as e:
                 logger.debug(f"PL 2-pass pipeline unavailable: {e}")
 
@@ -7074,6 +7112,8 @@ async def _invoke_fol_reasoning(
                                 *_fol_coros, return_exceptions=True
                             )
                             for _idx, _res in enumerate(_fol_results):
+                                if isinstance(_res, LLMCacheMiss):
+                                    raise _res  # #2320 — a replay miss traverses
                                 if isinstance(_res, BaseException):
                                     logger.debug(
                                         f"FOL Pass 2 batch {_idx} failed: {_res}"
@@ -7094,6 +7134,8 @@ async def _invoke_fol_reasoning(
                                     f"FOL 2-pass Pass 2: {len(formulas)} formulas generated "
                                     f"with shared signature"
                                 )
+            except LLMCacheMiss:
+                raise  # #2320 — replay miss traverses
             except Exception as e:
                 logger.debug(f"FOL 2-pass pipeline unavailable: {e}")
 

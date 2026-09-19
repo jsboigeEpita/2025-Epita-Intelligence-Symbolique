@@ -58,11 +58,16 @@ class CacheStats:
     - ``miss_replay``: replay-mode miss → ``LLMCacheMiss`` raised (never live)
     - ``live``: actual API round-trip made (off passthrough OR record miss)
 
+    ``miss_keys`` records the 16-hex prefix of every replay-miss key, in miss
+    order (#2320): the counter says HOW MANY cassettes are missing, the
+    prefixes say WHICH — pytest captures the raiser's log line on green tests,
+    so the only reliable CI-side diagnostic is the one harvested from here.
+
     ``live`` is the anti-theatre metric: at replay it MUST stay 0 — any non-zero
     value means a cache miss silently fell through to the API.
     """
 
-    __slots__ = ("_lock", "hit", "miss_record", "miss_replay", "live")
+    __slots__ = ("_lock", "hit", "miss_record", "miss_replay", "live", "miss_keys")
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
@@ -70,6 +75,7 @@ class CacheStats:
         self.miss_record = 0
         self.miss_replay = 0
         self.live = 0
+        self.miss_keys: List[str] = []
 
     def as_dict(self) -> Dict[str, int]:
         with self._lock:
@@ -86,6 +92,12 @@ class CacheStats:
             self.miss_record = 0
             self.miss_replay = 0
             self.live = 0
+            self.miss_keys.clear()
+
+    def get_miss_keys(self) -> List[str]:
+        """Copy of the recorded replay-miss key prefixes (#2320)."""
+        with self._lock:
+            return list(self.miss_keys)
 
 
 _cache_stats = CacheStats()
@@ -99,6 +111,11 @@ def get_cache_stats() -> Dict[str, int]:
 def reset_cache_stats() -> None:
     """Zero the shared cache counters (test isolation / per-batch measurement)."""
     _cache_stats.reset()
+
+
+def get_cache_miss_keys() -> List[str]:
+    """Replay-miss key prefixes since the last reset (#2320)."""
+    return _cache_stats.get_miss_keys()
 
 
 def get_cache_mode() -> str:
@@ -276,6 +293,7 @@ class CachedChatCompletion(ChatCompletionClientBase):
             cached = self._cache.get(key)
             if cached is None:
                 _cache_stats.miss_replay += 1
+                _cache_stats.miss_keys.append(key[:16])
                 raise LLMCacheMiss(
                     f"Cache miss in replay mode for key {key[:16]}... "
                     f"Record fixtures first with LLM_CACHE_MODE=record"
@@ -453,6 +471,7 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
         cached = cache.get(key)
         if cached is None:
             _cache_stats.miss_replay += 1
+            _cache_stats.miss_keys.append(key[:16])
             raise LLMCacheMiss(
                 f"Raw cache miss in replay mode for key {key[:16]}... "
                 f"Record fixtures first with LLM_CACHE_MODE=record"
