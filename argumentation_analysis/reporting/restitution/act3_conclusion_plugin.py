@@ -1317,7 +1317,16 @@ def _belief_revision_finding(state: Any) -> Optional[StructuredArgFinding]:
 
     card = best_mr["cardinality"]
     options = best_mr.get("options") or []
-    n_options = sum(1 for opt in options if isinstance(opt, list))
+    # Real-run bases yield combinatorially many equally-minimal retractions,
+    # so the producer caps the stored list and carries the exact count. Prefer
+    # the true multiplicity (insight B-2 names it); fall back to counting the
+    # stored list for pre-repair entries that carry no total.
+    options_total = best_mr.get("options_total")
+    n_options = (
+        options_total
+        if isinstance(options_total, int) and options_total >= 1
+        else sum(1 for opt in options if isinstance(opt, list))
+    )
     # Flatten the distinct beliefs across all minimal options (the rupture
     # candidates the reader names as evidence).
     named: List[str] = []

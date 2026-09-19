@@ -4452,22 +4452,14 @@ async def _invoke_belief_revision(
         from argumentation_analysis.agents.core.logic.belief_revision_insight import (
             build_belief_base,
             minimal_retractions,
+            shape_minimal_retraction,
         )
 
         base, names = build_belief_base(args, negated_indices)
         card, options = minimal_retractions(base)
-        # Map option index-tuples → named belief labels so the reader can NAME the
-        # point of rupture (insight B-1). ``touched_count`` drives the B-3
-        # inert-contradiction signal (beliefs that survive every retraction).
-        named_options = [[names[i] for i in opt] for opt in options]
-        touched = len({i for opt in options for i in opt})
-        minimal_retraction = {
-            "cardinality": card,
-            "options": named_options,
-            "base_size": len(base),
-            "touched_count": touched,
-            "degraded": False,
-        }
+        # Named labels + capped stored options + exact options_total (B-2
+        # multiplicity), shared shaping with the conversational producer.
+        minimal_retraction = shape_minimal_retraction(card, options, names)
     except ImportError:
         # logic/__init__ cascade (#1697) OR missing pysat: the insight is
         # unavailable, not the phase. cardinality -1 → the reader produces
