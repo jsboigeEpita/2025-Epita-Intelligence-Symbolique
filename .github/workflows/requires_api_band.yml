@@ -40,16 +40,19 @@ name: requires_api band (scheduled real-LLM lane)
 # fixture satisfied while leaving nothing real to fall through to: any live
 # attempt burns on 401 AND trips the egress guard.
 #
-# MEASURED SPLIT (re-measured 2026-09-19, po-2023, on e15bbe96 base, exact
-# argv, 3x: 2 runs + 1 collect — supersedes the 2026-09-18 figures, which
-# were not reproducible on an identical base and are withdrawn): of the 51
-# non-light tests, 21 replay green from cassettes with miss_replay=0,
-# live=0 and egress total 0 (counter report, ~40-60 s); 30 stay OUT, each
-# with a measured reason (bypass traffic the
+# MEASURED SPLIT (2026-09-19, po-2023, on the workflow's own argv after the
+# two #2300 deselects were REALLY removed — occurrence-counted 15 -> 13):
+# of the 51 non-light tests, 23 replay green from cassettes with hit=76,
+# miss_replay=0, live=0 and egress total 0 (counter report, ~46 s);
+# 28 stay OUT, each with a measured reason (bypass traffic the
 # cache cannot serve: 23; fatal miss -- cassette refused by the privacy audit
 # or nondeterministic chain: 2; #2296 open defect: noted; env-flip tests that
 # mutate LLM_CACHE_MODE mid-process: 3). #2300 returned its 2 tests (winner
-# fallback canon + privacy currency-word exemption). The deselect list and
+# fallback canon + privacy currency-word exemption) — the earlier commit on
+# this branch measured "21 passed" on a 15-flag argv: the original 23/hit=76
+# figures were real but measured on a LOCAL argv the harness did not carry
+# (coordinator review R1024); the flags are now actually gone and the numbers
+# below are the harness's own. The deselect list and
 # the full reasons live in the replay-band step below. The 23-test bypass
 # family is the cassette infra's known boundary (#1789: SK-agent phases and
 # direct-client tests bypass the cache wrap by construction).
@@ -361,7 +364,10 @@ jobs:
           LLM_CACHE_DIR: .cache/llm_replay_band
           REPLAY_GATE: '1'
           REPLAY_STATS_OUT: replay_stats.json
-        # The 13 deselect flags below cover 29 of the 51 non-light tests,
+        # The 13 deselect flags below (occurrence-counted after the #2300
+        # removal — the previous commit claimed 13 while the run line still
+        # carried 15: a purely-commentary hunk, caught by coordinator review
+        # R1024) cover 28 of the 51 non-light tests,
         # each with a MEASURED reason (classification replay, dummy key,
         # po-2023 2026-09-18, post max_tokens-repair record):
         #   - BYPASS, 23 tests: their traffic never consults the cache, so on
@@ -377,20 +383,22 @@ jobs:
         #   - ENV-FLIP, 2 tests (+ sk-path above): they set LLM_CACHE_MODE
         #     mid-process for their own record/replay cycle — incompatible
         #     with a global replay session.
-        #   - #2300 RETURNED (2 tests): the winner is None defect is repaired
-        #     (aggregate-level fallback canon condorcet -> majority ->
+        #   - #2300 RETURNED (2 tests, REALLY un-deselected this time — flags
+        #     removed from the run line below): the winner is None defect is
+        #     repaired (aggregate-level fallback canon condorcet -> majority ->
         #     plurality, #2300) and their cassettes pass the privacy audit
         #     (currency-word exemption). The delegation test's nondeterministic
         #     wide-net branch (2 SK-path keys never recorded; flaky 2/3 red
         #     on main pre-#2300) is now cassette-covered on both branches.
-        # Validated on the exact argv: 21 passed, miss_replay=0, live=0,
-        # egress total 0 (counter), gate OK — re-measured 2x on 2026-09-19
-        # (base e15bbe96 and with #2295 stacked); the earlier "23 passed,
-        # hit=76" was not reproducible on an identical base and is withdrawn.
+        # Validated on THIS workflow's argv (13 flags): 23 passed, hit=76,
+        # miss_replay=0, live=0, egress total 0 (counter), gate OK — measured
+        # 2026-09-19 after the flag removal. The interim commit on this branch
+        # reported "21 passed" because it measured the pre-removal 15-flag
+        # argv: both numbers are real, they described different harnesses.
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/integration/orchestration/test_democratech_demo.py::TestDemocratechDemo::test_demo_renders_firsthand_verdict_per_prop" --deselect "tests/integration/api/test_websocket_deliberation_genuine.py::TestWebSocketDeliberationGenuineVerdict::test_ws_client_receives_genuine_governance_verdict" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
 
       - name: Anti-vacuity gate (live==0, hit>=1, miss_replay==0)
         if: always()
