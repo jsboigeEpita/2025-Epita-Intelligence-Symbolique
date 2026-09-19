@@ -30,7 +30,9 @@ SQLite.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -40,6 +42,41 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 import diskcache  # type: ignore[import-not-found]
 
 from scripts.cassettes.privacy import assert_safe, audit_value
+
+# Packages whose versions feed the LLM cache keys (measured #2320: spacy-stack
+# virtue scores enter quality prompts; openai shapes the raw request path;
+# numpy pins the binary stack). All pinned in environment.yml so recorder and
+# replayer match by construction. NOT msgpack: since #2321 the srsly wheel
+# vendors its msgpack, so the external msgpack version never touches the keys.
+KEY_DEP_PACKAGES = (
+    "spacy",
+    "thinc",
+    "srsly",
+    "fr-core-news-sm",
+    "openai",
+    "numpy",
+)
+
+MANIFEST_NAME = "MANIFEST.json"
+
+
+def env_signature() -> dict[str, str]:
+    """Versions of the key-drift-relevant packages in THIS recording env."""
+    import importlib.metadata as im
+
+    sig: dict[str, str] = {}
+    for pkg in KEY_DEP_PACKAGES:
+        try:
+            sig[pkg] = im.version(pkg)
+        except im.PackageNotFoundError:
+            sig[pkg] = "absent"
+    return sig
+
+
+def keys_digest(keys: list[str]) -> str:
+    """Stable digest binding a manifest to an exact cassette set."""
+    blob = "\n".join(sorted(keys)).encode("utf-8")
+    return hashlib.sha256(blob).hexdigest()
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -142,6 +179,33 @@ def main(argv: list[str] | None = None) -> int:
             f"Refused cassettes (first 16 chars of key): {unsafe_keys}", file=sys.stderr
         )
         return 2
+
+    # #2323 provenance manifest: in a record-job run GITHUB_RUN_ID is set
+    # automatically, so the artifact carries its own birth certificate with no
+    # workflow change. Local exports (harvest) produce no manifest — importing
+    # those then fails loud on the replay side (see import.py), which is the
+    # point: the recorder must be the replayer.
+    run_id = os.environ.get("GITHUB_RUN_ID")
+    if run_id:
+        fixture_keys = sorted(
+            p.stem for p in args.fixtures_dir.glob("*.json") if p.name != MANIFEST_NAME
+        )
+        manifest = {
+            "schema": 1,
+            "record_run_id": run_id,
+            "record_sha": os.environ.get("GITHUB_SHA", "unknown"),
+            "recorded_at": os.environ.get("GITHUB_RUN_STARTED_AT", ""),
+            "cassette_count": len(fixture_keys),
+            "keys_sha256": keys_digest(fixture_keys),
+            "env_signature": env_signature(),
+        }
+        manifest_path = args.fixtures_dir / MANIFEST_NAME
+        manifest_path.write_text(
+            json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        print(
+            f"Manifest: {manifest_path} (run {run_id}, {len(fixture_keys)} cassettes)"
+        )
     return 0
 
 
