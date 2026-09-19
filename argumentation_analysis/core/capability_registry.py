@@ -291,18 +291,39 @@ class CapabilityRegistry:
         return self._find_by_capability(capability, ComponentType.SERVICE)
 
     def find_for_capability(self, capability: str) -> List[ComponentRegistration]:
-        """Find all components (any type) that provide a given capability."""
+        """Find all components (any type) that provide a given capability.
+
+        #2312 — the returned order is DETERMINISTIC and part of the API:
+        providers carrying an ``invoke`` first (a capability is exercised
+        at runtime through ``invoke``; a provider without one cannot
+        serve a call), then alphabetical by name among equals — the name
+        tiebreak makes registry names an API, deliberately. Before, the
+        order was the iteration of a ``set`` of names, salted
+        per-process: the same code and state could draw different
+        providers (measured 1-in-4 on #2296 — a no-invoke plugin drawn
+        before the invocable service, the phase completing with output
+        None; #1553 had warned about ``providers[0]`` arbitrariness in
+        the hierarchy bridge).
+        """
+        return [
+            self._registrations[n] for n in self._provider_names_ordered(capability)
+        ]
+
+    def _provider_names_ordered(self, capability: str) -> List[str]:
+        """Index names for a capability in the declared #2312 order."""
         component_names = self._capability_index.get(capability, set())
-        return [self._registrations[n] for n in component_names]
+        return sorted(
+            component_names,
+            key=lambda n: (self._registrations[n].invoke is None, n),
+        )
 
     def _find_by_capability(
         self, capability: str, component_type: ComponentType
     ) -> List[ComponentRegistration]:
         """Internal: find components of a specific type for a capability."""
-        component_names = self._capability_index.get(capability, set())
         return [
             self._registrations[n]
-            for n in component_names
+            for n in self._provider_names_ordered(capability)
             if self._registrations[n].component_type == component_type
         ]
 
