@@ -434,12 +434,18 @@ class TestWorkflowExecution:
     @pytest.mark.asyncio
     async def test_execute_with_missing_optional(self):
         """Optional phases are skipped when provider is missing."""
+        # #2313: the fixture registers a runnable provider for the phase
+        # that must complete — the test's subject is the SKIPPED counter.
+        async def _run_quality(input_text: str, context: dict) -> dict:
+            return {"note_finale": 7.0}
+
         registry = CapabilityRegistry()
         # Only register quality — no counter or jtms
         registry.register_agent(
             name="quality_only",
             agent_class=type("FakeQuality", (), {}),
             capabilities=["argument_quality"],
+            invoke=_run_quality,
         )
         workflow = (
             WorkflowBuilder("test_missing")
@@ -517,10 +523,17 @@ class TestRunUnifiedAnalysis:
         )
 
         registry = CapabilityRegistry()
+
+        # #2313: completed==1 requires a runnable provider — a bare class
+        # with no invoke is the wiring defect the executor now FAILS.
+        async def _run_quality(input_text: str, context: dict) -> dict:
+            return {"note_finale": 7.0}
+
         registry.register_agent(
             name="fake_quality",
             agent_class=type("FQ", (), {}),
             capabilities=["argument_quality"],
+            invoke=_run_quality,
         )
         custom_wf = (
             WorkflowBuilder("custom")

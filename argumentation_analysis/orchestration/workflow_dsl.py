@@ -918,21 +918,36 @@ class WorkflowExecutor:
                     f"Phase '{phase_name}': component '{provider.name}' "
                     f"has no invoke callable, output will be None"
                 )
-                if phase.capability == "fact_extraction":
-                    duration = time.time() - start
-                    return (
-                        phase_name,
-                        PhaseResult(
-                            phase_name=phase_name,
-                            status=PhaseStatus.FAILED,
-                            capability=phase.capability,
-                            component_used=provider.name,
-                            error="Foundational provider has no invoke callable",
-                            duration_seconds=duration,
-                            terminal=True,
+                duration = time.time() - start
+                # #2313: a capability whose registered providers carry no
+                # invoke is a WIRING defect, not a measurement — providers
+                # exist, none is runnable. Before, the phase fell through to
+                # COMPLETED with a None output (the #2296 shape: 17 completed
+                # / 0 degraded while belief_sets stayed 0 — every degraded==0
+                # gate read a success where there was a hole). Same status
+                # vocabulary as the retry-exhausted path: FAILED with the
+                # degraded flag set for optional phases (loud, non-fatal),
+                # unset for required ones. Distinct from SKIPPED (no provider
+                # registered at all) and from COMPLETED (a real invoke ran,
+                # whatever the output).
+                return (
+                    phase_name,
+                    PhaseResult(
+                        phase_name=phase_name,
+                        status=PhaseStatus.FAILED,
+                        capability=phase.capability,
+                        component_used=provider.name,
+                        error=(
+                            f"No invoke-capable provider for capability "
+                            f"'{phase.capability}' (component '{provider.name}' "
+                            f"has no invoke callable)"
                         ),
-                        None,
-                    )
+                        duration_seconds=duration,
+                        degraded=phase.optional,
+                        terminal=phase.capability == "fact_extraction",
+                    ),
+                    None,
+                )
 
             duration = time.time() - start
             foundational_error = self._foundational_failure(output, phase.capability)

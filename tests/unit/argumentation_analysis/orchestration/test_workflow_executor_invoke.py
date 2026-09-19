@@ -110,8 +110,9 @@ class TestInvokeCallableDispatch:
 
 class TestInvokeNoneFallback:
     @pytest.mark.asyncio
-    async def test_no_invoke_returns_none_output(self):
-        """When invoke is None, phase completes with output=None."""
+    async def test_no_invoke_is_failed_not_completed(self):
+        """#2313: a provider with no invoke callable is a wiring defect —
+        the phase FAILS (degraded=optional), never completes with None."""
         registry = CapabilityRegistry()
         registry.register_agent(
             "legacy_comp", type("X", (), {}), capabilities=["legacy_cap"]
@@ -123,9 +124,31 @@ class TestInvokeNoneFallback:
         executor = WorkflowExecutor(registry)
         results = await executor.execute(workflow, "test")
 
-        assert results["p1"].status == PhaseStatus.COMPLETED
+        assert results["p1"].status == PhaseStatus.FAILED
+        assert results["p1"].degraded is False
         assert results["p1"].output is None
         assert results["p1"].component_used == "legacy_comp"
+        assert results["p1"].error and "invoke" in results["p1"].error.lower()
+
+    @pytest.mark.asyncio
+    async def test_optional_no_invoke_is_degraded(self):
+        """#2313: an optional wiring-defect phase FAILS degraded — loud but
+        non-fatal, exactly like the retry-exhausted exception path."""
+        registry = CapabilityRegistry()
+        registry.register_agent(
+            "legacy_comp", type("X", (), {}), capabilities=["legacy_cap"]
+        )
+
+        workflow = (
+            WorkflowBuilder("test")
+            .add_phase("p1", capability="legacy_cap", optional=True)
+            .build()
+        )
+        executor = WorkflowExecutor(registry)
+        results = await executor.execute(workflow, "test")
+
+        assert results["p1"].status == PhaseStatus.FAILED
+        assert results["p1"].degraded is True
 
 
 # ============================================================
@@ -684,7 +707,8 @@ class TestMultiPhaseWorkflow:
 
     @pytest.mark.asyncio
     async def test_mixed_invoke_and_none(self):
-        """Workflow with some invoke callables and some None."""
+        """#2313: a workflow mixing invoke-capable and invoke-less providers
+        completes the runnable phase and FAILS the wiring-defect phase."""
 
         async def real_invoke(text, ctx):
             return {"real": True}
@@ -707,9 +731,9 @@ class TestMultiPhaseWorkflow:
         results = await executor.execute(workflow, "test")
 
         assert results["p1"].output == {"real": True}
-        assert results["p2"].output is None
         assert results["p1"].status == PhaseStatus.COMPLETED
-        assert results["p2"].status == PhaseStatus.COMPLETED
+        assert results["p2"].status == PhaseStatus.FAILED
+        assert results["p2"].output is None
 
 
 # ============================================================
