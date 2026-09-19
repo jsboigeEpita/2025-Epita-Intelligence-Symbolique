@@ -22,6 +22,8 @@ Markers: requires_api (LLM calls), llm_light (single-case smoke)
 
 import pytest
 
+from pathlib import Path
+
 # Auto-skip if API keys unavailable
 pytestmark = [
     pytest.mark.requires_api,
@@ -95,9 +97,7 @@ class TestTaxonomyInfrastructure:
                 except (ValueError, TypeError):
                     continue
 
-        assert max_depth >= 5, (
-            f"Taxonomy max depth is {max_depth}, expected >= 5"
-        )
+        assert max_depth >= 5, f"Taxonomy max depth is {max_depth}, expected >= 5"
 
     def test_reference_pks_exist_in_taxonomy(self):
         """All reference case PKs must exist in taxonomy_full.csv."""
@@ -124,9 +124,9 @@ class TestTaxonomyInfrastructure:
                     continue
 
         for case in REFERENCE_CASES:
-            assert case["expected_pk"] in all_pks, (
-                f"PK {case['expected_pk']} ({case['expected_name']}) not found in taxonomy"
-            )
+            assert (
+                case["expected_pk"] in all_pks
+            ), f"PK {case['expected_pk']} ({case['expected_name']}) not found in taxonomy"
 
     def test_reference_pks_at_expected_depth(self):
         """Reference PKs must be at depth >= 4."""
@@ -174,7 +174,9 @@ class TestExploreHierarchyPrimitive:
             pytest.skip("InformalFallacyDefinitions not importable")
 
         definitions = InformalFallacyDefinitions()
-        df = definitions.taxonomy_df  # cached DataFrame, required by _internal_explore_hierarchy
+        df = (
+            definitions.taxonomy_df
+        )  # cached DataFrame, required by _internal_explore_hierarchy
         if df is None or df.empty:
             pytest.skip("taxonomy_full.csv could not be loaded")
 
@@ -261,7 +263,30 @@ class TestGuidedDescentDepthGate:
         kernel = Kernel()
         kernel.add_service(llm_service)
 
-        return FallacyWorkflowPlugin(master_kernel=kernel, llm_service=llm_service)
+        # #2290: every production call site passes a taxonomy source; without
+        # one the navigator is empty ("taxonomy_state=none"), the wide-net
+        # resolves 0 PKs and the plugin falls back to one-shot — depth 1 by
+        # construction. The fixture used to omit it, so the gate measured the
+        # fallback, not the descent it claims to gate.
+        taxonomy_path = (
+            Path(__file__).parent.parent.parent.parent
+            / "argumentation_analysis"
+            / "data"
+            / "taxonomy_full.csv"
+        )
+        if not taxonomy_path.exists():
+            pytest.skip("taxonomy_full.csv not found")
+
+        plugin = FallacyWorkflowPlugin(
+            master_kernel=kernel,
+            llm_service=llm_service,
+            taxonomy_file_path=str(taxonomy_path),
+        )
+        assert plugin.taxonomy_state == "loaded", (
+            f"Fixture regression: taxonomy_state={plugin.taxonomy_state!r} — "
+            "the gate would measure the one-shot fallback, not the descent"
+        )
+        return plugin
 
     async def test_smoke_single_reference_case(self, fallacy_workflow):
         """
@@ -289,26 +314,19 @@ class TestGuidedDescentDepthGate:
             f"{type(result).__name__}: {result!r}"
         )
 
-    @pytest.mark.xfail(
-        strict=False,
-        raises=AssertionError,
-        reason=(
-            "#2290: the harness is repaired (await + real fixture), so this gate "
-            "finally EXECUTES. Measured over 5 consecutive real-LLM runs: 3 reach "
-            "depth>=2, 2 stay at depth 1 -- the guided descent is NON-DETERMINISTIC "
-            "on a binary threshold, not uniformly regressed (a single run said "
-            "'depth 1' and that was n=1). strict=False so neither outcome reddens "
-            "the weekly lane; raises=AssertionError so an API outage or ImportError "
-            "is still reported. Stabilising the descent, then removing this marker, "
-            "is #2290's DoD -- the mask must not outlive the repair."
-        ),
-    )
     async def test_guided_reaches_deeper_than_flat(self, fallacy_workflow):
         """
         VG-RA2-1: On reference text, guided analysis should reach
-        taxonomy depth >= 4 (deeper than flat depth-1 families).
+        taxonomy depth >= 2 (deeper than flat depth-1 families).
 
-        This compares guided vs flat classification depth.
+        #2290: the xfail is REMOVED. The old 3-pass/2-flake signature was not
+        descent instability — it was the fixture's empty navigator forcing
+        one-shot (depth 1 by construction) while the gate's
+        `if isinstance(result, dict)` branch silently skipped the assertion
+        whenever the one-shot LLM returned non-JSON (a vacuous PASS). With the
+        taxonomy source in the fixture and `depth` serialized on
+        IdentifiedFallacy, this gate measures the real funnel and fails loud
+        on every degenerate shape.
         """
         case = REFERENCE_CASES[0]  # Question Piège
         try:
@@ -320,9 +338,6 @@ class TestGuidedDescentDepthGate:
                 pytest.skip(f"LLM API unavailable: {e}")
             raise
 
-        # #2290: awaited now — unawaited, `result` was a coroutine, so the
-        # isinstance(result, dict) branch below was dead and this gate could
-        # not fail. Parse the JSON string the plugin actually returns.
         if isinstance(result, str):
             import json
 
@@ -331,19 +346,62 @@ class TestGuidedDescentDepthGate:
             except json.JSONDecodeError:
                 pytest.fail(f"run_guided_analysis returned non-JSON: {result[:200]!r}")
 
-        # Extract max depth from result
-        # Result format varies — check for depth info
-        if isinstance(result, dict):
-            fallacies = result.get("fallacies", [])
-            if fallacies:
-                max_depth = max(
-                    (f.get("depth", 1) for f in fallacies if isinstance(f, dict)),
-                    default=1,
-                )
-                assert max_depth >= 2, (
-                    f"Guided descent only reached depth {max_depth}, "
-                    f"expected >= 2 (deeper than flat depth-1)"
-                )
+        if not isinstance(result, dict):
+            pytest.fail(
+                f"run_guided_analysis returned {type(result).__name__}, expected "
+                "a dict after JSON parse — the vacuous-pass hole is closed"
+            )
+
+        fallacies = result.get("fallacies", [])
+        assert fallacies, (
+            f"Guided analysis identified no fallacy "
+            f"(exploration_method={result.get('exploration_method', '?')!r})"
+        )
+
+        depths = [
+            f["depth"]
+            for f in fallacies
+            if isinstance(f, dict) and isinstance(f.get("depth"), int)
+        ]
+        assert depths, (
+            "No identified fallacy carries an int `depth` — the descent "
+            "confirmed no taxonomy node "
+            f"(exploration_method={result.get('exploration_method', '?')!r}); "
+            "the gate refuses to score the one-shot fallback as a descent"
+        )
+
+        max_depth = max(depths)
+        assert max_depth >= 2, (
+            f"Guided descent only reached depth {max_depth}, "
+            f"expected >= 2 (deeper than flat depth-1)"
+        )
+
+    def test_identified_fallacy_serializes_depth(self):
+        """#2290 kill-set: the depth field exists, serializes, and defaults
+        to None (not a fabricated 1) — the structural precondition for the
+        depth gate above to measure anything at all."""
+        import json
+
+        from argumentation_analysis.plugins.identification_models import (
+            IdentifiedFallacy,
+        )
+
+        confirmed = IdentifiedFallacy(
+            fallacy_type="Question piège",
+            taxonomy_pk="179",
+            explanation="opaque synthetic",
+            depth=4,
+        )
+        assert confirmed.depth == 4
+        assert json.loads(confirmed.model_dump_json())["depth"] == 4
+
+        bare = IdentifiedFallacy(
+            fallacy_type="x", taxonomy_pk="1", explanation="opaque synthetic"
+        )
+        assert bare.depth is None, (
+            "one-shot identifications must carry depth=None, never a "
+            "fabricated 1 — None is the honest 'not measured' signal"
+        )
 
 
 class TestCompareDetectionModes:
@@ -368,9 +426,9 @@ class TestCompareDetectionModes:
             / "scripts"
             / "compare_fallacy_detection_modes.py"
         )
-        assert script_path.exists(), (
-            "3-way comparison script not found at scripts/compare_fallacy_detection_modes.py"
-        )
+        assert (
+            script_path.exists()
+        ), "3-way comparison script not found at scripts/compare_fallacy_detection_modes.py"
 
     def test_comparison_modes_defined(self):
         """The script must define the 3 comparison modes."""
@@ -384,12 +442,12 @@ class TestCompareDetectionModes:
         content = script_path.read_text(encoding="utf-8")
 
         # Check that the script mentions the 3 modes
-        assert "0-shot" in content or "zero_shot" in content, (
-            "Script must reference 0-shot mode"
-        )
-        assert "taxonomy" in content.lower(), (
-            "Script must reference taxonomy-based mode"
-        )
-        assert "guided" in content.lower() or "workflow" in content.lower(), (
-            "Script must reference guided/workflow mode"
-        )
+        assert (
+            "0-shot" in content or "zero_shot" in content
+        ), "Script must reference 0-shot mode"
+        assert (
+            "taxonomy" in content.lower()
+        ), "Script must reference taxonomy-based mode"
+        assert (
+            "guided" in content.lower() or "workflow" in content.lower()
+        ), "Script must reference guided/workflow mode"

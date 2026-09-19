@@ -34,6 +34,13 @@ class IdentifiedFallacy(BaseModel):
         default="",
         description="The CSV 'Famille' column value (one of the 7 French families)",
     )
+    depth: Optional[int] = Field(
+        default=None,
+        description=(
+            "Taxonomy depth of the confirmed node. None = not measured "
+            "(one-shot regime, where no descent happened)"
+        ),
+    )
 
 
 class FallacyAnalysisResult(BaseModel):

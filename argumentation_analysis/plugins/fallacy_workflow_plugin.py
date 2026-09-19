@@ -944,9 +944,9 @@ class FallacyWorkflowPlugin:
                     if lr.get("function_name") == "confirm_fallacy" and lr.get(
                         "confirmed"
                     ):
+                        leaf_depth = int(current_node.get("depth", 0))
                         # Register leaf confirmation for supersession (RA-3 #1048)
                         if supersession_tracker is not None:
-                            leaf_depth = int(current_node.get("depth", 0))
                             supersession_tracker.register(
                                 current_pk,
                                 leaf_depth,
@@ -960,6 +960,7 @@ class FallacyWorkflowPlugin:
                             confidence=lr.get("confidence", 0.7),
                             navigation_trace=navigation_trace,
                             family=current_node.get("Famille", ""),
+                            depth=leaf_depth,
                         )
                     elif lr.get("function_name") == "conclude_no_fallacy":
                         self.logger.info(
@@ -1182,6 +1183,7 @@ class FallacyWorkflowPlugin:
                     confidence=confirm_result.get("confidence", 0.7),
                     navigation_trace=navigation_trace,
                     family=current_node.get("Famille", ""),
+                    depth=confirmed_depth,
                 )
 
             if conclude_result is not None:
