@@ -39,10 +39,18 @@ _SESSION_TOTALS: dict[str, int] = {
     "live": 0,
 }
 
+# #2320: same accumulation problem as the counters, same fix — the miss KEY
+# PREFIXES must survive mid-session resets too, or the gate can only say "31
+# missing", never "these 31". Order preserved, one entry per miss.
+_SESSION_MISS_KEYS: list[str] = []
+
 
 def _accumulate(stats: dict[str, int]) -> None:
+    import argumentation_analysis.services.llm_cache as llm_cache
+
     for key in _SESSION_TOTALS:
         _SESSION_TOTALS[key] += int(stats.get(key, 0))
+    _SESSION_MISS_KEYS.extend(llm_cache.get_cache_miss_keys())
 
 
 def pytest_sessionstart(session: Any) -> None:
@@ -67,6 +75,7 @@ def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:
 
     _accumulate(llm_cache.get_cache_stats())
     stats = dict(_SESSION_TOTALS)
+    stats["miss_keys"] = list(_SESSION_MISS_KEYS)
     out = Path(os.getenv("REPLAY_STATS_OUT", ".cache/replay_stats.json"))
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(stats, indent=2), encoding="utf-8")
@@ -76,3 +85,14 @@ def pytest_sessionfinish(session: Any, exitstatus: Any) -> None:
         f"\n[replay-stats] live={stats['live']} hit={stats['hit']} "
         f"miss_record={stats['miss_record']} miss_replay={stats['miss_replay']}"
     )
+    if _SESSION_MISS_KEYS:
+        # Gate-side echo: pytest captures the raisers' own logs on green
+        # tests, so this is the ONLY place a green-looking run betrays its
+        # misses in the raw log (#2320).
+        for prefix in _SESSION_MISS_KEYS[:20]:
+            print(f"[replay-stats] miss_replay key={prefix}")
+        if len(_SESSION_MISS_KEYS) > 20:
+            print(
+                f"[replay-stats] ... {len(_SESSION_MISS_KEYS) - 20} more "
+                "(full list in the stats json)"
+            )
