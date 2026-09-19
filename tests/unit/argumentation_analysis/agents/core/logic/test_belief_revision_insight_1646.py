@@ -87,13 +87,20 @@ class TestMinimalRetractions:
         assert card == 2
         assert all(len(o) == 2 for o in opts)
 
-    def test_beyond_search_bound_degrades_honestly(self) -> None:
+    def test_beyond_search_bound_degrades_honestly(self, monkeypatch) -> None:
         """A base whose minimal retraction exceeds the search bound returns -1
         (no fabricated minimal set) — fail-loud #1019.
 
-        Five independent clashes need cardinal 5, but the search bound caps at 4,
-        so no restoring subset is found within budget.
+        The bound is calibrated for real-run cardinalities (8-9 measured on
+        corpus; ``_MAX_SEARCH_K = 12`` — see
+        ``test_belief_revision_realrun_bound_1646`` for the real-scale guards);
+        lowered here so the degrade fires fast instead of sweeping the real
+        subset budget. Five independent clashes need cardinal 5, a cap of 4
+        finds no restoring subset.
         """
+        import argumentation_analysis.agents.core.logic.belief_revision_insight as _bri
+
+        monkeypatch.setattr(_bri, "_MAX_SEARCH_K", 4)
         five_clashes = [[1], [-1], [2], [-2], [3], [-3], [4], [-4], [5], [-5]]
         card, opts = minimal_retractions(five_clashes)
         assert card == -1
