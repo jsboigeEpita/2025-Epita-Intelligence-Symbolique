@@ -125,7 +125,12 @@ def _load_deps():
             _nlp = None
         _DEPS_AVAILABLE = True
         return True
-    except (ImportError, OSError, RuntimeError) as exc:
+    except Exception as exc:
+        # Record EVERY escape (#2320): the load can die with exception types this
+        # clause historically did not list — e.g. srsly's msgpack deserializer
+        # raising ValueError("int is not allowed for map key...") — and those
+        # escaped unrecorded, leaving the later gates with "cause not recorded"
+        # and the diagnosis blind (run 35451228603: 54 gate hits, zero causes).
         _LAST_LOAD_ERROR = f"{type(exc).__name__}: {exc}"
         # ImportError: spacy/textstat not installed (most common cause — ensure
         #   `textstat` and `python -m spacy download fr_core_news_sm` are provisioned;
@@ -133,6 +138,8 @@ def _load_deps():
         # OSError [E050]: spaCy model `fr_core_news_sm` not downloaded.
         # OSError [WinError 182]: torch DLL conflict (#882) — rare on recent envs;
         #   dll_guard pre-loads torch before jpype as defense-in-depth.
+        if not isinstance(exc, (ImportError, OSError, RuntimeError)):
+            raise  # unfamiliar failure class — propagate it RAW, fail loud
         raise RuntimeError(
             f"Quality evaluation requires spacy, textstat and the fr_core_news_sm "
             f"model, but a dependency failed: {exc}. Most often this is a missing "
