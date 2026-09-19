@@ -1,0 +1,64 @@
+{
+  "key": "0b5f092688b10bbf318d586fb73ff9d59b3d1d186ee24f45a5591026771895bc",
+  "value": {
+    "id": "gen-1789758275-W1syvpBiteQb8ffHgFTC",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"Consacrer l’intégralité du budget à un tournoi, au buffet et aux prix peut produire une visibilité incertaine tout en laissant le club sans investissement durable dans ses activités régulières. Une partie du budget pourrait être mieux affectée à des équipements ou à des actions de communication évaluables.\",\n    \"strategy_used\": \"mise en évidence des coûts d’opportunité\",\n    \"target_argument\": \"Argument 1 : option A\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’option suppose que l’événement accroîtra la visibilité, sans fournir de garantie ni d’indicateur de réussite, alors que les dépenses engagées sont en grande partie ponctuelles.\"\n  },\n  {\n    \"counter_argument\": \"Investir tout le budget dans du matériel ne garantit pas une augmentation du nombre de joueurs ni une meilleure dynamique du club. Sans tournoi, communication ou action d’animation, les nouveaux équipements pourraient être sous-utilisés et ne pas répondre aux besoins réels.\",\n    \"strategy_used\": \"identification d’une condition manquante\",\n    \"target_argument\": \"Argument 2 : option B\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L’option privilégie les ressources matérielles, mais néglige les activités nécessaires pour attirer, fidéliser et mobiliser les membres.\"\n  },\n  {\n    \"counter_argument\": \"Répartir équitablement le budget ne signifie pas que cette répartition soit optimale : un tournoi réduit risque d’avoir une portée limitée et le matériel acheté pourrait être insuffisant. La proportion devrait plutôt dépendre des besoins prioritaires et d’objectifs mesurables.\",\n    \"strategy_used\": \"critique de l’hypothèse d’équité\",\n    \"target_argument\": \"Argument 3 : option C\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’égalité de répartition est présentée comme un critère de décision sans démontrer qu’elle maximise l’impact, la participation ou la pérennité du club.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": null,
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null,
+          "reasoning": null,
+          "reasoning_details": [
+            {
+              "type": "reasoning.encrypted",
+              "data": "gAAAAABqrYtFAG5agIh_bpQXb7Tk3EJCXB2Gmrwr3Gjta1zJGINKSAm8-7_vtzOl7wjOsOspJvne53P70ktMM8jCXJDKTWpiiscCuWpF1DNJvONYqH9gjr2SkZq-oeFpwmGUyI0RD_fvzelp7CLiDBV9aYhoR2-PZBHNVITKtPJI0GjWpIrkGFL7xCEcaGhQ8770VhfCoAOBK84WFn9kGVAHOAc-r94biYujPJaqQy_Qc3lBpr_bBnaN5DI2B6Jnbpq2ebvA07MQPe5JE7N_UYbaEWNzUfQ3pG7166CJ33orV5Ygl5qiStHVQLkQzXPeD9XTWr7Jj_F_j3p7P671XtsEKgN3uBQ10aLBNvQ6V3foBRZDt__Gdf-jHdrhYuZZ78N7qJtETZr4Gk7PJRHFyoQAx1u8uFk5_W0Y5ibatKb-vA5Mv4nufZ5atYz_ER0nDsO88fwSoKtJ5SbduRfs1L4AToD-CNUgvC9F1LR6QXS8jWIUVG6FGR39zwUkJssJ2rvfxos8ty3ukcxFuy9S4ngGK8vG8EUy_iblMEuQMTANvpExSKnV4HnIAZxuiKZAAS1k9DEtwRHqcTp7Ab4V0ukmzcNM9tfM7V8FOPXlgp0bN3LQmSCt3bEHmwcPiwXCX_otwtppbKI_ICqHCIdeqnaGuEFa3q0fe3UE_SygPAquHPLO4JGejAn0cnA6ZT1lII8IUpje2Ht3n-rDGKAIcZEAPXzWQ3M04LcY9CgHKGAdnH5a5YNYppe7FulDFcMS1K5lO71Xco62WxhFTrJ9wzkayy7_UIXBZ5uLtZnBTDsrRUD2pQnQjxPGw3HFaWiEDDOh_dyZ2ryR6O_6CYCmvtVMzqr1ffsi3o3rbljwsfwOCJhkAh0Pay_AleewMv3-osH1jRIogJ1tE0EuiQfBtHTV2cVgCMSIrn_ar82mdAacb_xcRwq7PSgKrIf3qmGjpwagH3TCUApTRAiZWFwsuYffenu6VnkJsL7rJV56dZXKHHJ8x0P15oJFzLjsM6YKXBDoHor1CkCqJmMbZkBaV2QwL8t3VYQ1Di49eXWaviD3cyxs5FieKEVURuB2BXJFSwJZL2Up5ZWTeM5kCw9DeAIlJLneEl7LPGUyiyEtoLJ69Zow7dW7XlAdNa5BM3Ne3L2ZNPVj9QiVf1w3oJh7uNqQKrzpnyi5ADMcELNYLLUfUL3tH_R_nlpixDxtBEL3gDh7K6rHsyVpI_TahaZ3F8TZGH3oN84hTc0OchWvrC2e2PQpkRblulNlrS_k04V_X8tFhe7bsQ7qL4-9dc1xEK89MWXFUnzqg9IMXvq9I5vO4EngyP3vMzdy7HJjJYQOa0BePtjaUx2-ECPxyIBVbwTCaIen1AOVVtEjC7b7Zrnprg7HZObeXymovLqU92XHn26IwfdZj4b71Xq2yaBhzBpLtxNFV6IJ9EN7AZK9ucgBrQhu_OgYxKUXFuH9r6gNxEkAU18XcjQa9KXq4idxeD1owhhQMUSV6wMrlkYTPNpflfCOw40FryLnYLvZpnJl00OfT0u1mdIf8VNXbP66BnFenNMKNFMt-3JTT6jVN1JV02JlqRg6HbE1OjYjlnmUjtXgoq3sFKBwTZbCgEurx6ju6J_h-3C5vqbLru9hiI6QKQwtjihU7da2V56y-3TiGNF53yoj-fIXZea_7bGVWSv3nesU29gBNaFno98x9sO7Ti9bANhf09tIeD9BEUwxA5dT4oeH7Jyihkqr6w9jMu_P9qSkPu11osR3bVe7-8B8KPIc0ePMCm8oKTogZNrhmP6Yd2UohIuycWN437C55_XE9m2J1ZhWxpz4CUJI3RpeETsVuRruuncbutOrKKl9afG-8p8-Fgrm-VTl2If9U0Q7hTnrt83CS0I5wxlTJEuud3sJ9fRww-nVB2T2Vm67jmawruUuDEmJ9zxw4HCpPjV2u60Kd9DI6LbvRhZ2FnO8cXKQBuvCpoU=.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC01LjYtbHVuYS0yMDI2MDcwOXxvcGVuYWkifQ",
+              "format": "openai-responses-v1",
+              "id": "rs_0ecf835dd8326f89016aad8b440c4c87d1aa7f7d607f32d380",
+              "index": 0
+            }
+          ]
+        },
+        "native_finish_reason": "completed"
+      }
+    ],
+    "created": 1789758275,
+    "model": "openai/gpt-5.6-luna",
+    "object": "chat.completion",
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 529,
+      "prompt_tokens": 206,
+      "total_tokens": 735,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": null,
+        "audio_tokens": 0,
+        "reasoning_tokens": 97,
+        "rejected_prediction_tokens": null,
+        "image_tokens": 0
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cached_tokens": 0,
+        "cache_write_tokens": 0,
+        "video_tokens": 0
+      },
+      "cost": 0,
+      "is_byok": true,
+      "cost_details": {
+        "upstream_inference_cost": 0.000676,
+        "upstream_inference_prompt_cost": 4.12e-05,
+        "upstream_inference_completions_cost": 0.0006348
+      }
+    },
+    "provider": "OpenAI"
+  }
+}

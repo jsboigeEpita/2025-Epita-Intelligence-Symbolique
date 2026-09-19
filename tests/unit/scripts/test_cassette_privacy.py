@@ -54,16 +54,44 @@ def test_currency_amount_does_not_trip_date_heuristic() -> None:
     )
 
 
-def test_year_before_currency_word_stays_blocked() -> None:
-    # The exemption is symbols-only by design: a letter currency code or a
-    # bare year in prose keeps tripping — loosening further would be a
-    # privacy regression, not a fix.
+def test_currency_word_amount_does_not_trip_date_heuristic() -> None:
+    # Regression #2300: the #1603 symbols-only exemption refused every
+    # cassette of the two deliberation tests on « 2000 euros » — the natural
+    # French spelling of an amount — blocking the replay band on a measured
+    # false-positive class. A denomination word glued to the digits is an
+    # amount, not a date.
+    assert (
+        audit_value(
+            {"content": "Organiser un tournoi pour 2000 euros au club."},
+            source="t",
+        )
+        == []
+    )
+    assert (
+        audit_value(
+            {"content": "The grant of 3000 dollars covers both options."},
+            source="t",
+        )
+        == []
+    )
+
+
+def test_year_without_currency_marker_stays_blocked() -> None:
+    # The exemption requires a currency marker glued to the digits: a bare
+    # year in prose, or a year followed by anything else, keeps tripping —
+    # that is the actual political-date leak channel.
     viol = audit_value(
-        {"content": "Le plan de 2000 EUR fut adopté, comme en 2021 ailleurs."},
+        {"content": "Le plan fut adopté, comme en 2021 ailleurs, après 2017."},
         source="t",
     )
-    assert any("historical-year hint 2000" in v for v in viol)
     assert any("historical-year hint 2021" in v for v in viol)
+    assert any("historical-year hint 2017" in v for v in viol)
+    # A year followed by a non-currency word is NOT an amount.
+    viol2 = audit_value(
+        {"content": "Le rapport 2000 annuel fut publié."},
+        source="t",
+    )
+    assert any("historical-year hint 2000" in v for v in viol2)
 
 
 def test_versioned_model_id_does_not_trip_date_heuristic() -> None:

@@ -1,0 +1,16 @@
+{
+  "key": "57f0b2b16095426ebba9b5b66b7f110cbb91f2311cc5aceb339bbae511bb1a4a",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "metadata": {
+        "logprobs": null,
+        "id": "gen-1789758809-8znPlFbF0u0arF6ReArG",
+        "created": 1789758809,
+        "system_fingerprint": null,
+        "usage": "prompt_tokens=1493 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cached_tokens=0, cache_write_tokens=1490, video_tokens=0) completion_tokens=125 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=None, audio_tokens=0, reasoning_tokens=55, rejected_prediction_tokens=None, image_tokens=0)"
+      }
+    }
+  ]
+}

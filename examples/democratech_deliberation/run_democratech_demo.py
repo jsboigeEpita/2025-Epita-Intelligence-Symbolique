@@ -63,7 +63,11 @@ def _extract_verdict(result: Dict[str, Any]) -> Dict[str, Any]:
     methods = dict(verdict.get("winners_per_method", {}))
     return {
         "decided_firsthand": bool(gov.get("governance_decided_firsthand")),
-        "winner": verdict.get("condorcet_winner"),
+        # #2300 — the aggregate's own fallback canon (condorcet → majority →
+        # plurality), not the raw strict variant: on a genuine pairwise tie
+        # 11+ methods still decide and the demo must render that winner.
+        "winner": verdict.get("winner"),
+        "winner_basis": verdict.get("winner_basis"),
         "n_methods": len(methods),
         "methods": methods,
         "consensus_rate": gov.get("consensus_rate"),
@@ -116,7 +120,9 @@ def _print_table(results: List[Dict[str, Any]]) -> None:
     print("\n" + "=" * 78)
     print(" DEMOCRATECH DELIBERATION — per-proposition verdict ")
     print("=" * 78)
-    hdr = f"{'ID':<7} {'Firsthand':<10} {'Winner':<10} {'#Methods':<9} {'Consensus':<10}"
+    hdr = (
+        f"{'ID':<7} {'Firsthand':<10} {'Winner':<10} {'#Methods':<9} {'Consensus':<10}"
+    )
     print(hdr)
     print("-" * 78)
     for r in results:
@@ -128,12 +134,16 @@ def _print_table(results: List[Dict[str, Any]]) -> None:
             if isinstance(v["consensus_rate"], (int, float))
             else "—"
         )
-        print(f"{r['id']:<7} {firsthand:<10} {str(winner):<10} "
-              f"{v['n_methods']:<9} {consensus:<10}")
+        print(
+            f"{r['id']:<7} {firsthand:<10} {str(winner):<10} "
+            f"{v['n_methods']:<9} {consensus:<10}"
+        )
     print("-" * 78)
     n_decided = sum(1 for r in results if r["verdict"]["decided_firsthand"])
-    print(f" {n_decided}/{len(results)} propositions decided firsthand "
-          f"(anti-théâtre: undecided ones reported, never fabricated).")
+    print(
+        f" {n_decided}/{len(results)} propositions decided firsthand "
+        f"(anti-théâtre: undecided ones reported, never fabricated)."
+    )
     # Per-phase honesty row for the first proposition (representative).
     if results and results[0]["phase_rows"]:
         print("\n Per-phase status (first proposition, honest-degraded shown):")
@@ -144,17 +154,26 @@ def _print_table(results: List[Dict[str, Any]]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Democratech deliberation demo.")
-    parser.add_argument("--limit", type=int, default=None,
-                        help="Limit to N propositions (default: all 5).")
-    parser.add_argument("--json", action="store_true",
-                        help="Emit machine-readable JSON instead of the table.")
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Limit to N propositions (default: all 5).",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Emit machine-readable JSON instead of the table.",
+    )
     args = parser.parse_args()
 
     provider = _ensure_api_key()
     if not provider:
-        print("No LLM API key found (OPENAI_API_KEY or OPENROUTER_*). "
-              "The demo needs a real LLM to deliberate. Skipping.",
-              file=sys.stderr)
+        print(
+            "No LLM API key found (OPENAI_API_KEY or OPENROUTER_*). "
+            "The demo needs a real LLM to deliberate. Skipping.",
+            file=sys.stderr,
+        )
         return 2
 
     # Make the examples package importable for `from synthetic_proposals import …`.

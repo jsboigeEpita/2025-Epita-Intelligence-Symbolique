@@ -39,19 +39,25 @@ def test_derive_profile_concordant_three_electors():
     """3 args x 3 virtues -> arg_2 is the Condorcet winner (beats others on 2/3)."""
     quality = {
         "per_argument_scores": {
-            "arg_1": {"scores_par_vertu": {"clarte": 9.0, "pertinence": 4.0, "structure": 3.0}},
-            "arg_2": {"scores_par_vertu": {"clarte": 5.0, "pertinence": 8.0, "structure": 7.0}},
-            "arg_3": {"scores_par_vertu": {"clarte": 2.0, "pertinence": 6.0, "structure": 5.0}},
+            "arg_1": {
+                "scores_par_vertu": {"clarte": 9.0, "pertinence": 4.0, "structure": 3.0}
+            },
+            "arg_2": {
+                "scores_par_vertu": {"clarte": 5.0, "pertinence": 8.0, "structure": 7.0}
+            },
+            "arg_3": {
+                "scores_par_vertu": {"clarte": 2.0, "pertinence": 6.0, "structure": 5.0}
+            },
         }
     }
     options, ballots, agents, derivable, reason = _derive_governance_profile(quality)
     assert derivable is True
     assert options == ["arg_1", "arg_2", "arg_3"]
-    assert len(agents) == 3   # one elector per virtue
+    assert len(agents) == 3  # one elector per virtue
     # clarte ranks arg_1 first; pertinence + structure rank arg_2 first.
-    assert ballots[0][0] == "arg_1"   # clarte elector
-    assert ballots[1][0] == "arg_2"   # pertinence elector
-    assert ballots[2][0] == "arg_2"   # structure elector
+    assert ballots[0][0] == "arg_1"  # clarte elector
+    assert ballots[1][0] == "arg_2"  # pertinence elector
+    assert ballots[2][0] == "arg_2"  # structure elector
     assert "3 electors" in reason
 
 
@@ -138,6 +144,51 @@ def test_aggregate_concordant_profile_single_winner():
     assert verdict["n_methods_decided"] >= 3
 
 
+def test_aggregate_pairwise_tie_renders_majority_winner_2300():
+    """#2300 — the measured wild profile: 2 electors split 1-1 between arg_1
+    and arg_3 in pairwise (clarte ranks arg_3 first, pertinence ranks arg_1
+    first). The STRICT Condorcet legitimately does not exist (1-1 <= strict
+    majority), but the aggregate still decides via its fallback canon
+    (condorcet -> majority -> plurality): the rendered ``winner`` must be the
+    majority tier's choice, with the basis naming the tier that decided."""
+    agents = [
+        Agent("elector_clarte", "stubborn", ["arg_3", "arg_1", "arg_2"]),
+        Agent("elector_pertinence", "stubborn", ["arg_1", "arg_2", "arg_3"]),
+    ]
+    options = ["arg_1", "arg_2", "arg_3"]
+    ballots = [list(a.preferences) for a in agents]
+
+    verdict = _aggregate_governance_votes(agents, options, ballots)
+
+    # The trigger: no strict Condorcet winner on the 1-1 pairwise split.
+    assert verdict["condorcet_winner"] is None
+    # The repair: a winner IS rendered, by the majority tier, and the basis
+    # says so — 11 other methods decided, "no winner" was a rendering loss.
+    assert verdict["winner"] is not None
+    assert verdict["winner"] == verdict["winners_per_method"]["majority"]
+    assert verdict["winner_basis"] == "majority"
+    assert verdict["n_methods_decided"] >= 3
+
+
+def test_aggregate_winner_basis_condorcet_when_strict_winner_exists():
+    """#2300 control case (no tie): when a strict Condorcet winner exists, the
+    rendered winner IS that Condorcet winner with basis "condorcet" — the
+    fallback tier must never override a genuine Condorcet."""
+    agents = [
+        Agent("e1", "stubborn", ["arg_1", "arg_2", "arg_3"]),
+        Agent("e2", "stubborn", ["arg_1", "arg_3", "arg_2"]),
+        Agent("e3", "stubborn", ["arg_2", "arg_1", "arg_3"]),
+    ]
+    options = ["arg_1", "arg_2", "arg_3"]
+    ballots = [list(a.preferences) for a in agents]
+
+    verdict = _aggregate_governance_votes(agents, options, ballots)
+
+    assert verdict["condorcet_winner"] == "arg_1"
+    assert verdict["winner"] == "arg_1"
+    assert verdict["winner_basis"] == "condorcet"
+
+
 # ---------------------------------------------------------------------------
 # _invoke_governance — end-to-end handler (DoD test guard)
 # ---------------------------------------------------------------------------
@@ -149,9 +200,15 @@ async def test_handler_guard_governance_decides_firsthand_condorcet():
     winner, the handler decides FIRSTHAND via formal aggregation (no LLM)."""
     quality = {
         "per_argument_scores": {
-            "arg_1": {"scores_par_vertu": {"clarte": 9.0, "pertinence": 4.0, "structure": 3.0}},
-            "arg_2": {"scores_par_vertu": {"clarte": 5.0, "pertinence": 8.0, "structure": 7.0}},
-            "arg_3": {"scores_par_vertu": {"clarte": 2.0, "pertinence": 6.0, "structure": 5.0}},
+            "arg_1": {
+                "scores_par_vertu": {"clarte": 9.0, "pertinence": 4.0, "structure": 3.0}
+            },
+            "arg_2": {
+                "scores_par_vertu": {"clarte": 5.0, "pertinence": 8.0, "structure": 7.0}
+            },
+            "arg_3": {
+                "scores_par_vertu": {"clarte": 2.0, "pertinence": 6.0, "structure": 5.0}
+            },
         }
     }
     context: Dict[str, Any] = {
