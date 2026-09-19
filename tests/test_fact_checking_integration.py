@@ -564,8 +564,27 @@ class TestPerformance:
 
         processing_time = end_time - start_time
 
-        # L'extraction devrait prendre moins de 10 secondes
-        assert processing_time < 10.0
+        # The bound follows the ACTIVE extraction path (retour #2321, 2026-09-19).
+        # The former flat 10.0 s was calibrated on the DEGRADED path: before #2321
+        # provisioned fr-core-news-sm in CI, FactClaimExtractor.__init__ swallowed
+        # the missing model (OSError -> self.nlp = None) and the timed section ran
+        # the pure-regex extractor (~0.03 s). Provisioning the model (#2321,
+        # environment.yml) flips CI onto the real NLP pipeline: run 35451914405
+        # measured 10.78 s on the runner, reddening that stale bound
+        # deterministically. Reference measurements (myia-po-2025, recording-env
+        # topology, 2026-09-19, n=3 medians): NLP path 0.88 s, regex path 0.015 s
+        # — the runner sits ~12x above local on the NLP path, hence the 30.0 s
+        # bound (≈2.8x the measured runner value: deterministic green, still
+        # reddens on a pathological ≥3x regression). The regex bound stays tight
+        # (a blowup there is ≥60x its baseline).
+        if extractor.nlp is not None:
+            bound = 30.0  # real NLP pipeline (fr_core_news_sm loaded)
+        else:
+            bound = 1.0  # degraded regex path (model absent)
+        assert processing_time < bound, (
+            f"extraction took {processing_time:.2f}s (bound {bound}s, "
+            f"nlp={'loaded' if extractor.nlp is not None else 'absent'})"
+        )
         assert isinstance(claims, list)
 
     @pytest.mark.skipif(

@@ -8,9 +8,11 @@ anti-vacuité contract of a replay run:
   that never consults the cache would be vacuously green;
 - ``miss_replay == 0`` — every lookup found its cassette. A miss means a
   cassette is missing or its key drifted (the degenerate substitution of
-  DoD 5); the lane must go red, not silently degrade — the extract phase
-  swallows ``LLMCacheMiss`` into a heuristic fallback, so pytest alone
-  stays green on a substituted cassette (constat D, #1603).
+  DoD 5); the lane must go red, not silently degrade. Before #2320 the
+  invoke layer swallowed ``LLMCacheMiss`` into degradation fallbacks (constat
+  D, #1603), so pytest alone stayed green on a missing cassette — the misses
+  now traverse (``except LLMCacheMiss: raise``) and redden the tests, this
+  gate stays the second, counting line of defence.
 
 Usage::
 
@@ -80,6 +82,17 @@ def main(argv: List[str] | None = None) -> int:
         print("REPLAY GATE FAILED:", file=sys.stderr)
         for v in violations:
             print(f"  - {v}", file=sys.stderr)
+        miss_keys = stats.get("miss_keys") or []
+        if miss_keys:
+            # #2320: the count names the symptom, the prefixes name the
+            # cassettes — re-recording blindly is forbidden until the drifting
+            # INPUT of each key is identified (record a probe or diff against
+            # the local keys for the same request).
+            print(
+                f"  - miss_replay key prefixes ({len(miss_keys)}): "
+                + ", ".join(miss_keys[:40]),
+                file=sys.stderr,
+            )
         return 1
     print("replay gate OK: live==0, hit>=1, miss_replay==0")
     return 0

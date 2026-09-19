@@ -21,11 +21,18 @@ dependencies:
   - scipy
   - scikit-learn
   - nltk
-  - spacy # Laisser conda choisir la version
+  # spacy/thinc: NO conda line on purpose (#2320). The whole spacy stack is
+  # pip-managed below (spacy==3.8.14 + thinc==8.3.13 + srsly==2.5.3). A conda
+  # spacy would drag conda srsly — and conda-forge's noarch srsly rebuild
+  # DE-VENDORS msgpack (conda-forge policy), routing model deserialization
+  # through the external msgpack, whose >=1.1 default strict_map_key=True
+  # rejects fr_core_news_sm's integer map keys: spacy.load dies with
+  # "int is not allowed for map key" and the quality phase raises RuntimeError.
+  # With conda spacy gone, nothing installs srsly but pip, whose 2.5.3 wheel
+  # vendors msgpack (1.0 semantics) exactly like the recording env.
   - pytorch
   - transformers
   - sympy=1.13.1
-  - thinc=8.3.2 # Figé pour compatibilité avec spacy (8.3.4 non trouvé sur conda)
 
   # Web & API
   - flask
@@ -77,6 +84,10 @@ dependencies:
   # La section pip est pour les paquets non disponibles ou problématiques sur Conda
   - pip:
     - textstat  # FB-23 #1088: readability (Flesch) for the quality-radar clarte detector
+    - spacy==3.8.14  # #2320 (with the pins below): the quality heuristic's virtue scores feed LLM-cache KEYS, so CI must compute the recording env's scores. The whole spacy stack is pip-managed — see the conda section note.
+    - thinc==8.3.13  # #2320: the working pair with spacy 3.8.14 (the dev boxes' proven stack — 79/79 replay keys match the recording env)
+    - srsly==2.5.3  # #2320 layer 3: conda-forge's noarch srsly rebuild de-vendors msgpack; external msgpack>=1.1 defaults strict_map_key=True -> spacy.load("fr_core_news_sm") raises "int is not allowed for map key" (the model's tokenizer data uses integer map keys) -> quality phase RuntimeError -> counter/democratic_vote target cascades. Reproduced locally in a fresh env-from-yml and repaired by this wheel (vendored msgpack, 1.0 semantics). Pinning alone is NOT enough when conda spacy is present (pip no-ops on an equal version) — hence spacy/thinc live only in this pip section.
+    - fr-core-news-sm==3.8.0  # #2320: the model the recording env used. CI never provisioned it: quality_evaluator silently degraded to "simplified tokenisation" (_load_dependencies: OSError -> _nlp=None, warn only) -> CI computed DIFFERENT scores than the recording env -> 12 replay keys existed nowhere -> gate miss_replay=31 while pytest stayed green (run 35435391692). Proven by exact key-prefix match: simulating the missing model locally reproduces 8 of the 12 CI miss prefixes. Same drift class as openai==3.3.0 below: an unpinned (here: absent) dep whose output enters cache keys is a replay-lane key-drift vector.
     - semantic-kernel>=1.33.0
     - openai==3.3.0  # Pinned. semantic-kernel declares only a floor (openai>=2.0.0), so every fresh env resolved whatever PyPI served that day. Measured 2026-08-19: CI resolved openai 3.3.0 while dev envs built months earlier sat on 2.26.0 — and openai>=3.x moved its transport from httpx to httpx2. That gap is precisely why a CI-only failure like #1794 cannot be reproduced on a dev box: the two sides do not run the same client. 3.3.0 is the version the gate actually exercises (run 32195821578, green). Same drift class as python-sat below: a floor is not a version.
     - flask_socketio>=5.3.6
