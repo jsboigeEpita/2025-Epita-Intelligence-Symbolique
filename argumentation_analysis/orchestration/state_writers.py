@@ -1089,6 +1089,41 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
+def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> None:
+    """#2295 — per-argument ``assert`` trace entry, anchored when measurable.
+
+    The anchor is honest by construction (tri-état): anchored only when the
+    verbatim ``source_quote`` occurs EXACTLY ONCE in the source text. Absent
+    quote, paraphrased quote (not found) or ambiguous quote (multiple
+    occurrences) all leave the ``anchor`` key OUT of the entry — never a
+    fabricated offset 0 masquerading as the start of the text. ``reacts_to``
+    carries the freshly assigned argument id: the entry is ABOUT ``arg_N``,
+    not about the phase that produced it.
+    """
+    anchor = None
+    if quote and raw_text:
+        first = raw_text.find(quote)
+        if first != -1 and raw_text.count(quote) == 1:
+            anchor = {"offset": first, "length": len(quote)}
+            basis = f"ancre offset {first}, longueur {len(quote)}"
+        elif first == -1:
+            basis = "sans ancre (quote introuvable dans le texte)"
+        else:
+            basis = "sans ancre (quote ambiguë, occurrences multiples)"
+    elif not quote:
+        basis = "sans ancre (quote non fournie)"
+    else:
+        basis = "sans ancre (texte source indisponible)"
+    state.add_trace_entry(
+        phase="extract",
+        agent="FactExtraction",
+        reacts_to=[arg_id],
+        summary=f"assert {arg_id} — {basis}.",
+        anchor=anchor,
+        move="assert",
+    )
+
+
 def _write_fact_extraction_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
@@ -1112,17 +1147,20 @@ def _write_fact_extraction_to_state(
     # Populate base identified_arguments from LLM extraction
     arguments = output.get("arguments", [])
     if isinstance(arguments, list):
+        raw_text = getattr(state, "raw_text", "") or ""
         for arg in arguments:
             if isinstance(arg, dict):
                 text = arg.get("text", "").strip()
-                quote = arg.get("source_quote", "")
+                quote = str(arg.get("source_quote", "") or "").strip()
                 if text:
                     arg_text = text
                     if quote:
                         arg_text = f'{text} [quote: "{quote[:100]}"]'
-                    state.add_argument(arg_text)
+                    arg_id = state.add_argument(arg_text)
+                    _record_assert_move(state, arg_id, quote, raw_text)
             elif isinstance(arg, str) and arg.strip():
-                state.add_argument(arg.strip())
+                arg_id = state.add_argument(arg.strip())
+                _record_assert_move(state, arg_id, "", raw_text)
     # NOTE: Fallacy detection removed from fact_extraction (issue #179).
     # Fallacies are the sole responsibility of hierarchical_fallacy_detection,
     # which uses deep taxonomy navigation for precise identification.

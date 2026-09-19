@@ -690,9 +690,9 @@ class TestConvergenceWiring:
         # is the feature) so we assert structure, not frozen content.
         assert "Convergent Verdicts" in md
         report = result["report"]
-        assert report["convergent_verdicts"], (
-            "convergent_verdicts must be populated for the cross-method fixture"
-        )
+        assert report[
+            "convergent_verdicts"
+        ], "convergent_verdicts must be populated for the cross-method fixture"
         # Fail-loud Section 9 is always surfaced (FB-31).
         assert "## 9. Final Synthesis" in md
 
@@ -984,3 +984,104 @@ class TestLLMSynthesisPromptSixSections:
         prompt = call_kwargs[1]["prompt"] if call_kwargs[1] else ""
         assert "security" in prompt
         assert "Speaker_A" in prompt
+
+
+class TestArgumentativeSequenceRendering2295:
+    """#2295 — Section 5 consumes the SEQUENCE: anchored trace entries
+    ordered by their position in the SOURCE TEXT (not the execution clock),
+    rendered for the LLM briefing with the Walton-Krabbe move in prose form.
+    Unanchored moves are counted out loud (tri-état), legacy entries render
+    exactly as before.
+    """
+
+    @staticmethod
+    def _run(coro):
+        return asyncio.get_event_loop().run_until_complete(coro)
+
+    @staticmethod
+    def _prompt_for(report):
+        kernel = MagicMock()
+        kernel.get_prompt_execution_settings_from_service_id = MagicMock(
+            return_value=MagicMock()
+        )
+        invoke_capture = AsyncMock(return_value="## 1. C\n## 6. L")
+        kernel.invoke_prompt = invoke_capture
+        stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
+        TestArgumentativeSequenceRendering2295._run(
+            DeepSynthesisAgent._llm_synthesis(stub, report)
+        )
+        call_kwargs = invoke_capture.call_args
+        return call_kwargs[1]["prompt"] if call_kwargs[1] else ""
+
+    @staticmethod
+    def _trace_fixture():
+        return [
+            # Listed first by extraction (execution clock) but LATE in the text.
+            {
+                "phase": "extract",
+                "agent": "FactExtraction",
+                "reacts_to": ["arg_1"],
+                "summary": "assert arg_1 — ancre offset 80, longueur 9.",
+                "timestamp": "2026-09-19T00:00:01Z",
+                "anchor": {"offset": 80, "length": 9},
+                "move": "assert",
+            },
+            # Listed second but EARLY in the text — sequence must invert.
+            {
+                "phase": "extract",
+                "agent": "FactExtraction",
+                "reacts_to": ["arg_2"],
+                "summary": "assert arg_2 — ancre offset 20, longueur 9.",
+                "timestamp": "2026-09-19T00:00:02Z",
+                "anchor": {"offset": 20, "length": 9},
+                "move": "assert",
+            },
+            # Instrumented but unanchorable — counted, never offset-0.
+            {
+                "phase": "extract",
+                "agent": "FactExtraction",
+                "reacts_to": ["arg_3"],
+                "summary": "assert arg_3 — sans ancre (quote non fournie).",
+                "timestamp": "2026-09-19T00:00:03Z",
+                "move": "assert",
+            },
+            # Legacy aggregate entry — rendered as before, not in the sequence.
+            {
+                "phase": "quality",
+                "agent": "QualityScorer",
+                "reacts_to": ["extract"],
+                "summary": "Évaluation qualité complétée.",
+                "timestamp": "2026-09-19T00:00:04Z",
+            },
+        ]
+
+    def test_section5_renders_sequence_in_text_order(self):
+        report = _ww_build_report()
+        report._raw_analysis_trace = self._trace_fixture()
+        prompt = self._prompt_for(report)
+        assert "SÉQUENCE ARGUMENTATIVE" in prompt
+        # Text order: arg_2 (offset 20) BEFORE arg_1 (offset 80) — the
+        # inversion of the execution-clock order in the fixture.
+        i_arg2 = prompt.index("le texte asserte arg_2")
+        i_arg1 = prompt.index("le texte asserte arg_1")
+        assert i_arg2 < i_arg1
+        # The unanchored move is counted out loud, not silently dropped.
+        assert "1 coup(s) non ancré(s)" in prompt
+        # Anchors are ints, never source text (privacy by construction).
+        assert "@+20" in prompt and "@+80" in prompt
+
+    def test_section5_without_anchored_entries_has_no_sequence_block(self):
+        report = _ww_build_report()
+        report._raw_analysis_trace = [
+            {
+                "phase": "quality",
+                "agent": "QualityScorer",
+                "reacts_to": ["extract"],
+                "summary": "Évaluation qualité complétée.",
+                "timestamp": "2026-09-19T00:00:04Z",
+            }
+        ]
+        prompt = self._prompt_for(report)
+        assert "SÉQUENCE ARGUMENTATIVE" not in prompt
+        # Legacy per-entry rendering still present.
+        assert "QualityScorer" in prompt

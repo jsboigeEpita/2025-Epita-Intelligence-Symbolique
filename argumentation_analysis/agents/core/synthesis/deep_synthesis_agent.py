@@ -1593,6 +1593,42 @@ class DeepSynthesisAgent(BaseAgent):
                     specialists_section += (
                         f'  [{agent}] (réagit à: {reacts}) → "{summary}"\n'
                     )
+                # #2295 — the argumentative SEQUENCE: anchored entries ordered
+                # by their position in the SOURCE TEXT, not by the execution
+                # clock. This is the narration input the flat terminal
+                # containers cannot give; unanchored moves stay out (tri-état).
+                _anchored = [
+                    e
+                    for e in trace_data
+                    if isinstance(e.get("anchor"), dict)
+                    and isinstance(e["anchor"].get("offset"), int)
+                ]
+                if _anchored:
+                    _move_fr = {
+                        "assert": "asserte",
+                        "concede": "concède",
+                        "retract": "se rétracte sur",
+                        "challenge": "conteste",
+                        "withdraw": "retire",
+                    }
+                    specialists_section += (
+                        "\n  [SÉQUENCE ARGUMENTATIVE — ordre du TEXTE, pas de "
+                        "l'horloge d'exécution (#2295)]\n"
+                    )
+                    for e in sorted(_anchored, key=lambda e: e["anchor"]["offset"]):
+                        _mv = _move_fr.get(str(e.get("move", "")), "opération")
+                        _ids = ", ".join(e.get("reacts_to", []))
+                        specialists_section += (
+                            f"  @+{e['anchor']['offset']} le texte {_mv} {_ids}\n"
+                        )
+                    _unanchored_moves = [
+                        e for e in trace_data if e.get("move") and "anchor" not in e
+                    ]
+                    if _unanchored_moves:
+                        specialists_section += (
+                            f"  ({len(_unanchored_moves)} coup(s) non ancré(s) — "
+                            "quote absente, paraphrasée ou ambiguë — hors séquence)\n"
+                        )
             if not specialist_commentary and not trace_data:
                 specialists_section += "  No specialist commentaries deposited.\n"
 
