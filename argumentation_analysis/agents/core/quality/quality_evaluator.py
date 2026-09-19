@@ -36,6 +36,11 @@ _nlp = None
 _flesch_reading_ease = None
 _DEPS_AVAILABLE = False
 _DEPS_ATTEMPTED = False
+# #2320: the FIRST load failure raises with its cause; every later call hits a
+# gate message that used to repeat only generic advice — the original cause was
+# lost (swallowed by callers' broad excepts), leaving CI diagnostics blind. The
+# gates re-embed it so the first failure stays visible from any later traceback.
+_LAST_LOAD_ERROR: Optional[str] = None
 _TORCH_NEUTRALIZED = False
 
 
@@ -92,13 +97,13 @@ def _load_deps():
     so the problem is visible and the root cause (dll_guard not
     imported at entry point) must be fixed instead.
     """
-    global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED
+    global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED, _LAST_LOAD_ERROR
     if _DEPS_ATTEMPTED:
         if not _DEPS_AVAILABLE:
             raise RuntimeError(
                 "spacy/textstat are not available. Ensure the conda environment "
                 "is activated and dll_guard is imported before jpype. "
-                "(Previous attempt failed — see logs above.)"
+                f"(Previous attempt failed: {_LAST_LOAD_ERROR or 'cause not recorded'})"
             )
         return True
     _DEPS_ATTEMPTED = True
@@ -121,6 +126,7 @@ def _load_deps():
         _DEPS_AVAILABLE = True
         return True
     except (ImportError, OSError, RuntimeError) as exc:
+        _LAST_LOAD_ERROR = f"{type(exc).__name__}: {exc}"
         # ImportError: spacy/textstat not installed (most common cause — ensure
         #   `textstat` and `python -m spacy download fr_core_news_sm` are provisioned;
         #   see setup_project_env.ps1 and environment.yml, FB-23 #1088).
@@ -573,7 +579,8 @@ class ArgumentQualityEvaluator:
                 "Cannot evaluate quality: spacy/textstat/model are not available. "
                 "Ensure textstat is installed and the fr_core_news_sm model is "
                 "downloaded (`python -m spacy download fr_core_news_sm`), and the "
-                "conda environment is activated. See setup_project_env.ps1."
+                "conda environment is activated. See setup_project_env.ps1. "
+                f"(First load failure: {_LAST_LOAD_ERROR or 'cause not recorded'})"
             )
 
         if context_level is None:
