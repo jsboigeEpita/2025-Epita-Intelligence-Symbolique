@@ -229,11 +229,21 @@ class TestWorkflowExecutor:
     @pytest.mark.asyncio
     async def test_execute_simple_workflow(self):
         """Test executing a simple workflow with all capabilities available."""
+
+        # #2313: the fixture used to register bare agent classes with no
+        # invoke and still expect COMPLETED — the defect's own shape frozen
+        # as a fixture. A runnable provider is the healthy shape.
+        async def _run_a(input_text: str, context: dict) -> dict:
+            return {"agent": "a"}
+
+        async def _run_b(input_text: str, context: dict) -> dict:
+            return {"agent": "b"}
+
         self.registry.register_agent(
-            "agent_a", type("A", (), {}), capabilities=["cap_a"]
+            "agent_a", type("A", (), {}), capabilities=["cap_a"], invoke=_run_a
         )
         self.registry.register_agent(
-            "agent_b", type("B", (), {}), capabilities=["cap_b"]
+            "agent_b", type("B", (), {}), capabilities=["cap_b"], invoke=_run_b
         )
 
         workflow = (
@@ -255,8 +265,15 @@ class TestWorkflowExecutor:
     @pytest.mark.asyncio
     async def test_execute_optional_missing(self):
         """Test that optional phases are skipped when no provider exists."""
+
+        # #2313: same fixture repair — a runnable provider for the phase
+        # that must complete; the OPTIONAL phase keeps no provider at all
+        # (the SKIPPED case under test).
+        async def _run_a(input_text: str, context: dict) -> dict:
+            return {"agent": "a"}
+
         self.registry.register_agent(
-            "agent_a", type("A", (), {}), capabilities=["cap_a"]
+            "agent_a", type("A", (), {}), capabilities=["cap_a"], invoke=_run_a
         )
 
         workflow = (
