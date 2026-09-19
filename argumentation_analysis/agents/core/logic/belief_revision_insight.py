@@ -42,7 +42,7 @@ never appear in any retraction option.
 
 from __future__ import annotations
 
-from typing import List, Sequence, Tuple
+from typing import Any, Dict, List, Sequence, Tuple
 
 # A belief, here, is one CNF clause: a list of signed integer literals.
 #   [1]       = positive belief in atom 1
@@ -51,11 +51,26 @@ from typing import List, Sequence, Tuple
 Clause = List[int]
 BeliefBase = List[Clause]
 
-#: upper bound on the retraction cardinality we search for. The pipeline bases
-#: are small (<= ~12 clauses on real runs); a retraction beyond this would mean
-#: the base is deeply inconsistent and the insight degrades honestly (no
+#: Upper bound on the retraction cardinality we search for. Real corpus runs
+#: (measured 2026-09-19, doc_0 spectacular): 8 fallacy targets -> 8 independent
+#: clash pairs -> minimal retraction of cardinality **8** — the old fixed cap
+#: of 4 sat below every real-run cardinality, so the insight degraded to -1 on
+#: each real run while the planted texts (cardinal 1-2) stayed green. The cap
+#: now covers real-run cardinalities (fallacy counts bound it); beyond it, the
+#: base is deeply inconsistent and the insight degrades honestly (no
 #: fabricated minimal set).
-_MAX_SEARCH = 4
+_MAX_SEARCH_K = 12
+
+#: Cumulative-subset budget across the whole k-sweep — the pathology guard.
+#: Real-run sweeps stay well under it (doc_0: ~127k subsets; a 10-target doc:
+#: ~616k); an adversarial or oversized base exhausts it and degrades to -1
+#: instead of enumerating C(n, k) forever.
+_MAX_SUBSET_BUDGET = 700_000
+
+#: Stored-options cap for the state entry (see ``shape_minimal_retraction``):
+#: real-run bases yield combinatorially many minimal options; the exact count
+#: rides along as the int ``options_total``.
+_OPTIONS_STORED_CAP = 64
 
 
 def _is_satisfiable(clauses: BeliefBase) -> bool:
@@ -78,9 +93,10 @@ def minimal_retractions(belief_base: BeliefBase) -> Tuple[int, List[Tuple[int, .
     Returns ``(cardinality, options)`` where ``options`` is the list of minimal
     retraction sets (as index-tuples into ``belief_base``). ``cardinality == 0``
     with ``options == [()]`` means the base is already consistent (no retraction
-    needed). ``cardinality == -1`` means no retraction within ``_MAX_SEARCH``
-    restores consistency (deeply inconsistent base; the insight degrades
-    honestly rather than fabricate).
+    needed). ``cardinality == -1`` means no retraction within the search
+    bounds (the ``_MAX_SEARCH_K`` cardinality cap or the ``_MAX_SUBSET_BUDGET``
+    subset budget) restores consistency — deeply inconsistent or oversized
+    base; the insight degrades honestly rather than fabricate.
 
     The minimal retraction is the smallest set of beliefs to give up so the rest
     holds together — the singular contribution of belief revision. Enumerating
@@ -127,15 +143,45 @@ def minimal_retractions(belief_base: BeliefBase) -> Tuple[int, List[Tuple[int, .
     n = len(belief_base)
     from itertools import combinations
 
-    for k in range(1, min(_MAX_SEARCH, n) + 1):
+    budget = _MAX_SUBSET_BUDGET
+    for k in range(1, min(_MAX_SEARCH_K, n) + 1):
         winners: List[Tuple[int, ...]] = []
         for drop in combinations(range(n), k):
+            budget -= 1
+            if budget < 0:
+                return (-1, [])
             kept = [belief_base[i] for i in range(n) if i not in drop]
             if _is_satisfiable(kept):
                 winners.append(drop)
         if winners:
             return (k, winners)
     return (-1, [])
+
+
+def shape_minimal_retraction(
+    card: int, options: List[Tuple[int, ...]], names: List[str]
+) -> Dict[str, Any]:
+    """Shape an MCS result for the ``belief_revision_results`` state entry.
+
+    Shared by both mode-exclusive producers (the pipeline
+    ``_invoke_belief_revision`` and the conversational
+    ``_run_belief_revision_from_state``). Real-run bases yield combinatorially
+    many equally-minimal retractions (doc_0: 8 clash pairs -> 2**8 = 256
+    options), so the stored ``options`` list is capped while the exact
+    ``options_total`` rides along — the Acte III reader names the TRUE
+    multiplicity (insight B-2), never the storage cap. ``options_total`` is an
+    int: nothing textual to scrub (sanitize_state leaves non-list leaves of
+    ``minimal_retraction`` untouched).
+    """
+    stored = [[names[i] for i in opt] for opt in options[:_OPTIONS_STORED_CAP]]
+    return {
+        "cardinality": card,
+        "options": stored,
+        "options_total": len(options),
+        "base_size": len(names),
+        "touched_count": len({i for opt in options for i in opt}),
+        "degraded": False,
+    }
 
 
 def build_belief_base(

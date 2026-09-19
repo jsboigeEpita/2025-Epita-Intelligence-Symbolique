@@ -3531,19 +3531,14 @@ def _run_belief_revision_from_state(state: Any) -> Optional[Dict[str, Any]]:
         from argumentation_analysis.agents.core.logic.belief_revision_insight import (
             build_belief_base,
             minimal_retractions,
+            shape_minimal_retraction,
         )
 
         base, names = build_belief_base(original_beliefs, negated_indices)
         card, options = minimal_retractions(base)
-        named_options = [[names[i] for i in opt] for opt in options]
-        touched = len({i for opt in options for i in opt})
-        minimal_retraction = {
-            "cardinality": card,
-            "options": named_options,
-            "base_size": len(base),
-            "touched_count": touched,
-            "degraded": False,
-        }
+        # Named labels + capped stored options + exact options_total (B-2
+        # multiplicity), shared shaping with the pipeline producer.
+        minimal_retraction = shape_minimal_retraction(card, options, names)
     except ImportError:
         # logic/__init__ jpype cascade (#1697) OR missing pysat: the insight
         # degrades honestly (cardinality -1 → reader mute), the phase continues.
