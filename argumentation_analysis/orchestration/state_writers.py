@@ -1089,6 +1089,11 @@ def _write_adf_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         state.dung_frameworks[df_id]["formalism_specific"] = sidecar
 
 
+# #2315 — cap on per-argument assert trace entries emitted by the extraction
+# writer (prompt-budget discipline; the renderer caps again at 8 for Acte II).
+_EXTRACT_ASSERT_CAP = 12
+
+
 def _record_assert_move(state: Any, arg_id: str, quote: str, raw_text: str) -> None:
     """#2295 — per-argument ``assert`` trace entry, anchored when measurable.
 
@@ -1145,9 +1150,16 @@ def _write_fact_extraction_to_state(
             elif isinstance(claim, str) and claim.strip():
                 state.extracts.append({"type": "claim", "content": claim.strip()})
     # Populate base identified_arguments from LLM extraction
+    # #2315 — the assert trace is BOUNDED: an unbounded per-argument entry
+    # stream feeding prompts is a debt only a long run exposes (measured on
+    # a 39-phase / 607 s run reaching the 12-entry cap). Arguments beyond
+    # the cap are still added to the state — only their trace entries stop;
+    # one legacy-style commentary entry names the truncation so the cap is
+    # never silent.
     arguments = output.get("arguments", [])
     if isinstance(arguments, list):
         raw_text = getattr(state, "raw_text", "") or ""
+        emitted = 0
         for arg in arguments:
             if isinstance(arg, dict):
                 text = arg.get("text", "").strip()
@@ -1157,10 +1169,24 @@ def _write_fact_extraction_to_state(
                     if quote:
                         arg_text = f'{text} [quote: "{quote[:100]}"]'
                     arg_id = state.add_argument(arg_text)
-                    _record_assert_move(state, arg_id, quote, raw_text)
+                    if emitted < _EXTRACT_ASSERT_CAP:
+                        _record_assert_move(state, arg_id, quote, raw_text)
+                        emitted += 1
             elif isinstance(arg, str) and arg.strip():
                 arg_id = state.add_argument(arg.strip())
-                _record_assert_move(state, arg_id, "", raw_text)
+                if emitted < _EXTRACT_ASSERT_CAP:
+                    _record_assert_move(state, arg_id, "", raw_text)
+                    emitted += 1
+        if emitted >= _EXTRACT_ASSERT_CAP:
+            state.add_trace_entry(
+                phase="extract",
+                agent="FactExtraction",
+                reacts_to=["extract"],
+                summary=(
+                    f"séquence tronquée à {_EXTRACT_ASSERT_CAP} asserts "
+                    f"(cap writer #2315)"
+                ),
+            )
     # NOTE: Fallacy detection removed from fact_extraction (issue #179).
     # Fallacies are the sole responsibility of hierarchical_fallacy_detection,
     # which uses deep taxonomy navigation for precise identification.

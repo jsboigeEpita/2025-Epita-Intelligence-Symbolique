@@ -60,6 +60,7 @@ from .specialist_roles import (
     classify_specialist_roles,
 )
 from .readability_gate import GateVerdict, ReadabilityGate
+from .text_sequence import MOVE_LABELS_FR, TextSequence, collect_text_sequence
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
@@ -351,6 +352,10 @@ class Act2Evidence:
     # derived deterministically from lower-level state. The narrative's
     # citation hierarchy is carried by this structure, never asked of the LLM.
     role_assignments: List[RoleAssignment] = field(default_factory=list)
+    # #2295 — the text-ordered sequence of argumentative moves (anchored
+    # Walton-Krabbe moves read from the trace). None when the run carries
+    # no anchored move (honest absence — the sequence is not fabricated).
+    text_sequence: Optional[TextSequence] = None
 
 
 @dataclass
@@ -386,6 +391,10 @@ def _truncate(text: Any, cap: int) -> str:
 # attack list can be long; a representative sample suffices to make the graph
 # inspectable without blowing the prompt budget (privacy + budget discipline).
 _TRACE_ATTACK_SAMPLE = 4
+
+# #2295 — cap on rendered sequence moves (same budget discipline). The
+# writer already caps at 12 entries; the renderer keeps the prompt lean.
+_SEQUENCE_RENDER_CAP = 8
 
 
 def _collect_dung_trace(state: Any) -> DungSolverTrace:
@@ -673,6 +682,7 @@ def build_act2_evidence(state: Any) -> Act2Evidence:
         deanonymized=bool(getattr(state, "deanonymized", True)),
         global_findings=project_global_findings(state),
         role_assignments=classify_specialist_roles(state),
+        text_sequence=collect_text_sequence(state),
     )
 
 
@@ -1359,6 +1369,35 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         )
     )
 
+    # #2295 — the text sequence: the order the TEXT brings the moves,
+    # restored from anchors (the execution clock cannot give it — it
+    # orders by phase DAG). Renders in both orders' states so the verdict
+    # is said, never implied by silence.
+    seq_lines: List[str] = []
+    seq_verdict = ""
+    if evidence.text_sequence is not None:
+        _seq = evidence.text_sequence
+        for _i, m in enumerate(_seq.moves[:_SEQUENCE_RENDER_CAP], start=1):
+            label = MOVE_LABELS_FR.get(m.move, m.move)
+            who = m.arg_ref or "coup non référencé"
+            seq_lines.append(f"  {_i}. {who} — {label} (offset {m.offset})")
+        if _seq.order_differs is True:
+            seq_verdict = (
+                "  L'ordre du TEXTE diffère de l'ordre d'analyse : le récit "
+                "suit l'ordre du texte, pas l'ordre des phases."
+            )
+        elif _seq.order_differs is False:
+            seq_verdict = "  L'ordre d'analyse suit ici l'ordre du texte."
+        else:
+            seq_verdict = "  Un seul coup ancré — pas d'ordre à comparer."
+    sequence_block = ""
+    if seq_lines:
+        sequence_block = (
+            "SÉQUENCE DU TEXTE (coups argumentatifs ancrés, ordonnés par leur "
+            "position dans le texte — à tisser comme fil chronologique du "
+            "récit) :\n" + "\n".join(seq_lines) + "\n" + seq_verdict + "\n\n"
+        )
+
     return (
         "Tu es l'auteur de l'ACTE II d'un rapport de restitution argumentative.\n"
         "Le récit suit le FIL ARGUMENTATIF (thèse → soutiens → dérapages), découpé\n"
@@ -1376,6 +1415,7 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
         f"le verdict de gouvernance ou un échange de débat peut appuyer un "
         f"battement, jamais une sous-section isolée) :\n"
         f"{deliberation_block}\n\n"
+        f"{sequence_block}"
         f"RÔLES DES RÉSULTATS DE SPÉCIALISTES (hiérarchie de preuve dérivée de "
         f"l'état — ce que chaque résultat peut changer dans le jugement) :\n"
         f"{roles_block}\n\n"
