@@ -917,3 +917,56 @@ class TestListShapedContainers1664:
         assert result["aspic_results"][0]["reasoner_type"] == "simple"
         assert result["belief_revision_results"][0]["method"] == "dalal"
         assert result["dialogue_results"][0]["outcome"] == "accepted"
+
+
+class TestSurplusProjectionPass:
+    """#2298 — the closed-shape validation of the persisted surplus projection.
+
+    The projection is privacy-safe by construction (natures + anchors). This
+    pass is the declared classification: a conforming projection traverses
+    intact; a drifting one (a statement sneaking in, an unexpected key) is
+    replaced by a marker, never traversed blind.
+    """
+
+    def test_conforming_projection_traverses_intact(self):
+        proj = {
+            "established_items": [
+                {"nature": "decisif_formel", "cites": ["arg_1", "FOL"]}
+            ],
+            "established_by_nature": {"decisif_formel": 1},
+            "procedural_items": 2,
+            "carries_non_procedural_surplus": True,
+        }
+        result = sanitize_state({"zero_shot_surplus": proj, "counts": {"n": 1}})
+        assert result["zero_shot_surplus"] == proj
+
+    def test_statement_sneaking_in_is_marked(self):
+        bad = {
+            "established_items": [
+                {"nature": "decisif_formel", "cites": ["arg_1"]},
+                {"nature": "decisif_formel", "cites": ["x"], "statement": "le locuteur dit…"},
+            ],
+            "established_by_nature": {"decisif_formel": 2},
+            "procedural_items": 0,
+            "carries_non_procedural_surplus": True,
+        }
+        result = sanitize_state({"zero_shot_surplus": bad})
+        assert result["zero_shot_surplus"] == {
+            "scrubbed": "non-conform surplus projection (item keys)"
+        }
+
+    def test_unexpected_key_is_marked(self):
+        bad = {"established_items": [], "prose": "anything"}
+        result = sanitize_state({"zero_shot_surplus": bad})
+        assert result["zero_shot_surplus"]["scrubbed"].startswith("non-conform")
+
+    def test_tri_state_reason_traverses(self):
+        proj = {
+            "established_items": [],
+            "established_by_nature": {},
+            "procedural_items": 0,
+            "carries_non_procedural_surplus": False,
+            "unavailable_reason": "no state object (partial run)",
+        }
+        result = sanitize_state({"zero_shot_surplus": proj})
+        assert result["zero_shot_surplus"] == proj

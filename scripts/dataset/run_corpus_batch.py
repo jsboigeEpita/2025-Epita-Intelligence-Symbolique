@@ -55,6 +55,9 @@ from argumentation_analysis.evaluation.env_manifest import (
     render_environment_stamp,
 )
 from argumentation_analysis.evaluation.run_provenance import provenance_block
+from argumentation_analysis.reporting.restitution.conclusion_salience import (
+    projection_from_state,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "argumentation_analysis" / "data"
@@ -426,6 +429,47 @@ def render_batch_verdict(summary: Dict[str, Any]) -> str:
     return "Verdict: PASS (0 documents failed)"
 
 
+def render_surplus_aggregate(signatures: List[Dict[str, Any]]) -> str:
+    """#2298 — the corpus-scale zero-shot surplus aggregate, on stdout.
+
+    Non-vacuity is the contract: a batch whose documents carry no
+    established surplus prints that measured absence explicitly — an empty
+    line here would be indistinguishable from an unwired instrument.
+    """
+
+    def _proj(sig: Dict[str, Any]) -> Dict[str, Any]:
+        p = sig.get("zero_shot_surplus")
+        return p if isinstance(p, dict) else {}
+
+    measured = [s for s in signatures if _proj(s) and "unavailable_reason" not in _proj(s)]
+    unavailable = len(signatures) - len(measured)
+    carrying = [s for s in measured if _proj(s).get("carries_non_procedural_surplus")]
+    by_nature: Dict[str, int] = {}
+    for s in measured:
+        for nature, count in (_proj(s).get("established_by_nature") or {}).items():
+            by_nature[nature] = by_nature.get(nature, 0) + count
+    parts = [
+        "Zero-shot surplus aggregate: {}/{} documents carry non-procedural "
+        "surplus".format(len(carrying), len(measured))
+    ]
+    if by_nature:
+        ventilation = ", ".join(
+            "{}={}".format(n, c) for n, c in sorted(by_nature.items())
+        )
+        parts.append("by nature: {}".format(ventilation))
+    else:
+        parts.append(
+            "by nature: none — measured absence, not an unwired instrument"
+        )
+    if unavailable:
+        parts.append(
+            "{} document(s) unavailable (partial run, projection not derived)".format(
+                unavailable
+            )
+        )
+    return "; ".join(parts)
+
+
 def render_non_argumentative_restitution(
     opaque_id_str: str, outcome: Dict[str, Any]
 ) -> str:
@@ -607,6 +651,10 @@ async def _run_single(
     partial_reason: Optional[str] = None
     analysis_outcome: Dict[str, str] = {"status": "ok"}
     state_snapshot: Dict[str, Any] = {}
+    # #2298 — the live state object the surplus projection re-reads (the
+    # snapshot dict is not enough: the projection uses the same deterministic
+    # reader as the Acte III render, on the object itself).
+    unified_state_obj: Optional[Any] = None
 
     try:
         if pipeline_fn is None:
@@ -638,6 +686,7 @@ async def _run_single(
         state_snapshot = result.get("state_snapshot", {})
         # Prefer full (non-summarized) state for pattern mining.
         unified = result.get("unified_state")
+        unified_state_obj = unified
         if unified is not None:
             try:
                 full = unified.get_state_snapshot(summarize=False)
@@ -704,6 +753,12 @@ async def _run_single(
     provenance = dict(provenance)
     provenance["environment"] = environment_manifest()
     signature["provenance"] = provenance
+    # #2298 — persist the structured zero-shot surplus projection (natures +
+    # opaque anchors, never prose). Re-derived from the live state object by
+    # the same deterministic reader the Acte III render used, so signature
+    # and prose cannot drift. Three-valued on partial runs (None state is
+    # named, never conflated with a measured-empty surplus).
+    signature["zero_shot_surplus"] = projection_from_state(unified_state_obj)
     if partial:
         signature["partial"] = True
     _with_document_classification(signature, analysis_outcome)
@@ -948,6 +1003,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     # in the summary, not only in a signature file.
     print(render_environment_stamp(environment_manifest()), flush=True)
     print(render_batch_summary(summary), flush=True)
+    print(render_surplus_aggregate(signatures), flush=True)
     print(render_batch_verdict(summary), flush=True)
     return 1 if summary["failed"] else 0
 
