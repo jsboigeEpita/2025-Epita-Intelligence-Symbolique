@@ -669,16 +669,29 @@ class UnifiedWebOrchestrator:
 
     def _setup_signal_handlers(self):
         """Configure les gestionnaires de signaux pour un arrêt propre, compatible Windows."""
-        if sys.platform != "win32":
-            # Utilisation de la version la plus a jour de la boucle asyncio
-            loop = asyncio.get_running_loop()
-            for sig in (signal.SIGINT, signal.SIGTERM):
-                loop.add_signal_handler(
-                    sig, lambda s=sig: asyncio.create_task(self.shutdown(signal=s))
-                )
-        else:
+        if sys.platform == "win32":
             self.logger.info(
                 "Gestionnaires de signaux non configurés pour Windows (SIGINT/SIGTERM)."
+            )
+            return
+
+        # POSIX : l'enregistrement exige une boucle asyncio EN COURS. Le
+        # constructeur est synchrone — construit hors boucle (l'usage qu'un
+        # constructeur invite), get_running_loop levait RuntimeError et tuait
+        # la construction (#2334). Dégradation NOMMÉE : pas de handlers, la
+        # voie programmatique shutdown(signal=...) reste la seule.
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self.logger.warning(
+                "Orchestrateur construit hors boucle asyncio : handlers "
+                "SIGINT/SIGTERM non enregistrés — construire dans un "
+                "contexte async, ou piloter l'arrêt via shutdown(signal=...)."
+            )
+            return
+        for sig in (signal.SIGINT, signal.SIGTERM):
+            loop.add_signal_handler(
+                sig, lambda s=sig: asyncio.create_task(self.shutdown(signal=s))
             )
 
     async def shutdown(self, signal=None):
