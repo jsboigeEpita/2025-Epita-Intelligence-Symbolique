@@ -83,8 +83,20 @@ class MinimalProcessCleaner:
     def __init__(self, logger):
         self.logger = logger
 
-    async def cleanup_webapp_processes(self, ports_to_check: List[int] = None):
-        """Nettoie les instances précédentes de manière robuste."""
+    async def cleanup_webapp_processes(
+        self,
+        ports_to_check: List[int] = None,
+        own_markers: Optional[List[str]] = None,
+    ):
+        """Nettoie les instances précédentes de manière robuste.
+
+        ``own_markers`` : marqueurs d'appartenance, cherchés dans la ligne de
+        commande des processus trouvés sur les ports cibles. Un processus dont
+        la ligne de commande n'en contient aucun est un occupant ÉTRANGER — il
+        est épargné : démarrer la webapp doit relocaliser (failover #1853),
+        pas tuer le voisin du port configuré (#2330, mesuré : le
+        pré-nettoyage tuait n'importe quel service sur le port de départ).
+        """
         self.logger.info(
             "[CLEANER] Démarrage du nettoyage robuste des instances webapp."
         )
@@ -121,15 +133,35 @@ class MinimalProcessCleaner:
         if not ports_to_check:
             return
 
+        def _is_own(pid: int) -> bool:
+            if not own_markers:
+                return True
+            try:
+                cmdline = " ".join(psutil.Process(pid).cmdline() or [])
+            except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+                return False  # disparu ou illisible : rien à terminer
+            return any(marker in cmdline for marker in own_markers)
+
         max_retries = 3
         retry_delay_s = 2
 
         for i in range(max_retries):
             pids_on_ports = self._get_pids_on_ports(ports_to_check)
+            foreign = {
+                pid: port for pid, port in pids_on_ports.items() if not _is_own(pid)
+            }
+            pids_on_ports = {
+                pid: port for pid, port in pids_on_ports.items() if pid not in foreign
+            }
+            if foreign:
+                self.logger.info(
+                    f"[CLEANER] Occupants étrangers épargnés (ligne de commande "
+                    f"sans marqueur d'appartenance) : {foreign}."
+                )
 
             if not pids_on_ports:
                 self.logger.info(
-                    f"[CLEANER] Aucun processus détecté sur les ports cibles: {ports_to_check}."
+                    f"[CLEANER] Aucune instance à nous sur les ports cibles: {ports_to_check}."
                 )
                 return
 
@@ -145,14 +177,18 @@ class MinimalProcessCleaner:
 
             await asyncio.sleep(retry_delay_s)
 
-        final_pids = self._get_pids_on_ports(ports_to_check)
+        final_pids = {
+            pid: port
+            for pid, port in self._get_pids_on_ports(ports_to_check).items()
+            if _is_own(pid)
+        }
         if final_pids:
             self.logger.error(
                 f"[CLEANER] ECHEC du nettoyage. PIDs {list(final_pids.keys())} occupent toujours les ports après {max_retries} tentatives."
             )
         else:
             self.logger.info(
-                "[CLEANER] SUCCES du nettoyage. Tous les ports cibles sont libres."
+                "[CLEANER] SUCCES du nettoyage. Les ports cibles sont libres de nos instances."
             )
 
     def _get_pids_on_ports(self, ports: List[int]) -> Dict[int, int]:
@@ -683,26 +719,45 @@ class UnifiedWebOrchestrator:
 
     async def shutdown(self, signal=None):
         """Point d'entrée pour l'arrêt."""
-        if self.app_info.status in [WebAppStatus.STOPPING, WebAppStatus.STOPPED]:
-            return
-
         if signal:
             self.add_trace(
                 "[SHUTDOWN] SIGNAL RECU", f"Signal: {signal.name}", "Arrêt initié"
             )
 
+        # Seul STOPPING (arrêt EN COURS) absorbe un signal. Garder aussi
+        # STOPPED avalait le PREMIER signal d'une app jamais démarrée — le
+        # status de construction EST STOPPED — sans trace ni nettoyage.
+        # stop_webapp est un nettoyage toujours-exécuté par conception, le
+        # re-jouer sur une app déjà arrêtée est sans effet de bord.
+        if self.app_info.status == WebAppStatus.STOPPING:
+            return
+
         await self.stop_webapp()
 
     def _is_port_in_use(self, port: int) -> bool:
-        """Vérifie si un port est déjà utilisé en se connectant dessus."""
+        """Vérifie si un port est déjà utilisé en se connectant dessus.
+
+        Les deux piles sont sondées (127.0.0.1 et ::1) : un occupant posé sur
+        ::1 est invisible à une sonde AF_INET seule, alors que le health
+        check résout ``localhost`` en IPv6 d'abord — le mauvais serveur peut
+        alors répondre à la place du backend (#2330, mesuré).
+        """
         if not port:
             return False
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.5)
-            is_used = s.connect_ex(("localhost", port)) == 0
-            if is_used:
-                self.logger.info(f"Port {port} détecté comme étant utilisé.")
-            return is_used
+        for host, family in (("127.0.0.1", socket.AF_INET), ("::1", socket.AF_INET6)):
+            try:
+                with socket.socket(family, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.5)
+                    if s.connect_ex((host, port)) == 0:
+                        self.logger.info(
+                            f"Port {port} détecté comme étant utilisé ({host})."
+                        )
+                        return True
+            except OSError:
+                # Pile indisponible (ex. IPv6 désactivé) : non concluante,
+                # on sonde l'autre.
+                continue
+        return False
 
     def _deep_merge_dicts(self, base: dict, new: dict) -> dict:
         """Fusionne récursivement deux dictionnaires."""
@@ -1194,7 +1249,8 @@ class UnifiedWebOrchestrator:
             ports_to_check = [p for p in ports_to_check if p is not None]
 
             await self.process_cleaner.cleanup_webapp_processes(
-                ports_to_check=ports_to_check
+                ports_to_check=ports_to_check,
+                own_markers=self._stale_instance_markers(),
             )
 
             self.app_info = WebAppInfo()  # Reset
@@ -1303,6 +1359,19 @@ class UnifiedWebOrchestrator:
     # MÉTHODES PRIVÉES
     # ========================================================================
 
+    def _stale_instance_markers(self) -> List[str]:
+        """Marqueurs d'appartenance pour le cleaner : ce qui distingue NOS
+        processus (backend uvicorn du module configuré, frontend du chemin
+        configuré) d'un occupant étranger sur les mêmes ports."""
+        markers: List[str] = []
+        backend_module = self.config.get("backend", {}).get("module", "api.main:app")
+        if backend_module:
+            markers.append(str(backend_module))
+        frontend_path = self.config.get("frontend", {}).get("path")
+        if frontend_path:
+            markers.append(str(frontend_path))
+        return markers
+
     async def _cleanup_previous_instances(self):
         """Nettoie les instances précédentes en utilisant le cleaner centralisé."""
         self.add_trace(
@@ -1336,7 +1405,8 @@ class UnifiedWebOrchestrator:
 
         # On passe la main au cleaner centralisé
         await self.process_cleaner.cleanup_webapp_processes(
-            ports_to_check=ports_to_check
+            ports_to_check=ports_to_check,
+            own_markers=self._stale_instance_markers(),
         )
         self.add_trace(
             "[OK] NETTOYAGE PREALABLE TERMINE", f"Ports vérifiés: {ports_to_check}"
@@ -1398,28 +1468,54 @@ class UnifiedWebOrchestrator:
             "Le setup des libs Java est maintenant géré en amont.",
         )
 
-        # Forcer le port dynamique pour éviter les conflits
+        # Failover de ports (#1853) : le port configuré, puis chaque repli,
+        # puis un port dynamique (0). Le #2330 a mesuré qu'aucun repli
+        # n'existait — une seule tentative, et un port occupé tuait la
+        # webapp. Un port occupé est détecté AVANT de lancer le sous-processus
+        # : un bind condamné ne signale jamais son démarrage et coûterait le
+        # timeout complet.
         backend_config = self.config.get("backend", {})
         start_port = backend_config.get("start_port", 0)
+        fallback_ports = backend_config.get("fallback_ports") or []
         self.logger.info(
             f"Démarage du backend avec le port de la configuration: {start_port}"
         )
 
-        result = await self.backend_manager.start(port_override=start_port)
-        if result["success"]:
-            self.app_info.backend_url = result["url"]
-            self.app_info.backend_port = result["port"]
-            self.app_info.backend_pid = result["pid"]
+        candidates: List[int] = []
+        for port in [start_port] + [p for p in fallback_ports if p] + [0]:
+            if port not in candidates:
+                candidates.append(port)
 
+        last_error = "Aucun port candidat n'a été tenté."
+        for port in candidates:
+            if port and self._is_port_in_use(port):
+                self.add_trace(
+                    "[BACKEND] PORT OCCUPE",
+                    f"Port {port} déjà utilisé — passage au suivant",
+                )
+                continue
+            result = await self.backend_manager.start(port_override=port)
+            if result["success"]:
+                self.app_info.backend_url = result["url"]
+                self.app_info.backend_port = result["port"]
+                self.app_info.backend_pid = result["pid"]
+
+                self.add_trace(
+                    "[OK] BACKEND OPERATIONNEL",
+                    f"Port: {result['port']} | PID: {result['pid']}",
+                    f"URL: {result['url']}",
+                )
+                return True
+            last_error = result.get("error", "Échec sans message.")
             self.add_trace(
-                "[OK] BACKEND OPERATIONNEL",
-                f"Port: {result['port']} | PID: {result['pid']}",
-                f"URL: {result['url']}",
+                "[BACKEND] ECHEC PORT",
+                f"Port {port or 'dynamique'}: {last_error}",
+                "Port suivant",
+                status="error",
             )
-            return True
-        else:
-            self.add_trace("[ERROR] ECHEC BACKEND", result["error"], "", status="error")
-            return False
+
+        self.add_trace("[ERROR] ECHEC BACKEND", last_error, "", status="error")
+        return False
 
     async def _start_frontend(self) -> bool:
         """Démarre le frontend React"""

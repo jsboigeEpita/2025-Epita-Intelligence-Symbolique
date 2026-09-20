@@ -27,11 +27,15 @@ async def main(port):
 
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "localhost", port)
+    # 127.0.0.1, comme le --host d'uvicorn dans l'orchestrateur : binder
+    # "localhost" met le faux serveur sur ::1 (IPv6 d'abord) et le rend
+    # invisible à la sonde AF_INET — deux serveurs « sur le même port »,
+    # chacun dans sa pile (#2330, mesuré).
+    site = web.TCPSite(runner, "127.0.0.1", port)
 
     try:
         await site.start()
-        logging.info(f"Fake aiohttp backend started on http://localhost:{port}")
+        logging.info(f"Fake aiohttp backend started on http://127.0.0.1:{port}")
         # THIS IS THE CRITICAL LINE THE ORCHESTRATOR IS WAITING FOR
         logging.info("Application startup complete.")
         # Keep the server running indefinitely
