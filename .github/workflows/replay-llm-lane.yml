@@ -48,6 +48,12 @@ concurrency:
   group: replay-llm-lane
   cancel-in-progress: true
 
+# #2326: --verify-run resolves the manifest's record_run_id against the
+# record run's own logs — needs the actions read scope.
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   replay:
     runs-on: windows-latest
@@ -80,8 +86,15 @@ jobs:
 
       - name: Import cassettes into the runtime replay DB
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
         run: |
-          python scripts/cassettes/import.py tests/fixtures/llm_cassettes ${{ inputs.replay_db }} --purge
+          # --verify-run (#2326): the manifest's record_run_id must resolve
+          # against the record run's own "Exported cassettes: N" line — a
+          # fabricated run id reddens before anything reaches the DB.
+          python scripts/cassettes/import.py tests/fixtures/llm_cassettes ${{ inputs.replay_db }} --purge --verify-run
           python scripts/cassettes/cost_report.py ${{ inputs.replay_db }} | Select-Object -First 3
 
       # NO OPENAI_API_KEY is provisioned on this step or this job — replay
