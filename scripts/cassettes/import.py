@@ -26,22 +26,164 @@ door: 211 cassettes harvested on a worker box while the record job had not
 succeeded since 2026-08-17). Local harvests produce no manifest and fail
 loud here by design — record via the job, commit its export WITH the
 manifest.
+
+#2326 closes the remaining door: the #2323 checks are CONSISTENCY checks —
+every one compares the manifest against a disk the manifest's author also
+wrote, so a locally-harvested dir with a fabricated ``record_run_id`` passed
+them all (measured: rc=0). ``--verify-run`` resolves the run id against the
+GitHub Actions run's own logs — the ``Exported cassettes: N`` line the run
+emitted, which no manifest author can rewrite — derives the true job
+baseline from it, and reddens when the disk's non-job delta exceeds what
+``sk_patches`` declares. The replay lanes pass the flag: the band verifies
+the guard itself (#2323's design).
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
+import os
+import re
 import sys
+import urllib.error
+import urllib.request
+import zipfile
 from pathlib import Path
+from typing import Any, Callable, List, Optional, Tuple
 
 # Allow `python scripts/cassettes/import.py` invocation from the repo root.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
-import diskcache  # type: ignore[import-not-found]
+import diskcache
 
 MANIFEST_NAME = "MANIFEST.json"
+
+# The one line the record job's export step writes (record-llm-cassettes.yml,
+# "Export cassettes" step) — the only baseline the run's author cannot forge
+# after the fact.
+_EXPORT_LINE_RE = re.compile(r"Exported cassettes:\s*(\d+)")
+
+
+class RunLogError(Exception):
+    """The run's logs could not serve a cassette-export count (#2326)."""
+
+
+def _run_export_count(
+    api_url: str,
+    repo: str,
+    token: str,
+    run_id: str,
+    urlopen: Optional[Callable[..., Any]] = None,
+) -> int:
+    """Fetch a record run's logs and parse its ``Exported cassettes: N`` line.
+
+    Raises:
+        RunLogError: the run does not exist (404 — a fabricated run id),
+            its logs are unreachable, or they carry no export line. Every
+            failure mode is a provenance verdict, never a silent skip.
+    """
+    if urlopen is None:
+        # Resolved at CALL time, not def time — a default argument bound at
+        # module load would pin the original and defeat patching.
+        urlopen = urllib.request.urlopen
+    url = f"{api_url.rstrip('/')}/repos/{repo}/actions/runs/{run_id}/logs"
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+        },
+    )
+    try:
+        with urlopen(req, timeout=30) as resp:
+            data = resp.read()
+    except urllib.error.HTTPError as exc:
+        if exc.code == 404:
+            raise RunLogError(
+                f"run {run_id} does not exist in {repo} (API 404) — the "
+                "manifest's record_run_id is fabricated or mistyped"
+            ) from exc
+        raise RunLogError(f"run {run_id} logs unavailable (HTTP {exc.code})") from exc
+    except (urllib.error.URLError, OSError) as exc:
+        raise RunLogError(f"run {run_id} logs unreachable: {exc}") from exc
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as zf:
+            for name in zf.namelist():
+                text = zf.read(name).decode("utf-8", errors="replace")
+                match = _EXPORT_LINE_RE.search(text)
+                if match:
+                    return int(match.group(1))
+    except zipfile.BadZipFile as exc:
+        raise RunLogError(f"run {run_id} logs are not a zip archive: {exc}") from exc
+    raise RunLogError(
+        f"run {run_id} logs carry no 'Exported cassettes:' line — cannot "
+        "derive the job baseline"
+    )
+
+
+def verify_run_provenance(
+    fixtures_dir: Path, *, api_url: str, repo: str, token: str
+) -> Tuple[List[str], Optional[str]]:
+    """Verify the manifest's run id against the run itself (#2326).
+
+    Returns:
+        (violations, note): ``violations`` empty means verified; ``note``
+        carries the reported provenance line (baseline, declared non-job
+        delta, disk count) for the lane log.
+    """
+    manifest_path = fixtures_dir / MANIFEST_NAME
+    if not manifest_path.exists():
+        return (
+            [f"no {MANIFEST_NAME} in {fixtures_dir} — cannot verify provenance"],
+            None,
+        )
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return ([f"unreadable {MANIFEST_NAME}: {exc}"], None)
+
+    run_id = str(manifest.get("record_run_id", "")).strip()
+    if not run_id:
+        return (["manifest carries no record_run_id"], None)
+
+    try:
+        baseline = _run_export_count(api_url, repo, token, run_id)
+    except RunLogError as exc:
+        return ([f"provenance: {exc}"], None)
+
+    disk_count = len(_fixture_keys(fixtures_dir))
+    patches = manifest.get("sk_patches") or []
+    declared = 0
+    if patches:
+        try:
+            declared = max(0, int(patches[-1].get("cassette_count", 0)) - baseline)
+        except (TypeError, ValueError):
+            return (
+                ["provenance: sk_patches entry carries a non-integer cassette_count"],
+                None,
+            )
+    non_job = disk_count - baseline
+    note = (
+        f"provenance: run {run_id} exported {baseline} cassettes; declared "
+        f"non-job delta {declared} (sk_patches: {len(patches)}); disk "
+        f"carries {disk_count}"
+    )
+    violations: List[str] = []
+    if non_job < 0:
+        violations.append(
+            f"provenance: disk carries {disk_count} cassettes but run {run_id} "
+            f"exported {baseline} — cassettes were REMOVED after the "
+            "recorded export"
+        )
+    elif non_job > declared:
+        violations.append(
+            f"provenance: non-job delta {non_job} exceeds the manifest's "
+            f"declared {declared} — cassettes on disk come from neither run "
+            f"{run_id} nor a declared sk_patch (#2326)"
+        )
+    return violations, note
 
 
 def _fixture_keys(fixtures_dir: Path) -> list[str]:
@@ -134,6 +276,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Purge the target DB before import (otherwise merge)",
     )
+    p.add_argument(
+        "--verify-run",
+        action="store_true",
+        help=(
+            "verify record_run_id against the GitHub Actions run's own logs "
+            "(#2326): the run's 'Exported cassettes: N' line is the only "
+            "baseline the manifest's author cannot rewrite. The replay "
+            "lanes' contract. Requires GITHUB_TOKEN/GH_TOKEN and "
+            "GITHUB_REPOSITORY"
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -154,6 +307,34 @@ def main(argv: list[str] | None = None) -> int:
         for v in provenance:
             print(f"  - {v}", file=sys.stderr)
         return 3
+
+    if args.verify_run:
+        token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
+        repo = os.environ.get("GITHUB_REPOSITORY", "")
+        api_url = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+        if not token or not repo:
+            print(
+                "PROVENANCE GATE FAILED — --verify-run requires "
+                "GITHUB_TOKEN/GH_TOKEN and GITHUB_REPOSITORY (present on "
+                "every Actions runner; locally, export GH_TOKEN from "
+                "`gh auth token`)",
+                file=sys.stderr,
+            )
+            return 3
+        run_violations, note = verify_run_provenance(
+            args.fixtures_dir, api_url=api_url, repo=repo, token=token
+        )
+        if note:
+            print(note)
+        if run_violations:
+            print(
+                "PROVENANCE GATE FAILED — run verification refused these "
+                f"cassettes ({len(run_violations)} violation(s)):",
+                file=sys.stderr,
+            )
+            for v in run_violations:
+                print(f"  - {v}", file=sys.stderr)
+            return 3
 
     args.target_dir.mkdir(parents=True, exist_ok=True)
 

@@ -117,6 +117,20 @@ jobs:
           # them without the build, the CI pipeline builds it).
           conda run -n projet-is --no-capture-output pytest tests/unit/ -m "${{ inputs.lane }}" --allow-dotenv ${{ inputs.extra_args }} --deselect "tests/unit/argumentation_analysis/test_llm_service.py::TestLLMService::test_create_llm_service_openai_authentic" --junitxml=pytest_report.xml -v --timeout=900 --timeout-method=thread
 
+      # #2326 root repair: the SK path is mocked under pytest (#1603 constat
+      # A), which is WHY the committed set ever needed sk_patches. The job
+      # now runs the out-of-pytest producer against the SAME DB the pytest
+      # record run just filled (--append, --no-export), so the single export
+      # below covers BOTH paths and the emitted manifest needs no patches —
+      # one run, one export, one provenance. ~$0.0005 of narration.
+      - name: Record SK-path cassette into the same DB (#2326 root)
+        shell: pwsh
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TEXT_CONFIG_PASSPHRASE: ${{ secrets.TEXT_CONFIG_PASSPHRASE }}
+        run: |
+          python scripts/cassettes/record_sk_cassette.py --cache-dir ${{ inputs.record_db }} --append --no-export
+
       - name: Export cassettes + blocking privacy audit
         shell: pwsh
         run: |

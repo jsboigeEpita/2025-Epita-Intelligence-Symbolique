@@ -72,6 +72,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="record into the scratch DB but do not export to the fixture dir",
     )
     p.add_argument(
+        "--append",
+        action="store_true",
+        help=(
+            "record into the EXISTING cache dir without wiping it (#2326 root "
+            "repair): the record job runs this script against the same DB its "
+            "pytest record run filled, so one export covers both the raw and "
+            "the SK path and the emitted manifest needs no sk_patches"
+        ),
+    )
+    p.add_argument(
         "--refresh-manifest-only",
         action="store_true",
         help=(
@@ -81,6 +91,23 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         ),
     )
     return p.parse_args(argv)
+
+
+def _prepare_cache_dir(cache_dir: Path, *, append: bool) -> None:
+    """Wipe-and-create (default) or reuse-in-place (``--append``).
+
+    The default wipe exists because a stale scratch DB would leak old keys
+    into the new export. ``--append`` is the record job's shared-DB flow
+    (#2326): the DB was just filled by the pytest record run and MUST
+    survive — the SK-path cassette lands beside the raw-path ones so the
+    job's single export emits one manifest over both.
+    """
+    if append:
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        return
+    if cache_dir.exists():
+        shutil.rmtree(cache_dir)
+    cache_dir.mkdir(parents=True)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -110,9 +137,7 @@ def main(argv: list[str] | None = None) -> int:
     load_dotenv(REPO / ".env")
 
     cache_dir: Path = args.cache_dir
-    if cache_dir.exists():
-        shutil.rmtree(cache_dir)
-    cache_dir.mkdir(parents=True)
+    _prepare_cache_dir(cache_dir, append=args.append)
 
     # Set BEFORE importing llm_cache: CACHE_DIR is frozen at import time.
     os.environ["LLM_CACHE_MODE"] = "record"

@@ -78,6 +78,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read  # #2326: --verify-run reads the record run's logs
 
 jobs:
   requires-api:
@@ -352,8 +353,15 @@ jobs:
 
       - name: Import cassettes into the runtime replay DB
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_API_URL: ${{ github.api_url }}
         run: |
-          python scripts/cassettes/import.py tests/fixtures/llm_cassettes .cache/llm_replay_band --purge
+          # --verify-run (#2326): the manifest's record_run_id must resolve
+          # against the record run's own "Exported cassettes: N" line — a
+          # fabricated run id reddens before anything reaches the DB.
+          python scripts/cassettes/import.py tests/fixtures/llm_cassettes .cache/llm_replay_band --purge --verify-run
           python scripts/cassettes/cost_report.py .cache/llm_replay_band | Select-Object -First 3
 
       - name: Replay band (dummy key -- nothing real to fall through to)
