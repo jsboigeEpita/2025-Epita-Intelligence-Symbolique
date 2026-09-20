@@ -32,6 +32,7 @@ from .acts import ACT_TITLES, RestitutionActs
 from .appendix import render_appendix
 from .factual_consistency_check import check_factual_consistency
 from .readability_gate import GateVerdict, ReadabilityGate
+from .reader_vocabulary_check import check_reader_vocabulary
 from .surplus_grounding_check import check_surplus_grounding
 
 # Minimum substantive length for an act body, below which we treat it as
@@ -177,6 +178,13 @@ class RestitutionReportRenderer:
         # claim that leaks through anyway; and symmetrically it never polices
         # a claim the state actually establishes (anti-pendulum).
         verdict = verdict.merge(check_surplus_grounding(body, state))
+
+        # #1914 criteria 1+7 — the reader-surface vocabulary: issue numbers,
+        # spec pointers, dict literals and gate echoes must not reach the
+        # acts, and raw specialist badges must not enumerate there. Body
+        # only — the folded appendix keeps these tokens by contract
+        # (criterion 6), so the boundary of the scan is itself the ± pair.
+        verdict = verdict.merge(check_reader_vocabulary(body))
 
         # assemble the final document
         doc = self._assemble(acts, body, verdict, state, include_full_state_json)
