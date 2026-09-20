@@ -95,6 +95,51 @@ sur l'argv de la lane → 8 tests ; `-m "requires_api"` même argv → 59 ; sur 
 
 ---
 
+## Objectif : « rejouer des cassettes LLM à coût nul »
+
+**Deux rejoueurs sans référence croisée** (#2305) — **et un producteur resté hors champ**
+(voir plus bas). Mesuré le **18/09** en rejouant l'historique de runs, pas en lisant une PR ;
+ligne `replay-band` re-mesurée le **20/09**.
+
+| Instrument | Credential | Preuve d'egress | Dernière exécution attestée |
+|---|---|---|---|
+| job `replay-band` de `requires_api_band.yml` (#2301) — **fait foi** | **dummy délibérée, non-secret** : `OPENAI_API_KEY: replay-band-no-live-anti-1019` | gate d'anti-vacuité (`live==0, hit>=1, miss_replay==0`) **+** étape dédiée « Egress guard — 0 outgoing LLM request, MEASURED » | **1 tir schedulé, 19/09** (`35435391692`) — **ROUGE**, `miss_replay=31` avec 22 tests pytest verts ⇒ racine #2320, réparée #2321 (`333ee1d4`). **Le vert de la bande réparée n'est pas encore attesté** : aucun run n'a exécuté la bande depuis ce merge, prochain tir cron **sam. 26/09** (le dispatch manuel est admin-only). |
+| `replay-llm-lane.yml` — **supplanté**, conservé comme sonde | **aucune clé provisionnée** | gate d'anti-vacuité seule | **3 runs, tous du 17/08, aucun vert** (1 failure, 2 cancelled) |
+
+⚠ **L'écart de credential va dans le sens inverse de l'intuition.** « Aucune clé » paraît la
+garantie la plus forte — rien à quoi retomber. Mais la garde `requires_api` **skippe** les
+tests quand la clé est absente : un lane sans clé ne prouve pas que le replay tient, il
+prouve que les tests n'ont pas tourné. C'est la vacuité exacte que la gate `hit >= 1` existe
+pour attraper, et c'est pourquoi **le skip est plus dangereux que le rouge**. La dummy key
+de `replay-band` satisfait la garde de skip — les tests **s'exécutent** — tout en rendant
+tout appel live un 401.
+
+`replay-llm-lane.yml` reste la seule surface acceptant un `lane_args` arbitraire (sonde d'un
+test isolé sans lancer la bande). **« Jamais vert » n'est pas une preuve de non-utilité** :
+trois runs d'un même après-midi d'août décrivent une mise au point (Cleanup Gate).
+
+**Il y a un troisième instrument, en amont des deux autres** : `record-llm-cassettes.yml`
+produit l'entrée que les deux rejoueurs consomment. Le compter hors-carte était l'angle mort
+de #2305 — un objectif dont on cartographie les consommateurs sans leur producteur laisse la
+provenance de l'entrée hors du champ, et c'est exactement là que la dérive est entrée.
+
+**D'où peuvent venir les cassettes que la bande consomme** (#2323, réparé par #2325, mergé
+`3da03329`) : jusqu'au 19/09 les 211 cassettes committées étaient une **récolte locale** — le
+job d'enregistrement n'avait plus réussi depuis le **17/08**, si bien que l'env qui calculait
+les clés n'était pas celui qui les rejouait. C'est la porte par laquelle la dérive du 19/09
+(`miss_replay=31`) est entrée. Depuis #2325, `export.py` dépose un `MANIFEST.json` quand il
+tourne dans le job, et `import.py` **refuse** (exit 3) un répertoire sans manifeste, ou dont
+le compte / le digest / la signature d'env dérivent.
+
+⚠ **Mais ce gate vérifie la cohérence, pas la provenance** (#2326) : `record_run_id` n'est
+testé que pour sa non-vacuité — le run n'est jamais interrogé — et `sk_patches`, le champ qui
+déclare les retouches manuelles, **n'a aucun lecteur**. Mesuré sur le manifeste livré : le run
+`35474667181` a exporté **33** cassettes, **34** sont committées ; le delta de 1 est la
+cassette du chemin SK que le job ne peut pas enregistrer (#1603 constat A), déclarée. Rien
+dans la CI ne permet de dériver que ce delta vaut 1 plutôt que 198.
+
+---
+
 ## Objectif : « comparer les modes d'orchestration entre eux »
 
 | Instrument | Nature | Dernière mesure firsthand |

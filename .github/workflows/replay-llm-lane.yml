@@ -8,6 +8,24 @@ name: Replay LLM Lane (#1603)
 # DoD 7 (arming this on PR pushes) is a SEPARATE trigger PR, arbitrated —
 # this workflow stays workflow_dispatch until then.
 #
+# ⚠ SUPERSEDED for band coverage (#2305, measured 2026-09-18). The
+# `replay-band` job of requires_api_band.yml is the instrument of record: it
+# provisions a DELIBERATE DUMMY key (replay-band-no-live-anti-1019, not a
+# secret), which satisfies the requires_api skip guard so the tests ACTUALLY
+# RUN, and it adds a dedicated "Egress guard — 0 outgoing LLM request,
+# MEASURED" step on top of the anti-vacuité gate.
+#
+# The no-key property below reads as the stronger guarantee and is not: with
+# no key, requires_api tests SKIP. A lane without a key does not prove replay
+# holds — it proves the tests did not run. That is the exact vacuity the
+# hit>=1 gate exists to catch, and the reason a skip is more dangerous than a
+# red.
+#
+# This workflow is KEPT, not retired: it is the only surface taking an
+# arbitrary `lane_args`, i.e. probing ONE test without firing the whole band.
+# Its run history (3 runs, all 2026-08-17, none green) describes a
+# work-in-progress afternoon, not non-utility — Cleanup Gate applies.
+#
 # A red gate here means one of:
 #   - live>0   : impossible by construction (no key) — a wrap leaked
 #   - hit==0   : the lane no longer consults the cache (vacuous green)
