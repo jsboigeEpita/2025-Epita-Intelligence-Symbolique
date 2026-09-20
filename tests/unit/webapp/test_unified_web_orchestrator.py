@@ -133,7 +133,19 @@ async def test_start_webapp_backend_fails(orchestrator):
 
     assert result is False
     mock_cleanup.assert_called_once()
-    orchestrator.backend_manager.start.assert_called_once()
+    # Failover #1853 (fait réel au #2330) : l'échec tente TOUTE la marche de
+    # candidats — port configuré, chaque repli, puis port dynamique — dans
+    # cet ordre, avant de déclarer l'échec. (Ce test épinglait l'ancienne
+    # forme à tentative unique : le défaut que le failover documenté
+    # n'existait pas.)
+    attempted = [
+        c.kwargs.get("port_override")
+        for c in orchestrator.backend_manager.start.await_args_list
+    ]
+    assert attempted == [8000, 8001, 8002, 0], (
+        f"la marche de candidats attendue est [8000, 8001, 8002, 0], "
+        f"mesuré : {attempted}"
+    )
     # frontend_manager is not even instantiated if backend fails
     assert orchestrator.frontend_manager is None
     assert orchestrator.app_info.status == WebAppStatus.ERROR
