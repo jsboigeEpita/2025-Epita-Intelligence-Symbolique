@@ -351,11 +351,23 @@ def is_multi_clause(text: str) -> bool:
     True when the unit carries at least one strong separator — ``;``, ``:``
     or a connector from the existing ``connecteurs_structure_logique``
     resource, reusing the detectors' own list and substring semantics (no
-    second taxonomy) — or at least two commas. Measured calibration on the
-    47-unit sub-30-word region: admits 11/12 structure-bearing units (the
-    12th carries no punctuation at all and stays honestly NOT_APPLICABLE —
-    a family bound of any punctuation-based rule) for 11/35 non-bearing
-    admissions, which are evaluated zeros, not fabricated scores.
+    second taxonomy) — or at least two commas.
+
+    Calibration (measured 2026-09-08 on the 47-unit sub-30-word region,
+    #1907): admits 11/12 structure-bearing units. The 12th is a 15-word
+    adversative refutation carrying no separator of any kind — recognized
+    by its content, not its punctuation — and stays honestly
+    NOT_APPLICABLE. **Family bound**: any punctuation-based admission rule
+    leaves at least one such residual false negative; do not tighten the
+    rule to catch it (that admits arbitrarily elsewhere).
+
+    Accepted noise on the comma branch (re-measured 2026-09-20): of the
+    non-bearing units admitted only by commas, a majority carry
+    enumeration or discourse-marker commas (one via a thousands
+    separator), not clause commas — yet the branch also admits genuinely
+    multi-clause units (2 of 6 in the measured set), which is why R2 was
+    preferred over R1. Admitted non-bearers produce evaluated zeros, not
+    fabricated scores.
     """
     lowered = (text or "").lower()
     if ";" in lowered or ":" in lowered:
