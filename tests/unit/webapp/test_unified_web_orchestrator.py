@@ -128,7 +128,18 @@ async def test_start_webapp_backend_fails(orchestrator):
 
     with patch.object(
         orchestrator, "_cleanup_previous_instances", new_callable=AsyncMock
-    ) as mock_cleanup:
+    ) as mock_cleanup, patch.object(
+        # La sonde d'occupation est substituée comme backend_manager l'est :
+        # le sujet de ce test est la LOGIQUE DE MARCHE, pas la table de ports
+        # de l'hôte. Sans substitution, l'assertion épingle une marche dont
+        # la forme dépend de la machine — mesuré chez le coordinateur (R1031) :
+        # 0.0.0.0:8000 LISTENING (notre propre commande uvicorn documentée) →
+        # marche [8001, 8002, 0], rouge. L'occupation RÉELLE est le sujet du
+        # test d'intégration (test_port_failover_integration.py).
+        orchestrator,
+        "_is_port_in_use",
+        return_value=False,
+    ):
         result = await orchestrator.start_webapp()
 
     assert result is False
@@ -149,6 +160,38 @@ async def test_start_webapp_backend_fails(orchestrator):
     # frontend_manager is not even instantiated if backend fails
     assert orchestrator.frontend_manager is None
     assert orchestrator.app_info.status == WebAppStatus.ERROR
+
+
+@pytest.mark.asyncio
+async def test_start_webapp_skips_occupied_candidates(orchestrator):
+    """Failover #1853, moitié skip : un candidat que la sonde dit occupé
+    n'est JAMAIS tenté (un bind condamné ne signale pas son démarrage et
+    coûte le timeout complet). Encode la mesure du coordinateur (R1031 :
+    8000 occupé → marche [8001, 8002, 0]) en garde déterministe, indépendante
+    de la table de ports réelle de l'hôte."""
+    orchestrator.backend_manager.start.return_value = {
+        "success": False,
+        "error": "simulated failure",
+    }
+
+    occupied = {8000}
+
+    with patch.object(
+        orchestrator, "_cleanup_previous_instances", new_callable=AsyncMock
+    ), patch.object(
+        orchestrator, "_is_port_in_use", side_effect=lambda port: port in occupied
+    ):
+        result = await orchestrator.start_webapp()
+
+    assert result is False
+    attempted = [
+        c.kwargs.get("port_override")
+        for c in orchestrator.backend_manager.start.await_args_list
+    ]
+    assert attempted == [8001, 8002, 0], (
+        f"le candidat occupé doit être sauté, marche attendue [8001, 8002, 0], "
+        f"mesuré : {attempted}"
+    )
 
 
 @pytest.mark.asyncio
