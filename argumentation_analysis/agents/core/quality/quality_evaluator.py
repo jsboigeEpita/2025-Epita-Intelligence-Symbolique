@@ -536,6 +536,12 @@ DETECTORS: Dict[str, Callable[[str], Tuple[float, str]]] = {
 
 # --- Main evaluator ---
 
+# #2331: sentinel distinguishing "evaluate() was not asked" (inherit the
+# constructor wiring) from "evaluate() was explicitly asked for lexical"
+# (``agentic_llm=None``). Without it, a per-call None could not force the
+# lexical layer on an evaluator constructed with wiring.
+_UNSET: Any = object()
+
 
 class ArgumentQualityEvaluator:
     """
@@ -549,13 +555,24 @@ class ArgumentQualityEvaluator:
         # result = {"note_finale": 7.5, "note_moyenne": 0.83, "scores_par_vertu": {...}, ...}
     """
 
-    def __init__(self, detectors: Optional[Dict] = None):
+    def __init__(
+        self,
+        detectors: Optional[Dict] = None,
+        agentic_llm: Optional[Any] = None,
+    ):
         self.detectors = detectors or DETECTORS
+        # #2331: the evaluator can be CONSTRUCTED with its agentic wiring —
+        # the production quality phase does this, so the construction site
+        # (not each call site) is where the wiring lives and is asserted.
+        # ``evaluate`` still accepts a per-call ``agentic_llm``; an explicitly
+        # passed value (including None) always wins over this one, so the
+        # degraded re-run of a failed unit can force the lexical layer.
+        self.agentic_llm = agentic_llm
 
     def evaluate(
         self,
         text: str,
-        agentic_llm: Optional[Any] = None,
+        agentic_llm: Any = _UNSET,
         context_level: Optional[ContextLevel] = None,
     ) -> Dict[str, Any]:
         """Evaluate argument quality and return structured report.
@@ -573,6 +590,11 @@ class ArgumentQualityEvaluator:
         detectors (see ``agentic_virtue_detectors``). The other 7 virtues stay
         deterministic. Without ``agentic_llm`` the legacy lexical detectors are
         used for all 9 — backwards-compatible, no behavior change.
+
+        #2331: omitted (the sentinel default) inherits ``self.agentic_llm``
+        (the constructor wiring the production phase asserts at its
+        construction site); explicitly passed — including ``None`` — always
+        overrides it.
 
         #1907: every virtue declares the context level it needs
         (``VIRTUE_CONTEXT_REQUIREMENTS``). A virtue that needs more material
@@ -601,6 +623,11 @@ class ArgumentQualityEvaluator:
                 "conda environment is activated. See setup_project_env.ps1. "
                 f"(First load failure: {_LAST_LOAD_ERROR or 'cause not recorded'})"
             )
+
+        # #2331: no per-call ask → inherit the constructor wiring. An explicit
+        # value (including None, the forced-lexical degraded re-run) wins.
+        if agentic_llm is _UNSET:
+            agentic_llm = self.agentic_llm
 
         if context_level is None:
             context_level = infer_context_level(text)
