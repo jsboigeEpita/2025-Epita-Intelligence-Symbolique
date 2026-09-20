@@ -10,9 +10,11 @@ BO-3 replay invariants stay un-widened.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import diskcache
+import pytest
 
 from scripts.cassettes.export import export_one, main
 
@@ -65,14 +67,30 @@ def test_allow_unsafe_does_not_bypass_degraded_refusal(tmp_path: Path) -> None:
     assert status == "degraded"
 
 
-def test_main_reports_degraded_but_does_not_exit_2(tmp_path: Path) -> None:
+def test_main_reports_degraded_but_does_not_exit_2(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # Only privacy violations gate the exit code (#1603). A degraded-only run
     # is an informational refusal: exit 0, degraded count in the summary.
+    #
+    # #2323: pin the CI shape explicitly. GitHub Actions exports GITHUB_RUN_ID
+    # into every job — including pytest processes — so an export invoked by a
+    # test inside CI emits MANIFEST.json (measured: this very test reddened on
+    # the PR's CI with a surprise manifest in the empty fixtures dir). Setting
+    # it here makes every box assert the real contract: NO cassette is written,
+    # and the manifest is emitted with cassette_count=0.
+    monkeypatch.setenv("GITHUB_RUN_ID", "42")
     db_dir = tmp_path / "db"
     db = diskcache.Cache(str(db_dir))
     db["f" * 32] = {"_fallback": "x"}
     db.close()
 
-    rc = main([str(db_dir), str(tmp_path / "fixtures")])
+    fixtures = tmp_path / "fixtures"
+    rc = main([str(db_dir), str(fixtures)])
     assert rc == 0
-    assert not list((tmp_path / "fixtures").glob("*.json"))
+    assert not [
+        p for p in fixtures.glob("*.json") if p.name != "MANIFEST.json"
+    ], "a degraded value must not produce a cassette"
+    manifest = json.loads((fixtures / "MANIFEST.json").read_text(encoding="utf-8"))
+    assert manifest["cassette_count"] == 0
+    assert manifest["record_run_id"] == "42"

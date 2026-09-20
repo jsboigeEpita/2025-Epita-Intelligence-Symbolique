@@ -9,6 +9,10 @@ name: Record LLM Cassettes (#1603)
 # uploaded as an artifact. A separate PR flow (coordinator-arbitrated) turns
 # the artifact into tests/fixtures/llm_cassettes additions. If a
 # CASSETTES_PR_TOKEN secret is configured, the job opens that PR itself.
+# Since #2323 the export also emits MANIFEST.json (run id + env signature +
+# cassette-set digest) — the artifact commit MUST include it: import.py
+# refuses fixtures without a matching manifest, which is what binds the
+# recorder to the replayer.
 #
 # Mode is EXPLICIT (LLM_CACHE_MODE=record on the record step only); nothing
 # here catches LLMCacheMiss or provisions the key for any replay step.
@@ -19,11 +23,19 @@ on:
       lane:
         description: 'pytest -m expression for the record lane'
         required: false
-        # NOT 'requires_api': under pytest the SK path is mocked on
-        # PYTEST_CURRENT_TEST (llm_service.py:115) regardless of markers —
-        # those tests record NOTHING (#1603 constat A). The recordable band
-        # is the raw-path consumers (_guarded_chat_completion), reachable
-        # through ordinary unmarked pipeline tests.
+        # Two record shapes (#2323):
+        # 1. BAND CASSETTES — the population the replay band replays. Pass
+        #    lane='requires_api and not llm_light' and the band's extra_args
+        #    (the 20 test paths, the mcp ignore, the band's --deselect list)
+        #    so recorder population == replayer population. The 18/09 attempt
+        #    (run 35326898374) omitted the deselects: it recorded 5 tests the
+        #    band never replays (2 cache-mode flippers + 3 golden Standard)
+        #    and failed on all of them. Under pytest the SK path stays mocked
+        #    (#1603 constat A) — these tests record through the raw path
+        #    (_guarded_chat_completion), which is exactly what the band
+        #    replays.
+        # 2. GENERAL HARVEST (default) — 'not slow and not requires_api' raw
+        #    path consumers for cassette coverage beyond the band.
         default: 'not slow and not requires_api'
       extra_args:
         description: 'Extra pytest args (e.g. a specific file, -k filter). Default runs the whole non-slow unit band — only raw-path consumers bill (~500-1000 calls, ~$1-5 projection, gpt-5-mini). Narrow explicitly for a cheap probe.'

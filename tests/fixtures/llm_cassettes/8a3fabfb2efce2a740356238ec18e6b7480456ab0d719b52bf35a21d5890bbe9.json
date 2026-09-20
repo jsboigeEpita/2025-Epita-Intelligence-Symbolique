@@ -1,0 +1,48 @@
+{
+  "key": "8a3fabfb2efce2a740356238ec18e6b7480456ab0d719b52bf35a21d5890bbe9",
+  "value": {
+    "id": "chatcmpl-EPyUYnDEHNm5nXubQZRjzguslK45N",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.72,\"fairness_assessment\":\"La méthode permet de comparer explicitement les bénéfices, coûts d’opportunité et risques des trois options, sans laisser le seul vainqueur du débat déterminer la décision. Une pondération des critères et un vote préférentiel seraient équitables.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Privilégie un tournoi inter-villes avec buffet et prix pour accroître la visibilité du club et recruter de nouveaux membres.\",\"influence\":0.5},{\"agent\":\"agent_2\",\"position\":\"Privilégie l’investissement complet dans du matériel pédagogique neuf pour répondre à un besoin matériel immédiat et améliorer les cours.\",\"influence\":0.65},{\"agent\":\"agent_3\",\"position\":\"Propose un partage égal du budget entre un tournoi réduit et du matériel pédagogique afin de concilier visibilité et pédagogie.\",\"influence\":0.55}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Les trois positions poursuivent des objectifs légitimes et les contre-arguments montrent surtout des arbitrages entre impact externe, qualité pédagogique et risque de sous-financement. Un vote social-choice, idéalement préférentiel et fondé sur des critères convenus, devrait favoriser une solution hybride ajustée, par exemple un investissement prioritaire dans le matériel indispensable complété par une action de visibilité à coût maîtrisé.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1789859438,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 389,
+      "prompt_tokens": 614,
+      "total_tokens": 1003,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 81,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,64 +1,48 @@
 {
   "key": "2bc3a28534fdf150f6ed5305a3eea70f84801901f71d831f9801f922a13d62a5",
   "value": {
-    "id": "gen-1789758256-OsM6GFe3Tct6RZxx8Xwx",
+    "id": "chatcmpl-EPyT9WfQOEEmlFrKo1uNFFyQ34QRS",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes comprenant un buffet et des prix, pour utiliser l'intégralité du budget et accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B défend l'investissement de la totalité du budget dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C défend une solution hybride répartissant équitablement le budget entre un tournoi réduit et l'achat de matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"Trois options distinctes sont en concurrence pour l'utilisation du budget.\",\"source_quote\":\"Trois options divergentes s'affrontent.\"},{\"text\":\"L'organisation du tournoi inter-villes avec buffet et prix coûte 2000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Le tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option B prévoit l'achat de matériel pédagogique et d'échiquiers neufs pour un montant total de 2000 euros.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"Le format hybride prévoit d'allouer 1000 euros à un tournoi réduit et 1000 euros au matériel.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel.\"}],\"summary\":\"Le texte présente trois positions concurrentes pour l'allocation d'un budget annuel de 2000 euros : privilégier la visibilité par un tournoi, renforcer les ressources pédagogiques, ou combiner les deux. La comparaison repose sur une répartition chiffrée et exclusive des dépenses.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes avec buffet et prix, en consacrant l'intégralité du budget à cet événement afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B défend l'investissement de l'intégralité du budget dans du matériel pédagogique et des échiquiers neufs.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C défend un compromis entre événement et équipement, avec un tournoi réduit et un investissement équivalent dans le matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"L'option A est chiffrée à 2000 euros et inclut un tournoi inter-villes, un buffet et des prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Selon la formulation du texte, l'organisation du tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option B prévoit de consacrer 2000 euros au matériel pédagogique et à de nouveaux échiquiers.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C répartit le budget en deux parts égales de 1000 euros : une pour un tournoi réduit et une pour du matériel.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel.\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'affectation d'un budget annuel de 2000 euros : un tournoi destiné à accroître la visibilité, un investissement matériel, ou un compromis hybride. La structure repose sur une comparaison directe entre rayonnement événementiel, amélioration des ressources et partage équilibré du budget.\"}",
           "refusal": null,
           "role": "assistant",
-          "annotations": null,
+          "annotations": [],
           "audio": null,
           "function_call": null,
-          "tool_calls": null,
-          "reasoning": null,
-          "reasoning_details": [
-            {
-              "type": "reasoning.encrypted",
-              "data": "gAAAAABqrYsz4lnzGOg2pC6btKLILwIB6GK76PCOTTgLFMUoGBXfCJDBnq4mOO5yyYhSIsaewFEBvnRgujw4Ro6y9NJ80gSjdkCfNeDR3gQzK1W2rJJfOqROzw4GwcWmkGUxHmiEuSoE-hlpAWd_QlfdbYgedZovCMCL_6T1R59PevyNjif4qsy8ZRVNWJdZcBAMdDykAi5ue4wkYgbSop_bUC1ah_M3oCTRhEgTB-2AcObeTTaJHTIjrl4x3AqLDra2ff4T8Ff1rGlCGvNb2-K-UwGK9GL8iI9cxaxKDZYWHVzNFAYBZ2PUGRRRp7smGmyW6oTNqadLq8N6vKIBN0ErG-M86IAdIA5Xoox3b_STvvfy9zlk0CzYPzRZvew4n5kkaw5RV-8okvfvg6Ok9KLwDy-PPcdlg6v_RfAooi6aj6tXD_waPCGzCUsC-JMKeUs4mqN-7HBrSOvkVhK46dY1yxcwQytpIlNYXlw8oIsB2bPNItwcfhZ9WzEzbcNI9WX02WS9R1Zo3ZTQv6ASZYZjlCOLz0sE0v42NJbElqav0M_ZKKNCAM8mj_czamerfIhDFRJ9YeeAuSW_ZyATPzSf520YA_aJnICugzaE-_TiNQVzOrW82LCAKIaI65yTUZ33ZiXRTX4f-R9KDO9C2qS2zRys72n66_lHSKhnlmfLoCrsXe-UaAJ0jnLb7ircLPfmbR5UwIFYBaGQmkWqssHHwGlfuUFGk5jyGn4TH78Hna9Z5waA0PGt35kmF6txBaXoh0GuwKyf7yOAFf3p73aLKnOUgRXof37axYHjjjzUmP7VrfNJTTOiz75Hmv1r4CU8P7mNC91BZsqtzKbez6E1KyZIQTbWwQ4akYbFbgWa43FvMr0MAlmv0cA31-wFfiuA2gs8Wtcc6BqLbS4qcoHyWvb2P8b4MtHNuOe3z_ol-bZFzuJOHyV_lYBcIUgV2DwYhkKrwxspOppNyrkzq_u5b5WeF7Mt8-HQT7-c3ZgEPID_QNYOYVWNrPAeYn9gvD6IogkjckCjyOR62ht7AlRDxFhmbBCNTRE_s2xzJMx5NOZSTUGyqwNwDjUJ2mZ6x7cDyNv3Dd7zMqviUNxc9YLQU6qX5vLaHiagLnIW8KVi5qtsED60c5nygIEtVGoMm1AVb_ZIKLGizYm9MW4fpJb3Bzj0j79VqvKyH66uj5o7T76299Yo3tQ6ukYmG1br3jgBBIxOvpONemnSPmZ3eHi56o_49iz1hOiEW-Kt0IbPcEYz4qR4jGOxtiM4kg9OPEtm25tVz0wPUnaBciVJMLDIiLlttwLy5DsDWEKaad8gxMuCVCFdDGF_Ffd-N1_kN5hlNl9tfK_JRJT736vK9kRcmQShW8UY-lLRx36b7bUVqtT1iGqKOGwSfPLEjoNu1iRhytvORbf5ULIwUYfHEQAp-jCXTD9Ch4Q6EHsVLJLKDEyQ8M1i1zYVydEv9lIzR8sHjyxjauFOefbA02at5Zf1FjGuXfEG1GiYdVtUCBV04CZrfnHiX6kS1ZVDDkHFxCCekMmo4y5FyRp_Qv4AjoMYQlYGCqgcoKnuD91ANWHhQZj7GzKStLXCGmTiUiPaaSB0FRGdQMzedt6KIv9o6d52eYVpt0nmXBKz_cpgUL2islMkwwp9OjuwOTUUCdpcaOALIr663ABY3G0dnPPikc5svWb3B9wS1i3yUVPTIoarfY1xyBswkjzdA3YyKW667JZhh_kMw6nEkvtkFIQ388WXl1BJwIQ3L6QukAQIDPUsqEoVMCaX2e7BISxtXEdJcCl04sakFEfERHPsuB-bi0ckqrZ0TeS82UwFI5F1s1-7bFkvuok-zKIyhVX_OAHZxW_QWwd3K0XEGKLSNHY-gMp3MMn0q-WKPGRXyyCLP9yNGn2V3dbD-5eQQv8wKlmjOE8bL-r1L7krNL_EZqI9zHLDPk_e0uw_gz-Bwi0JInn6cYnv_KsRSE5blg3tJzQbDXJGiHD6Zaw0Pe9cRhXQEgOSqyC4J4kw5Y_iZ-J_Uj2brHtHXTZnT-jY5p_fPIlSez946r_QAkrygYMHqMXZWjmT7ZVEalK2zS9JFpIBst002pOeTXB3vIJONquqLFxXGR8diJjpE0TMqKgymnLIUWZvr57j6bm9DpGouBuzXYS0vlc4oGK9RDgi_O183bT-MrOxNwGpG7RqsvAioulb5Q8puoHsuvSR161eZYaoAxBV9lhUFAZVqH6UdFH2HhaUeobHILpLQUZnEpgPKWEEdI8WBMoR9KiZL0a5f9J9AZ2FmmMm2Dc8v6clV9YwLF7X8vnAsJEHtuiVgNDHMp3F3RMrai4q98Lr6M5z5S3ELvh153v7S3PDrLg=.eyJlbmRwb2ludF9zbHVnIjoib3BlbmFpL2dwdC01LjYtbHVuYS0yMDI2MDcwOXxvcGVuYWkifQ",
-              "format": "openai-responses-v1",
-              "id": "rs_0998a62c819cf3f3016aad8b319bdc87d1a4f122e2bcb970c5",
-              "index": 0
-            }
-          ]
-        },
-        "native_finish_reason": "completed"
+          "tool_calls": null
+        }
       }
     ],
-    "created": 1789758256,
-    "model": "openai/gpt-5.6-luna",
+    "created": 1789859351,
+    "model": "gpt-5.6-luna",
     "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 641,
+      "completion_tokens": 560,
       "prompt_tokens": 402,
-      "total_tokens": 1043,
+      "total_tokens": 962,
       "completion_tokens_details": {
-        "accepted_prediction_tokens": null,
+        "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 150,
-        "rejected_prediction_tokens": null,
-        "image_tokens": 0
+        "reasoning_tokens": 61,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
       },
       "prompt_tokens_details": {
         "audio_tokens": 0,
-        "cached_tokens": 0,
         "cache_write_tokens": 0,
-        "video_tokens": 0
-      },
-      "cost": 0,
-      "is_byok": true,
-      "cost_details": {
-        "upstream_inference_cost": 0.0008496,
-        "upstream_inference_prompt_cost": 8.04e-05,
-        "upstream_inference_completions_cost": 0.0007692
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
       }
-    },
-    "provider": "OpenAI"
+    }
   }
 }

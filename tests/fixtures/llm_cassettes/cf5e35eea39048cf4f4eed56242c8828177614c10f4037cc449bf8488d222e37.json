@@ -1,14 +1,14 @@
 {
   "key": "cf5e35eea39048cf4f4eed56242c8828177614c10f4037cc449bf8488d222e37",
   "value": {
-    "id": "chatcmpl-EPRfgrPEJ2FCJNSqESfeVONbUvrGc",
+    "id": "chatcmpl-EPyThe7SdGmLmGa6dBZFxwo14Qbs1",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer la totalité de la subvention à l'élargissement du fonds de livres jeunesse.\",\"source_quote\":\"Option A : elargir le fonds de livres jeunesse.\"},{\"text\":\"L'option B consiste à consacrer la totalité de la subvention à la création d'un espace numérique équipé d'ordinateurs en libre accès.\",\"source_quote\":\"Option B : creer un espace numerique avec des ordinateurs en libre acces.\"},{\"text\":\"L'option C consiste à répartir la subvention à parts égales entre le fonds de livres et l'espace numérique.\",\"source_quote\":\"Option C : repartir la somme, moitie fonds livre, moitie espace numerique.\"}],\"claims\":[{\"text\":\"La bibliothèque de quartier bénéficie d'une subvention exceptionnelle de 3 000 euros.\",\"source_quote\":\"La bibliotheque de quartier beneficie d'une subvention exceptionnelle de 3000 euros.\"},{\"text\":\"Trois usages de la subvention sont en concurrence.\",\"source_quote\":\"Trois usages sont en concurrence.\"},{\"text\":\"L'option A porte sur l'élargissement du fonds de livres jeunesse.\",\"source_quote\":\"Option A : elargir le fonds de livres jeunesse.\"},{\"text\":\"L'option B porte sur la création d'un espace numérique avec des ordinateurs accessibles librement.\",\"source_quote\":\"Option B : creer un espace numerique avec des ordinateurs en libre acces.\"},{\"text\":\"L'option C prévoit une répartition par moitié entre le fonds de livres et l'espace numérique.\",\"source_quote\":\"Option C : repartir la somme, moitie fonds livre, moitie espace numerique.\"}],\"summary\":\"Le texte présente une subvention exceptionnelle de 3 000 euros et énumère trois usages concurrents : développer le fonds jeunesse, créer un espace numérique ou répartir la somme également entre ces deux objectifs. Il ne défend explicitement aucune option.\"}",
+          "content": "{\"arguments\":[{\"text\":\"Option A consiste à utiliser la subvention pour élargir le fonds de livres jeunesse.\",\"source_quote\":\"Option A : elargir le fonds de livres jeunesse.\"},{\"text\":\"Option B consiste à utiliser la subvention pour créer un espace numérique équipé d’ordinateurs en libre accès.\",\"source_quote\":\"Option B : creer un espace numerique avec des ordinateurs en libre acces.\"},{\"text\":\"Option C consiste à partager la subvention à parts égales entre le fonds de livres et l’espace numérique.\",\"source_quote\":\"Option C : repartir la somme, moitie fonds livre, moitie espace numerique.\"}],\"claims\":[{\"text\":\"La bibliothèque de quartier bénéficie d’une subvention exceptionnelle d’un montant de 3 000 euros.\",\"source_quote\":\"La bibliotheque de quartier beneficie d'une subvention exceptionnelle de 3000 euros.\"},{\"text\":\"Trois usages de la subvention sont en concurrence.\",\"source_quote\":\"Trois usages sont en concurrence.\"}],\"summary\":\"Le texte présente une subvention exceptionnelle de 3 000 euros et trois options concurrentes d’utilisation : investir entièrement dans les livres jeunesse, investir entièrement dans un espace numérique, ou répartir la somme à parts égales.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,25 +18,30 @@
         }
       }
     ],
-    "created": 1789733276,
+    "created": 1789859385,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 486,
+      "completion_tokens": 352,
       "prompt_tokens": 374,
-      "total_tokens": 860,
+      "total_tokens": 726,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 81,
-        "rejected_prediction_tokens": 0
+        "reasoning_tokens": 88,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
       },
       "prompt_tokens_details": {
         "audio_tokens": 0,
+        "cache_write_tokens": 0,
         "cached_tokens": 0,
-        "cache_write_tokens": 0
+        "image_tokens": null,
+        "text_tokens": null
       }
     }
   }

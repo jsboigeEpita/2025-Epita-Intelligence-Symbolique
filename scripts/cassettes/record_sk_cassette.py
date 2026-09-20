@@ -71,6 +71,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="record into the scratch DB but do not export to the fixture dir",
     )
+    p.add_argument(
+        "--refresh-manifest-only",
+        action="store_true",
+        help=(
+            "no API call: only re-bind the fixtures dir's MANIFEST.json to its "
+            "current cassette set (use after manually pruning stale SK siblings "
+            "so the #2323 import gate verifies again)"
+        ),
+    )
     return p.parse_args(argv)
 
 
@@ -81,6 +90,20 @@ def main(argv: list[str] | None = None) -> int:
     # reuses the tests' synthetic fixture builder.
     if str(REPO) not in sys.path:
         sys.path.insert(0, str(REPO))
+
+    # Import the manifest hook BEFORE the app imports below: running this file
+    # as a script puts scripts/cassettes on sys.path, and the downstream
+    # argumentation_analysis imports interact with that entry such that a late
+    # `from scripts.cassettes.export import ...` dies with ModuleNotFoundError
+    # (measured 2026-09-20). Binding the name early is immune to it.
+    from scripts.cassettes.export import refresh_manifest
+
+    # Manifest-only mode (#2323): re-bind without recording. The record path
+    # below also refreshes, but a manual stale-sibling prune (see the export
+    # epilogue) changes the cassette set AFTER this script exits — this mode
+    # closes that transaction without a second API call.
+    if args.refresh_manifest_only:
+        return 0 if refresh_manifest(args.out, note="SK prune (manual)") else 1
 
     from dotenv import load_dotenv
 
@@ -177,12 +200,29 @@ def main(argv: list[str] | None = None) -> int:
     after = {p.name for p in args.out.glob("*.json")}
     new = sorted(after - before)
     print(f"\nnew cassette file(s) in {args.out}: {new or '(none — key unchanged)'}")
+
+    # #2323: the fixtures dir's MANIFEST.json binds an exact cassette set. A
+    # surgical patch changes that set, so the manifest must be re-bound in the
+    # same transaction or the next import reddens (count/digest drift).
+    refreshed = refresh_manifest(
+        args.out, note=f"SK refresh #1950 (new: {', '.join(new) or 'none'})"
+    )
+
     if new:
         print(
             "Next: delete the cassette this one supersedes (the previous "
-            "list-shaped file), then commit. A stale sibling is harmless to the "
-            "test — it loads them all — but it is dead weight in the fixture dir."
+            "list-shaped file), then re-run this script with "
+            "--refresh-manifest-only so the manifest matches what you commit. "
+            "A stale sibling no longer is harmless dead weight: it is part of "
+            "the manifest's digest."
         )
+        if not refreshed:
+            print(
+                "WARNING: the fixture dir carries no MANIFEST.json — it is not "
+                "provenance-tracked. Record via the record-llm-cassettes job "
+                "and commit its export WITH the manifest (#2323).",
+                file=sys.stderr,
+            )
     return 0
 
 
