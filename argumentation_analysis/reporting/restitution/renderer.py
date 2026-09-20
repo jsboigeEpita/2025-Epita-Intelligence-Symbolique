@@ -32,6 +32,7 @@ from .acts import ACT_TITLES, RestitutionActs
 from .appendix import render_appendix
 from .factual_consistency_check import check_factual_consistency
 from .readability_gate import GateVerdict, ReadabilityGate
+from .surplus_grounding_check import check_surplus_grounding
 
 # Minimum substantive length for an act body, below which we treat it as
 # "present but thin" and flag it (distinct from entirely missing). Generous: an
@@ -168,6 +169,14 @@ class RestitutionReportRenderer:
         # as defense-in-depth with the #1297 prompt guardrail. Skipped honestly
         # (PASS) when no state was provided (no source of truth to check against).
         verdict = verdict.merge(check_factual_consistency(body, state))
+
+        # #1914 criterion 8 — the reader-chair fixture: the surplus claim in
+        # the prose must be grounded in the state's re-derived non-procedural
+        # surplus. Same defense-in-depth shape as the factual cross-check:
+        # the prompt INSTRUCTS the honest refusal, this detector catches any
+        # claim that leaks through anyway; and symmetrically it never polices
+        # a claim the state actually establishes (anti-pendulum).
+        verdict = verdict.merge(check_surplus_grounding(body, state))
 
         # assemble the final document
         doc = self._assemble(acts, body, verdict, state, include_full_state_json)
