@@ -219,16 +219,17 @@ class TestTwoPassPipeline:
         # bypasses it and the fallback-on-no-key premise never holds: the LLM
         # fires (measured: 1 openrouter.ai request). Clearing the toggle makes
         # the tested premise real; no mock needed.
-        # #1794: the producer (NLToLogicTranslator client build,
-        # services/nl_to_logic.py) can hold a DIFFERENT os module object than
+        # #1794: the producer can hold a DIFFERENT os module object than
         # sys.modules["os"] in a full session (measured: divergent id(os.environ)
         # — same mechanism as test_env_checks). A window on the global
         # "os.environ" clears only the sys.modules copy; the producer's copy
         # keeps whatever key it saw (CI: test-written; local repro: ambient) and
         # the POST still fires. The qualified window pins the object the
-        # producer actually reads.
+        # producer actually reads. #2352 moved that producer: nl_to_logic no
+        # longer reads the environment itself — the route now resolves in
+        # core.llm_service.resolve_chat_endpoint, so the window follows it.
         with patch.dict(
-            "argumentation_analysis.services.nl_to_logic.os.environ",
+            "argumentation_analysis.core.llm_service.os.environ",
             {
                 "OPENAI_API_KEY": "",
                 "OPENROUTER_API_KEY": "",
@@ -343,10 +344,11 @@ class TestBackwardCompat:
         # .env leaked by multi_model_benchmark) survives the window and the
         # no-key premise never holds (measured: real POSTs out of the test).
         # #1794 (round 3): qualified window on the producer's os binding — the
-        # global window alone does not reach NLToLogicTranslator's os.environ
-        # copy in a full session (see test_fallback_when_no_api_key above).
+        # global window alone does not reach the producer's os.environ copy in a
+        # full session (see test_fallback_when_no_api_key above). #2352 moved the
+        # producer to core.llm_service.resolve_chat_endpoint — the window follows.
         with patch.dict(
-            "argumentation_analysis.services.nl_to_logic.os.environ",
+            "argumentation_analysis.core.llm_service.os.environ",
             {
                 "OPENAI_API_KEY": "",
                 "OPENROUTER_API_KEY": "",
