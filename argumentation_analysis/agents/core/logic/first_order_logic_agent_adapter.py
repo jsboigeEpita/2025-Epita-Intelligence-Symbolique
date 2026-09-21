@@ -178,19 +178,30 @@ class FOLLogicAgent:
         self.logger.info(f"Exécution de la requête: {query}")
 
         # Essayer d'utiliser TweetyBridge réel si disponible
+        # #2338 : ``execute_fol_query`` rend un TUPLE ``(entailed, message)``
+        # (fol_handler.py:1126). L'ancien ``"ACCEPTED" in result`` était un test
+        # d'appartenance d'ÉLÉMENT sur ce tuple — toujours faux — donc TOUT
+        # verdict Tweety réel était rendu REJECTED ; et sur exception le mode
+        # dégradé rendait True, un ACCEPTED fabriqué (anti-théâtre #1019). Le
+        # contrat déclaré est ``Tuple[Optional[bool], str]`` : None = non calculé.
         if self._tweety_bridge:
             try:
-                result = self._tweety_bridge.execute_fol_query(
+                entailed, message = self._tweety_bridge.execute_fol_query(
                     belief_set.content, query
                 )
-                is_accepted = "ACCEPTED" in result and "True" in result
-                return is_accepted, result
+                return entailed, message
             except Exception as e:
                 self.logger.error(f"Erreur TweetyBridge: {e}. Mode dégradé activé.")
+                return None, (
+                    "Verdict FOL NON CALCULÉ (dégradation nommée) : le bridge a levé "
+                    f"{type(e).__name__}: {e}"
+                )
 
-        # Mode dégradé
-        result_message = f"FOL Query '{query}' is ACCEPTED (True) - Mode dégradé."
-        return True, result_message
+        # Mode dégradé : aucun verdict n'a été calculé — ne JAMAIS en fabriquer un.
+        return None, (
+            "Verdict FOL NON CALCULÉ (dégradation nommée) : aucun bridge FOL "
+            "disponible (Tweety/JVM non initialisés)."
+        )
 
     def interpret_results(
         self,
