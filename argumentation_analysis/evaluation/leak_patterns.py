@@ -26,6 +26,26 @@ document of our corpus. "It's a detector" is not a license: a detector
 enumerating corpus identifiers publishes the census the encryption
 protects. Detect instances by deriving tokens at runtime from the
 in-memory decrypted definitions, never by listing them here.
+
+Surface partition (#2349) — written here ONCE, because this module is what
+every instrument consumes. Two surfaces, two instruments, and neither
+substitutes for the other:
+
+* the FLUX — what a push makes permanent. ``scripts/security/scan_indexed_surfaces.py``
+  scans commit messages (``--commits origin/main..HEAD``, also a CI gate) and
+  any text body (``--text-file``) before it is posted. A commit message is
+  forever: the repo is public and forked, so history rewriting does not remove
+  it from the forks.
+* the ARBRE — what the tree already carries, at rest, in tracked files. Two
+  sweeps cover it, and their roots tile without overlap:
+  ``tests/unit/argumentation_analysis/evaluation/test_person_sweep_2004.py``
+  sweeps ``tests/``; ``test_production_person_sweep_2349.py`` sweeps every
+  tracked ``.py`` OUTSIDE ``tests/``. Before #2349 the second root was covered
+  by nobody: a name could sit in ``argumentation_analysis/``, ``scripts/`` or
+  ``project_core/`` indefinitely, while both instruments reported clean.
+
+Both sweeps exclude nominatively — a file, an issue owning its triage, a
+reason — never a directory. A directory-wide exclusion is how a carpet forms.
 """
 
 import re

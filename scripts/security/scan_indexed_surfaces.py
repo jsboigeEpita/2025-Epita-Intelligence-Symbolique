@@ -9,6 +9,14 @@ Discipline in ``CLAUDE.md`` covers them explicitly.
 
 This script closes that gap for anything you are about to publish.
 
+Surface partition (#2349): this script is the **FLUX** instrument — what a push
+makes permanent. The **ARBRE** — what the tree carries at rest — is tiled by two
+sweeps: ``tests/`` by ``test_person_sweep_2004.py``, every tracked ``.py``
+outside ``tests/`` by ``test_production_person_sweep_2349.py``. The partition is
+written once in ``argumentation_analysis/evaluation/leak_patterns.py``. Neither
+instrument substitutes for the other: a name already in the tree is invisible to
+a scan of the next commit message, and vice versa.
+
 Boundary semantics
 ------------------
 The shared patterns bake ``\b`` into each literal. ``\b`` is a *word* boundary
