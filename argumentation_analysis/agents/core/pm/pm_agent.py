@@ -217,6 +217,13 @@ class ProjectManagerAgent(BaseAgent):
         """
         Implémentation requise par la classe de base abstraite.
         Délègue à la méthode principale de l'agent.
+
+        C'est l'unique définition de `invoke_single` pour cet agent (cf. #2339) :
+        elle honore la signature `(kernel, arguments)` attendue par `get_response`
+        ci-dessus et par le consommateur de production
+        (`orchestration/enhanced_pm_analysis_runner.py`, qui construit lui-même
+        ses `KernelArguments` puis itère chaque élément produit comme une liste).
+        Elle délègue à `invoke_custom` — jamais à elle-même.
         """
         self.logger.debug(
             f"invoke_single appelé, délégation à invoke_custom pour {self.name}."
@@ -330,29 +337,25 @@ class ProjectManagerAgent(BaseAgent):
     #     #     return await self.define_tasks_and_delegate(full_state_snapshot, raw_text)
     #     pass
 
-    async def invoke_single(
-        self, messages: list[ChatMessageContent]
-    ) -> list[ChatMessageContent]:
-        # Logique d'invocation de base. Pourrait être plus complexe.
-        # Ici, on suppose que le dernier message est l'invite.
-        # Dans un scénario réel, il faudrait une logique plus robuste.
-
-        # Pour cet exemple, on délègue à une méthode qui simule une réponse
-        # simple ou qui appelle la logique existante.
-        # On passe le kernel et des arguments simulés si nécessaire.
-
-        # Création d'un KernelArguments à partir de l'historique des messages
-        # Ceci est une simplification. Une implémentation réelle devrait
-        # extraire et structurer les arguments à partir des messages.
-        arguments = KernelArguments(chat_history=messages)
-        return await self.invoke_single(self.kernel, arguments)
-
-    async def invoke_stream(self, messages: list[ChatMessageContent]):
-        # Implémentation de base pour le streaming.
-        # Elle peut envelopper la réponse non-streamée dans un stream.
-        final_result = await self.invoke(messages)
-
-        async def stream_generator():
-            yield final_result
-
-        return stream_generator()
+    # #2339 — Deux surcharges ajoutées ici par 5b717ee7 ont été retirées :
+    #
+    # 1. Un second `async def invoke_single(self, messages)` qui écrasait, à la
+    #    création de la classe, la définition conforme ci-dessus (l.214). Son corps
+    #    faisait `arguments = KernelArguments(chat_history=messages)` puis
+    #    `return await self.invoke_single(self.kernel, arguments)` : portant le même
+    #    nom, cette délégation se résolvait vers elle-même. Aucun appelant réel ne
+    #    demandait la forme `(messages)` (l'unique `AgentChannel` qui invoque avec
+    #    une liste de messages, `channels/volatile_agent_channel.py:56`, n'est câblé
+    #    que par `ExtractAgent.create_channel`; `SherlockEnqueteAgent` est une classe
+    #    sœur portant sa propre `invoke_single`). Sa seule logique propre — envelopper
+    #    des messages dans `KernelArguments(chat_history=...)` — est déjà faite par le
+    #    consommateur de production lui-même, `enhanced_pm_analysis_runner.py:576`.
+    #
+    # 2. Un `async def invoke_stream(self, messages)` qui faisait
+    #    `await self.invoke(messages)` alors que `BaseAgent.invoke` est un
+    #    générateur asynchrone (`agent_bases.py:223-229`) — donc inopérant quelle que
+    #    soit la forme d'appel, et incompatible avec l'appel de production
+    #    `invoke_stream(self.kernel, arguments=arguments)`. Son intention déclarée
+    #    (« envelopper la réponse non-streamée dans un stream ») est exactement ce que
+    #    fournit la paire héritée `BaseAgent.invoke`/`BaseAgent.invoke_stream`
+    #    (`agent_bases.py:223-237`), qui accepte la forme d'appel de production.
