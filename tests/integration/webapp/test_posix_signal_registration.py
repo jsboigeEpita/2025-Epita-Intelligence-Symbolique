@@ -46,20 +46,15 @@ def _build_orchestrator(webapp_config, test_config_path, tmp_path):
     The orchestrator's log file is redirected to tmp_path: the named
     degradation is asserted on the channel an operator reads, not on pytest's
     capture plumbing."""
-    import logging
-
     import yaml
 
     log_file = tmp_path / "orch.log"
     webapp_config["logging"] = {"file": str(log_file)}
-    # Le logger de l'orchestrateur est module-level et _setup_logging
-    # n'attache un FileHandler qu'en l'absence de handlers existants : sans
-    # détachement, la PREMIÈRE construction de la session capte toutes les
-    # émissions suivantes dans son propre fichier (mesuré : le test win32
-    # vert isolé, rouge dès qu'un test antérieur a construit l'objet).
-    orch_logger = logging.getLogger("argumentation_analysis.webapp.orchestrator")
-    for handler in list(orch_logger.handlers):
-        orch_logger.removeHandler(handler)
+    # #2336 : l'identité du logger dérive désormais de la destination — chaque
+    # fichier de log configuré a son propre logger. Le détachement de handlers
+    # qui vivait ici (workaround du logger module-level capturé par la première
+    # construction) est obsolète : ce tmp_path est unique par test, donc le
+    # logger l'est aussi, et le workaround ne survit pas à sa réparation.
     with open(test_config_path, "w") as f:
         yaml.dump(webapp_config, f)
     args = argparse.Namespace(
