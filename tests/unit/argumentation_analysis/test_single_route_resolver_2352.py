@@ -44,6 +44,7 @@ import os
 import re
 import subprocess
 import sys
+import types
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
@@ -70,6 +71,8 @@ _ROUTE_VARS = (
 # The files that used to re-derive the toggle. `core/llm_service.py` is absent
 # on purpose: it is where the route environment is allowed to be read.
 _NON_CANONICAL_FILES = (
+    "argumentation_analysis/evaluation/fallacy_benchmark.py",
+    "argumentation_analysis/orchestration/conversational_orchestrator.py",
     "argumentation_analysis/orchestration/invoke_callables.py",
     "argumentation_analysis/plugins/coordinated_logic_plugin.py",
     "argumentation_analysis/services/nl_to_logic.py",
@@ -301,10 +304,6 @@ _FROZEN_ROUTE_MODEL_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
         ("OPENAI_CHAT_MODEL_ID", "OPENROUTER_CHAT_MODEL_ID"),
         "the ONE resolver — the only place the route environment is read on purpose",
     ),
-    "argumentation_analysis/evaluation/fallacy_benchmark.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 B — raw SDK, endpoint defaults to api.openai.com: a toggle is invisible to it",
-    ),
     "argumentation_analysis/evaluation/model_registry.py": (
         ("OPENAI_CHAT_MODEL_ID",),
         "#2370 B — raw SDK registry, same hardcoded-endpoint default",
@@ -312,10 +311,6 @@ _FROZEN_ROUTE_MODEL_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
     "argumentation_analysis/evaluation/run_provenance.py": (
         ("OPENAI_CHAT_MODEL_ID",),
         "#2370 C — a provenance label: a drift here stamps artefacts with a model the run never used",
-    ),
-    "argumentation_analysis/orchestration/conversational_orchestrator.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — feeds an explicit model_id to create_llm_service (kernel path)",
     ),
     "scripts/apps/sherlock_watson/validation_point1_simple.py": (
         ("OPENAI_CHAT_MODEL_ID",),
@@ -747,3 +742,254 @@ def test_measurement_scripts_delegate_to_the_canonical_resolver(
     assert models == {"sentinel-model"}, result["sites"]
     endpoints = {site["base_url"] for site in result["sites"].values()}
     assert endpoints == {"https://sentinel.invalid/v1"}, result["sites"]
+
+
+# ---------------------------------------------------------------------------
+# R1035 — the two production files that close #2352 (#2370 tranche):
+# evaluation/fallacy_benchmark.py (class B, raw SDK) and
+# orchestration/conversational_orchestrator.py (class A, kernel path)
+# ---------------------------------------------------------------------------
+
+
+async def _fallacy_mode_routes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> Dict[str, Dict[str, Any]]:
+    """The (api_key, base_url, model) each benchmark mode would actually use.
+
+    Recorded on the clients the modes build: ``openai.AsyncOpenAI`` is replaced
+    by a recorder (mode C's guided plugin and SK service are stubbed too — the
+    plugin would drive its own LLM calls), so nothing leaves the machine.
+    """
+    from argumentation_analysis.evaluation.fallacy_benchmark import (
+        FallacyBenchmarkRunner,
+    )
+
+    constructions: List[Dict[str, Any]] = []
+    completions: List[Dict[str, Any]] = []
+    sk_services: List[Dict[str, Any]] = []
+
+    class _Completions:
+        async def create(self, **kwargs: Any) -> Any:
+            completions.append(kwargs)
+            choice = types.SimpleNamespace(
+                message=types.SimpleNamespace(content="stub")
+            )
+            return types.SimpleNamespace(choices=[choice])
+
+    class _Chat:
+        def __init__(self) -> None:
+            self.completions = _Completions()
+
+    class _Client:
+        def __init__(self, **kwargs: Any) -> None:
+            constructions.append(kwargs)
+            self.chat = _Chat()
+
+    class _StubSKService:
+        def __init__(self, **kwargs: Any) -> None:
+            sk_services.append(kwargs)
+
+    class _StubPlugin:
+        def __init__(self, **_kwargs: Any) -> None:
+            pass
+
+        async def run_guided_analysis(self, argument_text: str) -> str:
+            return json.dumps(
+                {"fallacies": [{"taxonomy_pk": "1", "fallacy_type": "Ad hominem"}]}
+            )
+
+    class _StubKernel:
+        def __init__(self, **_kwargs: Any) -> None:
+            pass
+
+        def add_service(self, _service: Any) -> None:
+            pass
+
+    monkeypatch.setattr("openai.AsyncOpenAI", _Client)
+    monkeypatch.setattr("semantic_kernel.kernel.Kernel", _StubKernel)
+    monkeypatch.setattr(
+        "semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion", _StubSKService
+    )
+    monkeypatch.setattr(
+        "argumentation_analysis.plugins.fallacy_workflow_plugin"
+        ".FallacyWorkflowPlugin",
+        _StubPlugin,
+    )
+
+    # __new__: the modes read no taxonomy state beyond `taxonomy_data`/`node_map`
+    # (mode A reads neither) — skipping __init__ keeps the measurement off the
+    # CSV filesystem dependency.
+    runner = FallacyBenchmarkRunner.__new__(FallacyBenchmarkRunner)
+    runner.taxonomy_data = []
+    runner.node_map = {}
+
+    routes: Dict[str, Dict[str, Any]] = {}
+    text = "Un argument quelconque."
+    await runner.run_mode_a_free(text)
+    routes["mode_a_free"] = {
+        "api_key": constructions[-1]["api_key"],
+        "base_url": constructions[-1]["base_url"],
+        "model": completions[-1]["model"],
+    }
+    await runner.run_mode_b_one_shot(text)
+    routes["mode_b_one_shot"] = {
+        "api_key": constructions[-1]["api_key"],
+        "base_url": constructions[-1]["base_url"],
+        "model": completions[-1]["model"],
+    }
+    await runner.run_mode_c_constrained(text)
+    routes["mode_c_constrained"] = {
+        "api_key": constructions[-1]["api_key"],
+        "base_url": constructions[-1]["base_url"],
+        "model": sk_services[-1]["ai_model_id"],
+    }
+    return routes
+
+
+async def test_fallacy_modes_agree_with_the_resolver_on_the_prescribed_seat(
+    monkeypatch,
+) -> None:
+    """THE class-B divergence, on the seat ``.env.example`` prescribes.
+
+    Pre-repair the three modes read the raw OpenAI triple inline, so a set
+    OpenRouter toggle was invisible to them: on this seat they sent the
+    configured model to **api.openai.com** while the canonical resolver routed
+    to OpenRouter — and with a retired model (#1930) they sent it unsubstituted.
+    The failure is in **route/model values**, never an ImportError.
+    """
+    _seat_without_openrouter_model(monkeypatch, model="gpt-5-mini")  # retired
+    canonical = resolve_chat_endpoint()
+    assert canonical[2] == "gpt-5.6-luna", "the canonical resolver must substitute it"
+
+    routes = await _fallacy_mode_routes(monkeypatch)
+
+    divergent = {
+        mode: route
+        for mode, route in routes.items()
+        if route["model"] != canonical[2] or route["base_url"] != canonical[1]
+    }
+    assert not divergent, (
+        f"fallacy-benchmark modes not on the canonical route: {divergent} "
+        f"(the resolver rendered model={canonical[2]!r} "
+        f"base_url={canonical[1]!r}) — they must call resolve_chat_endpoint "
+        "instead of reading the raw OpenAI triple (#2352/#2370)."
+    )
+
+
+async def test_fallacy_modes_accord_control_official_endpoint(monkeypatch) -> None:
+    """Non-vacuity: with NO toggle set, the inline reads already agreed.
+
+    On the official-endpoint seat the pre-repair triple and the resolver
+    rendered the same values — so a green here cannot be read as "the repair
+    fixed a case that was never broken". It pairs with the prescribed-seat
+    test to show the divergence was configuration-dependent.
+    """
+    for var in _ROUTE_VARS:
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-synthetic-not-a-real-key")
+    monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
+    canonical = resolve_chat_endpoint()
+
+    routes = await _fallacy_mode_routes(monkeypatch)
+    assert routes, "the recorder captured no mode — nothing was measured"
+    for mode, route in routes.items():
+        assert route == {
+            "api_key": canonical[0],
+            "base_url": canonical[1],
+            "model": canonical[2],
+        }, (mode, route)
+
+
+def test_conversational_kernel_feeds_the_canonical_model_to_the_factory(
+    monkeypatch,
+) -> None:
+    """The class-A site: what `_build_conversational_kernel` hands the factory.
+
+    Pre-repair the model id was read inline with a fallback literal, so the
+    OpenRouter jump and the #1930 substitution never reached the kernel path.
+    The seam is measured directly — the factory is replaced by a recorder and
+    the kernel by a stub, so no service is built and nothing leaves the machine.
+    """
+    import argumentation_analysis.orchestration.conversational_orchestrator as conversational
+
+    _seat_without_openrouter_model(monkeypatch, model="gpt-5-mini")  # retired
+    canonical = resolve_chat_endpoint()[2]
+    assert canonical == "gpt-5.6-luna"
+
+    received: Dict[str, Any] = {}
+
+    def _recording_factory(**kwargs: Any) -> Any:
+        received.update(kwargs)
+        return "stub-llm-service"
+
+    class _StubKernel:
+        def __init__(self) -> None:
+            self.services: List[Any] = []
+
+        def add_service(self, service: Any) -> None:
+            self.services.append(service)
+
+    monkeypatch.setattr(conversational, "sk", types.SimpleNamespace(Kernel=_StubKernel))
+    monkeypatch.setattr(conversational, "create_llm_service", _recording_factory)
+
+    kernel = conversational._build_conversational_kernel()
+
+    assert received["model_id"] == canonical, received
+    assert received["service_id"] == "conversational_llm", received
+    assert received["force_authentic"] is True, received
+    assert kernel.services == ["stub-llm-service"]
+
+
+async def test_fallacy_modes_and_kernel_delegate_to_the_canonical_resolver(
+    monkeypatch,
+) -> None:
+    """Delegation, not coincidence: the new sites must follow a patched resolver.
+
+    A site that re-derived the route from the environment cannot see the
+    sentinel, whatever the environment says. Pre-repair this reddens because
+    the delegated symbols do not exist (``AttributeError`` on the patch) — the
+    delegation is what is being asserted.
+    """
+    import argumentation_analysis.core.llm_service as llm_service
+    import argumentation_analysis.evaluation.fallacy_benchmark as fallacy_benchmark
+    import argumentation_analysis.orchestration.conversational_orchestrator as conversational
+
+    sentinel = (
+        "sk-sentinel-not-a-real-key",
+        "https://sentinel.invalid/v1",
+        "sentinel-model",
+    )
+
+    def _sentinel_resolver(*_args: Any, **_kwargs: Any):
+        return sentinel
+
+    monkeypatch.setattr(fallacy_benchmark, "resolve_chat_endpoint", _sentinel_resolver)
+    monkeypatch.setattr(llm_service, "resolve_chat_endpoint", _sentinel_resolver)
+
+    routes = await _fallacy_mode_routes(monkeypatch)
+    for mode, route in routes.items():
+        assert (
+            route["api_key"],
+            route["base_url"],
+            route["model"],
+        ) == sentinel, (mode, route)
+
+    received: Dict[str, Any] = {}
+
+    def _recording_factory(**kwargs: Any) -> Any:
+        received.update(kwargs)
+        return "stub-llm-service"
+
+    class _StubKernel:
+        def __init__(self) -> None:
+            self.services: List[Any] = []
+
+        def add_service(self, service: Any) -> None:
+            self.services.append(service)
+
+    monkeypatch.setattr(conversational, "sk", types.SimpleNamespace(Kernel=_StubKernel))
+    monkeypatch.setattr(conversational, "create_llm_service", _recording_factory)
+    conversational._build_conversational_kernel()
+
+    assert received["model_id"] == "sentinel-model", received
