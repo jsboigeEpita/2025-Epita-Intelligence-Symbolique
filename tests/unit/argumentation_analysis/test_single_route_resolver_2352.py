@@ -72,6 +72,7 @@ _ROUTE_VARS = (
 # on purpose: it is where the route environment is allowed to be read.
 _NON_CANONICAL_FILES = (
     "argumentation_analysis/evaluation/fallacy_benchmark.py",
+    "argumentation_analysis/evaluation/run_provenance.py",
     "argumentation_analysis/orchestration/conversational_orchestrator.py",
     "argumentation_analysis/orchestration/invoke_callables.py",
     "argumentation_analysis/plugins/coordinated_logic_plugin.py",
@@ -303,14 +304,6 @@ _FROZEN_ROUTE_MODEL_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
     "argumentation_analysis/core/llm_service.py": (
         ("OPENAI_CHAT_MODEL_ID", "OPENROUTER_CHAT_MODEL_ID"),
         "the ONE resolver — the only place the route environment is read on purpose",
-    ),
-    "argumentation_analysis/evaluation/model_registry.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 B — raw SDK registry, same hardcoded-endpoint default",
-    ),
-    "argumentation_analysis/evaluation/run_provenance.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 C — a provenance label: a drift here stamps artefacts with a model the run never used",
     ),
     "scripts/apps/sherlock_watson/validation_point1_simple.py": (
         ("OPENAI_CHAT_MODEL_ID",),
@@ -993,3 +986,125 @@ async def test_fallacy_modes_and_kernel_delegate_to_the_canonical_resolver(
     conversational._build_conversational_kernel()
 
     assert received["model_id"] == "sentinel-model", received
+
+
+# ---------------------------------------------------------------------------
+# #2370 next tranche — the last two evaluation/ readers:
+# model_registry.from_env (class B, the "default" entry decides the route)
+# and run_provenance.chat_model_id (class C, the provenance label must render
+# the RESOLVED model — never a raw variable, never a phantom default)
+# ---------------------------------------------------------------------------
+
+
+def _registry_default_entry(monkeypatch: pytest.MonkeyPatch) -> Any:
+    """The "default" entry `ModelRegistry.from_env` builds, or None.
+
+    Pre-repair the entry was keyed on the raw OPENAI_API_KEY read, so on the
+    prescribed seat (only the OpenRouter pair set) it did not even exist —
+    the registry was silently empty of a default while the canonical route
+    was alive. None is therefore a finding, not an absence of measurement.
+    """
+    from argumentation_analysis.evaluation.model_registry import ModelRegistry
+
+    registry = ModelRegistry.from_env()
+    return registry.list_models().get("default")
+
+
+def _provenance_label() -> Any:
+    from argumentation_analysis.evaluation.run_provenance import chat_model_id
+
+    return chat_model_id()
+
+
+def test_registry_default_and_provenance_label_agree_on_the_prescribed_seat(
+    monkeypatch,
+) -> None:
+    """Classes B and C on the seat ``.env.example`` prescribes.
+
+    Pre-repair: the "default" registry entry did not exist (raw empty
+    OPENAI_API_KEY) while the canonical route was alive, and the provenance
+    label returned the RAW variable — a retired model unsubstituted, or a
+    model the run never used under the toggle. Value failures, no ImportError.
+    """
+    _seat_without_openrouter_model(monkeypatch, model="gpt-5-mini")  # retired
+    canonical = resolve_chat_endpoint()
+    assert canonical[2] == "gpt-5.6-luna", "the canonical resolver must substitute it"
+
+    default = _registry_default_entry(monkeypatch)
+    assert default is not None, (
+        "from_env built no 'default' entry while the canonical route is alive "
+        "(api_key resolves non-empty) — the raw OPENAI_API_KEY read made the "
+        "toggle invisible to the registry (#2352/#2370)."
+    )
+    assert default.api_key == canonical[0], default.api_key
+    assert default.base_url == canonical[1], default.base_url
+    assert default.model_id == canonical[2], default.model_id
+
+    assert _provenance_label() == canonical[2]
+
+
+def test_registry_and_provenance_accord_control_official_endpoint(
+    monkeypatch,
+) -> None:
+    """Non-vacuity: with NO toggle set, the inline reads already agreed."""
+    for var in _ROUTE_VARS:
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-synthetic-not-a-real-key")
+    monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
+    canonical = resolve_chat_endpoint()
+
+    default = _registry_default_entry(monkeypatch)
+    assert default is not None, default
+    assert (default.api_key, default.base_url, default.model_id) == canonical
+    assert _provenance_label() == canonical[2]
+
+
+def test_provenance_label_stays_none_without_a_configured_llm(
+    monkeypatch,
+) -> None:
+    """The None semantics must SURVIVE the conversion.
+
+    A provenance block that rendered the resolver's default literal with no
+    key configured would stamp artefacts with a model no run used — a phantom
+    provenance. This passes pre-repair too: it pins the semantics the
+    conversion must not lose, it does not measure the divergence.
+    """
+    for var in _ROUTE_VARS:
+        monkeypatch.delenv(var, raising=False)
+
+    assert _provenance_label() is None
+    assert _registry_default_entry(monkeypatch) is None
+
+
+def test_registry_and_provenance_delegate_to_the_canonical_resolver(
+    monkeypatch,
+) -> None:
+    """Delegation, not coincidence: both sites must follow a patched resolver.
+
+    Pre-repair this reddens on values (the raw reads cannot see the sentinel)
+    and on the missing delegated symbol in ``model_registry`` — the
+    delegation is what is being asserted.
+    """
+    import argumentation_analysis.core.llm_service as llm_service
+    import argumentation_analysis.evaluation.model_registry as model_registry
+
+    sentinel = (
+        "sk-sentinel-not-a-real-key",
+        "https://sentinel.invalid/v1",
+        "sentinel-model",
+    )
+
+    def _sentinel_resolver(*_args: Any, **_kwargs: Any):
+        return sentinel
+
+    monkeypatch.setattr(llm_service, "resolve_chat_endpoint", _sentinel_resolver)
+    monkeypatch.setattr(model_registry, "resolve_chat_endpoint", _sentinel_resolver)
+
+    default = _registry_default_entry(monkeypatch)
+    assert default is not None, default
+    assert default.api_key == sentinel[0], default.api_key
+    assert default.base_url == sentinel[1], default.base_url
+    assert default.model_id == sentinel[2], default.model_id
+
+    assert _provenance_label() == sentinel[2]

@@ -15,6 +15,17 @@ from argumentation_analysis.evaluation.run_provenance import (
     provenance_block,
 )
 
+# Chaque test possède TOUTES les variables de route (#2352) : le label rend le
+# modèle résolu, un .env hérité ne doit pas décider du cas.
+_ROUTE_VARS = (
+    "OPENROUTER_BASE_URL",
+    "OPENROUTER_API_KEY",
+    "OPENROUTER_CHAT_MODEL_ID",
+    "OPENAI_API_KEY",
+    "OPENAI_BASE_URL",
+    "OPENAI_CHAT_MODEL_ID",
+)
+
 
 class TestNowUtcIso:
     def test_parses_as_utc_iso(self):
@@ -33,15 +44,25 @@ class TestCodeSha:
 
 
 class TestChatModelId:
-    def test_reads_env_or_none(self, monkeypatch):
-        monkeypatch.delenv("OPENAI_CHAT_MODEL_ID", raising=False)
+    def test_renders_the_resolved_model_or_none(self, monkeypatch):
+        # #2352/#2370 : le label rend le modèle RÉSOLU, pas la variable brute.
+        # Sans clé configurée, aucun LLM ne tourne — le label reste None (le
+        # défaut du résolveur serait une provenance fantôme sur l'artefact).
+        for var in _ROUTE_VARS:
+            monkeypatch.delenv(var, raising=False)
         assert chat_model_id() is None
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-synthetic-not-a-real-key")
         monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "test-model")
         assert chat_model_id() == "test-model"
 
 
 class TestProvenanceBlock:
     def test_carries_run_identity(self, monkeypatch):
+        # Le label du bloc suit le même contrat résolu que chat_model_id :
+        # clé réelle posée, sinon le bloc rendrait None en CI keyless.
+        for var in _ROUTE_VARS:
+            monkeypatch.delenv(var, raising=False)
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-synthetic-not-a-real-key")
         monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "test-model")
         block = provenance_block(params={"workflow": "spectacular"})
         # Contrat #2045 + #2282 : identité de run + environnement sondé du run.
