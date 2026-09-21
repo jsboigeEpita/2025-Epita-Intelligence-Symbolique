@@ -5,9 +5,9 @@ that regex cannot catch. More expensive but higher accuracy.
 """
 
 import json
-import os
 from typing import Any, Dict, Optional
 
+from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 from argumentation_analysis.services.ai_shield.shield import ShieldLayer, LayerResult
 from argumentation_analysis.core.reading_window import selected_text
 from argumentation_analysis.core.utils.llm_completion_guard import (
@@ -51,26 +51,17 @@ class LLMValidatorLayer(ShieldLayer):
         model: Optional[str] = None,
     ):
         super().__init__(name="llm_validator", threshold=threshold, enabled=enabled)
-        # Honor the OpenRouter toggle (same logic as core.llm_service.create_llm_service).
-        # Without this the shield's LLM validator hit the official OpenAI endpoint
-        # (429 quota) and silently failed-open instead of performing real analysis.
-        openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-        openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-        use_openrouter = bool(openrouter_base_url and openrouter_api_key)
-        if use_openrouter and not api_key:
-            self._api_key = openrouter_api_key
-            self._model = model or os.environ.get(
-                "OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna"
-            )
-            self._base_url = openrouter_base_url
-        else:
-            self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
-            self._model = model or os.environ.get(
-                "OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"
-            )
-            self._base_url = os.environ.get(
-                "OPENAI_BASE_URL", "https://api.openai.com/v1"
-            )
+        # #2352: the canonical resolver owns the OpenRouter toggle, the model
+        # jump and the #1930 obsolescence substitution. This layer used to
+        # re-derive them and defaulted to the provider-prefixed literal
+        # ``openai/gpt-5.6-luna`` — a model no other resolver returned — and its
+        # OpenRouter branch was skipped entirely when an explicit ``api_key``
+        # was passed, sending an OpenRouter key to the OpenAI endpoint. Explicit
+        # ``api_key`` / ``model`` arguments still win over the resolved route.
+        canonical_key, canonical_base_url, canonical_model = resolve_chat_endpoint()
+        self._api_key = api_key or canonical_key
+        self._model = model or canonical_model
+        self._base_url = canonical_base_url
 
     def validate(self, text: str, **kwargs) -> LayerResult:
         """Validate input using LLM analysis.
