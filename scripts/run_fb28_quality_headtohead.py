@@ -121,19 +121,18 @@ def load_pipeline_args(corpus_label: str) -> Tuple[Dict[str, str], Dict[str, Dic
 
 
 def _get_llm_client():
-    """OpenRouter-toggle-aware client (same provider as pipeline, FB-21 lesson)."""
+    """The client, on the route the ONE resolver decides (#2352, FB-21 lesson).
+
+    Delegation, not a local copy: a head-to-head that runs the pipeline on one
+    model and labels the result after another compares two models while naming
+    only one.
+    """
     from openai import OpenAI
 
-    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
-    if use_openrouter:
-        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
-        client = OpenAI(api_key=openrouter_api_key, base_url=openrouter_base_url)
-    else:
-        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-    return client, model
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    api_key, base_url, model = resolve_chat_endpoint()
+    return OpenAI(api_key=api_key, base_url=base_url), model
 
 
 def baseline_eval_argument(client: Any, model: str, arg_text: str) -> Dict[str, Any]:

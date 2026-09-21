@@ -265,27 +265,28 @@ def _extract_phase_metrics(snapshot: Dict[str, Any]) -> Dict[str, Any]:
 async def run_zeroshot_baseline(corpus_label: str, text: str) -> Dict[str, Any]:
     """Run 0-shot LLM baseline (single prompt, no tools).
 
-    Honors the OpenRouter toggle so the baseline uses the SAME provider as the
-    integral pipeline (create_llm_service). Without this, the baseline hit the
-    official OpenAI endpoint and 429'd on quota while the pipeline (via
-    OpenRouter) succeeded — making the integral-vs-baseline comparison compare
-    two different providers instead of two methods on the same model.
+    The route comes from the ONE resolver (#2352): the baseline must run on the
+    SAME provider as the integral pipeline (create_llm_service). Without this,
+    the baseline hit the official OpenAI endpoint and 429'd on quota while the
+    pipeline (via OpenRouter) succeeded — making the integral-vs-baseline
+    comparison compare two different providers instead of two methods on the
+    same model.
+
+    The inline toggle that used to live here answered that question with a
+    provider-prefixed literal (``openai/gpt-5.6-luna``) no resolver renders: on
+    the seat ``.env.example`` prescribes (only ``OPENAI_CHAT_MODEL_ID`` set) the
+    baseline ran the configured model and labelled the artefact after a
+    different one — a false provenance no reading of the output can detect.
     """
     print(f"[C1] Starting 0-shot baseline for corpus {corpus_label}...")
     t0 = time.time()
 
     from openai import OpenAI
-    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
-    if use_openrouter:
-        api_key = openrouter_api_key
-        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
-        client = OpenAI(api_key=api_key, base_url=openrouter_base_url)
-    else:
-        api_key = os.environ.get("OPENAI_API_KEY")
-        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-        client = OpenAI(api_key=api_key)  # reads OPENAI_API_KEY from env
+
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    api_key, base_url, model = resolve_chat_endpoint()
+    client = OpenAI(api_key=api_key, base_url=base_url)
 
     prompt = ZEROSHOT_PROMPT.format(text=text[:8000])  # Limit text for baseline (token budget)
     response = client.chat.completions.create(

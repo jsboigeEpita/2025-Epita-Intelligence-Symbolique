@@ -5,6 +5,17 @@ The audit measured six resolvers for one route, four diverging. The repair is
 calls :func:`resolve_chat_endpoint` and nothing else re-implements the
 OpenRouter toggle.
 
+The audit's census was bounded to ``argumentation_analysis/`` — a positive
+census is an absence verdict in disguise, and it missed the **measurement
+scripts**, whose defect is worse than a wrong call: they run a pipeline on one
+model and stamp the artefact with another name, so no reading of the output can
+see it. R1034 therefore adds (a) the four ``scripts/`` sites converted by
+delegation, measured **in a subprocess** because those modules load ``.env``,
+``chdir`` and (``run_fb32``) ``sys.exit`` at import time, and (b) a census over
+every production root, frozen file by file so a new copy reddens anywhere —
+including ``argumentation_analysis/``, where the same sweep found five more
+files the first audit never walked.
+
 Two divergence classes, both measured on the seat ``.env.example`` prescribes
 (only ``OPENAI_CHAT_MODEL_ID`` is set, so ``OPENROUTER_CHAT_MODEL_ID`` is
 absent — the normal case for that seat, and the case where the copies broke):
@@ -27,9 +38,14 @@ delegation tests pin today's wiring, the structural one keeps the next copy
 from being born.
 """
 
+import ast
+import json
+import os
 import re
+import subprocess
+import sys
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
 import pytest
 
@@ -252,3 +268,482 @@ def test_no_non_canonical_file_reads_the_route_environment(relpath: str) -> None
         f"{relpath} reads the route environment ({found}) — it must call "
         "resolve_chat_endpoint instead of re-deriving the toggle (#2352)."
     )
+
+
+# ---------------------------------------------------------------------------
+# R1034 — the measurement scripts, and the census over the roots the first
+# audit did not walk
+# ---------------------------------------------------------------------------
+
+# The four measurement harnesses the R1034 dispatch named. They are not
+# services: they decide the route of a run and stamp the resulting artefact
+# with the model's name, so a divergence here is a false provenance.
+_MEASUREMENT_SCRIPTS = (
+    "scripts/run_capstone_c1.py",
+    "scripts/run_fb28_quality_headtohead.py",
+    "scripts/run_fb29_agentic_headtohead.py",
+    "scripts/run_fb32_decast_variance.py",
+)
+
+# `tests/` is deliberately absent: a test owns the route environment to *set* a
+# seat, which is not a route decision.
+_CENSUS_ROOTS = ("argumentation_analysis", "scripts", "project_core", "api")
+
+_MODEL_VARS = ("OPENAI_CHAT_MODEL_ID", "OPENROUTER_CHAT_MODEL_ID")
+
+# The frozen census (#2352 remainder, tracked by #2370). Every production file
+# that READS a model id is named here with what that read feeds: a new copy is
+# not a key and reddens; an entry that stopped reading is stale and reddens; a
+# file that gained a read reddens on the value tuple. This green claims the
+# population is **counted**, never that the route is unified.
+_FROZEN_ROUTE_MODEL_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
+    "argumentation_analysis/core/llm_service.py": (
+        ("OPENAI_CHAT_MODEL_ID", "OPENROUTER_CHAT_MODEL_ID"),
+        "the ONE resolver — the only place the route environment is read on purpose",
+    ),
+    "argumentation_analysis/evaluation/fallacy_benchmark.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 B — raw SDK, endpoint defaults to api.openai.com: a toggle is invisible to it",
+    ),
+    "argumentation_analysis/evaluation/model_registry.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 B — raw SDK registry, same hardcoded-endpoint default",
+    ),
+    "argumentation_analysis/evaluation/run_provenance.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 C — a provenance label: a drift here stamps artefacts with a model the run never used",
+    ),
+    "argumentation_analysis/orchestration/conversational_orchestrator.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — feeds an explicit model_id to create_llm_service (kernel path)",
+    ),
+    "scripts/apps/sherlock_watson/validation_point1_simple.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A/C — two decisions + one trace label",
+    ),
+    "scripts/baseline_0shot.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — builds its client on the raw OpenAI pair, no toggle",
+    ),
+    "scripts/compare_fallacy_detection_modes.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — three mode runners each decide their own model",
+    ),
+    "scripts/maintenance/repair_commit_json.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — maintenance tool; reads without a fallback and refuses when absent",
+    ),
+    "scripts/run_fallacy_benchmark.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 C — prints the model it is about to use",
+    ),
+    "scripts/scda_deepsynthesis_vs_baseline.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — `gpt-4o-mini` fallback, a literal no resolver renders",
+    ),
+    "scripts/sherlock_watson/run_einstein_oracle_demo.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — kernel service built from the env with a `gpt-4o-mini` fallback",
+    ),
+    "scripts/validation/analyze_random_extract.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 A — logs the model then runs the analysis on it",
+    ),
+    "scripts/validation/test_environment_simple.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 D — a diagnostic: reading the configuration IS the test",
+    ),
+    "scripts/validation/validation_environnement_simple.py": (
+        ("OPENAI_CHAT_MODEL_ID",),
+        "#2370 D — an environment census; delegating here would be wrong",
+    ),
+}
+
+
+def _const_str(node: ast.AST) -> Any:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _tracked_python_files(root: Path, roots: Sequence[str]) -> List[Path]:
+    """``git ls-files``, never a directory walk.
+
+    A local walk counts the ``.py`` a working tree carries and CI does not (and
+    vice versa), so the census would differ by machine — the guard has to
+    measure the repository, not the checkout.
+    """
+    listing = subprocess.run(
+        ["git", "ls-files", *roots],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    return [root / line for line in listing.splitlines() if line.endswith(".py")]
+
+
+def _model_id_read_sites(
+    files: Iterable[Path], root: Path
+) -> Dict[str, Tuple[str, ...]]:
+    """relpath -> the model-id variables that file READS.
+
+    AST, not grep, for three measured reasons: a ``grep`` counts the deliberate
+    ``os.environ["OPENROUTER_CHAT_MODEL_ID"] = ...`` **write** in
+    ``measure_1629_attack_pairing.py`` as a read; it matches the same string in
+    comments and docstrings; and it cannot tell a load from a store. Parsing
+    also lets the sweep report the population it walked, so a file that failed
+    to parse cannot silently shrink the census.
+    """
+    found: Dict[str, Tuple[str, ...]] = {}
+    for path in files:
+        # utf-8-sig: `ast.parse` in strict utf-8 raises on a BOM (#2357).
+        tree = ast.parse(path.read_text(encoding="utf-8-sig"))
+        read_vars = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
+                if node.func.attr in ("get", "getenv") and node.args:
+                    name = _const_str(node.args[0])
+                    if name in _MODEL_VARS:
+                        read_vars.add(name)
+            elif isinstance(node, ast.Subscript) and isinstance(node.ctx, ast.Load):
+                name = _const_str(node.slice)
+                if name in _MODEL_VARS:
+                    read_vars.add(name)
+        if read_vars:
+            found[str(path.relative_to(root)).replace("\\", "/")] = tuple(
+                sorted(read_vars)
+            )
+    return found
+
+
+def test_the_route_model_census_is_complete_and_frozen() -> None:
+    """Every production file that reads a model id is named, with its class.
+
+    Three failures, three different defects: an **unexpected** file is a new
+    copy of the defect; a **stale** entry is a repair that never updated the
+    census; a **drifted** value tuple is a file that grew another read.
+    """
+    files = _tracked_python_files(REPO_ROOT, _CENSUS_ROOTS)
+    assert files, "git ls-files walked no file — this census measured nothing"
+
+    found = _model_id_read_sites(files, REPO_ROOT)
+
+    unexpected = {p: v for p, v in found.items() if p not in _FROZEN_ROUTE_MODEL_READS}
+    stale = {p: v for p, v in _FROZEN_ROUTE_MODEL_READS.items() if p not in found}
+    drifted = {
+        p: (expected[0], v)
+        for p, v in found.items()
+        if p in _FROZEN_ROUTE_MODEL_READS
+        for expected in (_FROZEN_ROUTE_MODEL_READS[p],)
+        if v != expected[0]
+    }
+
+    assert not unexpected, (
+        f"new route-model reader(s) outside the census: {unexpected} — call "
+        "resolve_chat_endpoint instead of reading the model id (#2352)."
+    )
+    assert not stale, (
+        f"the census lists file(s) that no longer read a model id: {stale} — "
+        "they were converted, drop the entries so the census keeps meaning "
+        "something."
+    )
+    assert not drifted, (
+        f"file(s) whose model-id reads changed: {drifted} (expected, found) — "
+        "update the census deliberately, or delegate the new read."
+    )
+
+
+def test_the_census_sweep_can_render_non_zero(tmp_path: Path) -> None:
+    """Non-vacuity, on a synthetic carrier built at run time.
+
+    The guard above is green; without this control a sweep that silently
+    matched nothing would be green for the same reason. It also pins the two
+    exclusions that keep the census honest: a **write** of the variable is not a
+    read, and a file that delegates is not a reader.
+    """
+    carrier = tmp_path / "carrier.py"
+    carrier.write_text(
+        'import os\n\nMODEL = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")\n',
+        encoding="utf-8",
+    )
+    subscript = tmp_path / "subscript_reader.py"
+    subscript.write_text(
+        'import os\n\nMODEL = os.environ["OPENAI_CHAT_MODEL_ID"]\n', encoding="utf-8"
+    )
+    writer = tmp_path / "writer.py"
+    writer.write_text(
+        'import os\n\nos.environ["OPENROUTER_CHAT_MODEL_ID"] = "gpt-5.6-luna"\n',
+        encoding="utf-8",
+    )
+    delegating = tmp_path / "delegating.py"
+    delegating.write_text(
+        "from argumentation_analysis.core.llm_service import resolve_chat_endpoint\n"
+        "\n"
+        "_KEY, _BASE, MODEL = resolve_chat_endpoint()\n",
+        encoding="utf-8",
+    )
+
+    found = _model_id_read_sites([carrier, subscript, writer, delegating], tmp_path)
+
+    assert found == {
+        "carrier.py": ("OPENROUTER_CHAT_MODEL_ID",),
+        "subscript_reader.py": ("OPENAI_CHAT_MODEL_ID",),
+    }, found
+
+
+_SEAT_DRIVER = r'''
+"""Measure the model each measurement script would send, in a throwaway process.
+
+Run as ``python -c <this>`` with the ``_SEAT_*`` variables set. A subprocess is
+mandatory, not stylistic: these scripts load ``.env``, ``chdir`` to the repo
+root, and ``run_fb32`` calls ``sys.exit`` at import time when determinism is
+forced — importing them into the pytest process would mutate it.
+"""
+import asyncio
+import importlib.util
+import json
+import os
+import sys
+import types
+from pathlib import Path
+
+root = Path(os.environ["_SEAT_ROOT"])
+sys.path.insert(0, str(root))
+
+import argumentation_analysis.core.llm_service as _llm_service
+
+
+class _Recorder:
+    """Stands in for ``openai.OpenAI``: records construction and call kwargs."""
+
+    constructions = []
+    calls = []
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        _Recorder.constructions.append(kwargs)
+        self.chat = types.SimpleNamespace(
+            completions=types.SimpleNamespace(create=self._create)
+        )
+
+    def _create(self, **kwargs):
+        _Recorder.calls.append(kwargs)
+        choice = types.SimpleNamespace(
+            message=types.SimpleNamespace(content="stub"),
+            text=None,
+            finish_reason="stop",
+        )
+        return types.SimpleNamespace(choices=[choice])
+
+
+def _load(name, relpath):
+    spec = importlib.util.spec_from_file_location(name, root / relpath)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+_SCRIPTS = json.loads(os.environ["_SEAT_SCRIPTS"])
+modules = {rel: _load("seat_" + Path(rel).stem, rel) for rel in _SCRIPTS}
+
+# The seat is imposed AFTER the imports: each of these scripts loads .env at
+# module level with os.environ.setdefault, which must not decide the case.
+seat = json.loads(os.environ["_SEAT"])
+for _var in seat["unset"]:
+    os.environ.pop(_var, None)
+for _var, _value in seat["set"].items():
+    os.environ[_var] = _value
+
+# Measured before any patching, so the accord is between the scripts and the
+# REAL resolver, in this one process and this one environment.
+canonical = _llm_service.resolve_chat_endpoint()
+
+if os.environ.get("_SEAT_SENTINEL") == "1":
+    _llm_service.resolve_chat_endpoint = lambda *a, **k: (
+        "sk-sentinel-not-a-real-key",
+        "https://sentinel.invalid/v1",
+        "sentinel-model",
+    )
+
+import openai
+
+openai.OpenAI = _Recorder
+
+_SITES = {}
+
+
+def _snapshot(rel, model, construction):
+    _SITES[rel] = {
+        "model": model,
+        "base_url": construction.get("base_url"),
+        "api_key": construction.get("api_key"),
+    }
+
+
+_LEGACY = "scripts/run_capstone_c1.py"
+_before_calls = len(_Recorder.calls)
+_before_constructions = len(_Recorder.constructions)
+asyncio.run(modules[_LEGACY].run_zeroshot_baseline("A", "Texte synthetique."))
+assert len(_Recorder.calls) > _before_calls, "run_zeroshot_baseline made no call"
+_snapshot(
+    _LEGACY,
+    _Recorder.calls[_before_calls]["model"],
+    _Recorder.constructions[_before_constructions],
+)
+
+for _rel in (
+    "scripts/run_fb28_quality_headtohead.py",
+    "scripts/run_fb29_agentic_headtohead.py",
+    "scripts/run_fb32_decast_variance.py",
+):
+    _before_constructions = len(_Recorder.constructions)
+    _client, _model = modules[_rel]._get_llm_client()
+    _snapshot(_rel, _model, _Recorder.constructions[_before_constructions])
+
+Path(os.environ["_SEAT_OUT"]).write_text(
+    json.dumps(
+        {
+            "canonical": {"model": canonical[2], "base_url": canonical[1]},
+            "sites": _SITES,
+        }
+    ),
+    encoding="utf-8",
+)
+'''
+
+
+def _seat(set_vars: Dict[str, str]) -> Dict[str, Any]:
+    return {"set": set_vars, "unset": list(_ROUTE_VARS)}
+
+
+def _measure_the_scripts(
+    tmp_path: Path, seat: Dict[str, Any], sentinel: bool = False
+) -> Dict[str, Any]:
+    """Run the four sites in a subprocess under ``seat``; return what they sent."""
+    out = tmp_path / "seat.json"
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in _ROUTE_VARS
+        and key != "LLM_DETERMINISTIC_MODE"  # run_fb32 sys.exit()s on it at import
+        and not key.startswith("PYTEST_")
+    }
+    env.update(
+        {
+            "_SEAT_ROOT": str(REPO_ROOT),
+            "_SEAT_OUT": str(out),
+            "_SEAT": json.dumps(seat),
+            "_SEAT_SCRIPTS": json.dumps(list(_MEASUREMENT_SCRIPTS)),
+            "_SEAT_SENTINEL": "1" if sentinel else "0",
+            "PYTHONPATH": str(REPO_ROOT),
+        }
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", _SEAT_DRIVER],
+        cwd=str(REPO_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    assert out.exists(), (
+        f"the seat driver wrote no result (rc={proc.returncode}).\n"
+        f"--- stdout ---\n{proc.stdout[-2000:]}\n--- stderr ---\n{proc.stderr[-4000:]}"
+    )
+    return json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_measurement_scripts_agree_with_the_resolver_on_the_prescribed_seat(
+    tmp_path: Path,
+) -> None:
+    """THE measured divergence, on the seat ``.env.example`` prescribes.
+
+    Pre-repair the four scripts answered ``openai/gpt-5.6-luna`` — a string no
+    resolver renders — while the canonical resolver rendered the configured
+    ``OPENAI_CHAT_MODEL_ID``. So the failure is a **model value**, named per
+    script, never an ``ImportError``.
+    """
+    result = _measure_the_scripts(
+        tmp_path,
+        _seat(
+            {
+                "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+                "OPENROUTER_API_KEY": "sk-or-synthetic-not-a-real-key",
+                "OPENAI_CHAT_MODEL_ID": "openai/gpt-5.6-pro",
+            }
+        ),
+    )
+
+    canonical = result["canonical"]
+    assert canonical["model"] == "openai/gpt-5.6-pro", canonical
+
+    divergent = {
+        rel: site["model"]
+        for rel, site in result["sites"].items()
+        if site["model"] != canonical["model"]
+    }
+    assert not divergent, (
+        f"measurement scripts naming a model the run does not use: {divergent} "
+        f"(the resolver rendered {canonical['model']!r}) — they must call "
+        "resolve_chat_endpoint instead of re-deriving the toggle (#2352)."
+    )
+    # The endpoint follows too: a model without its route is half a provenance.
+    endpoints = {site["base_url"] for site in result["sites"].values()}
+    assert endpoints == {canonical["base_url"]}, (endpoints, canonical["base_url"])
+
+
+def test_measurement_scripts_accord_control_with_a_declared_openrouter_model(
+    tmp_path: Path,
+) -> None:
+    """Non-vacuity: this seat already agreed BEFORE the repair.
+
+    With ``OPENROUTER_CHAT_MODEL_ID`` set, the inline toggle and the resolver
+    rendered the same model — so a green here cannot be read as "the repair
+    fixed a case that was never broken". It pairs with the measured seat to show
+    the divergence was configuration-dependent.
+    """
+    result = _measure_the_scripts(
+        tmp_path,
+        _seat(
+            {
+                "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+                "OPENROUTER_API_KEY": "sk-or-synthetic-not-a-real-key",
+                "OPENROUTER_CHAT_MODEL_ID": "gpt-5.6-luna",
+                "OPENAI_CHAT_MODEL_ID": "openai/gpt-5.6-pro",  # never consulted
+            }
+        ),
+    )
+
+    assert result["canonical"]["model"] == "gpt-5.6-luna", result["canonical"]
+    models = {site["model"] for site in result["sites"].values()}
+    assert models == {"gpt-5.6-luna"}, result["sites"]
+
+
+def test_measurement_scripts_delegate_to_the_canonical_resolver(
+    tmp_path: Path,
+) -> None:
+    """Delegation, not coincidence: the scripts must follow a patched resolver.
+
+    A script that re-derived the toggle from the environment cannot see the
+    sentinel, whatever the environment says — so this reddens on any re-inlined
+    resolver, and it is the only one of the three that does so in *every*
+    configuration.
+    """
+    result = _measure_the_scripts(
+        tmp_path,
+        _seat(
+            {
+                "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+                "OPENROUTER_API_KEY": "sk-or-synthetic-not-a-real-key",
+                "OPENAI_CHAT_MODEL_ID": "openai/gpt-5.6-pro",
+            }
+        ),
+        sentinel=True,
+    )
+
+    models = {site["model"] for site in result["sites"].values()}
+    assert models == {"sentinel-model"}, result["sites"]
+    endpoints = {site["base_url"] for site in result["sites"].values()}
+    assert endpoints == {"https://sentinel.invalid/v1"}, result["sites"]
