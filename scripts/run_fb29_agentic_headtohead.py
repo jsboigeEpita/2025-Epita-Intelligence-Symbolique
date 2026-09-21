@@ -146,26 +146,20 @@ def _get_llm_client():
     """
     from openai import OpenAI
 
-    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    use_openrouter = bool(openrouter_base_url and openrouter_api_key)
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
     # Generous ceiling for reasoning-model calls on complex detector prompts.
     call_timeout = float(os.environ.get("FB38_CALL_TIMEOUT", "120"))
-    if use_openrouter:
-        model = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
-        client = OpenAI(
-            api_key=openrouter_api_key,
-            base_url=openrouter_base_url,
-            timeout=call_timeout,
-            max_retries=1,
-        )
-    else:
-        model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-        client = OpenAI(
-            api_key=os.environ.get("OPENAI_API_KEY"),
-            timeout=call_timeout,
-            max_retries=1,
-        )
+    # #2352: the route is decided by the ONE resolver — the inline toggle that
+    # used to live here labelled the baseline after a provider-prefixed literal
+    # ("openai/gpt-5.6-luna") no resolver renders.
+    api_key, base_url, model = resolve_chat_endpoint()
+    client = OpenAI(
+        api_key=api_key,
+        base_url=base_url,
+        timeout=call_timeout,
+        max_retries=1,
+    )
     return client, model
 
 

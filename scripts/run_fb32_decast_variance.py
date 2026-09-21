@@ -372,12 +372,18 @@ def DeepSynthesisReport_stub(state, source_meta):
 # ---------------------------------------------------------------------------
 
 def _get_llm_client():
+    """The client, on the route the ONE resolver decides (#2352).
+
+    The variance run measures one model; a local toggle that labelled it after
+    a provider-prefixed literal would make the measurement's own provenance
+    false without changing a single score.
+    """
     from openai import OpenAI
-    base = os.environ.get("OPENROUTER_BASE_URL")
-    key = os.environ.get("OPENROUTER_API_KEY")
-    if base and key:
-        return OpenAI(api_key=key, base_url=base), os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
-    return OpenAI(api_key=os.environ.get("OPENAI_API_KEY")), os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    api_key, base_url, model = resolve_chat_endpoint()
+    return OpenAI(api_key=api_key, base_url=base_url), model
 
 
 def _snap(val):
