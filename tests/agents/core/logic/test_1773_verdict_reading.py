@@ -34,14 +34,20 @@ class TestValidatePlFormulaReadsReturnValue:
     """Le verdict doit refléter le retour du handler, pas seulement l'absence d'exception."""
 
     def setup_method(self):
+        # #2368 : les deux noms sont résolus par le SUT en **imports
+        # paresseux** depuis leurs modules sources — ``TweetyInitializer``
+        # dans ``__init__`` (``from .tweety_initializer import …``) et
+        # ``PLHandler`` dans la propriété ``pl_handler``. Le module
+        # ``tweety_bridge`` ne porte donc **jamais** ces attributs, et
+        # patcher un module pour un nom qu'il n'a pas échoue au setup :
+        # les trois tests ne pouvaient pas tourner. On patche là où
+        # l'import paresseux va chercher.
         self._patchers = [
             patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer"
+                "argumentation_analysis.agents.core.logic.tweety_initializer."
+                "TweetyInitializer"
             ),
-            patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge."
-                "PropositionalLogicHandler"
-            ),
+            patch("argumentation_analysis.agents.core.logic.pl_handler.PLHandler"),
         ]
         self.mock_initializer_class = self._patchers[0].start()
         self.mock_pl_handler_class = self._patchers[1].start()
