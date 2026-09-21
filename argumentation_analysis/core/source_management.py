@@ -132,24 +132,36 @@ class UnifiedSourceManager:
             UnifiedSourceType.COMPLEX,
             UnifiedSourceType.ENC_FILE,
         ]:
+            # Import paresseux : atteindre ``leak_patterns`` par le package
+            # executerait ``evaluation/__init__`` et tirerait la stack LLM.
+            # ``scripts/security/scan_indexed_surfaces.py`` evite la meme
+            # chose par ``spec_from_file_location`` — ici un import differe
+            # suffit : ``_setup_logging`` ne tourne qu'une fois.
+            from argumentation_analysis.evaluation.leak_patterns import LEAK_RE
+
             # Réutiliser le filtre d'anonymisation existant
             class AnonymizeFilter(logging.Filter):
                 def filter(self, record):
                     if hasattr(record, "msg") and isinstance(record.msg, str):
                         msg = record.msg
-                        sensitive_patterns = [
-                            "Hitler",
-                            "Staline",
-                            "Mao",
-                            "Churchill",
-                            "Roosevelt",
-                            "Trump",
-                            "Biden",
-                            "Macron",
-                            "Poutine",
-                        ]
-                        for pattern in sensitive_patterns:
-                            msg = msg.replace(pattern, "[LEADER]")
+                        # Privacy regle 7 (#2168, #2343) : ce filtre enumerait
+                        # en dur des IDENTIFIANTS DE DOCUMENTS du corpus, dans
+                        # un fichier suivi par git. Un detecteur qui les liste
+                        # publie le recensement que le chiffrement protege —
+                        # « le detecteur a besoin des vrais noms » n'est pas une
+                        # licence. La liste est donc retiree et la redaction se
+                        # fait par CLASSE (vocabulaire public partage).
+                        #
+                        # Troc mesure le 2026-09-21 sur les 9 entrees retirees :
+                        # 6 etaient deja couvertes par le vocabulaire de classe,
+                        # 3 ne le sont pas. Ces 3 sont des identifiants
+                        # d'INSTANCE : ils ne peuvent etre re-couverts qu'en
+                        # derivant les jetons au runtime depuis les definitions
+                        # dechiffrees EN MEMOIRE — jamais en les re-listant ici.
+                        # Residu suivi en #2343. Le troc penche du bon cote : la
+                        # liste fuyait sur une surface indexee par GitHub, les 3
+                        # redactions perdues ne concernent que des logs locaux.
+                        msg = LEAK_RE.sub("[LEADER]", msg)
                         record.msg = msg
                     return True
 
