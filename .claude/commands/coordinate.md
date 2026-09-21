@@ -91,10 +91,25 @@ falsifier : si je l'avais écrite, elle serait passée par mon `HEAD`.
 ```bash
 SLUG=$(gh pr view N --json headRefName --jq .headRefName)
 git branch -a --list "*${SLUG##*/}*"                    # vide attendu si ce n'est pas moi
-grep -c "${SLUG##*/}" .git/logs/HEAD                    # 0 attendu si ce n'est pas moi
+# TOUS les reflogs, pas seulement le principal — un worktree lie tient le SIEN (voir ci-dessous)
+grep -c "${SLUG##*/}" .git/logs/HEAD .git/worktrees/*/logs/HEAD 2>/dev/null
 # CONTROLE POSITIF obligatoire — un slug d'une branche que J'AI reellement creee doit rendre > 0,
 # sinon le 0 ci-dessus ne prouve rien : [[feedback_negative_from_an_unproven_instrument]]
 ```
+
+⚠ **Le reflog principal ne voit PAS les branches creees dans un worktree lie** — et c'est la
+direction qui *autorise* un merge. Mesure R1033, PR #2354 ecrite ici par un sous-agent en
+worktree isole :
+
+| surface interrogee | rendu |
+|---|---|
+| `.git/logs/HEAD` (l'ancienne commande) | **0** — « pas moi », faux |
+| `.git/worktrees/agent-*/logs/HEAD` | **1** — ecrite ici |
+| controle positif : un slug cree dans le checkout principal, sur `.git/logs/HEAD` | **2** — l'instrument marche, sur la surface qu'il couvre |
+
+Le `0` n'etait donc pas un negatif : c'etait un angle mort. Des qu'un agent (le mien ou celui
+d'un worker) travaille en `isolation: "worktree"`, l'ancienne commande degenere en faux « pas
+moi » **silencieux**. `git worktree list` enumere les surfaces a couvrir si le glob echoue.
 
 **Instrument de corroboration — l'email pré-squash.** `--squash` le réécrit en
 `…@users.noreply.github.com` (60 commits sur 60 de `main`) : ce contrôle passe **avant** le
