@@ -40,7 +40,10 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 )
 from semantic_kernel.contents.chat_history import ChatHistory
 
-from argumentation_analysis.core.llm_service import create_llm_service
+from argumentation_analysis.core.llm_service import (
+    create_llm_service,
+    resolve_active_model_id,
+)
 from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
     UnifiedAnalysisState,
@@ -1025,6 +1028,35 @@ def _classify_formal_capabilities(
     return used, degraded, missing
 
 
+def _build_conversational_kernel() -> "sk.Kernel":
+    """Kernel + LLM service shared by every conversational agent and plugin.
+
+    Routes through create_llm_service so the OpenRouter toggle applies: if
+    OPENROUTER_BASE_URL + OPENROUTER_API_KEY are set, calls go to OpenRouter
+    (OpenAI-compatible); otherwise the official OpenAI endpoint is used.
+    force_authentic=True preserves the prior behavior (a real LLM was always
+    built here, never a mock, even under PYTEST_CURRENT_TEST). The model id is
+    delegated to ``resolve_active_model_id`` — the canonical resolver's model
+    output (#2352/#2370). It was read inline with a fallback literal, so the
+    OpenRouter jump and the #1930 obsolescence substitution never reached the
+    kernel path.
+    """
+    kernel = sk.Kernel()
+    model_id = resolve_active_model_id()
+    try:
+        llm_service = create_llm_service(
+            service_id="conversational_llm",
+            model_id=model_id,
+            force_authentic=True,
+        )
+    except ValueError as e:
+        raise RuntimeError(
+            f"{e} Conversational mode requires an LLM. Ensure .env is loaded."
+        )
+    kernel.add_service(llm_service)
+    return kernel
+
+
 async def _run_conversational_analysis_inner(
     text: str,
     max_turns_per_phase: int = 5,
@@ -1108,27 +1140,8 @@ async def _run_conversational_analysis_inner(
 
         reprompt_extractor = RepromptTraceExtractor()
 
-    # 1. Setup kernel + LLM
-    # Route through create_llm_service so the OpenRouter toggle applies: if
-    # OPENROUTER_BASE_URL + OPENROUTER_API_KEY are set, calls go to OpenRouter
-    # (OpenAI-compatible); otherwise the official OpenAI endpoint is used. This
-    # is the single linchpin service shared by every conversational agent and
-    # plugin, so the toggle here covers the whole pipeline. force_authentic=True
-    # preserves the prior behavior (a real LLM was always built here, never a
-    # mock, even under PYTEST_CURRENT_TEST).
-    kernel = sk.Kernel()
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-    try:
-        llm_service = create_llm_service(
-            service_id="conversational_llm",
-            model_id=model_id,
-            force_authentic=True,
-        )
-    except ValueError as e:
-        raise RuntimeError(
-            f"{e} Conversational mode requires an LLM. Ensure .env is loaded."
-        )
-    kernel.add_service(llm_service)
+    # 1. Setup kernel + LLM — one seam, one route (#2352/#2370)
+    kernel = _build_conversational_kernel()
 
     # 2. Setup shared state (#363: UnifiedAnalysisState for spectacular coverage)
     state_cls = UnifiedAnalysisState if spectacular else RhetoricalAnalysisState
