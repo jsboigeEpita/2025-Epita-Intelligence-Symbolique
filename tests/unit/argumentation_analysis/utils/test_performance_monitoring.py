@@ -1,6 +1,10 @@
 # tests/unit/argumentation_analysis/utils/test_performance_monitoring.py
 """Tests for performance monitoring decorator."""
 
+import asyncio
+import inspect
+import json
+import logging
 import pytest
 import time
 
@@ -103,3 +107,65 @@ class TestMonitorPerformance:
         elapsed = time.perf_counter() - start
         # 100 calls should take less than 1 second
         assert elapsed < 1.0
+
+
+class TestMonitorPerformanceOnCoroutines:
+    """#2340 — une coroutine décorée doit rester une coroutine.
+
+    Un wrapper synchrone rendrait la coroutine sans l'attendre : la mesure
+    porterait alors sur sa *création* (~0 ms) et `iscoroutinefunction` sur la
+    fonction décorée répondrait False, cassant toute introspection async.
+    """
+
+    def test_decorated_coroutine_stays_a_coroutine_function(self):
+        @monitor_performance()
+        async def coro():
+            return 42
+
+        assert inspect.iscoroutinefunction(coro)
+
+    async def test_awaited_result_is_the_value_not_a_coroutine(self):
+        @monitor_performance(log_args=True)
+        async def add(a, b):
+            await asyncio.sleep(0)
+            return a + b
+
+        result = await add(2, 3)
+        assert result == 5
+
+    async def test_exception_propagates_through_async_wrapper(self):
+        @monitor_performance()
+        async def failing():
+            raise ValueError("boom")
+
+        with pytest.raises(ValueError, match="boom"):
+            await failing()
+
+    async def test_measured_time_covers_the_awaited_body(self):
+        """Le temps loggué doit couvrir l'exécution, pas la seule création.
+
+        `performance_logger` a `propagate = False` : `caplog` (branché sur le
+        logger racine) ne le voit pas. On pose donc un handler sur ce logger-là.
+        """
+
+        @monitor_performance()
+        async def slow():
+            await asyncio.sleep(0.05)
+
+        records = []
+
+        class _Collector(logging.Handler):
+            def emit(self, record):
+                records.append(record.getMessage())
+
+        perf_logger = logging.getLogger("performance_monitor")
+        handler = _Collector()
+        perf_logger.addHandler(handler)
+        try:
+            await slow()
+        finally:
+            perf_logger.removeHandler(handler)
+
+        durations = [json.loads(message)["execution_time_ms"] for message in records]
+        assert durations, "le logger de performance n'a rien émis"
+        assert max(durations) >= 40.0, durations

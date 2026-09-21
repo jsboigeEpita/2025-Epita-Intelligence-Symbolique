@@ -164,7 +164,7 @@ class MoriartyTools(OracleTools):
         name="provide_game_clue",
         description="Fournit un indice stratégique selon la politique de révélation.",
     )
-    def provide_game_clue(
+    async def provide_game_clue(
         self, requesting_agent: str, clue_type: str = "general"
     ) -> str:
         """
@@ -183,7 +183,7 @@ class MoriartyTools(OracleTools):
                 f"Demande d'indice par {requesting_agent}, type: {clue_type}"
             )
 
-            response = self.dataset_manager.request_clue(requesting_agent)
+            response = await self.dataset_manager.request_clue(requesting_agent)
 
             if response.authorized and response.data:
                 clue = response.data.get("clue", "Aucun indice disponible")

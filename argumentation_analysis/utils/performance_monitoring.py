@@ -6,6 +6,7 @@ Ce module fournit des outils pour monitorer la performance des fonctions critiqu
 notamment via des décorateurs et des gestionnaires de contexte.
 """
 
+import inspect
 import time
 import logging
 import json
@@ -50,7 +51,44 @@ def monitor_performance(log_args: bool = False):
                          À utiliser avec prudence pour ne pas exposer de données sensibles.
     """
 
+    def _emit(func, start_time, args, kwargs):
+        execution_time = time.perf_counter() - start_time
+
+        log_data = {
+            "execution_time_ms": round(execution_time * 1000, 2),
+            "function_name": func.__qualname__,
+        }
+
+        if log_args:
+            # Conversion prudente des arguments en string
+            try:
+                args_repr = [repr(a) for a in args]
+                kwargs_repr = {k: repr(v) for k, v in kwargs.items()}
+                log_data["arguments"] = {
+                    "args": args_repr,
+                    "kwargs": kwargs_repr,
+                }
+            except Exception:
+                log_data["arguments"] = "Could not serialize arguments"
+
+        performance_logger.info(json.dumps(log_data))
+
     def decorator(func):
+        if inspect.iscoroutinefunction(func):
+            # Sans cette branche, le wrapper synchrone mesurerait la *création*
+            # de la coroutine (~0 ms) au lieu de son exécution, et
+            # `inspect.iscoroutinefunction` répondrait False sur la fonction
+            # décorée (#2340).
+            @wraps(func)
+            async def async_wrapper(*args, **kwargs):
+                start_time = time.perf_counter()
+                try:
+                    return await func(*args, **kwargs)
+                finally:
+                    _emit(func, start_time, args, kwargs)
+
+            return async_wrapper
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             start_time = time.perf_counter()
@@ -58,27 +96,7 @@ def monitor_performance(log_args: bool = False):
                 result = func(*args, **kwargs)
                 return result
             finally:
-                end_time = time.perf_counter()
-                execution_time = end_time - start_time
-
-                log_data = {
-                    "execution_time_ms": round(execution_time * 1000, 2),
-                    "function_name": func.__qualname__,
-                }
-
-                if log_args:
-                    # Conversion prudente des arguments en string
-                    try:
-                        args_repr = [repr(a) for a in args]
-                        kwargs_repr = {k: repr(v) for k, v in kwargs.items()}
-                        log_data["arguments"] = {
-                            "args": args_repr,
-                            "kwargs": kwargs_repr,
-                        }
-                    except Exception:
-                        log_data["arguments"] = "Could not serialize arguments"
-
-                performance_logger.info(json.dumps(log_data))
+                _emit(func, start_time, args, kwargs)
 
         return wrapper
 
