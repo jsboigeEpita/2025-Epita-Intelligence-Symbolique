@@ -28,7 +28,7 @@ import subprocess
 import zipfile
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import Dict, List, Optional, Sequence
 from tqdm.auto import tqdm
 
 from argumentation_analysis.core import tweety_assembly
@@ -38,6 +38,32 @@ class JVMStartupTimeoutError(TimeoutError):
     """Exception raised when JVM startup exceeds the configured timeout."""
 
     pass
+
+
+class TweetyClasspathVersionError(RuntimeError):
+    """The tree holds Tweety classes, none at the version the code is written for.
+
+    Raised by ``_build_tweety_classpath`` when a version has to be *chosen* and the
+    configured one is absent (#2367). The alternative -- serving the
+    alphabetically-last fat jar -- is the workaround this exception retires: a
+    disagreement between the configured API level and the jars on disk is
+    information, and booting anyway destroys it silently. #2278 removed the
+    ``JVM_TWEETY_VERSION`` pin that used to hide exactly this class.
+
+    Both versions travel on the exception (``configured`` / ``present``) so a
+    caller can name them without re-deriving them from the filesystem.
+    """
+
+    def __init__(self, configured: str, present: Sequence[str]):
+        self.configured = configured
+        self.present = tuple(present)
+        super().__init__(
+            f"aucun jar ne porte des classes Tweety de la version configurée "
+            f"v{configured}, alors que l'arbre en porte d'autres versions "
+            f"({', '.join(present)}) — refus de démarrer sur une version "
+            f"arbitraire ; assemblez v{configured} ou configurez la version "
+            f"présente (JVM_TWEETY_VERSION)"
+        )
 
 
 # Default timeout for JVM startup (can be overridden via settings)
@@ -803,6 +829,16 @@ def _configure_external_tools():
         logger.info(f"  {tool_name} path registered: {path}")
 
 
+#: The one shape that claims to be the self-contained assembly (#1874/#1880).
+#: Used ONLY to decide which junk to drop -- never to select a classpath.
+FAT_JAR_SUFFIX = "-with-dependencies.jar"
+
+
+def _looks_like_fat_jar(name: str) -> bool:
+    """True when ``name`` claims the fat-assembly shape (see ``FAT_JAR_SUFFIX``)."""
+    return name.lower().endswith(FAT_JAR_SUFFIX)
+
+
 def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     """Ordered classpath of the Tweety jars present in ``tweety_libs_dir``.
 
@@ -825,68 +861,112 @@ def _build_tweety_classpath(tweety_libs_dir: Path) -> list[str]:
     Tweety classes**, which is the same rule ``_jar_carrying`` applies in the #1798
     tests: select by content, never by name.
 
-    #2246: a version tag matching MORE than one uber jar means the directory holds
-    the legacy module layout (each module + its dependencies, all fat-named) --
-    they all go on the classpath, and any reduction to a single jar among several
-    is logged, never silent.
+    #2246: several class-carrying jars can share a version tag -- the legacy
+    module layout deposits one jar per module. They all go on the classpath:
+    returning only the alphabetically-first amputates every module outside that
+    jar's transitive closure (arg.aspic measured absent). Any reduction to a
+    subset of the class-carrying jars is logged, never silent.
+
+    #2367 -- CONTENT DECIDES MEMBERSHIP, VERSION DECIDES SELECTION. Two filters
+    that were each correct in isolation were applied in the wrong order, and the
+    order was the defect:
+
+    * the nominal pre-filter (``"with-dependencies" in name``) ran FIRST, so the
+      content check only ever saw the jars the name had already kept. Measured:
+      the module layout deposits ``org.tweetyproject.tweety-full-1.31.jar``
+      -- the aggregation *name* -- holding **1947 bytes and zero Tweety classes**,
+      while the 49 jars that do carry them are named ``<module>-1.31.jar`` and hold
+      no ``-with-dependencies`` suffix. Every one of them was dropped before the
+      content check could see them, and the selector then served a fat jar of an
+      older version.
+    * the version test was spelled ``f"-{v}-"`` -- a **trailing** dash. The module
+      layout writes the version LAST (``…arg.aspic-1.31.jar``), so that spelling
+      matched nothing there. ``tweety_assembly.versions_in_name`` is the shared
+      parser that reads both forms; the two readers no longer drift.
     """
     all_jars = sorted(tweety_libs_dir.glob("*.jar"), key=lambda p: p.name)
-    named_fat = [jar for jar in all_jars if "with-dependencies" in jar.name.lower()]
-    uber_jars = [
-        jar for jar in named_fat if tweety_assembly.carries_tweety_classes(jar)
-    ]
-    for rejected in set(named_fat) - set(uber_jars):
+    carrying = [jar for jar in all_jars if tweety_assembly.carries_tweety_classes(jar)]
+    # A jar that takes the FAT name (``-with-dependencies``: "I am the self-contained
+    # assembly") yet carries no Tweety class is that claim falsified by its content --
+    # the 0-byte, truncated and wrong-content shapes of #1874/#1880, i.e. a failed
+    # download. It must not preempt the assembly, and it must not ride along on the
+    # classpath either. The name is used here to identify *junk to drop*, never to
+    # select which classpath -- the thin aggregator (``tweety-full-<v>.jar``, no fat
+    # suffix, 0 class) makes no such claim and stays, as #1874 pins.
+    fake_fat = {
+        jar for jar in all_jars if jar not in carrying and _looks_like_fat_jar(jar.name)
+    }
+    for rejected in sorted(fake_fat):
         logger.warning(
             "%s porte le nom d'un fat jar mais aucune classe Tweety (%d octet(s)): "
             "ignore pour le classpath.",
             rejected.name,
             rejected.stat().st_size if rejected.exists() else 0,
         )
-    if uber_jars:
-        # #2246 (piste A, arbitré): several uber jars can share the version tag --
-        # the legacy 1.28 layout deposits ~34 module ``*-with-dependencies`` jars
-        # that all match ``-1.28-``. Returning only the alphabetically-first
-        # amputates every module outside that jar's transitive closure (arg.aspic
-        # measured absent). When the version matches more than one, they ALL go
-        # on the classpath; any reduction to one jar among several is logged.
-        matching = [
-            jar
-            for jar in sorted(uber_jars)
-            if f"-{settings.jvm.tweety_version}-" in jar.name
+    configured = settings.jvm.tweety_version
+    matching = [
+        jar
+        for jar in carrying
+        if configured in tweety_assembly.versions_in_name(jar.name)
+    ]
+    if matching:
+        # The class-carrying jars AT the configured version, plus every other jar
+        # except the fake-fat junk above. Those others are the transitive
+        # third-party dependencies: required by the module layout (jgrapht, sat4j,
+        # commons-math are resolved from separate jars), harmless inside a fat
+        # assembly. Class-carrying jars of ANOTHER version are excluded -- putting
+        # two versions of the same classes on one classpath is the shadowing
+        # #2246/#1874 warn about -- and the exclusion is said out loud.
+        others = [
+            jar for jar in all_jars if jar not in carrying and jar not in fake_fat
         ]
-        if matching:
-            if len(matching) > 1:
-                logger.info(
-                    "#2246: %d fat jar(s) portent -%s-: classpath complet des %d "
-                    "(disposition en jars de module).",
-                    len(matching),
-                    settings.jvm.tweety_version,
-                    len(matching),
-                )
-            elif len(uber_jars) > 1:
-                logger.warning(
-                    "#2246: classpath réduit à 1 fat jar sur %d — seul celui-ci "
-                    "porte -%s-.",
-                    len(uber_jars),
-                    settings.jvm.tweety_version,
-                )
-            return [str(jar.resolve()) for jar in matching]
-        # No jar carries the configured version: prefer the highest name
-        # (`sorted()[-1]` alone is not version order — it breaks at 1.9 vs 1.10,
-        # where "1.9" sorts last) and SAY the classpath is reduced (#2246: the
-        # reduction must never be silent again).
-        logger.warning(
-            "#2246: classpath réduit à 1 fat jar sur %d — aucun ne porte -%s- "
-            "(fallback sur le dernier par ordre alphabétique).",
-            len(uber_jars),
-            settings.jvm.tweety_version,
+        shadowed = sorted(
+            {
+                version
+                for jar in carrying
+                for version in tweety_assembly.versions_in_name(jar.name)
+            }
+            - {configured},
+            key=tweety_assembly.version_key,
         )
-        return [str(sorted(uber_jars)[-1].resolve())]
-    # A named-fat jar rejected just above is unusable, so it does not belong on the
-    # fallback classpath either. Only those are dropped: a `copy-dependencies`
-    # assembly legitimately holds ~80 third-party jars carrying no Tweety class.
-    usable = [jar for jar in all_jars if jar not in set(named_fat) - set(uber_jars)]
-    jar_entries = [str(jar.resolve()) for jar in usable]
+        if shadowed:
+            logger.warning(
+                "#2367: %d jar(s) portant des classes Tweety d'une AUTRE version "
+                "(%s) écartés du classpath — une seule version de classes sur un "
+                "classpath, la configurée v%s.",
+                sum(
+                    1
+                    for jar in carrying
+                    if configured not in tweety_assembly.versions_in_name(jar.name)
+                ),
+                ", ".join(f"v{v}" for v in shadowed),
+                configured,
+            )
+        if len(matching) > 1:
+            logger.info(
+                "#2246: %d jar(s) portent -%s-: classpath complet de ces %d "
+                "(disposition en jars de module).",
+                len(matching),
+                configured,
+                len(matching),
+            )
+        return [str(jar.resolve()) for jar in matching + others]
+    if carrying:
+        present = sorted(
+            {
+                version
+                for jar in carrying
+                for version in tweety_assembly.versions_in_name(jar.name)
+            },
+            key=tweety_assembly.version_key,
+        )
+        if not present:  # class-carrying, yet no version tag anywhere in the names
+            present = ["(aucun jeton de version)"]
+        raise TweetyClasspathVersionError(configured, present)
+    # Nothing carries a Tweety class at all (a directory of unrelated jars): keep
+    # the historical behaviour rather than refusing -- there is no version to
+    # disagree about, and the caller's `if not jar_entries` refusal stays intact.
+    jar_entries = [str(jar.resolve()) for jar in all_jars]
     if not jar_entries:
         logger.critical(f"Aucun JAR trouvé dans {tweety_libs_dir}. Arrêt.")
     return jar_entries
@@ -1011,7 +1091,17 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
         os.environ["JAVA_HOME"] = java_home
 
         tweety_libs_dir = PROJ_ROOT / settings.jvm.tweety_libs_dir
-        jar_entries = _build_tweety_classpath(tweety_libs_dir)
+        try:
+            jar_entries = _build_tweety_classpath(tweety_libs_dir)
+        except TweetyClasspathVersionError as exc:
+            # Refusal, not degradation: no classpath may be assembled from a
+            # version the code was not written for, and booting on one is the
+            # silent-arbitrary choice #2367 removes. The message names both
+            # versions; it is critical because a WARNING in a 40-line JVM
+            # startup reads as noise (measured: the #2246 warning never stopped
+            # anything).
+            logger.critical("Classpath Tweety refusé — %s", exc)
+            return False
         if not jar_entries:
             return False
 
