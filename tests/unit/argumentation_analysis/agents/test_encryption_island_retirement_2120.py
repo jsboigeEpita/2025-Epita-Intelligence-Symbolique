@@ -16,11 +16,17 @@ Function-by-function preservation proof (arbitration DoD) lives in the PR
 body: every function has an equal-or-richer living equivalent, so nothing is
 ported. ``deploy_and_run_scripts.ps1`` is retired with the island — its sole
 purpose was deploying these four scripts (two of which no longer existed).
+
+#2365: the retirement is measured on **sources**, not on directory existence —
+``git rm`` cannot delete an ignored, untracked ``__pycache__/``, so the
+directory outlives the retirement on any machine that ever imported the island
+(measured: four ``.pyc``, no source, path absent from ``origin/main``).
 """
 
 import subprocess
 import sys
 from pathlib import Path
+from typing import List
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ISLAND = REPO_ROOT / "argumentation_analysis" / "agents" / "tools" / "encryption"
@@ -55,15 +61,64 @@ def _tracked_files() -> list[str]:
     return [line for line in out.stdout.splitlines() if line.strip()]
 
 
+def _island_sources(island: Path = ISLAND) -> List[str]:
+    """Sources still living under the retired island path (#2365).
+
+    Directory existence is NOT the measure. ``git rm`` cannot delete an
+    ignored, untracked ``__pycache__/``, so a machine that ever imported the
+    island keeps the directory forever while the retirement holds — measured:
+    four ``.pyc`` and no source, on a checkout whose ``origin/main`` carries no
+    entry under the path at all. What would actually resurrect the capability
+    is a **source file** (or any tracked file), so those are what is counted —
+    a bytecode cache with no source is not importable and is not a capability.
+    """
+    found: List[str] = []
+    try:
+        prefix = island.relative_to(REPO_ROOT).as_posix() + "/"
+    except ValueError:
+        prefix = None  # outside the repo: only the on-disk half applies
+    if prefix is not None:
+        found += sorted(rel for rel in _tracked_files() if rel.startswith(prefix))
+    if island.is_dir():
+        found += sorted(
+            path.relative_to(island).as_posix()
+            for path in island.rglob("*.py")
+            if "__pycache__" not in path.parts
+        )
+    return sorted(set(found))
+
+
 def test_island_and_its_deploy_companion_are_retired_2120():
-    assert not ISLAND.exists(), (
-        f"{ISLAND} still exists — the R975 arbitration retired this "
+    sources = _island_sources()
+    assert not sources, (
+        f"{ISLAND} still carries {sources} — the R975 arbitration retired this "
         "unexecutable second implementation of the encryption capability"
     )
     assert not DEPLOY_COMPANION.exists(), (
         "deploy_and_run_scripts.ps1 only deployed the four island scripts "
         "(two of which no longer existed) — it must not outlive them"
     )
+
+
+def test_retirement_guard_can_still_fail_2365(tmp_path: Path):
+    """Non-vacuity: the repaired guard must stay able to redden.
+
+    A retired island whose directory survives as an ignored ``__pycache__``
+    reads as retired; one source file under the same path does not.
+    """
+    island = tmp_path / "encryption"
+    (island / "__pycache__").mkdir(parents=True)
+    (island / "__pycache__" / "retired.cpython-310.pyc").write_bytes(b"\x00\x01")
+
+    assert (
+        _island_sources(island) == []
+    ), "a bytecode cache with no source is not a capability — #2365"
+
+    (island / "resurrected.py").write_text("x = 1\n", encoding="utf-8")
+
+    assert _island_sources(island) == [
+        "resurrected.py"
+    ], "a source file under the retired path IS the island coming back"
 
 
 def test_no_dangling_island_references_in_living_docs_2120():
