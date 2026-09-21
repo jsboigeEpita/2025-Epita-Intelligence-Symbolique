@@ -948,7 +948,18 @@ class UnifiedWebOrchestrator:
 
         # On configure le logger de la librairie, sans toucher à la config de base
         # pour permettre au script appelant de garder sa propre configuration.
-        logger = logging.getLogger(__name__)
+        # #2336 : l'identité du logger dérive de la DESTINATION — le logger du
+        # module est partagé par toutes les instances, et le garde
+        # « if not logger.handlers » faisait que la première instance du process
+        # fixait le fichier : toute instance suivante voyait son logging.file
+        # silencieusement ignoré (fichier jamais créé, lignes parties chez la
+        # première). Par destination : fichiers distincts ⇒ loggers distincts
+        # (chacun son handler) ; même fichier ⇒ même logger (le garde
+        # anti-doublon garde son intention et devient correct).
+        log_token = "".join(
+            ch if ch.isalnum() or ch in "-_." else "_" for ch in str(log_file.resolve())
+        )
+        logger = logging.getLogger(f"{__name__}[{log_token}]")
         logger.setLevel(level)
 
         # S'assurer de ne pas ajouter de handlers si ils existent déjà
