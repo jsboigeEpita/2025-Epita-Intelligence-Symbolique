@@ -185,11 +185,15 @@ class InformalAnalysisAgent(BaseAgent):
             f"Analyse sémantique des sophismes pour un texte de {len(text)} caractères..."
         )
         try:
+            # #2341: un seul KernelArguments, sous le nom que le template connaît.
+            # `prompt_analyze_fallacies_v3_tool_use` porte le slot `{{$input}}` ; un
+            # kwarg `text_to_analyze` laissait ce slot non résolu et envoyait au LLM
+            # la consigne d'analyse sans l'argument à analyser.
             arguments = KernelArguments(input=text)
             result = await self.kernel.invoke(
                 plugin_name="InformalAnalyzer",
                 function_name="semantic_AnalyzeFallacies",
-                arguments=KernelArguments(text_to_analyze=text),
+                arguments=arguments,
             )
 
             # Le traitement du résultat dépendra du format de sortie du prompt.
