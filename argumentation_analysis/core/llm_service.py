@@ -153,14 +153,26 @@ def get_determinism_params(model_id: Optional[str] = None) -> Dict[str, Any]:
     return params
 
 
-def _log_resolved_llm_config(api_key: str, base_url: str, model_id: str, source: str) -> None:
+def _log_resolved_llm_config(
+    api_key: str, base_url: str, model_id: str, source: str
+) -> None:
     """Log the resolved LLM config in one line — makes silent divergence visible (#2281).
+
+    Also the single funnel for the declared-route guard (#2322): every
+    resolution site in this module logs through here, so the assertion lives
+    here and covers them all — the log line is emitted BEFORE the guard
+    raises, so a divergent run leaves the evidence in its log.
 
     Args:
         api_key: the resolved key (empty means none configured)
         base_url: the resolved endpoint
         model_id: the resolved model id
         source: human-readable origin (e.g. "OPENROUTER_API_KEY+OPENROUTER_BASE_URL", "OPENAI_API_KEY")
+
+    Raises:
+        LLMRouteDivergenceError: when ``LLM_EXPECTED_ROUTE`` is declared and
+            the resolved route diverges from it (see
+            :func:`assert_declared_route`).
     """
     provider = "OpenRouter" if base_url and "openrouter" in base_url else "OpenAI"
     logger.info(
@@ -171,6 +183,81 @@ def _log_resolved_llm_config(api_key: str, base_url: str, model_id: str, source:
         source,
         "present" if api_key else "ABSENT",
     )
+    assert_declared_route(base_url, model_id, source)
+
+
+class LLMRouteDivergenceError(RuntimeError):
+    """The declared canonical route and the resolved route disagree (#2322).
+
+    Raised by :func:`assert_declared_route` when ``LLM_EXPECTED_ROUTE`` is
+    declared and the environment resolves elsewhere — the failure mode where
+    a lane carrying only ``OPENAI_API_KEY`` silently routes to
+    api.openai.com and dies later in scattered 400s instead of one named
+    error at startup. The guard never reroutes: fix the environment or the
+    declaration.
+    """
+
+
+_EXPECTED_ROUTE_ENV = "LLM_EXPECTED_ROUTE"
+
+
+def _classify_route(base_url: str) -> str:
+    """Classify a resolved endpoint the way the log line presents it.
+
+    Same heuristic as ``_log_resolved_llm_config``: an OpenRouter substring
+    reads as ``openrouter``, everything else as the OpenAI-compatible default
+    (``openai``) — including custom local endpoints, which simply never
+    declare ``LLM_EXPECTED_ROUTE`` and are unaffected.
+    """
+    return "openrouter" if base_url and "openrouter" in base_url else "openai"
+
+
+def assert_declared_route(base_url: str, model_id: str, source: str) -> None:
+    """Assert the resolved route matches the DECLARED canonical route (#2322).
+
+    The declaration is opt-in via ``LLM_EXPECTED_ROUTE``, set by the run that
+    requires a specific route (a CI lane, a benchmark harness) — it is never
+    hardcoded for everyone, so local runs on other routes are unaffected:
+
+    - unset → no-op (behavior unchanged);
+    - empty string → WARNING + no-op (#2281 — empty ≠ absent);
+    - ``openrouter`` or ``openrouter:<model_id>`` → the resolved provider
+      (and model, when declared) MUST match, else :class:`LLMRouteDivergenceError`
+      naming both sides. Never auto-corrects.
+
+    Args:
+        base_url: the resolved endpoint
+        model_id: the resolved model id
+        source: the resolution source, echoed in the error
+    """
+    raw = os.environ.get(_EXPECTED_ROUTE_ENV)
+    if raw is None:
+        return
+    declared = raw.strip()
+    if not declared:
+        logger.warning(
+            "%s is set to an empty string (#2281) — treated as not declared. "
+            "Remove the line from the environment (empty ≠ absent).",
+            _EXPECTED_ROUTE_ENV,
+        )
+        return
+    declared_provider, _, declared_model = declared.lower().partition(":")
+    resolved_provider = _classify_route(base_url)
+    mismatches = []
+    if declared_provider != resolved_provider:
+        mismatches.append(
+            f"provider declared={declared_provider} resolved={resolved_provider}"
+        )
+    if declared_model and model_id and model_id.lower() != declared_model:
+        mismatches.append(f"model declared={declared_model} resolved={model_id}")
+    if mismatches:
+        raise LLMRouteDivergenceError(
+            f"LLM route divergence (#2322): {'; '.join(mismatches)} — "
+            f"endpoint={base_url or '(default)'} source={source}. The "
+            f"declaration ({_EXPECTED_ROUTE_ENV}={declared}) and the environment "
+            "resolve to different routes. Fix the environment or the "
+            "declaration — this guard never reroutes."
+        )
 
 
 def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str, str]:
@@ -209,7 +296,9 @@ def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str
             os.environ.get("OPENAI_CHAT_MODEL_ID", default_model),
         )
         model_id = substitute_obsolete_model(model_id, "OPENROUTER_CHAT_MODEL_ID")
-        _log_resolved_llm_config(api_key, base_url, model_id, "OPENROUTER_API_KEY+OPENROUTER_BASE_URL")
+        _log_resolved_llm_config(
+            api_key, base_url, model_id, "OPENROUTER_API_KEY+OPENROUTER_BASE_URL"
+        )
         return api_key, base_url, model_id
     raw_key = os.environ.get("OPENAI_API_KEY")
     if raw_key is not None and raw_key.strip() == "":
@@ -333,7 +422,11 @@ def create_llm_service(
         api_key,
         openrouter_base_url or "https://api.openai.com/v1",
         model_id,
-        "OPENROUTER_API_KEY+OPENROUTER_BASE_URL" if use_openrouter else "OPENAI_API_KEY",
+        (
+            "OPENROUTER_API_KEY+OPENROUTER_BASE_URL"
+            if use_openrouter
+            else "OPENAI_API_KEY"
+        ),
     )
 
     resilient_client = get_resilient_async_client()
