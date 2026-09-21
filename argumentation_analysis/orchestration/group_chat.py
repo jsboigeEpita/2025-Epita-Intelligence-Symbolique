@@ -250,26 +250,6 @@ class GroupChatOrchestration:
 
         return status
 
-    def cleanup_session(self) -> bool:
-        """
-        Nettoie la session actuelle et libère les ressources.
-
-        Returns:
-            True si le nettoyage réussit
-        """
-        try:
-            self.logger.info(f"Nettoyage de la session: {self.session_id}")
-
-            self.active_agents.clear()
-            self.conversation_history.clear()
-            self.session_id = None
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Erreur lors du nettoyage de la session: {e}")
-            return False
-
     def coordinate_analysis_async(
         self,
         text: str,
