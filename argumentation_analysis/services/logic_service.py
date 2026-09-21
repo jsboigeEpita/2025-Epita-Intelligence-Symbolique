@@ -242,37 +242,6 @@ class LogicService:
 
         return result
 
-    def get_service_status(self) -> Dict[str, Any]:
-        """
-        Retourne le statut du service de logique.
-
-        Returns:
-            Dictionnaire du statut du service
-        """
-        return {
-            "service_name": "LogicService",
-            "status": "active",
-            "logic_agents": self.logic_agents,
-            "active_sessions": len(self.active_sessions),
-            "cached_analyses": len(self.analysis_cache),
-            "timestamp": datetime.now().isoformat(),
-        }
-
-    def clear_cache(self) -> bool:
-        """
-        Vide le cache d'analyses.
-
-        Returns:
-            True si le nettoyage réussit
-        """
-        try:
-            self.analysis_cache.clear()
-            self.logger.info("Cache d'analyses vidé")
-            return True
-        except Exception as e:
-            self.logger.error(f"Erreur lors du vidage du cache: {e}")
-            return False
-
     # Méthodes privées pour l'analyse
 
     def _generate_analysis_id(self, text: str, logic_type: str) -> str:
