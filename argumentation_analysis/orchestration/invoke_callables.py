@@ -15,7 +15,17 @@ import os
 import re
 import time
 from contextlib import contextmanager
-from typing import Dict, Any, Awaitable, Callable, Iterator, Optional, List, Tuple
+from typing import (
+    Dict,
+    Any,
+    Awaitable,
+    Callable,
+    Final,
+    Iterator,
+    Optional,
+    List,
+    Tuple,
+)
 
 from argumentation_analysis.core.reading_window import (
     reading_state_from_context,
@@ -181,17 +191,13 @@ __all__ = [
 ]
 
 
-def _get_openai_client() -> Tuple[Any, str]:
-    """Create an AsyncOpenAI client + model id from environment variables.
+def _resolve_llm_route() -> Tuple[str, str, str, str]:
+    """Resolve (api_key, base_url, model_id, provider) from the environment.
 
-    Honors the OpenRouter toggle (mirrors create_llm_service): if
-    OPENROUTER_BASE_URL + OPENROUTER_API_KEY are set, the client targets
-    OpenRouter (OpenAI-compatible) with the provider-prefixed
-    OPENROUTER_CHAT_MODEL_ID; otherwise the official OpenAI endpoint is used.
-    This routes every raw-SDK caller through the same provider, so they no
-    longer hit OpenAI's quota when OpenRouter is configured.
-
-    Returns (client, model_id) or (None, "") if no API key is available.
+    Single route resolution shared by the async enrichment client and the
+    sync agentic-detector client (#2331) — the OpenRouter toggle lives in
+    exactly one place. An empty ``api_key`` means "no route" for both
+    consumers. Logging mirrors the historical ``_get_openai_client`` lines.
     """
     openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
     openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
@@ -207,29 +213,44 @@ def _get_openai_client() -> Tuple[Any, str]:
             base_url,
             model_id,
         )
-    else:
-        raw_key = os.environ.get("OPENAI_API_KEY")
-        if raw_key is not None and raw_key.strip() == "":
-            logger.warning(
-                "OPENAI_API_KEY is set to an empty string (#2281) — treated as "
-                "not configured. Remove the line from .env (empty ≠ absent)."
-            )
-        api_key = raw_key or ""
-        raw_base_url = os.environ.get("OPENAI_BASE_URL")
-        if raw_base_url is not None and raw_base_url.strip() == "":
-            logger.warning(
-                "OPENAI_BASE_URL is set to an empty string (#2281) — using the "
-                "default endpoint. Remove the line from .env (empty ≠ absent)."
-            )
-            raw_base_url = None
-        base_url = raw_base_url or "https://api.openai.com/v1"
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-        logger.info(
-            "LLM config resolved: provider=OpenAI endpoint=%s model=%s source=OPENAI_API_KEY",
-            base_url,
-            model_id,
+        return api_key, base_url, model_id, "openrouter"
+    raw_key = os.environ.get("OPENAI_API_KEY")
+    if raw_key is not None and raw_key.strip() == "":
+        logger.warning(
+            "OPENAI_API_KEY is set to an empty string (#2281) — treated as "
+            "not configured. Remove the line from .env (empty ≠ absent)."
         )
+    api_key = raw_key or ""
+    raw_base_url = os.environ.get("OPENAI_BASE_URL")
+    if raw_base_url is not None and raw_base_url.strip() == "":
+        logger.warning(
+            "OPENAI_BASE_URL is set to an empty string (#2281) — using the "
+            "default endpoint. Remove the line from .env (empty ≠ absent)."
+        )
+        raw_base_url = None
+    base_url = raw_base_url or "https://api.openai.com/v1"
+    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+    logger.info(
+        "LLM config resolved: provider=OpenAI endpoint=%s model=%s source=OPENAI_API_KEY",
+        base_url,
+        model_id,
+    )
+    return api_key, base_url, model_id, "openai"
 
+
+def _get_openai_client() -> Tuple[Any, str]:
+    """Create an AsyncOpenAI client + model id from environment variables.
+
+    Honors the OpenRouter toggle (mirrors create_llm_service): if
+    OPENROUTER_BASE_URL + OPENROUTER_API_KEY are set, the client targets
+    OpenRouter (OpenAI-compatible) with the provider-prefixed
+    OPENROUTER_CHAT_MODEL_ID; otherwise the official OpenAI endpoint is used.
+    This routes every raw-SDK caller through the same provider, so they no
+    longer hit OpenAI's quota when OpenRouter is configured.
+
+    Returns (client, model_id) or (None, "") if no API key is available.
+    """
+    api_key, base_url, model_id, _provider = _resolve_llm_route()
     if not api_key:
         return None, ""
     try:
@@ -238,6 +259,58 @@ def _get_openai_client() -> Tuple[Any, str]:
         return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id
     except ImportError:
         return None, ""
+
+
+# #2331 — explicit concurrency bound for the wired quality phase.
+#
+# The phase evaluates up to 8 units per document (raw_args[:8]) and, when the
+# agentic layer is wired, each unit drives sequential LLM calls through its
+# detectors. Unbounded would be one semaphore-free gather; the bound is an
+# explicit wiring parameter, not a benchmark default inherited implicitly.
+# Measured 2026-09-20 (run reported on #2331): 12 units × 3 structural
+# virtues = 76 calls / ~31k tokens held 43 s wall at 6 workers on
+# gpt-5.6-luna via OpenRouter — the same ratio keeps a document's phase
+# in the same tens-of-seconds band instead of ~3 min sequential.
+_AGENTIC_QUALITY_MAX_WORKERS: Final[int] = 6
+
+
+def _make_agentic_llm_callable() -> Tuple[Optional[Callable[[str], str]], str, str]:
+    """Build the sync str→str LLM callable the agentic detectors need (#2331).
+
+    The detectors' contract (``agentic_virtue_detectors``) is a synchronous
+    ``llm(prompt) -> str``; this builds a dedicated SYNC client on the same
+    resolved route as the async enrichment client (one toggle, both layers),
+    with the parameters of the measured instrument (timeout 120 s, one
+    retry — the configuration that held 43 s at 6 workers).
+
+    Returns (callable, route, model_id) for tracing, or (None, "no_route", "")
+    when no key/route is resolvable — the caller then runs the NAMED degraded
+    path (lexical fallback traced in state), never a silent one.
+    """
+    api_key, base_url, model_id, provider = _resolve_llm_route()
+    if not api_key:
+        return None, "no_route", ""
+    try:
+        from openai import OpenAI
+    except ImportError:
+        logger.warning(
+            "#2331: openai SDK unavailable for the agentic quality layer — "
+            "degrading to lexical detectors (traced in the phase state)."
+        )
+        return None, "no_sdk", ""
+    client = OpenAI(api_key=api_key, base_url=base_url, timeout=120.0, max_retries=1)
+
+    def _call(prompt: str) -> str:
+        response = client.chat.completions.create(
+            model=model_id,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        choice = response.choices[0] if response.choices else None
+        if choice is None or choice.message is None:
+            return ""
+        return choice.message.content or ""
+
+    return _call, provider, model_id
 
 
 # --- Global per-run LLM-call circuit breaker (issue #708, Track LL-bis) ---
@@ -454,7 +527,14 @@ async def _invoke_quality_evaluator(
         ArgumentQualityEvaluator,
     )
 
-    evaluator = ArgumentQualityEvaluator()
+    # #2331 — the construction site of the quality instrument. The evaluator
+    # is constructed WITH its agentic callable when a route resolves; the
+    # guard asserts HERE (double substitution counting invocations), never on
+    # scores — refutation counts legitimately fluctuate between passes. No
+    # route → None: the NAMED degraded path (lexical fallback, traced in the
+    # phase state output below), never a silent one.
+    agentic_llm, agentic_route, agentic_model = _make_agentic_llm_callable()
+    evaluator = ArgumentQualityEvaluator(agentic_llm=agentic_llm)
 
     # Get individual arguments from upstream
     extract_output = context.get("phase_extract_output", {})
@@ -511,28 +591,77 @@ async def _invoke_quality_evaluator(
         )
 
     if raw_args:
-        results = {}
-        for i, arg in enumerate(raw_args[:8]):  # Cap at 8 to avoid timeout
+        # #2331 — units are evaluated concurrently under an EXPLICIT bound
+        # (``_AGENTIC_QUALITY_MAX_WORKERS``): a wired unit parks its thread on
+        # sequential LLM detector calls, so units in flight = LLM streams in
+        # flight. The bound is a wiring parameter, not a benchmark default.
+        _agentic_error_cls: Optional[type] = None
+        if agentic_llm is not None:
+            try:
+                from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import (
+                    AgenticDetectorError,
+                )
+
+                _agentic_error_cls = AgenticDetectorError
+            except ImportError:
+                logger.warning(
+                    "#2331: agentic_virtue_detectors importable-check failed — "
+                    "a wired callable cannot upgrade the detectors."
+                )
+        _unit_sem = asyncio.Semaphore(_AGENTIC_QUALITY_MAX_WORKERS)
+
+        async def _eval_unit(
+            i: int, arg: Any
+        ) -> Tuple[int, str, Optional[Dict[str, Any]], Optional[str]]:
             arg_text = arg.get("text", str(arg)) if isinstance(arg, dict) else str(arg)
-            if len(arg_text) < 10:
-                continue
             arg_id = f"arg_{i+1}"
-            result = await asyncio.to_thread(evaluator.evaluate, arg_text)
-            if isinstance(result, dict):
-                # (#289) Penalize score if argument is targeted by a fallacy
-                if i in fallacy_targets:
-                    penalty = min(0.3 * len(fallacy_targets[i]), 0.6)
-                    original_score = result.get("note_finale", 0)
-                    result["note_finale"] = max(
-                        0, original_score - original_score * penalty
-                    )
-                    result["fallacy_penalty"] = {
-                        "applied": True,
-                        "fallacies": fallacy_targets[i],
-                        "penalty_factor": penalty,
-                        "original_score": original_score,
-                    }
-                results[arg_id] = result
+            if len(arg_text) < 10:
+                return i, arg_id, None, None
+            async with _unit_sem:
+                try:
+                    result = await asyncio.to_thread(evaluator.evaluate, arg_text)
+                    return i, arg_id, result, None
+                except Exception as exc:
+                    if _agentic_error_cls is not None and isinstance(
+                        exc, _agentic_error_cls
+                    ):
+                        # #2331 — the per-unit named degraded path: the agentic
+                        # chain produced nothing for THIS unit. Provenance
+                        # decides — lexical re-run (explicit None overrides the
+                        # constructor wiring), reason recorded in the phase
+                        # state output, never only in a log. Any other
+                        # exception (fail-loud deps gate included) propagates.
+                        reason = f"{type(exc).__name__}: {str(exc)[:160]}"
+                        result = await asyncio.to_thread(
+                            evaluator.evaluate, arg_text, agentic_llm=None
+                        )
+                        return i, arg_id, result, reason
+                    raise
+
+        outcomes = await asyncio.gather(
+            *(_eval_unit(i, a) for i, a in enumerate(raw_args[:8]))
+        )
+        results: Dict[str, Any] = {}
+        degraded_units: Dict[str, str] = {}
+        for i, arg_id, result, degraded_reason in outcomes:
+            if not isinstance(result, dict):
+                continue
+            if degraded_reason is not None:
+                degraded_units[arg_id] = degraded_reason
+            # (#289) Penalize score if argument is targeted by a fallacy
+            if i in fallacy_targets:
+                penalty = min(0.3 * len(fallacy_targets[i]), 0.6)
+                original_score = result.get("note_finale", 0)
+                result["note_finale"] = max(
+                    0, original_score - original_score * penalty
+                )
+                result["fallacy_penalty"] = {
+                    "applied": True,
+                    "fallacies": fallacy_targets[i],
+                    "penalty_factor": penalty,
+                    "original_score": original_score,
+                }
+            results[arg_id] = result
         # Also compute aggregate
         if results:
             all_overalls = [
@@ -572,6 +701,21 @@ async def _invoke_quality_evaluator(
                 # Keep top-level keys for state writer compatibility
                 "note_finale": aggregate_score,
                 "scores_par_vertu": _aggregate_virtue_scores(results),
+                # #2331 — provenance of the layer that produced these scores,
+                # in the STATE output (not only a log): "wired" (model route +
+                # which units degraded per-unit to lexical and why) or the
+                # named degraded mode when no route resolved.
+                "agentic_wiring": {
+                    "mode": (
+                        "wired"
+                        if agentic_llm is not None
+                        else f"degraded_{agentic_route}"
+                    ),
+                    "route": agentic_route,
+                    "model": agentic_model,
+                    "units_evaluated": len(results),
+                    "units_degraded": degraded_units,
+                },
             }
             if detected_fallacies:
                 output["fallacy_cross_reference"] = {
@@ -623,23 +767,41 @@ def _quality_trace_summary(n_evaluated: int, output: Any) -> str:
     isolated claims produced when seven inapplicable dimensions were averaged
     in as zeros. There is no fixed /10 to report: each unit has its own
     reachable ceiling, so we report the share of it that held.
+
+    #2331: the line also names the layer that produced the scores — the
+    degraded mode is traced in the STATE trace, never only in a log.
     """
     per_arg = output.get("per_argument_scores", {}) if isinstance(output, dict) else {}
     fracs = [
         f for f in (_quality_fraction(s) for s in per_arg.values()) if f is not None
     ]
     if not fracs:
-        return (
+        body = (
             f"Évaluation qualité de {n_evaluated} arguments — part des "
             "dimensions applicables non mesurable sur ce run. "
             "Détection par vertus rhétoriques."
         )
-    avg = sum(fracs) / len(fracs)
-    return (
-        f"Évaluation qualité de {n_evaluated} arguments — {avg:.0%} des "
-        "dimensions applicables tiennent en moyenne. "
-        "Détection par vertus rhétoriques."
-    )
+    else:
+        avg = sum(fracs) / len(fracs)
+        body = (
+            f"Évaluation qualité de {n_evaluated} arguments — {avg:.0%} des "
+            "dimensions applicables tiennent en moyenne. "
+            "Détection par vertus rhétoriques."
+        )
+    wiring = output.get("agentic_wiring", {}) if isinstance(output, dict) else {}
+    if isinstance(wiring, dict):
+        mode = wiring.get("mode")
+        n_deg = len(wiring.get("units_degraded", {}) or {})
+        if mode == "wired":
+            body += " Couche agentic câblée (#2331)."
+        elif isinstance(mode, str):
+            body += f" Couche agentic en repli lexical explicite — mode {mode} (#2331)."
+        if n_deg:
+            body += (
+                f" {n_deg} unité(s) dégradée(s) en lexical après échec de "
+                "chaîne agentic (#2331)."
+            )
+    return body
 
 
 def _aggregate_virtue_scores(per_arg_results: Dict[str, Any]) -> Dict[str, float]:
