@@ -70,7 +70,7 @@ import time
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -414,6 +414,22 @@ _VERSION_TAG_RE = re.compile(r"-(\d+\.\d+(?:\.\d+)?)(?:[.-])")
 def version_key(version: str) -> Tuple[int, ...]:
     """Comparison key for a Tweety version string ("1.28" -> (1, 28))."""
     return tuple(int(part) for part in version.split("."))
+
+
+def versions_in_name(name: str) -> Set[str]:
+    """Every version tag a jar filename carries -- the ONE spelling of that rule.
+
+    ``_VERSION_TAG_RE`` accepts ``-1.31-`` (fat assembly:
+    ``…tweety-full-1.31-with-dependencies.jar``) **and** ``-1.31.jar`` (module
+    layout, version final: ``…arg.aspic-1.31.jar``). A caller testing
+    ``f"-{v}-" in name`` sees only the first form and matches **nothing** on the
+    second -- measured on the 49-jar module layout, where the trailing dash made
+    every module jar invisible to the version test (#2367).
+
+    ``detect_local_version`` already parses names this way; sharing the helper is
+    what keeps the two readers from drifting apart again.
+    """
+    return {match.group(1) for match in _VERSION_TAG_RE.finditer(name)}
 
 
 def detect_local_version(target_dir: Path) -> Optional[str]:
