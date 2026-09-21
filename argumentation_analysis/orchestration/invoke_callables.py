@@ -32,9 +32,11 @@ from argumentation_analysis.core.reading_window import (
     selected_text,
 )
 from argumentation_analysis.core.llm_service import (
+    classify_route,
     get_determinism_params as _get_determinism_params,
     is_reasoning_model as _is_reasoning_model,
     resolve_active_model_id as _resolve_model_id,
+    resolve_chat_endpoint,
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
@@ -192,50 +194,22 @@ __all__ = [
 
 
 def _resolve_llm_route() -> Tuple[str, str, str, str]:
-    """Resolve (api_key, base_url, model_id, provider) from the environment.
+    """Resolve (api_key, base_url, model_id, provider) — canonical resolver (#2352).
 
     Single route resolution shared by the async enrichment client and the
-    sync agentic-detector client (#2331) — the OpenRouter toggle lives in
-    exactly one place. An empty ``api_key`` means "no route" for both
-    consumers. Logging mirrors the historical ``_get_openai_client`` lines.
+    sync agentic-detector client (#2331). Since #2352 it DELEGATES to
+    :func:`resolve_chat_endpoint` instead of re-deriving the OpenRouter toggle:
+    this function used to be a third copy of it, and reproduced both divergences
+    the audit measured — no ``OPENAI_CHAT_MODEL_ID`` jump when only OpenRouter
+    is configured, and no #1930 obsolescence substitution (measured on the
+    prescribed seat: ``gpt-5-mini`` here vs ``gpt-5.6-luna`` canonically). It
+    also carried a second "LLM config resolved" log line, which could disagree
+    with the canonical one; the log line, the substitution and the declared-route
+    guard (#2322) now all live at the one resolver. An empty ``api_key`` still
+    means "no route" for both consumers.
     """
-    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    if openrouter_base_url and openrouter_api_key:
-        api_key = openrouter_api_key
-        base_url = openrouter_base_url
-        model_id = os.environ.get(
-            "OPENROUTER_CHAT_MODEL_ID",
-            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
-        )
-        logger.info(
-            "LLM config resolved: provider=OpenRouter endpoint=%s model=%s source=OPENROUTER_API_KEY+OPENROUTER_BASE_URL",
-            base_url,
-            model_id,
-        )
-        return api_key, base_url, model_id, "openrouter"
-    raw_key = os.environ.get("OPENAI_API_KEY")
-    if raw_key is not None and raw_key.strip() == "":
-        logger.warning(
-            "OPENAI_API_KEY is set to an empty string (#2281) — treated as "
-            "not configured. Remove the line from .env (empty ≠ absent)."
-        )
-    api_key = raw_key or ""
-    raw_base_url = os.environ.get("OPENAI_BASE_URL")
-    if raw_base_url is not None and raw_base_url.strip() == "":
-        logger.warning(
-            "OPENAI_BASE_URL is set to an empty string (#2281) — using the "
-            "default endpoint. Remove the line from .env (empty ≠ absent)."
-        )
-        raw_base_url = None
-    base_url = raw_base_url or "https://api.openai.com/v1"
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-    logger.info(
-        "LLM config resolved: provider=OpenAI endpoint=%s model=%s source=OPENAI_API_KEY",
-        base_url,
-        model_id,
-    )
-    return api_key, base_url, model_id, "openai"
+    api_key, base_url, model_id = resolve_chat_endpoint()
+    return api_key, base_url, model_id, classify_route(base_url)
 
 
 def _get_openai_client() -> Tuple[Any, str]:
@@ -10634,10 +10608,15 @@ async def _invoke_ai_shield(input_text: str, context: Dict[str, Any]) -> Dict[st
     # Politique non posée = sémantique du preset, jamais un True implicite (#2144)
     fail_open = shield_config.get("fail_open")
 
-    # LLM validator needs API key — pass through if available
-    api_key = os.environ.get("OPENAI_API_KEY")
+    # #2352: no key is resolved here. A bare OPENAI_API_KEY handed to the LLM
+    # validator layer was a seventh route decision — it bypassed the toggle, and
+    # once the layer's endpoint follows the canonical resolver, an OpenAI key
+    # paired with the OpenRouter endpoint is a credentials/endpoint MISMATCH
+    # rather than a silent detour. The layer resolves its own key from the same
+    # route (resolve_chat_endpoint); with no key configured it raises
+    # LLMValidatorUnavailable and the preset's fail-open policy decides (#2095).
     try:
-        shield = load_preset(preset_name, api_key=api_key, fail_open=fail_open)
+        shield = load_preset(preset_name, fail_open=fail_open)
     except Exception as exc:
         logger.warning(f"AI Shield preset load failed: {exc}")
         # Échec de chargement : la politique du preset décide, pas un repli muet.

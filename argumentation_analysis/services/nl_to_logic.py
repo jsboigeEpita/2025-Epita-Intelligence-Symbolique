@@ -16,11 +16,11 @@ Integration: Issue #173.
 import asyncio
 import json
 import logging
-import os
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
+from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 from argumentation_analysis.core.reading_window import selected_text
 
 logger = logging.getLogger(__name__)
@@ -354,21 +354,15 @@ class NLToLogicTranslator:
         """Translate via LLM with validate-retry loop."""
         from openai import AsyncOpenAI
 
-        # Honor the OpenRouter toggle (same logic as core.llm_service.create_llm_service).
-        # Without this, nl_to_logic instantiated its own AsyncOpenAI against the
-        # official OpenAI endpoint, hit 429 quota, and silently fell back to the
-        # heuristic translator — degrading formal-logic phases without any signal.
-        openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-        openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-        use_openrouter = bool(openrouter_base_url and openrouter_api_key)
-        if use_openrouter:
-            api_key = openrouter_api_key
-            base_url = openrouter_base_url
-            model_id = os.environ.get("OPENROUTER_CHAT_MODEL_ID", "openai/gpt-5.6-luna")
-        else:
-            api_key = os.environ.get("OPENAI_API_KEY", "")
-            base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-            model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+        # #2352: delegate to the canonical resolver instead of re-deriving the
+        # OpenRouter toggle here (this copy also defaulted to a provider-prefixed
+        # literal, naming a different model than every other caller — and skipped
+        # the #1930 obsolescence substitution). Routing via OpenRouter matters
+        # because otherwise this class instantiated its own AsyncOpenAI against
+        # the official OpenAI endpoint, hit 429 quota, and silently fell back to
+        # the heuristic translator — degrading formal-logic phases without any
+        # signal.
+        api_key, base_url, model_id = resolve_chat_endpoint()
 
         if not api_key:
             return self._translate_heuristic(text, logic_type)

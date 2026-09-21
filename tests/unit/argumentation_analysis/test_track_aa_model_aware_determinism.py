@@ -49,15 +49,26 @@ class TestResolveModelId:
                 os.environ[key] = val
 
     def test_default_model(self):
-        """OPENAI_CHAT_MODEL_ID explicitly set to known value."""
+        """OPENAI_CHAT_MODEL_ID, as resolved by the canonical resolver (#2352).
+
+        This asserted the raw env value (``gpt-5-mini``) — which pinned the
+        divergence #2352 repaired: ``gpt-5-mini`` is retired in the #1930 table,
+        so ``_resolve_model_id`` named a model the canonical route had already
+        substituted. The expected value is now the substituted one, AND equality
+        with the canonical resolver, so a re-inlined copy reddens here too.
+        """
         _clear_det_env()
         os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-5-mini"
         try:
+            from argumentation_analysis.core.llm_service import (
+                resolve_chat_endpoint,
+            )
             from argumentation_analysis.orchestration.invoke_callables import (
                 _resolve_model_id,
             )
 
-            assert _resolve_model_id() == "gpt-5-mini"
+            assert _resolve_model_id() == resolve_chat_endpoint()[2]
+            assert _resolve_model_id() == "gpt-5.6-luna"
         finally:
             os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
 

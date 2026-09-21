@@ -81,15 +81,22 @@ REASONING_MODEL_PREFIXES: Tuple[str, ...] = (
 
 
 def resolve_active_model_id() -> str:
-    """Resolve the active chat model id from environment (mirrors _get_openai_client)."""
-    openrouter_base_url = os.environ.get("OPENROUTER_BASE_URL")
-    openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-    if openrouter_base_url and openrouter_api_key:
-        return os.environ.get(
-            "OPENROUTER_CHAT_MODEL_ID",
-            os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
-        )
-    return os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+    """The active chat model id — resolved by the canonical resolver (#2352).
+
+    Was a hand-copied mirror of the OpenRouter toggle, and reproduced both
+    divergences the #2352 audit measured: it skipped the
+    ``OPENAI_CHAT_MODEL_ID`` jump when only OpenRouter is configured (rendering
+    the default literal instead of the configured model) **and** the #1930
+    obsolescence substitution, so it could name a model the canonical route had
+    already replaced. Measured on the prescribed seat (only
+    ``OPENAI_CHAT_MODEL_ID`` set, to an obsolete id): this returned
+    ``gpt-5-mini`` while :func:`resolve_chat_endpoint` returned
+    ``gpt-5.6-luna``.
+
+    Delegation is the repair — the model id, the substitution and the single
+    log line live in :func:`resolve_chat_endpoint` and nowhere else.
+    """
+    return resolve_chat_endpoint()[2]
 
 
 def is_reasoning_model(model_id: str) -> bool:
@@ -201,13 +208,17 @@ class LLMRouteDivergenceError(RuntimeError):
 _EXPECTED_ROUTE_ENV = "LLM_EXPECTED_ROUTE"
 
 
-def _classify_route(base_url: str) -> str:
+def classify_route(base_url: str) -> str:
     """Classify a resolved endpoint the way the log line presents it.
 
     Same heuristic as ``_log_resolved_llm_config``: an OpenRouter substring
     reads as ``openrouter``, everything else as the OpenAI-compatible default
     (``openai``) — including custom local endpoints, which simply never
     declare ``LLM_EXPECTED_ROUTE`` and are unaffected.
+
+    Public since #2352: the migrated route consumers
+    (``orchestration.invoke_callables._resolve_llm_route``) used to spell the
+    provider label themselves; the vocabulary belongs to this module.
     """
     return "openrouter" if base_url and "openrouter" in base_url else "openai"
 
@@ -242,7 +253,7 @@ def assert_declared_route(base_url: str, model_id: str, source: str) -> None:
         )
         return
     declared_provider, _, declared_model = declared.lower().partition(":")
-    resolved_provider = _classify_route(base_url)
+    resolved_provider = classify_route(base_url)
     mismatches = []
     if declared_provider != resolved_provider:
         mismatches.append(
@@ -264,8 +275,15 @@ def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str
     """Resolve the chat endpoint honoring the OpenRouter toggle.
 
     Single canonical source of truth for routing raw-SDK (non-kernel) LLM
-    chat calls. Mirrors the toggle embedded in :func:`create_llm_service`
-    (this module) and ``orchestration.invoke_callables._get_openai_client``.
+    chat calls — the ONE route resolver since #2352. ``create_llm_service``
+    (this module) embeds the same toggle for the kernel path, and every
+    non-kernel caller DELEGATES here rather than re-deriving it:
+    ``resolve_active_model_id``, ``orchestration.invoke_callables._resolve_llm_route``,
+    ``plugins.coordinated_logic_plugin._get_openai_client``,
+    ``services.nl_to_logic._translate_with_llm`` and
+    ``services.ai_shield.layers.llm_validator.LLMValidatorLayer``. A copy that
+    re-implements the toggle diverges silently — that is the defect #2352
+    measures, not a style preference.
     Anti-pendule (#1019 / anti-théâtre): consults ``OPENROUTER_BASE_URL`` +
     ``OPENROUTER_API_KEY`` first and falls back to ``OPENAI_*``. Do NOT add a
     new knob — every raw-SDK caller must go through this so they no longer hit
