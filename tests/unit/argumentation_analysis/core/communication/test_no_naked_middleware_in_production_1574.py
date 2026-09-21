@@ -104,15 +104,13 @@ def _iter_pkg_py_files() -> list[Path]:
     return sorted(files)
 
 
-def _find_naked_middleware_violations() -> list[str]:
+def _find_naked_middleware_violations(files: list[Path] | None = None) -> list[str]:
     violations: list[str] = []
-    for py_file in _iter_pkg_py_files():
-        try:
-            tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
-        except SyntaxError:
-            # Do not let an unparseable file mask the guard; skip it (other CI
-            # gates catch syntax errors).
-            continue
+    for py_file in _iter_pkg_py_files() if files is None else files:
+        # utf-8-sig, and a parse failure raises rather than skips: a guard
+        # that skips in silence greens in silence — under the strict read, 13
+        # BOM'd production files were invisible to this walk (#2373).
+        tree = ast.parse(py_file.read_text(encoding="utf-8-sig"), filename=str(py_file))
         parents = _parent_map(tree)
         for node in ast.walk(tree):
             if not _is_messagemiddleware_ctor(node):
@@ -125,7 +123,10 @@ def _find_naked_middleware_violations() -> list[str]:
                 continue
             if _scope_has_register_channel(scope):
                 continue
-            rel = py_file.relative_to(REPO_ROOT)
+            try:
+                rel = py_file.relative_to(REPO_ROOT)
+            except ValueError:
+                rel = py_file  # synthetic carrier outside the repo (#2373 control)
             violations.append(
                 f"{rel}: MessageMiddleware() without a register_channel in the "
                 f"same scope — use create_default_middleware() instead (#1574)."
@@ -141,10 +142,12 @@ class TestNoNakedMiddlewareInProduction:
         """No production module under ``argumentation_analysis/`` may build a
         ``MessageMiddleware()`` without registering a channel. DoD #1574 P2.
         """
-        violations = _find_naked_middleware_violations()
+        files = _iter_pkg_py_files()
+        violations = _find_naked_middleware_violations(files)
         assert not violations, (
-            "Naked MessageMiddleware() re-introduced in production "
-            "(R652/#1571 defect family):\n  - " + "\n  - ".join(violations)
+            f"{len(violations)} naked MessageMiddleware() over {len(files)} "
+            "production files walked (R652/#1571 defect family):\n  - "
+            + "\n  - ".join(violations)
         )
 
     def test_create_default_middleware_passes_the_guard(self) -> None:
@@ -206,6 +209,25 @@ class TestNoNakedMiddlewareInProduction:
         scope = _enclosing_scope(ctors[0], parents)
         assert scope is not None
         assert _scope_has_register_channel(scope)
+
+    def test_guard_sees_a_naked_ctor_behind_a_bom(self, tmp_path: Path) -> None:
+        """#2373 non-vacuity: a BOM'd module is part of the population. Under
+        the previous strict read the BOM character raised SyntaxError and the
+        bare ``continue`` dropped the file without a trace — a naked bus
+        behind a BOM was invisible to this guard.
+        """
+        src = "﻿" + textwrap.dedent("""
+            def build_bus():
+                mw = MessageMiddleware()
+                return mw
+            """)
+        bom_file = tmp_path / "naked_behind_bom.py"
+        bom_file.write_text(src, encoding="utf-8")
+        violations = _find_naked_middleware_violations(files=[bom_file])
+        assert violations, (
+            "a naked MessageMiddleware() behind a UTF-8 BOM must be seen — "
+            "if it is not, the population is amputated again (#2373)."
+        )
 
 
 if __name__ == "__main__":
