@@ -59,11 +59,28 @@ class OracleTools:
         self.agent_name = agent_name or "OracleTools"
         self._logger = logging.getLogger(self.__class__.__name__)
 
+    async def _run_oracle_query(
+        self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]
+    ) -> OracleResponse:
+        """Unique voie d'exécution vers le `DatasetAccessManager` (#2340).
+
+        Les trois `@kernel_function` qui exécutent une requête passent par ici :
+        l'`await` n'est écrit qu'une fois et ne peut donc plus diverger d'une
+        surface à l'autre. C'est précisément cette divergence qui avait laissé
+        `execute_authorized_query` synchrone — et donc inopérante — alors que
+        ses deux jumelles asynchrones étaient correctes.
+        """
+        return await self.dataset_manager.execute_oracle_query(
+            agent_name=agent_name,
+            query_type=query_type,
+            query_params=query_params,
+        )
+
     @kernel_function(
         name="validate_query_permission",
         description="Valide qu'un agent a la permission pour un type de requête.",
     )
-    def validate_query_permission(self, agent_name: str, query_type: str) -> str:
+    async def validate_query_permission(self, agent_name: str, query_type: str) -> str:
         """
         Vérifie si un agent a la permission d'exécuter un type de requête.
 
@@ -76,7 +93,7 @@ class OracleTools:
         """
         try:
             query_type_enum = QueryType(query_type)
-            is_authorized = self.dataset_manager.check_permission(
+            is_authorized = await self.dataset_manager.check_permission(
                 agent_name, query_type_enum
             )
 
@@ -95,7 +112,7 @@ class OracleTools:
         name="execute_authorized_query",
         description="Exécute une requête autorisée sur le dataset.",
     )
-    def execute_authorized_query(
+    async def execute_authorized_query(
         self, agent_name: str, query_type: str, query_params: str
     ) -> str:
         """
@@ -129,7 +146,7 @@ class OracleTools:
             query_type_enum = QueryType(query_type)
 
             # Exécution via le gestionnaire
-            response = self.dataset_manager.execute_oracle_query(
+            response = await self._run_oracle_query(
                 agent_name, query_type_enum, params_dict
             )
 
@@ -248,10 +265,8 @@ class OracleTools:
                 raise ValueError(f"Type de requête invalide: {query_type}")
 
             # Exécution via le gestionnaire
-            response = await self.dataset_manager.execute_oracle_query(
-                agent_name=self.agent_name,
-                query_type=query_type_enum,
-                query_params=params_dict,
+            response = await self._run_oracle_query(
+                self.agent_name, query_type_enum, params_dict
             )
 
             if response.authorized:
@@ -309,10 +324,8 @@ class OracleTools:
                 raise ValueError(f"Type de requête invalide: {query_type}")
 
             # Exécution via le gestionnaire
-            response = await self.dataset_manager.execute_oracle_query(
-                agent_name=self.agent_name,
-                query_type=query_type_enum,
-                query_params=params_dict,
+            response = await self._run_oracle_query(
+                self.agent_name, query_type_enum, params_dict
             )
 
             if response.authorized:
@@ -503,7 +516,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
         )
 
     @monitor_performance(log_args=True)
-    def process_oracle_request(
+    async def process_oracle_request(
         self, requesting_agent: str, query_type: QueryType, query_params: Dict[str, Any]
     ) -> OracleResponse:
         """
@@ -527,7 +540,7 @@ Vous êtes un gardien impartial mais stratégique des données."""
 
         try:
             # Délégation au gestionnaire de dataset
-            response = self.dataset_manager.execute_oracle_query(
+            response = await self.dataset_manager.execute_oracle_query(
                 requesting_agent, query_type, query_params
             )
 
