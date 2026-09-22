@@ -29,6 +29,11 @@ Trois choses sont mesurées ici, et chacune a son contrôle de non-vacuité :
    l'exécution), et leur périmètre (``argumentation_analysis/``) est **compté**
    à chaque exécution : une absence ne vaut que si la marche a marché.
 
+Le kernel du harnais est un vrai ``sk.Kernel`` (#2389) : la doublure écrite à
+la main qu'il remplace implémentait ``create_function_from_prompt``, une API
+que ``Kernel`` n'a pas — les tests de provenance verdissaient sur un chemin
+mort en production une ligne plus haut.
+
 Aucun symbole introduit par la réparation (``DEFAULT_CHAT_MODEL_ID``,
 ``_served_model_id``) n'est importé au niveau module : le né-rouge doit être un
 échec de **valeur**, pas un ``ImportError`` de collection.
@@ -43,8 +48,15 @@ import sys
 import types
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from unittest.mock import create_autospec
 
 import pytest
+import semantic_kernel as sk
+from semantic_kernel.connectors.ai.chat_completion_client_base import (
+    ChatCompletionClientBase,
+)
+from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.exceptions import KernelServiceNotFoundError
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CORE_ROOT = "argumentation_analysis"
@@ -55,6 +67,9 @@ CORE_ROOTS = ("argumentation_analysis", "api", "scripts", "project_core", "confi
 
 # Les deux méthodes qui rendaient une provenance fabriquée.
 _METHODS = ("_run_tactical_analysis", "_run_operational_analysis")
+
+# La réponse que le service factice rend — le témoin que le kernel a servi.
+_REPLY = "réponse simulée"
 
 # Un id de modèle, pour les gardes structurelles. Volontairement large : la
 # garde doit voir un littéral *neuf* de la même famille, pas seulement ceux
@@ -81,45 +96,41 @@ _ROUTE_VARS = (
 
 
 # ===========================================================================
-# Le harnais : un kernel minimal dont le modèle servi est CONNU du test
+# Le harnais : un VRAI kernel, dont le modèle servi est CONNU du test
 # ===========================================================================
+#
+# #2389 : ce harnais était une doublure écrite à la main (``_RecordingKernel``)
+# qui DÉFINISSAIT ``create_function_from_prompt`` — une méthode que
+# ``semantic_kernel.Kernel`` n'a pas. Les tests ci-dessous verdissaient donc sur
+# un chemin que la production ne pouvait pas prendre : elle mourait en
+# ``AttributeError`` une ligne avant la provenance certifiée. Le kernel est
+# désormais l'objet réel ; seule la feuille qui ferait un egress (le service de
+# chat) est factice, et elle hérite de la classe réelle.
 
 
-class _ServedService:
-    """Un service de kernel, réduit à ce qu'une provenance peut observer.
+class _FixedReplyChatCompletion(ChatCompletionClientBase):
+    """Service de chat réel par sa classe, factice par sa seule réponse."""
 
-    ``model_id=None`` construit un service SANS ``ai_model_id`` — le cas d'un
-    objet qui ne dit rien, distinct du cas « pas de service du tout ».
-    """
+    async def _inner_get_chat_message_contents(
+        self, chat_history: Any, settings: Any
+    ) -> List[ChatMessageContent]:
+        return [
+            ChatMessageContent(
+                role="assistant", content=_REPLY, ai_model_id=self.ai_model_id
+            )
+        ]
 
-    def __init__(self, model_id: Optional[str]) -> None:
-        if model_id is not None:
-            self.ai_model_id = model_id
 
-
-class _RecordingKernel:
-    """Kernel minimal : sert des services par id, enregistre les invocations.
-
-    ``create_function_from_prompt``/``invoke`` sont des doublures délibérées :
-    la propriété mesurée est « le champ égale le service que le kernel tient »,
-    pas « le service a répondu ». Aucun egress n'est donc nécessaire ni voulu.
-    """
-
-    def __init__(self, services: Dict[str, Any]) -> None:
-        self._services = services
-        self.invocations = 0
-
-    def get_service(self, service_id: Optional[str] = None) -> Any:
-        # KeyError sur un id inconnu : c'est ce que fait SK (ServiceNotFound),
-        # et c'est le cas que la provenance doit traverser sans mentir.
-        return self._services[service_id]
-
-    def create_function_from_prompt(self, prompt: str, function_name: str) -> str:
-        return function_name
-
-    async def invoke(self, function: str) -> str:
-        self.invocations += 1
-        return "réponse simulée"
+def _kernel(services: Dict[str, Any]) -> sk.Kernel:
+    """Un ``sk.Kernel`` réel tenant ``services`` (id -> service ou id de modèle)."""
+    kernel = sk.Kernel()
+    for service_id, service in services.items():
+        if isinstance(service, str):
+            service = _FixedReplyChatCompletion(
+                ai_model_id=service, service_id=service_id
+            )
+        kernel.add_service(service)
+    return kernel
 
 
 def _bare_settings():
@@ -155,6 +166,18 @@ def _manager(monkeypatch, kernel, service_id: Optional[str] = "openai"):
     return mgr
 
 
+def test_the_harness_offers_nothing_the_real_kernel_lacks():
+    """Le contrôle de #2389 DoD 5, en une assertion.
+
+    Le harnais passe au code l'objet ``sk.Kernel`` lui-même : il ne peut donc
+    exposer aucune méthode que la classe réelle n'a pas. Si quelqu'un
+    réintroduisait une doublure de kernel ici, ce test nommerait l'écart.
+    """
+    kernel = _kernel({"openai": "modele-quelconque"})
+    assert type(kernel) is sk.Kernel
+    assert not hasattr(kernel, "create_function_from_prompt")
+
+
 # ===========================================================================
 # 1. La mesure — le champ nomme le modèle servi
 # ===========================================================================
@@ -169,17 +192,18 @@ async def test_the_result_names_the_model_the_kernel_served(
 
     Sur ``b5845b6d`` les deux méthodes rendent ``"model": "gpt-5.6-luna"``
     quelle que soit la valeur servie : les deux paramètres rougissent, en
-    valeur de modèle, en nommant la valeur fausse.
+    valeur de modèle, en nommant la valeur fausse. Sur ``bdc5b618`` (kernel
+    réel, #2389) elles rougissent plus tôt : ``status == "error"`` sur
+    l'``AttributeError`` que l'ancienne doublure masquait.
     """
     assert served != "gpt-5.6-luna", "un cas qui coïncide ne mesure rien"
 
-    kernel = _RecordingKernel({"openai": _ServedService(served)})
-    mgr = _manager(monkeypatch, kernel)
+    mgr = _manager(monkeypatch, _kernel({"openai": served}))
 
     result = await getattr(mgr, method_name)("texte synthétique", None)
 
     assert result["status"] == "completed", f"chemin non mesuré: {result}"
-    assert result["llm_response"] == "réponse simulée", "le kernel n'a pas servi"
+    assert result["llm_response"] == _REPLY, "le kernel n'a pas servi"
     assert result["model"] == served, (
         f"le résultat annonce {result['model']!r} alors que le kernel a servi "
         f"{served!r}"
@@ -199,8 +223,7 @@ async def test_the_field_follows_the_real_factory_product(monkeypatch, method_na
     service = create_llm_service(service_id="openai", force_mock=True)
     assert service.ai_model_id != "gpt-5.6-luna", "le produit mesuré coïncide"
 
-    kernel = _RecordingKernel({"openai": service})
-    mgr = _manager(monkeypatch, kernel)
+    mgr = _manager(monkeypatch, _kernel({"openai": service}))
 
     result = await getattr(mgr, method_name)("texte synthétique", None)
 
@@ -214,38 +237,57 @@ async def test_the_field_follows_the_real_factory_product(monkeypatch, method_na
 
 
 @pytest.mark.parametrize("method_name", _METHODS)
-@pytest.mark.parametrize(
-    "case", ["no_service_id", "unknown_service_id", "service_without_model_id"]
-)
-async def test_the_field_is_absent_when_nothing_is_observable(
-    monkeypatch, method_name, case
-):
+async def test_the_field_is_absent_when_no_service_id_is_held(monkeypatch, method_name):
     """Le second terme du contrat : « ou il disparaît ».
 
-    Les trois cas gardent le chemin nominal intact (le kernel répond, le
-    résultat est complet) et ne retirent que l'observabilité — sinon l'absence
-    serait celle d'un dict d'erreur, et la garde verdirait à vide.
-    """
-    if case == "no_service_id":
-        kernel = _RecordingKernel({"openai": _ServedService("openai/gpt-5.6-pro")})
-        service_id = None
-    elif case == "unknown_service_id":
-        kernel = _RecordingKernel({"autre": _ServedService("openai/gpt-5.6-pro")})
-        service_id = "openai"
-    else:
-        kernel = _RecordingKernel({"openai": _ServedService(None)})
-        service_id = "openai"
+    Le chemin nominal reste intact (le kernel répond, le résultat est complet)
+    et seule l'observabilité est retirée — sinon l'absence serait celle d'un
+    dict d'erreur, et la garde verdirait à vide.
 
-    mgr = _manager(monkeypatch, kernel, service_id=service_id)
+    Le cas « id de service inconnu du kernel » n'est plus ici : depuis #2389 le
+    service est épinglé, un id inconnu échoue au lieu de servir par un autre
+    service (``test_service_manager_kernel_api_2389.py``).
+    """
+    mgr = _manager(
+        monkeypatch, _kernel({"openai": "openai/gpt-5.6-pro"}), service_id=None
+    )
 
     result = await getattr(mgr, method_name)("texte synthétique", None)
 
     assert result["status"] == "completed", f"cas vacant: {result}"
-    assert result["llm_response"] == "réponse simulée", f"cas vacant: {result}"
+    assert result["llm_response"] == _REPLY, f"cas vacant: {result}"
     assert "model" not in result, (
-        f"{case}: la clé est présente alors que rien n'est observable "
+        f"la clé est présente alors que rien n'est observable "
         f"({result.get('model')!r}) — un None se confond avec « pas de modèle »"
     )
+
+
+@pytest.mark.parametrize(
+    "held",
+    ["service_without_model_id", "unknown_service_id"],
+)
+def test_the_observation_is_none_when_the_service_says_nothing(held):
+    """``_served_model_id`` n'invente rien quand le service ne dit rien.
+
+    Un service réel ne peut pas être construit sans ``ai_model_id`` (SK le
+    refuse) : ce cas se mesure donc sur l'observateur seul, avec un kernel
+    **contraint à la classe réelle** (``create_autospec``) — une doublure qui
+    ne peut rien offrir que ``Kernel`` n'offre pas.
+    """
+    import argumentation_analysis.orchestration.service_manager as sm
+
+    kernel = create_autospec(sk.Kernel, instance=True)
+    if held == "service_without_model_id":
+        kernel.get_service.return_value = types.SimpleNamespace()
+    else:
+        kernel.get_service.side_effect = KernelServiceNotFoundError("absent")
+
+    mgr = sm.OrchestrationServiceManager(enable_logging=False)
+    mgr.kernel = kernel
+    mgr.llm_service_id = "openai"
+
+    assert mgr._served_model_id() is None
+    kernel.get_service.assert_called_once_with("openai")
 
 
 # ===========================================================================
