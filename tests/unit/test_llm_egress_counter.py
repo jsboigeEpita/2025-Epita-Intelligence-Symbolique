@@ -195,3 +195,75 @@ async def test_counter_sees_httpx2_request():
         "#1556: an unpatched transport reads exactly like a clean gate)"
     )
     assert "httpx2" in counter.snapshot()["transports_patched"]
+    # #2391: the outcome rides on httpx2 entries too (the transport CI's SDK uses).
+    entries = _this_test_llm_entries(counter, "test_counter_sees_httpx2_request")
+    assert [r.get("status") for r in entries] == [200], entries
+
+
+def _this_test_llm_entries(counter, test_name: str):
+    return [
+        r
+        for r in counter.snapshot()["requests"]
+        if r["class"] == "llm" and r["test"].endswith(test_name)
+    ]
+
+
+async def test_counter_records_the_response_status():
+    """#2391 : the report says how a request came back, not only that it left.
+
+    A 400 answered to every tool-carrying call was visible only when a test
+    FAILED and pytest printed its captured log; in a passing test the same 400
+    left no trace in the report. The status now rides on the request's entry.
+    """
+    counter = _session_counter()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(400, json={"error": {"message": "egress control"}})
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        await client.post(f"{FAKE_OPENAI_HOST}/chat/completions", json={"p": 1})
+
+    entries = _this_test_llm_entries(
+        counter, "test_counter_records_the_response_status"
+    )
+    assert [r.get("status") for r in entries] == [400], entries
+    snap = counter.snapshot()
+    assert snap["llm_outcomes"].get("400", 0) >= 1
+    assert any(
+        t.endswith("test_counter_records_the_response_status")
+        for t in snap["per_test_llm_not_ok"]
+    ), snap["per_test_llm_not_ok"]
+
+
+async def test_counter_records_a_transport_error_and_lets_it_propagate():
+    """An exception in the send is recorded by type, and still reaches the caller."""
+    counter = _session_counter()
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("egress control", request=request)
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        with pytest.raises(httpx.ConnectError):
+            await client.post(f"{FAKE_OPENAI_HOST}/chat/completions", json={"p": 1})
+
+    entries = _this_test_llm_entries(
+        counter, "test_counter_records_a_transport_error_and_lets_it_propagate"
+    )
+    assert [r.get("error") for r in entries] == ["ConnectError"], entries
+    assert all("status" not in r for r in entries)
+
+
+async def test_a_successful_llm_response_is_not_counted_as_not_ok():
+    """Agreement control: a 200 lands in the 2xx outcomes, not in the not-ok map."""
+    counter = _session_counter()
+    async with httpx.AsyncClient(transport=_mock_transport()) as client:
+        await client.post(f"{FAKE_OPENAI_HOST}/chat/completions", json={"p": 1})
+
+    entries = _this_test_llm_entries(
+        counter, "test_a_successful_llm_response_is_not_counted_as_not_ok"
+    )
+    assert [r.get("status") for r in entries] == [200], entries
+    assert not any(
+        t.endswith("test_a_successful_llm_response_is_not_counted_as_not_ok")
+        for t in counter.snapshot()["per_test_llm_not_ok"]
+    )
