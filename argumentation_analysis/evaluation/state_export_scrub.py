@@ -351,8 +351,28 @@ def _scrub_state_for_export(
 # ``argumentation_analysis.evaluation.corpus_instance_tokens``. Rule 7:
 # "a detector that enumerates corpus identifiers publishes the census the
 # encryption protects" (#2168, #2187).
+#
+# The PERSON alternation is derived from ``PERSON_PATTERNS`` (#2348 pattern,
+# #2362 B1): a hand list is a second census that drifts, and the production
+# sweep (#2349) reddens on every class member spelled in a tracked file.
+# Coverage is WIDENED, not narrowed — the class list carries more members
+# than the hand list it replaces, and a scrubber may grow, never shrink
+# silently (#1019). The behavior half of that move is pinned by
+# ``test_redaction_by_class_2362``: the sweep sees presence, not redaction.
+from argumentation_analysis.evaluation.leak_patterns import PERSON_PATTERNS
+
+# Public figures outside the class lists (kept verbatim until the class
+# vocabulary itself is arbitrated — Q-R1042-A family; dropping them would be
+# a silent narrowing of the scrubber).
+_EXTRA_PUBLIC_PERSONS = ("obama", "harris", "clinton", "attal", "netanyahu")
+
+_PERSON_ALTERNATION = "|".join([*PERSON_PATTERNS, *_EXTRA_PUBLIC_PERSONS])
+
+# States, groups, institutions: public generic vocabulary (organisations and
+# country names map onto no corpus document); spelling variants absent from
+# the class lists stay spelled here.
 _ENTITY_PATTERN = re.compile(
-    r"(?i)\b(trump|biden|obama|harris|clinton|poutine|putin|zelensky|macron|attal|netanyahu)"
+    rf"(?i)\b({_PERSON_ALTERNATION})"
     r"|\b(iran|ukraine|russia|china|israel|otan|onu|nato|maidan|crimea|bolchevik|bolchévik)"
     r"|\b(pentagon|white\s*house|united\s*nations|un\s*general\s*assembly)"
     r"|\b(russie|chinese|américaine)\b",
@@ -360,7 +380,7 @@ _ENTITY_PATTERN = re.compile(
 
 # Substring pattern for snake_case identifiers where \b doesn't match
 _ENTITY_SUBSTR_PATTERN = re.compile(
-    r"(?i)(trump|biden|obama|harris|clinton|poutine|putin|zelensky|macron|attal|netanyahu"
+    rf"(?i)({_PERSON_ALTERNATION}"
     r"|iran|ukraine|russia|china|israel|otan|onu|nato|maidan|crimea|bolchevik"
     r"|pentagon|white_house|united_nations)"
 )

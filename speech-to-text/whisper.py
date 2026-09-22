@@ -17,7 +17,7 @@ print(USERNAME, PASSWORD, HUGGING_FACE_API_KEY)
 
 client = Client("https://whisper-webui.myia.io/", auth=(USERNAME, PASSWORD))
 result = client.predict(
-    youtube_link="https://www.youtube.com/watch?v=n9Gj5QCSsBk",  # Example with Trump speech
+    youtube_link="https://www.youtube.com/watch?v=n9Gj5QCSsBk",  # Example with a public speech
     file_format="txt",
     add_timestamp=False,
     progress="large-v3-turbo",
