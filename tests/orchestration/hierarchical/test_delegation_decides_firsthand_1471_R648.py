@@ -51,7 +51,9 @@ class TestDelegationModeDecidesFirsthand:
 
     @pytest.mark.asyncio
     @pytest.mark.requires_api
-    async def test_delegation_mode_decides_end_to_end_with_real_agents(self) -> None:
+    async def test_delegation_mode_decides_end_to_end_with_real_agents(
+        self, monkeypatch
+    ) -> None:
         """5/5 operational tasks complete; conclusion is a graded verdict.
 
         #1550 (DoD #5): this test makes REAL LLM calls (≈184 s measured) — it
@@ -60,6 +62,17 @@ class TestDelegationModeDecidesFirsthand:
         collected it regardless. The marker protects a future CI scope widening
         and makes the LLM cost honest. A ``skip`` would satisfy none of that.
 
+        #2324: the fallacy-taxonomy descent runs SEQUENTIALLY here. The walk
+        shape of the parallel Phase 2 is chosen by the LLM *and the scheduler*
+        per recording session — a single record run cannot produce cassettes
+        covering every walk the replay might take (measured: 8 miss_replay on
+        the job's own cassettes, #2323). Sequential descent makes the walk a
+        pure function of the recorded responses: candidates in wide-net order,
+        one branch at a time — the record session and the replay walk the same
+        path. The descent still HAPPENS (nodes visited, LLM consulted at every
+        step); only the interleaving is pinned. The setenv must precede
+        ``setup_registry`` — the plugin reads the env at construction.
+
         Honnête-partiel: this assumes the test environment has a populated
         ``setup_registry()`` (i.e. ``include_optional=True``). The
         synthesis conclusion is one of the three graded verdicts in
@@ -67,6 +80,7 @@ class TestDelegationModeDecidesFirsthand:
         set membership AND the underlying success_rate moves from 0.25
         pre-fix to >=0.80 post-fix.
         """
+        monkeypatch.setenv("FALLACY_DESCENT_SEQUENTIAL", "1")
         registry = setup_registry(include_optional=True)
         result = await run_hierarchical_analysis(
             SYNTHETIC_FALLACY_TEXT,

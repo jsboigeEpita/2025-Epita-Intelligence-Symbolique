@@ -210,11 +210,87 @@ class LoggingHttpTransport(httpx.AsyncBaseTransport):
         # afin que le décorateur @retry de Tenacity puisse la traiter.
         if 400 <= response.status_code < 600:
             # Nous devons lire le corps ici UNIQUEMENT en cas d'erreur,
-            # car raise_for_status en a besoin pour le message d'exception.
+            # car l'exception en a besoin pour le message.
+            # #2324 : ``response.raise_for_status()`` mourait en RuntimeError
+            # (« request instance has not been set ») — une réponse de
+            # transport nu n'a pas son request lié. Le 400 de l'API devenait
+            # « APIConnectionError('Connection error.') » : le corps du
+            # message — le param rejeté, la raison, le remède proposé par
+            # l'API elle-même — se perdait, et le rejet se faisit passer pour
+            # une panne réseau (retries openai inclus). Lever explicitement
+            # avec le request et le corps : l'erreur dit ce que l'API a dit.
             await response.aread()
-            response.raise_for_status()
+            raise httpx.HTTPStatusError(
+                f"{response.status_code} {response.reason_phrase}: "
+                f"{response.text[:500]}",
+                request=request,
+                response=response,
+            )
 
         return response
+
+    async def aclose(self) -> None:
+        await self._wrapped_transport.aclose()
+
+
+class ReasoningEffortTransport(httpx.AsyncBaseTransport):
+    """#2324 — le paramètre que le connecteur SK ne peut pas exprimer.
+
+    Mesuré le 22/09 (#2324) : ``gpt-5.6-luna`` (famille reasoning) rejette
+    400 ``« Function tools with reasoning_effort are not supported … set
+    reasoning_effort to 'none' »`` sur /v1/chat/completions dès qu'un appel
+    porte des ``tools`` sans ``reasoning_effort`` explicite. SK 1.35 n'a pas
+    le champ (extra ignoré — impossible à exprimer dans les settings) et SK
+    1.44 ne l'envoie pas par défaut : le transport est le seul point de
+    passage commun aux deux versions, et à tout appel à outils de la
+    descente de taxonomie (chaque appel nav 400 → branche abandonnée → la
+    descente vit en fallback silencieux ; une session d'enregistrement ne
+    peut alors JAMAIS couvrir le rejeu).
+
+    Même discipline que la politique brute ``get_determinism_params``
+    (#1936) : n'injecter QUE si POST /chat/completions + ``tools`` présents
+    + modèle reasoning (``is_reasoning_model``) + champ absent. Un appel
+    sans tools ou un modèle non-reasoning ne doit pas recevoir le paramètre
+    (l'API le rejette pour eux).
+    """
+
+    def __init__(self, wrapped_transport: httpx.AsyncBaseTransport):
+        self._wrapped_transport = wrapped_transport
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.method == "POST" and "chat/completions" in request.url.path:
+            content_bytes = await request.aread()
+            try:
+                body = json.loads(content_bytes.decode("utf-8"))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                body = None
+            if (
+                isinstance(body, dict)
+                and body.get("tools")
+                and "reasoning_effort" not in body
+            ):
+                from argumentation_analysis.core.llm_service import is_reasoning_model
+
+                if is_reasoning_model(str(body.get("model", ""))):
+                    body["reasoning_effort"] = "none"
+                    new_content = json.dumps(body, ensure_ascii=False).encode("utf-8")
+                    # Deux écritures, parce que deux lecteurs : le send
+                    # httpx consomme ``request.stream`` (_transports/
+                    # default.py passe ``content=request.stream`` au canal),
+                    # tandis que tout ``aread()`` en aval sert le cache
+                    # ``_content``. Écrire l'un sans l'autre et l'appel
+                    # part sur le fil avec l'ancien corps — mesuré #2324 :
+                    # l'idiome ``stream._buffer`` (hérité de LoggingHttp-
+                    # Transport) est un no-op sur le ByteStream de httpx
+                    # 0.28, qui n'a plus d'attribut ``_buffer``. Le flux de
+                    # remplacement vient d'une Request jetable — publique,
+                    # pas d'import privé.
+                    request.stream = httpx.Request(
+                        "POST", request.url, content=new_content
+                    ).stream
+                    request._content = new_content
+                    request.headers["content-length"] = str(len(new_content))
+        return await self._wrapped_transport.handle_async_request(request)
 
     async def aclose(self) -> None:
         await self._wrapped_transport.aclose()
@@ -252,9 +328,13 @@ def get_resilient_async_client() -> httpx.AsyncClient:
     base_transport = httpx.AsyncHTTPTransport()
     resilient_transport = ResilientAsyncTransport(base_transport)
     # Le logger utilisé ici est celui du module network_utils
-    final_transport = LoggingHttpTransport(
+    logged_transport = LoggingHttpTransport(
         logger, wrapped_transport=resilient_transport
     )
+    # #2324 : l'injection reasoning_effort est la couche la plus EXTERNE —
+    # le log de la requête montre alors exactement le corps parti sur le fil
+    # (avec le champ injecté), pas un corps que l'API n'a jamais vu.
+    final_transport = ReasoningEffortTransport(logged_transport)
 
     return httpx.AsyncClient(
         transport=final_transport, timeout=settings.network.default_timeout

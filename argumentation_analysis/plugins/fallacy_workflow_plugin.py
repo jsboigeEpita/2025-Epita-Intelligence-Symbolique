@@ -244,6 +244,20 @@ class FallacyWorkflowPlugin:
         self.logger = logger or logging.getLogger(__name__)
         self.language = "fr"
 
+        # #2324: marche déterministe de la descente. En mode parallèle
+        # (défaut, production inchangée), l'entrelacement des branches dans le
+        # ``asyncio.gather`` du Phase 2 — et donc la supersession croisée et
+        # l'ordre de consommation du budget — dépend des latences de réponse :
+        # la forme de la marche est choisie par le LLM *et par le scheduler* à
+        # chaque session d'enregistrement. Une seule session ne peut alors pas
+        # produire des cassettes couvrant chaque marche possible. En mode
+        # séquentiel, la marche devient une fonction pure des réponses
+        # enregistrées : candidats dans l'ordre du wide-net, une branche après
+        # l'autre — le rejeu suit exactement la marche enregistrée. La descente
+        # a toujours LIEU (nœuds visités, LLM consulté) ; seule la
+        # séquentialisation change.
+        self.descent_sequential = os.getenv("FALLACY_DESCENT_SEQUENTIAL", "0") == "1"
+
         data = taxonomy_data or []
         load_error: Optional[str] = None
         if not data and taxonomy_file_path:
@@ -1282,7 +1296,17 @@ class FallacyWorkflowPlugin:
             )
         if not tasks:
             return
-        sub_results = await asyncio.gather(*tasks, return_exceptions=True)
+        if self.descent_sequential:
+            # #2324 : le fan-out suit la même discipline que le Phase 2 —
+            # l'ordre d'arrivée dans ``results_sink`` devient déterministe.
+            sub_results = []
+            for task in tasks:
+                try:
+                    sub_results.append(await task)
+                except Exception as exc:  # noqa: BLE001 — parité gather
+                    sub_results.append(exc)
+        else:
+            sub_results = await asyncio.gather(*tasks, return_exceptions=True)
         for r in sub_results:
             if isinstance(r, IdentifiedFallacy):
                 results_sink.append(r)
@@ -1369,9 +1393,20 @@ class FallacyWorkflowPlugin:
                 )
                 for pk in candidate_pks
             ]
-            branch_results = await asyncio.gather(
-                *exploration_tasks, return_exceptions=True
-            )
+            if self.descent_sequential:
+                # #2324 : une branche après l'autre, dans l'ordre des candidats
+                # — même exceptions que ``gather(return_exceptions=True)`` :
+                # une branche qui échoue n'interrompt pas les suivantes.
+                branch_results = []
+                for task in exploration_tasks:
+                    try:
+                        branch_results.append(await task)
+                    except Exception as exc:  # noqa: BLE001 — parité gather
+                        branch_results.append(exc)
+            else:
+                branch_results = await asyncio.gather(
+                    *exploration_tasks, return_exceptions=True
+                )
 
             # Phase 3: Collect + dedup by leaf taxonomy_pk (keep highest confidence)
             identified = []

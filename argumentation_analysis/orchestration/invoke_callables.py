@@ -275,7 +275,18 @@ def _make_agentic_llm_callable() -> Tuple[Optional[Callable[[str], str]], str, s
     client = OpenAI(api_key=api_key, base_url=base_url, timeout=120.0, max_retries=1)
 
     def _call(prompt: str) -> str:
-        response = client.chat.completions.create(
+        # #2324 : ce callable doit passer par le seam BO-3 (#1473) comme
+        # chaque autre appel direct — sinon la phase qualité part en live
+        # pendant le replay (mesuré : 12-14 POSTs par run sur le test de
+        # délégation, egress non-nul dans la bande replay). Le jumeau sync
+        # partage clés et cache avec le chemin async : une session record
+        # couvre les deux.
+        from argumentation_analysis.services.llm_cache import (
+            cached_raw_chat_completion_sync,
+        )
+
+        response = cached_raw_chat_completion_sync(
+            client,
             model=model_id,
             messages=[{"role": "user", "content": prompt}],
         )
