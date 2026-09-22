@@ -9,7 +9,6 @@ Watson en mode dégradé sans Tweety pour éviter les problèmes Java
 """
 
 import sys
-import os
 import json
 import asyncio
 import logging
