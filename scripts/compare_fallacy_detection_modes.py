@@ -145,12 +145,12 @@ def _assess_citation(fallacy: Dict, original_text: str) -> str:
 
 async def run_mode_a_raw(text: str) -> Dict[str, Any]:
     """Mode A: 0-shot raw LLM — 'find fallacies in this text'."""
-    from openai import AsyncOpenAI
+    from argumentation_analysis.core.utils.network_utils import build_async_openai_client
 
     # The ONE route resolver (#2352): honors the OpenRouter toggle and the
     # #1930 substitutions — the inline reads it replaces saw neither.
     api_key, base_url, model = resolve_chat_endpoint()
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    client = build_async_openai_client(api_key=api_key, base_url=base_url)
     start = time.time()
     resp = await client.chat.completions.create(
         model=model,
@@ -167,12 +167,12 @@ async def run_mode_a_raw(text: str) -> Dict[str, Any]:
 
 async def run_mode_b_taxonomy_fc(text: str, taxonomy_data: list) -> Dict[str, Any]:
     """Mode B: 0-shot LLM + taxonomy as free function-calling tool."""
-    from openai import AsyncOpenAI
+    from argumentation_analysis.core.utils.network_utils import build_async_openai_client
 
     # The ONE route resolver (#2352): honors the OpenRouter toggle and the
     # #1930 substitutions — the inline reads it replaces saw neither.
     api_key, base_url, model = resolve_chat_endpoint()
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    client = build_async_openai_client(api_key=api_key, base_url=base_url)
 
     taxonomy_summary = []
     for node in taxonomy_data:
@@ -210,14 +210,14 @@ async def run_mode_c_subworkflow(text: str, taxonomy_data: list) -> Dict[str, An
     """Mode C: FallacyWorkflowPlugin sub-workflow (iterative deepening)."""
     from semantic_kernel.kernel import Kernel
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-    from openai import AsyncOpenAI
+    from argumentation_analysis.core.utils.network_utils import build_async_openai_client
     from argumentation_analysis.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 
     # The ONE route resolver (#2352): honors the OpenRouter toggle and the
     # #1930 substitutions — the inline reads it replaces saw neither.
     api_key, base_url, model_id = resolve_chat_endpoint()
 
-    async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    async_client = build_async_openai_client(api_key=api_key, base_url=base_url)
     llm_service = OpenAIChatCompletion(ai_model_id=model_id, async_client=async_client)
     kernel = Kernel()
     kernel.add_service(llm_service)

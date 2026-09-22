@@ -1,10 +1,10 @@
 import asyncio
 import json
 import semantic_kernel as sk
-from openai import AsyncOpenAI
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from semantic_kernel.functions import KernelArguments
 from argumentation_analysis.core.models.toulmin_model import ToulminAnalysisResult
+from argumentation_analysis.core.utils.network_utils import build_async_openai_client
 
 
 class SemanticArgumentAnalyzer:
@@ -16,7 +16,7 @@ class SemanticArgumentAnalyzer:
         self.kernel = sk.Kernel()
 
         # Correction: Instancier un client AsyncOpenAI pour configurer l'URL de base
-        client = AsyncOpenAI(base_url=api_base_url, api_key="EMPTY")
+        client = build_async_openai_client(base_url=api_base_url, api_key="EMPTY")
 
         # Migration API Semantic Kernel: add_chat_service -> add_service
         service = OpenAIChatCompletion(ai_model_id=model_name, async_client=client)

@@ -5,7 +5,7 @@ Module contenant la classe NarrativeAgent pour interagir avec le Semantic Kernel
 import os
 import httpx
 import semantic_kernel as sk
-from openai import AsyncOpenAI
+from argumentation_analysis.core.utils.network_utils import build_async_openai_client
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion, OpenAIChatCompletion
 from semantic_kernel.functions import KernelArguments
 from pathlib import Path
@@ -44,15 +44,14 @@ class NarrativeAgent:
         if not api_key:
             raise ValueError("La variable d'environnement OPENAI_API_KEY est requise.")
 
-        # Configuration du client HTTP avec un timeout personnalisé
-        client_timeout = httpx.Timeout(120.0)
-        custom_httpx_client = httpx.AsyncClient(timeout=client_timeout)
-
-        # Création du client OpenAI avec le client HTTP personnalisé
-        async_openai_client = AsyncOpenAI(
+        # Client OpenAI avec un timeout personnalisé. #2391 : ce délai passait
+        # par un http_client maison, qui contournait ReasoningEffortTransport ;
+        # il passe désormais en option du client, et le transport est celui du
+        # constructeur unique.
+        async_openai_client = build_async_openai_client(
             api_key=api_key,
             organization=org_id,
-            http_client=custom_httpx_client
+            timeout=httpx.Timeout(120.0)
         )
 
         self.kernel.add_service(

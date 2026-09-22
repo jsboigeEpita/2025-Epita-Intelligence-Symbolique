@@ -1242,9 +1242,11 @@ class LLMFallacyDetector:
         if not api_key:
             return None, None
         try:
-            from openai import AsyncOpenAI
+            from argumentation_analysis.core.utils.network_utils import (
+                build_async_openai_client,
+            )
 
-            return AsyncOpenAI(api_key=api_key, base_url=base_url), model
+            return build_async_openai_client(api_key=api_key, base_url=base_url), model
         except ImportError:
             return None, None
 

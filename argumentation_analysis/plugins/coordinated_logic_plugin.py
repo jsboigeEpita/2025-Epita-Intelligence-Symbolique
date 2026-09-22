@@ -81,13 +81,19 @@ def _get_openai_client():
     ``openai/gpt-5.6-luna``, so it named a model no other resolver returned —
     in every configuration, including the OpenRouter-configured one (#2352).
     """
-    from openai import AsyncOpenAI
+    from argumentation_analysis.core.utils.network_utils import (
+        build_async_openai_client,
+    )
 
     api_key, base_url, model_id = resolve_chat_endpoint()
 
     if not api_key:
         return None, "", ""
-    return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id, api_key
+    return (
+        build_async_openai_client(api_key=api_key, base_url=base_url),
+        model_id,
+        api_key,
+    )
 
 
 class CoordinatedLogicPlugin:

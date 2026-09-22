@@ -204,14 +204,14 @@ async def main():
     # OpenRouter key against the official endpoint. The refusal now keys on
     # the resolved key alone: the resolver always renders a model id.
     from argumentation_analysis.core.llm_service import resolve_chat_endpoint
-    from openai import AsyncOpenAI
+    from argumentation_analysis.core.utils.network_utils import build_async_openai_client
 
     api_key, base_url, model_id = resolve_chat_endpoint()
     if not api_key:
         logging.error("Aucune clé API configurée (OPENAI_API_KEY ou OPENROUTER_API_KEY).")
         return
 
-    async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    async_client = build_async_openai_client(api_key=api_key, base_url=base_url)
     kernel.add_service(
         OpenAIChatCompletion(
             service_id="default", ai_model_id=model_id, async_client=async_client
