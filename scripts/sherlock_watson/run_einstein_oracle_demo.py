@@ -509,10 +509,17 @@ async def run_einstein_oracle_demo(integration_test=False):
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
         kernel = sk.Kernel()
-        api_key = os.getenv("OPENAI_API_KEY", "test-key")
-        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+        # The ONE route resolver (#2352): the `gpt-4o-mini` fallback it
+        # replaces names a retired model no resolver renders. `test-key`
+        # stays — it is the integration mode's placeholder, not a route
+        # decision.
+        from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+        api_key, _base_url, model_id = resolve_chat_endpoint()
         chat_service = OpenAIChatCompletion(
-            service_id="chat_completion", ai_model_id=model_id, api_key=api_key
+            service_id="chat_completion",
+            ai_model_id=model_id,
+            api_key=api_key or "test-key",
         )
         kernel.add_service(chat_service)
     else:

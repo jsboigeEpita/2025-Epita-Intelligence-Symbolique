@@ -199,13 +199,24 @@ async def main():
     
     # --- Initialisation du Kernel ---
     kernel = sk.Kernel()
-    api_key = os.environ.get("OPENAI_API_KEY")
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID")
-    if not all([api_key, model_id]):
-        logging.error("Variables d'environnement OPENAI_API_KEY et OPENAI_CHAT_MODEL_ID manquantes.")
+    # The ONE route resolver (#2352): the raw pair this replaces never saw the
+    # OpenRouter toggle — under it, this tool built an OpenAI service from an
+    # OpenRouter key against the official endpoint. The refusal now keys on
+    # the resolved key alone: the resolver always renders a model id.
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+    from openai import AsyncOpenAI
+
+    api_key, base_url, model_id = resolve_chat_endpoint()
+    if not api_key:
+        logging.error("Aucune clé API configurée (OPENAI_API_KEY ou OPENROUTER_API_KEY).")
         return
-        
-    kernel.add_service(OpenAIChatCompletion(service_id="default", ai_model_id=model_id, api_key=api_key))
+
+    async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    kernel.add_service(
+        OpenAIChatCompletion(
+            service_id="default", ai_model_id=model_id, async_client=async_client
+        )
+    )
 
     # --- Préparation du Prompt ---
     prompt = """

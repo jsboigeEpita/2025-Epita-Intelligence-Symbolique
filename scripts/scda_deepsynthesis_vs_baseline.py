@@ -414,6 +414,18 @@ async def run_baseline_0shot(text: str, model: str = "gpt-4o-mini") -> str:
     return response.choices[0].message.content
 
 
+def _resolved_run_model() -> str:
+    """Modèle résolu par le résolveur canonique (#2352).
+
+    Le fallback ``gpt-4o-mini`` qu'il remplace nomme un modèle retiré qu'aucun
+    résolveur ne rend : le run et sa provenance stampée (``results["model"]``)
+    divergeaient sur le même artefact.
+    """
+    from argumentation_analysis.core.llm_service import resolve_active_model_id
+
+    return resolve_active_model_id()
+
+
 async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
     """Run full comparison for one corpus."""
     info = CORPORA[corpus_id]
@@ -427,7 +439,7 @@ async def run_comparison(corpus_id: str, skip_pipeline: bool = False) -> dict:
     out_dir = OUTPUTS_DIR / info["label"]
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-4o-mini")
+    model = _resolved_run_model()
     results = {}
 
     # Step 1: Run full SCDA pipeline → DeepSynthesis report

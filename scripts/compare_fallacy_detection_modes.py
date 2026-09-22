@@ -33,6 +33,7 @@ if _env_path.exists():
 
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions
+from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
 CORPORA = {
     "A": {"src_idx": 11, "label": "corpus_dense_A"},
@@ -145,11 +146,11 @@ def _assess_citation(fallacy: Dict, original_text: str) -> str:
 async def run_mode_a_raw(text: str) -> Dict[str, Any]:
     """Mode A: 0-shot raw LLM — 'find fallacies in this text'."""
     from openai import AsyncOpenAI
-    client = AsyncOpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY", ""),
-        base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-    )
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
+    # The ONE route resolver (#2352): honors the OpenRouter toggle and the
+    # #1930 substitutions — the inline reads it replaces saw neither.
+    api_key, base_url, model = resolve_chat_endpoint()
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     start = time.time()
     resp = await client.chat.completions.create(
         model=model,
@@ -167,11 +168,11 @@ async def run_mode_a_raw(text: str) -> Dict[str, Any]:
 async def run_mode_b_taxonomy_fc(text: str, taxonomy_data: list) -> Dict[str, Any]:
     """Mode B: 0-shot LLM + taxonomy as free function-calling tool."""
     from openai import AsyncOpenAI
-    client = AsyncOpenAI(
-        api_key=os.environ.get("OPENAI_API_KEY", ""),
-        base_url=os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
-    )
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+
+    # The ONE route resolver (#2352): honors the OpenRouter toggle and the
+    # #1930 substitutions — the inline reads it replaces saw neither.
+    api_key, base_url, model = resolve_chat_endpoint()
+    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
 
     taxonomy_summary = []
     for node in taxonomy_data:
@@ -212,9 +213,9 @@ async def run_mode_c_subworkflow(text: str, taxonomy_data: list) -> Dict[str, An
     from openai import AsyncOpenAI
     from argumentation_analysis.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 
-    api_key = os.environ.get("OPENAI_API_KEY", "")
-    base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
-    model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+    # The ONE route resolver (#2352): honors the OpenRouter toggle and the
+    # #1930 substitutions — the inline reads it replaces saw neither.
+    api_key, base_url, model_id = resolve_chat_endpoint()
 
     async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
     llm_service = OpenAIChatCompletion(ai_model_id=model_id, async_client=async_client)

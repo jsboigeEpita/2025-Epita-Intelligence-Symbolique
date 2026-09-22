@@ -165,8 +165,11 @@ async def analyze_text_with_modules(text: str, description: str) -> bool:
         logger.info(f"🚀 Lancement de l'analyse avec GPT-4o-mini: {description}")
         logger.info(f"📝 Longueur du texte: {len(text)} caractères")
 
-        # Configuration du modèle depuis .env
-        llm_model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+        # Modèle résolu par le résolveur canonique (#2352) — la lecture brute
+        # ignorait la bascule OpenRouter et les substitutions #1930.
+        from argumentation_analysis.core.llm_service import resolve_active_model_id
+
+        llm_model = resolve_active_model_id()
         logger.info(f"🤖 Modèle configuré: {llm_model}")
 
         # Configuration de l'analyse avec GPT-4o-mini authentique

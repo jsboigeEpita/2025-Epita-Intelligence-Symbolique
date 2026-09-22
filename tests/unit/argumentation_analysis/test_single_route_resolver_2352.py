@@ -78,10 +78,20 @@ _NON_CANONICAL_FILES = (
     "argumentation_analysis/plugins/coordinated_logic_plugin.py",
     "argumentation_analysis/services/nl_to_logic.py",
     "argumentation_analysis/services/ai_shield/layers/llm_validator.py",
+    # R1043 (#2370 final tranche): the scripts/ sites that used to read the
+    # route environment now call the resolver.
+    "scripts/baseline_0shot.py",
+    "scripts/compare_fallacy_detection_modes.py",
+    "scripts/apps/sherlock_watson/validation_point1_simple.py",
+    "scripts/maintenance/repair_commit_json.py",
+    "scripts/run_fallacy_benchmark.py",
+    "scripts/scda_deepsynthesis_vs_baseline.py",
+    "scripts/sherlock_watson/run_einstein_oracle_demo.py",
+    "scripts/validation/analyze_random_extract.py",
 )
 
 _ROUTE_ENV_READ = re.compile(
-    r"""environ(?:\.get\(\s*|\[\s*)["']"""
+    r"""(?:environ(?:\.get\(\s*|\[\s*)|(?:os\.)?getenv\(\s*)["']"""
     r"""(OPENROUTER_[A-Z_]*|OPENAI_CHAT_MODEL_ID|OPENAI_BASE_URL|OPENAI_API_KEY)["']"""
 )
 
@@ -299,43 +309,13 @@ _MODEL_VARS = ("OPENAI_CHAT_MODEL_ID", "OPENROUTER_CHAT_MODEL_ID")
 # that READS a model id is named here with what that read feeds: a new copy is
 # not a key and reddens; an entry that stopped reading is stale and reddens; a
 # file that gained a read reddens on the value tuple. This green claims the
-# population is **counted**, never that the route is unified.
+# population is **counted**, never that the route is unified. The R1043 tranche
+# converted the last eight script readers, so what remains is the resolver
+# itself plus the two diagnostics #2370 class D keeps out of conversion.
 _FROZEN_ROUTE_MODEL_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
     "argumentation_analysis/core/llm_service.py": (
         ("OPENAI_CHAT_MODEL_ID", "OPENROUTER_CHAT_MODEL_ID"),
         "the ONE resolver — the only place the route environment is read on purpose",
-    ),
-    "scripts/apps/sherlock_watson/validation_point1_simple.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A/C — two decisions + one trace label",
-    ),
-    "scripts/baseline_0shot.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — builds its client on the raw OpenAI pair, no toggle",
-    ),
-    "scripts/compare_fallacy_detection_modes.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — three mode runners each decide their own model",
-    ),
-    "scripts/maintenance/repair_commit_json.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — maintenance tool; reads without a fallback and refuses when absent",
-    ),
-    "scripts/run_fallacy_benchmark.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 C — prints the model it is about to use",
-    ),
-    "scripts/scda_deepsynthesis_vs_baseline.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — `gpt-4o-mini` fallback, a literal no resolver renders",
-    ),
-    "scripts/sherlock_watson/run_einstein_oracle_demo.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — kernel service built from the env with a `gpt-4o-mini` fallback",
-    ),
-    "scripts/validation/analyze_random_extract.py": (
-        ("OPENAI_CHAT_MODEL_ID",),
-        "#2370 A — logs the model then runs the analysis on it",
     ),
     "scripts/validation/test_environment_simple.py": (
         ("OPENAI_CHAT_MODEL_ID",),
@@ -1108,3 +1088,333 @@ def test_registry_and_provenance_delegate_to_the_canonical_resolver(
     assert default.model_id == sentinel[2], default.model_id
 
     assert _provenance_label() == sentinel[2]
+
+
+# ---------------------------------------------------------------------------
+# R1043 — the final #2370 tranche: the last eight scripts/ readers
+# ---------------------------------------------------------------------------
+
+# The two sites with client-construction logic, where a delegation can be
+# wired wrong (dropped base_url, swapped argument). The six other converted
+# files resolve through one-line helpers whose delegation the structural
+# guard pins — importing them here would cost a 12s environment bootstrap
+# (`argumentation_analysis.core.environment`) or reconfigure the root logger
+# (`repair_commit_json`) for no additional measurement.
+_SEAT_DRIVER_FINAL = r'''
+"""Measure the final-tranche script sites (#2370), in a throwaway process.
+
+Same discipline as the R1034 driver: ``baseline_0shot`` and
+``compare_fallacy_detection_modes`` chdir and load ``.env`` at import time, so
+they are measured in a subprocess under a seat imposed AFTER the imports.
+"""
+import asyncio
+import importlib.util
+import json
+import os
+import sys
+import types
+from pathlib import Path
+
+root = Path(os.environ["_SEAT_ROOT"])
+sys.path.insert(0, str(root))
+
+import argumentation_analysis.core.llm_service as _llm_service
+
+
+class _SyncRecorder:
+    """Stands in for ``openai.OpenAI``: records construction and call kwargs."""
+
+    constructions = []
+    calls = []
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        _SyncRecorder.constructions.append(kwargs)
+        self.chat = types.SimpleNamespace(
+            completions=types.SimpleNamespace(create=self._create)
+        )
+
+    def _create(self, **kwargs):
+        _SyncRecorder.calls.append(kwargs)
+        choice = types.SimpleNamespace(
+            message=types.SimpleNamespace(content="stub"),
+            text=None,
+            finish_reason="stop",
+        )
+        return types.SimpleNamespace(choices=[choice])
+
+
+class _AsyncRecorder:
+    """Stands in for ``openai.AsyncOpenAI``: same, awaitable."""
+
+    constructions = []
+    calls = []
+
+    def __init__(self, **kwargs):
+        self.kwargs = kwargs
+        _AsyncRecorder.constructions.append(kwargs)
+        self.chat = types.SimpleNamespace(
+            completions=types.SimpleNamespace(create=self._create)
+        )
+
+    async def _create(self, **kwargs):
+        _AsyncRecorder.calls.append(kwargs)
+        choice = types.SimpleNamespace(
+            message=types.SimpleNamespace(content="stub"),
+            text=None,
+            finish_reason="stop",
+        )
+        return types.SimpleNamespace(choices=[choice])
+
+
+def _load(name, relpath):
+    spec = importlib.util.spec_from_file_location(name, root / relpath)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+baseline = _load("seat_baseline_2370", "scripts/baseline_0shot.py")
+compare = _load("seat_compare_2370", "scripts/compare_fallacy_detection_modes.py")
+
+# The seat is imposed AFTER the imports: both scripts load .env at module
+# level, which must not decide the case.
+seat = json.loads(os.environ["_SEAT"])
+for _var in seat["unset"]:
+    os.environ.pop(_var, None)
+for _var, _value in seat["set"].items():
+    os.environ[_var] = _value
+
+# Measured before any patching, so the accord is with the REAL resolver.
+canonical = _llm_service.resolve_chat_endpoint()
+
+if os.environ.get("_SEAT_SENTINEL") == "1":
+    _SENTINEL = (
+        "sk-sentinel-not-a-real-key",
+        "https://sentinel.invalid/v1",
+        "sentinel-model",
+    )
+    _llm_service.resolve_chat_endpoint = lambda *a, **k: _SENTINEL
+    # A module-level `from ... import resolve_chat_endpoint` binding is made
+    # at import time; redirect it too or the sentinel would not reach it.
+    for _m in (baseline, compare):
+        if hasattr(_m, "resolve_chat_endpoint"):
+            _m.resolve_chat_endpoint = _llm_service.resolve_chat_endpoint
+
+
+# Mode C builds a kernel service: stub the SK and plugin surface so the
+# measurement stops at the recorded client (no real call, no full SK).
+class _StubKernel:
+    def add_service(self, _service):
+        pass
+
+
+class _StubChatCompletion:
+    built = []
+
+    def __init__(self, **kwargs):
+        _StubChatCompletion.built.append(kwargs)
+
+
+class _StubPlugin:
+    def __init__(self, **_kwargs):
+        pass
+
+    async def run_guided_analysis(self, argument_text=""):
+        return '{"fallacies": [], "exploration_method": "stub"}'
+
+
+import semantic_kernel.kernel as _skk
+import semantic_kernel.connectors.ai.open_ai as _sko
+import argumentation_analysis.plugins.fallacy_workflow_plugin as _fwp
+
+_skk.Kernel = _StubKernel
+_sko.OpenAIChatCompletion = _StubChatCompletion
+_fwp.FallacyWorkflowPlugin = _StubPlugin
+
+import openai
+
+openai.OpenAI = _SyncRecorder
+openai.AsyncOpenAI = _AsyncRecorder
+
+_sites = {}
+
+_before_c, _before_k = len(_SyncRecorder.constructions), len(_SyncRecorder.calls)
+baseline.call_llm("Texte synthetique.")
+assert len(_SyncRecorder.calls) > _before_k, "call_llm made no call"
+_sites["scripts/baseline_0shot.py::call_llm"] = {
+    "model": _SyncRecorder.calls[_before_k]["model"],
+    "base_url": _SyncRecorder.constructions[_before_c].get("base_url"),
+}
+
+
+async def _measure_compare_modes():
+    _before_c, _before_k = len(_AsyncRecorder.constructions), len(_AsyncRecorder.calls)
+    await compare.run_mode_a_raw("Texte synthetique.")
+    assert len(_AsyncRecorder.calls) > _before_k, "mode A made no call"
+    _sites["scripts/compare_fallacy_detection_modes.py::mode_a"] = {
+        "model": _AsyncRecorder.calls[_before_k]["model"],
+        "base_url": _AsyncRecorder.constructions[_before_c].get("base_url"),
+    }
+
+    _before_c, _before_k = len(_AsyncRecorder.constructions), len(_AsyncRecorder.calls)
+    await compare.run_mode_b_taxonomy_fc("Texte synthetique.", [])
+    assert len(_AsyncRecorder.calls) > _before_k, "mode B made no call"
+    _sites["scripts/compare_fallacy_detection_modes.py::mode_b"] = {
+        "model": _AsyncRecorder.calls[_before_k]["model"],
+        "base_url": _AsyncRecorder.constructions[_before_c].get("base_url"),
+    }
+
+    _before_c, _before_k = len(_AsyncRecorder.constructions), len(_AsyncRecorder.calls)
+    await compare.run_mode_c_subworkflow("Texte synthetique.", [])
+    assert len(_StubChatCompletion.built), "mode C built no kernel service"
+    assert len(_AsyncRecorder.constructions) > _before_c, "mode C built no client"
+    _sites["scripts/compare_fallacy_detection_modes.py::mode_c"] = {
+        "model": _StubChatCompletion.built[-1]["ai_model_id"],
+        "base_url": _AsyncRecorder.constructions[_before_c].get("base_url"),
+    }
+
+
+asyncio.run(_measure_compare_modes())
+
+Path(os.environ["_SEAT_OUT"]).write_text(
+    json.dumps(
+        {
+            "canonical": {"model": canonical[2], "base_url": canonical[1]},
+            "sites": _sites,
+        }
+    ),
+    encoding="utf-8",
+)
+'''
+
+
+def _measure_final_tranche(
+    tmp_path: Path, seat: Dict[str, Any], sentinel: bool = False
+) -> Dict[str, Any]:
+    """Run the final-tranche sites in a subprocess under ``seat``."""
+    out = tmp_path / "seat_final.json"
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in _ROUTE_VARS and not key.startswith("PYTEST_")
+    }
+    env.update(
+        {
+            "_SEAT_ROOT": str(REPO_ROOT),
+            "_SEAT_OUT": str(out),
+            "_SEAT": json.dumps(seat),
+            "_SEAT_SENTINEL": "1" if sentinel else "0",
+            "PYTHONPATH": str(REPO_ROOT),
+        }
+    )
+    proc = subprocess.run(
+        [sys.executable, "-c", _SEAT_DRIVER_FINAL],
+        cwd=str(REPO_ROOT),
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    assert out.exists(), (
+        f"the final-tranche seat driver wrote no result (rc={proc.returncode}).\n"
+        f"--- stdout ---\n{proc.stdout[-2000:]}\n--- stderr ---\n{proc.stderr[-4000:]}"
+    )
+    return json.loads(out.read_text(encoding="utf-8"))
+
+
+# The seat with BOTH keys set: the raw-pair sites took the official key and
+# endpoint while the resolver serves the OpenRouter route — the silent
+# half-delegation #2352 measures. (`baseline`'s pristine read would KeyError
+# without an OPENAI key, which is a crash, not a measurement.)
+_FINAL_SEAT = _seat(
+    {
+        "OPENROUTER_BASE_URL": "https://openrouter.ai/api/v1",
+        "OPENROUTER_API_KEY": "sk-or-synthetic-not-a-real-key",
+        "OPENAI_API_KEY": "sk-official-synthetic-not-a-real-key",
+        "OPENAI_CHAT_MODEL_ID": "openai/gpt-5.6-pro",
+    }
+)
+
+
+def test_final_tranche_scripts_agree_with_the_resolver_on_the_both_keys_seat(
+    tmp_path: Path,
+) -> None:
+    """THE measured divergence, on the seat where both providers are keyed.
+
+    Pre-repair every site sent the official key to the official endpoint
+    (``baseline`` even dropped the endpoint entirely) while the canonical
+    resolver served the OpenRouter route — a **route value** failure, never
+    an ``ImportError``.
+    """
+    result = _measure_final_tranche(tmp_path, _FINAL_SEAT)
+
+    canonical = result["canonical"]
+    assert canonical["model"] == "openai/gpt-5.6-pro", canonical
+    assert canonical["base_url"] == "https://openrouter.ai/api/v1", canonical
+
+    divergent = {
+        site: (route["model"], route["base_url"])
+        for site, route in result["sites"].items()
+        if route["model"] != canonical["model"]
+        or route["base_url"] != canonical["base_url"]
+    }
+    assert not divergent, (
+        f"final-tranche sites not following the resolved route: {divergent} "
+        f"(the resolver rendered {canonical}) — they must call "
+        "resolve_chat_endpoint instead of re-deriving the toggle (#2352/#2370)."
+    )
+
+
+def test_final_tranche_scripts_follow_the_resolver_sentinel(
+    tmp_path: Path,
+) -> None:
+    """Delegation, not coincidence: the sites must follow a patched resolver.
+
+    A site that re-derived the route from the environment cannot see the
+    sentinel, whatever the environment says — this reddens on any re-inlined
+    resolver, pre-repair included.
+    """
+    result = _measure_final_tranche(tmp_path, _FINAL_SEAT, sentinel=True)
+
+    for site, route in result["sites"].items():
+        assert route["model"] == "sentinel-model", (site, result["sites"])
+        assert route["base_url"] == "https://sentinel.invalid/v1", (
+            site,
+            result["sites"],
+        )
+
+
+def test_final_tranche_accord_control_without_the_toggle(tmp_path: Path) -> None:
+    """Non-vacuity: without the toggle, the raw reads already agreed.
+
+    Pre-repair the three compare modes rendered exactly this route (official
+    key, official endpoint, configured model), so the divergence the
+    both-keys seat measures is configuration-dependent — not a seat where
+    nothing ever worked. ``baseline`` is the exception its repair carries:
+    it never rendered an endpoint at all, so only its model accorded — that
+    is why the both-keys seat measures its endpoint as ``None``.
+    """
+    result = _measure_final_tranche(
+        tmp_path,
+        _seat(
+            {
+                "OPENAI_API_KEY": "sk-official-synthetic-not-a-real-key",
+                "OPENAI_CHAT_MODEL_ID": "openai/gpt-5.6-pro",
+            }
+        ),
+    )
+
+    canonical = result["canonical"]
+    assert canonical["model"] == "openai/gpt-5.6-pro", canonical
+    assert canonical["base_url"] == "https://api.openai.com/v1", canonical
+
+    models = {site["model"] for site in result["sites"].values()}
+    assert models == {"openai/gpt-5.6-pro"}, result["sites"]
+    compare_endpoints = {
+        site["base_url"]
+        for name, site in result["sites"].items()
+        if name.startswith("scripts/compare_fallacy_detection_modes.py")
+    }
+    assert compare_endpoints == {"https://api.openai.com/v1"}, result["sites"]

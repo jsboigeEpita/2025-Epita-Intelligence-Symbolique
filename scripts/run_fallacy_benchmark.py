@@ -33,6 +33,20 @@ logging.basicConfig(
 )
 
 
+def _resolved_banner_model():
+    """Modèle que les modes vont réellement utiliser (#2352).
+
+    La bannière doit rendre la route résolue, pas la variable brute — sous
+    bascule OpenRouter, la variable brute nomme un modèle que le run
+    n'utilisera pas. None sans clé configurée : nommer un modèle que rien ne
+    fera tourner serait une fausse annonce.
+    """
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    api_key, _base_url, model_id = resolve_chat_endpoint()
+    return model_id if api_key else None
+
+
 async def main():
     parser = argparse.ArgumentParser(description="Fallacy detection benchmark")
     parser.add_argument("--parallel", type=int, default=1,
@@ -43,7 +57,7 @@ async def main():
 
     print("=" * 70)
     print("  Fallacy Detection Comparative Benchmark (#84 Phase 4)")
-    print(f"  Model: {os.environ.get('OPENAI_CHAT_MODEL_ID', 'gpt-5.6-luna')}")
+    print(f"  Model: {_resolved_banner_model() or 'none (no API key configured)'}")
     print(f"  Cases: {len(BENCHMARK_CASES)}")
     print(f"  Modes: {', '.join(args.modes)}")
     print(f"  Concurrency: {args.parallel}")

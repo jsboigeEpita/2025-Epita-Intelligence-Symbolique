@@ -9,7 +9,6 @@ Watson en mode dégradé sans Tweety pour éviter les problèmes Java
 """
 
 import sys
-import os
 import json
 import asyncio
 import logging
@@ -49,6 +48,19 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+
+def _resolved_demo_route():
+    """(api_key, model) résolus par le résolveur canonique (#2352).
+
+    Les lectures brutes qu'elle remplace ignoraient la bascule OpenRouter et
+    les substitutions #1930 : sous bascule, les démos partaient sur le
+    mauvais endpoint avec la mauvaise clé.
+    """
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    api_key, _base_url, model = resolve_chat_endpoint()
+    return api_key, model
 
 
 class SimpleSherlockAgent:
@@ -232,11 +244,10 @@ async def run_cluedo_demo_authentic():
     logger.info("🎯 DÉBUT DÉMO CLUEDO AVEC VRAIS LLMS")
 
     # Vérification de la clé API
-    api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+    api_key, model = _resolved_demo_route()
 
     if not api_key:
-        logger.error("❌ OPENAI_API_KEY non configurée")
+        logger.error("❌ Aucune clé API configurée (OPENAI_API_KEY ou OPENROUTER_API_KEY)")
         return None
 
     logger.info(f"🔧 Configuration: {model}")
@@ -353,11 +364,10 @@ async def run_einstein_demo_authentic():
     """Lance une démo Einstein avec vrais LLMs"""
     logger.info("🧮 DÉBUT DÉMO EINSTEIN AVEC VRAIS LLMS")
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+    api_key, model = _resolved_demo_route()
 
     if not api_key:
-        logger.error("❌ OPENAI_API_KEY non configurée")
+        logger.error("❌ Aucune clé API configurée (OPENAI_API_KEY ou OPENROUTER_API_KEY)")
         return None
 
     # Agents pour le puzzle Einstein
@@ -439,13 +449,17 @@ def save_validation_traces(cluedo_results: Dict, einstein_results: Dict) -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     trace_file = f"logs/point1_conversations_authentiques_{timestamp}.json"
 
+    # Provenance de la trace : le modèle RÉSOLU, None sans clé — nommer un
+    # modèle que rien n'a fait tourner serait une fausse provenance (#2352).
+    _api_key, _model = _resolved_demo_route()
+
     validation_data = {
         "validation_point": "1/5",
         "mission": "Démos Cluedo/Einstein Sherlock-Watson-Moriarty avec vrais LLMs",
         "timestamp": datetime.now().isoformat(),
         "status": "SUCCESS",
         "configuration": {
-            "openai_model": os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
+            "openai_model": _model if _api_key else None,
             "real_llm_confirmed": True,
             "mocks_eliminated": True,
             "tweety_bypassed": "Watson en mode dégradé pour éviter problème Java",
