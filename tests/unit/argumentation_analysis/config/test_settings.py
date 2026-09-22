@@ -101,9 +101,18 @@ class TestAzureOpenAISettings:
             s.deployment_name is None
         ), f"unset deployment_name must be None, got {s.deployment_name!r}"
 
-    def test_chat_model_id_is_string(self):
-        s = AzureOpenAISettings()
-        assert isinstance(s.chat_model_id, str)
+    def test_chat_model_id_is_unset_by_default(self, monkeypatch):
+        # #2377: this field is a **deployment name** on Azure, tenant-specific.
+        # It used to default to an OpenAI model id ("gpt-5.6-luna"), a value
+        # meaningless for this provider and read by nobody (the Azure branch of
+        # `kernel_builder` builds on `deployment_name`). The old assertion
+        # (`isinstance(..., str)`) pinned the presence of a default; the field
+        # now says "unset" instead of naming a model nothing serves.
+        monkeypatch.delenv("AZURE_OPENAI_CHAT_MODEL_ID", raising=False)
+        s = AzureOpenAISettings(_env_file=None)
+        assert (
+            s.chat_model_id is None
+        ), f"unset chat_model_id must be None, got {s.chat_model_id!r}"
 
 
 # ============================================================
@@ -215,6 +224,9 @@ class TestServiceManagerSettings:
 
     def test_default_model_id(self):
         s = ServiceManagerSettings()
+        # #2377: the literal still names the value, but it is no longer declared
+        # here — it is the single constant `settings.DEFAULT_CHAT_MODEL_ID`,
+        # whose identity `test_service_manager_provenance_2377.py` pins (`is`).
         assert s.default_model_id == "gpt-5.6-luna"  # default (#1930)
 
 

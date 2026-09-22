@@ -394,10 +394,11 @@ if __name__ == "__main__":
         # ou via le fichier de configuration chargé par `settings`.
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        # Fournir les arguments requis pour le service LLM
-        cli_llm_service = create_llm_service(
-            service_id="default", model_id="gpt-4-turbo-2024-04-09"
-        )
+        # Pas de model_id (#2377) : « gpt-4-turbo-2024-04-09 » était figé ici,
+        # un modèle qu'aucun résolveur ne choisissait — la CLI routait donc vers
+        # un modèle que la configuration ne pouvait pas changer. La fabrique
+        # résout depuis l'environnement (et la table #1930).
+        cli_llm_service = create_llm_service(service_id="default")
 
         # Exécution de l'analyse
         analysis_result = asyncio.run(

@@ -21,7 +21,7 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
-from argumentation_analysis.config.settings import settings
+from argumentation_analysis.config.settings import settings, DEFAULT_CHAT_MODEL_ID
 
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
@@ -42,9 +42,9 @@ logger.info("<<<<< MODULE llm_service.py LOADED >>>>>")
 # par tâche rendue — et tombe dans le piège #1929 (contenu vide en HTTP 200
 # quand le budget de sortie est serré, car le raisonnement se sert en premier).
 OBSOLETE_MODEL_SUBSTITUTIONS = {
-    "gpt-4-32k": "gpt-5.6-luna",
-    "gpt-5-mini": "gpt-5.6-luna",
-    "openai/gpt-5-mini": "openai/gpt-5.6-luna",
+    "gpt-4-32k": DEFAULT_CHAT_MODEL_ID,
+    "gpt-5-mini": DEFAULT_CHAT_MODEL_ID,
+    "openai/gpt-5-mini": f"openai/{DEFAULT_CHAT_MODEL_ID}",
 }
 
 
@@ -271,7 +271,9 @@ def assert_declared_route(base_url: str, model_id: str, source: str) -> None:
         )
 
 
-def resolve_chat_endpoint(default_model: str = "gpt-5.6-luna") -> Tuple[str, str, str]:
+def resolve_chat_endpoint(
+    default_model: str = DEFAULT_CHAT_MODEL_ID,
+) -> Tuple[str, str, str]:
     """Resolve the chat endpoint honoring the OpenRouter toggle.
 
     Single canonical source of truth for routing raw-SDK (non-kernel) LLM
@@ -397,7 +399,10 @@ def create_llm_service(
 
     # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
     if not model_id:
-        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+        # Le repli vient du MÊME endroit que celui du résolveur (#2377, item 4)
+        # — ce site portait une 2ᵉ copie du littéral, c'est-à-dire un 2ᵉ défaut
+        # libre de diverger du premier sans que rien ne rougisse.
+        model_id = os.getenv("OPENAI_CHAT_MODEL_ID", DEFAULT_CHAT_MODEL_ID)
         logger.info(
             f"model_id non fourni, utilisation de la valeur de .env: {model_id}"
         )

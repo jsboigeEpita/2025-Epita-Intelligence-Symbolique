@@ -195,7 +195,14 @@ class TestOrchestrationServiceManagerInit:
         assert manager.config is None
 
     def test_init_llm_service_id_default(self, manager):
-        assert manager.llm_service_id == "gpt-5.6-luna"  # default (#1930)
+        from argumentation_analysis.config.settings import settings
+
+        # #2377: this field is a kernel SERVICE id, consumed by
+        # `kernel.get_service()` and `create_llm_service(service_id=...)` — never
+        # sent to the API as a model. It used to default to "gpt-5.6-luna", a
+        # model id in a service-id field, which `initialize()` overwrote with
+        # this same settings value anyway: wrong-typed *and* dead.
+        assert manager.llm_service_id == settings.service_manager.default_llm_service_id
 
     def test_init_with_logging_enabled(self):
         from argumentation_analysis.orchestration.service_manager import (
