@@ -80,14 +80,6 @@ def mock_generate_sample(mocker: MagicMock) -> MagicMock:
     )
 
 
-@pytest.fixture
-def mock_split_args(mocker: MagicMock) -> MagicMock:
-    """Mock la fonction split_text_into_arguments."""
-    return mocker.patch(
-        "argumentation_analysis.orchestration.advanced_analyzer.split_text_into_arguments"
-    )
-
-
 def test_analyze_extract_advanced_successful_run(
     sample_extract_definition: Dict[str, Any],
     mock_plugin: MagicMock,
