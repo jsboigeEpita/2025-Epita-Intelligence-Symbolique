@@ -64,6 +64,11 @@ MANIFEST_NAME = "MANIFEST.json"
 # "Export cassettes" step) — the only baseline the run's author cannot forge
 # after the fact.
 _EXPORT_LINE_RE = re.compile(r"Exported cassettes:\s*(\d+)")
+# export.py's own report of the manifest it wrote (#2323). Since #2323 the
+# manifest sits INSIDE the staging dir the line above globs, so from #2323 to
+# #2405 that line counted it as a cassette (run 35792294382: 277 for 276).
+# The run printed this line too — the manifest's author cannot rewrite it.
+_MANIFEST_LINE_RE = re.compile(r"Manifest: .*\(run (\d+), (\d+) cassettes\)")
 
 
 class RunLogError(Exception):
@@ -77,12 +82,19 @@ def _run_export_count(
     run_id: str,
     urlopen: Optional[Callable[..., Any]] = None,
 ) -> int:
-    """Fetch a record run's logs and parse its ``Exported cassettes: N`` line.
+    """Fetch a record run's logs and derive the cassettes its export wrote.
+
+    A run recorded before #2323 carries only the ``Exported cassettes: N``
+    line, and N is the baseline. A later run also carries export.py's
+    ``Manifest: ... (run R, N cassettes)`` line: N is the baseline, R must be
+    this run, and the glob line must read N (#2405 producer) or N+1 (the
+    manifest counted as a cassette, #2323 to #2405).
 
     Raises:
         RunLogError: the run does not exist (404 — a fabricated run id),
-            its logs are unreachable, or they carry no export line. Every
-            failure mode is a provenance verdict, never a silent skip.
+            its logs are unreachable, they carry no export line, or the two
+            lines disagree. Every failure mode is a provenance verdict, never
+            a silent skip.
     """
     if urlopen is None:
         # Resolved at CALL time, not def time — a default argument bound at
@@ -108,19 +120,40 @@ def _run_export_count(
         raise RunLogError(f"run {run_id} logs unavailable (HTTP {exc.code})") from exc
     except (urllib.error.URLError, OSError) as exc:
         raise RunLogError(f"run {run_id} logs unreachable: {exc}") from exc
+    glob_count: Optional[int] = None
+    manifest_line: Optional[Tuple[str, int]] = None
     try:
         with zipfile.ZipFile(io.BytesIO(data)) as zf:
             for name in zf.namelist():
                 text = zf.read(name).decode("utf-8", errors="replace")
                 match = _EXPORT_LINE_RE.search(text)
-                if match:
-                    return int(match.group(1))
+                if match and glob_count is None:
+                    glob_count = int(match.group(1))
+                match = _MANIFEST_LINE_RE.search(text)
+                if match and manifest_line is None:
+                    manifest_line = (match.group(1), int(match.group(2)))
     except zipfile.BadZipFile as exc:
         raise RunLogError(f"run {run_id} logs are not a zip archive: {exc}") from exc
-    raise RunLogError(
-        f"run {run_id} logs carry no 'Exported cassettes:' line — cannot "
-        "derive the job baseline"
-    )
+    if glob_count is None:
+        raise RunLogError(
+            f"run {run_id} logs carry no 'Exported cassettes:' line — cannot "
+            "derive the job baseline"
+        )
+    if manifest_line is None:
+        return glob_count
+    line_run, cassettes = manifest_line
+    if line_run != str(run_id):
+        raise RunLogError(
+            f"run {run_id}'s export wrote a manifest for run {line_run} — the "
+            "logs do not belong to the manifest's record run"
+        )
+    if glob_count not in (cassettes, cassettes + 1):
+        raise RunLogError(
+            f"run {run_id}'s export lines disagree: 'Exported cassettes: "
+            f"{glob_count}' vs the manifest's {cassettes} cassettes (expected "
+            f"{cassettes}, or {cassettes + 1} with MANIFEST.json counted)"
+        )
+    return cassettes
 
 
 def verify_run_provenance(

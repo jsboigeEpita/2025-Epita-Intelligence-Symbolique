@@ -158,6 +158,91 @@ class TestRunExportCount:
             )
 
 
+# The export step's log since #2323 (#2325), three lines as run 35792294382
+# printed them: export.py wrote MANIFEST.json INTO the staging dir, and the
+# step's ``*.json`` glob then counted it as a cassette (#2405).
+def _post_2323_log(run_id: str, cassettes: int, glob_count: int) -> str:
+    return (
+        f"Exported: {cassettes}\n"
+        f"Manifest: staging_cassettes\\MANIFEST.json (run {run_id}, "
+        f"{cassettes} cassettes)\n"
+        f"Exported cassettes: {glob_count}\n"
+    )
+
+
+class TestManifestInTheStagingDir:
+    """#2405: since #2323 the staging dir carries the manifest, and the
+    record line counted it — every honest record read as 'REMOVED'."""
+
+    def test_the_manifest_is_not_a_cassette(self) -> None:
+        # the measured band failure: 276 cassettes + MANIFEST.json → line 277
+        count = cassette_import._run_export_count(
+            "https://api.github.com",
+            "o/r",
+            "tok",
+            "35792294382",
+            urlopen=_fake_urlopen_with_log(_post_2323_log("35792294382", 276, 277)),
+        )
+        assert count == 276
+
+    def test_the_repaired_producer_line_agrees(self) -> None:
+        count = cassette_import._run_export_count(
+            "https://api.github.com",
+            "o/r",
+            "tok",
+            "1",
+            urlopen=_fake_urlopen_with_log(_post_2323_log("1", 276, 276)),
+        )
+        assert count == 276
+
+    def test_a_disagreeing_line_is_an_error_not_a_guess(self) -> None:
+        with pytest.raises(cassette_import.RunLogError, match="disagree"):
+            cassette_import._run_export_count(
+                "https://api.github.com",
+                "o/r",
+                "tok",
+                "1",
+                urlopen=_fake_urlopen_with_log(_post_2323_log("1", 276, 280)),
+            )
+
+    def test_a_manifest_for_another_run_is_refused(self) -> None:
+        with pytest.raises(cassette_import.RunLogError, match="run 2"):
+            cassette_import._run_export_count(
+                "https://api.github.com",
+                "o/r",
+                "tok",
+                "1",
+                urlopen=_fake_urlopen_with_log(_post_2323_log("2", 276, 277)),
+            )
+
+    def test_the_real_run_shape_imports_green(
+        self, harvest_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # disk = the run's 4 cassettes; the line counted 5 (manifest included)
+        monkeypatch.setattr(
+            "urllib.request.urlopen",
+            _fake_urlopen_with_log(_post_2323_log(FABRICATED_RUN_ID, 4, 5)),
+        )
+        violations, note = cassette_import.verify_run_provenance(
+            harvest_dir, api_url="https://api.github.com", repo="o/r", token="tok"
+        )
+        assert violations == []
+        assert note is not None and "exported 4 cassettes" in note
+
+    def test_a_really_removed_cassette_still_reddens(
+        self, harvest_dir: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # control: the run exported 5 cassettes (line 6); disk carries 4
+        monkeypatch.setattr(
+            "urllib.request.urlopen",
+            _fake_urlopen_with_log(_post_2323_log(FABRICATED_RUN_ID, 5, 6)),
+        )
+        violations, _ = cassette_import.verify_run_provenance(
+            harvest_dir, api_url="https://api.github.com", repo="o/r", token="tok"
+        )
+        assert any("REMOVED" in v for v in violations)
+
+
 class TestVerifyRunProvenance:
     """Delta declared vs delta actual — sk_patches finally read."""
 
