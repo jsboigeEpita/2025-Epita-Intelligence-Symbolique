@@ -257,6 +257,46 @@ class TestSerialization:
         serialized = _serialize_response([msg])
         assert isinstance(serialized[0]["metadata"]["obj"], str)
 
+    def test_usage_metadata_stays_numbers_and_passes_the_export_audit_2324(self):
+        """Les compteurs de tokens restent des nombres, pas du texte.
+
+        Né-rouge sur ``bdc5b618`` : ``str(CompletionUsage)`` sérialisait
+        ``"prompt_tokens=1964 ..."``, que l'audit de l'export lisait comme deux
+        années du corpus — la cassette était refusée pour ses propres
+        compteurs.
+        """
+        from semantic_kernel.connectors.ai.completion_usage import CompletionUsage
+
+        from scripts.cassettes.privacy import audit_value
+
+        msg = ChatMessageContent(role="assistant", content="réponse du modèle")
+        msg.metadata = {
+            "usage": CompletionUsage(prompt_tokens=1964, completion_tokens=1956)
+        }
+
+        serialized = _serialize_response([msg])
+
+        usage = serialized[0]["metadata"]["usage"]
+        assert isinstance(usage, dict), f"usage sérialisé en texte : {usage!r}"
+        assert usage["prompt_tokens"] == 1964
+        assert usage["completion_tokens"] == 1956
+        assert audit_value(serialized, source="usage-2324") == []
+        # Le rejeu relit la structure telle quelle.
+        restored = _deserialize_response(json.loads(json.dumps(serialized)))
+        assert restored[0].metadata["usage"]["prompt_tokens"] == 1964
+
+    def test_witness_a_year_in_the_text_is_still_refused_2324(self):
+        """Témoin : la règle de l'audit n'a pas bougé, seule la forme a changé."""
+        from scripts.cassettes.privacy import audit_value
+
+        msg = ChatMessageContent(
+            role="assistant", content="Le discours prononcé en 1964 affirmait ceci."
+        )
+
+        violations = audit_value(_serialize_response([msg]), source="temoin-2324")
+
+        assert any("1964" in v for v in violations), violations
+
     def test_serialize_messages(self):
         history = make_history(("user", "hello"), ("assistant", "world"))
         msgs = _serialize_messages(history)
