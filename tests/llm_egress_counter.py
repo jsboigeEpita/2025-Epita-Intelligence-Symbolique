@@ -128,15 +128,19 @@ class LLMEgressCounter:
             return CLASS_NON_LLM
         return CLASS_UNKNOWN
 
-    def observe_request(self, url: Any, method: str) -> None:
-        """Called from the httpx send wrappers. Must never raise into a test."""
+    def observe_request(self, url: Any, method: str) -> Optional[Dict[str, Any]]:
+        """Called from the httpx send wrappers. Must never raise into a test.
+
+        Returns the recorded entry so the wrapper can attach the outcome of
+        the send to it (``observe_outcome``), or ``None`` when unclassified.
+        """
         try:
             raw = str(url)
             parsed = urlparse(raw)
             host = parsed.hostname
             klass = self._classify(host)
             if klass is None:
-                return
+                return None
             entry = {
                 "test": self.current_test or SESSION_BUCKET,
                 "host": host,
@@ -154,6 +158,33 @@ class LLMEgressCounter:
                     self._per_test_unknown[entry["test"]] = (
                         self._per_test_unknown.get(entry["test"], 0) + 1
                     )
+            return entry
+        except Exception:  # noqa: BLE001 — instrument must not break the measured run
+            return None
+
+    def observe_outcome(
+        self,
+        entry: Optional[Dict[str, Any]],
+        response: Any = None,
+        error: Optional[BaseException] = None,
+    ) -> None:
+        """Attach the send's outcome to its entry: HTTP status, or the error type.
+
+        #2391: without it the report said *that* a request left, never *how*
+        it came back. A 400 answered to every tool-carrying call was visible
+        only when a test failed and pytest printed its captured log; in a
+        passing test (or a record run) the same 400s were silent, and a
+        degraded fallback looked exactly like a healthy call. Must never
+        raise into a test.
+        """
+        if entry is None:
+            return
+        try:
+            with self._lock:
+                if error is not None:
+                    entry["error"] = type(error).__name__
+                else:
+                    entry["status"] = int(response.status_code)
         except Exception:  # noqa: BLE001 — instrument must not break the measured run
             pass
 
@@ -172,14 +203,28 @@ class LLMEgressCounter:
         counter = self
 
         def _client_send(client_self, request, **kwargs):
-            counter.observe_request(request.url, request.method)
-            return counter._orig_sends[(mod, "sync")](client_self, request, **kwargs)
+            entry = counter.observe_request(request.url, request.method)
+            try:
+                response = counter._orig_sends[(mod, "sync")](
+                    client_self, request, **kwargs
+                )
+            except BaseException as exc:
+                counter.observe_outcome(entry, error=exc)
+                raise
+            counter.observe_outcome(entry, response=response)
+            return response
 
         async def _async_send(client_self, request, **kwargs):
-            counter.observe_request(request.url, request.method)
-            return await counter._orig_sends[(mod, "async")](
-                client_self, request, **kwargs
-            )
+            entry = counter.observe_request(request.url, request.method)
+            try:
+                response = await counter._orig_sends[(mod, "async")](
+                    client_self, request, **kwargs
+                )
+            except BaseException as exc:
+                counter.observe_outcome(entry, error=exc)
+                raise
+            counter.observe_outcome(entry, response=response)
+            return response
 
         return _client_send, _async_send
 
@@ -237,8 +282,18 @@ class LLMEgressCounter:
             per_test = dict(self._per_test)
             per_test_unknown = dict(self._per_test_unknown)
         totals = {c: 0 for c in (CLASS_LLM, CLASS_NON_LLM, CLASS_UNKNOWN)}
+        llm_outcomes: Dict[str, int] = {}
+        per_test_llm_not_ok: Dict[str, int] = {}
         for r in requests:
             totals[r["class"]] += 1
+            if r["class"] != CLASS_LLM:
+                continue
+            outcome = _outcome_label(r)
+            llm_outcomes[outcome] = llm_outcomes.get(outcome, 0) + 1
+            if not outcome.startswith("2"):
+                per_test_llm_not_ok[r["test"]] = (
+                    per_test_llm_not_ok.get(r["test"], 0) + 1
+                )
         return {
             "total": totals[CLASS_LLM],
             "totals_by_class": totals,
@@ -246,8 +301,19 @@ class LLMEgressCounter:
             "transports_patched": list(self._transports_names),
             "per_test": per_test,
             "per_test_unknown": per_test_unknown,
+            "llm_outcomes": llm_outcomes,
+            "per_test_llm_not_ok": per_test_llm_not_ok,
             "requests": requests,
         }
+
+
+def _outcome_label(entry: Dict[str, Any]) -> str:
+    """``"200"``, ``"400"``… ; ``"error:<Type>"`` ; ``"none"`` if no outcome was seen."""
+    if "status" in entry:
+        return str(entry["status"])
+    if "error" in entry:
+        return f"error:{entry['error']}"
+    return "none"
 
 
 # ── session singleton ──────────────────────────────────────────────────
@@ -326,6 +392,18 @@ class LLMEgressPlugin:
                 {r["host"] for r in snap["requests"] if r["class"] == CLASS_LLM}
             )
             terminalreporter.write_line(f"LLM hosts hit: {', '.join(hosts)}")
+            outcomes = ", ".join(
+                f"{label}×{n}" for label, n in sorted(snap["llm_outcomes"].items())
+            )
+            terminalreporter.write_line(f"LLM response outcomes: {outcomes}")
+            if snap["per_test_llm_not_ok"]:
+                terminalreporter.write_line(
+                    "Per-test LLM responses that were not 2xx (test -> count):"
+                )
+                for test, count in sorted(
+                    snap["per_test_llm_not_ok"].items(), key=lambda kv: -kv[1]
+                ):
+                    terminalreporter.write_line(f"  {count:5d}  {test}")
         elif not any("test_llm_egress_counter" in t_ for t_ in snap["per_test"]):
             terminalreporter.write_line(
                 "0 LLM requests and the non-vacuity control did NOT run in this "
