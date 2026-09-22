@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional, cast
 
 from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.function_call_content import FunctionCallContent
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
@@ -213,6 +214,21 @@ def _serialize_response(response: List[ChatMessageContent]) -> list:
         entry = {"role": role_str}
         content = getattr(msg, "content", None)
         entry["content"] = str(content) if content is not None else ""
+        # #2324 : les items ``FunctionCallContent`` sont le CHOIX D'OUTIL de
+        # l'assistant — la réponse entière d'un agent à outils vit là (le
+        # ``content`` texte est vide). Les perdre enregistrait une réponse de
+        # navigation comme un silence (``content=''``, zéro item) : au rejeu,
+        # chaque branche de la descente mourrait en croyant que le LLM n'avait
+        # rien choisi, et la marche divergeait avant même le premier pas.
+        for item in getattr(msg, "items", None) or []:
+            if isinstance(item, FunctionCallContent):
+                entry.setdefault("function_calls", []).append(
+                    {
+                        "id": item.id,
+                        "name": item.name,
+                        "arguments": item.arguments,
+                    }
+                )
         # Metadata (usage stats, model, etc.)
         metadata = getattr(msg, "metadata", None)
         if metadata:
@@ -236,6 +252,16 @@ def _deserialize_response(serialized: list) -> List[ChatMessageContent]:
             role=entry.get("role", "assistant"),
             content=entry.get("content", ""),
         )
+        calls = entry.get("function_calls") or []
+        if calls:
+            msg.items = [
+                FunctionCallContent(
+                    id=c.get("id"),
+                    name=c.get("name") or "",
+                    arguments=c.get("arguments") or "{}",
+                )
+                for c in calls
+            ]
         if "metadata" in entry:
             msg.metadata = entry["metadata"]
         results.append(msg)
@@ -497,6 +523,62 @@ async def cached_raw_chat_completion(client: Any, **kwargs: Any) -> Any:
     except Exception as exc:  # noqa: BLE001 — best-effort recording
         logger.warning(
             "Raw cache RECORD: response not storable (key %s..., %s) — "
+            "passed through unrecorded",
+            key[:16],
+            type(exc).__name__,
+        )
+    return response
+
+
+def cached_raw_chat_completion_sync(client: Any, **kwargs: Any) -> Any:
+    """#2324 — jumeau SYNCHRONE de ``cached_raw_chat_completion``.
+
+    Les détecteurs de vertu agentic (#2331) exigent un callable
+    ``llm(prompt) -> str`` synchrone sur un client ``openai.OpenAI`` ; leur
+    chemin partait en direct, contournant le seam BO-3 (#1473) — mesuré sur
+    le replay du test de délégation : 12-14 POSTs /v1/chat/completions en
+    live par run, egress non-nul dans une bande qui attend 0. Mêmes clés
+    (``compute_raw_cache_key``), même cache que le chemin async : une
+    session d'enregistrement couvre les deux, et le rejeu est déterministe
+    pour les deux. En replay un miss lève ``LLMCacheMiss`` — jamais d'appel
+    live silencieux, même contrat que l'async.
+    """
+    mode = get_cache_mode()
+    if mode == OFF:
+        _cache_stats.live += 1
+        return client.chat.completions.create(**kwargs)
+    cache = get_raw_cache()
+    if cache is None:  # diskcache unavailable
+        _cache_stats.live += 1
+        return client.chat.completions.create(**kwargs)
+    key = compute_raw_cache_key(**kwargs)
+    if mode == REPLAY:
+        cached = cache.get(key)
+        if cached is None:
+            _cache_stats.miss_replay += 1
+            _cache_stats.miss_keys.append(key[:16])
+            raise LLMCacheMiss(
+                f"Raw cache miss (sync) in replay mode for key {key[:16]}... "
+                f"Record fixtures first with LLM_CACHE_MODE=record"
+            )
+        _cache_stats.hit += 1
+        logger.debug("Raw cache HIT (sync replay): %s...", key[:16])
+        return _deserialize_chat_completion(cached)
+    # RECORD mode
+    cached = cache.get(key)
+    if cached is not None:
+        _cache_stats.hit += 1
+        logger.debug("Raw cache HIT (sync record): %s...", key[:16])
+        return _deserialize_chat_completion(cached)
+    logger.debug("Raw cache MISS (sync record): %s..., calling API", key[:16])
+    _cache_stats.miss_record += 1
+    response = client.chat.completions.create(**kwargs)
+    _cache_stats.live += 1
+    try:
+        cache.set(key, _serialize_chat_completion(response))
+    except Exception as exc:  # noqa: BLE001 — best-effort recording
+        logger.warning(
+            "Raw cache RECORD (sync): response not storable (key %s..., %s) — "
             "passed through unrecorded",
             key[:16],
             type(exc).__name__,

@@ -185,6 +185,65 @@ class TestSerialization:
         assert deserialized[0].content == "test content with special chars: éàü"
         assert deserialized[0].role.value == "assistant"
 
+    def test_function_call_choice_survives_roundtrip_2324(self):
+        """#2324 — le choix d'outil de l'assistant EST la réponse d'un agent
+        à outils (``content`` est vide, le FunctionCallContent porte tout).
+
+        Avant réparation, la sérialisation ne gardait que role/content/
+        metadata : une réponse de navigation s'enregistrait comme un silence
+        (``content=''``, zéro item) et la descente rejoyable mourrait au
+        premier pas. Né-rouge en valeurs : l'item reconstruit est comparé
+        champ à champ.
+        """
+        from semantic_kernel.contents.function_call_content import (
+            FunctionCallContent,
+        )
+
+        msg = ChatMessageContent(role="assistant", content="")
+        msg.items = [
+            FunctionCallContent(
+                id="call_nav_1",
+                name="navigate_taxonomy",
+                arguments='{"pk": "1280", "direction": "deeper"}',
+            )
+        ]
+
+        serialized = _serialize_response([msg])
+        deserialized = _deserialize_response(serialized)
+
+        items = list(deserialized[0].items or [])
+        assert items, (
+            f"le choix d'outil a disparu au round-trip — la réponse se "
+            f"rejoue comme un silence : serialized={serialized}"
+        )
+        call = items[0]
+        assert (
+            call.name == "navigate_taxonomy"
+        ), f"l'outil choisi a changé : {call.name!r}"
+        assert call.id == "call_nav_1", f"le call-id a changé : {call.id!r}"
+        assert json.loads(call.arguments) == {
+            "pk": "1280",
+            "direction": "deeper",
+        }, f"les arguments du choix ont changé : {call.arguments!r}"
+
+    def test_function_call_free_response_unchanged_2324(self):
+        """Accord : une réponse texte pure ne gagne pas de choix d'outil au
+        round-trip (``items`` contient le TextContent auto — c'est normal SK)."""
+        from semantic_kernel.contents.function_call_content import (
+            FunctionCallContent,
+        )
+
+        serialized = _serialize_response(make_response("une réponse texte"))
+        assert "function_calls" not in serialized[0]
+        deserialized = _deserialize_response(serialized)
+        calls = [
+            i
+            for i in (deserialized[0].items or [])
+            if isinstance(i, FunctionCallContent)
+        ]
+        assert not calls, f"un choix d'outil est né de nulle part : {calls}"
+        assert deserialized[0].content == "une réponse texte"
+
     def test_metadata_preserved(self):
         msg = ChatMessageContent(role="assistant", content="hi")
         msg.metadata = {"usage": {"tokens": 42}, "model": "gpt-4"}
@@ -589,6 +648,113 @@ class TestCachedRawChatCompletion:
             r = await cached_raw_chat_completion(replayer, **kw)
             assert r.choices[0].message.tool_calls[0].function.name == "extract"
             assert replayer.calls == 0
+
+
+class FakeSyncRawClient:
+    """Sync twin of FakeRawClient — a sync ``openai.OpenAI`` client shape.
+    The ``chat.completions.create`` structure is attached by ``_client()``
+    so the bound ``create`` closes over THIS instance's counter."""
+
+    def __init__(self, response=None):
+        from openai.types.chat import ChatCompletion, ChatCompletionMessage
+        from openai.types.chat.chat_completion import Choice
+
+        self._response = response or ChatCompletion(
+            id="chatcmpl-sync",
+            object="chat.completion",
+            created=1700000000,
+            model="gpt-5-mini",
+            choices=[
+                Choice(
+                    index=0,
+                    message=ChatCompletionMessage(role="assistant", content="live"),
+                    finish_reason="stop",
+                )
+            ],
+        )
+        self.calls = 0
+
+    def _create(self, **kwargs):
+        self.calls += 1
+        return self._response
+
+
+class TestCachedRawChatCompletionSync2324:
+    """#2324 — le jumeau SYNCHRONE partage clés et cache avec l'async."""
+
+    def _client(self, response=None):
+        client = FakeSyncRawClient(response=response)
+        client.chat = type(
+            "chat",
+            (),
+            {
+                "completions": type(
+                    "completions", (), {"create": staticmethod(client._create)}
+                )()
+            },
+        )()
+        return client
+
+    def test_replay_miss_raises_fail_loud_no_live(self, isolated_raw_cache):
+        """Né-rouge en valeurs : avant le jumeau, ce chemin n'existait pas —
+        le callable agentic (#2331) partait en direct pendant le replay."""
+        from argumentation_analysis.services.llm_cache import (
+            cached_raw_chat_completion_sync,
+        )
+
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            client = self._client()
+            with pytest.raises(LLMCacheMiss, match="replay mode"):
+                cached_raw_chat_completion_sync(
+                    client,
+                    model="m",
+                    messages=[{"role": "user", "content": "never seen"}],
+                )
+            assert client.calls == 0  # fail-loud, jamais de live silencieux
+
+    def test_record_then_replay_hit_zero_live(self, isolated_raw_cache):
+        from argumentation_analysis.services.llm_cache import (
+            cached_raw_chat_completion_sync,
+        )
+
+        kw = {"model": "m", "messages": [{"role": "user", "content": "q"}]}
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            recorder = self._client()
+            r1 = cached_raw_chat_completion_sync(recorder, **kw)
+            assert r1.choices[0].message.content == "live"
+            assert recorder.calls == 1
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            replayer = self._client()
+            r2 = cached_raw_chat_completion_sync(replayer, **kw)
+            assert r2.choices[0].message.content == "live"  # servi du cache
+            assert replayer.calls == 0  # aucun live en replay
+
+    def test_sync_and_async_share_one_cache(self, isolated_raw_cache):
+        """UNE session record couvre les deux chemins : l'async enregistre,
+        le sync rejoue (et réciproquement) — même clé, même diskcache."""
+        from argumentation_analysis.services.llm_cache import (
+            cached_raw_chat_completion,
+            cached_raw_chat_completion_sync,
+        )
+
+        kw = {"model": "m", "messages": [{"role": "user", "content": "partagé"}]}
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "record"}):
+            reset_raw_cache()
+            async_recorder = FakeRawClient()
+            import asyncio
+
+            asyncio.get_event_loop().run_until_complete(
+                cached_raw_chat_completion(async_recorder, **kw)
+            )
+        with patch.dict(os.environ, {"LLM_CACHE_MODE": "replay"}):
+            reset_raw_cache()
+            sync_replayer = self._client()
+            r = cached_raw_chat_completion_sync(sync_replayer, **kw)
+            assert r.choices[0].message.content == "live"
+            assert sync_replayer.calls == 0
 
 
 class TestGetRawCache:

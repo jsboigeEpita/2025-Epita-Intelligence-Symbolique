@@ -275,3 +275,70 @@ async def test_concurrency_is_explicitly_bounded_and_enforced(monkeypatch):
         _TrackingEvaluator.max_in_flight <= bound
     ), f"observed {_TrackingEvaluator.max_in_flight} > declared bound {bound}"
     assert _TrackingEvaluator.max_in_flight >= 2, "no parallelism observed"
+
+
+def test_agentic_callable_routes_through_the_raw_cache_2324(monkeypatch, tmp_path):
+    """#2324 — le callable agentic passe par le seam BO-3 (#1473).
+
+    Mesuré sur le replay du test de délégation : ce callable partait en
+    direct — 12-14 POSTs /v1/chat/completions en LIVE par run « replay »,
+    egress non-nul dans une bande qui attend 0, et phase qualité
+    non-déterministe au rejeu. Né-rouge EN VALEURS : avant réparation, le
+    client double est appelé en direct et aucune ``LLMCacheMiss`` ne monte ;
+    après, en replay sur un cache vide, l'appel lève ``LLMCacheMiss`` et le
+    client double reste VIERGE — jamais de live silencieux.
+    """
+    import openai as openai_module
+    from argumentation_analysis.services.llm_cache import (
+        LLMCacheMiss,
+        reset_raw_cache,
+    )
+
+    monkeypatch.setenv("LLM_CACHE_MODE", "replay")
+    monkeypatch.setenv("LLM_CACHE_DIR", str(tmp_path))
+    reset_raw_cache()
+
+    class _Msg:
+        content = "1.0"
+
+    class _Choice:
+        message = _Msg()
+
+    class _Response:
+        choices = [_Choice()]
+
+    class _Completions:
+        calls: list = []
+
+        def create(self, **kwargs):
+            _Completions.calls.append(kwargs)
+            return _Response()
+
+    class _Chat:
+        completions = _Completions()
+
+    class _FakeOpenAI:
+        def __init__(self, **kwargs):
+            self.chat = _Chat()
+
+    _Completions.calls.clear()
+    monkeypatch.setattr(
+        invoke_callables,
+        "_resolve_llm_route",
+        lambda: ("sk-test-local", "https://example.invalid", "gpt-5.6-luna", "openai"),
+    )
+    monkeypatch.setattr(openai_module, "OpenAI", _FakeOpenAI)
+
+    agentic_llm, route, model_id = invoke_callables._make_agentic_llm_callable()
+    assert (
+        agentic_llm is not None
+    ), f"aucun callable construit (route={route!r}) — le test ne mesure rien"
+
+    with pytest.raises(LLMCacheMiss):
+        agentic_llm("un prompt de detecteur")
+
+    assert not _Completions.calls, (
+        f"le callable est parti en LIVE malgré le mode replay "
+        f"(seam BO-3 contourné) : {_Completions.calls}"
+    )
+    reset_raw_cache()
