@@ -15,7 +15,6 @@ construction, puisqu'il relie précisément un run à sa source).
 from __future__ import annotations
 
 import hashlib
-import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -48,8 +47,18 @@ def code_sha() -> Optional[str]:
 
 
 def chat_model_id() -> Optional[str]:
-    """Identité du modèle de chat (variable d'environnement), ou None."""
-    return os.environ.get("OPENAI_CHAT_MODEL_ID") or None
+    """Identité résolue du modèle de chat, ou None si aucun LLM configuré.
+
+    Rend le modèle que le résolveur canonique rendrait (#2352/#2370) — sous
+    bascule OpenRouter ou substitution #1930, la variable brute nomme un
+    modèle que le run n'a pas utilisé (fausse provenance). None (et non le
+    défaut du résolveur) quand aucune clé n'est configurée : un défaut rendu
+    serait une provenance fantôme sur un artefact.
+    """
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    api_key, _base_url, model_id = resolve_chat_endpoint()
+    return model_id if api_key else None
 
 
 def provenance_block(params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:

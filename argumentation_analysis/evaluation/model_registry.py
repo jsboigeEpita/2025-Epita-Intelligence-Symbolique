@@ -10,6 +10,8 @@ import logging
 from dataclasses import dataclass, field
 from typing import Dict, Optional
 
+from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
 logger = logging.getLogger("evaluation.model_registry")
 
 
@@ -83,10 +85,12 @@ class ModelRegistry:
         """Build a registry from .env variables (numbered endpoints)."""
         registry = cls()
 
-        # Primary endpoint
-        api_key = os.environ.get("OPENAI_API_KEY", "")
-        model_id = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
-        base_url = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        # Primary endpoint — resolved by the ONE route resolver (#2352/#2370):
+        # honors the OpenRouter toggle and the #1930 substitutions, so the
+        # "default" entry is the route the canonical resolver would serve. The
+        # inline triple it replaces made a set toggle invisible to this entry
+        # (empty key against api.openai.com, unsubstituted retired model).
+        api_key, base_url, model_id = resolve_chat_endpoint()
         if api_key:
             registry.register(
                 "default",
