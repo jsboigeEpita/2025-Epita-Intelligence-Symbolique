@@ -24,6 +24,7 @@ import logging
 import os
 import re
 import sys
+import threading
 from pathlib import Path
 from enum import Enum, IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -42,6 +43,13 @@ _DEPS_ATTEMPTED = False
 # gates re-embed it so the first failure stays visible from any later traceback.
 _LAST_LOAD_ERROR: Optional[str] = None
 _TORCH_NEUTRALIZED = False
+# The flags above are set in two steps around a load that takes seconds cold
+# (spaCy import), and the quality phase evaluates units in concurrent threads
+# (#2331). Unlocked, a sibling unit read "attempted, not available" mid-load
+# and raised "cause not recorded" — a load in progress reported as a failed
+# one (measured by the #2353 render). The load runs under this lock, and every
+# read of the pair goes through it, so a reader waits for the load to finish.
+_DEPS_LOCK = threading.Lock()
 
 
 def _neutralize_faulty_torch() -> None:
@@ -88,7 +96,23 @@ def _neutralize_faulty_torch() -> None:
 
 
 def _load_deps():
-    """Load required dependencies (spacy, textstat).
+    """Load required dependencies (spacy, textstat), once, under ``_DEPS_LOCK``.
+
+    A caller arriving while another thread loads waits for that load and
+    shares its outcome — success, or the recorded failure.
+    """
+    with _DEPS_LOCK:
+        return _load_deps_locked()
+
+
+def _deps_failed() -> bool:
+    """True once a load has been attempted and failed; waits for one in flight."""
+    with _DEPS_LOCK:
+        return _DEPS_ATTEMPTED and not _DEPS_AVAILABLE
+
+
+def _load_deps_locked():
+    """Load required dependencies (spacy, textstat). Caller holds ``_DEPS_LOCK``.
 
     Raises RuntimeError if spacy or textstat cannot be imported.
     This is the root-cause fix for #1019 subsystem 1: the previous
@@ -115,6 +139,21 @@ def _load_deps():
         from textstat import flesch_reading_ease
 
         _flesch_reading_ease = flesch_reading_ease
+        # textstat reaches NLTK's cmudict through a LazyCorpusLoader, which is
+        # not thread-safe on first use: concurrent units raced it and recorded
+        # 'clarte' UNAVAILABLE ("'CMUDictCorpusReader' object has no attribute
+        # '_LazyCorpusLoader__reader_cls'", #2353 render). One call here, under
+        # the lock, performs that first use before any unit can. A failure is
+        # left to the per-unit path, which records it with its cause, as before.
+        try:
+            flesch_reading_ease("Une phrase de mise en route. Puis une autre.")
+        except Exception as warm_exc:
+            logger.warning(
+                "textstat first use failed (%s: %s) — the clarte detector will "
+                "record it per unit.",
+                type(warm_exc).__name__,
+                warm_exc,
+            )
         try:
             _nlp = spacy.load("fr_core_news_sm")
         except OSError:
@@ -615,7 +654,7 @@ class ArgumentQualityEvaluator:
         # raise immediately rather than looping through 9 detectors that
         # will each catch the RuntimeError and produce score 0.0 — which
         # is the exact "degraded theatre" the mandate forbids.
-        if _DEPS_ATTEMPTED and not _DEPS_AVAILABLE:
+        if _deps_failed():
             raise RuntimeError(
                 "Cannot evaluate quality: spacy/textstat/model are not available. "
                 "Ensure textstat is installed and the fr_core_news_sm model is "
