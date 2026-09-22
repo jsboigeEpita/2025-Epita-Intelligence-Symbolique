@@ -45,6 +45,10 @@ import os
 import inspect
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.connectors.ai.prompt_execution_settings import (
+    PromptExecutionSettings,
+)
+from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.llm_service import create_llm_service
@@ -777,6 +781,39 @@ class OrchestrationServiceManager:
                 return None
         return None
 
+    async def _invoke_analysis_prompt(
+        self, template: str, function_name: str, text: str
+    ) -> Any:
+        """Invoque un prompt d'analyse sur le service que la provenance observe (#2389).
+
+        Trois défauts réparés ici, un par ligne :
+
+        - ``Kernel.create_function_from_prompt`` **n'existe pas** (mesuré sur SK
+          1.35 et 1.40) : chaque analyse tactique/opérationnelle mourait en
+          ``AttributeError`` une ligne avant la provenance de #2377. La forme qui
+          existe est ``add_function``.
+        - Le texte analysé était interpolé en f-string **dans le template** : le
+          moteur SK aurait lu un ``{{`` du texte comme une expression. Il entre
+          désormais comme argument (``{{$input}}``), jamais re-rendu.
+        - Sans épinglage, SK sert un prompt par le **premier** service du kernel
+          (mesuré), alors que ``_served_model_id()`` lit celui de
+          ``llm_service_id`` : la provenance pouvait nommer un modèle qui n'avait
+          pas servi. Le service est donc épinglé ; un id que le kernel ne tient
+          pas échoue au lieu de basculer en silence sur un autre service.
+        """
+        execution_settings = (
+            PromptExecutionSettings(service_id=self.llm_service_id)
+            if self.llm_service_id
+            else None
+        )
+        function = self.kernel.add_function(
+            plugin_name="service_manager_analysis",
+            function_name=function_name,
+            prompt=template,
+            prompt_execution_settings=execution_settings,
+        )
+        return await self.kernel.invoke(function, KernelArguments(input=text))
+
     async def _run_tactical_analysis(
         self, text: str, options: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -813,10 +850,10 @@ class OrchestrationServiceManager:
                 }
 
             # Prompt pour l'analyse tactique
-            tactical_prompt = f"""Effectue une analyse tactique du texte suivant en identifiant les arguments, les sophismes potentiels, et la structure rhétorique:
+            tactical_prompt = """Effectue une analyse tactique du texte suivant en identifiant les arguments, les sophismes potentiels, et la structure rhétorique:
 
 TEXTE À ANALYSER:
-{text}
+{{$input}}
 
 INSTRUCTIONS:
 1. Identifie les arguments principaux et secondaires
@@ -830,12 +867,10 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
             # Mesurer le temps de début
             start_time = time.time()
 
-            # Faire l'appel LLM authentique async
-            # Utiliser le kernel pour l'invocation, ce qui bénéficie de la résilience
-            chat_function = self.kernel.create_function_from_prompt(
-                prompt=tactical_prompt, function_name="tactical_analysis"
+            # Faire l'appel LLM authentique async, via le kernel (#2389)
+            response = await self._invoke_analysis_prompt(
+                tactical_prompt, "tactical_analysis", text
             )
-            response = await self.kernel.invoke(chat_function)
 
             # Mesurer le temps de fin
             end_time = time.time()
@@ -847,11 +882,15 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
                 "level": "tactical",
                 "status": "completed",
                 "llm_response": llm_result,
-                "prompt_used": tactical_prompt,
                 "response_time": response_time,
                 "manager": "TacticalManager",
                 "options": options,
             }
+            # Le prompt effectivement envoyé (rendu par SK), observé sur le
+            # résultat — ou absent, jamais le template (#2389).
+            rendered_prompt = getattr(response, "rendered_prompt", None)
+            if rendered_prompt:
+                result["prompt_used"] = rendered_prompt
             # « model » est une OBSERVATION du service que le kernel vient
             # d'appeler (#2377) : jamais un littéral local. Absent plutôt que
             # nul quand rien n'est observable — une provenance nulle et muette
@@ -906,10 +945,10 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
                 }
 
             # Prompt pour l'analyse opérationnelle détaillée
-            operational_prompt = f"""Effectue une analyse opérationnelle approfondie du texte suivant en te concentrant sur l'extraction d'éléments concrets et l'identification de patterns:
+            operational_prompt = """Effectue une analyse opérationnelle approfondie du texte suivant en te concentrant sur l'extraction d'éléments concrets et l'identification de patterns:
 
 TEXTE À ANALYSER:
-{text}
+{{$input}}
 
 INSTRUCTIONS OPÉRATIONNELLES:
 1. Extrais toutes les entités nommées (personnes, lieux, dates, concepts)
@@ -925,11 +964,10 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
             # Mesurer le temps de début
             start_time = time.time()
 
-            # Faire l'appel LLM authentique async
-            chat_function = self.kernel.create_function_from_prompt(
-                prompt=operational_prompt, function_name="operational_analysis"
+            # Faire l'appel LLM authentique async, via le kernel (#2389)
+            response = await self._invoke_analysis_prompt(
+                operational_prompt, "operational_analysis", text
             )
-            response = await self.kernel.invoke(chat_function)
 
             # Mesurer le temps de fin
             end_time = time.time()
@@ -941,11 +979,15 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                 "level": "operational",
                 "status": "completed",
                 "llm_response": llm_result,
-                "prompt_used": operational_prompt,
                 "response_time": response_time,
                 "manager": "OperationalManager",
                 "options": options,
             }
+            # Le prompt effectivement envoyé (rendu par SK), observé sur le
+            # résultat — ou absent, jamais le template (#2389).
+            rendered_prompt = getattr(response, "rendered_prompt", None)
+            if rendered_prompt:
+                result["prompt_used"] = rendered_prompt
             # Même contrat que l'analyse tactique (#2377) : le champ observe le
             # service servi par le kernel, ou n'existe pas.
             served_model = self._served_model_id()
