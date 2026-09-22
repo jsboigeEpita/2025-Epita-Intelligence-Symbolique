@@ -115,10 +115,13 @@ def load_corpus(corpus_id: str) -> str:
 
 def call_llm(prompt: str) -> str:
     import openai
-    client = openai.OpenAI(
-        api_key=os.environ["OPENAI_API_KEY"],
-    )
-    model = os.environ.get("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna")
+    from argumentation_analysis.core.llm_service import resolve_chat_endpoint
+
+    # The ONE route resolver (#2352): honors the OpenRouter toggle and the
+    # #1930 substitutions — the raw pair it replaces saw neither, so a set
+    # toggle sent this baseline to the official endpoint with the wrong key.
+    api_key, base_url, model = resolve_chat_endpoint()
+    client = openai.OpenAI(api_key=api_key, base_url=base_url)
     response = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
