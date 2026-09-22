@@ -37,8 +37,11 @@ from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions
 
 CORPORA = {
-    "A": {"src_idx": 11, "label": "corpus_dense_A", "desc": "Trump UN GA 2025 (~58K EN)"},
-    "B": {"src_idx": 3, "label": "corpus_dense_B", "desc": "Hitler collection (~50K DE extract)"},
+    # desc stays OPAQUE (rule 7, #2168): a label mapping 1:1 onto an encrypted
+    # source — name, event, year — publishes the census the encryption protects.
+    # The opaque index form already used by the C entry is the convention.
+    "A": {"src_idx": 11, "label": "corpus_dense_A", "desc": "src11 (~58K EN)"},
+    "B": {"src_idx": 3, "label": "corpus_dense_B", "desc": "src3 (~50K DE extract)"},
     "C": {"src_idx": 2, "label": "corpus_dense_C", "desc": "Source_3 (~46K EN)"},
 }
 
@@ -46,7 +49,7 @@ OUTPUTS_DIR = Path("outputs/scda_audit")
 
 
 def load_corpus(corpus_id: str) -> str:
-    """Load text for a given corpus. For B (Hitler), extract ~50K coherent segment."""
+    """Load text for a given corpus. For B, extract ~50K coherent segment."""
     info = CORPORA[corpus_id]
     key = derive_encryption_key(os.environ["TEXT_CONFIG_PASSPHRASE"])
     defs = load_extract_definitions(
@@ -82,7 +85,7 @@ def load_corpus(corpus_id: str) -> str:
             best_chunk = text[start:start + 50000]
 
         text = best_chunk
-        print(f"  Extracted {len(text):,} chars from src3 (Hitler collection)")
+        print(f"  Extracted {len(text):,} chars from src3")
 
     return text
 

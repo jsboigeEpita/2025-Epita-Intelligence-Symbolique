@@ -28,6 +28,33 @@ from argumentation_analysis.paths import PROJECT_ROOT_DIR
 logger = logging.getLogger(__name__)
 
 
+def _build_sensitive_patterns() -> dict:
+    """Redaction vocabulary for the log anonymizer (#2362 B1, #2348 pattern).
+
+    The leader alternation is derived from ``PERSON_PATTERNS`` — a hand list
+    is a second census that drifts, and the production sweep (#2349) reddens
+    on every class member spelled in a tracked file. Lazy import, like
+    ``source_management.py`` after #2348. Coverage is widened to the full
+    class list (a scrubber may grow, never shrink silently — #1019); the
+    three public figures below are outside the class lists and stay until
+    that vocabulary is arbitrated.
+    """
+    from argumentation_analysis.evaluation.leak_patterns import PERSON_PATTERNS
+
+    leaders = "|".join([*PERSON_PATTERNS, "Mao", "Churchill", "Roosevelt"])
+    return {
+        # Noms de leaders politiques
+        rf"\b({leaders})\b": "[LEADER]",
+        # Noms de pays sensibles dans certains contextes
+        r"\b(Allemagne nazie|URSS|Reich)\b": "[HISTORICAL_ENTITY]",
+        # Extraits de discours politiques longs
+        r'"[^"]{200,}"': '"[LONG_POLITICAL_EXTRACT]"',
+        # URLs potentiellement sensibles
+        r"https?://[^\s]+political[^\s]*": "[POLITICAL_URL]",
+        r"https?://[^\s]+discourse[^\s]*": "[DISCOURSE_URL]",
+    }
+
+
 class SensitiveDataCleaner:
     """
     Gestionnaire de nettoyage des données sensibles.
@@ -203,18 +230,8 @@ class SensitiveDataCleaner:
         if not logs_dir.exists():
             return
 
-        # Patterns de données sensibles à anonymiser
-        sensitive_patterns = {
-            # Noms de leaders politiques
-            r"\b(Hitler|Staline|Mao|Churchill|Roosevelt|Trump|Biden|Macron|Poutine|Putin)\b": "[LEADER]",
-            # Noms de pays sensibles dans certains contextes
-            r"\b(Allemagne nazie|URSS|Reich)\b": "[HISTORICAL_ENTITY]",
-            # Extraits de discours politiques longs
-            r'"[^"]{200,}"': '"[LONG_POLITICAL_EXTRACT]"',
-            # URLs potentiellement sensibles
-            r"https?://[^\s]+political[^\s]*": "[POLITICAL_URL]",
-            r"https?://[^\s]+discourse[^\s]*": "[DISCOURSE_URL]",
-        }
+        # Patterns de données sensibles à anonymiser — dérivés de la classe (#2362 B1)
+        sensitive_patterns = _build_sensitive_patterns()
 
         for log_file in logs_dir.rglob("*.log"):
             try:

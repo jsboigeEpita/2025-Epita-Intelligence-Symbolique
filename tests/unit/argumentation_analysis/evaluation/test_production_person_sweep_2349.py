@@ -56,12 +56,12 @@ DECLARED = {
 }
 
 # --- Measured violations, owned by #2362 ----------------------------------
-# class B1: redactor by enumeration (the exact #2348 shape)
+# class B1 (redactor by enumeration) and class C (incidental carrier) landed:
+# the redactors derive their person alternation from PERSON_PATTERNS (#2348
+# pattern) and the incidental carriers went opaque — their entries left the
+# ledger as their repairs landed. What remains is class B2.
 # class B2: behaviour keyed on ONE instance (branch / flag / label)
-# class C : incidental carrier (prose, docstring, comment, example)
 PENDING_TRIAGE = {
-    "scripts/utils/cleanup_sensitive_traces.py": "#2362 B1",
-    "argumentation_analysis/evaluation/state_export_scrub.py": "#2362 B1",
     "argumentation_analysis/utils/dev_tools/repair_utils.py": "#2362 B2",
     "argumentation_analysis/utils/dev_tools/verification_utils.py": "#2362 B2",
     "argumentation_analysis/utils/run_verify_extracts.py": "#2362 B2",
@@ -74,10 +74,6 @@ PENDING_TRIAGE = {
     "scripts/orchestration/run_verify_extracts.py": "#2362 B2",
     "scripts/reporting/generate_rhetorical_analysis_summaries.py": "#2362 B2",
     "scripts/reporting/generate_comprehensive_report.py": "#2362 B2",
-    "scripts/scda_audit.py": "#2362 C",
-    "argumentation_analysis/utils/extract_repair/marker_repair_logic.py": "#2362 C",
-    "scripts/validation/main.py": "#2362 C",
-    "speech-to-text/whisper.py": "#2362 C",
 }
 
 # The only path #2348 changed, used by the historical control below.

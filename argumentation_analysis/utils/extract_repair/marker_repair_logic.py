@@ -37,7 +37,7 @@ Processus à suivre:
 4. Proposer des corrections pour les bornes défectueuses
 5. Vérifier que les nouvelles bornes délimitent correctement l'extrait
 
-Pour les corpus volumineux comme les discours d'Hitler:
+Pour les corpus volumineux:
 - Utiliser une approche dichotomique pour localiser les discours
 - Rechercher des motifs structurels (titres, numéros de pages, etc.)
 - Créer des marqueurs plus robustes basés sur des séquences uniques

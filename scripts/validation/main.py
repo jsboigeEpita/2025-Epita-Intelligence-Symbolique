@@ -79,7 +79,7 @@ class UnifiedValidationSystem:
 
         # Échantillons de texte pour les tests
         self.test_texts = self.config.test_text_samples or [
-            "L'Ukraine a été créée par la Russie. Donc Poutine a raison.",
+            "Le pont a été construit par l'ingénieur. Donc l'ingénieur a raison.",
             "Si tous les hommes sont mortels et Socrate est un homme, alors Socrate est mortel.",
             "Le changement climatique est réel. Les politiques doivent agir maintenant.",
             "Tous les oiseaux volent. Les pingouins sont des oiseaux. Donc les pingouins volent.",
