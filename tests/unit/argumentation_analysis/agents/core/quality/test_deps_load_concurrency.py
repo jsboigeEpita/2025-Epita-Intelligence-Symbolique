@@ -94,9 +94,7 @@ def test_a_unit_arriving_during_the_load_waits_for_it(monkeypatch, cold_deps):
         assert not unavailable, (unavailable, result["rapport_detaille"])
 
 
-def test_witness_a_failed_load_still_fails_loud_with_its_cause(
-    monkeypatch, cold_deps
-):
+def test_witness_a_failed_load_still_fails_loud_with_its_cause(monkeypatch, cold_deps):
     def broken_load():
         raise ImportError("textstat introuvable (témoin)")
 
