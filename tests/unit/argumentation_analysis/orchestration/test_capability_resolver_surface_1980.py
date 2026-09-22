@@ -61,11 +61,15 @@ UNTYPED_RESOLVER = "find_for_capability"
 
 
 def _iter_python(root: Path):
+    """Walk *root* reading utf-8-sig; a parse failure raises, never skips.
+
+    The strict read + bare ``continue`` this replaces silently dropped 13
+    BOM'd production files and 10 under tests/ from every census this module
+    takes (#2373). A file that must sit outside the census is excluded by
+    path — an exclusion is named, never deduced from a SyntaxError.
+    """
     for py in sorted(root.rglob("*.py")):
-        try:
-            yield py, ast.parse(py.read_text(encoding="utf-8"))
-        except (SyntaxError, UnicodeDecodeError):
-            continue  # vendored / generated files are not part of the census
+        yield py, ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
 
 
 def _called_name(node: ast.Call) -> str | None:
@@ -99,6 +103,20 @@ def _call_sites(root: Path) -> dict[str, list[str]]:
             if name and name.endswith("_for_capability"):
                 sites.setdefault(name, []).append(f"{rel}:{node.lineno}")
     return sites
+
+
+def test_resolver_census_sees_a_bom_carrier(tmp_path: Path):
+    """#2373 non-vacuity: a ``*_for_capability`` definition behind a UTF-8 BOM
+    is in the census. Under the previous strict read the BOM raised and the
+    bare ``continue`` dropped the file — the surface enumeration below would
+    have gone quietly stale.
+    """
+    src = "﻿def find_for_capability(capability):\n    return []\n"
+    (tmp_path / "bom_resolver.py").write_text(src, encoding="utf-8")
+    assert _definitions(tmp_path) == {"find_for_capability"}, (
+        "a resolver definition behind a UTF-8 BOM must be in the census — "
+        "if it is not, the population is amputated again (#2373)."
+    )
 
 
 def test_resolver_surface_is_the_enumerated_five():

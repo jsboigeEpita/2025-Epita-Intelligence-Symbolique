@@ -82,21 +82,23 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
 
 
 def _module_path(py: Path) -> str:
-    rel = py.relative_to(PROJECT_ROOT)
+    try:
+        rel = py.relative_to(PROJECT_ROOT)
+    except ValueError:
+        return py.stem  # synthetic carrier outside the repo (#2373 control)
     parts = rel.with_suffix("").parts
     if parts and parts[-1] == "__init__":
         parts = parts[:-1]  # match ast.ImportFrom module paths for packages
     return ".".join(parts)
 
 
-def _definers_of_register_function() -> set[str]:
-    """Modules under argumentation_analysis/ defining the register function."""
+def _definers_of_register_function(root: Path = PROD_ROOT) -> set[str]:
+    """Modules under *root* defining the register function."""
     definers = set()
-    for py in PROD_ROOT.rglob("*.py"):
-        try:
-            tree = ast.parse(py.read_text(encoding="utf-8"))
-        except SyntaxError:
-            continue
+    for py in root.rglob("*.py"):
+        # utf-8-sig, and a parse failure raises rather than skips (#2373):
+        # BOM'd modules are inside the census, not silently outside it.
+        tree = ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef) and (
                 node.name == "register_with_capability_registry"
@@ -107,7 +109,7 @@ def _definers_of_register_function() -> set[str]:
 
 def _wired_register_modules() -> set[str]:
     """Modules whose register function registry_setup actually imports."""
-    tree = ast.parse(REGISTRY_SETUP.read_text(encoding="utf-8"))
+    tree = ast.parse(REGISTRY_SETUP.read_text(encoding="utf-8-sig"))
     wired = set()
     for node in ast.walk(tree):
         if isinstance(node, ast.ImportFrom) and node.module:
@@ -131,7 +133,7 @@ def _declared_capabilities() -> dict[str, list[str]]:
     ]
     declared: dict[str, list[str]] = {}
     for src in sources:
-        tree = ast.parse(src.read_text(encoding="utf-8"))
+        tree = ast.parse(src.read_text(encoding="utf-8-sig"))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
@@ -155,16 +157,15 @@ def _declared_capabilities() -> dict[str, list[str]]:
     return declared
 
 
-def _production_demanded_capabilities() -> set[str]:
+def _production_demanded_capabilities(root: Path = PROD_ROOT) -> set[str]:
     """Capability string literals production code actually asks for."""
     demanded = set()
-    for py in PROD_ROOT.rglob("*.py"):
+    for py in root.rglob("*.py"):
         if "test" in py.parts:
             continue
-        try:
-            tree = ast.parse(py.read_text(encoding="utf-8"))
-        except SyntaxError:
-            continue
+        # utf-8-sig, and a parse failure raises rather than skips (#2373):
+        # a BOM'd demander silently dropped here could orphan a capability.
+        tree = ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
         for node in ast.walk(tree):
             if not isinstance(node, ast.Call):
                 continue
@@ -177,6 +178,34 @@ def _production_demanded_capabilities() -> set[str]:
                 if node.args and isinstance(node.args[0], ast.Constant):
                     demanded.add(node.args[0].value)
     return demanded
+
+
+def test_censuses_see_a_bom_carrier(tmp_path):
+    """#2373 non-vacuity: both censuses of this guard must see a module
+    behind a UTF-8 BOM. Under the previous strict read the BOM raised
+    SyntaxError and the bare ``continue`` dropped the file — 13 BOM'd
+    production files sat outside BOTH censuses, so a BOM'd definer could go
+    unwired and a BOM'd demander could orphan a real capability.
+    """
+    src = (
+        "﻿"
+        "def register_with_capability_registry():\n"
+        "    pass\n"
+        "\n"
+        "\n"
+        "def build_workflow(dsl):\n"
+        "    dsl.add_phase(capability='bom_carried_capability')\n"
+    )
+    (tmp_path / "bom_carrier.py").write_text(src, encoding="utf-8")
+    assert _definers_of_register_function(tmp_path), (
+        "a register_with_capability_registry behind a UTF-8 BOM must be in "
+        "the definer census — otherwise the population is amputated (#2373)."
+    )
+    assert "bom_carried_capability" in _production_demanded_capabilities(tmp_path), (
+        "an add_phase(capability=...) behind a UTF-8 BOM must be in the "
+        "demanded census — otherwise a BOM'd demander can orphan a real "
+        "capability and the guard stays green (#2373)."
+    )
 
 
 class TestOneCapabilitySurface:
