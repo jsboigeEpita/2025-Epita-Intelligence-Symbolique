@@ -25,12 +25,10 @@ def _create_kernel_and_factory() -> tuple[sk.Kernel, AgentFactory, str]:
     llm_service_id = (
         settings.service_manager.default_llm_service_id or "default_service"
     )
-    model_id = settings.service_manager.default_model_id or "gpt-5.6-luna"  # Fallback
-
-    # Utilise la factory centralisée pour créer le service LLM
-    llm_service = create_llm_service(
-        service_id=llm_service_id, model_id=model_id, force_authentic=True
-    )
+    # Pas de model_id (#2377) : le repli « or "gpt-5.6-luna" » qui vivait ici
+    # était une 5ᵉ copie du défaut, libre de diverger des quatre autres. Un
+    # service_manager.default_model_id vide résout désormais par la fabrique.
+    llm_service = create_llm_service(service_id=llm_service_id, force_authentic=True)
     kernel.add_service(llm_service)
 
     # La factory d'agents a maintenant besoin du kernel et des settings

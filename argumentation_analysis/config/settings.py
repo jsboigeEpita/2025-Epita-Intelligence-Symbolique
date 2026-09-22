@@ -4,12 +4,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 from pathlib import Path
 
+# Le défaut de modèle de chat, en UN seul endroit (#2377, DoD item 4).
+# « gpt-5.6-luna » était recopié sur 4 surfaces hors résolveur : les deux
+# classes de settings ci-dessous, `service_manager.default_model_id`, et le
+# repli de `create_llm_service`. Deux défauts qui divergent est exactement
+# comment une flotte se coupe en deux modèles — ici ils ne peuvent plus.
+# Vit dans ce module (et non dans `core/llm_service.py`) parce que celui-ci
+# importe `settings` : la dépendance va dans un seul sens.
+DEFAULT_CHAT_MODEL_ID = "gpt-5.6-luna"
+
 
 class OpenAISettings(BaseSettings):
     api_key: Optional[SecretStr] = Field(
         default="sk-dummy-key-for-testing", alias="OPENAI_API_KEY"
     )
-    chat_model_id: str = "gpt-5.6-luna"
+    chat_model_id: str = DEFAULT_CHAT_MODEL_ID
     base_url: Optional[HttpUrl] = None
     model_config = SettingsConfigDict(
         env_prefix="OPENAI_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
@@ -22,7 +31,14 @@ class AzureOpenAISettings(BaseSettings):
     deployment_name: Optional[str] = Field(
         None, alias="AZURE_OPENAI_CHAT_DEPLOYMENT_NAME"
     )
-    chat_model_id: str = "gpt-5.6-luna"
+    # Pas de défaut ici, à la différence des autres surfaces (#2377) : côté
+    # Azure ce champ porte un **nom de déploiement**, propre au tenant — le
+    # défautter à un id de modèle OpenAI était une valeur sans signification
+    # sur ce provider, que seul un lecteur de ce champ aurait pu prendre pour
+    # la route d'Azure. Aucun code ne le lit aujourd'hui (le branch Azure de
+    # `kernel_builder` construit sur `deployment_name`) : `None` dit l'absence
+    # au lieu de nommer un modèle que rien ne sert.
+    chat_model_id: Optional[str] = None
     model_config = SettingsConfigDict(
         env_prefix="AZURE_OPENAI_",
         env_file=".env",
@@ -80,7 +96,7 @@ class ServiceManagerSettings(BaseSettings):
     results_dir: Path = Path("_temp/service_manager_results")
     data_dir: Path = Path("data")
     default_llm_service_id: str = "openai"
-    default_model_id: str = "gpt-5.6-luna"
+    default_model_id: str = DEFAULT_CHAT_MODEL_ID
     hierarchical_channel_id: str = "hierarchical_main"
     model_config = SettingsConfigDict(env_prefix="SERVICE_MANAGER_")
 

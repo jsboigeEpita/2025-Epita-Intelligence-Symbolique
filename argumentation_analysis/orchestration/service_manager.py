@@ -218,8 +218,13 @@ class OrchestrationServiceManager:
 
         # Kernel Semantic Kernel et service LLM principal
         self.kernel: Optional[sk.Kernel] = None
+        # Un id de SERVICE, pas un id de modèle (#2377) : ce champ est consommé
+        # par kernel.get_service() et par create_llm_service(service_id=...),
+        # jamais envoyé à l'API comme modèle. Le littéral « gpt-5.6-luna » qui
+        # vivait ici nommait un modèle dans un champ d'id de service ; la même
+        # source que celle utilisée à l'initialisation le remplace.
         self.llm_service_id: Optional[str] = (
-            "gpt-5.6-luna"  # Default, sera confirmé lors de l'ajout au kernel
+            settings.service_manager.default_llm_service_id
         )
         self.project_context: Optional[ProjectContext] = None  # Contexte du projet
 
@@ -312,9 +317,13 @@ class OrchestrationServiceManager:
 
             if api_key:
                 try:
-                    llm_service = create_llm_service(
-                        service_id=self.llm_service_id, model_id="default"
-                    )
+                    # Pas de model_id ici (#2377) : le littéral « default » qui
+                    # vivait à cet endroit partait tel quel dans
+                    # `ai_model_id` — mesuré — donc vers l'API comme nom de
+                    # modèle. Laisser `create_llm_service` résoudre (env, table
+                    # #1930, bascule OpenRouter) fait décider la fonction
+                    # canonique, et rend vraie la provenance lue plus bas.
+                    llm_service = create_llm_service(service_id=self.llm_service_id)
                     self.kernel.add_service(llm_service)
                     self.logger.info(
                         f"Service LLM résilient '{self.llm_service_id}' ajouté au kernel."
@@ -739,6 +748,35 @@ class OrchestrationServiceManager:
             )
             return {"error": str(e), "status": "failed_in_strategic_manager"}
 
+    def _served_model_id(self) -> Optional[str]:
+        """Le modèle que le kernel sert RÉELLEMENT, ou None s'il n'en sert aucun.
+
+        Observation, pas re-dérivation (#2377) : lit l'id porté par le service
+        présent dans le kernel — le seul endroit qui dise ce qui a été appelé.
+        Aucune lecture d'environnement ici, délibérément : une valeur
+        re-dérivée qui coïncide serait un accord tautologique, pas une mesure,
+        et recréerait le 7ᵉ résolveur que #2352 vient de fermer.
+
+        Le service peut être enveloppé par le cache (``CachedChatCompletion``) :
+        on déplie ``_inner``/``inner`` avant de conclure à l'absence.
+        """
+        if self.kernel is None or not self.llm_service_id:
+            return None
+        try:
+            service: Any = self.kernel.get_service(self.llm_service_id)
+        except Exception:
+            return None
+        for _ in range(4):  # profondeur bornée : un inner auto-référent bouclerait
+            model_id = getattr(service, "ai_model_id", None)
+            if model_id:
+                return str(model_id)
+            service = getattr(service, "_inner", None) or getattr(
+                service, "inner", None
+            )
+            if service is None:
+                return None
+        return None
+
     async def _run_tactical_analysis(
         self, text: str, options: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
@@ -789,8 +827,6 @@ INSTRUCTIONS:
 
 Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetorique, coherence, recommandations."""
 
-            model = "gpt-5.6-luna"
-
             # Mesurer le temps de début
             start_time = time.time()
 
@@ -807,16 +843,23 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
 
             llm_result = str(response)
 
-            return {
+            result: Dict[str, Any] = {
                 "level": "tactical",
                 "status": "completed",
                 "llm_response": llm_result,
                 "prompt_used": tactical_prompt,
-                "model": model,
                 "response_time": response_time,
                 "manager": "TacticalManager",
                 "options": options,
             }
+            # « model » est une OBSERVATION du service que le kernel vient
+            # d'appeler (#2377) : jamais un littéral local. Absent plutôt que
+            # nul quand rien n'est observable — une provenance nulle et muette
+            # se confond avec « pas de modèle ».
+            served_model = self._served_model_id()
+            if served_model:
+                result["model"] = served_model
+            return result
 
         except Exception as e:
             self.logger.error(f"Erreur dans l'analyse tactique: {e}", exc_info=True)
@@ -879,8 +922,6 @@ INSTRUCTIONS OPÉRATIONNELLES:
 
 Réponds au format JSON avec les clés: entites, relations, patterns, persuasion, premisses, conclusions, biais, validite_logique."""
 
-            model = "gpt-5.6-luna"
-
             # Mesurer le temps de début
             start_time = time.time()
 
@@ -896,16 +937,21 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
 
             llm_result = str(response)
 
-            return {
+            result: Dict[str, Any] = {
                 "level": "operational",
                 "status": "completed",
                 "llm_response": llm_result,
                 "prompt_used": operational_prompt,
-                "model": model,
                 "response_time": response_time,
                 "manager": "OperationalManager",
                 "options": options,
             }
+            # Même contrat que l'analyse tactique (#2377) : le champ observe le
+            # service servi par le kernel, ou n'existe pas.
+            served_model = self._served_model_id()
+            if served_model:
+                result["model"] = served_model
+            return result
 
         except Exception as e:
             self.logger.error(
