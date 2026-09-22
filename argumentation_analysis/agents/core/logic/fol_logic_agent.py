@@ -26,6 +26,7 @@ from pydantic import PrivateAttr
 # Mock éliminé en Phase 2 - utilisation d'objets réels uniquement
 
 from semantic_kernel import Kernel
+from semantic_kernel.functions import KernelArguments
 
 # PURGE PHASE 3A: ChatCompletionAgent n'existe pas dans SK 0.9.6b1.
 # Utiliser la classe Agent de base définie dans cluedo_extended_orchestrator ou une définition locale.
@@ -248,7 +249,7 @@ FOL: forall X: (Homme(X) => Mortel(X))
      Homme(socrate)
 
 ANALYSE LE TEXTE SUIVANT :
-{text}
+{{$text}}
 
 RÉPONDS EN FORMAT JSON :
 {
@@ -270,10 +271,10 @@ Tu es un expert en analyse logique FOL. Analyse les formules suivantes pour :
 4. INTERPRÉTATIONS : Quels modèles satisfont ces formules ?
 
 FORMULES FOL :
-{formulas}
+{{$formulas}}
 
 CONTEXTE :
-{context}
+{{$context}}
 
 RÉPONDS EN FORMAT JSON :
 {
@@ -286,46 +287,31 @@ RÉPONDS EN FORMAT JSON :
 }
 """
 
-    async def setup_agent_components(self) -> bool:
-        """
-        Configure les composants spécifiques à l'agent FOL.
+    # #2360 — l'ancienne def ``async def setup_agent_components(self) -> bool``
+    # (morte par écrasement avant la def vivante de fin de fichier) est
+    # supprimée : son corps (pont Tweety + fonctions sémantiques) était déjà
+    # un sous-ensemble de la survivante, et son retour booléen n'était lu
+    # nulle part (l'appel interne d'``analyze`` ignore la valeur de retour).
 
-        Returns:
-            bool: True si la configuration a réussi
-        """
-        try:
-            # Initialisation du pont Tweety pour FOL
-            if not getattr(self, "_tweety_bridge", None):
-                self._tweety_bridge = TweetyBridge()
-                if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
-                    await self._tweety_bridge.initialize_fol_reasoner()
-                logger.info("✅ TweetyBridge FOL initialisé")
-
-            # Configuration des fonctions sémantiques FOL
-            await self._register_fol_semantic_functions()
-
-            return True
-
-        except Exception as e:
-            logger.error(f"❌ Erreur configuration FOL Agent: {e}")
-            return False
-
-    async def _register_fol_semantic_functions(self):
+    def _register_fol_semantic_functions(self):
         """Enregistre les fonctions sémantiques spécifiques FOL."""
         if not self.kernel:
             logger.warning("⚠️ Pas de kernel - fonctions sémantiques non enregistrées")
             return
 
-        # Fonction de conversion texte → FOL
-        conversion_function = self.kernel.create_function_from_prompt(
+        # #2360 — ``Kernel.create_function_from_prompt`` n'existe pas sur le
+        # kernel Semantic Kernel de ce dépôt (AttributeError avalée par le
+        # try/except de la def vivante : les fonctions ne s'enregistraient
+        # JAMAIS, même sur le chemin awaited). ``add_function`` est la forme
+        # qui fonctionne (pm_agent, sherlock_enquete_agent).
+        self.kernel.add_function(
             function_name="convert_to_fol",
             plugin_name="fol_logic",
             prompt=self._conversion_prompt,
             description="Convertit du texte naturel en formules FOL",
         )
 
-        # Fonction d'analyse FOL
-        analysis_function = self.kernel.create_function_from_prompt(
+        self.kernel.add_function(
             function_name="analyze_fol",
             plugin_name="fol_logic",
             prompt=self._analysis_prompt,
@@ -352,7 +338,7 @@ RÉPONDS EN FORMAT JSON :
         try:
             # 0. Lazy setup: register semantic functions if not done yet
             if not getattr(self, "_components_initialized", False):
-                await self.setup_agent_components()
+                self.setup_agent_components()
                 object.__setattr__(self, "_components_initialized", True)
 
             # 1. Vérification du cache
@@ -411,7 +397,7 @@ RÉPONDS EN FORMAT JSON :
                 result = await self.kernel.invoke(
                     function_name="convert_to_fol",
                     plugin_name="fol_logic",
-                    arguments=conversion_args,
+                    arguments=KernelArguments(**conversion_args),
                 )
 
                 # Parsing du JSON résultat
@@ -796,7 +782,7 @@ RÉPONDS EN FORMAT JSON :
             llm_result = await self.kernel.invoke(
                 function_name="analyze_fol",
                 plugin_name="fol_logic",
-                arguments=analysis_args,
+                arguments=KernelArguments(**analysis_args),
             )
 
             # Parsing et intégration des résultats LLM
@@ -883,8 +869,15 @@ RÉPONDS EN FORMAT JSON :
             ],
         }
 
-    async def setup_agent_components(self, llm_service_id: str = None) -> None:
-        """Configure les composants de l'agent FOL."""
+    def setup_agent_components(self, llm_service_id: Optional[str] = None) -> None:
+        """Configure les composants de l'agent FOL.
+
+        Contrat sync de ``BaseLogicAgent.setup_agent_components`` (agent_bases.py),
+        partagé par les 8 autres agents : l'API web (``logic_service``) et les
+        autres appelants génériques appellent cette méthode SANS ``await`` —
+        l'unique def async (#2360) laissait la configuration en coroutine jamais
+        attendue, silencieusement.
+        """
         try:
             # Appel parent
             if llm_service_id:
@@ -894,11 +887,17 @@ RÉPONDS EN FORMAT JSON :
             if not getattr(self, "_tweety_bridge", None):
                 self._tweety_bridge = TweetyBridge()
                 if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
-                    await self._tweety_bridge.initialize_fol_reasoner()
+                    maybe = self._tweety_bridge.initialize_fol_reasoner()
+                    if inspect.isawaitable(maybe):
+                        # Le pont de secours sans JVM déclare cette
+                        # initialisation asynchrone (corps no-op) ; un cycle
+                        # sync ne peut pas l'attendre — on la referme plutôt
+                        # que de fuiter une coroutine orpheline.
+                        maybe.close()
                 logger.info("✅ TweetyBridge FOL configuré")
 
             # Configuration des fonctions sémantiques
-            await self._register_fol_semantic_functions()
+            self._register_fol_semantic_functions()
 
         except Exception as e:
             logger.warning(f"⚠️ Configuration composants FOL partielle: {e}")
