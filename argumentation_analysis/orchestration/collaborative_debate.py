@@ -113,7 +113,9 @@ async def _invoke_collaborative_analysis(
 
     Returns a dict with per-role outputs and final synthesis.
     """
-    from openai import AsyncOpenAI
+    from argumentation_analysis.core.utils.network_utils import (
+        build_async_openai_client,
+    )
     from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
     # RA anti-théâtre #1079: route through the OpenRouter toggle (canonical
@@ -123,7 +125,7 @@ async def _invoke_collaborative_analysis(
     if not api_key:
         return _fallback_collaborative(input_text, context)
 
-    client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+    client = build_async_openai_client(api_key=api_key, base_url=base_url)
 
     # Gather upstream context
     extract_output = context.get("phase_extract_output", {})

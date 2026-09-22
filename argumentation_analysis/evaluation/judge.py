@@ -88,7 +88,9 @@ class LLMJudge:
             analysis_results: The analysis output to evaluate.
             model_registry: Optional ModelRegistry for model switching.
         """
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
 
         # Prepare the prompt with smart summarization
         prepared = self._prepare_results_for_judge(analysis_results)
@@ -123,7 +125,7 @@ class LLMJudge:
                     "OPENROUTER_API_KEY + OPENROUTER_BASE_URL)."
                 )
 
-            client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+            client = build_async_openai_client(api_key=api_key, base_url=base_url)
 
             response = await client.chat.completions.create(
                 model=model_id,

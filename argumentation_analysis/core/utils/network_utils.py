@@ -341,6 +341,39 @@ def get_resilient_async_client() -> httpx.AsyncClient:
     )
 
 
+def build_async_openai_client(**client_kwargs: Any) -> Any:
+    """Le seul constructeur d'``AsyncOpenAI`` hors ``create_llm_service`` (#2391).
+
+    #2387 a réparé le 400 ``reasoning_effort`` dans ``ReasoningEffortTransport``,
+    mais un transport n'atteint que les clients construits avec lui : seul
+    ``create_llm_service`` le faisait. Dix-huit sites construisaient un
+    ``AsyncOpenAI`` nu et contournaient la réparation, dont la fixture du garde
+    de #2322, qui restait rouge sur la route par défaut alors que la production
+    était réparée (mesuré : run ``35783217532``). Poser le transport site par
+    site ne tiendrait pas : le prochain client nu le contournerait de nouveau.
+    Chaque construction passe donc par ici, et
+    ``test_one_openai_client_constructor_2391.py`` refuse toute construction nue.
+
+    Le transport est posé seul, sans la couche résiliente (retry, disjoncteur
+    partagé) de ``get_resilient_async_client`` : ces sites n'en avaient pas, et
+    un disjoncteur commun à tous les clients changerait leur comportement en
+    panne. L'injection reste conditionnelle (POST ``/chat/completions`` +
+    ``tools`` + famille reasoning + champ absent) : un modèle non-reasoning ou
+    un appel sans outils part inchangé.
+    """
+    from openai import AsyncOpenAI
+
+    if "http_client" in client_kwargs:
+        raise TypeError(
+            "build_async_openai_client pose lui-même http_client (#2391) : "
+            "un client fourni contournerait ReasoningEffortTransport"
+        )
+    http_client = httpx.AsyncClient(
+        transport=ReasoningEffortTransport(httpx.AsyncHTTPTransport())
+    )
+    return AsyncOpenAI(http_client=http_client, **client_kwargs)
+
+
 if __name__ == "__main__":
     # Section de test simple pour la fonction download_file
     # Configure le logging basic pour voir les messages d'information et d'erreur

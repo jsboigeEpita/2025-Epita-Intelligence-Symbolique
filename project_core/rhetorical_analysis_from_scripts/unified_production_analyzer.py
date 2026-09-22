@@ -376,9 +376,11 @@ class UnifiedLLMService:
     async def _initialize_openai(self):
         """Initialise le client OpenAI authentique"""
         try:
-            import openai
+            from argumentation_analysis.core.utils.network_utils import (
+                build_async_openai_client,
+            )
 
-            self._client = openai.AsyncOpenAI()
+            self._client = build_async_openai_client()
 
             # Test de connexion seulement si mode authentique
             if self.config.mock_level == MockLevel.NONE:

@@ -228,9 +228,11 @@ def _get_openai_client() -> Tuple[Any, str]:
     if not api_key:
         return None, ""
     try:
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
 
-        return AsyncOpenAI(api_key=api_key, base_url=base_url), model_id
+        return build_async_openai_client(api_key=api_key, base_url=base_url), model_id
     except ImportError:
         return None, ""
 
@@ -3056,14 +3058,16 @@ async def _invoke_camembert_fallacy(
         }
 
     try:
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
         from semantic_kernel.kernel import Kernel
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         from argumentation_analysis.plugins.fallacy_workflow_plugin import (
             FallacyWorkflowPlugin,
         )
 
-        async_client = AsyncOpenAI(api_key=api_key, base_url=endpoint)
+        async_client = build_async_openai_client(api_key=api_key, base_url=endpoint)
         llm_service = OpenAIChatCompletion(
             ai_model_id=model_id,
             async_client=async_client,

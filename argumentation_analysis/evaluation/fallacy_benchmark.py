@@ -559,13 +559,15 @@ class FallacyBenchmarkRunner:
 
     async def run_mode_a_free(self, text: str) -> Dict[str, Any]:
         """Mode A: Free LLM detection with zero taxonomy context."""
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
 
         # The ONE route resolver (#2352): honors the OpenRouter toggle and the
         # #1930 substitutions — the inline reads it replaces saw neither.
         api_key, base_url, model_id = resolve_chat_endpoint()
 
-        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client = build_async_openai_client(api_key=api_key, base_url=base_url)
         response = await client.chat.completions.create(
             model=model_id,
             messages=[
@@ -589,7 +591,9 @@ class FallacyBenchmarkRunner:
 
     async def run_mode_b_one_shot(self, text: str) -> Dict[str, Any]:
         """Mode B: One-shot with full taxonomy available."""
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
 
         # The ONE route resolver (#2352): honors the OpenRouter toggle and the
         # #1930 substitutions — the inline reads it replaces saw neither.
@@ -606,7 +610,7 @@ class FallacyBenchmarkRunner:
                 taxonomy_ref.append(f"PK={pk} depth={depth} path={path}: {name}")
         taxonomy_text = "\n".join(taxonomy_ref)
 
-        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client = build_async_openai_client(api_key=api_key, base_url=base_url)
         response = await client.chat.completions.create(
             model=model_id,
             messages=[
@@ -634,7 +638,9 @@ class FallacyBenchmarkRunner:
 
     async def run_mode_c_constrained(self, text: str) -> Dict[str, Any]:
         """Mode C: Constrained hierarchical navigation via FallacyWorkflowPlugin."""
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
         from semantic_kernel.kernel import Kernel
         from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
         from argumentation_analysis.plugins.fallacy_workflow_plugin import (
@@ -645,7 +651,7 @@ class FallacyBenchmarkRunner:
         # #1930 substitutions — the inline reads it replaces saw neither.
         api_key, base_url, model_id = resolve_chat_endpoint()
 
-        async_client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        async_client = build_async_openai_client(api_key=api_key, base_url=base_url)
         llm_service = OpenAIChatCompletion(
             ai_model_id=model_id, async_client=async_client
         )

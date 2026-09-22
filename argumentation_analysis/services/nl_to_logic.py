@@ -352,7 +352,9 @@ class NLToLogicTranslator:
         shared_atoms: Optional[List[str]] = None,
     ) -> TranslationResult:
         """Translate via LLM with validate-retry loop."""
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
 
         # #2352: delegate to the canonical resolver instead of re-deriving the
         # OpenRouter toggle here (this copy also defaulted to a provider-prefixed
@@ -367,7 +369,7 @@ class NLToLogicTranslator:
         if not api_key:
             return self._translate_heuristic(text, logic_type)
 
-        client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+        client = build_async_openai_client(api_key=api_key, base_url=base_url)
 
         # #1396: when a shared modal atom inventory (ETAPE 0 Pass 1) is provided,
         # extend the base MODAL_SYSTEM_PROMPT to constrain the translator to it

@@ -232,17 +232,25 @@ class TestGuidedDescentDepthGate:
         # per-push gate deselects it and nobody ran it by hand. The scheduled
         # lane (#2286) caught it on its first fire.
         #
-        # Built exactly like production (fallacy_benchmark.py:643-656), NOT
-        # mocked: these are value-gates on real descent behaviour. A mock here
-        # would make them pass while measuring nothing — the false green this
-        # lane exists to end.
+        # NOT mocked: these are value-gates on real descent behaviour. A mock
+        # here would make them pass while measuring nothing — the false green
+        # this lane exists to end.
+        #
+        # #2391: the client comes from the single constructor, like every
+        # production client. This fixture used to copy fallacy_benchmark's
+        # bare ``AsyncOpenAI(...)`` and called that "production" — but the
+        # bare client skipped ReasoningEffortTransport (#2387), so on the
+        # default route every descent call got a 400 and the gate stayed red
+        # while the pipeline itself was repaired (run 35783217532).
         import os
 
         try:
-            from openai import AsyncOpenAI
             from semantic_kernel import Kernel
             from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
+            from argumentation_analysis.core.utils.network_utils import (
+                build_async_openai_client,
+            )
             from argumentation_analysis.plugins.fallacy_workflow_plugin import (
                 FallacyWorkflowPlugin,
             )
@@ -258,7 +266,7 @@ class TestGuidedDescentDepthGate:
 
         llm_service = OpenAIChatCompletion(
             ai_model_id=model_id,
-            async_client=AsyncOpenAI(api_key=api_key, base_url=base_url),
+            async_client=build_async_openai_client(api_key=api_key, base_url=base_url),
         )
         kernel = Kernel()
         kernel.add_service(llm_service)

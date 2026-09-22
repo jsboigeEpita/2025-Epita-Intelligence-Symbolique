@@ -237,11 +237,15 @@ class TextAnalysisRouter:
         self, text: str, available_caps: List[str]
     ) -> RoutingResult:
         """Use LLM to determine which capabilities to activate."""
-        from openai import AsyncOpenAI
+        from argumentation_analysis.core.utils.network_utils import (
+            build_async_openai_client,
+        )
 
         # Client built from the toggle-resolved endpoint (init); base_url ensures
         # OpenRouter is targeted when the toggle is on (anti-théâtre #1079).
-        client = AsyncOpenAI(api_key=self._api_key, base_url=self._base_url)
+        client = build_async_openai_client(
+            api_key=self._api_key, base_url=self._base_url
+        )
 
         # Build capability list for the prompt
         cap_lines = []
