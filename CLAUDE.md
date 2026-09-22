@@ -297,6 +297,7 @@ GitHub Actions (`.github/workflows/ci.yml`):
 - **Test markers**: Use appropriate markers from `pytest.ini` (50+ markers). Tests requiring API keys should use `@pytest.mark.requires_api` and will auto-skip.
 - **Async**: All async code uses `asyncio`. Tests use `asyncio_mode = auto`.
 - **New code goes in `argumentation_analysis/`**: Do not create new modules at root level.
+- **Metric mandate renders are reproducible** (#2353): a PR that shows a real render cites the command that reproduces it; the producer is tracked under `scripts/`, its output stays gitignored, and the render opens with a provenance header. Convention and producer table: `docs/guides/RENDER_REPRODUCIBILITY.md`.
 
 ## STOP&REPAIR — Never Workaround
 
