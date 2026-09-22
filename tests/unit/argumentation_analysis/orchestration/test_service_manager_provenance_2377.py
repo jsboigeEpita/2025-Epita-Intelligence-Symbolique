@@ -49,6 +49,10 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CORE_ROOT = "argumentation_analysis"
 
+# #2381 : la marche s'étend aux racines hors noyau où la classe vivait hors
+# périmètre — la garde ne certifie que ce qu'elle parcourt.
+CORE_ROOTS = ("argumentation_analysis", "api", "scripts", "project_core", "config")
+
 # Les deux méthodes qui rendaient une provenance fabriquée.
 _METHODS = ("_run_tactical_analysis", "_run_operational_analysis")
 
@@ -481,24 +485,30 @@ def test_the_factory_fallback_renders_the_same_default(tmp_path):
 
 
 def _core_sources() -> List[Tuple[str, str]]:
-    """Les sources suivies de ``argumentation_analysis/``.
+    """Les sources suivies des cinq racines du dépôt.
 
+    #2377 naissait sur ``argumentation_analysis/`` seule ; #2381 étend la marche
+    à ``api/``, ``scripts/``, ``project_core/`` et ``config/`` : la classe
+    provenance-par-littéral y vivait hors périmètre, ni réparée ni silencieuse.
     ``git ls-files`` et non la marche disque (le dossier de travail contient des
     artefacts ignorés), et ``utf-8-sig`` : trois fichiers du dépôt portent un BOM
     et un lecteur en ``utf-8`` meurt dessus au lieu de mesurer (#2373).
     """
-    listed = subprocess.run(
-        ["git", "ls-files", "--", CORE_ROOT],
-        cwd=str(REPO_ROOT),
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    return [
-        (rel, (REPO_ROOT / rel).read_text(encoding="utf-8-sig"))
-        for rel in listed
-        if rel.endswith(".py")
-    ]
+    sources: List[Tuple[str, str]] = []
+    for root in CORE_ROOTS:
+        listed = subprocess.run(
+            ["git", "ls-files", "--", root],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.split()
+        sources.extend(
+            (rel, (REPO_ROOT / rel).read_text(encoding="utf-8-sig"))
+            for rel in listed
+            if rel.endswith(".py")
+        )
+    return sources
 
 
 def _model_like(node: ast.AST) -> bool:
@@ -615,7 +625,9 @@ def test_the_factory_guard_catches_a_hardcoded_model():
 
 def test_no_result_dict_takes_its_provenance_from_a_local_literal():
     sources = _core_sources()
-    assert len(sources) > 400, (
+    # #2381 : la marche couvre les cinq racines (989 fichiers mesurés à
+    # l'adoption — 569 pour le seul noyau avant extension).
+    assert len(sources) > 800, (
         f"la marche n'a vu que {len(sources)} fichiers — une marche cassée ne "
         "certifie aucune absence"
     )
