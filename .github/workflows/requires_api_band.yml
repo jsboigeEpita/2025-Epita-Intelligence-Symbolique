@@ -344,7 +344,9 @@ jobs:
       - name: Count committed cassettes (guard against a vacuous lane)
         shell: pwsh
         run: |
-          $n = (Get-ChildItem tests/fixtures/llm_cassettes -Filter *.json | Measure-Object).Count
+          # MANIFEST.json is not a cassette (#2405): a dir holding only the
+          # manifest must still read as empty here.
+          $n = (Get-ChildItem tests/fixtures/llm_cassettes -Filter *.json | Where-Object Name -ne 'MANIFEST.json' | Measure-Object).Count
           Write-Host "Committed cassettes: $n"
           if ($n -lt 1) {
             Write-Host "FAIL-LOUD: no cassettes committed -- the replay band would be vacuous (hit would be 0)."
