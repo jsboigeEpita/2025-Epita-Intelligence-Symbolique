@@ -145,7 +145,6 @@ def test_analyze_extract_advanced_missing_text_uses_sample(
     mock_generate_sample.assert_called_once()
 
 
-
 def test_analyze_extract_advanced_plugin_exception_handling(
     sample_extract_definition: Dict[str, Any], mock_plugin: MagicMock, caplog
 ):

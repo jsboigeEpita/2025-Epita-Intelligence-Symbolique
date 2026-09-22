@@ -180,9 +180,9 @@ class TestValidateFolWithSignature:
         assert mock_bridge.fol_handler.parse_fol_formula.call_count == 3
 
         # #2375 anti-theater witness: the mock must be CONSULTED by the SUT.
-        assert mock_jclass.called, (
-            "theater: the patch is not read by the code under test"
-        )
+        assert (
+            mock_jclass.called
+        ), "theater: the patch is not read by the code under test"
 
     @patch("jpype.JClass")
     def test_undeclared_constants_auto_discovered(self, mock_jclass):
