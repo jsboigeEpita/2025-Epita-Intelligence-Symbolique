@@ -205,6 +205,28 @@ def compute_cache_key(chat_history: ChatHistory, settings=None) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
+def _jsonable_metadata(value: Any) -> Any:
+    """Forme JSON d'une valeur de métadonnée que ``json.dumps`` refuse.
+
+    #2324 : un modèle pydantic (``CompletionUsage`` de SK) garde sa structure
+    via ``model_dump`` au lieu d'être réduit à son ``str()``. Le ``str()``
+    rendait ``"prompt_tokens=1964 completion_tokens=..."`` : l'audit de
+    confidentialité de l'export lit alors les compteurs de tokens comme des
+    années du corpus et refuse la cassette (run ``35786207835`` : 2 cassettes
+    refusées, 4 indices, tous à ``[0].metadata.usage``). Des entiers dans une
+    structure restent des nombres ; l'audit ne lit que le texte.
+    """
+    dump = getattr(value, "model_dump", None)
+    if callable(dump):
+        try:
+            dumped = dump(mode="json")
+            json.dumps(dumped)
+            return dumped
+        except (TypeError, ValueError):
+            pass
+    return str(value)
+
+
 def _serialize_response(response: List[ChatMessageContent]) -> list:
     """Serialize a list of ChatMessageContent to JSON-compatible structure."""
     serialized = []
@@ -238,7 +260,7 @@ def _serialize_response(response: List[ChatMessageContent]) -> list:
                     json.dumps(v)
                     safe_meta[k] = v
                 except (TypeError, ValueError):
-                    safe_meta[k] = str(v)
+                    safe_meta[k] = _jsonable_metadata(v)
             entry["metadata"] = safe_meta
         serialized.append(entry)
     return serialized
