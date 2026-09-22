@@ -20,9 +20,7 @@ from . import report_generator
 from . import reporting_utils
 from . import restore_config
 from . import run_extract_editor
-from . import run_extract_repair
 from . import run_verify_extracts_with_llm
-from . import run_verify_extracts
 from . import system_utils
 from . import taxonomy_loader
 from . import text_processing
@@ -60,9 +58,7 @@ __all__ = [
     "reporting_utils",
     "restore_config",
     "run_extract_editor",
-    "run_extract_repair",
     "run_verify_extracts_with_llm",
-    "run_verify_extracts",
     "system_utils",
     "taxonomy_loader",
     "text_processing",

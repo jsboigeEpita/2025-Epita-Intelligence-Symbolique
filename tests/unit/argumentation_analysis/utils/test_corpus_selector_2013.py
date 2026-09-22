@@ -7,6 +7,12 @@ log file at import, so imports happen lazily inside the fixture under a chdir
 to tmp_path. Since #2018 the scripts/ runner imports on the declared core
 dependencies alone (the once-pulled namespace was a broken import, fixed
 there), so these tests carry no dependency skip.
+
+``argumentation_analysis.utils.run_verify_extracts`` was deleted by #2342
+(its lazy import pointed at a module removed by the dev_tools refactor; the
+live deterministic verify entry point is
+``scripts/orchestration/run_verify_extracts.py``, which builds its parser
+inline and so is out of this builder-pattern test's scope).
 """
 
 import importlib
@@ -16,7 +22,6 @@ import pytest
 from argumentation_analysis.core.utils.cli_utils import DEPRECATED_ORATOR_ALIAS
 
 MODULE_NAMES = [
-    "argumentation_analysis.utils.run_verify_extracts",
     "argumentation_analysis.utils.run_verify_extracts_with_llm",
     "argumentation_analysis.scripts.run_verify_extracts_llm",
 ]

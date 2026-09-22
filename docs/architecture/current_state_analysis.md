@@ -10,7 +10,7 @@ Ce rapport détaille l'analyse de la structure actuelle du projet, mettant en lu
 
 *   **`argumentation_analysis/`**: Module principal contenant la logique métier.
     *   Sous-répertoires : `agents/`, `core/` (contient [`jvm_setup.py`](../../argumentation_analysis/core/jvm_setup.py:1), [`shared_state.py`](../../argumentation_analysis/core/shared_state.py:1), [`communication/`](../../argumentation_analysis/core/communication/:1)), `models/`, `orchestration/` (contient `analysis_runner.py`), `services/`, `ui/`, `utils/`.
-    *   Scripts d'exécution spécifiques : [`main_orchestrator.py`](../../argumentation_analysis/main_orchestrator.py:1), `run_analysis.py`, [`run_extract_editor.py`](../../argumentation_analysis/utils/run_extract_editor.py:1), [`run_extract_repair.py`](../../argumentation_analysis/utils/run_extract_repair.py:1), [`run_orchestration.py`](../../argumentation_analysis/run_orchestration.py:1).
+    *   Scripts d'exécution spécifiques : [`main_orchestrator.py`](../../argumentation_analysis/main_orchestrator.py:1), `run_analysis.py`, [`run_extract_editor.py`](../../argumentation_analysis/utils/run_extract_editor.py:1), [`run_extract_repair.py`](../../scripts/orchestration/run_extract_repair.py:1), [`run_orchestration.py`](../../argumentation_analysis/run_orchestration.py:1).
 *   **`project_core/`**: Modules transversaux et utilitaires de base.
     *   [`bootstrap.py`](../../argumentation_analysis/core/bootstrap.py:1) (rôle d'initialisation probable).
     *   Sous-répertoires : `dev_utils/`, `integration/`, `utils/`.

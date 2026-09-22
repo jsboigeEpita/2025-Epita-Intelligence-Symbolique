@@ -21,7 +21,7 @@ Ce répertoire contient le cœur logique de l'analyse rhétorique et de la déte
 *   **`argumentation_analysis/run_extract_editor.py`**
     *   **Rôle :** Script pour lancer l'éditeur de marqueurs d'extraits.
     *   **Statut :** Stable.
-*   **`argumentation_analysis/run_extract_repair.py`**
+*   **`scripts/orchestration/run_extract_repair.py`**
     *   **Rôle :** Script pour lancer la réparation des bornes défectueuses dans les extraits.
     *   **Statut :** Stable.
 *   **`argumentation_analysis/run_orchestration.py`**
