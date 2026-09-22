@@ -1,0 +1,48 @@
+{
+  "key": "2b4d65f0a7449c1b7cd010efbce7d03af6f04d7115703091d36400211df98393",
+  "value": {
+    "id": "chatcmpl-ER3VgRW9vRQXBGqT5mGor35n3Q0Hw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Prémisse : organiser un tournoi inter-villes avec buffet et prix permet d'utiliser tout le budget et d'accroître la visibilité ainsi que le recrutement. Conclusion : il faut défendre cette organisation. Verdict : saut logique, car les bénéfices énoncés ne suffisent pas à établir directement l'obligation de la défendre.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117056,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 135,
+      "prompt_tokens": 289,
+      "total_tokens": 424,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 48,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

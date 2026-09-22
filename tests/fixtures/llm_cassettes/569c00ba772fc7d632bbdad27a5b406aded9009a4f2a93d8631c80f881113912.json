@@ -1,0 +1,48 @@
+{
+  "key": "569c00ba772fc7d632bbdad27a5b406aded9009a4f2a93d8631c80f881113912",
+  "value": {
+    "id": "chatcmpl-ER3Ukj5asaqKwNylc4lEMcXkiW2lw",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"A structured vote using transparent criteria would treat visibility, long-term club development, and member benefit fairly; no option is clearly dominant, so equal stakeholder input is appropriate.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"agent_1\",\"position\":\"Supports option A: spend the full budget on an inter-city tournament, buffet, and prizes to increase the club’s visibility.\",\"influence\":0.33},{\"agent\":\"agent_2\",\"position\":\"Supports option B: invest the full budget in educational materials and new chessboards to strengthen training conditions.\",\"influence\":0.34},{\"agent\":\"agent_3\",\"position\":\"Supports option C: split the budget between a smaller tournament and equipment purchases as a balanced compromise.\",\"influence\":0.33}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"The three options represent legitimate but competing goals: external visibility, internal development, and balance. A social-choice process should rank the options against agreed criteria and allow a compromise outcome, most plausibly option C or a modified hybrid, while preserving the possibility of reviewing results after one budget cycle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116998,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 373,
+      "prompt_tokens": 563,
+      "total_tokens": 936,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 118,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

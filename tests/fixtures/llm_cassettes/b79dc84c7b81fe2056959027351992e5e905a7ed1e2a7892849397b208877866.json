@@ -1,0 +1,48 @@
+{
+  "key": "b79dc84c7b81fe2056959027351992e5e905a7ed1e2a7892849397b208877866",
+  "value": {
+    "id": "chatcmpl-ER3TrusDpmGh7s0f4jXvZZOcxvIOz",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"has_opposing_claim\":true,\"opposing_claim\":\"L'avis des personnes qui ne sont pas expertes devrait compter ou être pris en considération.\",\"main_thesis\":\"L'unanimité des experts suffit à établir qu'une affirmation est vraie, et l'avis des non-experts ne compte pas.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116943,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 244,
+      "prompt_tokens": 214,
+      "total_tokens": 458,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 173,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

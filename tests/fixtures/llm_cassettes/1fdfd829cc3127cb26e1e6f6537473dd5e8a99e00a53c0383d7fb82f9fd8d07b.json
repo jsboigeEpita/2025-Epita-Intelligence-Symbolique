@@ -1,0 +1,48 @@
+{
+  "key": "1fdfd829cc3127cb26e1e6f6537473dd5e8a99e00a53c0383d7fb82f9fd8d07b",
+  "value": {
+    "id": "chatcmpl-ER3WTinybJV7TF5zuU5zYbsOKnf5Y",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse est clairement formulée et aucune digression n’est identifiée : l’ensemble est centré sur le rôle des taux élevés de vaccination dans la protection indirecte des personnes non vaccinables grâce à l’immunité collective.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117105,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 61,
+      "prompt_tokens": 272,
+      "total_tokens": 333,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "key": "76e744932d215d984315d99b809774ca243bc71a16dbe6c3fa1fa331aa5b8829",
+  "value": {
+    "id": "chatcmpl-ER3S4SvEiOhxWUoGf4BxzYJVYW8Gi",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "[\n  {\n    \"counter_argument\": \"La prolongation de la durée du travail ne devrait pas être présentée comme une évidence naturelle : elle engage un choix collectif sur la répartition des efforts et doit donc être discutée politiquement.\",\n    \"strategy_used\": \"contestation du cadrage\",\n    \"target_argument\": \"1\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L’argument souligne que la présentation contestée repose sur un choix normatif plutôt que sur un simple fait objectif.\"\n  },\n  {\n    \"counter_argument\": \"Une croissance annuelle de 1,8 % n’est qu’une hypothèse parmi d’autres ; si la croissance réelle est plus faible, la prévision de déficit peut être nettement sous-estimée.\",\n    \"strategy_used\": \"mise en doute de l’hypothèse\",\n    \"target_argument\": \"2\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"La conclusion dépend directement d’une hypothèse économique incertaine, dont la sensibilité doit être testée par plusieurs scénarios.\"\n  },\n  {\n    \"counter_argument\": \"Les différences entre les systèmes de retraite ne rendent pas toute comparaison européenne inutile : elles peuvent au contraire permettre d’identifier les effets de dispositifs précis, à condition de comparer des situations réellement comparables.\",\n    \"strategy_used\": \"nuance comparative\",\n    \"target_argument\": \"3\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"Cet argument reconnaît la limite invoquée tout en montrant qu’elle ne suffit pas à rejeter entièrement la comparaison.\"\n  },\n  {\n    \"counter_argument\": \"Affirmer que tous les pays européens ont déjà adopté la réforme est une généralisation excessive : les règles, les calendriers et les choix de nombreux pays restent différents.\",\n    \"strategy_used\": \"contre-exemple et réfutation factuelle\",\n    \"target_argument\": \"4\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument d’autorité fondé sur l’unanimité européenne s’effondre si cette unanimité n’est pas démontrée.\"\n  },\n  {\n    \"counter_argument\": \"Le risque d’un effondrement dans cinq ans ne découle pas nécessairement de l’absence d’une réforme immédiate : des mesures graduelles, des ajustements budgétaires ou de nouvelles recettes peuvent aussi modifier la trajectoire.\",\n    \"strategy_used\": \"réfutation de l’alternative forcée\",\n    \"target_argument\": \"5\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"L’argument remet en cause l’idée qu’il n’existerait que deux options, la réforme immédiate ou l’effondrement.\"\n  },\n  {\n    \"counter_argument\": \"Le fait qu’une évolution soit présentée comme naturelle ne la rend ni inévitable ni souhaitable : la durée du travail résulte de décisions sociales et politiques susceptibles d’être modifiées.\",\n    \"strategy_used\": \"dénonciation du sophisme naturaliste\",\n    \"target_argument\": \"6\",\n    \"strength\": \"strong\",\n    \"reasoning\": \"La réponse distingue ce qui est décrit comme naturel de ce qui est effectivement justifié ou légitime.\"\n  },\n  {\n    \"counter_argument\": \"La prévision d’un déficit de 2,3 % du PIB en 2030 dépend de nombreuses hypothèses économiques et démographiques ; elle ne peut donc pas être présentée comme un résultat certain.\",\n    \"strategy_used\": \"incertitude prévisionnelle\",\n    \"target_argument\": \"7\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"Les projections à long terme comportent une marge d’erreur importante et doivent être accompagnées de scénarios ou d’une analyse de sensibilité.\"\n  },\n  {\n    \"counter_argument\": \"Même si l’opposition ne propose pas de supprimer les retraites, une réforme différente doit démontrer concrètement comment elle garantirait leur financement et leur pérennité.\",\n    \"strategy_used\": \"déplacement de la charge de la preuve\",\n    \"target_argument\": \"8\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"La distinction entre réforme et suppression ne suffit pas à établir la viabilité de l’alternative défendue.\"\n  },\n  {\n    \"counter_argument\": \"La référence aux enfants peut rendre visibles les conséquences intergénérationnelles du financement des retraites ; elle ne détourne du débat technique que si elle remplace effectivement l’examen des chiffres.\",\n    \"strategy_used\": \"réhabilitation du registre émotionnel\",\n    \"target_argument\": \"9\",\n    \"strength\": \"moderate\",\n    \"reasoning\": \"L’émotion n’est pas nécessairement fallacieuse : elle peut compléter l’analyse technique en rappelant les personnes affectées par la décision.\"\n  }\n]",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116832,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1081,
+      "prompt_tokens": 442,
+      "total_tokens": 1523,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 79,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

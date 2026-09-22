@@ -1,0 +1,40 @@
+{
+  "key": "69e6ae95474ebc0295fbb353319307b60320f44420563d782914a34476054d5e",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_pgQxslbJljWAVYflbtfW6vsV",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"74\",\"confidence\":\"high\",\"justification\":\"L’argument 2 affirme que l’avis d’une personne ne compte pas simplement parce qu’elle n’est pas experte, ce qui substitue une prétendue autorité personnelle à une justification. Toutefois, l’argument 1 relève plus précisément d’un appel à l’autorité collective; le nœud 74 correspond bien à l’argument 2.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3TPWCZgvNA0C5ibHmLsWBhgz1GO",
+        "created": 1790116915,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 648,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 105,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

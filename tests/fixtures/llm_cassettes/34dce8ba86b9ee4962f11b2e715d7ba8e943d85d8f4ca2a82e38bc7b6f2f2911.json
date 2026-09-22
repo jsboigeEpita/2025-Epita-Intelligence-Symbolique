@@ -1,0 +1,48 @@
+{
+  "key": "34dce8ba86b9ee4962f11b2e715d7ba8e943d85d8f4ca2a82e38bc7b6f2f2911",
+  "value": {
+    "id": "chatcmpl-ER3VadfS5zW8NcSm0H0hiYRsaB3sf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse défend l’organisation d’un tournoi inter-villes avec buffet et prix pour utiliser tout le budget et accroître la visibilité ; aucune digression n’est identifiée.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117050,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 103,
+      "prompt_tokens": 279,
+      "total_tokens": 382,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 47,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

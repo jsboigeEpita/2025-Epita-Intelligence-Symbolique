@@ -1,0 +1,48 @@
+{
+  "key": "5cc5a4080d09d35764af029b92ea40eb67fa3ba15feb5a888988f84fc9ed02a3",
+  "value": {
+    "id": "chatcmpl-ER3Rc12E1DcFxrIylkDqVYhyBN6tS",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":1.0,\"exhibit\":\"La thèse est clairement soutenue sans digression identifiée : l'argument affirme que la prolongation de la durée du travail doit être débattue politiquement plutôt que présentée comme naturelle.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116804,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 80,
+      "prompt_tokens": 270,
+      "total_tokens": 350,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 20,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
