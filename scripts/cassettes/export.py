@@ -151,7 +151,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 def export_one(
-    db: diskcache.Cache, key: str, value, fixtures_dir: Path, *, allow_unsafe: bool
+    db: diskcache.Cache,
+    key: str,
+    value,
+    fixtures_dir: Path,
+    *,
+    allow_unsafe: bool,
+    violations_out: list[str] | None = None,
 ) -> str:
     """Write one cassette. Returns 'ok' | 'unsafe' | 'already' | 'degraded'.
 
@@ -163,6 +169,11 @@ def export_one(
     this check (no false negative by construction). Refusing at the export
     boundary keeps ``llm_cache.py`` free of record-shape guards and the BO-3
     replay invariants un-widened.
+
+    ``violations_out`` receives the audit's findings when the value is
+    refused as ``unsafe``. Each finding names the rule, the matched hint and
+    the JSON path — never the surrounding prose — so the caller can print it
+    in a public CI log.
     """
     out = fixtures_dir / f"{key}.json"
     if out.exists():
@@ -172,6 +183,8 @@ def export_one(
     if not allow_unsafe:
         violations = audit_value(value, source=f"cassette {key[:16]}")
         if violations:
+            if violations_out is not None:
+                violations_out.extend(violations)
             return "unsafe"
     out.write_text(
         json.dumps({"key": key, "value": value}, ensure_ascii=False, indent=2),
@@ -199,11 +212,17 @@ def main(argv: list[str] | None = None) -> int:
 
         counts: dict[str, int] = {"ok": 0, "already": 0, "unsafe": 0, "degraded": 0}
         unsafe_keys: list[str] = []
+        unsafe_findings: list[str] = []
         degraded_keys: list[str] = []
         for key in db.iterkeys():
             value = db[key]
             status = export_one(
-                db, key, value, args.fixtures_dir, allow_unsafe=args.allow_unsafe
+                db,
+                key,
+                value,
+                args.fixtures_dir,
+                allow_unsafe=args.allow_unsafe,
+                violations_out=unsafe_findings,
             )
             counts[status] = counts.get(status, 0) + 1
             if status == "unsafe":
@@ -229,6 +248,15 @@ def main(argv: list[str] | None = None) -> int:
         print(
             f"Refused cassettes (first 16 chars of key): {unsafe_keys}", file=sys.stderr
         )
+        # Name WHY each cassette was refused. Without this the refusal is
+        # undiagnosable from the CI log: the recording runner is gone, so the
+        # refused values are unrecoverable, and a record run whose export
+        # refuses anything writes no MANIFEST — the whole run is lost for a
+        # reason nobody can read (measured on record run 35783523640: 3
+        # refusals, 279 exported, no manifest, no cause). A finding carries the
+        # rule, the matched hint and the path, never the prose around it.
+        for finding in unsafe_findings:
+            print(f"  refused: {finding}", file=sys.stderr)
         return 2
 
     # #2323 provenance manifest: in a record-job run GITHUB_RUN_ID is set

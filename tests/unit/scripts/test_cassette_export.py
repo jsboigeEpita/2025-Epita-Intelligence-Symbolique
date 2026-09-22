@@ -94,3 +94,26 @@ def test_main_reports_degraded_but_does_not_exit_2(
     manifest = json.loads((fixtures / "MANIFEST.json").read_text(encoding="utf-8"))
     assert manifest["cassette_count"] == 0
     assert manifest["record_run_id"] == "42"
+
+
+def test_main_names_why_each_cassette_is_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture
+) -> None:
+    # Record run 35783523640 refused 3 cassettes and printed only their key
+    # prefixes: the runner was gone, the values unrecoverable, and the run
+    # (which writes no MANIFEST on refusal) lost for an unreadable reason. The
+    # refusal must name its rule, its hint and its path — never the prose.
+    monkeypatch.setenv("GITHUB_RUN_ID", "42")
+    db_dir = tmp_path / "db"
+    db = diskcache.Cache(str(db_dir))
+    prose = "Une réponse synthétique qui situe son exemple en 1999 seulement."
+    db["9" * 32] = [{"role": "assistant", "content": prose}]
+    db.close()
+
+    rc = main([str(db_dir), str(tmp_path / "fixtures")])
+
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert "historical-year hint 1999" in err, err
+    assert "content" in err, err
+    assert "situe son exemple" not in err, "the refusal log must not carry prose"
