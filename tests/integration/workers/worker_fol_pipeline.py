@@ -85,10 +85,10 @@ async def fol_agent_with_kernel():
     # Utilisation de la factory pour créer une instance concrète
     agent = LogicAgentFactory.create_agent(logic_type="first_order", kernel=kernel)
     # L'ID 'default' correspond au service par défaut ajouté dans get_kernel_with_gpt4o_mini
-    # #1867: setup_agent_components est une coroutine — sans await, la coroutine
-    # n'exécute jamais et le TweetyBridge reste None ("Degraded: no Tweety
-    # bridge", fol_logic_agent.py:1068).
-    await agent.setup_agent_components(llm_service_id="default")
+    # #2360: le cycle de vie est sync (contrat de BaseLogicAgent) — l'ancien
+    # await (#1867) décrivait la def async unique à FOL, supprimée avec la
+    # double définition.
+    agent.setup_agent_components(llm_service_id="default")
     return agent
 
 

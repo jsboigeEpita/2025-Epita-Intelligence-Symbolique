@@ -568,7 +568,8 @@ async def fol_agent_with_kernel():
         agent = LogicAgentFactory.create_agent(logic_type="fol", kernel=kernel)
         # L'ID 'default' correspond au service par défaut ajouté dans get_kernel_with_gpt4o_mini
         # La dépendance à integration_jvm garantit que la JVM est déjà démarrée.
-        await agent.setup_agent_components(llm_service_id="default")
+        # #2360: le cycle de vie est sync (contrat de BaseLogicAgent).
+        agent.setup_agent_components(llm_service_id="default")
         yield agent
     finally:
         logger.info("--- FIN FIXTURE 'fol_agent_with_kernel' (teardown) ---")

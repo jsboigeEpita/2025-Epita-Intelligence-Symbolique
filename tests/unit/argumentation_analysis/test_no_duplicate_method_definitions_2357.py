@@ -58,15 +58,9 @@ EXCLUDE_DIR_NAMES = {"tests", "__pycache__", "__pypackages__"}
 #: **shrinks** as those issues land and never grows to absorb new silence: a
 #: stale entry (the duplicate is gone) reddens on its own, see
 #: :func:`test_the_pending_triage_map_has_no_stale_entry`.
-PENDING_TRIAGE: dict[tuple[str, str, str], str] = {
-    # Divergent signatures AND return types on a lifecycle entry point; the
-    # async/sync split is the subject of #2360, which carries its own born-red.
-    (
-        "agents/core/logic/fol_logic_agent.py",
-        "FOLLogicAgent",
-        "setup_agent_components",
-    ): "#2360",
-}
+#: #2360 landed (single sync ``setup_agent_components`` on FOLLogicAgent) —
+#: its entry left the map with the repair.
+PENDING_TRIAGE: dict[tuple[str, str, str], str] = {}
 
 _ACCESSOR_SUFFIXES = {"setter", "deleter", "getter", "register"}
 _ACCESSOR_NAMES = {"property", "overload", "singledispatchmethod", "cached_property"}

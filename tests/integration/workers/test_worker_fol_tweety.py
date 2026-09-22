@@ -762,7 +762,8 @@ async def fol_agent_with_kernel(jvm_session):
     agent = FOLLogicAgent(kernel=kernel, agent_name="TestFOLAgentWithKernel")
 
     # L'initialisation des composants, y compris TweetyBridge, est gérée par l'agent.
-    await agent.setup_agent_components(llm_service_id="default")
+    # #2360: le cycle de vie est sync comme la base et les 8 autres agents.
+    agent.setup_agent_components(llm_service_id="default")
 
     return agent
 
