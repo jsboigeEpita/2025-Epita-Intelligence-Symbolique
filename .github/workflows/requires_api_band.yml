@@ -406,13 +406,13 @@ jobs:
         #     cassettes are re-recorded on main b9e321ef (record job
         #     35792294382, 22/22 passed, 276 exported, 0 refused) with the
         #     delegation test IN the recorder's argv, so it replays here.
-        # Validated on THIS workflow's argv (14 flags): see the PR's local
-        # band measurement (21 passed, hit=72, miss_replay=0, live=0).
-        # The pre-#2323 argv (13 flags) measured 23 passed, hit=76,
-        # miss_replay=0, live=0, egress total 0 (counter), gate OK — measured
-        # 2026-09-19 after the flag removal. The interim commit on this branch
-        # reported "21 passed" because it measured the pre-removal 15-flag
-        # argv: both numbers are real, they described different harnesses.
+        # Validated on THIS workflow's argv (13 --deselect flags), on the
+        # runner, against the committed cassettes of record 35792294382:
+        # band run 35797422276 (2026-09-23) — 22 passed, 0 skipped, the
+        # delegation test among them; hit=699, miss_replay=0, live=0; egress
+        # report llm_outcomes {} (zero LLM requests). Earlier figures in this
+        # comment (21/23 passed, hit=72/76) measured other argvs and older
+        # cassettes; they no longer describe this step.
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
