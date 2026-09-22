@@ -31,16 +31,29 @@ async def test_environment():
 
     print(f"✅ OPENAI_API_KEY trouvée (longueur: {len(api_key)})")
 
+    # Vérification modèle (#2383) : un diagnostic rapporte ce qui est CONFIGURÉ.
+    # Le repli « gpt-5.6-luna » qui vivait ici fabriquait un succès — variable
+    # absente, le kernel était bâti sur un défaut codé en dur et le script
+    # rendait « ✅ » pour une configuration qui n'était pas dans .env (entrée
+    # versée à #2377 par la revue coord R1043). Un vide n'est pas une
+    # configuration non plus (#2281 : vide ≠ absent, et vide ≠ configuré).
+    model_id = os.getenv("OPENAI_CHAT_MODEL_ID")
+    if not model_id:
+        print("❌ OPENAI_CHAT_MODEL_ID non configurée")
+        return False
+
+    print(f"✅ OPENAI_CHAT_MODEL_ID configurée : {model_id}")
+
     # Test kernel
     try:
         kernel = Kernel()
         chat_service = OpenAIChatCompletion(
             service_id="test",
             api_key=api_key,
-            ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5.6-luna"),
+            ai_model_id=model_id,
         )
         kernel.add_service(chat_service)
-        print("✅ Kernel Semantic Kernel créé avec succès")
+        print(f"✅ Kernel Semantic Kernel créé avec succès (modèle : {model_id})")
         return True
 
     except Exception as e:
