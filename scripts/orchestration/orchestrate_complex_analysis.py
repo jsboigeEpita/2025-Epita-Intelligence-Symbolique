@@ -381,13 +381,14 @@ async def orchestrate_complex_analysis():
         start_time = datetime.now()
 
         # Simulation d'analyse rhétorique complexe
+        # (#2381 : une simulation ne nomme pas de modèle — aucun service n'a
+        # été consulté pour ce tour, la clé de provenance n'annonce rien.)
         rhetoric_result = {
             "rhetorical_devices": ["métaphore", "anaphore", "appel à l'autorité"],
             "persuasion_score": 0.75,
             "emotional_appeals": ["peur", "espoir", "responsabilité"],
             "target_audience": "parents et éducateurs",
             "authentic": True,
-            "model_used": "gpt-5.6-luna",
         }
 
         duration = (datetime.now() - start_time).total_seconds() + 3.5  # Simulation
@@ -412,7 +413,6 @@ async def orchestrate_complex_analysis():
             "cross_validation": "cohérence entre analyses fallacies et rhétorique",
             "recommendations": ["vérifier les sources", "demander des preuves"],
             "authentic": True,
-            "model_used": "gpt-5.6-luna",
         }
 
         duration = (datetime.now() - start_time).total_seconds() + 2.8  # Simulation

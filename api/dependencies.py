@@ -48,7 +48,8 @@ class MockAnalysisService:
             "analysis_metadata": {
                 "text_length": len(text),
                 "processing_time": duration,
-                "model_used": "gpt-5.6-luna-mock",
+                # #2381 : aucun modèle n'a été consulté en mode mock — la clé
+                # de provenance ne doit rien annoncer. fallback_reason dit le mode.
                 "fallback_reason": "Mode mock forcé via FORCE_MOCK_LLM",
             },
         }
@@ -138,6 +139,22 @@ class AnalysisService:
                 self.logger.error(f"Erreur en parsant le résultat du LLM: {e}")
                 summary = f"Erreur de formatage dans la réponse du service: {e}"
 
+            # #2381 : la provenance est OBSERVÉE depuis le résultat du
+            # OrchestrationServiceManager — le chemin hiérarchique y porte le
+            # modèle servi (#2377). Clé absente plutôt qu'annoncée : la réponse
+            # HTTP ne nomme un modèle que si l'analyse en a réellement servi un.
+            results_tree = service_result.get("results", {})
+            hierarchical = results_tree.get("hierarchical", {})
+            specialized = results_tree.get("specialized", {})
+            served_model = hierarchical.get("model") or specialized.get("model")
+            analysis_metadata = {
+                "text_length": len(text),
+                "processing_time": duration,
+                "raw_llm_payload": llm_payload,  # Pour le débogage
+            }
+            if served_model:
+                analysis_metadata["model_used"] = served_model
+
             return {
                 "fallacies": fallacies_data,
                 "duration": duration,
@@ -147,12 +164,7 @@ class AnalysisService:
                 "argument_structure": llm_payload.get("argument_structure", "N/A"),
                 "suggestions": llm_payload.get("suggestions", []),
                 "authentic_gpt4o_used": True,
-                "analysis_metadata": {
-                    "text_length": len(text),
-                    "processing_time": duration,
-                    "model_used": "gpt-5.6-luna",
-                    "raw_llm_payload": llm_payload,  # Pour le débogage
-                },
+                "analysis_metadata": analysis_metadata,
             }
 
         except Exception as e:

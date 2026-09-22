@@ -64,7 +64,9 @@ async def main():
 
     try:
         logger.info("Initialisation du service LLM...")
-        llm_service = create_llm_service(service_id="default", model_id="gpt-4-turbo")
+        # #2381 : le modèle figé "gpt-4-turbo" vivait ici — un modèle qu'aucun
+        # résolveur ne choisit. Sans model_id, le résolveur de route décide.
+        llm_service = create_llm_service(service_id="default")
         if not llm_service:
             logger.error(
                 "Échec de l'initialisation du service LLM. Vérifiez la configuration."

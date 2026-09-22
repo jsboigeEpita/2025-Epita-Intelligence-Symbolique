@@ -139,6 +139,26 @@ class MasterTraceValidator:
         kernel.add_service(chat_service)
         return kernel
 
+    def _served_model(self, kernel: Kernel) -> Optional[str]:
+        """Le modèle que le kernel sert réellement (#2381) — observé, pas déclaré.
+
+        La trace annnonce le modèle lu depuis le service du kernel, jamais un
+        littéral : la clé n'apparaît que si un service est effectivement monté.
+        """
+        try:
+            service = kernel.get_service("openai_chat")
+        except Exception:
+            return None
+        inner: Any = service
+        for _ in range(4):
+            model = getattr(inner, "ai_model_id", None)
+            if model:
+                return model
+            inner = getattr(inner, "_inner", None) or getattr(inner, "inner", None)
+            if inner is None:
+                break
+        return None
+
     def generate_simple_cluedo_case(self) -> str:
         """Génère un cas de Cluedo simple (3-4 indices)."""
         return """Enquête Cluedo simple: 
@@ -259,15 +279,20 @@ class MasterTraceValidator:
             duration = (end_time - start_time).total_seconds()
 
             # Construction des résultats complets
+            # #2381 : le modèle est OBSERVÉ depuis le service du kernel —
+            # la clé n'apparaît que si le kernel en sert réellement un.
+            served_model = self._served_model(kernel)
+            metadata: Dict[str, Any] = {
+                "case_name": case_name,
+                "timestamp": self.timestamp,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "duration_seconds": duration,
+            }
+            if served_model:
+                metadata["model_used"] = served_model
             results = {
-                "metadata": {
-                    "case_name": case_name,
-                    "timestamp": self.timestamp,
-                    "start_time": start_time.isoformat(),
-                    "end_time": end_time.isoformat(),
-                    "duration_seconds": duration,
-                    "model_used": "gpt-5.6-luna",
-                },
+                "metadata": metadata,
                 "input": {"case_description": case_description},
                 "conversation_history": final_history,
                 "final_state": {
@@ -367,15 +392,18 @@ class MasterTraceValidator:
             duration = (end_time - start_time).total_seconds()
 
             # Construction des résultats complets
+            served_model = self._served_model(kernel)
+            metadata: Dict[str, Any] = {
+                "case_name": case_name,
+                "timestamp": self.timestamp,
+                "start_time": start_time.isoformat(),
+                "end_time": end_time.isoformat(),
+                "duration_seconds": duration,
+            }
+            if served_model:
+                metadata["model_used"] = served_model
             results = {
-                "metadata": {
-                    "case_name": case_name,
-                    "timestamp": self.timestamp,
-                    "start_time": start_time.isoformat(),
-                    "end_time": end_time.isoformat(),
-                    "duration_seconds": duration,
-                    "model_used": "gpt-5.6-luna",
-                },
+                "metadata": metadata,
                 "input": {"case_description": case_description},
                 "execution_results": resultats,
                 "analysis": {
