@@ -8,7 +8,6 @@ Consolide toutes les capacités de validation du système :
 - Authenticité des composants (LLM, Tweety, Taxonomie)
 - Écosystème complet (Sources, Orchestration, Verbosité, Formats)
 - Orchestrateurs unifiés (Conversation, RealLLM)
-import argumentation_analysis.core.environment
 - Intégration et performance
 
 Fichiers sources consolidés :
@@ -20,6 +19,7 @@ Fichiers sources consolidés :
 
 import argparse
 import asyncio
+import importlib
 import os
 import sys
 import json
@@ -72,6 +72,46 @@ from .validators import (
 class UnifiedValidationSystem:
     """Système de validation unifié consolidant toutes les capacités."""
 
+    # Composant -> (module, noms importés). Une sonde nomme le symbole là où il
+    # vit aujourd'hui (#2451).
+    COMPONENT_PROBES: Dict[str, Tuple[str, Tuple[str, ...]]] = {
+        "unified_config": (
+            "config.unified_config",
+            (
+                "UnifiedConfig",
+                "MockLevel",
+                "TaxonomySize",
+                "LogicType",
+                "PresetConfigs",
+            ),
+        ),
+        "llm_service": ("argumentation_analysis.core.llm_service", ("LLMService",)),
+        "fol_agent": (
+            "argumentation_analysis.agents.core.logic.fol_logic_agent",
+            ("FOLLogicAgent",),
+        ),
+        "conversation_orchestrator": (
+            "argumentation_analysis.orchestration.conversation_orchestrator",
+            ("ConversationOrchestrator",),
+        ),
+        "unified_pipeline": (
+            "argumentation_analysis.orchestration.unified_pipeline",
+            ("run_unified_analysis",),
+        ),
+        "source_selector": (
+            "project_core.core_from_scripts.unified_source_selector",
+            ("UnifiedSourceSelector",),
+        ),
+        "tweety_analyzer": (
+            "argumentation_analysis.utils.tweety_error_analyzer",
+            ("TweetyErrorAnalyzer",),
+        ),
+        "unified_analysis": (
+            "argumentation_analysis.pipelines.unified_text_analysis",
+            ("UnifiedAnalysisConfig",),
+        ),
+    }
+
     def __init__(self, config: ValidationConfiguration = None):
         """Initialise le système de validation."""
         self.config = config or ValidationConfiguration()
@@ -87,6 +127,7 @@ class UnifiedValidationSystem:
         ]
 
         # Composants disponibles
+        self.component_import_failures: Dict[str, str] = {}
         self.available_components = self._detect_available_components()
 
         # Rapport de validation
@@ -104,90 +145,27 @@ class UnifiedValidationSystem:
         )
 
     def _detect_available_components(self) -> Dict[str, bool]:
-        """Détecte les composants disponibles."""
-        components = {
-            "unified_config": False,
-            "llm_service": False,
-            "fol_agent": False,
-            "conversation_orchestrator": False,
-            "unified_pipeline": False,
-            "source_selector": False,
-            "tweety_analyzer": False,
-            "unified_analysis": False,
-        }
+        """Détecte les composants disponibles.
 
-        # Test des imports
-        try:
-            from config.unified_config import (
-                UnifiedConfig,
-                MockLevel,
-                TaxonomySize,
-                LogicType,
-                PresetConfigs,
-            )
-
-            components["unified_config"] = True
-        except ImportError:
-            pass
-
-        try:
-            from argumentation_analysis.core.services.llm_service import LLMService
-
-            components["llm_service"] = True
-        except ImportError:
-            pass
-
-        try:
-            from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-                FirstOrderLogicAgent,
-            )
-
-            components["fol_agent"] = True
-        except ImportError:
-            pass
-
-        try:
-            from argumentation_analysis.orchestration.conversation_orchestrator import (
-                ConversationOrchestrator,
-            )
-
-            components["conversation_orchestrator"] = True
-        except ImportError:
-            pass
-
-        try:
-            from argumentation_analysis.orchestration.unified_pipeline import (
-                run_unified_analysis,
-            )
-
-            components["unified_pipeline"] = True
-        except ImportError:
-            pass
-
-        try:
-            from scripts.core.unified_source_selector import UnifiedSourceSelector
-
-            components["source_selector"] = True
-        except ImportError:
-            pass
-
-        try:
-            from argumentation_analysis.utils.tweety_error_analyzer import (
-                TweetyErrorAnalyzer,
-            )
-
-            components["tweety_analyzer"] = True
-        except ImportError:
-            pass
-
-        try:
-            from argumentation_analysis.pipelines.unified_text_analysis import (
-                UnifiedAnalysisConfig,
-            )
-
-            components["unified_analysis"] = True
-        except ImportError:
-            pass
+        #2451 : une sonde qui échoue garde sa raison dans
+        ``component_import_failures`` (reprise dans le résumé du rapport). Trois
+        sondes importaient des chemins disparus, et ``except ImportError: pass``
+        les rendait « absentes » sans dire pourquoi : un chemin faux et un
+        composant manquant se lisaient pareil.
+        """
+        components: Dict[str, bool] = {}
+        for key, (module_name, names) in self.COMPONENT_PROBES.items():
+            try:
+                module = importlib.import_module(module_name)
+                missing = [name for name in names if not hasattr(module, name)]
+                if missing:
+                    raise ImportError(
+                        f"cannot import name(s) {missing} from '{module_name}'"
+                    )
+                components[key] = True
+            except ImportError as e:
+                components[key] = False
+                self.component_import_failures[key] = f"{type(e).__name__}: {e}"
 
         available_count = sum(components.values())
         total_count = len(components)
@@ -196,6 +174,8 @@ class UnifiedValidationSystem:
         for comp, available in components.items():
             status = "✓" if available else "✗"
             self.logger.debug(f"  {status} {comp}")
+        for comp, reason in self.component_import_failures.items():
+            self.logger.warning(f"  ✗ {comp} : {reason}")
 
         return components
 
@@ -340,6 +320,7 @@ class UnifiedValidationSystem:
             "validation_sections": {},
             "overall_status": "unknown",
             "error_count": len(self.report.errors),
+            "component_import_failures": dict(self.component_import_failures),
         }
 
         # Statuts des sections

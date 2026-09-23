@@ -57,7 +57,7 @@ EXEMPLES:
 COMPOSANTS DISPONIBLES:
     - TweetyErrorAnalyzer
     - UnifiedConfig
-    - FirstOrderLogicAgent
+    - FOLLogicAgent
     - AuthenticitySystem
     - UnifiedOrchestrations
 
