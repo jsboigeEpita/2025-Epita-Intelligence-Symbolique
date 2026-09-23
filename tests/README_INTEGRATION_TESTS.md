@@ -155,17 +155,18 @@ Les fixtures réutilisables pour les tests d'intégration sont définies dans le
 ```python
 import pytest
 from tests.fixtures.rhetorical_data_fixtures import example_text, example_fallacies
-from tests.fixtures.agent_fixtures import informal_agent, complex_fallacy_analyzer
+from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
+    ComplexFallacyAnalyzer,
+)
 
-def test_agent_analyzer_integration(informal_agent, complex_fallacy_analyzer, example_text):
-    # Configurer l'agent avec l'analyseur
-    informal_agent.tools["complex_analyzer"] = complex_fallacy_analyzer
-    
-    # Tester l'interaction
-    result = informal_agent.analyze_text(example_text)
-    
-    # Vérifier le résultat
-    assert "fallacies" in result
+def test_complex_analyzer_on_example_text(example_text, example_fallacies):
+    # L'analyseur se construit dans le test, avec son API actuelle
+    analyzer = ComplexFallacyAnalyzer()
+
+    patterns = analyzer.identify_fallacy_patterns(example_text)
+
+    assert isinstance(patterns, list)
+    assert {f["type"] for f in example_fallacies}
 ```
 
 ### Utilitaires pour les Tests d'Intégration

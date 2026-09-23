@@ -6,21 +6,15 @@ Ce répertoire contient des **fixtures** `pytest` réutilisables, conçues pour 
 
 ## Fixtures Fournies
 
-### 1. Fixtures d'Agents et d'Adaptateurs
+> **Agents** : il n'y a pas de module de fixtures d'agents. Chaque test construit l'agent qu'il exerce avec son API actuelle (voir `tests/unit/argumentation_analysis/agents/`). L'ancien `agent_fixtures.py` a été retiré en #2416 : il ne s'importait plus depuis 2025-07 et aucun test ne le chargeait.
 
-*   **`agent_fixtures.py`**: Ce module est au cœur de la configuration des tests pour les agents d'analyse d'argumentation. Il fournit :
-    *   Des instances pré-configurées d'agents (`InformalAgent`, `EnhancedInformalAgent`).
-    *   Des instances des outils utilisés par ces agents (`FallacyDetector`, `RhetoricalAnalyzer`, etc.).
-    *   Des versions réelles et mockées des adaptateurs d'agents (`ExtractAgentAdapter`, `InformalAgentAdapter`) et du `MessageMiddleware`.
-    *   Des définitions de sophismes (`fallacy_definitions`) pour initialiser les détecteurs.
-
-### 2. Fixtures pour les Tests d'Intégration
+### 1. Fixtures pour les Tests d'Intégration
 
 *   **`integration_fixtures.py`**: Ce module est essentiel pour les tests qui nécessitent une interaction avec des bibliothèques Java via JPype.
     *   **`integration_jvm`**: Une fixture de portée `session` qui démarre une véritable JVM et la rend disponible pour toute la durée de la session de test. Elle s'assure que le vrai module `jpype` est utilisé et que les JARs de Tweety sont correctement chargés.
     *   **Fixtures de classes Tweety**: Une série de fixtures (`dung_classes`, `tweety_logics_classes`, `dialogue_classes`, etc.) qui dépendent de `integration_jvm` pour fournir des objets `JClass` prêts à l'emploi pour les différentes classes de la bibliothèque Tweety. Cela évite de devoir redéfinir ces importations dans chaque fichier de test.
 
-### 3. Fixtures de Données de Test
+### 2. Fixtures de Données de Test
 
 *   **`rhetorical_data_fixtures.py`**: Ce module fournit un ensemble de données standard pour tester les fonctionnalités d'analyse rhétorique et de détection de sophismes.
     *   **Textes et corpus**: Des textes d'exemple (`example_text`, `example_corpus`) contenant divers sophismes.
@@ -37,20 +31,15 @@ Pour utiliser ces fixtures, il suffit de les déclarer comme arguments dans vos 
 ```python
 # Dans un fichier de test (ex: tests/unit/test_my_analyzer.py)
 
-from tests.fixtures.agent_fixtures import informal_agent
-from tests.fixtures.rhetorical_data_fixtures import example_text
+from tests.fixtures.rhetorical_data_fixtures import example_text, example_fallacies
 
-def test_informal_agent_analysis(informal_agent, example_text):
+def test_fixtures_are_injected(example_text, example_fallacies):
     """
-    Teste que l'agent informel analyse correctement un texte.
-    `informal_agent` et `example_text` sont fournis par les fixtures.
+    `example_text` et `example_fallacies` sont fournis par les fixtures :
+    les importer dans le module de test suffit pour que pytest les injecte.
     """
-    # Act
-    result = informal_agent.analyze_text(example_text)
-
-    # Assert
-    assert "fallacies" in result
-    assert len(result["fallacies"]) > 0
+    assert example_text
+    assert all("type" in f and "confidence" in f for f in example_fallacies)
 ```
 
 L'utilisation de ces fixtures centralisées garantit que les objets complexes sont initialisés de manière cohérente à travers toute la suite de tests.
