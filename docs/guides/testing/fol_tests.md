@@ -36,7 +36,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/work
 - La JVM est démarrée une fois par session par la fixture `jvm_session` (`tests/conftest.py`). Aucune variable d'environnement n'est à positionner.
 - `--disable-jvm-session` remplace `jpype` par un mock. `test_worker_fol_tweety.py` se saute alors en entier (`pytestmark` : « FOL-Tweety tests require real JVM »). Un run avec ce drapeau ne dit donc rien du vrai Tweety.
 - Les JARs Tweety vivent sous `libs/tweety/` (non suivi par git). Un worktree neuf ne les a pas : copiez-les, sinon la JVM ne démarre pas.
-- Avec `-n N` (pytest-xdist), `--disable-jvm-session` n'atteint pas les workers : ils tournent avec le vrai `jpype` et sans JVM (#2402). La CI lance la suite en série.
+- Avec `-n N` (pytest-xdist), `--disable-jvm-session` atteint désormais les workers : `pytest_configure` exporte la décision dans l'environnement que les workers héritent (`PYTEST_JVM_SESSION_DISABLED`, lecteur unique #2402). En pré-fix, les sites argv des workers ne voyaient pas le drapeau : vrai `jpype` sans JVM (7 faux rouges à `-n 1`/`-n 4`).
 - `-rs` affiche la raison de chaque test sauté. Un fichier Tweety « vert » dont tous les tests sont sautés n'a rien vérifié.
 
 Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `742d1a0e` plus les correctifs de cohérence et de provenance des formules de #2447) : `test_worker_fol_tweety.py` rend 21 passed, 0 skipped, avec la JVM et le filtre de la CI (`-m "not slow and not requires_api"`), pour 0 requête LLM au compteur d'egress. Il en rendait 16 avant les tests ajoutés par #2447 (deux de requête, un de validation d'argument, deux de cohérence de bout en bout). `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
