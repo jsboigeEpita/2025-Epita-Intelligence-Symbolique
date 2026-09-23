@@ -471,6 +471,21 @@ Mortal(socrate)
         ), "L'inférence 'est_intelligent(marie)' devrait être acceptée."
         logger.info("✅ Inférence 'est_intelligent(marie)' validée.")
 
+    @pytest.mark.asyncio
+    async def test_validate_argument_on_the_real_solver(
+        self, fol_agent_with_kernel, jvm_session
+    ):
+        """#2447: on ``main`` both arguments below came back ``False``: the
+        bridge was called with a list, the error was caught."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+
+        agent = fol_agent_with_kernel
+        premises = ["forall X: (Man(X) => Mortal(X))", "Man(socrate)"]
+
+        assert await agent.validate_argument(premises, "Mortal(socrate)") is True
+        assert await agent.validate_argument(premises, "Man(platon)") is False
+
 
 class TestFOLErrorHandling:
     """Tests gestion d'erreurs FOL avec Tweety."""

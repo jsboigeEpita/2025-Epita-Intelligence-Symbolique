@@ -1169,38 +1169,46 @@ RÉPONDS EN FORMAT JSON :
     ) -> bool:
         """
         Valide si une conclusion découle logiquement d'un ensemble de prémisses.
-        Implémentation de la méthode abstraite de BaseLogicAgent.
+
+        L'argument est valide si {prémisses} ∪ {¬conclusion} est incohérent. Le
+        bridge reçoit ce qu'il attend : une chaîne précédée de la signature que
+        le parseur Tweety exige, la négation Tweety ``!``, et ``"first_order"``.
+
+        #2447 : l'ancienne version passait une liste sans ``logic_type``,
+        capturait l'erreur et rendait ``False`` (« invalide ») pour tout
+        argument, et aussi sans bridge. Les prémisses viennent du code
+        appelant : quand rien ne peut être vérifié, la méthode lève au lieu de
+        rendre un verdict.
 
         Args:
             premises (List[str]): La liste des prémisses en format FOL.
             conclusion (str): La conclusion en format FOL.
 
         Returns:
-            bool: True si l'argument est valide, False sinon.
+            bool: True si le solveur a décidé l'argument valide, False s'il a
+            trouvé les prémisses compatibles avec la négation de la conclusion.
+
+        Raises:
+            RuntimeError: aucun bridge Tweety, ou le solveur n'a pas décidé.
         """
-        if not self._tweety_bridge:
-            logger.warning(
-                "TweetyBridge non disponible. Impossible de valider l'argument."
-            )
-            return False
-
-        # Un argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
-        # Nous devons formater la négation de la conclusion. Pour l'instant, une negation simple.
-        negated_conclusion = f"not ({conclusion})"
-
-        formulas_to_check = premises + [negated_conclusion]
-
-        try:
-            # check_consistency retourne True si c'est cohérent, False si c'est incohérent.
-            is_consistent = await self._tweety_bridge.check_consistency(
-                formulas_to_check
+        bridge = self._tweety_bridge
+        if not bridge:
+            raise RuntimeError(
+                "validate_argument : aucun bridge Tweety, l'argument n'est pas "
+                f"vérifié (setup_failures : {self.setup_failures or 'aucune'})."
             )
 
-            # L'argument est valide si l'ensemble est INCOHÉRENT.
-            return not is_consistent
-        except Exception as e:
-            logger.error(f"Erreur lors de la validation de l'argument via Tweety: {e}")
-            return False
+        formulas = list(premises) + [f"!({conclusion})"]
+        belief_set = "\n".join(self.build_signature_prefixed_formulas(formulas))
+        raw = bridge.check_consistency(belief_set, "first_order")
+        if inspect.isawaitable(raw):
+            raw = await raw
+        is_consistent, message = raw
+        if is_consistent is None:
+            raise RuntimeError(
+                f"validate_argument : le solveur n'a pas décidé ({message})."
+            )
+        return not is_consistent
 
     def get_analysis_summary(self) -> Dict[str, Any]:
         """
