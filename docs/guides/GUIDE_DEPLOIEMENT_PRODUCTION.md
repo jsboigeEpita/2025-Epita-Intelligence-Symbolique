@@ -5,14 +5,24 @@
 **Statut :** ✅ Validé pour production  
 **Compatibilité :** Windows 11, Python 3.10+, Conda
 
+> **⚠ Page remplacée — état de juin 2025 (Sprint 3).** Le guide de déploiement en vigueur
+> est [`DEPLOYMENT.md`](DEPLOYMENT.md) (#991) : API FastAPI et proxy Starlette,
+> environnement `projet-is`. Les commandes de cette page ont été re-mesurées le
+> 2026-09-23 (#2436). Celles qui appelaient des scripts disparus
+> (`scripts/sprint3_final_validation.py`, `scripts/fix_unicode_conda.py`,
+> `scripts/fix_critical_imports.py`), un module inexistant (`argumentation_analysis.app`)
+> ou un environnement conda absent de la flotte (`epita_symbolic_ai_sherlock`) sont
+> remplacées par leurs équivalents vivants. Les chiffres, métriques et la « certification »
+> plus bas sont ceux du Sprint 3 : ils n'ont pas été re-mesurés.
+
 ---
 
 ## 🚀 DÉPLOIEMENT RAPIDE (5 MINUTES)
 
 ### Étape 1 : Préparation environnement
 ```bash
-# Activation environnement
-conda activate epita_symbolic_ai_sherlock
+# Activation environnement (DEPLOYMENT.md, étape 1)
+conda activate projet-is
 
 # Configuration UTF-8 (automatique)
 $env:PYTHONIOENCODING='utf-8'
@@ -21,10 +31,11 @@ $env:PYTHONLEGACYWINDOWSSTDIO='1'
 
 ### Étape 2 : Validation système
 ```bash
-# Test complet du système
-python scripts/sprint3_final_validation.py
+# Vérification du système : même commande que DEPLOYMENT.md, étape 3
+python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
+pytest tests/unit/ -m "not slow and not requires_api" -x -q --tb=line
 
-# Résultat attendu : 100% de succès
+# Résultat attendu : « OK », puis un résumé pytest sans échec
 ```
 
 ### Étape 3 : Lancement services
@@ -35,8 +46,9 @@ pytest tests/unit/ -v --tb=short
 # Option B : Tests d'intégration  
 pytest tests/integration/ -v --tb=short
 
-# Option C : Application Flask
-python -m argumentation_analysis.app
+# Option C : API FastAPI (DEPLOYMENT.md, étape 4 ; l'application Flask
+# du Sprint 3 n'existe plus)
+uvicorn api.main:app --port 8000
 ```
 
 ---
@@ -45,7 +57,7 @@ python -m argumentation_analysis.app
 
 ### ✅ Prérequis techniques validés
 - [x] Python 3.10+ installé
-- [x] Conda environnement `epita_symbolic_ai_sherlock` actif
+- [x] Conda environnement `projet-is` actif
 - [x] Configuration UTF-8 appliquée
 - [x] Dépendances installées
 
@@ -93,10 +105,11 @@ MATPLOTLIB_BACKEND=Agg
 
 ### Script de diagnostic :
 ```bash
-# Diagnostic complet
-python scripts/fix_unicode_conda.py
-python scripts/fix_critical_imports.py
-python scripts/sprint3_final_validation.py
+# Diagnostic complet. Les scripts fix_unicode_conda / fix_critical_imports
+# de juin 2025 n'existent plus : l'encodage se règle par les variables UTF-8
+# de la configuration production.
+python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
+pytest tests/unit/ -m "not slow and not requires_api" -x -q --tb=line
 ```
 
 ### Monitoring santé système :
@@ -132,8 +145,8 @@ print('Services opérationnels ✅')
 ### Problème : Erreur d'encodage Unicode
 **Solution :**
 ```bash
-python scripts/fix_unicode_conda.py
 $env:PYTHONIOENCODING='utf-8'
+$env:PYTHONLEGACYWINDOWSSTDIO='1'
 ```
 
 ### Problème : Import matplotlib bloqué
@@ -142,8 +155,9 @@ $env:PYTHONIOENCODING='utf-8'
 ### Problème : Tests d'intégration échouent
 **Solution :**
 ```bash
-# Relancer validation complète
-python scripts/sprint3_final_validation.py
+# Relancer la vérification complète
+python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
+pytest tests/unit/ -m "not slow and not requires_api" -x -q --tb=line
 ```
 
 ### Problème : Services Flask non disponibles
@@ -166,13 +180,11 @@ print(f'Intégration: {result}')
 
 ### Test de validation finale :
 ```bash
-# Commande unique de validation
-python scripts/sprint3_final_validation.py
+# Validation : même commande que DEPLOYMENT.md, étape 3
+python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
+pytest tests/unit/ -m "not slow and not requires_api" -x -q --tb=line
 
-# Résultat attendu :
-# SPRINT 3: SUCCÈS COMPLET!
-# Tests réussis: 7/7
-# Taux de succès: 100.0%
+# Résultat attendu : « OK », puis un résumé pytest sans échec
 ```
 
 ### Critères de succès :
