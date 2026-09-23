@@ -7,7 +7,11 @@ import time
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
-from argumentation_analysis.core.prover9_runner import PROVER9_EXECUTABLE, run_prover9
+from argumentation_analysis.core.prover9_runner import (
+    PROVER9_EXECUTABLE,
+    Prover9InputRejected,
+    run_prover9,
+)
 from argumentation_analysis.core.mace4_runner import (
     MACE4_EXECUTABLE,
     interpret_mace4_output,
@@ -532,6 +536,10 @@ class FOLHandler:
         if settings.solver == SolverChoice.PROVER9:
             try:
                 return await self._fol_check_consistency_with_prover9(belief_set)
+            except Prover9InputRejected:
+                # #2489: a refused input is the builder's defect, not an
+                # unavailable solver.
+                raise
             except RuntimeError as e:
                 self.logger.warning(
                     f"Prover9 unavailable ({e}), falling back to Tweety FOL reasoner"
@@ -605,6 +613,9 @@ class FOLHandler:
             msg = f"Prover9-based consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
+        except Prover9InputRejected:
+            # #2489: a refused input is the builder's defect; it keeps its type.
+            raise
         except Exception as e:
             logger.error(
                 f"Error during external FOL consistency check: {e}", exc_info=True
@@ -778,6 +789,10 @@ class FOLHandler:
                     self._fol_query_with_prover9(belief_set, query_formula_str),
                     False,
                 )
+            except Prover9InputRejected:
+                # #2489: Prover9 refused the input we built. The in-JVM
+                # reasoner would answer, and the defect would stay invisible.
+                raise
             except RuntimeError as e:
                 logger.warning(
                     f"Prover9 unavailable ({e}), falling back to Tweety FOL query"
@@ -835,6 +850,8 @@ class FOLHandler:
 
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return entails
+        except Prover9InputRejected:
+            raise
         except Exception as e:
             logger.error(f"Error during external FOL query: {e}", exc_info=True)
             raise RuntimeError(
@@ -975,8 +992,11 @@ class FOLHandler:
             # #2482: this check, the one the FOL phase calls, ran
             # SimpleFolReasoner when PROVER9 was configured. Prover9 refutes: a
             # proof of $F from the KB means it is inconsistent. When it decides
-            # nothing (input refused, timeout, resource limit), the in-JVM
+            # nothing (binary absent, timeout, resource limit), the in-JVM
             # reasoner below decides, and the message says why.
+            # #2489: an input Prover9 refuses is not one of those. We built
+            # it, so the refusal raises with the binary's text; the fallback
+            # used to answer instead, and a builder defect stayed invisible.
             fallback_note = ""
             if choice == SolverChoice.PROVER9:
                 proved = None
@@ -988,6 +1008,8 @@ class FOLHandler:
                             run_prover9(_prover9_input(java_belief_set))
                         )
                         fallback_note = "Prover9 decided nothing; "
+                    except Prover9InputRejected:
+                        raise
                     except Exception as e:
                         first_line = (str(e).splitlines() or [""])[0]
                         fallback_note = f"Prover9 failed ({first_line}); "
@@ -1092,6 +1114,9 @@ class FOLHandler:
                     None,
                 )
 
+        except Prover9InputRejected:
+            # #2489: not a check that could not run, a defect in our input.
+            raise
         except Exception as e:
             # #1290 (anti-theater #1019/#1278): an exception here means the
             # check could NOT run — most often a Tweety parse failure
