@@ -22,9 +22,22 @@ are part of the instrument: they emit one request per covered path and assert
 the counter sees it. They run inside the gate, so every gate report
 self-attests liveness through their own rows.
 
+Each request also carries a ``transport`` field (#2422): ``network`` when it
+reached httpx's (or httpx2's) own network transport, ``in_process`` otherwise —
+a ``MockTransport``, a replaced transport, an ASGI app. The hook sits on
+``Client.send``, above the transport, so it sees doubles too: that is what lets
+the non-vacuity controls prove liveness without spending, and it is also why a
+report that did not tell the two apart read test doubles as "LLM hosts hit".
+The gate metric ``total`` still counts every watched-LLM request, doubles
+included: ``in_process`` means "never reached the httpx network transport",
+and a third-party transport doing its own I/O would read the same, so the
+split informs the reader and never lowers the gate's count.
+
 Observation only — never blocks. Blocking is a gate (legitimate after #1591),
 not an instrument. No pricing: a count, not an amount.
 """
+
+import contextvars
 
 import json
 import os
@@ -76,6 +89,16 @@ CLASS_UNKNOWN = "unknown"
 
 SESSION_BUCKET = "(session)"
 
+TRANSPORT_NETWORK = "network"
+TRANSPORT_IN_PROCESS = "in_process"
+
+# The entry of the send in progress, so the network transport it reaches (if
+# any) can mark it. A context variable follows the send into the transport
+# within one task or thread, and does not leak across concurrent sends.
+_CURRENT_ENTRY: "contextvars.ContextVar[Optional[Dict[str, Any]]]" = (
+    contextvars.ContextVar("llm_egress_current_entry", default=None)
+)
+
 
 def llm_hosts_from_env() -> frozenset:
     """Default LLM hosts + hosts parsed from endpoint env vars (deduped)."""
@@ -113,6 +136,7 @@ class LLMEgressCounter:
         # `transports_patched` read [] in the report (#1591).
         self._transports_names: List[str] = []
         self._orig_sends: Dict[Any, Any] = {}
+        self._orig_transports: Dict[Any, Any] = {}
 
     # ── observation core ──────────────────────────────────────────────
 
@@ -147,6 +171,8 @@ class LLMEgressCounter:
                 "method": method,
                 "path": parsed.path or "/",
                 "class": klass,
+                # Until the network transport marks it (#2422).
+                "transport": TRANSPORT_IN_PROCESS,
             }
             with self._lock:
                 self._requests.append(entry)
@@ -188,6 +214,21 @@ class LLMEgressCounter:
         except Exception:  # noqa: BLE001 — instrument must not break the measured run
             pass
 
+    @staticmethod
+    def observe_network_transport() -> None:
+        """Mark the send in progress as having reached a network transport (#2422).
+
+        Called from the wrapped ``handle_request`` / ``handle_async_request`` of
+        httpx's own ``HTTPTransport`` / ``AsyncHTTPTransport`` classes. Must
+        never raise into a test.
+        """
+        try:
+            entry = _CURRENT_ENTRY.get()
+            if entry is not None:
+                entry["transport"] = TRANSPORT_NETWORK
+        except Exception:  # noqa: BLE001 — instrument must not break the measured run
+            pass
+
     # ── install / uninstall (class-level httpx + httpx2 patch) ─────────
     #
     # openai>=3.x dropped its httpx dependency for httpx2 (requires_dist of
@@ -204,6 +245,7 @@ class LLMEgressCounter:
 
         def _client_send(client_self, request, **kwargs):
             entry = counter.observe_request(request.url, request.method)
+            token = _CURRENT_ENTRY.set(entry)
             try:
                 response = counter._orig_sends[(mod, "sync")](
                     client_self, request, **kwargs
@@ -211,11 +253,14 @@ class LLMEgressCounter:
             except BaseException as exc:
                 counter.observe_outcome(entry, error=exc)
                 raise
+            finally:
+                _CURRENT_ENTRY.reset(token)
             counter.observe_outcome(entry, response=response)
             return response
 
         async def _async_send(client_self, request, **kwargs):
             entry = counter.observe_request(request.url, request.method)
+            token = _CURRENT_ENTRY.set(entry)
             try:
                 response = await counter._orig_sends[(mod, "async")](
                     client_self, request, **kwargs
@@ -223,10 +268,47 @@ class LLMEgressCounter:
             except BaseException as exc:
                 counter.observe_outcome(entry, error=exc)
                 raise
+            finally:
+                _CURRENT_ENTRY.reset(token)
             counter.observe_outcome(entry, response=response)
             return response
 
         return _client_send, _async_send
+
+    def _make_transport_wrappers(self, mod):
+        counter = self
+
+        def _handle_request(transport_self, request):
+            counter.observe_network_transport()
+            return counter._orig_transports[(mod, "sync")](transport_self, request)
+
+        async def _handle_async_request(transport_self, request):
+            counter.observe_network_transport()
+            return await counter._orig_transports[(mod, "async")](
+                transport_self, request
+            )
+
+        return _handle_request, _handle_async_request
+
+    def _patch_network_transports(self, mod) -> None:
+        """Wrap the network transport classes of ``mod`` (#2422).
+
+        The class objects are captured here, at install, so a test that
+        rebinds the name ``httpx.AsyncHTTPTransport`` to a double does not
+        reach the wrapper: its requests stay ``in_process``, as they should.
+        """
+        try:
+            sync_cls = mod.HTTPTransport
+            async_cls = mod.AsyncHTTPTransport
+            self._orig_transports[(mod, "sync")] = sync_cls.handle_request
+            self._orig_transports[(mod, "async")] = async_cls.handle_async_request
+            self._orig_transports[(mod, "classes")] = (sync_cls, async_cls)
+            handle, handle_async = self._make_transport_wrappers(mod)
+            sync_cls.handle_request = handle  # type: ignore[assignment]
+            async_cls.handle_async_request = handle_async  # type: ignore[assignment]
+        except AttributeError:
+            for key in ((mod, "sync"), (mod, "async"), (mod, "classes")):
+                self._orig_transports.pop(key, None)
 
     def install(self) -> None:
         if self._installed:
@@ -234,6 +316,7 @@ class LLMEgressCounter:
         import httpx
 
         self._orig_sends = {}
+        self._orig_transports = {}
         self._patched_mods = []
         try:
             import httpx2  # noqa: F401 — openai>=3.x transport (CI)
@@ -251,6 +334,7 @@ class LLMEgressCounter:
                 self._patched_mods.append(mod)
             except AttributeError:
                 continue
+            self._patch_network_transports(mod)
         self._transports_names = [m.__name__ for m in self._patched_mods]
         self._installed = True
 
@@ -260,8 +344,14 @@ class LLMEgressCounter:
         for mod in self._patched_mods:
             mod.Client.send = self._orig_sends[(mod, "sync")]  # type: ignore[assignment]
             mod.AsyncClient.send = self._orig_sends[(mod, "async")]  # type: ignore[assignment]
+            classes = self._orig_transports.get((mod, "classes"))
+            if classes is not None:
+                sync_cls, async_cls = classes
+                sync_cls.handle_request = self._orig_transports[(mod, "sync")]
+                async_cls.handle_async_request = self._orig_transports[(mod, "async")]
         self._patched_mods = []
         self._orig_sends = {}
+        self._orig_transports = {}
         self._installed = False
 
     # ── reporting ─────────────────────────────────────────────────────
@@ -282,12 +372,20 @@ class LLMEgressCounter:
             per_test = dict(self._per_test)
             per_test_unknown = dict(self._per_test_unknown)
         totals = {c: 0 for c in (CLASS_LLM, CLASS_NON_LLM, CLASS_UNKNOWN)}
+        llm_by_transport = {TRANSPORT_NETWORK: 0, TRANSPORT_IN_PROCESS: 0}
+        per_test_llm_network: Dict[str, int] = {}
         llm_outcomes: Dict[str, int] = {}
         per_test_llm_not_ok: Dict[str, int] = {}
         for r in requests:
             totals[r["class"]] += 1
             if r["class"] != CLASS_LLM:
                 continue
+            transport = r.get("transport", TRANSPORT_IN_PROCESS)
+            llm_by_transport[transport] = llm_by_transport.get(transport, 0) + 1
+            if transport == TRANSPORT_NETWORK:
+                per_test_llm_network[r["test"]] = (
+                    per_test_llm_network.get(r["test"], 0) + 1
+                )
             outcome = _outcome_label(r)
             llm_outcomes[outcome] = llm_outcomes.get(outcome, 0) + 1
             if not outcome.startswith("2"):
@@ -303,6 +401,10 @@ class LLMEgressCounter:
             "per_test_unknown": per_test_unknown,
             "llm_outcomes": llm_outcomes,
             "per_test_llm_not_ok": per_test_llm_not_ok,
+            # #2422: which watched-LLM requests reached a network transport.
+            # ``total`` above still counts both.
+            "llm_by_transport": llm_by_transport,
+            "per_test_llm_network": per_test_llm_network,
             "requests": requests,
         }
 
@@ -378,20 +480,39 @@ class LLMEgressPlugin:
     def pytest_terminal_summary(self, terminalreporter: Any, exitstatus: Any) -> None:
         snap = self.counter.snapshot()
         t = snap["totals_by_class"]
+        by_transport = snap["llm_by_transport"]
         line = (
             f"LLM egress (#1787): {t['llm']} watched-LLM request(s) "
-            f"(gate expectation: 0) · {t['nonllm']} known non-LLM · "
-            f"{t['unknown']} UNKNOWN host"
+            f"(gate expectation: 0; {by_transport[TRANSPORT_NETWORK]} network, "
+            f"{by_transport[TRANSPORT_IN_PROCESS]} in-process double) · "
+            f"{t['nonllm']} known non-LLM · {t['unknown']} UNKNOWN host"
         )
         terminalreporter.write_sep("=", line)
         if t["llm"]:
-            terminalreporter.write_line("Per-test LLM breakdown (test -> requests):")
-            for test, count in sorted(snap["per_test"].items(), key=lambda kv: -kv[1]):
-                terminalreporter.write_line(f"  {count:5d}  {test}")
-            hosts = sorted(
-                {r["host"] for r in snap["requests"] if r["class"] == CLASS_LLM}
+            network = snap["per_test_llm_network"]
+            terminalreporter.write_line(
+                "Per-test LLM breakdown (test -> requests, of which network):"
             )
-            terminalreporter.write_line(f"LLM hosts hit: {', '.join(hosts)}")
+            for test, count in sorted(snap["per_test"].items(), key=lambda kv: -kv[1]):
+                terminalreporter.write_line(
+                    f"  {count:5d}  {test}  (network: {network.get(test, 0)})"
+                )
+            # #2422: "hosts hit" names only what reached a network transport;
+            # a host answered by a test double is listed apart, as such.
+            for label, transport in (
+                ("LLM hosts hit", TRANSPORT_NETWORK),
+                ("LLM hosts answered by an in-process double", TRANSPORT_IN_PROCESS),
+            ):
+                hosts = sorted(
+                    {
+                        r["host"]
+                        for r in snap["requests"]
+                        if r["class"] == CLASS_LLM
+                        and r.get("transport", TRANSPORT_IN_PROCESS) == transport
+                    }
+                )
+                if hosts:
+                    terminalreporter.write_line(f"{label}: {', '.join(hosts)}")
             outcomes = ", ".join(
                 f"{label}×{n}" for label, n in sorted(snap["llm_outcomes"].items())
             )
