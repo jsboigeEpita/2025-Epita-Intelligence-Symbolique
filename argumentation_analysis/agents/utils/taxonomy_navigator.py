@@ -2,6 +2,10 @@ import json
 from typing import List, Dict, Any, Optional
 
 from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
+from argumentation_analysis.utils.taxonomy_tree import (
+    taxonomy_parent_path,
+    taxonomy_root_path,
+)
 
 
 class TaxonomyNavigator:
@@ -72,28 +76,18 @@ class TaxonomyNavigator:
         if not parent_node:
             return []
 
-        parent_path = parent_node.get("path", "")
-        parent_depth = int(parent_node.get("depth", "-1"))
-
-        children = []
-        for node in self.taxonomy_data:
-            # Ensure depth is treated as an integer for comparison
-            try:
-                node_depth = int(node.get("depth", "-1"))
-            except (ValueError, TypeError):
-                continue
-
-            node_path = node.get("path", "")
-            # Ensure paths are strings for comparison
-            node_path_str = str(node_path)
-            parent_path_str = str(parent_path)
-
-            if (
-                node_path_str.startswith(f"{parent_path_str}.")
-                and node_depth == parent_depth + 1
-            ):
-                children.append(node)
-        return children
+        # #2401: the path is the relation. A depth cell is not consulted: one
+        # row's depth disagrees with its path, and the root's children carry
+        # bare segments no prefix rule reaches.
+        parent_path = str(parent_node.get("path", ""))
+        root = taxonomy_root_path(
+            (node.get("path"), node.get("depth")) for node in self.taxonomy_data
+        )
+        return [
+            node
+            for node in self.taxonomy_data
+            if taxonomy_parent_path(node.get("path"), root) == parent_path
+        ]
 
     def get_parent(self, node_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -103,11 +97,14 @@ class TaxonomyNavigator:
         if not node:
             return None
 
-        node_path = node.get("path", "")
-        if "." not in node_path:
-            return None  # Root node
-
-        parent_path = ".".join(node_path.split(".")[:-1])
+        # #2401: a bare segment belongs to the depth-0 root when the taxonomy
+        # carries one; without it, it is a top and has no parent.
+        root = taxonomy_root_path(
+            (row.get("path"), row.get("depth")) for row in self.taxonomy_data
+        )
+        parent_path = taxonomy_parent_path(node.get("path"), root)
+        if parent_path is None:
+            return None
         for parent_node in self.taxonomy_data:
             if parent_node.get("path") == parent_path:
                 return parent_node

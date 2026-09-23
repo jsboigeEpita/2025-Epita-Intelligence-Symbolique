@@ -232,6 +232,17 @@ class TestOutputValidation:
         )
         assert not passed
 
+    def test_validate_has_children_requires_a_non_empty_list(self):
+        # #2401: the key alone used to pass — an empty list is a leaf, not
+        # the "has children" the case expects.
+        suite = PluginBenchmarkSuite()
+        empty, _ = suite._validate_output({"has_children": True}, '{"children": []}')
+        full, _ = suite._validate_output(
+            {"has_children": True}, '{"children": [{"pk": "2"}]}'
+        )
+        assert not empty
+        assert full
+
     def test_validate_returns_json_valid(self):
         suite = PluginBenchmarkSuite()
         passed, details = suite._validate_output(
