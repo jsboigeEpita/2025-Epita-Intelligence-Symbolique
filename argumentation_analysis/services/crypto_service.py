@@ -24,6 +24,17 @@ logger = logging.getLogger("Services.CryptoService")
 class CryptoService:
     """Service pour le chiffrement et le déchiffrement des données."""
 
+    # #2344 (family d): named failure causes — the None-return contract stays,
+    # but the cause of a failed encrypt/decrypt lives in the state (last_error),
+    # not only in the log. Doctrinal reset: last_error is None on success.
+    ERR_NO_KEY = "no-key"
+    ERR_INVALID_KEY = "invalid-key"
+    ERR_BAD_TOKEN = "bad-token"
+    ERR_ENCRYPT = "encrypt-failed"
+    ERR_DECRYPT = "decrypt-failed"
+    ERR_JSON_ENCODE = "json-encode-failed"
+    ERR_JSON_DECODE = "json-decode-failed"
+
     def __init__(
         self, encryption_key: Optional[bytes] = None, fixed_salt: Optional[bytes] = None
     ):
@@ -41,11 +52,17 @@ class CryptoService:
             fixed_salt or b"q\x8b\t\x97\x8b\xe9\xa3\xf2\xe4\x8e\xea\xf5\xe8\xb7\xd6\x8c"
         )
         self.logger = logger
+        self._last_error: Optional[str] = None
 
         if not encryption_key:
             self.logger.warning(
                 "Service de chiffrement initialisé sans clé. Le chiffrement est désactivé."
             )
+
+    @property
+    def last_error(self) -> Optional[str]:
+        """Cause named of the last failed encrypt/decrypt, None after success."""
+        return self._last_error
 
     def derive_key_from_passphrase(
         self, passphrase: str, iterations: int = 480000
@@ -109,20 +126,26 @@ class CryptoService:
         """
         # Utiliser la clé fournie ou celle de l'instance
         encryption_key = key if key is not None else self.encryption_key
+        self._last_error = None
 
         if not encryption_key:
             self.logger.error("Erreur de chiffrement: Clé de chiffrement manquante.")
+            self._last_error = self.ERR_NO_KEY
             return None
 
         try:
-            self.logger.debug(
-                f"CryptoService.encrypt_data using key (first 16 bytes): {encryption_key[:16]}"
-            )
             f = Fernet(encryption_key)
+        except (ValueError, TypeError) as e:
+            self.logger.error(f"Erreur de chiffrement: clé invalide: {e}")
+            self._last_error = self.ERR_INVALID_KEY
+            return None
+
+        try:
             encrypted_data = f.encrypt(data)
             return encrypted_data
         except Exception as e:
             self.logger.error(f"Erreur de chiffrement: {e}")
+            self._last_error = self.ERR_ENCRYPT
             return None
 
     def decrypt_data(
@@ -143,27 +166,32 @@ class CryptoService:
         """
         # Utiliser la clé fournie ou celle de l'instance
         encryption_key = key if key is not None else self.encryption_key
+        self._last_error = None
 
         if not encryption_key:
             self.logger.error("Erreur de déchiffrement: Clé de chiffrement manquante.")
+            self._last_error = self.ERR_NO_KEY
             return None
 
         try:
-            self.logger.debug(
-                f"CryptoService.decrypt_data using key (first 16 bytes): {encryption_key[:16]}"
-            )
             f = Fernet(encryption_key)
+        except (ValueError, TypeError) as e:
+            self.logger.error(f"Erreur de déchiffrement: clé invalide: {e}")
+            self._last_error = self.ERR_INVALID_KEY
+            return None
+
+        try:
             decrypted_data = f.decrypt(encrypted_data)
             return decrypted_data
         except (InvalidToken, InvalidSignature) as e:
-            self.logger.error(
-                f"Erreur de déchiffrement (clé invalide) with key (first 16 bytes): {encryption_key[:16]}: {e}"
-            )
+            # Mauvaise clé OU données corrompues : le MAC échoue pareil, Fernet
+            # ne tranche pas — une cause honnête pour les deux (#2344 family d).
+            self.logger.error(f"Erreur de déchiffrement (clé invalide): {e}")
+            self._last_error = self.ERR_BAD_TOKEN
             return None
         except Exception as e:
-            self.logger.error(
-                f"Erreur de déchiffrement (autre) with key (first 16 bytes): {encryption_key[:16]}: {e}"
-            )
+            self.logger.error(f"Erreur de déchiffrement (autre): {e}")
+            self._last_error = self.ERR_DECRYPT
             return None
 
     def encrypt_and_compress_json(self, data: Union[List, Dict]) -> Optional[bytes]:
@@ -178,25 +206,22 @@ class CryptoService:
                  ou chiffrement).
         :rtype: Optional[bytes]
         """
+        self._last_error = None
         try:
             # Convertir en JSON
             json_data = json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
 
             # Compresser
             compressed_data = gzip.compress(json_data)
-
-            # Chiffrer
-            encrypted_data = self.encrypt_data(compressed_data)
-
-            if encrypted_data is None:
-                raise ValueError("Échec du chiffrement.")
-
-            return encrypted_data
         except Exception as e:
             self.logger.error(
-                f"Erreur lors du chiffrement et de la compression des données JSON: {e}"
+                f"Erreur lors de la sérialisation/compression des données JSON: {e}"
             )
+            self._last_error = self.ERR_JSON_ENCODE
             return None
+
+        # Le tag d'un échec de chiffrement reste celui de encrypt_data
+        return self.encrypt_data(compressed_data)
 
     def decrypt_and_decompress_json(
         self, encrypted_data: bytes
@@ -211,24 +236,25 @@ class CryptoService:
                  décompression, ou parsing JSON).
         :rtype: Optional[Union[List, Dict]]
         """
+        self._last_error = None
+
+        # Le tag d'un échec de déchiffrement reste celui de decrypt_data
+        decrypted_compressed_data = self.decrypt_data(encrypted_data)
+        if decrypted_compressed_data is None:
+            return None
+
         try:
-            # Déchiffrer
-            decrypted_compressed_data = self.decrypt_data(encrypted_data)
-
-            if decrypted_compressed_data is None:
-                raise ValueError("Échec du déchiffrement.")
-
             # Décompresser
             decompressed_data = gzip.decompress(decrypted_compressed_data)
 
             # Charger le JSON
             data = json.loads(decompressed_data.decode("utf-8"))
-
             return data
         except Exception as e:
             self.logger.error(
-                f"Erreur lors du déchiffrement et de la décompression des données JSON: {e}"
+                f"Erreur lors de la décompression/lecture des données JSON: {e}"
             )
+            self._last_error = self.ERR_JSON_DECODE
             return None
 
     def is_encryption_enabled(self) -> bool:
