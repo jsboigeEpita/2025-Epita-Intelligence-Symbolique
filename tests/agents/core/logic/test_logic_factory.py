@@ -126,22 +126,23 @@ class TestLogicAgentFactory:
         """Test de la création d'un agent avec un service LLM."""
         await self.async_setUp()
         with self.agent_classes_patch:
-            llm_service = await self._create_authentic_gpt4o_mini_instance()
+            # #2441 — the helper returns a Kernel, not a service. This test
+            # passed that Kernel as ``llm_service`` and asserted the agent was
+            # built WITHOUT a service_id: it certified the silent drop. The
+            # factory now refuses such an argument; the test passes the
+            # kernel's service and checks that its id reaches the agent.
+            authentic_kernel = await self._create_authentic_gpt4o_mini_instance()
+            llm_service = next(iter(authentic_kernel.services.values()))
 
             agent = LogicAgentFactory.create_agent(
                 "propositional", self.kernel, llm_service
             )
 
             self.mock_propositional_agent_class.assert_called_once_with(
-                kernel=self.kernel, agent_name="PropositionalAgent"
+                kernel=self.kernel,
+                agent_name="PropositionalAgent",
+                service_id=llm_service.service_id,
             )
-            # La configuration se fait maintenant via les `kwargs` du constructeur,
-            # en passant un `service_id`. Cette assertion n'est plus pertinente.
-            # self.mock_propositional_agent_class.assert_called_once_with(
-            #     kernel=self.kernel,
-            #     agent_name='PropositionalAgent',
-            #     service_id=llm_service.service_id
-            # )
 
             assert agent == self.mock_propositional_agent
 

@@ -368,7 +368,7 @@ class EducationalProjectManager:
             # Agents logiques selon le niveau
             if "logique_prop" in concepts or "logique_complete" in concepts:
                 prop_agent = LogicAgentFactory.create_agent(
-                    "propositional", kernel, llm_service.service_id
+                    "propositional", kernel, llm_service
                 )
                 if prop_agent:
                     self.agents["propositional"] = prop_agent
@@ -380,7 +380,7 @@ class EducationalProjectManager:
 
             if "logique_complete" in concepts:
                 modal_agent = LogicAgentFactory.create_agent(
-                    "modal", kernel, llm_service.service_id
+                    "modal", kernel, llm_service
                 )
                 if modal_agent:
                     self.agents["modal"] = modal_agent
