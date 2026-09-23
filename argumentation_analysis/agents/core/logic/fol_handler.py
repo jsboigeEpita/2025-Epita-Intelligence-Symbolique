@@ -427,6 +427,106 @@ def _ladr_text(formula) -> str:
     return _formula_text(formula, _LADR_SYNTAX)
 
 
+def _declared_signature(java_belief_set) -> "tuple[dict, list]":
+    """The belief set's declared sorts, each with its constants (sorted), and
+    its declared predicates, each with its argument sorts. Equality and the
+    other built-ins are not declared (#2494, #2514)."""
+    constant_cls = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+    signature = java_belief_set.getSignature()
+    sort_constants: "dict[str, list[str]]" = {}
+    for sort in signature.getSorts():
+        sort_constants[str(sort.getName())] = sorted(
+            str(c.get()) for c in sort.getTerms(constant_cls)
+        )
+    predicates: "list[tuple[str, list[str]]]" = []
+    for predicate in signature.getPredicates():
+        name = str(predicate.getName())
+        if not name[:1].isalpha():
+            continue  # equality and other built-ins are not declared
+        predicates.append(
+            (name, [str(s.getName()) for s in predicate.getArgumentTypes()])
+        )
+    return sort_constants, predicates
+
+
+def _atoms_naming(sort_constants, predicates, constants) -> "list[str]":
+    """One ground atom for each constant of ``constants`` that a declared
+    predicate can take, so that a formula built from the atoms names them
+    (#2494, #2514). A constant of a sort no predicate takes gets none."""
+    atoms: "list[str]" = []
+    covered: "set[str]" = set()
+    for name, arg_sorts in predicates:
+        pools = [sort_constants.get(s, []) for s in arg_sorts]
+        if not arg_sorts or any(not pool for pool in pools):
+            continue
+        for position, pool in enumerate(pools):
+            for constant in pool:
+                if constant in covered or constant not in constants:
+                    continue
+                args = [p[0] for p in pools]
+                args[position] = constant
+                atoms.append(f"{name}({', '.join(args)})")
+                covered.add(constant)
+    return atoms
+
+
+def _rebuilt_belief_set(sort_constants, predicates, formula_lines):
+    """A belief set parsed from our own text: ``sort_constants`` and
+    ``predicates`` declared, then ``formula_lines`` in Tweety syntax (#2494,
+    #2514). Returns it with the parser's signature."""
+    parser_cls = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+    string_reader = jpype.JClass("java.io.StringReader")
+    lines = [
+        f"{sort} = {{{', '.join(names)}}}" for sort, names in sort_constants.items()
+    ]
+    lines += [
+        f"type({name}({', '.join(arg_sorts)}))" if arg_sorts else f"type({name})"
+        for name, arg_sorts in predicates
+    ]
+    parser = parser_cls()
+    rebuilt = parser.parseBeliefBase(string_reader("\n".join(lines + formula_lines)))
+    rebuilt.setSignature(parser.getSignature())
+    return rebuilt, parser.getSignature()
+
+
+def _eprover_belief_set(java_belief_set):
+    """The belief set EProver receives: ``java_belief_set``, with every
+    declared constant in its sort (#2514).
+
+    Tweety's ``TPTPWriter`` relativises each quantifier to its sort
+    (``! [X]: (thing(X) => Man(X))``) and asserts ``thing(c)`` only for the
+    constants the base's formulas name. A sort whose constants no formula
+    names could be empty, so a contradiction between universals read
+    consistent; a constant named only in the query was outside every sort,
+    so a universal did not reach it.
+
+    So each declared constant no formula names gets the tautology
+    ``P(c) || !P(c)`` over a predicate that takes its sort, in a copy of the
+    set; Tweety then writes its membership, and a tautology adds no
+    constraint. A set whose formulas name all its declared constants is
+    returned as is. A copy that cannot be written or parsed is a defect of our
+    input and raises (``SolverInputDefect``); it is not an unavailable
+    EProver.
+    """
+    sort_constants, predicates = _declared_signature(java_belief_set)
+    named = {str(c.get()) for c in java_belief_set.getMinimalSignature().getConstants()}
+    unnamed = {c for names in sort_constants.values() for c in names} - named
+    atoms = _atoms_naming(sort_constants, predicates, unnamed)
+    if not atoms:
+        return java_belief_set
+    formula_lines = [_tweety_text(formula) for formula in java_belief_set]
+    formula_lines += [f"{atom} || !{atom}" for atom in atoms]
+    try:
+        rebuilt, _signature = _rebuilt_belief_set(
+            sort_constants, predicates, formula_lines
+        )
+    except Exception as e:
+        raise SolverInputDefect(
+            f"#2514: the copy of the belief set for EProver does not parse: {e}"
+        ) from e
+    return rebuilt
+
+
 def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
     """``SimpleFolReasoner``'s consistency verdict, read for what it decides
     (#2494).
@@ -446,16 +546,8 @@ def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
     check, whose "inconsistent" also reads ``None``.
     """
     parser_cls = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-    constant_cls = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
-    string_reader = jpype.JClass("java.io.StringReader")
     witness_sorts, exact = _positive_existentials(java_belief_set)
-    signature = java_belief_set.getSignature()
-
-    sort_constants: "dict[str, list[str]]" = {}
-    for sort in signature.getSorts():
-        sort_constants[str(sort.getName())] = sorted(
-            str(c.get()) for c in sort.getTerms(constant_cls)
-        )
+    sort_constants, predicates = _declared_signature(java_belief_set)
     taken = {c for names in sort_constants.values() for c in names}
     formula_constants = {
         str(c.get()) for c in java_belief_set.getMinimalSignature().getConstants()
@@ -470,36 +562,15 @@ def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
         sort_constants.setdefault(str(sort.getName()), []).append(f"witness{index}")
         witnesses += 1
 
-    predicates = []
-    for predicate in signature.getPredicates():
-        name = str(predicate.getName())
-        if not name[:1].isalpha():
-            continue  # equality and other built-ins are not declared
-        predicates.append(
-            (name, [str(s.getName()) for s in predicate.getArgumentTypes()])
-        )
-
     # One atom per constant, so that the contradiction's signature, which the
     # reasoner adds to the Herbrand base, names every constant (#2494).
-    atoms: "list[str]" = []
-    covered: "set[str]" = set()
+    atoms = _atoms_naming(sort_constants, predicates, taken)
     ground_atoms = 0
-    for name, arg_sorts in predicates:
-        pools = [sort_constants.get(s, []) for s in arg_sorts]
+    for _name, arg_sorts in predicates:
         count = 1
-        for pool in pools:
-            count *= len(pool)
+        for s in arg_sorts:
+            count *= len(sort_constants.get(s, []))
         ground_atoms += count
-        if not arg_sorts or any(not pool for pool in pools):
-            continue
-        for position, pool in enumerate(pools):
-            for constant in pool:
-                if constant in covered:
-                    continue
-                args = [p[0] for p in pools]
-                args[position] = constant
-                atoms.append(f"{name}({', '.join(args)})")
-                covered.add(constant)
 
     def plain() -> "tuple[bool | None, str]":
         contradiction = parser_cls()
@@ -527,20 +598,14 @@ def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
     ):
         return plain()
 
-    lines = [
-        f"{sort} = {{{', '.join(names)}}}" for sort, names in sort_constants.items()
-    ]
-    lines += [
-        f"type({name}({', '.join(arg_sorts)}))" if arg_sorts else f"type({name})"
-        for name, arg_sorts in predicates
-    ]
     try:
-        lines += [_tweety_text(formula) for formula in java_belief_set]
-        parser = parser_cls()
-        widened = parser.parseBeliefBase(string_reader("\n".join(lines)))
-        widened.setSignature(parser.getSignature())
+        widened, widened_signature = _rebuilt_belief_set(
+            sort_constants,
+            predicates,
+            [_tweety_text(formula) for formula in java_belief_set],
+        )
         query_parser = parser_cls()
-        query_parser.setSignature(parser.getSignature())
+        query_parser.setSignature(widened_signature)
         query = query_parser.parseFormula(
             " || ".join(f"({a} && !{a})" for a in atoms) if atoms else "-"
         )
@@ -888,6 +953,10 @@ class FOLHandler:
         elif settings.solver == SolverChoice.EPROVER:
             try:
                 return await self._fol_check_consistency_with_eprover(belief_set)
+            except SolverInputDefect:
+                # #2514: the copy we built for EProver; not an unavailable
+                # EProver, so no fallback.
+                raise
             except RuntimeError as e:
                 self.logger.warning(
                     f"EProver unavailable ({e}), falling back to Tweety FOL reasoner"
@@ -1044,12 +1113,18 @@ class FOLHandler:
             )()
             local_parser.setSignature(belief_set.getMinimalSignature())
             contradiction = local_parser.parseFormula("-")
-            inconsistent = reasoner.query(belief_set, contradiction)
+            # #2514: every declared constant in its sort.
+            inconsistent = reasoner.query(
+                _eprover_belief_set(belief_set), contradiction
+            )
 
             is_consistent = not bool(inconsistent)
             msg = f"EProver-based consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
+        except SolverInputDefect:
+            # #2514: the copy we built for EProver; not an unavailable EProver.
+            raise
         except Exception as e:
             logger.error(
                 f"Error during EProver FOL consistency check: {e}", exc_info=True
@@ -1140,6 +1215,9 @@ class FOLHandler:
                     self._fol_query_with_eprover(belief_set, query_formula_str),
                     False,
                 )
+            except SolverInputDefect:
+                # #2514: likewise for a query.
+                raise
             except RuntimeError as e:
                 logger.warning(
                     f"EProver unavailable ({e}), falling back to Tweety FOL query"
@@ -1239,7 +1317,8 @@ class FOLHandler:
                 "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
             )
             reasoner = EFOLReasoner(JString(eprover_path))
-            entails = reasoner.query(belief_set, query_formula)
+            # #2514: every declared constant in its sort, the query's included.
+            entails = reasoner.query(_eprover_belief_set(belief_set), query_formula)
             logger.info(
                 f"EProver query: KB entails '{query_formula_str}'? {bool(entails)}"
             )
@@ -1439,11 +1518,17 @@ class FOLHandler:
                     )()
                     local_parser.setSignature(java_belief_set.getMinimalSignature())
                     contradiction = local_parser.parseFormula("-")
-                    inconsistent = reasoner.query(java_belief_set, contradiction)
+                    # #2514: every declared constant in its sort.
+                    inconsistent = reasoner.query(
+                        _eprover_belief_set(java_belief_set), contradiction
+                    )
                     is_consistent = not bool(inconsistent)
                     msg = f"{fallback_note}FOL consistency check ({solver_name}): {'consistent' if is_consistent else 'inconsistent'}"
                     label = "eprover" if solver_name == "EProver" else "tweety"
                     return is_consistent, msg, label
+                except SolverInputDefect:
+                    # #2514: the copy we built for EProver.
+                    raise
                 except Exception as e:
                     # Fail-loud (anti-theater): parsing succeeded but the
                     # reasoner could not decide. Do NOT fabricate a consistent
