@@ -139,6 +139,55 @@ def rows_matching_fallacy_name(df: pd.DataFrame, fallacy_name: str) -> pd.DataFr
     return df[exact] if exact.any() else df[contains]
 
 
+def node_summary(row: pd.Series) -> Dict[str, Any]:
+    """Le résumé d'un nœud que l'explorateur et les détails renvoient.
+
+    Les cellules vides rendent ``""`` : ``row.get(col, "")`` rendait ``NaN``,
+    et le JSON de l'outil n'était plus du JSON strict.
+    """
+    return {
+        "pk": int(row.name),
+        # Clé de sortie `nom_vulgarise` (contrat, non accentuée) ≠ colonne CSV
+        # `nom_vulgarisé` (accentuée) : les confondre est le défaut de 0b77c3e50 (#2196).
+        "nom_vulgarise": _cell_text(row, "nom_vulgarisé"),
+        "description_courte": _cell_text(row, "text_fr"),
+        "famille": _cell_text(row, "Famille"),
+    }
+
+
+def child_rows(df: pd.DataFrame, pk: Any, path: Any, depth: Any):
+    """Les enfants d'un nœud, et de quoi dire si un enfant en a lui-même.
+
+    Rend ``(children, has_children)`` ; ``has_children(child_row)`` rend
+    ``None`` quand la relation lue ne permet pas de le dire. L'explorateur et
+    les détails lisaient chacun leur copie de cette cascade (#2345).
+    """
+    if "FK_Parent" in df.columns:
+        keys = set(df["FK_Parent"].dropna())
+        return df[df["FK_Parent"] == pk], lambda child: child.name in keys
+    if "parent_pk" in df.columns:
+        keys = set(df["parent_pk"].dropna())
+        return df[df["parent_pk"] == pk], lambda child: child.name in keys
+    if "path" in df.columns and path:
+        parents = taxonomy_parent_paths(df)
+        keys = set(parents.dropna())
+        return df[parents == str(path)], lambda child: (
+            str(child.get("path", "")) in keys
+        )
+    if "depth" in df.columns and pd.notna(depth):
+        path_str = str(path) if pd.notna(path) else ""
+        children = df[
+            (df["depth"] == int(depth) + 1)
+            & (
+                df["path"]
+                .astype(str)
+                .str.startswith(path_str + ("." if path_str else ""), na=False)
+            )
+        ]
+        return children, lambda child: None
+    return df.iloc[0:0], lambda child: None
+
+
 # --- Classe InformalAnalysisPlugin (Refonte Hybride) ---
 class InformalAnalysisPlugin:
     """
@@ -292,44 +341,13 @@ class InformalAnalysisPlugin:
             "depth": (
                 int(current_row["depth"]) if pd.notna(current_row.get("depth")) else 0
             ),
-            "Name": current_row.get("Name", ""),
-            # Clé de sortie `nom_vulgarise` (contrat, non accentuée) ≠ colonne CSV
-            # `nom_vulgarisé` (accentuée) : les confondre est le défaut de 0b77c3e50 (#2196).
-            "nom_vulgarise": current_row.get("nom_vulgarisé", ""),
-            "famille": current_row.get("Famille", ""),
-            "description_courte": current_row.get("text_fr", ""),
+            "Name": _cell_text(current_row, "Name"),
+            **{k: v for k, v in node_summary(current_row).items() if k != "pk"},
         }
 
-        children_df = pd.DataFrame()
-        # The parents present in the relation, keyed like the children: a
-        # child is inner iff its key is some row's parent. None = the branch
-        # below has no relation to read it from, so the flag is not computed.
-        parent_keys = None
-        key_by_pk = True
-        if "FK_Parent" in df.columns:
-            children_df = df[df["FK_Parent"] == current_pk]
-            parent_keys = set(df["FK_Parent"].dropna())
-        elif "parent_pk" in df.columns:
-            children_df = df[df["parent_pk"] == current_pk]
-            parent_keys = set(df["parent_pk"].dropna())
-        elif "path" in df.columns and current_path:
-            parents = taxonomy_parent_paths(df)
-            children_df = df[parents == str(current_path)]
-            parent_keys = set(parents.dropna())
-            key_by_pk = False
-        elif "depth" in df.columns and pd.notna(current_row.get("depth")):
-            current_depth = int(current_row["depth"])
-            current_path_str = str(current_path) if pd.notna(current_path) else ""
-            children_df = df[
-                (df["depth"] == current_depth + 1)
-                & (
-                    df["path"]
-                    .astype(str)
-                    .str.startswith(
-                        current_path_str + ("." if current_path_str else ""), na=False
-                    )
-                )
-            ]
+        children_df, has_children = child_rows(
+            df, current_pk, current_path, current_row.get("depth")
+        )
 
         children_count = len(children_df)
 
@@ -340,19 +358,8 @@ class InformalAnalysisPlugin:
                 result["total_children"] = children_count
 
             for _, child_row in children_df.iterrows():
-                if parent_keys is None:
-                    has_children = None
-                elif key_by_pk:
-                    has_children = child_row.name in parent_keys
-                else:
-                    has_children = str(child_row.get("path", "")) in parent_keys
-                child_info = {
-                    "pk": int(child_row.name),
-                    "nom_vulgarise": child_row.get("nom_vulgarisé", ""),
-                    "description_courte": child_row.get("text_fr", ""),
-                    "famille": child_row.get("Famille", ""),
-                    "has_children": has_children,
-                }
+                child_info = node_summary(child_row)
+                child_info["has_children"] = has_children(child_row)
                 result["children"].append(child_info)
 
         self._logger.debug(
@@ -414,54 +421,16 @@ class InformalAnalysisPlugin:
 
         if len(parent_df) > 0:
             parent_row = parent_df.iloc[0]
-            result["parent"] = {
-                "pk": int(parent_row.name),
-                "nom_vulgarise": parent_row.get("nom_vulgarisé", ""),
-                "description_courte": parent_row.get("text_fr", ""),
-                "famille": parent_row.get("Famille", ""),
-            }
+            result["parent"] = node_summary(parent_row)
 
-        child_nodes_for_details = pd.DataFrame()
-        current_path_for_children = row.get("path", "")
-        current_depth_for_children = row.get("depth", None)
-
-        if "FK_Parent" in df.columns:
-            child_nodes_for_details = df[df["FK_Parent"] == pk]
-        elif "parent_pk" in df.columns:
-            child_nodes_for_details = df[df["parent_pk"] == pk]
-        elif "path" in df.columns and current_path_for_children:
-            child_nodes_for_details = df[
-                taxonomy_parent_paths(df) == str(current_path_for_children)
-            ]
-        elif "depth" in df.columns and pd.notna(current_depth_for_children):
-            current_path_str_for_children = (
-                str(current_path_for_children)
-                if pd.notna(current_path_for_children)
-                else ""
-            )
-            child_nodes_for_details = df[
-                (df["depth"] == int(current_depth_for_children) + 1)
-                & (
-                    df["path"]
-                    .astype(str)
-                    .str.startswith(
-                        current_path_str_for_children
-                        + ("." if current_path_str_for_children else ""),
-                        na=False,
-                    )
-                )
-            ]
+        child_nodes_for_details, _ = child_rows(
+            df, pk, row.get("path", ""), row.get("depth", None)
+        )
 
         if len(child_nodes_for_details) > 0:
             result["children"] = []
             for _, child_row_detail in child_nodes_for_details.iterrows():
-                child_info_detail = {
-                    "pk": int(child_row_detail.name),
-                    "nom_vulgarise": child_row_detail.get("nom_vulgarisé", ""),
-                    "description_courte": child_row_detail.get("text_fr", ""),
-                    "famille": child_row_detail.get("Famille", ""),
-                }
-                result["children"].append(child_info_detail)
+                result["children"].append(node_summary(child_row_detail))
 
         self._logger.debug(f"DEBUG: Exiting _internal_get_node_details for pk={pk}")
         return result
