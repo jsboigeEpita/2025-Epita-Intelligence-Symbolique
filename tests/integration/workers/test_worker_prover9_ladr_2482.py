@@ -129,7 +129,7 @@ def test_the_consistency_check_runs_prover9_when_configured(fol, formulas, expec
     assert by[0] is expected and by[2] == "prover9", by
 
 
-@pytest.mark.parametrize("solver", ["tweety", "eprover", "prover9"])
+@pytest.mark.parametrize("solver", ["tweety", "eprover", "prover9", "mace4"])
 @pytest.mark.parametrize(
     "goal, expected",
     [("Mortal(socrates)", True), ("Man(plato)", False)],
@@ -138,7 +138,9 @@ def test_the_consistency_check_runs_prover9_when_configured(fol, formulas, expec
 def test_a_query_is_answered_by_the_configured_solver(fol, solver, goal, expected):
     """``fol_query`` raised under every solver on ``main``: the shared parser
     is ``None`` outside TWEETY, and under TWEETY it lacks the KB's signature.
-    ``solver_fallback`` is ``False``: the configured solver answered."""
+    ``solver_fallback`` is ``False``: the configured solver answered. Under
+    MACE4, a model-finder, the in-JVM reasoner answers the query on a handler
+    built without the shared parser."""
     if solver == "eprover" and fol._get_eprover_path() is None:
         pytest.skip("the EProver binary is not wired on this seat")
     handler = _handler(fol, solver)
