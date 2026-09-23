@@ -1,0 +1,48 @@
+{
+  "key": "6d6ab2bb0c9d10902cc73d22c1f1d89edcf53c679a1822a98378d5b56978a154",
+  "value": {
+    "id": "chatcmpl-ER3XXJ7bSP48TqqwOQy2VdkQg4HLr",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":true,\"clarity_verdict\":\"opaque_réel\",\"reasoning\":\"L’expression « cette position » ne possède aucun antécédent identifiable dans le passage, et son contenu ne peut donc pas être déterminé par le contexte fourni.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117171,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 151,
+      "prompt_tokens": 246,
+      "total_tokens": 397,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 84,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

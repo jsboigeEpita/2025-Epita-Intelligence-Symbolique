@@ -1,0 +1,48 @@
+{
+  "key": "0870a66d053f6f60327e97a13f2f85e3f940196e2174a0224dd0e6821da9ab28",
+  "value": {
+    "id": "chatcmpl-ER3WAIHrRtn6dYbbv5HHeQ7FUHlTn",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"recommended_method\":\"social_choice\",\"consensus_potential\":0.68,\"fairness_assessment\":\"Fairly compares the three budget priorities and prevents the debate winner from determining the outcome alone; fairness improves if members can rank options and assess equipment needs and expected impact.\",\"conflict_severity\":\"medium\",\"stakeholder_analysis\":[{\"agent\":\"Agent A\",\"position\":\"Prioritizes an inter-city tournament with catering and prizes to increase visibility and recruit members.\",\"influence\":0.62},{\"agent\":\"Agent B\",\"position\":\"Prioritizes allocating the full budget to replacing or supplementing worn educational equipment.\",\"influence\":0.78},{\"agent\":\"Agent C\",\"position\":\"Supports an equal split between a smaller tournament and educational equipment as a balanced compromise.\",\"influence\":0.7},{\"agent\":\"Agent 4\",\"position\":\"Challenges the framing of the options and calls for evidence-based assessment of needs, costs, and expected results.\",\"influence\":0.65}],\"recommended_resolution\":\"compromise\",\"governance_reasoning\":\"Use a ranked or approval-based social-choice vote after a short fact-finding phase on equipment condition, tournament costs, and measurable outcomes. A compromise is most likely to preserve legitimacy, while allowing the final allocation to depart from an arbitrary 50/50 split if evidence shows one need is substantially greater.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117086,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 384,
+      "prompt_tokens": 691,
+      "total_tokens": 1075,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 107,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

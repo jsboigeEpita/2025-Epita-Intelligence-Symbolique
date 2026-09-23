@@ -1,0 +1,40 @@
+{
+  "key": "c8257cff7a044a09952be62c5ab8558ac4b5fff2ec1e805d5a616d28491ea9ae",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_YIEsNL762n86tPu5p0Jk2BlA",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte ne présente pas d'appât puis de substitution progressive : il invoque directement l'unanimité des experts et exclut l'avis des non-experts. Cette branche ne correspond pas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3SwAsDWhnVnPPNe8OCRkhUSJFnW",
+        "created": 1790116886,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1251,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1248,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 62,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

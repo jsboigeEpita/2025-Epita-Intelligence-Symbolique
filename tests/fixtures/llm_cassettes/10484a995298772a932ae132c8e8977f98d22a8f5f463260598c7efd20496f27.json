@@ -1,0 +1,48 @@
+{
+  "key": "10484a995298772a932ae132c8e8977f98d22a8f5f463260598c7efd20496f27",
+  "value": {
+    "id": "chatcmpl-ER3RX6rDZ7ClIgikvXOl5wBaY1cUf",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"obstacle_genuinely_opaque\":true,\"clarity_verdict\":\"opaque_réel\",\"reasoning\":\"L’expression « cette présentation » renvoie à un antécédent absent de l’extrait, empêchant d’identifier précisément ce que les syndicats contestent.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116799,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 62,
+      "prompt_tokens": 266,
+      "total_tokens": 328,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

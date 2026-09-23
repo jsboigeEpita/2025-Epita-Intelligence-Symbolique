@@ -400,32 +400,25 @@ jobs:
         #     (currency-word exemption). The delegation test's nondeterministic
         #     wide-net branch (2 SK-path keys never recorded; flaky 2/3 red
         #     on main pre-#2300) is now cassette-covered on both branches.
-        #   - WALK-VARIANCE, 1 test (#2323, 2026-09-20): the delegation test
-        #     joins the deselect list — the #2300 cassette coverage above held
-        #     only for the HARVEST's walk shape. Measured on record job
-        #     35474667181 (main 333ee1d4, exact band argv): its live LLM
-        #     confirmed on the first nav call — 2 SK calls recorded, 0 nav
-        #     prompts. A replay against job-produced cassettes then walks an
-        #     exploring shape (miss-fallback iterates candidates: 8 miss_replay,
-        #     all SK nav prompts, 7 of 8 keys present only in the old local
-        #     harvest) — deterministic given the DB (run twice, identical key
-        #     sets), so not flake and not env drift: the walk's SHAPE is chosen
-        #     by the LLM per recording session. A single record run cannot in
-        #     principle cover it. The test stays in the LIVE band above (runs
-        #     green there, 25s, run 35474667181 junit) and in the unit CI
-        #     (cache off); the deterministic-walk redesign is the follow-up
-        #     issue on #2323.
-        # Validated on THIS workflow's argv (14 flags): see the PR's local
-        # band measurement (21 passed, hit=72, miss_replay=0, live=0).
-        # The pre-#2323 argv (13 flags) measured 23 passed, hit=76,
-        # miss_replay=0, live=0, egress total 0 (counter), gate OK — measured
-        # 2026-09-19 after the flag removal. The interim commit on this branch
-        # reported "21 passed" because it measured the pre-removal 15-flag
-        # argv: both numbers are real, they described different harnesses.
+        #   - WALK-VARIANCE RETURNED (#2324 PR B): the delegation test was
+        #     deselected by #2323 because its fallacy walk's SHAPE was chosen
+        #     by the LLM per session, so a replay walked candidates the record
+        #     never saw (record job 35474667181: 8 miss_replay, all SK nav
+        #     prompts). #2324 PR A (#2387) pinned the walk; the band
+        #     cassettes are re-recorded on main b9e321ef (record job
+        #     35792294382, 22/22 passed, 276 exported, 0 refused) with the
+        #     delegation test IN the recorder's argv, so it replays here.
+        # Validated on THIS workflow's argv (13 --deselect flags), on the
+        # runner, against the committed cassettes of record 35792294382:
+        # band run 35797422276 (2026-09-23) — 22 passed, 0 skipped, the
+        # delegation test among them; hit=699, miss_replay=0, live=0; egress
+        # report llm_outcomes {} (zero LLM requests). Earlier figures in this
+        # comment (21/23 passed, hit=72/76) measured other argvs and older
+        # cassettes; they no longer describe this step.
         run: |
           $marker = "requires_api and not llm_light"
           Write-Host "Band marker: $marker"
-          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" --deselect "tests/orchestration/hierarchical/test_delegation_decides_firsthand_1471_R648.py::TestDelegationModeDecidesFirsthand::test_delegation_mode_decides_end_to_end_with_real_agents" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
+          conda run -n projet-is --no-capture-output pytest tests/unit/ tests/scripts/ tests/orchestration/ tests/ui/ tests/utils/ tests/golden/ tests/core/ tests/config/ tests/property/ tests/argumentation_analysis/ tests/project_core/ tests/functional/ tests/integration/orchestration/ tests/integration/services/ tests/integration/workers/ tests/integration/api/ tests/test_fact_checking_integration.py tests/test_integration_success_validation.py tests/test_orchestration_integration.py tests/test_readme_quickstart.py tests/test_regression_golden.py -m "$marker" --deselect "tests/test_regression_golden.py::TestGoldenStandardWorkflow" --deselect "tests/unit/argumentation_analysis/orchestration/test_regression_golden.py::TestGoldenIntegration::test_run_unified_analysis_standard_thresholds" --deselect "tests/unit/argumentation_analysis/test_value_gates.py::TestFOLValueGate::test_fol_consistent_is_bool_when_tweety_available" --deselect "tests/integration/orchestration/test_replay_cache_sk_path.py" --deselect "tests/unit/argumentation_analysis/evaluation/test_fallacy_benchmark.py::TestModeRunners::test_mode_c_constrained" --deselect "tests/unit/argumentation_analysis/evaluation/test_judge_advanced.py::TestEvaluateMethod::test_evaluate_with_api" --deselect "tests/config/test_config_real_gpt.py" --deselect "tests/integration/api/test_deliberation_genuine_verdict.py::TestDeliberationGenuineVerdictViaAPI::test_deliberation_decides_governance_firsthand_via_http" --deselect "tests/unit/argumentation_analysis/orchestration/test_fact_extraction_opposing_poles_1745.py::TestInventoryCarriesBothPoles::test_inventory_carries_both_poles_of_explicit_opposition" --deselect "tests/unit/argumentation_analysis/workflows/test_democratech.py::TestDemocratechE2EGenuineFirsthand::test_governance_decides_firsthand_on_multi_option_proposition" --deselect "tests/scripts/test_proof_bo2b_dashboard_1493.py::test_proof_script_cli_real_llm_path" --deselect "tests/integration/orchestration/test_replay_cache_determinism.py::TestReplayCacheDeterminism::test_record_then_replay_yields_identical_governance_verdict" --deselect "tests/integration/orchestration/test_replay_cache_profiling_batch.py::TestReplayCacheProfilingBatch::test_batch_record_then_replay_zero_live_and_profiled" -p scripts.cassettes.replay_stats_plugin --junitxml=pytest_report_replay.xml -v --timeout=900 --timeout-method=thread
 
       - name: Anti-vacuity gate (live==0, hit>=1, miss_replay==0)
         if: always()

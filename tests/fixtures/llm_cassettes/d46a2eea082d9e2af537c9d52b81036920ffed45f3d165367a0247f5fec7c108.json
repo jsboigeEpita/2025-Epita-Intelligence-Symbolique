@@ -1,0 +1,40 @@
+{
+  "key": "d46a2eea082d9e2af537c9d52b81036920ffed45f3d165367a0247f5fec7c108",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_WaSmiH0A493NelG0VCGy5KmC",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte ne cite pas une source fausse, mal identifiée ou inventée ; il invoque plutôt l'autorité des experts et exclut l'avis des non-experts. La branche « Fausse attribution » ne correspond pas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3Tcmn7dGQ1av8LtXFdxqhJnKswt",
+        "created": 1790116928,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1600,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1597,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 71,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "key": "3b8e93b320cd58e2853c0fdf1a5f4225b08a071d8e2a79fa5da2e411d6d13b4b",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_rJf8HQB1Kqlv7SGjAXWK1TkG",
+          "name": "Exploration-conclude_no_fallacy",
+          "arguments": "{\"reason\":\"Le texte relève d'un appel à l'autorité et d'une disqualification de l'avis des non-experts, pas d'une validation subjective au sens de cette branche ni de ses spécialisations Barnum/lecture à froid.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3SjMsIL3Ug1jiY3UaGdCUyUfJcl",
+        "created": 1790116873,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1438,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1435,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 68,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

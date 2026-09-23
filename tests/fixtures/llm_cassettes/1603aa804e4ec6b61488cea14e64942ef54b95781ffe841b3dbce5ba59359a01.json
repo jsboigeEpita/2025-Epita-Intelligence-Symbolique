@@ -1,0 +1,48 @@
+{
+  "key": "1603aa804e4ec6b61488cea14e64942ef54b95781ffe841b3dbce5ba59359a01",
+  "value": {
+    "id": "chatcmpl-ER3RqvN9zOlLSIVolexuryOZZ2f3H",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"chain_holds\":true,\"structure_verdict\":\"progression_logique\",\"reasoning\":\"Le caractère jugé optimiste de l’hypothèse de croissance fournit une raison pertinente de contester la prévision.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116818,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 173,
+      "prompt_tokens": 312,
+      "total_tokens": 485,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 118,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
