@@ -16,9 +16,7 @@ import logging
 
 from semantic_kernel import Kernel
 
-from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import (
-    LogicAgentFactory,
-)
+from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.logic.belief_set import (
     PropositionalBeliefSet,
     FirstOrderBeliefSet,
