@@ -994,23 +994,37 @@ RÉPONDS EN FORMAT JSON :
     async def text_to_belief_set(
         self, text: str, context: Optional[Dict[str, Any]] = None
     ) -> Tuple[Optional[BeliefSet], str]:
-        """Convertit texte en ensemble de croyances FOL."""
-        try:
-            # Conversion vers formules FOL en utilisant la méthode existante
-            formulas = self._basic_fol_conversion(text)
+        """Convertit texte en ensemble de croyances FOL.
 
-            # Si la conversion ne produit aucune formule, on peut considérer cela comme une erreur
-            if not formulas:
-                return None, "Conversion resulted in no formulas, likely invalid input."
+        #2447 item 5: the conversion is the LLM's (``_convert_to_fol``), and
+        the belief set carries the sort and predicate declarations the parser
+        needs. It used to be ``_basic_fol_conversion(text)`` directly: the LLM
+        was never called, and placeholder formulas (``P0(a)``) were returned
+        as the text's translation. When only the heuristic converter can run,
+        its formulas translate nothing: no belief set is returned, and the
+        status names why (``BaseLogicAgent`` reports a ``None`` belief set as
+        a failed conversion).
+        """
+        # The ``fol_logic`` plugin is registered by the setup. ``analyze()``
+        # runs it lazily, and so does this entry point: without it the
+        # conversion cannot be invoked and only the heuristic would run.
+        if not self._components_initialized:
+            self.setup_agent_components()
 
-            # Le contenu du BeliefSet est la représentation textuelle des formules
-            content_str = "\n".join(formulas)
-            belief_set = FirstOrderBeliefSet(content=content_str)
+        formulas, heuristic_reason = await self._convert_to_fol(text, context)
+        if heuristic_reason is not None:
+            return None, (
+                "Conversion LLM impossible, aucune formule traduite du texte "
+                f"({heuristic_reason})."
+            )
+        if not formulas:
+            return None, "Conversion resulted in no formulas, likely invalid input."
 
-            return belief_set, f"Converted to {len(formulas)} FOL formulas"
-
-        except Exception as e:
-            return None, f"Conversion error: {str(e)}"
+        content_str = "\n".join(self.build_signature_prefixed_formulas(formulas))
+        return (
+            FirstOrderBeliefSet(content=content_str),
+            f"Converted to {len(formulas)} FOL formulas (llm)",
+        )
 
     async def generate_queries(
         self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None

@@ -342,6 +342,7 @@ Mortal(socrate)
         assert "aristote" in msg
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_api
     async def test_end_to_end_fol_syllogism_with_llm(
         self, fol_agent_with_kernel, jvm_session, caplog
     ):
@@ -513,6 +514,7 @@ class TestFOLErrorHandling:
             logger.warning("⚠️ Erreur non reconnue par l'analyseur")
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_api
     async def test_fol_syntax_error_recovery(self, fol_agent_with_kernel):
         """
         Teste la robustesse de l'agent face à un texte sémantiquement absurde.
@@ -527,14 +529,13 @@ class TestFOLErrorHandling:
         try:
             belief_set, msg = await agent.text_to_belief_set(problematic_text)
 
-            # L'agent doit retourner un objet BeliefSet, même s'il est vide, sans planter.
-            assert (
-                belief_set is not None
-            ), "Le belief_set ne devrait pas être None après une tentative de conversion."
-
-            if belief_set.is_empty():
+            # #2447 item 5: a model that finds nothing to translate yields no
+            # belief set, and the status says so. Any other ``None`` is a
+            # failed conversion, which this test does not accept.
+            if belief_set is None:
+                assert "no formulas" in msg, msg
                 logger.info(
-                    "✅ Le LLM a correctement identifié le texte comme absurde et a retourné un belief set vide."
+                    "✅ Le LLM a correctement identifié le texte comme absurde : aucune formule."
                 )
             else:
                 logger.warning(
@@ -674,6 +675,7 @@ class TestFOLPerformanceVsModal:
         logger.info(f"Temps moyen: {avg_time:.2f}s")
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_api
     async def test_fol_memory_usage_stability(self, fol_agent_with_kernel):
         """Test stabilité mémoire agent FOL."""
         agent = fol_agent_with_kernel
@@ -737,6 +739,7 @@ class TestFOLRealWorldIntegration:
         logger.info(f"✅ Analyse complexe terminée avec succès.")
 
     @pytest.mark.asyncio
+    @pytest.mark.requires_api
     async def test_fol_multilingual_support(self, fol_agent_with_kernel, jvm_session):
         """Test la capacité du LLM à comprendre et traduire une autre langue (espagnol) en logique."""
         if not jvm_session:
@@ -782,27 +785,10 @@ class TestAnalyzeReachesTheSolver:
     answers the conversion prompt's own example: no LLM is called.
     """
 
-    @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "formulas, verdict",
-        [
-            (["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"], True),
-            (
-                [
-                    "forall X: (Homme(X) => Mortel(X))",
-                    "Homme(socrate)",
-                    "!Mortel(socrate)",
-                ],
-                False,
-            ),
-        ],
-    )
-    async def test_llm_formulas_get_a_decided_verdict(
-        self, jvm_session, formulas, verdict
-    ):
-        if not jvm_session:
-            pytest.skip("Test nécessite la JVM.")
-
+    @staticmethod
+    def _agent_answering(formulas):
+        """A ``FOLLogicAgent`` whose model answers the conversion with
+        ``formulas``, on the real solver."""
         import json
 
         import semantic_kernel as sk
@@ -825,9 +811,32 @@ class TestAnalyzeReachesTheSolver:
 
         kernel = sk.Kernel()
         kernel.add_service(_FakeChat(ai_model_id="fake-2447", service_id="fake"))
-        agent = FOLLogicAgent(
+        return FOLLogicAgent(
             kernel=kernel, service_id="fake", tweety_bridge=TweetyBridge()
         )
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "formulas, verdict",
+        [
+            (["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"], True),
+            (
+                [
+                    "forall X: (Homme(X) => Mortel(X))",
+                    "Homme(socrate)",
+                    "!Mortel(socrate)",
+                ],
+                False,
+            ),
+        ],
+    )
+    async def test_llm_formulas_get_a_decided_verdict(
+        self, jvm_session, formulas, verdict
+    ):
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+
+        agent = self._agent_answering(formulas)
 
         result = await agent.analyze(
             "Tous les hommes sont mortels. Socrate est un homme."
@@ -835,6 +844,29 @@ class TestAnalyzeReachesTheSolver:
 
         assert result.consistency_check is verdict, result.consistency_message
         assert result.formulas_source == "llm"
+
+    @pytest.mark.asyncio
+    async def test_text_to_belief_set_answers_the_syllogism_query(self, jvm_session):
+        """#2447 item 5: ``text_to_belief_set`` converts through the model, and
+        its belief set carries the declarations, so the real solver answers
+        the query the syllogism entails. On ``main`` the belief set held the
+        heuristic's placeholders (``P0(a)``) and the model was never asked."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+
+        agent = self._agent_answering(
+            ["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"]
+        )
+
+        belief_set, status = await agent.text_to_belief_set(
+            "Tous les hommes sont mortels. Socrate est un homme."
+        )
+        assert belief_set is not None, status
+
+        consistent, message = await agent.is_consistent(belief_set)
+        assert consistent is True, message
+        entailed, message = await agent.execute_query(belief_set, "Mortel(socrate)")
+        assert entailed is True, message
 
 
 # ==================== UTILITAIRES DE TEST ====================
