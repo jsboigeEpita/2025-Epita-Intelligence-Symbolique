@@ -303,13 +303,20 @@ class TestFOLTweetyIntegration:
 
     @pytest.mark.asyncio
     async def test_tweety_validation_formulas(self, fol_agent_with_tweety):
-        """Test validation formules avant envoi à Tweety."""
-        valid_formulas = ["∀x(P(x) → Q(x))", "∃y(R(y) ∧ S(y))"]
+        """Test validation formules avant envoi à Tweety.
+
+        #2447: the parser needs the sorts and predicates declared before the
+        formulas, so the bridge receives them first. The formulas are ASCII,
+        as ``_convert_to_fol`` hands them over.
+        """
+        valid_formulas = ["forall X: (P(X) => Q(X))", "P(a)"]
 
         result = await fol_agent_with_tweety._analyze_with_tweety(valid_formulas)
 
         fol_agent_with_tweety._tweety_bridge.check_consistency.assert_called_once_with(
-            "∀x(P(x) → Q(x))\n∃y(R(y) ∧ S(y))", "first_order"
+            "thing = {a}\ntype(P(thing))\ntype(Q(thing))\n\n"
+            "forall X: (P(X) => Q(X))\nP(a)",
+            "first_order",
         )
         fol_agent_with_tweety._tweety_bridge.derive_inferences.assert_called_once_with(
             valid_formulas
@@ -440,7 +447,10 @@ class TestFOLAnalysisPipeline:
         )
         assert "Human(socrate)" in result.formulas
         assert result.consistency_check is True
-        assert "Mortal(socrate)" in result.inferences
+        # #2447: ``inferences`` holds what the bridge derived. The model's
+        # inferences stay in its own answer, ``llm_assessment``.
+        assert result.inferences == ["Inférence LLM"]
+        assert result.llm_assessment["inferences"] == ["Mortal(socrate)"]
         assert result.confidence_score >= 0.9
 
     @pytest.mark.asyncio
