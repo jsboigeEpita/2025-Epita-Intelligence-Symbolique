@@ -1497,6 +1497,12 @@ class FOLHandler:
         DISAGREEMENT is surfaced explicitly and NEVER silently reconciled — the
         comparison is the point (#1019).
 
+        A backend that cannot run (absent binary, timeout, broken delivery) is
+        reported ``available: False``. A ``SolverInputDefect`` is not that: the
+        input our code built was refused or could not be written, so the
+        comparison raises it (#2491). Read as "unavailable", it marked both
+        LADR backends missing and left the other two to agree.
+
         Soundness asymmetry (made explicit in the disagreement note):
         * EProver / Prover9 are sound on the **INCONSISTENT** side (refutation).
         * Mace4 is sound on the **CONSISTENT** side (a finite model is a witness);
@@ -1551,6 +1557,9 @@ class FOLHandler:
                     "elapsed_ms": round(elapsed, 1),
                     "available": True,
                 }
+            except SolverInputDefect:
+                # #2491: a defect of our builder, not an unavailable backend.
+                raise
             except Exception as e:
                 elapsed = (time.perf_counter() - start) * 1000.0
                 backends[name] = {

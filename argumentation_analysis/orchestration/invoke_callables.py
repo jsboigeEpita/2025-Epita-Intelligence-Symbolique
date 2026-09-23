@@ -7694,7 +7694,9 @@ async def _invoke_fol_reasoning(
         # path (single configured solver) untouched. Surfaces every available FOL
         # backend's verdict + timing + agreement flag so disagreement is visible,
         # never silently reconciled (mandate R468, #1019). Failure here must not
-        # break the primary verdict, so it is best-effort.
+        # break the primary verdict, so it is best-effort — except a defect of
+        # our own solver input, which fails the phase as the primary check does
+        # (#2491).
         fol_backend_comparison: Optional[Dict[str, Any]] = None
         if context.get("compare_backends"):
             try:
@@ -7708,6 +7710,8 @@ async def _invoke_fol_reasoning(
                 )
                 for _dis in fol_backend_comparison.get("disagreement", []):
                     logger.warning("FOL backend %s", _dis)
+            except SolverInputDefect:
+                raise
             except Exception as _cmp_err:
                 logger.warning(f"FOL backend comparison skipped ({_cmp_err}).")
         # FP-6 #1197: pass the handler's tri-state through unchanged. The handler
@@ -8946,7 +8950,9 @@ async def compare_all_axes(
     comparator (no re-implementation), and return a report of uniform shape per
     axis. Disagreements are surfaced **verbatim and NEVER auto-reconciled** (a
     disagreement is a result, anti-pendule #1019). An axis that cannot run is
-    reported ``available=False`` (fail-loud), never silently omitted.
+    reported ``available=False`` (fail-loud), never silently omitted. A
+    ``SolverInputDefect`` from an axis is not an axis that cannot run: the
+    input our code built was refused, so the harness raises it (#2491).
 
     Each axis reasons over a DIFFERENT input shape (FOL belief set, Dung
     arguments+attacks, sophism candidates+span_text_for) — there is no invented
@@ -9053,6 +9059,9 @@ async def compare_all_axes(
             report_axes[axis] = normalized
             if normalized["agreement"] is False:
                 any_disagree = True
+        except SolverInputDefect:
+            # #2491: a defect of our solver input, not an unavailable axis.
+            raise
         except Exception as e:
             # A buggy comparator never poisons the harness — the axis is
             # reported unavailable (fail-loud), other axes still run.
