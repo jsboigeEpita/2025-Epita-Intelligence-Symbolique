@@ -84,7 +84,7 @@ Le bridge n'a pas de méthode d'initialisation propre à la FOL : la JVM est pri
 ## Limites connues
 
 - `FOLLogicAgent.text_to_belief_set()` n'appelle pas le LLM : elle passe par la conversion heuristique `_basic_fol_conversion()`. `test_end_to_end_fol_syllogism_with_llm` passe donc sans aucune requête LLM (mesuré le 2026-09-23 : 0 requête au compteur d'egress, dont le contrôle de vivacité a tourné dans la même session), et l'inférence qu'il vise échoue au parseur sans faire échouer le test (elle n'est qu'un avertissement). Ce test ne vérifie pas la conversion par le LLM. Suivi dans #2447.
-- Certains verdicts de l'agent ne viennent d'aucune vérification (cohérence supposée sans bridge, résultat non décidé lu comme « incohérent ») : #2447.
+- `analyze()` ne rend `consistency_check` à `True` ou `False` que si un solveur a décidé. Sinon il vaut `None`, et `consistency_message` dit pourquoi (pas de bridge, solveur non décidé, erreur) (#2447). L'étape d'enrichissement par le LLM ajoute encore au résultat les `inferences`, les `errors` et la `confidence` du modèle sans les étiqueter : #2447.
 
 ## Historique
 
