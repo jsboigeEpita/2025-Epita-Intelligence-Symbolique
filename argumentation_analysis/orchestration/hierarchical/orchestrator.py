@@ -124,32 +124,18 @@ class HierarchicalOrchestrator:
         strategic_plan = init_result.get("strategic_plan", {})
 
         if not objectives:
-            logger.warning(
-                "StrategicManager returned no objectives — "
-                "falling back to default 4-objective set"
+            # #2344 (doctrine #1019): the StrategicManager contract guarantees
+            # a non-empty set — every degradation path inside it (no kernel,
+            # LLM failure, parse error) lands on _fallback_objectives(),
+            # tagged source="degraded" and logged. An empty list here is a
+            # broken strategic tier, not a case to mask with an untagged
+            # hardcoded set: fail loud, like M3's DelegationError.
+            raise RuntimeError(
+                "StrategicManager returned no objectives — its contract "
+                "guarantees a non-empty set (degraded fallback is tagged "
+                "source='degraded'). Refusing to silently inject hardcoded "
+                "objectives (anti-théâtre #1019, #2344)."
             )
-            objectives = [
-                {
-                    "id": "obj-1",
-                    "description": "Identifier les arguments principaux",
-                    "priority": "high",
-                },
-                {
-                    "id": "obj-2",
-                    "description": "Détecter les sophismes",
-                    "priority": "high",
-                },
-                {
-                    "id": "obj-3",
-                    "description": "Analyser la structure logique",
-                    "priority": "medium",
-                },
-                {
-                    "id": "obj-4",
-                    "description": "Évaluer la cohérence globale",
-                    "priority": "medium",
-                },
-            ]
 
         logger.info(f"  → {len(objectives)} objectives generated")
 

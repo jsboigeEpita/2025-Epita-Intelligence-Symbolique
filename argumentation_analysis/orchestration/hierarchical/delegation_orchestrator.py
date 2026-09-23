@@ -27,9 +27,10 @@ M3 does **not** replace the DAG/bridge (M2). Both remain selectable via the
 **fails loud**:
 
 * If the strategic tier yields zero objectives, raise :class:`DelegationError`
-  instead of silently injecting a hardcoded objective list. (The M2 bridge's
-  hardcoded 4-objective fallback at ``orchestrator.py:102-128`` is the explicit
-  contrast point this module refuses to imitate.)
+  instead of silently injecting a hardcoded objective list. Both modes now
+  fail loud on zero objectives: M3 raises :class:`DelegationError`, and the
+  M2 bridge raises ``RuntimeError`` (#2344) — the bridge's old hardcoded
+  4-objective fallback is gone.
 * If a required operational capability has no provider, the per-task result is
   an honest ``status="failed"`` propagated upward — never a heuristic
   substitution.
