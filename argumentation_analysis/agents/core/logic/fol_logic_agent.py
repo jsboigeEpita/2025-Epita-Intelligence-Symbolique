@@ -86,7 +86,11 @@ class FOLAnalysisResult:
 
     formulas: List[str] = field(default_factory=list)
     interpretations: List[Dict[str, Any]] = field(default_factory=list)
-    consistency_check: bool = False
+    # #2447 — the Tweety verdict: ``True``/``False`` only when a solver
+    # decided, ``None`` when no check ran or the solver did not decide.
+    # ``consistency_message`` says which, and why.
+    consistency_check: Optional[bool] = None
+    consistency_message: str = ""
     inferences: List[str] = field(default_factory=list)
     validation_errors: List[str] = field(default_factory=list)
     confidence_score: float = 0.0
@@ -94,6 +98,12 @@ class FOLAnalysisResult:
     # #2441 — components whose setup failed, with their cause (e.g. the
     # Tweety bridge when the JVM is absent). Empty when setup was complete.
     setup_failures: Dict[str, str] = field(default_factory=dict)
+
+
+def _consistency_label(result: "FOLAnalysisResult") -> str:
+    if result.consistency_check is None:
+        return f"⚠️ Non vérifiée ({result.consistency_message or 'raison inconnue'})"
+    return "✅ Cohérent" if result.consistency_check else "❌ Incohérent"
 
 
 class BeliefSetBuilderPlugin:
@@ -667,7 +677,12 @@ RÉPONDS EN FORMAT JSON :
         bridge = getattr(self, "_tweety_bridge", None)
         if not bridge:
             logger.warning("⚠️ TweetyBridge non initialisé - analyse limitée")
-            result.consistency_check = True  # Assume consistent si pas de vérification
+            # #2447: no bridge, no check, so no verdict (it was ``True``).
+            result.consistency_check = None
+            result.consistency_message = (
+                "Cohérence NON VÉRIFIÉE : aucun bridge Tweety "
+                f"(setup_failures: {self.setup_failures or 'aucun'})."
+            )
             result.confidence_score = 0.5
             return result
 
@@ -679,9 +694,17 @@ RÉPONDS EN FORMAT JSON :
                 raw = await raw
             is_consistent = raw[0] if isinstance(raw, tuple) else raw
             result.consistency_check = is_consistent
+            if isinstance(raw, tuple) and len(raw) > 1:
+                result.consistency_message = str(raw[1])
 
             # Calcul d'inférences
-            if is_consistent and hasattr(bridge, "derive_inferences"):
+            if is_consistent is None:
+                # #2447: the solver did not decide. That is no inconsistency,
+                # so it adds no "incohérentes" entry.
+                if not result.consistency_message:
+                    result.consistency_message = "Cohérence NON DÉCIDÉE par le solveur."
+                result.confidence_score = 0.5
+            elif is_consistent and hasattr(bridge, "derive_inferences"):
                 raw_inf = bridge.derive_inferences(formulas)
                 if inspect.isawaitable(raw_inf):
                     raw_inf = await raw_inf
@@ -703,6 +726,11 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             logger.error(f"❌ Erreur analyse Tweety: {e}")
             result.validation_errors.append(f"Erreur Tweety: {str(e)}")
+            if result.consistency_check is None:
+                result.consistency_message = (
+                    "Cohérence NON VÉRIFIÉE : le contrôle a levé "
+                    f"{type(e).__name__}: {e}"
+                )
             result.confidence_score = 0.1
 
         return result
@@ -728,7 +756,7 @@ RÉPONDS EN FORMAT JSON :
             # Ajout d'étapes de raisonnement
             result.reasoning_steps = [
                 f"Conversion de {len(original_text)} caractères en {len(result.formulas)} formules FOL",
-                f"Test de cohérence: {'✅ Cohérent' if result.consistency_check else '❌ Incohérent'}",
+                f"Test de cohérence: {_consistency_label(result)}",
                 f"Inférences trouvées: {len(result.inferences)}",
                 f"Modèles générés: {len(result.interpretations)}",
             ]
@@ -787,10 +815,14 @@ RÉPONDS EN FORMAT JSON :
 
             parsed = json.loads(str(llm_result))
 
-            # Fusion des résultats
-            result.consistency_check = parsed.get(
-                "consistency", result.consistency_check
-            )
+            # Fusion des résultats. #2447: the model's opinion on consistency
+            # is not the solver's verdict, so it never replaces
+            # ``consistency_check``; it is kept, labelled, in the steps.
+            if "consistency" in parsed:
+                result.reasoning_steps.append(
+                    "Avis du LLM sur la cohérence (non vérifié par un solveur) : "
+                    f"{parsed['consistency']}"
+                )
             result.inferences.extend(parsed.get("inferences", []))
             result.interpretations.extend(parsed.get("interpretations", []))
             result.validation_errors.extend(parsed.get("errors", []))
@@ -1112,7 +1144,7 @@ RÉPONDS EN FORMAT JSON :
 
             response = f"Analyse FOL:\n"
             response += f"Formules: {len(result.formulas)}\n"
-            response += f"Cohérence: {result.consistency_check}\n"
+            response += f"Cohérence: {_consistency_label(result)}\n"
             response += f"Confiance: {result.confidence_score:.2f}\n"
 
             if result.inferences:
@@ -1193,11 +1225,19 @@ RÉPONDS EN FORMAT JSON :
         consistent_count = sum(
             1 for r in self._analysis_cache.values() if r.consistency_check
         )
+        # #2447: the rate is over the analyses a solver decided; the others
+        # are counted apart, not as "inconsistent".
+        decided_count = sum(
+            1 for r in self._analysis_cache.values() if r.consistency_check is not None
+        )
 
         return {
             "total_analyses": total_analyses,
             "avg_confidence": avg_confidence,
-            "consistency_rate": consistent_count / total_analyses,
+            "consistency_rate": (
+                consistent_count / decided_count if decided_count else None
+            ),
+            "consistency_undetermined": total_analyses - decided_count,
             "agent_type": "FOL_Logic",
             "tweety_enabled": self._tweety_bridge is not None,
         }

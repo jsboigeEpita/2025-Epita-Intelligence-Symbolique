@@ -12,6 +12,7 @@ Composant unifié pour orchestration conversationnelle avec support de 4 modes :
 S'intègre harmonieusement avec l'architecture Semantic Kernel existante.
 """
 
+import dataclasses
 import time
 import json
 import logging
@@ -168,6 +169,7 @@ class AnalysisState:
     def update_from_modal(self, result: Dict[str, Any]):
         """Met à jour l'état avec résultats de logique modale."""
         self.propositions_found += result.get("propositions_count", 0)
+        # #2447: ``None`` is "undetermined" (no solver decided) and stays None.
         self.consistency_score = result.get("consistency", 0.0)
         self.score += result.get("logical_score", 0.0) * 0.3
         self.agent_results["modal"] = result
@@ -185,7 +187,11 @@ class AnalysisState:
             "agents_active": self.agents_active,
             "fallacies_detected": self.fallacies_detected,
             "propositions_found": self.propositions_found,
-            "consistency_score": round(self.consistency_score, 2),
+            "consistency_score": (
+                None
+                if self.consistency_score is None
+                else round(self.consistency_score, 2)
+            ),
             "phase": self.phase,
             "completed": self.completed,
             "processing_time": round(self.processing_time, 3),
@@ -583,6 +589,10 @@ class ConversationOrchestrator:
             result = raw_result
         elif hasattr(raw_result, "model_dump"):
             result = raw_result.model_dump()
+        elif dataclasses.is_dataclass(raw_result) and not isinstance(raw_result, type):
+            # ``FOLAnalysisResult`` is a dataclass: without this branch it
+            # became ``{"raw": str(...)}`` and every field read its default.
+            result = dataclasses.asdict(raw_result)
         else:
             result = {"raw": str(raw_result)}
 
@@ -598,13 +608,20 @@ class ConversationOrchestrator:
                 "raw_result": result,
             }
         elif agent_key == "fol_logic":
+            # #2447: the verdict is tri-state. ``None`` (no solver decided) is
+            # "undetermined": it is neither 1.0 nor 0.5, and not satisfiable.
+            # Only a decided inconsistency counts as a contradiction; an
+            # analysis error in ``validation_errors`` is not one.
+            verdict = result.get("consistency_check")
             return {
                 "formulas_count": len(result.get("formulas", [])),
                 "propositions_count": len(result.get("formulas", [])),
-                "consistency": 1.0 if result.get("consistency_check", False) else 0.5,
+                "consistency": (None if verdict is None else (1.0 if verdict else 0.0)),
+                "consistency_undetermined": verdict is None,
+                "consistency_message": result.get("consistency_message", ""),
                 "logical_score": result.get("confidence_score", 0.5),
-                "contradictions": len(result.get("validation_errors", [])),
-                "satisfiable": result.get("consistency_check", True),
+                "contradictions": 1 if verdict is False else 0,
+                "satisfiable": verdict,
                 "raw_result": result,
             }
         return result
@@ -938,7 +955,7 @@ class ConversationOrchestrator:
 ## 🎯 BILAN D'ANALYSE MODALE
 - **Score global:** {self.state.score:.3f}/1.0
 - **Modalités extraites:** {self.state.propositions_found} (nécessité/possibilité)
-- **Cohérence logique:** {self.state.consistency_score:.2f}/1.0
+- **Cohérence logique:** {"non déterminée" if self.state.consistency_score is None else f"{self.state.consistency_score:.2f}/1.0"}
 - **Sophismes détectés:** {self.state.fallacies_detected}
 - **Statut:** {"✅ Analyse complète" if self.state.completed else "⏳ En cours"}
 
