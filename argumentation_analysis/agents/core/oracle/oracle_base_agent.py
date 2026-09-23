@@ -229,15 +229,14 @@ class OracleTools:
             self._logger.error(f"Erreur révélation contrôlée: {e}")
             return f"Erreur lors de la révélation: {str(e)}"
 
-    @kernel_function(
-        name="query_oracle_dataset",
-        description="Exécute une requête sur le dataset Oracle.",
-    )
-    async def query_oracle_dataset(self, query_type: str, query_params: str) -> str:
-        """
-        Exécute une requête sur le dataset pour le compte de l'agent propriétaire.
+    async def _query_and_report(self, query_type: str, query_params: str) -> str:
+        """Corps unique de `query_oracle_dataset` et `execute_oracle_query` (#2345).
 
-        Cette fonction est une version asynchrone de `execute_authorized_query`.
+        Les deux fonctions kernel portaient chacune une copie de ce corps, et les
+        copies avaient divergé : `execute_oracle_query` taisait
+        `revealed_information`, si bien qu'un LLM passant par ce nom-là ne voyait
+        jamais ce que l'Oracle venait de révéler. Les deux noms restent exposés au
+        kernel (arbitrage #2137) ; leur réponse ne peut plus différer.
 
         Args:
             query_type (str): Le type de requête à exécuter.
@@ -286,17 +285,36 @@ class OracleTools:
             return f"Erreur lors de la requête Oracle: {str(e)}"
 
     @kernel_function(
+        name="query_oracle_dataset",
+        description="Exécute une requête sur le dataset Oracle.",
+    )
+    async def query_oracle_dataset(self, query_type: str, query_params: str) -> str:
+        """
+        Exécute une requête sur le dataset pour le compte de l'agent propriétaire.
+
+        Même réponse que `execute_oracle_query` : les deux passent par
+        `_query_and_report` (#2345).
+
+        Args:
+            query_type (str): Le type de requête à exécuter.
+            query_params (str): Les paramètres de la requête en format JSON.
+
+        Returns:
+            str: Un message résumant le résultat de la requête.
+        """
+        return await self._query_and_report(query_type, query_params)
+
+    @kernel_function(
         name="execute_oracle_query",
         description="Exécute une requête Oracle avec gestion complète.",
     )
     async def execute_oracle_query(self, query_type: str, query_params: str) -> str:
         """
-        Exécute une requête Oracle (version sémantiquement redondante).
+        Exécute une requête Oracle — second nom de `query_oracle_dataset`.
 
-        Note:
-            Cette fonction semble être fonctionnellement identique à
-            `query_oracle_dataset`. À conserver pour la compatibilité
-            sémantique si des plans l'utilisent.
+        Le nom reste exposé au kernel : un `@kernel_function` est appelé par le
+        LLM à l'exécution, un grep vide ne prouve pas qu'il ne l'est jamais
+        (arbitrage #2137). Le corps est celui de `query_oracle_dataset` (#2345).
 
         Args:
             query_type (str): Le type de requête.
@@ -305,39 +323,7 @@ class OracleTools:
         Returns:
             str: Un message résumant le résultat de la requête.
         """
-        try:
-            import json
-
-            # Parsing des paramètres
-            try:
-                params_dict = (
-                    json.loads(query_params)
-                    if isinstance(query_params, str)
-                    else query_params
-                )
-            except json.JSONDecodeError:
-                return f"Erreur de format JSON: {query_params}"
-
-            try:
-                query_type_enum = QueryType(query_type)
-            except ValueError:
-                raise ValueError(f"Type de requête invalide: {query_type}")
-
-            # Exécution via le gestionnaire
-            response = await self._run_oracle_query(
-                self.agent_name, query_type_enum, params_dict
-            )
-
-            if response.authorized:
-                return f"Requête Oracle exécutée: {response.message}"
-            else:
-                return f"Requête Oracle refusée: {response.message}"
-
-        except ValueError:
-            raise ValueError(f"Type de requête invalide: {query_type}")
-        except Exception as e:
-            self._logger.error(f"Erreur requête Oracle: {e}", exc_info=True)
-            return f"Erreur lors de la requête Oracle: {str(e)}"
+        return await self._query_and_report(query_type, query_params)
 
     @kernel_function(
         name="check_agent_permission", description="Vérifie les permissions d'un agent."
