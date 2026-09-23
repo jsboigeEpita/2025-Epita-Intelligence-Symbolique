@@ -5,7 +5,7 @@ hard-coded wording and ``continue`` past the degraded branch — so the *precise
 reason the act is missing (filed in ``acts.degraded``) never reached the reader.
 
 For Acte III the hard-coded wording named a cause — *« portes G1–G4 non
-évaluées »* — that is **false on all three real paths** that produce a missing
+évaluées »* — that is **false on all four real paths** that produce a missing
 act (verified firsthand in ``act3_conclusion_plugin.build_act3_conclusion``):
 
 * ``empty_state`` (l.1509) — G1 WAS evaluated (and failed); the real cause is
@@ -14,6 +14,9 @@ act (verified firsthand in ``act3_conclusion_plugin.build_act3_conclusion``):
   *« aucun LLM injecté »*.
 * LLM produced nothing (l.1547) — gates passed, LLM called; the real cause is
   *« le LLM n'a rien produit »*.
+* LLM call raised (#2345) — gates passed, LLM called, the call failed; the real
+  cause is *« l'appel au LLM a échoué (<type>) »*. Before #2345 this path was
+  recorded with the previous path's motif: the exception lived in the log only.
 
 The fix: the hard-coded wording *cedes the floor* to the precise motif when one
 exists, and is itself made honest-generic (no false cause named). The
@@ -31,11 +34,11 @@ flattening at ``_read_act_degraded``; #1617 is about the renderer's ``continue``
 short-circuit — a different mechanism that hits all three acts.
 
 Falsifiability — ``test_three_missing_paths_produce_distinct_renders`` asserts
-the three renders DIFFER. On the pre-fix code they are identical (the motif is
+the four renders DIFFER. On the pre-fix code they are identical (the motif is
 dropped, the same hard-coded wording is printed for all three), so the
 inequalities fail. Degenerate substitution: delete the
 ``acts.degraded.get(key)`` lookup in the renderer's missing-act branch → all
-three renders collapse to the generic wording again → the test fails.
+four renders collapse to the generic wording again → the test fails.
 
 Anti-pendule: ``_MISSING_ACT_WORDING`` is NOT removed — it stays as the generic
 fallback when no motif was recorded (an act never invoked produces none).
@@ -48,7 +51,7 @@ from argumentation_analysis.reporting.restitution.renderer import (
     RestitutionReportRenderer,
 )
 
-# The exact motifs ``build_act3_conclusion`` records on the three missing-act
+# The exact motifs ``build_act3_conclusion`` records on the four missing-act
 # paths (act3_conclusion_plugin.py:1509/1521/1547). Using the real strings, not
 # paraphrases — the test must break if the plugin rewording drifts.
 _ACT3_MISSING_MOTIFS = {
@@ -62,6 +65,10 @@ _ACT3_MISSING_MOTIFS = {
     ),
     "llm_mute": (
         "Conclusion indisponible — le LLM n'a rien produit (fail-loud, #1108)."
+    ),
+    "llm_raised": (
+        "Conclusion indisponible — l'appel au LLM a échoué (TimeoutError) "
+        "(fail-loud, #1108)."
     ),
 }
 
@@ -85,10 +92,10 @@ class TestMissingActMotifCeded:
     """A missing act with a recorded motif prints the motif, not a false cause."""
 
     def test_three_missing_paths_produce_distinct_renders(self) -> None:
-        """The three real missing-act paths render to DISTINCT markdown.
+        """The four real missing-act paths render to DISTINCT markdown.
 
         The assertion is on the DIFFERENCE between renders, not on the presence
-        of any particular word. On the pre-fix code the three renders are
+        of any particular word. On the pre-fix code the four renders are
         identical (the motif is dropped, the same hard-coded wording is printed),
         so these inequalities fail — that is the defect.
         """
@@ -101,6 +108,9 @@ class TestMissingActMotifCeded:
         assert renders["empty_state"] != renders["llm_absent"]
         assert renders["empty_state"] != renders["llm_mute"]
         assert renders["llm_absent"] != renders["llm_mute"]
+        # #2345: the raised path no longer borrows the mute path's motif.
+        assert renders["llm_raised"] != renders["llm_mute"]
+        assert len(set(renders.values())) == len(renders)
 
     def test_missing_act_with_motif_prints_the_motif(self) -> None:
         """The precise motif reaches the reader (here: the empty_state path)."""

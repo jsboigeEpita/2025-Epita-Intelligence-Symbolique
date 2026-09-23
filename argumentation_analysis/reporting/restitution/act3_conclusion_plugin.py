@@ -54,7 +54,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from .dung_reader import (  # #1908: shared meaning with act2
     REJECTED_MEANS,
@@ -67,13 +67,11 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
 from .conclusion_salience import ConclusionSalience, assess_conclusion_salience
 from .fr_accord import accord
 from .global_projection import GlobalFinding, project_global_findings
+from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
-
-# An async LLM callable: prompt in, completion text out (FB-29/38 injectable).
-LlmCallable = Callable[[str], Awaitable[str]]
 
 # Truncation caps for corpus-derived fields entering the prompt (privacy +
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
@@ -2456,22 +2454,15 @@ def _blocked_claim_note(
 
 async def weave_act3_conclusion(
     evidence: Act3Evidence, llm_callable: LlmCallable
-) -> str:
+) -> WeaveOutcome:
     """Conduct the Acte III conclusion via the LLM (fail-loud, #1108).
 
-    Returns the LLM-produced markdown, or an empty string if the LLM produced
-    nothing (the caller records the explicit ``unavailable`` status). No
-    template fallback — anti-pendule #1019/#369.
+    The outcome carries the LLM-produced markdown, or the observed reason there
+    is none — the call raised, or the LLM produced nothing (#2345); the caller
+    records it with the explicit ``unavailable`` status. No template fallback —
+    anti-pendule #1019/#369.
     """
-    prompt = build_act3_prompt(evidence)
-    try:
-        raw = await llm_callable(prompt)
-    except Exception as exc:  # noqa: BLE001 — surface, don't fabricate
-        logger.warning("Acte III LLM weaving failed (fail-loud): %s", exc)
-        return ""
-    if not raw:
-        return ""
-    return str(raw).strip()
+    return await weave(build_act3_prompt(evidence), llm_callable, "Acte III")
 
 
 # --- orchestrator ------------------------------------------------------------
@@ -2539,18 +2530,19 @@ async def build_act3_conclusion(
         # Re-flag the verdict as ungated so the prompt's synthesis beat degrades.
         evidence.verdict = None
 
-    narrative = await weave_act3_conclusion(evidence, llm_callable)
-    if not narrative:
+    outcome = await weave_act3_conclusion(evidence, llm_callable)
+    if not outcome.narrative:
         return Act3Result(
             narrative="",
             status="unavailable",
             degraded={
                 "act3_conclusion": (
-                    "Conclusion indisponible — le LLM n'a rien produit "
+                    f"Conclusion indisponible — {outcome.failure} "
                     "(fail-loud, #1108)."
                 )
             },
         )
+    narrative = outcome.narrative
 
     # #1605 — the conclusion must carry what the run failed to evaluate. The
     # ledger is recorded unconditionally (it is a fact about the run), and the

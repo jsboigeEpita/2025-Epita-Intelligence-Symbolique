@@ -41,18 +41,16 @@ import logging
 import os
 import re
 from dataclasses import dataclass, field
-from typing import Any, Awaitable, Callable, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import yaml
 
 from .fr_accord import accord
+from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .readability_gate import GateVerdict, ReadabilityGate
 from .virtuous_identification import VirtuousModeAssessment, detect_virtuous_mode
 
 logger = logging.getLogger(__name__)
-
-# An async LLM callable: prompt in, completion text out (FB-29/38 injectable).
-LlmCallable = Callable[[str], Awaitable[str]]
 
 # Truncation caps for corpus-derived fields entering the prompt.
 _STAKE_CAP = 200
@@ -558,17 +556,15 @@ def build_act1_prompt(evidence: Act1Evidence) -> str:
 # --- LLM-conducted weaving (fail-loud) ---------------------------------------
 
 
-async def weave_act1_framing(evidence: Act1Evidence, llm_callable: LlmCallable) -> str:
-    """Conduct the Acte I framing via the LLM (fail-loud, #1108)."""
-    prompt = build_act1_prompt(evidence)
-    try:
-        raw = await llm_callable(prompt)
-    except Exception as exc:  # noqa: BLE001 — surface, don't fabricate
-        logger.warning("Acte I LLM weaving failed (fail-loud): %s", exc)
-        return ""
-    if not raw:
-        return ""
-    return str(raw).strip()
+async def weave_act1_framing(
+    evidence: Act1Evidence, llm_callable: LlmCallable
+) -> WeaveOutcome:
+    """Conduct the Acte I framing via the LLM (fail-loud, #1108).
+
+    The outcome carries the narrative, or the observed reason there is none
+    (the call raised, or the LLM produced nothing) — #2345.
+    """
+    return await weave(build_act1_prompt(evidence), llm_callable, "Acte I")
 
 
 def _extract_interpretive_question(narrative: str) -> str:
@@ -616,18 +612,18 @@ async def build_act1_framing(
             },
         )
 
-    narrative = await weave_act1_framing(evidence, llm_callable)
-    if not narrative:
+    outcome = await weave_act1_framing(evidence, llm_callable)
+    if not outcome.narrative:
         return Act1Result(
             narrative="",
             status="unavailable",
             degraded={
                 "act1_framing": (
-                    "Cadrage indisponible — le LLM n'a rien produit (fail-loud, "
-                    "#1108)."
+                    f"Cadrage indisponible — {outcome.failure} (fail-loud, #1108)."
                 )
             },
         )
+    narrative = outcome.narrative
 
     gate = ReadabilityGate()
     verdict = gate.check_body(narrative)

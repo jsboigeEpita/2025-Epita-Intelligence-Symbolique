@@ -617,19 +617,45 @@ class TestPrivacy:
 
 
 class TestWeaveFailLoud:
-    def test_llm_error_returns_empty(self):
+    def test_llm_error_returns_empty_with_its_cause(self):
         ev = build_act2_evidence(_rich_state())
         out = asyncio.get_event_loop().run_until_complete(
             weave_act2_narrative(ev, _raising_llm(RuntimeError("boom")))  # type: ignore[arg-type]
         )
-        assert out == ""
+        assert out.narrative == ""
+        assert "RuntimeError" in out.failure
 
-    def test_llm_empty_returns_empty(self):
+    def test_llm_empty_returns_empty_as_mute(self):
         ev = build_act2_evidence(_rich_state())
         out = asyncio.get_event_loop().run_until_complete(
             weave_act2_narrative(ev, _stub_llm(""))  # type: ignore[arg-type]
         )
-        assert out == ""
+        assert out.narrative == ""
+        assert out.failure == "le LLM n'a rien produit"
+
+    def test_raised_call_is_not_recorded_as_mute(self):
+        """#2345 — a call that raised is not « le LLM n'a rien produit ».
+
+        Both paths stay fail-loud (empty narrative, ``unavailable``); only the
+        recorded motif differs, and it names the exception type, never its
+        message (which can quote the prompt or a credential).
+        """
+        run = asyncio.get_event_loop().run_until_complete
+        raised = run(
+            build_act2_narrative(
+                _rich_state(),
+                llm_callable=_raising_llm(TimeoutError("sk-SENTINEL-2345")),  # type: ignore[arg-type]
+            )
+        )
+        mute = run(build_act2_narrative(_rich_state(), llm_callable=_stub_llm("")))  # type: ignore[arg-type]
+        assert raised.status == mute.status == "unavailable"
+        assert raised.narrative == mute.narrative == ""
+        assert mute.degraded["act2_narrative"] == (
+            "Récit dialectique indisponible — le LLM n'a rien produit (fail-loud, #1108)."
+        )
+        assert "TimeoutError" in raised.degraded["act2_narrative"]
+        assert "n'a rien produit" not in raised.degraded["act2_narrative"]
+        assert "sk-SENTINEL-2345" not in raised.degraded["act2_narrative"]
 
 
 # ============================================================================

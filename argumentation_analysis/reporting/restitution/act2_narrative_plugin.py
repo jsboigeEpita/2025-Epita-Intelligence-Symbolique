@@ -33,7 +33,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from .dung_reader import (  # #1908: one shared meaning for act2 and act3
     ACCEPTED_MEANS,
@@ -53,6 +53,7 @@ from .native_dung import (  # #1912: single shared decoder — see native_dung.p
 from .fr_accord import accord
 from .formal_derivation import extract_tested_content
 from .global_projection import GlobalFinding, project_global_findings
+from .llm_weaving import LlmCallable, WeaveOutcome, weave
 from .specialist_roles import (
     ROLE_LABELS,
     ROLE_ORDER,
@@ -77,9 +78,6 @@ _KIND_READABLE = {
     "convergence": "convergence inter-axes",
     "gate": "gate de synthèse",
 }
-
-# An async LLM callable: prompt in, completion text out (FB-29/38 injectable).
-LlmCallable = Callable[[str], Awaitable[str]]
 
 # Truncation caps for corpus-derived fields entering the prompt (privacy +
 # prompt-budget discipline). The LLM is told to paraphrase, not echo.
@@ -1495,22 +1493,15 @@ def build_act2_prompt(evidence: Act2Evidence) -> str:
 
 async def weave_act2_narrative(
     evidence: Act2Evidence, llm_callable: LlmCallable
-) -> str:
+) -> WeaveOutcome:
     """Conduct the Acte II narrative via the LLM (fail-loud, #1108).
 
-    Returns the LLM-produced markdown, or an empty string if the LLM produced
-    nothing (the caller records the explicit ``unavailable`` status). No
-    template fallback — anti-pendule #1019/#369.
+    The outcome carries the LLM-produced markdown, or the observed reason there
+    is none — the call raised, or the LLM produced nothing (#2345); the caller
+    records it with the explicit ``unavailable`` status. No template fallback —
+    anti-pendule #1019/#369.
     """
-    prompt = build_act2_prompt(evidence)
-    try:
-        raw = await llm_callable(prompt)
-    except Exception as exc:  # noqa: BLE001 — surface, don't fabricate
-        logger.warning("Acte II LLM weaving failed (fail-loud): %s", exc)
-        return ""
-    if not raw:
-        return ""
-    return str(raw).strip()
+    return await weave(build_act2_prompt(evidence), llm_callable, "Acte II")
 
 
 # --- orchestrator ------------------------------------------------------------
@@ -1555,18 +1546,19 @@ async def build_act2_narrative(
             },
         )
 
-    narrative = await weave_act2_narrative(evidence, llm_callable)
-    if not narrative:
+    outcome = await weave_act2_narrative(evidence, llm_callable)
+    if not outcome.narrative:
         return Act2Result(
             narrative="",
             status="unavailable",
             degraded={
                 "act2_narrative": (
-                    "Récit dialectique indisponible — le LLM n'a rien produit "
+                    f"Récit dialectique indisponible — {outcome.failure} "
                     "(fail-loud, #1108)."
                 )
             },
         )
+    narrative = outcome.narrative
 
     # §4 self-check (honest, never grades on a curve).
     gate = ReadabilityGate()

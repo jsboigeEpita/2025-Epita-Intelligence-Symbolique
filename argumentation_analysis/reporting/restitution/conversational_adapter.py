@@ -38,7 +38,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, Optional
 
-from .act1_framing_plugin import LlmCallable, build_act1_framing
+from .act1_framing_plugin import build_act1_framing
+from .llm_weaving import LlmCallable
 from .act2_narrative_plugin import build_act2_narrative
 from .act3_conclusion_plugin import build_act3_conclusion
 from .pipeline_adapter import render_spectacular_restitution
