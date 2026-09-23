@@ -314,6 +314,13 @@ class UnifiedAnalysisPipeline:
             analysis_result = await agent.analyze_text(
                 selected_text(text, 1000, "analysis_informal")
             )  # Limite pour performance
+            # #2485 : une analyse échouée n'est pas un résultat authentique. Elle
+            # passe par le chemin d'échec du pipeline : retry, puis fallback
+            # étiqueté, ou statut "error" avec sa cause.
+            if analysis_result.get("error"):
+                raise RuntimeError(
+                    f"Analyse informelle en échec: {analysis_result['error']}"
+                )
 
             return {
                 "mode": mode.value,
