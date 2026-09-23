@@ -121,9 +121,15 @@ class TestValidateFolWithSignature:
     def _make_translator(self):
         return NLToLogicTranslator(logic_type="fol")
 
-    @patch("argumentation_analysis.services.nl_to_logic.jpype", create=True)
-    def test_signature_built_with_sorts_and_constants(self, mock_jpype):
-        """Signature is built with sorts, constants, and predicates."""
+    @patch("jpype.JClass")
+    def test_signature_built_with_sorts_and_constants(self, mock_jclass):
+        """Signature is built with sorts, constants, and predicates.
+
+        #2375: the SUT imports jpype LOCALLY inside
+        ``_validate_fol_with_signature``, so the patch must live on the real
+        module's attribute — a created attribute on ``nl_to_logic`` was never
+        read (theater, proven by execution).
+        """
         translator = self._make_translator()
 
         # Mock JPype classes
@@ -134,7 +140,7 @@ class TestValidateFolWithSignature:
         mock_parser = MagicMock()
         mock_arraylist = MagicMock()
 
-        mock_jpype.JClass.side_effect = lambda name: {
+        mock_jclass.side_effect = lambda name: {
             "org.tweetyproject.logics.fol.syntax.FolSignature": lambda: mock_sig,
             "org.tweetyproject.logics.commons.syntax.Sort": lambda s: mock_sort,
             "org.tweetyproject.logics.commons.syntax.Constant": lambda s, sort: mock_constant,
@@ -173,8 +179,13 @@ class TestValidateFolWithSignature:
         # Verify parse_fol_formula was called for each formula with custom_parser
         assert mock_bridge.fol_handler.parse_fol_formula.call_count == 3
 
-    @patch("argumentation_analysis.services.nl_to_logic.jpype", create=True)
-    def test_undeclared_constants_auto_discovered(self, mock_jpype):
+        # #2375 anti-theater witness: the mock must be CONSULTED by the SUT.
+        assert (
+            mock_jclass.called
+        ), "theater: the patch is not read by the code under test"
+
+    @patch("jpype.JClass")
+    def test_undeclared_constants_auto_discovered(self, mock_jclass):
         """Constants found in formulas but not in metadata are auto-added."""
         translator = self._make_translator()
 
@@ -185,7 +196,7 @@ class TestValidateFolWithSignature:
         mock_parser = MagicMock()
         mock_arraylist = MagicMock()
 
-        mock_jpype.JClass.side_effect = lambda name: {
+        mock_jclass.side_effect = lambda name: {
             "org.tweetyproject.logics.fol.syntax.FolSignature": lambda: mock_sig,
             "org.tweetyproject.logics.commons.syntax.Sort": lambda s: mock_sort,
             "org.tweetyproject.logics.commons.syntax.Constant": lambda s, sort: mock_constant,
@@ -214,8 +225,8 @@ class TestValidateFolWithSignature:
         assert is_valid is True
         # plato should have been auto-discovered and added
 
-    @patch("argumentation_analysis.services.nl_to_logic.jpype", create=True)
-    def test_parse_error_returns_invalid(self, mock_jpype):
+    @patch("jpype.JClass")
+    def test_parse_error_returns_invalid(self, mock_jclass):
         """Parse errors are collected and returned as invalid."""
         translator = self._make_translator()
 
@@ -226,7 +237,7 @@ class TestValidateFolWithSignature:
         mock_parser = MagicMock()
         mock_arraylist = MagicMock()
 
-        mock_jpype.JClass.side_effect = lambda name: {
+        mock_jclass.side_effect = lambda name: {
             "org.tweetyproject.logics.fol.syntax.FolSignature": lambda: mock_sig,
             "org.tweetyproject.logics.commons.syntax.Sort": lambda s: mock_sort,
             "org.tweetyproject.logics.commons.syntax.Constant": lambda s, sort: mock_constant,
@@ -235,7 +246,6 @@ class TestValidateFolWithSignature:
             "java.util.ArrayList": lambda: mock_arraylist,
             "java.lang.String": lambda s: s,
         }[name]
-        mock_jpype.JException = Exception
 
         mock_bridge = MagicMock()
         mock_bridge.fol_handler.parse_fol_formula.side_effect = ValueError(
