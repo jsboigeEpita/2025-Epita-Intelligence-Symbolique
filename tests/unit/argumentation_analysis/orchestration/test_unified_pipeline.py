@@ -922,7 +922,9 @@ class TestInvokeCallables:
             return_value=mock_evaluator,
         ):
             result = await _invoke_quality_evaluator("Test arg", {})
-        mock_evaluator.evaluate.assert_called_once_with("Test arg")
+        # #2403 — la phase déclare le niveau de contexte ; sur le chemin
+        # texte-entier, None laisse l'évaluateur inférer (comme avant).
+        mock_evaluator.evaluate.assert_called_once_with("Test arg", context_level=None)
         assert result.pop("agentic_wiring")["mode"] == "degraded_no_route"
         assert result == {"note_finale": 7.5, "clarity": 8.0}
 
