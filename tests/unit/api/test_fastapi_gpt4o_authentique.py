@@ -38,6 +38,7 @@ def client():
 class TestAPIFastAPIAuthentique:
     """Tests unitaires pour l'API FastAPI avec vérifications authentiques."""
 
+    @pytest.mark.requires_api  # #2411: the assertion's subject IS the ambient key
     def test_01_environment_setup(self):
         """Test 1: Vérification de la configuration environnement."""
         api_key = os.getenv("OPENAI_API_KEY")
