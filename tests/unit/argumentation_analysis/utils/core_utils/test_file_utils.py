@@ -10,6 +10,7 @@ Tests unitaires pour les utilitaires de fichiers de project_core.
 import pytest
 from pathlib import Path
 import json
+import logging
 import shutil  # Ajouté pour archive_file
 
 # Fonctions à tester
@@ -288,6 +289,10 @@ def test_load_json_file_decode_error(tmp_path, caplog):
 
 def test_load_json_file_double_encoded_string(tmp_path, sample_json_list_data, caplog):
     """Teste le chargement d'un JSON qui est une chaîne doublement encodée."""
+    # Le message attendu est émis en INFO : le demander explicitement. Ce test
+    # passait grâce au `logging.basicConfig(level=INFO)` que l'ancien
+    # `system_utils` exécutait à l'import du paquet (retiré, #2345).
+    caplog.set_level(logging.INFO, logger="App.ProjectCore.FileLoaders")
     file_path = tmp_path / "double_encoded.json"
     # Simuler un JSON qui est une chaîne contenant un autre JSON
     double_encoded_content = json.dumps(json.dumps(sample_json_list_data))

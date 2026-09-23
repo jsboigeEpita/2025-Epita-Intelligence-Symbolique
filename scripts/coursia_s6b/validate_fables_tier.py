@@ -70,8 +70,10 @@ S6B_BLOB_NAME = "fables_tier.json.gz.enc"
 S6B_BLOB_PATH = REPO_ROOT / "argumentation_analysis" / "data" / S6B_BLOB_NAME
 
 logger = logging.getLogger("coursia_s6b")
-# Do NOT attach a StreamHandler: root logger already configures one in
-# __main__. Attaching one here doubles every line.
+# Do NOT attach a StreamHandler: the root logger is configured in `__main__`
+# (bottom of this file). Attaching one here doubles every line. Until #2345 the
+# root handler actually came from an import side effect of `core.utils`
+# (`system_utils` ran `logging.basicConfig`), not from `__main__`.
 logger.setLevel(logging.INFO)
 logger.propagate = True
 
@@ -339,4 +341,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(module)s.%(funcName)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
     raise SystemExit(main())

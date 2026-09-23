@@ -19,6 +19,7 @@ def run_shell_command(
     shell_mode: bool = False,  # Par défaut, False pour la sécurité (si command est une liste)
     cwd: Optional[Path] = None,
     env: Optional[Dict[str, str]] = None,
+    timeout: Optional[float] = None,
 ) -> Tuple[int, str, str]:
     """
     Exécute une commande shell et loggue sa sortie.
@@ -36,6 +37,9 @@ def run_shell_command(
                            liste d'arguments lorsque c'est possible.
         cwd (Optional[Path]): Répertoire de travail pour l'exécution de la commande.
         env (Optional[Dict[str,str]]): Variables d'environnement à définir pour la commande.
+        timeout (Optional[float]): Délai maximal en secondes. ``None`` (défaut) : pas de
+                                   délai. À l'expiration, le processus est tué et le code
+                                   de retour est -9, avec la sortie capturée jusque-là.
 
     Returns:
         Tuple[int, str, str]: Un tuple contenant:
@@ -72,6 +76,7 @@ def run_shell_command(
             "shell": shell_mode,
             "cwd": str(cwd) if cwd else None,  # subprocess.run attend str pour cwd
             "env": env,
+            "timeout": timeout,
         }
         if text_output:  # encoding n'est pertinent que si text=True
             process_args["encoding"] = "utf-8"
@@ -110,6 +115,18 @@ def run_shell_command(
 
         return result.returncode, stdout_str, stderr_str
 
+    except subprocess.TimeoutExpired as e:
+        # Porté depuis l'ancien doublon `system_utils.run_shell_command` (#2345) :
+        # code -9, et la sortie capturée avant l'expiration est rendue.
+        # `TimeoutExpired.stdout/stderr` sont des bytes même quand text=True.
+        logger.error(f"❌ {description} a expiré après {timeout} secondes.")
+
+        def _partial(stream: Union[bytes, str, None]) -> str:
+            if isinstance(stream, bytes):
+                return stream.decode("utf-8", "replace").strip()
+            return (stream or "").strip()
+
+        return -9, _partial(e.stdout), _partial(e.stderr)
     except FileNotFoundError:
         logger.error(
             f"❌ Erreur lors de l'exécution de '{description}': Commande ou exécutable non trouvé."
