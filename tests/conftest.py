@@ -549,7 +549,11 @@ def _skip_storm_signal(session, exitstatus):
     if _cache(config).get("is_e2e_session", False) or _argv_decides_e2e_session(config):
         return
     jvm_reasons = _skip_storm_counter.jvm_signature_reasons()
-    shout, message = _storm_verdict(len(session.items), len(jvm_reasons))
+    # #2490: the count the session decided on. The xdist controller collects
+    # nothing itself, so ``session.items`` stays empty there, and xdist
+    # publishes the workers' count in ``session.testscollected``. Serially
+    # the two are equal.
+    shout, message = _storm_verdict(session.testscollected, len(jvm_reasons))
     if not shout:
         return
     # print, not logger: sessionfinish runs after per-test capture is gone,
