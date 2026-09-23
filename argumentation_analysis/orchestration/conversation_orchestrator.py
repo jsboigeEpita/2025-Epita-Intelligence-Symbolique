@@ -177,7 +177,8 @@ class AnalysisState:
         """Met à jour l'état avec résultats de logique modale."""
         self.propositions_found += result.get("propositions_count", 0)
         # #2447: ``None`` is "undetermined" (no solver decided) and stays None.
-        self.consistency_score = result.get("consistency", 0.0)
+        # #2456: so does an absent key; a default would be a score nobody computed.
+        self.consistency_score = result.get("consistency")
         self.score += result.get("logical_score", 0.0) * 0.3
         self.agent_results["modal"] = result
 

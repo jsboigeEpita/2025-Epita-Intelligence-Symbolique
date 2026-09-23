@@ -11,15 +11,19 @@ R652+#1471-era entry-points are wired here:
 - ``hierarchical_delegation`` -> ``run_hierarchical_analysis(..., mode="delegation")``
 - ``conversational``        -> ``run_conversational_analysis`` (wall-time-bounded)
 - ``conversation_deterministic`` -> ``ConversationOrchestrator(mode="demo")`` (no LLM)
+- ``conversation_real`` -> ``ConversationOrchestrator(mode="real")`` (same engine,
+  its informal and FOL agents, #2456)
 
 Three counts appear in this module and they denominate different things —
 do not "reconcile" them into one (R807):
 
 - **5 engines** — the list above: the distinct orchestration implementations.
-- **9 ``MODE_RUNNERS`` keys** — the ``--modes`` dispatch surface: the 5 engines
+- **10 ``MODE_RUNNERS`` keys** — the ``--modes`` dispatch surface: the 5 engines
   plus 2 pipeline workflow presets (``pipeline_light`` / ``pipeline_full``,
-  same engine, different DAG) plus 2 deprecated aliases (``hierarchical``,
-  ``pipeline``). ``default_modes()`` is this set minus the aliases — **7**.
+  same engine, different DAG) plus ``conversation_real`` (the
+  ``conversation_deterministic`` engine with real agents) plus 2 deprecated
+  aliases (``hierarchical``, ``pipeline``). ``default_modes()`` is this set
+  minus the aliases — **8**.
   Every default key is exactly the label its runner emits (#1747), so a label
   copied out of a report is a key that dispatches.
 - **N ``compute_depth_parity()`` rows** — the modes that have a *measurable*
@@ -830,6 +834,15 @@ def compute_depth_parity() -> List[DepthParityRow]:
             verdict_dimension="ConversationOrchestrator synthesis",
         )
     )
+    rows.append(
+        DepthParityRow(
+            mode="conversation_real",
+            depth_dimension="dialogue steps (real agents)",
+            depth_count=len(CONVERSATION_REAL_STEPS),
+            nature="dialogue-depth (real agents)",
+            verdict_dimension="informal agent + FOL agent (Tweety solver)",
+        )
+    )
     return rows
 
 
@@ -1312,6 +1325,176 @@ async def run_conversation_deterministic_mode(
     )
 
 
+# #2456: nothing tracked built ``ConversationOrchestrator(mode="real")``, so the
+# real agents it wires were never run. This key is that caller, on the
+# instrument that compares modes (#1735). It is the same engine as
+# ``conversation_deterministic``, with the real agents in place of
+# ``SimulatedAgent``.
+CONVERSATION_REAL_STEPS = ("informal", "fol_logic")
+
+
+def _conversation_real_kernel():
+    """A kernel carrying the configured chat service, built as the
+    ``conversational`` mode builds its own (``force_authentic``: under pytest
+    ``create_llm_service`` otherwise returns a mock)."""
+    import semantic_kernel as sk
+
+    from argumentation_analysis.core.llm_service import (
+        create_llm_service,
+        resolve_active_model_id,
+    )
+
+    kernel = sk.Kernel()
+    kernel.add_service(
+        create_llm_service(
+            service_id="conversation_real_llm",
+            model_id=resolve_active_model_id(),
+            force_authentic=True,
+        )
+    )
+    return kernel
+
+
+async def run_conversation_real_mode(
+    text: str,
+    corpus_id: str,
+    max_wall_seconds: Optional[float] = None,
+    kernel_factory: Optional[Callable[[], Any]] = None,
+) -> ModeResult:
+    """Run ConversationOrchestrator in real mode: its informal agent, then its
+    FOL agent (LLM formulas checked by a Tweety solver). #2456.
+
+    ``ConversationOrchestrator`` falls back to demo mode when its kernel has
+    no LLM service. That would put ``SimulatedAgent`` output under this label,
+    so an orchestrator that is not in ``real`` mode is a failed run, never a
+    result.
+
+    A step counts as completed when it left a result. The FOL step counts even
+    when no solver decided: its consistency is then ``None``, carried as such
+    in ``extra_metrics``. The informal step does not count when its analysis
+    failed and found nothing, and ``fallacy_count`` is then ``None``: a ``0``
+    would read as "no fallacy in the text".
+
+    On a budget breach the steps that finished before it are read off the
+    orchestrator's state, which each step updates as it ends.
+    """
+    from argumentation_analysis.orchestration.conversation_orchestrator import (
+        ConversationOrchestrator,
+    )
+
+    start = time.time()
+    scope = MODE_SCOPE_DESCRIPTIONS["conversation_real"]
+    try:
+        kernel = (kernel_factory or _conversation_real_kernel)()
+        orch = ConversationOrchestrator(mode="real", kernel=kernel)
+    except Exception as exc:
+        return ModeResult(
+            mode="conversation_real",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=False,
+            error=f"setup failed: {exc}"[:200],
+            duration_seconds=round(time.time() - start, 2),
+            scope_of_work=scope,
+        )
+    if orch.mode != "real":
+        return ModeResult(
+            mode="conversation_real",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=False,
+            error=(
+                f"ConversationOrchestrator fell back to {orch.mode!r} mode: "
+                "its kernel has no LLM service"
+            ),
+            duration_seconds=round(time.time() - start, 2),
+            scope_of_work=scope,
+        )
+
+    timed_out = False
+    coro = orch.run_orchestration_async(text)
+    try:
+        if max_wall_seconds is not None:
+            await asyncio.wait_for(coro, timeout=max_wall_seconds)
+        else:
+            await coro
+    except asyncio.TimeoutError:
+        timed_out = True
+    except Exception as exc:
+        return ModeResult(
+            mode="conversation_real",
+            corpus_id=corpus_id,
+            success=False,
+            terminates=False,
+            error=str(exc)[:200],
+            duration_seconds=round(time.time() - start, 2),
+            scope_of_work=scope,
+        )
+    duration = time.time() - start
+
+    state = orch.state
+    conv_state = orch.get_conversation_state()
+    setup_failures = conv_state["real_agent_setup_failures"]
+    results = state.agent_results
+    errors = list(state.fallacy_analysis_errors)
+    informal_decided = "informal" in results and (
+        state.fallacies_detected > 0 or not errors
+    )
+    completed = [
+        step
+        for step in CONVERSATION_REAL_STEPS
+        if (step == "informal" and informal_decided)
+        or (step == "fol_logic" and step in results)
+    ]
+    missing = []
+    for step in CONVERSATION_REAL_STEPS:
+        if step in completed:
+            continue
+        if step in setup_failures:
+            missing.append(f"{step}: {setup_failures[step]}")
+        elif step == "informal" and errors:
+            missing.append(f"informal: analysis failed: {errors[0]}")
+        else:
+            missing.append(f"{step}: no result")
+
+    fol = results.get("fol_logic") or {}
+    fol_raw = fol.get("raw_result") or {}
+    if timed_out:
+        error = f"Wall-clock budget (>={max_wall_seconds:g}s)"
+    elif missing:
+        error = "; ".join(missing)[:200]
+    else:
+        error = None
+    return ModeResult(
+        mode="conversation_real",
+        corpus_id=corpus_id,
+        success=not timed_out and not missing,
+        terminates=True,
+        terminated_by_budget=timed_out,
+        error=error,
+        duration_seconds=round(duration, 2),
+        # Same as conversation_deterministic: this orchestrator exposes no
+        # UnifiedAnalysisState, so there is no fill rate to report.
+        state_fill_rate=None,
+        fallacy_count=state.fallacies_detected if informal_decided else None,
+        phases_completed=len(completed),
+        phases_total=len(CONVERSATION_REAL_STEPS),
+        scope_of_work=scope,
+        extra_metrics={
+            "steps_completed": completed,
+            "real_agent_setup_failures": setup_failures,
+            "fallacy_analysis_errors": errors,
+            # None = no solver decided (#2447), never a default score.
+            "consistency": state.consistency_score,
+            "consistency_message": fol.get("consistency_message"),
+            "formulas_count": fol.get("formulas_count"),
+            "formulas_source": fol_raw.get("formulas_source"),
+            "messages_count": conv_state["messages_count"],
+            "tools_count": conv_state["tools_count"],
+        },
+    )
+
+
 async def run_hierarchical_bridge_mode(
     text: str, corpus_id: str, max_wall_seconds: Optional[float] = None
 ) -> ModeResult:
@@ -1735,6 +1918,7 @@ MODE_RUNNERS: Dict[str, Callable[..., Awaitable[ModeResult]]] = {
     ),
     "conversational": run_conversational_mode,
     "conversation_deterministic": run_conversation_deterministic_mode,
+    "conversation_real": run_conversation_real_mode,
     "hierarchical_bridge": run_hierarchical_bridge_mode,
     "hierarchical_delegation": run_hierarchical_delegation_mode,
     # Backward-compat aliases (see deprecation note above).
@@ -1778,6 +1962,9 @@ MODE_SCOPE_DESCRIPTIONS = {
     ),
     "conversation_deterministic": (
         "ConversationOrchestrator(mode=demo, SimulatedAgent, no LLM)"
+    ),
+    "conversation_real": (
+        "ConversationOrchestrator(mode=real, informal + FOL agents, LLM + Tweety)"
     ),
     "hierarchical_bridge": (
         "Strategic -> objectives_to_workflow -> WorkflowExecutor " "(Lego/DAG, 4 axes)"
