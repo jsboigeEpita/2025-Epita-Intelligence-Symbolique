@@ -503,6 +503,34 @@ def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
     )
 
 
+def _in_jvm_entailment(
+    reasoner, java_belief_set, query_formula
+) -> "tuple[bool | None, str]":
+    """Whether ``java_belief_set`` entails ``query_formula``, read through
+    ``_in_jvm_consistency`` (#2502).
+
+    Asked directly, ``SimpleFolReasoner`` answers over the same split, closed
+    domain as its consistency check (#2494), so "entailed" was not sound:
+    ``Man(s)`` entailed ``forall X: (Man(X))``. Entailment is the
+    inconsistency of the set plus the query's negation, and that check already
+    says what its domain decides: a model of it is a real countermodel ("not
+    entailed"), an exact inconsistency is "entailed", anything else reads
+    ``None``.
+    """
+    syntax = "org.tweetyproject.logics.fol.syntax."
+    refutation = jpype.JClass(syntax + "FolBeliefSet")()
+    for formula in java_belief_set:
+        refutation.add(formula)
+    refutation.add(jpype.JClass(syntax + "Negation")(query_formula))
+    consistent, note = _in_jvm_consistency(reasoner, refutation)
+    # The verdict word ends the message, as it did before (#2447 readers).
+    if consistent is True:
+        return False, f"the set and the query's negation are {note}, so not entailed"
+    if consistent is False:
+        return True, f"the set and the query's negation are {note}, so entailed"
+    return None, f"{note}; no verdict on entailment"
+
+
 class FOLHandler:
     """
     Handles First-Order Logic (FOL) operations using either TweetyProject or Prover9,
@@ -1021,8 +1049,9 @@ class FOLHandler:
 
         When the external solver is unavailable (binary absent, RuntimeError),
         falls back to the in-JVM Tweety reasoner.  Returns a tuple
-        ``(entailed: bool, solver_fallback: bool)`` so callers can track
-        degradation.
+        ``(entailed: bool | None, solver_fallback: bool)`` so callers can track
+        degradation. The in-JVM reasoner answers ``None`` when its domain does
+        not decide the query (#2502).
         """
         logger.debug(f"Performing FOL query with solver: {settings.solver.value}")
 
@@ -1101,9 +1130,12 @@ class FOLHandler:
                 f"FOL query failed. Details: {getattr(e, 'stderr', str(e))}"
             ) from e
 
-    def _fol_query_with_tweety(self, belief_set, query_formula_str: str) -> bool:
+    def _fol_query_with_tweety(
+        self, belief_set, query_formula_str: str
+    ) -> "bool | None":
         """
-        Logique d'interrogation via Tweety/JPype.
+        Logique d'interrogation via Tweety/JPype. ``None`` when the in-JVM
+        reasoner's domain does not decide the query (#2502).
         """
         logger.debug(f"Performing FOL query via Tweety. Query: '{query_formula_str}'")
         if not self._initializer_instance:
@@ -1113,8 +1145,9 @@ class FOLHandler:
         try:
             query_formula = self._parse_query(belief_set, query_formula_str)
             reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
-            entails = reasoner.query(belief_set, query_formula)
-            return bool(entails)
+            entails, note = _in_jvm_entailment(reasoner, belief_set, query_formula)
+            logger.info(f"FOL query '{query_formula_str}' (in-JVM): {note}")
+            return entails
         except Exception as e:
             logger.error(f"Error during Tweety FOL query: {e}", exc_info=True)
             raise
@@ -1539,9 +1572,11 @@ class FOLHandler:
             query_formula = self._parse_query(java_belief_set, query_str)
 
             reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
-            entailed = bool(reasoner.query(java_belief_set, query_formula))
-            msg = f"Query '{query_str}': {'entailed' if entailed else 'not entailed'}"
-            return entailed, msg
+            # #2502: the in-JVM domain is read for what it decides.
+            entailed, note = _in_jvm_entailment(
+                reasoner, java_belief_set, query_formula
+            )
+            return entailed, f"Query '{query_str}': {note}"
 
         except Exception as e:
             error_msg = str(e)

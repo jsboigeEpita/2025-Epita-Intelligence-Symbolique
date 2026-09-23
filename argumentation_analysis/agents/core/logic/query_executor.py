@@ -169,24 +169,23 @@ class QueryExecutor:
             #     self._logger.error(f"Invalid first-order query: {validation_msg}")
             #     return None, f"FUNC_ERROR: Invalid query: {validation_msg}"
 
-            # Exécuter la requête
-            result = self._tweety_bridge.fol_handler.fol_query(belief_set, query)
-
-            # Analyser le résultat
-            if isinstance(result, bool):
-                if result:
-                    return (
-                        True,
-                        f"Tweety Result: FOL Query '{query}' is ACCEPTED (True).",
-                    )
-                else:
-                    return (
-                        False,
-                        f"Tweety Result: FOL Query '{query}' is REJECTED (False).",
-                    )
-
-            self._logger.error(f"Erreur du handler FOL: {result}")
-            return None, result
+            # #2502: ``fol_query`` takes a Java belief set and returns
+            # ``(verdict, fallback)``. This reader handed it the Python wrapper
+            # and tested the tuple for ``bool``, so it never returned a verdict.
+            # ``execute_fol_query`` takes either form, and its ``None`` says why
+            # nothing was decided.
+            java_object = getattr(belief_set, "java_object", None)
+            verdict, message = self._tweety_bridge.fol_handler.execute_fol_query(
+                java_object if java_object is not None else belief_set.content, query
+            )
+            if verdict is None:
+                self._logger.warning(f"Requête FOL sans verdict: {message}")
+                return None, message
+            outcome = "ACCEPTED (True)" if verdict else "REJECTED (False)"
+            return (
+                verdict,
+                f"Tweety Result: FOL Query '{query}' is {outcome}. {message}",
+            )
 
         except Exception as e:
             error_msg = (
