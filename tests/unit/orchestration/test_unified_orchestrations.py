@@ -31,12 +31,13 @@ try:
     from argumentation_analysis.orchestration.conversation_orchestrator import (
         ConversationOrchestrator,
     )
+
     # RealLLMOrchestrator removed (#885) — superseded by UnifiedPipeline
     from argumentation_analysis.utils.tweety_error_analyzer import (
         TweetyErrorAnalyzer,
         TweetyErrorFeedback,
     )
-    from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import (
+    from argumentation_analysis.agents.core.logic.fol_logic_agent import (
         FOLLogicAgent,
     )
 
