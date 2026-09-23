@@ -121,7 +121,9 @@ class TestQualityFallacyCrossReference:
     def mock_evaluator(self):
         """Mock ArgumentQualityEvaluator that returns a known score (fresh copy each call)."""
         mock = MagicMock()
-        mock.evaluate.side_effect = lambda text: {
+        # #2403 — la phase déclare le niveau de contexte (None = CLAIM,
+        # inféré par l'évaluateur) : le mock porte la même signature.
+        mock.evaluate.side_effect = lambda text, context_level=None: {
             "note_finale": 8.0,
             "scores_par_vertu": {"clarity": 8, "coherence": 8},
         }

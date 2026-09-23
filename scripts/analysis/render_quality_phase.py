@@ -165,11 +165,12 @@ def _unit_scores(output: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
 def unit_shape(units: List[Any]) -> Dict[str, Dict[str, int]]:
     """Word counts of what each unit carries — counts only, never the text.
 
-    The quality phase judges ``arguments[i]["text"]``. Whether a virtue is
-    even applicable is read from that text's length (#1907), so the shape of
-    the unit decides what a render can show; two renders whose units differ
-    in shape are not comparable on the structural virtues. ``source_quote``
-    is what the extractor says it quoted from the document.
+    ``arguments[i]["text"]`` is the extractor's paraphrase; ``source_quote``
+    is what it says it quoted from the document. #2403: the quality phase
+    judges the claim PLUS the located passage, so the paraphrase's length no
+    longer decides which virtues exist — but the shape still says what the
+    extraction carried, and a quote too short to locate leaves the unit at
+    CLAIM (counted in the phase's ``passage_basis``, printed per arm).
     """
     shape: Dict[str, Dict[str, int]] = {}
     for i, unit in enumerate(units):
@@ -319,9 +320,18 @@ def render_markdown(
     for arm, data in arms.items():
         wiring = data["output"].get("agentic_wiring") or {}
         degraded = wiring.get("units_degraded") or {}
+        basis = data["output"].get("passage_basis") or {}
+        with_passage = basis.get("claim_and_passage")
+        basis_note = (
+            f", claim+passage {with_passage}"
+            f"/{int(with_passage) + int(basis.get('claim_only', 0))}"
+            if with_passage is not None
+            else ""
+        )
         lines.append(
             f"- **arm `{arm}`**: mode `{wiring.get('mode')}`, model "
-            f"`{wiring.get('model')}`, {wiring.get('units_evaluated')} units, "
+            f"`{wiring.get('model')}`, {wiring.get('units_evaluated')} units"
+            f"{basis_note}, "
             f"{len(degraded)} degraded, {data.get('llm_requests')} LLM requests, "
             f"{_fmt(data.get('wall_seconds'))} s"
         )

@@ -510,8 +510,13 @@ async def _invoke_quality_evaluator(
     Evaluates individual arguments from upstream fact_extraction rather than
     the entire raw text, producing per-argument quality scores.
     """
+    from argumentation_analysis.agents.core.quality.passage import (
+        locate_quote,
+        sentence_passage,
+    )
     from argumentation_analysis.agents.core.quality.quality_evaluator import (
         ArgumentQualityEvaluator,
+        ContextLevel,
     )
 
     # #2331 — the construction site of the quality instrument. The evaluator
@@ -591,15 +596,25 @@ async def _invoke_quality_evaluator(
                 "a wired callable cannot upgrade the detectors."
             )
 
-    async def _evaluate_unit(text: str) -> Tuple[Dict[str, Any], Optional[str]]:
+    async def _evaluate_unit(
+        text: str, context_level: Optional[ContextLevel] = None
+    ) -> Tuple[Dict[str, Any], Optional[str]]:
         """Score one unit; return ``(result, degraded_reason)``.
 
         Shared by the per-argument units and the whole-text fallback (#2444:
         the fallback used to call the evaluator bare, so it neither degraded
-        by name nor said which layer scored).
+        by name nor said which layer scored). ``context_level`` est le niveau
+        DÉCLARÉ (#2403) : ``None`` laisse l'évaluateur l'inférer de la
+        longueur — le même argument est passé au re-jeu dégradé, sinon la
+        reprise lexical jugerait un autre objet que l'appel initial.
         """
         try:
-            return await asyncio.to_thread(evaluator.evaluate, text), None
+            return (
+                await asyncio.to_thread(
+                    evaluator.evaluate, text, context_level=context_level
+                ),
+                None,
+            )
         except Exception as exc:
             if _agentic_error_cls is not None and isinstance(exc, _agentic_error_cls):
                 # #2331 — the per-unit named degraded path: the agentic
@@ -610,7 +625,10 @@ async def _invoke_quality_evaluator(
                 # exception (fail-loud deps gate included) propagates.
                 reason = f"{type(exc).__name__}: {str(exc)[:160]}"
                 result = await asyncio.to_thread(
-                    evaluator.evaluate, text, agentic_llm=None
+                    evaluator.evaluate,
+                    text,
+                    agentic_llm=None,
+                    context_level=context_level,
                 )
                 return result, reason
             raise
@@ -656,9 +674,29 @@ async def _invoke_quality_evaluator(
             arg_id = f"arg_{i+1}"
             if len(arg_text) < 10:
                 return i, arg_id, None, None
+            # #2403 — l'unité jugée est la claim PLUS le passage source où
+            # elle se situe, localisé via la citation de l'extracteur. Le
+            # niveau est DÉCLARÉ (LOCAL_CONTEXT), pas deviné de la longueur :
+            # juger la paraphrase seule faisait exister les 7 vertus
+            # structurelles selon la verbosité de la session d'extraction.
+            # Citation non localisable → l'unité reste CLAIM (niveau inféré,
+            # comportement d'avant), et le rendement le compte.
+            quote = arg.get("source_quote", "") if isinstance(arg, dict) else ""
+            span = locate_quote(input_text, str(quote or ""))
+            if span is not None:
+                passage = sentence_passage(input_text, span[0], span[1])
+                judged = f"{arg_text}\n{passage}" if passage else arg_text
+                declared_level = ContextLevel.LOCAL_CONTEXT if passage else None
+            else:
+                judged = arg_text
+                declared_level = None
             async with _unit_sem:
-                result, reason = await _evaluate_unit(arg_text)
-                return i, arg_id, result, reason
+                result, reason = await _evaluate_unit(judged, declared_level)
+            if isinstance(result, dict):
+                result["evaluated_on"] = (
+                    "claim+passage" if span is not None and passage else "claim"
+                )
+            return i, arg_id, result, reason
 
         outcomes = await asyncio.gather(
             *(_eval_unit(i, a) for i, a in enumerate(raw_args[:8]))
@@ -724,6 +762,23 @@ async def _invoke_quality_evaluator(
                 "note_finale": aggregate_score,
                 "scores_par_vertu": _aggregate_virtue_scores(results),
                 "agentic_wiring": _agentic_wiring(len(results), degraded_units),
+                # #2403 — combien d'unités ont été jugées sur claim+passage
+                # (niveau LOCAL_CONTEXT déclaré) vs paraphrase seule. Un
+                # rendu où tout est « claim_only » dit que la localisation
+                # a échoué, pas que le document n'a pas de passages.
+                "passage_basis": {
+                    "claim_and_passage": sum(
+                        1
+                        for r in results.values()
+                        if isinstance(r, dict)
+                        and r.get("evaluated_on") == "claim+passage"
+                    ),
+                    "claim_only": sum(
+                        1
+                        for r in results.values()
+                        if isinstance(r, dict) and r.get("evaluated_on") == "claim"
+                    ),
+                },
             }
             if detected_fallacies:
                 output["fallacy_cross_reference"] = {
