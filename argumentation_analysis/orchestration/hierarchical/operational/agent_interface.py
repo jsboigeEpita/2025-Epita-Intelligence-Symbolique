@@ -370,56 +370,47 @@ class OperationalAgent(ABC):
         results: List[Dict[str, Any]],
         metrics: Dict[str, Any],
         issues: List[Dict[str, Any]],
+        task_id_to_report: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Formate le résultat d'une tâche pour le niveau tactique.
 
+        Seule définition de l'arbre (#2345). Les quatre adaptateurs en
+        portaient chacun une copie, qui avait dérivé de celle-ci : les copies
+        vidaient la clé ``type`` des résultats de l'appelant (``pop``) et
+        rangeaient un résultat sans type sous ``"unknown"``, là où cette
+        version le jetait sans trace. Ce sont les copies qui tournaient en
+        production : leur comportement est conservé, sans la mutation.
+
         Args:
             task: La tâche traitée
-            results: Les résultats de l'analyse
+            results: Les résultats de l'analyse, chacun sous sa clé ``type``
             metrics: Les métriques d'exécution
             issues: Les problèmes rencontrés
+            task_id_to_report: Identifiant rapporté à la place de ``task["id"]``
 
         Returns:
             Le résultat formaté
         """
+        final_task_id = task_id_to_report or task.get("id")
+
+        # Regrouper par type sur des copies : les résultats de l'appelant
+        # restent intacts.
+        outputs: Dict[Any, List[Dict[str, Any]]] = {}
+        for result in results:
+            result_copy = dict(result)
+            result_type = result_copy.pop("type", "unknown")
+            outputs.setdefault(result_type, []).append(result_copy)
+
         return {
-            "id": f"result-{task.get('id')}",
-            "task_id": task.get("id"),
+            "id": f"result-{final_task_id}",
+            "task_id": final_task_id,
             "tactical_task_id": task.get("tactical_task_id"),
             "status": "completed" if not issues else "completed_with_issues",
-            "outputs": self._format_outputs(results),
+            "outputs": outputs,
             "metrics": metrics,
             "issues": issues,
         }
-
-    def _format_outputs(self, results: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """
-        Formate les outputs pour le niveau tactique.
-
-        Args:
-            results: Les résultats de l'analyse
-
-        Returns:
-            Les outputs formatés
-        """
-        outputs = {}
-
-        # Regrouper les résultats par type
-        for result in results:
-            result_type = result.get("type")
-            if result_type:
-                if result_type not in outputs:
-                    outputs[result_type] = []
-
-                # Copier le résultat sans le type
-                result_copy = result.copy()
-                if "type" in result_copy:
-                    del result_copy["type"]
-
-                outputs[result_type].append(result_copy)
-
-        return outputs
 
     def _map_priority_to_enum(self, priority: str) -> MessagePriority:
         """

@@ -222,31 +222,3 @@ class ExtractAgentAdapter(OperationalAgent):
         self.kernel = None
         self.initialized = False
         return True
-
-    def format_result(
-        self,
-        task: Dict[str, Any],
-        results: List[Dict[str, Any]],
-        metrics: Dict[str, Any],
-        issues: List[Dict[str, Any]],
-        task_id_to_report: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        """Formate le résultat final dans la structure attendue."""
-        final_task_id = task_id_to_report or task.get("id")
-
-        outputs = {}
-        for res_item in results:
-            res_type = res_item.pop("type", "unknown")
-            if res_type not in outputs:
-                outputs[res_type] = []
-            outputs[res_type].append(res_item)
-
-        return {
-            "id": f"result-{final_task_id}",
-            "task_id": final_task_id,
-            "tactical_task_id": task.get("tactical_task_id"),
-            "status": "completed" if not issues else "completed_with_issues",
-            "outputs": outputs,
-            "metrics": metrics,
-            "issues": issues,
-        }
