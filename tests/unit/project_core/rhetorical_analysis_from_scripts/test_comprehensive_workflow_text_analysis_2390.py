@@ -91,11 +91,10 @@ class PromptCapturingChatCompletion(ChatCompletionClientBase):
         return self.rendered_prompts[-1]
 
 
-def _patch_seam(monkeypatch) -> PromptCapturingChatCompletion:
+def _patch_seam(
+    monkeypatch, service: PromptCapturingChatCompletion
+) -> PromptCapturingChatCompletion:
     kernel = sk.Kernel()
-    service = PromptCapturingChatCompletion(
-        ai_model_id="fake-model-2390", service_id=SERVICE_ID
-    )
     kernel.add_service(service)
     # raising=False : sur pristine le seam n'existe pas — le test doit
     # rougir en valeurs sur le défaut du processeur, pas sur un échec de
@@ -106,12 +105,50 @@ def _patch_seam(monkeypatch) -> PromptCapturingChatCompletion:
     return service
 
 
+def _capturing_service() -> PromptCapturingChatCompletion:
+    return PromptCapturingChatCompletion(
+        ai_model_id="fake-model-2390", service_id=SERVICE_ID
+    )
+
+
+class RaisingChatCompletion(ChatCompletionClientBase):
+    """Service factice dont CHAQUE appel lève (401 simulé, review #2481).
+
+    Zéro réseau : l'exception simule l'échec de transport/auth que le
+    processeur doit nommer au lieu de publier ``status: success``.
+    """
+
+    async def _inner_get_chat_message_contents(
+        self,
+        chat_history: ChatHistory,
+        settings: Any,
+    ) -> List[ChatMessageContent]:
+        raise PermissionError("401 (clé simulée refusée)")
+
+
+class GarbageChatCompletion(ChatCompletionClientBase):
+    """Service factice qui répond un non-JSON (review #2481, ligne 2)."""
+
+    async def _inner_get_chat_message_contents(
+        self,
+        chat_history: ChatHistory,
+        settings: Any,
+    ) -> List[ChatMessageContent]:
+        return [
+            ChatMessageContent(
+                role="assistant",
+                content="<ceci n'est pas du json>",
+                ai_model_id=self.ai_model_id,
+            )
+        ]
+
+
 async def test_analyze_text_content_succeeds_and_text_reaches_the_prompt(
     monkeypatch,
 ):
     """NÉ-ROUGE (en valeurs) : le status doit être success, le prompt rendu
     doit porter le texte analysé."""
-    service = _patch_seam(monkeypatch)
+    service = _patch_seam(monkeypatch, _capturing_service())
     engine = PipelineEngine(WorkflowConfig())
 
     result = await engine._analyze_text_content(FABRICATED_TEXT, WorkflowConfig())
@@ -132,12 +169,68 @@ async def test_performance_scenario_measures_instead_of_raising(monkeypatch):
     Sur pristine, ``MockLevel.MINIMAL`` (membre inexistant) lève
     ``AttributeError`` que l'``except ImportError`` ne rattrape pas.
     """
-    _patch_seam(monkeypatch)
+    _patch_seam(monkeypatch, _capturing_service())
     orchestrator = TestOrchestrator(WorkflowConfig())
 
     # Ne doit pas lever — l'échec éventuel de l'analyse serait nommé par le
     # scénario lui-même (RuntimeError avec l'erreur), pas un fantôme d'enum.
     await orchestrator._performance_text_analysis()
+
+
+async def test_raised_llm_failure_is_an_error_not_a_success(monkeypatch):
+    """NÉ-ROUGE (review #2481, ligne 1) : le service LÈVE → le processeur
+    doit rendre ``status == "error"`` et NOMMER l'échec.
+
+    L'agent remonte l'échec dans le champ ``error`` de premier niveau
+    (contrat #2485/#2500) ; le processeur ne peut plus le publier
+    ``success``.
+    """
+    _patch_seam(
+        monkeypatch,
+        RaisingChatCompletion(ai_model_id="fake-model-2390", service_id=SERVICE_ID),
+    )
+    engine = PipelineEngine(WorkflowConfig())
+
+    result = await engine._analyze_text_content(FABRICATED_TEXT, WorkflowConfig())
+
+    assert result["status"] == "error", (
+        "un appel LLM qui lève doit rendre status=error ; rendu : "
+        f"{result.get('status')} avec analysis={result.get('analysis')}"
+    )
+    assert result.get("error"), "l'échec doit être nommé dans le champ error"
+
+
+async def test_non_json_reply_is_an_error_not_a_success(monkeypatch):
+    """NÉ-ROUGE (review #2481, ligne 2) : réponse non-JSON → ``status ==
+    "error"``, jamais un succès avec un échec enfoui sous ``fallacies``."""
+    _patch_seam(
+        monkeypatch,
+        GarbageChatCompletion(ai_model_id="fake-model-2390", service_id=SERVICE_ID),
+    )
+    engine = PipelineEngine(WorkflowConfig())
+
+    result = await engine._analyze_text_content(FABRICATED_TEXT, WorkflowConfig())
+
+    assert result["status"] == "error", (
+        "une réponse non-JSON doit rendre status=error ; rendu : "
+        f"{result.get('status')} avec analysis={result.get('analysis')}"
+    )
+
+
+async def test_perf_scenario_raises_on_failed_analysis(monkeypatch):
+    """NÉ-ROUGE (review #2481, ligne 3) : le service lève → le scénario de
+    performance LÈVE ``RuntimeError`` (l'échec est nommé, pas avalé) —
+    sa docstring l'annonce, il doit le faire."""
+    import pytest
+
+    _patch_seam(
+        monkeypatch,
+        RaisingChatCompletion(ai_model_id="fake-model-2390", service_id=SERVICE_ID),
+    )
+    orchestrator = TestOrchestrator(WorkflowConfig())
+
+    with pytest.raises(RuntimeError):
+        await orchestrator._performance_text_analysis()
 
 
 def test_single_construction_path_in_the_module():

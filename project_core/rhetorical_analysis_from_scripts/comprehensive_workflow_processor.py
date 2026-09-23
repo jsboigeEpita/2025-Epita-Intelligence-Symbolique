@@ -387,6 +387,22 @@ class PipelineEngine:
                 content[:1000]
             )  # Limite pour performance
 
+            # L'agent remonte un échec (appel LLM levé, réponse non-JSON)
+            # dans le champ ``error`` de premier niveau (contrat #2485) :
+            # le publier ``success`` reviendrait à dire qu'une analyse qui
+            # n'a pas eu lieu a réussi.
+            analysis_error = analysis_result.get("error")
+            if analysis_error:
+                return {
+                    "content_preview": (
+                        content[:200] + "..." if len(content) > 200 else content
+                    ),
+                    "analysis": analysis_result,
+                    "error": str(analysis_error),
+                    "timestamp": datetime.now().isoformat(),
+                    "status": "error",
+                }
+
             return {
                 "content_preview": (
                     content[:200] + "..." if len(content) > 200 else content
