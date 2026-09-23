@@ -50,6 +50,13 @@ reason — never a directory. A directory-wide exclusion is how a carpet forms.
 
 import re
 
+# Derivational suffixes a name takes as an adjective or a movement (#2476):
+# English -ist/-ism/-ian/-ite, French -iste/-isme/-ien/-ienne, each with an
+# optional plural. The list is CLOSED on purpose: the detectors are
+# case-insensitive, so an open letter run after the core would match every
+# common word that merely begins with a pattern.
+DERIVATIONAL_SUFFIX = r"(?:ist|ism|ian|ite|iste|isme|ien|ienne)s?"
+
 
 def letter_boundary(core: str) -> str:
     """Wrap a bare core in the #2012 letter frontier.
@@ -57,8 +64,17 @@ def letter_boundary(core: str) -> str:
     ``(?<![A-Za-z]){core}(?![A-Za-z])`` — fires on prose and on identifiers
     alike: the frontier is drawn on letters, not on word characters, so the
     underscore of ``core_only`` no longer shields a smuggled name.
+
+    A derivational suffix may follow the core before the frontier closes
+    (#2476): the trailing frontier alone stopped at the suffix's first
+    letter, so a derived form escaped every detector. A plain core ending in
+    ``e`` also admits the suffix on its stem, the way French drops the ``e``
+    before it.
     """
-    return rf"(?<![A-Za-z]){core}(?![A-Za-z])"
+    derived = rf"(?:{core})(?:{DERIVATIONAL_SUFFIX})?"
+    if core.isalpha() and core.endswith("e"):
+        derived = rf"(?:{derived}|{core[:-1]}{DERIVATIONAL_SUFFIX})"
+    return rf"(?<![A-Za-z]){derived}(?![A-Za-z])"
 
 
 # --- Class vocabulary: entries are never elided toward the corpus (#2202) ---
