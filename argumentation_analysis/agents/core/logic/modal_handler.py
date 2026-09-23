@@ -152,8 +152,8 @@ class ModalHandler:
         undecided). Applied here, *amont* de ``parseBeliefBase``, it protects
         every caller regardless of upstream producer (defense-in-depth).
 
-        Idempotent on already-legal atoms: the nl path pre-sanitizes via
-        ``invoke_callables._legal_symbol`` and the second pass is a no-op.
+        Idempotent on already-legal atoms: the nl path builds its KB with
+        ``build_modal_kb`` and the second pass is a no-op.
         Anti-pendule: normalizes sort-name SYNTAX only (PascalCase stem
         survives), no heuristic masking a parse-fail (#1019 fail-loud).
         """
@@ -223,7 +223,10 @@ class ModalHandler:
             # underscored atoms (joke_teleprompter) become MlParser-legal
             # (JokeTeleprompter). One shared normalizer maps belief-set and
             # query atoms consistently so query names match the KB signature.
+            # #2471: the legal atoms of both texts are reserved first, so a
+            # renamed KB atom never takes the name of a legal query atom.
             normalizer = ModalIdentifierNormalizer()
+            normalizer.reserve_legal_atoms(belief_set_content, query_string)
             belief_set_content, _bs_rev = normalizer.normalize_belief_set(
                 belief_set_content
             )
