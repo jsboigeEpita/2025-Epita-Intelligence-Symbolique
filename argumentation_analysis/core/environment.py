@@ -182,8 +182,10 @@ if __name__ != "__main__":
     # (SELF_HOSTED_LLM_* absents d'os.environ, phases auto-hébergées « not configured »
     # sur des sièges au .env pourtant rempli). Seule la partie dotenv est câblée ici :
     # le garde Conda de ensure_env() lève RuntimeError hors shell activé et n'appartient
-    # pas à un effet d'import. Les sessions pytest ne sont pas affectées : conftest
-    # mocke python-dotenv par défaut (MOCK_DOTENV_IN_TESTS).
+    # pas à un effet d'import. Les sessions pytest passent aussi par ici (conftest
+    # appelle ensure_env()) : le .env racine y est chargé, mais une valeur posée par
+    # l'appelant l'emporte, même vide — `OPENAI_API_KEY= pytest ...` tourne sans
+    # clé (#2472).
     try:
         from project_core.managers.environment_manager import EnvironmentManager
 
