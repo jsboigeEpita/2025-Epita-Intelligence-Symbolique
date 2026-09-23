@@ -21,7 +21,10 @@ cp .env.example .env
 
 # 3. Verify
 python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
-pytest tests/unit/ -x -q --tb=line         # Should pass (skip marks for missing API keys)
+# Same marker filter as CI (#2436): it keeps the `requires_api` tests, which
+# call the live LLM when .env has keys, and the `slow` ones out. A few
+# unmarked tests still call the LLM with keys set (~20 requests, #2444).
+pytest tests/unit/ -m "not slow and not requires_api" -x -q --tb=line
 
 # 4. Launch API
 uvicorn api.main:app --reload --port 8000

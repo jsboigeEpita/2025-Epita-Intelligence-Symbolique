@@ -12,6 +12,8 @@ L'objectif de ce répertoire est de centraliser le code de support qui facilite 
 
 - **[`llm_route.py`](llm_route.py)**: `cut_llm_route(monkeypatch)` retire la route LLM pour un test (#2444). Toute l'API brute résout sa route par `resolve_chat_endpoint` : sans clé, chaque phase prend son chemin dégradé nommé, et le test peut l'asserter. À préférer au patch d'une classe du SDK, qui laisse fuir le client suivant.
 
+- **[`withdrawn_modules.py`](withdrawn_modules.py)** (#2436): `still_importable(name)`, the question a withdrawal guard asks instead of `find_spec(name) is None`. A directory left holding only its untracked `__pycache__/` resolves as an empty namespace package on any checkout that ran the code before the withdrawal; nothing can be imported from it, so it counts as gone.
+
 - **[`data_generators.py`](data_generators.py)**: Prévu pour héberger des fonctions qui génèrent des données de test complexes ou volumineuses, aidant à créer des scénarios de test réalistes et variés.
 
 ## Utilisation

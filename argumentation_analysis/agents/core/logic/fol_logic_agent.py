@@ -70,27 +70,12 @@ except ImportError:
             self.beliefs.append(SimpleBelief(content))
 
 
-# Import TweetyBridge avec fallback
-try:
-    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
-except ImportError:
-    # Fallback pour les tests sans JVM
-    class TweetyBridge:
-        def __init__(self):
-            pass
-
-        async def initialize_fol_reasoner(self):
-            return True
-
-        async def check_consistency(self, formulas):
-            return True
-
-        async def derive_inferences(self, formulas):
-            return ["Inférence simulée pour test"]
-
-        async def generate_models(self, formulas):
-            return [{"description": "Modèle simulé", "model": {}}]
-
+# #2432 : import direct. ``tweety_bridge`` n'importe au niveau module que la
+# stdlib et un jpype optionnel (sous try, #1697) : il ne lève pas ImportError.
+# Le repli qui le remplaçait n'était donc jamais atteint, et il fabriquait des
+# verdicts (cohérence ``True``, « Inférence simulée pour test »). Garde :
+# ``tests/agents/core/logic/test_1773_verdict_reading.py``.
+from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 
 logger = logging.getLogger(__name__)
 
@@ -886,14 +871,6 @@ RÉPONDS EN FORMAT JSON :
             # Initialisation TweetyBridge si pas déjà fait
             if not getattr(self, "_tweety_bridge", None):
                 self._tweety_bridge = TweetyBridge()
-                if hasattr(self._tweety_bridge, "initialize_fol_reasoner"):
-                    maybe = self._tweety_bridge.initialize_fol_reasoner()
-                    if inspect.isawaitable(maybe):
-                        # Le pont de secours sans JVM déclare cette
-                        # initialisation asynchrone (corps no-op) ; un cycle
-                        # sync ne peut pas l'attendre — on la referme plutôt
-                        # que de fuiter une coroutine orpheline.
-                        maybe.close()
                 logger.info("✅ TweetyBridge FOL configuré")
 
             # Configuration des fonctions sémantiques
@@ -951,6 +928,10 @@ RÉPONDS EN FORMAT JSON :
 
         Supports both command queries ("consistency_check", "derive_conclusions")
         and formula-based queries (e.g., "Mortal(socrate)") for entailment checking.
+
+        #2338, carried here from the retired adapter (#2432): the verdict is
+        tri-state — ``True`` entailed, ``False`` refused, ``None`` not computed,
+        with a message naming why. No path returns a verdict nothing computed.
         """
         try:
             bridge = getattr(self, "_tweety_bridge", None)
@@ -968,8 +949,13 @@ RÉPONDS EN FORMAT JSON :
                     if inspect.isawaitable(result):
                         result = await result
                     return len(result) > 0, f"Inferences: {result}"
-                else:
-                    return True, "Inferences simulated"
+                # ``TweetyBridge`` exposes no inference derivation: the former
+                # ``True, "Inferences simulated"`` claimed conclusions nobody
+                # derived (#2432).
+                return None, (
+                    "Dérivation NON CALCULÉE (dégradation nommée) : le bridge "
+                    "n'expose aucune dérivation d'inférences."
+                )
 
             else:
                 # Treat as a formula-based entailment query
@@ -998,7 +984,12 @@ RÉPONDS EN FORMAT JSON :
                     return None, f"No Tweety bridge available for query: {query}"
 
         except Exception as e:
-            return False, f"Query execution error: {str(e)}"
+            # A failure computes no verdict: ``False`` would read as a refusal
+            # (#2338, #2432).
+            return None, (
+                "Verdict FOL NON CALCULÉ (dégradation nommée) : la requête a levé "
+                f"{type(e).__name__}: {e}"
+            )
 
     def interpret_results(
         self,
@@ -1027,8 +1018,10 @@ RÉPONDS EN FORMAT JSON :
             elif query == "derive_conclusions":
                 if result is True:
                     interpretation.append("✅ Des conclusions peuvent être dérivées.")
-                else:
+                elif result is False:
                     interpretation.append("⚠️ Aucune conclusion dérivable.")
+                else:
+                    interpretation.append("❓ Dérivation non calculée.")
 
             interpretation.append(f"   Détails: {details}")
 
@@ -1067,7 +1060,11 @@ RÉPONDS EN FORMAT JSON :
                 return None, "Degraded: no Tweety bridge; no consistency verdict."
 
         except Exception as e:
-            return False, f"Consistency check error: {str(e)}"
+            # A failure is no inconsistency claim (#2432).
+            return None, (
+                "Cohérence NON CALCULÉE (dégradation nommée) : le contrôle a levé "
+                f"{type(e).__name__}: {e}"
+            )
 
     async def get_response(
         self, text: str, context: Optional[Dict[str, Any]] = None

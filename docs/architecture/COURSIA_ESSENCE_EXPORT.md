@@ -56,8 +56,10 @@ La version précédente de cette section annonçait **14 fichiers** sous `logic/
 
 - **Annoncés mais jamais vendorisés** : `tweety_bridge_sk.py`, `modal_logic_agent.py`,
   `modal_kb_identifier_normalizer.py`, `fol_logic_agent.py`,
-  `first_order_logic_agent_adapter.py`, `propositional_logic_agent.py`, `belief_set.py`,
+  `propositional_logic_agent.py`, `belief_set.py`,
   `logic_factory.py`, `pl_formula_sanitizer.py`. Tous existent chez nous ; aucun chez eux.
+  La liste nommait aussi l'adaptateur FOL, retiré chez nous par #2432 : ses quatre
+  classes rendaient des résultats qu'aucun raisonneur n'avait calculés, il n'est pas à exporter.
 - **Vendorisés mais absents de la liste** : `adf_handler.py`, `af_handler.py`,
   `ranking_handler.py`, `belief_revision_handler.py`, `probabilistic_handler.py`,
   `dialogue_handler.py` — soit 6 des 9 handlers réellement portés.

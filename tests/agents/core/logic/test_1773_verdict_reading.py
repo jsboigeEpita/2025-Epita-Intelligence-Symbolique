@@ -14,7 +14,9 @@ Inclut les deux frères découverts au sweep constat 1 :
   dépaquetait un bool comme tuple (validateur fantôme sur le handler) ;
 - ``first_order_logic_agent_adapter`` importait ``bridges.tweety_bridge``
   (module inexistant) → ImportError permanent → mode dégradé à toutes les
-  exécutions, sans que la JVM soit jamais consultée.
+  exécutions, sans que la JVM soit jamais consultée. L'adaptateur est retiré
+  (#2432) ; le même défaut est gardé sur l'agent FOL que la production
+  construit : son ``TweetyBridge`` doit être le vrai, pas un repli.
 """
 
 import json
@@ -25,9 +27,7 @@ import pytest
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.logic.query_executor import QueryExecutor
 from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
-from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import (
-    FOLLogicAgent as FOLLogicAgentAdapter,
-)
+from argumentation_analysis.agents.core.logic import fol_logic_agent
 
 
 class TestValidatePlFormulaReadsReturnValue:
@@ -126,32 +126,15 @@ class TestQueryExecutorRealContract:
 
 
 # ---------------------------------------------------------------------------
-# Frère 2 — adaptateur FOL : l'ImportError permanent fabriquait le mode dégradé
+# Frère 2 — agent FOL : le bridge vient du vrai module, pas d'un repli
 # ---------------------------------------------------------------------------
 
 
-class TestFolAdapterBridgeInit:
-    def test_bridge_survives_when_module_path_is_real(self):
-        """Avec le vrai module patché et une JVM prete, le bridge doit etre pose.
-
-        Sur main, l'import pointait vers ``bridges.tweety_bridge`` (module
-        inexistant) : ImportError capture => _tweety_bridge reste None a
-        TOUTES les exécutions, même JVM prete.
-        """
-        with patch(
-            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
-        ) as mock_bridge_class:
-            mock_bridge_class.return_value.initializer.is_jvm_ready.return_value = True
-            adapter = FOLLogicAgentAdapter(agent_name="test_adapter")
-            assert adapter._tweety_bridge is mock_bridge_class.return_value, (
-                "le bridge n'a pas été posé alors que la JVM est prête "
-                "(import fantôme ou sonde fantôme)"
-            )
-
-    def test_degraded_still_honest_when_jvm_not_ready(self):
-        with patch(
-            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
-        ) as mock_bridge_class:
-            mock_bridge_class.return_value.initializer.is_jvm_ready.return_value = False
-            adapter = FOLLogicAgentAdapter(agent_name="test_adapter")
-            assert adapter._tweety_bridge is None
+class TestFolAgentBridgeIsTheRealOne:
+    def test_the_agent_module_resolves_the_real_tweety_bridge(self):
+        """L'adaptateur retiré (#2432) importait un module inexistant et
+        tombait en mode dégradé à chaque exécution. L'agent FOL importait le
+        bon module, mais derrière un repli sur ImportError qui fabriquait des
+        verdicts ; #2432 l'a retiré. Si un repli revient et prend la place du
+        vrai pont, ce test rougit."""
+        assert fol_logic_agent.TweetyBridge is TweetyBridge

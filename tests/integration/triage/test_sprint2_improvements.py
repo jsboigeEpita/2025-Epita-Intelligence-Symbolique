@@ -22,15 +22,29 @@ from argumentation_analysis.services.flask_service_integration import (
 from argumentation_analysis.services.logic_service import LogicService
 from argumentation_analysis.orchestration.group_chat import GroupChatOrchestration
 from argumentation_analysis.utils.async_manager import AsyncManager, run_hybrid_safe
-from argumentation_analysis.agents.core.logic.first_order_logic_agent_adapter import (
-    FOLLogicAgent,
-    LogicAgentFactory,
-)
+from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
+from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.informal.informal_agent_adapter import (
     InformalAgent,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _kernel_with_mock_llm():
+    """Kernel carrying a spec'd chat service: ``BaseAgent`` refuses a kernel
+    without one (same construction as ``tests/conftest.py::mock_kernel_with_llm``)."""
+    from semantic_kernel import Kernel
+    from semantic_kernel.connectors.ai.chat_completion_client_base import (
+        ChatCompletionClientBase,
+    )
+
+    service = MagicMock(spec=ChatCompletionClientBase)
+    service.service_id = "test_llm_service"
+    service.ai_model_id = "test-model"
+    kernel = Kernel()
+    kernel.add_service(service)
+    return kernel
 
 
 class TestSprint2Improvements(unittest.TestCase):
@@ -64,17 +78,9 @@ class TestSprint2Improvements(unittest.TestCase):
 
     def test_harmonized_agent_interfaces(self):
         """Test que les interfaces d'agents sont harmonisées et compatibles."""
-        # Test FOLLogicAgent avec différents paramètres
-        fol_agent1 = FOLLogicAgent(agent_name="FOLAgent1")
-        self.assertEqual(fol_agent1.name, "FOLAgent1")
-        self.assertEqual(fol_agent1.agent_id, "FOLAgent1")
-        self.assertEqual(fol_agent1.agent_name, "FOLAgent1")
-
-        fol_agent2 = FOLLogicAgent(agent_id="FOLAgent2")
-        self.assertEqual(fol_agent2.name, "FOLAgent2")
-        self.assertEqual(fol_agent2.agent_id, "FOLAgent2")
-        self.assertEqual(fol_agent2.agent_name, "FOLAgent2")
-
+        # The FOL half measured the retired adapter's own ``agent_id`` /
+        # ``agent_name`` aliases (#2432); the real FOL agent takes
+        # ``agent_name`` only.
         # Test InformalAgent avec différents paramètres
         informal_agent1 = InformalAgent(agent_id="InformalAgent1")
         self.assertEqual(informal_agent1.agent_id, "InformalAgent1")
@@ -83,28 +89,6 @@ class TestSprint2Improvements(unittest.TestCase):
         informal_agent2 = InformalAgent(agent_name="InformalAgent2")
         self.assertEqual(informal_agent2.agent_id, "InformalAgent2")
         self.assertEqual(informal_agent2.agent_name, "InformalAgent2")
-
-    def test_logic_agent_factory_robustness(self):
-        """Test que la factory d'agents logiques est robuste."""
-        # Test création d'agents valides
-        fol_agent = LogicAgentFactory.create_agent("first_order")
-        self.assertIsNotNone(fol_agent)
-        self.assertEqual(fol_agent.name, "FOLLogicAgent")
-        self.assertEqual(fol_agent.agent_id, "fol_agent")
-
-        pl_agent = LogicAgentFactory.create_agent("propositional")
-        self.assertIsNotNone(pl_agent)
-        self.assertEqual(pl_agent.name, "PropositionalLogicAgent")
-        self.assertEqual(pl_agent.agent_id, "pl_agent")
-
-        modal_agent = LogicAgentFactory.create_agent("modal")
-        self.assertIsNotNone(modal_agent)
-        self.assertEqual(modal_agent.name, "ModalLogicAgent")
-        self.assertEqual(modal_agent.agent_id, "modal_agent")
-
-        # Test gestion d'erreurs
-        with self.assertRaises(Exception):
-            LogicAgentFactory.create_agent("invalid_type")
 
     def test_flask_service_integration(self):
         """Test que l'intégration Flask fonctionne correctement."""
@@ -266,8 +250,9 @@ class TestSprint2Improvements(unittest.TestCase):
         """Test d'intégration complète du workflow des agents."""
         # Créer les agents avec les nouvelles interfaces
         fol_agent = LogicAgentFactory.create_agent(
-            "first_order", agent_name="TestFOLAgent"
+            "first_order", _kernel_with_mock_llm()
         )
+        self.assertIsInstance(fol_agent, FOLLogicAgent)
         informal_agent = InformalAgent(
             agent_id="TestInformalAgent",
             tools={
@@ -285,8 +270,7 @@ class TestSprint2Improvements(unittest.TestCase):
 
         # Test des capacités
         fol_capabilities = fol_agent.get_agent_capabilities()
-        self.assertIn("name", fol_capabilities)
-        self.assertIn("logic_type", fol_capabilities)
+        self.assertEqual(fol_capabilities["logic_type"], "first_order")
 
         informal_capabilities = informal_agent.get_agent_capabilities()
         self.assertIn("fallacy_detection", informal_capabilities)

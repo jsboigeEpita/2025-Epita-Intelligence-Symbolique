@@ -7,17 +7,16 @@ log only — exactly the silent fallback #2205 forbids. All three flip with the
 grain; the fourth test is the known-mode control (stays green throughout).
 """
 
-import importlib.util
-
 import pytest
+
+from tests.support.withdrawn_modules import still_importable
 
 
 def test_orchestrators_shell_is_gone():
-    assert (
-        importlib.util.find_spec(
-            "argumentation_analysis.pipelines.orchestration.orchestrators"
-        )
-        is None
+    # #2436: not ``find_spec(...) is None`` -- a checkout that ran the shell
+    # keeps its untracked ``__pycache__/``, which resolves as a namespace.
+    assert not still_importable(
+        "argumentation_analysis.pipelines.orchestration.orchestrators"
     )
 
 
