@@ -250,6 +250,9 @@ class TestFOLHandlerEProverImplementation:
                     lambda _path: mock_reasoner
                 ),
                 "org.tweetyproject.logics.fol.parser.FolParser": lambda: query_parser,
+                # #2514: the declared signature is read for the constants no
+                # formula names; this one declares none.
+                "org.tweetyproject.logics.commons.syntax.Constant": MagicMock(),
             }
             mock_jpype.JClass.side_effect = classes.__getitem__
 
@@ -270,7 +273,8 @@ class TestFOLHandlerEProverImplementation:
             query_parser.setSignature.assert_called_once_with(
                 mock_belief_set.getSignature()
             )
-            mock_reasoner.query.assert_called_once()
+            # #2514: no constant goes unnamed, so the set goes as is.
+            mock_reasoner.query.assert_called_once_with(mock_belief_set, "mock_formula")
             assert result is True
 
 
