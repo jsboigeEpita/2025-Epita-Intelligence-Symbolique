@@ -19,6 +19,7 @@ from pathlib import Path
 # Import de l'InformalAnalysisPlugin pour accéder à la taxonomie
 from .informal_definitions import InformalAnalysisPlugin
 from argumentation_analysis.utils.taxonomy_local_overrides import render_alias
+from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
 
 logger = logging.getLogger("TaxonomySophismDetector")
 
@@ -298,18 +299,16 @@ class TaxonomySophismDetector:
             if not current_path:
                 return {"siblings": []}
 
-            # Trouver le path parent
-            path_parts = str(current_path).split(".")
-            if len(path_parts) <= 1:
+            parents = taxonomy_parent_paths(df)
+            parent_path = parents.loc[taxonomy_key]
+            if parent_path is None:
                 return {"siblings": []}
 
-            parent_path = ".".join(path_parts[:-1])
-
-            # Trouver les frères/sœurs (même parent)
-            siblings = df[
-                df["path"].astype(str).str.startswith(parent_path + ".", na=False)
-            ]
-            siblings = siblings[siblings.index != taxonomy_key]  # Exclure soi-même
+            # Frères/sœurs = même parent (#2401). Un préfixe `parent + "."`
+            # ramenait aussi les descendants du nœud et ses neveux (2360
+            # entrées sur 5016 mesurées), et les nœuds de profondeur 1 n'en
+            # avaient aucun.
+            siblings = df[(parents == parent_path) & (df.index != taxonomy_key)]
 
             siblings_list = []
             for _, sibling in siblings.iterrows():

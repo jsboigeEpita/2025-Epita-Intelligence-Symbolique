@@ -165,48 +165,39 @@ class TestExploreHierarchyPrimitive:
     """Verify _internal_explore_hierarchy can reach deep nodes."""
 
     def test_explore_hierarchy_reaches_depth_5(self):
-        """_internal_explore_hierarchy should navigate to depth >= 5 iteratively."""
-        try:
-            from argumentation_analysis.agents.core.informal.informal_definitions import (
-                InformalFallacyDefinitions,
-            )
-        except ImportError:
-            pytest.skip("InformalFallacyDefinitions not importable")
+        """_internal_explore_hierarchy should navigate to depth >= 5 iteratively.
 
-        definitions = InformalFallacyDefinitions()
-        df = (
-            definitions.taxonomy_df
-        )  # cached DataFrame, required by _internal_explore_hierarchy
-        if df is None or df.empty:
-            pytest.skip("taxonomy_full.csv could not be loaded")
+        #2401: this guard imported ``InformalFallacyDefinitions`` (a name that
+        never existed) and read ``taxonomy_df`` (no such attribute), turning
+        the ImportError into a skip — it skipped on every run since #1055.
+        Pointed at the real class, it measured depth 0: the root had no
+        children. A missing primitive now fails here instead of vanishing.
+        """
+        from argumentation_analysis.agents.core.informal.informal_definitions import (
+            InformalAnalysisPlugin,
+        )
+
+        plugin = InformalAnalysisPlugin()
+        df = plugin._get_taxonomy_dataframe()
+        assert df is not None and not df.empty, "the taxonomy CSV must load"
 
         current_pk = 0  # root
         max_depth_reached = 0
 
         for _ in range(10):  # max 10 levels of descent
-            result = definitions._internal_explore_hierarchy(current_pk, df)
-            if result.get("error"):
-                break
+            result = plugin._internal_explore_hierarchy(current_pk, df)
+            assert not result.get("error"), result.get("error")
 
-            node = result.get("current_node", {})
-            depth = node.get("depth", 0)
-            max_depth_reached = max(max_depth_reached, depth)
+            max_depth_reached = max(max_depth_reached, result["current_node"]["depth"])
 
             children = result.get("children", [])
             if not children:
                 break
+            current_pk = int(children[0]["pk"])
 
-            # Pick first child to descend
-            first_child = children[0]
-            # Extract PK from child info (format varies)
-            child_pk = first_child.get("pk") or first_child.get("PK")
-            if child_pk is None:
-                break
-            current_pk = int(child_pk)
-
-        assert max_depth_reached >= 3, (
+        assert max_depth_reached >= 5, (
             f"Hierarchy exploration only reached depth {max_depth_reached}, "
-            f"expected >= 3 (capability to descend iteratively)"
+            f"expected >= 5 (capability to descend iteratively)"
         )
 
 

@@ -29,6 +29,10 @@ from argumentation_analysis.core.interfaces.fallacy_detector import (
     AbstractFallacyDetector,
 )
 from argumentation_analysis.core.reading_window import selected_text
+from argumentation_analysis.utils.taxonomy_tree import (
+    taxonomy_parent_path,
+    taxonomy_root_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -143,15 +147,11 @@ def _load_taxonomy_hierarchy() -> Dict[str, Any]:
 
             # Build parent-child links using path hierarchy
             # Path "1.1.3" is a child of "1.1"; path "1" is child of "0"
+            root_path = taxonomy_root_path(
+                (path, node["depth"]) for path, node in nodes_by_path.items()
+            )
             for path, node in nodes_by_path.items():
-                if path == "0":
-                    continue  # root has no parent
-                if "." in path:
-                    parent_path = path.rsplit(".", 1)[0]
-                else:
-                    # Depth-1 nodes (path "1", "2", ...) are children of root
-                    parent_path = "0"
-                parent = nodes_by_path.get(parent_path)
+                parent = nodes_by_path.get(taxonomy_parent_path(path, root_path))
                 if parent is not None:
                     parent["children"].append(node)
 

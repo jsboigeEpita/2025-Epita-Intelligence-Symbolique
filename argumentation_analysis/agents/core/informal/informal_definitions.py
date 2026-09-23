@@ -43,6 +43,7 @@ from semantic_kernel.functions.kernel_parameter_metadata import KernelParameterM
 # Import de l'utilitaire de lazy loading pour la taxonomie
 from argumentation_analysis.core.utils.file_loaders import load_csv_file
 from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
+from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
 from argumentation_analysis.utils.taxonomy_local_overrides import purge_dataframe
 from argumentation_analysis.paths import DATA_DIR
 
@@ -61,8 +62,9 @@ from .prompts import (
     prompt_justify_fallacy_attribution_v1,
 )
 
-
 # --- Modèles Pydantic pour une sortie structurée ---
+
+
 class IdentifiedFallacy(BaseModel):
     """Modèle de données pour un seul sophisme identifié."""
 
@@ -246,21 +248,22 @@ class InformalAnalysisPlugin:
         }
 
         children_df = pd.DataFrame()
+        # The parents present in the relation, keyed like the children: a
+        # child is inner iff its key is some row's parent. None = the branch
+        # below has no relation to read it from, so the flag is not computed.
+        parent_keys = None
+        key_by_pk = True
         if "FK_Parent" in df.columns:
             children_df = df[df["FK_Parent"] == current_pk]
+            parent_keys = set(df["FK_Parent"].dropna())
         elif "parent_pk" in df.columns:
             children_df = df[df["parent_pk"] == current_pk]
+            parent_keys = set(df["parent_pk"].dropna())
         elif "path" in df.columns and current_path:
-            child_path_prefix = str(current_path) + "."
-            potential_children = df[
-                df["path"].astype(str).str.startswith(child_path_prefix, na=False)
-            ]
-            children_df = potential_children[
-                ~potential_children["path"]
-                .astype(str)
-                .str.slice(start=len(child_path_prefix))
-                .str.contains(".", na=False, regex=False)
-            ]
+            parents = taxonomy_parent_paths(df)
+            children_df = df[parents == str(current_path)]
+            parent_keys = set(parents.dropna())
+            key_by_pk = False
         elif "depth" in df.columns and pd.notna(current_row.get("depth")):
             current_depth = int(current_row["depth"])
             current_path_str = str(current_path) if pd.notna(current_path) else ""
@@ -284,12 +287,18 @@ class InformalAnalysisPlugin:
                 result["total_children"] = children_count
 
             for _, child_row in children_df.iterrows():
+                if parent_keys is None:
+                    has_children = None
+                elif key_by_pk:
+                    has_children = child_row.name in parent_keys
+                else:
+                    has_children = str(child_row.get("path", "")) in parent_keys
                 child_info = {
                     "pk": int(child_row.name),
                     "nom_vulgarise": child_row.get("nom_vulgarisé", ""),
                     "description_courte": child_row.get("text_fr", ""),
                     "famille": child_row.get("Famille", ""),
-                    "has_children": False,
+                    "has_children": has_children,
                 }
                 result["children"].append(child_info)
 
@@ -346,10 +355,9 @@ class InformalAnalysisPlugin:
                 )
 
         elif "path" in df.columns:
-            path_val = row.get("path", "")
-            if path_val and "." in str(path_val):
-                parent_path = str(path_val).rsplit(".", 1)[0]
-                parent_df = df[df["path"] == parent_path]
+            parent_path = taxonomy_parent_paths(df).loc[pk]
+            if parent_path is not None:
+                parent_df = df[df["path"].astype(str) == parent_path]
 
         if len(parent_df) > 0:
             parent_row = parent_df.iloc[0]
@@ -369,15 +377,8 @@ class InformalAnalysisPlugin:
         elif "parent_pk" in df.columns:
             child_nodes_for_details = df[df["parent_pk"] == pk]
         elif "path" in df.columns and current_path_for_children:
-            child_path_prefix = str(current_path_for_children) + "."
-            potential_children = df[
-                df["path"].astype(str).str.startswith(child_path_prefix, na=False)
-            ]
-            child_nodes_for_details = potential_children[
-                ~potential_children["path"]
-                .astype(str)
-                .str.slice(start=len(child_path_prefix))
-                .str.contains(".", na=False, regex=False)
+            child_nodes_for_details = df[
+                taxonomy_parent_paths(df) == str(current_path_for_children)
             ]
         elif "depth" in df.columns and pd.notna(current_depth_for_children):
             current_path_str_for_children = (

@@ -676,7 +676,9 @@ class PluginBenchmarkSuite:
                 failures.append("no types returned")
 
         if "has_children" in expected:
-            if not actual or (isinstance(actual, dict) and "children" not in actual):
+            # #2401: a present-but-empty "children" key used to pass — the
+            # property is a non-empty list, not the key.
+            if not isinstance(actual, dict) or not actual.get("children"):
                 failures.append("no children in response")
 
         if "has_confirmation" in expected:
