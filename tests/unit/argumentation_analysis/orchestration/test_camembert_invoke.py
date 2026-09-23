@@ -98,15 +98,11 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "test-model",
         }
 
-        with _patch_invokecallables_env_get(env), patch(
-            "argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
-            create=True,
-        ) as mock_fwp_cls, patch("openai.AsyncOpenAI"), patch(
+        # #2486: the function imports FallacyWorkflowPlugin from its module;
+        # the sys.modules entry below is the mock it runs against.
+        with _patch_invokecallables_env_get(env), patch("openai.AsyncOpenAI"), patch(
             "semantic_kernel.kernel.Kernel"
-        ), patch(
-            "semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"
-        ):
-            # Make the plugin class importable inside the function
+        ), patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
             with patch.dict(
                 "sys.modules",
                 {
@@ -199,12 +195,11 @@ class TestInvokeCamemBERTFallacy:
             "SELF_HOSTED_LLM_MODEL": "qwen3.5-35b-a3b",
         }
 
-        with _patch_invokecallables_env_get(env), patch(
-            "argumentation_analysis.orchestration.invoke_callables.FallacyWorkflowPlugin",
-            create=True,
-        ), patch("openai.AsyncOpenAI"), patch("semantic_kernel.kernel.Kernel"), patch(
-            "semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"
-        ):
+        # #2486: as above, the sys.modules entry is the plugin the function
+        # imports.
+        with _patch_invokecallables_env_get(env), patch("openai.AsyncOpenAI"), patch(
+            "semantic_kernel.kernel.Kernel"
+        ), patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
             with patch.dict(
                 "sys.modules",
                 {

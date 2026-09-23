@@ -9,6 +9,7 @@ Verifies:
 """
 
 import asyncio
+import contextlib
 import time
 import logging
 import pytest
@@ -21,6 +22,25 @@ from argumentation_analysis.orchestration.conversational_orchestrator import (
     _GROWTH_EXPECTING_PATTERNS,
     _RE_PROMPT_FEEDBACK,
 )
+
+# #2486: ``_run_phase`` imports ``AgentGroupChat`` from SK's own module, inside
+# the function, so that is where a test replaces it. The patch these tests
+# carried, on ``conversational_orchestrator.AgentGroupChat`` with
+# ``create=True``, reached nothing: they fell to round-robin through a
+# CONSTRUCTION failure (a pydantic error on the mock agents, logged at ERROR),
+# not through the unavailable-SK path they meant.
+_AGENT_GROUP_CHAT = "semantic_kernel.agents.group_chat.agent_group_chat.AgentGroupChat"
+
+
+@contextlib.contextmanager
+def _without_agent_group_chat(caplog):
+    """Run with SK's ``AgentGroupChat`` unavailable, and check the phase fell
+    back to round-robin for that reason."""
+    with caplog.at_level(logging.INFO, logger="ConversationalOrchestrator"), patch(
+        _AGENT_GROUP_CHAT, side_effect=ImportError("disabled for test")
+    ):
+        yield
+    assert "SK AgentGroupChat not importable" in caplog.text, caplog.text
 
 
 class TestGrowthFingerprint:
@@ -169,15 +189,11 @@ class TestRunPhaseGrowthHook:
         return agent
 
     @pytest.mark.asyncio
-    async def test_no_re_prompt_when_disabled(self, mock_state):
+    async def test_no_re_prompt_when_disabled(self, mock_state, caplog):
         """When enable_growth_validation=False, no re-prompts occur."""
         agent = self._make_noop_agent()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.AgentGroupChat",
-            create=True,
-            side_effect=ImportError("disabled for test"),
-        ):
+        with _without_agent_group_chat(caplog):
             messages = await _run_phase(
                 [agent],
                 "Test prompt",
@@ -193,15 +209,11 @@ class TestRunPhaseGrowthHook:
         assert len(growth_msgs) == 0
 
     @pytest.mark.asyncio
-    async def test_re_prompt_triggers_on_no_growth(self, mock_state):
+    async def test_re_prompt_triggers_on_no_growth(self, mock_state, caplog):
         """In growth-expecting phase, no-growth turn triggers re-prompt."""
         agent = self._make_growth_agent(mock_state)
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.AgentGroupChat",
-            create=True,
-            side_effect=ImportError("disabled for test"),
-        ):
+        with _without_agent_group_chat(caplog):
             messages = await _run_phase(
                 [agent],
                 "Test prompt",
@@ -225,15 +237,11 @@ class TestRunPhaseGrowthHook:
         assert growth_msgs[0]["re_prompt_count"] >= 1
 
     @pytest.mark.asyncio
-    async def test_no_re_prompt_in_non_growth_phase(self, mock_state):
+    async def test_no_re_prompt_in_non_growth_phase(self, mock_state, caplog):
         """Synthesis phase should NOT trigger re-prompts."""
         agent = self._make_noop_agent()
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.AgentGroupChat",
-            create=True,
-            side_effect=ImportError("disabled for test"),
-        ):
+        with _without_agent_group_chat(caplog):
             messages = await _run_phase(
                 [agent],
                 "Test prompt",
@@ -249,15 +257,11 @@ class TestRunPhaseGrowthHook:
         assert len(growth_msgs) == 0
 
     @pytest.mark.asyncio
-    async def test_backward_compat_default_is_enabled(self, mock_state):
+    async def test_backward_compat_default_is_enabled(self, mock_state, caplog):
         """Default enable_growth_validation=True preserves new behavior."""
         agent = self._make_growth_agent(mock_state)
 
-        with patch(
-            "argumentation_analysis.orchestration.conversational_orchestrator.AgentGroupChat",
-            create=True,
-            side_effect=ImportError("disabled for test"),
-        ):
+        with _without_agent_group_chat(caplog):
             messages = await _run_phase(
                 [agent],
                 "Test prompt",
@@ -319,11 +323,7 @@ class TestCB1528Item4RoundRobinDeadlineGuard:
             return entry_time if call_count[0] <= 4 else post_turn_time
 
         with caplog.at_level(logging.INFO, logger="ConversationalOrchestrator"):
-            with patch(
-                "argumentation_analysis.orchestration.conversational_orchestrator.AgentGroupChat",
-                create=True,
-                side_effect=ImportError("disabled for test"),
-            ):
+            with _without_agent_group_chat(caplog):
                 with patch(
                     "argumentation_analysis.orchestration.conversational_orchestrator.time.time",
                     side_effect=fake_time,
