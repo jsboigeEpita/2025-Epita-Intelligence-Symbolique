@@ -886,13 +886,19 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
     ) -> bool:
         """
         Valide si une conclusion découle logiquement d'un ensemble de prémisses modales.
-        Implémentation de la méthode abstraite de BaseLogicAgent.
+
+        #2447 : sans bridge, la méthode rendait ``False`` (« invalide »), et un
+        verdict ``None`` du solveur (formule illisible) devenait ``not None``,
+        soit « valide ». Quand rien ne peut être vérifié, elle lève.
+
+        Raises:
+            RuntimeError: aucun bridge Tweety, ou le solveur n'a pas décidé.
         """
         if not self._tweety_bridge:
-            self.logger.warning(
-                "TweetyBridge non disponible. Impossible de valider l'argument modal."
+            raise RuntimeError(
+                "validate_argument : aucun bridge Tweety, l'argument modal n'est "
+                "pas vérifié."
             )
-            return False
 
         # L'argument est valide si l'ensemble {prémisses} U {¬conclusion} est incohérent.
         negated_conclusion = f"!({conclusion})"  # Négation en logique modale Tweety
@@ -912,9 +918,13 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         kb_parts.extend(all_formulas)
         belief_set_content = "\n".join(kb_parts)
 
-        is_consistent, _ = self.tweety_bridge.modal_handler.is_modal_kb_consistent(
-            belief_set_content
+        is_consistent, message = (
+            self.tweety_bridge.modal_handler.is_modal_kb_consistent(belief_set_content)
         )
+        if is_consistent is None:
+            raise RuntimeError(
+                f"validate_argument : le solveur modal n'a pas décidé ({message})."
+            )
         # L'argument est valide si l'ensemble est INCOHÉRENT.
         return not is_consistent
 

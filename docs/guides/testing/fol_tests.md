@@ -39,7 +39,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/work
 - Avec `-n N` (pytest-xdist), `--disable-jvm-session` n'atteint pas les workers : ils tournent avec le vrai `jpype` et sans JVM (#2402). La CI lance la suite en série.
 - `-rs` affiche la raison de chaque test sauté. Un fichier Tweety « vert » dont tous les tests sont sautés n'a rien vérifié.
 
-Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `1e29c08a` plus le correctif de requête de #2447) : `test_worker_fol_tweety.py` rend 18 passed, 0 skipped, avec la JVM (16 avant les deux tests de requête ajoutés par #2447), et `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
+Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `2ceae29e` plus le correctif de `validate_argument` de #2447) : `test_worker_fol_tweety.py` rend 19 passed, 0 skipped, avec la JVM (16 avant les tests ajoutés par #2447 : deux de requête, un de validation d'argument), et `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
 
 ## Syntaxe FOL de Tweety
 
@@ -77,9 +77,11 @@ La grammaire complète est recopiée en tête de `tests/integration/workers/test
 
 Le bridge n'a pas de méthode d'initialisation propre à la FOL : la JVM est prise en charge par `jvm_setup.py` et la fixture de session.
 
-**Agent** (`FOLLogicAgent`) : `setup_agent_components(llm_service_id)`, `analyze(text)` (rend un `FOLAnalysisResult`), `text_to_belief_set(text)`, `is_consistent(belief_set)`, `execute_query(belief_set, query)`, et `BeliefSetBuilderPlugin` (`agent._builder_plugin`) pour construire un belief set par programme (`add_sort`, `add_predicate_schema`, `add_atomic_fact`, `add_negated_atomic_fact`, `add_universal_implication`, `build_tweety_belief_set`).
+**Agent** (`FOLLogicAgent`) : `setup_agent_components(llm_service_id)`, `analyze(text)` (rend un `FOLAnalysisResult`), `text_to_belief_set(text)`, `is_consistent(belief_set)`, `execute_query(belief_set, query)`, `validate_argument(premises, conclusion)`, et `BeliefSetBuilderPlugin` (`agent._builder_plugin`) pour construire un belief set par programme (`add_sort`, `add_predicate_schema`, `add_atomic_fact`, `add_negated_atomic_fact`, `add_universal_implication`, `build_tweety_belief_set`).
 
 **Configuration** : `PresetConfigs.authentic_fol()` (`config/unified_config.py`) rend une configuration avec `LogicType.FOL`, `MockLevel.NONE` et l'agent `AgentType.FOL_LOGIC`, et `get_agent_classes()["fol_logic"]` vaut `"FOLLogicAgent"`.
+
+`validate_argument(premises, conclusion)` vérifie que {prémisses} ∪ {`!(conclusion)`} est incohérent. Elle construit la signature, appelle `check_consistency(…, "first_order")`, et rend `True` (valide) ou `False` (le solveur a trouvé les prémisses compatibles avec la négation de la conclusion). Sans bridge, ou quand le solveur n'a pas décidé, elle lève `RuntimeError` avec la raison (#2447). Sur les prémisses de l'exemple (`forall X: (Man(X) => Mortal(X))`, `Man(socrate)`), `Mortal(socrate)` rend `True` et `Man(platon)` rend `False`.
 
 ## Limites connues
 
