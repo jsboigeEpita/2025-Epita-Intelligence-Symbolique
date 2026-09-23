@@ -39,8 +39,13 @@ class TestTweetyBridge(unittest.TestCase):
         else:
             # Patcher entièrement TweetyInitializer pour éviter tout contact avec jpype
             # On retire spec=True car le patching de cette classe est problématique.
+            # #2483: patched where the SUT resolves it. Since #1697,
+            # ``TweetyBridge.__init__`` imports it lazily
+            # (``from .tweety_initializer import TweetyInitializer``), so it is
+            # never an attribute of ``tweety_bridge`` and the old target made
+            # every test of this class fail in setUp.
             self.initializer_patcher = patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyInitializer"
+                "argumentation_analysis.agents.core.logic.tweety_initializer.TweetyInitializer"
             )
             self.mock_initializer_class = self.initializer_patcher.start()
             self.mock_initializer_instance = self.mock_initializer_class.return_value
@@ -48,12 +53,16 @@ class TestTweetyBridge(unittest.TestCase):
             self.mock_initializer_instance.is_jvm_ready.return_value = True
 
             # Patcher les classes Handler pour injecter des mocks
+            # #2483: same, the properties import ``PLHandler`` / ``FOLHandler``
+            # from their own modules at first access; the aliases
+            # ``PropositionalLogicHandler`` / ``FirstOrderLogicHandler`` exist
+            # only inside those properties.
             self.pl_handler_patcher = patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge.PropositionalLogicHandler",
+                "argumentation_analysis.agents.core.logic.pl_handler.PLHandler",
                 autospec=True,
             )
             self.fol_handler_patcher = patch(
-                "argumentation_analysis.agents.core.logic.tweety_bridge.FirstOrderLogicHandler",
+                "argumentation_analysis.agents.core.logic.fol_handler.FOLHandler",
                 autospec=True,
             )
             self.mock_pl_handler_class = self.pl_handler_patcher.start()
