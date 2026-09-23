@@ -9738,7 +9738,10 @@ async def _invoke_text_to_kb(
     """Extract a knowledge base from NL text via TextToKBPlugin (#474).
 
     Uses extract_kb for structured extraction (arguments, beliefs, FOL signature).
-    Falls back to extract_arguments_only if LLM unavailable.
+    extract_kb is heuristic: no LLM is called on this path (each argument
+    carries confidence 0.3), so there is no LLM-unavailable fallback either.
+    An LLM reaches the plugin only when an SK agent calls extract_kb as a
+    kernel function.
     """
     if not input_text or not input_text.strip():
         return {"error": "empty input", "arguments": [], "belief_candidates": []}
