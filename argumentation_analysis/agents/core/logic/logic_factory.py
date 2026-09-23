@@ -71,6 +71,18 @@ class LogicAgentFactory:
             logger.info(f"Types supportés: {', '.join(cls._agent_classes.keys())}")
             return None
 
+        # #2441 — the third parameter is the LLM service, read for its
+        # ``service_id``. A service id passed as a ``str`` used to be dropped
+        # without a trace (the agent silently got its default id). Refused
+        # here, outside the ``try`` below, so the caller sees why.
+        if llm_service is not None and not hasattr(llm_service, "service_id"):
+            raise TypeError(
+                f"LogicAgentFactory.create_agent: llm_service must be a service "
+                f"object with a service_id, got {type(llm_service).__name__}"
+                + (f" {llm_service!r}" if isinstance(llm_service, str) else "")
+                + ". Pass the service, not its id."
+            )
+
         try:
             # Créer l'instance de l'agent
             agent_class = cls._agent_classes[logic_type]
@@ -80,7 +92,7 @@ class LogicAgentFactory:
                 "kernel": kernel,
                 "agent_name": f"{logic_type.capitalize()}Agent",
             }
-            if llm_service and hasattr(llm_service, "service_id"):
+            if llm_service is not None:
                 agent_args["service_id"] = llm_service.service_id
 
             # Créer l'agent avec les arguments

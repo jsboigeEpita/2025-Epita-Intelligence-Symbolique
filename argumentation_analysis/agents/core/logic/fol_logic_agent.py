@@ -91,6 +91,9 @@ class FOLAnalysisResult:
     validation_errors: List[str] = field(default_factory=list)
     confidence_score: float = 0.0
     reasoning_steps: List[str] = field(default_factory=list)
+    # #2441 — components whose setup failed, with their cause (e.g. the
+    # Tweety bridge when the JVM is absent). Empty when setup was complete.
+    setup_failures: Dict[str, str] = field(default_factory=dict)
 
 
 class BeliefSetBuilderPlugin:
@@ -183,6 +186,10 @@ class FOLLogicAgent(BaseLogicAgent):
     _analysis_cache: Dict[str, "FOLAnalysisResult"] = PrivateAttr(default_factory=dict)
     _conversion_prompt: str = PrivateAttr(default="")
     _analysis_prompt: str = PrivateAttr(default="")
+    # #2441 — set only by a setup that registered the plugin, so a failed
+    # lazy setup in ``analyze()`` is retried on the next call.
+    _components_initialized: bool = PrivateAttr(default=False)
+    _setup_failures: Dict[str, str] = PrivateAttr(default_factory=dict)
 
     def __init__(
         self,
@@ -321,10 +328,11 @@ RÉPONDS EN FORMAT JSON :
         logger.info(f"🔍 Début analyse FOL pour texte de {len(text)} caractères")
 
         try:
-            # 0. Lazy setup: register semantic functions if not done yet
-            if not getattr(self, "_components_initialized", False):
+            # 0. Lazy setup: register semantic functions if not done yet.
+            # A failure raises into the except below, which names it in the
+            # result; the flag stays False, so the next call retries (#2441).
+            if not self._components_initialized:
                 self.setup_agent_components()
-                object.__setattr__(self, "_components_initialized", True)
 
             # 1. Vérification du cache
             cache_key = self._generate_cache_key(text, context)
@@ -344,6 +352,8 @@ RÉPONDS EN FORMAT JSON :
             logger.info("✅ Validation et enrichissement des résultats...")
             final_result = await self._enrich_analysis(analysis_result, text, context)
 
+            final_result.setup_failures = self.setup_failures
+
             # 5. Mise en cache
             self._analysis_cache[cache_key] = final_result
 
@@ -355,7 +365,9 @@ RÉPONDS EN FORMAT JSON :
         except Exception as e:
             logger.error(f"❌ Erreur analyse FOL: {e}")
             return FOLAnalysisResult(
-                validation_errors=[f"Erreur d'analyse: {str(e)}"], confidence_score=0.0
+                validation_errors=[f"Erreur d'analyse: {str(e)}"],
+                confidence_score=0.0,
+                setup_failures=self.setup_failures,
             )
 
     async def _convert_to_fol(
@@ -825,6 +837,16 @@ RÉPONDS EN FORMAT JSON :
         return self._tweety_bridge
 
     @property
+    def setup_failures(self) -> Dict[str, str]:
+        """Components whose last setup failed, with their cause (#2441).
+
+        Empty when the last ``setup_agent_components`` set everything up.
+        Only degradable components appear here (the Tweety bridge); a
+        failure of the parent setup or of the plugin registration raises.
+        """
+        return dict(self._setup_failures)
+
+    @property
     def _builder_plugin(self) -> "BeliefSetBuilderPlugin":
         """Lazy-initialized BeliefSetBuilderPlugin for programmatic FOL construction."""
         if (
@@ -862,22 +884,37 @@ RÉPONDS EN FORMAT JSON :
         autres appelants génériques appellent cette méthode SANS ``await`` —
         l'unique def async (#2360) laissait la configuration en coroutine jamais
         attendue, silencieusement.
-        """
-        try:
-            # Appel parent
-            if llm_service_id:
-                super().setup_agent_components(llm_service_id)
 
-            # Initialisation TweetyBridge si pas déjà fait
-            if not getattr(self, "_tweety_bridge", None):
+        #2441 — les trois étapes sont indépendantes et chacune a sa conduite
+        d'échec. Un seul ``try`` les enveloppait : un échec du pont sautait
+        l'enregistrement du plugin, qui n'a pas besoin du pont, et ce même
+        ``try`` avait caché #2360 pendant des mois.
+
+        1. Configuration parente : ses arguments viennent du code, elle lève.
+        2. Pont Tweety : dépendance d'environnement (JVM, jars) dont l'agent
+           peut se passer. Son échec se dégrade **par son nom** dans
+           ``setup_failures`` (et dans ``FOLAnalysisResult.setup_failures``).
+        3. Plugin ``fol_logic`` : un plugin absent est un défaut de
+           configuration, l'échec lève. ``_components_initialized`` n'est
+           posé qu'après cette étape.
+        """
+        if llm_service_id:
+            super().setup_agent_components(llm_service_id)
+
+        self._setup_failures.pop("tweety_bridge", None)
+        if not getattr(self, "_tweety_bridge", None):
+            try:
                 self._tweety_bridge = TweetyBridge()
                 logger.info("✅ TweetyBridge FOL configuré")
+            except Exception as e:
+                self._setup_failures["tweety_bridge"] = f"{type(e).__name__}: {e}"
+                logger.warning(
+                    f"⚠️ TweetyBridge FOL indisponible, analyse formelle "
+                    f"dégradée: {self._setup_failures['tweety_bridge']}"
+                )
 
-            # Configuration des fonctions sémantiques
-            self._register_fol_semantic_functions()
-
-        except Exception as e:
-            logger.warning(f"⚠️ Configuration composants FOL partielle: {e}")
+        self._register_fol_semantic_functions()
+        self._components_initialized = True
 
     async def text_to_belief_set(
         self, text: str, context: Optional[Dict[str, Any]] = None

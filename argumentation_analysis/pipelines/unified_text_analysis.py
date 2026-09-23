@@ -404,7 +404,7 @@ class UnifiedTextAnalysisPipeline:
             kernel.add_service(self.llm_service)
 
             logic_agent = LogicAgentFactory.create_agent(
-                self.config.logic_type, kernel, self.llm_service.service_id
+                self.config.logic_type, kernel, self.llm_service
             )
 
             if not logic_agent:
