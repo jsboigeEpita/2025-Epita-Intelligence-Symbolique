@@ -2,8 +2,8 @@
 """#2344 — hierarchical bridge: the silent 4-objective injection is gone.
 
 The M2 bridge used to mask a StrategicManager returning zero objectives by
-injecting an untagged hardcoded 4-objective set — the exact contrast
-``delegation_orchestrator.py:29-32`` documents refusing to imitate. The
+injecting an untagged hardcoded 4-objective set — the silent-fallback shape
+delegation mode has refused since its creation (anti-pendule, #1019). The
 manager's contract guarantees a non-empty set: every degradation path inside
 ``_define_initial_objectives`` / ``_generate_llm_objectives`` lands on
 ``_fallback_objectives()``, tagged ``source="degraded"`` and logged. So an

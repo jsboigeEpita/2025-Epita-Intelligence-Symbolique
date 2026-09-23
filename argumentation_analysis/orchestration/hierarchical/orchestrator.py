@@ -129,8 +129,7 @@ class HierarchicalOrchestrator:
             # LLM failure, parse error) lands on _fallback_objectives(),
             # tagged source="degraded" and logged. An empty list here is a
             # broken strategic tier, not a case to mask with an untagged
-            # hardcoded set — the exact contrast delegation_orchestrator.py
-            # documents refusing to imitate.
+            # hardcoded set: fail loud, like M3's DelegationError.
             raise RuntimeError(
                 "StrategicManager returned no objectives — its contract "
                 "guarantees a non-empty set (degraded fallback is tagged "
