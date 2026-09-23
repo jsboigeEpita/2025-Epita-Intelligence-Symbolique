@@ -90,12 +90,20 @@ falsifier : si je l'avais écrite, elle serait passée par mon `HEAD`.
 
 ```bash
 SLUG=$(gh pr view N --json headRefName --jq .headRefName)
-git branch -a --list "*${SLUG##*/}*"                    # vide attendu si ce n'est pas moi
-# TOUS les reflogs, pas seulement le principal — un worktree lie tient le SIEN (voir ci-dessous)
+# 1. Le reflog de la REF : cree avec toute branche locale, quel que soit le worktree ou la
+#    forme de creation (checkout -b, worktree add -b, branch). Supprime par `git branch -D`.
+find .git/logs/refs/heads -path "*${SLUG##*/}*"
+# 2. Les reflogs HEAD (principal + worktrees lies) : ils gardent la trace d'une branche
+#    creee puis supprimee ici — mais seulement si un `checkout` l'a nommee (voir ci-dessous).
 grep -c "${SLUG##*/}" .git/logs/HEAD .git/worktrees/*/logs/HEAD 2>/dev/null
-# CONTROLE POSITIF obligatoire — un slug d'une branche que J'AI reellement creee doit rendre > 0,
-# sinon le 0 ci-dessus ne prouve rien : [[feedback_negative_from_an_unproven_instrument]]
+# Les deux surfaces rendent 0 ⇒ « pas moi ». Une seule > 0 ⇒ ecrite ici.
+# CONTROLE POSITIF obligatoire, sur CHAQUE surface — un slug d'une branche que J'AI reellement
+# creee doit rendre > 0, sinon le 0 ne prouve rien : [[feedback_negative_from_an_unproven_instrument]]
 ```
+
+⚠ Ne pas utiliser `git branch -a --list` : `-a` liste aussi `remotes/origin/<slug>`, present
+apres un simple `fetch` pour toute branche poussee par un worker. Une ligne la ne dit rien de
+l'autorat. `git branch --list "*slug*"` (sans `-a`) ne lit que les branches locales.
 
 ⚠ **Le reflog principal ne voit PAS les branches creees dans un worktree lie** — et c'est la
 direction qui *autorise* un merge. Mesure R1033, PR #2354 ecrite ici par un sous-agent en
@@ -110,6 +118,20 @@ worktree isole :
 Le `0` n'etait donc pas un negatif : c'etait un angle mort. Des qu'un agent (le mien ou celui
 d'un worker) travaille en `isolation: "worktree"`, l'ancienne commande degenere en faux « pas
 moi » **silencieux**. `git worktree list` enumere les surfaces a couvrir si le glob echoue.
+
+⚠ **Et le reflog HEAD d'un worktree lie ne nomme pas toujours la branche** (mesure R1048).
+Un worktree cree par `git worktree add -b <slug>` ecrit une entree sans message,
+`reset: moving to HEAD`, puis les `commit:`, et le slug n'y figure nulle part. Un reflog HEAD
+ne nomme une branche que si un `checkout` y est passe (`checkout: moving from main to <slug>`).
+
+| surface, pour deux branches creees ici par `git worktree add -b` | rendu |
+|---|---|
+| `.git/logs/HEAD` + `.git/worktrees/*/logs/HEAD` (la commande de R1033 seule) | **0** et **0** — « pas moi », faux |
+| `.git/logs/refs/heads/<slug>` | **1** et **1** — ecrites ici |
+
+D'ou les deux surfaces du bloc ci-dessus. Aucune ne couvre seule tous les cas : le reflog de
+la ref disparait avec `git branch -D`, et le reflog HEAD ne voit pas les branches creees par
+`worktree add -b`.
 
 **Instrument de corroboration — l'email pré-squash.** `--squash` le réécrit en
 `…@users.noreply.github.com` (60 commits sur 60 de `main`) : ce contrôle passe **avant** le
