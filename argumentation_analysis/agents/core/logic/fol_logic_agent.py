@@ -98,6 +98,23 @@ class FOLAnalysisResult:
     # #2441 — components whose setup failed, with their cause (e.g. the
     # Tweety bridge when the JVM is absent). Empty when setup was complete.
     setup_failures: Dict[str, str] = field(default_factory=dict)
+    # #2447 — where ``formulas`` came from: "llm" (the conversion prompt) or
+    # "heuristic" (``_basic_fol_conversion``: placeholder predicates P0, Q0…,
+    # not a translation of the text). ``conversion_message`` says why the
+    # heuristic ran.
+    formulas_source: str = ""
+    conversion_message: str = ""
+    # #2447 — the model's answer to the ``analyze_fol`` step, as it gave it.
+    # No solver computed any of it, so none of it is copied into
+    # ``consistency_check``, ``inferences``, ``interpretations``,
+    # ``validation_errors`` or ``confidence_score``.
+    llm_assessment: Dict[str, Any] = field(default_factory=dict)
+
+
+def _source_label(result: "FOLAnalysisResult") -> str:
+    if result.formulas_source == "heuristic":
+        return f"heuristique de substitution : {result.conversion_message}"
+    return result.formulas_source or "source inconnue"
 
 
 def _consistency_label(result: "FOLAnalysisResult") -> str:
@@ -352,11 +369,28 @@ RÉPONDS EN FORMAT JSON :
 
             # 2. Conversion texte → formules FOL
             logger.info("🔄 Conversion texte vers formules FOL...")
-            formulas = await self._convert_to_fol(text, context)
+            formulas, heuristic_reason = await self._convert_to_fol(text, context)
 
             # 3. Analyse logique avec Tweety
-            logger.info("🧮 Analyse logique avec TweetyProject...")
-            analysis_result = await self._analyze_with_tweety(formulas, context)
+            if heuristic_reason is None:
+                logger.info("🧮 Analyse logique avec TweetyProject...")
+                analysis_result = await self._analyze_with_tweety(formulas, context)
+                analysis_result.formulas_source = "llm"
+            else:
+                # #2447: the heuristic's formulas are placeholders (P0(a),
+                # forall X: (P0(X) => Q0(X))…). A solver verdict on them
+                # says nothing about the text, so none is computed.
+                analysis_result = FOLAnalysisResult(
+                    formulas=formulas,
+                    formulas_source="heuristic",
+                    conversion_message=heuristic_reason,
+                    consistency_message=(
+                        "Cohérence NON VÉRIFIÉE : formules heuristiques de "
+                        "substitution, pas une traduction du texte "
+                        f"({heuristic_reason})."
+                    ),
+                    confidence_score=0.1,
+                )
 
             # 4. Validation et enrichissement
             logger.info("✅ Validation et enrichissement des résultats...")
@@ -382,7 +416,7 @@ RÉPONDS EN FORMAT JSON :
 
     async def _convert_to_fol(
         self, text: str, context: Optional[Dict[str, Any]] = None
-    ) -> List[str]:
+    ) -> Tuple[List[str], Optional[str]]:
         """
         Convertit le texte naturel en formules FOL.
 
@@ -391,7 +425,9 @@ RÉPONDS EN FORMAT JSON :
             context: Contexte optionnel
 
         Returns:
-            List[str]: Liste des formules FOL
+            Tuple[List[str], Optional[str]]: les formules, et ``None`` quand le
+            LLM les a produites. Sinon, la raison pour laquelle le convertisseur
+            heuristique a pris le relais (#2447).
         """
         try:
             if self.kernel and self.kernel.services:
@@ -417,16 +453,18 @@ RÉPONDS EN FORMAT JSON :
                 formulas = [self.unicode_to_ascii_fol(f) for f in formulas]
 
                 logger.info(f"✅ Conversion LLM: {len(formulas)} formules générées")
-                return formulas
+                return formulas, None
 
             else:
                 # Fallback : conversion basique par règles
                 logger.warning("⚠️ Pas de LLM - conversion par règles basiques")
-                return self._basic_fol_conversion(text)
+                return self._basic_fol_conversion(text), "aucun service LLM"
 
         except Exception as e:
             logger.error(f"❌ Erreur conversion FOL: {e}")
-            return self._basic_fol_conversion(text)
+            return self._basic_fol_conversion(text), (
+                f"la conversion LLM a levé {type(e).__name__}: {e}"
+            )
 
     @staticmethod
     def unicode_to_ascii_fol(formula: str) -> str:
@@ -687,8 +725,12 @@ RÉPONDS EN FORMAT JSON :
             return result
 
         try:
-            # Test de cohérence — handle both sync and async bridges
-            content_str = "\n".join(formulas)
+            # Test de cohérence — handle both sync and async bridges.
+            # #2447: the conversion prompt asks for bare formulas, and the FOL
+            # parser needs the sorts and predicates declared first. Without
+            # them every LLM conversion failed to parse, so no verdict was
+            # ever computed on this path.
+            content_str = "\n".join(self.build_signature_prefixed_formulas(formulas))
             raw = bridge.check_consistency(content_str, "first_order")
             if inspect.isawaitable(raw):
                 raw = await raw
@@ -755,7 +797,8 @@ RÉPONDS EN FORMAT JSON :
         try:
             # Ajout d'étapes de raisonnement
             result.reasoning_steps = [
-                f"Conversion de {len(original_text)} caractères en {len(result.formulas)} formules FOL",
+                f"Conversion de {len(original_text)} caractères en "
+                f"{len(result.formulas)} formules FOL ({_source_label(result)})",
                 f"Test de cohérence: {_consistency_label(result)}",
                 f"Inférences trouvées: {len(result.inferences)}",
                 f"Modèles générés: {len(result.interpretations)}",
@@ -815,21 +858,21 @@ RÉPONDS EN FORMAT JSON :
 
             parsed = json.loads(str(llm_result))
 
-            # Fusion des résultats. #2447: the model's opinion on consistency
-            # is not the solver's verdict, so it never replaces
-            # ``consistency_check``; it is kept, labelled, in the steps.
-            if "consistency" in parsed:
-                result.reasoning_steps.append(
-                    "Avis du LLM sur la cohérence (non vérifié par un solveur) : "
-                    f"{parsed['consistency']}"
-                )
-            result.inferences.extend(parsed.get("inferences", []))
-            result.interpretations.extend(parsed.get("interpretations", []))
-            result.validation_errors.extend(parsed.get("errors", []))
-            result.confidence_score = max(
-                result.confidence_score, parsed.get("confidence", 0.0)
+            # #2447: nothing the model answers here was computed by a solver.
+            # Its answer is kept as it came, in ``llm_assessment``, with one
+            # labelled step. It writes none of the solver's fields: it used to
+            # replace the verdict, add its inferences, interpretations and
+            # errors unlabelled, and raise ``confidence_score`` to its own
+            # self-rating (a ``max``).
+            if not isinstance(parsed, dict):
+                parsed = {"raw": parsed}
+            result.llm_assessment = parsed
+            result.reasoning_steps.append(
+                "Avis du LLM (non vérifié par un solveur) : "
+                f"cohérence={parsed.get('consistency', '?')}, "
+                f"{len(parsed.get('inferences') or [])} inférence(s), "
+                f"{len(parsed.get('errors') or [])} erreur(s) signalée(s)"
             )
-            result.reasoning_steps.extend(parsed.get("reasoning_steps", []))
 
             return result
 

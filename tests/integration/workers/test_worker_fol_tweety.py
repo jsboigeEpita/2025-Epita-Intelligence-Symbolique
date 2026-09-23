@@ -772,6 +772,71 @@ class TestFOLRealWorldIntegration:
             )
 
 
+class TestAnalyzeReachesTheSolver:
+    """#2447 item 8: ``analyze()`` sends the LLM's formulas to the real
+    solver with the sort and predicate declarations the parser needs.
+
+    On ``main`` the formulas went bare, so the parser failed on every LLM
+    conversion ("Illegal characters in sort definition") and no verdict was
+    ever computed on this path. The kernel holds a fake chat service that
+    answers the conversion prompt's own example: no LLM is called.
+    """
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "formulas, verdict",
+        [
+            (["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"], True),
+            (
+                [
+                    "forall X: (Homme(X) => Mortel(X))",
+                    "Homme(socrate)",
+                    "!Mortel(socrate)",
+                ],
+                False,
+            ),
+        ],
+    )
+    async def test_llm_formulas_get_a_decided_verdict(
+        self, jvm_session, formulas, verdict
+    ):
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+
+        import json
+
+        import semantic_kernel as sk
+        from semantic_kernel.connectors.ai.chat_completion_client_base import (
+            ChatCompletionClientBase,
+        )
+        from semantic_kernel.contents.chat_message_content import (
+            ChatMessageContent,
+        )
+
+        answer = json.dumps({"formulas": formulas})
+
+        class _FakeChat(ChatCompletionClientBase):
+            async def _inner_get_chat_message_contents(self, chat_history, settings):
+                return [
+                    ChatMessageContent(
+                        role="assistant", content=answer, ai_model_id=self.ai_model_id
+                    )
+                ]
+
+        kernel = sk.Kernel()
+        kernel.add_service(_FakeChat(ai_model_id="fake-2447", service_id="fake"))
+        agent = FOLLogicAgent(
+            kernel=kernel, service_id="fake", tweety_bridge=TweetyBridge()
+        )
+
+        result = await agent.analyze(
+            "Tous les hommes sont mortels. Socrate est un homme."
+        )
+
+        assert result.consistency_check is verdict, result.consistency_message
+        assert result.formulas_source == "llm"
+
+
 # ==================== UTILITAIRES DE TEST ====================
 
 
