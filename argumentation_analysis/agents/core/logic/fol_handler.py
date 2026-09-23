@@ -17,6 +17,10 @@ from argumentation_analysis.core.mace4_runner import (
     interpret_mace4_output,
     run_mace4,
 )
+from argumentation_analysis.core.eprover_runner import (  # noqa: F401 (re-exported)
+    EProverInputRejected,
+    run_eprover,
+)
 from argumentation_analysis.core.config import settings, SolverChoice
 
 setup_logging()
@@ -62,6 +66,30 @@ def _sanitize_fol_bool_constants(formula: str) -> str:
     )
 
 
+class _EProverReasoner:
+    """The reasoner of every EProver site (#2516): Tweety's ``TPTPWriter``
+    writes the problem, and ``run_eprover`` runs E and reads its answer.
+
+    It replaces Tweety's ``EFOLReasoner``, whose ``query`` returns ``false``
+    on every outcome other than a proof. An input E refuses, a run without a
+    verdict and a shell failure all read "consistent" or "not entailed".
+    Here a refusal raises ``EProverInputRejected`` and a run without a verdict
+    raises ``RuntimeError``.
+    """
+
+    def __init__(self, eprover_path: str):
+        self._eprover_path = str(eprover_path)
+
+    def query(self, belief_set, formula) -> bool:
+        """``True`` iff E proves that ``belief_set`` entails ``formula``."""
+        text = jpype.JClass("java.io.StringWriter")()
+        writer = jpype.JClass("org.tweetyproject.logics.fol.writer.TPTPWriter")(text)
+        writer.printBase(belief_set)
+        writer.printQuery(formula)
+        writer.close()
+        return run_eprover(str(text.toString()), self._eprover_path)
+
+
 # Cache: eprover binary path -> bool (delivery contract verified on this platform).
 # The sentinel is a one-off subprocess per binary, not per-query overhead.
 _EPROVER_DELIVERY_RELIABLE: "dict[str, bool]" = {}
@@ -84,6 +112,10 @@ def _eprover_delivery_is_reliable(reasoner, eprover_path: str) -> bool:
     detected, the delivery is broken here and eprover must not be trusted — the
     caller raises so ``fol_check_consistency`` falls back to the in-JVM Tweety
     reasoner instead of serving a fabricated answer. Result cached per path.
+
+    #2516: every site now runs E through ``_EProverReasoner`` (an argument
+    list, no ``NativeShell``); the sentinel still checks the whole chain once
+    per binary.
 
     Returns True iff the sentinel is correctly reported inconsistent.
     """
@@ -1071,7 +1103,8 @@ class FOLHandler:
             ) from e
 
     async def _fol_check_consistency_with_eprover(self, belief_set):
-        """Checks FOL consistency using Tweety's EFOLReasoner (backed by EProver binary).
+        """Checks FOL consistency with the EProver binary, through
+        ``_EProverReasoner`` (Tweety's ``EFOLReasoner`` before #2516).
 
         #1196: the EProver binary path is read from the module-level
         ``EXTERNAL_TOOL_PATHS`` registry populated by ``jvm_setup._configure_external_tools``.
@@ -1090,11 +1123,7 @@ class FOLHandler:
                 "cannot run the 'eprover' solver path."
             )
         try:
-            JString = jpype.JClass("java.lang.String")
-            EFOLReasoner = jpype.JClass(
-                "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
-            )
-            reasoner = EFOLReasoner(JString(eprover_path))
+            reasoner = _EProverReasoner(eprover_path)  # #2516
 
             # #1204 anti-théâtre guard: verify the Tweety->E delivery contract
             # actually carries the problem to the binary on this platform before
@@ -1123,7 +1152,8 @@ class FOLHandler:
             logger.info(msg)
             return is_consistent, msg
         except SolverInputDefect:
-            # #2514: the copy we built for EProver; not an unavailable EProver.
+            # #2514: the copy we built for EProver; #2516: an input E refused.
+            # Neither is an unavailable EProver.
             raise
         except Exception as e:
             logger.error(
@@ -1296,7 +1326,8 @@ class FOLHandler:
 
     def _fol_query_with_eprover(self, belief_set, query_formula_str: str) -> bool:
         """
-        FOL query via Tweety's EFOLReasoner (backed by EProver binary).
+        FOL query with the EProver binary, through ``_EProverReasoner``
+        (Tweety's ``EFOLReasoner`` before #2516).
         Uses the same Tweety parsing as the default path but delegates
         reasoning to the EProver theorem prover.
         """
@@ -1312,11 +1343,7 @@ class FOLHandler:
                 raise RuntimeError(
                     "EProver binary not detected (EXTERNAL_TOOL_PATHS['eprover'] unset)."
                 )
-            JString = jpype.JClass("java.lang.String")
-            EFOLReasoner = jpype.JClass(
-                "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
-            )
-            reasoner = EFOLReasoner(JString(eprover_path))
+            reasoner = _EProverReasoner(eprover_path)  # #2516
             # #2514: every declared constant in its sort, the query's included.
             entails = reasoner.query(_eprover_belief_set(belief_set), query_formula)
             logger.info(
@@ -1460,14 +1487,10 @@ class FOLHandler:
             if use_eprover or self._initializer_instance:
                 try:
                     if use_eprover:
-                        JString = jpype.JClass("java.lang.String")
-                        EFOLReasoner = jpype.JClass(
-                            "org.tweetyproject.logics.fol.reasoner.EFOLReasoner"
-                        )
                         # use_eprover already implies eprover_path is not None
                         # (set above); narrow for the typed sentinel call below.
                         assert eprover_path is not None
-                        reasoner = EFOLReasoner(JString(eprover_path))
+                        reasoner = _EProverReasoner(eprover_path)  # #2516
                         solver_name = "EProver"
                         # #1204/#1232: this SYNC path is what
                         # ``TweetyBridge.check_consistency`` and the #1210 real-
@@ -1527,7 +1550,8 @@ class FOLHandler:
                     label = "eprover" if solver_name == "EProver" else "tweety"
                     return is_consistent, msg, label
                 except SolverInputDefect:
-                    # #2514: the copy we built for EProver.
+                    # #2514: the copy we built for EProver; #2516: an input E
+                    # refused.
                     raise
                 except Exception as e:
                     # Fail-loud (anti-theater): parsing succeeded but the

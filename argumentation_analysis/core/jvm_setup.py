@@ -728,7 +728,7 @@ def _configure_external_tools():
     Detected tools:
     - Clingo (ASP solver) → directory of the binary, for ClingoSolver
     - SPASS (Modal logic prover) → binary path, for SPASSMlReasoner
-    - EProver (FOL prover) → binary path, for EFOLReasoner
+    - EProver (FOL prover) → binary path, for fol_handler._EProverReasoner (#2516)
     - Python SAT tools (sat_solver.py, marco.py, maxsat_solver.py) — detection only
 
     Pattern from CoursIA tweety_init.py (issue #27).
