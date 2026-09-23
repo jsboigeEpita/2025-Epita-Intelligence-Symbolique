@@ -222,6 +222,92 @@ async def test_agentic_unit_failure_degrades_that_unit_in_state(monkeypatch):
     assert set(out["per_argument_scores"]) == {"arg_1", "arg_2", "arg_3"}
 
 
+# The two contexts that reach the whole-text fallback: no extracted argument,
+# and arguments too short to score (the per-argument loop keeps no result).
+_WHOLE_TEXT_CONTEXTS = [
+    pytest.param({}, id="no-arguments"),
+    pytest.param(
+        {"phase_extract_output": {"arguments": [{"text": "court"}]}},
+        id="no-scorable-argument",
+    ),
+]
+
+
+@pytest.mark.parametrize("context", _WHOLE_TEXT_CONTEXTS)
+async def test_whole_text_fallback_names_no_route_2444(monkeypatch, context):
+    """#2444: the whole-text fallback used to call the evaluator bare and
+    wrote no ``agentic_wiring``, so its output could not say which layer
+    scored. It now carries the same provenance as the per-argument path."""
+    invoke = _production_quality_invoke()
+
+    _WiringSpyEvaluator.llm_invocations = 0
+    monkeypatch.setattr(qe_module, "ArgumentQualityEvaluator", _WiringSpyEvaluator)
+    monkeypatch.setattr(
+        invoke_callables,
+        "_make_agentic_llm_callable",
+        lambda: (None, "no_route", ""),
+    )
+    _no_network(monkeypatch)
+
+    out = await invoke("un texte entier sans argument extrait", context)
+
+    assert _WiringSpyEvaluator.llm_invocations == 0
+    assert out["note_finale"] == _MINIMAL_EVAL["note_finale"]
+    assert out["agentic_wiring"] == {
+        "mode": "degraded_no_route",
+        "route": "no_route",
+        "model": "",
+        "units_evaluated": 1,
+        "units_degraded": {},
+    }
+
+
+@pytest.mark.parametrize("context", _WHOLE_TEXT_CONTEXTS)
+async def test_whole_text_fallback_degrades_by_name_2444(monkeypatch, context):
+    """#2444: on the whole-text fallback, an agentic chain failure failed the
+    phase, where the per-argument path re-runs the unit lexically and records
+    why. Both paths now share that degraded path."""
+    from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import (
+        AgenticDetectorError,
+    )
+
+    invoke = _production_quality_invoke()
+
+    class _FailingThenLexicalEvaluator(_WiringSpyEvaluator):
+        def evaluate(
+            self,
+            text: str,
+            agentic_llm: Any = _UNSET,
+            context_level: Any = None,
+        ) -> Dict[str, Any]:
+            effective = self._wired if agentic_llm is _UNSET else agentic_llm
+            if effective is not None:
+                raise AgenticDetectorError("simulated unparseable chain step")
+            return dict(_MINIMAL_EVAL)
+
+    def stub_llm(prompt: str) -> str:
+        return "1.0"
+
+    monkeypatch.setattr(
+        qe_module, "ArgumentQualityEvaluator", _FailingThenLexicalEvaluator
+    )
+    monkeypatch.setattr(
+        invoke_callables,
+        "_make_agentic_llm_callable",
+        lambda: (stub_llm, "stub", "stub-model"),
+    )
+    _no_network(monkeypatch)
+
+    out = await invoke("un texte entier sans argument extrait", context)
+
+    wiring = out["agentic_wiring"]
+    assert wiring["mode"] == "wired"  # route intact, the one unit degraded
+    assert wiring["units_evaluated"] == 1
+    assert list(wiring["units_degraded"]) == ["text"]
+    assert wiring["units_degraded"]["text"].startswith("AgenticDetectorError")
+    assert out["note_finale"] == _MINIMAL_EVAL["note_finale"]
+
+
 async def test_concurrency_is_explicitly_bounded_and_enforced(monkeypatch):
     """The bound is an explicit wiring parameter (≤ the 8-units/doc phase cap)
     and the semaphore actually enforces it at runtime."""

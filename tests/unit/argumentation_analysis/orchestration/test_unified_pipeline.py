@@ -12,6 +12,8 @@ Validates:
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from tests.support.llm_route import cut_llm_route
+
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
     ComponentType,
@@ -388,16 +390,19 @@ class TestWorkflowExecution:
         assert executor is not None
 
     @pytest.mark.asyncio
-    async def test_execute_light_workflow(self):
+    async def test_execute_light_workflow(self, monkeypatch):
         """Light workflow executes with registered components.
 
         #1583: this exercises the real light workflow end-to-end. The quality
         and counter invoke_callables leak collateral LLM calls (4 req / 46s),
         but ``COMPLETED`` does not depend on the model — phases reach
-        ``COMPLETED`` via the honest-degraded path too. Patch the AsyncOpenAI
-        ctor (family a, mechanism M2) so the verdict is decided without
-        network; the ``COMPLETED`` assertions still hold, proving (biting) the
-        phase status never depended on the leaked calls.
+        ``COMPLETED`` via the honest-degraded path too.
+
+        #2444: #1583 patched the ``AsyncOpenAI`` constructor. The quality
+        phase later gained a sync ``OpenAI`` client (#2331), which that patch
+        does not reach, and the test went back to 2 real requests per CI run.
+        The LLM route is now cut at the resolver every client reads, and the
+        test asserts the quality phase names its degraded mode.
         """
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
@@ -421,8 +426,8 @@ class TestWorkflowExecution:
             registry = setup_registry(include_optional=False)
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
-        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
-            results = await executor.execute(workflow, input_data="Test argument text")
+        cut_llm_route(monkeypatch)
+        results = await executor.execute(workflow, input_data="Test argument text")
         assert isinstance(results, dict)
         assert "quality" in results
         assert "counter" in results
@@ -430,10 +435,14 @@ class TestWorkflowExecution:
         # the status is honest-degraded, never model-gated.
         assert results["quality"].status == PhaseStatus.COMPLETED
         assert results["counter"].status == PhaseStatus.COMPLETED
+        assert (
+            results["quality"].output["agentic_wiring"]["mode"] == "degraded_no_route"
+        )
 
     @pytest.mark.asyncio
     async def test_execute_with_missing_optional(self):
         """Optional phases are skipped when provider is missing."""
+
         # #2313: the fixture registers a runnable provider for the phase
         # that must complete — the test's subject is the SKIPPED counter.
         async def _run_quality(input_text: str, context: dict) -> dict:
@@ -895,12 +904,17 @@ class TestStateViaRunUnifiedAnalysis:
 class TestInvokeCallables:
     """Test _invoke_* async callables with mocked dependencies."""
 
-    async def test_invoke_quality_evaluator(self):
-        """_invoke_quality_evaluator calls ArgumentQualityEvaluator.evaluate."""
+    async def test_invoke_quality_evaluator(self, monkeypatch):
+        """_invoke_quality_evaluator calls ArgumentQualityEvaluator.evaluate.
+
+        #2444: the whole-text result also says which layer scored it. The
+        route is cut so that mode does not depend on the machine's keys.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             _invoke_quality_evaluator,
         )
 
+        cut_llm_route(monkeypatch)
         mock_evaluator = MagicMock()
         mock_evaluator.evaluate.return_value = {"note_finale": 7.5, "clarity": 8.0}
         with patch(
@@ -908,6 +922,8 @@ class TestInvokeCallables:
             return_value=mock_evaluator,
         ):
             result = await _invoke_quality_evaluator("Test arg", {})
+        mock_evaluator.evaluate.assert_called_once_with("Test arg")
+        assert result.pop("agentic_wiring")["mode"] == "degraded_no_route"
         assert result == {"note_finale": 7.5, "clarity": 8.0}
 
     async def test_invoke_counter_argument(self):

@@ -10,6 +10,8 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from tests.support.llm_route import cut_llm_route
+
 from argumentation_analysis.orchestration.router import (
     TextAnalysisRouter,
     RoutingResult,
@@ -468,39 +470,37 @@ class TestCapabilityDiscovery:
 
 class TestRouterIntegration:
     @pytest.mark.asyncio
-    async def test_auto_workflow_name_works(self):
-        """workflow_name='auto' in run_unified_analysis() uses the router."""
+    async def test_auto_workflow_name_works(self, monkeypatch):
+        """workflow_name='auto' in run_unified_analysis() uses the router.
+
+        #2444: this test used to give the router a fake key and answer its LLM
+        call with a patched ``openai.AsyncOpenAI``. The quality phase read the
+        same route and built its sync client (#2331), which that patch does not
+        reach: 1 real request per CI run, 4 on a machine with OpenRouter
+        configured. With the route cut, the router takes its heuristic tier
+        and the workflow it builds runs without a model. The LLM tier is
+        tested in ``TestLLMRouting``, where the mocked client serves the
+        router alone.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             run_unified_analysis,
             setup_registry,
         )
 
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
 
-        # Mock the LLM call in the router
-        llm_response = json.dumps(
-            {
-                "capabilities": ["argument_quality", "counter_argument_generation"],
-                "workflow_complexity": "light",
-            }
-        )
-        mock_response = _mock_openai_response(llm_response)
+        with patch.object(
+            TextAnalysisRouter, "_route_with_llm", new=AsyncMock()
+        ) as llm_tier:
+            result = await run_unified_analysis(
+                "Les vaccins sont efficaces.",
+                workflow_name="auto",
+                registry=registry,
+                create_state=False,
+            )
 
-        with patch("openai.AsyncOpenAI") as MockClient:
-            with patch.dict("os.environ", {"OPENAI_API_KEY": "sk-test"}):
-                client_instance = AsyncMock()
-                client_instance.chat.completions.create = AsyncMock(
-                    return_value=mock_response
-                )
-                MockClient.return_value = client_instance
-
-                result = await run_unified_analysis(
-                    "Les vaccins sont efficaces.",
-                    workflow_name="auto",
-                    registry=registry,
-                    create_state=False,
-                )
-
+        llm_tier.assert_not_called()
         assert "auto" in result["workflow_name"]
         assert "phases" in result
 

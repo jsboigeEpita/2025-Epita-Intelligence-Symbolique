@@ -490,6 +490,26 @@ jobs:
           }
           Write-Host "✅ JVM-startup guard OK — $passed test(s) passed; JVM-dependent tests ran (or skipped for legitimate non-JVM reasons)."
 
+      - name: Fail-loud guard — LLM network egress in the gate (#2444)
+        # The gate runs under -m "not slow and not requires_api", so an LLM
+        # request that reaches the network during it is a leak by
+        # construction. The egress counter printed "gate expectation: 0" but
+        # only observed: run 35819591775 on main was green with 16 billed
+        # requests to api.openai.com from four tests. This step fails the job
+        # when the report's per_test_llm_network is not empty, and names the
+        # tests. Requests answered by an in-process double are not counted
+        # (#2422). A missing report, or one without the counter's control
+        # rows, is "not measured" and fails too.
+        if: always() && env.API_KEYS_CONFIGURED == 'true'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path pytest_report.xml)) {
+            Write-Host "ℹ️ No pytest_report.xml — egress guard skipped (the suite produced no report; failure already captured upstream)."
+            exit 0
+          }
+          conda run -n projet-is --no-capture-output python scripts/ci/llm_egress_gate.py llm_egress_report.json
+          exit $LASTEXITCODE
+
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
