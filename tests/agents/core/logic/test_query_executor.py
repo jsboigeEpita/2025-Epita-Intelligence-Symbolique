@@ -157,18 +157,39 @@ class TestQueryExecutor:
     @pytest.mark.asyncio
     async def test_execute_query_first_order_accepted(self):
         """Test de l'exécution d'une requête du premier ordre acceptée."""
-        # La validation FOL est skipée dans l'implémentation pour le moment
-        self.mock_tweety_bridge.fol_handler.fol_query.return_value = True
+        # #2502: the double returns what ``execute_fol_query`` returns, a
+        # ``(verdict, message)`` pair. It used to make ``fol_query`` return a
+        # bare bool, which the real ``fol_query`` never does.
+        self.mock_tweety_bridge.fol_handler.execute_fol_query.return_value = (
+            True,
+            "Query 'P(a)': entailed",
+        )
 
         belief_set = FirstOrderBeliefSet("forall X: (P(X) => Q(X))")
         result, message = self.query_executor.execute_query(belief_set, "P(a)")
 
-        self.mock_tweety_bridge.fol_handler.fol_query.assert_called_once_with(
-            belief_set, "P(a)"
+        self.mock_tweety_bridge.fol_handler.execute_fol_query.assert_called_once_with(
+            belief_set.content, "P(a)"
         )
 
         assert result is True
-        assert message == "Tweety Result: FOL Query 'P(a)' is ACCEPTED (True)."
+        assert message.startswith("Tweety Result: FOL Query 'P(a)' is ACCEPTED (True).")
+
+    @pytest.mark.asyncio
+    async def test_execute_query_first_order_undecided(self):
+        """#2502: a query the reasoner does not decide reads ``None``, with the
+        reason, never a refusal."""
+        self.mock_tweety_bridge.fol_handler.execute_fol_query.return_value = (
+            None,
+            "Query 'P(a)': no verdict on entailment",
+        )
+
+        result, message = self.query_executor.execute_query(
+            FirstOrderBeliefSet("forall X: (P(X) => Q(X))"), "P(a)"
+        )
+
+        assert result is None
+        assert "no verdict" in message
 
     @pytest.mark.asyncio
     async def test_execute_query_modal_accepted(self):
