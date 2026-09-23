@@ -172,13 +172,22 @@ def _run_child_pytest(tmp_path: Path, root: Path, *args: str) -> dict:
     return seen
 
 
-def test_a_pytest_session_and_its_worker_keep_what_the_caller_set(tmp_path):
+def test_a_pytest_session_keeps_what_the_caller_set(tmp_path):
     """The real harness: ``tests/conftest.py``'s ``pytest_configure`` loads the
     root ``.env`` through ``ensure_env``. ``OPENAI_API_KEY= pytest ...`` now
-    runs keyless, and the keys the caller did not set still come from ``.env``.
+    runs keyless, and the keys the caller did not set still come from ``.env``."""
+    seen = _run_child_pytest(tmp_path, _root(tmp_path))
+    assert set(seen) == {"controller"}
+    got = {k: v for k, v in seen["controller"].items() if k in NAMES}
+    assert got == EXPECTED
 
-    An xdist worker is started with the controller's environment, after the
+
+def test_an_xdist_worker_keeps_what_the_caller_set(tmp_path):
+    """An xdist worker is started with the controller's environment, after the
     controller's ``pytest_configure``: it must see the caller's values too."""
+    # The CI env (``projet-is``) carries no pytest-xdist: ``-n`` is an
+    # unrecognized argument there (rc=4). Local seats run with ``-n 4``.
+    pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
     seen = _run_child_pytest(tmp_path, _root(tmp_path), "-n", "1")
     assert set(seen) == {"controller", "gw0"}
     for role, values in seen.items():
