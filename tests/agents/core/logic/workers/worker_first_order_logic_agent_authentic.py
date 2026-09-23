@@ -86,7 +86,7 @@ async def test_agent_initialization_simplified(jvm_session):
 
 def main():
     """Point d'entrée principal pour l'exécution des tests."""
-    logger.info("Démarrage du worker pour TestFirstOrderLogicAgent...")
+    logger.info("Démarrage du worker pour FOLLogicAgent...")
 
     try:
         # Exécuter les tests pytest

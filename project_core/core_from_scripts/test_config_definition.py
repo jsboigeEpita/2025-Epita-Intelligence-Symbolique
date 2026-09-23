@@ -94,7 +94,7 @@ class TestRunner:
         self.available_components = [
             "TweetyErrorAnalyzer",
             "UnifiedConfig",
-            "FirstOrderLogicAgent",
+            "FOLLogicAgent",
             "AuthenticitySystem",
             "UnifiedOrchestrations",
         ]

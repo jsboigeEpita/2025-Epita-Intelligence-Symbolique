@@ -102,7 +102,9 @@ async def _validate_source_management(
 
     try:
         if available_components.get("source_selector", False):
-            from scripts.core.unified_source_selector import UnifiedSourceSelector
+            from project_core.core_from_scripts.unified_source_selector import (
+                UnifiedSourceSelector,
+            )
 
             source_tests["module_import"] = {
                 "status": "✅ OK",
@@ -126,10 +128,10 @@ async def _validate_source_management(
                 "description": "Import du module UnifiedSourceSelector",
             }
 
-    except ImportError:
+    except ImportError as e:
         source_tests["module_import"] = {
             "status": "❌ ERREUR IMPORT",
-            "description": "Impossible d'importer UnifiedSourceSelector",
+            "description": f"Impossible d'importer UnifiedSourceSelector: {e}",
         }
     except Exception as e:
         source_tests["module_error"] = {
