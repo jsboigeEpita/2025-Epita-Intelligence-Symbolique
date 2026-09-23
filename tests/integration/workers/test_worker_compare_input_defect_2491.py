@@ -245,6 +245,22 @@ def test_a_refused_input_is_not_an_unavailable_axis(fol, monkeypatch):
     assert type(raised.value).__name__ == "Prover9InputRejected"
 
 
+def test_a_refused_input_fails_the_multi_axis_phase(fol, monkeypatch):
+    """The phase that runs the harness (``multi_axis_compare``) does not catch
+    it either, so the executor fails the phase; ``main`` completed it with the
+    FOL axis unavailable."""
+    from argumentation_analysis.orchestration.invoke_callables import (
+        _invoke_multi_axis_compare,
+    )
+
+    _prover9_refuses(fol, monkeypatch)
+    context = {"multi_axis": {"axes": ["fol"], "fol_belief_set": _KB}}
+
+    with pytest.raises(RuntimeError, match="Fatal error") as raised:
+        asyncio.run(_invoke_multi_axis_compare("text", context))
+    assert type(raised.value).__name__ == "Prover9InputRejected"
+
+
 def test_a_failing_comparator_is_still_an_unavailable_axis():
     """Control: any other comparator failure still reads as an unavailable
     axis, and the harness does not raise."""
