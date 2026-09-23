@@ -2,14 +2,11 @@
 # VÉRIFICATION DE LA VERSION DE SEMANTIC-KERNEL
 # Le projet requiert une version moderne et agentique. Cette importation précoce
 # garantit que le programme s'arrête immédiatement si la version est obsolète.
+# #2459: the ``ImportError`` propagates, naming the cause. A library module
+# never ends the importing process (it used to call ``sys.exit(1)``).
 # =====================================================================================
-try:
-    from argumentation_analysis.utils import version_validator
-except ImportError as e:
-    import sys
+from argumentation_analysis.utils import version_validator  # noqa: F401
 
-    print(f"ERREUR CRITIQUE: {e}", file=sys.stderr)
-    sys.exit(1)
 # =====================================================================================
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-

@@ -30,16 +30,12 @@ logger = logging.getLogger("CleanupSensitiveFiles")
 # Ajouter le répertoire parent au chemin de recherche des modules
 sys.path.append(str(Path(__file__).parent.parent))
 
-# Importer les modules nécessaires
-try:
-    from argumentation_analysis.config.settings import settings
-    from argumentation_analysis.ui.extract_utils import load_extract_definitions_safely
-
-    logger.info("Import réussi.")
-except ImportError as e:
-    logger.error(f"Erreur d'importation: {e}")
-    logger.error("Vérifiez que les modules nécessaires sont présents dans le projet.")
-    sys.exit(1)
+# #2459: ``argumentation_analysis/utils/__init__.py`` imports this module, so
+# any ``import argumentation_analysis.utils.<x>`` runs this line. A failure
+# here raises its ``ImportError`` instead of ending the importing process
+# (it used to call ``sys.exit(1)``). ``load_extract_definitions_safely``
+# pulls ``crypto_service`` and is imported where it is used.
+from argumentation_analysis.config.settings import settings
 
 # Définir les constantes
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -73,6 +69,8 @@ def verify_encrypted_file():
         return False
 
     # Tenter de charger les définitions d'extraits depuis le fichier chiffré
+    from argumentation_analysis.ui.extract_utils import load_extract_definitions_safely
+
     extract_definitions, error_message = load_extract_definitions_safely(
         CONFIG_FILE_ENC, ENCRYPTION_KEY
     )
