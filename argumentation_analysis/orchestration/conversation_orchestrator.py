@@ -668,11 +668,17 @@ class ConversationOrchestrator:
             fallacies = [
                 f for f in entries if not (isinstance(f, dict) and "error" in f)
             ]
+            # The informal prompt names a fallacy under ``"nom"``, which this
+            # adapter did not read: every live fallacy was "unknown". The
+            # conversational orchestrator's reader tries every key in use.
+            from argumentation_analysis.orchestration.conversational_orchestrator import (
+                _extract_fallacy_type,
+            )
+
             adapted = {
                 "fallacies_count": len(fallacies),
                 "main_issues": [
-                    f.get("type", f.get("fallacy_type", "unknown"))
-                    for f in fallacies[:5]
+                    _extract_fallacy_type(f) or "unknown" for f in fallacies[:5]
                 ],
                 "raw_result": result,
             }

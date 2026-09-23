@@ -39,7 +39,8 @@ from argumentation_analysis.orchestration.conversation_orchestrator import (
 
 TEXT = "Tous les hommes sont mortels. Socrate est un homme."
 FORMULAS = ["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"]
-FALLACIES = [{"fallacy_type": "ad_hominem", "confidence": 0.9}]
+# The informal prompt's schema names the fallacy under "nom" (prompts.py).
+FALLACIES = [{"nom": "ad-hominem", "confidence": 0.9}]
 
 
 class _FakeChat(ChatCompletionClientBase):
@@ -117,7 +118,7 @@ async def test_the_real_mode_runs_the_fol_step(
 
     informal = orch.state.agent_results["informal"]
     assert informal["fallacies_count"] == 1
-    assert informal["main_issues"] == ["ad_hominem"]
+    assert informal["main_issues"] == ["ad-hominem"]
     assert "analysis_errors" not in informal
     assert _fallacies_line(report).endswith("** 1")
 
