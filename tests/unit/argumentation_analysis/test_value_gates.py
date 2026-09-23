@@ -1637,7 +1637,11 @@ class TestPLValueGate:
         text = "If it rains then the ground is wet. It is raining."
         context = {}
 
-        # Simulate TweetyBridge returning a successful consistency check
+        # Simulate TweetyBridge returning a successful consistency check.
+        # #2499: the phase decides through check_consistency_detailed, which
+        # returns (verdict, model, message). This double used to answer the
+        # older 2-tuple, so the main path raised on the unpack and the test was
+        # green on the isolation net's fabricated ``satisfiable: True``.
         mock_bridge = MagicMock()
         mock_bridge.check_consistency.return_value = (True, "Satisfiable")
 
@@ -1651,10 +1655,12 @@ class TestPLValueGate:
             return_value=(None, None),
         ), patch(
             "argumentation_analysis.orchestration.invoke_callables.asyncio.to_thread",
-            return_value=(True, "Satisfiable"),
+            return_value=(True, {}, "Satisfiable"),
         ):
             result = await _invoke_propositional_logic(text, context)
 
+        # The verdict comes from the batch check, not from the isolation net.
+        assert "isolation_retry" not in result, result
         # When Tweety succeeds, satisfiable must be a bool
         assert isinstance(result.get("satisfiable"), bool), (
             f"PL 'satisfiable' should be bool when Tweety succeeds, "
