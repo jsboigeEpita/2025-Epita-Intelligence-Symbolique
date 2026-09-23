@@ -375,36 +375,13 @@ def initialize_project_environment(
             logger.info(
                 f"Added CWD-based project root to sys.path: {current_project_root}"
             )
-            # Re-tenter les imports
-            global initialize_jvm_func, CryptoService_class, DefinitionService_class, create_llm_service_func, InformalAgent_class, ContextualFallacyDetector_class, sk_module, ENCRYPTION_KEY_imported, ExtractDefinitions_class, SourceDefinition_class, Extract_class
-            if not initialize_jvm_func:
-                try:
-                    from argumentation_analysis.core.jvm_setup import (
-                        initialize_jvm as initialize_jvm_func,
-                    )
-
-                    logger.info("Late import: initialize_jvm_func")
-                except ImportError:
-                    pass
-            if not CryptoService_class:
-                try:
-                    from argumentation_analysis.services.crypto_service import (
-                        CryptoService as CryptoService_class,
-                    )
-
-                    logger.info("Late import: CryptoService_class")
-                except ImportError:
-                    pass
-            if not ContextualFallacyDetector_class:
-                try:
-                    from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import (
-                        ContextualFallacyDetector as ContextualFallacyDetector_class,
-                    )
-
-                    logger.info("Late import: ContextualFallacyDetector_class")
-                except ImportError:
-                    pass
-            # L'import tardif de InformalAgent a été supprimé.
+            # #2345 : un bloc « Re-tenter les imports » ré-important ici trois
+            # modules du haut de fichier a été retiré. Il ne s'exécutait que si
+            # ``project_root`` est None, c'est-à-dire si ``__file__`` est indéfini
+            # pour ce module, ce qui n'arrive pas à un module importé. Et même
+            # atteint, il ré-importait des modules ``argumentation_analysis.*``
+            # depuis un paquet déjà importable : l'erreur de l'import du haut
+            # se serait reproduite, avalée cette fois par ``except ImportError: pass``.
 
     context.project_root_path = current_project_root
     logger.info(
