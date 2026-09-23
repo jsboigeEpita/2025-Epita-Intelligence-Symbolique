@@ -99,10 +99,10 @@ La documentation est mise à jour selon le processus suivant :
 
 ### Via le script de lancement
 
-Le moyen le plus simple d'utiliser l'outil de réparation est d'exécuter le script à la racine du projet:
+Le moyen le plus simple d'utiliser l'outil de réparation est d'exécuter le script de lancement maintenance depuis la racine du projet:
 
 ```bash
-python ../../run_extract_repair.py
+python scripts/orchestration/run_extract_repair.py
 ```
 
 ### Options du script de lancement
@@ -110,7 +110,7 @@ python ../../run_extract_repair.py
 Le script de réparation accepte plusieurs options en ligne de commande:
 
 ```bash
-python ../../run_extract_repair.py --output rapport.html --save --single-orator-only
+python scripts/orchestration/run_extract_repair.py --output rapport.html --save --single-orator-only
 ```
 
 Options disponibles:

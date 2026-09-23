@@ -64,7 +64,6 @@ DECLARED = {
 PENDING_TRIAGE = {
     "argumentation_analysis/utils/dev_tools/repair_utils.py": "#2362 B2",
     "argumentation_analysis/utils/dev_tools/verification_utils.py": "#2362 B2",
-    "argumentation_analysis/utils/run_verify_extracts.py": "#2362 B2",
     "argumentation_analysis/scripts/run_verify_extracts_llm.py": "#2362 B2",
     "argumentation_analysis/utils/run_verify_extracts_with_llm.py": "#2362 B2",
     "argumentation_analysis/utils/data_generation.py": "#2362 B2",
