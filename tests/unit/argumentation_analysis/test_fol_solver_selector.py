@@ -227,18 +227,15 @@ class TestExternalFOLSolverConsumer:
     """
 
     async def test_context_eprover_routes_to_eprover_branch(self):
-        """When context has fol_solver='eprover', the eprover branch should be entered.
+        """When context has fol_solver='eprover', the handler is asked for EProver.
 
         TweetyBridge and FOLLogicAgent are imported locally inside the function,
         so we must patch their source modules, not invoke_callables.
 
-        Hermicity (#982): _invoke_external_fol_solver gates the eprover branch
-        on `shutil.which("eprover")` — the EProver binary is NOT on PATH in CI
-        (external bundled solver, not installed on runners). Without mocking
-        that probe the function falls through to the TweetyBridge path and the
-        routing-under-test never executes. We mock shutil.which to simulate a
-        present EProver binary so the test exercises the eprover branch
-        deterministically, independent of the runner's PATH.
+        #2482: the phase no longer picks a branch on ``shutil.which`` (the
+        handler finds the bundled binary through ``jvm_setup``); it passes the
+        solver to ``fol_handler.check_consistency_by``, and the label is the
+        solver the handler reports. The routing under test is that argument.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
@@ -252,13 +249,13 @@ class TestExternalFOLSolverConsumer:
             },
         }
 
+        from argumentation_analysis.core.config import SolverChoice
+
         mock_bridge = MagicMock()
-        mock_bridge.check_consistency = MagicMock(return_value=(True, "consistent"))
+        check = mock_bridge.fol_handler.check_consistency_by
+        check.return_value = (True, "consistent", "eprover")
 
         with patch(
-            "argumentation_analysis.orchestration.invoke_callables.shutil.which",
-            return_value="/usr/local/bin/eprover",
-        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ), patch(
@@ -271,13 +268,16 @@ class TestExternalFOLSolverConsumer:
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
+        assert check.call_args[0][1] == SolverChoice.EPROVER
         assert result.get("solver") == "eprover"
         assert result.get("logic_type") == "first_order"
 
     async def test_context_prover9_routes_to_prover9_branch(self):
-        """When context has fol_solver='prover9', prover9 subprocess should be attempted.
+        """When context has fol_solver='prover9', the handler is asked for Prover9.
 
-        We mock prover9_runner.run_prover9 to avoid needing the real binary.
+        #2482: the phase used to run Prover9 itself, on input the binary
+        rejects; the handler runs it now (on the real binary:
+        ``tests/integration/workers/test_worker_prover9_ladr_2482.py``).
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
@@ -291,13 +291,13 @@ class TestExternalFOLSolverConsumer:
             },
         }
 
+        from argumentation_analysis.core.config import SolverChoice
+
         mock_bridge = MagicMock()
-        mock_bridge.check_consistency = MagicMock(return_value=(True, "OK"))
+        check = mock_bridge.fol_handler.check_consistency_by
+        check.return_value = (False, "FOL consistency check (Prover9): x", "prover9")
 
         with patch(
-            "argumentation_analysis.core.prover9_runner.run_prover9",
-            return_value="THEOREM PROVED\nproof finished",
-        ), patch(
             "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
             return_value=mock_bridge,
         ), patch(
@@ -310,21 +310,23 @@ class TestExternalFOLSolverConsumer:
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
-        # Prover9 path should produce solver="prover9" or fall back to tweety
+        assert check.call_args[0][1] == SolverChoice.PROVER9
         assert result.get("logic_type") == "first_order"
-        assert result.get("solver") in ("prover9", "tweety_fallback", "tweety")
+        assert result.get("solver") == "prover9"
+        assert result.get("consistent") is False
 
     async def test_default_eprover_uses_eprover_branch(self):
         """When context has no fol_solver, default eprover path should be used (#939).
 
-        Hermicity (#982, #900): two probes must be mocked here. (1) The EProver
-        binary gate `shutil.which("eprover")` — CI runners lack the bundled
-        external solver. (2) The settings fallback: with no context override the
-        function reads `str(settings.solver)`, which reflects the real .env /
-        pydantic-settings defaults (tweety on many envs) and would route away
-        from eprover regardless of the binary probe. We force settings.solver to
-        the #939 default ("eprover") so the test exercises the default-eprover
-        routing deterministically, independent of runner config.
+        Hermicity (#982, #900): with no context override the function reads
+        ``settings.solver``, which reflects the real .env / pydantic-settings
+        defaults (tweety on many envs). We force it to the #939 default so the
+        test exercises the default-eprover routing, independent of runner config.
+
+        #2482: the double is the real type, a ``SolverChoice``. It used to be the
+        string ``"eprover"``, which hid that the function read
+        ``str(settings.solver)`` (``'SolverChoice.EPROVER'``) and so matched no
+        branch for a real setting.
         """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
@@ -337,16 +339,16 @@ class TestExternalFOLSolverConsumer:
             },
         }
 
+        from argumentation_analysis.core.config import SolverChoice
+
         mock_bridge = MagicMock()
-        mock_bridge.check_consistency = MagicMock(return_value=(True, "OK"))
+        check = mock_bridge.fol_handler.check_consistency_by
+        check.return_value = (True, "OK", "eprover")
 
         mock_settings = MagicMock()
-        mock_settings.solver = "eprover"
+        mock_settings.solver = SolverChoice.EPROVER
 
         with patch(
-            "argumentation_analysis.orchestration.invoke_callables.shutil.which",
-            return_value="/usr/local/bin/eprover",
-        ), patch(
             "argumentation_analysis.core.config.settings",
             mock_settings,
         ), patch(
@@ -362,7 +364,8 @@ class TestExternalFOLSolverConsumer:
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
-        # Default eprover path → eprover (binary present + settings default via mock)
+        # Default eprover path → the handler is asked for EProver.
+        assert check.call_args[0][1] is SolverChoice.EPROVER
         assert result.get("solver") == "eprover"
         assert result.get("logic_type") == "first_order"
 

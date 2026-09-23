@@ -39,8 +39,13 @@ def handler():
 
 @pytest.fixture
 def fake_jpype():
-    """``FolParser`` is a double, so no JVM is needed to reach the reasoner."""
+    """``FolParser`` is a double, so no JVM is needed to reach the reasoner.
+
+    ``JException`` stays an exception class: the query goes through
+    ``parse_fol_formula``, whose ``except jpype.JException`` cannot evaluate
+    against a mock attribute (#2482)."""
     with patch.object(fol_handler_module, "jpype") as jpype:
+        jpype.JException = type("JException", (Exception,), {})
         yield jpype
 
 

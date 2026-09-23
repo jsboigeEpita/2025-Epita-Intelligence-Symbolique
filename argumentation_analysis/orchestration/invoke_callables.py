@@ -10066,11 +10066,12 @@ async def _invoke_tweety_interpretation(
 async def _invoke_external_fol_solver(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Route FOL formulas to external solver (EProver/Prover9) with fallback (#504).
+    """Route FOL formulas to the configured FOL solver (#504, #2482).
 
-    Picks up formulas from the FOL phase output. Tries EProver via Tweety
-    EFOLReasoner first, then Prover9 subprocess. Falls back to TweetyBridge
-    (the default FOL path) when neither external solver is available.
+    Picks up formulas from the FOL phase output and asks the FOL handler, with
+    the solver the context requests (``fol_solver``) or ``settings.solver``.
+    The handler runs EProver, Prover9 or Mace4 when asked and available, and
+    the in-JVM Tweety reasoner otherwise; ``solver`` names the one that decided.
 
     #1019: falling back to TweetyBridge is NOT degradation. TweetyBridge is a
     genuine FOL reasoner; external solvers are optional performance enhancers,
@@ -10082,6 +10083,14 @@ async def _invoke_external_fol_solver(
     ``bool()``, so a parse failure was published as a decided *inconsistent*.
     Both now track the tri-state: ``consistent`` is ``True``/``False``/``None``
     and ``degraded`` is exactly ``consistent is None``.
+
+    #2482: this was three branches. EProver was probed on ``PATH`` and Prover9
+    relative to the working directory, while the handler finds both through
+    ``jvm_setup`` and its runner; the Prover9 branch sent Tweety syntax, which
+    Prover9 rejects; and the label named the branch, not the solver ("tweety"
+    next to the handler's own "FOL consistency check (EProver)"). The solver
+    was also read as ``str(settings.solver)``, ``'SolverChoice.EPROVER'``,
+    which matched no branch.
     """
     _preflight_solver_check()
 
@@ -10092,110 +10101,24 @@ async def _invoke_external_fol_solver(
     if not isinstance(formulas, list):
         formulas = [str(formulas)]
 
-    fol_signature = fol_output.get("fol_signature", [])
+    from argumentation_analysis.core.config import SolverChoice, settings
 
-    # Resolve solver choice: context override > settings > default (#900)
-    fol_solver = context.get("fol_solver", None)
-    if fol_solver is None:
-        try:
-            from argumentation_analysis.core.config import settings
+    # Resolve solver choice: context override > settings (#900).
+    requested = context.get("fol_solver", None)
+    try:
+        choice = (
+            settings.solver if requested is None else SolverChoice(requested.lower())
+        )
+    except (AttributeError, ValueError):
+        return {
+            "formulas": formulas,
+            "consistent": None,
+            "solver": "none",
+            "degraded": True,
+            "error": f"unknown fol_solver {requested!r}",
+            "logic_type": "first_order",
+        }
 
-            fol_solver = str(settings.solver)  # SolverChoice enum → str
-        except Exception:
-            fol_solver = "eprover"  # #939: eprover default, not tweety
-
-    # #982: Probe for EProver binary before claiming external solver
-    eprover_available = shutil.which("eprover") is not None
-
-    # Try EProver via Tweety EFOLReasoner (only if binary present)
-    if eprover_available and fol_solver == "eprover":
-        try:
-            from argumentation_analysis.agents.core.logic.tweety_bridge import (
-                TweetyBridge,
-            )
-            from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-                FOLLogicAgent,
-            )
-
-            bridge = TweetyBridge()
-            # #2468: the signature and the formulas renamed to it.
-            meta = FOLLogicAgent.extract_fol_metadata(formulas)
-            formulas = meta["formulas"]
-            belief_set_str = "\n".join(
-                str(f) for f in meta["signature_lines"] + [""] + formulas
-            )
-            is_consistent, msg = await asyncio.to_thread(
-                bridge.check_consistency, belief_set_str, "first_order"
-            )
-            return {
-                "formulas": formulas,
-                # #1634: pass the handler's tri-state through. It answers
-                # ``(None, "Degraded: …")`` when the belief set will not parse;
-                # ``bool(None)`` turned that into a decided "inconsistent".
-                "consistent": is_consistent,
-                "solver": "eprover",
-                "degraded": is_consistent is None,
-                "message": msg,
-                "logic_type": "first_order",
-            }
-        except Exception as e:
-            logger.info(f"EProver unavailable ({e}), trying Prover9")
-    elif fol_solver == "eprover":
-        logger.info("EProver binary not found on PATH (shutil.which), skipping")
-
-    # Try Prover9 subprocess (only if requested)
-    prover9_available = False
-    if fol_solver == "prover9":
-        try:
-            from pathlib import Path as _Path
-
-            _prover9_bat = _Path("libs/prover9/bin/prover9.bat")
-            prover9_available = _prover9_bat.is_file()
-        except Exception:
-            pass
-        if prover9_available:
-            try:
-                from argumentation_analysis.core.prover9_runner import run_prover9
-
-                belief_set_str = "\n".join(
-                    str(f) for f in fol_signature + [""] + formulas
-                )
-                prover9_input = f"formulas(sos).\n{belief_set_str}\nend_of_list.\n"
-                result = await asyncio.to_thread(run_prover9, prover9_input)
-                # #1634: report what Prover9 actually said, and only that.
-                #
-                # The input above is a bare SOS list with NO goal, so a proof
-                # here IS the derivation of the empty clause: "THEOREM PROVED"
-                # means the KB is INCONSISTENT and "SEARCH FAILED" means it is
-                # consistent (the runner's own docstring says so — exit 2 =
-                # SEARCH FAILED on a consistent KB). The previous expression
-                # stored ``consistent = proved``, i.e. exactly backwards.
-                # Measured against the bundled binary: ``P(a). -P(a).`` →
-                # THEOREM PROVED (was stored as consistent=True), and
-                # ``P(a). Q(b).`` → SEARCH FAILED (was stored as False).
-                #
-                # And when NEITHER marker is present, Prover9 decided nothing —
-                # that is the #1634 motif proper, so it yields None rather than
-                # a boolean picked by default.
-                refuted = "THEOREM PROVED" in result or "Proof found" in result
-                exhausted = "SEARCH FAILED" in result
-                consistent = False if refuted else (True if exhausted else None)
-                return {
-                    "formulas": formulas,
-                    "consistent": consistent,
-                    "solver": "prover9",
-                    "degraded": consistent is None,
-                    "raw_output": result[:500],
-                    "logic_type": "first_order",
-                }
-            except FileNotFoundError:
-                logger.info("Prover9 binary not found, falling back to TweetyBridge")
-            except Exception as e:
-                logger.info(f"Prover9 failed ({e}), falling back to TweetyBridge")
-        else:
-            logger.info("Prover9 binary not bundled, falling back to TweetyBridge")
-
-    # Fallback: TweetyBridge (default path) — genuine FOL reasoning via JVM
     try:
         from argumentation_analysis.agents.core.logic.tweety_bridge import (
             TweetyBridge,
@@ -10211,17 +10134,16 @@ async def _invoke_external_fol_solver(
         belief_set_str = "\n".join(
             str(f) for f in meta["signature_lines"] + [""] + formulas
         )
-        is_consistent, msg = await asyncio.to_thread(
-            bridge.check_consistency, belief_set_str, "first_order"
+        is_consistent, msg, solver = await asyncio.to_thread(
+            bridge.fol_handler.check_consistency_by, belief_set_str, choice
         )
         return {
             "formulas": formulas,
-            # #1634: same tri-state pass-through as the EProver branch above.
-            # This is the branch actually taken when ``eprover`` is not on PATH,
-            # so it is where real corpora had their parse failures rendered as
-            # a decided ``consistent: False``.
+            # #1634: the handler's tri-state passes through. It answers
+            # ``(None, "Degraded: …")`` when the belief set will not parse;
+            # ``bool(None)`` turned that into a decided "inconsistent".
             "consistent": is_consistent,
-            "solver": "tweety",
+            "solver": solver or "none",
             "degraded": is_consistent is None,
             "message": msg,
             "logic_type": "first_order",

@@ -92,8 +92,14 @@ def _recording_bridge(verdict):
         seen.append(belief_set)
         return verdict, "bridge double"
 
+    def check_by(belief_set, solver=None):
+        seen.append(belief_set)
+        return verdict, "bridge double", "tweety"
+
     bridge = MagicMock()
     bridge.check_consistency.side_effect = check
+    # #2482: the external FOL phase asks the handler, which names its solver.
+    bridge.fol_handler.check_consistency_by.side_effect = check_by
     return bridge, seen
 
 

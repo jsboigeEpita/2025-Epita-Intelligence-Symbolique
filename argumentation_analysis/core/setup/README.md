@@ -27,11 +27,11 @@ N'est **pas** l'initialisation système du pipeline (`core/bootstrap.py`) ni le 
 ## Amont / aval
 
 - Amont : miroirs de téléchargement externes (huaweicloud, cs.unm.edu).
-- Aval via **artefacts** : `core/prover9_runner.py:6-7` exige `libs/prover9/bin/prover9.bat` (le wrapper :214) ; `core/mace4_runner.py` consomme le même zip LADR ; en production, `orchestration/invoke_callables.py:9888` appelle `run_prover9` via `asyncio.to_thread`.
+- Aval via **artefacts** : `core/prover9_runner.py:6-7` exige `libs/prover9/bin/prover9.bat` (le wrapper :214) ; `core/mace4_runner.py` consomme le même zip LADR ; en production, `run_prover9` n'est appelé que par `agents/core/logic/fol_handler.py`, avec une entrée construite par `_prover9_input` (#2482) : `check_consistency_by` (la vérification que la phase FOL externe `_invoke_external_fol_solver` demande), `_fol_check_consistency_with_prover9` (via `compare_fol_backends`) et `_fol_query_with_prover9`.
 
 ## Statut d'intégration
 
-- **Prover9/Mace4 : `actif`** — artefact réel sur disque (`libs/prover9/bin/prover9.bat` constaté) + consommation production (`invoke_callables.py:9888`).
+- **Prover9/Mace4 : `actif`** — artefact réel sur disque (`libs/prover9/bin/prover9.bat` constaté) + consommation production (`fol_handler.check_consistency_by`, `compare_fol_backends`).
 - **JDK/Octave/Node portables : `compatibilité`** — importeurs = scripts utils et démo uniquement ; `libs/` réellement peuplé mais drift avec `JDK_CONFIG` (15.0.2 annoncée vs JDK 17 installé) ; la JVM du pipeline passe par `jvm_setup.py`, pas par ici.
 - **Tweety via ce script : `déprécié`** — auto-déclaré : « La gestion de Tweety via ce script est obsolète. Les JARs doivent être placés manuellement » (:381-384).
 
