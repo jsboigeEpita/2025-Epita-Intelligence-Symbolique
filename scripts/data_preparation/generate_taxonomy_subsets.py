@@ -9,6 +9,7 @@ if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 from argumentation_analysis.core.utils.file_loaders import load_csv_file
+from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
 
 
 def load_and_prepare_taxonomy(file_path: str) -> pd.DataFrame:
@@ -48,24 +49,19 @@ def load_and_prepare_taxonomy(file_path: str) -> pd.DataFrame:
     return df
 
 
-def get_direct_children(
-    df: pd.DataFrame, parent_path: str, parent_depth: int
-) -> pd.DataFrame:
+def get_direct_children(df: pd.DataFrame, parent_path: str) -> pd.DataFrame:
     """
-    Récupère les enfants directs d'un nœud parent à partir de son chemin et de sa profondeur.
+    Récupère les enfants directs d'un nœud parent à partir de son chemin.
+
+    #2409 : la relation parent se lit dans ``taxonomy_tree`` (le seul lecteur,
+    #2401). Le préfixe ``parent + "."`` ne trouvait aucun enfant sous la racine
+    (les nœuds de profondeur 1 portent des chemins nus), et l'appariement avec
+    ``depth == parent_depth + 1`` perdait la ligne dont la cellule ``depth``
+    contredit le chemin.
     """
-    if not parent_path or pd.isna(parent_depth):
+    if not parent_path or pd.isna(parent_path):
         return pd.DataFrame()
-
-    child_path_prefix = str(parent_path) + "."
-    expected_child_depth = parent_depth + 1
-
-    # Filtrer les enfants potentiels par le début du chemin et la profondeur exacte
-    potential_children = df[
-        df["path"].str.startswith(child_path_prefix, na=False)
-        & (df["depth"] == expected_child_depth)
-    ]
-    return potential_children
+    return df[taxonomy_parent_paths(df) == str(parent_path)]
 
 
 def generate_taxonomy_subsets(base_path: str, output_dir: str):
@@ -96,9 +92,7 @@ def generate_taxonomy_subsets(base_path: str, output_dir: str):
     # Contient les branches principales plus leurs enfants directs
     medium_pks = set(small_df.index)
     for pk, parent_row in small_df.iterrows():
-        parent_path = parent_row.get("path")
-        parent_depth = parent_row.get("depth")
-        children_df = get_direct_children(full_df, parent_path, parent_depth)
+        children_df = get_direct_children(full_df, parent_row.get("path"))
         medium_pks.update(children_df.index.tolist())
 
     medium_df = full_df.loc[list(medium_pks)].sort_index()
