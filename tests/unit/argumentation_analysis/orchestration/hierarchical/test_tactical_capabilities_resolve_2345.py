@@ -37,7 +37,9 @@ from argumentation_analysis.orchestration.registry_setup import setup_registry
 # Table entries the tactical tier never emits and that no provider serves.
 # Named, so the set cannot grow in silence: a new unresolved entry reddens
 # ``test_unresolved_table_entries_are_exactly_the_named_gaps``.
-KNOWN_UNRESOLVED = {"argument_visualization", "summary_generation"}
+# ``summary_generation`` left the set when its translation moved from the
+# provider-less ``synthesis`` to ``deep_synthesis`` (#2424).
+KNOWN_UNRESOLVED = {"argument_visualization"}
 
 
 def _emitted_capabilities() -> set:

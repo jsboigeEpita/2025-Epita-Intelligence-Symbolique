@@ -33,6 +33,17 @@ before), the services remainder is #2137's own broader triage. A NEW
 component declaring an orphan reddens immediately: wire it, remove the
 capability, or add a ``PENDING_TRIAGE`` entry with an owning issue — never
 silently.
+
+#2424 repair — the demand census read two literal forms only
+(``add_phase(capability="...")`` and ``*for_capability("...")``). A demand
+carried by a table value reaches the resolver through a variable
+(``for cap in caps: registry.find_for_capability(cap)``), so it was invisible
+in both directions: #1842 trimmed ``argument_parsing`` while the delegation
+table still translated to it, and the hierarchical bridge map demanded eight
+names that no provider has ever declared. ``_capability_tables`` now brings
+table-carried demand into the census, and
+``test_table_carried_demand_resolves`` checks the other direction
+(demanded ⇒ served) against the production registry.
 """
 
 import ast
@@ -65,16 +76,13 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     ("logic_agent_plugin", "propositional_reasoning"): "#1604",
     ("logic_agent_plugin", "first_order_reasoning"): "#1604",
     ("logic_agent_plugin", "modal_reasoning"): "#1604",
-    ("text_to_kb_plugin", "argument_extraction"): "#1604",
     ("text_to_kb_plugin", "kb_construction"): "#1604",
     ("tweety_logic_plugin", "tweety_logic"): "#1604",
     ("tweety_result_interpretation_plugin", "dung_interpretation"): "#1604",
     # #2137 — services remainder of the declared-without-consumer triage
     ("ai_shield_service", "output_filtering"): "#2137",
     ("ai_shield_service", "adversarial_protection"): "#2137",
-    ("hierarchical_fallacy_detector", "fallacy_detection"): "#2137",
     ("hierarchical_fallacy_per_argument", "per_argument_fallacy_detection"): "#2137",
-    ("self_hosted_fallacy_detector", "fallacy_detection"): "#2137",
     ("local_llm_service", "chat_completion"): "#2137",
     ("semantic_index_service", "argument_search"): "#2137",
     ("speech_transcription_service", "speech_to_text"): "#2137",
@@ -177,7 +185,121 @@ def _production_demanded_capabilities(root: Path = PROD_ROOT) -> set[str]:
             elif "for_capability" in callee:
                 if node.args and isinstance(node.args[0], ast.Constant):
                     demanded.add(node.args[0].value)
+    for capabilities in _capability_tables(root).values():
+        demanded |= capabilities
     return demanded
+
+
+# Callees that resolve a capability name against the registry (production
+# spells ``find_for_capability`` and ``RegistryBackedOperationalRegistry
+# .has_capability``).
+_RESOLVER_CALLEES = ("for_capability", "has_capability")
+
+
+def _string_table_values(value: ast.expr) -> list[str] | None:
+    """The strings a table literal holds, or ``None`` if it is not one.
+
+    A table is a dict whose values are strings or lists of strings, or a
+    list / tuple / set of strings (bare or wrapped in ``frozenset(...)`` etc.).
+    """
+
+    def strings(node: ast.expr) -> list[str] | None:
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            return [node.value]
+        if isinstance(node, (ast.List, ast.Tuple, ast.Set)) and all(
+            isinstance(e, ast.Constant) and isinstance(e.value, str) for e in node.elts
+        ):
+            return [e.value for e in node.elts]
+        if (
+            isinstance(node, ast.Call)
+            and getattr(node.func, "id", "") in ("frozenset", "set", "tuple", "list")
+            and len(node.args) == 1
+        ):
+            return strings(node.args[0])
+        return None
+
+    if isinstance(value, ast.Dict):
+        parts = [strings(v) for v in value.values]
+        if parts and all(p is not None for p in parts):
+            return [s for p in parts for s in p]
+        return None
+    if isinstance(value, ast.Constant):
+        return None  # a single string is a constant, not a table
+    return strings(value)
+
+
+def _resolved_import_module(node: ast.ImportFrom, importer: str, is_pkg: bool) -> str:
+    """Absolute dotted module of a ``from X import Y``, relative ones included."""
+    if not node.level:
+        return node.module or ""
+    package = importer.split(".") if is_pkg else importer.split(".")[:-1]
+    base = package[: len(package) - (node.level - 1)]
+    return ".".join(base + ([node.module] if node.module else []))
+
+
+def _capability_tables(root: Path = PROD_ROOT) -> dict[str, set[str]]:
+    """String tables whose values production resolves as capabilities (#2424).
+
+    A table counts when a function that calls a resolver with a non-literal
+    argument names it: by bare name in the table's own module, or after a
+    ``from <module> import <TABLE>`` (the delegation executor reads the bridge
+    map through a lazy import). Tables are module- or class-level assignments.
+    Keyed ``module:TABLE``. Parse failures raise, BOM'd files are read (#2373).
+    """
+    tables: dict[tuple[str, str], set[str]] = {}
+    readers: list[tuple[str, set[str], set[tuple[str, str]]]] = []
+    for py in root.rglob("*.py"):
+        if "test" in py.parts:
+            continue
+        tree = ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
+        module = _module_path(py)
+        is_pkg = py.name == "__init__.py"
+        bodies = [tree.body] + [
+            n.body for n in ast.walk(tree) if isinstance(n, ast.ClassDef)
+        ]
+        for body in bodies:
+            for node in body:
+                if isinstance(node, ast.Assign) and len(node.targets) == 1:
+                    target, value = node.targets[0], node.value
+                elif isinstance(node, ast.AnnAssign) and node.value is not None:
+                    target, value = node.target, node.value
+                else:
+                    continue
+                values = _string_table_values(value)
+                if isinstance(target, ast.Name) and values:
+                    tables[(module, target.id)] = set(values)
+        imports = {
+            (_resolved_import_module(n, module, is_pkg), alias.name)
+            for n in ast.walk(tree)
+            if isinstance(n, ast.ImportFrom)
+            for alias in n.names
+        }
+        for fn in ast.walk(tree):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            resolves = False
+            for n in ast.walk(fn):
+                if not isinstance(n, ast.Call) or not n.args:
+                    continue
+                callee = getattr(n.func, "attr", "") or getattr(n.func, "id", "")
+                if any(r in callee for r in _RESOLVER_CALLEES) and not isinstance(
+                    n.args[0], ast.Constant
+                ):
+                    resolves = True
+                    break
+            if not resolves:
+                continue
+            names = {n.id for n in ast.walk(fn) if isinstance(n, ast.Name)} | {
+                n.attr for n in ast.walk(fn) if isinstance(n, ast.Attribute)
+            }
+            readers.append((module, names, imports))
+    feeding: dict[str, set[str]] = {}
+    for (module, name), values in tables.items():
+        for reader_module, names, imports in readers:
+            if name in names and (reader_module == module or (module, name) in imports):
+                feeding[f"{module}:{name}"] = values
+                break
+    return feeding
 
 
 def test_censuses_see_a_bom_carrier(tmp_path):
@@ -205,6 +327,73 @@ def test_censuses_see_a_bom_carrier(tmp_path):
         "an add_phase(capability=...) behind a UTF-8 BOM must be in the "
         "demanded census — otherwise a BOM'd demander can orphan a real "
         "capability and the guard stays green (#2373)."
+    )
+
+
+# Table-carried demand that no provider serves, named so the set cannot grow
+# in silence (#2424). ``argument_visualization`` is the delegation table's
+# placeholder; the tactical tier never emits it (see
+# ``test_tactical_capabilities_resolve_2345.py``).
+TABLE_DEMAND_GAPS = {"argument_visualization"}
+
+
+def test_capability_table_census_sees_the_production_tables():
+    """Non-vacuity: the tables production resolves through are all found."""
+    names = {key.rsplit(":", 1)[1] for key in _capability_tables()}
+    assert {
+        "_OBJECTIVE_CAPABILITY_MAP",  # hierarchy_bridge, delegation fallback
+        "LEGACY_TO_REGISTRY_CAPABILITY",  # delegation_orchestrator
+        "KNOWN_CAPABILITIES",  # router
+    } <= names, sorted(names)
+
+
+def test_capability_table_census_follows_an_import(tmp_path):
+    """A table read through ``from module import TABLE`` is demand; a string
+    table that no resolver reads is not."""
+    (tmp_path / "tables.py").write_text(
+        'ROUTES = {"key": ["table_carried_capability"]}\n'
+        'LABELS = {"key": "not_a_capability"}\n',
+        encoding="utf-8",
+    )
+    (tmp_path / "reader.py").write_text(
+        "def pick(registry):\n"
+        "    from tables import ROUTES\n"
+        "    for cap in ROUTES['key']:\n"
+        "        if registry.find_for_capability(cap):\n"
+        "            return cap\n",
+        encoding="utf-8",
+    )
+    assert _capability_tables(tmp_path) == {
+        "tables:ROUTES": {"table_carried_capability"}
+    }
+    demanded = _production_demanded_capabilities(tmp_path)
+    assert "table_carried_capability" in demanded
+    assert "not_a_capability" not in demanded
+
+
+def test_table_carried_demand_resolves():
+    """demanded ⇒ served: every capability a table feeds to a resolver has a
+    provider in the production registry (#2424).
+
+    On ``main`` before #2424 this listed eight names of the bridge map
+    (``formal_logic``, ``fol_analysis``, ``debate_management``,
+    ``governance_voting``, ``synthesis``, ``coherence_evaluation``,
+    ``text_extraction``, ``french_fallacy_detection``), none of which any
+    provider has ever declared.
+    """
+    from argumentation_analysis.orchestration.registry_setup import setup_registry
+
+    registry = setup_registry()  # the call the hierarchical orchestrator makes
+    dead = {
+        f"{table}:{cap}"
+        for table, caps in _capability_tables().items()
+        for cap in caps
+        if not registry.find_for_capability(cap)
+    }
+    assert {key.rsplit(":", 1)[1] for key in dead} == TABLE_DEMAND_GAPS, (
+        f"Capabilities demanded through a table with no provider: "
+        f"{sorted(dead)}. Rename to the capability the registry serves, "
+        f"or name the gap in TABLE_DEMAND_GAPS."
     )
 
 
@@ -272,6 +461,19 @@ class TestOneCapabilitySurface:
             f"PENDING_TRIAGE entries whose component no longer declares them: "
             f"{sorted(stale)}. Triage landed or the component changed — "
             f"remove the entry so the map shrinks instead of rotting."
+        )
+
+    def test_pending_triage_entries_are_still_orphans(self):
+        """No answered debt: a pair that production demands is not an orphan.
+
+        Before #2424 the census ignored table-carried demand, so pairs whose
+        capability a table does demand sat here as orphans.
+        """
+        demanded = _production_demanded_capabilities()
+        answered = sorted(pair for pair in PENDING_TRIAGE if pair[1] in demanded)
+        assert not answered, (
+            f"PENDING_TRIAGE entries whose capability production demands: "
+            f"{answered}. They have a consumer: remove the entry."
         )
 
 

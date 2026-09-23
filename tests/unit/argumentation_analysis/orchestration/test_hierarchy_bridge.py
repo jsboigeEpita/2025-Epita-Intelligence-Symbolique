@@ -338,13 +338,13 @@ class TestMatchCapabilities:
     """Tests for _match_capabilities helper."""
 
     def test_identifier_keyword(self):
+        # ``text_extraction`` left the map (#2424): no provider declares it.
         registry = make_registry(
             make_component("a", ["fact_extraction"]),
             make_component("b", ["text_extraction"]),
         )
         result = _match_capabilities("identifier les arguments", registry)
-        assert "fact_extraction" in result
-        assert "text_extraction" in result
+        assert result == ["fact_extraction"]
 
     def test_no_match(self):
         registry = make_registry(
@@ -609,18 +609,18 @@ class TestEdgeCases:
 
     def test_objective_with_debate_keyword(self):
         registry = make_registry(
-            make_component("debate", ["debate_management"]),
+            make_component("debate", ["adversarial_debate"]),
         )
         objectives = [
             {"id": "o1", "description": "Organiser un débat", "priority": "medium"},
         ]
         wf = objectives_to_workflow(objectives, registry)
         caps = [p.capability for p in wf.phases]
-        assert "debate_management" in caps
+        assert "adversarial_debate" in caps  # the registry's name (#2424)
 
     def test_objective_with_governance_keyword(self):
         registry = make_registry(
-            make_component("gov", ["governance_voting"]),
+            make_component("gov", ["governance_simulation"]),
         )
         objectives = [
             {
@@ -631,11 +631,11 @@ class TestEdgeCases:
         ]
         wf = objectives_to_workflow(objectives, registry)
         caps = [p.capability for p in wf.phases]
-        assert "governance_voting" in caps
+        assert "governance_simulation" in caps  # the registry's name (#2424)
 
     def test_objective_with_synthesis_keyword(self):
         registry = make_registry(
-            make_component("synth", ["synthesis"]),
+            make_component("synth", ["deep_synthesis"]),
         )
         objectives = [
             {
@@ -646,7 +646,7 @@ class TestEdgeCases:
         ]
         wf = objectives_to_workflow(objectives, registry)
         caps = [p.capability for p in wf.phases]
-        assert "synthesis" in caps
+        assert "deep_synthesis" in caps  # the registry's name (#2424)
 
     @pytest.mark.asyncio
     async def test_hierarchical_strategy_with_pipeline(self):

@@ -200,12 +200,13 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > declared capability with zero production demanders. The orphans the tree
 > already carries are named debt, not silence: each sits in the guard's
 > `PENDING_TRIAGE` map with the issue owning its triage (#1604 — formal/Tweety
-> specialists; #2137 — services remainder; 20 pairs / 14 components, measured
-> 2026-09-13 on `d24cb83a` — the figure moves with every triage that lands,
+> specialists; #2137 — services remainder; 17 pairs / 12 components, measured
+> 2026-09-23 on #2424's branch — the figure moves with every triage that lands,
 > re-measure before quoting). The map shrinks as those issues land and never
-> grows to absorb new silence; a stale entry reddens on its own. When adding a
+> grows to absorb new silence; a stale entry reddens on its own, whether its
+> component stopped declaring it or production started demanding it. When adding a
 > capability, add it to the surface `setup_registry` populates, **and give it
-> a consumer** — a phase asking for it.
+> a consumer** — a phase asking for it, or a capability table a resolver reads.
 
 > ⚠ **"Requested" means `add_phase(capability="…")`, not a `find_*` grep.**
 > Phases are what consume capabilities: `workflow_dsl.py` resolves `phase.capability` through
@@ -224,6 +225,12 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > `tests/unit/argumentation_analysis/orchestration/test_capability_resolver_surface_1980.py`
 > re-derives the partition — it reddens when a sixth spelling appears or a typed variant gains
 > a production caller, not when the codebase grows.
+> A capability is also requested through a **table** a resolver reads with a variable
+> (`for cap in caps: registry.find_for_capability(cap)`): the hierarchical bridge map
+> `_OBJECTIVE_CAPABILITY_MAP`, the delegation `LEGACY_TO_REGISTRY_CAPABILITY`, the router's
+> `KNOWN_CAPABILITIES`. No literal grep sees that demand; the #1842 census counts it since
+> #2424 (`_capability_tables`), and `test_table_carried_demand_resolves` holds every name a
+> table carries to a provider of `setup_registry()` — `TABLE_DEMAND_GAPS` names the exceptions.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 
