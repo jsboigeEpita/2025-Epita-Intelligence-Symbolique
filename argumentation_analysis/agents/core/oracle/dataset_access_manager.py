@@ -26,6 +26,7 @@ from .permissions import (
     validate_cluedo_method_access,
 )
 from .cluedo_dataset import CluedoDataset
+from .interfaces import DatasetManagerInterface
 
 
 class QueryCache:
@@ -182,7 +183,7 @@ class QueryCache:
         }
 
 
-class DatasetAccessManager:
+class DatasetAccessManager(DatasetManagerInterface):
     """
     Orchestre l'accès sécurisé et contrôlé à un jeu de données.
 

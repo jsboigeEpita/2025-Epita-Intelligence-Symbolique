@@ -13,6 +13,11 @@ from argumentation_analysis.agents.core.oracle.interfaces import (
     StandardOracleResponse,
     OracleResponseStatus,
 )
+from argumentation_analysis.agents.core.oracle.permissions import (
+    OracleResponse,
+    QueryResult,
+    QueryType,
+)
 
 
 class TestOracleAgentInterface:
@@ -29,15 +34,16 @@ class TestOracleAgentInterface:
     def test_oracle_agent_interface_methods(self):
         """Test que l'interface définit les bonnes méthodes abstraites"""
 
-        # Création d'une implémentation concrète
+        # Création d'une implémentation concrète — le contrat réel (#2358) :
+        # QueryType en entrée, OracleResponse en sortie, process async.
         class ConcreteOracleAgent(OracleAgentInterface):
             async def process_oracle_request(
                 self,
                 requesting_agent: str,
-                query_type: str,
+                query_type: QueryType,
                 query_params: Dict[str, Any],
-            ) -> Dict[str, Any]:
-                return {"success": True, "data": "test_data"}
+            ) -> OracleResponse:
+                return OracleResponse(authorized=True, data="test_data")
 
             def get_oracle_statistics(self) -> Dict[str, Any]:
                 return {"total_requests": 5}
@@ -56,10 +62,10 @@ class TestOracleAgentInterface:
             async def process_oracle_request(
                 self,
                 requesting_agent: str,
-                query_type: str,
+                query_type: QueryType,
                 query_params: Dict[str, Any],
-            ) -> Dict[str, Any]:
-                return {"success": True}
+            ) -> OracleResponse:
+                return OracleResponse(authorized=True)
 
             # Manque get_oracle_statistics et reset_oracle_state
 
@@ -80,13 +86,20 @@ class TestDatasetManagerInterface:
     def test_dataset_manager_interface_methods(self):
         """Test que l'interface définit les bonnes méthodes abstraites"""
 
+        # Contrat réel (#2358) : execute_query et check_permission sont async,
+        # QueryType en entrée, QueryResult en sortie.
         class ConcreteDatasetManager(DatasetManagerInterface):
-            def execute_query(
-                self, agent_name: str, query_type: str, query_params: Dict[str, Any]
-            ) -> Dict[str, Any]:
-                return {"result": "query_executed"}
+            async def execute_query(
+                self,
+                agent_name: str,
+                query_type: QueryType,
+                query_params: Dict[str, Any],
+            ) -> QueryResult:
+                return QueryResult(success=True, data="query_executed")
 
-            def check_permission(self, agent_name: str, query_type: str) -> bool:
+            async def check_permission(
+                self, agent_name: str, query_type: QueryType
+            ) -> bool:
                 return True
 
         manager = ConcreteDatasetManager()
@@ -96,10 +109,13 @@ class TestDatasetManagerInterface:
         """Test qu'une implémentation incomplète ne peut pas être instanciée"""
 
         class IncompleteDatasetManager(DatasetManagerInterface):
-            def execute_query(
-                self, agent_name: str, query_type: str, query_params: Dict[str, Any]
-            ) -> Dict[str, Any]:
-                return {"result": "query_executed"}
+            async def execute_query(
+                self,
+                agent_name: str,
+                query_type: QueryType,
+                query_params: Dict[str, Any],
+            ) -> QueryResult:
+                return QueryResult(success=True, data="query_executed")
 
             # Manque check_permission
 
@@ -218,15 +234,14 @@ class TestInterfacesIntegration:
             async def process_oracle_request(
                 self,
                 requesting_agent: str,
-                query_type: str,
+                query_type: QueryType,
                 query_params: Dict[str, Any],
-            ) -> Dict[str, Any]:
-                response = StandardOracleResponse(
-                    success=True,
-                    data={"agent": requesting_agent, "query": query_type},
+            ) -> OracleResponse:
+                return OracleResponse(
+                    authorized=True,
+                    data={"agent": requesting_agent, "query": query_type.value},
                     message="Request processed successfully",
                 )
-                return response.to_dict()
 
             def get_oracle_statistics(self) -> Dict[str, Any]:
                 return {"requests_processed": 1}
@@ -241,11 +256,11 @@ class TestInterfacesIntegration:
 
         async def test_async():
             result = await agent.process_oracle_request(
-                "Sherlock", "validate", {"data": "test"}
+                "Sherlock", QueryType.CARD_INQUIRY, {"data": "test"}
             )
-            assert result["success"] is True
-            assert result["data"]["agent"] == "Sherlock"
-            assert result["data"]["query"] == "validate"
+            assert result.authorized is True
+            assert result.data["agent"] == "Sherlock"
+            assert result.data["query"] == "card_inquiry"
 
         asyncio.run(test_async())
 
@@ -253,28 +268,58 @@ class TestInterfacesIntegration:
         """Test Dataset Manager utilisant OracleResponseStatus"""
 
         class TestDatasetManager(DatasetManagerInterface):
-            def execute_query(
-                self, agent_name: str, query_type: str, query_params: Dict[str, Any]
-            ) -> Dict[str, Any]:
+            async def execute_query(
+                self,
+                agent_name: str,
+                query_type: QueryType,
+                query_params: Dict[str, Any],
+            ) -> QueryResult:
                 if agent_name == "unauthorized":
-                    return {
-                        "status": OracleResponseStatus.PERMISSION_DENIED.value,
-                        "message": "Access denied",
-                    }
-                return {
-                    "status": OracleResponseStatus.SUCCESS.value,
-                    "result": "Query executed",
-                }
+                    return QueryResult(
+                        success=False,
+                        message="Access denied",
+                        query_type=query_type,
+                        metadata={
+                            "status": OracleResponseStatus.PERMISSION_DENIED.value
+                        },
+                    )
+                return QueryResult(
+                    success=True,
+                    data="Query executed",
+                    query_type=query_type,
+                    metadata={"status": OracleResponseStatus.SUCCESS.value},
+                )
 
-            def check_permission(self, agent_name: str, query_type: str) -> bool:
+            async def check_permission(
+                self, agent_name: str, query_type: QueryType
+            ) -> bool:
                 return agent_name != "unauthorized"
 
         manager = TestDatasetManager()
 
-        # Test avec agent autorisé
-        result = manager.execute_query("Sherlock", "validate", {})
-        assert result["status"] == "success"
+        import asyncio
 
-        # Test avec agent non autorisé
-        result = manager.execute_query("unauthorized", "validate", {})
-        assert result["status"] == "permission_denied"
+        async def run_queries():
+            # Test avec agent autorisé
+            authorized = await manager.check_permission(
+                "Sherlock", QueryType.CARD_INQUIRY
+            )
+            result = await manager.execute_query("Sherlock", QueryType.CARD_INQUIRY, {})
+            assert authorized is True
+            assert result.success is True
+            assert result.metadata["status"] == "success"
+
+            # Test avec agent non autorisé — les appels sont AWAITED (#2340) :
+            # un appel sync rendrait une coroutine truthy.
+            denied = await manager.check_permission(
+                "unauthorized", QueryType.CARD_INQUIRY
+            )
+            assert denied is False
+
+            result = await manager.execute_query(
+                "unauthorized", QueryType.CARD_INQUIRY, {}
+            )
+            assert result.success is False
+            assert result.metadata["status"] == "permission_denied"
+
+        asyncio.run(run_queries())

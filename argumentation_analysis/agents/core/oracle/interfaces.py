@@ -6,12 +6,31 @@ Ce module contient les Classes de Base Abstraites (ABC), les Dataclasses,
 et les Enums qui garantissent une interaction cohérente et standardisée
 entre les différents composants du système Oracle (Agents, Gestionnaires
 de Données, etc.).
+
+Verdict #2358 — ceci est un CONTRAT, pas une documentation de forme :
+- les implémentations de production en héritent (`OracleBaseAgent` implémente
+  `OracleAgentInterface`, `DatasetAccessManager` implémente
+  `DatasetManagerInterface`) ;
+- une garde de conformité compare chaque membre déclaré à l'implémentation
+  réelle (signatures + async-ité) et ROUGIT à la première divergence
+  (`tests/unit/argumentation_analysis/agents/core/oracle/test_interface_contract_2358.py`).
+
+L'historique : ce contrat divergeait de la réalité sur trois membres et avait
+« licencié » le défaut de #2340 — un appel sync vers un `check_permission`
+async, exactement ce que la déclaration affirmait. Un contrat sans exécutant
+endosse les bugs au lieu de les attraper ; c'est réparé.
 """
 
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
+
+from argumentation_analysis.agents.core.oracle.permissions import (
+    OracleResponse,
+    QueryResult,
+    QueryType,
+)
 
 
 class OracleAgentInterface(ABC):
@@ -24,19 +43,18 @@ class OracleAgentInterface(ABC):
 
     @abstractmethod
     async def process_oracle_request(
-        self, requesting_agent: str, query_type: str, query_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, requesting_agent: str, query_type: QueryType, query_params: Dict[str, Any]
+    ) -> OracleResponse:
         """
         Traite une requête entrante adressée à l'Oracle.
 
         Args:
             requesting_agent (str): Le nom de l'agent qui soumet la requête.
-            query_type (str): Le type de requête (ex: 'query_data', 'get_schema').
+            query_type (QueryType): Le type de requête (enum `permissions.QueryType`).
             query_params (Dict[str, Any]): Les paramètres spécifiques à la requête.
 
         Returns:
-            Dict[str, Any]: Une réponse structurée, idéalement conforme au modèle
-            `StandardOracleResponse`.
+            OracleResponse: Un objet structuré contenant le résultat de l'opération.
         """
         pass
 
@@ -66,30 +84,34 @@ class DatasetManagerInterface(ABC):
     """
 
     @abstractmethod
-    def execute_query(
-        self, agent_name: str, query_type: str, query_params: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def execute_query(
+        self, agent_name: str, query_type: QueryType, query_params: Dict[str, Any]
+    ) -> QueryResult:
         """
         Exécute une requête sur le jeu de données après vérification des permissions.
 
         Args:
             agent_name (str): Le nom de l'agent effectuant la requête.
-            query_type (str): Le type de requête à exécuter.
+            query_type (QueryType): Le type de requête à exécuter (enum).
             query_params (Dict[str, Any]): Les paramètres de la requête.
 
         Returns:
-            Dict[str, Any]: Le résultat de la requête.
+            QueryResult: Le résultat de la requête.
         """
         pass
 
     @abstractmethod
-    def check_permission(self, agent_name: str, query_type: str) -> bool:
+    async def check_permission(self, agent_name: str, query_type: QueryType) -> bool:
         """
         Vérifie si un agent a la permission d'exécuter un certain type de requête.
 
+        ⚠ Async (#2340/#2358) : un appel sync à cette méthode rend une coroutine
+        truthy — le contrôle répond « autorisé » sur tout refus.
+
         Args:
             agent_name (str): Le nom de l'agent demandeur.
-            query_type (str): Le type de requête pour lequel la permission est demandée.
+            query_type (QueryType): Le type de requête pour lequel la permission
+                est demandée.
 
         Returns:
             bool: `True` si l'agent a la permission, `False` sinon.
