@@ -121,20 +121,13 @@ class TacticalOperationalInterface:
             "context": self._get_local_context(task),
         }
 
-        recipient_id = self._determine_appropriate_agent(required_capabilities)
-
-        self.tactical_adapter.assign_task(
-            task_type="operational_command",
-            parameters=operational_command,
-            recipient_id=recipient_id,
-            priority=self._map_priority_to_enum(operational_command["priority"]),
-            requires_ack=True,
-            metadata={"objective_id": operational_command["objective_id"]},
-        )
-
-        self.logger.info(
-            f"Commande {operational_task_id} assignée à l'agent {recipient_id}."
-        )
+        # #2415 : l'émission middleware de la commande (tactical_adapter
+        # .assign_task) est retirée — son récepteur (l'abonnement des agents
+        # opérationnels) était un circuit mort, et elle écrivait
+        # ``command_type="operational_command"`` là où le callback abonné
+        # attendait ``"operational_task"``. La commande construite repart
+        # par la file du manager ou le seam executor de M3.
+        self.logger.info(f"Commande {operational_task_id} construite.")
 
         return operational_command
 
@@ -207,26 +200,6 @@ class TacticalOperationalInterface:
             self.logger.error(
                 f"Échec de la sauvegarde du rapport de résultat dans {results_path_str}: {e}"
             )
-
-    def subscribe_to_operational_updates(
-        self, update_types: List[str], callback: Callable
-    ) -> str:
-        """
-        Abonne la couche tactique aux mises à jour du niveau opérationnel.
-
-        Permet un suivi en temps réel de l'exécution, par exemple pour implémenter
-        des barres de progression ou des tableaux de bord.
-
-        Args:
-            update_types: Liste des types de mise à jour (ex: "task_progress").
-            callback: La fonction à appeler lorsqu'une mise à jour est reçue.
-
-        Returns:
-            Un identifiant d'abonnement pour une éventuelle désinscription.
-        """
-        return self.tactical_adapter.subscribe_to_operational_updates(
-            update_types=update_types, callback=callback
-        )
 
     def request_operational_status(
         self, agent_id: str, timeout: float = 5.0
@@ -381,30 +354,3 @@ class TacticalOperationalInterface:
             else:
                 tactical_issues.append(issue)
         return tactical_issues
-
-    def _map_priority_to_enum(self, priority: str) -> MessagePriority:
-        return {
-            "high": MessagePriority.HIGH,
-            "medium": MessagePriority.NORMAL,
-            "low": MessagePriority.LOW,
-        }.get(priority.lower(), MessagePriority.NORMAL)
-
-    def _determine_appropriate_agent(self, required_capabilities: List[str]) -> str:
-        capability_agent_mapping = {
-            "argument_identification": "informal_analyzer",
-            "fallacy_detection": "informal_analyzer",
-            "formal_logic": "logic_analyzer",
-            "text_extraction": "extract_processor",
-            "complex_fallacy_analysis": "rhetorical_analyzer",
-            "contextual_fallacy_analysis": "rhetorical_analyzer",
-        }
-        agent_counts = {}
-        for capability in required_capabilities:
-            agent = capability_agent_mapping.get(capability)
-            if agent:
-                agent_counts[agent] = agent_counts.get(agent, 0) + 1
-
-        if agent_counts:
-            return max(agent_counts, key=agent_counts.get)
-
-        return "default_operational_agent"
