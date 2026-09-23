@@ -16,6 +16,11 @@ from pathlib import Path
 import shutil
 from unittest.mock import patch, MagicMock
 
+# #2472: capture the environment pytest was started with, before anything loads
+# a .env. A value set on the command line, even "", then wins over the root .env
+# that ensure_env() loads in pytest_configure.
+import project_core.managers.environment_manager  # noqa: F401
+
 from tests._e2e_session_decision import _argv_decides_e2e_session
 from tests._jvm_session_flag import (
     export_flag_from_config as _export_jvm_flag_from_config,
@@ -157,14 +162,6 @@ for path in additional_paths:
 
 logger = logging.getLogger(__name__)
 
-# --- Mocking de python-dotenv ---
-_dotenv_patcher = None
-MOCK_DOTENV = os.environ.get("MOCK_DOTENV_IN_TESTS", "false").lower() in (
-    "true",
-    "1",
-    "t",
-)
-
 
 def pytest_addoption(parser):
     """Ajoute des options de ligne de commande personnalisées à pytest."""
@@ -172,7 +169,11 @@ def pytest_addoption(parser):
         "--allow-dotenv",
         action="store_true",
         default=False,
-        help="Désactive le mock de dotenv et autorise le chargement du vrai fichier .env.",
+        help=(
+            "Charge aussi .env.test (s'il existe) par-dessus le .env racine, que "
+            "pytest_configure charge sans ce drapeau. Une valeur posée par "
+            "l'appelant, même vide, l'emporte sur les deux (#2472)."
+        ),
     )
     parser.addoption(
         "--disable-e2e-servers-fixture",
@@ -233,61 +234,18 @@ def pytest_configure(config):
             file=sys.stderr,
         )
 
-    global MOCK_DOTENV, _dotenv_patcher
-
-    from dotenv import dotenv_values
-
+    # The root .env is loaded above by ensure_env(). --allow-dotenv layers
+    # .env.test over it; a value the caller set wins over both (#2472).
     if config.getoption("--allow-dotenv"):
-        MOCK_DOTENV = False
-        print("\n[INFO] Dotenv mocking is DISABLED. Real .env file will be used.")
+        from project_core.managers import environment_manager as _env_manager
 
-        project_dir = Path(__file__).parent.parent
-        # Hiérarchie de chargement: .env.test > .env
-        dotenv_test_path = project_dir / ".env.test"
-        dotenv_path = project_dir / ".env"
-
-        if dotenv_test_path.exists():
-            print(f"[INFO] Loading .env.test file from: {dotenv_test_path}")
-            env_vars = dotenv_values(dotenv_path=dotenv_test_path)
-        elif dotenv_path.exists():
-            print(f"[INFO] Loading .env file from: {dotenv_path}")
-            env_vars = dotenv_values(dotenv_path=dotenv_path)
+        repo_root = _env_manager._find_repo_root()
+        dotenv_test_path = repo_root / ".env.test" if repo_root else None
+        if dotenv_test_path is not None and dotenv_test_path.exists():
+            print(f"\n[INFO] --allow-dotenv: loading {dotenv_test_path}.")
+            _env_manager.load_env_file(dotenv_test_path)
         else:
-            env_vars = {}
-            print("[INFO] No .env or .env.test file found.")
-
-        if env_vars:
-            if not env_vars:
-                print(
-                    f"[WARNING] .env file found at '{dotenv_path}' but it seems to be empty."
-                )
-                return
-
-            updated_vars = 0
-            for key, value in env_vars.items():
-                if value is not None:
-                    if key in os.environ:
-                        print(
-                            f"[INFO] Overriding existing environment variable '{key}'."
-                        )
-                    os.environ[key] = value
-                    updated_vars += 1
-                else:
-                    print(
-                        f"[WARNING] Skipping .env variable '{key}' because its value is None."
-                    )
-
-            print(f"[INFO] Loaded {updated_vars} variables from .env into os.environ.")
-
-            if "OPENAI_API_KEY" not in os.environ:
-                print(
-                    f"[WARNING] OPENAI_API_KEY was not found in the loaded .env variables."
-                )
-            else:
-                print("[INFO] OPENAI_API_KEY successfully loaded.")
-
-        else:
-            print(f"[INFO] No .env file found at '{dotenv_path}'.")
+            print("\n[INFO] --allow-dotenv: no .env.test to layer.")
 
     # --- Désactivation d'OpenTelemetry pour les tests ---
     # Pour éviter les erreurs de connexion pendant les tests, nous désactivons
@@ -322,13 +280,6 @@ def pytest_configure(config):
         "jvm_test: (deprecated, use jpype) marks tests that require the JVM to be started.",
     )
 
-    if MOCK_DOTENV:
-        print("[INFO] Dotenv mocking is ENABLED. .env files will be ignored by tests.")
-        _dotenv_patcher = patch(
-            "dotenv.main.dotenv_values", return_value={}, override=True
-        )
-        _dotenv_patcher.start()
-
     # LLM egress counter (#1787) — observation-only instrument. Counts outgoing
     # httpx requests to LLM hosts for the whole session (SK kernel path, direct
     # AsyncOpenAI path, embeddings: all transit through httpx). Installed AFTER
@@ -341,17 +292,6 @@ def pytest_configure(config):
     config.pluginmanager.register(
         LLMEgressPlugin(_llm_egress), name="llm_egress_counter"
     )
-
-
-def pytest_unconfigure(config):
-    """
-    Arrête le patcher dotenv à la fin de la session de test pour nettoyer.
-    """
-    global _dotenv_patcher
-    if _dotenv_patcher:
-        print("\n[INFO] Stopping dotenv mock.")
-        _dotenv_patcher.stop()
-        _dotenv_patcher = None
 
 
 class _NullCache:
