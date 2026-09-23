@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
 """#2471 on the real JVM: the pipeline's modal phase decides a KB whose atoms
-need renaming, and decides it right.
+need renaming, and decides it right, with either modal solver.
 
 Measured on ``main`` with the TWEETY solver: the three ``renamed-*`` sets were
 decided ``False`` (two atoms merged into one) and the ``accented`` set was left
 undetermined (``Illegal characters in predicate definition``). The controls
 were ``False`` then and stay ``False``. Synthetic atoms only.
+
+The SPASS cases run where the vendored SPASS binary is wired (CI, and seats
+with ``ext_tools/spass``): the modal phase routes to it by default there.
 """
 
 import sys
@@ -22,18 +25,36 @@ pytestmark = [
     ),
 ]
 
-from argumentation_analysis.core.config import ModalSolverChoice, settings  # noqa: E402
 
+@pytest.fixture(params=["tweety", "spass"])
+def modal_solver(request):
+    """Pin the solver the modal phase uses, on the settings object it reads.
 
-@pytest.fixture
-def tweety_solver():
-    """Pin the pure-Java solver (SimpleMlReasoner), as #1219's test does."""
+    ``settings`` is resolved here, not at import: a test that reloads
+    ``core.config`` gives the module a new ``settings`` object and a new
+    ``ModalSolverChoice`` class (#1804), and a pin on the old object is inert.
+    TWEETY is ``SimpleMlReasoner``; SPASS is the vendored binary, which the
+    phase routes to when ``modal_prefer_spass_when_available`` is set.
+    """
+    from argumentation_analysis.agents.core.logic.modal_handler import (
+        _get_spass_path,
+    )
+    from argumentation_analysis.core import config
+    from argumentation_analysis.core.jvm_setup import initialize_jvm
+
+    initialize_jvm()
+    if request.param == "spass" and _get_spass_path() is None:
+        pytest.skip("the vendored SPASS binary is not wired on this seat")
+
+    settings = config.settings
     previous = settings.modal_solver
     previous_prefer = settings.modal_prefer_spass_when_available
-    settings.modal_solver = ModalSolverChoice.TWEETY
-    object.__setattr__(settings, "modal_prefer_spass_when_available", False)
+    settings.modal_solver = config.ModalSolverChoice.TWEETY
+    object.__setattr__(
+        settings, "modal_prefer_spass_when_available", request.param == "spass"
+    )
     try:
-        yield
+        yield request.param
     finally:
         settings.modal_solver = previous
         object.__setattr__(
@@ -88,13 +109,12 @@ CASES = {
 @pytest.mark.parametrize(
     "context, expected", list(CASES.values()), ids=list(CASES.keys())
 )
-async def test_the_modal_phase_decides_renamed_atoms(context, expected, tweety_solver):
-    from argumentation_analysis.core.jvm_setup import initialize_jvm
+async def test_the_modal_phase_decides_renamed_atoms(context, expected, modal_solver):
     from argumentation_analysis.orchestration.invoke_callables import (
         _invoke_modal_logic,
     )
 
-    initialize_jvm()
     result = await _invoke_modal_logic("ignored", context)
     assert result.get("valid") is expected, result.get("message")
-    assert result.get("solver") == "tweety"
+    # Control: the pin took effect, so the verdict is the named solver's.
+    assert result.get("solver") == modal_solver

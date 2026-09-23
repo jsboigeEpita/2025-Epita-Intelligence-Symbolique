@@ -1,9 +1,11 @@
 import os
-import importlib
 from unittest.mock import patch
 
-# Important: il faut importer le module config APRÈS avoir mocké l'environnement
-# ou utiliser importlib.reload pour forcer la relecture.
+# Les réglages se lisent à la construction : ces tests construisent un
+# ArgAnalysisSettings() neuf sous l'environnement mocké. Ils ne rechargent plus
+# le module (importlib.reload) : un reload remplace `config.settings` et
+# `ModalSolverChoice` pour toute la session, et un test qui a figé l'ancien objet
+# épingle alors un objet que plus personne ne lit (#1804, #2471).
 
 
 def test_default_fol_solver_is_eprover():
@@ -16,9 +18,7 @@ def test_default_fol_solver_is_eprover():
     with patch.dict(os.environ, {}, clear=True):
         from argumentation_analysis.core import config
 
-        # Forcer la relecture du module pour prendre en compte l'environnement mocké
-        importlib.reload(config)
-        assert config.settings.solver == config.SolverChoice.EPROVER
+        assert config.ArgAnalysisSettings().solver == config.SolverChoice.EPROVER
 
 
 def test_solver_loads_from_environment_variable():
@@ -29,8 +29,7 @@ def test_solver_loads_from_environment_variable():
     with patch.dict(os.environ, {"ARG_ANALYSIS_SOLVER": "prover9"}, clear=True):
         from argumentation_analysis.core import config
 
-        importlib.reload(config)
-        assert config.settings.solver == config.SolverChoice.PROVER9
+        assert config.ArgAnalysisSettings().solver == config.SolverChoice.PROVER9
 
 
 def test_solver_enum_values():
