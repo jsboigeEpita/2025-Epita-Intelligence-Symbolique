@@ -91,34 +91,32 @@ class TestInvokeFOLWithExternalSolvers:
         assert "logic_type" in result
         assert result["logic_type"] == "first_order"
 
-    @patch(
-        "argumentation_analysis.orchestration.invoke_callables.FOLHandler",
-        create=True,
-    )
-    def test_eprover_solver_choice(self, mock_handler_cls):
-        """When fol_solver=eprover, routes to EProver."""
-        # Mock the FOLHandler and its method
-        mock_instance = MagicMock()
-        mock_instance._fol_check_consistency_with_eprover.return_value = (
-            True,
-            "Consistent",
-        )
-        mock_handler_cls.return_value = mock_instance
+    def test_eprover_solver_choice(self):
+        """With fol_solver=eprover, the phase reads its verdict from the bridge
+        and passes it through.
 
-        # Patch the import within the function
+        #2486: since #2482 the solver is chosen by the handler
+        (``check_consistency_by``), not by this phase. The test patched
+        ``invoke_callables.FOLHandler`` with ``create=True``, a name that
+        module never reads, and set a method the phase never calls; its
+        assertion also held on the all-failed return. The phase imports
+        ``TweetyBridge`` from its module, so that is where it is replaced.
+        """
+        bridge = MagicMock()
+        bridge.check_consistency.return_value = (True, "Consistent")
+
         invoke = self._get_invoke()
-        with patch.dict(
-            "sys.modules",
-            {
-                "argumentation_analysis.agents.core.logic.fol_handler": MagicMock(
-                    FOLHandler=mock_handler_cls
-                ),
-            },
-        ):
+        with patch(
+            "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge",
+            return_value=bridge,
+        ), patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1583")):
             result = asyncio.get_event_loop().run_until_complete(
                 invoke("test", {"fol_solver": "eprover", "formulas": ["P(X)"]})
             )
-            assert result.get("solver") == "eprover" or "formulas" in result
+
+        bridge.check_consistency.assert_called_once()
+        assert (result["consistent"], result["fol_status"]) == (True, "decided")
+        assert result["formulas"] == ["P(X)"]
 
     def test_eprover_fallback_on_import_error(self):
         """When EProver handler can't be imported, falls back to Tweety."""

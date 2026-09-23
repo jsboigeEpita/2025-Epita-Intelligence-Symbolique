@@ -97,34 +97,25 @@ class TestInvokeCallables:
         mock_plugin.extract_kb = AsyncMock(
             return_value='{"arguments": [{"text": "arg1"}], "belief_candidates": ["b1"], "fol_signature": null, "count": 1}'
         )
+        # #2486: the callable imports TextToKBPlugin from its module, so that
+        # is where it is replaced. The test set it on invoke_callables, a name
+        # that module never reads, and ran the real plugin.
         with patch(
-            "argumentation_analysis.orchestration.invoke_callables.TextToKBPlugin",
+            "argumentation_analysis.plugins.text_to_kb_plugin.TextToKBPlugin",
             return_value=mock_plugin,
-            create=True,
-        ), patch.dict(
-            "argumentation_analysis.orchestration.invoke_callables.__dict__",
-            {},  # force re-import side-effects
         ):
-            # Direct call with patch
-            import argumentation_analysis.orchestration.invoke_callables as ic
+            result = await _invoke_text_to_kb("Some argument text", {})
 
-            original = getattr(ic, "TextToKBPlugin", None)
-            try:
-                from argumentation_analysis.plugins.text_to_kb_plugin import (
-                    TextToKBPlugin,
-                )
-
-                ic.TextToKBPlugin = type(
-                    "FakeTextToKB", (), {"extract_kb": mock_plugin.extract_kb}
-                )
-
-                result = await ic._invoke_text_to_kb("Some argument text", {})
-                assert result["source_length"] == len("Some argument text")
-            finally:
-                if original:
-                    ic.TextToKBPlugin = original
-                elif hasattr(ic, "TextToKBPlugin"):
-                    del ic.TextToKBPlugin
+        mock_plugin.extract_kb.assert_awaited_once_with(
+            "Some argument text", target_logic="fol"
+        )
+        assert result == {
+            "arguments": [{"text": "arg1"}],
+            "belief_candidates": ["b1"],
+            "fol_signature": None,
+            "count": 1,
+            "source_length": len("Some argument text"),
+        }
 
     @pytest.mark.asyncio
     async def test_invoke_kb_to_tweety_empty_input(self):

@@ -289,22 +289,24 @@ class TestValidateFormulaFOLDispatch:
         with patch.object(
             translator, "_validate_fol_with_signature", return_value=(True, "OK")
         ) as mock_sig_validate:
-            # Mock Tweety import to not fail
+            # #2486: nl_to_logic imports TweetyBridge from its module inside
+            # the method, so that is where it is replaced (a patch on
+            # nl_to_logic.TweetyBridge with create=True reached nothing).
             with patch(
-                "argumentation_analysis.services.nl_to_logic.TweetyBridge",
-                create=True,
-            ):
-                with patch(
-                    "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
-                ) as MockBridge:
-                    mock_bridge = MagicMock()
-                    MockBridge.return_value = mock_bridge
+                "argumentation_analysis.agents.core.logic.tweety_bridge.TweetyBridge"
+            ) as MockBridge:
+                mock_bridge = MagicMock()
+                MockBridge.return_value = mock_bridge
 
-                    is_valid, msg = await translator._validate_formula(
-                        "Human(socrates)", "fol", fol_metadata=fol_metadata
-                    )
+                is_valid, msg = await translator._validate_formula(
+                    "Human(socrates)", "fol", fol_metadata=fol_metadata
+                )
 
-        # Should have attempted Tweety validation with signature builder
+        # The signature builder decided, on the bridge and the metadata.
+        mock_sig_validate.assert_called_once_with(
+            mock_bridge, ["Human(socrates)"], fol_metadata
+        )
+        assert (is_valid, msg) == (True, "OK")
 
     @pytest.mark.asyncio
     async def test_fol_without_metadata_falls_back(self):
