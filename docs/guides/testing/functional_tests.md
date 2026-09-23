@@ -21,7 +21,7 @@ tests/
 │   └── fixtures/
 │       ├── test_data.py         # Données de test
 │       └── page_objects.py      # Page Object Models
-├── README_FUNCTIONAL_TESTS.md   # Cette documentation
+├── README_FUNCTIONAL_TESTS.md   # Renvoi vers ce guide
 └── requirements.txt             # Dépendances tests
 ```
 

@@ -20,7 +20,7 @@ tests/
 ├── scripts/
 │   └── test_unified_config_cli.ps1         # Tests PowerShell CLI
 ├── run_unified_config_tests.py             # Orchestrateur de tests
-└── README_UNIFIED_CONFIG_TESTS.md          # Cette documentation
+└── README_UNIFIED_CONFIG_TESTS.md          # Renvoi vers ce guide
 ```
 
 ### Types de tests implémentés

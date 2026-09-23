@@ -208,7 +208,7 @@ else:
 
 **Documents clés :**
 1. [`docs/design/FACT_CHECKING_SYSTEM_ARCHITECTURE.md:504-513`](../../docs/design/FACT_CHECKING_SYSTEM_ARCHITECTURE.md:504-513) - Architecture tests
-2. [`tests/BEST_PRACTICES.md:220-227`](../../tests/BEST_PRACTICES.md:220-227) - Bonnes pratiques isolation
+2. [`docs/guides/testing/best_practices.md:220-227`](../guides/testing/best_practices.md) - Bonnes pratiques isolation (cité à l'origine sous `tests/BEST_PRACTICES.md`, copie remplacée par un renvoi, #2345)
 3. [`docs/architecture/ARCHITECTURE_TESTS_E2E.md`](../../docs/architecture/ARCHITECTURE_TESTS_E2E.md) - Tests E2E
 
 **Architecture tests établie :**

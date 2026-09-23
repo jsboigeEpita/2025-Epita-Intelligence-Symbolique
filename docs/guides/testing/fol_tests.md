@@ -31,7 +31,7 @@ tests/
 │   └── test_fol_complete_validation.py   # Validation avec métriques
 ├── migration/
 │   └── test_modal_to_fol_migration.py    # Tests migration Modal→FOL
-└── README_FOL_TESTS.md                   # Cette documentation
+└── README_FOL_TESTS.md                   # Renvoi vers ce guide
 ```
 
 ## 🧪 Tests unitaires (`test_fol_logic_agent.py`)
