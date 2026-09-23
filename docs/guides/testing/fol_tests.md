@@ -39,7 +39,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/work
 - Avec `-n N` (pytest-xdist), `--disable-jvm-session` n'atteint pas les workers : ils tournent avec le vrai `jpype` et sans JVM (#2402). La CI lance la suite en série.
 - `-rs` affiche la raison de chaque test sauté. Un fichier Tweety « vert » dont tous les tests sont sautés n'a rien vérifié.
 
-Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `2ceae29e` plus le correctif de `validate_argument` de #2447) : `test_worker_fol_tweety.py` rend 19 passed, 0 skipped, avec la JVM (16 avant les tests ajoutés par #2447 : deux de requête, un de validation d'argument), et `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
+Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `742d1a0e` plus les correctifs de cohérence et de provenance des formules de #2447) : `test_worker_fol_tweety.py` rend 21 passed, 0 skipped, avec la JVM et le filtre de la CI (`-m "not slow and not requires_api"`), pour 0 requête LLM au compteur d'egress. Il en rendait 16 avant les tests ajoutés par #2447 (deux de requête, un de validation d'argument, deux de cohérence de bout en bout). `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
 
 ## Syntaxe FOL de Tweety
 
@@ -86,7 +86,11 @@ Le bridge n'a pas de méthode d'initialisation propre à la FOL : la JVM est pri
 ## Limites connues
 
 - `FOLLogicAgent.text_to_belief_set()` n'appelle pas le LLM : elle passe par la conversion heuristique `_basic_fol_conversion()`. `test_end_to_end_fol_syllogism_with_llm` passe donc sans aucune requête LLM (mesuré le 2026-09-23 : 0 requête au compteur d'egress, dont le contrôle de vivacité a tourné dans la même session), et l'inférence qu'il vise échoue au parseur sans faire échouer le test (elle n'est qu'un avertissement). Ce test ne vérifie pas la conversion par le LLM. Suivi dans #2447.
-- `analyze()` ne rend `consistency_check` à `True` ou `False` que si un solveur a décidé. Sinon il vaut `None`, et `consistency_message` dit pourquoi (pas de bridge, solveur non décidé, erreur) (#2447). L'étape d'enrichissement par le LLM ajoute encore au résultat les `inferences`, les `errors` et la `confidence` du modèle sans les étiqueter : #2447.
+- `analyze()` ne rend `consistency_check` à `True` ou `False` que si un solveur a décidé. Sinon il vaut `None`, et `consistency_message` dit pourquoi (pas de bridge, solveur non décidé, erreur) (#2447).
+- `FOLAnalysisResult.formulas_source` dit d'où viennent les formules (#2447) :
+  - `"llm"` : la conversion par le LLM. Les formules partent au solveur précédées de la signature (sortes et prédicats) que le parseur exige. Sans elle, le parseur rejetait toute conversion LLM (« Illegal characters in sort definition »). `TestAnalyzeReachesTheSolver`, dans `test_worker_fol_tweety.py`, le vérifie contre le vrai solveur : le syllogisme rend `True`, et `False` avec `!Mortel(socrate)` en plus ;
+  - `"heuristic"` : `_basic_fol_conversion()` a pris le relais, et `conversion_message` dit pourquoi. Ses formules sont des prédicats de substitution (`P0`, `Q0`…), pas une traduction du texte. Elles ne partent pas au solveur, et `consistency_check` vaut `None`.
+- La réponse du LLM à l'étape d'analyse (`analyze_fol`) est gardée telle quelle dans `llm_assessment`, avec une étape de raisonnement « Avis du LLM (non vérifié par un solveur) ». Elle n'écrit aucun champ du solveur : `consistency_check`, `inferences`, `interpretations`, `validation_errors`, `confidence_score` (#2447). Le bridge n'a ni `derive_inferences` ni `generate_models` : sur un vrai run, `inferences` et `interpretations` sont donc vides, et les inférences proposées par le modèle se lisent dans `llm_assessment["inferences"]`.
 
 ## Historique
 
