@@ -373,9 +373,9 @@ def test_the_fol_phase_under_prover9(fol, monkeypatch, refused):
         assert "Prover9" in result.get("message", ""), result.get("message")
 
 
-# Ground formulas only: the isolation net rejects a universal formula checked
-# alone (its sort has no constant), a defect of its own (#2492).
-_GROUND = ["Man(socrates)", "Mortal(plato)"]
+# A universal rule next to ground facts: since #2492 the isolation net checks
+# each formula over the set's constants, so the rule survives.
+_SURVIVORS = ["forall X: (Man(X) => Mortal(X))", "Man(socrates)", "Mortal(plato)"]
 # Tweety refuses this one, so the combined check degrades and isolation runs.
 _UNPARSABLE = "Man(socrates"
 
@@ -409,7 +409,7 @@ def test_a_refused_input_is_not_retried_formula_by_formula(fol, monkeypatch):
 
     monkeypatch.setattr(fol, "_prover9_input", refused)
     with pytest.raises(RuntimeError, match="Fatal error"):
-        _run_fol_phase(fol, _GROUND)
+        _run_fol_phase(fol, _SURVIVORS)
     assert len(built) == 1
 
 
@@ -420,7 +420,7 @@ def test_isolation_does_not_drop_a_refused_formula(fol, monkeypatch):
     undecided set with no trace of the builder."""
     monkeypatch.setattr(fol, "_prover9_input", lambda *_args: _MALFORMED)
     with pytest.raises(RuntimeError, match="Fatal error") as raised:
-        _run_fol_phase(fol, _GROUND + [_UNPARSABLE])
+        _run_fol_phase(fol, _SURVIVORS + [_UNPARSABLE])
     assert type(raised.value).__name__ == "Prover9InputRejected"
 
 
@@ -437,14 +437,14 @@ def test_isolation_does_not_degrade_a_refused_combined_set(fol, monkeypatch):
 
     monkeypatch.setattr(fol, "_prover9_input", refuses_sets)
     with pytest.raises(RuntimeError, match="Fatal error") as raised:
-        _run_fol_phase(fol, _GROUND + [_UNPARSABLE])
+        _run_fol_phase(fol, _SURVIVORS + [_UNPARSABLE])
     assert type(raised.value).__name__ == "Prover9InputRejected"
 
 
 def test_isolation_under_prover9_control(fol):
     """Control: the real builder, the same formulas. Isolation rejects the
     unparsable formula by name and Prover9 decides on the survivors."""
-    result = _run_fol_phase(fol, _GROUND + [_UNPARSABLE])
+    result = _run_fol_phase(fol, _SURVIVORS + [_UNPARSABLE])
 
     assert result["consistent"] is True, result.get("message")
     assert result["fol_metrics"]["rejected_formulas"] == [_UNPARSABLE]
