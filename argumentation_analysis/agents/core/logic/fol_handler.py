@@ -7,7 +7,7 @@ import time
 # La configuration du logging (appel à setup_logging()) est supposée être faite globalement.
 from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
-from argumentation_analysis.core.prover9_runner import run_prover9
+from argumentation_analysis.core.prover9_runner import PROVER9_EXECUTABLE, run_prover9
 from argumentation_analysis.core.mace4_runner import (
     MACE4_EXECUTABLE,
     interpret_mace4_output,
@@ -171,7 +171,43 @@ def _belief_set_to_ladr_assumptions(belief_set) -> str:
         if ladr:
             clauses.append(ladr.rstrip(".") + ".")
     body = "\n".join(clauses)
-    return f"formulas(assumptions).\n{body}\nend_of_list.\n"
+    # #2482: LADR reads a free symbol starting with ``u``-``z`` as a variable,
+    # so the constant in ``Red(zone)`` meant "everything is red" and a
+    # consistent KB had no model. Prolog style is Tweety's own convention
+    # (constants start lowercase or with a digit, variables uppercase).
+    return (
+        "set(prolog_style_variables).\n"
+        f"formulas(assumptions).\n{body}\nend_of_list.\n"
+    )
+
+
+def _prover9_input(belief_set, goal=None) -> str:
+    """Prover9 input for a Tweety ``FolBeliefSet`` (#2482).
+
+    The one builder every Prover9 caller uses: the belief set's formulas as
+    LADR assumptions (the translation Mace4 uses), and one goal, a parsed
+    Tweety formula translated the same way. Without a goal it is ``$F``: a
+    proof of falsehood from the assumptions means they are inconsistent.
+    """
+    if goal is None:
+        goal_ladr = "$F"
+    else:
+        goal_ladr = _tweety_fol_to_ladr(str(goal.toString())).strip().rstrip(".")
+    return (
+        f"{_belief_set_to_ladr_assumptions(belief_set)}"
+        f"formulas(goals).\n{goal_ladr}.\nend_of_list.\n"
+    )
+
+
+def _prover9_proved(output: str) -> "bool | None":
+    """``True`` when Prover9 proved its goal, ``False`` when its search ran out
+    of clauses without a proof, ``None`` when it stopped on neither (a resource
+    limit): Prover9 then decided nothing."""
+    if "THEOREM PROVED" in output:
+        return True
+    if "SEARCH FAILED" in output:
+        return False
+    return None
 
 
 # Cache: Mace4 binary path -> bool (delivery contract verified on this platform).
@@ -549,22 +585,24 @@ class FOLHandler:
             f"Checking FOL consistency for belief set of size {belief_set.size()} via external Prover9"
         )
         try:
-            formulas_str = belief_set.toString().replace(";", ".\n")
-            # FP-8: correct Prover9 syntax — goals must be wrapped in
-            # ``formulas(goals).`` (the bare ``goals.`` list header is rejected
-            # by Prover9 2009-11A with "Fatal error: Unrecognized command"). A
-            # consistency check asks whether the KB entails falsehood ($F): a
-            # proof of $F = inconsistent.
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\nformulas(goals).\n$F.\nend_of_list."
+            # #2482: one LADR clause per formula of the belief set. Its
+            # ``toString()`` is set notation, which Prover9 rejects ("Set
+            # parsing is not available"): this path had never decided.
+            prover9_input = _prover9_input(belief_set)
             logger.debug(f"Prover9 input for consistency check:\n{prover9_input}")
             prover9_output = await asyncio.to_thread(run_prover9, prover9_input)
-            # FP-8: the real proof-found marker emitted by Prover9 2009-11A is
-            # "THEOREM PROVED" (the previous code looked for "END OF PROOF" in
-            # the wrong case — it never matched, so an inconsistent KB was
-            # reported as consistent = théâtre). Proof found (KB entails $F) ⇒
-            # inconsistent.
-            is_consistent = "THEOREM PROVED" not in prover9_output
-            msg = f"Consistency check result: {is_consistent}"
+            # A proof of $F from the KB means the KB is inconsistent. A run
+            # that ends on neither marker decided nothing: no verdict, rather
+            # than "consistent" because no proof was printed.
+            proved = _prover9_proved(prover9_output)
+            if proved is None:
+                msg = (
+                    "Degraded (Prover9): no proof and no exhausted search; no verdict."
+                )
+                logger.warning(msg)
+                return None, msg
+            is_consistent = not proved
+            msg = f"Prover9-based consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
         except Exception as e:
@@ -759,6 +797,19 @@ class FOLHandler:
         else:
             return self._fol_query_with_tweety(belief_set, query_formula_str), False
 
+    def _parse_query(self, belief_set, query_str: str):
+        """Parse a query against the belief set's declared signature.
+
+        ``self._fol_parser`` is built only under the TWEETY solver, and it
+        carries no KB's signature: ``fol_query`` raised under every solver
+        (#2482). The declared signature, not the minimal one, because a
+        constant declared only in a sort is absent from the minimal one (#2447).
+        """
+        FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+        query_parser = FolParser()
+        query_parser.setSignature(belief_set.getSignature())
+        return self.parse_fol_formula(query_str, custom_parser=query_parser)
+
     def _fol_query_with_prover9(self, belief_set, query_formula_str: str) -> bool:
         """
         Ancienne logique d'interrogation via un processus externe Prover9.
@@ -768,23 +819,19 @@ class FOLHandler:
             f"Performing FOL query via external Prover9. Query: '{query_formula_str}'"
         )
         try:
-            # Convert belief set and query to Prover9 input format
-            formulas_str = belief_set.toString().replace(";", ".\n")
-            prover9_goal = query_formula_str.rstrip(".")
-            # FP-8: correct Prover9 syntax — ``formulas(goals).`` not bare
-            # ``goals.`` (see consistency check above). Validated empirically
-            # against Prover9 2009-11A.
-            prover9_input = f"formulas(assumptions).\n{formulas_str}\nend_of_list.\n\nformulas(goals).\n{prover9_goal}.\nend_of_list."
-
+            # #2482: the goal is parsed against the KB's signature, then
+            # translated like the KB's formulas. The Tweety string used to go
+            # to Prover9 as is, after the belief set's set notation.
+            goal = self._parse_query(belief_set, query_formula_str)
+            prover9_input = _prover9_input(belief_set, goal)
             logger.debug(f"Prover9 input for query:\n{prover9_input}")
-
-            # Run Prover9 externally
             prover9_output = run_prover9(prover9_input)
 
-            # FP-8: the real proof-found marker is "THEOREM PROVED" (Prover9
-            # 2009-11A). "END OF PROOF" never matched (wrong case) so every
-            # entailment query returned False even when the goal was proven.
-            entails = "THEOREM PROVED" in prover9_output
+            entails = _prover9_proved(prover9_output)
+            if entails is None:
+                raise RuntimeError(
+                    "Prover9 decided nothing: no proof and no exhausted search."
+                )
 
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return entails
@@ -804,7 +851,7 @@ class FOLHandler:
                 "TweetyInitializer instance is required for the 'tweety' solver path."
             )
         try:
-            query_formula = self.parse_fol_formula(query_formula_str)
+            query_formula = self._parse_query(belief_set, query_formula_str)
             reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
             entails = reasoner.query(belief_set, query_formula)
             return bool(entails)
@@ -824,7 +871,7 @@ class FOLHandler:
                 "TweetyInitializer instance is required for the 'eprover' solver path."
             )
         try:
-            query_formula = self.parse_fol_formula(query_formula_str)
+            query_formula = self._parse_query(belief_set, query_formula_str)
             eprover_path = _get_eprover_path()
             if eprover_path is None:
                 raise RuntimeError(
@@ -845,8 +892,13 @@ class FOLHandler:
             raise
 
     def check_consistency(self, belief_set_input) -> tuple:
+        """``(is_consistent, message)``: ``check_consistency_by`` without the
+        name of the solver."""
+        return self.check_consistency_by(belief_set_input)[:2]
+
+    def check_consistency_by(self, belief_set_input, solver=None) -> tuple:
         """
-        Check consistency of a FOL belief set.
+        Check consistency of a FOL belief set, and say which solver decided.
 
         Accepts either a Tweety-syntax string (parsed via local FolParser)
         or a pre-built Java FolBeliefSet object.
@@ -859,12 +911,20 @@ class FOLHandler:
         downstream consumers cannot mistake "could not check" for "is
         consistent". Only a Tweety reasoner query determines consistency.
 
+        ``solver`` overrides ``settings.solver`` for this call: the external
+        FOL phase passes the solver its context asks for (#2482).
+
         Returns:
-            Tuple[Optional[bool], str]: ``(is_consistent, message)`` where
-            ``is_consistent`` is ``True``/``False`` when the reasoner decided,
-            or ``None`` when the check is degraded (reasoner unavailable or
-            raised). An empty belief set is trivially consistent (``True``).
+            Tuple[Optional[bool], str, Optional[str]]:
+            ``(is_consistent, message, solver)``. ``is_consistent`` is
+            ``True``/``False`` when a reasoner decided, or ``None`` when the
+            check is degraded (reasoner unavailable or raised). ``solver`` is
+            the reasoner the answer comes from: ``"eprover"``, ``"prover9"``,
+            ``"mace4"`` or ``"tweety"`` (``SimpleFolReasoner``); ``None`` when
+            no reasoner was reached. An empty belief set is trivially
+            consistent (``True``, no solver).
         """
+        choice = settings.solver if solver is None else SolverChoice(solver)
         try:
             # If it's a string, parse it into a Java belief set first
             if isinstance(belief_set_input, str):
@@ -876,35 +936,71 @@ class FOLHandler:
                 java_belief_set = belief_set_input
 
             if java_belief_set is None or java_belief_set.size() == 0:
-                return True, "Empty belief set is trivially consistent."
+                return True, "Empty belief set is trivially consistent.", None
 
             # MACE4 path (FP-19 #1243): the model-finder runs as a subprocess
             # (no in-JVM reasoner), so it is dispatched before the EProver/Tweety
             # reasoner selection. Same anti-théâtre discipline: degraded => None.
-            if settings.solver == SolverChoice.MACE4 and MACE4_EXECUTABLE.is_file():
+            if choice == SolverChoice.MACE4 and MACE4_EXECUTABLE.is_file():
                 if not _mace4_delivery_is_reliable():
                     return (
                         None,
                         "Degraded: Mace4 delivery contract broken (sentinel "
                         "{ptest(a)} found no model, #1204); no consistency verdict.",
+                        "mace4",
                     )
                 try:
                     ladr_input = _belief_set_to_ladr_assumptions(java_belief_set)
                     mace4_output = run_mace4(ladr_input)
                     is_consistent, note = interpret_mace4_output(mace4_output)
                     if is_consistent is None:
-                        return None, f"Degraded (Mace4): {note}"
+                        return None, f"Degraded (Mace4): {note}", "mace4"
                     verdict = "consistent" if is_consistent else "inconsistent"
                     return (
                         is_consistent,
                         f"FOL consistency check (Mace4): {verdict}. {note}",
+                        "mace4",
                     )
                 except Exception as e:
                     self.logger.warning(
                         f"Mace4 consistency check failed: {e}. Returning degraded "
                         "(None) — no fabricated verdict (#1019)."
                     )
-                    return None, f"Degraded: Mace4 unavailable ({e}); no verdict."
+                    return (
+                        None,
+                        f"Degraded: Mace4 unavailable ({e}); no verdict.",
+                        "mace4",
+                    )
+
+            # #2482: this check, the one the FOL phase calls, ran
+            # SimpleFolReasoner when PROVER9 was configured. Prover9 refutes: a
+            # proof of $F from the KB means it is inconsistent. When it decides
+            # nothing (input refused, timeout, resource limit), the in-JVM
+            # reasoner below decides, and the message says why.
+            fallback_note = ""
+            if choice == SolverChoice.PROVER9:
+                proved = None
+                if not PROVER9_EXECUTABLE.is_file():
+                    fallback_note = "Prover9 binary absent; "
+                else:
+                    try:
+                        proved = _prover9_proved(
+                            run_prover9(_prover9_input(java_belief_set))
+                        )
+                        fallback_note = "Prover9 decided nothing; "
+                    except Exception as e:
+                        first_line = (str(e).splitlines() or [""])[0]
+                        fallback_note = f"Prover9 failed ({first_line}); "
+                if proved is not None:
+                    verdict = "inconsistent" if proved else "consistent"
+                    return (
+                        not proved,
+                        f"FOL consistency check (Prover9): {verdict}",
+                        "prover9",
+                    )
+                self.logger.warning(
+                    f"{fallback_note}the in-JVM reasoner decides instead."
+                )
 
             # Select the reasoner: the configured external solver (EProver) when
             # its binary is wired, otherwise Tweety's SimpleFolReasoner (#1196).
@@ -913,9 +1009,7 @@ class FOLHandler:
             # used the in-JVM reasoner (and OOM'd on large KBs), masking the
             # EProver integration as "active" when it never ran.
             eprover_path = _get_eprover_path()
-            use_eprover = (
-                settings.solver == SolverChoice.EPROVER and eprover_path is not None
-            )
+            use_eprover = choice == SolverChoice.EPROVER and eprover_path is not None
 
             # Use the configured reasoner if available via initializer / registry
             if use_eprover or self._initializer_instance:
@@ -955,6 +1049,7 @@ class FOLHandler:
                                     "Degraded: EProver delivery contract broken "
                                     "(#1204) and no in-JVM reasoner available; "
                                     "no consistency verdict.",
+                                    "eprover",
                                 )
                     else:
                         reasoner = self._initializer_instance.get_reasoner(
@@ -971,8 +1066,9 @@ class FOLHandler:
                     contradiction = local_parser.parseFormula("-")
                     inconsistent = reasoner.query(java_belief_set, contradiction)
                     is_consistent = not bool(inconsistent)
-                    msg = f"FOL consistency check ({solver_name}): {'consistent' if is_consistent else 'inconsistent'}"
-                    return is_consistent, msg
+                    msg = f"{fallback_note}FOL consistency check ({solver_name}): {'consistent' if is_consistent else 'inconsistent'}"
+                    label = "eprover" if solver_name == "EProver" else "tweety"
+                    return is_consistent, msg, label
                 except Exception as e:
                     # Fail-loud (anti-theater): parsing succeeded but the
                     # reasoner could not decide. Do NOT fabricate a consistent
@@ -985,11 +1081,16 @@ class FOLHandler:
                     return (
                         None,
                         "Degraded: reasoner unavailable; no consistency verdict (parse-only).",
+                        None,
                     )
             else:
                 # No initializer — cannot reason about consistency.
                 # Fail-loud: degraded, not "consistent".
-                return None, "Degraded: no Tweety initializer; no consistency verdict."
+                return (
+                    None,
+                    "Degraded: no Tweety initializer; no consistency verdict.",
+                    None,
+                )
 
         except Exception as e:
             # #1290 (anti-theater #1019/#1278): an exception here means the
@@ -1006,6 +1107,7 @@ class FOLHandler:
             return (
                 None,
                 f"Degraded: FOL consistency check error ({error_msg}); no verdict.",
+                None,
             )
 
     async def compare_fol_backends(self, belief_set_input) -> dict:
@@ -1157,13 +1259,7 @@ class FOLHandler:
             if java_belief_set is None:
                 return None, "Degraded: no belief set was built; no query verdict."
 
-            # The query parser takes the belief set's declared signature, not its
-            # minimal one: a constant declared only in a sort is absent from the
-            # minimal signature (#2447).
-            FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
-            query_parser = FolParser()
-            query_parser.setSignature(java_belief_set.getSignature())
-            query_formula = query_parser.parseFormula(query_str)
+            query_formula = self._parse_query(java_belief_set, query_str)
 
             reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
             entailed = bool(reasoner.query(java_belief_set, query_formula))

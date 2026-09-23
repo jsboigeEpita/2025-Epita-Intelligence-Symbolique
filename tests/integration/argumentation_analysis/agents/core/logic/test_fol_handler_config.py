@@ -16,6 +16,9 @@ def mock_belief_set():
     bs = MagicMock()
     bs.toString.return_value = "some_formula(a)."
     bs.size.return_value = 1
+    # A FolBeliefSet is a Java Collection: the LADR translation iterates it
+    # (#2482). An endless MagicMock ``hasNext()`` would hang that loop.
+    bs.iterator.return_value.hasNext.return_value = False
     return bs
 
 
@@ -40,11 +43,17 @@ def test_fol_query_solver_dispatch(
     # du module partagé, orphelinant les références figées des tests suivants
     # (tripwire #1804 : test_invoke_modal_logic_reaches_solver basculait sur
     # SPASS via les défauts du nouvel objet).
+    # #2482: the query is parsed against the KB's signature, which a mock
+    # belief set does not carry, and Prover9's answer is read from its stdout;
+    # an undecided run falls back to Tweety, so the double must decide.
     with patch(
-        "argumentation_analysis.agents.core.logic.fol_handler.run_prover9"
+        "argumentation_analysis.agents.core.logic.fol_handler.run_prover9",
+        return_value="THEOREM PROVED",
     ) as mock_run_prover9, patch.object(
         FOLHandler, "_fol_query_with_tweety"
-    ) as mock_tweety_query, patch(
+    ) as mock_tweety_query, patch.object(
+        FOLHandler, "_parse_query", return_value=MagicMock()
+    ), patch(
         "argumentation_analysis.agents.core.logic.fol_handler.settings"
     ) as mock_settings:
         mock_settings.solver = config.SolverChoice(solver_choice)

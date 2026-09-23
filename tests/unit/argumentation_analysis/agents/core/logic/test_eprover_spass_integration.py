@@ -241,18 +241,35 @@ class TestFOLHandlerEProverImplementation:
             return_value=fake_path,
         ):
             mock_settings.solver = SolverChoice.EPROVER
-            # EFOLReasoner(path) returns the mock reasoner.
-            mock_jpype.JClass.return_value = lambda _path: mock_reasoner
+            # EFOLReasoner(path) returns the mock reasoner; FolParser() the
+            # query parser.
+            query_parser = MagicMock()
+            classes = {
+                "java.lang.String": str,
+                "org.tweetyproject.logics.fol.reasoner.EFOLReasoner": (
+                    lambda _path: mock_reasoner
+                ),
+                "org.tweetyproject.logics.fol.parser.FolParser": lambda: query_parser,
+            }
+            mock_jpype.JClass.side_effect = classes.__getitem__
 
+            # No shared parser: FOLHandler builds one only under TWEETY. The
+            # test used to plant one, which hid that the query could not be
+            # parsed under EPROVER (#2482).
             handler = FOLHandler(initializer_instance=mock_initializer)
-            handler._fol_parser = MagicMock()
 
             # Mock parse_fol_formula to return a mock formula
             handler.parse_fol_formula = MagicMock(return_value="mock_formula")
 
             result = handler._fol_query_with_eprover(mock_belief_set, "query(a)")
 
-            handler.parse_fol_formula.assert_called_once_with("query(a)")
+            # The query is parsed against the KB's declared signature.
+            handler.parse_fol_formula.assert_called_once_with(
+                "query(a)", custom_parser=query_parser
+            )
+            query_parser.setSignature.assert_called_once_with(
+                mock_belief_set.getSignature()
+            )
             mock_reasoner.query.assert_called_once()
             assert result is True
 

@@ -356,22 +356,23 @@ class TestParseFailureIsNotAVerdict:
     def _run(coro):
         return asyncio.get_event_loop().run_until_complete(coro)
 
-    def _fol_with_handler_reply(self, reply, solver="eprover", eprover=True):
-        """Drive the real external-FOL callable over one bridge reply."""
-        import argumentation_analysis.orchestration.invoke_callables as mod
+    def _fol_with_handler_reply(self, reply, solver="eprover"):
+        """Drive the real external-FOL callable over one handler reply.
+
+        #2482: the phase asks ``fol_handler.check_consistency_by``, which
+        names the solver that decided; it no longer picks a branch itself.
+        """
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
         )
 
         bridge = MagicMock()
-        bridge.check_consistency.return_value = reply
+        bridge.fol_handler.check_consistency_by.return_value = reply
         fake_mod = MagicMock()
         fake_mod.TweetyBridge.return_value = bridge
         with patch.dict(
             "sys.modules",
             {"argumentation_analysis.agents.core.logic.tweety_bridge": fake_mod},
-        ), patch.object(
-            mod.shutil, "which", side_effect=lambda b: "/x" if eprover else None
         ):
             return self._run(
                 _invoke_external_fol_solver(
@@ -383,21 +384,23 @@ class TestParseFailureIsNotAVerdict:
                 )
             )
 
-    @pytest.mark.parametrize("eprover", [True, False], ids=["eprover", "tweety"])
-    def test_fol_parse_failure_is_undecided_on_both_branches(self, eprover):
+    @pytest.mark.parametrize("solver", ["eprover", "tweety"])
+    def test_fol_parse_failure_is_undecided_whoever_decides(self, solver):
         """Both FOL return paths flattened the handler's ``None`` (#1634).
 
         The EProver branch and the TweetyBridge fallback carried the same
-        ``bool(is_consistent)``; the fallback is the one real corpora take,
-        since ``eprover`` is usually not on PATH.
+        ``bool(is_consistent)``. Since #2482 there is one path: the handler
+        decides and names its solver, and the phase passes the tri-state
+        through whichever solver it was.
         """
         degraded = self._fol_with_handler_reply(
-            (None, "Degraded: FOL consistency check error (parse)"), eprover=eprover
+            (None, "Degraded: FOL consistency check error (parse)", None), solver
         )
         decided = self._fol_with_handler_reply(
-            (False, "FOL consistency check (EProver): inconsistent"), eprover=eprover
+            (False, "FOL consistency check: inconsistent", solver), solver
         )
         assert decided["consistent"] is False, "a real inconsistency still decides"
+        assert decided["solver"] == solver, "the label is the handler's solver"
         assert degraded["consistent"] is None, "a parse failure decided nothing"
         assert degraded["consistent"] is not decided["consistent"], (
             "a parse failure is indistinguishable from a decided inconsistency "
@@ -411,8 +414,8 @@ class TestParseFailureIsNotAVerdict:
         genuine reasoner); it now means "no verdict was reached", which is the
         one thing it can usefully tell the state writer.
         """
-        degraded = self._fol_with_handler_reply((None, "Degraded: parse"))
-        decided = self._fol_with_handler_reply((True, "consistent"))
+        degraded = self._fol_with_handler_reply((None, "Degraded: parse", None))
+        decided = self._fol_with_handler_reply((True, "consistent", "eprover"))
         assert degraded["degraded"] is True
         assert decided["degraded"] is False
 
@@ -458,20 +461,52 @@ class TestParseFailureIsNotAVerdict:
         ``consistent=True``.
 
         And with neither marker present, nothing was decided at all.
+
+        #2482: the reading moved into ``FOLHandler.check_consistency_by``,
+        which the phase calls. This drives the phase over the real handler;
+        only the binary and the JVM belief set are doubles.
         """
-        import argumentation_analysis.orchestration.invoke_callables as mod
+        from argumentation_analysis.agents.core.logic import fol_handler as fh
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
         )
 
+        class _JavaIterator:
+            def __init__(self, items):
+                self._items = list(items)
+
+            def hasNext(self):
+                return bool(self._items)
+
+            def next(self):
+                return self._items.pop(0)
+
+        formula = MagicMock()
+        formula.toString.return_value = "P(a)"
+        belief_set = MagicMock()
+        belief_set.size.return_value = 1
+        belief_set.iterator.side_effect = lambda: _JavaIterator([formula])
+        handler = fh.FOLHandler(initializer_instance=None)
+        bridge = MagicMock()
+        bridge.fol_handler = handler
+        fake_mod = MagicMock()
+        fake_mod.TweetyBridge.return_value = bridge
+        binary = MagicMock()
+        binary.is_file.return_value = True
+        sent = []
+
         def run(prover9_stdout):
-            fake_runner = MagicMock()
-            fake_runner.run_prover9.return_value = prover9_stdout
+            def fake_run(prover9_input):
+                sent.append(prover9_input)
+                return prover9_stdout
+
             with patch.dict(
                 "sys.modules",
-                {"argumentation_analysis.core.prover9_runner": fake_runner},
-            ), patch.object(mod.shutil, "which", return_value=None), patch(
-                "pathlib.Path.is_file", return_value=True
+                {"argumentation_analysis.agents.core.logic.tweety_bridge": fake_mod},
+            ), patch.object(fh, "run_prover9", side_effect=fake_run), patch.object(
+                fh, "PROVER9_EXECUTABLE", binary
+            ), patch.object(
+                handler, "create_belief_set_from_string", return_value=belief_set
             ):
                 return self._run(
                     _invoke_external_fol_solver(
@@ -493,5 +528,9 @@ class TestParseFailureIsNotAVerdict:
             "INCONSISTENT KB, not a consistent one"
         )
         assert exhausted["consistent"] is True
+        assert exhausted["solver"] == "prover9"
         assert silent["consistent"] is None
         assert silent["degraded"] is True
+        # The binary got LADR: the formula as an assumption, $F as the goal.
+        assert "formulas(assumptions).\nP(a).\nend_of_list." in sent[0], sent[0]
+        assert "formulas(goals).\n$F.\nend_of_list." in sent[0], sent[0]
