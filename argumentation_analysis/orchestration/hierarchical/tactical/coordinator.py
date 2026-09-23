@@ -26,6 +26,26 @@ from argumentation_analysis.core.communication.message import (
 )
 from argumentation_analysis.core.communication.channel_interface import ChannelType
 
+# Capacités legacy par agent tactique — source unique (#2345). Les noms que
+# `_decompose_objective_to_tasks` émet doivent y figurer, et la traduction vers
+# le registre (`delegation_orchestrator.LEGACY_TO_REGISTRY_CAPABILITY`) est
+# indexée par ces mêmes noms. Garde : `test_tactical_capabilities_resolve_2345.py`
+# (chaque nom émis doit se résoudre vers un fournisseur réel du registre).
+TACTICAL_AGENT_CAPABILITIES: Dict[str, List[str]] = {
+    "informal_analyzer": [
+        "argument_identification",
+        "fallacy_detection",
+        "rhetorical_analysis",
+    ],
+    "logic_analyzer": [
+        "formal_logic",
+        "validity_checking",
+        "consistency_analysis",
+    ],
+    "extract_processor": ["text_extraction", "preprocessing"],
+    "visualizer": ["argument_visualization", "summary_generation"],
+}
+
 
 class TaskCoordinator:
     """
@@ -78,19 +98,9 @@ class TaskCoordinator:
         self.adapter = TacticalAdapter(
             agent_id="tactical_coordinator", middleware=self.middleware
         )
+        # Copie par instance : une mutation locale ne touche pas la table partagée.
         self.agent_capabilities = {
-            "informal_analyzer": [
-                "argument_identification",
-                "fallacy_detection",
-                "rhetorical_analysis",
-            ],
-            "logic_analyzer": [
-                "formal_logic",
-                "validity_checking",
-                "consistency_analysis",
-            ],
-            "extract_processor": ["text_extraction", "preprocessing"],
-            "visualizer": ["argument_visualization", "summary_generation"],
+            agent: list(caps) for agent, caps in TACTICAL_AGENT_CAPABILITIES.items()
         }
         self._subscribe_to_strategic_directives()
 
