@@ -68,12 +68,47 @@ class TestExtractFolMetadataExtended:
         assert any("type(Q(thing, thing))" in line for line in sig)
 
     def test_empty_formulas(self):
-        """Empty formula list should return empty metadata."""
+        """Empty formula list: no predicate, no constant, and a sort Tweety
+        accepts. It used to be ``thing = {}``, which Tweety refuses (#2495)."""
         meta = FOLLogicAgent.extract_fol_metadata([])
 
         assert meta["predicates"] == {}
         assert meta["constants"] == set()
-        assert meta["signature_lines"] == ["thing = {}"]
+        assert meta["signature_lines"] == ["thing = {witness}"]
+
+    def test_a_set_without_constants_declares_a_witness_in_its_sort_only(self):
+        """#2495: the witness is in the sort, never in ``constants`` nor in a
+        formula."""
+        meta = FOLLogicAgent.extract_fol_metadata(["forall X: (Man(X))"])
+
+        assert meta["sorts"] == {"thing": ["witness"]}
+        assert meta["signature_lines"][0] == "thing = {witness}"
+        assert meta["constants"] == set()
+        assert meta["formulas"] == ["forall X: (Man(X))"]
+
+    def test_the_witness_does_not_take_a_predicate_name(self):
+        """#2495: a constant named like a predicate is an input EProver
+        refuses, so the witness steps aside."""
+        meta = FOLLogicAgent.extract_fol_metadata(
+            ["forall X: (witness(X) && witness2(X))"]
+        )
+
+        assert meta["sorts"] == {"thing": ["witness3"]}
+
+    def test_a_set_that_names_a_constant_gets_no_witness(self):
+        meta = FOLLogicAgent.extract_fol_metadata(["forall X: (Man(X))", "Man(a)"])
+
+        assert meta["sorts"] == {"thing": ["a"]}
+
+    def test_a_lent_domain_takes_the_witness_place(self):
+        """#2492's domain already gives the sort an individual; an empty
+        domain lends none, and the witness is declared (#2495)."""
+        lent = FOLLogicAgent.extract_fol_metadata(["forall X: (Man(X))"], domain={"a"})
+        empty = FOLLogicAgent.extract_fol_metadata(["forall X: (Man(X))"], domain=set())
+
+        assert lent["sorts"] == {"thing": ["a"]}
+        assert empty["sorts"] == {"thing": ["witness"]}
+        assert empty["constants"] == set()
 
     def test_quantified_formula_with_implication(self):
         """Complex formula with forall, =>, and multiple predicates."""
