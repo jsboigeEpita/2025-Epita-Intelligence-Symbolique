@@ -7504,8 +7504,12 @@ async def _invoke_fol_reasoning(
             for formula in formulas:
                 try:
                     single_meta = FOLLogicAgent.extract_fol_metadata([formula])
-                    single_sig = single_meta.get("signature_lines", [])
-                    single_bs = "\n".join(str(f) for f in single_sig + [""] + [formula])
+                    single_bs = "\n".join(
+                        str(f)
+                        for f in single_meta["signature_lines"]
+                        + [""]
+                        + single_meta["formulas"]
+                    )
                     f_verdict, _f_msg = await asyncio.to_thread(
                         bridge.check_consistency, single_bs, "first_order"
                     )
@@ -7548,7 +7552,10 @@ async def _invoke_fol_reasoning(
             len(formulas),
         )
         surv_meta = FOLLogicAgent.extract_fol_metadata(valid_formulas)
-        surv_signature = surv_meta.get("signature_lines", [])
+        surv_signature = surv_meta["signature_lines"]
+        # #2468: the belief set and the report pair the signature with the
+        # formulas renamed to it.
+        valid_formulas = surv_meta["formulas"]
         iso_consistent: Optional[bool] = None
         iso_msg = "combined consistency unverified"
         if bridge is not None:
@@ -7603,29 +7610,12 @@ async def _invoke_fol_reasoning(
         fol_metrics["pre_sanitize"] = len(formulas)
         formulas = [FOLLogicAgent.unicode_to_ascii_fol(f) for f in formulas]
 
-        # Sanitize formula identifiers to match signature naming (#677)
-        # extract_fol_metadata builds sanitized constant_map/predicate_map;
-        # apply those mappings to the raw formulas so identifiers match.
+        # Identifiers renamed to the signature's names (#677). #2468: the
+        # renaming is extract_fol_metadata's, the one the agent uses too; this
+        # phase no longer carries its own loop.
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
-        fol_signature = meta.get("signature_lines", [])
-        constant_map = meta.get("constant_map", {})
-        predicate_map = meta.get("predicate_map", {})
-        if constant_map or predicate_map:
-            sanitized_formulas = []
-            for f in formulas:
-                sf = f
-                # Replace predicates first (longer names first to avoid partial matches)
-                for orig, safe in sorted(
-                    predicate_map.items(), key=lambda x: -len(x[0])
-                ):
-                    sf = re.sub(r"\b" + re.escape(orig) + r"\b", safe, sf)
-                # Replace constants (longer names first)
-                for orig, safe in sorted(
-                    constant_map.items(), key=lambda x: -len(x[0])
-                ):
-                    sf = re.sub(r"\b" + re.escape(orig) + r"\b", safe, sf)
-                sanitized_formulas.append(sf)
-            formulas = sanitized_formulas
+        fol_signature = meta["signature_lines"]
+        formulas = meta["formulas"]
         fol_metrics["post_sanitize"] = len(formulas)
 
         belief_set_str = "\n".join(str(f) for f in fol_signature + [""] + formulas)
@@ -10193,9 +10183,12 @@ async def _invoke_external_fol_solver(
             )
 
             bridge = TweetyBridge()
+            # #2468: the signature and the formulas renamed to it.
             meta = FOLLogicAgent.extract_fol_metadata(formulas)
-            sig = meta.get("signature_lines", fol_signature)
-            belief_set_str = "\n".join(str(f) for f in sig + [""] + formulas)
+            formulas = meta["formulas"]
+            belief_set_str = "\n".join(
+                str(f) for f in meta["signature_lines"] + [""] + formulas
+            )
             is_consistent, msg = await asyncio.to_thread(
                 bridge.check_consistency, belief_set_str, "first_order"
             )
@@ -10277,9 +10270,12 @@ async def _invoke_external_fol_solver(
         )
 
         bridge = TweetyBridge()
+        # #2468: the signature and the formulas renamed to it.
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
-        sig = meta.get("signature_lines", fol_signature)
-        belief_set_str = "\n".join(str(f) for f in sig + [""] + formulas)
+        formulas = meta["formulas"]
+        belief_set_str = "\n".join(
+            str(f) for f in meta["signature_lines"] + [""] + formulas
+        )
         is_consistent, msg = await asyncio.to_thread(
             bridge.check_consistency, belief_set_str, "first_order"
         )

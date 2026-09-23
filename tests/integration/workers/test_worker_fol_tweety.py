@@ -828,6 +828,19 @@ class TestAnalyzeReachesTheSolver:
                 ],
                 False,
             ),
+            # #2468: names the parser refuses as the model writes them. On
+            # ``main`` their declarations were sanitised to ``_`` (illegal)
+            # and the formulas were never renamed, so no verdict came back.
+            (["forall X: (A_Fait(X) => Mortel(X))", "A_Fait(socrate)"], True),
+            (
+                [
+                    "forall X: (Évalue(X) => Mortel(X))",
+                    "Évalue(socrate)",
+                    "!Mortel(socrate)",
+                ],
+                False,
+            ),
+            (["Homme(été)", "!Homme(été)"], False),
         ],
     )
     async def test_llm_formulas_get_a_decided_verdict(
@@ -867,6 +880,48 @@ class TestAnalyzeReachesTheSolver:
         assert consistent is True, message
         entailed, message = await agent.execute_query(belief_set, "Mortel(socrate)")
         assert entailed is True, message
+
+
+class TestPipelineFolPhaseNames:
+    """#2468: the pipeline FOL phase declares names the parser accepts and
+    renames the formulas to them.
+
+    On ``main`` the declarations of ``A_Fait`` and ``Évalue`` were refused, so
+    the #1630 isolation net dropped every formula using them and checked the
+    rest alone. With ``!Mortel(socrate)`` in the set, the rest was consistent
+    and the phase published ``consistent: True``, ``decided``, for a set that
+    is inconsistent.
+    """
+
+    FORMULAS = [
+        "forall X: (A_Fait(X) => Mortel(X))",
+        "A_Fait(socrate)",
+        "forall X: (Évalue(X) => EstPrésident(X))",
+        "Évalue(jean-paul)",
+        "est_valide(été)",
+    ]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "extra, verdict", [([], True), (["!Mortel(socrate)"], False)]
+    )
+    async def test_the_whole_set_is_decided(self, jvm_session, extra, verdict):
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+        from argumentation_analysis.orchestration.invoke_callables import (
+            _invoke_fol_reasoning,
+        )
+
+        context = {
+            "phase_extract_output": {"arguments": [{"text": "an argument"}]},
+            "formulas": self.FORMULAS + extra,
+            "_state_object": None,
+        }
+        result = await _invoke_fol_reasoning("text", context)
+
+        assert result["consistent"] is verdict, result["message"]
+        assert result["fol_status"] == "decided"
+        assert "isolation_rejected_count" not in result["fol_metrics"]
 
 
 # ==================== UTILITAIRES DE TEST ====================

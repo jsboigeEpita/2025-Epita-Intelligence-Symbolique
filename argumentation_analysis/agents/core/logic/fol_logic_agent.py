@@ -560,9 +560,18 @@ RÉPONDS EN FORMAT JSON :
 
         Returns:
             Dict with keys: sorts (Dict[str, List[str]]), predicates (Dict[str, int]),
-            constants (set), signature_lines (List[str]).
+            constants (set), signature_lines (List[str]), constant_map and
+            predicate_map (surface name -> declared name), and formulas: the
+            input formulas renamed to the declared names. A belief set is
+            ``signature_lines + [""] + formulas``; the input formulas with this
+            signature do not parse as soon as one name was renamed (#2468).
         """
         import re
+
+        from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+            ModalIdentifierNormalizer,
+            fold_to_ascii,
+        )
 
         predicates: Dict[str, int] = {}  # name -> arity
         constants: Set[str] = set()
@@ -614,52 +623,55 @@ RÉPONDS EN FORMAT JSON :
                 ):
                     constants.add(word)
 
-        # Sanitize constants: Tweety identifiers must be alphanumeric ASCII + underscore.
-        # Collision detection: distinct surface forms may collapse to the same
-        # sanitized form (e.g. "Jean-Paul" and "Jean Paul" → "Jean_Paul").
-        # Disambiguate by appending _v2, _v3, ... suffixes when collision detected.
-        sanitized_constants = set()
-        constant_map: Dict[str, str] = {}  # surface_form → sanitized_form
-        collision_counts: Dict[str, int] = {}  # sanitized_base → count
-        for c in constants:
-            sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", c)
-            if sanitized and not sanitized[0].isdigit():
-                base = sanitized
-            else:
-                base = f"c_{sanitized}"
-            if base in sanitized_constants:
-                # Collision: disambiguate
-                count = collision_counts.get(base, 1) + 1
-                collision_counts[base] = count
-                base = f"{base}_v{count}"
-            else:
-                collision_counts[base] = 1
-            sanitized_constants.add(base)
-            constant_map[c] = base
+        # Tweety constants (measured on the real JVM, #2468): a letter first,
+        # then letters, digits or underscores (``_t_`` is refused; ``jean_paul``
+        # and ``c_42`` are accepted). A constant the grammar accepts keeps its
+        # name. The others are folded to ASCII (``été`` -> ``ete``), their other
+        # characters become ``_``, and ``c_`` is prefixed when the first
+        # character is no letter. Distinct surface forms that land on one name
+        # (``jean-paul`` next to ``jean_paul``) get ``_v2``, ``_v3``... The
+        # legal names are reserved first and the rest is taken in sorted order,
+        # so no generated name shadows a real one and the map does not depend
+        # on the set's iteration order.
+        legal_constant = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+        constant_map: Dict[str, str] = {
+            c: c for c in constants if legal_constant.match(c)
+        }
+        sanitized_constants = set(constant_map.values())
+        for c in sorted(constants - set(constant_map)):
+            base = re.sub(r"[^A-Za-z0-9_]", "_", fold_to_ascii(c))
+            if not re.match(r"[A-Za-z]", base):
+                base = f"c_{base}"
+            name, count = base, 1
+            while name in sanitized_constants:
+                count += 1
+                name = f"{base}_v{count}"
+            sanitized_constants.add(name)
+            constant_map[c] = name
 
         # Build sort declarations from constants
         sorted_consts = sorted(sanitized_constants)
         sorts: Dict[str, List[str]] = {"thing": sorted_consts}
         signature_lines = [f"thing = {{{', '.join(sorted_consts)}}}"]
-        # Sanitize predicate names in signature for Tweety compatibility.
-        # Same collision detection as constants above.
+        # A predicate declaration must match ``[A-Za-z][A-Za-z0-9]*``: no
+        # underscore (measured on the real JVM, #2468: ``A_Fait`` is refused).
+        # The modal parser has the same rule, and its legaliser names these
+        # predicates too: accents folded, separators dropped in PascalCase
+        # (``A_Fait`` -> ``AFait``, ``Évalue`` -> ``Evalue``), a digit suffix on
+        # a collision. The names already legal are reserved first, so a
+        # generated name never merges two predicates.
+        legal_predicates = {
+            p for p in predicates if re.match(r"^[A-Za-z][A-Za-z0-9]*$", p)
+        }
+        legaliser = ModalIdentifierNormalizer(reserved=legal_predicates)
         sanitized_predicates: Dict[str, int] = {}
         predicate_map: Dict[str, str] = {}
-        pred_collision_counts: Dict[str, int] = {}
-        seen_pred_names: set = set()
         for pred_name, arity in predicates.items():
-            safe_name = re.sub(r"[^a-zA-Z0-9_]", "_", pred_name)
-            if safe_name and not safe_name[0].isdigit():
-                base = safe_name
-            else:
-                base = f"pred_{safe_name}"
-            if base in seen_pred_names:
-                count = pred_collision_counts.get(base, 1) + 1
-                pred_collision_counts[base] = count
-                base = f"{base}_v{count}"
-            else:
-                pred_collision_counts[base] = 1
-            seen_pred_names.add(base)
+            base = (
+                pred_name
+                if pred_name in legal_predicates
+                else legaliser.legalize(pred_name)
+            )
             sanitized_predicates[base] = arity
             predicate_map[pred_name] = base
             sort_args = ", ".join(["thing"] * arity)
@@ -672,7 +684,52 @@ RÉPONDS EN FORMAT JSON :
             "signature_lines": signature_lines,
             "constant_map": constant_map,
             "predicate_map": predicate_map,
+            "formulas": FOLLogicAgent._rename_to_signature(
+                formulas, predicate_map, constant_map
+            ),
         }
+
+    @staticmethod
+    def _rename_to_signature(
+        formulas: List[str],
+        predicate_map: Dict[str, str],
+        constant_map: Dict[str, str],
+    ) -> List[str]:
+        """Rewrite ``formulas`` with the declared names (#2468).
+
+        A predicate is renamed where it is applied (``name(``), a constant where
+        it stands alone. One pass over each formula: a name is never renamed
+        twice, so ``jean-paul`` -> ``jean_paul_v2`` cannot be caught again by
+        the rule for ``jean_paul``.
+        """
+        import re
+
+        ident = "A-Za-z0-9_À-ÖØ-öø-ÿ"
+        preds = sorted(
+            (k for k, v in predicate_map.items() if k != v), key=len, reverse=True
+        )
+        consts = sorted(
+            (k for k, v in constant_map.items() if k != v), key=len, reverse=True
+        )
+        alternatives = []
+        if preds:
+            alternatives.append(
+                "(?P<pred>" + "|".join(map(re.escape, preds)) + r")(?=\()"
+            )
+        if consts:
+            alternatives.append(
+                "(?P<const>" + "|".join(map(re.escape, consts)) + f")(?![{ident}(])"
+            )
+        if not alternatives:
+            return list(formulas)
+        pattern = re.compile(f"(?<![{ident}])(?:" + "|".join(alternatives) + ")")
+
+        def rename(match):
+            if match.lastgroup == "pred":
+                return predicate_map[match.group("pred")]
+            return constant_map[match.group("const")]
+
+        return [pattern.sub(rename, formula) for formula in formulas]
 
     @staticmethod
     def build_signature_prefixed_formulas(formulas: List[str]) -> List[str]:
@@ -680,12 +737,14 @@ RÉPONDS EN FORMAT JSON :
 
         Tweety's FolParser requires sort/type declarations before formulas.
         This method extracts metadata from formulas, generates declarations,
-        and combines them into a single parseable block.
+        and combines them with the formulas renamed to the declared names
+        (#2468: the formulas used to go as written, so a name the signature
+        had to rename was never declared).
         """
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
         if not meta["constants"] and not meta["predicates"]:
             return formulas
-        return meta["signature_lines"] + [""] + formulas
+        return meta["signature_lines"] + [""] + meta["formulas"]
 
     def _validate_fol_formula(self, formula: str) -> bool:
         """Validation basique syntaxe FOL (accepts both Unicode and ASCII)."""

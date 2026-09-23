@@ -266,6 +266,8 @@ class TestExternalFOLSolverConsumer:
         ) as mock_agent_cls:
             mock_agent_cls.extract_fol_metadata = MagicMock(return_value={
                 "signature_lines": ["type(t)"],
+                # #2468: the formulas renamed to the signature.
+                "formulas": ["forall X (p(X) -> q(X))"],
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
@@ -303,6 +305,8 @@ class TestExternalFOLSolverConsumer:
         ) as mock_agent_cls:
             mock_agent_cls.extract_fol_metadata = MagicMock(return_value={
                 "signature_lines": [],
+                # #2468: the formulas renamed to the signature.
+                "formulas": ["p(a)"],
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
@@ -353,6 +357,8 @@ class TestExternalFOLSolverConsumer:
         ) as mock_agent_cls:
             mock_agent_cls.extract_fol_metadata = MagicMock(return_value={
                 "signature_lines": [],
+                # #2468: the formulas renamed to the signature.
+                "formulas": ["p(a)"],
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
@@ -379,6 +385,8 @@ class TestExternalFOLSolverConsumer:
         ) as mock_agent_cls:
             mock_agent_cls.extract_fol_metadata = MagicMock(return_value={
                 "signature_lines": [],
+                # #2468: the formulas renamed to the signature.
+                "formulas": ["test formula"],
             })
             result = await _invoke_external_fol_solver("test formula", context)
 
