@@ -78,7 +78,13 @@ def letter_boundary(core: str) -> str:
 # the signal; here a reader cannot tell which entries the corpus holds.
 # RE-MEASURE BEFORE QUOTING — the figure moves with every corpus revision.
 #
-# leaders / heads of state — the 19 person patterns the tests/ sweep uses
+# 2026-09-23, option 4 (user arbitration Q-R1042-A, #2362 class A): 9
+# additions — 5 heads of state and 4 spelling variants — ruled PUBLIC CLASS
+# VOCABULARY by the user. Margin measured the same day: the additions are
+# 9 of 9 absent from the runtime-derived corpus tokens (zero corpus margin);
+# the merged list measures 26 of 28 absent.
+#
+# leaders / heads of state — the 28 person patterns the tests/ sweep uses
 LEADER_PATTERNS = [
     r"Putin",
     r"Poutine",
@@ -99,6 +105,15 @@ LEADER_PATTERNS = [
     r"Mélenchon",
     r"Zelensky",
     r"Zelenskiy",
+    r"Zelenskyy",
+    r"Melenchon",
+    r"Pétain",
+    r"Petain",
+    r"Bachelet",
+    r"Milei",
+    r"Bolsonaro",
+    r"Orbán",
+    r"Orban",
 ]
 
 # states / regions — same invariant as above: never elided toward the census
@@ -138,8 +153,16 @@ EVENT_PATTERNS = [
 # order affects which first match finditer reports).
 LEAK_PATTERNS = LEADER_PATTERNS + STATE_PATTERNS + PARTY_PATTERNS + EVENT_PATTERNS
 
-# The 19 person patterns: the subset used to sweep tests/ for fixtures
+# The person patterns: the subset used to sweep tests/ for fixtures
 # carrying real leader identities (#1999/#2004).
 PERSON_PATTERNS = LEADER_PATTERNS
+
+# The person-only detector. The cassette privacy audit consumes this
+# (#2362 class A, option 4): one vocabulary, one boundary (#2012), one
+# casing rule — instead of a hand-copied list that could drift from the
+# class vocabulary in silence.
+PERSON_RE = re.compile(
+    "|".join(letter_boundary(p) for p in PERSON_PATTERNS), re.IGNORECASE
+)
 
 LEAK_RE = re.compile("|".join(letter_boundary(p) for p in LEAK_PATTERNS), re.IGNORECASE)

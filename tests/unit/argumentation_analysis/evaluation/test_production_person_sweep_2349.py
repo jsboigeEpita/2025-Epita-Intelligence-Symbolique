@@ -45,10 +45,6 @@ DECLARED = {
         "forbids eliding entries toward the corpus, because the survivors "
         "would BE the census"
     ),
-    "scripts/cassettes/privacy.py": (
-        "SOURCE_NAME_HINTS — a declared canary detector, dated 2026-08-06 "
-        "(#1603 R758) and self-documented as intentionally narrow"
-    ),
     "argumentation_analysis/core/utils/cli_utils.py": (
         "DEPRECATED_ORATOR_ALIAS — a declared deprecated CLI spelling, i.e. a "
         "contract, not a detector (tension noted on #2362, not re-litigated)"
@@ -56,6 +52,10 @@ DECLARED = {
 }
 
 # --- Measured violations, owned by #2362 ----------------------------------
+# class A landed (Q-R1042-A option 4, 2026-09-23): scripts/cassettes/privacy.py
+# imports the shared vocabulary instead of carrying its hand-copied list, so
+# its DECLARED entry left the ledger — any name re-added there now reddens as
+# an unregistered bearer, which is exactly the protection this sweep owes.
 # class B1 (redactor by enumeration) and class C (incidental carrier) landed:
 # the redactors derive their person alternation from PERSON_PATTERNS (#2348
 # pattern) and the incidental carriers went opaque — their entries left the

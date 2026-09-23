@@ -26,6 +26,29 @@ def test_source_name_hint_is_blocked() -> None:
     assert any("source-name hint" in v for v in viol)
 
 
+def test_detector_is_the_shared_class_vocabulary() -> None:
+    # #2362 class A (option 4, user arbitration Q-R1042-A): the audit's name
+    # detector is the shared class vocabulary — the hand-copied list is gone,
+    # so the two instruments can never drift apart again.
+    import argumentation_analysis.evaluation.leak_patterns as lp
+
+    import scripts.cassettes.privacy as privacy
+
+    assert privacy.PERSON_RE is lp.PERSON_RE
+
+
+def test_lowercase_prose_form_is_caught() -> None:
+    # The shared detector is case-insensitive and letter-bounded (#2012): a
+    # lowercase prose mention is a leak the old case-sensitive substring list
+    # was structurally blind to. Core derived at runtime — no spelling here.
+    from argumentation_analysis.evaluation.leak_patterns import PERSON_PATTERNS
+
+    core = next(p for p in PERSON_PATTERNS if p.isascii() and p.isalpha())
+    node = f"le president {core.lower()} a parle en comite restreint ce jour"
+    viol = audit_value({"content": node}, source="t")
+    assert any("source-name hint" in v for v in viol)
+
+
 def test_historical_year_in_prose_is_blocked() -> None:
     viol = audit_value(
         {"content": "Le discours du 15 mars 1940 marque un tournant."},
