@@ -22,6 +22,27 @@ from ..utils.async_manager import (
 )
 
 
+class LogicEngineNotWiredError(RuntimeError):
+    """Raised by the analysis core when no logic engine is wired (#2344).
+
+    This ``LogicService`` never had an engine behind its analysers: the
+    private methods returned hardcoded results, including a fabricated
+    ``Tweety Result: ... ACCEPTED`` message impersonating the reasoner. They
+    now fail loud; the public methods catch this and name the gap in the
+    result state (``success=False`` / ``accepted=None``), so callers keep
+    their contract while the fabrication disappears (doctrine #1019: the
+    capacity stays, the lie goes).
+    """
+
+
+_ENGINE_NOT_WIRED_MESSAGE = (
+    "no logic engine wired — this LogicService never had one; the hardcoded "
+    "mock answers were removed (#2344, anti-théâtre #1019). Wire TweetyBridge "
+    "or LogicAgentFactory (see web_api/services/logic_service.py for the "
+    "engine-backed implementation) to get real answers."
+)
+
+
 class LogicService:
     """
     Service de logique pour l'analyse argumentative.
@@ -266,71 +287,44 @@ class LogicService:
     def _analyze_propositional(
         self, text: str, context: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Analyse en logique propositionnelle (mockée)."""
-        return {
-            "belief_set": "p => q",
-            "queries": ["p", "q", "p => q"],
-            "query_results": [
-                {"query": "p", "accepted": True},
-                {"query": "q", "accepted": True},
-                {"query": "p => q", "accepted": True},
-            ],
-            "interpretation": "L'analyse propositionnelle indique que les propositions sont cohérentes.",
-        }
+        """Analyse en logique propositionnelle — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _analyze_first_order(
         self, text: str, context: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Analyse en logique du premier ordre (mockée)."""
-        return {
-            "belief_set": "forall X: (P(X) => Q(X))",
-            "queries": ["P(a)", "Q(a)", "forall X: (P(X) => Q(X))"],
-            "query_results": [
-                {"query": "P(a)", "accepted": True},
-                {"query": "Q(a)", "accepted": True},
-                {"query": "forall X: (P(X) => Q(X))", "accepted": True},
-            ],
-            "interpretation": "L'analyse FOL montre que les prédicats sont cohérents.",
-        }
+        """Analyse en logique du premier ordre — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _analyze_modal(
         self, text: str, context: Optional[Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Analyse en logique modale (mockée)."""
-        return {
-            "belief_set": "[]p => <>q",
-            "queries": ["p", "[]p", "<>q"],
-            "query_results": [
-                {"query": "p", "accepted": True},
-                {"query": "[]p", "accepted": True},
-                {"query": "<>q", "accepted": True},
-            ],
-            "interpretation": "L'analyse modale révèle des relations de nécessité et possibilité.",
-        }
+        """Analyse en logique modale — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _validate_propositional_formula(self, formula: str) -> Tuple[bool, str]:
-        """Valide une formule propositionnelle (mockée)."""
-        return True, "Formule propositionnelle valide"
+        """Valide une formule propositionnelle — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _validate_fol_formula(self, formula: str) -> Tuple[bool, str]:
-        """Valide une formule FOL (mockée)."""
-        return True, "Formule FOL valide"
+        """Valide une formule FOL — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _validate_modal_formula(self, formula: str) -> Tuple[bool, str]:
-        """Valide une formule modale (mockée)."""
-        return True, "Formule modale valide"
+        """Valide une formule modale — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _execute_pl_query(self, query: str) -> Tuple[bool, str]:
-        """Exécute une requête propositionnelle (mockée)."""
-        return True, f"Tweety Result: Query '{query}' is ACCEPTED (True)."
+        """Exécute une requête propositionnelle — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _execute_fol_query(self, query: str) -> Tuple[bool, str]:
-        """Exécute une requête FOL (mockée)."""
-        return True, f"Tweety Result: FOL Query '{query}' is ACCEPTED (True)."
+        """Exécute une requête FOL — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def _execute_modal_query(self, query: str) -> Tuple[bool, str]:
-        """Exécute une requête modale (mockée)."""
-        return True, f"Tweety Result: Modal Query '{query}' is ACCEPTED (True)."
+        """Exécute une requête modale — refuse sans moteur (#2344)."""
+        raise LogicEngineNotWiredError(_ENGINE_NOT_WIRED_MESSAGE)
 
     def analyze_text_logic_async(
         self,
@@ -410,7 +404,9 @@ class LogicService:
                     "belief_set_id": query_def.get("belief_set_id", ""),
                     "query": query_def.get("query", ""),
                     "logic_type": query_def.get("logic_type", "propositional"),
-                    "accepted": False,
+                    # #2344 family (a): a timeout measures nothing, so the
+                    # verdict is indeterminate — None, not a rejection.
+                    "accepted": None,
                     "message": "Timeout ou erreur d'exécution",
                     "success": False,
                 },
@@ -468,29 +464,30 @@ class LogicService:
         """
         analysis_id = self._generate_analysis_id(text, logic_type)
 
-        fallback_result = {
+        # #2344 family (a): this envelope used to fabricate a belief set, a
+        # query and ``accepted: True`` under ``success: True`` — a verdict no
+        # reasoner computed, only labelled. Unavailability is named in the
+        # state (#1019), and what was not measured stays falsy: no belief
+        # set, no query, no success.
+        interpretation = f"Analyse de fallback pour {logic_type} - service temporairement indisponible"
+        if not self._fallback_enabled:
+            interpretation = (
+                "Service indisponible et fallback désactivé - aucune analyse produite"
+            )
+
+        return {
             "analysis_id": analysis_id,
             "text": text,
             "logic_type": logic_type,
             "timestamp": datetime.now().isoformat(),
-            "belief_set": f"fallback_{logic_type}_belief_set",
-            "queries": [f"fallback_query_{logic_type}"],
-            "query_results": [
-                {"query": f"fallback_query_{logic_type}", "accepted": True}
-            ],
-            "interpretation": f"Analyse de fallback pour {logic_type} - service temporairement indisponible",
-            "success": True,
+            "belief_set": None,
+            "queries": [],
+            "query_results": [],
+            "interpretation": interpretation,
+            "success": False,
             "fallback_mode": True,
             "error": error,
         }
-
-        if not self._fallback_enabled:
-            fallback_result["success"] = False
-            fallback_result["interpretation"] = (
-                "Service indisponible et fallback désactivé"
-            )
-
-        return fallback_result
 
     def get_service_status(self) -> Dict[str, Any]:
         """
@@ -560,10 +557,17 @@ class LogicService:
 
     def enable_fallback_mode(self, enabled: bool = True):
         """
-        Active ou désactive le mode fallback.
+        Choisit la formulation de l'enveloppe d'indisponibilité.
+
+        Elle ne décide pas si une enveloppe de fallback est renvoyée — ce
+        choix vit dans ``analyze_text_logic_async`` — et ne change aucun
+        verdict : ``success`` est False dans les deux cas depuis #2344
+        famille (a). Restent sous ce commutateur la phrase d'interprétation
+        de l'enveloppe et le champ ``fallback_enabled`` du statut.
 
         Args:
-            enabled: True pour activer le fallback
+            enabled: True pour la formulation standard, False pour celle
+                qui nomme un fallback désactivé
         """
         self._fallback_enabled = enabled
         self.logger.info(f"Mode fallback {'activé' if enabled else 'désactivé'}")

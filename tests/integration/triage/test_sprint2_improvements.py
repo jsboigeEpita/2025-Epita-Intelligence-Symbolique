@@ -324,7 +324,14 @@ class TestSprint2Improvements(unittest.TestCase):
         enabled_fallback_result = logic_service._get_fallback_analysis_result(
             "test", "propositional"
         )
-        self.assertTrue(enabled_fallback_result["success"])
+        # #2344 family (a): the switch no longer flips a verdict — the
+        # envelope never reports a success that was not computed. What it
+        # still selects is the interpretation sentence.
+        self.assertFalse(enabled_fallback_result["success"])
+        self.assertNotEqual(
+            enabled_fallback_result["interpretation"],
+            disabled_fallback_result["interpretation"],
+        )
 
     def test_performance_monitoring(self):
         """Test que le monitoring de performance fonctionne."""
