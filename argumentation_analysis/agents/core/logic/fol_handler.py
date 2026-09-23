@@ -253,6 +253,256 @@ def _mace4_delivery_is_reliable() -> bool:
     return reliable
 
 
+# #2494: above this many ground atoms the in-JVM reasoner's enumeration of every
+# Herbrand interpretation (2^atoms) is not attempted with witnesses (#1192).
+# Measured on myia-ai-01: 18 atoms 9 s, 20 atoms 56 s.
+_IN_JVM_MAX_ATOMS = 16
+
+
+def _fol_class(name: str):
+    return jpype.JClass("org.tweetyproject.logics.fol.syntax." + name)
+
+
+def _positive_existentials(java_belief_set) -> "tuple[list, bool]":
+    """The sorts of the variables quantified existentially in effect, and
+    whether an inconsistency found over one witness per variable is exact
+    (#2494).
+
+    A quantifier's effect is read from its polarity, counted here rather than
+    taken from Tweety's ``toNnf()``, which leaves a negation over an
+    implication. An ``exists`` under an even number of negations (a premise
+    counts as one), or a ``forall`` under an odd number, needs a witness; a
+    side of an equivalence is read in both polarities. The witnesses are the
+    Skolem constants of those under no universal in effect; one under a
+    universal needs a Skolem function, which a finite set of constants does not
+    replace. Equality, or a node this walk does not know, makes the answer
+    inexact.
+    """
+    exists_cls = _fol_class("ExistsQuantifiedFormula")
+    forall_cls = _fol_class("ForallQuantifiedFormula")
+    junction_cls = (_fol_class("Conjunction"), _fol_class("Disjunction"))
+    negation_cls = _fol_class("Negation")
+    implication_cls = _fol_class("Implication")
+    equivalence_cls = _fol_class("Equivalence")
+    atom_cls = _fol_class("FolAtom")
+    special_cls = (_fol_class("Tautology"), _fol_class("Contradiction"))
+    sorts: list = []
+    exact = [True]
+
+    def walk(formula, positive: bool, under_forall: bool) -> None:
+        if isinstance(formula, (exists_cls, forall_cls)):
+            existential = isinstance(formula, exists_cls) == positive
+            if existential:
+                for variable in formula.getQuantifierVariables():
+                    sorts.append(variable.getSort())
+                if under_forall:
+                    exact[0] = False
+            walk(formula.getFormula(), positive, under_forall or not existential)
+        elif isinstance(formula, junction_cls):
+            for sub in formula.getFormulas():
+                walk(sub, positive, under_forall)
+        elif isinstance(formula, negation_cls):
+            walk(formula.getFormula(), not positive, under_forall)
+        elif isinstance(formula, implication_cls):
+            pair = formula.getFormulas()
+            walk(pair.getFirst(), not positive, under_forall)
+            walk(pair.getSecond(), positive, under_forall)
+        elif isinstance(formula, equivalence_cls):
+            pair = formula.getFormulas()
+            for side in (pair.getFirst(), pair.getSecond()):
+                walk(side, True, under_forall)
+                walk(side, False, under_forall)
+        elif isinstance(formula, atom_cls):
+            if not str(formula.getPredicate().getName())[:1].isalpha():
+                exact[0] = False  # equality and other built-ins
+        elif not isinstance(formula, special_cls):
+            exact[0] = False
+
+    for formula in java_belief_set:
+        walk(formula, True, False)
+    return sorts, exact[0]
+
+
+def _tweety_text(formula) -> str:
+    """``formula`` in the syntax the Tweety parser reads, every sub-formula
+    parenthesised (#2494).
+
+    ``str()`` drops the parentheses a negation needs: ``!(Man(a) && Man(b))``
+    prints as ``!Man(a)&&Man(b)``, which parses back as another formula, and a
+    negated quantifier prints as text the parser refuses. A node this writer
+    does not know raises ``ValueError``.
+    """
+    if isinstance(formula, _fol_class("Negation")):
+        return f"!({_tweety_text(formula.getFormula())})"
+    for name, connective in (("Conjunction", " && "), ("Disjunction", " || ")):
+        if isinstance(formula, _fol_class(name)):
+            parts = [_tweety_text(sub) for sub in formula.getFormulas()]
+            return "(" + connective.join(f"({part})" for part in parts) + ")"
+    for name, connective in (("Implication", " => "), ("Equivalence", " <=> ")):
+        if isinstance(formula, _fol_class(name)):
+            pair = formula.getFormulas()
+            first, second = _tweety_text(pair.getFirst()), _tweety_text(
+                pair.getSecond()
+            )
+            return f"(({first}){connective}({second}))"
+    for name, keyword in (
+        ("ExistsQuantifiedFormula", "exists"),
+        ("ForallQuantifiedFormula", "forall"),
+    ):
+        if isinstance(formula, _fol_class(name)):
+            text = _tweety_text(formula.getFormula())
+            for variable in formula.getQuantifierVariables():
+                text = f"{keyword} {variable}: ({text})"
+            return text
+    if isinstance(formula, _fol_class("FolAtom")):
+        name = str(formula.getPredicate().getName())
+        if not name[:1].isalpha():
+            raise ValueError(f"no Tweety text for the built-in predicate {name}")
+        args = [str(term) for term in formula.getArguments()]
+        return f"{name}({', '.join(args)})" if args else name
+    if isinstance(formula, _fol_class("Tautology")):
+        return "+"
+    if isinstance(formula, _fol_class("Contradiction")):
+        return "-"
+    raise ValueError(f"no Tweety text for {formula.getClass().getName()}")
+
+
+def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
+    """``SimpleFolReasoner``'s consistency verdict, read for what it decides
+    (#2494).
+
+    The reasoner's quantifiers range over the declared sorts, but its Herbrand
+    base holds only the constants that appear in a formula or in the query: an
+    atom over any other declared constant is always false. And its domain is
+    closed: a set that needs an individual nobody named reads inconsistent.
+
+    So the check runs on a copy of the set whose sorts carry one fresh witness
+    per positive existential variable, against a contradiction that names every
+    constant, which puts them all in the Herbrand base. "Consistent" is then a
+    finite model, so it is sound. "Inconsistent" is exact when no positive
+    existential sits under a universal (the witnesses are its Skolem
+    constants); otherwise it reads ``None``. Nothing is fabricated: a copy that
+    cannot be built, or would exceed ``_IN_JVM_MAX_ATOMS``, leaves the plain
+    check, whose "inconsistent" also reads ``None``.
+    """
+    parser_cls = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+    constant_cls = jpype.JClass("org.tweetyproject.logics.commons.syntax.Constant")
+    string_reader = jpype.JClass("java.io.StringReader")
+    witness_sorts, exact = _positive_existentials(java_belief_set)
+    signature = java_belief_set.getSignature()
+
+    sort_constants: "dict[str, list[str]]" = {}
+    for sort in signature.getSorts():
+        sort_constants[str(sort.getName())] = sorted(
+            str(c.get()) for c in sort.getTerms(constant_cls)
+        )
+    taken = {c for names in sort_constants.values() for c in names}
+    formula_constants = {
+        str(c.get()) for c in java_belief_set.getMinimalSignature().getConstants()
+    }
+    declared_only = taken - formula_constants
+    witnesses = 0
+    for sort in witness_sorts:
+        index = 1
+        while f"witness{index}" in taken:
+            index += 1
+        taken.add(f"witness{index}")
+        sort_constants.setdefault(str(sort.getName()), []).append(f"witness{index}")
+        witnesses += 1
+
+    predicates = []
+    for predicate in signature.getPredicates():
+        name = str(predicate.getName())
+        if not name[:1].isalpha():
+            continue  # equality and other built-ins are not declared
+        predicates.append(
+            (name, [str(s.getName()) for s in predicate.getArgumentTypes()])
+        )
+
+    # One atom per constant, so that the contradiction's signature, which the
+    # reasoner adds to the Herbrand base, names every constant (#2494).
+    atoms: "list[str]" = []
+    covered: "set[str]" = set()
+    ground_atoms = 0
+    for name, arg_sorts in predicates:
+        pools = [sort_constants.get(s, []) for s in arg_sorts]
+        count = 1
+        for pool in pools:
+            count *= len(pool)
+        ground_atoms += count
+        if not arg_sorts or any(not pool for pool in pools):
+            continue
+        for position, pool in enumerate(pools):
+            for constant in pool:
+                if constant in covered:
+                    continue
+                args = [p[0] for p in pools]
+                args[position] = constant
+                atoms.append(f"{name}({', '.join(args)})")
+                covered.add(constant)
+
+    def plain() -> "tuple[bool | None, str]":
+        contradiction = parser_cls()
+        contradiction.setSignature(java_belief_set.getMinimalSignature())
+        inconsistent = bool(
+            reasoner.query(java_belief_set, contradiction.parseFormula("-"))
+        )
+        if not inconsistent:
+            return True, "consistent (a model over the declared constants)"
+        if exact and not witnesses and not declared_only:
+            # No positive existential, and every declared constant is in the
+            # Herbrand base: the set is universal over its own constants.
+            return False, "inconsistent (no model over the declared constants)"
+        return None, (
+            "no model over the formulas' constants alone; a witness or a "
+            "declared-only constant is missing from that domain, so this does "
+            "not decide inconsistency"
+        )
+
+    if not witnesses and not declared_only:
+        # The plain check already covers the whole domain, at its usual cost.
+        return plain()
+    if ground_atoms > _IN_JVM_MAX_ATOMS or any(
+        not names for names in sort_constants.values()
+    ):
+        return plain()
+
+    lines = [
+        f"{sort} = {{{', '.join(names)}}}" for sort, names in sort_constants.items()
+    ]
+    lines += [
+        f"type({name}({', '.join(arg_sorts)}))" if arg_sorts else f"type({name})"
+        for name, arg_sorts in predicates
+    ]
+    try:
+        lines += [_tweety_text(formula) for formula in java_belief_set]
+        parser = parser_cls()
+        widened = parser.parseBeliefBase(string_reader("\n".join(lines)))
+        widened.setSignature(parser.getSignature())
+        query_parser = parser_cls()
+        query_parser.setSignature(parser.getSignature())
+        query = query_parser.parseFormula(
+            " || ".join(f"({a} && !{a})" for a in atoms) if atoms else "-"
+        )
+    except Exception as e:  # the copy is ours: say so, then read the plain check
+        logger.warning(
+            f"#2494: the witnessed copy of the belief set could not be built ({e}); "
+            "the plain in-JVM check answers, and its 'inconsistent' reads None."
+        )
+        return plain()
+
+    inconsistent = bool(reasoner.query(widened, query))
+    domain = f"the declared constants and {witnesses} witness(es)"
+    if not inconsistent:
+        return True, f"consistent (a model over {domain})"
+    if exact:
+        return False, f"inconsistent (no model over {domain}, which is exact here)"
+    return None, (
+        f"no model over {domain}, but an existential under a universal (or "
+        "equality) makes that domain insufficient; no verdict"
+    )
+
+
 class FOLHandler:
     """
     Handles First-Order Logic (FOL) operations using either TweetyProject or Prover9,
@@ -642,19 +892,12 @@ class FOLHandler:
             # the external-solver FALLBACK and a comparison backend, FP-19 #1243 —
             # would spuriously fail). This mirrors the robust sync ``check_consistency``
             # and ``_fol_check_consistency_with_eprover`` paths.
-            local_parser = jpype.JClass(
-                "org.tweetyproject.logics.fol.parser.FolParser"
-            )()
-            local_parser.setSignature(belief_set.getMinimalSignature())
-            contradiction = local_parser.parseFormula("-")
-
+            # #2494: the in-JVM reasoner's domain is read for what it decides.
             SimpleFolReasoner = self._initializer_instance.get_reasoner(
                 "SimpleFolReasoner"
             )
-            inconsistent = SimpleFolReasoner.query(belief_set, contradiction)
-
-            is_consistent = not bool(inconsistent)
-            msg = f"Tweety-based consistency check result: {is_consistent}"
+            is_consistent, note = _in_jvm_consistency(SimpleFolReasoner, belief_set)
+            msg = f"Tweety-based consistency check result: {is_consistent} ({note})"
             logger.info(msg)
             return is_consistent, msg
 
@@ -1078,6 +1321,15 @@ class FOLHandler:
                             "SimpleFolReasoner"
                         )
                         solver_name = "SimpleFolReasoner"
+                    if solver_name == "SimpleFolReasoner":
+                        # #2494: the in-JVM reasoner's domain is read for what
+                        # it decides; an "inconsistent" it cannot make exact
+                        # reads None.
+                        is_consistent, note = _in_jvm_consistency(
+                            reasoner, java_belief_set
+                        )
+                        msg = f"{fallback_note}FOL consistency check (SimpleFolReasoner): {note}"
+                        return is_consistent, msg, "tweety"
                     # Check if KB entails a contradiction
                     # Use "-" (Tweety's built-in contradiction/bottom symbol)
                     # which doesn't require any predicates in the signature
