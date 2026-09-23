@@ -11,163 +11,115 @@ Tests cover:
 """
 
 import json
-import os
 
 import pytest
+
+# Determinism knobs read by get_determinism_params, cleared for every test.
+_DETERMINISM_VARS = (
+    "LLM_DETERMINISTIC_MODE",
+    "LLM_TEMPERATURE",
+    "LLM_SEED",
+    "LLM_FORCE_SAMPLING_PARAMS",
+)
+# A model that accepts temperature/seed, passed as ``model_id``. #2496: pinning
+# OPENAI_CHAT_MODEL_ID did not name it, because the resolver reads the
+# OpenRouter pair first; on a seat whose .env configures OpenRouter the
+# resolved model was a reasoning model and the params were suppressed.
+STANDARD_MODEL = "gpt-4o"
+
+
+@pytest.fixture
+def determinism_env(monkeypatch):
+    """Set the determinism knobs for one test, and restore them after it."""
+    for name in _DETERMINISM_VARS:
+        monkeypatch.delenv(name, raising=False)
+
+    def set_env(**values):
+        for name, value in values.items():
+            monkeypatch.setenv(name, value)
+
+    return set_env
 
 
 class TestGetDeterminismParams:
     """_get_determinism_params reads env vars correctly."""
 
-    def test_default_returns_empty(self):
+    def test_default_returns_empty(self, determinism_env):
         """No env vars set → empty dict (provider defaults apply)."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-        os.environ.pop("LLM_TEMPERATURE", None)
-        os.environ.pop("LLM_SEED", None)
-        result = _get_determinism_params()
-        assert result == {}
+        assert _get_determinism_params(model_id=STANDARD_MODEL) == {}
 
-    def test_deterministic_mode_shorthand(self):
+    def test_deterministic_mode_shorthand(self, determinism_env):
         """LLM_DETERMINISTIC_MODE=1 → temperature=0, seed=42."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_TEMPERATURE", None)
-        os.environ.pop("LLM_SEED", None)
-        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
-        # Use a standard (non-reasoning) model so params are not suppressed
-        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
-        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
-        os.environ["LLM_DETERMINISTIC_MODE"] = "1"
-        try:
-            result = _get_determinism_params()
-            assert result["temperature"] == 0.0
-            assert result["seed"] == 42
-        finally:
-            os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-            if prev_model is None:
-                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
-            else:
-                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
+        determinism_env(LLM_DETERMINISTIC_MODE="1")
+        result = _get_determinism_params(model_id=STANDARD_MODEL)
+        assert result["temperature"] == 0.0
+        assert result["seed"] == 42
 
-    def test_temperature_override(self):
+    def test_temperature_override(self, determinism_env):
         """LLM_TEMPERATURE=0.5 → temperature=0.5 only."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-        os.environ.pop("LLM_SEED", None)
-        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
-        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
-        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
-        os.environ["LLM_TEMPERATURE"] = "0.5"
-        try:
-            result = _get_determinism_params()
-            assert result == {"temperature": 0.5}
-        finally:
-            os.environ.pop("LLM_TEMPERATURE", None)
-            if prev_model is None:
-                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
-            else:
-                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
+        determinism_env(LLM_TEMPERATURE="0.5")
+        assert _get_determinism_params(model_id=STANDARD_MODEL) == {"temperature": 0.5}
 
-    def test_seed_override(self):
+    def test_seed_override(self, determinism_env):
         """LLM_SEED=123 → seed=123 only."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-        os.environ.pop("LLM_TEMPERATURE", None)
-        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
-        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
-        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
-        os.environ["LLM_SEED"] = "123"
-        try:
-            result = _get_determinism_params()
-            assert result == {"seed": 123}
-        finally:
-            os.environ.pop("LLM_SEED", None)
-            if prev_model is None:
-                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
-            else:
-                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
+        determinism_env(LLM_SEED="123")
+        assert _get_determinism_params(model_id=STANDARD_MODEL) == {"seed": 123}
 
-    def test_individual_overrides_take_precedence(self):
+    def test_individual_overrides_take_precedence(self, determinism_env):
         """LLM_TEMPERATURE and LLM_SEED override LLM_DETERMINISTIC_MODE values."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_FORCE_SAMPLING_PARAMS", None)
-        prev_model = os.environ.get("OPENAI_CHAT_MODEL_ID")
-        os.environ["OPENAI_CHAT_MODEL_ID"] = "gpt-4o"
-        os.environ["LLM_DETERMINISTIC_MODE"] = "1"
-        os.environ["LLM_TEMPERATURE"] = "0.7"
-        os.environ["LLM_SEED"] = "999"
-        try:
-            result = _get_determinism_params()
-            assert result["temperature"] == 0.7
-            assert result["seed"] == 999
-        finally:
-            os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-            os.environ.pop("LLM_TEMPERATURE", None)
-            os.environ.pop("LLM_SEED", None)
-            if prev_model is None:
-                os.environ.pop("OPENAI_CHAT_MODEL_ID", None)
-            else:
-                os.environ["OPENAI_CHAT_MODEL_ID"] = prev_model
+        determinism_env(
+            LLM_DETERMINISTIC_MODE="1", LLM_TEMPERATURE="0.7", LLM_SEED="999"
+        )
+        result = _get_determinism_params(model_id=STANDARD_MODEL)
+        assert result["temperature"] == 0.7
+        assert result["seed"] == 999
 
-    def test_invalid_temperature_ignored(self):
+    def test_invalid_temperature_ignored(self, determinism_env):
         """Non-numeric LLM_TEMPERATURE is silently skipped."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-        os.environ.pop("LLM_SEED", None)
-        os.environ["LLM_TEMPERATURE"] = "not_a_number"
-        try:
-            result = _get_determinism_params()
-            assert result == {}
-        finally:
-            os.environ.pop("LLM_TEMPERATURE", None)
+        determinism_env(LLM_TEMPERATURE="not_a_number")
+        assert _get_determinism_params(model_id=STANDARD_MODEL) == {}
 
-    def test_invalid_seed_ignored(self):
+    def test_invalid_seed_ignored(self, determinism_env):
         """Non-integer LLM_SEED is silently skipped."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_DETERMINISTIC_MODE", None)
-        os.environ.pop("LLM_TEMPERATURE", None)
-        os.environ["LLM_SEED"] = "abc"
-        try:
-            result = _get_determinism_params()
-            assert result == {}
-        finally:
-            os.environ.pop("LLM_SEED", None)
+        determinism_env(LLM_SEED="abc")
+        assert _get_determinism_params(model_id=STANDARD_MODEL) == {}
 
-    def test_empty_deterministic_mode_string_no_effect(self):
+    def test_empty_deterministic_mode_string_no_effect(self, determinism_env):
         """LLM_DETERMINISTIC_MODE='' is falsy → no effect."""
         from argumentation_analysis.orchestration.invoke_callables import (
             _get_determinism_params,
         )
 
-        os.environ.pop("LLM_TEMPERATURE", None)
-        os.environ.pop("LLM_SEED", None)
-        os.environ["LLM_DETERMINISTIC_MODE"] = ""
-        try:
-            result = _get_determinism_params()
-            assert result == {}
-        finally:
-            os.environ.pop("LLM_DETERMINISTIC_MODE", None)
+        determinism_env(LLM_DETERMINISTIC_MODE="")
+        assert _get_determinism_params(model_id=STANDARD_MODEL) == {}
 
 
 class TestJsonParsingDeterminism:
