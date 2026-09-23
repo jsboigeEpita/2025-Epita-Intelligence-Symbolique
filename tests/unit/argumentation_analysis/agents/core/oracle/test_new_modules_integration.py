@@ -16,10 +16,10 @@ from argumentation_analysis.agents.core.oracle.error_handling import (
     OraclePermissionError,
     oracle_error_handler,
 )
-from argumentation_analysis.agents.core.oracle.interfaces import (
-    OracleAgentInterface,
-    StandardOracleResponse,
-    OracleResponseStatus,
+from argumentation_analysis.agents.core.oracle.interfaces import OracleAgentInterface
+from argumentation_analysis.agents.core.oracle.permissions import (
+    OracleResponse,
+    QueryType,
 )
 
 
@@ -39,17 +39,17 @@ class TestNewModulesIntegration:
 
             @oracle_error_handler("process_request")
             async def process_oracle_request(
-                self, requesting_agent: str, query_type: str, query_params: dict
-            ) -> dict:
+                self, requesting_agent: str, query_type: QueryType, query_params: dict
+            ) -> OracleResponse:
                 if requesting_agent == "error_agent":
                     raise OraclePermissionError("Access denied for error_agent")
 
-                response = StandardOracleResponse(
-                    success=True,
+                return OracleResponse(
+                    authorized=True,
                     data={"processed": True},
+                    query_type=query_type,
                     message="Request processed successfully",
                 )
-                return response.to_dict()
 
             def get_oracle_statistics(self) -> dict:
                 stats = self.error_handler.get_error_statistics()
@@ -68,16 +68,20 @@ class TestNewModulesIntegration:
 
         # Test requête normale
         async def test_normal_request():
-            result = await agent.process_oracle_request("Sherlock", "validate", {})
-            assert result["success"] is True
-            assert result["data"]["processed"] is True
+            result = await agent.process_oracle_request(
+                "Sherlock", QueryType.LOGICAL_VALIDATION, {}
+            )
+            assert result.authorized is True
+            assert result.data["processed"] is True
 
         asyncio.run(test_normal_request())
 
         # Test requête avec erreur
         async def test_error_request():
             with pytest.raises(OraclePermissionError):
-                await agent.process_oracle_request("error_agent", "validate", {})
+                await agent.process_oracle_request(
+                    "error_agent", QueryType.LOGICAL_VALIDATION, {}
+                )
 
         asyncio.run(test_error_request())
 
@@ -92,47 +96,40 @@ class TestNewModulesIntegration:
 
             @oracle_error_handler("oracle_processing")
             async def process_oracle_request(
-                self, requesting_agent: str, query_type: str, query_params: dict
-            ) -> dict:
+                self, requesting_agent: str, query_type: QueryType, query_params: dict
+            ) -> OracleResponse:
                 self.request_count += 1
 
                 try:
                     # Simulation de traitement
-                    if query_type == "forbidden":
+                    if query_type == QueryType.ADMIN_COMMAND:
                         raise OraclePermissionError(
-                            f"Query type {query_type} not allowed for {requesting_agent}"
+                            f"Query type {query_type.value} not allowed for {requesting_agent}"
                         )
 
                     # Succès
-                    response = StandardOracleResponse(
-                        success=True,
+                    return OracleResponse(
+                        authorized=True,
                         data={
                             "query_result": "processed",
                             "request_id": self.request_count,
                         },
-                        message=f"Query {query_type} processed for {requesting_agent}",
-                        metadata={"status_code": OracleResponseStatus.SUCCESS.value},
+                        query_type=query_type,
+                        message=f"Query {query_type.value} processed for {requesting_agent}",
                     )
-
-                    return response.to_dict()
 
                 except Exception as e:
                     # Conversion d'erreur en réponse
                     error_info = self.error_handler.handle_oracle_error(
-                        e, f"agent={requesting_agent}, query={query_type}"
+                        e, f"agent={requesting_agent}, query={query_type.value}"
                     )
 
-                    response = StandardOracleResponse(
-                        success=False,
+                    return OracleResponse(
+                        authorized=False,
+                        query_type=query_type,
                         message=error_info["message"],
                         error_code=error_info["type"],
-                        metadata={
-                            "status_code": OracleResponseStatus.PERMISSION_DENIED.value,
-                            "error_context": error_info["context"],
-                        },
                     )
-
-                    return response.to_dict()
 
             def get_oracle_statistics(self) -> dict:
                 return {
@@ -152,21 +149,19 @@ class TestNewModulesIntegration:
 
         agent = CompleteOracleAgent()
 
-        # Test requête normale
-        # Test requête normale
         # Requête réussie
         result = await agent.process_oracle_request(
-            "Sherlock", "validate", {"data": "test"}
+            "Sherlock", QueryType.LOGICAL_VALIDATION, {"data": "test"}
         )
-        assert result["success"] is True
-        assert result["data"]["request_id"] == 1
-        assert result["metadata"]["status_code"] == "success"
+        assert result.authorized is True
+        assert result.data["request_id"] == 1
 
         # Requête interdite
-        result = await agent.process_oracle_request("Watson", "forbidden", {})
-        assert result["success"] is False
-        assert result["error_code"] == "OraclePermissionError"
-        assert result["metadata"]["status_code"] == "permission_denied"
+        result = await agent.process_oracle_request(
+            "Watson", QueryType.ADMIN_COMMAND, {}
+        )
+        assert result.authorized is False
+        assert result.error_code == "OraclePermissionError"
 
         # Vérifier statistiques
         stats = agent.get_oracle_statistics()

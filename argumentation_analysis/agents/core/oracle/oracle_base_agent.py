@@ -30,6 +30,7 @@ except ImportError:
 
 from ..abc.agent_bases import BaseAgent
 from .dataset_access_manager import DatasetAccessManager
+from .interfaces import OracleAgentInterface
 from .permissions import QueryType, OracleResponse, PermissionManager
 from argumentation_analysis.utils.performance_monitoring import monitor_performance
 
@@ -379,7 +380,7 @@ class OracleTools:
         return await self.check_agent_permission(query_type, target_agent)
 
 
-class OracleBaseAgent(BaseAgent):
+class OracleBaseAgent(BaseAgent, OracleAgentInterface):
     """
     Classe de base pour les agents qui agissent comme des gardiens de données.
 

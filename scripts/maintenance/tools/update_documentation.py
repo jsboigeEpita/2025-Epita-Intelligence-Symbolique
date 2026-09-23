@@ -231,18 +231,20 @@ async def validate_suggestion(suggestion):
 Interfaces standardisées pour tous les composants Oracle:
 
 ```python
-from argumentation_analysis.agents.core.oracle.interfaces import (
-    OracleAgentInterface, StandardOracleResponse, OracleResponseStatus
-)
+from argumentation_analysis.agents.core.oracle.interfaces import OracleAgentInterface
+from argumentation_analysis.agents.core.oracle.permissions import OracleResponse, QueryType
 
-# Implémentation agent Oracle
+# Implémentation agent Oracle — contrat réel (#2358) : QueryType en
+# entrée, OracleResponse en sortie.
 class MyOracleAgent(OracleAgentInterface):
-    async def process_oracle_request(self, agent, query_type, params):
-        return StandardOracleResponse(
-            success=True,
+    async def process_oracle_request(
+        self, requesting_agent: str, query_type: QueryType, query_params: dict
+    ) -> OracleResponse:
+        return OracleResponse(
+            authorized=True,
             data={"processed": True},
-            metadata={"status": OracleResponseStatus.SUCCESS.value}
-        ).to_dict()
+            query_type=query_type,
+        )
 ```
 
 ## 📊 Tests et Validation
@@ -408,37 +410,39 @@ argumentation_analysis/agents/core/oracle/
 #### 1. Création Nouvel Agent Oracle
 ```python
 from argumentation_analysis.agents.core.oracle import (
-    OracleBaseAgent, OracleAgentInterface, StandardOracleResponse,
+    OracleBaseAgent, OracleAgentInterface,
     oracle_error_handler, OracleValidationError
 )
+from argumentation_analysis.agents.core.oracle.permissions import OracleResponse, QueryType
 
 class MonNouvelOracleAgent(OracleBaseAgent, OracleAgentInterface):
     """Nouvel agent Oracle avec interfaces standardisées"""
-    
+
     def __init__(self, dataset_manager, **kwargs):
         super().__init__(dataset_manager=dataset_manager, **kwargs)
-        
+
     @oracle_error_handler("process_custom_request")
-    async def process_oracle_request(self, requesting_agent: str, 
-                                   query_type: str, query_params: dict) -> dict:
+    async def process_oracle_request(self, requesting_agent: str,
+                                   query_type: QueryType, query_params: dict) -> OracleResponse:
         # Validation métier
         if not self._validate_custom_request(query_params):
             raise OracleValidationError("Paramètres invalides")
-            
+
         # Traitement Oracle spécialisé
         result = await self._process_custom_logic(requesting_agent, query_params)
-        
+
         # Réponse standardisée
-        return StandardOracleResponse(
-            success=True,
+        return OracleResponse(
+            authorized=True,
             data=result,
+            query_type=query_type,
             message=f"Request processed for {requesting_agent}"
-        ).to_dict()
-        
+        )
+
     def _validate_custom_request(self, params: dict) -> bool:
         """Validation métier spécialisée"""
         return "required_field" in params
-        
+
     async def _process_custom_logic(self, agent: str, params: dict) -> dict:
         """Logique Oracle spécialisée"""
         return {"processed": True, "agent": agent}
@@ -447,29 +451,35 @@ class MonNouvelOracleAgent(OracleBaseAgent, OracleAgentInterface):
 #### 2. Extension Dataset Manager
 ```python
 from argumentation_analysis.agents.core.oracle import (
-    DatasetAccessManager, DatasetManagerInterface, 
+    DatasetAccessManager, DatasetManagerInterface,
     QueryType, OracleDatasetError
 )
+from argumentation_analysis.agents.core.oracle.permissions import QueryResult
 
 class MonDatasetManager(DatasetAccessManager, DatasetManagerInterface):
-    """Dataset manager spécialisé avec validation custom"""
-    
-    def execute_query(self, agent_name: str, query_type: str, 
-                     query_params: dict) -> dict:
-        # Validation permissions héritée
-        if not self.check_permission(agent_name, query_type):
+    """Dataset manager spécialisé avec validation custom
+
+    Contrat réel (#2358) : execute_query et check_permission sont ASYNC —
+    un appel sync à check_permission rend une coroutine truthy et répond
+    « autorisé » sur tout refus (#2340).
+    """
+
+    async def execute_query(self, agent_name: str, query_type: QueryType,
+                           query_params: dict) -> QueryResult:
+        # Validation permissions héritée — AWAITED
+        if not await self.check_permission(agent_name, query_type):
             raise OraclePermissionError(f"Access denied for {agent_name}")
-            
+
         # Logique spécialisée
-        if query_type == "custom_query":
-            return self._handle_custom_query(agent_name, query_params)
-            
+        if query_type == QueryType.DATASET_ACCESS:
+            return await self._handle_custom_query(agent_name, query_params)
+
         # Déléguer au parent pour queries standard
-        return super().execute_query(agent_name, query_type, query_params)
-        
-    def _handle_custom_query(self, agent: str, params: dict) -> dict:
+        return await super().execute_query(agent_name, query_type, query_params)
+
+    async def _handle_custom_query(self, agent: str, params: dict) -> QueryResult:
         """Gestionnaire query custom"""
-        return {"custom_result": f"Processed for {agent}"}
+        return QueryResult(success=True, data={"custom_result": f"Processed for {agent}"})
 ```
 
 ## 🧪 Développement Piloté par les Tests
@@ -511,18 +521,21 @@ class TestMonNouvelOracleAgent:
         """Test gestion erreur validation"""
         with pytest.raises(OracleValidationError):
             await self.agent.process_oracle_request(
-                "Watson", "custom_query", {}  # Manque required_field
+                "Watson", QueryType.DATASET_ACCESS, {}  # Manque required_field
             )
 ```
 
 #### 2. Implémentation Minimale
 ```python
-# Implémentation juste pour faire passer les tests
+# Implémentation juste pour faire passer les tests — le contrat réel
+# (#2358) veut un QueryType en entrée et une OracleResponse en sortie.
+from argumentation_analysis.agents.core.oracle.permissions import OracleResponse, QueryType
+
 class MonNouvelOracleAgent(OracleBaseAgent):
-    async def process_oracle_request(self, requesting_agent, query_type, query_params):
+    async def process_oracle_request(self, requesting_agent, query_type: QueryType, query_params):
         if "required_field" not in query_params:
             raise OracleValidationError("required_field manquant")
-        return {"success": True, "data": {"processed": True}, "message": f"Processed for {requesting_agent}"}
+        return OracleResponse(authorized=True, data={"processed": True}, message=f"Processed for {requesting_agent}")
 ```
 
 #### 3. Refactorisation et Amélioration
