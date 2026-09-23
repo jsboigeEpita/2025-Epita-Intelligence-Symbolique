@@ -112,6 +112,26 @@ def categorize_fallacy_types(
     return categories
 
 
+def fallacy_analysis_failure(fallacies: Any) -> Optional[str]:
+    """La cause de l'échec d'une analyse des sophismes, ou ``None`` (#2485).
+
+    `InformalAnalysisAgent.analyze_fallacies` signale un appel LLM en échec
+    ou une réponse illisible par une entrée de sa liste portant une clé
+    ``"error"`` (son contrat documenté). Comptée comme un sophisme, cette
+    entrée se lisait « 1 sophisme détecté ». Tout lecteur de la liste pose
+    la question ici, et les méthodes de l'agent qui l'agrègent remontent la
+    réponse dans leur champ ``error`` de premier niveau.
+    """
+    if not isinstance(fallacies, list):
+        return None
+    errors = [
+        str(entry["error"])
+        for entry in fallacies
+        if isinstance(entry, dict) and "error" in entry
+    ]
+    return "; ".join(errors) if errors else None
+
+
 class InformalAnalysisAgent(BaseAgent):
     """
     Agent spécialiste de la détection de sophismes et de l'analyse informelle.
@@ -416,6 +436,9 @@ class InformalAnalysisAgent(BaseAgent):
             "argument": argument,
             "fallacies": await self.analyze_fallacies(argument),  # Appel asynchrone
         }
+        failure = fallacy_analysis_failure(results["fallacies"])
+        if failure:
+            results["error"] = failure
 
         # L'analyse rhétorique et contextuelle sont commentées car elles dépendaient d'outils externes
         # if "rhetorical_analyzer" in self.tools: # self.tools n'existe plus
@@ -473,9 +496,18 @@ class InformalAnalysisAgent(BaseAgent):
                     "arguments": arguments,
                     "analysis_timestamp": self._get_timestamp(),
                 }
-                self.logger.info(
-                    f"Analyse terminée: {len(arguments) if arguments else 0} arguments identifiés."
-                )
+                if arguments is None:
+                    # identify_arguments rend None quand l'appel sémantique a
+                    # levé (#2485) : ce n'est pas « 0 argument ».
+                    results["error"] = (
+                        "L'identification des arguments a échoué "
+                        "(semantic_IdentifyArguments a levé une exception)."
+                    )
+                    self.logger.warning(results["error"])
+                else:
+                    self.logger.info(
+                        f"Analyse terminée: {len(arguments)} arguments identifiés."
+                    )
 
             elif analysis_type == "fallacies":
                 # Exécuter l'analyse des sophismes
@@ -484,9 +516,17 @@ class InformalAnalysisAgent(BaseAgent):
                     "fallacies": fallacies,
                     "analysis_timestamp": self._get_timestamp(),
                 }
-                self.logger.info(
-                    f"Analyse terminée: {len(fallacies)} sophismes détectés."
-                )
+                # #2485 : l'échec est remonté au champ `error` de premier
+                # niveau ; l'entrée de liste reste pour les lecteurs directs
+                # de analyze_fallacies.
+                failure = fallacy_analysis_failure(fallacies)
+                if failure:
+                    results["error"] = failure
+                    self.logger.warning(f"Analyse des sophismes échouée: {failure}")
+                else:
+                    self.logger.info(
+                        f"Analyse terminée: {len(fallacies)} sophismes détectés."
+                    )
 
             else:
                 self.logger.warning(f"Type d'analyse inconnu: '{analysis_type}'")
@@ -646,6 +686,13 @@ class InformalAnalysisAgent(BaseAgent):
             # Analyse des sophismes
             fallacies = await self.analyze_fallacies(text)  # Appel asynchrone
             results["fallacies"] = fallacies
+
+            failure = fallacy_analysis_failure(fallacies)
+            if failure:
+                # #2485 : une analyse échouée n'a rien à catégoriser.
+                results["error"] = failure
+                self.logger.warning(f"Analyse complète échouée: {failure}")
+                return results
 
             # Catégorisation des sophismes
             if fallacies:
@@ -865,6 +912,18 @@ class InformalAnalysisAgent(BaseAgent):
         try:
             # Analyser les sophismes
             fallacies = await self.analyze_fallacies(text)  # Appel asynchrone
+            failure = fallacy_analysis_failure(fallacies)
+            if failure:
+                # #2485 : un échec n'a pas de compte, pas même 0.
+                self.logger.warning(f"Analyse et catégorisation échouées: {failure}")
+                return {
+                    "text": text,
+                    "fallacies": fallacies,
+                    "categories": {},
+                    "error": failure,
+                    "analysis_timestamp": self._get_timestamp(),
+                    "summary": {"total_fallacies": None, "categories_count": None},
+                }
 
             # Catégoriser les sophismes (méthode synchrone)
             categories = self.categorize_fallacies(fallacies) if fallacies else {}

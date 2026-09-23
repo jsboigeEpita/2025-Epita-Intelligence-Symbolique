@@ -660,11 +660,18 @@ class ConversationOrchestrator:
             # #2456: ``analyze_fallacies`` reports a failed analysis as a list
             # entry with an ``"error"`` key (its documented contract). It was
             # counted as a fallacy: "1 sophisme détecté", type "unknown".
+            # #2485: the agent's module reads that entry, and its aggregators
+            # lift it to the top-level ``error``: counted once, not twice.
+            from argumentation_analysis.agents.core.informal.informal_agent import (
+                fallacy_analysis_failure,
+            )
+
             entries = result.get("fallacies", [])
-            errors = [
-                str(f["error"]) for f in entries if isinstance(f, dict) and "error" in f
-            ]
-            if result.get("error"):
+            errors = []
+            entry_failure = fallacy_analysis_failure(entries)
+            if entry_failure:
+                errors.append(entry_failure)
+            if result.get("error") and str(result["error"]) not in errors:
                 errors.append(str(result["error"]))
             fallacies = [
                 f for f in entries if not (isinstance(f, dict) and "error" in f)
