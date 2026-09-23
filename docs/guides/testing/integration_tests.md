@@ -224,7 +224,7 @@ pytest -v tests/integration/
 4. **Vérification des Interfaces** : Vérifiez que les interfaces entre les modules sont correctement utilisées.
 5. **Gestion des Erreurs** : Testez la gestion des erreurs entre les modules.
 
-Pour plus de détails sur les bonnes pratiques, consultez le fichier [BEST_PRACTICES.md](BEST_PRACTICES.md).
+Pour plus de détails sur les bonnes pratiques, consultez le guide [best_practices.md](best_practices.md).
 
 ## Exemples
 
