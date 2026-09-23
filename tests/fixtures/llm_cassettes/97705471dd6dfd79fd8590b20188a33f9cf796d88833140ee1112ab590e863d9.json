@@ -1,0 +1,40 @@
+{
+  "key": "97705471dd6dfd79fd8590b20188a33f9cf796d88833140ee1112ab590e863d9",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_lCU0KQ9xb4o56w7lrWHB0smU",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"497\",\"confidence\":\"high\",\"justification\":\"Les deux arguments exercent une pression fondée sur les rôles et le statut social : l’un invoque l’unanimité des experts comme norme d’adhésion, et l’autre disqualifie l’avis des non-experts en s’appuyant sur leur position sociale plutôt que sur les raisons avancées.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3SeTft5eODzrWy0CxLzyT64hzTG",
+        "created": 1790116868,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1633,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1630,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 95,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

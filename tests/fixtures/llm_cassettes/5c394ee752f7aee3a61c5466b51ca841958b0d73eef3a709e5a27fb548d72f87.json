@@ -1,0 +1,48 @@
+{
+  "key": "5c394ee752f7aee3a61c5466b51ca841958b0d73eef3a709e5a27fb548d72f87",
+  "value": {
+    "id": "chatcmpl-ER3RsR9naeLb5LAnJX0P7RiVfdoID",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La prévision repose sur une hypothèse de croissance annuelle de 1,8 %, jugée optimiste, ce qui conduit à la conclusion qu’elle est contestée. L’inférence est présente, mais le lien entre le caractère optimiste de l’hypothèse et la contestation n’est pas entièrement explicité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116820,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 127,
+      "prompt_tokens": 274,
+      "total_tokens": 401,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 42,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

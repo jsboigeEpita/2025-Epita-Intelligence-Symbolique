@@ -1,0 +1,48 @@
+{
+  "key": "3e66d8c7f698c7d2af5910b5ee19d97b1065031ca2478900146c856c6cd3c44c",
+  "value": {
+    "id": "chatcmpl-ER3WRjq3SMZ4xYjMrpxUH8z2F6LkE",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Anaphore non résolvable : le possessif « ses » peut renvoyer à « la vaccination » ou à « la recherche scientifique » ; l'ambiguïté est résolvable par le contexte.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117103,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 55,
+      "prompt_tokens": 255,
+      "total_tokens": 310,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 0,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

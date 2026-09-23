@@ -135,7 +135,10 @@ jobs:
         shell: pwsh
         run: |
           python scripts/cassettes/export.py ${{ inputs.record_db }} staging_cassettes
-          Write-Host "Exported cassettes: $((Get-ChildItem staging_cassettes -Filter *.json | Measure-Object).Count)"
+          # import.py --verify-run reads this line as the job's cassette count
+          # (#2326). export.py writes MANIFEST.json into the same dir (#2323),
+          # so the glob excludes it — it is not a cassette (#2405).
+          Write-Host "Exported cassettes: $((Get-ChildItem staging_cassettes -Filter *.json | Where-Object Name -ne 'MANIFEST.json' | Measure-Object).Count)"
 
       - name: Cost artifact + fail-loud token cap
         shell: pwsh
@@ -151,7 +154,10 @@ jobs:
             exit 1
           }
 
-      - name: Upload artifacts (cassettes + cost + junit)
+      # llm_egress_report.json (#2397): the status of every recorded response.
+      # The counter writes it on every run; without the upload, a 4xx behind a
+      # green record is unreadable from any other seat.
+      - name: Upload artifacts (cassettes + cost + junit + egress)
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -161,6 +167,7 @@ jobs:
             cost_report.json
             cost_report.md
             pytest_report.xml
+            llm_egress_report.json
           if-no-files-found: error
 
       # Optional: open the cassettes PR from this job when a PAT is configured.

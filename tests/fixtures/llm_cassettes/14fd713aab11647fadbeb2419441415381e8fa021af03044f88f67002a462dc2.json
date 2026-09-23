@@ -1,0 +1,48 @@
+{
+  "key": "14fd713aab11647fadbeb2419441415381e8fa021af03044f88f67002a462dc2",
+  "value": {
+    "id": "chatcmpl-ER3XqAL0F4ccKG1aYpavTXj0WJohh",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.0,\"exhibit\":\"Chaîne reconstruite : prémisse — « La rapidité du changement climatique actuel est sans précédent » ; conclusion — « Cette position néglige le caractère sans précédent de la rapidité du changement climatique actuel ». Verdict : saut logique, car la prémisse ne permet pas d’identifier une position qui négligerait ce caractère.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117190,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 158,
+      "prompt_tokens": 272,
+      "total_tokens": 430,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 71,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

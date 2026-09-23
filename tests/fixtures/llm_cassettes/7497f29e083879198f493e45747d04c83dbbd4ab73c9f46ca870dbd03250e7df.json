@@ -3,13 +3,30 @@
   "value": [
     {
       "role": "assistant",
-      "content": "[\n  {\n    \"fallacy_name\": \"Argument d'autorité (argumentum ad verecundiam)\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Appel au consensus des experts\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Confusion entre consensus et vérité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Saut injustifié de l'accord des experts à la certitude\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Ipse dixit\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.88\n  },\n  {\n    \"fallacy_name\": \"Autorité non spécifiée ou non vérifiable\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Généralisation abusive sur l'unanimité des experts\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Confusion entre expertise et infaillibilité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.97\n  },\n  {\n    \"fallacy_name\": \"Sophisme de l'expert ou du statut\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Ad hominem circonstanciel\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Sophisme génétique\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.96\n  },\n  {\n    \"fallacy_name\": \"Appel à l'intimidation ou à la position sociale\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Faux dilemme entre expert et non-expert\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.92\n  },\n  {\n    \"fallacy_name\": \"Généralisation abusive sur les non-experts\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Empoisonnement du puits\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Irrelevance de la source par rapport à la validité de l'argument\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.97\n  },\n  {\n    \"fallacy_name\": \"Confusion entre compétence dans un domaine et compétence universelle\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Élitisme épistémique ou gatekeeping\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.94\n  }\n]",
+      "content": "[\n  {\n    \"fallacy_name\": \"Appel fallacieux à l'autorité (argumentum ad verecundiam)\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Appel au consensus ou à l'unanimité\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Confusion entre consensus et vérité\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Non sequitur\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Généralisation hâtive\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.82\n  },\n  {\n    \"fallacy_name\": \"Certitude injustifiée\",\n    \"root_category\": \"Insuffisance\",\n    \"confidence\": 0.93\n  },\n  {\n    \"fallacy_name\": \"Appel à la popularité ou à l'opinion collective\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.7\n  },\n  {\n    \"fallacy_name\": \"Autorité non pertinente ou portée excessive de l'expertise\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.9\n  },\n  {\n    \"fallacy_name\": \"Ad hominem circonstanciel\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.99\n  },\n  {\n    \"fallacy_name\": \"Rejet de la source plutôt que réfutation de l'argument\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.98\n  },\n  {\n    \"fallacy_name\": \"Poisonnement du puits\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.91\n  },\n  {\n    \"fallacy_name\": \"Argument d'autorité inversé\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.93\n  },\n  {\n    \"fallacy_name\": \"Élitisme épistémique ou argument par le statut\",\n    \"root_category\": \"Influence\",\n    \"confidence\": 0.95\n  },\n  {\n    \"fallacy_name\": \"Faux dilemme entre être expert et ne pas avoir d'avis recevable\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.96\n  },\n  {\n    \"fallacy_name\": \"Irrelevance ou conclusion non pertinente\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.94\n  },\n  {\n    \"fallacy_name\": \"Confusion entre compétence limitée et absence totale de valeur argumentative\",\n    \"root_category\": \"Erreur de raisonnement\",\n    \"confidence\": 0.96\n  },\n  {\n    \"fallacy_name\": \"Ambiguïté sur le sens de « votre avis ne compte pas »\",\n    \"root_category\": \"Abus de langage\",\n    \"confidence\": 0.86\n  },\n  {\n    \"fallacy_name\": \"Déplacement de la charge de la preuve vers le statut de l'interlocuteur\",\n    \"root_category\": \"Tricherie\",\n    \"confidence\": 0.78\n  }\n]",
       "metadata": {
         "logprobs": null,
-        "id": "chatcmpl-EPySp8liKBpNH9GL7FFLSsnk5zgud",
-        "created": 1789859331,
+        "id": "chatcmpl-ER3SGoCxkRoAWO29w2IxG7ew9PCnn",
+        "created": 1790116844,
         "system_fingerprint": null,
-        "usage": "prompt_tokens=227 prompt_tokens_details=PromptTokensDetails(audio_tokens=0, cache_write_tokens=0, cached_tokens=0, image_tokens=None, text_tokens=None) completion_tokens=1251 completion_tokens_details=CompletionTokensDetails(accepted_prediction_tokens=0, audio_tokens=0, reasoning_tokens=512, rejected_prediction_tokens=0, text_tokens=None)"
+        "usage": {
+          "prompt_tokens": 227,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 1214,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 463,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
       }
     }
   ]

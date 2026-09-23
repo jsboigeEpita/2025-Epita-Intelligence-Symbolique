@@ -1,0 +1,40 @@
+{
+  "key": "9aea5fdb49fa680884baea1d4291ccc9e02e205883ca1c3f3d9742c93e6f3cb4",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_M0YSDfp8HBU4YGyUMVal5c3H",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"700\",\"confidence\":\"high\",\"justification\":\"L’argument ne constitue pas un cercle cartésien : il invoque l’unanimité des experts comme preuve de vérité et disqualifie l’avis des non-experts. Cela relève plutôt de l’appel à l’autorité et de l’argument ad hominem/argument d’autorité, sans prémisse présupposant déjà la conclusion.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3TCjPSPfORsuwssLrQoiaznAmpy",
+        "created": 1790116902,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 655,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 103,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}

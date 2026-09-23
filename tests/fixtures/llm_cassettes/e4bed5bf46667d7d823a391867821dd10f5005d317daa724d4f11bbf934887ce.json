@@ -1,0 +1,48 @@
+{
+  "key": "e4bed5bf46667d7d823a391867821dd10f5005d317daa724d4f11bbf934887ce",
+  "value": {
+    "id": "chatcmpl-ER3Rhv388XBii6wz7VtPbM0LGa6sU",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"La comparaison européenne néglige les différences structurelles entre les systèmes de retraite, donc elle ne suffit pas à justifier la réforme. La progression est logique, mais l’inférence reste partielle car le lien entre négligence des différences et insuffisance justificative n’est pas entièrement explicité.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116809,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 156,
+      "prompt_tokens": 271,
+      "total_tokens": 427,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 75,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}
