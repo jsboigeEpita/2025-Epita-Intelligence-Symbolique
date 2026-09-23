@@ -4,8 +4,10 @@ A cassette contains the LLM response, optionally with metadata. Per project
 policy, no plaintext dataset content may appear in committed fixtures:
 
 - raw_text / full_text / full_text_segment / raw_text_snippet (forbidden keys)
-- Source names (heuristic — year ranges + author hints; PROVEN absent in the
-  recorded subset used for the probe)
+- Source names — the shared class-vocabulary detector ``PERSON_RE`` from
+  ``argumentation_analysis/evaluation/leak_patterns.py`` (#2362 class A,
+  option 4: one vocabulary for every instrument; the hand-copied list that
+  lived here could drift from the class vocabulary in silence)
 - Encrypted ciphertext is allowed (cannot be decrypted without the passphrase;
   useless alone)
 
@@ -23,6 +25,8 @@ import re
 from pathlib import Path
 from typing import Any, Iterable
 
+from argumentation_analysis.evaluation.leak_patterns import PERSON_RE
+
 # Forbidden plaintext keys — checked recursively in any dict / list element.
 # Names mirror `argumentation_analysis.core.io_manager` extraction schema.
 FORBIDDEN_KEYS = frozenset(
@@ -33,35 +37,6 @@ FORBIDDEN_KEYS = frozenset(
         "raw_text_snippet",
         "passphrase",  # never commit derived secrets
     )
-)
-
-# Heuristic: politically sensitive corpus sources the dataset can contain.
-# If any name appears in a cassette, the audit fails.
-# Source: project CLAUDE.md "Dataset Privacy Discipline" + the canonical
-# dataset is political speeches (historical dictators, current heads of state).
-# This list is intentionally narrow — broader NER catches false positives.
-# Last update: 2026-08-06 (#1603 R758).
-SOURCE_NAME_HINTS = (
-    "Trump",
-    "Biden",
-    "Macron",
-    "Le Pen",
-    "Mélenchon",
-    "Melenchon",
-    "Poutine",
-    "Zelensky",
-    "Zelenskyy",
-    "Mussolini",
-    "Hitler",
-    "Pétain",
-    "Petain",
-    "Staline",
-    "Stalin",
-    "Bachelet",
-    "Milei",
-    "Bolsonaro",
-    "Orbán",
-    "Orban",
 )
 
 # Historical political date range — corpus contains (year: 1933-2026).
@@ -144,12 +119,11 @@ def audit_value(value: Any, *, source: str = "<unknown>") -> list[str]:
                 last = m.group(1)
             if last in METADATA_KEYS:
                 return
-            for name in SOURCE_NAME_HINTS:
-                if name in node:
-                    violations.append(
-                        f"{source}: source-name hint {name!r} found at {path}"
-                    )
-                    break  # one report per node is enough
+            name_hit = PERSON_RE.search(node)
+            if name_hit:
+                violations.append(
+                    f"{source}: source-name hint {name_hit.group(0)!r} found at {path}"
+                )
             for m in DATE_RE.finditer(node):
                 if _is_monetary_amount(node, m):
                     continue

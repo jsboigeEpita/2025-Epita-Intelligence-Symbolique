@@ -1,6 +1,6 @@
 """tests/ person-name sweep guard (#2004, follow-up of #1999).
 
-Sweeps tests/**/*.py with the 19 leader patterns of the repo's leak detector
+Sweeps tests/**/*.py with the leader patterns of the repo's leak detector
 (shared vocabulary: argumentation_analysis/evaluation/leak_patterns.py — the
 import-effect-free single source; scripts/run_fb34_opaqueness_check.py
 consumes the same list at runtime).
