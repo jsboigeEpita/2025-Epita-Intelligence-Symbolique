@@ -23,9 +23,14 @@ producer — defense-in-depth. The transform:
 * generic ``MpAtomN`` fallback when the stem is empty/illegal.
 * applied **consistently** to declarations and bodies, and the collision set
   tracks *generated* candidates too — so two distinct source atoms that
-  PascalCase to the same stem (``heavy_rain`` vs ``heavy-rain``) are
+  PascalCase to the same stem (``heavy_rain`` vs ``heavy__rain``) are
   disambiguated instead of collapsed. That soundness guard was absent from the
   original inline #1260 closure.
+* the collision set also starts with every atom that is **already legal** in
+  the text being normalised (#2471), so ``heavy_rain`` next to a real
+  ``HeavyRain`` becomes ``HeavyRain1`` instead of merging into it. Without it,
+  the consistent KB ``heavy_rain``, ``!HeavyRain`` reached the solver as
+  ``HeavyRain``, ``!HeavyRain`` and was decided inconsistent (measured).
 
 The FOL parser (``FolParser``) applies the same rule to predicate declarations
 (measured on the real JVM, #2468: ``A_Fait`` is refused, ``AFait`` accepted), so
@@ -37,16 +42,18 @@ lost it (``Value``).
 Anti-pendule: this normalizes the **syntax** of the sort-name for Tweety only;
 it does not neutralize semantic content or variance. No heuristic masks a
 parse-fail — a genuinely malformed KB is still rejected and the handler returns
-honest ``None`` (#1019 fail-loud). It is idempotent on already-legal atoms, so a
-caller that pre-sanitizes (the nl path via ``invoke_callables._legal_symbol``)
-is unaffected by the second pass here.
+honest ``None`` (#1019 fail-loud). It is idempotent on already-legal atoms, so
+the nl path, which builds its KB with ``build_modal_kb``, is unaffected by the
+second pass in ``ModalHandler``. ``build_modal_kb`` is the one legaliser of the
+modal paths: the inline #1260 closure of ``invoke_callables`` and the copy in
+``scripts/run_fp16_modal_enum.py`` call it now (#2471).
 """
 
 from __future__ import annotations
 
 import re
 import unicodedata
-from typing import Dict, Iterable, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 # Reserved words of the modal grammar — must never be treated as atoms.
 _KEYWORDS = frozenset(
@@ -64,10 +71,14 @@ _KEYWORDS = frozenset(
     }
 )
 
-# A modal atom token (mirrors ``invoke_callables._atom_re`` / #1260): any
-# identifier-shaped run including underscores, so ``joke_teleprompter`` is
-# captured as ONE token rather than split around the underscore.
-_ATOM_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+# A modal atom token: any identifier-shaped run including underscores, so
+# ``joke_teleprompter`` is captured as ONE token rather than split around the
+# underscore. Accented letters belong to the token too (#2471): MlParser refuses
+# them ("Illegal characters in predicate definition 'évalue'", measured), so an
+# accented atom is captured whole and folded by ``legalize`` instead of being
+# split around its accent, which left the accent in the KB.
+_ACCENTED = "\u00c0-\u00d6\u00d8-\u00f6\u00f8-\u00ff"  # Latin-1 letters
+_ATOM_RE = re.compile(rf"[A-Za-z{_ACCENTED}_][A-Za-z0-9{_ACCENTED}_]*")
 
 # Illegal ``sort`` declaration lines (#1441). The Tweety FOL/ML grammar
 # (firsthand-confirmed vs FolParser/MlParser BNF: ``tweety_fol_bnf.md``) has
@@ -117,7 +128,9 @@ class ModalIdentifierNormalizer:
     """Sound, memoized mapping of modal atoms to MlParser-legal identifiers.
 
     ``reserved`` pre-seeds the collision set (e.g. atoms already legal in the
-    KB) so a generated symbol never shadows a real atom. Generated candidates
+    KB) so a generated symbol never shadows a real atom;
+    ``reserve_legal_atoms`` seeds it from the texts themselves (#2471).
+    Generated candidates
     are also added to the collision set, so two distinct source atoms that
     PascalCase to the same stem are disambiguated rather than collapsed — the
     soundness guard missing from the original inline #1260 closure.
@@ -126,6 +139,18 @@ class ModalIdentifierNormalizer:
     def __init__(self, reserved: Iterable[str] = ()) -> None:
         self._reserved: set[str] = set(reserved)
         self._forward: Dict[str, str] = {}
+
+    def reserve_legal_atoms(self, *texts: str) -> None:
+        """Add every atom already legal in ``texts`` to the collision set.
+
+        Call it with every text that shares this normaliser (a KB and its
+        query) before normalising any of them: a renamed atom must never take
+        the name of a legal atom that only appears in a text normalised later.
+        """
+        for text in texts:
+            for tok in _ATOM_RE.findall(text):
+                if tok not in _KEYWORDS and _LEGAL_RE.match(tok):
+                    self._reserved.add(tok)
 
     def legalize(self, atom: str) -> str:
         """Return an MlParser-legal identifier for ``atom`` (memoized)."""
@@ -153,7 +178,8 @@ class ModalIdentifierNormalizer:
 
         Returns ``(normalized_content, reverse_map)`` where ``reverse_map`` is
         ``{normalized: original}`` for readability/traceability. Atoms already
-        legal are absent from the map (they pass through verbatim).
+        legal are absent from the map (they pass through verbatim), and they
+        are reserved before anything is renamed (#2471).
 
         Also strips illegal ``sort ...`` declaration lines (#1441): the ML
         grammar has no ``sort`` keyword, so such a line is never parseable.
@@ -162,8 +188,33 @@ class ModalIdentifierNormalizer:
         silent — anti-théâtre #1019).
         """
         content, removed = strip_illegal_sort_declarations(content)
+        self.reserve_legal_atoms(content)
         normalized = _ATOM_RE.sub(lambda m: self.legalize(m.group(0)), content)
         reverse = {v: k for k, v in self._forward.items()}
         if removed:
             reverse["__stripped_sort_lines__"] = str(removed)
         return normalized, reverse
+
+
+def build_modal_kb(formulas: Iterable[str]) -> Tuple[List[str], List[str]]:
+    """Declare and legalise the atoms of undeclared modal formulas.
+
+    The nl path's KB builder (#1224; FP-11 #1214 for the declarations). Returns
+    ``(declarations, formulas)``: one ``type(atom)`` per atom in first-seen
+    order, and the formulas with every atom made MlParser-legal. One normaliser
+    renames every formula, and its collision set starts with every atom already
+    legal in any of them, so a renamed atom merges neither into a real atom nor
+    into another renamed one (#2471).
+    """
+    texts = [str(f) for f in formulas]
+    normalizer = ModalIdentifierNormalizer()
+    normalizer.reserve_legal_atoms(*texts)
+    renamed = [
+        _ATOM_RE.sub(lambda m: normalizer.legalize(m.group(0)), text) for text in texts
+    ]
+    seen: Dict[str, None] = {}
+    for text in renamed:
+        for tok in _ATOM_RE.findall(text):
+            if tok not in _KEYWORDS:
+                seen.setdefault(tok, None)
+    return [f"type({atom})" for atom in seen], renamed

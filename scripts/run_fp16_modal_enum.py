@@ -16,8 +16,8 @@ set, this harness:
   1. runs the real spectacular+full pipeline per corpus (the DoD matrix re-run),
   2. takes the modal phase output's real ``formulas`` (the ``nl_to_logic``
      translations the pipeline actually built its KB from),
-  3. replays them through a VERBATIM copy of the #1230 KB-construction logic
-     (kept byte-aligned with ``_invoke_modal_logic``'s nl-path),
+  3. replays them through the production KB builder (``build_modal_kb``, the
+     one ``_invoke_modal_logic``'s nl-path calls, #2471),
   4. validates the resulting belief base against the LIVE ``MlParser`` — first the
      whole KB (matching the pipeline's ``valid``), then each ``type(...)``
      declaration and each formula INDIVIDUALLY — so every rejection is captured,
@@ -55,10 +55,12 @@ import run_fp5_formal_matrix as fp5  # noqa: E402
 
 RESULTS_DIR = fp5.RESULTS_DIR
 
-# ── #1230 KB construction — VERBATIM copy of _invoke_modal_logic's nl-path ──
-# Kept byte-aligned with argumentation_analysis/orchestration/invoke_callables.py
-# (~5763-5850). The enumeration is only faithful if this matches production; any
-# drift here would measure a different KB than the pipeline builds.
+# ── Modal KB construction — the production builder ──
+# The enumeration is only faithful if it builds the KB the pipeline builds. This
+# harness used to carry a copy of ``_invoke_modal_logic``'s nl-path, which drifted:
+# it still generated the #1230 ``mpN`` names after #1260 made production
+# PascalCase them. It now calls the builder the pipeline calls
+# (``build_modal_kb``, #2471), after the same ``PLFormulaSanitizer`` step.
 _KEYWORD_ATOMS = {
     "forall",
     "exists",
@@ -75,9 +77,13 @@ _ATOM_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 _MLPARSER_LEGAL_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*$")
 
 
-def _build_modal_kb_1230(nl_formulas: "list[str]") -> "tuple[str, list[str], list[str]]":
-    """Reproduce the #1230 nl-path: sanitize → map illegal atoms to mpN →
-    declare type(atom). Returns (belief_set_str, declarations, kb_formulas)."""
+def _build_modal_kb(nl_formulas: "list[str]") -> "tuple[str, list[str], list[str]]":
+    """Build the modal KB the pipeline builds: sanitize, then ``build_modal_kb``.
+    Returns (belief_set_str, declarations, kb_formulas)."""
+    from argumentation_analysis.agents.core.logic.modal_kb_identifier_normalizer import (
+        build_modal_kb,
+    )
+
     kb_formulas: "list[str]" = list(nl_formulas)
     try:
         from argumentation_analysis.agents.core.logic.pl_formula_sanitizer import (
@@ -91,38 +97,8 @@ def _build_modal_kb_1230(nl_formulas: "list[str]") -> "tuple[str, list[str], lis
     except Exception:
         pass
 
-    _legal_atoms = {
-        tok
-        for f in kb_formulas
-        for tok in _ATOM_RE.findall(str(f))
-        if tok not in _KEYWORD_ATOMS and _MLPARSER_LEGAL_RE.match(tok)
-    }
-    _atom_symbol: "dict[str, str]" = {}
-    _symbol_counter = 0
-
-    def _legal_symbol(atom: str) -> str:
-        nonlocal _symbol_counter
-        if atom in _KEYWORD_ATOMS or _MLPARSER_LEGAL_RE.match(atom):
-            return atom
-        if atom not in _atom_symbol:
-            _symbol_counter += 1
-            candidate = f"mp{_symbol_counter}"
-            while candidate in _legal_atoms:
-                _symbol_counter += 1
-                candidate = f"mp{_symbol_counter}"
-            _atom_symbol[atom] = candidate
-        return _atom_symbol[atom]
-
-    kb_formulas = [
-        _ATOM_RE.sub(lambda m: _legal_symbol(m.group(0)), str(f)) for f in kb_formulas
-    ]
-    _seen: "dict[str, None]" = {}
-    for f in kb_formulas:
-        for tok in _ATOM_RE.findall(str(f)):
-            if tok not in _KEYWORD_ATOMS and tok not in _seen:
-                _seen[tok] = None
-    declarations = [f"type({atom})" for atom in _seen]
-    belief_set_str = "\n".join(declarations + [str(f) for f in kb_formulas])
+    declarations, kb_formulas = build_modal_kb(kb_formulas)
+    belief_set_str = "\n".join(declarations + kb_formulas)
     return belief_set_str, declarations, kb_formulas
 
 
@@ -173,11 +149,11 @@ def _enumerate_modal_rejections(
     Two complementary signals:
       * ``kb_parses`` — the AUTHORITATIVE decidability signal: does the full
         constructed belief base parse? This matches the pipeline's modal
-        ``valid`` non-None-ness (same formulas, same #1230 construction, same
+        ``valid`` non-None-ness (same formulas, same ``build_modal_kb`` construction, same
         ``parseBeliefBase``). True ⇒ modal decides.
       * ``illegal_by_type`` — a STATIC scan of the constructed KB for any
         predicate-position token that violates the MlParser grammar
-        ``[a-zA-Z][a-zA-Z0-9]*`` after the #1230 mpN-substitution. When #1230
+        ``[a-zA-Z][a-zA-Z0-9]*`` after the production renaming. When the renaming
         fully covers the corpus this is empty and agrees with ``kb_parses=True``;
         when a residual class survives (a construct ``_atom_re`` never captured —
         accents, leading digits, stray punctuation), ``kb_parses=False`` and this
@@ -189,7 +165,7 @@ def _enumerate_modal_rejections(
     both correct and faithful. No raw token ever leaves this function — only
     construct *types*.
     """
-    belief_set_str, declarations, kb_formulas = _build_modal_kb_1230(nl_formulas)
+    belief_set_str, declarations, kb_formulas = _build_modal_kb(nl_formulas)
     StringReader = jpype_mod.JClass("java.io.StringReader")
 
     whole_parses = True
