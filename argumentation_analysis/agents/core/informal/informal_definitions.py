@@ -86,6 +86,59 @@ class FallacyAnalysisResult(BaseModel):
     )
 
 
+# --- Recherche d'un sophisme par son nom (#2412) ---
+
+#: Colonnes qui portent un nom de sophisme, dans l'ordre où un nom est rapporté.
+NAME_COLUMNS = ("nom_vulgarisé", "text_fr", "Latin")
+
+#: Nombre maximal de candidats rapportés quand un nom ne désigne pas un seul nœud.
+MAX_NAME_CANDIDATES = 10
+
+
+def _cell_text(row: pd.Series, column: str) -> str:
+    """Texte d'une cellule, ``""`` si la colonne manque ou si la cellule est vide.
+
+    ``row.get(col, default)`` ne rend le défaut que si la colonne est absente :
+    une cellule vide rend ``NaN``, qui part tel quel dans le JSON (#2412).
+    """
+    value = row.get(column)
+    if value is None or (isinstance(value, float) and pd.isna(value)):
+        return ""
+    return str(value).strip()
+
+
+def reported_fallacy_name(row: pd.Series, default: str = "") -> str:
+    """Le nom sous lequel un nœud est rapporté : vulgarisé, sinon ``text_fr``."""
+    for column in ("nom_vulgarisé", "text_fr"):
+        text = _cell_text(row, column)
+        if text:
+            return text
+    return default
+
+
+def rows_matching_fallacy_name(df: pd.DataFrame, fallacy_name: str) -> pd.DataFrame:
+    """Les lignes qu'un nom de sophisme désigne (#2412).
+
+    La requête est lue **littéralement**, jamais comme une regex : un nom qui
+    porte des parenthèses doit se retrouver lui-même. Un nom **exact** (casse
+    ignorée, sur l'une des colonnes de nom) l'emporte sur une sous-chaîne ; la
+    sous-chaîne reste le repli, puisque le prompt de l'agent cherche aussi par
+    mots-clés. Plusieurs lignes rendues = un nom qui ne désigne pas un nœud.
+    """
+    query = str(fallacy_name or "").strip().casefold()
+    if not query:
+        return df.iloc[0:0]
+    exact = pd.Series(False, index=df.index)
+    contains = pd.Series(False, index=df.index)
+    for column in NAME_COLUMNS:
+        if column not in df.columns:
+            continue
+        values = df[column].fillna("").astype(str).str.strip().str.casefold()
+        exact |= values == query
+        contains |= values.str.contains(query, regex=False)
+    return df[exact] if exact.any() else df[contains]
+
+
 # --- Classe InformalAnalysisPlugin (Refonte Hybride) ---
 class InformalAnalysisPlugin:
     """
@@ -530,70 +583,66 @@ class InformalAnalysisPlugin:
         self._logger.info(
             f"Recherche de la définition pour le sophisme: '{fallacy_name}'"
         )
+        return self._lookup_by_name(
+            fallacy_name,
+            column="desc_fr",
+            key="definition",
+            missing="Définition non disponible.",
+            not_found=f"Définition non trouvée pour '{fallacy_name}'.",
+        )
+
+    def _lookup_by_name(
+        self, fallacy_name: str, column: str, key: str, missing: str, not_found: str
+    ) -> str:
+        """La recherche par nom partagée par la définition et l'exemple (#2412).
+
+        Un seul nœud trouvé : son ``pk``, son nom et la valeur de ``column``.
+        Plusieurs : les candidats (``pk`` + nom, plafonnés), jamais un premier
+        arbitraire — l'agent précise ensuite via ``get_fallacy_details(pk)``.
+        """
         df = self._get_taxonomy_dataframe()
         if df is None:
             return json.dumps({"error": "Taxonomie non disponible."})
 
-        condition_nom_vulgarise = pd.Series(False, index=df.index)
-        if "nom_vulgarisé" in df.columns:
-            condition_nom_vulgarise = (
-                df["nom_vulgarisé"]
-                .fillna("")
-                .astype(str)
-                .str.contains(fallacy_name, case=False, na=False)
-            )
+        found = rows_matching_fallacy_name(df, fallacy_name)
+        if found.empty:
+            self._logger.warning(f"Aucun sophisme trouvé pour '{fallacy_name}'.")
+            return json.dumps({"error": not_found})
 
-        condition_text_fr = pd.Series(False, index=df.index)
-        if "text_fr" in df.columns:
-            condition_text_fr = (
-                df["text_fr"]
-                .fillna("")
-                .astype(str)
-                .str.contains(fallacy_name, case=False, na=False)
-            )
-
-        condition_latin = pd.Series(False, index=df.index)
-        if "Latin" in df.columns:
-            condition_latin = (
-                df["Latin"]
-                .fillna("")
-                .astype(str)
-                .str.contains(fallacy_name, case=False, na=False)
-            )
-
-        found_fallacy = df[
-            condition_nom_vulgarise | condition_text_fr | condition_latin
-        ]
-
-        if not found_fallacy.empty:
-            definition = found_fallacy.iloc[0].get(
-                "desc_fr", "Définition non disponible."
-            )
-            pk_found = (
-                found_fallacy.iloc[0].name
-                if df.index.name == "PK"
-                else found_fallacy.index[0]
-            )
-            name_found = found_fallacy.iloc[0].get(
-                "nom_vulgarisé", found_fallacy.iloc[0].get("text_fr", fallacy_name)
-            )
-
+        if len(found) > 1:
             self._logger.info(
-                f"Définition trouvée pour '{name_found}' (PK: {pk_found})."
+                f"'{fallacy_name}' désigne {len(found)} nœuds : candidats rapportés."
             )
+            candidates = [
+                {"pk": int(pk), "fallacy_name": reported_fallacy_name(row)}
+                for pk, row in found.head(MAX_NAME_CANDIDATES).iterrows()
+            ]
             return json.dumps(
                 {
-                    "fallacy_name": name_found,
-                    "pk": int(pk_found),
-                    "definition": definition,
+                    "query": fallacy_name,
+                    "ambiguous": True,
+                    "match_count": len(found),
+                    "candidates": candidates,
+                    "message": (
+                        f"'{fallacy_name}' désigne {len(found)} sophismes ; "
+                        "préciser avec get_fallacy_details(pk)."
+                    ),
                 },
-                default=str,
+                ensure_ascii=False,
             )
-        else:
-            self._logger.warning(f"Aucune définition trouvée pour '{fallacy_name}'.")
-            return json.dumps(
-                {"error": f"Définition non trouvée pour '{fallacy_name}'."}
-            )
+
+        pk_found = int(found.index[0])
+        row = found.iloc[0]
+        name_found = reported_fallacy_name(row, default=fallacy_name)
+        self._logger.info(f"Trouvé '{name_found}' (PK: {pk_found}).")
+        return json.dumps(
+            {
+                "fallacy_name": name_found,
+                "pk": pk_found,
+                key: _cell_text(row, column) or missing,
+            },
+            ensure_ascii=False,
+        )
 
     @kernel_function(
         description="Liste les grandes catégories de sophismes (basées sur la colonne 'Famille').",
@@ -666,9 +715,7 @@ class InformalAnalysisPlugin:
             result_list = []
             for index, row in fallacies_in_cat_df.iterrows():
                 pk_val = index
-                name_val = row.get(
-                    "nom_vulgarisé", row.get("text_fr", "Nom non disponible")
-                )
+                name_val = reported_fallacy_name(row, default="Nom non disponible")
                 result_list.append({"pk": int(pk_val), "nom_vulgarise": name_val})
             self._logger.info(
                 f"{len(result_list)} sophismes trouvés dans la catégorie '{category_name}'."
@@ -694,66 +741,16 @@ class InformalAnalysisPlugin:
     )
     def get_fallacy_example(self, fallacy_name: str) -> str:
         self._logger.info(f"Recherche d'un exemple pour le sophisme: '{fallacy_name}'")
-        df = self._get_taxonomy_dataframe()
-        if df is None:
-            return json.dumps({"error": "Taxonomie non disponible."})
-
-        condition_nom_vulgarise = pd.Series(False, index=df.index)
-        if "nom_vulgarisé" in df.columns:
-            condition_nom_vulgarise = (
-                df["nom_vulgarisé"]
-                .fillna("")
-                .astype(str)
-                .str.contains(fallacy_name, case=False, na=False)
-            )
-
-        condition_text_fr = pd.Series(False, index=df.index)
-        if "text_fr" in df.columns:
-            condition_text_fr = (
-                df["text_fr"]
-                .fillna("")
-                .astype(str)
-                .str.contains(fallacy_name, case=False, na=False)
-            )
-
-        condition_latin = pd.Series(False, index=df.index)
-        if "Latin" in df.columns:
-            condition_latin = (
-                df["Latin"]
-                .fillna("")
-                .astype(str)
-                .str.contains(fallacy_name, case=False, na=False)
-            )
-
-        found_fallacy = df[
-            condition_nom_vulgarise | condition_text_fr | condition_latin
-        ]
-
-        if not found_fallacy.empty:
-            example = found_fallacy.iloc[0].get("example_fr", "Exemple non disponible.")
-            pk_found = (
-                found_fallacy.iloc[0].name
-                if df.index.name == "PK"
-                else found_fallacy.index[0]
-            )
-            name_found = found_fallacy.iloc[0].get(
-                "nom_vulgarisé", found_fallacy.iloc[0].get("text_fr", fallacy_name)
-            )
-
-            self._logger.info(f"Exemple trouvé pour '{name_found}' (PK: {pk_found}).")
-            return json.dumps(
-                {"fallacy_name": name_found, "pk": int(pk_found), "example": example},
-                default=str,
-            )
-        else:
-            self._logger.warning(
-                f"Aucun sophisme trouvé pour '{fallacy_name}' lors de la recherche d'exemple."
-            )
-            return json.dumps(
-                {
-                    "error": f"Sophisme '{fallacy_name}' non trouvé, impossible de récupérer un exemple."
-                }
-            )
+        return self._lookup_by_name(
+            fallacy_name,
+            column="example_fr",
+            key="example",
+            missing="Exemple non disponible.",
+            not_found=(
+                f"Sophisme '{fallacy_name}' non trouvé, impossible de récupérer "
+                "un exemple."
+            ),
+        )
 
 
 logger.info("Classe InformalAnalysisPlugin (V12 avec nouvelles fonctions) définie.")
