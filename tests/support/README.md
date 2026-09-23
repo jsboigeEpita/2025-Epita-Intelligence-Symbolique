@@ -10,6 +10,8 @@ L'objectif de ce répertoire est de centraliser le code de support qui facilite 
 
 - **[`common_test_helpers.py`](common_test_helpers.py)**: Conçu pour contenir des fonctions d'aide, des assertions personnalisées ou d'autres utilitaires partagés par plusieurs fichiers de test.
 
+- **[`llm_route.py`](llm_route.py)**: `cut_llm_route(monkeypatch)` retire la route LLM pour un test (#2444). Toute l'API brute résout sa route par `resolve_chat_endpoint` : sans clé, chaque phase prend son chemin dégradé nommé, et le test peut l'asserter. À préférer au patch d'une classe du SDK, qui laisse fuir le client suivant.
+
 - **[`data_generators.py`](data_generators.py)**: Prévu pour héberger des fonctions qui génèrent des données de test complexes ou volumineuses, aidant à créer des scénarios de test réalistes et variés.
 
 ## Utilisation

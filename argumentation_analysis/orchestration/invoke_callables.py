@@ -577,24 +577,76 @@ async def _invoke_quality_evaluator(
             len(detected_fallacies),
         )
 
+    _agentic_error_cls: Optional[type] = None
+    if agentic_llm is not None:
+        try:
+            from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import (
+                AgenticDetectorError,
+            )
+
+            _agentic_error_cls = AgenticDetectorError
+        except ImportError:
+            logger.warning(
+                "#2331: agentic_virtue_detectors importable-check failed — "
+                "a wired callable cannot upgrade the detectors."
+            )
+
+    async def _evaluate_unit(text: str) -> Tuple[Any, Optional[str]]:
+        """Score one unit; return ``(result, degraded_reason)``.
+
+        Shared by the per-argument units and the whole-text fallback (#2444:
+        the fallback used to call the evaluator bare, so it neither degraded
+        by name nor said which layer scored).
+        """
+        try:
+            return await asyncio.to_thread(evaluator.evaluate, text), None
+        except Exception as exc:
+            if _agentic_error_cls is not None and isinstance(exc, _agentic_error_cls):
+                # #2331 — the per-unit named degraded path: the agentic
+                # chain produced nothing for THIS unit. Provenance
+                # decides — lexical re-run (explicit None overrides the
+                # constructor wiring), reason recorded in the phase
+                # state output, never only in a log. Any other
+                # exception (fail-loud deps gate included) propagates.
+                reason = f"{type(exc).__name__}: {str(exc)[:160]}"
+                result = await asyncio.to_thread(
+                    evaluator.evaluate, text, agentic_llm=None
+                )
+                return result, reason
+            raise
+
+    def _agentic_wiring(
+        units_evaluated: int, units_degraded: Dict[str, str]
+    ) -> Dict[str, Any]:
+        # #2331 — provenance of the layer that produced these scores, in the
+        # STATE output (not only a log): "wired" (model route + which units
+        # degraded per-unit to lexical and why) or the named degraded mode
+        # when no route resolved.
+        return {
+            "mode": (
+                "wired" if agentic_llm is not None else f"degraded_{agentic_route}"
+            ),
+            "route": agentic_route,
+            "model": agentic_model,
+            "units_evaluated": units_evaluated,
+            "units_degraded": units_degraded,
+        }
+
+    async def _whole_text_output() -> Any:
+        # No argument unit to score: the whole text is the one unit, with the
+        # same degraded path and the same provenance (#2444).
+        result, reason = await _evaluate_unit(input_text)
+        if isinstance(result, dict):
+            result["agentic_wiring"] = _agentic_wiring(
+                1, {"text": reason} if reason is not None else {}
+            )
+        return result
+
     if raw_args:
         # #2331 — units are evaluated concurrently under an EXPLICIT bound
         # (``_AGENTIC_QUALITY_MAX_WORKERS``): a wired unit parks its thread on
         # sequential LLM detector calls, so units in flight = LLM streams in
         # flight. The bound is a wiring parameter, not a benchmark default.
-        _agentic_error_cls: Optional[type] = None
-        if agentic_llm is not None:
-            try:
-                from argumentation_analysis.agents.core.quality.agentic_virtue_detectors import (
-                    AgenticDetectorError,
-                )
-
-                _agentic_error_cls = AgenticDetectorError
-            except ImportError:
-                logger.warning(
-                    "#2331: agentic_virtue_detectors importable-check failed — "
-                    "a wired callable cannot upgrade the detectors."
-                )
         _unit_sem = asyncio.Semaphore(_AGENTIC_QUALITY_MAX_WORKERS)
 
         async def _eval_unit(
@@ -605,25 +657,8 @@ async def _invoke_quality_evaluator(
             if len(arg_text) < 10:
                 return i, arg_id, None, None
             async with _unit_sem:
-                try:
-                    result = await asyncio.to_thread(evaluator.evaluate, arg_text)
-                    return i, arg_id, result, None
-                except Exception as exc:
-                    if _agentic_error_cls is not None and isinstance(
-                        exc, _agentic_error_cls
-                    ):
-                        # #2331 — the per-unit named degraded path: the agentic
-                        # chain produced nothing for THIS unit. Provenance
-                        # decides — lexical re-run (explicit None overrides the
-                        # constructor wiring), reason recorded in the phase
-                        # state output, never only in a log. Any other
-                        # exception (fail-loud deps gate included) propagates.
-                        reason = f"{type(exc).__name__}: {str(exc)[:160]}"
-                        result = await asyncio.to_thread(
-                            evaluator.evaluate, arg_text, agentic_llm=None
-                        )
-                        return i, arg_id, result, reason
-                    raise
+                result, reason = await _evaluate_unit(arg_text)
+                return i, arg_id, result, reason
 
         outcomes = await asyncio.gather(
             *(_eval_unit(i, a) for i, a in enumerate(raw_args[:8]))
@@ -688,21 +723,7 @@ async def _invoke_quality_evaluator(
                 # Keep top-level keys for state writer compatibility
                 "note_finale": aggregate_score,
                 "scores_par_vertu": _aggregate_virtue_scores(results),
-                # #2331 — provenance of the layer that produced these scores,
-                # in the STATE output (not only a log): "wired" (model route +
-                # which units degraded per-unit to lexical and why) or the
-                # named degraded mode when no route resolved.
-                "agentic_wiring": {
-                    "mode": (
-                        "wired"
-                        if agentic_llm is not None
-                        else f"degraded_{agentic_route}"
-                    ),
-                    "route": agentic_route,
-                    "model": agentic_model,
-                    "units_evaluated": len(results),
-                    "units_degraded": degraded_units,
-                },
+                "agentic_wiring": _agentic_wiring(len(results), degraded_units),
             }
             if detected_fallacies:
                 output["fallacy_cross_reference"] = {
@@ -722,9 +743,9 @@ async def _invoke_quality_evaluator(
                 )
             return output
         # Fallback if no results
-        return await asyncio.to_thread(evaluator.evaluate, input_text)
+        return await _whole_text_output()
     else:
-        return await asyncio.to_thread(evaluator.evaluate, input_text)
+        return await _whole_text_output()
 
 
 def _quality_fraction(scores: Any) -> Optional[float]:

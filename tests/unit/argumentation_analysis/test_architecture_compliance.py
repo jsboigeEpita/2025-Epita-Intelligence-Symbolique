@@ -162,7 +162,11 @@ class TestPluginCompliance:
             FrenchFallacyPlugin,
         )
 
-        plugin = FrenchFallacyPlugin(enable_nli=False, enable_llm=False)
+        # #2444: the self-hosted tier has its own switch (default on). With
+        # only ``enable_llm=False`` it still called the endpoint in .env.
+        plugin = FrenchFallacyPlugin(
+            enable_nli=False, enable_llm=False, enable_self_hosted_llm=False
+        )
         result = plugin.detect_fallacies("Test texte simple.")
         data = json.loads(result)
         assert "detected_fallacies" in data

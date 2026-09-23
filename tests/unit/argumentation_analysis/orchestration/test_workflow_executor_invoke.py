@@ -10,6 +10,8 @@ import asyncio
 import pytest
 from unittest.mock import AsyncMock, patch
 
+from tests.support.llm_route import cut_llm_route
+
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
     ComponentType,
@@ -743,12 +745,18 @@ class TestMultiPhaseWorkflow:
 
 class TestRealComponentIntegration:
     @pytest.mark.asyncio
-    async def test_quality_evaluator_real_invoke(self):
-        """Integration test: quality evaluator produces real scores."""
+    async def test_quality_evaluator_real_invoke(self, monkeypatch):
+        """Integration test: quality evaluator produces real scores.
+
+        #2444: with no LLM route, the lexical detectors score the text and the
+        output names that mode. Before the cut, this test sent 9 requests to
+        the model on every CI run although no assertion reads model output.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
         )
 
+        cut_llm_route(monkeypatch)
         registry = setup_registry(include_optional=False)
         workflow = (
             WorkflowBuilder("quality_only")
@@ -765,6 +773,9 @@ class TestRealComponentIntegration:
         assert results["quality"].output is not None
         assert isinstance(results["quality"].output, dict)
         assert "note_finale" in results["quality"].output
+        wiring = results["quality"].output["agentic_wiring"]
+        assert wiring["mode"] == "degraded_no_route"
+        assert wiring["units_evaluated"] == 1
 
     @pytest.mark.asyncio
     async def test_counter_argument_real_invoke(self):
@@ -791,8 +802,13 @@ class TestRealComponentIntegration:
         assert "suggested_strategy" in results["counter"].output
 
     @pytest.mark.asyncio
-    async def test_light_workflow_quality_and_counter(self):
-        """Integration test: light workflow chains quality -> counter."""
+    async def test_light_workflow_quality_and_counter(self, monkeypatch):
+        """Integration test: light workflow chains quality -> counter.
+
+        #2444: the LLM route is cut, not one SDK class. Patching
+        ``openai.AsyncOpenAI`` missed the sync client the quality phase builds
+        (#2331), so this test still made 4 real requests per CI run.
+        """
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
             build_light_workflow,
@@ -815,16 +831,21 @@ class TestRealComponentIntegration:
             registry = setup_registry(include_optional=False)
         workflow = build_light_workflow()
         executor = WorkflowExecutor(registry)
-        with patch("openai.AsyncOpenAI", side_effect=RuntimeError("no-network-1591")):
-            results = await executor.execute(
-                workflow,
-                "La peine de mort devrait être abolie car elle ne dissuade pas le crime.",
-            )
+        cut_llm_route(monkeypatch)
+        results = await executor.execute(
+            workflow,
+            "La peine de mort devrait être abolie car elle ne dissuade pas le crime.",
+        )
 
         assert results["quality"].status == PhaseStatus.COMPLETED
         assert results["quality"].output is not None
+        assert (
+            results["quality"].output["agentic_wiring"]["mode"] == "degraded_no_route"
+        )
 
         assert results["counter"].status == PhaseStatus.COMPLETED
         assert results["counter"].output is not None
         # Counter should have received quality context
         assert results["counter"].output.get("quality_context") is not None
+        # No route: the rule-based counter only, with no LLM counter-arguments.
+        assert "llm_counter_arguments" not in results["counter"].output

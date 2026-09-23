@@ -34,7 +34,9 @@ and a third-party transport doing its own I/O would read the same, so the
 split informs the reader and never lowers the gate's count.
 
 Observation only — never blocks. Blocking is a gate (legitimate after #1591),
-not an instrument. No pricing: a count, not an amount.
+not an instrument. No pricing: a count, not an amount. The gate that blocks
+is ``scripts/ci/llm_egress_gate.py`` (#2444): the CI job fails when the
+report's ``per_test_llm_network`` is not empty, and names the tests.
 """
 
 import contextvars
