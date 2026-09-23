@@ -523,7 +523,7 @@ Parcourez ces dossiers pour trouver des tests pertinents pour la fonctionnalité
 3.  **Nommage** : Nommez votre fichier `test_*.py` (par exemple, `test_nouvelle_fonctionnalite.py`) et vos fonctions de test `test_*` (par exemple, `def test_comportement_attendu():`).
 4.  **Écriture** :
     *   Importez les modules nécessaires et `pytest`.
-    *   Utilisez des fixtures `pytest` (définies dans des fichiers `conftest.py` ou localement, voir par exemple [`tests/fixtures/agent_fixtures.py`](../../../../tests/fixtures/agent_fixtures.py)) pour préparer l'environnement de test (données, objets mockés, etc.).
+    *   Utilisez des fixtures `pytest` (définies dans des fichiers `conftest.py` ou localement, voir par exemple [`tests/fixtures/rhetorical_data_fixtures.py`](../../../../tests/fixtures/rhetorical_data_fixtures.py)) pour préparer l'environnement de test (données, objets mockés, etc.).
     *   Écrivez des assertions claires (`assert condition`) pour vérifier les résultats.
 5.  **Exécution** : Lancez `pytest` pour vérifier que votre nouveau test passe et n'introduit pas de régressions.
 Consultez le guide [`docs/guides/guide_developpeur.md`](../../../guides/guide_developpeur.md) (section sur l'écriture des tests) pour des conventions et des exemples plus détaillés.
