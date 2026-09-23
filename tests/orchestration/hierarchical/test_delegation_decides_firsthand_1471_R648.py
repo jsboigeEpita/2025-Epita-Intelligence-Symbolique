@@ -92,9 +92,21 @@ class TestDelegationModeDecidesFirsthand:
         ops = result.get("operational_results", [])
         assert len(ops) == 5, f"expected 5 tasks, got {len(ops)}"
         completed = [op for op in ops if op.get("status") == "completed"]
-        assert len(completed) >= 4, (
-            f"delegation should drive at least 4/5 tasks to completion, "
-            f"got {len(completed)}/5 (pre-R648: 1/5)"
+        # #2345: this read ``>= 4`` while the docstring announced 5/5, and the
+        # tolerance absorbed a real loss. Since #1842 removed the
+        # ``argument_parsing`` provider, the "Identifier les arguments" task
+        # failed with no_provider_for_required_capabilities on every run: 4/5.
+        # Its translation now resolves (``argument_extraction``), so 5/5 is
+        # the contract again, and a lost task goes red here.
+        not_completed = [
+            (op.get("capability"), op.get("reason"), op.get("required_capabilities"))
+            for op in ops
+            if op.get("status") != "completed"
+        ]
+        assert len(completed) == 5, (
+            f"delegation should drive all 5 tasks to completion, "
+            f"got {len(completed)}/5 (pre-R648: 1/5, #1842..#2345: 4/5); "
+            f"not completed: {not_completed}"
         )
 
         # --- Every completed task used a registry-backed capability ----

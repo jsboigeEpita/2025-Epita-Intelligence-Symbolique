@@ -182,25 +182,17 @@ def make_registry_operational_executor(
 
     async def _executor(command: Dict[str, Any]) -> Dict[str, Any]:
         required = command.get("required_capabilities") or []
-        # BO-1 #1471 cont. R648: bridge the legacy capability names hardcoded
-        # in TaskCoordinator.agent_capabilities (coordinator.py:79-92) to the
+        # BO-1 #1471 cont. R648: bridge the legacy capability names of
+        # ``tactical.coordinator.TACTICAL_AGENT_CAPABILITIES`` to the
         # registry-side capability names. This was the actual cause-racine:
         # delegation-mode's M3 chain produced no_provider_for_required_capabilities
         # for tasks labelled ``text_extraction`` / ``argument_identification`` /
         # etc., even when the registry had providers under different names
-        # (``fact_extraction``, ``argument_parsing``, ...). Anti-pendule #1019:
+        # (``fact_extraction``, ``argument_extraction``, ...). Anti-pendule #1019:
         # map only at the lookup seam, never silently replace an unmatched
         # legacy cap with a fabricated one (the legacy caps still surface in
         # the ``required_capabilities`` field of failed-task results).
-        chosen: Optional[str] = next(
-            (cap for cap in required if op_registry.has_capability(cap)), None
-        )
-        if chosen is None:
-            for legacy in required:
-                mapped = LEGACY_TO_REGISTRY_CAPABILITY.get(legacy)
-                if mapped and op_registry.has_capability(mapped):
-                    chosen = mapped
-                    break
+        chosen: Optional[str] = resolve_registry_capability(required, op_registry)
         # Fallback for empty ``required_capabilities`` (generic tasks): read
         # the originating strategic objective's NL description and try the
         # bridge's keyword map. Keeps the fix surgical — we reuse
@@ -311,14 +303,19 @@ def make_registry_operational_executor(
 
 
 # Legacy capability names emitted by ``TaskCoordinator._decompose_objective_to_tasks``
-# (see coordinator.py:79-92 agent_capabilities table) mapped to the canonical
+# (see ``tactical.coordinator.TACTICAL_AGENT_CAPABILITIES``) mapped to the canonical
 # CapabilityRegistry names that actually carry a provider. Keyed by legacy name
 # (the only one the tactical tier ever emits). Anti-pendule: minimal mapping,
 # only the names that the empirical probe (R648) showed were failing — extending
 # to unknown legacy caps is NOT a goal here, honesty about the gap is.
 LEGACY_TO_REGISTRY_CAPABILITY: Dict[str, str] = {
     "text_extraction": "fact_extraction",
-    "argument_identification": "argument_parsing",
+    # Was ``argument_parsing``, whose only provider (counter_argument) was
+    # trimmed to its demanded capability in #1842: this dict's demand was not
+    # counted, and every "Identifier les arguments" task has failed with
+    # ``no_provider_for_required_capabilities`` since. ``argument_extraction``
+    # (text_to_kb: premises and conclusions from NL) is the live provider (#2345).
+    "argument_identification": "argument_extraction",
     "argument_visualization": "argument_visualization",  # placeholder; no provider yet
     "summary_generation": "synthesis",
     "formal_logic": "propositional_logic",
@@ -327,6 +324,28 @@ LEGACY_TO_REGISTRY_CAPABILITY: Dict[str, str] = {
     "rhetorical_analysis": "argument_quality",
     "preprocessing": "fact_extraction",
 }
+
+
+def resolve_registry_capability(
+    required: List[str], op_registry: RegistryBackedOperationalRegistry
+) -> Optional[str]:
+    """First required capability a provider covers, as named or translated.
+
+    A name the registry serves directly wins; otherwise each name is looked up
+    in ``LEGACY_TO_REGISTRY_CAPABILITY``. ``None`` when neither resolves: the
+    caller reports ``no_provider_for_required_capabilities``, it never
+    substitutes. This is the one reader of the translation (#2345): the
+    registry executor routes through it, and the guard that every capability
+    the tactical tier emits still resolves calls it rather than a copy.
+    """
+    chosen = next((cap for cap in required if op_registry.has_capability(cap)), None)
+    if chosen is not None:
+        return chosen
+    for legacy in required:
+        mapped = LEGACY_TO_REGISTRY_CAPABILITY.get(legacy)
+        if mapped and op_registry.has_capability(mapped):
+            return mapped
+    return None
 
 
 class DelegationOrchestrator:
