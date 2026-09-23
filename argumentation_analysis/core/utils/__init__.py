@@ -15,7 +15,6 @@ from . import path_operations
 from . import reporting_utils
 from . import shell_utils
 from . import string_utils
-from . import system_utils
 from . import text_utils
 from . import visualization_utils
 
@@ -35,7 +34,6 @@ __all__ = [
     "reporting_utils",
     "shell_utils",
     "string_utils",
-    "system_utils",
     "text_utils",
     "visualization_utils",
 ]

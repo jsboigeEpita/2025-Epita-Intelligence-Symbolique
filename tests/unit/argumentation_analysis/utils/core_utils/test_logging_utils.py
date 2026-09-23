@@ -91,10 +91,13 @@ def test_setup_logging_invalid_level_defaults_to_info(caplog):
         logging.WARNING
     ):  # Capturer les logs de niveau WARNING et plus
         setup_logging(log_level_str="INVALID_LEVEL")
-
-    assert (
-        logging.getLogger().getEffectiveLevel() == logging.INFO
-    ), "Le niveau du logger racine devrait être INFO par défaut pour un niveau invalide."
+        # Lu DANS le bloc : à sa sortie, `at_level` restaure le niveau d'avant le
+        # test, et une assertion placée après mesurerait ce niveau-là, pas celui
+        # que `setup_logging` a posé. Elle passait tant que l'import du paquet
+        # mettait la racine à INFO (`system_utils`, retiré en #2345).
+        assert (
+            logging.getLogger().getEffectiveLevel() == logging.INFO
+        ), "Le niveau du logger racine devrait être INFO par défaut pour un niveau invalide."
 
     assert (
         "Niveau de log invalide: INVALID_LEVEL. Utilisation du niveau INFO par défaut."

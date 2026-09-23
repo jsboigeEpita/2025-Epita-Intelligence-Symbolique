@@ -30,6 +30,12 @@ async def test_perform_text_analysis_nominal_case(
     mock_enhanced_runner_class, mock_services, caplog
 ):
     """Teste le cas nominal de perform_text_analysis avec AnalysisRunnerV2."""
+    # Les trois messages attendus sont émis en INFO : le demander explicitement.
+    # Ce test passait grâce au `logging.basicConfig(level=INFO)` que l'ancien
+    # `core.utils.system_utils` exécutait à l'import du paquet (retiré, #2345).
+    caplog.set_level(
+        logging.INFO, logger="argumentation_analysis.analytics.text_analyzer"
+    )
     text_to_analyze = "Ceci est un texte d'exemple pour l'analyse."
     analysis_type = "default_test"
     expected_result = {"status": "success", "analysis": "Résultat de l'analyse V2"}
