@@ -322,8 +322,11 @@ class TweetyBridge:
         """Backward compatibility wrapper for execute_pl_query."""
         return self.pl_handler.execute_pl_query(belief_set, query)
 
-    def execute_fol_query(self, belief_set: str, query: str) -> Tuple[bool, str]:
-        """Backward compatibility wrapper for execute_fol_query."""
+    def execute_fol_query(
+        self, belief_set: str, query: str
+    ) -> Tuple[Optional[bool], str]:
+        """Backward compatibility wrapper for execute_fol_query. ``None`` means
+        no check ran (#2447)."""
         return self.fol_handler.execute_fol_query(belief_set, query)
 
     def execute_modal_query(

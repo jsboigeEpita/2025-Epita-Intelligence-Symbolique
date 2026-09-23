@@ -39,7 +39,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/work
 - Avec `-n N` (pytest-xdist), `--disable-jvm-session` n'atteint pas les workers : ils tournent avec le vrai `jpype` et sans JVM (#2402). La CI lance la suite en série.
 - `-rs` affiche la raison de chaque test sauté. Un fichier Tweety « vert » dont tous les tests sont sautés n'a rien vérifié.
 
-Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `781e1c18`) : `test_worker_fol_tweety.py` rend 16 passed, 0 skipped, avec la JVM, et `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
+Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `1e29c08a` plus le correctif de requête de #2447) : `test_worker_fol_tweety.py` rend 18 passed, 0 skipped, avec la JVM (16 avant les deux tests de requête ajoutés par #2447), et `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
 
 ## Syntaxe FOL de Tweety
 
@@ -69,7 +69,10 @@ La grammaire complète est recopiée en tête de `tests/integration/workers/test
 **Bridge** (`argumentation_analysis/agents/core/logic/tweety_bridge.py`) :
 
 - `TweetyBridge().check_consistency(belief_set: str, logic_type: str = "propositional")`. La méthode est synchrone, et son type par défaut est **propositionnel** : pour la FOL, passez `"first_order"`. Sans ce paramètre, une base FOL part au parseur propositionnel, qui peut l'accepter et répondre `True` (mesuré sur l'exemple ci-dessus : `(True, 'PL knowledge base is consistent.')`). Elle rend `Tuple[Optional[bool], str]`, où `None` veut dire « non décidé » (reasoner absent, belief set illisible).
-- `TweetyBridge().execute_fol_query(belief_set: str, query: str)` rend `(bool, str)`. Une erreur du parseur rend aussi `False`, avec un message `FOL query error: …` : le booléen seul ne distingue pas « non impliqué » de « non vérifié » (#2447). Sur l'exemple ci-dessus, `Mortal(socrate)` rend `(True, "Query 'Mortal(socrate)': entailed")`, et `Mortal(platon)` rend `False` avec « Constant 'platon' has not been declared », bien que `platon` soit déclaré dans la sorte `human`.
+- `TweetyBridge().execute_fol_query(belief_set: str, query: str)` rend `Tuple[Optional[bool], str]`. `True` et `False` ne viennent que du reasoner. `None` veut dire « non vérifié » : pas d'initialiseur Tweety, belief set ou requête illisible, erreur du reasoner. Le message commence alors par `Degraded:` et donne la raison. Sur l'exemple ci-dessus :
+  - `Mortal(socrate)` rend `(True, "Query 'Mortal(socrate)': entailed")` ;
+  - `Mortal(platon)` rend `(False, "Query 'Mortal(platon)': not entailed")`. `platon` n'apparaît dans aucune formule, seulement dans la sorte `human` : le belief set garde la signature déclarée par le parseur, et la requête est analysée avec elle (#2447) ;
+  - `Mortal(aristote)` rend `None`, car `aristote` n'est déclaré nulle part.
 - `TweetyBridge().fol_handler` (`FOLHandler`, dans `fol_handler.py`) : `parse_fol_formula`, `create_belief_set_from_string`, `check_consistency`, `execute_fol_query`, `validate_formula_with_signature`.
 
 Le bridge n'a pas de méthode d'initialisation propre à la FOL : la JVM est prise en charge par `jvm_setup.py` et la fixture de session.
