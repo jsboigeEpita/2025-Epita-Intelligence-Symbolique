@@ -152,17 +152,24 @@ class AnalysisState:
         self.agents_active = 0
         self.fallacies_detected = 0
         self.propositions_found = 0
-        self.consistency_score = 0.0
+        # #2456: ``None`` until an agent produces a verdict. The report prints
+        # "non déterminée" for it. It started at ``0.0``, which the report
+        # printed as a measured "0.00/1.0" when no logic step had run.
+        self.consistency_score: Optional[float] = None
         self.phase = "initialization"
         self.completed = False
 
         # Métriques additionnelles pour compatibilité
         self.processing_time = 0.0
         self.agent_results = {}
+        # #2456: why the informal analysis failed, when it did. Its failures
+        # are not fallacies, so they are not in ``fallacies_detected``.
+        self.fallacy_analysis_errors: List[str] = []
 
     def update_from_informal(self, result: Dict[str, Any]):
         """Met à jour l'état avec résultats d'analyse informelle."""
         self.fallacies_detected += result.get("fallacies_count", 0)
+        self.fallacy_analysis_errors.extend(result.get("analysis_errors", []))
         self.score += result.get("sophistication_score", 0.0) * 0.4
         self.agent_results["informal"] = result
 
@@ -173,6 +180,18 @@ class AnalysisState:
         self.consistency_score = result.get("consistency", 0.0)
         self.score += result.get("logical_score", 0.0) * 0.3
         self.agent_results["modal"] = result
+
+    def update_from_fol(self, result: Dict[str, Any]):
+        """Met à jour l'état avec résultats de logique du premier ordre.
+
+        #2456: the FOL step used ``update_from_modal`` and was stored under
+        ``agent_results["modal"]``. ``consistency`` is ``None`` when no solver
+        decided (#2447), and stays ``None``.
+        """
+        self.propositions_found += result.get("propositions_count", 0)
+        self.consistency_score = result.get("consistency")
+        self.score += result.get("logical_score", 0.0) * 0.3
+        self.agent_results["fol_logic"] = result
 
     def update_from_synthesis(self, result: Dict[str, Any]):
         """Met à jour l'état avec résultats de synthèse."""
@@ -222,6 +241,10 @@ class SimulatedAgent:
 
         if self.agent_type == "informal":
             return self._analyze_informal(text, conv_logger, state)
+        elif self.agent_type == "modal":
+            # #2456: the micro mode's modal agent. Without this branch it
+            # answered "Unknown agent type" and ``_analyze_modal`` never ran.
+            return self._analyze_modal(text, conv_logger, state)
         elif self.agent_type == "fol_logic":
             return self._analyze_fol_logic(text, conv_logger, state)
         elif self.agent_type == "synthesis":
@@ -447,7 +470,7 @@ class SimulatedAgent:
             "fol_analysis",
         )
 
-        state.update_from_modal(result)  # Réutilise la méthode pour l'instant
+        state.update_from_fol(result)
         state.agents_active += 1
 
         return result
@@ -507,6 +530,8 @@ class ConversationOrchestrator:
         self.state = AnalysisState()
         self.logger = logging.getLogger(f"{__name__}.ConversationOrchestrator")
         self._real_agents = {}  # Cache for real agent instances
+        # #2456: why a real agent could not be created, by step name.
+        self.real_agent_setup_failures: Dict[str, str] = {}
 
         # Configuration des agents selon le mode
         self._setup_agents()
@@ -563,20 +588,54 @@ class ConversationOrchestrator:
         """Create real LLM-backed agents. Falls back per-agent on failure."""
         self.agents = []  # Not used in real mode
 
+        from semantic_kernel.connectors.ai.chat_completion_client_base import (
+            ChatCompletionClientBase,
+        )
+
         # 1. InformalAnalysisAgent
         try:
             from argumentation_analysis.agents.core.informal.informal_agent import (
                 InformalAnalysisAgent,
             )
 
+            chat_service = self.kernel.get_service(type=ChatCompletionClientBase)
             informal = InformalAnalysisAgent(
                 kernel=self.kernel,
                 agent_name="InformalAnalysisAgent",
             )
+            # #2456: the setup registers the ``InformalAnalyzer`` plugin. It
+            # was never called here, so every analysis answered "Plugin
+            # 'InformalAnalyzer' not found" and nothing reached the model.
+            informal.setup_agent_components(llm_service_id=chat_service.service_id)
             self._real_agents["informal"] = informal
             self.logger.info("Real InformalAnalysisAgent created")
         except Exception as e:
+            self.real_agent_setup_failures["informal"] = f"{type(e).__name__}: {e}"
             self.logger.warning(f"Cannot create real InformalAnalysisAgent: {e}")
+
+        # 2. FOLLogicAgent (#2456). The ``fol_logic`` step and its result
+        # adapter existed, but no agent was registered for it, so the step
+        # was skipped on every run. The agent builds its Tweety bridge in its
+        # own setup and names a bridge failure in ``setup_failures`` (#2441).
+        try:
+            from argumentation_analysis.agents.core.logic.logic_factory import (
+                LogicAgentFactory,
+            )
+
+            chat_service = self.kernel.get_service(type=ChatCompletionClientBase)
+            fol = LogicAgentFactory.create_agent(
+                "first_order", self.kernel, chat_service
+            )
+            if fol is None:
+                # The factory logs the exception and returns None.
+                raise RuntimeError(
+                    "LogicAgentFactory.create_agent('first_order') returned None"
+                )
+            self._real_agents["fol_logic"] = fol
+            self.logger.info("Real FOLLogicAgent created")
+        except Exception as e:
+            self.real_agent_setup_failures["fol_logic"] = f"{type(e).__name__}: {e}"
+            self.logger.warning(f"Cannot create real FOLLogicAgent: {e}")
 
         if not self._real_agents:
             self.logger.error("No real agents could be created. Falling back to demo.")
@@ -597,16 +656,38 @@ class ConversationOrchestrator:
             result = {"raw": str(raw_result)}
 
         if agent_key == "informal":
-            fallacies = result.get("fallacies", [])
-            return {
+            # #2456: ``analyze_fallacies`` reports a failed analysis as a list
+            # entry with an ``"error"`` key (its documented contract). It was
+            # counted as a fallacy: "1 sophisme détecté", type "unknown".
+            entries = result.get("fallacies", [])
+            errors = [
+                str(f["error"]) for f in entries if isinstance(f, dict) and "error" in f
+            ]
+            if result.get("error"):
+                errors.append(str(result["error"]))
+            fallacies = [
+                f for f in entries if not (isinstance(f, dict) and "error" in f)
+            ]
+            # The informal prompt names a fallacy under ``"nom"``, which this
+            # adapter did not read: every live fallacy was "unknown". The
+            # conversational orchestrator's reader tries every key in use.
+            from argumentation_analysis.orchestration.conversational_orchestrator import (
+                _extract_fallacy_type,
+            )
+
+            adapted = {
                 "fallacies_count": len(fallacies),
-                "sophistication_score": min(len(fallacies) * 0.2 + 0.3, 1.0),
                 "main_issues": [
-                    f.get("type", f.get("fallacy_type", "unknown"))
-                    for f in fallacies[:5]
+                    _extract_fallacy_type(f) or "unknown" for f in fallacies[:5]
                 ],
                 "raw_result": result,
             }
+            if errors:
+                adapted["analysis_errors"] = errors
+            if fallacies or not errors:
+                # A failed analysis adds nothing to the score.
+                adapted["sophistication_score"] = min(len(fallacies) * 0.2 + 0.3, 1.0)
+            return adapted
         elif agent_key == "fol_logic":
             # #2447: the verdict is tri-state. ``None`` (no solver decided) is
             # "undetermined": it is neither 1.0 nor 0.5, and not satisfiable.
@@ -638,8 +719,10 @@ class ConversationOrchestrator:
                     "InformalAnalysisAgent has no suitable analysis method"
                 )
         elif agent_key == "fol_logic":
-            if hasattr(agent, "analyze_text"):
-                return await agent.analyze_text(text)
+            # #2456: ``FOLLogicAgent``'s method is ``analyze(text, context)``.
+            # This branch called ``analyze_text``, which it does not have.
+            if hasattr(agent, "analyze"):
+                return await agent.analyze(text)
             else:
                 raise AttributeError("FOLLogicAgent has no suitable analysis method")
         else:
@@ -688,7 +771,7 @@ class ConversationOrchestrator:
         if agent_key == "informal":
             self.state.update_from_informal(adapted)
         elif agent_key == "fol_logic":
-            self.state.update_from_modal(adapted)
+            self.state.update_from_fol(adapted)
         elif agent_key == "synthesis":
             self.state.update_from_synthesis(adapted)
         self.state.agents_active += 1
@@ -728,7 +811,10 @@ class ConversationOrchestrator:
 
         for agent_key in agent_order:
             if agent_key not in self._real_agents:
-                self.logger.info(f"Agent '{agent_key}' not available, skipping")
+                reason = self.real_agent_setup_failures.get(agent_key, "not created")
+                self.logger.warning(
+                    f"Agent '{agent_key}' not available, skipping: {reason}"
+                )
                 continue
 
             try:
@@ -956,7 +1042,7 @@ class ConversationOrchestrator:
 - **Score global:** {self.state.score:.3f}/1.0
 - **Modalités extraites:** {self.state.propositions_found} (nécessité/possibilité)
 - **Cohérence logique:** {"non déterminée" if self.state.consistency_score is None else f"{self.state.consistency_score:.2f}/1.0"}
-- **Sophismes détectés:** {self.state.fallacies_detected}
+- **Sophismes détectés:** {self._fallacies_line()}
 - **Statut:** {"✅ Analyse complète" if self.state.completed else "⏳ En cours"}
 
 ## 🔍 DIAGNOSTIC TECHNIQUE
@@ -971,6 +1057,17 @@ class ConversationOrchestrator:
 
         return report
 
+    def _fallacies_line(self) -> str:
+        """#2456: a count only when an informal analysis ran. Without one,
+        or when it failed and found nothing, "0" would read as "no fallacy
+        in the text"."""
+        if "informal" not in self.state.agent_results:
+            return "non déterminé (aucune analyse informelle)"
+        errors = self.state.fallacy_analysis_errors
+        if errors and not self.state.fallacies_detected:
+            return f"non déterminé (analyse en échec : {errors[0][:160]})"
+        return str(self.state.fallacies_detected)
+
     def get_conversation_state(self) -> Dict[str, Any]:
         """Retourne l'état de la conversation pour intégration externe."""
         return {
@@ -980,6 +1077,7 @@ class ConversationOrchestrator:
             "tools_count": len(self.conv_logger.tool_calls),
             "processing_time": self.state.processing_time,
             "completed": self.state.completed,
+            "real_agent_setup_failures": dict(self.real_agent_setup_failures),
         }
 
     async def run_demo_conversation(self, text: str) -> Dict[str, Any]:
