@@ -30,8 +30,8 @@ def run_prover9(input_content: str) -> str:
     Returns:
         La sortie de Prover9 (stdout), whether or not a proof was found. A
         non-zero exit code is SEMANTIC (exit 2 = "SEARCH FAILED" on a consistent
-        KB) and is NOT treated as an error — the caller inspects the stdout
-        markers ("THEOREM PROVED" vs "SEARCH FAILED") to decide.
+        KB) and is NOT treated as an error — the caller reads the proof count
+        and the exit reason (``fol_handler._prover9_proved``) to decide.
 
     Raises:
         FileNotFoundError: Si l'exécutable de Prover9 n'est pas trouvé.

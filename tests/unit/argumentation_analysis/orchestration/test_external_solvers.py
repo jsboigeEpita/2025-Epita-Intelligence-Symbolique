@@ -518,8 +518,16 @@ class TestParseFailureIsNotAVerdict:
                     )
                 )
 
-        refuted = run("... THEOREM PROVED ...")
-        exhausted = run("... SEARCH FAILED ...")
+        # #2506: the binary's real endings; the verdict is read from the
+        # proof count and the exit reason, not from one marker.
+        refuted = run(
+            "THEOREM PROVED\n\nExiting with 1 proof.\n\n"
+            "Process 1 exit (max_proofs) Wed Sep 23 21:10:43 2026\n"
+        )
+        exhausted = run(
+            "SEARCH FAILED\n\nExiting with failure.\n\n"
+            "Process 1 exit (sos_empty) Wed Sep 23 21:10:43 2026\n"
+        )
         silent = run("... nothing conclusive here ...")
 
         assert refuted["solver"] == "prover9", "the prover9 branch was not taken"

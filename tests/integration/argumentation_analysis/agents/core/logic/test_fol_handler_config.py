@@ -45,10 +45,12 @@ def test_fol_query_solver_dispatch(
     # SPASS via les défauts du nouvel objet).
     # #2482: the query is parsed against the KB's signature, which a mock
     # belief set does not carry, and Prover9's answer is read from its stdout;
-    # an undecided run falls back to Tweety, so the double must decide.
+    # an undecided run falls back to Tweety, so the double must decide: it
+    # ends like the binary's output, with its proof count and exit (#2506).
     with patch(
         "argumentation_analysis.agents.core.logic.fol_handler.run_prover9",
-        return_value="THEOREM PROVED",
+        return_value="THEOREM PROVED\n\nExiting with 1 proof.\n\n"
+        "Process 1 exit (max_proofs) Wed Sep 23 21:10:43 2026\n",
     ) as mock_run_prover9, patch.object(
         FOLHandler, "_fol_query_with_tweety"
     ) as mock_tweety_query, patch.object(

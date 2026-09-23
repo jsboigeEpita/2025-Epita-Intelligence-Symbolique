@@ -203,13 +203,29 @@ def _prover9_input(belief_set, goal=None) -> str:
     )
 
 
+# Prover9's last lines: how many proofs it found, and why it stopped.
+_PROVER9_PROOFS_RE = re.compile(r"^Exiting with (\d+) proofs?\.", re.MULTILINE)
+_PROVER9_EXIT_RE = re.compile(r"^Process \d+ exit \((\w+)\)", re.MULTILINE)
+
+
 def _prover9_proved(output: str) -> "bool | None":
     """``True`` when Prover9 proved its goal, ``False`` when its search ran out
     of clauses without a proof, ``None`` when it stopped on neither (a resource
-    limit): Prover9 then decided nothing."""
-    if "THEOREM PROVED" in output:
+    limit): Prover9 then decided nothing.
+
+    Read from the proof count and the exit reason (#2506). ``THEOREM PROVED``
+    is printed only when the count reaches ``max_proofs``, which
+    ``auto_denials`` can raise to 2 (measured with a negative clause of two
+    literals beside the goal's denial): the one proof is found, the search for
+    a second runs out, and the output ends on ``SEARCH FAILED``. That marker
+    is printed on every exit short of ``max_proofs``, a resource limit
+    included.
+    """
+    proofs = _PROVER9_PROOFS_RE.search(output)
+    if proofs is not None and int(proofs.group(1)) > 0:
         return True
-    if "SEARCH FAILED" in output:
+    exit_reason = _PROVER9_EXIT_RE.search(output)
+    if exit_reason is not None and exit_reason.group(1) == "sos_empty":
         return False
     return None
 
