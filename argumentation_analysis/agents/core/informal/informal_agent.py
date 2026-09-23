@@ -19,6 +19,7 @@ import warnings
 import logging
 import json
 import re
+import unicodedata
 from typing import Dict, List, Any, Optional
 from pydantic import Field, PrivateAttr
 import semantic_kernel as sk
@@ -48,6 +49,67 @@ from argumentation_analysis.agents.core.informal.informal_definitions import (
 #     format='%(asctime)s [%(levelname)s] [%(name)s] %(message)s',
 #     datefmt='%H:%M:%S'
 # )
+
+
+# --- Catégorisation des types de sophismes (#2345) ---
+# L'agent et son adaptateur (`informal_agent_adapter`) portaient chacun leur copie
+# de cette table ; elles avaient dérivé, chacune envoyant dans AUTRES les types
+# propres à l'autre. Une seule table, une seule normalisation.
+FALLACY_CATEGORIES = (
+    "RELEVANCE",
+    "INDUCTION",
+    "CAUSALITE",
+    "AMBIGUITE",
+    "PRESUPPOSITION",
+    "AUTRES",
+)
+
+# Clés sous leur forme normalisée (voir `normalize_fallacy_type`).
+FALLACY_CATEGORY_MAP = {
+    "ad_hominem": "RELEVANCE",
+    "appel_autorite": "RELEVANCE",
+    "argument_d_autorite": "RELEVANCE",
+    "appel_emotion": "RELEVANCE",
+    "appel_popularite": "INDUCTION",
+    "generalisation_hative": "INDUCTION",
+    "anecdote_personnelle": "INDUCTION",
+    "pente_glissante": "CAUSALITE",
+    "fausse_cause": "CAUSALITE",
+    "equivoque": "AMBIGUITE",
+    "amphibologie": "AMBIGUITE",
+    "petitio_principii": "PRESUPPOSITION",
+    "fausse_dichotomie": "PRESUPPOSITION",
+    "faux_dilemme": "PRESUPPOSITION",
+}
+
+
+def normalize_fallacy_type(fallacy_type: Any) -> str:
+    """Forme canonique d'un type de sophisme écrit librement par le LLM.
+
+    Minuscules, diacritiques retirés, toute suite de caractères non
+    alphanumériques réduite à ``_`` : « Argument d'autorité » et
+    ``argument_d_autorite`` désignent la même clé.
+    """
+    text = unicodedata.normalize("NFKD", str(fallacy_type or "").casefold())
+    text = text.encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^0-9a-z]+", "_", text).strip("_")
+
+
+def categorize_fallacy_types(
+    fallacies: List[Dict[str, Any]],
+) -> Dict[str, List[str]]:
+    """Range les types normalisés des sophismes dans les six catégories.
+
+    Un type absent de `FALLACY_CATEGORY_MAP` va dans AUTRES ; chaque type
+    n'apparaît qu'une fois, quelle que soit sa graphie d'origine.
+    """
+    categories: Dict[str, List[str]] = {name: [] for name in FALLACY_CATEGORIES}
+    for fallacy in fallacies:
+        fallacy_type = normalize_fallacy_type(fallacy.get("fallacy_type", ""))
+        category = FALLACY_CATEGORY_MAP.get(fallacy_type, "AUTRES")
+        if fallacy_type not in categories[category]:
+            categories[category].append(fallacy_type)
+    return categories
 
 
 class InformalAnalysisAgent(BaseAgent):
@@ -527,8 +589,9 @@ class InformalAnalysisAgent(BaseAgent):
         """
         Catégorise une liste de sophismes détectés en fonction de types prédéfinis.
 
-        Utilise un mapping interne pour assigner chaque type de sophisme à une catégorie
-        plus large (RELEVANCE, INDUCTION, CAUSALITE, AMBIGUITE, PRESUPPOSITION, AUTRES).
+        Lit la table du module (`FALLACY_CATEGORY_MAP`, partagée avec l'adaptateur)
+        pour assigner chaque type de sophisme à une catégorie plus large
+        (RELEVANCE, INDUCTION, CAUSALITE, AMBIGUITE, PRESUPPOSITION, AUTRES).
 
         :param fallacies: Une liste de dictionnaires, chaque dictionnaire représentant
                           un sophisme détecté et devant contenir une clé "fallacy_type".
@@ -539,36 +602,7 @@ class InformalAnalysisAgent(BaseAgent):
         """
         self.logger.info(f"Catégorisation de {len(fallacies)} sophismes...")
 
-        categories = {
-            "RELEVANCE": [],
-            "INDUCTION": [],
-            "CAUSALITE": [],
-            "AMBIGUITE": [],
-            "PRESUPPOSITION": [],
-            "AUTRES": [],
-        }
-
-        # Mapping des types de sophismes vers les catégories
-        fallacy_mapping = {
-            "ad_hominem": "RELEVANCE",
-            "appel_autorite": "RELEVANCE",
-            "appel_emotion": "RELEVANCE",
-            "appel_popularite": "INDUCTION",
-            "generalisation_hative": "INDUCTION",
-            "pente_glissante": "CAUSALITE",
-            "fausse_cause": "CAUSALITE",
-            "equivoque": "AMBIGUITE",
-            "amphibologie": "AMBIGUITE",
-            "petitio_principii": "PRESUPPOSITION",
-            "fausse_dichotomie": "PRESUPPOSITION",
-        }
-
-        for fallacy in fallacies:
-            fallacy_type = fallacy.get("fallacy_type", "").lower().replace(" ", "_")
-            category = fallacy_mapping.get(fallacy_type, "AUTRES")
-
-            if fallacy_type not in categories[category]:
-                categories[category].append(fallacy_type)
+        categories = categorize_fallacy_types(fallacies)
 
         self.logger.info(
             f"Sophismes catégorisés: {sum(len(v) for v in categories.values())} types"
