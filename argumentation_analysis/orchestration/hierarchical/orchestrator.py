@@ -112,6 +112,9 @@ class HierarchicalOrchestrator:
               - ``conclusion``: The StrategicManager's final conclusion
               - ``duration_seconds``: Total wall-clock time
               - ``summary``: Completed/failed/skipped counts
+              - ``unresolved_capabilities``: per objective id, the
+                capabilities its keywords asked for that no provider
+                serves (#2424)
         """
         start = time.time()
         registry = self._ensure_registry()
@@ -235,6 +238,10 @@ class HierarchicalOrchestrator:
                 "skipped": skipped,
             },
             "workflow_name": "hierarchical_analysis",
+            # Capabilities the objectives asked for that no provider serves,
+            # per objective id (#2424): a dead map name reads here, not only
+            # in the log.
+            "unresolved_capabilities": workflow.metadata["unresolved_capabilities"],
         }
 
 

@@ -16,7 +16,7 @@ the single source of truth across both orchestration paradigms.
 
 import logging
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.capability_registry import (
     CapabilityRegistry,
@@ -176,23 +176,30 @@ class RegistryBackedOperationalRegistry:
 # 2. objectives_to_workflow
 # ---------------------------------------------------------------------------
 
-# Mapping from strategic objective keywords to Lego capabilities
+# Mapping from strategic objective keywords to Lego capabilities.
+# Every value is a name the registry serves (#2424). The map was first written
+# in the hierarchy's own vocabulary (``formal_logic``, ``fol_analysis``,
+# ``debate_management``, ``governance_voting``, ``synthesis``...), which no
+# provider declares: 6 of the 15 keywords resolved nothing, and
+# ``_match_capabilities`` dropped them without a trace. The capability-table
+# census in ``test_one_capability_surface_1842.py`` holds every name here to a
+# provider of ``setup_registry()``.
 _OBJECTIVE_CAPABILITY_MAP: Dict[str, List[str]] = {
-    "identifier": ["fact_extraction", "text_extraction"],
-    "extraire": ["fact_extraction", "text_extraction"],
-    "détecter": ["fallacy_detection", "french_fallacy_detection"],
-    "sophisme": ["fallacy_detection", "french_fallacy_detection"],
-    "analyser": ["formal_logic", "fol_analysis"],
-    "structure": ["formal_logic", "fol_analysis"],
-    "logique": ["formal_logic", "propositional_logic"],
-    "évaluer": ["argument_quality", "coherence_evaluation"],
-    "cohérence": ["argument_quality", "coherence_evaluation"],
+    "identifier": ["fact_extraction"],
+    "extraire": ["fact_extraction"],
+    "détecter": ["fallacy_detection"],
+    "sophisme": ["fallacy_detection"],
+    "analyser": ["fol_reasoning"],
+    "structure": ["fol_reasoning"],
+    "logique": ["fol_reasoning", "propositional_logic"],
+    "évaluer": ["argument_quality"],
+    "cohérence": ["argument_quality"],
     "contre-argument": ["counter_argument_generation"],
-    "débat": ["debate_management"],
-    "gouvernance": ["governance_voting"],
+    "débat": ["adversarial_debate"],
+    "gouvernance": ["governance_simulation"],
     "qualité": ["argument_quality"],
-    "synthétiser": ["synthesis"],
-    "synthèse": ["synthesis"],
+    "synthétiser": ["deep_synthesis"],
+    "synthèse": ["deep_synthesis"],
 }
 
 
@@ -213,10 +220,14 @@ def objectives_to_workflow(
         workflow_name: Name for the resulting workflow.
 
     Returns:
-        A WorkflowDefinition ready for execution via WorkflowExecutor.
+        A WorkflowDefinition ready for execution via WorkflowExecutor. Its
+        ``unresolved_capabilities`` metadata maps each objective id to the
+        capabilities its keywords asked for and the registry could not serve
+        (empty when every one resolved).
     """
     builder = WorkflowBuilder(workflow_name)
     previous_phase: Optional[str] = None
+    unresolved: Dict[str, List[str]] = {}
 
     for objective in objectives:
         obj_id = objective.get("id", "unknown")
@@ -224,7 +235,17 @@ def objectives_to_workflow(
         priority = objective.get("priority", "medium")
 
         # Find matching capabilities from description keywords
-        matched_capabilities = _match_capabilities(description, capability_registry)
+        matched_capabilities, dropped = _split_capabilities(
+            description, capability_registry
+        )
+        if dropped:
+            # The map is code, so a name the registry cannot serve is a defect
+            # to surface in the workflow itself, not only in a log (#2424).
+            logger.warning(
+                f"Objective '{obj_id}' asks for capabilities with no provider: "
+                f"{dropped}"
+            )
+            unresolved[obj_id] = dropped
 
         if not matched_capabilities:
             logger.warning(
@@ -257,8 +278,40 @@ def objectives_to_workflow(
 
     builder.set_metadata("source", "hierarchical_bridge")
     builder.set_metadata("objective_count", len(objectives))
+    builder.set_metadata("unresolved_capabilities", unresolved)
 
     return builder.build()
+
+
+def _split_capabilities(
+    description: str,
+    capability_registry: CapabilityRegistry,
+) -> Tuple[List[str], List[str]]:
+    """
+    Map a text description to capabilities, split by registry resolution.
+
+    Returns ``(resolved, unresolved)``: the unique capabilities the keywords
+    of *description* ask for, in map order, split by whether the registry has
+    a provider for them.
+    """
+    candidates: List[str] = []
+    for keyword, caps in _OBJECTIVE_CAPABILITY_MAP.items():
+        if keyword in description:
+            candidates.extend(caps)
+
+    # Deduplicate while preserving order
+    seen: set = set()
+    resolved: List[str] = []
+    unresolved: List[str] = []
+    for cap in candidates:
+        if cap not in seen:
+            seen.add(cap)
+            if capability_registry.find_for_capability(cap):
+                resolved.append(cap)
+            else:
+                unresolved.append(cap)
+
+    return resolved, unresolved
 
 
 def _match_capabilities(
@@ -268,24 +321,9 @@ def _match_capabilities(
     """
     Match a text description to available capabilities.
 
-    Returns unique capabilities found in the registry, ordered by specificity.
+    Returns unique capabilities found in the registry, in map order.
     """
-    candidates: List[str] = []
-    for keyword, caps in _OBJECTIVE_CAPABILITY_MAP.items():
-        if keyword in description:
-            candidates.extend(caps)
-
-    # Deduplicate while preserving order
-    seen: set = set()
-    unique: List[str] = []
-    for cap in candidates:
-        if cap not in seen:
-            seen.add(cap)
-            # Only include if the registry has a provider
-            if capability_registry.find_for_capability(cap):
-                unique.append(cap)
-
-    return unique
+    return _split_capabilities(description, capability_registry)[0]
 
 
 # ---------------------------------------------------------------------------

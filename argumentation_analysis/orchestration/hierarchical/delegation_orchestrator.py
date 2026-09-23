@@ -318,7 +318,9 @@ LEGACY_TO_REGISTRY_CAPABILITY: Dict[str, str] = {
     # (text_to_kb: premises and conclusions from NL) is the live provider (#2345).
     "argument_identification": "argument_extraction",
     "argument_visualization": "argument_visualization",  # placeholder; no provider yet
-    "summary_generation": "synthesis",
+    # ``synthesis`` never had a provider (#2424): the synthesis capability the
+    # registry serves is ``deep_synthesis``.
+    "summary_generation": "deep_synthesis",
     "formal_logic": "propositional_logic",
     "validity_checking": "propositional_logic",
     "consistency_analysis": "propositional_logic",
