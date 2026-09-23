@@ -57,6 +57,40 @@ class TestNoFabricatedAnswers:
             "this family removes"
         )
 
+    def test_fallback_analysis_carries_no_verdict(self, service):
+        """The fallback envelope used to fabricate accepted=True under success=True."""
+        result = service._get_fallback_analysis_result(
+            "p implies q", "propositional", "engine unavailable"
+        )
+        assert (
+            result["success"] is False
+        ), "an analysis that never ran must not report success"
+        assert result["belief_set"] is None
+        assert result["queries"] == []
+        assert (
+            result["query_results"] == []
+        ), "a query no reasoner ran must not be reported as accepted"
+        assert result["fallback_mode"] is True
+        assert result["error"] == "engine unavailable"
+
+    def test_multi_query_timeout_fallback_is_indeterminate(self, service):
+        """A per-query timeout records None, not a measured rejection."""
+        seen = {}
+
+        def capture(tasks, max_concurrent=3, global_timeout=45.0):
+            seen["tasks"] = tasks
+            return [task["fallback_result"] for task in tasks]
+
+        with patch.object(service.async_manager, "run_multiple_hybrid", capture):
+            results = service.execute_multiple_queries_async(
+                [{"belief_set_id": "bs1", "query": "p", "logic_type": "propositional"}]
+            )
+        assert seen.get("tasks"), "the capture must see the real task payload"
+        assert (
+            results[0]["accepted"] is None
+        ), "a timeout measures nothing: None ≠ a rejection"
+        assert results[0]["success"] is False
+
 
 # ── __init__ ──
 
@@ -264,7 +298,11 @@ class TestFallback:
     def test_fallback_result(self, service):
         result = service._get_fallback_analysis_result("text", "propositional")
         assert result["fallback_mode"] is True
-        assert result["success"] is True
+        assert result["success"] is False, (
+            "the envelope names the unavailability; it does not report an "
+            "analysis that never ran (#2344 family (a))"
+        )
+        assert result["belief_set"] is None
 
     def test_fallback_with_error(self, service):
         result = service._get_fallback_analysis_result(

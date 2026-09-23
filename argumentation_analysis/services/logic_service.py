@@ -404,7 +404,9 @@ class LogicService:
                     "belief_set_id": query_def.get("belief_set_id", ""),
                     "query": query_def.get("query", ""),
                     "logic_type": query_def.get("logic_type", "propositional"),
-                    "accepted": False,
+                    # #2344 family (a): a timeout measures nothing, so the
+                    # verdict is indeterminate — None, not a rejection.
+                    "accepted": None,
                     "message": "Timeout ou erreur d'exécution",
                     "success": False,
                 },
@@ -462,29 +464,30 @@ class LogicService:
         """
         analysis_id = self._generate_analysis_id(text, logic_type)
 
-        fallback_result = {
+        # #2344 family (a): this envelope used to fabricate a belief set, a
+        # query and ``accepted: True`` under ``success: True`` — a verdict no
+        # reasoner computed, only labelled. Unavailability is named in the
+        # state (#1019), and what was not measured stays falsy: no belief
+        # set, no query, no success.
+        interpretation = f"Analyse de fallback pour {logic_type} - service temporairement indisponible"
+        if not self._fallback_enabled:
+            interpretation = (
+                "Service indisponible et fallback désactivé - aucune analyse produite"
+            )
+
+        return {
             "analysis_id": analysis_id,
             "text": text,
             "logic_type": logic_type,
             "timestamp": datetime.now().isoformat(),
-            "belief_set": f"fallback_{logic_type}_belief_set",
-            "queries": [f"fallback_query_{logic_type}"],
-            "query_results": [
-                {"query": f"fallback_query_{logic_type}", "accepted": True}
-            ],
-            "interpretation": f"Analyse de fallback pour {logic_type} - service temporairement indisponible",
-            "success": True,
+            "belief_set": None,
+            "queries": [],
+            "query_results": [],
+            "interpretation": interpretation,
+            "success": False,
             "fallback_mode": True,
             "error": error,
         }
-
-        if not self._fallback_enabled:
-            fallback_result["success"] = False
-            fallback_result["interpretation"] = (
-                "Service indisponible et fallback désactivé"
-            )
-
-        return fallback_result
 
     def get_service_status(self) -> Dict[str, Any]:
         """
@@ -554,10 +557,17 @@ class LogicService:
 
     def enable_fallback_mode(self, enabled: bool = True):
         """
-        Active ou désactive le mode fallback.
+        Choisit la formulation de l'enveloppe d'indisponibilité.
+
+        Elle ne décide pas si une enveloppe de fallback est renvoyée — ce
+        choix vit dans ``analyze_text_logic_async`` — et ne change aucun
+        verdict : ``success`` est False dans les deux cas depuis #2344
+        famille (a). Restent sous ce commutateur la phrase d'interprétation
+        de l'enveloppe et le champ ``fallback_enabled`` du statut.
 
         Args:
-            enabled: True pour activer le fallback
+            enabled: True pour la formulation standard, False pour celle
+                qui nomme un fallback désactivé
         """
         self._fallback_enabled = enabled
         self.logger.info(f"Mode fallback {'activé' if enabled else 'désactivé'}")
