@@ -397,6 +397,42 @@ class TestFamilyLookup:
         family = runner._get_family_for_pk("5")
         assert family == "Insuffisance"
 
+    def test_family_is_found_by_path_not_by_pk(self, tmp_path):
+        """#2409: in the real taxonomy a family's path segment is not its PK."""
+        taxonomy_path = tmp_path / "taxonomy.csv"
+        taxonomy_path.write_text(
+            "PK,nom_vulgarisé,text_fr,depth,path\n"
+            "1,Insuffisance,Insuffisance,1,1\n"
+            "2,Inside1,Inside1,2,1.1\n"
+            "175,Influence,Influence,1,2\n"
+            "340,Deep,Deep,4,2.1.3\n",
+            encoding="utf-8",
+        )
+
+        runner = FallacyBenchmarkRunner(taxonomy_path=str(taxonomy_path))
+
+        assert runner._get_family_for_pk("340") == "Influence"
+        assert runner._get_family_for_pk("175") == "Influence"
+        assert runner._get_family_for_pk("2") == "Insuffisance"
+
+    def test_perfect_detector_matches_every_family_on_the_real_csv(self):
+        """#2409: on the real taxonomy, a detector naming every expected PK must
+        score family_match on all built-in cases (6/30 before the fix)."""
+        runner = FallacyBenchmarkRunner()
+        assert len(runner.taxonomy_data) > 1000, "the real taxonomy must load"
+        misses = []
+        for case in BENCHMARK_CASES:
+            result = runner._score_result(
+                case,
+                "free",
+                {"taxonomy_pk": case["expected_pk"], "fallacy_name_fr": ""},
+                0.0,
+            )
+            assert result.exact_pk_match
+            if not result.family_match:
+                misses.append((case["id"], case["expected_family"]))
+        assert misses == [], f"{len(misses)} of {len(BENCHMARK_CASES)}: {misses[:5]}"
+
     def test_get_family_for_unknown_pk(self, tmp_path):
         """Test getting family for non-existent PK."""
         taxonomy_path = tmp_path / "taxonomy.csv"

@@ -538,6 +538,7 @@ class FallacyBenchmarkRunner:
             )
         self.taxonomy_data = self._load_taxonomy()
         self.node_map = {str(n.get("PK", "")): n for n in self.taxonomy_data}
+        self.path_map = {str(n["path"]): n for n in self.taxonomy_data if n.get("path")}
 
     def _load_taxonomy(self) -> list:
         """Load taxonomy from CSV."""
@@ -552,9 +553,11 @@ class FallacyBenchmarkRunner:
         node = self.node_map.get(pk)
         if not node:
             return ""
-        path = node.get("path", "")
-        root_pk = path.split(".")[0] if "." in path else path
-        root = self.node_map.get(root_pk)
+        # #2409: the family is the node whose PATH is the first segment. A
+        # family's path segment is not its PK ("2" is PK 175), so a PK lookup
+        # named a node inside family 1 for every node of families 2-7.
+        family_path = str(node.get("path", "")).split(".")[0]
+        root = self.path_map.get(family_path)
         return root.get("text_fr", root.get("nom_vulgarisé", "")) if root else ""
 
     async def run_mode_a_free(self, text: str) -> Dict[str, Any]:
