@@ -18,6 +18,7 @@ except ImportError:
     # crashing the import.
     jpype = None  # type: ignore[assignment]
     _JPYPE_AVAILABLE = False
+import atexit
 import logging
 import threading
 import platform
@@ -1031,6 +1032,24 @@ def _resolve_effective_tweety_version() -> str:
     return local
 
 
+def _attach_the_exiting_thread() -> None:
+    """Attach the thread that runs the atexit handlers to the JVM (#2519).
+
+    jpype's own atexit handler, ``_JTerminate``, never returns when the
+    thread running it was never attached. ``initialize_jvm`` starts the JVM
+    on an executor thread (the startup timeout), so a process whose main
+    thread never calls Java hung forever at exit: every xdist controller,
+    every pytest session that runs no test, any script that uses Java from
+    other threads only.
+
+    atexit runs its handlers on the main thread, last registered first.
+    jpype registers ``_JTerminate`` when it is imported (``jpype/_core.py``),
+    and this module imports jpype first, so this handler runs before it.
+    """
+    if jpype.isJVMStarted():
+        jpype.JClass("java.lang.Thread").currentThread()
+
+
 def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
     """
     Démarre la JVM avec le CLASSPATH configuré, en s'assurant qu'elle n'est démarrée qu'une seule fois.
@@ -1202,6 +1221,9 @@ def initialize_jvm(force_restart=False, session_fixture_owns_jvm=False) -> bool:
                 f"Appel à jpype.startJVM terminé (Thread ID: {current_thread_id})."
             )
             _JVM_INITIALIZED_THIS_SESSION = True
+            # #2519: registered once this call has started the JVM; runs
+            # before jpype's _JTerminate (registered at jpype's import).
+            atexit.register(_attach_the_exiting_thread)
             logger.info("[SUCCESS] JVM démarrée avec succès.")
 
             # Auto-detect and configure external reasoning tools (issue #27)
