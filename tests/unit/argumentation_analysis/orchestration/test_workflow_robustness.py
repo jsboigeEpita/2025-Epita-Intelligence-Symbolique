@@ -149,7 +149,7 @@ NON_FRENCH_INPUTS = [
         id="arabic_text",
     ),
     pytest.param(
-        "\ud83d\ude80\ud83d\udd25\ud83d\udca1\ud83c\udf0d\ud83d\udcca\ud83e\udd14\ud83d\udca3\u2728\ud83c\udfaf\ud83d\udcaf",
+        "\U0001f680\U0001f525\U0001f4a1\U0001f30d\U0001f4ca\U0001f914\U0001f4a3\u2728\U0001f3af\U0001f4af",
         id="emoji_only",
     ),
     pytest.param(
@@ -563,7 +563,7 @@ class TestAllWorkflowsAdversarialSample:
         pytest.param("a", id="minimal"),
         pytest.param("A" * 50000, id="long_50k"),
         pytest.param(
-            "\ud83d\ude80\ud83d\udd25\ud83d\udca1",
+            "\U0001f680\U0001f525\U0001f4a1",
             id="emoji",
         ),
         pytest.param(
@@ -608,27 +608,30 @@ class TestAllWorkflowsAdversarialSample:
 # ============================================================
 
 
+# State-integrity adversarial inputs (parametrize source for
+# TestStateIntegrityAdversarial). Kept as a module constant so the UTF-8
+# encodability guard below enumerates the same surface it protects (#2402).
+STATE_SNAPSHOT_INPUTS = [
+    pytest.param("", id="empty"),
+    pytest.param("\x00\x01\x02", id="control_chars"),
+    pytest.param("A" * 100000, id="100k_chars"),
+    pytest.param(
+        "\U0001f680" * 1000,
+        id="1k_emoji",
+    ),
+    pytest.param(
+        "'; DROP TABLE users; --",
+        id="sql_injection",
+    ),
+]
+
+
 @pytest.mark.robustness
 class TestStateIntegrityAdversarial:
     """Verify UnifiedAnalysisState remains consistent after adversarial inputs."""
 
     @pytest.mark.asyncio
-    @pytest.mark.parametrize(
-        "text_input",
-        [
-            pytest.param("", id="empty"),
-            pytest.param("\x00\x01\x02", id="control_chars"),
-            pytest.param("A" * 100000, id="100k_chars"),
-            pytest.param(
-                "\ud83d\ude80" * 1000,
-                id="1k_emoji",
-            ),
-            pytest.param(
-                "'; DROP TABLE users; --",
-                id="sql_injection",
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("text_input", STATE_SNAPSHOT_INPUTS)
     async def test_state_snapshot_valid(self, text_input, shared_registry):
         """State snapshot is valid dict after adversarial input on light workflow."""
         result = await _run_with_timeout(
@@ -687,6 +690,29 @@ class TestStateIntegrityAdversarial:
         if state is not None:
             snapshot = state.get_state_snapshot(summarize=True)
             assert isinstance(snapshot, dict)
+
+
+# ============================================================
+# #2402: adversarial inputs must stay UTF-8 encodable — a surrogate (or a
+# surrogate pair written as escapes, which Python's strict encoder refuses)
+# in a report string crashes the xdist worker transport (`DumpError: strings
+# must be utf-8 encodable`) and erases every traceback in the session.
+# ============================================================
+
+
+def test_adversarial_inputs_are_utf8_encodable():
+    """#2402 guard: every parametrized adversarial input must encode.
+
+    Execnet serializes pytest reports to workers; the emoji params used to be
+    written as surrogate escapes, which ``value.encode("utf-8")`` refuses —
+    the worker crashed and the session lost its failures section.
+    """
+    inputs = [
+        p.values[0] for p in TestAllWorkflowsAdversarialSample.REPRESENTATIVE_INPUTS
+    ] + [p.values[0] for p in STATE_SNAPSHOT_INPUTS]
+    assert inputs, "the guard must enumerate a non-empty surface"
+    for value in inputs:
+        value.encode("utf-8")
 
 
 # ============================================================
@@ -871,7 +897,7 @@ class TestConcurrentAdversarialExecution:
             "Normal argument text about philosophy.",
             "\x00\x01\x02",
             "A" * 10000,
-            "\ud83d\ude80\ud83d\udd25\ud83d\udca1",
+            "\U0001f680\U0001f525\U0001f4a1",
             '<script>alert("XSS")</script>',
             "mot " * 200,
         ]

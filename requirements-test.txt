@@ -18,3 +18,4 @@ matplotlib
 mcp>=2.0  # #1559 : migré vers l'API mcp 2.x (voir environment.yml)
 hypothesis
 pytest-timeout
+pytest-xdist  # #2402: the -n runs are the local harness; the flag's one-reader DoD is verified under xdist

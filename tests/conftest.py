@@ -17,6 +17,11 @@ import shutil
 from unittest.mock import patch, MagicMock
 
 from tests._e2e_session_decision import _argv_decides_e2e_session
+from tests._jvm_session_flag import (
+    export_flag_from_config as _export_jvm_flag_from_config,
+    jvm_session_disabled as _jvm_session_disabled,
+    propagate_argv_to_env as _propagate_jvm_flag_argv_to_env,
+)
 from tests.jvm_skip_storm_signal import COUNTER as _skip_storm_counter
 from tests.jvm_skip_storm_signal import storm_verdict as _storm_verdict
 from tests.jvm_skip_storm_signal import ventilate as _storm_ventilate
@@ -98,7 +103,11 @@ except (ImportError, AttributeError):
 
 # --- Mocking global pour les tests E2E ---
 # Si --disable-jvm-session est présent, on mocke jpype AVANT toute autre importation.
-_disable_jvm_early_check = any(arg == "--disable-jvm-session" for arg in sys.argv)
+# #2402 : la décision est exportée une fois dans l'environnement (cf.
+# _jvm_session_flag) — le propagateur argv ne couvre que le bootstrap
+# pré-configure du contrôleur ; les workers lisent l'env var héritée.
+_propagate_jvm_flag_argv_to_env()
+_disable_jvm_early_check = _jvm_session_disabled()
 if _disable_jvm_early_check:
     print("[INFO] Early check: --disable-jvm-session detected. Mocking jpype globally.")
     _mock_jpype = MagicMock()
@@ -195,6 +204,11 @@ def pytest_configure(config):
     """
     Hook de configuration précoce de pytest.
     """
+    # #2402 : un seul lecteur du drapeau --disable-jvm-session — la décision
+    # est prise ici (config analysé, donc addopts compris) et exportée aux
+    # workers via l'environnement. Doit tourner AVANT le spawn xdist.
+    _export_jvm_flag_from_config(config)
+
     # ========================== VÉRIFICATION CRITIQUE DE L'ENVIRONNEMENT ==========================
     # Le bloc suivant est essentiel pour garantir que les tests s'exécutent dans le bon environnement Conda.
     # NE PAS COMMENTER OU DÉSACTIVER, sauf en cas de maintenance délibérée de l'infrastructure de test.
@@ -759,7 +773,7 @@ pytest_plugins = [
 # lorsque nous savons qu'elle ne sera pas disponible.
 import pytest
 
-_disable_jvm = any(arg == "--disable-jvm-session" for arg in sys.argv)
+_disable_jvm = _jvm_session_disabled()
 
 if not _disable_jvm:
     pytest_plugins.append("tests.fixtures.integration_fixtures")
