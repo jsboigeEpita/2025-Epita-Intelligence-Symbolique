@@ -38,13 +38,22 @@ def _build_sensitive_patterns() -> dict:
     class list (a scrubber may grow, never shrink silently — #1019); the
     three public figures below are outside the class lists and stay until
     that vocabulary is arbitrated.
-    """
-    from argumentation_analysis.evaluation.leak_patterns import PERSON_PATTERNS
 
-    leaders = "|".join([*PERSON_PATTERNS, "Mao", "Churchill", "Roosevelt"])
+    Each name is framed by the shared ``letter_boundary``, not by ``\b``: a
+    word boundary missed the identifier form ``name_only`` (#2012), and a
+    trailing frontier of any kind missed the derived form (#2476).
+    """
+    from argumentation_analysis.evaluation.leak_patterns import (
+        PERSON_PATTERNS,
+        letter_boundary,
+    )
+
+    leaders = "|".join(
+        letter_boundary(p) for p in [*PERSON_PATTERNS, "Mao", "Churchill", "Roosevelt"]
+    )
     return {
         # Noms de leaders politiques
-        rf"\b({leaders})\b": "[LEADER]",
+        rf"(?:{leaders})": "[LEADER]",
         # Noms de pays sensibles dans certains contextes
         r"\b(Allemagne nazie|URSS|Reich)\b": "[HISTORICAL_ENTITY]",
         # Extraits de discours politiques longs
