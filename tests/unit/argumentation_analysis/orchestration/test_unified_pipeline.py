@@ -1321,6 +1321,14 @@ class TestInvokeCallables:
 
         mock_bridge = MagicMock()
         mock_bridge.check_consistency.return_value = (True, "consistent")
+        # #2499: the phase decides through check_consistency_detailed. Without
+        # it, MagicMock answered a mock, the unpack raised, and this test was
+        # green on the isolation net's fabricated ``satisfiable: True``.
+        mock_bridge.check_consistency_detailed.return_value = (
+            True,
+            {"p": True, "q": True},
+            "consistent",
+        )
         # #1583: the NL→logic generator runs unconditionally and leaks a real
         # LLM call for a short input. Patch the AsyncOpenAI ctor (family a,
         # mechanism M2 — same as the router/conversational concentrateurs) so
@@ -1333,7 +1341,9 @@ class TestInvokeCallables:
         assert result["satisfiable"] is True
         assert result["logic_type"] == "propositional"
         # Bite: the verdict transits the mocked bridge, no LLM path decides it.
-        mock_bridge.check_consistency.assert_called()
+        mock_bridge.check_consistency_detailed.assert_called()
+        assert result["model"] == {"p": True, "q": True}
+        assert "isolation_retry" not in result, result
 
     async def test_invoke_propositional_logic_error(self):
         """_invoke_propositional_logic fails loud when Tweety unavailable (#1019, #1249).

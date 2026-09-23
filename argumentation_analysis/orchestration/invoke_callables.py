@@ -7105,10 +7105,37 @@ async def _invoke_propositional_logic(
                 f"PL per-formula isolation: {len(valid_formulas)}/{len(formulas)} "
                 f"formulas accepted by Tweety"
             )
+            # #2499: the survivors are checked together, and the verdict and the
+            # model come from that check only. The net used to publish
+            # ``satisfiable: True`` with an all-True model built from the
+            # argument texts, so {p, !p} plus one unparsable formula came out
+            # satisfiable. Same motif as the FOL net (_attempt_isolation): a
+            # combined check that fails reports None (unverified), never True.
+            iso_satisfiable: Optional[bool] = None
+            iso_model: Dict[str, Any] = {}
+            iso_msg = "combined consistency unverified"
+            try:
+                iso_consistent, iso_sat_model, iso_msg = await asyncio.to_thread(
+                    bridge.check_consistency_detailed,
+                    "\n".join(str(f) for f in valid_formulas),
+                    "propositional",
+                )
+                iso_satisfiable = bool(iso_consistent)
+                iso_model = iso_sat_model if isinstance(iso_sat_model, dict) else {}
+            except Exception as iso_err:
+                logger.warning(
+                    "PL isolation: combined consistency check failed (%s) — "
+                    "reporting unverified (None), not fabricated True.",
+                    iso_err,
+                )
+                iso_msg = f"combined consistency unverified: {iso_err}"
             return {
                 "formulas": valid_formulas,
-                "satisfiable": True,
-                "model": {_pl_atom(a): True for a in args},
+                "satisfiable": iso_satisfiable,
+                "model": iso_model,
+                "axiom_count": len(valid_formulas),
+                "query_count": 0,
+                "message": iso_msg,
                 "logic_type": "propositional",
                 "argument_mapping": argument_mapping
                 or {_pl_atom(a): a[:60] for a in args},
