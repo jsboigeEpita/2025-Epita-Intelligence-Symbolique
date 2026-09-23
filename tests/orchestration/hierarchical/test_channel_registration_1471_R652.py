@@ -143,6 +143,7 @@ class TestChannelRegistration:
             f"--- STDERR (tail) ---\n{result.stderr[-2000:]}"
         )
 
+    @pytest.mark.requires_api  # #2411: keyless CLI degrades before "Taches completees"
     def test_cli_delegation_mode_still_completes_e2e(self) -> None:
         """No regression on the R648/R651 contract: 5/5 tasks complete
         and a graded conclusion is printed. The R652 plumbing fix must
