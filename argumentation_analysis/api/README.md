@@ -9,8 +9,8 @@ Le package **JTMS-spécifique** de l'API : un `APIRouter` FastAPI + ses modèles
 ## Composants publics
 
 - `jtms_router` (`jtms_endpoints.py:59`, `APIRouter(prefix="/jtms")`) — **18 routes** (comptées sur les décorateurs :116-885) : 6 beliefs (create :116, justification :203, validité :283, explain :336, query :396, state :456), 4 sessions (create :540, list :571, checkpoint :612, restore :641), export :682 / import :716, plugin status :755, et 5 routes miroir `sk_*` :787-886 passant par le plugin SK plutôt que le service direct ;
-- DI lazy : `get_jtms_service` :67, `get_session_manager` :75, `get_sk_plugin` :85 ; erreur centralisée `handle_jtms_error` :97 ;
-- `initialize_jtms_services()` :911 — init au démarrage + tâche asyncio horaire de purge des sessions expirées (:923-932) ;
+- DI lazy : `get_jtms_service` :67, `get_session_manager` :75, `get_sk_plugin` :85 ; erreur centralisée `jtms_http_exception` :114 — construit le `JTMSError` et classifie le statut **par provenance** (#2344 famille c) : `ValueError`/`KeyError` (entité demandée inexistante = entrée client) → 400, tout le reste (défaut serveur, ex. `NotImplementedError` export graphml) → 500. Les 18 handlers partagent cette définition unique ;
+- `initialize_jtms_services()` :970 — init au démarrage + tâche asyncio horaire de purge des sessions expirées. La boucle vit en fonction module-level `_expired_session_cleanup_loop` :949 : un échec de tick est nommé dans un `logger.warning` au lieu d'être avalé, et la boucle survit (#2344 famille c) ;
 - `jtms_models.py` — 30 modèles Pydantic (:13-381) : requêtes (`CreateBeliefRequest` :39…), réponses (`JTMSResponse` :154…), data (`BeliefInfo` :13, `SessionInfo` :220, `JTMSStatistics` :209), `JTMSError` :316 ;
 - `main.py` (61 l.) — mini-app FastAPI **démo** : `TestPlugin(BasePlugin)` mock (:11), route unique `POST /api/v2/analyze` :43 sur `OrchestrationService`. N'est **pas** l'app racine.
 

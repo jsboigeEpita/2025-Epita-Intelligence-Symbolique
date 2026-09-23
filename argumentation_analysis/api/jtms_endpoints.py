@@ -3,6 +3,8 @@ Endpoints API REST pour l'intégration JTMS
 Expose les fonctionnalités du service JTMS via une API REST complète.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from typing import List, Optional, Dict, Any
 import json
@@ -58,6 +60,8 @@ from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import (
 # Router principal pour les endpoints JTMS
 jtms_router = APIRouter(prefix="/jtms", tags=["JTMS"])
 
+logger = logging.getLogger(__name__)
+
 # Services globaux (seront initialisés au démarrage de l'application)
 _jtms_service: Optional[JTMSService] = None
 _session_manager: Optional[JTMSSessionManager] = None
@@ -94,19 +98,36 @@ def get_sk_plugin() -> JTMSSemanticKernelPlugin:
     return _sk_plugin
 
 
-async def handle_jtms_error(operation: str, error: Exception, **context) -> JTMSError:
-    """Gestionnaire d'erreurs centralisé pour les opérations JTMS."""
-    error_type = type(error).__name__
-    error_message = str(error)
+# #2344 (family c): the JTMS service raises ValueError/KeyError when the
+# REQUESTED entity does not exist (unknown session, instance, belief, format)
+# — that is client input. Anything else raised below is a server defect.
+_CLIENT_INPUT_ERRORS = (ValueError, KeyError)
 
-    return JTMSError(
-        error_type=error_type,
-        error_message=error_message,
-        error_details=context,
-        operation=operation,
-        session_id=context.get("session_id"),
-        instance_id=context.get("instance_id"),
-        timestamp=datetime.now().isoformat(),
+
+def classify_jtms_exception(error: Exception) -> int:
+    """Provenance decides the status: client input is 400, server defect is 500."""
+    if isinstance(error, _CLIENT_INPUT_ERRORS):
+        return status.HTTP_400_BAD_REQUEST
+    return status.HTTP_500_INTERNAL_SERVER_ERROR
+
+
+def jtms_http_exception(operation: str, error: Exception, **context) -> HTTPException:
+    """One definition turns an exception into a provenance-classified response.
+
+    Builds the structured ``JTMSError`` (type, message, context) and picks the
+    status by provenance: client input is 400, server defect is 500 (#2344).
+    """
+    return HTTPException(
+        status_code=classify_jtms_exception(error),
+        detail=JTMSError(
+            error_type=type(error).__name__,
+            error_message=str(error),
+            error_details=context,
+            operation=operation,
+            session_id=context.get("session_id"),
+            instance_id=context.get("instance_id"),
+            timestamp=datetime.now().isoformat(),
+        ).dict(),
     )
 
 
@@ -190,14 +211,13 @@ async def create_belief(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "create_belief",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
             belief_name=request.belief_name,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post(
@@ -270,14 +290,13 @@ async def add_justification(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "add_justification",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
             conclusion=request.conclusion,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post(
@@ -323,14 +342,13 @@ async def set_belief_validity(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "set_belief_validity",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
             belief_name=request.belief_name,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post("/beliefs/explain", response_model=ExplainBeliefResponse)
@@ -383,14 +401,13 @@ async def explain_belief(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "explain_belief",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
             belief_name=request.belief_name,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post("/beliefs/query", response_model=QueryBeliefsResponse)
@@ -443,14 +460,13 @@ async def query_beliefs(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "query_beliefs",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
             filter_status=request.filter_status,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post("/state", response_model=GetJTMSStateResponse)
@@ -525,13 +541,12 @@ async def get_jtms_state(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "get_jtms_state",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 # ===== ENDPOINTS POUR LES SESSIONS =====
@@ -564,8 +579,7 @@ async def create_session(
         )
 
     except Exception as e:
-        error = await handle_jtms_error("create_session", e, agent_id=request.agent_id)
-        raise HTTPException(status_code=400, detail=error.dict())
+        raise jtms_http_exception("create_session", e, agent_id=request.agent_id)
 
 
 @jtms_router.get("/sessions", response_model=SessionListResponse)
@@ -603,10 +617,9 @@ async def list_sessions(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "list_sessions", e, agent_id=agent_id, status_filter=status_filter
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post("/sessions/checkpoints", response_model=CreateCheckpointResponse)
@@ -632,10 +645,7 @@ async def create_checkpoint(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
-            "create_checkpoint", e, session_id=request.session_id
-        )
-        raise HTTPException(status_code=400, detail=error.dict())
+        raise jtms_http_exception("create_checkpoint", e, session_id=request.session_id)
 
 
 @jtms_router.post("/sessions/restore", response_model=RestoreCheckpointResponse)
@@ -667,13 +677,12 @@ async def restore_checkpoint(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "restore_checkpoint",
             e,
             session_id=request.session_id,
             checkpoint_id=request.checkpoint_id,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 # ===== ENDPOINTS POUR L'IMPORT/EXPORT =====
@@ -704,13 +713,12 @@ async def export_jtms_state(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
+        raise jtms_http_exception(
             "export_jtms_state",
             e,
             session_id=request.session_id,
             instance_id=request.instance_id,
         )
-        raise HTTPException(status_code=400, detail=error.dict())
 
 
 @jtms_router.post("/import", response_model=ImportJTMSResponse)
@@ -743,10 +751,7 @@ async def import_jtms_state(
         )
 
     except Exception as e:
-        error = await handle_jtms_error(
-            "import_jtms_state", e, session_id=request.session_id
-        )
-        raise HTTPException(status_code=400, detail=error.dict())
+        raise jtms_http_exception("import_jtms_state", e, session_id=request.session_id)
 
 
 # ===== ENDPOINTS POUR LE PLUGIN SEMANTIC KERNEL =====
@@ -777,8 +782,7 @@ async def get_plugin_status(
         )
 
     except Exception as e:
-        error = await handle_jtms_error("get_plugin_status", e)
-        raise HTTPException(status_code=500, detail=error.dict())
+        raise jtms_http_exception("get_plugin_status", e)
 
 
 # ===== ENDPOINTS DE CONVENANCE POUR LES FONCTIONS SK =====
@@ -806,7 +810,13 @@ async def sk_create_belief(
         )
         return {"result": json.loads(result)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise jtms_http_exception(
+            "sk_create_belief",
+            e,
+            agent_id=agent_id,
+            session_id=session_id or None,
+            instance_id=instance_id or None,
+        )
 
 
 @jtms_router.post("/sk/add_justification")
@@ -833,7 +843,13 @@ async def sk_add_justification(
         )
         return {"result": json.loads(result)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise jtms_http_exception(
+            "sk_add_justification",
+            e,
+            agent_id=agent_id,
+            session_id=session_id or None,
+            instance_id=instance_id or None,
+        )
 
 
 @jtms_router.post("/sk/explain_belief")
@@ -856,7 +872,13 @@ async def sk_explain_belief(
         )
         return {"result": json.loads(result)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise jtms_http_exception(
+            "sk_explain_belief",
+            e,
+            agent_id=agent_id,
+            session_id=session_id or None,
+            instance_id=instance_id or None,
+        )
 
 
 @jtms_router.post("/sk/query_beliefs")
@@ -879,7 +901,13 @@ async def sk_query_beliefs(
         )
         return {"result": json.loads(result)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise jtms_http_exception(
+            "sk_query_beliefs",
+            e,
+            agent_id=agent_id,
+            session_id=session_id or None,
+            instance_id=instance_id or None,
+        )
 
 
 @jtms_router.post("/sk/get_jtms_state")
@@ -904,10 +932,37 @@ async def sk_get_jtms_state(
         )
         return {"result": json.loads(result)}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise jtms_http_exception(
+            "sk_get_jtms_state",
+            e,
+            agent_id=agent_id,
+            session_id=session_id or None,
+            instance_id=instance_id or None,
+        )
 
 
 # Fonction d'initialisation pour configurer les services globaux
+async def _expired_session_cleanup_loop(
+    session_manager: JTMSSessionManager,
+) -> None:
+    """Nettoyage horaire des sessions expirées.
+
+    #2344 (family c): un échec de tick est nommé dans un warning au lieu
+    d'être avalé — un nettoyage durablement cassé doit rester visible — et
+    la boucle survit à l'échec (elle retente à l'heure suivante).
+    """
+    while True:
+        try:
+            await asyncio.sleep(3600)
+            await session_manager.cleanup_expired_sessions()
+        except Exception as e:
+            logger.warning(
+                "JTMS expired-session cleanup failed (%s: %s); next retry in 1h",
+                type(e).__name__,
+                e,
+            )
+
+
 async def initialize_jtms_services():
     """
     Initialise les services JTMS globaux.
@@ -920,13 +975,5 @@ async def initialize_jtms_services():
     _sk_plugin = create_jtms_plugin(_jtms_service, _session_manager)
 
     # Nettoyage automatique des sessions expirées
-    async def cleanup_expired_sessions():
-        while True:
-            try:
-                await asyncio.sleep(3600)  # Chaque heure
-                await _session_manager.cleanup_expired_sessions()
-            except Exception:
-                pass  # Ignore les erreurs de nettoyage
-
     # Lancer la tâche de nettoyage en arrière-plan
-    asyncio.create_task(cleanup_expired_sessions())
+    asyncio.create_task(_expired_session_cleanup_loop(_session_manager))
