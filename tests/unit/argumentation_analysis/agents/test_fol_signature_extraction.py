@@ -29,8 +29,10 @@ class TestExtractFolMetadataExtended:
         formulas = ["EstPrésident(jean_paul)"]
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
 
-        # Predicate name sanitized: EstPrésident -> EstPr_sident
-        assert "EstPr_sident" in meta["predicates"]
+        # Predicate name folded to ASCII: EstPrésident -> EstPresident. It was
+        # EstPr_sident, which the parser refuses: no underscore in a predicate
+        # declaration (#2468).
+        assert "EstPresident" in meta["predicates"]
         # Constant sanitized: jean_paul (no accent, stays as-is)
         assert "jean_paul" in meta["constants"]
 
@@ -97,12 +99,16 @@ class TestExtractFolMetadataExtended:
         assert "fallacy1" in meta["constants"]
 
     def test_predicate_with_underscore(self):
-        """Predicates and constants with underscores should be captured."""
+        """Predicates and constants with underscores should be captured. A
+        predicate declaration cannot carry the underscore (#2468): the
+        predicate is declared ``IsValid``; a constant keeps it."""
         formulas = ["is_valid(test_case)"]
         meta = FOLLogicAgent.extract_fol_metadata(formulas)
 
-        assert "is_valid" in meta["predicates"]
+        assert meta["predicate_map"] == {"is_valid": "IsValid"}
+        assert "IsValid" in meta["predicates"]
         assert "test_case" in meta["constants"]
+        assert meta["formulas"] == ["IsValid(test_case)"]
 
     def test_constant_collision_disambiguation(self):
         """Distinct constants that sanitize to same name get _v2, _v3 suffixes."""

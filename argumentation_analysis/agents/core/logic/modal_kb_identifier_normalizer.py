@@ -27,6 +27,13 @@ producer — defense-in-depth. The transform:
   disambiguated instead of collapsed. That soundness guard was absent from the
   original inline #1260 closure.
 
+The FOL parser (``FolParser``) applies the same rule to predicate declarations
+(measured on the real JVM, #2468: ``A_Fait`` is refused, ``AFait`` accepted), so
+``FOLLogicAgent.extract_fol_metadata`` names FOL predicates with ``legalize``
+too. ``legalize`` folds accents to ASCII before it splits (``Évalue`` →
+``Evalue``); without the fold the accented letter was a separator and the name
+lost it (``Value``).
+
 Anti-pendule: this normalizes the **syntax** of the sort-name for Tweety only;
 it does not neutralize semantic content or variance. No heuristic masks a
 parse-fail — a genuinely malformed KB is still rejected and the handler returns
@@ -38,6 +45,7 @@ is unaffected by the second pass here.
 from __future__ import annotations
 
 import re
+import unicodedata
 from typing import Dict, Iterable, Tuple
 
 # Reserved words of the modal grammar — must never be treated as atoms.
@@ -98,6 +106,13 @@ def strip_illegal_sort_declarations(content: str) -> Tuple[str, int]:
 _LEGAL_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9]*$")
 
 
+def fold_to_ascii(text: str) -> str:
+    """Drop the accents of ``text`` (``été`` → ``ete``) and any character
+    with no ASCII base letter."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    return decomposed.encode("ascii", "ignore").decode("ascii")
+
+
 class ModalIdentifierNormalizer:
     """Sound, memoized mapping of modal atoms to MlParser-legal identifiers.
 
@@ -119,7 +134,7 @@ class ModalIdentifierNormalizer:
         cached = self._forward.get(atom)
         if cached is not None:
             return cached
-        parts = [p for p in re.split(r"[^A-Za-z0-9]+", atom) if p]
+        parts = [p for p in re.split(r"[^A-Za-z0-9]+", fold_to_ascii(atom)) if p]
         candidate = "".join(p[:1].upper() + p[1:] for p in parts) or "MpAtom"
         if not _LEGAL_RE.match(candidate) or candidate in self._reserved:
             # Rare: degenerate stem or collision — disambiguate, but keep the
