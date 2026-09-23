@@ -567,6 +567,14 @@ RÉPONDS EN FORMAT JSON :
         of ``thing = {}`` (#2492). Each name must already be a legal
         constant, as the ``constants`` of a call on the whole set are.
 
+        A set that names no individual at all, with no ``domain`` to lend
+        one, gets one witness constant in its sort (#2495). Tweety refuses
+        ``thing = {}``, so such a set was never decided under any solver. A
+        FOL domain is never empty, so an unused constant adds no constraint:
+        EProver, Prover9 and Mace4 decide the same set, and the in-JVM check
+        puts the witness in its domain (#2494). ``constants`` stays the names
+        the formulas and ``domain`` carry; the witness is only in the sort.
+
         Returns:
             Dict with keys: sorts (Dict[str, List[str]]), predicates (Dict[str, int]),
             constants (set), signature_lines (List[str]), constant_map and
@@ -667,8 +675,16 @@ RÉPONDS EN FORMAT JSON :
                 )
             sanitized_constants |= domain_names
 
-        # Build sort declarations from constants
+        # Build sort declarations from constants. Tweety refuses an empty
+        # sort, and a FOL domain is never empty: a set without a constant
+        # declares one witness, which no formula names (#2495).
         sorted_consts = sorted(sanitized_constants)
+        if not sorted_consts:
+            witness, count = "witness", 1
+            while witness in predicates:
+                count += 1
+                witness = f"witness{count}"
+            sorted_consts = [witness]
         sorts: Dict[str, List[str]] = {"thing": sorted_consts}
         signature_lines = [f"thing = {{{', '.join(sorted_consts)}}}"]
         # A predicate declaration must match ``[A-Za-z][A-Za-z0-9]*``: no
