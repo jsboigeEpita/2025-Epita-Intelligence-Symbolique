@@ -7502,9 +7502,26 @@ async def _invoke_fol_reasoning(
         valid_formulas: List[str] = []
         rejected_formulas: List[str] = []
         if bridge is not None:
+            # #2492: each formula is checked over the SET's constants. Its
+            # own constants alone leave a universal rule without any and
+            # declare ``thing = {}``, which Tweety refuses: the rule was
+            # rejected as a poison and the survivors' verdict published
+            # without it. The predicates stay the formula's own, so an arity
+            # another formula contradicts is not charged to this one.
+            try:
+                set_domain = FOLLogicAgent.extract_fol_metadata(formulas)["constants"]
+            except Exception as domain_err:
+                logger.warning(
+                    "FOL isolation: the set's constants could not be read "
+                    "(%s); each formula is checked over its own.",
+                    domain_err,
+                )
+                set_domain = None
             for formula in formulas:
                 try:
-                    single_meta = FOLLogicAgent.extract_fol_metadata([formula])
+                    single_meta = FOLLogicAgent.extract_fol_metadata(
+                        [formula], domain=set_domain
+                    )
                     single_bs = "\n".join(
                         str(f)
                         for f in single_meta["signature_lines"]

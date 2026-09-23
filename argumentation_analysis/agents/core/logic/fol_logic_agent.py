@@ -19,7 +19,7 @@ Fonctionnalités :
 import logging
 import asyncio
 import inspect
-from typing import Dict, List, Any, Optional, Union, Tuple, Set
+from typing import Dict, List, Any, Iterable, Optional, Union, Tuple, Set
 from dataclasses import dataclass, field
 from pydantic import PrivateAttr
 
@@ -546,7 +546,9 @@ RÉPONDS EN FORMAT JSON :
         return declarations + [""] + formulas
 
     @staticmethod
-    def extract_fol_metadata(formulas: List[str]) -> Dict[str, Any]:
+    def extract_fol_metadata(
+        formulas: List[str], domain: Optional[Iterable[str]] = None
+    ) -> Dict[str, Any]:
         """Extract sorts, predicates, and constants from FOL formulas.
 
         Parses LLM-generated formulas to build a Tweety-compatible signature
@@ -557,6 +559,13 @@ RÉPONDS EN FORMAT JSON :
         Handles accented characters (e.g. estPrésident), numeric constants
         (e.g. arg1), and function symbols (e.g. f(x)) in addition to the
         standard CamelCase predicate patterns.
+
+        ``domain`` names the declared constants of a larger belief set the
+        formulas belong to. They join the ``thing`` sort, so a formula
+        checked on its own is read over the set's individuals: a universal
+        rule with no constant of its own gets a sort Tweety accepts instead
+        of ``thing = {}`` (#2492). Each name must already be a legal
+        constant, as the ``constants`` of a call on the whole set are.
 
         Returns:
             Dict with keys: sorts (Dict[str, List[str]]), predicates (Dict[str, int]),
@@ -648,6 +657,15 @@ RÉPONDS EN FORMAT JSON :
                 name = f"{base}_v{count}"
             sanitized_constants.add(name)
             constant_map[c] = name
+
+        if domain is not None:
+            domain_names = set(domain)
+            illegal = sorted(n for n in domain_names if not legal_constant.match(n))
+            if illegal:
+                raise ValueError(
+                    f"domain names must be legal Tweety constants: {illegal}"
+                )
+            sanitized_constants |= domain_names
 
         # Build sort declarations from constants
         sorted_consts = sorted(sanitized_constants)
