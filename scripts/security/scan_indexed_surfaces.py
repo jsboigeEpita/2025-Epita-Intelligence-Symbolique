@@ -19,12 +19,11 @@ a scan of the next commit message, and vice versa.
 
 Boundary semantics
 ------------------
-The shared patterns bake ``\b`` into each literal. ``\b`` is a *word* boundary
-and ``_`` is a word character, so ``\bName\b`` cannot match ``name_only`` —
-precisely the shape a name takes when it enters code (see #2012). This script
-therefore re-applies a **letter** boundary, ``(?<![A-Za-z])…(?![A-Za-z])``,
-which keeps whole-word behaviour in prose *and* fires on identifier forms.
-It does not modify the shared module; #2012 tracks fixing it at the source.
+The shared patterns are stored bare and compiled through the shared **letter**
+boundary, ``leak_patterns.letter_boundary`` — ``(?<![A-Za-z])…(?![A-Za-z])``.
+A *word* boundary ``\b`` could not match ``name_only``, since ``_`` is a word
+character: precisely the shape a name takes when it enters code (#2012, fixed
+at the source).
 
 Output discipline
 -----------------
@@ -63,11 +62,11 @@ _PATTERNS_MODULE = (
 def _load_patterns() -> tuple[list, object]:
     """Load the shared vocabulary by path.
 
-    Importing ``argumentation_analysis.evaluation.leak_patterns`` normally would
-    execute the package ``__init__`` and pull in the LLM stack. ``leak_patterns``
-    declares itself import-effect-free precisely so it can be consumed cheaply;
-    loading it by path honours that and keeps this security script side-effect
-    free, fast, and usable from a hook.
+    The CI gate runs this script on the runner's system Python, before the
+    project environment exists and with no repository root on ``sys.path``.
+    ``leak_patterns`` is stdlib-only, so loading that one file by path needs
+    nothing else — no package ``__init__`` runs, whatever they come to import.
+    (The package path no longer pulls the LLM stack either, since #2477.)
     """
     spec = importlib.util.spec_from_file_location("_leak_patterns", _PATTERNS_MODULE)
     if spec is None or spec.loader is None:  # pragma: no cover - defensive
