@@ -12,7 +12,7 @@ import logging
 from typing import Dict, List, Any, Optional
 
 # Import de la nouvelle classe
-from .informal_agent import InformalAnalysisAgent
+from .informal_agent import InformalAnalysisAgent, categorize_fallacy_types
 
 
 class InformalAgent:
@@ -211,37 +211,7 @@ class InformalAgent:
         Returns:
             Dictionnaire de catégories
         """
-        categories = {
-            "RELEVANCE": [],
-            "INDUCTION": [],
-            "CAUSALITE": [],
-            "AMBIGUITE": [],
-            "PRESUPPOSITION": [],
-            "AUTRES": [],
-        }
-
-        fallacy_mapping = {
-            "ad_hominem": "RELEVANCE",
-            "appel_autorite": "RELEVANCE",
-            "argument_d_autorité": "RELEVANCE",
-            "appel_emotion": "RELEVANCE",
-            "appel_popularite": "INDUCTION",
-            "generalisation_hative": "INDUCTION",
-            "généralisation_hâtive": "INDUCTION",
-            "pente_glissante": "CAUSALITE",
-            "fausse_cause": "CAUSALITE",
-            "faux_dilemme": "PRESUPPOSITION",
-            "anecdote_personnelle": "INDUCTION",
-        }
-
-        for fallacy in fallacies:
-            fallacy_type = fallacy.get("fallacy_type", "").lower().replace(" ", "_")
-            category = fallacy_mapping.get(fallacy_type, "AUTRES")
-
-            if fallacy_type not in categories[category]:
-                categories[category].append(fallacy_type)
-
-        return categories
+        return categorize_fallacy_types(fallacies)
 
     def _get_timestamp(self) -> str:
         """Génère un timestamp actuel."""
