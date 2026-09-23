@@ -46,12 +46,25 @@ import traceback
 # Configuration du projet
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
-# Configuration du logging avec support UTF-8
+# Configuration du logging avec support UTF-8. La reconfiguration console
+# (detach + writer UTF-8) vivait ici au niveau import : elle mutait les flux
+# globaux de N'IMPORTE QUEL processus important ce module — le premier test
+# qui l'importait tuait le terminal writer de pytest (« underlying buffer
+# has been detached », #2390). Elle est désormais posée par le chemin CLI
+# (`main`), seul endroit qui en a besoin.
 if sys.platform == "win32":
-    import codecs
 
-    sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
-    sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+    def _configure_windows_console() -> None:
+        import codecs
+
+        sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
+        sys.stderr = codecs.getwriter("utf-8")(sys.stderr.detach())
+
+else:
+
+    def _configure_windows_console() -> None:  # no-op hors Windows
+        return None
+
 
 logging.basicConfig(
     level=logging.INFO,
@@ -258,6 +271,25 @@ class CorpusManager:
 
 # === MOTEUR DE PIPELINE ===
 
+ANALYSIS_SERVICE_ID = "processor_analysis_llm"
+
+
+def _make_analysis_kernel() -> Tuple[Any, str]:
+    """Kernel d'analyse avec son service LLM (#2390).
+
+    Le chemin canonique : le service est créé par ``create_llm_service``
+    (le résolveur de route unique depuis #2352), l'agent est construit
+    contre ce kernel — jamais nu. Les tests substituent ce seam par un
+    service factice qui archive les prompts rendus.
+    """
+    import semantic_kernel as sk
+
+    from argumentation_analysis.core.llm_service import create_llm_service
+
+    kernel = sk.Kernel()
+    kernel.add_service(create_llm_service(service_id=ANALYSIS_SERVICE_ID))
+    return kernel, ANALYSIS_SERVICE_ID
+
 
 class PipelineEngine:
     """Moteur d'analyse avec orchestration avancée."""
@@ -274,31 +306,16 @@ class PipelineEngine:
         results = {"status": "success", "analyses": [], "errors": []}
 
         try:
-            # Import dynamique pour la configuration unifiée
-            from config.unified_config import UnifiedConfig, LogicType, MockLevel
-
-            # Configuration pour l'analyse authentique
-            is_prod = self.config.environment == ProcessingEnvironment.PROD
-            analysis_config = UnifiedConfig(
-                logic_type=LogicType.FOL,
-                mock_level=MockLevel.NONE if is_prod else MockLevel.PARTIAL,
-                enable_jvm=True,
-                orchestration_type="comprehensive",
-                require_real_gpt=is_prod,
-                require_real_tweety=is_prod,
-                require_full_taxonomy=is_prod,
-            )
-
-            # Traitement parallèle des données
+            # Traitement parallèle des données. #2390 : l'UnifiedConfig
+            # fabriquée ici ne servait qu'à alimenter un appel qui ne la
+            # lisait pas — la route LLM est résolue par _make_analysis_kernel.
             if corpus_data["loaded_files"]:
                 analysis_tasks = []
 
                 for file_data in corpus_data["loaded_files"]:
                     for definition in file_data["definitions"]:
                         if "content" in definition:
-                            task = self._analyze_text_content(
-                                definition["content"], analysis_config
-                            )
+                            task = self._analyze_text_content(definition["content"])
                             analysis_tasks.append(task)
 
                 # Exécution parallèle avec limite de workers
@@ -339,20 +356,34 @@ class PipelineEngine:
         async with semaphore:
             return await task
 
-    async def _analyze_text_content(self, content: str, config) -> Dict[str, Any]:
-        """Analyse un contenu textuel."""
+    async def _analyze_text_content(
+        self, content: str, config: Any = None
+    ) -> Dict[str, Any]:
+        """Analyse un contenu textuel par le kernel d'analyse (#2390).
+
+        ``config`` est conservé pour le contrat d'appel historique ; la
+        construction ne le consulte pas — la route LLM vient de
+        l'environnement via ``_make_analysis_kernel``, pas d'une
+        configuration sérialisée. Avant #2390, cette méthode empilait quatre
+        défauts dont chacun masquait les suivants : un kwarg ``config``
+        inexistant (le constructeur exige ``kernel``), un
+        ``setup_agent_components()`` sans son ``llm_service_id`` obligatoire,
+        un ``await`` sur cette méthode sync, et un ``analyze`` qui n'existe
+        pas sur l'agent.
+        """
         try:
-            # Import dynamique des composants d'analyse
             from argumentation_analysis.agents.core.informal.informal_agent import (
                 InformalAnalysisAgent,
             )
 
-            # Création de l'agent d'analyse
-            agent = InformalAnalysisAgent(config=config.to_dict())
-            await agent.setup_agent_components()
+            kernel, service_id = _make_analysis_kernel()
+            agent = InformalAnalysisAgent(
+                kernel=kernel, agent_name="ProcessorInformalAgent"
+            )
+            agent.setup_agent_components(llm_service_id=service_id)
 
             # Exécution de l'analyse
-            analysis_result = await agent.analyze(
+            analysis_result = await agent.analyze_text(
                 content[:1000]
             )  # Limite pour performance
 
@@ -685,26 +716,22 @@ class TestOrchestrator:
         return results
 
     async def _performance_text_analysis(self):
-        """Test de performance d'analyse de texte."""
-        test_text = "Ceci est un texte de test pour l'analyse de performance."
+        """Test de performance d'analyse de texte (#2390 : un seul chemin).
 
-        try:
-            from config.unified_config import UnifiedConfig, LogicType, MockLevel
-            from argumentation_analysis.agents.core.informal.informal_agent import (
-                InformalAnalysisAgent,
+        Le scénario emprunte la construction du ``PipelineEngine`` — plus de
+        copie locale. La copie portait son propre premier défaut
+        (``MockLevel.MINIMAL``, membre inexistant : ``AttributeError`` que
+        l'``except ImportError`` ne rattrapait pas — le scénario levait au
+        lieu de mesurer). Un échec d'analyse est nommé, pas avalé.
+        """
+        engine = PipelineEngine(self.config)
+        result = await engine._analyze_text_content(
+            "Ceci est un texte de test pour l'analyse de performance."
+        )
+        if result.get("status") != "success":
+            raise RuntimeError(
+                f"analyse de performance en erreur: {result.get('error')}"
             )
-
-            config = UnifiedConfig(
-                logic_type=LogicType.FOL, mock_level=MockLevel.MINIMAL, enable_jvm=False
-            )
-
-            agent = InformalAnalysisAgent(config=config.to_dict())
-            await agent.setup_agent_components()
-            await agent.analyze(test_text)
-
-        except ImportError:
-            # Simulation si les modules ne sont pas disponibles
-            await asyncio.sleep(0.1)
 
     async def _performance_pipeline_init(self):
         """Test de performance d'initialisation de pipeline."""
@@ -1421,6 +1448,7 @@ async def main_async(config: WorkflowConfig) -> int:
 def main() -> int:
     """Point d'entrée principal synchrone."""
     try:
+        _configure_windows_console()
         config = parse_arguments()
         return asyncio.run(main_async(config))
     except Exception as e:
