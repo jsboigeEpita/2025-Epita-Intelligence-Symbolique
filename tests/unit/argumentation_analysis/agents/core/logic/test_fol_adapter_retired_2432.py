@@ -24,6 +24,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[6]
 ADAPTER = "first_order_logic_agent_adapter"
 ADAPTER_PATH = f"argumentation_analysis/agents/core/logic/{ADAPTER}.py"
+# This guard names the module it looks for, so its own ``ADAPTER`` literal
+# reads as a dotted-path import. It is the one file the scan skips; the
+# non-vacuity test below proves the detector still bites.
+THIS_FILE = Path(__file__).resolve().relative_to(REPO_ROOT).as_posix()
 
 # Point-in-time snapshots keep the historical path; living docs must not.
 SNAPSHOT_DIRS = ("docs/reports/", "docs/archives/")
@@ -113,7 +117,9 @@ def test_the_adapter_module_is_gone():
 
 
 def test_no_tracked_module_imports_the_adapter():
-    python_files = [rel for rel in _tracked_files() if rel.endswith(".py")]
+    python_files = [
+        rel for rel in _tracked_files() if rel.endswith(".py") and rel != THIS_FILE
+    ]
     assert len(python_files) > 1000, "the scan must cover the tracked tree"
     offenders = [
         rel for rel in python_files if _imports_adapter(_read(REPO_ROOT / rel))
