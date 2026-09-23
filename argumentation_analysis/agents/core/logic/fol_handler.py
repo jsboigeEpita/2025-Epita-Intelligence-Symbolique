@@ -9,7 +9,7 @@ from argumentation_analysis.core.utils.logging_utils import setup_logging
 from .tweety_initializer import TweetyInitializer
 from argumentation_analysis.core.prover9_runner import (
     PROVER9_EXECUTABLE,
-    Prover9InputRejected,
+    SolverInputDefect,
     run_prover9,
 )
 from argumentation_analysis.core.mace4_runner import (
@@ -123,58 +123,20 @@ def _eprover_delivery_is_reliable(reasoner, eprover_path: str) -> bool:
 # (sound), complementing EProver/Prover9's refutation (which proves inconsistent).
 # --------------------------------------------------------------------------- #
 
-# Operator map Tweety-FOL formula-toString -> LADR (Prover9/Mace4 share LADR).
-# Longest tokens first so ``<=>`` is rewritten before ``=>``. Tweety already
-# renders negation as ``-`` (LADR's symbol) in its toString, but a parsed formula
-# may surface ``!`` — map both.
-_TWEETY_TO_LADR_OPS = [
-    ("<=>", "<->"),
-    ("=>", "->"),
-    ("&&", "&"),
-    ("||", "|"),
-    ("forall ", "all "),
-    ("!", "-"),
-]
-
-
-def _tweety_fol_to_ladr(formula_str: str) -> str:
-    """Translate ONE Tweety FOL formula ``toString()`` into LADR syntax.
-
-    Operates on an INDIVIDUAL formula (e.g. ``Mortal(socrate)`` or
-    ``forall X: (Human(X) => Mortal(X))``), never the whole belief set — the
-    belief set's ``toString()`` is set notation ``{ f1, f2 }`` which LADR cannot
-    parse ("Set parsing is not available"). Anything still un-parseable surfaces
-    as a Mace4 ``Fatal error`` (RuntimeError) → honest fallback, never a
-    fabricated verdict (#1019).
-    """
-    s = formula_str
-    for src, dst in _TWEETY_TO_LADR_OPS:
-        s = s.replace(src, dst)
-    # Tweety renders quantifiers as ``all X:`` / ``exists X:``; LADR wants no
-    # colon (``all X ...``). Drop the colon after the bound variable.
-    s = re.sub(r"\b(all|exists)\s+(\w+)\s*:", r"\1 \2", s)
-    return s
-
 
 def _belief_set_to_ladr_assumptions(belief_set) -> str:
     """Build a LADR ``formulas(assumptions). … end_of_list.`` block from a Tweety
     ``FolBeliefSet``.
 
     Iterates the belief set's INDIVIDUAL formulas (a ``FolBeliefSet`` is a Java
-    ``Collection``) and translates each to a LADR clause terminated by ``.``.
+    ``Collection``) and writes each from its structure (``_ladr_text``) as a
+    LADR clause terminated by ``.``.
     This deliberately avoids ``belief_set.toString()`` — that renders the set as
     ``{ f1, f2 }`` (brace + comma), which Mace4/Prover9 reject as "Set parsing is
     not available" (the reason the legacy Prover9 path never genuinely decided
     and always fell back). Mace4 searches for a model of these assumptions.
     """
-    clauses = []
-    iterator = belief_set.iterator()
-    while iterator.hasNext():
-        formula = iterator.next()
-        ladr = _tweety_fol_to_ladr(str(formula.toString())).strip()
-        if ladr:
-            clauses.append(ladr.rstrip(".") + ".")
-    body = "\n".join(clauses)
+    body = "\n".join(_ladr_text(formula) + "." for formula in belief_set)
     # #2482: LADR reads a free symbol starting with ``u``-``z`` as a variable,
     # so the constant in ``Red(zone)`` meant "everything is red" and a
     # consistent KB had no model. Prolog style is Tweety's own convention
@@ -189,14 +151,14 @@ def _prover9_input(belief_set, goal=None) -> str:
     """Prover9 input for a Tweety ``FolBeliefSet`` (#2482).
 
     The one builder every Prover9 caller uses: the belief set's formulas as
-    LADR assumptions (the translation Mace4 uses), and one goal, a parsed
-    Tweety formula translated the same way. Without a goal it is ``$F``: a
+    LADR assumptions (the text Mace4 reads), and one goal, a parsed Tweety
+    formula written the same way. Without a goal it is ``$F``: a
     proof of falsehood from the assumptions means they are inconsistent.
     """
     if goal is None:
         goal_ladr = "$F"
     else:
-        goal_ladr = _tweety_fol_to_ladr(str(goal.toString())).strip().rstrip(".")
+        goal_ladr = _ladr_text(goal)
     return (
         f"{_belief_set_to_ladr_assumptions(belief_set)}"
         f"formulas(goals).\n{goal_ladr}.\nend_of_list.\n"
@@ -279,6 +241,10 @@ def _fol_class(name: str):
     return jpype.JClass("org.tweetyproject.logics.fol.syntax." + name)
 
 
+def _commons_class(name: str):
+    return jpype.JClass("org.tweetyproject.logics.commons.syntax." + name)
+
+
 def _positive_existentials(java_belief_set) -> "tuple[list, bool]":
     """The sorts of the variables quantified existentially in effect, and
     whether an inconsistency found over one witness per variable is exact
@@ -339,48 +305,126 @@ def _positive_existentials(java_belief_set) -> "tuple[list, bool]":
     return sorts, exact[0]
 
 
-def _tweety_text(formula) -> str:
-    """``formula`` in the syntax the Tweety parser reads, every sub-formula
-    parenthesised (#2494).
+class UnwritableFormula(SolverInputDefect):
+    """The writer has no text for a node of the formula (#2504). The parser
+    gives none of these (an uppercase name parses as a variable, and equality
+    is refused), so the formula was built in code: a defect of our input, like
+    one Prover9 refuses."""
+
+
+def _ladr_term(term) -> str:
+    """``term`` in LADR, which reads a symbol by its first letter under
+    Prolog-style variables (#2482). Tweety refuses a variable that does not
+    start uppercase. A constant built in code may start uppercase, and LADR
+    would read it as a variable, so it is refused."""
+    name = str(term)
+    first = name[:1]
+    if isinstance(term, _commons_class("Variable")):
+        return name
+    if isinstance(term, _commons_class("Constant")) and (
+        first.islower() or first.isdigit()
+    ):
+        return name
+    raise UnwritableFormula(f"no LADR text for the term {name}")
+
+
+# The two syntaxes a formula is written in (#2494, #2504): the Tweety parser's,
+# and LADR's, which Prover9 and Mace4 read. LADR has no exclusive disjunction,
+# and it reads a symbol that starts uppercase in a formula's place as a
+# variable (``Bad`` alone was refused), so its predicates carry a prefix.
+_TWEETY_SYNTAX = {
+    "not": "!",
+    "and": " && ",
+    "or": " || ",
+    "xor": " ^^ ",
+    "implies": " => ",
+    "iff": " <=> ",
+    "forall": "forall {}: ({})",
+    "exists": "exists {}: ({})",
+    "true": "+",
+    "false": "-",
+    "predicate": "{}",
+    "term": str,
+}
+_LADR_SYNTAX = {
+    "not": "-",
+    "and": " & ",
+    "or": " | ",
+    "xor": None,
+    "implies": " -> ",
+    "iff": " <-> ",
+    "forall": "all {} ({})",
+    "exists": "exists {} ({})",
+    "true": "$T",
+    "false": "$F",
+    "predicate": "p_{}",
+    "term": _ladr_term,
+}
+
+
+def _formula_text(formula, syntax: dict) -> str:
+    """``formula`` written from its structure in ``syntax``, every sub-formula
+    parenthesised (#2494, #2504).
 
     ``str()`` drops the parentheses a negation needs: ``!(Man(a) && Man(b))``
-    prints as ``!Man(a)&&Man(b)``, which parses back as another formula, and a
-    negated quantifier prints as text the parser refuses. A node this writer
-    does not know raises ``ValueError``.
+    prints as ``!Man(a)&&Man(b)``, which the Tweety parser and LADR both read
+    as another formula, and a negated quantifier prints as text the parser
+    refuses. A node this writer does not know raises ``ValueError``.
     """
     if isinstance(formula, _fol_class("Negation")):
-        return f"!({_tweety_text(formula.getFormula())})"
-    for name, connective in (("Conjunction", " && "), ("Disjunction", " || ")):
+        return f"{syntax['not']}({_formula_text(formula.getFormula(), syntax)})"
+    for name, key in (
+        ("Conjunction", "and"),
+        ("Disjunction", "or"),
+        ("ExclusiveDisjunction", "xor"),
+    ):
         if isinstance(formula, _fol_class(name)):
-            parts = [_tweety_text(sub) for sub in formula.getFormulas()]
-            return "(" + connective.join(f"({part})" for part in parts) + ")"
-    for name, connective in (("Implication", " => "), ("Equivalence", " <=> ")):
+            parts = [_formula_text(sub, syntax) for sub in formula.getFormulas()]
+            if syntax[key] is None:
+                # Tweety's exclusive disjunction holds when an odd number of
+                # its operands do, which a chain of non-equivalences writes.
+                text = parts[0]
+                for part in parts[1:]:
+                    text = f"{syntax['not']}(({text}){syntax['iff']}({part}))"
+                return text
+            return "(" + syntax[key].join(f"({part})" for part in parts) + ")"
+    for name, key in (("Implication", "implies"), ("Equivalence", "iff")):
         if isinstance(formula, _fol_class(name)):
             pair = formula.getFormulas()
-            first, second = _tweety_text(pair.getFirst()), _tweety_text(
-                pair.getSecond()
-            )
-            return f"(({first}){connective}({second}))"
-    for name, keyword in (
+            first = _formula_text(pair.getFirst(), syntax)
+            second = _formula_text(pair.getSecond(), syntax)
+            return f"(({first}){syntax[key]}({second}))"
+    for name, key in (
         ("ExistsQuantifiedFormula", "exists"),
         ("ForallQuantifiedFormula", "forall"),
     ):
         if isinstance(formula, _fol_class(name)):
-            text = _tweety_text(formula.getFormula())
+            text = _formula_text(formula.getFormula(), syntax)
             for variable in formula.getQuantifierVariables():
-                text = f"{keyword} {variable}: ({text})"
+                text = syntax[key].format(syntax["term"](variable), text)
             return text
     if isinstance(formula, _fol_class("FolAtom")):
         name = str(formula.getPredicate().getName())
         if not name[:1].isalpha():
-            raise ValueError(f"no Tweety text for the built-in predicate {name}")
-        args = [str(term) for term in formula.getArguments()]
+            raise UnwritableFormula(f"no text for the built-in predicate {name}")
+        args = [syntax["term"](term) for term in formula.getArguments()]
+        name = syntax["predicate"].format(name)
         return f"{name}({', '.join(args)})" if args else name
     if isinstance(formula, _fol_class("Tautology")):
-        return "+"
+        return syntax["true"]
     if isinstance(formula, _fol_class("Contradiction")):
-        return "-"
-    raise ValueError(f"no Tweety text for {formula.getClass().getName()}")
+        return syntax["false"]
+    raise UnwritableFormula(f"no text for {formula.getClass().getName()}")
+
+
+def _tweety_text(formula) -> str:
+    """``formula`` in the syntax the Tweety parser reads (#2494)."""
+    return _formula_text(formula, _TWEETY_SYNTAX)
+
+
+def _ladr_text(formula) -> str:
+    """``formula`` in LADR, the input of Prover9 and Mace4 (#2504)."""
+    return _formula_text(formula, _LADR_SYNTAX)
 
 
 def _in_jvm_consistency(reasoner, java_belief_set) -> "tuple[bool | None, str]":
@@ -830,7 +874,7 @@ class FOLHandler:
         if settings.solver == SolverChoice.PROVER9:
             try:
                 return await self._fol_check_consistency_with_prover9(belief_set)
-            except Prover9InputRejected:
+            except SolverInputDefect:
                 # #2489: a refused input is the builder's defect, not an
                 # unavailable solver.
                 raise
@@ -854,6 +898,9 @@ class FOLHandler:
         elif settings.solver == SolverChoice.MACE4:
             try:
                 return await self._fol_check_consistency_with_mace4(belief_set)
+            except SolverInputDefect:
+                # #2504: an input the writer could not write, likewise.
+                raise
             except RuntimeError as e:
                 self.logger.warning(
                     f"Mace4 unavailable ({e}), falling back to Tweety FOL reasoner"
@@ -907,7 +954,7 @@ class FOLHandler:
             msg = f"Prover9-based consistency check result: {is_consistent}"
             logger.info(msg)
             return is_consistent, msg
-        except Prover9InputRejected:
+        except SolverInputDefect:
             # #2489: a refused input is the builder's defect; it keeps its type.
             raise
         except Exception as e:
@@ -1077,7 +1124,7 @@ class FOLHandler:
                     self._fol_query_with_prover9(belief_set, query_formula_str),
                     False,
                 )
-            except Prover9InputRejected:
+            except SolverInputDefect:
                 # #2489: Prover9 refused the input we built. The in-JVM
                 # reasoner would answer, and the defect would stay invisible.
                 raise
@@ -1138,7 +1185,7 @@ class FOLHandler:
 
             logger.info(f"FOL Query: KB entails '{query_formula_str}'? {entails}")
             return entails
-        except Prover9InputRejected:
+        except SolverInputDefect:
             raise
         except Exception as e:
             logger.error(f"Error during external FOL query: {e}", exc_info=True)
@@ -1270,6 +1317,10 @@ class FOLHandler:
                         f"FOL consistency check (Mace4): {verdict}. {note}",
                         "mace4",
                     )
+                except SolverInputDefect:
+                    # #2504: the writer could not write our input; not an
+                    # unavailable Mace4.
+                    raise
                 except Exception as e:
                     self.logger.warning(
                         f"Mace4 consistency check failed: {e}. Returning degraded "
@@ -1300,7 +1351,7 @@ class FOLHandler:
                             run_prover9(_prover9_input(java_belief_set))
                         )
                         fallback_note = "Prover9 decided nothing; "
-                    except Prover9InputRejected:
+                    except SolverInputDefect:
                         raise
                     except Exception as e:
                         first_line = (str(e).splitlines() or [""])[0]
@@ -1415,7 +1466,7 @@ class FOLHandler:
                     None,
                 )
 
-        except Prover9InputRejected:
+        except SolverInputDefect:
             # #2489: not a check that could not run, a defect in our input.
             raise
         except Exception as e:

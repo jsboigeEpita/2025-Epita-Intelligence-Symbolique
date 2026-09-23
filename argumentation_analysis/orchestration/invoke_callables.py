@@ -40,7 +40,7 @@ from argumentation_analysis.core.llm_service import (
     REASONING_MODEL_PREFIXES as _REASONING_MODEL_PREFIXES,
 )
 from argumentation_analysis.services.llm_cache import LLMCacheMiss
-from argumentation_analysis.core.prover9_runner import Prover9InputRejected
+from argumentation_analysis.core.prover9_runner import SolverInputDefect
 
 logger = logging.getLogger("UnifiedPipeline")
 
@@ -7559,7 +7559,7 @@ async def _invoke_fol_reasoning(
                     f_verdict, _f_msg = await asyncio.to_thread(
                         bridge.check_consistency, single_bs, "first_order"
                     )
-                except Prover9InputRejected:
+                except SolverInputDefect:
                     # #2489: Prover9 refused the input our builder made. The
                     # formula is not Tweety's poison, and dropping it would
                     # hide the defect.
@@ -7617,7 +7617,7 @@ async def _invoke_fol_reasoning(
                 iso_consistent, iso_msg = await asyncio.to_thread(
                     bridge.check_consistency, combined_bs, "first_order"
                 )
-            except Prover9InputRejected:
+            except SolverInputDefect:
                 raise
             except Exception as iso_err:
                 logger.warning(
@@ -7744,7 +7744,7 @@ async def _invoke_fol_reasoning(
             ),
             **({"strategic_objective_ids": _strat_ids_fol} if _strat_ids_fol else {}),
         }
-    except Prover9InputRejected:
+    except SolverInputDefect:
         # #2489: with PROVER9 configured, a refused input is the builder's
         # defect. Read as a Tweety parse failure, it sent every formula to
         # isolation, where each one was dropped as "rejected by Tweety".
@@ -10206,7 +10206,7 @@ async def _invoke_external_fol_solver(
             "message": msg,
             "logic_type": "first_order",
         }
-    except Prover9InputRejected:
+    except SolverInputDefect:
         # #2489: Prover9 refused the input our builder made. That is a defect,
         # so the phase fails with the binary's text; the dict below would
         # report it as a completed phase without a verdict.

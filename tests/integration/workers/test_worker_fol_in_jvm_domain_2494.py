@@ -11,6 +11,7 @@ inconsistent. Synthetic predicates and constants only.
 """
 
 import asyncio
+import re
 import sys
 from unittest.mock import MagicMock
 
@@ -138,6 +139,7 @@ ROUND_TRIP = [
     "forall X: (exists Y: (R(X, Y) && !(R(Y, X) => Man(Y))))",
     "Bad",
     "+",
+    "Man(a) ^^ Man(b) ^^ R(a, b)",
 ]
 
 
@@ -164,6 +166,49 @@ def test_the_copy_writes_each_formula_back_as_itself(handler, text):
     written = fol._tweety_text(formula)
 
     assert reparser.parseFormula(written).equals(formula), written
+
+
+# LADR back to the parser's syntax, token by token (#2504). The writer
+# parenthesises every sub-formula, so no precedence is left to guess.
+_FROM_LADR = [
+    ("<->", "<=>"),
+    ("->", "=>"),
+    ("&", "&&"),
+    ("|", "||"),
+    ("-", "!"),
+    ("$T", "+"),
+    ("$F", "-"),
+]
+
+
+@pytest.mark.parametrize("text", [t for t in ROUND_TRIP if "^^" not in t])
+def test_the_ladr_input_means_each_formula(handler, text):
+    """#2504: Prover9 and Mace4 read the formula of the belief set, written
+    by the same writer. LADR has no exclusive disjunction; those rows are
+    decided on the binaries in ``test_worker_ladr_from_structure_2504.py``."""
+    import jpype
+
+    from argumentation_analysis.agents.core.logic import fol_handler as fol
+
+    belief_set = handler.create_belief_set_from_string(
+        _kb("thing = {a, b}", ["Man(thing)", "R(thing, thing)", "Bad"], "Man(a)")
+    )
+    parser_cls = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
+    parser = parser_cls()
+    parser.setSignature(belief_set.getSignature())
+    formula = parser.parseFormula(text)
+    reparser = parser_cls()
+    reparser.setSignature(belief_set.getSignature())
+
+    ladr = fol._ladr_text(formula)
+    back = ladr
+    for ladr_token, tweety_token in _FROM_LADR:
+        back = back.replace(ladr_token, tweety_token)
+    back = re.sub(r"\b(all|exists) (\w+) \(", r"\1 \2: (", back)
+    back = re.sub(r"\ball ", "forall ", back)
+    back = re.sub(r"\bp_(\w+)", r"\1", back)
+
+    assert reparser.parseFormula(back).equals(formula), (ladr, back)
 
 
 @pytest.mark.parametrize("label", list(EXACT))
