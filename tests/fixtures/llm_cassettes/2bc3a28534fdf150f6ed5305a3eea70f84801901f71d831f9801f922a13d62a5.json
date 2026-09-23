@@ -1,14 +1,14 @@
 {
   "key": "2bc3a28534fdf150f6ed5305a3eea70f84801901f71d831f9801f922a13d62a5",
   "value": {
-    "id": "chatcmpl-EPyT9WfQOEEmlFrKo1uNFFyQ34QRS",
+    "id": "chatcmpl-ER3UD6a3ty9AaqP1y6QCBUudIUknF",
     "choices": [
       {
         "finish_reason": "stop",
         "index": 0,
         "logprobs": null,
         "message": {
-          "content": "{\"arguments\":[{\"text\":\"L'option A défend l'organisation d'un tournoi inter-villes avec buffet et prix, en consacrant l'intégralité du budget à cet événement afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B défend l'investissement de l'intégralité du budget dans du matériel pédagogique et des échiquiers neufs.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C défend un compromis entre événement et équipement, avec un tournoi réduit et un investissement équivalent dans le matériel.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose chaque année d'un budget participatif de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"L'option A est chiffrée à 2000 euros et inclut un tournoi inter-villes, un buffet et des prix.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"Selon la formulation du texte, l'organisation du tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option B prévoit de consacrer 2000 euros au matériel pédagogique et à de nouveaux échiquiers.\",\"source_quote\":\"investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C répartit le budget en deux parts égales de 1000 euros : une pour un tournoi réduit et une pour du matériel.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel.\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'affectation d'un budget annuel de 2000 euros : un tournoi destiné à accroître la visibilité, un investissement matériel, ou un compromis hybride. La structure repose sur une comparaison directe entre rayonnement événementiel, amélioration des ressources et partage équilibré du budget.\"}",
+          "content": "{\"arguments\":[{\"text\":\"L'option A consiste à consacrer les 2000 euros à un tournoi inter-villes comprenant un buffet et des prix, afin d'accroître la visibilité du club.\",\"source_quote\":\"Option A : organiser un tournoi inter-villes avec buffet et prix pour 2000 euros, augmentant la visibilite du club.\"},{\"text\":\"L'option B consiste à investir les 2000 euros dans du matériel pédagogique et de nouveaux échiquiers.\",\"source_quote\":\"Option B : investir les 2000 euros en materiel pedagogique et echiquiers neufs.\"},{\"text\":\"L'option C propose de répartir le budget entre un tournoi réduit de 1000 euros et l'achat de matériel pour 1000 euros.\",\"source_quote\":\"Option C : un format hybride, 1000 euros tournoi reduit et 1000 euros materiel.\"}],\"claims\":[{\"text\":\"Le club d'échecs dispose d'un budget participatif annuel de 2000 euros.\",\"source_quote\":\"Le club d'echecs dispose d'un budget participatif annuel de 2000 euros.\"},{\"text\":\"Un tournoi inter-villes avec buffet et prix peut être organisé pour 2000 euros.\",\"source_quote\":\"organiser un tournoi inter-villes avec buffet et prix pour 2000 euros\"},{\"text\":\"L'organisation du tournoi inter-villes augmenterait la visibilité du club.\",\"source_quote\":\"augmentant la visibilite du club.\"},{\"text\":\"L'option C prévoit une répartition égale de 1000 euros entre le tournoi réduit et le matériel.\",\"source_quote\":\"1000 euros tournoi reduit et 1000 euros materiel.\"}],\"summary\":\"Le texte présente trois options concurrentes pour l'utilisation d'un budget annuel de 2000 euros : privilégier la visibilité par un tournoi, privilégier les ressources pédagogiques, ou combiner les deux à parts égales.\"}",
           "refusal": null,
           "role": "assistant",
           "annotations": [],
@@ -18,7 +18,7 @@
         }
       }
     ],
-    "created": 1789859351,
+    "created": 1790116965,
     "model": "gpt-5.6-luna",
     "object": "chat.completion",
     "metadata": null,
@@ -26,13 +26,13 @@
     "service_tier": "default",
     "system_fingerprint": null,
     "usage": {
-      "completion_tokens": 560,
+      "completion_tokens": 517,
       "prompt_tokens": 402,
-      "total_tokens": 962,
+      "total_tokens": 919,
       "completion_tokens_details": {
         "accepted_prediction_tokens": 0,
         "audio_tokens": 0,
-        "reasoning_tokens": 61,
+        "reasoning_tokens": 114,
         "rejected_prediction_tokens": 0,
         "text_tokens": null
       },

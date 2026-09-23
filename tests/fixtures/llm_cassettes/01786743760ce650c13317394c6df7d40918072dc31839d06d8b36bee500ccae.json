@@ -1,0 +1,48 @@
+{
+  "key": "01786743760ce650c13317394c6df7d40918072dc31839d06d8b36bee500ccae",
+  "value": {
+    "id": "chatcmpl-ER3WXk5l8KySfXZEKDg1uXXBsNIz3",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"enrichments\":[{\"arg_id\":\"arg_1\",\"implicit_assumptions\":[\"La vaccination désigne l’ensemble des vaccins, indépendamment des maladies, des populations et des contextes.\",\"La vaccination est nécessaire, et pas seulement utile, pour protéger la santé publique.\",\"Les bénéfices collectifs l’emportent généralement sur les risques et les coûts éventuels.\"],\"reasoning_assessment\":\"weak\",\"evidence_quality\":\"none\",\"bias_indicators\":[\"Formulation absolue avec le terme « indispensable ».\",\"Généralisation non nuancée.\"],\"improvement_suggestion\":\"Préciser de quels vaccins et de quels résultats de santé publique il est question, puis appuyer l’affirmation par des données comparant les bénéfices collectifs aux risques connus.\",\"llm_assessment\":\"L’énoncé exprime une conclusion plausible, mais il ne fournit ni raisonnement ni preuve permettant d’établir le caractère véritablement indispensable de la vaccination. Sa portée très générale et son vocabulaire absolu nuisent à la clarté et à la précision.\"},{\"arg_id\":\"arg_2\",\"implicit_assumptions\":[\"Tous les vaccins présentent un niveau de danger comparable.\",\"La présence d’effets indésirables suffit à établir que les vaccins sont globalement dangereux.\",\"Les risques éventuels dépassent leurs bénéfices pour la population.\"],\"reasoning_assessment\":\"weak\",\"evidence_quality\":\"none\",\"bias_indicators\":[\"Généralisation abusive à partir d’une catégorie très large.\",\"Vocabulaire alarmiste et non quantifié.\",\"Absence de distinction entre effets bénins, rares et graves.\"],\"improvement_suggestion\":\"Identifier le vaccin, le risque précis, sa fréquence et sa gravité, puis comparer ces données aux bénéfices attendus et aux risques de la maladie évitée.\",\"llm_assessment\":\"Cette affirmation est trop vague pour constituer un argument évalué rationnellement : elle ne précise ni le danger ni son ampleur. Elle semble reposer sur une généralisation et une présentation alarmiste plutôt que sur des éléments vérifiables.\"},{\"arg_id\":\"arg_3\",\"implicit_assumptions\":[\"Les entreprises pharmaceutiques agissent de manière coordonnée et dissimulent systématiquement des informations.\",\"Les effets secondaires concernés sont suffisamment établis pour être volontairement cachés.\",\"Les mécanismes de surveillance, les publications et les autorités de régulation ne détectent pas ces dissimulations.\"],\"reasoning_assessment\":\"weak\",\"evidence_quality\":\"none\",\"bias_indicators\":[\"Accusation généralisée visant l’ensemble des entreprises pharmaceutiques.\",\"Cadre potentiellement conspirationniste.\",\"Absence de cas, de sources ou de distinction entre omission, erreur et dissimulation volontaire.\"],\"improvement_suggestion\":\"Citer des entreprises, produits, documents ou décisions réglementaires précis, et distinguer les preuves de dissimulation intentionnelle des erreurs de communication ou des désaccords scientifiques.\",\"llm_assessment\":\"L’énoncé avance une accusation grave sans exemple ni source et transforme éventuellement certains cas particuliers en règle générale. La plausibilité abstraite d’un conflit d’intérêts ne suffit pas à démontrer une dissimulation systématique.\"},{\"arg_id\":\"arg_4\",\"implicit_assumptions\":[\"Les résultats de la recherche scientifique invoqués sont robustes, convergents et correctement interprétés.\",\"Les améliorations historiques concernant les maladies sont principalement attribuables à la vaccination.\",\"Les résultats passés restent pertinents pour les vaccins et les contextes actuels.\"],\"reasoning_assessment\":\"moderate\",\"evidence_quality\":\"moderate\",\"bias_indicators\":[\"Appel général à l’autorité de la science sans références précises.\",\"Risque d’attribution causale simplifiée des effets historiques.\",\"Formulation indirecte qui ne précise pas clairement la thèse défendue.\"],\"improvement_suggestion\":\"Nommer les maladies, les périodes et les études ou indicateurs concernés, tout en distinguant l’effet de la vaccination de celui d’autres facteurs comme l’hygiène, les traitements et l’accès aux soins.\",\"llm_assessment\":\"Cet énoncé mobilise des types de preuves pertinents — recherche scientifique et tendances historiques — ce qui lui donne une base argumentative plus solide que les autres. Toutefois, il reste formulé de manière abstraite et ne fournit aucune donnée précise ni démonstration causale.\"}]}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790117109,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 1072,
+      "prompt_tokens": 312,
+      "total_tokens": 1384,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 175,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

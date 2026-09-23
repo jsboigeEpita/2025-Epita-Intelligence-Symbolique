@@ -1,0 +1,48 @@
+{
+  "key": "a12fb9bd4ef600af7afd5f6d1bb159986b104b7ce2c0f3158afead287c843735",
+  "value": {
+    "id": "chatcmpl-ER3UBYz5WzBVECvMlA8pXWTYJxJWj",
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "index": 0,
+        "logprobs": null,
+        "message": {
+          "content": "{\"score\":0.5,\"exhibit\":\"Les deux points portent sur l’autorité épistémique, mais expriment des thèses différentes : le premier affirme que l’unanimité des experts suffit à établir la vérité, tandis que le second exclut la valeur probante de l’avis des non-experts. Ils se recoupent partiellement sans être redondants.\"}",
+          "refusal": null,
+          "role": "assistant",
+          "annotations": [],
+          "audio": null,
+          "function_call": null,
+          "tool_calls": null
+        }
+      }
+    ],
+    "created": 1790116963,
+    "model": "gpt-5.6-luna",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": "default",
+    "system_fingerprint": null,
+    "usage": {
+      "completion_tokens": 177,
+      "prompt_tokens": 274,
+      "total_tokens": 451,
+      "completion_tokens_details": {
+        "accepted_prediction_tokens": 0,
+        "audio_tokens": 0,
+        "reasoning_tokens": 88,
+        "rejected_prediction_tokens": 0,
+        "text_tokens": null
+      },
+      "prompt_tokens_details": {
+        "audio_tokens": 0,
+        "cache_write_tokens": 0,
+        "cached_tokens": 0,
+        "image_tokens": null,
+        "text_tokens": null
+      }
+    }
+  }
+}

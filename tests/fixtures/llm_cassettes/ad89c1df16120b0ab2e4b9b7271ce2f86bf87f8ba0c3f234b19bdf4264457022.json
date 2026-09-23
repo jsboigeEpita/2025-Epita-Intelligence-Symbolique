@@ -1,0 +1,40 @@
+{
+  "key": "ad89c1df16120b0ab2e4b9b7271ce2f86bf87f8ba0c3f234b19bdf4264457022",
+  "value": [
+    {
+      "role": "assistant",
+      "content": "",
+      "function_calls": [
+        {
+          "id": "call_amwHNMFTR1AOuvTb6YzB7jLr",
+          "name": "Exploration-confirm_fallacy",
+          "arguments": "{\"node_pk\":\"301\",\"confidence\":\"low\",\"justification\":\"Le texte contient bien un appel à l’autorité et une disqualification de l’avis des non-experts, mais le nœud « appel à la conviction » ne correspond pas précisément à ces mécanismes. Aucun enfant affiché (« effet de halo ») ne décrit ce cas.\"}"
+        }
+      ],
+      "metadata": {
+        "logprobs": null,
+        "id": "chatcmpl-ER3SZO4Qi6ijWBMgu1XO7gMzdIuGs",
+        "created": 1790116863,
+        "system_fingerprint": null,
+        "usage": {
+          "prompt_tokens": 1208,
+          "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 1205,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null
+          },
+          "completion_tokens": 89,
+          "completion_tokens_details": {
+            "accepted_prediction_tokens": 0,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": 0,
+            "text_tokens": null
+          }
+        }
+      }
+    }
+  ]
+}
