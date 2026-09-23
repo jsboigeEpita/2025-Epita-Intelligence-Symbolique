@@ -7098,7 +7098,8 @@ async def _invoke_propositional_logic(
                 except Exception:
                     logger.debug(f"PL formula rejected by Tweety: {formula}")
 
-        if valid_formulas:
+        # Survivors imply a bridge; the second test only narrows its type.
+        if valid_formulas and bridge is not None:
             pl_metrics["post_tweety"] = len(valid_formulas)
             pl_metrics["isolation_survivors"] = len(valid_formulas)
             logger.info(
