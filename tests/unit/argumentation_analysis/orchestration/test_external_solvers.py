@@ -464,28 +464,18 @@ class TestParseFailureIsNotAVerdict:
 
         #2482: the reading moved into ``FOLHandler.check_consistency_by``,
         which the phase calls. This drives the phase over the real handler;
-        only the binary and the JVM belief set are doubles.
+        only the binary, the JVM belief set and the writer that turns its Java
+        formula into LADR (#2504, tested on the real JVM) are doubles.
         """
         from argumentation_analysis.agents.core.logic import fol_handler as fh
         from argumentation_analysis.orchestration.invoke_callables import (
             _invoke_external_fol_solver,
         )
 
-        class _JavaIterator:
-            def __init__(self, items):
-                self._items = list(items)
-
-            def hasNext(self):
-                return bool(self._items)
-
-            def next(self):
-                return self._items.pop(0)
-
         formula = MagicMock()
-        formula.toString.return_value = "P(a)"
         belief_set = MagicMock()
         belief_set.size.return_value = 1
-        belief_set.iterator.side_effect = lambda: _JavaIterator([formula])
+        belief_set.__iter__.side_effect = lambda: iter([formula])
         handler = fh.FOLHandler(initializer_instance=None)
         bridge = MagicMock()
         bridge.fol_handler = handler
@@ -505,6 +495,8 @@ class TestParseFailureIsNotAVerdict:
                 {"argumentation_analysis.agents.core.logic.tweety_bridge": fake_mod},
             ), patch.object(fh, "run_prover9", side_effect=fake_run), patch.object(
                 fh, "PROVER9_EXECUTABLE", binary
+            ), patch.object(
+                fh, "_ladr_text", {formula: "P(a)"}.__getitem__
             ), patch.object(
                 handler, "create_belief_set_from_string", return_value=belief_set
             ):

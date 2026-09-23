@@ -7,14 +7,18 @@ PROVER9_BIN_DIR = Path(__file__).parent.parent.parent / "libs" / "prover9" / "bi
 PROVER9_EXECUTABLE = PROVER9_BIN_DIR / "prover9.bat"
 
 
-class Prover9InputRejected(RuntimeError):
-    """Prover9 refused its input: the binary printed its ``Fatal error``
-    marker (#2489).
+class SolverInputDefect(RuntimeError):
+    """The input our code built for an external solver is wrong (#2489,
+    #2504): a defect of that builder, never a property of the problem. A
+    caller that degrades on a timeout, an undecided run or an absent binary
+    must let this one through.
+    """
 
-    The input is built by our code (``fol_handler._prover9_input``), so a
-    refusal is a defect of that builder, never a property of the problem. A
-    caller that degrades on a timeout or an undecided run must let this one
-    through.
+
+class Prover9InputRejected(SolverInputDefect):
+    """Prover9 refused its input: the binary printed its ``Fatal error``
+    marker (#2489). The input is built by our code
+    (``fol_handler._prover9_input``).
     """
 
 

@@ -16,9 +16,9 @@ def mock_belief_set():
     bs = MagicMock()
     bs.toString.return_value = "some_formula(a)."
     bs.size.return_value = 1
-    # A FolBeliefSet is a Java Collection: the LADR translation iterates it
-    # (#2482). An endless MagicMock ``hasNext()`` would hang that loop.
-    bs.iterator.return_value.hasNext.return_value = False
+    # A FolBeliefSet is a Java Collection, which the LADR writer iterates
+    # (#2482, #2504): this one is empty.
+    bs.__iter__.side_effect = lambda: iter([])
     return bs
 
 
@@ -47,7 +47,12 @@ def test_fol_query_solver_dispatch(
     # belief set does not carry, and Prover9's answer is read from its stdout;
     # an undecided run falls back to Tweety, so the double must decide: it
     # ends like the binary's output, with its proof count and exit (#2506).
+    # The LADR writer needs the parsed Java formula (#2504), which a mock
+    # query is not, so the input it builds is doubled too.
     with patch(
+        "argumentation_analysis.agents.core.logic.fol_handler._prover9_input",
+        return_value="formulas(goals).\nquery(a).\nend_of_list.\n",
+    ), patch(
         "argumentation_analysis.agents.core.logic.fol_handler.run_prover9",
         return_value="THEOREM PROVED\n\nExiting with 1 proof.\n\n"
         "Process 1 exit (max_proofs) Wed Sep 23 21:10:43 2026\n",
