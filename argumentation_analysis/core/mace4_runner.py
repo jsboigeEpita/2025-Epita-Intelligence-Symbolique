@@ -28,8 +28,9 @@ Two firsthand facts (po-2025, 2026-06-23, synthetic atoms) shape this runner:
    ``MODEL`` (consistent); ``{P(a), -P(a)}`` → ``exit (exhausted)`` with
    ``current_models=0`` (no finite model ≤ N).
 
-A timeout / crash / fatal-parse is surfaced as ``RuntimeError`` so the caller
-falls back honestly — never a fabricated verdict on degraded execution.
+A timeout or a crash is surfaced as ``RuntimeError`` so the caller
+falls back honestly. A refused input is ``Mace4InputRejected``: we built it, so
+the caller lets it through (#2508) — never a fabricated verdict on degraded execution.
 """
 
 import os
@@ -37,6 +38,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
+
+from argumentation_analysis.core.prover9_runner import SolverInputDefect
 
 MACE4_BIN_DIR = Path(__file__).parent.parent.parent / "libs" / "prover9" / "bin"
 MACE4_EXECUTABLE = MACE4_BIN_DIR / "mace4.exe"
@@ -48,6 +51,13 @@ MACE4_EXECUTABLE = MACE4_BIN_DIR / "mace4.exe"
 MACE4_DEFAULT_MAX_DOMAIN = 10
 # A hard ceiling: a genuine bounded search on a small KB returns well under 1s.
 MACE4_DEFAULT_TIMEOUT = 30
+
+
+class Mace4InputRejected(SolverInputDefect):
+    """Mace4 refused its input: the binary printed its ``Fatal error`` marker
+    (#2508). The input is built by our code
+    (``fol_handler._belief_set_to_ladr_assumptions``).
+    """
 
 
 def run_mace4(
@@ -72,9 +82,10 @@ def run_mace4(
 
     Raises:
         FileNotFoundError: if the Mace4 binary is not present.
-        RuntimeError: on timeout (deadlock / runaway search) or a fatal Mace4
-            parse error (malformed input must surface, not masquerade as a
-            verdict — #1019).
+        Mace4InputRejected: on a fatal Mace4 parse error. Malformed input
+            must surface, not masquerade as a verdict (#1019), nor as an
+            unavailable binary (#2508).
+        RuntimeError: on timeout (deadlock / runaway search).
     """
     if not MACE4_EXECUTABLE.is_file():
         raise FileNotFoundError(f"Mace4 executable not found at {MACE4_EXECUTABLE}")
@@ -120,7 +131,7 @@ def run_mace4(
         stdout = process.stdout or ""
         # A genuine parse error must surface, not be read as "no model".
         if "Fatal error" in stdout or "Fatal error" in (process.stderr or ""):
-            raise RuntimeError(
+            raise Mace4InputRejected(
                 "Mace4 reported a fatal error (likely malformed LADR input):\n"
                 f"{stdout}\n{process.stderr or ''}"
             )
