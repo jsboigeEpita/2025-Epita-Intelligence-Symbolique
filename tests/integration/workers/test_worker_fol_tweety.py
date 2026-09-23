@@ -280,6 +280,68 @@ Man(socrate)
         logger.info("✅ Analyse du syllogisme par chaîne de caractères réussie.")
 
     @pytest.mark.asyncio
+    async def test_query_on_a_constant_declared_only_in_a_sort(
+        self, fol_agent_with_kernel, jvm_session
+    ):
+        """#2447: ``platon`` is declared in the sort and used in no formula.
+        On ``main`` every query on it failed to parse ("Constant 'platon' has
+        not been declared") and came back ``False``, so a KB that entails
+        ``Mortal(platon)`` answered "not entailed"."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+
+        agent = fol_agent_with_kernel
+        syllogism_str = """
+human = {socrate, platon}
+type(Man(human))
+type(Mortal(human))
+
+forall X: (Man(X) => Mortal(X))
+Man(socrate)
+"""
+        syllogism = FirstOrderBeliefSet(content=syllogism_str)
+        entailed, msg = await agent.execute_query(syllogism, "Mortal(platon)")
+        assert entailed is False, msg
+        assert msg.endswith("not entailed"), msg
+
+        # The KB entails it: the verdict must say so, not only "not entailed".
+        everyone_mortal_str = """
+human = {socrate, platon}
+type(Mortal(human))
+
+forall X: (Mortal(X))
+"""
+        everyone_mortal = FirstOrderBeliefSet(content=everyone_mortal_str)
+        entailed, msg = await agent.execute_query(everyone_mortal, "Mortal(platon)")
+        assert entailed is True, msg
+
+        # A pre-built Java belief set carries the declared signature too.
+        handler = agent.tweety_bridge.fol_handler
+        java_bs = handler.create_belief_set_from_string(everyone_mortal_str)
+        entailed, msg = handler.execute_fol_query(java_bs, "Mortal(platon)")
+        assert entailed is True, msg
+
+    @pytest.mark.asyncio
+    async def test_a_query_that_cannot_be_parsed_decides_nothing(
+        self, fol_agent_with_kernel, jvm_session
+    ):
+        """#2447: a constant declared nowhere cannot be checked. The answer is
+        ``None`` with the parser's reason, not ``False``."""
+        if not jvm_session:
+            pytest.skip("Test nécessite la JVM.")
+
+        bridge = fol_agent_with_kernel.tweety_bridge
+        kb = """
+human = {socrate}
+type(Mortal(human))
+
+Mortal(socrate)
+"""
+        entailed, msg = bridge.execute_fol_query(kb, "Mortal(aristote)")
+        assert entailed is None, msg
+        assert "aristote" in msg
+
+    @pytest.mark.asyncio
     async def test_end_to_end_fol_syllogism_with_llm(
         self, fol_agent_with_kernel, jvm_session, caplog
     ):

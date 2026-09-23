@@ -318,6 +318,11 @@ class FOLHandler:
             local_parser = FolParser()
             reader = StringReader(tweety_syntax)
             belief_set = local_parser.parseBeliefBase(reader)
+            # The parsed belief set's signature holds only the symbols its
+            # formulas use: a constant declared in a sort and used in no formula
+            # is dropped, so a later query on it fails to parse (#2447). The
+            # parser's signature is the declared one.
+            belief_set.setSignature(local_parser.getSignature())
             logger.info(
                 f"Parsing réussi avec un parser local. {belief_set.size()} formules chargées."
             )
@@ -1123,7 +1128,9 @@ class FOLHandler:
             "disagreement": disagreement,
         }
 
-    def execute_fol_query(self, belief_set_input, query_str: str) -> tuple:
+    def execute_fol_query(
+        self, belief_set_input, query_str: str
+    ) -> tuple[bool | None, str]:
         """
         Execute a FOL query (entailment check) against a belief set.
 
@@ -1131,8 +1138,13 @@ class FOLHandler:
         for the belief set.
 
         Returns:
-            Tuple[bool, str]: (entailed, message)
+            Tuple[Optional[bool], str]: (entailed, message). ``True``/``False``
+            only when the reasoner answered; ``None`` when no check ran (no
+            initializer, no belief set, a parse or reasoner error), so that
+            "could not check" never reads as "not entailed" (#2447).
         """
+        if not self._initializer_instance:
+            return None, "Degraded: no Tweety initializer; no query verdict."
         try:
             # Parse belief set if string
             if isinstance(belief_set_input, str):
@@ -1143,29 +1155,25 @@ class FOLHandler:
                 java_belief_set = belief_set_input
 
             if java_belief_set is None:
-                return False, "Failed to create belief set."
+                return None, "Degraded: no belief set was built; no query verdict."
 
-            # Parse query formula with the belief set's signature
+            # The query parser takes the belief set's declared signature, not its
+            # minimal one: a constant declared only in a sort is absent from the
+            # minimal signature (#2447).
             FolParser = jpype.JClass("org.tweetyproject.logics.fol.parser.FolParser")
             query_parser = FolParser()
-            query_parser.setSignature(java_belief_set.getMinimalSignature())
+            query_parser.setSignature(java_belief_set.getSignature())
             query_formula = query_parser.parseFormula(query_str)
 
-            # Use reasoner if available
-            if self._initializer_instance:
-                reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
-                entailed = bool(reasoner.query(java_belief_set, query_formula))
-                msg = (
-                    f"Query '{query_str}': {'entailed' if entailed else 'not entailed'}"
-                )
-                return entailed, msg
-            else:
-                return False, "No Tweety initializer available for query."
+            reasoner = self._initializer_instance.get_reasoner("SimpleFolReasoner")
+            entailed = bool(reasoner.query(java_belief_set, query_formula))
+            msg = f"Query '{query_str}': {'entailed' if entailed else 'not entailed'}"
+            return entailed, msg
 
-        except (ValueError, Exception) as e:
+        except Exception as e:
             error_msg = str(e)
             self.logger.error(f"FOL query failed: {error_msg}")
-            return False, f"FOL query error: {error_msg}"
+            return None, f"Degraded: FOL query error ({error_msg}); no verdict."
 
     def validate_formula_with_signature(
         self, signature, formula_str: str
