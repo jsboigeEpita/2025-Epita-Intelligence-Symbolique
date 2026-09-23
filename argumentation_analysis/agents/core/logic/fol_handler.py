@@ -899,7 +899,8 @@ class FOLHandler:
             try:
                 return await self._fol_check_consistency_with_mace4(belief_set)
             except SolverInputDefect:
-                # #2504: an input the writer could not write, likewise.
+                # #2504, #2508: an input the writer could not write, or that
+                # Mace4 refused, likewise.
                 raise
             except RuntimeError as e:
                 self.logger.warning(
@@ -1318,8 +1319,8 @@ class FOLHandler:
                         "mace4",
                     )
                 except SolverInputDefect:
-                    # #2504: the writer could not write our input; not an
-                    # unavailable Mace4.
+                    # #2504, #2508: the writer could not write our input, or
+                    # Mace4 refused it; not an unavailable Mace4.
                     raise
                 except Exception as e:
                     self.logger.warning(
