@@ -55,6 +55,13 @@ except ImportError as e:
     )
     settings = None
 
+# #2344 (family b): every ImportError below used to leave a None that call
+# sites skipped silently — the only trace was a log line at import time.
+# The registry is the named state: symbol -> import error. It is exposed on
+# the ProjectContext so a caller can know WHAT was skipped (doctrine #1019:
+# the degradation lives in the state, not only in the log).
+BOOTSTRAP_IMPORT_FAILURES: Dict[str, str] = {}
+
 initialize_jvm_func = None
 CryptoService_class = None
 DefinitionService_class = None
@@ -73,6 +80,7 @@ except ImportError as e:
     logger.error(
         f"Failed to import start_jvm_if_needed (aliased as initialize_jvm_func): {e}"
     )
+    BOOTSTRAP_IMPORT_FAILURES["initialize_jvm_func"] = str(e)
 
 try:
     from argumentation_analysis.services.crypto_service import (
@@ -80,6 +88,7 @@ try:
     )
 except ImportError as e:
     logger.error(f"Failed to import CryptoService: {e}")
+    BOOTSTRAP_IMPORT_FAILURES["CryptoService_class"] = str(e)
 
 try:
     from argumentation_analysis.services.definition_service import (
@@ -87,6 +96,7 @@ try:
     )
 except ImportError as e:
     logger.error(f"Failed to import DefinitionService: {e}")
+    BOOTSTRAP_IMPORT_FAILURES["DefinitionService_class"] = str(e)
 
 try:
     from argumentation_analysis.core.llm_service import (
@@ -94,6 +104,7 @@ try:
     )
 except ImportError as e:
     logger.error(f"Failed to import create_llm_service: {e}")
+    BOOTSTRAP_IMPORT_FAILURES["create_llm_service_func"] = str(e)
 
 try:
     from argumentation_analysis.agents.core.informal.informal_agent import (
@@ -101,12 +112,14 @@ try:
     )
 except ImportError as e:
     logger.error(f"Failed to import {e}")
+    BOOTSTRAP_IMPORT_FAILURES["InformalAgent_class"] = str(e)
 
 try:
     import semantic_kernel as sk_module
 except ImportError as e:
     logger.error(f"Failed to import semantic_kernel: {e}")
     sk_module = None
+    BOOTSTRAP_IMPORT_FAILURES["sk_module"] = str(e)
 
 # L'import de ENCRYPTION_KEY depuis ui.config est supprimé au profit de l'objet settings.
 ENCRYPTION_KEY_imported = None
@@ -119,6 +132,7 @@ try:
     )
 except ImportError as e:
     logger.error(f"Failed to import extract models (ExtractDefinitions, etc.): {e}")
+    BOOTSTRAP_IMPORT_FAILURES["ExtractDefinitions_class"] = str(e)
 
 try:
     from argumentation_analysis.agents.tools.analysis.new.contextual_fallacy_detector import (
@@ -126,6 +140,7 @@ try:
     )
 except ImportError as e:
     logger.error(f"Failed to import ContextualFallacyDetector: {e}")
+    BOOTSTRAP_IMPORT_FAILURES["ContextualFallacyDetector_class"] = str(e)
 
 # L'adaptateur local est maintenant remplacé par celui dans argumentation_analysis.adapters
 
@@ -144,6 +159,9 @@ class ProjectContext:
         self.settings = None
         self.project_root_path = None
         self.services = {}  # Dictionnaire pour regrouper les services
+        # #2344 (family b): named degradation — which imports the bootstrap
+        # could not make, so the caller knows what was skipped.
+        self.import_failures: Dict[str, str] = {}
 
     def get_fallacy_detector(self):
         """
@@ -360,6 +378,14 @@ def initialize_project_environment(
     global project_root
 
     context = ProjectContext()
+    # #2344 (family b): the degradation travels in the state, named, so a
+    # caller can know exactly which capabilities were skipped.
+    context.import_failures = dict(BOOTSTRAP_IMPORT_FAILURES)
+    if context.import_failures:
+        logger.warning(
+            f"Bootstrap degraded: {len(context.import_failures)} import(s) "
+            f"unavailable: {sorted(context.import_failures)}"
+        )
 
     if root_path_str:
         current_project_root = Path(root_path_str)
