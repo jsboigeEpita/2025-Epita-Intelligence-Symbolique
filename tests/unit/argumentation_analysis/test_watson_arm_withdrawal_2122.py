@@ -7,7 +7,7 @@ alive**: ``sherlock_jtms_agent.py`` (factory:472 + sherlock_watson scripts)
 and ``jtms_agent_base.py`` (imported by sherlock).
 """
 
-import importlib.util
+from tests.support.withdrawn_modules import still_importable
 
 WITHDRAWN_MODULES = [
     "argumentation_analysis.agents.jtms_communication_hub",
@@ -28,25 +28,14 @@ EXCLUDED_ALIVE_MODULES = [
 ]
 
 
-def _spec_or_none(name):
-    # find_spec raises ModuleNotFoundError for a submodule whose parent
-    # package is gone — that state IS "gone".
-    try:
-        return importlib.util.find_spec(name)
-    except ModuleNotFoundError:
-        return None
-
-
 def test_dead_arm_modules_are_gone():
-    gone = [name for name in WITHDRAWN_MODULES if _spec_or_none(name) is not None]
+    # #2436: ``still_importable`` treats a missing parent as gone, and a
+    # directory left holding only ``__pycache__/`` as gone too.
+    gone = [name for name in WITHDRAWN_MODULES if still_importable(name)]
     assert gone == [], f"modules of the withdrawn watson arm still resolvable: {gone}"
 
 
 def test_excluded_survivors_are_alive():
     """The withdrawal must not take the alive sherlock arm with it."""
-    alive = [
-        name
-        for name in EXCLUDED_ALIVE_MODULES
-        if importlib.util.find_spec(name) is None
-    ]
+    alive = [name for name in EXCLUDED_ALIVE_MODULES if not still_importable(name)]
     assert alive == [], f"excluded-but-alive modules missing: {alive}"

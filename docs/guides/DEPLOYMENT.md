@@ -21,8 +21,9 @@ cp .env.example .env
 
 # 3. Verify
 python -c "from argumentation_analysis.orchestration.registry_setup import setup_registry; setup_registry(); print('OK')"
-# Same marker filter as CI: with keys in .env, `requires_api` tests would call
-# the live LLM, and `slow` ones are out of CI's argv too (#2436).
+# Same marker filter as CI (#2436): it keeps the `requires_api` tests, which
+# call the live LLM when .env has keys, and the `slow` ones out. A few
+# unmarked tests still call the LLM with keys set (~20 requests, #2444).
 pytest tests/unit/ -m "not slow and not requires_api" -x -q --tb=line
 
 # 4. Launch API

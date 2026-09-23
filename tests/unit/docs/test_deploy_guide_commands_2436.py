@@ -144,7 +144,8 @@ def test_the_sprint3_script_is_retired_and_no_living_doc_runs_it():
 
 def test_both_guides_verify_with_the_same_command():
     """One verification, written once in each guide: the registry, then the
-    unit suite under CI's marker filter (no live LLM call with keys set)."""
+    unit suite under CI's marker filter, which keeps ``requires_api`` tests
+    out (unmarked tests that still reach the LLM are #2444)."""
     expected = 'pytest tests/unit/ -m "not slow and not requires_api"'
     for guide in GUIDES:
         text = (REPO_ROOT / guide).read_text(encoding="utf-8-sig")

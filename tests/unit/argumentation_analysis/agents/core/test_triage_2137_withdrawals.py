@@ -11,10 +11,11 @@ governance metrics, the abstract `get_agent_capabilities` contract).
 """
 
 import importlib
-import importlib.util
 import inspect
 
 import pytest
+
+from tests.support.withdrawn_modules import still_importable
 
 # --- withdrawn modules (whole files) ----------------------------------------
 
@@ -28,8 +29,8 @@ import pytest
     ],
 )
 def test_withdrawn_modules_are_gone(module_name):
-    assert (
-        importlib.util.find_spec(module_name) is None
+    assert not still_importable(
+        module_name
     ), f"{module_name} was withdrawn (#2137) — restoring it needs a new triage"
 
 
