@@ -19,6 +19,45 @@ def initialized_service(service):
     return service
 
 
+# ── #2344 family (a): no fabricated answers without an engine ──
+
+
+class TestNoFabricatedAnswers:
+    """Without an engine wired, the service names the gap — it never fabricates.
+
+    The private analysers/validators/executors used to return hardcoded
+    results, including a fabricated ``Tweety Result: ... ACCEPTED`` message
+    impersonating the reasoner (#2344 family (a), doctrine #1019: the
+    capacity stays, the lie goes). Born-red on the pre-fix tree.
+    """
+
+    def test_analysis_names_the_missing_engine(self, initialized_service):
+        result = initialized_service.analyze_text_logic("p implies q", "propositional")
+        assert result["success"] is False
+        assert "no logic engine" in result["error"].lower()
+
+    def test_analysis_keeps_the_tri_state_none(self, initialized_service):
+        result = initialized_service.analyze_text_logic("p implies q", "propositional")
+        assert result["belief_set"] is None, (
+            "tri-état #1019: None (not computed) must not be confused with "
+            "a measured belief set"
+        )
+
+    def test_validation_refuses_without_engine(self, service):
+        valid, msg = service.validate_formula("p => q", "propositional")
+        assert valid is False
+        assert "engine" in msg.lower()
+
+    def test_query_does_not_impersonate_tweety(self, service):
+        result = service.execute_query("bs1", "p", "propositional")
+        assert result["success"] is False
+        assert result["accepted"] is None, "tri-état #1019: None ≠ measured"
+        assert "Tweety Result" not in result["message"], (
+            "impersonating the reasoner's verdict format is the fabrication "
+            "this family removes"
+        )
+
+
 # ── __init__ ──
 
 
@@ -55,25 +94,30 @@ class TestInitializeLogicAgents:
 
 
 class TestAnalyzeTextLogic:
+    # #2344 family (a): without an engine the analysis is a NAMED failure —
+    # these tests used to assert success=True on hardcoded mock answers.
+
     def test_propositional_analysis(self, initialized_service):
         result = initialized_service.analyze_text_logic("p implies q", "propositional")
-        assert result["success"] is True
+        assert result["success"] is False
         assert result["logic_type"] == "propositional"
-        assert result["belief_set"] is not None
+        assert "no logic engine" in result["error"].lower()
 
     def test_first_order_analysis(self, initialized_service):
         result = initialized_service.analyze_text_logic("forall x P(x)", "first_order")
-        assert result["success"] is True
+        assert result["success"] is False
         assert result["logic_type"] == "first_order"
+        assert "no logic engine" in result["error"].lower()
 
     def test_modal_analysis(self, initialized_service):
         result = initialized_service.analyze_text_logic("necessarily p", "modal")
-        assert result["success"] is True
+        assert result["success"] is False
         assert result["logic_type"] == "modal"
+        assert "no logic engine" in result["error"].lower()
 
     def test_auto_detection_propositional(self, initialized_service):
         result = initialized_service.analyze_text_logic("simple proposition", "auto")
-        assert result["success"] is True
+        assert result["success"] is False
         assert result["logic_type"] == "propositional"
 
     def test_auto_detection_fol(self, initialized_service):
@@ -99,17 +143,23 @@ class TestAnalyzeTextLogic:
 
 
 class TestValidateFormula:
+    # #2344 family (a): without an engine validation REFUSES — the old tests
+    # asserted True on answers hardcoded to always accept.
+
     def test_propositional(self, service):
         valid, msg = service.validate_formula("p => q", "propositional")
-        assert valid is True
+        assert valid is False
+        assert "engine" in msg.lower()
 
     def test_fol(self, service):
         valid, msg = service.validate_formula("forall X: P(X)", "first_order")
-        assert valid is True
+        assert valid is False
+        assert "engine" in msg.lower()
 
     def test_modal(self, service):
         valid, msg = service.validate_formula("[]p", "modal")
-        assert valid is True
+        assert valid is False
+        assert "engine" in msg.lower()
 
     def test_unsupported_type(self, service):
         valid, msg = service.validate_formula("formula", "unknown")
@@ -121,21 +171,24 @@ class TestValidateFormula:
 
 
 class TestExecuteQuery:
+    # #2344 family (a): without an engine the query is a NAMED failure with
+    # the tri-état intact (accepted=None, never a fabricated True).
+
     def test_propositional_query(self, service):
         result = service.execute_query("bs1", "p", "propositional")
-        assert result["success"] is True
-        assert result["accepted"] is True
-        assert "ACCEPTED" in result["message"]
+        assert result["success"] is False
+        assert result["accepted"] is None
+        assert "Tweety Result" not in result["message"]
 
     def test_fol_query(self, service):
         result = service.execute_query("bs1", "P(a)", "first_order")
-        assert result["success"] is True
-        assert result["accepted"] is True
+        assert result["success"] is False
+        assert result["accepted"] is None
 
     def test_modal_query(self, service):
         result = service.execute_query("bs1", "[]p", "modal")
-        assert result["success"] is True
-        assert result["accepted"] is True
+        assert result["success"] is False
+        assert result["accepted"] is None
 
     def test_unsupported_type(self, service):
         result = service.execute_query("bs1", "q", "quantum")
@@ -340,18 +393,24 @@ class TestShutdown:
 
 class TestLogicServiceIntegration:
     def test_full_workflow(self, service):
-        """Init, analyze, validate, query, status, clear, shutdown."""
+        """Init, analyze, validate, query, status, clear, shutdown.
+
+        #2344 family (a): the workflow still runs end-to-end (cache, status,
+        clear, shutdown keep their contracts) but every analysis step NAMES
+        the missing engine instead of fabricating an answer.
+        """
         service.initialize_logic_agents()
 
         result = service.analyze_text_logic("forall x: P(x) => Q(x)", "auto")
-        assert result["success"] is True
+        assert result["success"] is False
         assert result["logic_type"] == "first_order"
+        assert "no logic engine" in result["error"].lower()
 
         valid, msg = service.validate_formula("P(a)", "first_order")
-        assert valid is True
+        assert valid is False
 
         qr = service.execute_query("bs1", "P(a)", "first_order")
-        assert qr["success"] is True
+        assert qr["success"] is False
 
         status = service.get_service_status()
         assert status["status"] == "healthy"
