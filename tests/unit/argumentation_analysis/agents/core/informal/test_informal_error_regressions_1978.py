@@ -98,11 +98,8 @@ class TestDegradedPathIsolatesDetectorException:
             side_effect=RuntimeError("local detector exploded")
         )
         agent = InformalAgent(tools={"fallacy_detector": broken_detector})
-        # SK agent will not be available in the test environment (the
-        # InformalAnalysisAgent ctor raises on the ``tools=`` kwarg, so
-        # adapter sets _sk_agent = None and falls into degraded mode).
-        # The degraded mode should still swallow its own detector failure
-        # to match the SK path's behavior.
+        # The adapter analyses with its local tools only (#2419); it
+        # should still swallow its own detector failure.
         result = agent.analyze_text("some text")
         assert isinstance(result, dict)
         assert "fallacies" in result

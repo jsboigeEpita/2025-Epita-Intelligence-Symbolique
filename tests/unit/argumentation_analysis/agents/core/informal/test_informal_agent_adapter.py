@@ -8,15 +8,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 from datetime import datetime
 
-# Patch the SK import so that InformalAnalysisAgent doesn't try to use SK
-with patch(
-    "argumentation_analysis.agents.core.informal.informal_agent_adapter.InformalAnalysisAgent",
-    MagicMock(side_effect=Exception("SK not available")),
-):
-    from argumentation_analysis.agents.core.informal.informal_agent_adapter import (
-        InformalAgent,
-    )
-
+from argumentation_analysis.agents.core.informal.informal_agent_adapter import (
+    InformalAgent,
+)
 
 # ============================================================
 # Initialization
@@ -61,9 +55,10 @@ class TestInformalAgentInit:
         )
         assert agent.strict_validation is True
 
-    def test_sk_agent_none_when_sk_unavailable(self):
+    def test_no_sk_agent_attribute(self):
+        # The adapter analyses with its local tools only (#2419).
         agent = InformalAgent()
-        assert agent._sk_agent is None
+        assert not hasattr(agent, "_sk_agent")
 
 
 # ============================================================

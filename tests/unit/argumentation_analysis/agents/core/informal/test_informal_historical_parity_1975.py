@@ -137,7 +137,6 @@ class TestHandleContextualAnalyzerException:
                 "contextual_analyzer": broken_contextual,
             }
         )
-        agent._sk_agent = None  # force degraded mode
         result = agent.perform_complete_analysis("text", context="ctx")
         assert isinstance(result, dict)
         # historical: contextual_analysis slot is present but empty on error

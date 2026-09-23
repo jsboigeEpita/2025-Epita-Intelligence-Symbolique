@@ -4,23 +4,28 @@
 """
 Adaptateur pour maintenir la compatibilité avec l'ancienne interface InformalAgent.
 
-Ce module fournit une classe adaptateur qui permet aux tests existants
-de continuer à fonctionner avec la nouvelle architecture basée sur Semantic Kernel.
+L'adaptateur analyse avec les outils qu'on lui passe (``tools``) et rien d'autre.
+Il ne délègue pas à l'agent Semantic Kernel ``InformalAnalysisAgent`` : celui-ci
+exige un ``kernel``, n'a pas de paramètre ``tools`` et expose un ``analyze_text``
+asynchrone. La construction que l'adaptateur tentait échouait donc à chaque fois,
+et l'échec était rangé en « mode dégradé » (#2419) : la délégation annoncée n'a
+jamais existé. Pour une analyse conduite par LLM, utiliser ``InformalAnalysisAgent``
+(via ``AgentFactory``), pas cet adaptateur.
 """
 
 import logging
 from typing import Dict, List, Any, Optional
 
-# Import de la nouvelle classe
-from .informal_agent import InformalAnalysisAgent, categorize_fallacy_types
+# Table de catégories partagée avec l'agent SK (#2345)
+from .informal_agent import categorize_fallacy_types
 
 
 class InformalAgent:
     """
     Adaptateur de compatibilité pour l'ancien InformalAgent.
 
-    Cette classe maintient l'interface attendue par les tests existants
-    tout en déléguant vers la nouvelle implémentation basée sur Semantic Kernel.
+    Cette classe maintient l'interface attendue par les tests existants ;
+    l'analyse est faite par les outils locaux (``tools``), sans agent SK (#2419).
     """
 
     def __init__(
@@ -53,18 +58,6 @@ class InformalAgent:
             raise ValueError(
                 "Aucun outil fourni. L'agent ne peut pas fonctionner sans outils en mode de validation stricte."
             )
-
-        # Essayer de créer le vrai agent SK sous-jacent
-        try:
-            self._sk_agent = InformalAnalysisAgent(
-                agent_name=self.agent_name, tools=self.tools
-            )
-            self.logger.info(f"Agent SK réel créé pour {self.agent_name}")
-        except Exception as e:
-            self.logger.warning(
-                f"Impossible de créer l'agent SK réel: {e}. Mode dégradé activé."
-            )
-            self._sk_agent = None
 
     def get_available_tools(self) -> List[str]:
         """Retourne la liste des outils disponibles."""
@@ -106,18 +99,7 @@ class InformalAgent:
 
         self.logger.info(f"Analyse d'un texte de {len(text)} caractères...")
 
-        # Essayer d'utiliser l'agent SK réel si disponible
-        if self._sk_agent:
-            try:
-                # Utiliser le vrai agent SK
-                sk_result = self._sk_agent.analyze_text(text, context)
-                return sk_result
-            except Exception as e:
-                self.logger.error(
-                    f"Erreur avec l'agent SK réel: {e}. Utilisation du mode dégradé."
-                )
-
-        # Mode dégradé : utiliser les outils locaux
+        # Outils locaux : le seul chemin d'analyse de l'adaptateur (#2419).
         fallacies = []
 
         if "fallacy_detector" in self.tools:
