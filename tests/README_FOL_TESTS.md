@@ -1,4 +1,4 @@
-# Tests pour FirstOrderLogicAgent (FOL)
+# Tests FOL (`FOLLogicAgent`)
 
 Ce guide vit dans [`docs/guides/testing/fol_tests.md`](../docs/guides/testing/fol_tests.md).
 

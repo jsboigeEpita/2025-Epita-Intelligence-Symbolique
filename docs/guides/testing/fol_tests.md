@@ -1,342 +1,89 @@
-﻿# Tests pour FirstOrderLogicAgent (FOL)
+# Tests FOL (`FOLLogicAgent`)
 
-## 📋 Vue d'ensemble
+Ce guide décrit les tests de la logique du premier ordre (FOL) qui existent dans le dépôt, et comment les lancer. Il ne nomme que des fichiers, classes et méthodes présents sur `main` (vérifié le 2026-09-23 sur `781e1c18`, #2442).
 
-Cette suite de tests valide complètement l'agent `FirstOrderLogicAgent` qui remplace le `ModalLogicAgent` problématique. L'agent FOL génère une syntaxe FOL valide et s'intègre parfaitement avec le solveur Tweety sans erreurs de parsing.
+L'agent FOL est `FOLLogicAgent` (`argumentation_analysis/agents/core/logic/fol_logic_agent.py`). Aucune classe `FirstOrderLogicAgent` n'existe : c'est un ancien nom, encore présent dans d'autres documents.
 
-## 🎯 Objectifs de validation
+## Où sont les tests
 
-### **Métriques critiques**
-- ✅ **100%** des formules FOL générées valides
-- ✅ **0** erreur de parsing Tweety avec syntaxe FOL  
-- ✅ **>95%** compatibilité avec sophismes existants
-- ✅ **Temps réponse** ≤ Modal Logic précédent
-- ✅ **>90%** couverture tests pour FirstOrderLogicAgent
+| Fichier | Ce qu'il vérifie | JVM réelle ? | Dans l'argv de la CI ? |
+|---|---|---|---|
+| `tests/unit/agents/test_fol_logic_agent.py` | configuration (`UnifiedConfig`, `PresetConfigs.authentic_fol()`), syntaxe générée, pipeline d'analyse avec un bridge doublé | non | oui (`tests/unit/`) |
+| `tests/unit/argumentation_analysis/test_fol_logic_agent.py` | l'agent sur l'architecture `BaseLogicAgent` | non | oui |
+| `tests/unit/argumentation_analysis/agents/core/logic/test_fol_handler.py` | repli du solveur quand le solveur externe (eprover/prover9) est absent (#949) | non | oui |
+| `tests/unit/argumentation_analysis/agents/core/logic/test_fol_agent_verdict_2338.py` | un verdict FOL est propagé tel que calculé, jamais fabriqué (#2338) | non | oui |
+| `tests/unit/argumentation_analysis/agents/core/logic/test_fol_lifecycle_and_dialect_2360.py` | cycle de vie sync et prompts au dialecte Semantic Kernel (#2360) | non | oui |
+| `tests/unit/argumentation_analysis/agents/core/logic/test_fol_signature_predeclaration.py`, `test_fol_bool_constant_sanitizer.py`, `tests/unit/argumentation_analysis/test_fol_constant_predeclaration.py`, `tests/unit/argumentation_analysis/agents/test_fol_signature_extraction.py` | construction de la signature (sortes, constantes, prédicats) et réécriture des constantes `T`/`F` avant le parseur Tweety | non | oui |
+| `tests/unit/argumentation_analysis/test_fol_2pass_pipeline.py`, `test_fol_solver_selector.py`, `test_formalagent_fol_default.py` | pipeline FOL en deux passes (#544), sélecteur `--fol-solver` (#900), traduction de l'agent formel où PL, FOL et modale sont à égalité (#1396) | non | oui |
+| `tests/unit/argumentation_analysis/orchestration/test_fol_isolation_net_1630.py`, `test_fp6_fol_faillloud.py`, `test_track_b_fol_fail_loud_1278.py` | l'appel FOL de l'orchestration : verdict à trois états propagé (#1197), isolation par formule (#1630), contrat « vivant ou fail-loud » (#1278) | non | oui |
+| **`tests/integration/workers/test_worker_fol_tweety.py`** | **l'agent contre le vrai Tweety** : formules acceptées par le parseur, incohérence `P(a)` / `!P(a)` détectée, inférence par implication universelle, gestion d'erreurs, stabilité | **oui** | oui (`tests/integration/workers/`) |
+| `tests/integration/test_fol_pipeline_integration.py` (lance `workers/worker_fol_pipeline.py` dans un sous-processus) | pipeline FOL de bout en bout, JVM isolée | oui | **non** |
+| `tests/integration/argumentation_analysis/agents/core/logic/test_fol_handler_config.py` | choix du solveur par `FOLHandler` pour la requête et la cohérence | non (doublures) | **non** |
+| `tests/agents/core/logic/test_first_order_logic_agent_authentic.py` | initialisation de l'agent avec un bridge injecté | oui (`@pytest.mark.jpype`) | **non** (`tests/agents/` est hors argv, voir #1867) |
 
-### **Fonctionnalités validées**
-- 🔧 Génération syntaxe FOL : `∀x(P(x) → Q(x))`, `∃x(F(x) ∧ G(x))`
-- 🔧 Intégration Tweety sans erreurs de parsing
-- 🔧 Configuration dynamique via `UnifiedConfig`
-- 🔧 Utilisation dans orchestrations unifiées
+L'argv de la CI est la commande `pytest` du job `automated-tests` dans `.github/workflows/ci.yml`. Relisez-la avant de citer cette colonne : elle bouge.
 
-## 📁 Structure des tests
+## Lancer les tests
 
-```
-tests/
-├── unit/agents/
-│   └── test_fol_logic_agent.py           # Tests unitaires complets
-├── integration/
-│   └── test_fol_tweety_integration.py    # Tests intégration Tweety
-├── validation/
-│   └── test_fol_complete_validation.py   # Validation avec métriques
-├── migration/
-│   └── test_modal_to_fol_migration.py    # Tests migration Modal→FOL
-└── README_FOL_TESTS.md                   # Renvoi vers ce guide
-```
-
-## 🧪 Tests unitaires (`test_fol_logic_agent.py`)
-
-### **Classes de test**
-
-#### `TestFOLLogicAgentInitialization`
-- ✅ `test_agent_initialization_with_fol_config()` - Création avec config FOL
-- ✅ `test_unified_config_fol_mapping()` - Mapping depuis `UnifiedConfig.logic_type='FOL'`
-- ✅ `test_agent_parameters_configuration()` - Paramètres agent (expertise, style)
-- ✅ `test_fol_configuration_validation()` - Validation configuration FOL
-
-#### `TestFOLSyntaxGeneration`
-- ✅ `test_quantifier_universal_generation()` - Tests `∀x(P(x) → Q(x))`
-- ✅ `test_quantifier_existential_generation()` - Tests `∃x(F(x) ∧ G(x))`
-- ✅ `test_complex_predicate_generation()` - Tests `∀x∀y(R(x,y) → S(y,x))`
-- ✅ `test_logical_connectors_validation()` - Tests `∧`, `∨`, `→`, `¬`, `↔`
-
-#### `TestFOLTweetyIntegration`
-- ✅ `test_tweety_integration_fol()` - Compatibilité syntaxe Tweety
-- ✅ `test_tweety_validation_formulas()` - Validation avant envoi Tweety
-- ✅ `test_tweety_error_handling_fol()` - Gestion erreurs Tweety
-- ✅ `test_tweety_results_analysis_fol()` - Analyse résultats Tweety
-
-#### `TestFOLAnalysisPipeline`
-- ✅ `test_sophism_analysis_with_fol()` - Analyse sophismes avec FOL
-- ✅ `test_fol_report_generation()` - Génération rapport avec formules FOL
-- ✅ `test_tweety_error_analyzer_integration()` - Intégration `TweetyErrorAnalyzer`
-- ✅ `test_performance_analysis()` - Tests performance
-
-### **Syntaxe FOL validée**
-
-```fol
-# Quantificateurs de base
-∀x(Human(x) → Mortal(x))
-∃x(Student(x) ∧ Intelligent(x))
-
-# Prédicats complexes  
-∀x∀y(Loves(x,y) → Cares(x,y))
-∃x∃y(Friend(x,y) ∧ Trust(x,y))
-
-# Connecteurs logiques complets
-∀x((P(x) ∧ Q(x)) → (R(x) ∨ S(x)))
-∃x(¬Bad(x) ↔ Good(x))
-```
-
-## 🔗 Tests d'intégration (`test_fol_tweety_integration.py`)
-
-### **Validation Tweety authentique**
-
-#### `TestFOLTweetyCompatibility`
-- ✅ `test_fol_formula_tweety_compatibility()` - Formules acceptées par Tweety réel
-- ✅ `test_fol_predicate_declaration_validation()` - Validation déclaration prédicats
-- ✅ `test_fol_quantifier_binding_validation()` - Validation liaison quantificateurs
-
-#### `TestRealTweetyFOLAnalysis`
-- ✅ `test_real_tweety_fol_syllogism_analysis()` - Analyse syllogisme avec Tweety réel
-- ✅ `test_real_tweety_fol_inconsistency_detection()` - Détection incohérence
-- ✅ `test_real_tweety_fol_inference_generation()` - Génération inférences
-
-#### `TestFOLErrorHandling`
-- ✅ `test_fol_predicate_declaration_error_handling()` - Gestion erreurs déclaration
-- ✅ `test_fol_syntax_error_recovery()` - Récupération erreurs syntaxe
-- ✅ `test_fol_timeout_handling()` - Gestion timeouts
-
-### **Exigences Tweety**
-- 🔧 `USE_REAL_JPYPE=true` pour tests authentiques
-- 🔧 JAR Tweety authentique requis
-- 🔧 Parsing sans erreurs validé
-- 🔧 Résultats cohérents garantis
-
-## 📊 Validation complète (`test_fol_complete_validation.py`)
-
-### **Métriques automatisées**
-
-La classe `FOLCompleteValidator` exécute une validation exhaustive :
-
-#### **Critères validés**
-- 📈 **100%** formules FOL syntaxiquement valides
-- 📈 **0** erreur parsing Tweety  
-- 📈 **>95%** compatibilité sophismes existants
-- 📈 **Performance** acceptable (< 10s moyenne)
-- 📈 **Gestion erreurs** complète et gracieuse
-
-#### **Tests d'échantillons**
-- 🔍 **Syntaxe FOL** : Quantificateurs, prédicats, connecteurs
-- 🔍 **Sophismes** : Syllogismes, sophismes classiques, contradictions
-- 🔍 **Argumentation complexe** : Philosophie, science, déontique
-- 🔍 **Cas d'erreur** : Texte vide, non-logique, caractères spéciaux
-
-### **Rapport automatique**
-```json
-{
-  "overall_success": true,
-  "metrics": {
-    "fol_syntax_validity_rate": 1.0,
-    "tweety_parsing_success_rate": 1.0,
-    "sophism_compatibility": 0.98,
-    "avg_analysis_time": 3.2,
-    "avg_confidence": 0.85
-  },
-  "recommendations": ["✅ Agent FOL prêt pour production"]
-}
-```
-
-## 🔄 Tests de migration (`test_modal_to_fol_migration.py`)
-
-### **Validation remplacement Modal Logic**
-
-#### `TestModalToFOLInterface`
-- ✅ `test_interface_compatibility()` - Interface identique
-- ✅ `test_configuration_migration_transparency()` - Migration config transparente
-- ✅ `test_result_structure_compatibility()` - Structure résultats compatible
-
-#### `TestFunctionalReplacement`
-- ✅ `test_sophism_analysis_migration()` - Migration analyse sophismes
-- ✅ `test_error_handling_improvement()` - Amélioration gestion erreurs
-
-#### `TestPerformanceComparison`
-- ✅ `test_performance_parity_or_improvement()` - Performance équivalente/meilleure
-- ✅ `test_stability_improvement()` - Stabilité améliorée
-
-### **Améliorations vs Modal Logic**
-- 🚀 **Stabilité** : Moins de crashes et erreurs
-- 🚀 **Performance** : Temps réponse équivalent ou meilleur
-- 🚀 **Compatibilité** : Même interface, meilleurs résultats
-- 🚀 **Intégration** : Fonctionne avec orchestrations existantes
-
-## 🚀 Exécution des tests
-
-### **Script d'exécution automatisé**
 ```bash
-# Tous les tests
-python scripts/run_fol_tests.py --all
+# Tests FOL sans JVM (jpype est remplacé par un mock)
+conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/agents/test_fol_logic_agent.py tests/unit/argumentation_analysis/agents/core/logic/ -q --disable-jvm-session
 
-# Tests unitaires seulement
-python scripts/run_fol_tests.py --unit-only
-
-# Tests intégration avec Tweety réel
-python scripts/run_fol_tests.py --integration --real-tweety
-
-# Validation complète avec métriques
-python scripts/run_fol_tests.py --validation
-
-# Tests migration Modal → FOL
-python scripts/run_fol_tests.py --migration
+# Tests contre le vrai Tweety (JVM démarrée par la fixture de session)
+conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/workers/test_worker_fol_tweety.py -q -rs
 ```
 
-### **Prérequis pour tests complets**
-```bash
-# Variables d'environnement
-export USE_REAL_JPYPE=true
-export TWEETY_JAR_PATH=libs/tweety-full.jar
-export JVM_MEMORY=1024m
-export UNIFIED_LOGIC_TYPE=fol
-export UNIFIED_MOCK_LEVEL=none
+- La JVM est démarrée une fois par session par la fixture `jvm_session` (`tests/conftest.py`). Aucune variable d'environnement n'est à positionner.
+- `--disable-jvm-session` remplace `jpype` par un mock. `test_worker_fol_tweety.py` se saute alors en entier (`pytestmark` : « FOL-Tweety tests require real JVM »). Un run avec ce drapeau ne dit donc rien du vrai Tweety.
+- Les JARs Tweety vivent sous `libs/tweety/` (non suivi par git). Un worktree neuf ne les a pas : copiez-les, sinon la JVM ne démarre pas.
+- Avec `-n N` (pytest-xdist), `--disable-jvm-session` n'atteint pas les workers : ils tournent avec le vrai `jpype` et sans JVM (#2402). La CI lance la suite en série.
+- `-rs` affiche la raison de chaque test sauté. Un fichier Tweety « vert » dont tous les tests sont sautés n'a rien vérifié.
 
-# Installation dépendances
-pip install pytest pytest-asyncio pytest-json-report
+Mesure du 2026-09-23 sur ai-01 (`projet-is-roo-new`, `main` `781e1c18`) : `test_worker_fol_tweety.py` rend 16 passed, 0 skipped, avec la JVM, et `tests/unit/agents/test_fol_logic_agent.py` rend 17 passed.
+
+## Syntaxe FOL de Tweety
+
+Le parseur FOL de Tweety (`FolParser`) n'accepte que la syntaxe ASCII, avec les sortes et les prédicats déclarés **avant** les formules :
+
+```
+human = {socrate, platon}
+type(Man(human))
+type(Mortal(human))
+
+forall X: (Man(X) => Mortal(X))
+Man(socrate)
 ```
 
-### **Tests par niveau**
+| Opérateur | Syntaxe Tweety |
+|---|---|
+| pour tout / il existe | `forall X: (...)`, `exists X: (...)` |
+| et / ou / non | `&&`, `\|\|`, `!` |
+| implique / équivaut | `=>`, `<=>` |
+| ou exclusif | `^^` |
+| contradiction / tautologie | `+`, `-` |
 
-#### **Niveau 1 : Tests unitaires (sans Tweety)**
-```bash
-python scripts/run_fol_tests.py --unit-only
-# ✅ Validation syntaxe FOL
-# ✅ Configuration UnifiedConfig  
-# ✅ Interface agent
-# ✅ Pipeline analyse (mocked)
-```
+La grammaire complète est recopiée en tête de `tests/integration/workers/test_worker_fol_tweety.py`. `FOLLogicAgent.unicode_to_ascii_fol()` convertit la notation Unicode (`∀`, `∃`, `∧`, `∨`, `→`, `¬`, `↔`) vers cette syntaxe. Une formule en notation Unicode envoyée telle quelle au parseur est rejetée.
 
-#### **Niveau 2 : Tests intégration (avec Tweety simulé)**
-```bash
-python scripts/run_fol_tests.py --integration
-# ✅ Compatibilité syntaxe (simulée)
-# ✅ Gestion erreurs
-# ✅ Performance
-```
+## API utilisée par les tests
 
-#### **Niveau 3 : Tests authentiques (Tweety réel)**
-```bash
-python scripts/run_fol_tests.py --integration --real-tweety
-# ✅ Parsing Tweety authentique
-# ✅ Analyse syllogismes réels
-# ✅ Détection incohérences réelles
-# ✅ Inférences Tweety valides
-```
+**Bridge** (`argumentation_analysis/agents/core/logic/tweety_bridge.py`) :
 
-#### **Niveau 4 : Validation complète**
-```bash
-python scripts/run_fol_tests.py --validation --real-tweety
-# ✅ Métriques toutes validées
-# ✅ Critères 100% respectés
-# ✅ Rapport détaillé généré
-# ✅ Recommandations produites
-```
+- `TweetyBridge().check_consistency(belief_set: str, logic_type: str = "propositional")`. La méthode est synchrone, et son type par défaut est **propositionnel** : pour la FOL, passez `"first_order"`. Sans ce paramètre, une base FOL part au parseur propositionnel, qui peut l'accepter et répondre `True` (mesuré sur l'exemple ci-dessus : `(True, 'PL knowledge base is consistent.')`). Elle rend `Tuple[Optional[bool], str]`, où `None` veut dire « non décidé » (reasoner absent, belief set illisible).
+- `TweetyBridge().execute_fol_query(belief_set: str, query: str)` rend `(bool, str)`. Une erreur du parseur rend aussi `False`, avec un message `FOL query error: …` : le booléen seul ne distingue pas « non impliqué » de « non vérifié » (#2447). Sur l'exemple ci-dessus, `Mortal(socrate)` rend `(True, "Query 'Mortal(socrate)': entailed")`, et `Mortal(platon)` rend `False` avec « Constant 'platon' has not been declared », bien que `platon` soit déclaré dans la sorte `human`.
+- `TweetyBridge().fol_handler` (`FOLHandler`, dans `fol_handler.py`) : `parse_fol_formula`, `create_belief_set_from_string`, `check_consistency`, `execute_fol_query`, `validate_formula_with_signature`.
 
-## 📋 Rapport de validation
+Le bridge n'a pas de méthode d'initialisation propre à la FOL : la JVM est prise en charge par `jvm_setup.py` et la fixture de session.
 
-### **Exemple de rapport réussi**
-```
-📋 RAPPORT VALIDATION AGENT FOL
-================================================================================
+**Agent** (`FOLLogicAgent`) : `setup_agent_components(llm_service_id)`, `analyze(text)` (rend un `FOLAnalysisResult`), `text_to_belief_set(text)`, `is_consistent(belief_set)`, `execute_query(belief_set, query)`, et `BeliefSetBuilderPlugin` (`agent._builder_plugin`) pour construire un belief set par programme (`add_sort`, `add_predicate_schema`, `add_atomic_fact`, `add_negated_atomic_fact`, `add_universal_implication`, `build_tweety_belief_set`).
 
-🕐 Temps total: 45.67s
-🎯 Succès global: ✅ OUI
-📊 Taux réussite: 100% (4/4)
+**Configuration** : `PresetConfigs.authentic_fol()` (`config/unified_config.py`) rend une configuration avec `LogicType.FOL`, `MockLevel.NONE` et l'agent `AgentType.FOL_LOGIC`, et `get_agent_classes()["fol_logic"]` vaut `"FOLLogicAgent"`.
 
-📋 Résultats par suite:
-  ✅ Unit: 12.34s
-  ✅ Integration: 18.45s  
-  ✅ Validation: 8.92s
-  ✅ Migration: 5.96s
+## Limites connues
 
-📏 Conformité critères:
-  ✅ 100% formules FOL valides
-  ✅ 0 erreur parsing Tweety
-  ✅ >95% compatibilité sophismes
-  ✅ Performance acceptable
-  ✅ Gestion erreurs complète
+- `FOLLogicAgent.text_to_belief_set()` n'appelle pas le LLM : elle passe par la conversion heuristique `_basic_fol_conversion()`. `test_end_to_end_fol_syllogism_with_llm` passe donc sans aucune requête LLM (mesuré le 2026-09-23 : 0 requête au compteur d'egress, dont le contrôle de vivacité a tourné dans la même session), et l'inférence qu'il vise échoue au parseur sans faire échouer le test (elle n'est qu'un avertissement). Ce test ne vérifie pas la conversion par le LLM. Suivi dans #2447.
+- Certains verdicts de l'agent ne viennent d'aucune vérification (cohérence supposée sans bridge, résultat non décidé lu comme « incohérent ») : #2447.
 
-📈 Métriques clés:
-  • Syntaxe FOL valide: 100%
-  • Parsing Tweety: 100%
-  • Compatibilité sophismes: 98%
-  • Temps analyse moyen: 3.20s
-  • Confiance moyenne: 0.85
+## Historique
 
-💡 Recommandations:
-  • ✅ Tous les tests réussis - Agent FOL prêt pour production
-
-🎉 Agent FOL validé avec succès!
-```
-
-## 🔧 Configuration et environnement
-
-### **Configuration UnifiedConfig pour FOL**
-```python
-# Configuration authentique FOL
-config = PresetConfigs.authentic_fol()
-assert config.logic_type == LogicType.FOL
-assert config.mock_level == MockLevel.NONE
-assert config.require_real_tweety == True
-assert AgentType.FOL_LOGIC in config.agents
-
-# Utilisation en orchestration
-agent_classes = config.get_agent_classes()
-assert agent_classes["fol_logic"] == "FirstOrderLogicAgent"
-```
-
-### **Mapping automatique Modal → FOL**
-```python
-# Configuration legacy automatiquement migrée
-config = UnifiedConfig(logic_type=LogicType.FOL)
-# AgentType.LOGIC automatiquement remplacé par AgentType.FOL_LOGIC
-assert AgentType.FOL_LOGIC in config.agents
-```
-
-## 📚 Documentation technique
-
-### **Syntaxe FOL supportée**
-- **Quantificateurs** : `∀x`, `∃x`, `∀x∀y`, `∃x∃y`
-- **Prédicats** : `P(x)`, `Q(x,y)`, `R(x,y,z)`
-- **Connecteurs** : `∧` (et), `∨` (ou), `→` (implique), `¬` (non), `↔` (équivalent)
-- **Variables** : `x`, `y`, `z` (liées par quantificateurs)
-- **Constantes** : `a`, `b`, `c`, `socrate`, etc.
-
-### **Intégration Tweety**
-- **Initialisation** : `TweetyBridge.initialize_fol_reasoner()`
-- **Validation** : `check_consistency(formulas)`
-- **Inférences** : `derive_inferences(formulas)` 
-- **Modèles** : `generate_models(formulas)`
-
-### **Gestion d'erreurs**
-- **TweetyErrorAnalyzer** : Analyse erreurs avec feedback BNF
-- **Récupération gracieuse** : Aucun crash sur erreurs
-- **Logging détaillé** : Traces complètes pour debugging
-
-## 🎯 Critères de succès
-
-### **Critères obligatoires (PASS/FAIL)**
-- [ ] **100%** formules FOL syntaxiquement valides
-- [ ] **0** erreur parsing Tweety avec syntaxe FOL
-- [ ] **>95%** compatibilité avec sophismes existants
-- [ ] **Performance** ≤ Modal Logic précédent
-- [ ] **>90%** couverture tests
-- [ ] **Migration** transparente depuis Modal Logic
-
-### **Critères d'amélioration**
-- [ ] **Stabilité** améliorée (moins d'erreurs vs Modal Logic)
-- [ ] **Confiance** moyenne > 70%
-- [ ] **Gestion erreurs** gracieuse sur tous cas de test
-- [ ] **Documentation** complète et exemples
-
-## 🚦 Prochaines étapes
-
-1. **Exécution initiale** : `python scripts/run_fol_tests.py --unit-only`
-2. **Validation progressive** : Ajouter `--integration` puis `--real-tweety`
-3. **Validation finale** : `python scripts/run_fol_tests.py --all --real-tweety`
-4. **Déploiement** : Si tous critères validés
-5. **Migration production** : Remplacement Modal Logic par FOL
-
----
-
-**✅ Agent FOL validé** = Prêt pour remplacement de Modal Logic en production  
-**⚠️ Validation partielle** = Corrections nécessaires avant déploiement  
-**❌ Validation échouée** = Retour développement requis
+- Les anciens `tests/validation/test_fol_complete_validation.py` et `tests/migration/test_modal_to_fol_migration.py` sont archivés sous `tests/_archived/validation/` et `tests/_archived/migration/`. `scripts/run_fol_tests.py` n'existe plus.
+- #2442 a retiré `tests/integration/workers/worker_fol_tweety.py` et son lanceur `tests/integration/test_fol_tweety_integration.py`. Le fichier worker n'était pas collecté (son nom ne suit pas `test_*.py`), il appelait une méthode d'initialisation FOL que le bridge n'a jamais eue, et ses tests Tweety se sautaient faute d'une variable `USE_REAL_JPYPE=true` que rien ne positionne. Chacun de ses 14 tests a un homonyme dans `tests/integration/workers/test_worker_fol_tweety.py`, qui les couvre contre le vrai Tweety.
