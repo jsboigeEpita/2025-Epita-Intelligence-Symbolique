@@ -10,6 +10,8 @@ L'objectif de ce répertoire est de centraliser le code de support qui facilite 
 
 - **[`common_test_helpers.py`](common_test_helpers.py)**: Conçu pour contenir des fonctions d'aide, des assertions personnalisées ou d'autres utilitaires partagés par plusieurs fichiers de test.
 
+- **[`withdrawn_modules.py`](withdrawn_modules.py)** (#2436): `still_importable(name)`, the question a withdrawal guard asks instead of `find_spec(name) is None`. A directory left holding only its untracked `__pycache__/` resolves as an empty namespace package on any checkout that ran the code before the withdrawal; nothing can be imported from it, so it counts as gone.
+
 - **[`data_generators.py`](data_generators.py)**: Prévu pour héberger des fonctions qui génèrent des données de test complexes ou volumineuses, aidant à créer des scénarios de test réalistes et variés.
 
 ## Utilisation
