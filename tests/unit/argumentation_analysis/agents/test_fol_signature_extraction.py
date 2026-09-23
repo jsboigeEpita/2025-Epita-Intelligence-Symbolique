@@ -193,3 +193,30 @@ class TestExtractFolMetadataExtended:
         cmap = meta["constant_map"]
         assert cmap["a"] == "a"
         assert cmap["b"] == "b"
+
+    def test_a_constant_is_not_named_like_the_sort(self):
+        """#2516: Tweety's TPTP writes the sort ``thing`` as a predicate, and
+        EProver refuses a name used with two arities."""
+        meta = FOLLogicAgent.extract_fol_metadata(["forall X: (Man(X))", "!Man(thing)"])
+
+        assert meta["constant_map"] == {"thing": "thing_v2"}
+        assert meta["sorts"] == {"thing": ["thing_v2"]}
+        assert meta["formulas"] == ["forall X: (Man(X))", "!Man(thing_v2)"]
+
+    def test_a_constant_is_not_named_like_a_predicate(self):
+        """#2516: the predicate keeps its name; the constant is renamed where
+        it stands alone."""
+        meta = FOLLogicAgent.extract_fol_metadata(["forall X: (p(X))", "!p(p)"])
+
+        assert meta["predicate_map"] == {"p": "p"}
+        assert meta["constant_map"] == {"p": "p_v2"}
+        assert meta["formulas"] == ["forall X: (p(X))", "!p(p_v2)"]
+
+    def test_a_predicate_is_not_named_like_the_sort(self):
+        """#2516: a predicate ``thing`` would be read as membership of the
+        sort."""
+        meta = FOLLogicAgent.extract_fol_metadata(["!thing(c)", "thing2(c)"])
+
+        assert meta["predicate_map"] == {"thing": "thing3", "thing2": "thing2"}
+        assert "type(thing3(thing))" in meta["signature_lines"]
+        assert meta["formulas"] == ["!thing3(c)", "thing2(c)"]

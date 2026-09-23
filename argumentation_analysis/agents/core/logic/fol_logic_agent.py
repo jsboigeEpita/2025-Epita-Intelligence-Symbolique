@@ -640,6 +640,43 @@ RÉPONDS EN FORMAT JSON :
                 ):
                     constants.add(word)
 
+        # A predicate declaration must match ``[A-Za-z][A-Za-z0-9]*``: no
+        # underscore (measured on the real JVM, #2468: ``A_Fait`` is refused).
+        # The modal parser has the same rule, and its legaliser names these
+        # predicates too: accents folded, separators dropped in PascalCase
+        # (``A_Fait`` -> ``AFait``, ``Évalue`` -> ``Evalue``), a digit suffix on
+        # a collision. The names already legal are reserved first, so a
+        # generated name never merges two predicates.
+        #
+        # The sort's name is not a predicate name (#2516): Tweety's TPTP writes
+        # the sort as the unary predicate ``thing``, so a predicate ``thing``
+        # would be read as membership of the sort (EProver then decides
+        # ``!thing(c)`` inconsistent). It gets a digit suffix.
+        legal_predicates = {
+            p
+            for p in predicates
+            if re.match(r"^[A-Za-z][A-Za-z0-9]*$", p) and p != "thing"
+        }
+        legaliser = ModalIdentifierNormalizer(reserved=legal_predicates | {"thing"})
+        sanitized_predicates: Dict[str, int] = {}
+        predicate_map: Dict[str, str] = {}
+        for pred_name, arity in predicates.items():
+            if pred_name in legal_predicates:
+                base = pred_name
+            elif pred_name == "thing":
+                base, count = "thing2", 2
+                while base in legal_predicates or base in sanitized_predicates:
+                    count += 1
+                    base = f"thing{count}"
+            else:
+                base = legaliser.legalize(pred_name)
+            sanitized_predicates[base] = arity
+            predicate_map[pred_name] = base
+        # A constant is named neither like the sort nor like a predicate
+        # (#2516): TPTP has one namespace for them, and EProver refuses a
+        # name used with two arities.
+        reserved_names = {"thing"} | set(sanitized_predicates)
+
         # Tweety constants (measured on the real JVM, #2468): a letter first,
         # then letters, digits or underscores (``_t_`` is refused; ``jean_paul``
         # and ``c_42`` are accepted). A constant the grammar accepts keeps its
@@ -652,7 +689,9 @@ RÉPONDS EN FORMAT JSON :
         # on the set's iteration order.
         legal_constant = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
         constant_map: Dict[str, str] = {
-            c: c for c in constants if legal_constant.match(c)
+            c: c
+            for c in constants
+            if legal_constant.match(c) and c not in reserved_names
         }
         sanitized_constants = set(constant_map.values())
         for c in sorted(constants - set(constant_map)):
@@ -660,7 +699,7 @@ RÉPONDS EN FORMAT JSON :
             if not re.match(r"[A-Za-z]", base):
                 base = f"c_{base}"
             name, count = base, 1
-            while name in sanitized_constants:
+            while name in sanitized_constants or name in reserved_names:
                 count += 1
                 name = f"{base}_v{count}"
             sanitized_constants.add(name)
@@ -687,27 +726,7 @@ RÉPONDS EN FORMAT JSON :
             sorted_consts = [witness]
         sorts: Dict[str, List[str]] = {"thing": sorted_consts}
         signature_lines = [f"thing = {{{', '.join(sorted_consts)}}}"]
-        # A predicate declaration must match ``[A-Za-z][A-Za-z0-9]*``: no
-        # underscore (measured on the real JVM, #2468: ``A_Fait`` is refused).
-        # The modal parser has the same rule, and its legaliser names these
-        # predicates too: accents folded, separators dropped in PascalCase
-        # (``A_Fait`` -> ``AFait``, ``Évalue`` -> ``Evalue``), a digit suffix on
-        # a collision. The names already legal are reserved first, so a
-        # generated name never merges two predicates.
-        legal_predicates = {
-            p for p in predicates if re.match(r"^[A-Za-z][A-Za-z0-9]*$", p)
-        }
-        legaliser = ModalIdentifierNormalizer(reserved=legal_predicates)
-        sanitized_predicates: Dict[str, int] = {}
-        predicate_map: Dict[str, str] = {}
-        for pred_name, arity in predicates.items():
-            base = (
-                pred_name
-                if pred_name in legal_predicates
-                else legaliser.legalize(pred_name)
-            )
-            sanitized_predicates[base] = arity
-            predicate_map[pred_name] = base
+        for base, arity in sanitized_predicates.items():
             sort_args = ", ".join(["thing"] * arity)
             signature_lines.append(f"type({base}({sort_args}))")
 

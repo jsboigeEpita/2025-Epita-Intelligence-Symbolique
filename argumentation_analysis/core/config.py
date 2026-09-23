@@ -40,7 +40,7 @@ class ArgAnalysisSettings(BaseSettings):
 
     #
     # Le choix du solveur à utiliser pour les opérations de logique FOL.
-    # 'eprover' (défaut) utilise EProver via Tweety's EFOLReasoner — robust (#939).
+    # 'eprover' (défaut) utilise EProver via fol_handler._EProverReasoner — robust (#939, #2516).
     # 'prover9' utilise un appel à un processus externe Prover9.
     # 'tweety' fallback — SimpleFolReasoner via JPype, last resort only.
     #

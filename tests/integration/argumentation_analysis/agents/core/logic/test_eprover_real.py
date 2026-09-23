@@ -6,8 +6,8 @@ existing ``test_eprover_spass_integration`` is **100% mocked**: it patches
 never running the binary. This file closes that hole with ONE non-mocked,
 skip-if-binary-absent integration test that runs the REAL EProver binary
 through the production path (``TweetyBridge.check_consistency(bs, "first_order")``
-→ ``FOLHandler.check_consistency`` → ``EFOLReasoner(path)``) and asserts a real
-consistency verdict.
+→ ``FOLHandler.check_consistency`` → ``_EProverReasoner(path)``, Tweety's
+``EFOLReasoner`` before #2516) and asserts a real consistency verdict.
 
 Modeled on FP-8's real-Prover9 test (``test_real_binary_inconsistent_kb_emits_theorem_proved``
 in ``tests/unit/argumentation_analysis/core/test_prover9_runner.py``).
