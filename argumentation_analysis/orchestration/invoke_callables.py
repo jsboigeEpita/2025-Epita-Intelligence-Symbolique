@@ -591,7 +591,7 @@ async def _invoke_quality_evaluator(
                 "a wired callable cannot upgrade the detectors."
             )
 
-    async def _evaluate_unit(text: str) -> Tuple[Any, Optional[str]]:
+    async def _evaluate_unit(text: str) -> Tuple[Dict[str, Any], Optional[str]]:
         """Score one unit; return ``(result, degraded_reason)``.
 
         Shared by the per-argument units and the whole-text fallback (#2444:
@@ -632,7 +632,7 @@ async def _invoke_quality_evaluator(
             "units_degraded": units_degraded,
         }
 
-    async def _whole_text_output() -> Any:
+    async def _whole_text_output() -> Dict[str, Any]:
         # No argument unit to score: the whole text is the one unit, with the
         # same degraded path and the same provenance (#2444).
         result, reason = await _evaluate_unit(input_text)
