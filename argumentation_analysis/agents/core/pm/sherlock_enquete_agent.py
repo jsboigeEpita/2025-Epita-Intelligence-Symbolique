@@ -156,77 +156,77 @@ class SherlockTools:
 
     @kernel_function(
         name="instant_deduction",
-        description="Effectue une déduction instantanée pour Cluedo basée sur les éléments disponibles.",
+        description=(
+            "Propose rapidement un triplet suspect/arme/lieu par position dans les "
+            "listes fournies. Ce n'est PAS une déduction : aucun indice n'est "
+            "utilisé. À vérifier avec faire_suggestion avant toute solution finale."
+        ),
     )
     async def instant_deduction(self, elements: str, partial_info: str = "") -> str:
         """
-        Outil de raisonnement instantané pour Cluedo - convergence forcée vers solution
+        Choix positionnel rapide parmi les éléments du jeu, présenté comme tel.
+
+        #2344 : l'outil présentait ce choix comme une déduction, avec une
+        ``confidence`` de 0.85 et une justification inventée. Il n'utilisait
+        aucun indice (``partial_info`` était ignoré), inventait un jeu par défaut
+        quand ``elements`` n'était pas du JSON, et des noms de remplissage quand
+        une liste était vide. L'outil reste, pour converger vite, mais il dit ce
+        qu'il est, et il refuse ce qu'il ne peut pas choisir.
 
         Args:
             elements: Éléments du jeu (suspects, armes, lieux) au format JSON
-            partial_info: Informations partielles ou indices déjà collectés
+            partial_info: Indices déjà collectés. Non exploités : le résultat le dit.
 
         Returns:
-            Déduction immédiate avec suspect/arme/lieu identifiés
+            Le triplet choisi en JSON, ou un message d'erreur nommant l'entrée refusée.
         """
-        self.logger.info(f"Déduction instantanée demandée avec éléments: {elements}")
+        import json
+
+        self.logger.info(f"Choix positionnel demandé avec éléments: {elements}")
 
         try:
-            import json
-            import random
+            parsed_elements = (
+                json.loads(elements) if isinstance(elements, str) else elements
+            )
+        except json.JSONDecodeError as e:
+            return (
+                f"Erreur déduction : les éléments ne sont pas un JSON valide "
+                f"({e.msg}). Passez le résultat de get_cluedo_game_elements."
+            )
+        if not isinstance(parsed_elements, dict):
+            return (
+                "Erreur déduction : les éléments doivent être un objet JSON "
+                "{suspects, armes, lieux}."
+            )
+        missing = [
+            key
+            for key in ("suspects", "armes", "lieux")
+            if not isinstance(parsed_elements.get(key), list)
+            or not parsed_elements[key]
+        ]
+        if missing:
+            return (
+                f"Erreur déduction : aucune liste non vide pour {', '.join(missing)} ; "
+                "rien à choisir."
+            )
 
-            # Parse des éléments du jeu
-            if isinstance(elements, str):
-                try:
-                    parsed_elements = json.loads(elements)
-                except json.JSONDecodeError:
-                    # Fallback si pas JSON - utiliser les éléments par défaut
-                    parsed_elements = {
-                        "suspects": [
-                            "Colonel Moutarde",
-                            "Mme Leblanc",
-                            "Mme Pervenche",
-                        ],
-                        "armes": ["Couteau", "Revolver", "Corde"],
-                        "lieux": ["Salon", "Cuisine", "Bibliothèque"],
-                    }
-            else:
-                parsed_elements = elements
-
-            # Raisonnement instantané basé sur l'intuition de Sherlock
-            suspects = parsed_elements.get("suspects", ["Suspect Inconnu"])
-            armes = parsed_elements.get("armes", ["Arme Inconnue"])
-            lieux = parsed_elements.get("lieux", ["Lieu Inconnu"])
-
-            # Application de la logique déductive de Sherlock (simulation de raisonnement rapide)
-            # Priorité aux éléments "suspects" selon l'intuition de Holmes
-
-            # Logique : Le suspect le plus improbable est souvent le coupable (paradoxe de Sherlock)
-            selected_suspect = suspects[-1] if suspects else "Suspect Mystérieux"
-
-            # Logique : L'arme la plus discrète pour ne pas éveiller les soupçons
-            selected_arme = armes[len(armes) // 2] if armes else "Arme Secrète"
-
-            # Logique : Le lieu le moins évident mais logiquement accessible
-            selected_lieu = lieux[0] if lieux else "Lieu Caché"
-
-            # Construction de la déduction avec raisonnement
-            deduction = {
-                "suspect": selected_suspect,
-                "arme": selected_arme,
-                "lieu": selected_lieu,
-                "confidence": 0.85,
-                "reasoning": f"Déduction instantanée basée sur: {selected_suspect} avait accès à {selected_arme} dans {selected_lieu}",
-                "method": "instant_sherlock_logic",
-                "time_to_solution": "instantané",
-            }
-
-            self.logger.info(f"Déduction instantanée produite: {deduction}")
-            return json.dumps(deduction, ensure_ascii=False)
-
-        except Exception as e:
-            self.logger.error(f"Erreur lors de la déduction instantanée: {e}")
-            return f"Erreur déduction: {e}"
+        suspects = parsed_elements["suspects"]
+        armes = parsed_elements["armes"]
+        lieux = parsed_elements["lieux"]
+        guess = {
+            "suspect": suspects[-1],
+            "arme": armes[len(armes) // 2],
+            "lieu": lieux[0],
+            "method": "positional_guess",
+            "clues_used": False,
+            "reasoning": (
+                "Choix par position dans les listes (dernier suspect, arme du "
+                "milieu, premier lieu). Aucun indice n'a été utilisé : ce n'est "
+                "pas une déduction, et aucune confiance n'est calculée."
+            ),
+        }
+        self.logger.info(f"Choix positionnel produit: {guess}")
+        return json.dumps(guess, ensure_ascii=False)
 
 
 class SherlockEnqueteAgent(BaseAgent):
@@ -299,7 +299,7 @@ class SherlockEnqueteAgent(BaseAgent):
             "get_current_case_description": "Récupère la description de l'affaire en cours.",
             "add_new_hypothesis": "Ajoute une nouvelle hypothèse à l'état de l'enquête.",
             "propose_final_solution": "Propose une solution finale à l'enquête.",
-            "instant_deduction": "Effectue une déduction instantanée pour Cluedo.",
+            "instant_deduction": "Choix positionnel rapide suspect/arme/lieu (pas une déduction).",
         }
 
     def setup_agent_components(self, llm_service_id: str) -> None:
