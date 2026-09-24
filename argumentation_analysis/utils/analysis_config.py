@@ -27,6 +27,13 @@ from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.reading_window import selected_text
 
 
+class AuthenticAnalysisUnavailable(RuntimeError):
+    """The authentic analysis cannot run: no API key, or a module failed to import.
+
+    Retrying cannot supply either, so the retry loop does not retry it.
+    """
+
+
 class AnalysisMode(Enum):
     """Modes d'analyse disponibles."""
 
@@ -144,7 +151,18 @@ class UnifiedAnalysisPipeline:
                 mode_result = await self._execute_analysis_mode(text, mode)
                 result.results[mode.value] = mode_result
 
-            result.status = "completed"
+            # #2344: a keyword fallback is not an authentic analysis. The run
+            # says so in its status and names each fallback and its cause.
+            fallbacks = {
+                name: mode_result.get("fallback_cause", "")
+                for name, mode_result in result.results.items()
+                if isinstance(mode_result, dict) and mode_result.get("fallback")
+            }
+            for name, cause in fallbacks.items():
+                result.warnings.append(
+                    f"{name} : analyse de repli, non authentique ({cause})"
+                )
+            result.status = "degraded" if fallbacks else "completed"
             result.execution_time = time.time() - start_time
 
             self.logger.info(
@@ -222,20 +240,23 @@ class UnifiedAnalysisPipeline:
                     return await self._mock_analysis(text, mode)
 
             except Exception as e:
-                if attempt < self.config.retry_count - 1:
+                retryable = not isinstance(e, AuthenticAnalysisUnavailable)
+                if retryable and attempt < self.config.retry_count - 1:
                     delay = self.config.retry_delay * (2**attempt)
                     self.logger.warning(
                         f"[WARNING] Tentative {attempt + 1} échouée: {e}, retry dans {delay}s"
                     )
                     await asyncio.sleep(delay)
-                else:
-                    # Fallback si activé
-                    if self.config.enable_fallback:
-                        self.logger.warning(
-                            f"[FALLBACK] Activation du fallback pour {mode.value}"
-                        )
-                        return await self._fallback_analysis(text, mode)
+                    continue
+                # #2344: the fallback is the one ``enable_fallback`` allows,
+                # whatever the cause, and it carries that cause.
+                if not self.config.enable_fallback:
                     raise
+                cause = f"{type(e).__name__}: {e}"
+                self.logger.warning(
+                    f"[FALLBACK] Activation du fallback pour {mode.value} : {cause}"
+                )
+                return await self._fallback_analysis(text, mode, cause=cause)
 
     async def _real_llm_analysis(self, text: str, mode: AnalysisMode) -> Dict[str, Any]:
         """Analyse authentique via LLM."""
@@ -281,10 +302,10 @@ class UnifiedAnalysisPipeline:
                 else None
             )
             if not api_key:
-                self.logger.warning(
-                    "[API-KEY] OPENAI_API_KEY non trouvée dans la configuration, utilisation fallback"
+                raise AuthenticAnalysisUnavailable(
+                    "OPENAI_API_KEY absente de la configuration : l'analyse "
+                    "authentique ne peut pas s'exécuter"
                 )
-                return await self._fallback_analysis(text, mode)
 
             # Ajout du service OpenAI au kernel
             from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
@@ -330,9 +351,10 @@ class UnifiedAnalysisPipeline:
                 "timestamp": datetime.now().isoformat(),
             }
 
-        except ImportError:
-            # Fallback si les modules ne sont pas disponibles
-            return await self._fallback_analysis(text, mode)
+        except ImportError as e:
+            raise AuthenticAnalysisUnavailable(
+                f"module de l'analyse authentique introuvable : {e}"
+            ) from e
 
     async def _mock_analysis(self, text: str, mode: AnalysisMode) -> Dict[str, Any]:
         """Analyse simulée pour tests."""
@@ -350,8 +372,10 @@ class UnifiedAnalysisPipeline:
             "confidence": 0.85,
         }
 
-    async def _fallback_analysis(self, text: str, mode: AnalysisMode) -> Dict[str, Any]:
-        """Analyse de fallback simplifiée."""
+    async def _fallback_analysis(
+        self, text: str, mode: AnalysisMode, *, cause: str
+    ) -> Dict[str, Any]:
+        """Analyse de fallback simplifiée, qui porte la cause du repli (#2344)."""
         await asyncio.sleep(0.05)
 
         # Analyse basique basée sur des mots-clés
@@ -360,6 +384,7 @@ class UnifiedAnalysisPipeline:
             "result": f"Analyse fallback {mode.value}",
             "authentic": False,
             "fallback": True,
+            "fallback_cause": cause,
             "timestamp": datetime.now().isoformat(),
         }
 
@@ -449,6 +474,9 @@ class UnifiedAnalysisPipeline:
             [r for r in self.results_cache if r.status == "completed"]
         )
         failed_analyses = len([r for r in self.results_cache if r.status == "error"])
+        degraded_analyses = len(
+            [r for r in self.results_cache if r.status == "degraded"]
+        )
 
         total_time = sum(r.execution_time for r in self.results_cache)
         avg_time = total_time / total_analyses if total_analyses > 0 else 0
@@ -458,6 +486,7 @@ class UnifiedAnalysisPipeline:
             "total_analyses": total_analyses,
             "successful_analyses": successful_analyses,
             "failed_analyses": failed_analyses,
+            "degraded_analyses": degraded_analyses,
             "success_rate": (
                 successful_analyses / total_analyses if total_analyses > 0 else 0
             ),
@@ -481,7 +510,12 @@ def create_analysis_pipeline(
             try:
                 modes.append(AnalysisMode(mode_str))
             except ValueError:
-                logging.warning(f"Mode d'analyse invalide: {mode_str}")
+                # #2344: the caller's mode list is ours; a typo used to drop
+                # the mode with a warning and run the others.
+                valid = ", ".join(m.value for m in AnalysisMode)
+                raise ValueError(
+                    f"Mode d'analyse invalide : {mode_str!r} (modes valides : {valid})"
+                ) from None
 
     if not modes:
         modes = [AnalysisMode.UNIFIED]

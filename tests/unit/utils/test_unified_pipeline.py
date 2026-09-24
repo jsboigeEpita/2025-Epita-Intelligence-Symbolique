@@ -154,8 +154,10 @@ class TestUnifiedAnalysisPipeline:
                 mock_fallback.return_value = {"fallback": True}
                 result = await pipeline.analyze_text("Test text")
 
-        assert result.status == "completed"
+        # #2344: a fallback run is degraded, not completed, and says which mode.
+        assert result.status == "degraded"
         assert result.results["unified"]["fallback"] is True
+        assert result.warnings and result.warnings[0].startswith("unified : ")
 
     @pytest.mark.asyncio
     async def test_analyze_batch_sequential(self):
@@ -390,11 +392,9 @@ class TestFactoryFunction:
 
     def test_create_pipeline_invalid_mode(self):
         """Test création avec mode invalide."""
-        # Les modes invalides sont ignorés avec warning
-        pipeline = create_analysis_pipeline(analysis_modes=["invalid_mode", "unified"])
-
-        # Devrait garder seulement les modes valides ou revenir au défaut
-        assert len(pipeline.config.analysis_modes) >= 1
+        # #2344: un mode invalide lève, il n'est plus ignoré avec un warning.
+        with pytest.raises(ValueError, match="invalid_mode"):
+            create_analysis_pipeline(analysis_modes=["invalid_mode", "unified"])
 
 
 # Tests d'intégration
