@@ -1403,10 +1403,8 @@ class UnifiedWebOrchestrator:
             "Arrêt robuste des instances existantes via ProcessCleaner",
         )
 
-        # Je dois injecter la config dans le cleaner car il en a besoin
-        # L'injection de la config se fait maintenant dans le __init__
-        pass
-
+        # Le cleaner ne reçoit aucune config : les ports à vérifier, lus ici,
+        # lui sont passés en argument.
         backend_config = self.config.get("backend", {})
         frontend_config = self.config.get("frontend", {})
 
