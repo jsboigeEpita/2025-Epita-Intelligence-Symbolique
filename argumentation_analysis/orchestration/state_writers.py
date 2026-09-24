@@ -1661,10 +1661,15 @@ def _write_sat_to_state(output: Any, state: Any, ctx: dict[str, Any]) -> None:
         sat_label = (
             "SAT" if is_sat is True else ("UNSAT" if is_sat is False else "indéterminé")
         )
+        # #2344: the producer names why it did not decide (``error``, e.g. the
+        # backend is not installed). Kept as the entry's ``message``, the field
+        # the restitution reads for the cause; dropped, an undecided SAT entry
+        # carried no reason at all.
         state.add_propositional_analysis_result(
             formulas=[f"SAT: {sat_label}"],
             satisfiable=is_sat,
             model=model if isinstance(model, dict) else {},
+            message=output.get("error") or None,
         )
 
 
