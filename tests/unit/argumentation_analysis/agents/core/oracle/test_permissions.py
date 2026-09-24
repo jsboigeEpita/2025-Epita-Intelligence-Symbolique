@@ -17,6 +17,9 @@ from argumentation_analysis.agents.core.oracle.permissions import (
     validate_cluedo_method_access,
     get_default_cluedo_permissions,
 )
+from argumentation_analysis.agents.core.oracle.error_handling import (
+    OraclePermissionError,
+)
 
 # ── Enums ──
 
@@ -187,9 +190,11 @@ class TestPermissionManager:
         # Now should be denied
         assert pm.is_authorized("Sherlock", QueryType.CARD_INQUIRY) is False
 
-    def test_add_permission_new_agent(self, pm):
-        pm.add_permission(agent_name="NewAgent", query_type=QueryType.CLUE_REQUEST)
-        assert pm.is_authorized("NewAgent", QueryType.CLUE_REQUEST) is True
+    def test_add_permission_new_agent_is_refused(self, pm):
+        # #2344: no rule, no grant — the agent enters via add_permission_rule.
+        with pytest.raises(OraclePermissionError):
+            pm.add_permission(agent_name="NewAgent", query_type=QueryType.CLUE_REQUEST)
+        assert pm.is_authorized("NewAgent", QueryType.CLUE_REQUEST) is False
 
     def test_add_permission_existing_agent(self, pm, rule_sherlock):
         pm.add_permission_rule(rule_sherlock)
