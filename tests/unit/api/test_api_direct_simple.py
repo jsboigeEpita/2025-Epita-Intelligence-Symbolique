@@ -4,7 +4,9 @@
 Test Direct API FastAPI - Point d'Entree 2 (sans Unicode)
 =========================================================
 
-Test unitaire simplifie pour valider l'API FastAPI avec GPT-4o-mini authentique
+Demarre l'API FastAPI et appelle /api/analyze. Cette route fait analyser le
+texte par Tweety (AspicParser) et n'appelle aucun LLM : ni cle OpenAI ni mode
+mock n'entrent en jeu (#2525).
 """
 
 import os
@@ -15,12 +17,9 @@ import requests
 import subprocess
 import pytest
 from pathlib import Path
-from dotenv import load_dotenv
 
-# Configuration modèle LLM depuis .env
-EXPECTED_MODEL = os.getenv("OPENAI_CHAT_MODEL_ID", "gpt-5-mini")
-
-# Vérifier disponibilité OPENAI_API_KEY et fichiers API
+# Vérifier la présence des fichiers API. La route testée n'utilise pas de clé
+# OpenAI (#2525), donc son absence ne fait pas sauter ces tests.
 API_ENVIRONMENT_AVAILABLE = True
 API_ENVIRONMENT_ERROR = None
 API_FILES_REQUIRED = [
@@ -30,11 +29,6 @@ API_FILES_REQUIRED = [
 ]
 
 try:
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key or len(api_key) < 20:
-        API_ENVIRONMENT_AVAILABLE = False
-        API_ENVIRONMENT_ERROR = "OPENAI_API_KEY non configurée ou invalide"
-
     # Vérifier fichiers API
     missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
     if missing_files:
@@ -47,21 +41,11 @@ except Exception as e:
 
 @pytest.mark.skipif(
     not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
+    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing API files'}",
 )
 def test_environment_setup():
     """Test 1: Verification environnement."""
     print("\n=== Test 1: Verification environnement ===")
-
-    # Verifier cle OpenAI
-    api_key = os.getenv("OPENAI_API_KEY")
-    assert (
-        api_key is not None
-    ), "ECHEC: OPENAI_API_KEY n'a pas ete chargee dans l'environnement de test."
-    assert (
-        len(api_key) > 20
-    ), "ECHEC: La cle OPENAI_API_KEY semble invalide (trop courte)."
-    print(f"[OK] OPENAI_API_KEY configuree ({len(api_key)} chars)")
 
     # Verifier fichiers API
     api_files = [
@@ -78,7 +62,7 @@ def test_environment_setup():
 
 @pytest.mark.skipif(
     not API_ENVIRONMENT_AVAILABLE,
-    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing OPENAI_API_KEY or API files'}",
+    reason=f"API test environment not configured - {API_ENVIRONMENT_ERROR if API_ENVIRONMENT_ERROR else 'Missing API files'}",
 )
 def test_api_startup_and_basic_functionality():
     """Test 2: Demarrage API et fonctionnalite de base."""
@@ -114,24 +98,8 @@ def test_api_startup_and_basic_functionality():
         # Creation d'un environnement controle pour le sous-processus
         proc_env = os.environ.copy()
         proc_env["PYTHONPATH"] = os.getcwd()
-        api_key = os.getenv("OPENAI_API_KEY")
-        if api_key:
-            proc_env["OPENAI_API_KEY"] = api_key
-
-        # Forcer le mode mock pour ce test afin de le débloquer
-        proc_env["FORCE_MOCK_LLM"] = "1"
-        print("[DEBUG] Variable 'FORCE_MOCK_LLM=1' ajoutee pour le sous-processus.")
-
-        # Indiquer au sous-processus qu'il est dans un contexte de test
-        proc_env["IN_PYTEST"] = "1"
-        print("[DEBUG] Variable 'IN_PYTEST=1' ajoutee pour le sous-processus.")
-
         # Remove PYTEST_CURRENT_TEST so API subprocess doesn't auto-mock
         proc_env.pop("PYTEST_CURRENT_TEST", None)
-
-        print(
-            f"[DEBUG] OPENAI_API_KEY dans l'env du sous-processus: {'presente' if 'OPENAI_API_KEY' in proc_env else 'absente'}"
-        )
 
         # Use DEVNULL to avoid pipe buffer deadlock — with debug logging,
         # the pipe fills up and blocks the uvicorn process from starting.
@@ -183,7 +151,7 @@ def test_api_startup_and_basic_functionality():
         print(f"[OK] Exemples trouves: {len(data['examples'])}")
 
         # Test analyse simple
-        print("\nTest endpoint /analyze avec GPT-4o-mini...")
+        print("\nTest endpoint /analyze...")
         test_text = "Si il pleut, alors la route est mouillee. Il pleut. Donc la route est mouillee."
 
         start_time = time.time()
@@ -197,35 +165,19 @@ def test_api_startup_and_basic_functionality():
 
         # Verifications — API returns {status, analysis_id, results: {...}}
         assert "analysis_id" in data
-        assert "status" in data or "results" in data
-
-        results = data.get("results", data)
-        metadata = results.get("metadata", {})
-        service = metadata.get("gpt_model", metadata.get("service_status", "unknown"))
-
+        assert data.get("status") == "success", data
         print(f"[OK] Analyse recue en {processing_time:.2f}s")
-        print(f"[OK] Status: {data.get('status')}")
-        print(f"[OK] Service: {service}")
-        print(f"[OK] Composants: {metadata.get('components_used', [])}")
 
-        # Test detection sophisme
-        print("\nTest detection sophisme...")
-        sophisme_text = "Cette theorie est fausse car son auteur est un idiot."
-
-        response = requests.post(
-            f"{api_url}/api/analyze", json={"text": sophisme_text}, timeout=60
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data.get("status") == "success" or "analysis_id" in data
-
-        # Verify the API processed the request (has results or fallacies)
-        results = data.get("results", data)
-        fallacies = results.get("fallacies", [])
-        fallacy_count = results.get("fallacy_count", len(fallacies))
-        print(f"[OK] Sophismes detectes: {fallacy_count}")
-        print(f"[OK] Resultats: {list(results.keys())}")
+        # Le contrat de /api/analyze (#2525) : Tweety parse le texte avec son
+        # AspicParser, sans LLM. La réponse nomme le composant qui l'a produite.
+        # Cette route ne détecte aucun sophisme (#2526) ; ce test ne l'exige pas.
+        metadata = data["results"].get("metadata", {})
+        assert metadata.get("components_used") == [
+            "TweetyArgumentReconstructor_centralized_v2"
+        ], f"composant inattendu : {metadata!r}"
+        structure = data["results"].get("argument_structure") or {}
+        assert isinstance(structure.get("premises"), list), structure
+        assert isinstance(structure.get("conclusion"), str), structure
 
         print("[OK] Test API et fonctionnalites REUSSI")
 
@@ -248,7 +200,7 @@ def test_api_startup_and_basic_functionality():
 
 def run_all_tests():
     """Executer tous les tests."""
-    print("=== TESTS VALIDATION POINT D'ENTREE 2 - API FASTAPI GPT-4O-MINI ===")
+    print("=== TESTS VALIDATION POINT D'ENTREE 2 - API FASTAPI ===")
 
     try:
         test_environment_setup()
@@ -256,9 +208,7 @@ def run_all_tests():
 
         print("\n" + "=" * 60)
         print("TOUS LES TESTS REUSSIS - VALIDATION CONFIRMEE")
-        print("[OK] API FastAPI utilise authentiquement GPT-4o-mini")
-        print("[OK] Endpoints fonctionnels et temps de reponse realistes")
-        print("[OK] Detection de sophismes operationnelle")
+        print("[OK] /health et /api/analyze repondent")
         print("=" * 60)
 
         return True

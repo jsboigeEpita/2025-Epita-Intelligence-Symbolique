@@ -4,7 +4,9 @@
 Test Direct API FastAPI - Point d'Entrée 2
 ==========================================
 
-Test unitaire simplifié pour valider l'API FastAPI avec GPT-4o-mini authentique
+Démarre l'API FastAPI et appelle /api/analyze. Cette route fait analyser le
+texte par Tweety (AspicParser) et n'appelle aucun LLM : ni clé OpenAI ni mode
+mock n'entrent en jeu (#2525).
 """
 
 import os
@@ -15,23 +17,17 @@ import requests
 import subprocess
 import threading
 from pathlib import Path
-from dotenv import load_dotenv
 import pytest
 
 # Disponibilité calculée À L'EXÉCUTION (#1827) : l'import de ce fichier ne
-# doit ni charger .env ni écrire os.environ — toute bande qui collecte
-# tests/unit/ l'importe, et un load_dotenv() au niveau module semerait la clé
-# réelle pour toute la session pytest.
+# doit ni charger .env ni écrire os.environ. La route testée n'utilise pas de
+# clé (#2525), donc ce fichier ne charge plus .env du tout.
 API_FILES_REQUIRED = ["api/main.py", "api/endpoints.py", "api/dependencies.py"]
 
 
 def _api_environment_status():
     """(disponible, raison) — évalué au moment où le test démarre."""
     try:
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key or len(api_key) < 20:
-            return False, "OPENAI_API_KEY non configurée ou invalide"
-
         # Vérifier fichiers API
         missing_files = [f for f in API_FILES_REQUIRED if not Path(f).exists()]
         if missing_files:
@@ -51,17 +47,11 @@ def _api_environment_status():
 
 
 def _ensure_api_environment():
-    """Charge .env puis vérifie la disponibilité — début de CHAQUE test.
-
-    Le load_dotenv() vit ici, pas au niveau module : la clé n'entre dans
-    os.environ que si un test de ce fichier s'exécute réellement.
-    """
-    load_dotenv()
+    """Vérifie la disponibilité au début de CHAQUE test."""
     available, error = _api_environment_status()
     if not available:
         pytest.skip(
-            f"API test environment not configured - "
-            f"{error or 'Missing OPENAI_API_KEY or API files'}"
+            f"API test environment not configured - " f"{error or 'Missing API files'}"
         )
 
 
@@ -69,12 +59,6 @@ def test_environment_setup():
     """Test 1: Vérification environnement."""
     _ensure_api_environment()
     print("\n=== Test 1: Vérification environnement ===")
-
-    # Vérifier clé OpenAI
-    api_key = os.getenv("OPENAI_API_KEY")
-    assert api_key is not None, "OPENAI_API_KEY manquante"
-    assert len(api_key) > 20, "OPENAI_API_KEY invalide"
-    print(f"✓ OPENAI_API_KEY configurée ({len(api_key)} chars)")
 
     # Vérifier fichiers API
     api_files = ["api/main.py", "api/endpoints.py", "api/dependencies.py"]
@@ -126,7 +110,7 @@ def test_api_startup_and_basic_functionality():
             stderr=subprocess.PIPE,
             text=True,
             cwd=os.getcwd(),
-            env=dict(os.environ, PYTHONPATH=os.getcwd(), FORCE_MOCK_LLM="1"),
+            env=dict(os.environ, PYTHONPATH=os.getcwd()),
         )
 
         print(f"API process démarré (PID: {api_process.pid})")
@@ -218,90 +202,18 @@ def test_api_startup_and_basic_functionality():
         assert "results" in data
         assert "fallacies" in data["results"]
 
-        analysis_summary = data["results"].get("summary", "")
-        service_metadata = data["results"].get("metadata", {})
+        print(f"✓ Analyse reçue en {processing_time:.2f}s")
 
-        print(f"✓ Analyse reçue ({analysis_summary[:50]}...) en {processing_time:.2f}s")
-        print(f"✓ Service utilisé: {service_metadata.get('gpt_model')}")
-
-        # Vérifier authenticité ou mode mock en se basant sur la réponse
-        is_mock_response = "mock" in service_metadata.get(
-            "gpt_model", ""
-        ) or "fallback" in service_metadata.get("gpt_model", "")
-
-        # Vérification de l'authenticité si l'information est disponible
-        if "authentic_analysis" in service_metadata:
-            if is_mock_response:
-                print(
-                    "ℹ️  Réponse de type MOCK/FALLBACK détectée, ajustement des assertions."
-                )
-                assert (
-                    service_metadata.get("authentic_analysis") is False
-                ), "L'analyse devrait être marquée comme non authentique"
-                print("✓ Analyse en mode mock/fallback confirmée")
-            else:
-                print("ℹ️  Réponse de type authentique détectée.")
-                assert (
-                    service_metadata.get("authentic_analysis") is True
-                ), "L'analyse ne semble pas authentique"
-                assert "gpt-5-mini" in service_metadata.get(
-                    "gpt_model", ""
-                ), "Le modèle ne semble pas être gpt-5-mini"
-                assert (
-                    len(analysis_summary) > 10
-                ), f"Résumé d'analyse trop court: {len(analysis_summary)} chars"
-                assert (
-                    processing_time > 1.0
-                ), f"Temps trop rapide ({processing_time:.2f}s), possible mock"
-                print(f"✓ Analyse authentique GPT-4o-mini confirmée")
-                print(f"  - Temps: {processing_time:.2f}s (> 1.0s)")
-                print(f"  - Longueur: {len(analysis_summary)} chars")
-        else:
-            print(
-                "⚠️  Clé 'authentic_analysis' absente des métadonnées. Vérification de l'authenticité sautée."
-            )
-            print(f"  - Service: {service_metadata.get('gpt_model')}")
-
-        # Test détection sophisme
-        print("\nTest détection sophisme...")
-        sophisme_text = "Cette théorie est fausse car son auteur est un idiot."
-
-        response = requests.post(
-            f"{api_url}/api/analyze", json={"text": sophisme_text}, timeout=60
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        results = data.get("results", {})
-        analysis_summary = results.get("summary", "").lower()
-
-        # Ajuster les assertions basées sur le mode détecté
-        # La réponse pour la deuxième requête doit aussi être un mock
-        metadata_2 = results.get("metadata", {})
-        is_mock_response_2 = "mock" in metadata_2.get(
-            "gpt_model", ""
-        ) or "fallback" in metadata_2.get("gpt_model", "")
-
-        # Comme le service sous-jacent n'est pas un LLM, il ne renvoie pas de mode mock/fallback.
-        # On assouplit le test pour simplement vérifier qu'une analyse a eu lieu.
-        # assert is_mock_response_2, "La deuxième réponse aurait dû aussi être un mock/fallback"
-
-        # En mode mock, on s'attend à une détection de "ad hominem" par mot-clé
-        fallacies_found = [f["type"].lower() for f in results.get("fallacies", [])]
-        if fallacies_found:
-            print(f"✓ Fallacies trouvées en mode mock: {fallacies_found}")
-            indicators = ["ad hominem", "attaque personnelle"]
-            assert any(
-                indicator in f_type
-                for indicator in indicators
-                for f_type in fallacies_found
-            ), f"Le mock Ad Hominem n'a pas été détecté dans {fallacies_found}"
-        else:
-            # Si aucun sophisme n'est trouvé, on l'accepte pour ce test de base.
-            # Le service mock de base n'est pas assez sophistiqué pour toujours en trouver.
-            print(
-                "✓ Aucun sophisme détecté par le service, ce qui est acceptable pour ce test."
-            )
+        # Le contrat de /api/analyze (#2525) : Tweety parse le texte avec son
+        # AspicParser, sans LLM. La réponse nomme le composant qui l'a produite.
+        # Cette route ne détecte aucun sophisme (#2526) ; ce test ne l'exige pas.
+        metadata = data["results"].get("metadata", {})
+        assert metadata.get("components_used") == [
+            "TweetyArgumentReconstructor_centralized_v2"
+        ], f"composant inattendu : {metadata!r}"
+        structure = data["results"].get("argument_structure") or {}
+        assert isinstance(structure.get("premises"), list), structure
+        assert isinstance(structure.get("conclusion"), str), structure
 
         print("✓ Test API et fonctionnalités RÉUSSI")
 
@@ -324,7 +236,7 @@ def test_api_startup_and_basic_functionality():
 
 def run_all_tests():
     """Exécuter tous les tests."""
-    print("=== TESTS VALIDATION POINT D'ENTRÉE 2 - API FASTAPI GPT-4O-MINI ===")
+    print("=== TESTS VALIDATION POINT D'ENTRÉE 2 - API FASTAPI ===")
 
     try:
         test_environment_setup()
@@ -332,9 +244,7 @@ def run_all_tests():
 
         print("\n" + "=" * 60)
         print("🎉 TOUS LES TESTS RÉUSSIS - VALIDATION CONFIRMÉE")
-        print("✓ API FastAPI utilise authentiquement GPT-4o-mini")
-        print("✓ Endpoints fonctionnels et temps de réponse réalistes")
-        print("✓ Détection de sophismes opérationnelle")
+        print("✓ /health et /api/analyze répondent")
         print("=" * 60)
 
         return True
