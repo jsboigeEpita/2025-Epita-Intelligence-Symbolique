@@ -9,6 +9,7 @@ ainsi que la fonction de génération de rapport.
 """
 
 import logging
+from html import escape
 from typing import List, Dict, Any, Optional
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions,
@@ -190,6 +191,10 @@ class ExtractRepairPlugin:
         return self.repair_results
 
 
+def _escaped(result: Dict[str, Any], key: str, default: str = "") -> str:
+    return escape(str(result.get(key, default)))
+
+
 def generate_report(
     results: List[Dict[str, Any]], output_file: str = "repair_report.html"
 ):
@@ -293,20 +298,23 @@ def generate_report(
     """
 
     for result in results:
-        source_name = result.get("source_name", "Source inconnue")
-        extract_name = result.get("extract_name", "Extrait inconnu")
-        status = result.get("status", "error")
-        message = result.get("message", "Aucun message")
+        # Every value comes from the extracts or from the model: escaped, so a
+        # ``<`` or ``&`` in a marker cannot break or rewrite the page (#2346).
+        source_name = _escaped(result, "source_name", "Source inconnue")
+        extract_name = _escaped(result, "extract_name", "Extrait inconnu")
+        raw_status = result.get("status", "error")
+        status = escape(str(raw_status))
+        message = _escaped(result, "message", "Aucun message")
 
         details_html = ""  # Renommé pour éviter conflit de nom
-        if status == "repaired":
+        if raw_status == "repaired":
             details_html += f"""
             <div class="details">
-                <p><strong>Ancien marqueur de début:</strong> "{result.get('old_start_marker', '')}"</p>
-                <p><strong>Nouveau marqueur de début:</strong> "{result.get('new_start_marker', '')}"</p>
-                <p><strong>Ancien marqueur de fin:</strong> "{result.get('old_end_marker', '')}"</p>
-                <p><strong>Nouveau marqueur de fin:</strong> "{result.get('new_end_marker', '')}"</p>
-                <p><strong>Explication:</strong> {result.get('explanation', '')}</p>
+                <p><strong>Ancien marqueur de début:</strong> "{_escaped(result, 'old_start_marker')}"</p>
+                <p><strong>Nouveau marqueur de début:</strong> "{_escaped(result, 'new_start_marker')}"</p>
+                <p><strong>Ancien marqueur de fin:</strong> "{_escaped(result, 'old_end_marker')}"</p>
+                <p><strong>Nouveau marqueur de fin:</strong> "{_escaped(result, 'new_end_marker')}"</p>
+                <p><strong>Explication:</strong> {_escaped(result, 'explanation')}</p>
             </div>
             """
 
