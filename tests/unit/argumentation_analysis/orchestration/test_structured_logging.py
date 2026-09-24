@@ -5,7 +5,7 @@ Validates:
 - JsonFormatter produces valid JSON output
 - HumanFormatter includes correlation prefix
 - correlation_id propagates across a multi-phase workflow run
-- LOG_FORMAT=json activates JSON output
+- LOG_FORMAT=json selects the JSON formatter (entry points: test_log_format_reader_2346.py)
 """
 import json
 import logging
@@ -18,6 +18,7 @@ from argumentation_analysis.orchestration.structured_logging import (
     HumanFormatter,
     JsonFormatter,
     PhaseLogger,
+    formatter_from_env,
     generate_correlation_id,
     get_phase_logger,
 )
@@ -125,26 +126,22 @@ class TestHumanFormatter:
 
 
 class TestLogFormatEnv:
-    """Test LOG_FORMAT environment variable control."""
+    """LOG_FORMAT picks the formatter, read each time an entry point asks (#2346)."""
 
     def test_json_format_env(self, monkeypatch):
-        # Reset the configured flag
-        import argumentation_analysis.orchestration.structured_logging as sl_mod
         monkeypatch.setenv("LOG_FORMAT", "json")
-        monkeypatch.setattr(sl_mod, "_configured", False)
-
-        slog = get_phase_logger("test_env_json", correlation_id="env-test")
-        # Verify we got a PhaseLogger
-        assert isinstance(slog, PhaseLogger)
-        assert slog.extra["correlation_id"] == "env-test"
+        assert type(formatter_from_env("%(message)s")) is JsonFormatter
 
     def test_human_format_default(self, monkeypatch):
-        import argumentation_analysis.orchestration.structured_logging as sl_mod
         monkeypatch.delenv("LOG_FORMAT", raising=False)
-        monkeypatch.setattr(sl_mod, "_configured", False)
+        assert type(formatter_from_env("%(message)s")) is HumanFormatter
 
-        slog = get_phase_logger("test_env_human", correlation_id="human-test")
-        assert isinstance(slog, PhaseLogger)
+    def test_a_later_call_reads_the_variable_again(self, monkeypatch):
+        """The first caller no longer fixes the format for the process."""
+        monkeypatch.delenv("LOG_FORMAT", raising=False)
+        formatter_from_env("%(message)s")
+        monkeypatch.setenv("LOG_FORMAT", "JSON")
+        assert type(formatter_from_env("%(message)s")) is JsonFormatter
 
 
 class TestCorrelationPropagation:

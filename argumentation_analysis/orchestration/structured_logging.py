@@ -3,27 +3,36 @@
 Provides a JSON-capable log formatter and a PhaseLogger adapter that
 injects ``correlation_id`` and ``phase_name`` into every log record.
 
-Output mode is controlled by the ``LOG_FORMAT`` environment variable:
+Output mode is controlled by the ``LOG_FORMAT`` environment variable, read by
+``formatter_from_env`` when an entry point configures logging:
 - ``LOG_FORMAT=json`` → JSON lines to stderr (for production / corpus runs)
 - anything else → human-readable format (default, for dev / tests)
+
+The module itself configures nothing: the entry point installs the formatter
+(``run_orchestration.setup_logging``, ``compare_orchestration_modes.main``).
 
 Usage in orchestration modules::
 
     from argumentation_analysis.orchestration.structured_logging import get_phase_logger
 
     logger = get_phase_logger("workflow_executor", correlation_id="run-abc")
-    logger.info("Phase completed", phase_name="extract", duration=1.2)
+    logger.info("Phase completed", extra={"phase_name": "extract", "duration": 1.2})
 """
 import json
 import logging
 import os
-import sys
 import uuid
 from typing import Any, Dict, Optional
 
+# Attributes every LogRecord carries; anything else on a record came from ``extra``.
+_RECORD_ATTRIBUTES = frozenset(vars(logging.makeLogRecord({}))) | {
+    "message",
+    "asctime",
+}
+
 
 class JsonFormatter(logging.Formatter):
-    """Emit one JSON object per log line."""
+    """Emit one JSON object per log line, with every field passed in ``extra``."""
 
     def format(self, record: logging.LogRecord) -> str:
         obj: Dict[str, Any] = {
@@ -33,10 +42,8 @@ class JsonFormatter(logging.Formatter):
             "message": record.getMessage(),
         }
         # Merge extra fields from the record
-        for key in ("correlation_id", "phase_name", "duration", "workflow",
-                     "capability", "phases_total", "phases_completed"):
-            val = getattr(record, key, None)
-            if val is not None:
+        for key, val in vars(record).items():
+            if key not in _RECORD_ATTRIBUTES and val is not None:
                 obj[key] = val
 
         if record.exc_info and record.exc_info[1]:
@@ -107,35 +114,20 @@ def get_phase_logger(
 ) -> PhaseLogger:
     """Get a PhaseLogger for the given module name.
 
-    If LOG_FORMAT=json is set, configures the root handler to use JSON output.
-    Otherwise, uses human-readable format.
+    Configures nothing: the output format is the entry point's, see
+    ``formatter_from_env``.
     """
-    _configure_root_if_needed()
     logger = logging.getLogger(name)
     return PhaseLogger(logger, correlation_id=correlation_id, phase_name=phase_name)
 
 
-_configured = False
+def formatter_from_env(fmt: str, datefmt: Optional[str] = None) -> logging.Formatter:
+    """The formatter an entry point installs, chosen by ``LOG_FORMAT`` when called.
 
-
-def _configure_root_if_needed():
-    """One-time configuration of the root logger handler."""
-    global _configured
-    if _configured:
-        return
-    _configured = True
-
-    log_format = os.environ.get("LOG_FORMAT", "").lower()
-    handler = logging.StreamHandler(sys.stderr)
-
-    if log_format == "json":
-        handler.setFormatter(JsonFormatter())
-    else:
-        handler.setFormatter(
-            HumanFormatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                           datefmt="%H:%M:%S")
-        )
-
-    root = logging.getLogger("argumentation_analysis.orchestration")
-    if not root.handlers:
-        root.addHandler(handler)
+    ``LOG_FORMAT=json`` gives ``JsonFormatter``. Anything else gives
+    ``HumanFormatter(fmt)``, which prefixes the correlation id and phase name a
+    ``PhaseLogger`` attaches, and prints other records as ``fmt`` alone would.
+    """
+    if os.environ.get("LOG_FORMAT", "").lower() == "json":
+        return JsonFormatter()
+    return HumanFormatter(fmt, datefmt=datefmt)

@@ -64,14 +64,30 @@ from dotenv import load_dotenv  # noqa: E402 — imported only, called in main()
 
 
 def setup_logging(verbose: bool = False) -> None:
-    """Configuration du logging pour l'orchestration."""
+    """Configuration du logging pour l'orchestration.
+
+    ``LOG_FORMAT=json`` y est lu (#2346) : une ligne JSON par enregistrement ;
+    sinon le format lisible, préfixé de l'identifiant de run et de la phase
+    quand l'exécuteur les attache.
+
+    ``force=True`` : le point d'entrée possède la configuration du processus.
+    Des modules de la bibliothèque appellent encore ``basicConfig`` à l'import
+    (#2346) ; sans ``force``, le premier importé l'emporte et cet appel ne fait
+    rien.
+    """
+    from argumentation_analysis.orchestration.structured_logging import (
+        formatter_from_env,
+    )
+
     level = logging.DEBUG if verbose else logging.INFO
 
-    logging.basicConfig(
-        level=level,
-        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-        datefmt="%H:%M:%S",
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        formatter_from_env(
+            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+        )
     )
+    logging.basicConfig(level=level, handlers=[handler], force=True)
 
     # Réduire la verbosité de certaines bibliothèques
     logging.getLogger("httpx").setLevel(logging.WARNING)

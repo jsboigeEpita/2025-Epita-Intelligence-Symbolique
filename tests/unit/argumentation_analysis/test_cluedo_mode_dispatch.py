@@ -79,6 +79,10 @@ class TestCluedoModeDispatch:
             # #1794: main() loads the CLI .env — in-test that call would seed
             # the real (nested) provider key into the process env.
             "argumentation_analysis.run_orchestration.load_dotenv",
+        ), patch(
+            # #2346: main() configures the process's logging with force=True,
+            # which would remove pytest's capture handlers.
+            "argumentation_analysis.run_orchestration.setup_logging",
         ):
             from argumentation_analysis.run_orchestration import main
             import sys
@@ -118,6 +122,9 @@ class TestCluedoModeDispatch:
         ), patch(
             # #1794: same as above — main()'s CLI .env load stays out of tests.
             "argumentation_analysis.run_orchestration.load_dotenv",
+        ), patch(
+            # #2346: same as above — main()'s logging configuration too.
+            "argumentation_analysis.run_orchestration.setup_logging",
         ):
             from argumentation_analysis.run_orchestration import main
             import sys
