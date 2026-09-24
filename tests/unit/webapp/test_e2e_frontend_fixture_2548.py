@@ -8,6 +8,7 @@ tests failed on ``ERR_CONNECTION_REFUSED`` (run 35969872851), and the cause
 was only in a log the lane did not upload.
 """
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -130,19 +131,43 @@ def _ui_fallacy_timeout_ms():
     return int(match.group(1))
 
 
+def _relay_module():
+    """``interface_web.app``, which mounts the React build when imported.
+
+    Without ``build/`` the import raises. The gate builds the app (ci.yml,
+    "Build React frontend", #1403), so there a missing build is a failure,
+    not a reason to skip.
+    """
+    build = _REPO / root_conftest._E2E_FRONTEND_DIR / "build"
+    if not build.is_dir():
+        if os.environ.get("CI"):
+            pytest.fail(
+                "the gate builds the React app before the tests; without "
+                "build/, interface_web.app cannot be imported"
+            )
+        pytest.skip(
+            "interface_web.app mounts the React build when imported: run "
+            "`npm ci` then `npm run build` in "
+            f"{root_conftest._E2E_FRONTEND_DIR.as_posix()}"
+        )
+    from interface_web import app as relay
+
+    return relay
+
+
 def test_the_relay_outwaits_the_app_it_serves():
     """The relay must not answer 504 while the React app is still waiting.
 
     Measured on #2548's branch: fallacy detection on the stress text took
     37 s, and the relay answered 504 at 30 s.
     """
-    from interface_web import app as relay
+    relay = _relay_module()
 
     assert relay.PROXY_READ_TIMEOUT_SECONDS * 1000 > _ui_fallacy_timeout_ms()
 
 
 async def test_the_relay_client_uses_that_timeout():
-    from interface_web import app as relay
+    relay = _relay_module()
 
     async with relay.lifespan(relay.app):
         timeout = relay.app.state.http_client.timeout
