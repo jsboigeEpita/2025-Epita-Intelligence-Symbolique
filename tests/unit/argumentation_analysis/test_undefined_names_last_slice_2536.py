@@ -52,11 +52,14 @@ def _refuse_to_start(*args, **kwargs):
 def test_dung_demo_gets_past_its_path_line(monkeypatch, capsys):
     """The demo reaches the Tweety library lookup instead of a NameError.
 
-    The JVM is never started: the test stops the demo at ``startJVM``, or
-    earlier if the jars are absent, and each of those outcomes proves that the
-    ``Path`` line ran.
+    The JVM is never looked up nor started: the test stops the demo at
+    ``startJVM``, or earlier if the jars are absent, and each of those outcomes
+    proves that the ``Path`` line ran. ``getDefaultJVMPath`` is stubbed because
+    the demo evaluates it as ``startJVM``'s argument, and on a machine where it
+    finds no JVM it would raise first (measured in CI on #2595).
     """
     monkeypatch.setattr(jpype, "isJVMStarted", lambda: False)
+    monkeypatch.setattr(jpype, "getDefaultJVMPath", lambda: "jvm-path-2536")
     monkeypatch.setattr(jpype, "startJVM", _refuse_to_start)
 
     runpy.run_path(str(REPO / "abs_arg_dung" / "agent.py"), run_name="__main__")
