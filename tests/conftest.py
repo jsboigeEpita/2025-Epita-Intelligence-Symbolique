@@ -918,32 +918,53 @@ def page_with_console_logs(page: "Page"):
 
 import subprocess
 import time
+from urllib.parse import urlparse
+
 import requests
 
 
-def _wait_for_server(url: str, process: subprocess.Popen, timeout: int = 120):
-    """Attend qu'un serveur soit disponible ou que le processus se termine."""
+def _server_output(process: subprocess.Popen, log_path=None) -> str:
+    """What the server printed.
+
+    The e2e fixture sends the server's output to a log file, so
+    ``communicate()`` returns ``(None, None)``: the log is then the only place
+    that names why the server stopped (#2480).
+    """
+    if log_path is not None:
+        try:
+            return Path(log_path).read_text(encoding="utf-8", errors="replace")
+        except OSError as exc:
+            return f"<log {log_path} unreadable: {exc}>"
+    stdout, stderr = process.communicate(timeout=5)
+    return "\n".join(
+        part.decode("utf-8", "ignore") for part in (stdout, stderr) if part is not None
+    )
+
+
+def _wait_for_server(
+    url: str, process: subprocess.Popen, timeout: int = 120, log_path=None
+):
+    """Attend qu'un serveur soit disponible ou que le processus se termine.
+
+    ``log_path`` : le fichier où le serveur écrit sa sortie, s'il y en a un.
+    """
     start_time = time.time()
     try:
         while time.time() - start_time < timeout:
             # Vérifie si le processus a terminé prématurément
             if process.poll() is not None:
                 # Le serveur s'est arrêté, on lève une erreur avec sa sortie
-                stdout, stderr = process.communicate()
-                stdout_decoded = stdout.decode("utf-8", "ignore")
-                stderr_decoded = stderr.decode("utf-8", "ignore")
+                output = _server_output(process, log_path)
 
                 # Utiliser le logger pour s'assurer que la sortie est capturée par pytest
                 logger.error(
                     f"Le serveur {url} a terminé prématurément. Code: {process.poll()}"
                 )
-                logger.error(f"--- STDOUT DU SERVEUR ---\n{stdout_decoded}")
-                logger.error(f"--- STDERR DU SERVEUR ---\n{stderr_decoded}")
+                logger.error(f"--- SORTIE DU SERVEUR ---\n{output}")
 
                 raise RuntimeError(
                     f"Le serveur à l'adresse {url} a terminé prématurément avec le code {process.poll()}.\n"
-                    f"STDOUT:\n{stdout_decoded}\n\n"
-                    f"STDERR:\n{stderr_decoded}"
+                    f"Sortie du serveur :\n{output}"
                 )
 
             try:
@@ -971,12 +992,8 @@ def _wait_for_server(url: str, process: subprocess.Popen, timeout: int = 120):
             # S'il y a eu un timeout et que le processus s'est terminé entre-temps,
             # on tente une dernière fois de récupérer sa sortie pour le débogage.
             try:
-                stdout, stderr = process.communicate(
-                    timeout=5
-                )  # Petit timeout pour ne pas bloquer
-                logger.error("SORTIE DU SERVEUR CAPTURÉE APRÈS TIMEOUT:")
-                logger.error(f"STDOUT:\n{stdout.decode('utf-8', 'ignore')}")
-                logger.error(f"STDERR:\n{stderr.decode('utf-8', 'ignore')}")
+                output = _server_output(process, log_path)
+                logger.error(f"SORTIE DU SERVEUR CAPTURÉE APRÈS TIMEOUT:\n{output}")
             except subprocess.TimeoutExpired:
                 logger.error(
                     "Impossible de récupérer la sortie du processus serveur après le timeout (il est peut-être bloqué)."
@@ -985,6 +1002,43 @@ def _wait_for_server(url: str, process: subprocess.Popen, timeout: int = 120):
                 logger.error(
                     f"Une erreur est survenue en tentant de récupérer la sortie du serveur après timeout: {e}"
                 )
+
+
+def _e2e_backend_command(host: str, port: str) -> list:
+    """The e2e backend: the live FastAPI app, served by uvicorn (#2480).
+
+    ``services.web_api_from_libs.app``, the Flask app this fixture used to
+    start, was archived in df031b34 (#34). ``api.main:app`` is the target the
+    #1853 launchers converged on.
+    """
+    return [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "api.main:app",
+        "--host",
+        host,
+        "--port",
+        str(port),
+    ]
+
+
+def _e2e_backend_env(port: str, project_root: Path) -> dict:
+    """The e2e backend's environment: this process's, plus the keys the
+    fixture decides.
+
+    ``ensure_env()`` has already loaded the root ``.env`` into ``os.environ``
+    and kept every value the caller set (#2472). This fixture used to read the
+    ``.env`` a second time and overwrite those values, an emptied key included
+    (#2480).
+    """
+    env = os.environ.copy()
+    env["PORT"] = str(port)
+    env["PYTHONPATH"] = str(project_root)
+    # Meant to keep the backend off the real LLM, but api/ has not read this
+    # variable since d0f28d45e: /api/analyze runs the real analysis (#2525).
+    env["FORCE_MOCK_LLM"] = "true"
+    return env
 
 
 def _kill_process(proc):
@@ -1022,40 +1076,16 @@ def e2e_servers(request):
     frontend_process = None
 
     try:
-        # --- Démarrage du serveur Backend (Application Flask en tant que module) ---
-        backend_module = "services.web_api_from_libs.app"
-        backend_command = [sys.executable, "-m", backend_module]
-
-        backend_port = backend_url.split(":")[-1]
-
-        # --- Définition de l'environnement pour le sous-processus Backend ---
-        # Il est crucial de reconstruire un environnement propre qui inclut
-        # les variables du .env, car Popen n'hérite pas automatiquement de celles
-        # chargées par pytest-dotenv dans le processus principal.
-        from dotenv import dotenv_values
-
-        # 1. Copier l'environnement courant
-        backend_env = os.environ.copy()
-
-        # 2. Charger les variables du fichier .env
-        dotenv_path = project_root / ".env"
-        if dotenv_path.exists():
-            logger.info(
-                f"Chargement des variables depuis {dotenv_path} pour le sous-processus backend."
-            )
-            env_vars = dotenv_values(dotenv_path)
-            backend_env.update(env_vars)
-            logger.info(
-                f"{len(env_vars)} variables chargées. Clé OPENAI_API_KEY présente: {'OPENAI_API_KEY' in backend_env}"
-            )
-
-        # 3. Ajouter/Surcharger les variables spécifiques au test
-        backend_env["PORT"] = backend_port
-        backend_env["PYTHONPATH"] = str(project_root)
-        backend_env["FORCE_MOCK_LLM"] = "true"  # Force le mock pour les tests E2E
+        # --- Démarrage du serveur Backend (api.main:app, #2480) ---
+        parsed_backend_url = urlparse(backend_url)
+        backend_port = str(parsed_backend_url.port)
+        backend_command = _e2e_backend_command(
+            parsed_backend_url.hostname or "127.0.0.1", backend_port
+        )
+        backend_env = _e2e_backend_env(backend_port, project_root)
 
         logger.info(
-            f"Démarrage du serveur backend Flask avec la commande: {' '.join(backend_command)}"
+            f"Démarrage du serveur backend avec la commande: {' '.join(backend_command)}"
         )
         # Création des fichiers de log
         e2e_logs_dir = project_root / "_e2e_logs"
@@ -1063,9 +1093,7 @@ def e2e_servers(request):
         backend_log_path = e2e_logs_dir / "backend_server.log"
         backend_log_file = open(backend_log_path, "w")
 
-        logger.info(
-            f"Démarrage du serveur backend Flask. Logs dans: {backend_log_path}"
-        )
+        logger.info(f"Démarrage du serveur backend. Logs dans: {backend_log_path}")
         backend_process = subprocess.Popen(
             backend_command,
             cwd=project_root,
@@ -1075,7 +1103,7 @@ def e2e_servers(request):
         )
 
         # Attendre que le backend soit prêt
-        _wait_for_server(backend_url, backend_process)
+        _wait_for_server(backend_url, backend_process, log_path=backend_log_path)
 
         # --- Démarrage du serveur Frontend ---
         frontend_command = ["npm", "start"]
