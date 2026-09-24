@@ -249,8 +249,8 @@ def main():
     parser.add_argument(
         "--passphrase",
         type=str,
-        default="Propaganda",
-        help="Phrase secrète pour le chiffrement (défaut: Propaganda)",
+        default=os.environ.get("TEXT_CONFIG_PASSPHRASE"),
+        help="Phrase secrète pour le chiffrement (défaut: $TEXT_CONFIG_PASSPHRASE)",
     )
 
     parser.add_argument(
@@ -260,6 +260,8 @@ def main():
     )
 
     args = parser.parse_args()
+    if not args.passphrase:
+        parser.error("--passphrase ou la variable TEXT_CONFIG_PASSPHRASE est requise")
 
     # Déterminer le chemin de sortie
     if args.output:
@@ -280,7 +282,7 @@ def main():
         logger.info("Fichier de test créé avec succès !")
         logger.info(f"Vous pouvez maintenant tester avec:")
         logger.info(
-            f"python scripts/utils/list_encrypted_extracts.py --passphrase '{args.passphrase}'"
+            'python scripts/utils/list_encrypted_extracts.py --passphrase "$TEXT_CONFIG_PASSPHRASE"'
         )
         return 0
     else:
