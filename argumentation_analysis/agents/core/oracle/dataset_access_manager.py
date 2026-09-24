@@ -526,7 +526,11 @@ class DatasetAccessManager(DatasetManagerInterface):
         self.permission_manager.add_permission_rule(rule)
 
     def add_permission(self, agent_name: str, query_type: QueryType):
-        """Ajoute une permission pour un agent via le gestionnaire de permissions."""
+        """Ajoute une permission à un agent qui a déjà une règle.
+
+        Lève ``OraclePermissionError`` pour un agent sans règle (#2344) :
+        l'enregistrer d'abord via ``add_permission_rule``.
+        """
         self.permission_manager.add_permission(agent_name, query_type)
         self._logger.info(
             f"Permission {query_type.value} ajoutée pour l'agent {agent_name}."

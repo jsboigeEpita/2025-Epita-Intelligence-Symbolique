@@ -19,7 +19,7 @@ from enum import Enum
 # Classe canonique : la hiérarchie OracleError de error_handling (#2139).
 # L'ancienne définition locale (Exception) rendait l'isinstance de
 # error_handling.py:80 inatteignable pour l'exception réellement levée ici.
-from .error_handling import CluedoIntegrityError
+from .error_handling import CluedoIntegrityError, OraclePermissionError
 
 
 class PermissionDeniedError(Exception):
@@ -241,25 +241,29 @@ class PermissionManager:
         )
 
     def add_permission(self, agent_name: str, query_type: QueryType):
-        """Ajoute dynamiquement une permission à une règle existante."""
+        """Ajoute dynamiquement une permission à une règle existante.
+
+        Raises:
+            OraclePermissionError: si l'agent n'a pas de règle. Un agent entre
+                dans l'ACL par ``add_permission_rule``, avec des conditions
+                écrites par l'appelant (#2344) : on n'élargit que ce qui existe.
+        """
         if agent_name not in self._permission_rules:
-            # Si l'agent n'a pas de règle, on en crée une nouvelle.
-            # C'est un comportement de convenance, mais peut nécessiter une logique plus fine
-            # dans un cas réel (par ex. lever une erreur).
-            self._permission_rules[agent_name] = PermissionRule(
-                agent_name=agent_name, allowed_query_types=[query_type]
+            # #2344 : on créait ici une règle aux valeurs par défaut
+            # (aucun champ interdit, quota 50), plus faible que chacune des
+            # règles Cluedo par défaut — un inconnu entrait par la porte de côté.
+            raise OraclePermissionError(
+                f"Aucune règle de permission pour l'agent {agent_name!r} : "
+                f"impossible de lui accorder {query_type.value}. Enregistrer "
+                f"d'abord sa règle, avec ses conditions, via add_permission_rule."
             )
+        # Ajoute la permission si elle n'existe pas déjà pour éviter les doublons
+        rule = self._permission_rules[agent_name]
+        if query_type not in rule.allowed_query_types:
+            rule.allowed_query_types.append(query_type)
             self._logger.info(
-                f"Nouvelle règle de permission créée pour l'agent {agent_name} avec la permission {query_type.value}."
+                f"Permission {query_type.value} ajoutée à la règle existante pour l'agent {agent_name}."
             )
-        else:
-            # Ajoute la permission si elle n'existe pas déjà pour éviter les doublons
-            rule = self._permission_rules[agent_name]
-            if query_type not in rule.allowed_query_types:
-                rule.allowed_query_types.append(query_type)
-                self._logger.info(
-                    f"Permission {query_type.value} ajoutée à la règle existante pour l'agent {agent_name}."
-                )
 
     def is_authorized(self, agent_name: str, query_type: QueryType) -> bool:
         """Vérifie si un agent est autorisé pour un type de requête."""
