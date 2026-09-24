@@ -32,6 +32,7 @@ class CryptoService:
     ERR_BAD_TOKEN = "bad-token"
     ERR_ENCRYPT = "encrypt-failed"
     ERR_DECRYPT = "decrypt-failed"
+    ERR_DECOMPRESS = "decompress-failed"
     ERR_JSON_ENCODE = "json-encode-failed"
     ERR_JSON_DECODE = "json-decode-failed"
 
@@ -61,7 +62,13 @@ class CryptoService:
 
     @property
     def last_error(self) -> Optional[str]:
-        """Cause named of the last failed encrypt/decrypt, None after success."""
+        """Cause named of the last failed encrypt/decrypt, None after success.
+
+        It describes the LAST call on this instance: readable only right
+        after the call whose cause you want, on the same thread. A future
+        async caller sharing the instance must not read another request's
+        cause (#2344 family d).
+        """
         return self._last_error
 
     def derive_key_from_passphrase(
@@ -246,14 +253,17 @@ class CryptoService:
         try:
             # Décompresser
             decompressed_data = gzip.decompress(decrypted_compressed_data)
+        except Exception as e:
+            self.logger.error(f"Erreur lors de la décompression des données: {e}")
+            self._last_error = self.ERR_DECOMPRESS
+            return None
 
+        try:
             # Charger le JSON
             data = json.loads(decompressed_data.decode("utf-8"))
             return data
         except Exception as e:
-            self.logger.error(
-                f"Erreur lors de la décompression/lecture des données JSON: {e}"
-            )
+            self.logger.error(f"Erreur lors de la lecture des données JSON: {e}")
             self._last_error = self.ERR_JSON_DECODE
             return None
 
