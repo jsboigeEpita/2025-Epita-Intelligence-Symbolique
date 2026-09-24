@@ -128,7 +128,12 @@ class TestRoundtrip:
             "argumentation_analysis.core.utils.crypto_utils.derive_encryption_key",
             return_value=b"dGVzdGtleQ==",
         ), patch.dict(
-            os.environ, {"TEXT_CONFIG_PASSPHRASE": "test"}
+            # #2411: add_extract prints the extract's opaque ID on success;
+            # the derivation refuses to run without a salt (#1998 — no public
+            # default). The test's own salt keeps the roundtrip keyless
+            # without touching that fail-loud.
+            os.environ,
+            {"TEXT_CONFIG_PASSPHRASE": "test", "OPAQUE_ID_SALT": "test-salt-2411"},
         ):
             ret = add_extract.main(
                 [
