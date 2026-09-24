@@ -29,13 +29,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-try:
-    from scripts.webapp.process_cleaner import ProcessCleaner
-
-    PROCESS_CLEANER_AVAILABLE = True
-except ImportError:
-    PROCESS_CLEANER_AVAILABLE = False
-
 
 def find_processes_by_port(port):
     """Trouve les processus utilisant un port spécifique."""

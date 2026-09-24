@@ -55,24 +55,43 @@ class TestInterfacesCoexistence(unittest.TestCase):
         }
 
     def test_01_interface_directories_structure(self):
-        """Test 1: Structure des répertoires d'interfaces."""
-        self.assertTrue(
-            self.simple_exists, "Le répertoire interface-simple doit exister"
-        )
+        """Test 1: Structure des répertoires d'interfaces.
+
+        #2529: l'interface simple Flask a été archivée sous #322. L'arbre
+        d'aujourd'hui a le frontend React ici, l'application Starlette qui le
+        sert (``interface_web/app.py``), et l'archive de l'interface simple.
+        """
         self.assertTrue(
             self.react_exists, "Le répertoire interface-web-argumentative doit exister"
         )
-
-        # Vérifier que les deux interfaces sont bien séparées
-        self.assertNotEqual(
-            self.simple_interface_dir,
-            self.react_interface_dir,
-            "Les interfaces doivent être dans des répertoires séparés",
+        self.assertTrue(
+            (self.project_root / "interface_web" / "app.py").exists(),
+            "interface_web/app.py sert le frontend React",
+        )
+        self.assertFalse(
+            self.simple_exists,
+            "interface-simple a été archivée sous #322 : elle ne revient pas ici",
+        )
+        self.assertTrue(
+            (
+                self.project_root
+                / "docs"
+                / "archives"
+                / "web_api_legacy_317"
+                / "interface-simple"
+            ).exists(),
+            "l'archive de interface-simple (#322) doit exister",
         )
 
     def test_02_key_files_existence(self):
-        """Test 2: Existence des fichiers clés des interfaces."""
+        """Test 2: Existence des fichiers clés des interfaces.
+
+        #2529: les fichiers de l'interface simple sont archivés (#322), donc
+        seuls ceux du frontend React sont attendus ici.
+        """
         for file_name, file_path in self.key_files.items():
+            if file_name.startswith("simple_"):
+                continue
             with self.subTest(file=file_name):
                 self.assertTrue(
                     file_path.exists(),
@@ -401,7 +420,7 @@ class TestIntegrationEnvironment(unittest.TestCase):
                         self.fail(f"Configuration JSON {config_file.name} invalide")
 
 
-def test_interfaces_integration_complete():
+def run_interfaces_integration_complete():
     """Test complet d'intégration des interfaces."""
     print("=== TESTS D'INTÉGRATION INTER-INTERFACES ===")
     print("=" * 50)
@@ -461,6 +480,11 @@ def test_interfaces_integration_complete():
     return success
 
 
+def test_interfaces_integration_complete():
+    """#2529: pytest ignores a returned value, so the result is asserted."""
+    assert run_interfaces_integration_complete(), "voir le résumé imprimé"
+
+
 if __name__ == "__main__":
-    success = test_interfaces_integration_complete()
+    success = run_interfaces_integration_complete()
     sys.exit(0 if success else 1)
