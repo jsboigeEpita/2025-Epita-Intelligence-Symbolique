@@ -5,13 +5,35 @@ Ce module fournit un service centralisé pour la gestion du cache de textes,
 permettant de stocker et récupérer des contenus textuels à partir d'URLs.
 """
 
+import contextlib
 import hashlib
 import logging
+import os
+import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 
 # Configuration du logging
 logger = logging.getLogger("Services.CacheService")
+
+
+def atomic_write_bytes(path: Path, data: bytes) -> None:
+    """Write ``data`` to ``path`` so that ``path`` never holds a partial write.
+
+    #2344: a cache file written in place and interrupted (full disk, killed
+    process) stays empty or truncated, and every later read serves it as the
+    cached content. The bytes go to a temporary file in the same directory,
+    which replaces ``path`` only once complete.
+    """
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            f.write(data)
+        os.replace(tmp, path)
+    except BaseException:
+        with contextlib.suppress(OSError):
+            os.unlink(tmp)
+        raise
 
 
 class CacheService:
@@ -59,10 +81,18 @@ class CacheService:
         if filepath.exists():
             try:
                 self.logger.info(f"Lecture depuis cache: {filepath.name}")
-                return filepath.read_text(encoding="utf-8")
+                text = filepath.read_text(encoding="utf-8")
             except Exception as e:
                 self.logger.warning(f"Erreur lecture cache {filepath.name}: {e}")
                 return None
+            if not text:
+                # #2344: save_to_cache never writes an empty text, so an empty
+                # file is an interrupted write, not a cached empty document.
+                self.logger.warning(
+                    f"Fichier cache vide {filepath.name} : écriture interrompue, ignoré."
+                )
+                return None
+            return text
         self.logger.debug(f"Cache miss pour URL: {url}")
         return None
 
@@ -85,7 +115,7 @@ class CacheService:
         try:
             # S'assurer que le dossier cache existe
             filepath.parent.mkdir(parents=True, exist_ok=True)
-            filepath.write_text(text, encoding="utf-8")
+            atomic_write_bytes(filepath, text.encode("utf-8"))
             self.logger.info(f"Texte sauvegardé: {filepath.name}")
             return True
         except Exception as e:
