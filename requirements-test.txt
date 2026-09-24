@@ -7,7 +7,7 @@ semantic-kernel
 pydantic-settings
 tenacity
 pandas
-jpype1
+jpype1==1.7.1  # #2538: the version environment.yml pins (see the measurement there)
 cryptography
 playwright
 markdown

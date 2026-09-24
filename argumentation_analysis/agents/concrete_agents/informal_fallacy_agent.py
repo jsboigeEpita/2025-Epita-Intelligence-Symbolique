@@ -92,24 +92,23 @@ class InformalFallacyAgent(BaseAgent):
             )
             self._configured_plugins.append("TaxonomyDisplayPlugin")
         if config_name in ["workflow_only", "full"]:
-            try:
-                module = importlib.import_module(
-                    "argumentation_analysis.plugins.fallacy_workflow_plugin"
-                )
-                FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
-                self.kernel.add_plugin(
-                    FallacyWorkflowPlugin(
-                        master_kernel=self.kernel,
-                        llm_service=llm_service,
-                        taxonomy_file_path=taxonomy_file_path,
-                    ),
-                    plugin_name="FallacyWorkflowPlugin",
-                )
-                self._configured_plugins.append("FallacyWorkflowPlugin")
-            except (ModuleNotFoundError, AttributeError) as e:
-                self.logger.error(
-                    f"Could not dynamically load FallacyWorkflowPlugin: {e}"
-                )
+            # #2344: the plugin module is ours and imports nothing optional, so
+            # an import or attribute error here is a defect of the tree. It
+            # propagates: an agent built without the plugin its config names
+            # is not the agent the caller asked for.
+            module = importlib.import_module(
+                "argumentation_analysis.plugins.fallacy_workflow_plugin"
+            )
+            FallacyWorkflowPlugin = getattr(module, "FallacyWorkflowPlugin")
+            self.kernel.add_plugin(
+                FallacyWorkflowPlugin(
+                    master_kernel=self.kernel,
+                    llm_service=llm_service,
+                    taxonomy_file_path=taxonomy_file_path,
+                ),
+                plugin_name="FallacyWorkflowPlugin",
+            )
+            self._configured_plugins.append("FallacyWorkflowPlugin")
 
     def get_agent_capabilities(self) -> Dict[str, Any]:
         """The plugins this agent actually mounted.

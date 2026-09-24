@@ -210,18 +210,19 @@ class TextAnalysisRouter:
     # ----------------------------------------------------------
 
     def _get_available_capabilities(self, registry) -> List[str]:
-        """Get capabilities that have registered providers in the registry."""
+        """Get capabilities that have registered providers in the registry.
+
+        A capability nobody provides comes back as ``[]`` and is left out. A
+        registry that raises is broken, not empty: the error propagates rather
+        than dropping the capability as if it had no provider (#2344).
+        """
         if registry is None:
             return list(KNOWN_CAPABILITIES)
 
         available = []
         for cap in KNOWN_CAPABILITIES:
-            try:
-                providers = registry.find_for_capability(cap)
-                if providers:
-                    available.append(cap)
-            except Exception:
-                pass
+            if registry.find_for_capability(cap):
+                available.append(cap)
 
         # Always include argument_quality even if not registered
         if "argument_quality" not in available:
