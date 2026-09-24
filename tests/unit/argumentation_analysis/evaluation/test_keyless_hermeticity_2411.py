@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""#2411 — the evaluation unit suite must stay green on a keyless checkout.
+"""#2411 — the evaluation unit suite must stay green on a keyless environment.
 
 Two evaluation tests read the AMBIENT API key (their only config source is
 ``os.environ`` via ``resolve_chat_endpoint``, which runs before the mocked
@@ -10,11 +10,13 @@ own configuration; this guard runs one keyless pass over the defect
 population root (``tests/unit/argumentation_analysis/evaluation/``, plus the
 two hermetic nodes the census repaired elsewhere) and asserts it stays green.
 
-The pass is only meaningful keyless: when a key is ambient the run cannot
-distinguish a hermetic test from one that borrowed the environment, so the
-guard skips itself. CI carries keys and never executes the pass; the DoD's
-red-on-main gate is the born-red executed on a keyless checkout, captured
-in the PR (the pass names the environment-dependent tests before the fix).
+The child runs keyless by carrying EMPTY values for the three config
+variables, not by waiting for a keyless checkout: an empty value counts as
+absent (``resolve_chat_endpoint``) yet as caller-set, so it survives the
+``pytest_configure`` dotenv reload (#2472/#2475 — the root ``.env`` fills in
+only what the environment does not already carry). The guard therefore runs
+on every harness seat — CI (keys as secrets), keyed dev checkouts, keyless
+ones — instead of skipping exactly where regressions land.
 
 Anti-recursion: the spawned run excludes this file.
 """
@@ -23,13 +25,14 @@ import os
 import subprocess
 import sys
 
-import pytest
-
 _REPO_ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 )
 _EVAL_DIR = os.path.join(_REPO_ROOT, "tests/unit/argumentation_analysis/evaluation")
-_KEYS = ("OPENAI_API_KEY", "OPENROUTER_API_KEY")
+
+# Empty counts as absent for the readers, and as caller-set for the dotenv
+# reload (#2475): the child is keyless on every checkout, .env or not.
+_EMPTIED_CONFIG = ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "TEXT_CONFIG_PASSPHRASE")
 
 # The two hermetic repairs the census made outside the evaluation directory:
 # their subject is code, so they must never read the suite host's config
@@ -43,8 +46,7 @@ _REPAIRED_HERMETIC_NODES = (
 
 
 def test_keyless_evaluation_suite_stays_green():
-    if any(os.environ.get(k) for k in _KEYS):
-        pytest.skip("the keyless pass requires a keyless environment")
+    child_env = {**os.environ, **{name: "" for name in _EMPTIED_CONFIG}}
 
     result = subprocess.run(
         [
@@ -63,11 +65,12 @@ def test_keyless_evaluation_suite_stays_green():
             os.path.join(_EVAL_DIR, "test_keyless_hermeticity_2411.py"),
         ],
         cwd=_REPO_ROOT,
+        env=child_env,
         capture_output=True,
         text=True,
         timeout=900,
     )
     assert result.returncode == 0, (
-        "an evaluation unit test depends on the ambient API key:\n"
+        "an evaluation unit test depends on the ambient config:\n"
         f"{result.stdout[-2000:]}\n{result.stderr[-2000:]}"
     )
