@@ -10,7 +10,7 @@ import logging
 import os
 import requests
 from pathlib import Path
-from typing import Optional, Tuple, List, Dict, Any, Union
+from typing import Optional, Tuple, List, Dict, Any, Iterable, Iterator, Union
 from pybreaker import CircuitBreakerError
 from tenacity import RetryError
 
@@ -20,10 +20,43 @@ from argumentation_analysis.core.utils.network_utils import (
     retry_on_network_error,
     network_breaker,
 )
-from .cache_service import CacheService
+from .cache_service import CacheService, atomic_write_bytes
 
 # Configuration du logging
 logger = logging.getLogger("Services.FetchService")
+
+
+def decode_fetched_text(
+    content: bytes, fallback_encodings: Iterable[Optional[str]] = ()
+) -> Tuple[str, str]:
+    """Decode fetched bytes without silently dropping characters.
+
+    #2344: ``decode("utf-8", errors="ignore")`` deleted every non-UTF-8 byte,
+    so a Latin-1 text lost its accents and the cache kept the loss. UTF-8 is
+    tried first. Otherwise the first fallback encoding that decodes the bytes
+    strictly wins. When none does, undecodable bytes become U+FFFD, so the
+    loss stays visible in the text.
+
+    Returns the text and the encoding used (``"utf-8+replace"`` in the last case).
+    """
+    try:
+        return content.decode("utf-8"), "utf-8"
+    except UnicodeDecodeError:
+        pass
+    for encoding in fallback_encodings:
+        if not encoding:
+            continue
+        try:
+            return content.decode(encoding), encoding
+        except (UnicodeDecodeError, LookupError):
+            continue
+    return content.decode("utf-8", errors="replace"), "utf-8+replace"
+
+
+def _response_encodings(response: requests.Response) -> Iterator[Optional[str]]:
+    yield response.encoding
+    # Charset detection runs only when the declared encoding did not decode.
+    yield response.apparent_encoding
 
 
 class FetchService:
@@ -194,7 +227,13 @@ class FetchService:
             response = requests.get(url, headers=headers, timeout=timeout)
             response.raise_for_status()
 
-            texte_brut = response.content.decode("utf-8", errors="ignore")
+            texte_brut, encoding = decode_fetched_text(
+                response.content, _response_encodings(response)
+            )
+            if encoding != "utf-8":
+                self.logger.warning(
+                    f"Contenu de {url} non UTF-8 : décodé en {encoding}."
+                )
             self.logger.info(f"Contenu direct récupéré (longueur {len(texte_brut)}).")
 
             self.cache_service.save_to_cache(url, texte_brut)
@@ -344,7 +383,9 @@ class FetchService:
                             effective_raw_cache_path.parent.mkdir(
                                 parents=True, exist_ok=True
                             )
-                            effective_raw_cache_path.write_bytes(content_to_send)
+                            atomic_write_bytes(
+                                effective_raw_cache_path, content_to_send
+                            )
                             self.logger.info(
                                 f"Doc brut sauvegardé: {effective_raw_cache_path}"
                             )
@@ -368,7 +409,9 @@ class FetchService:
                 )
 
                 try:
-                    texte_brut = file_content.decode("utf-8", errors="ignore")
+                    # #2344: strict, so that a non-UTF-8 file reaches the Tika
+                    # branch below instead of losing its accents here.
+                    texte_brut = file_content.decode("utf-8")
                     self.cache_service.save_to_cache(cache_key, texte_brut)
                     return texte_brut
                 except Exception as e_decode:
