@@ -37,21 +37,30 @@ class TracedAgent:
             f"TracedAgent for '{self.name}' enabled. Log file: {self._trace_log_path}"
         )
 
-    def _setup_logger(self):
-        """Configure et retourne un logger pour la trace (mode de débogage robuste)."""
-        # Utiliser basicConfig avec force=True est une manière robuste de s'assurer
-        # que la configuration est réinitialisée à chaque appel, évitant les deadlocks
-        # potentiels liés à la manipulation manuelle des handlers dans un contexte de multiprocesseing.
-        logging.basicConfig(
-            filename=self._trace_log_path,
-            filemode="w",  # 'w' pour écraser le fichier à chaque fois
-            level=logging.INFO,
-            format="%(asctime)s - %(message)s",
-            encoding="utf-8",
-            force=True,  # force=True est crucial ici
+    def _setup_logger(self) -> logging.Logger:
+        """Retourne un logger propre à cette trace, qui écrit dans son fichier.
+
+        Le logger n'est pas enregistré auprès de ``logging`` et n'a pas de
+        parent : la configuration de logging du processus n'est pas touchée,
+        et les logs de l'application n'entrent pas dans la trace. L'ancien
+        ``basicConfig(force=True)`` reconfigurait le logger **racine** : il
+        retirait les handlers de l'application et deux agents tracés se
+        volaient le même fichier (#2346).
+        """
+        trace_logger = logging.Logger(f"trace.{self.name}", level=logging.INFO)
+        trace_logger.propagate = False
+        # 'w' : un fichier de trace par exécution.
+        self._handler = logging.FileHandler(
+            self._trace_log_path, mode="w", encoding="utf-8"
         )
-        # Retourne le logger root qui vient d'être configuré.
-        return logging.getLogger()
+        self._handler.setFormatter(logging.Formatter("%(asctime)s - %(message)s"))
+        trace_logger.addHandler(self._handler)
+        return trace_logger
+
+    def close(self) -> None:
+        """Ferme le fichier de trace."""
+        self._logger.removeHandler(self._handler)
+        self._handler.close()
 
     def _format_messages(self, history: "ChatHistory") -> str:
         """Formate un historique de chat en une chaîne détaillée."""
