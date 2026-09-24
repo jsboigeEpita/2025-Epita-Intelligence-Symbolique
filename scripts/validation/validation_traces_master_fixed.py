@@ -9,7 +9,6 @@ Version corrigée avec auto_env compatible.
 import argumentation_analysis.core.environment  # Added import
 
 # ===== INTÉGRATION AUTO_ENV - MÊME APPROCHE QUE CONFTEST.PY =====
-import sys
 import os
 from pathlib import Path
 
