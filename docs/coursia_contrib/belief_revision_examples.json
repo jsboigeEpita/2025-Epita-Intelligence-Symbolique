@@ -5,7 +5,7 @@
   "inventory": {
     "argumentation_analysis/services/jtms/jtms_core.py": 354,
     "argumentation_analysis/services/jtms/atms_core.py": 242,
-    "argumentation_analysis/services/jtms/conflict_resolution.py": 238,
+    "argumentation_analysis/services/jtms/conflict_resolution.py": 305,
     "argumentation_analysis/agents/core/logic/dung_native.py": 308,
     "argumentation_analysis/agents/core/logic/qbf_native.py": 466
   },
@@ -156,9 +156,9 @@
       "reasoning": "Best evidence score: 2.00 by agent_1"
     },
     {
-      "name": "unknown_strategy_silently_falls_back",
-      "strategy_used": "confidence_based",
-      "chosen_agent": "agent_1"
+      "name": "unknown_strategy_raises",
+      "raises": "ValueError",
+      "message_contains": "made_up_strategy"
     },
     {
       "name": "consensus_quorum_and_tie",
@@ -173,25 +173,29 @@
       "expert_chosen": "sherlock_agent",
       "expert_reasoning": "Expert sherlock for domain evidence",
       "no_expert_fallback_agent": "agent_y",
-      "no_expert_fallback_reasoning": "Highest confidence: 0.70 by agent_y"
+      "no_expert_fallback_reasoning": "agent_expertise not applicable (no sherlock agent among the beliefs); fell back to confidence. Highest confidence: 0.70 by agent_y",
+      "no_expert_strategy_used": "confidence_based",
+      "no_expert_fallback_from": "agent_expertise"
     },
     {
       "name": "temporal_iso_string_comparison",
       "latest_chosen": "new",
-      "no_timestamp_fallback_agent": "b"
+      "no_timestamp_fallback_agent": "b",
+      "no_timestamp_strategy_used": "confidence_based",
+      "no_timestamp_fallback_from": "temporal"
     },
     {
       "name": "history_stats",
       "stats": {
-        "total_conflicts": 10,
-        "resolved": 8,
+        "total_conflicts": 9,
+        "resolved": 7,
         "unresolved": 2,
         "by_strategy": {
-          "confidence_based": 2,
+          "confidence_based": 3,
           "evidence_based": 1,
           "consensus": 3,
-          "agent_expertise": 2,
-          "temporal": 2
+          "agent_expertise": 1,
+          "temporal": 1
         }
       }
     }

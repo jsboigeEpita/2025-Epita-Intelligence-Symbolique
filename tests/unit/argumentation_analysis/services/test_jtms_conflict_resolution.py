@@ -168,6 +168,9 @@ class TestAgentExpertise:
         result = resolver.resolve(conflict, strategy="agent_expertise")
         assert result["resolved"] is True
         assert result["chosen_agent"] == "agent_b"
+        # #2344: the fallback is named.
+        assert result["strategy_used"] == "confidence_based"
+        assert result["fallback_from"] == "agent_expertise"
 
 
 class TestTemporal:
@@ -179,13 +182,15 @@ class TestTemporal:
     def test_no_timestamps_falls_back_to_confidence(self, resolver, simple_conflict):
         result = resolver.resolve(simple_conflict, strategy="temporal")
         assert result["resolved"] is True
+        assert result["fallback_from"] == "temporal"
 
 
 class TestInvalidStrategy:
-    def test_falls_back_to_confidence(self, resolver, simple_conflict):
-        result = resolver.resolve(simple_conflict, strategy="nonexistent_strategy")
-        assert result["resolved"] is True
-        assert result["strategy_used"] == "confidence_based"
+    def test_unknown_strategy_raises(self, resolver, simple_conflict):
+        # #2344: a misspelt strategy used to become confidence_based silently.
+        with pytest.raises(ValueError, match="nonexistent_strategy"):
+            resolver.resolve(simple_conflict, strategy="nonexistent_strategy")
+        assert resolver.get_history() == []
 
 
 class TestHistoryAndStats:

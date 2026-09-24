@@ -7,9 +7,15 @@ Works with belief dictionaries — no direct agent dependency.
 5 resolution strategies:
 - confidence_based: highest confidence wins
 - evidence_based: evidence quality + justification count
-- consensus: placeholder for N-agent voting
+- consensus: majority vote on ``valid`` among 3+ agents
 - agent_expertise: domain-specific expertise mapping
 - temporal: most recent belief wins
+
+A strategy that cannot apply (no expert for the domain, no timestamp) falls
+back to confidence and says so: ``strategy_used`` names what decided and
+``fallback_from`` what was asked. A belief without a numeric ``confidence``
+is not scored as 0.0: the comparison is reported unresolved, naming it
+(``missing_confidence``). #2344.
 """
 
 import logging
@@ -67,9 +73,24 @@ class ConflictResolver:
         conflict: Dict[str, Any],
         strategy: str = "confidence_based",
     ) -> Dict[str, Any]:
-        """Resolve a conflict synchronously. Returns resolution dict."""
+        """Resolve a conflict synchronously. Returns resolution dict.
+
+        Raises:
+            ValueError: an unknown ``strategy``, or a conflict without a
+                ``beliefs`` mapping. Both come from the caller's code (#2344):
+                a misspelt strategy used to become ``confidence_based``, and a
+                conflict handed under another key resolved nobody, silently.
+        """
         if strategy not in self.STRATEGIES:
-            strategy = "confidence_based"
+            raise ValueError(
+                f"Unknown conflict resolution strategy {strategy!r}; "
+                f"known: {', '.join(self.STRATEGIES)}"
+            )
+        if not isinstance(conflict.get("beliefs"), dict):
+            raise ValueError(
+                "Conflict has no 'beliefs' mapping (agent -> belief dict); "
+                f"got keys {sorted(conflict)}"
+            )
 
         result = {
             "conflict_id": conflict.get(
@@ -94,15 +115,51 @@ class ConflictResolver:
         self.resolution_history.append(result)
         return result
 
+    @staticmethod
+    def _missing_confidence(beliefs: Dict) -> Optional[Dict]:
+        """Unresolved result naming the agents whose belief has no confidence.
+
+        ``None`` when every belief carries a number. A missing confidence used
+        to count as 0.0, so the other side won by default (#2344).
+        """
+        missing = [
+            agent
+            for agent, data in beliefs.items()
+            if isinstance(data.get("confidence"), bool)
+            or not isinstance(data.get("confidence"), (int, float))
+        ]
+        if not missing:
+            return None
+        return {
+            "resolved": False,
+            "missing_confidence": missing,
+            "reasoning": f"No confidence for {', '.join(missing)}: "
+            "the beliefs cannot be compared",
+        }
+
+    def _fallback_to_confidence(self, conflict: Dict, requested: str, why: str) -> Dict:
+        """Resolve by confidence, naming the strategy that could not apply."""
+        resolution = self._resolve_by_confidence(conflict)
+        resolution["strategy_used"] = "confidence_based"
+        resolution["fallback_from"] = requested
+        resolution["reasoning"] = (
+            f"{requested} not applicable ({why}); fell back to confidence. "
+            f"{resolution['reasoning']}"
+        )
+        return resolution
+
     def _resolve_by_confidence(self, conflict: Dict) -> Dict:
         """Pick the belief with highest confidence."""
         beliefs = conflict.get("beliefs", {})
+        missing = self._missing_confidence(beliefs)
+        if missing:
+            return missing
         best_belief = None
         best_confidence = -1.0
         best_agent = None
 
         for agent_name, data in beliefs.items():
-            confidence = data.get("confidence", 0.0)
+            confidence = data["confidence"]
             if confidence > best_confidence:
                 best_confidence = confidence
                 best_belief = data.get("belief_name")
@@ -119,14 +176,16 @@ class ConflictResolver:
     def _resolve_by_evidence(self, conflict: Dict) -> Dict:
         """Pick the belief with best evidence score (justification count * confidence)."""
         beliefs = conflict.get("beliefs", {})
+        missing = self._missing_confidence(beliefs)
+        if missing:
+            return missing
         best_belief = None
         best_score = -1.0
         best_agent = None
 
         for agent_name, data in beliefs.items():
             justification_count = data.get("justification_count", 1)
-            confidence = data.get("confidence", 0.0)
-            score = justification_count * confidence
+            score = justification_count * data["confidence"]
 
             if score > best_score:
                 best_score = score
@@ -180,7 +239,13 @@ class ConflictResolver:
         """Pick the belief from the agent with domain expertise."""
         beliefs = conflict.get("beliefs", {})
         context_type = conflict.get("context", {}).get("type", "unknown")
-        expert_role = self.EXPERTISE_MAP.get(context_type, "sherlock")
+        # #2344: an unknown domain has no expert. It used to default to
+        # "sherlock", which crowned Sherlock the expert of any domain.
+        expert_role = self.EXPERTISE_MAP.get(context_type)
+        if expert_role is None:
+            return self._fallback_to_confidence(
+                conflict, "agent_expertise", f"no expert mapped for {context_type!r}"
+            )
 
         for agent_name, data in beliefs.items():
             if expert_role.lower() in agent_name.lower():
@@ -192,8 +257,9 @@ class ConflictResolver:
                     "expertise_domain": context_type,
                 }
 
-        # Fallback to confidence if no expert found
-        return self._resolve_by_confidence(conflict)
+        return self._fallback_to_confidence(
+            conflict, "agent_expertise", f"no {expert_role} agent among the beliefs"
+        )
 
     def _resolve_by_temporal(self, conflict: Dict) -> Dict:
         """Pick the most recently updated belief."""
@@ -215,8 +281,9 @@ class ConflictResolver:
                 "reasoning": f"Most recent: {latest_agent} at {latest_ts}",
             }
 
-        # Fallback to confidence
-        return self._resolve_by_confidence(conflict)
+        return self._fallback_to_confidence(
+            conflict, "temporal", "no belief carries a timestamp"
+        )
 
     def get_history(self) -> List[Dict[str, Any]]:
         """Get resolution history."""

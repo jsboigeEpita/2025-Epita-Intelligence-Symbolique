@@ -1373,15 +1373,11 @@ async def _run_conversational_analysis_inner(
         conflict_resolutions = await _resolve_phase_conflicts(
             state, phase_name, strategy="confidence_based"
         )
-        if conflict_resolutions:
-            conversation_log.append(
-                {
-                    "phase": phase_name,
-                    "type": "conflict_resolution",
-                    "resolutions": conflict_resolutions,
-                    "resolution_count": len(conflict_resolutions),
-                }
-            )
+        conflict_entry = _conflict_resolution_log_entry(
+            phase_name, conflict_resolutions
+        )
+        if conflict_entry:
+            conversation_log.append(conflict_entry)
 
         # Parent harness (#578 tier 3): always fire on dense texts after Detection
         if "etection" in phase_name and len(text) > 5000:
@@ -3072,6 +3068,25 @@ async def _run_parent_harness_fallback(
         }
 
 
+def _conflict_resolution_log_entry(
+    phase_name: str, resolutions: List[Dict[str, Any]]
+) -> Optional[Dict[str, Any]]:
+    """Conversation-log entry for a phase's conflicts, or ``None`` if none.
+
+    #2344: unresolved conflicts are listed too, so the two counts are apart.
+    """
+    if not resolutions:
+        return None
+    resolved = sum(1 for r in resolutions if r["resolution"].get("resolved"))
+    return {
+        "phase": phase_name,
+        "type": "conflict_resolution",
+        "resolutions": resolutions,
+        "resolution_count": resolved,
+        "unresolved_count": len(resolutions) - resolved,
+    }
+
+
 async def _resolve_phase_conflicts(
     state: RhetoricalAnalysisState,
     phase_name: str,
@@ -3088,7 +3103,8 @@ async def _resolve_phase_conflicts(
         strategy: Resolution strategy (confidence_based, evidence_based, consensus, etc.)
 
     Returns:
-        List of resolution results applied to the state.
+        One entry per detected conflict, resolved or not. An unresolved one
+        carries the resolver's cause (#2344), e.g. ``missing_confidence``.
     """
     from argumentation_analysis.services.jtms.conflict_resolution import (
         ConflictResolver,
@@ -3131,18 +3147,21 @@ async def _resolve_phase_conflicts(
                     if isinstance(quality, dict):
                         score = quality.get("note_finale", 0)
                         if score > 5.0:  # High quality but marked as fallacy = conflict
+                            # #2344: the resolver reads "beliefs" (this was
+                            # "agents": it saw nobody), and a fallacy with no
+                            # confidence gets none (this was an invented 0.7).
+                            informal_belief = {
+                                "belief_name": f"FALLACY:{fallacy.get('type', fallacy.get('fallacy_type', 'unknown'))}",
+                                "evidence": fallacy.get("justification", ""),
+                            }
+                            if "confidence" in fallacy:
+                                informal_belief["confidence"] = fallacy["confidence"]
                             conflicts.append(
                                 {
                                     "conflict_id": f"fallacy_quality_{target_arg}",
                                     "type": "fallacy_vs_quality",
-                                    "agents": {
-                                        "InformalAgent": {
-                                            "belief_name": f"FALLACY:{fallacy.get('type', fallacy.get('fallacy_type', 'unknown'))}",
-                                            "confidence": fallacy.get(
-                                                "confidence", 0.7
-                                            ),
-                                            "evidence": fallacy.get("explanation", ""),
-                                        },
+                                    "beliefs": {
+                                        "InformalAgent": informal_belief,
                                         "QualityAgent": {
                                             "belief_name": f"QUALITY:{target_arg}",
                                             "confidence": score
@@ -3162,25 +3181,32 @@ async def _resolve_phase_conflicts(
             # Use standalone ConflictResolver.resolve() (sync, no agents param)
             resolution = resolver.resolve(conflict, strategy=strategy)
 
+            # For now, just log - future: update state with resolution.
+            # #2344: an unresolved conflict is kept with its cause, not dropped.
             if resolution.get("resolved"):
-                # Apply resolution to state
-                # For now, just log - future: update state with resolution
                 logger.info(
                     f"[{phase_name}] Conflict resolved: {resolution.get('reasoning', 'No reasoning')}"
                 )
-                resolutions.append(
-                    {
-                        "phase": phase_name,
-                        "conflict_id": conflict.get("conflict_id"),
-                        "resolution": resolution,
-                    }
+            else:
+                logger.warning(
+                    f"[{phase_name}] Conflict {conflict.get('conflict_id')} "
+                    f"unresolved: {resolution.get('reasoning', 'No reasoning')}"
                 )
+            resolutions.append(
+                {
+                    "phase": phase_name,
+                    "conflict_id": conflict.get("conflict_id"),
+                    "resolution": resolution,
+                }
+            )
         except Exception as e:
             logger.error(f"Error resolving conflict {conflict.get('conflict_id')}: {e}")
 
+    resolved_count = sum(1 for r in resolutions if r["resolution"].get("resolved"))
     if resolutions:
         logger.info(
-            f"[{phase_name}] Resolved {len(resolutions)} conflicts using strategy '{strategy}'"
+            f"[{phase_name}] Resolved {resolved_count}/{len(resolutions)} conflicts "
+            f"using strategy '{strategy}'"
         )
 
     return resolutions
