@@ -247,15 +247,16 @@ class TestConflictResolver:
         assert result["resolved"] is True
         assert result["chosen_agent"] == "b"
 
-    def test_invalid_strategy_falls_back(self):
+    def test_invalid_strategy_raises(self):
+        # #2344: a misspelt strategy used to become confidence_based silently.
         resolver = ConflictResolver()
         conflict = self._make_conflict(
             {
                 "a": {"belief_name": "b1", "confidence": 0.5},
             }
         )
-        result = resolver.resolve(conflict, strategy="nonexistent")
-        assert result["strategy_used"] == "confidence_based"
+        with pytest.raises(ValueError, match="nonexistent"):
+            resolver.resolve(conflict, strategy="nonexistent")
 
     def test_resolution_history(self):
         resolver = ConflictResolver()

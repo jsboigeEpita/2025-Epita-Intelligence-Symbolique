@@ -267,10 +267,10 @@ CONFLICT = {
 }
 
 
-def test_conflict_confidence_evidence_and_silent_fallback(examples):
+def test_conflict_confidence_evidence_and_unknown_strategy(examples):
     stored_c = case(examples["conflict_cases"], "confidence_based")
     stored_e = case(examples["conflict_cases"], "evidence_based_score_beats_confidence")
-    stored_u = case(examples["conflict_cases"], "unknown_strategy_silently_falls_back")
+    stored_u = case(examples["conflict_cases"], "unknown_strategy_raises")
     r = ConflictResolver()
 
     res = r.resolve(CONFLICT, strategy="confidence_based")
@@ -296,9 +296,10 @@ def test_conflict_confidence_evidence_and_silent_fallback(examples):
     assert res_ev["chosen_agent"] == stored_e["chosen_agent"] == "agent_1"
     assert res_ev["reasoning"] == stored_e["reasoning"]  # 4×0.5 beats 1×0.9
 
-    res_u = r.resolve(CONFLICT, strategy="made_up_strategy")
-    assert res_u["strategy_used"] == stored_u["strategy_used"] == "confidence_based"
-    assert res_u["chosen_agent"] == stored_u["chosen_agent"]
+    # #2344: an unknown strategy raises; it used to fall back silently.
+    assert stored_u["raises"] == "ValueError"
+    with pytest.raises(ValueError, match=stored_u["message_contains"]):
+        r.resolve(CONFLICT, strategy="made_up_strategy")
 
 
 def test_conflict_consensus_quorum_and_tie(examples):
@@ -378,6 +379,9 @@ def test_conflict_expertise_and_temporal(examples):
     )
     assert noexp["chosen_agent"] == stored_exp["no_expert_fallback_agent"] == "agent_y"
     assert noexp["reasoning"] == stored_exp["no_expert_fallback_reasoning"]
+    # #2344: the fallback is named, not booked under the strategy asked for.
+    assert noexp["strategy_used"] == stored_exp["no_expert_strategy_used"]
+    assert noexp["fallback_from"] == stored_exp["no_expert_fallback_from"]
 
     late = r.resolve(
         {
@@ -391,13 +395,28 @@ def test_conflict_expertise_and_temporal(examples):
     )
     assert late["chosen_agent"] == stored_time["latest_chosen"] == "new"
 
+    undated = r.resolve(
+        {
+            "belief_name": "fact_U",
+            "beliefs": {
+                "a": {"belief_name": "fact_U", "confidence": 0.3},
+                "b": {"belief_name": "fact_U", "confidence": 0.6},
+            },
+        },
+        strategy="temporal",
+    )
+    assert undated["chosen_agent"] == stored_time["no_timestamp_fallback_agent"]
+    assert undated["strategy_used"] == stored_time["no_timestamp_strategy_used"]
+    assert undated["fallback_from"] == stored_time["no_timestamp_fallback_from"]
+
 
 def test_conflict_history_stats_consistent(examples):
     stored = case(examples["conflict_cases"], "history_stats")["stats"]
     assert stored["total_conflicts"] == stored["resolved"] + stored["unresolved"]
     assert sum(stored["by_strategy"].values()) == stored["total_conflicts"]
-    # The silent fallback is booked under the strategy that actually fired
-    assert stored["by_strategy"]["confidence_based"] == 2
+    # The named fallbacks (no expert, no timestamp) are booked under the
+    # strategy that actually decided; the unknown strategy raises (#2344).
+    assert stored["by_strategy"]["confidence_based"] == 3
 
 
 # ---------------------------------------------------------------- Dung
