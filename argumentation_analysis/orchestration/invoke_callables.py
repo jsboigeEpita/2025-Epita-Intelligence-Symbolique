@@ -25,6 +25,7 @@ from typing import (
     Optional,
     List,
     Tuple,
+    TypeVar,
 )
 
 from argumentation_analysis.core.reading_window import (
@@ -341,16 +342,37 @@ class _LLMBudget:
         self.ceiling = ceiling
 
 
+_N = TypeVar("_N", int, float)
+
+
+def _env_number(key: str, default: _N, kind: Callable[[str], _N]) -> _N:
+    """Read a numeric knob from the environment.
+
+    Unset or blank means *default*. Any other value must parse with *kind*: a
+    typo such as ``LLM_CALL_TIMEOUT_S=thirty`` raises, naming the key and the
+    value, instead of running on a default the operator did not ask for
+    (#2344). Every numeric knob of this module is read here.
+    """
+    raw = os.environ.get(key)
+    if raw is None or not str(raw).strip():
+        return default
+    try:
+        return kind(raw)
+    except (TypeError, ValueError) as exc:
+        expected = "an integer" if kind is int else "a number"
+        raise ValueError(
+            f"{key}={raw!r} is not {expected}; unset it to use the default "
+            f"({default})"
+        ) from exc
+
+
 def _default_llm_call_budget() -> int:
     """Generous per-run LLM-call ceiling (override via ``LLM_CALL_BUDGET``).
 
     Healthy ``spectacular`` run ~60-100 calls; the default 500 never bites a
     healthy run but stops a 12K-call runaway.
     """
-    try:
-        return max(1, int(os.environ.get("LLM_CALL_BUDGET", "500")))
-    except (TypeError, ValueError):
-        return 500
+    return max(1, _env_number("LLM_CALL_BUDGET", 500, int))
 
 
 _llm_budget: "contextvars.ContextVar[Optional[_LLMBudget]]" = contextvars.ContextVar(
@@ -407,21 +429,13 @@ def _bump_sk_budget(n: int = 1) -> None:
 # conversational-spectacular path hung ~50 min on one unbounded call. Generous
 # default (300s) — far above a legitimate reasoning-model call (<2 min) but well
 # below a pathological hang. Set LLM_CALL_TIMEOUT_S=0 to disable.
-def _safe_float_env(key: str, default: float) -> float:
-    """Read a float from an env var, falling back to *default* on bad input."""
-    try:
-        return float(os.environ.get(key, str(default)))
-    except (ValueError, TypeError):
-        return default
-
-
-_LLM_CALL_TIMEOUT_S = _safe_float_env("LLM_CALL_TIMEOUT_S", 300.0)
+_LLM_CALL_TIMEOUT_S = _env_number("LLM_CALL_TIMEOUT_S", 300.0, float)
 
 # Dung extension computation timeout (seconds). Preferred/stable semantics on
 # large attack graphs can hang indefinitely.  On timeout, falls back to
 # pure-Python grounded-only computation with degraded=True.  Set
 # DUNG_TIMEOUT_S=0 to disable timeout (not recommended).
-_DUNG_TIMEOUT_S = _safe_float_env("DUNG_TIMEOUT_S", 180.0)
+_DUNG_TIMEOUT_S = _env_number("DUNG_TIMEOUT_S", 180.0, float)
 
 # #1290 — Bounded deterministic retry for LLM fact extraction. The LLM
 # occasionally emits malformed JSON (e.g. ``Expecting value (char 3033)``),
@@ -432,12 +446,7 @@ _DUNG_TIMEOUT_S = _safe_float_env("DUNG_TIMEOUT_S", 180.0)
 # a second call frequently parses cleanly); remaining failures surface an
 # explicit ``extraction_status="failed:<reason>"`` instead of a silent ``[]``.
 # Override via EXTRACTION_MAX_ATTEMPTS=3 (min 1).
-try:
-    _EXTRACTION_MAX_ATTEMPTS = max(
-        1, int(os.environ.get("EXTRACTION_MAX_ATTEMPTS", "3"))
-    )
-except (ValueError, TypeError):
-    _EXTRACTION_MAX_ATTEMPTS = 3
+_EXTRACTION_MAX_ATTEMPTS = max(1, _env_number("EXTRACTION_MAX_ATTEMPTS", 3, int))
 
 # #1290 M1 (po-2023 diagnostic) — the malformed-JSON signature
 # ``Expecting value (char ~3033)`` is a *truncated output*, not bad escaping:
@@ -449,10 +458,7 @@ except (ValueError, TypeError):
 # silently clipped at the default ceiling. This is the cause-root lever; the
 # retry (levier 2) only masks the truncation probabilistically. Override via
 # EXTRACTION_MAX_TOKENS=8192 (set 0 to omit the param entirely).
-try:
-    _EXTRACTION_MAX_TOKENS = int(os.environ.get("EXTRACTION_MAX_TOKENS", "8192") or 0)
-except (ValueError, TypeError):
-    _EXTRACTION_MAX_TOKENS = 8192
+_EXTRACTION_MAX_TOKENS = _env_number("EXTRACTION_MAX_TOKENS", 8192, int)
 
 
 async def _guarded_chat_completion(client: Any, **kwargs: Any) -> Any:

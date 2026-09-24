@@ -171,10 +171,12 @@ class TestBudgetCeilingResolution:
             with llm_budget_scope() as budget:
                 assert budget.ceiling == 500
 
-    async def test_malformed_env_falls_back_to_500(self):
+    async def test_malformed_env_raises_naming_the_key(self):
+        # #2344: a typo stops the run instead of running on the default.
         with self._patch_env_get({"LLM_CALL_BUDGET": "not-a-number"}):
-            with llm_budget_scope() as budget:
-                assert budget.ceiling == 500
+            with pytest.raises(ValueError, match="LLM_CALL_BUDGET='not-a-number'"):
+                with llm_budget_scope():
+                    pass
 
 
 class TestExtractArgumentsCap:
