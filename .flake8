@@ -24,6 +24,11 @@ exclude =
     # (norecursedirs: _*) ; les F821 y restent inertes et se réparent si un
     # fichier ressuscite.
     tests/_archived,
+    # #2536: cet arbre EST l'archive du code remplacé (ex. la factory
+    # d'agents remplacée par agents/factory.py, #213) ; ses imports relatifs
+    # ne se résolvent pas depuis docs/, rien ne l'importe ni ne l'exécute ;
+    # les F821 y restent inertes et se réparent si un fichier ressuscite.
+    docs/archives,
     # Student projects
     1.4.1-JTMS,
     1_2_7_argumentation_dialogique,
@@ -60,7 +65,6 @@ ignore =
     F406,
     F541,
     F811,
-    F821,
     F824,
     F841,
     W191,

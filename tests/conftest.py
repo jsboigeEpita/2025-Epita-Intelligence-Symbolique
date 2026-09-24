@@ -14,6 +14,7 @@ import sys
 import asyncio
 from pathlib import Path
 import shutil
+from typing import TYPE_CHECKING
 from unittest.mock import patch, MagicMock
 
 # #2472: capture the environment pytest was started with, before anything loads
@@ -867,22 +868,6 @@ def mock_kernel():
 
 
 @pytest.fixture
-def fol_agent(mock_kernel):
-    """Provides a concrete, testable instance of FOLLogicAgent."""
-
-    class ConcreteFOLAgent(FOLLogicAgent):
-        async def validate_argument(
-            self, premises: list[str], conclusion: str, **kwargs
-        ) -> bool:
-            return True
-
-    agent = ConcreteFOLAgent(kernel=mock_kernel, agent_name="fol_test_agent")
-    agent._tweety_bridge = MagicMock()
-    agent._tweety_bridge.validate_fol_belief_set.return_value = (True, "Valid")
-    return agent
-
-
-@pytest.fixture
 def sample_definitions():
     """Provides a sample ExtractDefinitions object for tests."""
     from argumentation_analysis.models.extract_definition import (
@@ -927,6 +912,10 @@ def successful_simple_argument_analysis_fixture_path(tmp_path):
     file_path = tmp_path / "simple_argument.json"
     file_path.write_text(json.dumps(data))
     return str(file_path)
+
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Page
 
 
 @pytest.fixture(scope="function")

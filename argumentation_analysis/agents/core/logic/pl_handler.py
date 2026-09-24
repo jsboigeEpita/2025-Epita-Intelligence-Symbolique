@@ -152,7 +152,7 @@ class PLHandler:
                     if not signature.contains(proposition):
                         signature.add(proposition)
                 pl_formula = self._pl_parser.parseFormula(
-                    JString(normalized_formula), signature
+                    jpype.JString(normalized_formula), signature
                 )
             else:
                 # Using JString is a good practice to avoid ambiguity.
