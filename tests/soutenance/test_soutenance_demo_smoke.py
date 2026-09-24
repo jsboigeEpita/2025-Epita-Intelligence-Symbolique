@@ -10,6 +10,7 @@ Usage:
 
 import json
 import pytest
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch, AsyncMock
 from pathlib import Path
 
@@ -28,9 +29,17 @@ from examples.soutenance._shared import (
 
 
 def _make_mock_state():
-    """Create a mock UnifiedAnalysisState with realistic data."""
-    state = MagicMock()
-    state.arguments = [MagicMock() for _ in range(20)]
+    """Create a stand-in UnifiedAnalysisState with realistic data.
+
+    A SimpleNamespace, not a MagicMock: a MagicMock answers every attribute,
+    so when #623 moved extract_metrics to the real field
+    ``identified_arguments``, this fixture (still writing ``arguments``)
+    handed it a MagicMock of length 0. The test went red unseen: the CI
+    gate's pytest argv does not name tests/soutenance/.
+    Here a field the reader looks for and the fixture lacks reads as absent.
+    """
+    state = SimpleNamespace()
+    state.identified_arguments = {f"arg_{i}": MagicMock() for i in range(20)}
     state.identified_fallacies = [MagicMock() for _ in range(13)]
     state.jtms_beliefs = {"b1": MagicMock(), "b2": MagicMock(),
                           "b3": MagicMock(), "b4": MagicMock()}
@@ -47,8 +56,9 @@ def _make_mock_state():
 class TestSharedModule:
     """Test _shared.py utilities."""
 
-    def test_corpora_has_three_entries(self):
-        assert set(CORPORA.keys()) == {"A", "B", "C"}
+    def test_corpora_has_four_entries(self):
+        # Corpus D (EN dense) was added in #620.
+        assert set(CORPORA.keys()) == {"A", "B", "C", "D"}
 
     def test_each_corpus_has_required_fields(self):
         for cid, info in CORPORA.items():
@@ -86,8 +96,8 @@ class TestMetricExtraction:
         assert metrics["corpus_id"] == "A"
 
     def test_handles_empty_attrs(self):
-        state = MagicMock()
-        state.arguments = None
+        state = SimpleNamespace()
+        state.identified_arguments = None
         state.identified_fallacies = None
         state.jtms_beliefs = None
         state.counter_arguments = None
@@ -97,7 +107,7 @@ class TestMetricExtraction:
         assert metrics["corpus_label"] == "corpus_dense_B"
 
     def test_corpus_id_in_metrics(self):
-        for cid in ("A", "B", "C"):
+        for cid in CORPORA:
             metrics = extract_metrics(None, cid)
             assert metrics["corpus_id"] == cid
             assert metrics["corpus_label"] == CORPORA[cid]["label"]
