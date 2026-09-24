@@ -50,12 +50,36 @@ def _as_junit_skip(message: str) -> str:
     return f'<skipped type="pytest.skip" message="{escaped}"/>'
 
 
-def _skip_literals(path: Path, within: str | None = None) -> list[str]:
-    """Every constant-string `pytest.skip(...)` argument in `path`.
+def _static_head(arg: ast.expr) -> str | None:
+    """The text every rendering of a skip message starts with, or ``None``.
 
-    `within` restricts the harvest to one function definition. Only literal
-    arguments are collected: an f-string message cannot be checked statically,
-    and pretending otherwise would make the harvest look larger than its reach.
+    A string constant is its own head. An f-string's head is its leading
+    constant text, up to the first placeholder: #2530 made the `jvm_session`
+    health-check reason end with the exception. Both classifiers match the JVM
+    token or a fixed prefix, and appending text can remove neither, so a head
+    that counts is a message that counts. An f-string that opens on a
+    placeholder has no head and stays out: its start cannot be read statically.
+    """
+    if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+        return arg.value
+    if isinstance(arg, ast.JoinedStr):
+        head = []
+        for part in arg.values:
+            if not (isinstance(part, ast.Constant) and isinstance(part.value, str)):
+                break
+            head.append(part.value)
+        return "".join(head) or None
+    return None
+
+
+def _skip_literals(path: Path, within: str | None = None) -> list[str]:
+    """The static head of every `pytest.skip(...)` message in `path`.
+
+    `within` restricts the harvest to one function definition. A constant
+    message is collected whole; an f-string contributes its leading constant
+    text (`_static_head`). Nothing else is collected: a message built at run
+    time has no start this harvest can read, and pretending otherwise would
+    make the harvest look larger than its reach.
     """
     # `utf-8-sig`: several test files carry a UTF-8 BOM, and `ast.parse` refuses
     # a source starting with U+FEFF. Reading them as plain utf-8 would raise here
@@ -83,10 +107,10 @@ def _skip_literals(path: Path, within: str | None = None) -> list[str]:
         is_skip = (isinstance(func, ast.Attribute) and func.attr == "skip") or (
             isinstance(func, ast.Name) and func.id == "skip"
         )
-        if is_skip and node.args and isinstance(node.args[0], ast.Constant):
-            value = node.args[0].value
-            if isinstance(value, str):
-                found.append(value)
+        if is_skip and node.args:
+            head = _static_head(node.args[0])
+            if head is not None:
+                found.append(head)
     return found
 
 

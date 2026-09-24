@@ -665,9 +665,14 @@ def jvm_session(request):
         _str_class = jpype.JClass("java.lang.String")
         _test = _str_class("jvm_health_check")
         assert str(_test) == "jvm_health_check"
-    except Exception:
+    except Exception as exc:
+        # #2530: the reason names the exception, or a broken JVM leaves no
+        # trace of why. Both classifiers of this reason (the local signal and
+        # the ci.yml guard) read its fixed start, so the storm counts do not
+        # move; the contract tests harvest that start from the f-string.
         pytest.skip(
-            "Saut du test car la JVM est démarrée mais non fonctionnelle (JClass health check échoué)."
+            "Saut du test car la JVM est démarrée mais non fonctionnelle "
+            f"(JClass health check échoué) : {type(exc).__name__}: {str(exc)[:500]}"
         )
 
     # La JVM est prête — yield le module jpype pour que les fixtures
