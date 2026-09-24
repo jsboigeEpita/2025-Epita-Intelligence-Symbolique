@@ -69,6 +69,15 @@ FASTAPI_HOST = os.environ.get("FASTAPI_HOST", "127.0.0.1")
 FASTAPI_PORT = int(os.environ.get("FASTAPI_PORT", "8095"))
 FASTAPI_BASE_URL = f"http://{FASTAPI_HOST}:{FASTAPI_PORT}"
 
+# Attente maximale du relais sur la reponse du backend. L'app React attend
+# jusqu'a FALLACY_TIMEOUT_MS (180 s, src/services/api.js) un appel qui detecte
+# les sophismes : le detecteur LLM depuis #2542, 53 s sur deux paragraphes
+# (#2526). A 30 s, le relais repondait 504 pendant que le backend travaillait
+# encore (#2548). Il attend desormais plus longtemps que l'app, et c'est le
+# delai de l'app qui decide.
+# Garde : tests/unit/webapp/test_e2e_frontend_fixture_2548.py
+PROXY_READ_TIMEOUT_SECONDS = 185.0
+
 
 # ==============================================================================
 # CYCLE DE VIE DE L'APPLICATION (LIFESPAN)
@@ -86,7 +95,7 @@ async def lifespan(app: Starlette):
     # Creer un client HTTP persistant pour le proxy
     app.state.http_client = httpx.AsyncClient(
         base_url=FASTAPI_BASE_URL,
-        timeout=httpx.Timeout(30.0, connect=5.0),
+        timeout=httpx.Timeout(PROXY_READ_TIMEOUT_SECONDS, connect=5.0),
     )
 
     logger.info("LIFESPAN: Proxy pret.")

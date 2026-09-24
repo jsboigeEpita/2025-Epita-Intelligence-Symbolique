@@ -7,7 +7,9 @@ import pytest
 
 # pytest.mark.skip(reason="Skipping entire file to debug test suite hang")
 import pytest
+import re
 import time
+from pathlib import Path
 from typing import Dict, Any
 from playwright.sync_api import Page, expect
 
@@ -17,6 +19,41 @@ from playwright.sync_api import Page, expect
 WORKFLOW_TIMEOUT = 30000  # 30s pour workflows complets
 TAB_TRANSITION_TIMEOUT = 15000  # 15s pour transitions d'onglets
 STRESS_TEST_TIMEOUT = 20000  # 20s pour tests de performance (optimisé)
+
+_FRONTEND_SRC = (
+    Path(__file__).resolve().parents[3]
+    / "services"
+    / "web_api"
+    / "interface-web-argumentative"
+    / "src"
+)
+
+
+def _frontend_constant(relative: str, pattern: str) -> int:
+    """An integer the React app declares, read from its source (#2548).
+
+    The stress test must wait as long as the UI does and respect the limits
+    the UI enforces. Reading them here keeps one source: a copy in this file
+    would drift from the app. Raises when the pattern is gone, so a renamed
+    constant fails the test instead of silently using a stale value.
+    """
+    source = (_FRONTEND_SRC / relative).read_text(encoding="utf-8")
+    match = re.search(pattern, source)
+    if match is None:
+        raise AssertionError(f"{pattern!r} not found in {relative}")
+    return int(match.group(1))
+
+
+# How long the UI waits for a fallacy-detecting request before giving up.
+# Since #2542, /api/analyze runs the LLM detector: measured 27 s on the
+# 10 260-character stress text in the e2e lane (run 35991132591).
+UI_FALLACY_TIMEOUT_MS = _frontend_constant(
+    "services/api.js", r"FALLACY_TIMEOUT_MS\s*=\s*(\d+)"
+)
+# The fallacy tab disables its submit button above this many characters.
+UI_FALLACY_MAX_CHARS = _frontend_constant(
+    "components/FallacyDetector.js", r"text\.length\s*>\s*(\d+)"
+)
 
 # La fixture app_page est supprimée au profit d'une configuration directe dans chaque test.
 
@@ -547,23 +584,38 @@ def test_performance_stress_workflow(
     stress_operations = []
 
     # ÉTAPE 1: Test de performance sur chaque onglet
+    # (tab, input, submit, results, how long the UI itself waits for results)
     performance_tabs = [
-        ("analyzer", "#argument-text", 'button[type="submit"]', ".analysis-results"),
+        (
+            "analyzer",
+            "#argument-text",
+            'button[type="submit"]',
+            ".analysis-results",
+            UI_FALLACY_TIMEOUT_MS,  # detect_fallacies is on by default
+        ),
         (
             "fallacy_detector",
             '[data-testid="fallacy-text-input"]',
             '[data-testid="fallacy-submit-button"]',
             '[data-testid="fallacy-results-container"]',
+            UI_FALLACY_TIMEOUT_MS,
         ),
         (
             "reconstructor",
             '[data-testid="reconstructor-text-input"]',
             '[data-testid="reconstructor-submit-button"]',
             '[data-testid="reconstructor-results-container"]',
+            STRESS_TEST_TIMEOUT,
         ),
     ]
 
-    for tab_name, input_selector, submit_selector, results_selector in performance_tabs:
+    for (
+        tab_name,
+        input_selector,
+        submit_selector,
+        results_selector,
+        results_timeout,
+    ) in performance_tabs:
         operation_name = f"stress_{tab_name}"
         integration_helpers.start_performance_timer(operation_name)
 
@@ -574,12 +626,23 @@ def test_performance_stress_workflow(
             # Remplissage avec du texte volumineux
             page.locator(input_selector).fill(stress_text)
 
+            if (
+                tab_name == "fallacy_detector"
+                and len(stress_text) > UI_FALLACY_MAX_CHARS
+            ):
+                # Above its limit the tab refuses the text: the submit button
+                # stays disabled. That refusal is the behaviour under test.
+                expect(page.locator(submit_selector)).to_be_disabled()
+                integration_helpers.end_performance_timer(operation_name)
+                stress_operations.append(operation_name)
+                continue
+
             # Soumission
             page.locator(submit_selector).click()
 
-            # Attendre les résultats avec timeout étendu
+            # Attendre les résultats aussi longtemps que l'UI les attend
             expect(page.locator(results_selector)).to_be_visible(
-                timeout=STRESS_TEST_TIMEOUT
+                timeout=results_timeout
             )
 
             integration_helpers.end_performance_timer(operation_name)
