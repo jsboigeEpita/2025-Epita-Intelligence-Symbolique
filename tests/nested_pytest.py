@@ -279,12 +279,13 @@ def run_bounded(argv, bound=BOUND, failure="the process did not end", env=None):
     return subprocess.CompletedProcess(argv, process.returncode, out, err)
 
 
-def run_probe(label, files, *argv, bound=BOUND, watchdog=EXIT_WATCHDOG):
+def run_probe(label, files, *argv, bound=BOUND, watchdog=EXIT_WATCHDOG, env=None):
     """Run pytest on ``files`` (``{name: source}``). ``(returncode, stdout, stderr)``.
 
     The first ``.py`` file whose name starts with ``probe`` is the one pytest
     is given; the others (a ``conftest.py``) sit beside it. ``watchdog``: the
-    seconds after the session before the probe dumps its threads.
+    seconds after the session before the probe dumps its threads. ``env``:
+    entries added to (or overriding) the caller's environment for the probe.
     """
     probe_dir = ROOT / "tests" / f"_probe_{label}_{uuid.uuid4().hex}"
     probe_dir.mkdir()
@@ -307,7 +308,7 @@ def run_probe(label, files, *argv, bound=BOUND, watchdog=EXIT_WATCHDOG):
             ],
             bound,
             failure="the probe session did not end",
-            env={_WATCHDOG_ENV: str(watchdog)},
+            env={_WATCHDOG_ENV: str(watchdog), **(env or {})},
         )
     finally:
         shutil.rmtree(probe_dir, ignore_errors=True)

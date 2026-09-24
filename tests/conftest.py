@@ -32,6 +32,9 @@ from tests._jvm_session_flag import (
 from tests.jvm_skip_storm_signal import COUNTER as _skip_storm_counter
 from tests.jvm_skip_storm_signal import storm_verdict as _storm_verdict
 from tests.jvm_skip_storm_signal import ventilate as _storm_ventilate
+from tests._xdist_report_serialization import (
+    sanitize_report_data as _sanitize_report_data,
+)
 import nest_asyncio
 
 # Apply nest_asyncio early at module level to allow nested event loops
@@ -525,6 +528,19 @@ def pytest_sessionstart(session):
 def pytest_runtest_logreport(report):
     """#2021: feed the local skip-storm signal (see tests/jvm_skip_storm_signal.py)."""
     _skip_storm_counter.add(report)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_report_to_serializable(config, report):
+    """#2402: xdist builds the wire form of every report here, in the worker.
+    execnet refuses a non-UTF-8-encodable string (``DumpError``), which kills
+    the worker and takes the session's other tracebacks with it; the escaped
+    strings name the cause (see tests/_xdist_report_serialization.py)."""
+    data = yield
+    if data is None:
+        return data
+    data, _escaped = _sanitize_report_data(data)
+    return data
 
 
 _JVM_FLAG_AT_SETUP = pytest.StashKey[object]()

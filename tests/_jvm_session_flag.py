@@ -17,7 +17,9 @@ where the option is forwarded), and exported to an env var that workers
 inherit. Every consumer reads that env var — or ``config.getoption`` where a
 config is in scope. The ``sys.argv`` polls are gone except one explicit,
 pre-parse propagator below, inert in workers by construction (a worker's
-argv never carries the flag, measured in #2402).
+argv never carries the flag, measured in #2402). The export OVERWRITES — or
+clears — an inherited value: the parsed option decides, never a stale
+environment (#2402, what remained after #2465).
 
 Import-light (stdlib only) and tolerant of mock config objects, mirroring
 ``tests/_e2e_session_decision.py``, because ``tests/conftest.py`` loads this
@@ -37,14 +39,20 @@ JVM_SESSION_DISABLED_ENV = "PYTEST_JVM_SESSION_DISABLED"
 
 def propagate_argv_to_env() -> None:
     """Controller bootstrap: conftest module-level code runs before any hook,
-    so on the CONTROLLER the only pre-parse source of the flag is argv.
-    Export that decision to the env var all readers consume.
+    so on the CONTROLLER the only pre-parse source of the flag is argv. The
+    decision is WRITTEN, or cleared — an inherited value must not outvote it
+    (measured: ``PYTEST_JVM_SESSION_DISABLED=0`` with the flag kept the #2402
+    split serially and silently).
 
     In an xdist worker this is inert: the worker's argv never carries the
-    flag (the worker is spawned with its own arguments — the measured root
-    of #2402), and the env var is already inherited from the controller."""
+    flag (the measured root of #2402), and the env var inherited from the
+    controller IS the decision — clearing it here would undo the channel."""
+    if os.environ.get("PYTEST_XDIST_WORKER"):
+        return
     if any(arg == "--disable-jvm-session" for arg in sys.argv):
-        os.environ.setdefault(JVM_SESSION_DISABLED_ENV, "1")
+        os.environ[JVM_SESSION_DISABLED_ENV] = "1"
+    else:
+        os.environ.pop(JVM_SESSION_DISABLED_ENV, None)
 
 
 def jvm_session_disabled() -> bool:
@@ -55,17 +63,21 @@ def jvm_session_disabled() -> bool:
 def export_flag_from_config(config) -> None:
     """``pytest_configure`` body: decide the flag from the parsed option — the
     authoritative source, covering an addopts/ini-driven flag that argv never
-    saw — and export it for workers and for later module-level reads.
+    saw — and export it, or clear it, for workers and for later module-level
+    reads. Overwrite, not ``setdefault``: the parsed option decides.
 
     Tolerant of the mock ``config`` objects the conftest unit tests feed
-    around: without a working ``getoption`` the export is skipped."""
+    around: without a working ``getoption`` the environment is left alone."""
     try:
-        if config.getoption("--disable-jvm-session"):
-            os.environ.setdefault(JVM_SESSION_DISABLED_ENV, "1")
+        disabled = bool(config.getoption("--disable-jvm-session"))
     except (AttributeError, ValueError):
         # AttributeError: mock config without getoption.
         # ValueError: option unregistered (unexpected bootstrapping order).
-        pass
+        return
+    if disabled:
+        os.environ[JVM_SESSION_DISABLED_ENV] = "1"
+    else:
+        os.environ.pop(JVM_SESSION_DISABLED_ENV, None)
 
 
 def put_back(before):
