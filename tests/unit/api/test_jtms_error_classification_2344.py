@@ -4,10 +4,12 @@
 Every handler of the module used to map ANY exception to HTTP 400 (the
 client's fault): the ``NotImplementedError`` of the graphml export path,
 an internal ``AttributeError``, a broken plugin — all surfaced as if the
-caller had sent a bad request. Provenance rules (#1019): a
-``ValueError``/``KeyError`` raised by the JTMS service means the requested
-entity does not exist (client input) and legitimately stays 400; anything
-else is a server defect and must surface as 500. The hourly
+caller had sent a bad request. Provenance rules (#1019): the service marks
+client input — the requested entity or format does not exist — with the
+named ``JTMSClientInputError`` (a ``ValueError`` subclass), which stays 400;
+anything else, including ``ValueError``-shaped server defects (a ``KeyError``
+on the handler's own dict read, a ``ValidationError``, a
+``JSONDecodeError``), is a server defect and must surface as 500. The hourly
 expired-session cleanup loop swallowed each failure in
 ``except Exception: pass`` — a permanently broken cleanup was invisible;
 its failures are now named in a warning, and the loop survives them.
@@ -114,12 +116,78 @@ class TestServerDefectsAreInternalErrors:
         ), "a TypeError in the SK plugin is a server defect, not a 400"
         assert response.json()["detail"]["error_type"] == "TypeError"
 
+    def test_handler_dict_read_is_500(self, client):
+        """Review round 2 probe: the service returning a dict WITHOUT the
+        handler's expected key is a server contract defect — the KeyError
+        raised by result["name"] is not the caller's fault."""
+        broken = MagicMock()
+        broken.create_belief = AsyncMock(return_value={})
+        with patch.object(jtms_endpoints, "_jtms_service", broken):
+            response = client.post(
+                "/api/v1/jtms/beliefs",
+                json={
+                    "belief_name": "b",
+                    "session_id": "s",
+                    "instance_id": "i",
+                    "agent_id": "a",
+                },
+            )
+        assert (
+            response.status_code == 500
+        ), "a KeyError on the handler's own dict read is a server defect, not a 400"
+        assert response.json()["detail"]["error_type"] == "KeyError"
+
+    def test_handler_response_construction_is_500(self, client):
+        """Review round 2 probe: the service returning well-named but wrongly
+        typed fields breaks the handler's pydantic construction — a
+        ValidationError (a ValueError subclass) is a server defect here."""
+        broken = MagicMock()
+        broken.create_belief = AsyncMock(
+            return_value={
+                "name": "b",
+                "valid": "not-a-bool",
+                "non_monotonic": "not-a-bool",
+                "justifications_count": "not-an-int",
+                "implications_count": "not-an-int",
+            }
+        )
+        with patch.object(jtms_endpoints, "_jtms_service", broken):
+            response = client.post(
+                "/api/v1/jtms/beliefs",
+                json={
+                    "belief_name": "b",
+                    "session_id": "s",
+                    "instance_id": "i",
+                    "agent_id": "a",
+                },
+            )
+        assert (
+            response.status_code == 500
+        ), "a pydantic ValidationError on the response body is a server defect, not a 400"
+        assert response.json()["detail"]["error_type"] == "ValidationError"
+
+    def test_sk_non_json_result_is_500(self, client):
+        """Review round 2 probe: a plugin returning a non-JSON string breaks
+        the handler's json.loads — a JSONDecodeError (a ValueError subclass)
+        is a server defect, not a 400."""
+        broken_plugin = MagicMock()
+        broken_plugin.create_belief = AsyncMock(return_value="not json at all")
+        with patch.object(jtms_endpoints, "_sk_plugin", broken_plugin):
+            response = client.post(
+                "/api/v1/jtms/sk/create_belief",
+                params={"belief_name": "b"},
+            )
+        assert (
+            response.status_code == 500
+        ), "a JSONDecodeError on the plugin result is a server defect, not a 400"
+        assert response.json()["detail"]["error_type"] == "JSONDecodeError"
+
 
 class TestClientInputStays400:
     """Anti-pendulum: the legitimate 400s keep their meaning."""
 
     def test_unknown_session_is_still_400(self, client):
-        """A unknown session id is client input — ValueError stays 400."""
+        """A unknown session id is client input — the named type stays 400."""
         service = JTMSService()
         manager = JTMSSessionManager(service)
         with patch.object(jtms_endpoints, "_jtms_service", service), patch.object(
@@ -136,7 +204,9 @@ class TestClientInputStays400:
         assert (
             response.status_code == 400
         ), "an unknown session is a client-input error and must stay 400"
-        assert response.json()["detail"]["error_type"] == "ValueError"
+        assert (
+            response.json()["detail"]["error_type"] == "JTMSClientInputError"
+        ), "the service marks client input with the named type (a ValueError subclass)"
 
 
 class TestCleanupNamesItsFailures:

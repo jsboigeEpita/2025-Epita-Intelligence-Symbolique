@@ -50,7 +50,10 @@ from .jtms_models import (
 )
 
 # Import des services
-from argumentation_analysis.services.jtms_service import JTMSService
+from argumentation_analysis.services.jtms_service import (
+    JTMSClientInputError,
+    JTMSService,
+)
 from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
 from argumentation_analysis.plugins.semantic_kernel.jtms_plugin import (
     JTMSSemanticKernelPlugin,
@@ -98,15 +101,14 @@ def get_sk_plugin() -> JTMSSemanticKernelPlugin:
     return _sk_plugin
 
 
-# #2344 (family c): the JTMS service raises ValueError/KeyError when the
-# REQUESTED entity does not exist (unknown session, instance, belief, format)
-# — that is client input. Anything else raised below is a server defect.
-_CLIENT_INPUT_ERRORS = (ValueError, KeyError)
-
-
+# #2344 (family c): a client input is the service refusing what the CALLER
+# asked for — and it says so by raising the named type, JTMSClientInputError.
+# Deciding by that marker (not by exception type: a KeyError on the handler's
+# own dict read, a pydantic ValidationError or a JSONDecodeError are all
+# ValueError-shaped SERVER defects) is the provenance rule of #1019.
 def classify_jtms_exception(error: Exception) -> int:
     """Provenance decides the status: client input is 400, server defect is 500."""
-    if isinstance(error, _CLIENT_INPUT_ERRORS):
+    if isinstance(error, JTMSClientInputError):
         return status.HTTP_400_BAD_REQUEST
     return status.HTTP_500_INTERNAL_SERVER_ERROR
 
@@ -320,7 +322,9 @@ async def set_belief_validity(
     """
     try:
         if not request.instance_id:
-            raise ValueError("Un `instance_id` est requis pour cette opération.")
+            raise JTMSClientInputError(
+                "Un `instance_id` est requis pour cette opération."
+            )
 
         result = await jtms_service.set_belief_validity(
             instance_id=request.instance_id,
@@ -363,7 +367,7 @@ async def explain_belief(
     """
     try:
         if not request.instance_id:
-            raise ValueError("Instance ID requis pour cette opération")
+            raise JTMSClientInputError("Instance ID requis pour cette opération")
 
         result = await jtms_service.explain_belief(
             instance_id=request.instance_id, belief_name=request.belief_name
@@ -420,12 +424,12 @@ async def query_beliefs(
     """
     try:
         if not request.instance_id:
-            raise ValueError("Instance ID requis pour cette opération")
+            raise JTMSClientInputError("Instance ID requis pour cette opération")
 
         # Valider le filtre
         valid_filters = ["valid", "invalid", "unknown", "non_monotonic", "all"]
         if request.filter_status not in valid_filters:
-            raise ValueError(f"Filtre invalide: {request.filter_status}")
+            raise JTMSClientInputError(f"Filtre invalide: {request.filter_status}")
 
         filter_param = None if request.filter_status == "all" else request.filter_status
 
@@ -481,7 +485,7 @@ async def get_jtms_state(
     """
     try:
         if not request.instance_id:
-            raise ValueError("Instance ID requis pour cette opération")
+            raise JTMSClientInputError("Instance ID requis pour cette opération")
 
         result = await jtms_service.get_jtms_state(instance_id=request.instance_id)
 
@@ -662,7 +666,7 @@ async def restore_checkpoint(
         )
 
         if not success:
-            raise ValueError("Échec de la restauration du checkpoint")
+            raise JTMSClientInputError("Échec de la restauration du checkpoint")
 
         # Compter les instances restaurées
         session_data = await session_manager.get_session(request.session_id)
@@ -697,7 +701,7 @@ async def export_jtms_state(
     """
     try:
         if not request.instance_id:
-            raise ValueError("Instance ID requis pour l'export")
+            raise JTMSClientInputError("Instance ID requis pour l'export")
 
         exported_data = await jtms_service.export_jtms_state(
             instance_id=request.instance_id, format=request.format
