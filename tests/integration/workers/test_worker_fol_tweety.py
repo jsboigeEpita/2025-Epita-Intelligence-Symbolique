@@ -978,21 +978,42 @@ def check_tweety_availability():
 
 @pytest_asyncio.fixture(scope="module")
 async def fol_agent_with_kernel(jvm_session):
-    """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
+    """Fixture pour créer un FOLLogicAgent avec un kernel authentique.
+
+    #2411: la clé n'est exigée que pour CONSTRUIRE le kernel — les tests qui
+    appellent le LLM à travers cet agent sont marqués ``requires_api`` (skip
+    keyless) ; les autres n'exercent que le côté Tweety. La clé factice vit
+    exactement autour de la construction (jamais pendant un test), pour que
+    les ``requires_api`` du module gardent leur skip keyless (conftest.py
+    évalue la clé à chaque setup) et pour qu'un test qui appellerait vraiment
+    l'API échoue bruyamment (401) au lieu de se cacher derrière un défaut de
+    configuration. Absence réelle seulement : une OPENAI_API_KEY vide doit
+    continuer à lever (#2281, empty != absent), et une config OpenRouter
+    n'est pas touchée.
+    """
     logger.info(f"--- DEBUT FIXTURE 'fol_agent_with_kernel' ---")
     if not jvm_session:
         pytest.skip("Skipping test: jvm_session fixture failed to initialize.")
 
     config = UnifiedConfig()
-    kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
+    with pytest.MonkeyPatch.context() as mp:
+        _no_key_at_all = (
+            "OPENAI_API_KEY" not in os.environ
+            and not (
+                os.getenv("OPENROUTER_API_KEY") and os.getenv("OPENROUTER_BASE_URL")
+            )
+        )
+        if _no_key_at_all:
+            mp.setenv("OPENAI_API_KEY", "sk-construction-only-2411")
+        kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
 
-    # Création de l'agent. Le paramètre use_serialization est obsolète.
-    # L'agent gère maintenant sa propre instance de TweetyBridge.
-    agent = FOLLogicAgent(kernel=kernel, agent_name="TestFOLAgentWithKernel")
+        # Création de l'agent. Le paramètre use_serialization est obsolète.
+        # L'agent gère maintenant sa propre instance de TweetyBridge.
+        agent = FOLLogicAgent(kernel=kernel, agent_name="TestFOLAgentWithKernel")
 
-    # L'initialisation des composants, y compris TweetyBridge, est gérée par l'agent.
-    # #2360: le cycle de vie est sync comme la base et les 8 autres agents.
-    agent.setup_agent_components(llm_service_id="default")
+        # L'initialisation des composants, y compris TweetyBridge, est gérée par l'agent.
+        # #2360: le cycle de vie est sync comme la base et les 8 autres agents.
+        agent.setup_agent_components(llm_service_id="default")
 
     return agent
 
