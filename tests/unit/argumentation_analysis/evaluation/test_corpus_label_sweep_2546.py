@@ -22,6 +22,10 @@ from pathlib import Path
 
 import pytest
 
+# It decrypts the dataset with the real ambient passphrase: the keyless
+# pass of #2411 leaves it out (#2565).
+pytestmark = pytest.mark.requires_dataset_passphrase
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
 DATASET = REPO_ROOT / "argumentation_analysis" / "data" / "extract_sources.json.gz.enc"
 
