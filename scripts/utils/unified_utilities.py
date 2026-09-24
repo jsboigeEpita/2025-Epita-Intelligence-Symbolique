@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import argumentation_analysis.core.environment
+
 """
 Système d'Utilitaires Unifiés
 =============================
@@ -131,11 +132,7 @@ class UnifiedCorpusManager:
 
     def _get_passphrase(self) -> str:
         """Obtient la passphrase de déchiffrement."""
-        passphrase = (
-            self.config.passphrase
-            or os.getenv("TEXT_CONFIG_PASSPHRASE")
-            or "Propaganda"  # Fallback par défaut
-        )
+        passphrase = self.config.passphrase or os.getenv("TEXT_CONFIG_PASSPHRASE")
 
         if not passphrase:
             raise ValueError("Passphrase requise pour accéder au corpus chiffré")
@@ -823,7 +820,8 @@ class UnifiedCorpusManager:
                     "extract_name": extract.get("extract_name", ""),
                     "start_marker": extract.get("start_marker", ""),
                     "end_marker": extract.get("end_marker", ""),
-                    "full_text": extract.get("extract_text", "") or extract.get("full_text_segment", ""),
+                    "full_text": extract.get("extract_text", "")
+                    or extract.get("full_text_segment", ""),
                     "metadata": extract.get("metadata", {}),
                 }
 
