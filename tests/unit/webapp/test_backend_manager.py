@@ -1,5 +1,6 @@
 import pytest
 import asyncio
+import io
 import logging
 import time
 import subprocess
@@ -35,6 +36,14 @@ def manager(backend_config, logger_mock):
     return BackendManager(backend_config, logger_mock)
 
 
+def _process(pid):
+    """A stand-in for the backend's ``Popen``: its output streams are at their
+    end, as a real process's are once it exits. A ``MagicMock`` stream never
+    is: ``_log_stream`` reads it until ``readline`` returns ``""``, so its
+    threads ran for the rest of the session (#2538)."""
+    return MagicMock(pid=pid, stdout=io.StringIO(""), stderr=io.StringIO(""))
+
+
 def test_initialization(manager, backend_config):
     """Tests the constructor and basic attribute assignments."""
     assert manager.config == backend_config
@@ -57,9 +66,7 @@ async def test_start_success(mock_popen, manager):
     manager._save_backend_info = AsyncMock()
 
     # Le PID vient de l'instance Popen mockée.
-    mock_process = MagicMock()
-    mock_process.pid = 1234
-    mock_popen.return_value = mock_process
+    mock_popen.return_value = _process(1234)
 
     # Le port est passé ici pour simplifier le test.
     result = await manager.start_with_failover(port_override=5003)
@@ -95,7 +102,7 @@ async def test_start_fails_if_wait_fails(mock_popen, manager):
     manager._is_port_occupied = AsyncMock(return_value=False)
 
     # Note: _cleanup_failed_process n'existe plus, la logique est dans _wait_for_backend
-    mock_popen.return_value = MagicMock(pid=1235)
+    mock_popen.return_value = _process(1235)
 
     result = await manager.start_with_failover()
 

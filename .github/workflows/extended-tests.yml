@@ -83,6 +83,19 @@ jobs:
             echo "API_KEYS_CONFIGURED=false" >> $env:GITHUB_ENV
           }
 
+      # #2529: two lanes launch Chromium through Playwright, and the runner
+      # had none. Every Playwright test of the e2e lane errored at
+      # BrowserType.launch ("Executable doesn't exist"), before any assertion
+      # ran (run 35942387103: 38 errors). integration-rest carries
+      # tests/integration/webapp/test_playwright_integration.py, which launches
+      # a real browser too. The env's own playwright installs the build it
+      # expects; a failed install fails the lane instead of skipping its tests.
+      - name: Install the Playwright browser
+        if: env.RUN == 'true' && env.API_KEYS_CONFIGURED == 'true' && (matrix.lane == 'e2e' || matrix.lane == 'integration-rest')
+        timeout-minutes: 15
+        shell: pwsh
+        run: conda run -n projet-is --no-capture-output python -m playwright install chromium
+
       # Chaque lane a son propre sélecteur. Le timeout de step est le garde-fou
       # sous la limite GitHub 6h ; --timeout=900 borne chaque test individuel.
       - name: Run lane ${{ matrix.lane }}

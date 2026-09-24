@@ -200,13 +200,15 @@ def test_api_startup_and_basic_functionality():
         assert "status" in data
         assert data["status"] == "success"
         assert "results" in data
-        assert "fallacies" in data["results"]
+        # #2526 : sans `options.detect_fallacies`, la route ne cherche pas de
+        # sophismes et ne rend donc ni liste ni compte.
+        assert "fallacies" not in data["results"]
 
         print(f"✓ Analyse reçue en {processing_time:.2f}s")
 
         # Le contrat de /api/analyze (#2525) : Tweety parse le texte avec son
         # AspicParser, sans LLM. La réponse nomme le composant qui l'a produite.
-        # Cette route ne détecte aucun sophisme (#2526) ; ce test ne l'exige pas.
+        # Les sophismes ne sont cherchés que sur demande (#2526).
         metadata = data["results"].get("metadata", {})
         assert metadata.get("components_used") == [
             "TweetyArgumentReconstructor_centralized_v2"

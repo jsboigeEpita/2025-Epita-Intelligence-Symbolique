@@ -25,7 +25,7 @@ function ArgumentReconstructor() {
       setReconstructionResult(response);
     } catch (err) {
       console.error("Erreur lors de la reconstruction de l'argument:", err);
-      setError(err.response?.data?.error || 'Une erreur inattendue est survenue.');
+      setError(err.message || 'Une erreur inattendue est survenue.');
     }
     setIsLoading(false);
   };

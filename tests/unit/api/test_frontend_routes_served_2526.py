@@ -33,12 +33,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 FRONTEND = "services/web_api/interface-web-argumentative/src"
 
-# (method, path) -> why it is not served yet. The fallacy detector behind the
-# archived route answers 0 fallacies for every text (#2526, PR B), and so does
-# /api/analyze: both wait for the decision on which detector serves the UI.
-UNSERVED = {
-    ("POST", "/api/fallacies"): "#2526: FallacyService detects nothing on real text",
-}
+# (method, path) -> why it is not served yet, and the issue that owns it. Empty
+# since #2526 PR B served POST /api/fallacies with the pipeline's detector.
+UNSERVED = {}
 
 _LITERAL = re.compile(
     r"""(['"`])(?:\$\{API_BASE_URL\})?(/api/[^'"`?\s]*)(?:\?[^'"`]*)?\1"""
@@ -159,9 +156,14 @@ def test_every_frontend_call_is_served(call, served):
     assert (method, shape(url)) in served, f"{name}:{line} calls {method} {url}"
 
 
-@pytest.mark.parametrize("route", sorted(UNSERVED))
-def test_an_unserved_entry_is_still_unserved_and_still_called(route, served):
-    """The map only shrinks: a served or no longer called route leaves it."""
-    method, url = route
-    assert (method, shape(url)) not in served, f"{method} {url} is served now"
-    assert any((m, u) == route for _, _, m, u in CALLS), f"{method} {url} is not called"
+def test_an_unserved_entry_is_still_unserved_and_still_called(served):
+    """The map only shrinks: a served or no longer called route leaves it.
+
+    A loop, not a parametrization: an empty map is the goal, and pytest skips a
+    test whose parameter set is empty.
+    """
+    for method, url in UNSERVED:
+        assert (method, shape(url)) not in served, f"{method} {url} is served now"
+        assert any(
+            (m, u) == (method, url) for _, _, m, u in CALLS
+        ), f"{method} {url} is not called"

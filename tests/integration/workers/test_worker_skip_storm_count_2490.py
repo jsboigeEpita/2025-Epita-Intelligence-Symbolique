@@ -8,9 +8,8 @@ stays empty there while xdist publishes the workers' count in
 0 test(s) collected" with exit code 1.
 
 Each case is a real pytest session in a fresh interpreter, on a probe file
-under ``tests/`` so that ``tests/conftest.py`` applies. The probe directory
-starts with ``_``, which ``norecursedirs`` skips, so an ordinary run never
-collects it. Three shapes:
+under ``tests/`` so that ``tests/conftest.py`` applies
+(``tests/nested_pytest.py``, whose wait is bounded). Three shapes:
 
 * serial;
 * the xdist controller's state, modelled serially by a probe conftest that
@@ -27,16 +26,12 @@ for a storm the probe did not make. The nested session still starts its JVM
 in ``pytest_sessionstart``, like any session the guard watches.
 """
 
-import os
-import shutil
-import signal
-import subprocess
 import sys
-import uuid
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+
+from tests.nested_pytest import both, run_probe
 
 _jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
 
@@ -46,13 +41,6 @@ pytestmark = [
         reason="#2490 tests run real sessions (jpype mocked by --disable-jvm-session)",
     ),
 ]
-
-ROOT = Path(__file__).resolve().parents[3]
-
-# A probe session takes about 20 s here and 12 s in CI, JVM start included.
-_BOUND = 300
-# After a kill, how long the pipes may take to close.
-_DRAIN = 30
 
 _GREEN = """
 def test_one():
@@ -119,77 +107,13 @@ def _needs_xdist(shape):
         pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
 
 
-def _kill_tree(process):
-    """Kill ``process`` and its children, then wait at most ``_DRAIN`` s for
-    its pipes. ``(stdout, stderr)``, empty when they did not close.
-
-    ``subprocess.run(timeout=...)`` kills only the child and then waits for
-    the pipes without a bound, so a grandchild that holds them keeps the
-    caller waiting. The first CI run of this file lost 895 s that way on one
-    case. ``eprover_runner._kill_tree`` kills the same way but drains without
-    a bound.
-    """
-    if os.name == "nt":
-        subprocess.run(
-            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
-            capture_output=True,
-            check=False,
-        )
-    else:
-        os.killpg(process.pid, signal.SIGKILL)
-    process.kill()
-    try:
-        return process.communicate(timeout=_DRAIN)
-    except subprocess.TimeoutExpired:
-        return "", ""
-
-
 def _session(shape, probe, *extra):
     """Run pytest on ``probe`` in ``shape``. ``(returncode, stdout, stderr)``."""
     argv, controller_state = _SHAPES[shape]
-    probe_dir = ROOT / "tests" / f"_probe_2490_{uuid.uuid4().hex}"
-    probe_dir.mkdir()
-    try:
-        (probe_dir / "probe_2490.py").write_text(probe, encoding="utf-8")
-        conftest = _PROBE_CONFTEST + (_CONTROLLER_STATE if controller_state else "")
-        (probe_dir / "conftest.py").write_text(conftest, encoding="utf-8")
-        env = dict(os.environ)
-        env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
-        process = subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "pytest",
-                str(probe_dir / "probe_2490.py"),
-                "-p",
-                "no:cacheprovider",
-                "-q",
-                *argv,
-                *extra,
-            ],
-            cwd=ROOT,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            start_new_session=os.name != "nt",
-        )
-        try:
-            out, err = process.communicate(timeout=_BOUND)
-        except subprocess.TimeoutExpired:
-            out, err = _kill_tree(process)
-            pytest.fail(
-                f"the probe session did not end within {_BOUND}s\n" + _both(out, err)
-            )
-    finally:
-        shutil.rmtree(probe_dir, ignore_errors=True)
-    return process.returncode, out, err
-
-
-def _both(out, err):
-    return f"--- stdout\n{out[-3000:]}\n--- stderr\n{err[-3000:]}"
+    conftest = _PROBE_CONFTEST + (_CONTROLLER_STATE if controller_state else "")
+    return run_probe(
+        "2490", {"probe_2490.py": probe, "conftest.py": conftest}, *argv, *extra
+    )
 
 
 @pytest.mark.parametrize("shape", list(_SHAPES))
@@ -200,9 +124,9 @@ def test_a_green_session_exits_0_with_its_summary(shape):
 
     returncode, out, err = _session(shape, _GREEN)
 
-    assert "FAIL-LOUD" not in out, _both(out, err)
-    assert "3 passed" in out, _both(out, err)
-    assert returncode == 0, _both(out, err)
+    assert "FAIL-LOUD" not in out, both(out, err)
+    assert "3 passed" in out, both(out, err)
+    assert returncode == 0, both(out, err)
 
 
 @pytest.mark.parametrize("shape", list(_SHAPES))
@@ -214,8 +138,8 @@ def test_a_storm_still_shouts(shape):
 
     returncode, out, err = _session(shape, _STORM)
 
-    assert "FAIL-LOUD (#2021): 3 of 3 collected tests" in out, _both(out, err)
-    assert returncode == 1, _both(out, err)
+    assert "FAIL-LOUD (#2021): 3 of 3 collected tests" in out, both(out, err)
+    assert returncode == 1, both(out, err)
 
 
 @pytest.mark.parametrize("shape", ["serial", "xdist -n 2"])
@@ -226,4 +150,4 @@ def test_an_empty_selection_still_fails(shape):
 
     returncode, out, err = _session(shape, _GREEN, "-k", "no_test_is_named_like_this")
 
-    assert returncode == pytest.ExitCode.NO_TESTS_COLLECTED, _both(out, err)
+    assert returncode == pytest.ExitCode.NO_TESTS_COLLECTED, both(out, err)
