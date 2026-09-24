@@ -444,7 +444,6 @@ class TestHierarchicalIntegration:
 
         # Mocks
         strategic.adapter.issue_directive = MagicMock()
-        tactical.adapter.assign_task = MagicMock()
         strategic.state.global_objectives = [{"id": "obj1", "description": "Test"}]
         decomposed_task = {
             "id": "t1",
@@ -480,7 +479,14 @@ class TestHierarchicalIntegration:
         directive = strategic.adapter.issue_directive.call_args.kwargs
         objectives = directive.get("parameters", {}).get("objectives", [])
         tactical.process_strategic_objectives(objectives)
-        a_task_for_op = tactical.adapter.assign_task.call_args.kwargs.get("parameters")
+        # #2415 : la tâche op. vient de ce que le palier tactique a enregistré
+        # (state.get_pending_tasks — la source exacte que lit
+        # delegation_orchestrator), pas d'une directive middleware retirée.
+        # Le niveau stratégique décompose lui-même l'objectif global, la tâche
+        # est donc enregistrée plusieurs fois — l'appartenance suffit.
+        pending = tactical.state.get_pending_tasks()
+        assert decomposed_task["id"] in [t["id"] for t in pending]
+        a_task_for_op = pending[0]
 
         # Lancer le traitement op. en arrière-plan
         processing_task = asyncio.create_task(

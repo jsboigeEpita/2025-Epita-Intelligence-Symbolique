@@ -25,7 +25,6 @@ from argumentation_analysis.core.communication import (
     TacticalAdapter,
     OperationalAdapter,
     ChannelType,
-    MessagePriority,
     Message,
     MessageType,
     AgentLevel,
@@ -135,14 +134,12 @@ class TestTacticalOperationalInterface(unittest.TestCase):
             "priority": "high",
         }
 
-        # Configurer le mock pour assign_task
-        self.mock_tactical_adapter.assign_task.return_value = "task-id-123"
-
         # Appeler la méthode à tester
         command = self.interface.translate_task_to_command(task)
 
-        # Vérifier que la méthode assign_task a été appelée
-        self.mock_tactical_adapter.assign_task.assert_called_once()
+        # #2415 : la directive middleware est retirée — la commande est
+        # construite et retournée, l'adaptateur n'émet rien.
+        self.mock_tactical_adapter.assign_task.assert_not_called()
 
         # Vérifier le résultat
         self.assertIsInstance(command, dict)
@@ -494,81 +491,6 @@ class TestTacticalOperationalInterface(unittest.TestCase):
         self.assertEqual(result[1]["type"], "task_timeout")
         self.assertEqual(result[2]["type"], "low_confidence")
         self.assertEqual(result[3]["type"], "custom_issue")
-
-    def test_map_priority_to_enum(self):
-        """Teste la conversion de priorité textuelle en énumération."""
-        # Tester avec différentes priorités
-        self.assertEqual(
-            self.interface._map_priority_to_enum("high"), MessagePriority.HIGH
-        )
-        self.assertEqual(
-            self.interface._map_priority_to_enum("medium"), MessagePriority.NORMAL
-        )
-        self.assertEqual(
-            self.interface._map_priority_to_enum("low"), MessagePriority.LOW
-        )
-        self.assertEqual(
-            self.interface._map_priority_to_enum("unknown"), MessagePriority.NORMAL
-        )
-
-    def test_determine_appropriate_agent(self):
-        """Teste la détermination de l'agent approprié."""
-        # Tester avec différentes capacités
-        self.assertEqual(
-            self.interface._determine_appropriate_agent(["argument_identification"]),
-            "informal_analyzer",
-        )
-        self.assertEqual(
-            self.interface._determine_appropriate_agent(["formal_logic"]),
-            "logic_analyzer",
-        )
-        self.assertEqual(
-            self.interface._determine_appropriate_agent(["text_extraction"]),
-            "extract_processor",
-        )
-        self.assertEqual(
-            self.interface._determine_appropriate_agent(["argument_visualization"]),
-            "default_operational_agent",
-        )
-
-        # Tester avec des capacités multiples
-        self.assertEqual(
-            self.interface._determine_appropriate_agent(
-                ["argument_identification", "fallacy_detection"]
-            ),
-            "informal_analyzer",
-        )
-
-        # Tester avec des capacités inconnues
-        self.assertEqual(
-            self.interface._determine_appropriate_agent(["unknown_capability"]),
-            "default_operational_agent",
-        )
-
-    def test_subscribe_to_operational_updates(self):
-        """Teste l'abonnement aux mises à jour opérationnelles."""
-
-        # Définir un callback
-        def callback(message):
-            pass
-
-        # Configurer le mock pour subscribe_to_operational_updates
-        self.mock_tactical_adapter.subscribe_to_operational_updates.return_value = (
-            "subscription-id-123"
-        )
-
-        # Appeler la méthode à tester
-        result = self.interface.subscribe_to_operational_updates(
-            update_types=["task_progress", "resource_usage"], callback=callback
-        )
-
-        # Vérifier le résultat
-        self.assertEqual(result, "subscription-id-123")
-
-        # Vérifier que la méthode subscribe_to_operational_updates a été appelée
-        self.mock_tactical_adapter.subscribe_to_operational_updates.assert_called_once_with(
-            update_types=["task_progress", "resource_usage"], callback=callback
-        )
 
     def test_request_operational_status(self):
         """Teste la demande de statut opérationnel."""
