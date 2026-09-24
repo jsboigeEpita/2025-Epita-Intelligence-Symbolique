@@ -430,7 +430,9 @@ class WorkflowExecutor:
                 to the state object.
             checkpoint_callback: Optional callable invoked after each DAG level
                 with signature ``(results, ctx) -> None``.  Used for per-document
-                checkpointing in long batch runs.
+                checkpointing in long batch runs.  A level torn by an outside
+                cancellation still reaches it with the phases that finished
+                before the cancellation, if any.
             resume_from: Optional set of phase names to skip (already completed
                 in a previous run).  Their outputs must already be present in
                 *context* (keyed ``phase_{name}_output`` / ``phase_{name}_result``).
@@ -584,17 +586,41 @@ class WorkflowExecutor:
                     )
 
             if phase_coros:
-                level_results = await asyncio.gather(*phase_coros)
+                tasks = [asyncio.ensure_future(coro) for coro in phase_coros]
+                try:
+                    level_results = await asyncio.gather(*tasks)
+                except asyncio.CancelledError:
+                    # #2346: a run cancelled from outside (a wall budget around
+                    # the executor) tears this level. The phases that finished
+                    # before the cancellation keep their results, in phase
+                    # order, and reach the checkpoint; the torn ones are not
+                    # stored.
+                    finished = [
+                        task.result()
+                        for task in tasks
+                        if task.done()
+                        and not task.cancelled()
+                        and task.exception() is None
+                    ]
+                    for phase_name, result, output in finished:
+                        self._store_phase_result(
+                            phase_name,
+                            result,
+                            output,
+                            results,
+                            ctx,
+                            state,
+                            state_writers,
+                        )
+                    if finished:
+                        self._checkpoint(checkpoint_callback, results, ctx)
+                    raise
                 for phase_name, result, output in level_results:
                     self._store_phase_result(
                         phase_name, result, output, results, ctx, state, state_writers
                     )
 
-            if checkpoint_callback is not None:
-                try:
-                    checkpoint_callback(results, ctx)
-                except Exception as cb_err:
-                    logger.warning("Checkpoint callback failed: %s", cb_err)
+            self._checkpoint(checkpoint_callback, results, ctx)
 
         # Summary
         completed = sum(
@@ -1110,6 +1136,18 @@ class WorkflowExecutor:
                 f"{timeout_seconds}s budget"
             )
         return type(exc).__name__ or "UnknownError"
+
+    @staticmethod
+    def _checkpoint(
+        checkpoint_callback: Optional[Callable[..., None]],
+        results: Dict[str, PhaseResult],
+        ctx: Dict[str, Any],
+    ) -> None:
+        if checkpoint_callback is not None:
+            try:
+                checkpoint_callback(results, ctx)
+            except Exception as cb_err:
+                logger.warning("Checkpoint callback failed: %s", cb_err)
 
     def _store_phase_result(
         self,
