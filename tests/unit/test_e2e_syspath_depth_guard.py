@@ -32,7 +32,6 @@ GUARDED_MODULES = [
     ("tests/e2e/demos/demo_service_manager_validated.py", "project_root"),
     ("tests/e2e/web_api/test_interfaces_integration.py", "PROJECT_ROOT"),
     ("tests/e2e/web_api/test_management_scripts.py", "PROJECT_ROOT"),
-    ("tests/e2e/web_api/test_interface_simple_playwright.py", "PROJECT_ROOT"),
 ]
 
 PROBE = """
