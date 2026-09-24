@@ -76,7 +76,8 @@ def client():
     install_error_handlers(app)
     app.include_router(api_router, prefix="/api")
     app.include_router(frontend_router, prefix="/api")
-    # /api/analyze parses the structure with Tweety's AspicParser.
+    # /api/analyze parses prose with the markers component (#2562); the
+    # AspicParser stand-in below only serves formal ASPIC+ input.
     context = Mock()
     context.jvm_initialized = True
     kb = Mock()
@@ -245,9 +246,13 @@ def test_analyze_without_detection_does_not_claim_a_fallacy_count(client, detect
         "overall_quality",
     ):
         assert absent not in results, absent
+    # #2562 : la structure vient du parseur de marqueurs (le prose ne passe
+    # plus par le AspicParser) — prémisse = ce qui précède « donc ».
     assert results["argument_structure"] == {
-        "premises": ["premise1"],
-        "conclusion": "conclusion1",
+        "premises": ["Tu dis que fumer est dangereux, mais tu fumes toi-même,"],
+        "conclusion": (
+            "Tu dis que fumer est dangereux, mais tu fumes toi-même, donc tu as tort"
+        ),
     }
 
 
@@ -271,7 +276,7 @@ def test_analyze_with_detection_runs_the_same_detector(client, detector):
     assert results["fallacy_count"] == 1
     assert results["fallacy_detection"]["tier"] == "taxonomy"
     assert results["metadata"]["components_used"] == [
-        "TweetyArgumentReconstructor_centralized_v2",
+        "ArgumentParser_marqueurs_francais",
         "hierarchical_fallacy:taxonomy",
     ]
 

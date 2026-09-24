@@ -168,13 +168,15 @@ def test_api_startup_and_basic_functionality():
         assert data.get("status") == "success", data
         print(f"[OK] Analyse recue en {processing_time:.2f}s")
 
-        # Le contrat de /api/analyze (#2525) : Tweety parse le texte avec son
-        # AspicParser, sans LLM. La réponse nomme le composant qui l'a produite.
-        # Cette route ne détecte aucun sophisme (#2526) ; ce test ne l'exige pas.
+        # Le contrat de /api/analyze (#2525, #2562) : sans LLM. Le prose va au
+        # composant de marqueurs de l'analyse (prémisses et conclusion
+        # réelles) ; seule l'entrée formelle ASPIC+ va au AspicParser de
+        # Tweety. La réponse nomme le chemin qui l'a produite.
         metadata = data["results"].get("metadata", {})
         assert metadata.get("components_used") == [
-            "TweetyArgumentReconstructor_centralized_v2"
+            "ArgumentParser_marqueurs_francais"
         ], f"composant inattendu : {metadata!r}"
+        assert data["results"]["extraction_path"] == "prose_markers"
         structure = data["results"].get("argument_structure") or {}
         assert isinstance(structure.get("premises"), list), structure
         assert isinstance(structure.get("conclusion"), str), structure

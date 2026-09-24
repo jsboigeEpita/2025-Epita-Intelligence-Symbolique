@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional
 
-from .errors import TimeoutError_, UpstreamError
+from .errors import (
+    APIError,
+    TimeoutError_,
+    UnanalyzableInputError,
+    UpstreamError,
+)
 
 from .fallacy_detection import detect_fallacies
 from .models import (
@@ -121,8 +126,25 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+# #2562 : une entrée ASPIC+ formelle se reconnaît à ses flèches de règle ;
+# tout le reste (le prose) va au parseur de marqueurs de l'analyse.
+_ASPIC_RULE_ARROWS = ("=>", "->")
+
+
 def _perform_tweety_analysis(text: str, project_context) -> Dict:
-    """Effectue l'analyse argumentative avec TweetyProject."""
+    """Analyse argumentative : prose par marqueurs, ASPIC+ formel par Tweety.
+
+    #2562 : le prose confié au ``AspicParser`` (syntaxe de règles) rendait
+    zéro argument — une structure vide avec un résumé de comptes jamais
+    extraits. Le prose va désormais au composant de marqueurs de
+    ``argumentation_analysis`` (sans LLM, #2525) ; un texte sans aucun
+    marqueur argumentatif est refusé avec sa raison ; l'entrée formelle
+    (flèches de règle) continue d'aller au ``AspicParser``. La réponse nomme
+    le chemin emprunté (``extraction_path``).
+    """
+    if not any(arrow in text for arrow in _ASPIC_RULE_ARROWS):
+        return _analyze_prose_with_markers(text)
+
     if not project_context or not project_context.jvm_initialized:
         raise ValueError("Le contexte du projet ou la JVM n'est pas initialisé.")
     if "AspicParser" not in project_context.tweety_classes:
@@ -140,11 +162,47 @@ def _perform_tweety_analysis(text: str, project_context) -> Dict:
         premises = arguments_list[:-1]
         conclusion = arguments_list[-1]
 
+    if arguments_list:
+        summary = f"{len(premises)} prémisses et 1 conclusion extraites."
+    else:
+        summary = "La base ASPIC+ a été analysée mais ne contient aucun argument."
+
     return {
         "argument_structure": {"premises": premises, "conclusion": conclusion},
-        "summary": f"{len(premises)} prémisses et 1 conclusion extraites.",
+        "summary": summary,
         "suggestions": ["Analyser chaque argument individuellement."],
         "components_used": ["TweetyArgumentReconstructor_centralized_v2"],
+        "extraction_path": "aspic_formal",
+    }
+
+
+def _analyze_prose_with_markers(text: str) -> Dict[str, Any]:
+    """Le prose par le composant de marqueurs — prémisses réelles, casse d'origine."""
+    from argumentation_analysis.agents.core.counter_argument.parser import (
+        ArgumentParser,
+    )
+
+    argument = ArgumentParser().parse_prose(text)
+    if argument is None:
+        raise UnanalyzableInputError(
+            "Aucune structure argumentative identifiable : aucun marqueur de "
+            "conclusion (donc, par conséquent, ainsi…) ni de prémisse "
+            "(parce que, car, puisque…) n'apparaît dans le texte.",
+            context={"extraction_path": "prose_markers"},
+        )
+
+    return {
+        "argument_structure": {
+            "premises": argument.premises,
+            "conclusion": argument.conclusion,
+        },
+        "summary": (
+            f"{len(argument.premises)} prémisse(s) et 1 conclusion extraites "
+            "par le parseur de marqueurs."
+        ),
+        "suggestions": ["Analyser chaque argument individuellement."],
+        "components_used": ["ArgumentParser_marqueurs_francais"],
+        "extraction_path": "prose_markers",
     }
 
 
@@ -160,6 +218,7 @@ def _build_response_payload(analysis_result: Dict) -> Dict:
         "argument_structure": analysis_result.get("argument_structure"),
         "suggestions": analysis_result.get("suggestions", []),
         "summary": analysis_result.get("summary", "L'analyse a été complétée."),
+        "extraction_path": analysis_result.get("extraction_path"),
         "metadata": {
             "duration": analysis_result.get("duration", 0.0),
             "service_status": "active",
@@ -208,6 +267,10 @@ async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Requ
             f"Analysis exceeded its time budget: {exc}",
             context={"analysis_id": analysis_id},
         ) from exc
+    except APIError:
+        # #2562 : le verdict propre de l'analyse (rien de reconstructible)
+        # n'est pas une panne d'amont — il traverse tel quel.
+        raise
     except Exception as exc:
         logger.error(
             f"[{analysis_id}] Erreur lors de l'analyse: {exc}", exc_info=True

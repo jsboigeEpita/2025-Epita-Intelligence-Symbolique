@@ -16,10 +16,25 @@ from .definitions import Argument, Vulnerability, CounterArgumentType
 logger = logging.getLogger(__name__)
 
 
+def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
+    """Earliest standalone-word occurrence of any marker (case-insensitive).
+
+    #2562: a plain substring test misfires — ``car`` matches ``carte``,
+    ``comme`` matches ``commencer``. A marker only counts when flanked by
+    non-word characters (``\\w`` already covers accented French letters).
+    """
+    best: Optional[Tuple[int, int]] = None
+    for marker in markers:
+        match = re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", text, re.IGNORECASE)
+        if match and (best is None or match.start() < best[0]):
+            best = (match.start(), match.end())
+    return best
+
+
 class ArgumentParser:
     """Parse French argumentative text into structured arguments."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.premise_markers = [
             "parce que",
             "car",
@@ -35,6 +50,7 @@ class ArgumentParser:
             "par conséquent",
             "ainsi",
             "en conclusion",
+            "conclusion",
             "il s'ensuit que",
             "on peut conclure que",
             "cela montre que",
@@ -74,65 +90,80 @@ class ArgumentParser:
         vulnerabilities.sort(key=lambda v: v.score, reverse=True)
         return vulnerabilities
 
+    def parse_prose(self, text: str) -> Optional[Argument]:
+        """Parse prose into an argument, or None when nothing is identifiable.
+
+        #2562 route contract: a text carrying no argumentative marker (no
+        conclusion marker, no premise marker) has nothing reconstructible in
+        it — the caller must say so instead of presenting an empty or
+        fabricated structure as a success. ``parse_argument`` keeps its
+        always-returns-something contract for the agent's own calls.
+        """
+        if (
+            _find_marker(text, self.conclusion_markers) is None
+            and _find_marker(text, self.premise_markers) is None
+        ):
+            return None
+        return self.parse_argument(text)
+
+    def _sentence_at(
+        self, text: str, sentences: List[str], offset: int
+    ) -> Optional[str]:
+        """The sentence (original case) containing ``offset``."""
+        cursor = 0
+        for sentence in sentences:
+            start = text.find(sentence, cursor)
+            if start < 0:
+                continue
+            if start <= offset < start + len(sentence):
+                return sentence
+            cursor = start + len(sentence)
+        return None
+
     def _extract_premises(self, text: str) -> List[str]:
-        """Extract premises from argumentative text."""
-        premises = []
+        """Extract premises from argumentative text.
+
+        #2562: premises come out as one sentence per list element, in the
+        original case (the former implementation lowercased the text and
+        returned everything before a conclusion marker as ONE merged,
+        re-capitalized string).
+        """
         sentences = self._split_into_sentences(text)
-        full_text_lower = text.lower()
 
-        for marker in self.premise_markers:
-            if marker in full_text_lower:
-                parts = full_text_lower.split(marker, 1)
-                if len(parts) == 2:
-                    premise_part = parts[1].strip()
-                    for sentence in sentences:
-                        if premise_part in sentence.lower():
-                            premises.append(sentence.strip())
-                            break
+        conclusion_marker = _find_marker(text, self.conclusion_markers)
+        if conclusion_marker is not None:
+            premises = self._split_into_sentences(text[: conclusion_marker[0]])
+            if premises:
+                return premises
 
-        for marker in self.conclusion_markers:
-            if marker in full_text_lower:
-                parts = full_text_lower.split(marker, 1)
-                if len(parts) == 2:
-                    premise_part = parts[0].strip()
-                    if not any(premise_part in p.lower() for p in premises):
-                        premises.append(premise_part.capitalize())
-                    break
+        premise_marker = _find_marker(text, self.premise_markers)
+        if premise_marker is not None:
+            sentence = self._sentence_at(text, sentences, premise_marker[0])
+            if sentence is not None:
+                return [sentence]
 
-        if not premises:
-            if len(sentences) > 1:
-                if any(
-                    marker in sentences[-1].lower()
-                    for marker in self.conclusion_markers
-                ):
-                    premises = [s.strip() for s in sentences[:-1]]
-                else:
-                    premises = [sentences[0].strip()]
-            else:
-                premises = [text.strip()]
-
-        return premises
+        if len(sentences) > 1:
+            return [sentences[0]]
+        return [text.strip()] if text.strip() else []
 
     def _extract_conclusion(self, text: str) -> str:
         """Extract conclusion from argumentative text."""
         sentences = self._split_into_sentences(text)
 
-        for sentence in sentences:
-            if any(marker in sentence.lower() for marker in self.conclusion_markers):
-                return sentence.strip()
+        conclusion_marker = _find_marker(text, self.conclusion_markers)
+        if conclusion_marker is not None:
+            sentence = self._sentence_at(text, sentences, conclusion_marker[0])
+            if sentence is not None:
+                return sentence
 
-        full_text_lower = text.lower()
-        for marker in self.premise_markers:
-            if marker in full_text_lower:
-                parts = full_text_lower.split(marker, 1)
-                if len(parts) == 2:
-                    conclusion_part = parts[0].strip()
-                    for sentence in sentences:
-                        if conclusion_part in sentence.lower():
-                            return sentence.strip()
+        premise_marker = _find_marker(text, self.premise_markers)
+        if premise_marker is not None:
+            sentence = self._sentence_at(text, sentences, premise_marker[0])
+            if sentence is not None:
+                return sentence
 
         if sentences:
-            return sentences[-1].strip()
+            return sentences[-1]
         return ""
 
     def _determine_argument_type(self, text: str) -> str:

@@ -71,6 +71,19 @@ class UpstreamError(APIError):
     error_code = "upstream_error"
 
 
+class UnanalyzableInputError(APIError):
+    """The payload is well-formed but carries nothing analyzable.
+
+    #2562: e.g. a prose text with no argumentative marker — the request is
+    not malformed (that is ``ValidationError``) and no upstream failed (that
+    is ``UpstreamError``); there is simply nothing to reconstruct, and the
+    response must say so rather than present an empty structure as success.
+    """
+
+    status_code = 422
+    error_code = "unanalyzable_input"
+
+
 class TimeoutError_(APIError):
     """The pipeline exceeded its per-phase or per-request timeout.
 

@@ -126,7 +126,12 @@ class TestAPIFastAPIAuthentique:
 
     def test_08_analyze_endpoint_multiple_calls(self, client):
         """Test 8: Vérification que plusieurs appels fonctionnent."""
-        test_text = "Le modus ponens est une règle d'inférence valide en logique propositionnelle."
+        # #2562 : le succès exige un marqueur argumentatif — le texte est
+        # celui du modus ponens, conclu par un « donc ».
+        test_text = (
+            "Le modus ponens est une règle d'inférence valide en logique "
+            "propositionnelle, donc ce mode de raisonnement est valide."
+        )
 
         for i in range(2):
             response = client.post(
@@ -141,20 +146,20 @@ class TestAPIFastAPIAuthentique:
 
     def test_09_analyze_endpoint_error_handling(self, client):
         """Test 9: Gestion d'erreurs de l'endpoint d'analyse."""
-        # Test avec texte vide
+        # Test avec texte vide : rien de reconstructible, refus motivé (#2562)
         response = client.post(f"{API_BASE_URL}/analyze", json={"text": ""})
-        assert (
-            response.status_code == 200
-        ), "Le service traite maintenant le texte vide."
+        assert response.status_code == 422, "Le texte vide n'a rien à analyser."
+        assert response.json()["error_code"] == "unanalyzable_input"
 
         # Test sans paramètre text
         response = client.post(f"{API_BASE_URL}/analyze", json={})
         assert response.status_code == 422, "Devrait rejeter l'absence de texte"
 
-        # Test avec texte long
+        # Test avec texte long sans marqueur : refus motivé, pas un succès vide
         long_text = "a" * 10000
         response = client.post(f"{API_BASE_URL}/analyze", json={"text": long_text})
-        assert response.status_code == 200
+        assert response.status_code == 422
+        assert response.json()["error_code"] == "unanalyzable_input"
 
     def test_10_api_documentation(self, client):
         """Test 10: Documentation API automatique FastAPI."""
