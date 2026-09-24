@@ -17,6 +17,9 @@ import datetime
 # import xml.etree.ElementTree as ET # Déplacé vers coverage_utils
 from pathlib import Path
 from argumentation_analysis.utils.dev_tools.coverage_utils import parse_coverage_xml
+from argumentation_analysis.utils.dev_tools.reporting_utils import (
+    generate_coverage_evolution_text_report,
+)
 
 # La fonction parse_coverage_xml a été déplacée vers project_core.dev_utils.coverage_utils
 # et est importée ci-dessus.

@@ -1,6 +1,11 @@
 import argumentation_analysis.core.environment
 import os
 import sys
+from pathlib import Path
+
+from argumentation_analysis.core.utils.filesystem_utils import (
+    check_files_existence,
+)
 
 
 def verify_files():

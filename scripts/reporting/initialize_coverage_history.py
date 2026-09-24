@@ -17,6 +17,7 @@ import datetime
 # import xml.etree.ElementTree as ET # Déplacé
 from pathlib import Path
 from argumentation_analysis.utils.dev_tools.coverage_utils import (
+    create_initial_coverage_history,
     parse_coverage_xml,
 )  # Ajout de l'import
 

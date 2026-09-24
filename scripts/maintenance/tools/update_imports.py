@@ -150,6 +150,7 @@ def update_imports_in_directory(
         "modified_files": 0,
         "total_replacements": 0,
         "modified_files_list": [],
+        "modified_files_details": [],
     }
 
     for file_path in Path(directory).rglob("*"):
@@ -170,6 +171,9 @@ def update_imports_in_directory(
             stats["modified_files"] += 1
             stats["total_replacements"] += replacements
             stats["modified_files_list"].append(str(file_path))
+            stats["modified_files_details"].append(
+                {"path": str(file_path), "replacements": replacements}
+            )
 
             logging.info(
                 f"Fichier {file_path}: {replacements} importations mises à jour."
@@ -207,11 +211,11 @@ def main():
             "Exécutez à nouveau sans l'option --dry-run pour appliquer les modifications."
         )
 
-    if modified_files_count > 0:
+    if stats["modified_files_details"]:
         logging.info(
             "\nFichiers avec modifications potentielles (et nombre de remplacements):"
         )
-        for detail in modified_files_details:
+        for detail in stats["modified_files_details"]:
             logging.info(
                 f"  {detail.get('path')}: {detail.get('replacements')} remplacement(s)"
             )

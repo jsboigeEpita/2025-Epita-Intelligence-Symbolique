@@ -11,6 +11,10 @@ import argparse
 import re
 import logging
 
+from argumentation_analysis.core.utils.parsing_utils import (
+    parse_colon_separated_string_to_regex_dict,
+)
+
 # Ajuster le PYTHONPATH pour trouver project_core si le script est exécuté directement
 script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root_dir = os.path.abspath(

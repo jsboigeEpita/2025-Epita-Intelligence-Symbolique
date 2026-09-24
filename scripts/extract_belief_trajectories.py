@@ -766,7 +766,7 @@ async def _run_one(
         traj.observations = list(trajectories_holder.get(corpus_id, []))
     except Exception as exc:  # noqa: BLE001 — surface, never swallow
         traj.error = f"{type(exc).__name__}: {exc}"
-        traj.observations = list(trajectures_holder.get(corpus_id, []))
+        traj.observations = list(trajectories_holder.get(corpus_id, []))
     return traj
 
 

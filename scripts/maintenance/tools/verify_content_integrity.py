@@ -2,6 +2,7 @@ import argumentation_analysis.core.environment
 import os
 import json
 import sys
+from pathlib import Path
 
 
 def check_markdown_file(file_path):

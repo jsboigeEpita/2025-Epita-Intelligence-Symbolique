@@ -16,6 +16,11 @@ import argparse
 import datetime
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from argumentation_analysis.utils.dev_tools.coverage_utils import parse_coverage_xml
+from argumentation_analysis.utils.dev_tools.project_structure_utils import (
+    map_package_to_module,
+)
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd

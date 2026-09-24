@@ -178,6 +178,7 @@ def update_paths_in_directory(
         "total_replacements": 0,
         "imports_added": 0,
         "modified_files_list": [],
+        "changed_files_details": [],
     }
 
     for file_path in Path(directory).rglob("*"):
@@ -200,6 +201,13 @@ def update_paths_in_directory(
             if import_added:
                 stats["imports_added"] += 1
             stats["modified_files_list"].append(str(file_path))
+            stats["changed_files_details"].append(
+                {
+                    "path": str(file_path),
+                    "path_replacements": replacements,
+                    "import_changed": import_added,
+                }
+            )
 
             logging.info(
                 f"Fichier {file_path}: {replacements} références aux chemins mises à jour, importation ajoutée: {import_added}."
@@ -238,9 +246,9 @@ def main():
             "Exécutez à nouveau sans l'option --dry-run pour appliquer les modifications."
         )
 
-    if changed_files_details:
+    if stats["changed_files_details"]:
         logging.info("\nFichiers avec modifications (chemins et/ou imports):")
-        for detail in changed_files_details:
+        for detail in stats["changed_files_details"]:
             log_msg = f"  {detail.get('path')}: {detail.get('path_replacements',0)} remplacement(s) de chemin"
             if detail.get("import_changed"):
                 log_msg += ", import de chemin modifié/ajouté."
