@@ -13,6 +13,17 @@ from pathlib import Path
 from argumentation_analysis.services.jtms import JTMS, Belief, Justification
 
 
+class JTMSClientInputError(ValueError):
+    """The request names an entity or format the server does not have.
+
+    Raised where the service refuses what the CALLER asked for (unknown
+    session/instance/belief/checkpoint, unsupported format, unparsable
+    import data). Subclasses ValueError so existing consumers keep
+    catching it; the API layer classifies by this provenance (#2344):
+    client input is 400, every other failure is a server defect.
+    """
+
+
 class JTMSService:
     """
     Service centralisé pour la gestion des systèmes JTMS avec support
@@ -66,7 +77,7 @@ class JTMSService:
             Dict contenant les détails de la croyance créée
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         jtms = self.instances[instance_id]
 
@@ -110,7 +121,7 @@ class JTMSService:
             Dict contenant les détails de la justification ajoutée
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         jtms = self.instances[instance_id]
 
@@ -146,10 +157,10 @@ class JTMSService:
             Dict contenant l'explication structurée de la croyance
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         if belief_name not in self.instances[instance_id].beliefs:
-            raise ValueError(f"Croyance non trouvée: {belief_name}")
+            raise JTMSClientInputError(f"Croyance non trouvée: {belief_name}")
 
         jtms = self.instances[instance_id]
         belief = jtms.beliefs[belief_name]
@@ -201,7 +212,7 @@ class JTMSService:
             Dict contenant la liste filtrée des croyances
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         jtms = self.instances[instance_id]
         beliefs_data = []
@@ -247,7 +258,7 @@ class JTMSService:
             Dict contenant l'état complet du système
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         jtms = self.instances[instance_id]
 
@@ -309,10 +320,10 @@ class JTMSService:
             Dict contenant les détails du changement et de la propagation
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         if belief_name not in self.instances[instance_id].beliefs:
-            raise ValueError(f"Croyance non trouvée: {belief_name}")
+            raise JTMSClientInputError(f"Croyance non trouvée: {belief_name}")
 
         jtms = self.instances[instance_id]
         old_value = jtms.beliefs[belief_name].valid
@@ -343,12 +354,12 @@ class JTMSService:
             Dict confirmant la suppression
         """
         if instance_id not in self.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         jtms = self.instances[instance_id]
 
         if belief_name not in jtms.beliefs:
-            raise ValueError(f"Croyance non trouvée: {belief_name}")
+            raise JTMSClientInputError(f"Croyance non trouvée: {belief_name}")
 
         # Supprimer la croyance
         jtms.remove_belief(belief_name)
@@ -386,7 +397,7 @@ class JTMSService:
             # Implémentation future pour DOT (Graphviz)
             raise NotImplementedError("Export DOT non implémenté")
         else:
-            raise ValueError(f"Format non supporté: {format}")
+            raise JTMSClientInputError(f"Format non supporté: {format}")
 
     async def import_jtms_state(
         self, session_id: str, state_data: str, format: str = "json"
@@ -403,12 +414,12 @@ class JTMSService:
             str: Identifiant de la nouvelle instance créée
         """
         if format != "json":
-            raise ValueError(f"Format d'import non supporté: {format}")
+            raise JTMSClientInputError(f"Format d'import non supporté: {format}")
 
         try:
             state = json.loads(state_data)
         except json.JSONDecodeError as e:
-            raise ValueError(f"Données JSON invalides: {e}")
+            raise JTMSClientInputError(f"Données JSON invalides: {e}")
 
         # Créer une nouvelle instance
         instance_id = await self.create_jtms_instance(session_id)
