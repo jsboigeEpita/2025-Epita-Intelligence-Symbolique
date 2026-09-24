@@ -55,10 +55,10 @@ Le plugin est aussi déclaré dans la carte de chargement paresseux `agents/fact
 | Module | Statut | Preuve mesurée |
 |---|---|---|
 | `governance_methods.py` | **actif** | `invoke_callables.py:1852` itère `GOVERNANCE_METHODS` en production |
-| `social_choice.py` | **actif** | `invoke_callables.py:1864-1881` (5 appels) + `governance_plugin.py:129-160` |
+| `social_choice.py` | **actif** | `invoke_callables.py:1864-1881` (5 appels) + `governance_plugin.py:143-174` |
 | `governance_agent.py` | **actif** | `invoke_callables.py:1754/:1800` (`Agent` comme électeur) ; `registry_setup.py:154-160` |
 | `conflict_resolution.py` | **actif** | `governance_plugin.py:52/:66` appelés par `invoke_callables.py:1977/:1981` |
-| `metrics.py` | **actif** | `governance_plugin.py:85-92` (`consensus_rate`, `fairness_index`, `satisfaction`) |
+| `metrics.py` | **actif** | `governance_plugin.py:92-98` (`consensus_rate`, `fairness_index`, `satisfaction` ; les deux dernières absentes et nommées sous `unavailable` quand l'entrée ne porte pas de scores `satisfaction`, #2344) |
 | `plugins/governance_plugin.py` | **actif** | `invoke_callables.py:1928-1931` |
 | ~~`simulation.py`~~ | **retiré (#2137)** | 0 appelant de production : seuls `__init__` (ré-export) et `tests/.../test_governance_simulation.py` l'exerçaient |
 
