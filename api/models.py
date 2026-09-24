@@ -1,22 +1,25 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Dict, Optional
+
+from .fallacy_detection import FallacyTier
+
+
+class AnalysisOptions(BaseModel):
+    """What ``POST /api/analyze`` computes besides the structure (#2526)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    detect_fallacies: bool = Field(
+        default=False,
+        description="Run the pipeline's fallacy detector (an LLM call for the "
+        "``llm`` tier: a key, and tens of seconds).",
+    )
+    fallacy_tier: FallacyTier = "llm"
 
 
 class AnalysisRequest(BaseModel):
     text: str
-
-
-class Fallacy(BaseModel):
-    type: str
-    description: str
-
-
-class AnalysisResponse(BaseModel):
-    fallacies: List[Fallacy]
-    analysis_id: str
-    status: str
-    metadata: Dict
-    summary: str
+    options: AnalysisOptions = Field(default_factory=AnalysisOptions)
 
 
 class StatusResponse(BaseModel):

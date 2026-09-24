@@ -265,9 +265,8 @@ test.describe('Investigation Textes Varies - Analyse Argumentative', () => {
         data: {
           text: texte.texte,
           analysis_type: texte.type,
+          // #2526 : une option que la route ne prend pas est refusée (422).
           options: {
-            deep_analysis: true,
-            include_logical_structure: true,
             detect_fallacies: true
           }
         }
