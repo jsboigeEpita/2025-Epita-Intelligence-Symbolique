@@ -26,15 +26,30 @@ import pytest
 from tests import _jvm_session_flag as flag
 
 
+@pytest.fixture
+def flag_absent(monkeypatch):
+    """The variable starts absent, and what the code under test writes to it
+    is undone at teardown.
+
+    ``monkeypatch.delenv(..., raising=False)`` alone records nothing when the
+    variable is already absent. The ``"1"`` that the propagator then wrote
+    outlived the test, and every pytest session spawned later in the suite
+    mocked jpype (#2530). ``setenv`` records the value to restore first.
+    """
+    monkeypatch.setenv(flag.JVM_SESSION_DISABLED_ENV, "")
+    monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV)
+    return monkeypatch
+
+
 class TestEnvVarChannel:
-    def test_propagator_exports_argv_decision_to_env(self, monkeypatch):
-        monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV, raising=False)
+    def test_propagator_exports_argv_decision_to_env(self, flag_absent):
+        monkeypatch = flag_absent
         monkeypatch.setattr(sys, "argv", ["pytest", "--disable-jvm-session"])
         flag.propagate_argv_to_env()
         assert os.environ.get(flag.JVM_SESSION_DISABLED_ENV) == "1"
 
-    def test_propagator_inert_without_flag(self, monkeypatch):
-        monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV, raising=False)
+    def test_propagator_inert_without_flag(self, flag_absent):
+        monkeypatch = flag_absent
         monkeypatch.setattr(sys, "argv", ["pytest", "-q", "tests/unit"])
         flag.propagate_argv_to_env()
         assert flag.JVM_SESSION_DISABLED_ENV not in os.environ
@@ -65,7 +80,9 @@ class TestEnvVarChannel:
         monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV, raising=False)
         assert flag.jvm_session_disabled() is False
 
-    def test_export_from_parsed_option(self, monkeypatch):
+    def test_export_from_parsed_option(self, flag_absent):
+        monkeypatch = flag_absent
+
         class _FlagOn:
             def getoption(self, name):
                 return name == "--disable-jvm-session"
@@ -74,7 +91,6 @@ class TestEnvVarChannel:
             def getoption(self, name):
                 return False
 
-        monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV, raising=False)
         flag.export_flag_from_config(_FlagOn())
         assert os.environ.get(flag.JVM_SESSION_DISABLED_ENV) == "1"
 
@@ -82,11 +98,10 @@ class TestEnvVarChannel:
         flag.export_flag_from_config(_FlagOff())
         assert flag.JVM_SESSION_DISABLED_ENV not in os.environ
 
-    def test_export_tolerant_of_mock_config(self, monkeypatch):
+    def test_export_tolerant_of_mock_config(self, flag_absent):
         """The conftest unit tests hand mock configs around (same tolerance
         as ``_e2e_session_decision``): no getoption must not blow up and
         must not leak an export."""
-        monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV, raising=False)
         flag.export_flag_from_config(object())
         assert flag.JVM_SESSION_DISABLED_ENV not in os.environ
 
@@ -100,3 +115,26 @@ class TestConftestConsumesTheEnvDecision:
         assert flag.jvm_session_disabled() is True
         monkeypatch.delenv(flag.JVM_SESSION_DISABLED_ENV, raising=False)
         assert flag.jvm_session_disabled() is False
+
+
+class TestPutBack:
+    """#2530: the per-test guard in ``tests/conftest.py`` calls ``put_back``."""
+
+    def test_nothing_moved(self, flag_absent):
+        assert flag.put_back(None) is None
+        assert flag.JVM_SESSION_DISABLED_ENV not in os.environ
+
+    def test_a_written_flag_is_removed_and_named(self, flag_absent):
+        os.environ[flag.JVM_SESSION_DISABLED_ENV] = "1"
+
+        message = flag.put_back(None)
+
+        assert flag.JVM_SESSION_DISABLED_ENV not in os.environ
+        assert f"{flag.JVM_SESSION_DISABLED_ENV}='1'" in message
+        assert "it was None when the test started" in message
+
+    def test_a_removed_flag_is_restored(self, flag_absent):
+        message = flag.put_back("1")
+
+        assert os.environ.get(flag.JVM_SESSION_DISABLED_ENV) == "1"
+        assert f"{flag.JVM_SESSION_DISABLED_ENV}=None" in message

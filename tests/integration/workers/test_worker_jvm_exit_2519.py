@@ -12,13 +12,12 @@ Each case runs in its own interpreter: the hang is at interpreter exit, which
 the test process cannot reach for itself.
 """
 
-import os
-import subprocess
 import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+
+from tests.nested_pytest import run_bounded
 
 _jpype_is_mocked = isinstance(sys.modules.get("jpype"), MagicMock)
 
@@ -28,8 +27,6 @@ pytestmark = [
         reason="#2519 tests require the real JVM (jpype mocked by --disable-jvm-session)",
     ),
 ]
-
-ROOT = Path(__file__).resolve().parents[3]
 
 # A start and a clean exit take about 15 s here. On ``main`` the hang never
 # ends, so any bound well above the start separates the two.
@@ -49,21 +46,9 @@ print("started", started[0], flush=True)
 
 
 def _run(argv, bound=_BOUND):
-    env = dict(os.environ)
-    env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
-    try:
-        return subprocess.run(
-            argv,
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=bound,
-        )
-    except subprocess.TimeoutExpired:
-        pytest.fail(f"the process did not exit within {bound}s (the #2519 hang)")
+    # Bounded after the kill too: ``subprocess.run(timeout=...)`` waits for the
+    # pipes without a bound once it has killed the child (#2530).
+    return run_bounded(argv, bound, failure="the #2519 hang: the process did not exit")
 
 
 def _start_and_exit(call, after=""):

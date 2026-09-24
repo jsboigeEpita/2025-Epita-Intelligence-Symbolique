@@ -46,6 +46,7 @@ from tests.jvm_skip_storm_signal import (  # noqa: E402
     ventilate,
 )
 from tests.unit.test_ci_guard_signature_contract_1873 import (  # noqa: E402
+    CI_YML,
     CONFTEST,
     _as_junit_skip,
     _guard_pattern,
@@ -208,6 +209,39 @@ def test_ventilation_names_the_dominant_cause():
     assert "unhealthy" in text
     assert "outside the three conftest signatures" in text
     assert "1 x" in text  # the fourth reason is ventilated as outside
+
+
+def test_the_health_check_reason_names_the_exception_and_still_counts():
+    """#2530: the `jvm_session` health-check skip ends with the exception.
+
+    The reason pytest renders, with that tail, still lands in the "unhealthy"
+    bucket locally and in both CI counts (the storm numerator and the
+    ventilation line), and its harvested head is the fixed start.
+    """
+    heads = _skip_literals(CONFTEST, within="jvm_session")
+    head = next(h for h in heads if "JClass" in h)
+    assert head.endswith("(JClass health check échoué) : "), head
+
+    rendered = head + "RuntimeError: No matching overloads found for java.lang.String"
+    report = _FakeReport(
+        "t", "skipped", ("tests/conftest.py", 1, f"Skipped: {rendered}")
+    )
+    counter = SkipStormCounter()
+    counter.add(report)
+    assert counter.jvm_signature_reasons() == [rendered]
+    assert "1 x JVM started but unhealthy (JClass health check)" in ventilate(
+        [rendered]
+    )
+
+    junit = _as_junit_skip(rendered)
+    assert re.search(_guard_pattern(), junit), junit
+    # The ci.yml guard's ventilation line, read from the workflow.
+    unhealthy = re.search(
+        r"\$unhealthy\s*=\s*\(\[regex\]::Matches\(\$content, '([^']+)'\)",
+        CI_YML.read_text(encoding="utf-8"),
+    )
+    assert unhealthy, "the ci.yml ventilation line for unhealthy skips moved"
+    assert re.search(unhealthy.group(1), junit), junit
 
 
 # --- 4. the wiring: conftest actually consults the signal --------------------

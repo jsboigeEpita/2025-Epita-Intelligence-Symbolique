@@ -66,3 +66,31 @@ def export_flag_from_config(config) -> None:
         # AttributeError: mock config without getoption.
         # ValueError: option unregistered (unexpected bootstrapping order).
         pass
+
+
+def put_back(before):
+    """#2530 — a test leaves the flag as it found it.
+
+    ``before`` is the value the variable held when the test started (``None``
+    when it was absent). The variable is set back to it, and the return is the
+    message naming the change, or ``None`` when nothing moved.
+
+    Why it matters: every pytest session spawned later inherits the variable.
+    Such a session is a new controller, so its module-level reader mocks jpype
+    while its own ``--disable-jvm-session`` option is off. Its JVM tests are
+    then skipped on the ``JClass`` health check (measured in CI, #2530).
+    """
+    after = os.environ.get(JVM_SESSION_DISABLED_ENV)
+    if after == before:
+        return None
+    if before is None:
+        del os.environ[JVM_SESSION_DISABLED_ENV]
+    else:
+        os.environ[JVM_SESSION_DISABLED_ENV] = before
+    return (
+        f"#2530: this test left {JVM_SESSION_DISABLED_ENV}={after!r}; it was "
+        f"{before!r} when the test started. Every pytest session spawned after "
+        "it would mock jpype. The value is put back; undo the write in the test "
+        "(monkeypatch.delenv(..., raising=False) records nothing when the "
+        "variable is absent)."
+    )
