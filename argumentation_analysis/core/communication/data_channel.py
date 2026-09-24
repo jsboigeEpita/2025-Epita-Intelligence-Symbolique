@@ -395,58 +395,54 @@ class DataChannel(Channel):
 
         Returns:
             Le message reçu ou None si timeout
+
+        Raises:
+            Toute autre exception de la lecture : c'est un défaut de notre
+            code. #2344 : elle était convertie en ``None``, la valeur du
+            timeout. Un message dont les données stockées à part ne se
+            relisent pas lève aussi, et reste non lu : il était remis
+            sans ses données.
         """
-        try:
-            with self.lock:
-                # Vérifier s'il y a des messages non lus
-                if recipient_id in self.message_queues:
-                    for i, entry in enumerate(self.message_queues[recipient_id]):
-                        if not entry["read"]:
-                            # Récupérer le message
-                            message = entry["message"]
+        with self.lock:
+            # Vérifier s'il y a des messages non lus
+            if recipient_id in self.message_queues:
+                for i, entry in enumerate(self.message_queues[recipient_id]):
+                    if not entry["read"]:
+                        # Récupérer le message
+                        message = entry["message"]
 
-                            # Vérifier si le message contient une référence à des données
-                            data_reference = message.content.get("data_reference")
-                            if data_reference:
-                                try:
-                                    # Récupérer les données
-                                    data, _ = self.data_store.get_data(
-                                        data_reference["data_id"],
-                                        data_reference.get("version_id"),
-                                    )
+                        # Vérifier si le message contient une référence à des données
+                        data_reference = message.content.get("data_reference")
+                        if data_reference:
+                            # Récupérer les données
+                            data, _ = self.data_store.get_data(
+                                data_reference["data_id"],
+                                data_reference.get("version_id"),
+                            )
 
-                                    # Remplacer la référence par les données
-                                    message.content["data"] = data
-                                    message.content.pop("data_reference", None)
-
-                                    # Mettre à jour les statistiques
-                                    self.stats["data_items_retrieved"] += 1
-
-                                    self.logger.info(
-                                        f"Data for message {message.id} retrieved from storage"
-                                    )
-
-                                except Exception as e:
-                                    self.logger.error(
-                                        f"Error retrieving data for message {message.id}: {str(e)}"
-                                    )
-
-                            # Marquer le message comme lu
-                            self.message_queues[recipient_id][i]["read"] = True
+                            # Remplacer la référence par les données
+                            message.content["data"] = data
+                            message.content.pop("data_reference", None)
 
                             # Mettre à jour les statistiques
-                            self.stats["messages_received"] += 1
+                            self.stats["data_items_retrieved"] += 1
 
                             self.logger.info(
-                                f"Message {message.id} received by {recipient_id}"
+                                f"Data for message {message.id} retrieved from storage"
                             )
-                            return message
 
-            return None
+                        # Marquer le message comme lu
+                        self.message_queues[recipient_id][i]["read"] = True
 
-        except Exception as e:
-            self.logger.error(f"Error receiving message: {str(e)}")
-            return None
+                        # Mettre à jour les statistiques
+                        self.stats["messages_received"] += 1
+
+                        self.logger.info(
+                            f"Message {message.id} received by {recipient_id}"
+                        )
+                        return message
+
+        return None
 
     def subscribe(
         self,
@@ -514,6 +510,10 @@ class DataChannel(Channel):
 
         Returns:
             Liste des messages en attente
+
+        Raises:
+            L'erreur de relecture des données stockées à part d'un message.
+            #2344 : le message était listé sans ses données.
         """
         messages = []
 
@@ -527,38 +527,31 @@ class DataChannel(Channel):
                         # Vérifier si le message contient une référence à des données
                         data_reference = message.content.get("data_reference")
                         if data_reference:
-                            try:
-                                # Récupérer les données
-                                data, _ = self.data_store.get_data(
-                                    data_reference["data_id"],
-                                    data_reference.get("version_id"),
-                                )
+                            # Récupérer les données
+                            data, _ = self.data_store.get_data(
+                                data_reference["data_id"],
+                                data_reference.get("version_id"),
+                            )
 
-                                # Créer une copie du message avec les données
-                                message_copy = Message(
-                                    message_type=message.type,
-                                    sender=message.sender,
-                                    sender_level=message.sender_level,
-                                    content={
-                                        **message.content,
-                                        "data": data,
-                                        "data_reference": None,
-                                    },
-                                    recipient=message.recipient,
-                                    channel=message.channel,
-                                    priority=message.priority,
-                                    metadata=message.metadata,
-                                    message_id=message.id,
-                                    timestamp=message.timestamp,
-                                )
+                            # Créer une copie du message avec les données
+                            message_copy = Message(
+                                message_type=message.type,
+                                sender=message.sender,
+                                sender_level=message.sender_level,
+                                content={
+                                    **message.content,
+                                    "data": data,
+                                    "data_reference": None,
+                                },
+                                recipient=message.recipient,
+                                channel=message.channel,
+                                priority=message.priority,
+                                metadata=message.metadata,
+                                message_id=message.id,
+                                timestamp=message.timestamp,
+                            )
 
-                                messages.append(message_copy)
-
-                            except Exception as e:
-                                self.logger.error(
-                                    f"Error retrieving data for message {message.id}: {str(e)}"
-                                )
-                                messages.append(message)
+                            messages.append(message_copy)
                         else:
                             messages.append(message)
 

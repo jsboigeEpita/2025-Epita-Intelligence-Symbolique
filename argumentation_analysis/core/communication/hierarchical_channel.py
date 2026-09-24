@@ -165,42 +165,42 @@ class HierarchicalChannel(Channel):
 
         Returns:
             Le message reçu ou None si timeout
-        """
-        try:
-            # Vérifier si le destinataire a une file d'attente
-            with self.lock:
-                if recipient_id not in self.message_queues:
-                    self.message_queues[recipient_id] = queue.PriorityQueue()
 
-            q_size = self.message_queues[recipient_id].qsize()
+        Raises:
+            Toute autre exception de la lecture : c'est un défaut de notre
+            code. #2344 : elle était convertie en ``None``, la valeur du
+            timeout.
+        """
+        # Vérifier si le destinataire a une file d'attente
+        with self.lock:
+            if recipient_id not in self.message_queues:
+                self.message_queues[recipient_id] = queue.PriorityQueue()
+
+        q_size = self.message_queues[recipient_id].qsize()
+        self.logger.info(
+            f"Attempting to get message for {recipient_id}. Queue size: {q_size}. Timeout: {timeout}"
+        )
+
+        # Récupérer un message de la file d'attente
+        try:
+            priority, timestamp, message_obj = self.message_queues[recipient_id].get(
+                block=True, timeout=timeout
+            )
             self.logger.info(
-                f"Attempting to get message for {recipient_id}. Queue size: {q_size}. Timeout: {timeout}"
+                f"Successfully got message {message_obj.id} for {recipient_id} from queue."
             )
 
-            # Récupérer un message de la file d'attente
-            try:
-                priority, timestamp, message_obj = self.message_queues[
-                    recipient_id
-                ].get(block=True, timeout=timeout)
-                self.logger.info(
-                    f"Successfully got message {message_obj.id} for {recipient_id} from queue."
-                )
+            # Mettre à jour les statistiques
+            with self.lock:
+                self.stats["messages_received"] += 1
 
-                # Mettre à jour les statistiques
-                with self.lock:
-                    self.stats["messages_received"] += 1
+            self.logger.info(f"Message {message_obj.id} received by {recipient_id}")
+            return message_obj
 
-                self.logger.info(f"Message {message_obj.id} received by {recipient_id}")
-                return message_obj
-
-            except queue.Empty:
-                self.logger.warning(
-                    f"Queue empty for {recipient_id} after timeout {timeout}s."
-                )
-                return None
-
-        except Exception as e:
-            self.logger.error(f"Error receiving message: {str(e)}")
+        except queue.Empty:
+            self.logger.warning(
+                f"Queue empty for {recipient_id} after timeout {timeout}s."
+            )
             return None
 
     def subscribe(
