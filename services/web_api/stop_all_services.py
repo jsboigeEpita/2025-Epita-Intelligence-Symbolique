@@ -26,7 +26,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.webapp.process_cleaner import ProcessCleaner
+# Ports checked when --ports is not given.
+STANDARD_PORTS = [3000, 5000, 8000, 8080, 3001, 5001]
 
 
 def find_processes_by_port(port):
@@ -66,13 +67,12 @@ def find_webapp_processes():
     return webapp_processes
 
 
-async def stop_services_gracefully(force=False):
-    """Arrête les services de manière propre."""
+async def stop_services_gracefully(force=False, ports=None):
+    """Arrête les services de manière propre, sur ``ports`` ou ``STANDARD_PORTS``."""
     print("🛑 ARRÊT DE TOUS LES SERVICES")
     print("=" * 50)
 
-    # Ports standards à vérifier
-    standard_ports = [3000, 5000, 8000, 8080, 3001, 5001]
+    standard_ports = list(ports) if ports else STANDARD_PORTS
 
     # 1. Recherche des processus par ports
     print("🔍 Recherche des processus sur les ports standards...")
@@ -88,11 +88,7 @@ async def stop_services_gracefully(force=False):
     webapp_processes = find_webapp_processes()
     print(f"   {len(webapp_processes)} processus webapp trouvé(s)")
 
-    # 3. Utilisation du ProcessCleaner pour arrêt propre
-    print("🧹 Utilisation du ProcessCleaner...")
-    cleaner = ProcessCleaner()
-
-    # Arrêt des processus par ports
+    # 3. Arrêt des processus par ports
     for port, processes in port_processes.items():
         print(f"🔌 Arrêt des processus sur le port {port}...")
         for proc in processes:
@@ -129,13 +125,7 @@ async def stop_services_gracefully(force=False):
             except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
                 print(f"   ⚠️ Impossible d'arrêter le processus webapp {proc.pid}: {e}")
 
-    # 4. Nettoyage avec ProcessCleaner
-    print("🧽 Nettoyage final...")
-    cleaner.cleanup_specific_processes(
-        ["flask", "react-scripts", "npm", "node", "python.*app.py"]
-    )
-
-    # 5. Nettoyage des fichiers PID s'ils existent
+    # 4. Nettoyage des fichiers PID s'ils existent
     print("📄 Nettoyage des fichiers PID...")
     pid_files = [
         PROJECT_ROOT / "logs" / "services_pids.json",
@@ -151,7 +141,7 @@ async def stop_services_gracefully(force=False):
             except Exception as e:
                 print(f"   ⚠️ Erreur suppression {pid_file.name}: {e}")
 
-    # 6. Vérification finale
+    # 5. Vérification finale
     print("🔍 Vérification finale...")
     remaining_processes = []
     for port in standard_ports:
@@ -208,12 +198,9 @@ Exemples:
 
     if args.ports:
         print(f"🎯 Ports spécifiques ciblés: {args.ports}")
-        # Modifier la liste des ports standards
-        global standard_ports
-        standard_ports = args.ports
 
     try:
-        await stop_services_gracefully(force=args.force)
+        await stop_services_gracefully(force=args.force, ports=args.ports)
         return True
     except KeyboardInterrupt:
         print("\n🛑 Interruption utilisateur")

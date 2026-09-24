@@ -43,6 +43,7 @@ class TestManagementScripts(unittest.TestCase):
         # Scripts à tester
         cls.scripts = {
             "start_simple": cls.services_dir / "start_simple_only.py",
+            "start_full": cls.services_dir / "start_full_system.py",
             "stop_all": cls.services_dir / "stop_all_services.py",
             "health_check": cls.services_dir / "health_check.py",
         }
@@ -194,10 +195,12 @@ class TestManagementScripts(unittest.TestCase):
             self.assertEqual(
                 result.returncode, 0, "Le script start_simple doit afficher l'aide"
             )
+            # #2529: the Flask "interface simple" was archived under #322; the
+            # script now serves the backend alone.
             self.assertIn(
-                "interface simple",
+                "backend seul",
                 result.stdout.lower(),
-                "L'aide doit mentionner l'interface simple",
+                "L'aide doit dire que le script démarre le backend seul",
             )
 
         except subprocess.TimeoutExpired:
@@ -242,34 +245,30 @@ class TestManagementScripts(unittest.TestCase):
             )
 
     def test_07_scripts_import_validation(self):
-        """Test 7: Validation des imports dans les scripts."""
-        scripts_to_test = []
+        """Test 7: chaque script importe ce qui existe.
 
-        # Test des imports pour health_check
-        if self.scripts_available["health_check"]:
-            scripts_to_test.append(("health_check", self.scripts["health_check"]))
-
-        for script_name, script_path in scripts_to_test:
+        #2529: ``py_compile`` ne vérifiait que la syntaxe, et un seul script.
+        Quatre scripts importaient ``scripts.webapp``, supprimé en 2025-06.
+        ``--help`` exécute les imports du script avant de rendre la main.
+        """
+        for script_name, script_path in self.scripts.items():
             with self.subTest(script=script_name):
-                # Test d'exécution avec validation syntax
                 try:
                     result = subprocess.run(
-                        [sys.executable, "-m", "py_compile", str(script_path)],
+                        [sys.executable, str(script_path), "--help"],
                         capture_output=True,
                         text=True,
-                        timeout=10,
+                        timeout=60,
+                        cwd=self.project_root,
                     )
-
-                    self.assertEqual(
-                        result.returncode,
-                        0,
-                        f"Le script {script_name} doit être syntaxiquement correct",
-                    )
-
                 except subprocess.TimeoutExpired:
-                    self.fail(
-                        f"La compilation du script {script_name} a dépassé le timeout"
-                    )
+                    self.fail(f"{script_name} --help a dépassé le timeout")
+
+                self.assertEqual(
+                    result.returncode,
+                    0,
+                    f"{script_name} --help doit réussir:\n{result.stderr[-2000:]}",
+                )
 
     def test_08_servicemanager_dependency_check(self):
         """Test 8: Vérification des dépendances OrchestrationServiceManager dans les scripts."""
@@ -368,7 +367,7 @@ async def run_async_management_tests():
         return False
 
 
-def test_management_scripts_complete():
+def run_management_scripts_complete():
     """Test complet des scripts de gestion."""
     print("=== TESTS SCRIPTS DE GESTION ===")
     print("=" * 40)
@@ -404,6 +403,11 @@ def test_management_scripts_complete():
     return success
 
 
+def test_management_scripts_complete():
+    """#2529: pytest ignores a returned value, so the result is asserted."""
+    assert run_management_scripts_complete(), "voir le résumé imprimé"
+
+
 if __name__ == "__main__":
-    success = test_management_scripts_complete()
+    success = run_management_scripts_complete()
     sys.exit(0 if success else 1)

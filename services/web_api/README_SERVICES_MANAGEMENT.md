@@ -8,48 +8,47 @@ Cette solution remplace les anciens scripts PowerShell par des **scripts Python 
 
 ### 1. `start_full_system.py` - Système complet Backend + Frontend
 ```bash
-# Démarrage complet (backend ServiceManager + frontend React)
+# Démarrage complet (backend api.main:app + frontend React) et tests d'intégration
 python services/web_api/start_full_system.py
 
 # Mode visible pour debugging
 python services/web_api/start_full_system.py --visible
 
-# Ports personnalisés
-python services/web_api/start_full_system.py --backend-port 5001 --frontend-port 3001
-
 # Sans tests automatiques
 python services/web_api/start_full_system.py --skip-tests
 ```
 
+Le script délègue à `python -m argumentation_analysis.webapp.orchestrator --frontend`.
+Les ports viennent de `argumentation_analysis/webapp/config/webapp_config.yml`
+(les options `--backend-port` / `--frontend-port` ont été retirées, #2529).
+
 **Fonctionnalités :**
-- ✅ Démarrage automatique backend ServiceManager (port 5000)
+- ✅ Démarrage automatique du backend `api.main:app` (port 5003, avec repli)
 - ✅ Démarrage automatique frontend React (port 3000)
 - ✅ Gestion du timing et des dépendances
 - ✅ Tests d'intégration automatiques
 - ✅ Surveillance continue avec health checks
 - ✅ Ouverture optionnelle du navigateur
 
-### 2. `start_simple_only.py` - Interface simple standalone
+### 2. `start_simple_only.py` - Backend seul
 ```bash
-# Interface simple Flask uniquement
+# Backend api.main:app seul, sans frontend React
 python services/web_api/start_simple_only.py
 
 # Port personnalisé
-python services/web_api/start_simple_only.py --port 3001
+python services/web_api/start_simple_only.py --port 5004
 
-# Mode debug Flask
-python services/web_api/start_simple_only.py --debug
-
-# Sans vérification ServiceManager
-python services/web_api/start_simple_only.py --skip-servicemanager-check
+# Redémarrage automatique quand le code change
+python services/web_api/start_simple_only.py --reload
 ```
 
 **Fonctionnalités :**
-- ✅ Démarrage interface simple Flask intégrée
-- ✅ Vérification automatique ServiceManager disponible
-- ✅ Mode dégradé si ServiceManager indisponible
-- ✅ Surveillance des analyseurs de sophismes
-- ✅ Health checks périodiques
+- ✅ Sert le backend de `webapp_config.yml` (`api.main:app`) avec uvicorn
+- ✅ Port par défaut : le `start_port` de la configuration (5003)
+
+L'interface simple Flask que ce script démarrait a été archivée sous #322
+(`docs/archives/web_api_legacy_317/interface-simple`) ; les options `--debug` et
+`--skip-servicemanager-check` ont été retirées avec elle (#2529).
 
 ### 3. `stop_all_services.py` - Arrêt propre de tous les services
 ```bash
@@ -108,10 +107,10 @@ python services/web_api/health_check.py --detailed
 python services/web_api/stop_all_services.py
 ```
 
-### Test interface simple seulement
+### Test du backend seul
 ```bash
-# 1. Interface simple standalone
-python services/web_api/start_simple_only.py --debug
+# 1. Backend seul
+python services/web_api/start_simple_only.py --reload
 
 # 2. Surveillance continue
 python services/web_api/health_check.py --continuous
