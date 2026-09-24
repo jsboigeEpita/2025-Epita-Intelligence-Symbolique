@@ -491,8 +491,10 @@ def reset_raw_cache() -> None:
     if _raw_cache is not None:
         try:
             _raw_cache.close()
-        except Exception:  # noqa: BLE001 — best-effort teardown
-            pass
+        except Exception as exc:  # noqa: BLE001 — teardown continues, named
+            # The singleton is dropped either way; a cache that could not be
+            # closed is said, not swallowed (#2346).
+            logger.warning("Raw LLM cache at %s did not close: %r", _raw_cache_dir, exc)
     _raw_cache = None
     _raw_cache_dir = None
 

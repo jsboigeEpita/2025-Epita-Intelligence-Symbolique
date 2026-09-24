@@ -59,11 +59,10 @@ class LogicAgentFactory:
         :rtype: Optional[BaseLogicAgent]
         """
         logger.info(f"Création d'un agent logique de type '{logic_type}'")
-        logger.info(f"DEBUG: Logic type received: {logic_type}")
 
         # Normaliser le type de logique
         logic_type = logic_type.lower().strip()
-        logger.info(f"DEBUG: Normalized logic type: {logic_type}")
+        logger.debug(f"Normalized logic type: {logic_type}")
 
         # Vérifier si le type de logique est supporté
         if logic_type not in cls._agent_classes:

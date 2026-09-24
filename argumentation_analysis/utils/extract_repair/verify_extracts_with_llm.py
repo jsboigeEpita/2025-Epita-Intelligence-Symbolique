@@ -16,6 +16,7 @@ import re
 import json
 import logging
 import asyncio
+from html import escape
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
@@ -438,16 +439,19 @@ def generate_report(
 
     # Ajouter une ligne pour chaque résultat
     for result in results:
-        source_name = result.get("source_name", "Source inconnue")
-        extract_name = result.get("extract_name", "Extrait inconnu")
-        status = result.get("status", "error")
+        # Names come from the extracts, comments and messages from the model:
+        # escaped, so they cannot break or rewrite the page (#2346).
+        source_name = escape(str(result.get("source_name", "Source inconnue")))
+        extract_name = escape(str(result.get("extract_name", "Extrait inconnu")))
+        raw_status = result.get("status", "error")
+        status = escape(str(raw_status))
 
         # Préparer les scores et commentaires
         scores_html = ""
         comments_html = ""
 
-        if status == "error":
-            message = result.get("message", "Erreur inconnue")
+        if raw_status == "error":
+            message = escape(str(result.get("message", "Erreur inconnue")))
             scores_html = "N/A"
             comments_html = f"<strong>Erreur:</strong> {message}"
         else:
@@ -473,7 +477,7 @@ def generate_report(
             </div>
             """
 
-            comments_html = comments
+            comments_html = escape(str(comments))
 
         html_content += f"""
         <tr class="{status}">
