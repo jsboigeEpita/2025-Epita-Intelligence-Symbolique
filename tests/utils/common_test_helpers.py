@@ -17,6 +17,8 @@ import os
 import sys
 import json
 import logging
+from unittest.mock import MagicMock, patch
+
 import tempfile
 import shutil
 from pathlib import Path

@@ -838,6 +838,9 @@ class MockOrchestrator:
             return response
 
         except Exception as e:
+            # e est supprimé à la sortie du except : capturer avant la lambda,
+            # qui sinon ferme sur un nom mort (F821).
+            error_message = str(e)
             if TYPES_AVAILABLE:
                 from argumentation_analysis.orchestration.fact_checking_orchestrator import (
                     FactCheckingResponse,
@@ -848,7 +851,7 @@ class MockOrchestrator:
                     "MockResult",
                     (),
                     {
-                        "to_dict": lambda: {"error": str(e)},
+                        "to_dict": lambda: {"error": error_message},
                         "family_results": {},
                         "factual_claims": [],
                         "fact_check_results": [],

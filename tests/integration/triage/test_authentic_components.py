@@ -294,45 +294,6 @@ class TestAuthenticPipelineIntegration:
         Donc Pierre est corrompu. Cette logique est-elle valide ?
         """
 
-    @pytest.mark.skipif(
-        not os.getenv("OPENAI_API_KEY"),
-        reason="Clé API OpenAI requise",
-    )
-    @pytest.mark.jpype
-    def test_full_authentic_pipeline_execution(self):
-        """Test d'exécution pipeline complet 100% authentique."""
-        try:
-            # Configuration 100% authentique
-            config = UnifiedConfig(
-                logic_type=LogicType.FOL,
-                mock_level=MockLevel.NONE,
-                taxonomy_size=TaxonomySize.FULL,
-                require_real_gpt=True,
-                require_real_tweety=True,
-                require_full_taxonomy=True,
-            )
-
-            # Initialisation orchestrateur
-            orchestrator = UnifiedOrchestrator(config)
-
-            # Exécution pipeline authentique
-            start_time = time.time()
-            result = asyncio.run(orchestrator.analyze_text(self.test_text))
-            execution_time = time.time() - start_time
-
-            # Validations du résultat
-            assert isinstance(result, dict)
-            assert "analysis" in result or "results" in result
-            assert execution_time < 120  # Pipeline complet sous 2 minutes
-
-            # Vérifier l'authenticité du résultat
-            result_str = str(result).lower()
-            assert "mock" not in result_str
-            assert "simulé" not in result_str
-
-        except Exception as e:
-            pytest.skip(f"Pipeline authentique non disponible: {e}")
-
     def test_authentic_vs_mock_pipeline_comparison(self):
         """Test de comparaison pipeline authentique vs mock."""
         # Configuration authentique

@@ -23,6 +23,9 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 from unittest.mock import Mock
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

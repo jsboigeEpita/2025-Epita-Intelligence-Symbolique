@@ -18,6 +18,10 @@ import sys
 import os
 import tempfile
 from pathlib import Path
+import logging
+from unittest.mock import Mock
+
+logger = logging.getLogger(__name__)
 
 # Ajout du chemin pour les imports
 # #1867: worker vit a tests/integration/workers/ -> la racine du repo est a

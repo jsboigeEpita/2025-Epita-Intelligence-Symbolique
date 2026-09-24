@@ -38,6 +38,9 @@ from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
     MoriartyInterrogatorAgent,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Configuration pour tests de performance
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
