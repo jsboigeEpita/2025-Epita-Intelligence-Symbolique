@@ -23,13 +23,6 @@ export const runDebateAnalysis = (text, workflow = 'debate_tournament') =>
     body: JSON.stringify({ text, workflow }),
   });
 
-// Get Dung framework analysis
-export const analyzeDungFramework = (args, attacks) =>
-  fetchJSON(`${API_BASE_URL}/api/framework`, {
-    method: 'POST',
-    body: JSON.stringify({ arguments: args, attacks }),
-  });
-
 /**
  * Generate demo debate data for visualization when API is unavailable.
  */

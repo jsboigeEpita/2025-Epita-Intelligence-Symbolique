@@ -60,28 +60,24 @@ test.describe('API Backend - Services d\'Analyse', () => {
   });
 
   test('Test de construction de framework', async ({ request }) => {
+    // #2526: the route the framework view calls, with the body api.js
+    // analyzeDungFramework sends. c attacks b, which attacks a.
     const frameworkData = {
-      arguments: [
-        { id: "a", content: "Les IA peuvent être créatives." },
-        { id: "b", content: "La créativité requiert une conscience." },
-        { id: "c", content: "Les IA n'ont pas de conscience." }
-      ],
-      attack_relations: [
-        { from: "c", to: "b" },
-        { from: "b", to: "a" }
-      ]
+      arguments: ["a", "b", "c"],
+      attacks: [["c", "b"], ["b", "a"]],
+      options: { semantics: "preferred", compute_extensions: true }
     };
 
-    const response = await request.post(`${FLASK_API_BASE_URL}/api/framework`, {
+    const response = await request.post(`${FLASK_API_BASE_URL}/api/v1/framework/analyze`, {
       data: frameworkData
     });
-    
+
     expect(response.status()).toBe(200);
-    
-    const result = await response.json();
-    expect(result).toHaveProperty('success', true);
-    expect(result).toHaveProperty('argument_count', 3);
-    expect(result).toHaveProperty('attack_count', 2);
+
+    const { analysis } = await response.json();
+    expect(analysis.graph_properties.num_arguments).toBe(3);
+    expect(analysis.graph_properties.num_attacks).toBe(2);
+    expect(analysis.extensions.preferred.map(ext => [...ext].sort())).toEqual([["a", "c"]]);
   });
 
   test('Test de validation d\'argument', async ({ request }) => {

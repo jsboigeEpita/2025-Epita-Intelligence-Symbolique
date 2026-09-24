@@ -87,9 +87,12 @@ class TestWebAppAPIInvestigation:
         }
 
         try:
-            # Cette route /api/fallacies n'existe plus dans la nouvelle app Starlette
-            # Je la skipperai pour l'instant.
-            pytest.skip("La route /api/fallacies n'est plus implémentée.")
+            # #2526: api.main:app ne sert pas /api/fallacies. Le service archivé
+            # (FallacyService) ne détecte rien sur un texte réel ; la route attend
+            # la décision sur le détecteur qui sert l'interface.
+            pytest.skip(
+                "#2526: /api/fallacies n'est pas servie (FallacyService inerte)."
+            )
             assert (
                 base_url
             ), "L'URL du backend doit être fournie par la fixture e2e_servers"
@@ -125,77 +128,37 @@ class TestWebAppAPIInvestigation:
             "argument_type": "deductive",
         }
 
-        try:
-            # Cette route /api/validate n'existe plus dans la nouvelle app Starlette
-            pytest.skip("La route /api/validate n'est plus implémentée.")
-            assert (
-                base_url
-            ), "L'URL du backend doit être fournie par la fixture e2e_servers"
-            response = requests.post(
-                f"{base_url}/api/validate", json=payload, timeout=30
-            )
-            print(f"\n[OK] Test de l'endpoint /api/validate:")
-            print(f"   Status Code: {response.status_code}")
-            print(
-                f"   Argument testé: {payload['premises']} -> {payload['conclusion']}"
-            )
+        # #2526: /api/validate est servie par api.main:app (api/frontend_endpoints.py).
+        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
+        response = requests.post(f"{base_url}/api/validate", json=payload, timeout=30)
 
-            if response.status_code == 200:
-                result = response.json()
-                print(f"   [OK] Validation réussie")
-                print(f"   Valide: {result.get('valid', False)}")
-                print(f"   Confiance: {result.get('confidence', 0):.2f}")
-            else:
-                print(f"   [ERROR] Erreur: {response.text}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"   [ERROR] Erreur de connexion: {e}")
+        assert response.status_code == 200, response.text
+        body = response.json()
+        assert body["success"] is True
+        assert 0.0 < body["result"]["validity_score"] <= 1.0
+        assert body["result"]["logical_structure"]["method"] == "heuristic"
 
     @pytest.mark.e2e
     def test_api_framework_endpoint(self, e2e_servers):
         """Test de l'endpoint de framework de Dung"""
         base_url, _ = e2e_servers
+        # #2526: the body api.js analyzeDungFramework sends to the route the
+        # framework view now calls. A3 attacks A2, which attacks A1.
         payload = {
-            "arguments": [
-                {"id": "A1", "content": "Il faut protéger l'environnement"},
-                {"id": "A2", "content": "L'économie est plus importante"},
-                {"id": "A3", "content": "On peut faire les deux"},
-            ],
-            "attacks": [
-                {"attacker": "A2", "target": "A1"},
-                {"attacker": "A3", "target": "A2"},
-            ],
+            "arguments": ["A1", "A2", "A3"],
+            "attacks": [["A2", "A1"], ["A3", "A2"]],
+            "options": {"semantics": "preferred", "compute_extensions": True},
         }
 
-        try:
-            # Cette route /api/framework n'existe plus. Elle a été remplacée par /api/v1/framework/analyze
-            pytest.skip(
-                "La route /api/framework a été remplacée par /api/v1/framework/analyze."
-            )
-            assert (
-                base_url
-            ), "L'URL du backend doit être fournie par la fixture e2e_servers"
-            response = requests.post(
-                f"{base_url}/api/framework", json=payload, timeout=30
-            )
-            print(f"\n[FRAMEWORK]  Test de l'endpoint /api/framework:")
-            print(f"   Status Code: {response.status_code}")
-            print(f"   Arguments: {len(payload['arguments'])}")
-            print(f"   Attaques: {len(payload['attacks'])}")
+        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
+        response = requests.post(
+            f"{base_url}/api/v1/framework/analyze", json=payload, timeout=60
+        )
 
-            if response.status_code == 200:
-                result = response.json()
-                print(f"   [OK] Framework construit")
-                extensions = result.get("extensions", {})
-                if isinstance(extensions, dict):
-                    print(f"   Extensions calculées: {list(extensions.keys())}")
-                else:
-                    print(f"   Extensions calculées: {extensions}")
-            else:
-                print(f"   [ERROR] Erreur: {response.text}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"   [ERROR] Erreur de connexion: {e}")
+        assert response.status_code == 200, response.text
+        extensions = response.json()["analysis"]["extensions"]
+        assert sorted(extensions["grounded"]) == ["A1", "A3"]
+        assert [sorted(ext) for ext in extensions["preferred"]] == [["A1", "A3"]]
 
     @pytest.mark.e2e
     def test_generate_api_investigation_report(self, e2e_servers):
