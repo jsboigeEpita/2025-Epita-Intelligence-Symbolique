@@ -5569,6 +5569,30 @@ async def _invoke_asp_reasoning(
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---
 
 
+class FallacyDetectionFailed(RuntimeError):
+    """The detector ran, and none of its LLM runs gave an answer (#2540).
+
+    Not "no fallacy found", and not ``FALLACY_DETECTION_UNAVAILABLE`` (no
+    detector for the tier). The message starts with ``FALLACY_DETECTION_FAILED``.
+    """
+
+
+def _unanswered(run: Dict[str, Any]) -> Optional[str]:
+    """Why one guided-analysis run gave no answer, or ``None`` if it answered.
+
+    ``FallacyWorkflowPlugin.run_guided_analysis`` does not raise: a failed LLM
+    call comes back as ``{"error": ..., "fallacies": []}`` (#2540). The two
+    timeout markers are set by the callers below.
+    """
+    if run.get("error"):
+        return str(run["error"])
+    if run.get("wide_net_timed_out"):
+        return "wide-net descent timed out (>300s)"
+    if run.get("timed_out"):
+        return "timed out, one-shot retry included"
+    return None
+
+
 async def _invoke_hierarchical_fallacy(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -5674,12 +5698,18 @@ async def _invoke_hierarchical_fallacy(
                 "exploration_method": "widenet_timeout",
                 "wide_net_timed_out": True,
             }
+        # #2540: read the plugin's failure channel here, once. From here on the
+        # failure travels as ``degraded``/``last_error``, or the call raises.
+        widenet_failure = _unanswered(result)
+        result.pop("error", None)
         result["extraction_method"] = result.get("exploration_method", "unknown")
         if _strat_ids:
             result["strategic_objective_ids"] = _strat_ids
 
         # Per-argument enrichment pass: run _invoke_hierarchical_fallacy_per_argument
         # and merge extras into the wide-net results to lift recall on dense text.
+        perarg_answered = False
+        perarg_failure: Optional[str] = None
         try:
             per_arg_result = await _invoke_hierarchical_fallacy_per_argument(
                 input_text, context
@@ -5709,6 +5739,10 @@ async def _invoke_hierarchical_fallacy(
                 )
             else:
                 result["extraction_method"] = "widenet+perarg_union"
+                perarg_answered = True
+                # #2540: some per-argument runs got no answer.
+                if per_arg_result.get("failed_runs"):
+                    perarg_failure = per_arg_result.get("last_error")
             logger.info(
                 "Fallacy recall lift: widenet=%d, perarg=%d, merged=%d",
                 len(wide_fallacies),
@@ -5716,9 +5750,31 @@ async def _invoke_hierarchical_fallacy(
                 len(merged),
             )
         except Exception as enrich_err:
+            perarg_failure = f"per-argument fallacy pass failed: {enrich_err}"
             logger.warning(
                 "Per-argument enrichment failed, keeping wide-net results only: %s",
                 enrich_err,
+            )
+
+        # #2540: no run answered, so there is no result to report, not an
+        # empty one. With a wide-net answer, a per-argument failure only
+        # degrades it, and the other way round.
+        if widenet_failure and not perarg_answered:
+            raise FallacyDetectionFailed(
+                f"FALLACY_DETECTION_FAILED: tier=llm, reason={widenet_failure}"
+                + (f"; {perarg_failure}" if perarg_failure else "")
+            )
+        _run_failures: List[str] = []
+        if widenet_failure:
+            _run_failures.append(
+                f"wide-net fallacy pass got no answer: {widenet_failure}"
+            )
+        if perarg_failure:
+            _run_failures.append(perarg_failure)
+        if _run_failures:
+            result["degraded"] = True
+            result["last_error"] = "; ".join(
+                [e for e in [result.get("last_error"), *_run_failures] if e]
             )
 
         # FB-35 (#1121): translate the descent budget-exceeded marker (from the
@@ -5739,8 +5795,15 @@ async def _invoke_hierarchical_fallacy(
                 _capped_sources.append("wide-net")
             if _perarg_capped:
                 _capped_sources.append("per-argument")
-            result["last_error"] = (
-                "descent budget exceeded (" + "+".join(_capped_sources) + " capped)"
+            result["last_error"] = "; ".join(
+                e
+                for e in [
+                    result.get("last_error"),
+                    "descent budget exceeded ("
+                    + "+".join(_capped_sources)
+                    + " capped)",
+                ]
+                if e
             )
             logger.warning(
                 "Fallacy descent cost-capped (FB-35 #1121): %s — results are partial",
@@ -5757,7 +5820,7 @@ async def _invoke_hierarchical_fallacy(
                     _fallacies[0].get("fallacy_type", _fallacies[0].get("type", ""))
                 )
             _degraded_note = (
-                " [DEGRADED: descent budget exceeded — partial coverage]"
+                f" [DEGRADED: {result.get('last_error')} — partial coverage]"
                 if result.get("degraded")
                 else ""
             )
@@ -5769,6 +5832,8 @@ async def _invoke_hierarchical_fallacy(
             )
         return result  # type: ignore[no-any-return]
 
+    except FallacyDetectionFailed:
+        raise
     except (ImportError, RuntimeError, ValueError) as e:
         # Anti-theater mandate (#1019 / RA-1 #1046): fail loud, do NOT silently
         # return empty results that look like "no fallacies found". Callers must
@@ -5979,18 +6044,31 @@ async def _invoke_full_fallacy(
     # Run LLM pass (default tier) — may raise RuntimeError if unavailable
     llm_context = {**context, "fallacy_tier": "llm"}
     llm_result: Dict[str, Any] = {}
+    llm_failure: Optional[str] = None
     try:
         llm_result = await _invoke_hierarchical_fallacy(input_text, llm_context)
         llm_fallacies = llm_result.get("fallacies", [])
-    except RuntimeError:
+    except RuntimeError as e:
+        llm_failure = str(e)
         logger.warning(
-            "LLM tier unavailable in full merge — proceeding with hybrid only"
+            "LLM tier did not run in full merge — proceeding with hybrid only: %s",
+            e,
         )
         llm_fallacies = []
 
     # Run hybrid pass
     hybrid_result = await _invoke_hybrid_fallacy(input_text, context)
     hybrid_fallacies = hybrid_result.get("fallacies", [])
+    hybrid_failure: Optional[str] = None
+    if hybrid_result.get("extraction_method") == "unavailable":
+        hybrid_failure = str(hybrid_result.get("error") or "unavailable")
+
+    # #2540: neither tier ran, so there is nothing to merge.
+    if llm_failure and hybrid_failure:
+        reason = f"tier=full, llm: {llm_failure}; hybrid: {hybrid_failure}"
+        if llm_failure.startswith("FALLACY_DETECTION_UNAVAILABLE"):
+            raise RuntimeError(f"FALLACY_DETECTION_UNAVAILABLE: {reason}")
+        raise FallacyDetectionFailed(f"FALLACY_DETECTION_FAILED: {reason}")
 
     # Merge by taxonomy_pk (or fallacy_type as fallback), keep highest confidence
     merged = _merge_fallacy_results(llm_fallacies, hybrid_fallacies)
@@ -6013,14 +6091,20 @@ async def _invoke_full_fallacy(
         "llm_count": len(llm_fallacies),
         "hybrid_count": len(hybrid_fallacies),
     }
+    _degradations: List[str] = []
     if llm_result.get("descent_budget_exceeded") or llm_result.get("degraded"):
         full_result["descent_budget_exceeded"] = bool(
             llm_result.get("descent_budget_exceeded")
         )
+        _degradations.append(llm_result.get("last_error", "descent budget exceeded"))
+    # #2540: a tier that did not run is named, with its reason.
+    if llm_failure:
+        _degradations.append(f"llm tier did not run: {llm_failure}")
+    if hybrid_failure:
+        _degradations.append(f"hybrid tier did not run: {hybrid_failure}")
+    if _degradations:
         full_result["degraded"] = True
-        full_result["last_error"] = llm_result.get(
-            "last_error", "descent budget exceeded"
-        )
+        full_result["last_error"] = "; ".join(_degradations)
     # FB-35 (#1121): propagate the descent-call diagnostic so verification can
     # confirm the breaker's margin on normal corpora (calls made vs budget).
     if "descent_calls_made" in llm_result:
@@ -6237,11 +6321,18 @@ async def _invoke_hierarchical_fallacy_per_argument(
         # FB-35 (#1121): surface if ANY per-argument descent tripped the global
         # call budget (each per-arg plugin instance has its own budget).
         any_descent_budget_exceeded = False
+        # #2540: a run that got no answer is counted, not read as "none found".
+        run_failures: List[str] = []
         for result in per_arg_results:
             if isinstance(result, Exception):
                 logger.warning("Per-argument analysis error: %s", result)
+                run_failures.append(f"{type(result).__name__}: {result}")
                 continue
             if isinstance(result, dict):
+                _why = _unanswered(result)
+                if _why:
+                    run_failures.append(_why)
+                    continue
                 if result.get("descent_budget_exceeded"):
                     any_descent_budget_exceeded = True
                 fallacies = result.get("fallacies", [])
@@ -6279,6 +6370,12 @@ async def _invoke_hierarchical_fallacy_per_argument(
             ]
             deduped.append(f)
 
+        if run_failures and len(run_failures) == len(per_arg_results):
+            raise FallacyDetectionFailed(
+                f"FALLACY_DETECTION_FAILED: all {len(run_failures)} per-argument "
+                f"fallacy runs got no answer: {run_failures[0]}"
+            )
+
         exploration_method = (
             "+".join(sorted(methods_used)) if methods_used else "per_argument_parallel"
         )
@@ -6290,7 +6387,7 @@ async def _invoke_hierarchical_fallacy_per_argument(
             len(deduped),
         )
 
-        return {
+        per_arg_output: Dict[str, Any] = {
             "fallacies": deduped,
             "total_iterations": total_iterations,
             "exploration_method": exploration_method,
@@ -6299,7 +6396,17 @@ async def _invoke_hierarchical_fallacy_per_argument(
             "parallel_executed": True,
             "descent_budget_exceeded": any_descent_budget_exceeded,
         }
+        if run_failures:
+            per_arg_output["degraded"] = True
+            per_arg_output["failed_runs"] = len(run_failures)
+            per_arg_output["last_error"] = (
+                f"{len(run_failures)}/{len(per_arg_results)} per-argument fallacy "
+                f"runs got no answer: {run_failures[0]}"
+            )
+        return per_arg_output
 
+    except FallacyDetectionFailed:
+        raise
     except (ImportError, RuntimeError, ValueError) as e:
         # Anti-theater (#1019/#1046): fail loud. The caller (wide-net merge)
         # handles this gracefully — do not return empty that looks like "found nothing".
