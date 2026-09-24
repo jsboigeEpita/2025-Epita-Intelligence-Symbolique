@@ -23,6 +23,10 @@ class DungAnalysisService:
         import jpype
         import jpype.imports
 
+        # #2526: 07d7cce7c removed this module's `from jpype import JClass` with
+        # a dead class, and every construction then raised NameError.
+        from jpype import JClass
+
         if not jpype.isJVMStarted():
             raise RuntimeError(
                 "La JVM n'est pas démarrée. "

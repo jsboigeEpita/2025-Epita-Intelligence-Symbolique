@@ -33,16 +33,18 @@ class TestDungServiceDirect:
 
     @pytest.fixture(autouse=True)
     def setup_dung_service(self):
-        """Initialize the Dung service, skip if JVM not available."""
+        """Initialize the Dung service, skip if JVM not available.
+
+        #2526: once the JVM runs, a service that cannot be built is a failure.
+        The former ``except Exception: pytest.skip`` turned the NameError of
+        ``api/services.py`` into four skips for seven months.
+        """
         if not _is_jvm_available():
             pytest.skip("JVM not started — run without --disable-jvm-session")
 
-        try:
-            from api.dependencies import get_dung_analysis_service
+        from api.dependencies import get_dung_analysis_service
 
-            self.service = get_dung_analysis_service()
-        except Exception as e:
-            pytest.skip(f"DungAnalysisService not available: {e}")
+        self.service = get_dung_analysis_service()
 
     def test_simple_framework(self):
         """Scenario 1: Simple framework a->b->c."""
