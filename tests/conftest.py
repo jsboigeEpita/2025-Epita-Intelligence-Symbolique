@@ -1035,9 +1035,6 @@ def _e2e_backend_env(port: str, project_root: Path) -> dict:
     env = os.environ.copy()
     env["PORT"] = str(port)
     env["PYTHONPATH"] = str(project_root)
-    # Meant to keep the backend off the real LLM, but api/ has not read this
-    # variable since d0f28d45e: /api/analyze runs the real analysis (#2525).
-    env["FORCE_MOCK_LLM"] = "true"
     return env
 
 

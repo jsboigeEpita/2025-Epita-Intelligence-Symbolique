@@ -50,7 +50,7 @@ class MockAnalysisService:
                 "processing_time": duration,
                 # #2381 : aucun modèle n'a été consulté en mode mock — la clé
                 # de provenance ne doit rien annoncer. fallback_reason dit le mode.
-                "fallback_reason": "Mode mock forcé via FORCE_MOCK_LLM",
+                "fallback_reason": "Mock choisi par dependency_overrides",
             },
         }
 

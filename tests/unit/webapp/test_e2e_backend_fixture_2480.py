@@ -91,7 +91,9 @@ def test_the_backend_environment_keeps_what_the_caller_set(tmp_path, monkeypatch
     assert env["CALLER_2480"] == "from the caller"
     assert "FILE_ONLY_2480" not in env
     changed = {name for name in env if env[name] != os.environ.get(name)}
-    assert changed <= {"PORT", "PYTHONPATH", "FORCE_MOCK_LLM"}, changed
+    # Nothing else: FORCE_MOCK_LLM, which the fixture used to add, has no
+    # reader in api/ (#2525).
+    assert changed <= {"PORT", "PYTHONPATH"}, changed
     assert env["PORT"] == "8095"
 
 
