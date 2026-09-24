@@ -20,9 +20,9 @@ exclude =
     logs,
     .temp,
     _temp,
-    # #2536: arbre de tests archivé, non collecté par pytest (norecursedirs: _*).
-    # Les F821 qui y vivent appartiennent à du code inert ; réparés si le
-    # fichier ressuscite (l'original vit sous docs/archives/).
+    # #2536: cet arbre EST l'archive (#448), non collecté par pytest
+    # (norecursedirs: _*) ; les F821 y restent inertes et se réparent si un
+    # fichier ressuscite.
     tests/_archived,
     # Student projects
     1.4.1-JTMS,
