@@ -2936,6 +2936,12 @@ async def _run_parent_harness_fallback(
         # --- Per-argument pass (existing) ---
         per_arg_result = await _invoke_hierarchical_fallacy_per_argument(text, context)
         fallacies = per_arg_result.get("fallacies", [])
+        # #2540: what did not run is reported with what did.
+        harness_failures: List[str] = []
+        if per_arg_result.get("degraded"):
+            harness_failures.append(
+                per_arg_result.get("last_error") or "per-argument pass degraded"
+            )
 
         # --- Wide-net whole-text fusion pass (#655 Track KK) ---
         # Catch framing, tonal, or discourse-level fallacies that span
@@ -2945,8 +2951,13 @@ async def _run_parent_harness_fallback(
             try:
                 whole_result = await _invoke_hierarchical_fallacy(text, context)
                 whole_text_fallacies = whole_result.get("fallacies", [])
+                if whole_result.get("degraded"):
+                    harness_failures.append(
+                        f"whole-text pass: {whole_result.get('last_error')}"
+                    )
             except Exception as e:
-                logger.debug("Wide-net whole-text pass failed: %s", e)
+                logger.warning("Wide-net whole-text pass failed: %s", e)
+                harness_failures.append(f"whole-text pass failed: {e}")
 
         # Deduplicate whole-text findings against per-argument results
         per_arg_signatures: set = set()
@@ -2977,7 +2988,7 @@ async def _run_parent_harness_fallback(
                 "Wide-net whole-text pass: %d additional fallacies", extra_count
             )
 
-        if not fallacies:
+        if not fallacies and not harness_failures:
             logger.info("Parent harness: no additional fallacies found")
             return None
 
@@ -3039,14 +3050,26 @@ async def _run_parent_harness_fallback(
             "exploration_method": per_arg_result.get(
                 "exploration_method", "per_argument_parallel"
             ),
+            **(
+                {"degraded": True, "last_error": "; ".join(harness_failures)}
+                if harness_failures
+                else {}
+            ),
         }
 
     except ImportError:
         logger.debug("Parent harness not available (import error)")
         return None
     except Exception as e:
+        # #2540: a harness that did not run leaves an entry saying so, not
+        # the silence of one that found nothing.
         logger.warning("Parent harness fallback failed: %s", e)
-        return None
+        return {
+            "phase": "Detection",
+            "type": "parent_harness",
+            "status": "failed",
+            "last_error": f"{type(e).__name__}: {e}",
+        }
 
 
 async def _resolve_phase_conflicts(
