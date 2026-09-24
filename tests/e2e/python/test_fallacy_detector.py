@@ -2,6 +2,11 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
+# #2526 : l'onglet appelle le détecteur LLM du pipeline, mesuré à 18 s sur une
+# phrase et 53 s sur deux paragraphes. Même borne que `FALLACY_TIMEOUT_MS`
+# dans `services/api.js`.
+DETECTION_TIMEOUT_MS = 180000
+
 
 # Les URLs des services sont injectées via les fixtures `frontend_url` et `backend_url`.
 # so the web server is started automatically for all tests in this module.
@@ -9,7 +14,7 @@ from playwright.sync_api import Page, expect
 @pytest.mark.playwright
 def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
     """
-    Test principal : détection d'un sophisme Ad Hominem
+    Test principal : un ad hominem évident donne au moins une détection
     Valide le workflow complet de détection avec un exemple prédéfini
     """
     # 1. Navigation et attente API connectée
@@ -36,28 +41,25 @@ def test_fallacy_detection_basic_workflow(page: Page, frontend_url: str):
     submit_button.click()
 
     # 6. Attente des résultats
-    expect(results_container).to_be_visible(timeout=10000)
+    expect(results_container).to_be_visible(timeout=DETECTION_TIMEOUT_MS)
 
-    # 7. Vérification de la détection
-    # Vérification plus flexible qui accepte un ou plusieurs sophismes
+    # 7. Au moins une détection. Son nom vient de la taxonomie et varie d'un
+    # appel LLM à l'autre : le test ne l'exige pas.
     expect(results_container).to_contain_text(
-        re.compile(r"\d+ sophisme\(s\) détecté\(s\)")
+        re.compile(r"[1-9]\d* sophisme\(s\) détecté\(s\)")
     )
-    # Utilise une expression régulière insensible à la casse pour plus de robustesse
-    # face aux variations de formatage (ex: "Ad Hominem (Simulé)").
-    expect(results_container).to_contain_text(re.compile(r"ad hominem", re.IGNORECASE))
 
-    # 8. Vérification présence d'un niveau de sévérité
-    severity_badge = results_container.locator(".severity-badge").first
-    expect(severity_badge).to_be_visible()
+    # 8. Chaque détection porte la confiance du détecteur
+    badge = results_container.locator(".severity-badge").first
+    expect(badge).to_contain_text("Confiance")
 
 
 @pytest.mark.e2e
 @pytest.mark.playwright
-def test_severity_threshold_adjustment(page: Page, frontend_url: str):
+def test_confidence_threshold_adjustment(page: Page, frontend_url: str):
     """
-    Test curseur seuil de sévérité
-    Vérifie l'impact du seuil sur les résultats de détection
+    Test du curseur de confiance minimale
+    Vérifie qu'une détection aboutit avec un seuil élevé
     """
     # 1. Navigation et activation onglet
     page.goto(frontend_url)
@@ -81,8 +83,7 @@ def test_severity_threshold_adjustment(page: Page, frontend_url: str):
     submit_button.click()
 
     # Attendre les résultats du premier test
-    expect(results_container).to_be_visible(timeout=10000)
-    expect(results_container).to_be_visible(timeout=10000)
+    expect(results_container).to_be_visible(timeout=DETECTION_TIMEOUT_MS)
 
 
 @pytest.mark.e2e
@@ -159,7 +160,7 @@ def test_fallacy_detector_reset_functionality(page: Page, frontend_url: str):
     submit_button.click()
 
     # 4. Attendre les résultats
-    expect(results_container).to_be_visible(timeout=10000)
+    expect(results_container).to_be_visible(timeout=DETECTION_TIMEOUT_MS)
     expect(text_input).to_have_value(test_text)
 
     # 5. Clic sur le bouton reset
