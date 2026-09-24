@@ -47,8 +47,8 @@ CHECKS = [
     ),
     (
         "Orchestration et agents",
-        "argumentation_analysis.orchestration.cluedo_orchestrator",
-        "CluedoOrchestrator",
+        "argumentation_analysis.orchestration.cluedo_extended_orchestrator",
+        "CluedoExtendedOrchestrator",
     ),
     (
         "Orchestration et agents",

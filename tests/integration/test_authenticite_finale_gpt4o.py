@@ -163,13 +163,13 @@ class AuthenticAPITester:
         logger.info(f"[ORCHESTRATEUR] Test avec API réelle")
 
         try:
-            from argumentation_analysis.orchestration.cluedo_orchestrator import (
-                run_cluedo_game,
+            # #2544: the 2-agent run_cluedo_game this script called was retired;
+            # the live Cluedo game is the 3-agent one.
+            from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
+                run_cluedo_oracle_game,
             )
             from semantic_kernel.kernel import Kernel
             from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-            from semantic_kernel.contents.text_content import TextContent
-            from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
             kernel = Kernel()
             api_key = os.getenv("OPENAI_API_KEY", "")
@@ -209,28 +209,20 @@ class AuthenticAPITester:
             """
 
             start_time = time.time()
-            history, final_state = asyncio.run(
-                run_cluedo_game(
-                    kernel=kernel, initial_question=unique_question, max_iterations=3
+            result = asyncio.run(
+                run_cluedo_oracle_game(
+                    kernel=kernel, initial_question=unique_question, max_turns=3
                 )
             )
+            history = result["conversation_history"]
+            final_state = result["final_state"]
             end_time = time.time()
             execution_time = end_time - start_time
 
-            processed_history_texts = []
-            if history:  # S'assurer que history n'est pas None
-                for msg in history:
-                    text_content = None
-                    if isinstance(msg, ChatMessageContent):
-                        if msg.content is not None:
-                            text_content = str(msg.content)
-                        elif msg.items:
-                            for item in msg.items:
-                                if isinstance(item, TextContent):
-                                    text_content = item.text
-                                    break
-                    if text_content:
-                        processed_history_texts.append(text_content)
+            # conversation_history: [{"sender": ..., "message": ...}]
+            processed_history_texts = [
+                entry["message"] for entry in history if entry.get("message")
+            ]
 
             conversation_analysis = {
                 "turns_count": len(history) if history else 0,

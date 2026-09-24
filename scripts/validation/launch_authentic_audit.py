@@ -57,7 +57,7 @@ def check_prerequisites():
 
     # Vérifier la structure du projet
     critical_paths = [
-        "argumentation_analysis/orchestration/cluedo_orchestrator.py",
+        "argumentation_analysis/orchestration/cluedo_extended_orchestrator.py",
         "config/.env",
     ]
 

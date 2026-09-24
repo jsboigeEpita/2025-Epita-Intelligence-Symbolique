@@ -242,7 +242,7 @@ path) remains dormant; M3's behavior is covered by
 **Key files:**
 
 - `argumentation_analysis/orchestration/cluedo_extended_orchestrator.py` — 3-agent + Oracle (active)
-- `docs/archives/orchestration_legacy/cluedo_orchestrator_base.py` — 2-agent version (archived, superseded by Extended)
+- The 2-agent `cluedo_orchestrator.py` was removed in #2544: broken at every entry point since 2025-10-31, and every method it had lives on in the Extended orchestrator. Its last version is in git at `41ebd4aee`.
 
 ---
 
@@ -307,12 +307,12 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 ### Archived Components
 | Component | Archived To | Replacement | PR |
 |-----------|-------------|-------------|-----|
-| `RealLLMOrchestrator` (668→124 LOC shim) | `docs/archives/orchestration_legacy/real_llm_orchestrator_shim.py` | `UnifiedPipeline` + `WorkflowDSL` | #246, #886 |
+| `RealLLMOrchestrator` (668→124 LOC shim) | Shim removed by #887; the pre-shim class is `docs/archives/orchestration_legacy/real_llm_orchestrator.py` | `UnifiedPipeline` + `WorkflowDSL` | #246, #887 |
 | `RealLLMOrchestratorWrapper` (60 lines) | Deprecation shim in `pipelines/` | Same as above | #247 |
 | Dead code in `pipeline_utils.py` | Removed (EnhancedPipeline, singletons) | `AnalysisCache` + `PipelineMetrics` kept | #255 |
-| `ConversationOrchestrator` (1044 LOC) | `docs/archives/orchestration_legacy/conversation_orchestrator.py` | 8-agent SK system via `CapabilityRegistry` | #886 |
-| `CluedoOrchestrator` base 2-agent (488 LOC) | `docs/archives/orchestration_legacy/cluedo_orchestrator_base.py` | `CluedoExtendedOrchestrator` (3-agent + Oracle) | #886 |
-| `LogiqueComplexeOrchestrator` (108 LOC stub) | `docs/archives/orchestration_legacy/logique_complexe_orchestrator.py` | `FOLLogicAgent` + `TweetyLogicPlugin` | #886 |
+| `ConversationOrchestrator` (1044 LOC) | **Not archived** — #886 was closed unmerged, and the class is live (`conversation_real`, #2456) | — | — |
+| `CluedoOrchestrator` base 2-agent (488 LOC) | Removed by #2544 (#886, which would have archived it, was closed unmerged) | `CluedoExtendedOrchestrator` (3-agent + Oracle) | #2544 |
+| `LogiqueComplexeOrchestrator` (108 LOC stub) | Removed by #887 | `FOLLogicAgent` + `TweetyLogicPlugin` | #887 |
 
 ### Consolidated Components
 | Component | New Location | Description | PR |
