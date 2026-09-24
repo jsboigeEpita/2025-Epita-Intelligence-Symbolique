@@ -88,7 +88,7 @@ La forte cohérence thématique de ces scripts appelle à la création d'un outi
 3.  **Sort des anciens fichiers :**
     - `scripts/setup/adapt_code_for_pyjnius.py`: **À supprimer** après migration de sa logique.
     - `scripts/setup/check_jpype_import.py`: **À supprimer** après migration de sa logique.
-    - `scripts/setup/download_test_jars.py`: **À supprimer** après migration de sa logique.
+    - `scripts/setup/download_test_jars.py`: **À supprimer** après migration de sa logique. — **Fait (#2532)** : sa logique vit dans `argumentation_analysis/core/jvm_setup.py::download_tweety_jars`, appelée par `scripts/ci/provision_tweety.py`.
     - `scripts/setup/__init__.py`: **À conserver** en l'état.
 
 Ce premier lot sera donc entièrement absorbé par un nouvel outil unifié, ce qui clarifiera considérablement la gestion de l'environnement.
@@ -337,7 +337,7 @@ Ce lot ne nécessite pas de nouvelles fonctionnalités mais confirme la pertinen
     - Tous les fichiers de ce lot, sans exception, seront supprimés.
     - `scripts/setup/setup_jpype_mock.ps1`: **À supprimer**.
     - `scripts/setup/setup_test_env.ps1`: **À supprimer**.
-    - `scripts/setup/setup_test_env.py`: **À supprimer**.
+    - `scripts/setup/setup_test_env.py`: **À supprimer**. — **Fait (#2532)** : il importait un pipeline qui n'a jamais existé à ce chemin ; l'environnement se crée avec `setup_project_env.ps1` / `environment.yml`.
     - `scripts/setup/test_all_dependencies.ps1`: **À supprimer**.
     - `scripts/setup/test_all_dependencies.py`: **À supprimer**.
     - `scripts/setup/test_dependencies.ps1`: **À supprimer**.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import argumentation_analysis.core.environment
+
 """
 Utilitaire simple pour sélectionner des extraits du corpus.
 Usage: python select_extract.py [--random] [--index N] [--list]
@@ -23,19 +24,26 @@ def main():
 
     args = parser.parse_args()
 
-    # Import des fonctions nécessaires
-    from scripts.data_processing.decrypt_extracts import decrypt_and_load_extracts
+    # Le corpus chiffré se lit en mémoire, par le chargeur du tronc (#2532 :
+    # `scripts.data_processing.decrypt_extracts` n'existe plus depuis 1873e9d13).
+    from argumentation_analysis.core.io_manager import load_extract_definitions
+    from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
+    from argumentation_analysis.paths import EXTRACT_SOURCES_FILE
     import os
 
     # Charger les extraits
-    encryption_key = os.getenv("TEXT_CONFIG_PASSPHRASE")
-    if not encryption_key:
+    passphrase = os.getenv("TEXT_CONFIG_PASSPHRASE")
+    if not passphrase:
         print("❌ Variable TEXT_CONFIG_PASSPHRASE requise")
         return 1
 
-    extracts, status = decrypt_and_load_extracts(encryption_key)
+    extracts = load_extract_definitions(
+        EXTRACT_SOURCES_FILE,
+        derive_encryption_key(passphrase),
+        raise_on_decrypt_error=True,
+    )
     if not extracts:
-        print(f"❌ {status}")
+        print(f"❌ Aucune définition d'extrait dans {EXTRACT_SOURCES_FILE}")
         return 1
 
     # Créer l'index des extraits

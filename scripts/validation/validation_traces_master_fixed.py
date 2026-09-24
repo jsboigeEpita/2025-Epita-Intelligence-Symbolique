@@ -9,21 +9,17 @@ Version corrigée avec auto_env compatible.
 import argumentation_analysis.core.environment  # Added import
 
 # ===== INTÉGRATION AUTO_ENV - MÊME APPROCHE QUE CONFTEST.PY =====
-import sys
 import os
 from pathlib import Path
 
 # Déterminer le répertoire racine du projet
 project_root = Path(__file__).parent.parent.absolute()
 
+# #2532 : `scripts/core/auto_env.py` n'existe plus (2025-06) et un
+# `except ImportError` taisait son absence ; `ensure_env` vit dans le tronc.
+from argumentation_analysis.core.environment import ensure_env
+
 try:
-    # Import direct par chemin absolu pour éviter les problèmes d'import
-    scripts_core_path = project_root / "scripts" / "core"
-    if str(scripts_core_path) not in sys.path:
-        sys.path.insert(0, str(scripts_core_path))
-
-    from auto_env import ensure_env
-
     success = ensure_env(silent=False)
 
     if success:
@@ -31,8 +27,6 @@ try:
     else:
         print("[WARN AUTO_ENV] Activation en mode dégradé")
 
-except ImportError as e:
-    print(f"[ERROR AUTO_ENV] Module auto_env non disponible: {e}")
 except Exception as e:
     print(f"[ERROR AUTO_ENV] Erreur d'activation: {e}")
 
@@ -51,6 +45,7 @@ from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     run_cluedo_oracle_game,
 )
+
 # LogiqueComplexeOrchestrator removed (#885) — superseded by FOL/Tweety via Registry
 from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
     SherlockEnqueteAgent,

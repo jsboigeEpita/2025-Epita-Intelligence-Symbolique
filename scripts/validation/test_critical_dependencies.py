@@ -23,37 +23,21 @@ def test_semantic_kernel_version():
 
 
 def test_author_role_import():
-    """Test de l'import AuthorRole"""
+    """Test de l'import AuthorRole, là où le code du projet le prend.
+
+    #2532 : ce test importait `semantic_kernel_compatibility`, notre ancien shim
+    supprimé, et sur `ImportError` il définissait sa propre enum `AuthorRole`
+    puis rendait `True` : il ne pouvait pas échouer. Il lit désormais le chemin
+    que `argumentation_analysis/` importe, et un échec est un échec.
+    """
     try:
-        from semantic_kernel_compatibility import AuthorRole
+        from semantic_kernel.contents.utils.author_role import AuthorRole
 
         print("[OK] AuthorRole import reussi")
         print(f"[OK] AuthorRole disponible: {AuthorRole}")
         return True
-    except ImportError as e:
+    except Exception as e:
         print(f"[ERREUR] Erreur import AuthorRole: {e}")
-        print("Tentative de fallback...")
-        return test_author_role_fallback()
-    except Exception as e:
-        print(f"[ERREUR] Erreur inattendue AuthorRole: {e}")
-        return False
-
-
-def test_author_role_fallback():
-    """Test d'un fallback pour AuthorRole"""
-    try:
-        # Fallback 1: Enum simple
-        from enum import Enum
-
-        class AuthorRole(Enum):
-            USER = "user"
-            ASSISTANT = "assistant"
-            SYSTEM = "system"
-
-        print("[OK] Fallback AuthorRole cree avec succes")
-        return True
-    except Exception as e:
-        print(f"[ERREUR] Echec du fallback AuthorRole: {e}")
         return False
 
 
