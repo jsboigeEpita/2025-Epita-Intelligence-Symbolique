@@ -22,6 +22,8 @@ import time
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
+
+from dotenv import load_dotenv
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.evaluation.judge import LLMJudge, JudgeScore
@@ -96,22 +98,7 @@ def load_benchmark_results(path: Path) -> List[Dict[str, Any]]:
 
 def _load_dotenv() -> None:
     """Load .env file if present."""
-    env_path = Path(".env")
-    if not env_path.exists():
-        return
-    with open(env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key = key.strip()
-            val = val.strip()
-            # Strip surrounding quotes if present
-            if len(val) >= 2 and val[0] in ('"', "'") and val[-1] == val[0]:
-                val = val[1:-1]
-            if key not in os.environ:
-                os.environ[key] = val
+    load_dotenv(Path(".env"))
 
 
 async def run_judge_on_results(

@@ -30,19 +30,14 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 sys.path.insert(0, str(Path(__file__).parent))
 os.chdir(Path(__file__).parent.parent)
 
 _env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    with open(_env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, val = line.partition("=")
-                os.environ.setdefault(key.strip(), val.strip())
+load_dotenv(_env_path)
 
 from measure_1737_head_nature import (  # noqa: E402
     CORPUS_SRC_IDX,
