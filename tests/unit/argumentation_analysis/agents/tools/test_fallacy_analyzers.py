@@ -12,24 +12,8 @@ Issue: #36 (test coverage)
 import pytest
 from unittest.mock import patch, MagicMock
 
-# ---------------------------------------------------------------------------
-# Fixtures to isolate singleton state between tests
-# ---------------------------------------------------------------------------
-
-
-@pytest.fixture(autouse=True)
-def _reset_singletons():
-    """Reset ServiceRegistry and ConfigManager caches between tests."""
-    from argumentation_analysis.agents.tools.support.shared_services import (
-        ServiceRegistry,
-        ConfigManager,
-    )
-
-    old_services = ServiceRegistry._services.copy()
-    old_configs = ConfigManager._configs.copy()
-    yield
-    ServiceRegistry._services = old_services
-    ConfigManager._configs = old_configs
+# ServiceRegistry and ConfigManager are emptied after every test by the
+# ``reset_shared_services`` fixture of tests/conftest.py (#2346).
 
 
 # ========================================================================
@@ -291,6 +275,21 @@ class TestContextualFallacyAnalyzer:
         )
 
         return ContextualFallacyAnalyzer()
+
+    def test_taxonomy_unavailable_once_is_reloaded_when_back(
+        self, analyzer, monkeypatch
+    ):
+        """#2346: a failed taxonomy load is not the process's state until restart."""
+        from argumentation_analysis.agents.tools.analysis import (
+            contextual_fallacy_analyzer as module,
+        )
+
+        with monkeypatch.context() as m:
+            m.setattr(module, "validate_taxonomy_file", lambda: False)
+            assert analyzer._get_taxonomy_df() is None
+        taxonomy = analyzer._get_taxonomy_df()
+        assert taxonomy is not None
+        assert len(taxonomy) > 0
 
     # --- _determine_context_type ---
 

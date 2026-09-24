@@ -767,6 +767,24 @@ else:
     )
 
 
+@pytest.fixture(autouse=True)
+def reset_shared_services():
+    """Vide les caches de processus de ``shared_services`` après chaque test (#2346).
+
+    ``ServiceRegistry`` et ``ConfigManager`` gardent leurs instances pour tout
+    le processus : sans remise à zéro, la taxonomie de test ou le service
+    simulé qu'un test y laisse devient l'état du test suivant. Le module n'est
+    pas importé ici : un test qui ne l'a pas chargé ne paie rien.
+    """
+    yield
+    module = sys.modules.get(
+        "argumentation_analysis.agents.tools.support.shared_services"
+    )
+    if module is not None:
+        module.ServiceRegistry.reset()
+        module.ConfigManager.reset()
+
+
 @pytest.fixture(scope="function", autouse=True)
 def check_mock_llm_is_forced(request, monkeypatch):
     """
