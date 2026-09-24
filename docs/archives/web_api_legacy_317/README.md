@@ -10,6 +10,7 @@
 - `templates/index.html` — HTML template
 - `test_api_validation.py`, `test_fallacy_detection.py`, `test_integration.py`, `test_webapp.py` — Tests
 - `README_INTEGRATION.md` — Integration documentation
+- `test_interface_simple_playwright.py` — Playwright tests of this app on `http://localhost:3000`. Moved here from `tests/e2e/web_api/` by #2548: nothing in the repository serves the app any more, so in the e2e lane its 7 tests only ever refused the connection or failed on their own async fixtures.
 
 ## Reason for Archival
 

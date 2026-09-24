@@ -2,171 +2,133 @@
 import argumentation_analysis.core.environment
 
 """
-Test d'importation consolidée du système universel récupéré
-Valide l'intégrité et la cohérence des 553 fichiers Python récupérés
+Test d'importation consolidée : les symboles dont dépend le système s'importent.
+
+Chaque vérification importe un module et lit un symbole. Le script rend 1 dès
+qu'une vérification échoue.
+
+#2532 : la version précédente affichait « ✅ Modules critiques opérationnels »
+et « Prêt pour tests complets Phase 3 » quels que soient ses résultats, et
+rendait toujours 0. Trois de ses symboles n'avaient jamais existé dans le module
+interrogé (`generate_unified_report`, `ReportingPipeline`, `load_config` :
+`git log -S` ne trouve aucune définition), et un quatrième nommait un module
+supprimé. Les vérifications nomment désormais les symboles réels.
+
+Ce script vérifie des symboles. Le garde
+`tests/unit/test_web_lane_imports_resolve_2529.py` vérifie les modules.
 """
 
+import importlib
 import sys
-import traceback
-from pathlib import Path
+
+# (section, module, symbole)
+CHECKS = [
+    (
+        "Modules critiques",
+        "argumentation_analysis.agents.core.logic.fol_logic_agent",
+        "FOLLogicAgent",
+    ),
+    (
+        "Modules critiques",
+        "argumentation_analysis.utils.report_generator",
+        "generate_markdown_performance_report",
+    ),
+    (
+        "Modules critiques",
+        "argumentation_analysis.orchestration.unified_pipeline",
+        "run_unified_analysis",
+    ),
+    ("Modules critiques", "config.unified_config", "UnifiedConfig"),
+    ("Rapports", "argumentation_analysis.reporting.models", None),
+    (
+        "Rapports",
+        "argumentation_analysis.pipelines.reporting_pipeline",
+        "run_comprehensive_report_pipeline",
+    ),
+    (
+        "Orchestration et agents",
+        "argumentation_analysis.orchestration.cluedo_orchestrator",
+        "CluedoOrchestrator",
+    ),
+    (
+        "Orchestration et agents",
+        "argumentation_analysis.agents.core.informal.informal_agent",
+        "InformalAnalysisAgent",
+    ),
+    (
+        "Services et utilitaires",
+        "argumentation_analysis.services.logic_service",
+        "LogicService",
+    ),
+    (
+        "Services et utilitaires",
+        "argumentation_analysis.utils.config_utils",
+        "find_sources_in_config_by_ids",
+    ),
+    (
+        "Hiérarchie",
+        "argumentation_analysis.orchestration.hierarchical.tactical.coordinator",
+        "TacticalCoordinator",
+    ),
+    (
+        "Hiérarchie",
+        "argumentation_analysis.orchestration.hierarchical.operational.manager",
+        "OperationalManager",
+    ),
+    (
+        "Analyse",
+        "argumentation_analysis.plugins.analysis_tools.logic.rhetorical_result_analyzer",
+        "EnhancedRhetoricalResultAnalyzer",
+    ),
+]
+
+
+def check(module_name, symbol):
+    module = importlib.import_module(module_name)
+    if symbol is not None:
+        getattr(module, symbol)
 
 
 def test_critical_imports():
-    """Test des importations critiques du système universel"""
-
-    print("=== TEST IMPORTATION SYSTÈME UNIVERSEL CONSOLIDÉ ===")
+    """Rend la liste des vérifications en échec (vide si tout passe)."""
+    print("=== TEST IMPORTATION CONSOLIDÉE ===")
     print(f"Python version: {sys.version}")
-    print(f"PYTHONPATH inclus: {sys.path[:3]}...")
 
-    # Test 1: Modules critiques principaux
-    print("\n1. MODULES CRITIQUES PRINCIPAUX:")
+    failures = []
+    section = None
+    for current, module_name, symbol in CHECKS:
+        if current != section:
+            section = current
+            print(f"\n{section}:")
+        label = f"{module_name}.{symbol}" if symbol else module_name
+        try:
+            check(module_name, symbol)
+            print(f"✅ {label}")
+        except Exception as e:
+            print(f"❌ {label}: {e}")
+            failures.append(label)
 
+    print("\nCohérence:")
     try:
-        from argumentation_analysis.agents.core.logic.fol_logic_agent import (
-            FOLLogicAgent,
-        )
-
-        print("✅ FOLLogicAgent importé (28014 bytes)")
-    except Exception as e:
-        print(f"❌ FOLLogicAgent: {e}")
-
-    try:
-        from argumentation_analysis.utils.report_generator import (
-            generate_unified_report,
-        )
-
-        print("✅ generate_unified_report importé (6856 bytes)")
-    except Exception as e:
-        print(f"❌ generate_unified_report: {e}")
-
-    try:
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            run_unified_analysis,
-        )
-
-        print("✅ run_unified_analysis importé")
-    except Exception as e:
-        print(f"❌ run_unified_analysis: {e}")
-
-    try:
-        from config.unified_config import UnifiedConfig
-
-        print("✅ UnifiedConfig importé (13679 bytes)")
-    except Exception as e:
-        print(f"❌ UnifiedConfig: {e}")
-
-    # Test 2: Module de rapport principal récupéré
-    print("\n2. MODULE DE RAPPORT PRINCIPAL (package reporting):")
-
-    try:
-        from argumentation_analysis.reporting import models as core_report
-
-        print("✅ reporting.models importé")
-    except Exception as e:
-        print(f"❌ reporting.models: {e}")
-
-    # Test 3: Autres modules critiques récupérés
-    print("\n3. AUTRES MODULES CRITIQUES RÉCUPÉRÉS:")
-
-    try:
-        from argumentation_analysis.pipelines.reporting_pipeline import (
-            ReportingPipeline,
-        )
-
-        print("✅ ReportingPipeline importé (39864 bytes)")
-    except Exception as e:
-        print(f"❌ ReportingPipeline: {e}")
-
-    try:
-        from argumentation_analysis.orchestration.cluedo_orchestrator import (
-            CluedoOrchestrator,
-        )
-
-        print("✅ CluedoOrchestrator importé")
-    except Exception as e:
-        print(f"❌ CluedoOrchestrator: {e}")
-
-    try:
-        from argumentation_analysis.agents.core.informal.informal_agent import (
-            InformalAnalysisAgent as InformalAgent,
-        )
-
-        print("✅ InformalAgent importé")
-    except Exception as e:
-        print(f"❌ InformalAgent: {e}")
-
-    # Test 4: Services et utilitaires
-    print("\n4. SERVICES ET UTILITAIRES:")
-
-    try:
-        from argumentation_analysis.services.logic_service import LogicService
-
-        print("✅ LogicService importé")
-    except Exception as e:
-        print(f"❌ LogicService: {e}")
-
-    try:
-        from argumentation_analysis.utils.config_utils import load_config
-
-        print("✅ config_utils importé")
-    except Exception as e:
-        print(f"❌ config_utils: {e}")
-
-    # Test 5: Agents tactiques
-    print("\n5. AGENTS TACTIQUES RÉCUPÉRÉS:")
-
-    try:
-        from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import (
-            TacticalCoordinator,
-        )
-
-        print("✅ TacticalCoordinator importé")
-    except Exception as e:
-        print(f"❌ TacticalCoordinator: {e}")
-
-    try:
-        from argumentation_analysis.orchestration.hierarchical.operational.manager import (
-            OperationalManager,
-        )
-
-        print("✅ OperationalManager importé")
-    except Exception as e:
-        print(f"❌ OperationalManager: {e}")
-
-    # Test 6: Agents d'analyse
-    print("\n6. AGENTS D'ANALYSE RÉCUPÉRÉS:")
-
-    try:
-        from argumentation_analysis.agents.tools.analysis.rhetorical_result_analyzer import (
-            RhetoricalResultAnalyzer,
-        )
-
-        print("✅ RhetoricalResultAnalyzer importé")
-    except Exception as e:
-        print(f"❌ RhetoricalResultAnalyzer: {e}")
-
-    # Test de cohérence
-    print("\n=== TEST DE COHÉRENCE SYSTÈME ===")
-
-    try:
-        # Test création d'un orchestrateur
         from argumentation_analysis.orchestration.unified_pipeline import (
             setup_registry,
         )
 
-        registry = setup_registry()
+        summary = setup_registry().summary()
         print(
-            f"✅ setup_registry instancié avec succès ({len(registry._agents)} agents)"
+            f"✅ setup_registry : {summary['agents']} agents, "
+            f"{summary['plugins']} plugins, {summary['services']} services"
         )
     except Exception as e:
-        print(f"❌ Instanciation setup_registry: {e}")
+        print(f"❌ setup_registry: {e}")
+        failures.append("setup_registry")
 
-    print("\n=== RÉCUPÉRATION SYSTÈME UNIVERSEL VALIDÉE ===")
-    print("✅ 553 fichiers Python récupérés")
-    print("✅ Modules critiques opérationnels")
-    print("✅ Structure complète reconstituée")
-    print("✅ Prêt pour tests complets Phase 3")
+    total = len(CHECKS) + 1
+    print(f"\n=== {total - len(failures)}/{total} vérifications réussies ===")
+    for label in failures:
+        print(f"❌ {label}")
+    return failures
 
 
 if __name__ == "__main__":
-    test_critical_imports()
+    sys.exit(1 if test_critical_imports() else 0)

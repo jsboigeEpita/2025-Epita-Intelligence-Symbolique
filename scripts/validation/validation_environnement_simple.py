@@ -20,6 +20,11 @@ import json
 from pathlib import Path
 from project_core.utils.shell import run_in_activated_env, ShellCommandError
 
+# #2532 : `scripts.core.auto_env` n'existe plus (supprimé en 2025-06, a75a150f9) ;
+# `ensure_env` vit dans le tronc. Importé ici, au niveau du module, pour qu'un
+# module manquant fasse échouer le script au lieu d'être compté comme un test raté.
+from argumentation_analysis.core.environment import ensure_env
+
 # Ajouter le répertoire racine au path
 project_root = Path(__file__).parent.parent.absolute()
 sys.path.insert(0, str(project_root))
@@ -33,15 +38,9 @@ def log_status(message, status="INFO"):
 
 
 def test_auto_env():
-    """Test import auto_env"""
-    log_status("Test 1: Import scripts.core.auto_env")
+    """Test de l'activation de l'environnement (ensure_env)"""
+    log_status("Test 1: argumentation_analysis.core.environment.ensure_env")
     try:
-        import scripts.core.auto_env
-
-        log_status("Import scripts.core.auto_env reussi", "OK")
-
-        from scripts.core.auto_env import ensure_env
-
         result = ensure_env(silent=True)
 
         if result:
@@ -50,7 +49,7 @@ def test_auto_env():
             log_status("Auto-activation en mode degrade", "WARN")
         return True
     except Exception as e:
-        log_status(f"Echec import auto_env: {e}", "ERROR")
+        log_status(f"Echec ensure_env: {e}", "ERROR")
         return False
 
 
@@ -238,7 +237,7 @@ def main():
     log_status("=" * 50)
 
     tests = [
-        ("Import auto_env", test_auto_env),
+        ("Activation environnement", test_auto_env),
         ("Conda environment", test_conda),
         ("Variables .env", test_dotenv),
         ("Configuration gpt-5.6-luna", test_gpt4o),
@@ -271,7 +270,7 @@ def main():
 
     # One-liner
     log_status("ONE-LINER D'ACTIVATION:")
-    log_status("import scripts.core.auto_env", "OK")
+    log_status("import argumentation_analysis.core.environment", "OK")
 
     success = len(errors) == 0
     log_status(f"VALIDATION {'REUSSIE' if success else 'ECHOUEE'}")

@@ -28,63 +28,41 @@ logger = logging.getLogger(__name__)
 project_root = Path(__file__).resolve().parent
 sys.path.insert(0, str(project_root))
 
+# #2532 : les deux imports d'origine (`scripts.consolidated.universal_rhetorical_analyzer`,
+# `scripts.data_processing.decrypt_extracts`) nommaient des modules supprimés en
+# 2025-06, et un `except ImportError` les taisait. L'analyseur n'était lu nulle
+# part ; le déchiffrement passe par le chargeur du tronc.
+from argumentation_analysis.core.io_manager import load_extract_definitions
+from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
+from argumentation_analysis.paths import EXTRACT_SOURCES_FILE
+
 
 async def analyze_random_extract():
     """
     Lance l'analyse sur un extrait aléatoire en utilisant les analyseurs existants.
     """
     try:
-        # Import des modules d'analyse
-        from scripts.consolidated.universal_rhetorical_analyzer import (
-            UniversalRhetoricalAnalyzer,
-        )
-        from scripts.data_processing.decrypt_extracts import decrypt_and_load_extracts
-
         logger.info("=== Analyse d'un Extrait Aléatoire ===")
 
         # 1. Charger la clé de chiffrement
-        encryption_key = os.getenv("TEXT_CONFIG_PASSPHRASE")
-        if not encryption_key:
+        passphrase = os.getenv("TEXT_CONFIG_PASSPHRASE")
+        if not passphrase:
             logger.error("Variable d'environnement TEXT_CONFIG_PASSPHRASE requise")
             return False
 
-        # 2. Déchiffrer et charger les extraits
+        # 2. Déchiffrer et charger les extraits, en mémoire (#2532). Un échec
+        # de déchiffrement est un échec : le script analyse un extrait du
+        # corpus, pas un texte de démonstration mis à sa place.
         logger.info("Chargement du corpus...")
-        try:
-            extract_definitions, status_message = decrypt_and_load_extracts(
-                encryption_key
-            )
-        except Exception as e:
-            logger.warning(
-                f"Erreur lors du déchiffrement (clé différente?): {str(e)[:100]}..."
-            )
-            # Utiliser un texte de fallback pour la démonstration
-            fallback_text = """
-            L'analyse rhétorique moderne doit identifier les sophismes dans le discours politique.
-            Par exemple, l'argument d'autorité fallacieux consiste à invoquer une autorité non qualifiée.
-            L'ad hominem attaque la personne plutôt que l'argument.
-            Ces techniques manipulatoires sont courantes dans les débats publics contemporains.
-            De plus, l'appel à l'émotion détourne l'attention des faits vers les sentiments.
-            Le faux dilemme présente seulement deux options alors qu'il en existe d'autres.
-            """
-            logger.info("Utilisation d'un texte de fallback pour la démonstration")
-            return await analyze_text_with_modules(
-                fallback_text.strip(), "Texte de démonstration (fallback)"
-            )
+        extract_definitions = load_extract_definitions(
+            EXTRACT_SOURCES_FILE,
+            derive_encryption_key(passphrase),
+            raise_on_decrypt_error=True,
+        )
 
         if not extract_definitions:
-            logger.warning(
-                "Aucune définition d'extrait chargée - utilisation du fallback"
-            )
-            fallback_text = """
-            L'analyse rhétorique moderne doit identifier les sophismes dans le discours politique.
-            Par exemple, l'argument d'autorité fallacieux consiste à invoquer une autorité non qualifiée.
-            L'ad hominem attaque la personne plutôt que l'argument.
-            Ces techniques manipulatoires sont courantes dans les débats publics contemporains.
-            """
-            return await analyze_text_with_modules(
-                fallback_text.strip(), "Texte de démonstration (fallback)"
-            )
+            logger.error(f"Aucune définition d'extrait dans {EXTRACT_SOURCES_FILE}")
+            return False
 
         # 3. Sélectionner un extrait aléatoire
         logger.info("Sélection d'un extrait aléatoire...")
@@ -135,9 +113,6 @@ async def analyze_random_extract():
             f"{selected_extract['source_name']} - {selected_extract['extract_name']}",
         )
 
-    except ImportError as e:
-        logger.error(f"Erreur d'import: {e}")
-        return False
     except Exception as e:
         logger.error(f"Erreur inattendue: {e}")
         return False

@@ -40,13 +40,10 @@
     },
     
     "validation_settings": {
-      "authenticity_threshold": 0.9,
       "enable_system_validation": true,
-      "mock_detection": true,
       "validation_levels": [
         "syntax_validation",
         "semantic_validation",
-        "authenticity_check",
         "performance_validation"
       ]
     },
@@ -90,7 +87,6 @@
       "environment": "development",
       "parallel_workers": 2,
       "test_timeout": 60,
-      "authenticity_threshold": 0.7,
       "report_formats": ["json", "markdown"]
     },
     
@@ -100,7 +96,6 @@
       "parallel_workers": 4,
       "test_timeout": 120,
       "enable_api_tests": true,
-      "authenticity_threshold": 0.9,
       "report_formats": ["json", "html"]
     },
     
@@ -109,8 +104,6 @@
       "environment": "production",
       "parallel_workers": 8,
       "test_timeout": 180,
-      "authenticity_threshold": 0.95,
-      "mock_detection": true,
       "report_formats": ["comprehensive"]
     },
     
@@ -136,8 +129,6 @@
       "mode": "validation",
       "environment": "testing",
       "enable_system_validation": true,
-      "mock_detection": true,
-      "authenticity_threshold": 0.9,
       "report_formats": ["markdown", "html"]
     }
   },

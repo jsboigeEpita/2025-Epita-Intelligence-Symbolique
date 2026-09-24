@@ -16,8 +16,15 @@ def backend_url(request) -> str:
 
 
 @pytest.fixture(scope="session")
-def frontend_url(request) -> str:
-    """Fixture to get the frontend URL from the --frontend-url pytest option."""
+def frontend_url(request, e2e_servers) -> str:
+    """The frontend URL, once ``e2e_servers`` serves it.
+
+    A test that asked for the URL alone got it before anything served it, and
+    passed only when an earlier test had started the servers (#2548). With the
+    fixture disabled, the servers are someone else's: the option names them.
+    """
+    if e2e_servers[1]:
+        return e2e_servers[1]
     url = request.config.getoption("--frontend-url")
     if not url:
         pytest.fail(

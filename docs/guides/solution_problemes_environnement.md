@@ -77,7 +77,7 @@ Pour résoudre ces problèmes, nous avons:
    ```
 
 2. **Créé des scripts pour configurer un environnement de test propre**:
-   - `setup_test_env.py`: Script Python pour configurer un environnement virtuel et installer les dépendances
+   - `setup_test_env.py`: Script Python pour configurer un environnement virtuel et installer les dépendances (supprimé par #2532 : son import visait un pipeline qui n'existe plus ; l'environnement se crée avec `setup_project_env.ps1` / `environment.yml`)
    - `setup_test_env.ps1`: Script PowerShell pour les utilisateurs Windows
 
 3. **Créé un environnement virtuel et installé les dépendances**:

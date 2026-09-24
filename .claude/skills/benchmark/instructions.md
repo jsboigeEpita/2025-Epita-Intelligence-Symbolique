@@ -89,18 +89,21 @@ Display results as a markdown table.
 
 ## Available Documents (encrypted dataset)
 
-| # | Name | Chars | Language |
-|---|------|-------|----------|
-| 0 | Lincoln-Douglas Debate 1 | 99K | EN |
-| 1 | Lincoln-Douglas Debate 2 | 102K | EN |
-| 2 | Source_3 | 46K | FR |
-| 3 | Anthology (PDF) | 3M | DE/EN |
-| 4 | Gouvernement.fr | 0 | FR |
-| 5 | Assemblée Nationale | 140K | FR |
-| 6 | Vie Publique | 0 | FR |
-| 7 | Le Monde | 66K | FR |
+| # | Chars | Language |
+|---|-------|----------|
+| 0 | 99K | EN |
+| 1 | 102K | EN |
+| 2 | 46K | FR |
+| 3 | 3M | DE/EN |
+| 4 | 0 | FR |
+| 5 | 140K | FR |
+| 6 | 0 | FR |
+| 7 | 66K | FR |
 
 Note: Documents 4 and 6 have no text and will be skipped.
+
+Documents are named by index only. This file is tracked, so it is indexed by GitHub; a
+name column here would map each index to its source (CLAUDE.md privacy rules 4 and 7, #2546).
 
 ## Available Models
 
