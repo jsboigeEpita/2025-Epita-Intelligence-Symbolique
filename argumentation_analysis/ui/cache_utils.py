@@ -1,11 +1,18 @@
 """
 Utilitaires de gestion du cache pour l'interface utilisateur.
+
+#2344: this module and ``ui/utils.py`` each carried their own copy of the text
+cache, on the same directory and file names as
+``services.cache_service.CacheService``. The copies wrote in place, so a failed
+write left an empty file that they then served as the cached document. They
+now delegate to the service: one cache, one set of guards.
 """
 
-import hashlib
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
+
+from ..services.cache_service import CacheService
 
 # Importation de la configuration UI pour CACHE_DIR
 from . import config as ui_config
@@ -21,6 +28,20 @@ if not cache_logger.handlers and not cache_logger.propagate:
     cache_logger.addHandler(handler)
     cache_logger.setLevel(logging.INFO)  # Ou INFO selon le besoin
 
+_cache_services: Dict[Path, CacheService] = {}
+
+
+def cache_service() -> CacheService:
+    """The CacheService on ``ui_config.CACHE_DIR``, read at call time.
+
+    One instance per directory, so the UI's many cache calls do not rebuild it.
+    """
+    cache_dir = ui_config.CACHE_DIR
+    service = _cache_services.get(cache_dir)
+    if service is None:
+        service = _cache_services[cache_dir] = CacheService(cache_dir)
+    return service
+
 
 def get_cache_filepath(url: str) -> Path:
     """Génère le chemin du fichier cache pour une URL donnée.
@@ -32,8 +53,7 @@ def get_cache_filepath(url: str) -> Path:
     :return: Le chemin (objet Path) vers le fichier cache.
     :rtype: Path
     """
-    url_hash = hashlib.sha256(url.encode()).hexdigest()
-    return ui_config.CACHE_DIR / f"{url_hash}.txt"
+    return cache_service().get_cache_filepath(url)
 
 
 def load_from_cache(url: str) -> Optional[str]:
@@ -42,43 +62,27 @@ def load_from_cache(url: str) -> Optional[str]:
     :param url: L'URL à rechercher dans le cache.
     :type url: str
     :return: Le contenu textuel en tant que chaîne si trouvé, sinon None.
+        Un fichier vide est une écriture interrompue : il se lit comme un défaut
+        de cache.
     :rtype: Optional[str]
     """
-    filepath = get_cache_filepath(url)
-    if filepath.exists():
-        try:
-            cache_logger.info(f"   -> Lecture depuis cache : {filepath.name}")
-            return filepath.read_text(encoding="utf-8")
-        except Exception as e:
-            cache_logger.warning(f"   -> Erreur lecture cache {filepath.name}: {e}")
-            return None
-    cache_logger.debug(f"Cache miss pour URL: {url}")
-    return None
+    return cache_service().load_from_cache(url)
 
 
-def save_to_cache(url: str, text: str) -> None:
+def save_to_cache(url: str, text: str) -> bool:
     """Sauvegarde le contenu textuel dans le cache fichier pour une URL donnée.
 
-    Ne fait rien si le texte est vide. Crée le répertoire de cache si nécessaire.
+    Ne fait rien si le texte est vide. L'écriture est atomique : un échec ne
+    laisse aucune entrée.
 
     :param url: L'URL associée au contenu.
     :type url: str
     :param text: Le contenu textuel à sauvegarder.
     :type text: str
-    :return: None
-    :rtype: None
+    :return: True si le texte a été sauvegardé, False sinon.
+    :rtype: bool
     """
-    if not text:
-        cache_logger.info("   -> Texte vide, non sauvegardé.")
-        return
-    filepath = get_cache_filepath(url)
-    try:
-        # S'assurer que le dossier cache existe
-        filepath.parent.mkdir(parents=True, exist_ok=True)
-        filepath.write_text(text, encoding="utf-8")
-        cache_logger.info(f"   -> Texte sauvegardé : {filepath.name}")
-    except Exception as e:
-        cache_logger.error(f"   -> Erreur sauvegarde cache {filepath.name}: {e}")
+    return cache_service().save_to_cache(url, text)
 
 
 cache_logger.info("Utilitaires de cache UI définis.")

@@ -627,6 +627,8 @@ def test_load_extract_definitions_invalid_format(
 
 
 # --- Tests pour le cache (get_cache_filepath, load_from_cache, save_to_cache) ---
+# #2344: these functions delegate to services.cache_service.CacheService, so the
+# tests assert what they return and leave on disk, not the old copy's log lines.
 
 
 def test_get_cache_filepath(temp_cache_dir):
@@ -640,22 +642,19 @@ def test_get_cache_filepath(temp_cache_dir):
 def test_save_and_load_from_cache(temp_cache_dir, mock_logger):
     url = "http://example.com/cached_content.txt"
     content = "This is cached content."
-    aa_utils.save_to_cache(url, content)
+    assert aa_utils.save_to_cache(url, content) is True
     cache_file = aa_utils.get_cache_filepath(url)
     assert cache_file.exists()
     assert cache_file.read_text(encoding="utf-8") == content
-    mock_logger.info.assert_any_call(f"   -> Texte sauvegardé : {cache_file.name}")
 
     loaded_content = aa_utils.load_from_cache(url)
     assert loaded_content == content
-    mock_logger.info.assert_any_call(f"   -> Lecture depuis cache : {cache_file.name}")
 
 
 def test_load_from_cache_not_exists(temp_cache_dir, mock_logger):
     url = "http://example.com/non_existent_cache.txt"
     loaded_content = aa_utils.load_from_cache(url)
     assert loaded_content is None
-    mock_logger.debug.assert_any_call(f"Cache miss pour URL: {url}")
 
 
 @patch("pathlib.Path.read_text", side_effect=IOError("Read error"))
@@ -666,28 +665,26 @@ def test_load_from_cache_read_error(mock_read_text, temp_cache_dir, mock_logger)
 
     loaded_content = aa_utils.load_from_cache(url)
     assert loaded_content is None
-    mock_logger.warning.assert_any_call(
-        f"   -> Erreur lecture cache {cache_file.name}: Read error"
-    )
 
 
-@patch("pathlib.Path.write_text", side_effect=IOError("Write error"))
-def test_save_to_cache_write_error(mock_write_text, temp_cache_dir, mock_logger):
+@patch(
+    "argumentation_analysis.services.cache_service.os.replace",
+    side_effect=IOError("Write error"),
+)
+def test_save_to_cache_write_error(mock_replace, temp_cache_dir, mock_logger):
+    # The write fails before it lands: nothing is left behind (#2344).
     url = "http://example.com/cache_write_error.txt"
     content = "Cannot write this."
-    aa_utils.save_to_cache(url, content)
-    cache_file = aa_utils.get_cache_filepath(url)
-    mock_logger.error.assert_any_call(
-        f"   -> Erreur sauvegarde cache {cache_file.name}: Write error"
-    )
+    assert aa_utils.save_to_cache(url, content) is False
+    assert not aa_utils.get_cache_filepath(url).exists()
+    assert list(temp_cache_dir.iterdir()) == []
 
 
 def test_save_to_cache_empty_text(temp_cache_dir, mock_logger):
     url = "http://example.com/empty_cache.txt"
-    aa_utils.save_to_cache(url, "")
+    assert aa_utils.save_to_cache(url, "") is False
     cache_file = aa_utils.get_cache_filepath(url)
     assert not cache_file.exists()
-    mock_logger.info.assert_any_call("   -> Texte vide, non sauvegardé.")
 
 
 # --- Tests pour reconstruct_url ---
