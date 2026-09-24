@@ -180,6 +180,20 @@ class TestJsonEncryptCompress:
     def test_decrypt_json_corrupted(self, svc):
         assert svc.decrypt_and_decompress_json(b"bad_data") is None
 
+    def test_truncated_gzip_is_decompress_failed_not_json(self, svc):
+        """#2344 family (d), review round 2: a blob that decrypts but is not
+        gzip names the decompression stage — it is not a JSON problem."""
+        import gzip as gzip_mod
+
+        encrypted = svc.encrypt_data(b"not gzip at all")
+        assert svc.decrypt_and_decompress_json(encrypted) is None
+        assert svc.last_error == svc.ERR_DECOMPRESS
+
+        valid_gzip_of_non_json = gzip_mod.compress(b"not json {{{")
+        encrypted2 = svc.encrypt_data(valid_gzip_of_non_json)
+        assert svc.decrypt_and_decompress_json(encrypted2) is None
+        assert svc.last_error == svc.ERR_JSON_DECODE
+
     def test_unicode_data(self, svc):
         data = {"message": "Bonjour le monde", "emoji": "Test accent: e"}
         encrypted = svc.encrypt_and_compress_json(data)

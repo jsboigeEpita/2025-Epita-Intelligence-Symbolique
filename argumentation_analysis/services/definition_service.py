@@ -112,6 +112,7 @@ class DefinitionService:
                     else:
                         error_message = (
                             f"Échec du déchiffrement de {config_file_path.name}"
+                            f" ({self.crypto_service.last_error})"
                         )
                         self.logger.error(error_message)
                 else:
@@ -242,7 +243,10 @@ class DefinitionService:
                     )
                     success = True
                 else:
-                    error_message = "Échec du chiffrement des définitions"
+                    error_message = (
+                        f"Échec du chiffrement des définitions"
+                        f" ({self.crypto_service.last_error})"
+                    )
                     self.logger.error(error_message)
             else:
                 # Fichier JSON non chiffré

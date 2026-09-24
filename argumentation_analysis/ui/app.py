@@ -24,14 +24,13 @@ from . import config as ui_config
 from .. import utils as ui_utils
 
 # Importations des services de base
-from ..config.settings import settings
 from ..services.cache_service import CacheService
 from ..services.fetch_service import FetchService
 
 # Importer spécifiquement les fonctions/classes nécessaires des utils
 from .file_operations import load_extract_definitions, save_extract_definitions
 from .verification_utils import verify_extract_definitions
-from .utils import reconstruct_url
+from .utils import get_cache_filepath, reconstruct_url
 from .cache_utils import load_from_cache
 
 # Importer les constantes nécessaires depuis config
@@ -58,6 +57,21 @@ if not app_logger.handlers and not app_logger.propagate:
     app_logger.setLevel(logging.INFO)
 
 
+def _build_fetch_service() -> FetchService:
+    """The one FetchService of the notebook UI, built from ``ui.config`` (#2536).
+
+    Both entry points used to pass ``settings`` where CacheService expects a
+    directory and FetchService a Jina prefix, so neither could build it. The
+    cache directory is the one ``get_cache_filepath`` reads.
+    """
+    return FetchService(
+        CacheService(ui_config.CACHE_DIR),
+        jina_reader_prefix=ui_config.JINA_READER_PREFIX,
+        temp_download_dir=ui_config.TEMP_DOWNLOAD_DIR,
+        plaintext_extensions=ui_config.PLAINTEXT_EXTENSIONS,
+    )
+
+
 # --- Fonction Principale de l'UI ---
 def configure_analysis_task() -> Optional[str]:
     """
@@ -70,8 +84,7 @@ def configure_analysis_task() -> Optional[str]:
 
     # --- Initialisation des Services ---
     app_logger.info("Initialisation des services (Cache, Fetch)...")
-    cache_service = CacheService(settings)
-    fetch_service = FetchService(cache_service, settings)
+    fetch_service = _build_fetch_service()
     app_logger.info("Services initialisés.")
 
     # Utiliser les variables importées depuis ui.config
@@ -545,7 +558,7 @@ def configure_analysis_task() -> Optional[str]:
                                 f"   -> Cache vide. Récupération (Type: {source_type}, URL: ...)..."
                             )
                             if source_type == "jina":
-                                texte_brut_source = fetch_service.fetch_website_content(
+                                texte_brut_source = fetch_service.fetch_with_jina(
                                     reconstructed_url
                                 )
                             elif source_type == "direct_download":
@@ -554,10 +567,8 @@ def configure_analysis_task() -> Optional[str]:
                                 )
                             elif source_type == "tika":
                                 # Le FetchService gère la distinction plaintext/binaire pour Tika
-                                texte_brut_source = (
-                                    fetch_service.fetch_document_content(
-                                        source_url=reconstructed_url
-                                    )
+                                texte_brut_source = fetch_service.fetch_with_tika(
+                                    url=reconstructed_url
                                 )
                             else:
                                 raise ValueError(
@@ -594,13 +605,11 @@ def configure_analysis_task() -> Optional[str]:
                             texte_brut_source = cached_text
                         else:
                             if processing_type == "jina":
-                                texte_brut_source = fetch_service.fetch_website_content(
-                                    url
-                                )
+                                texte_brut_source = fetch_service.fetch_with_jina(url)
                             elif processing_type == "tika":
                                 # Le FetchService gère la distinction plaintext/binaire
-                                texte_brut_source = (
-                                    fetch_service.fetch_document_content(source_url=url)
+                                texte_brut_source = fetch_service.fetch_with_tika(
+                                    url=url
                                 )
                             else:
                                 raise ValueError(
@@ -623,7 +632,7 @@ def configure_analysis_task() -> Optional[str]:
                             )
                             file_content_bytes = uploaded_file_info["content"]
                             source_description = f"Fichier: {file_name}"
-                            texte_brut_source = fetch_service.fetch_document_content(
+                            texte_brut_source = fetch_service.fetch_with_tika(
                                 file_content=file_content_bytes, file_name=file_name
                             )
                         try:
@@ -893,6 +902,10 @@ def initialize_text_cache():
         return
 
     initialisation_errors = 0
+    # #2536: this function used to read `fetch_service`, a local of
+    # configure_analysis_task, so every source failed with a NameError that the
+    # loop's `except` counted as one more error.
+    fetch_service = _build_fetch_service()
     app_logger.info(
         f"Vérification du cache pour {len(definitions_to_check)} source(s)..."
     )
@@ -917,14 +930,12 @@ def initialize_text_cache():
                 )
                 try:
                     if source_type == "jina":
-                        fetch_service.fetch_website_content(reconstructed_url)
+                        fetch_service.fetch_with_jina(reconstructed_url)
                     elif source_type == "direct_download":
                         fetch_service.fetch_direct_text(reconstructed_url)
                     elif source_type == "tika":
                         # Le FetchService s'occupe de la logique interne, incluant le cache du fichier brut
-                        fetch_service.fetch_document_content(
-                            source_url=reconstructed_url
-                        )
+                        fetch_service.fetch_with_tika(url=reconstructed_url)
                     else:
                         app_logger.warning(
                             f"   -> ⚠️ Type source inconnu '{source_type}' lors de l'init cache."

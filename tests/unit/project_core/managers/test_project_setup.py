@@ -54,9 +54,9 @@ class TestProjectSetup(unittest.TestCase):
         MockEnvironmentManager.return_value.project_root = Path("/fake/dir")
         mock_validator_instance = MockValidationEngine.return_value
         setup = ProjectSetup(logger=self.mock_logger)
-        setup.setup_environment(env_name="test", with_mocks=True)
+        setup.setup_environment(env_name="test")
         mock_dev_setup.assert_not_called()
-        mock_test_setup.assert_called_once_with(with_mocks=True)
+        mock_test_setup.assert_called_once_with()
 
     @patch("project_core.core_from_scripts.project_setup.ValidationEngine")
     @patch("project_core.core_from_scripts.project_setup.EnvironmentManager")
@@ -87,13 +87,10 @@ class TestProjectSetup(unittest.TestCase):
         mock_download_jars.return_value = True
         setup = ProjectSetup(logger=self.mock_logger)
 
-        result = setup._setup_test_environment(with_mocks=True)
+        result = setup._setup_test_environment()
 
         self.assertTrue(result)
         mock_download_jars.assert_called_once()
-        self.mock_logger.info.assert_any_call(
-            "Activation des mocks pour l'environnement de test..."
-        )
         self.mock_logger.success.assert_called_with(
             "Environnement de test configuré avec succès."
         )

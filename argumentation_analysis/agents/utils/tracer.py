@@ -1,13 +1,16 @@
 # Fichier : argumentation_analysis/agents/utils/tracer.py
 
 import logging
-from typing import AsyncIterator
+from typing import TYPE_CHECKING, AsyncIterator
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.contents import (
     ChatMessageContent,
     FunctionCallContent,
     FunctionResultContent,
 )
+
+if TYPE_CHECKING:
+    from semantic_kernel.contents import ChatHistory
 
 
 class TracedAgent:

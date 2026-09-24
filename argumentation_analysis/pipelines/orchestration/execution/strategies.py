@@ -48,7 +48,7 @@ DISPATCHABLE_STRATEGIES = frozenset(
 
 
 async def select_orchestration_strategy(
-    pipeline: "UnifiedOrchestrationPipeline",
+    pipeline: Any,
     text: str,
     custom_config: Optional[Dict[str, Any]] = None,
 ) -> str:
@@ -148,7 +148,7 @@ async def select_orchestration_strategy(
 
 
 async def execute_hierarchical_full_orchestration(
-    pipeline: "UnifiedOrchestrationPipeline", text: str, results: Dict[str, Any]
+    pipeline: Any, text: str, results: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Exécute l'orchestration hiérarchique complète."""
     logger.info("[HIERARCHICAL] Exécution de l'orchestration hiérarchique complète...")
@@ -201,7 +201,7 @@ async def execute_hierarchical_full_orchestration(
 
 
 async def execute_specialized_orchestration(
-    pipeline: "UnifiedOrchestrationPipeline", text: str, results: Dict[str, Any]
+    pipeline: Any, text: str, results: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Exécute l'orchestration spécialisée."""
     logger.info("[SPECIALIZED] Exécution de l'orchestration spécialisée...")
@@ -254,7 +254,7 @@ async def execute_specialized_orchestration(
 
 
 async def execute_fallback_orchestration(
-    pipeline: "UnifiedOrchestrationPipeline", text: str, results: Dict[str, Any]
+    pipeline: Any, text: str, results: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Exécute l'orchestration de fallback avec le pipeline original."""
     logger.info("[FALLBACK] Exécution de l'orchestration de fallback...")
@@ -280,7 +280,7 @@ async def execute_fallback_orchestration(
 
 
 async def execute_hybrid_orchestration(
-    pipeline: "UnifiedOrchestrationPipeline", text: str, results: Dict[str, Any]
+    pipeline: Any, text: str, results: Dict[str, Any]
 ) -> Dict[str, Any]:
     """Exécute l'orchestration hybride combinant plusieurs approches."""
     logger.info("[HYBRID] Exécution de l'orchestration hybride...")
@@ -318,7 +318,7 @@ async def execute_hybrid_orchestration(
 
 
 async def select_specialized_orchestrator(
-    pipeline: "UnifiedOrchestrationPipeline",
+    pipeline: Any,
 ) -> Optional[tuple]:
     """Sélectionne l'orchestrateur spécialisé approprié."""
     if not pipeline.specialized_orchestrators:

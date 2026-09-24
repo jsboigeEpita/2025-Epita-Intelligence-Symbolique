@@ -311,9 +311,9 @@ class TestServiceIntegration:
             mock_logic_service = Mock()
             mock_logic_service.is_healthy.return_value = True
 
-            # #1859: FrameworkService n'est pas dans la boucle — il n'expose
-            # plus `is_healthy` (interface remplacée par analyze_dung_framework ;
-            # sa construction bootstrap en plus la JVM via TweetyBridge).
+            # #1859: FrameworkService n'est pas dans la boucle — sa
+            # construction bootstrap la JVM via TweetyBridge. Son `is_healthy`
+            # (rétabli par #1864) est tenu par test_mcp_server.py via AppServices.
             services = [
                 AnalysisService(llm_service=Mock()),
                 ValidationService(logic_service=mock_logic_service),

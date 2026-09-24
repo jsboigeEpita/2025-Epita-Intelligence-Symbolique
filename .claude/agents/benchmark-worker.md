@@ -40,7 +40,7 @@ if api_key_4 and base_url_4:
 runner = BenchmarkRunner(registry)
 runner.load_dataset_encrypted(
     "argumentation_analysis/data/extract_sources.json.gz.enc",
-    passphrase="Propaganda"
+    passphrase=os.environ["TEXT_CONFIG_PASSPHRASE"]
 )
 
 async def main():

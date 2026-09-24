@@ -12,16 +12,15 @@ C'est la commande à utiliser pour préparer un environnement de travail.
 # Configurer l'environnement de développement
 powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py setup --env dev"
 
-# Configurer l'environnement de test (avec mocks)
-powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py setup --env test --with-mocks"
+# Configurer l'environnement de test
+powershell -c "./activate_project_env.ps1; python scripts/setup_manager.py setup --env test"
 ```
 
 **Que fait cette commande ?**
 
 *   `--env dev` : S'assure que les prérequis de base sont là et configure les variables d'environnement.
-*   `--env test` : Orchestre la préparation complète de l'environnement de test, incluant :
-    *   Le téléchargement des dépendances JAR nécessaires.
-    *   L'activation des mocks (si `--with-mocks` est utilisé) pour simuler des composants comme la JVM.
+*   `--env test` : Prépare l'environnement de test : le classpath Tweety est vérifié, et assemblé s'il manque, par `jvm_setup.download_tweety_jars`, le même téléchargeur que la CI (`scripts/ci/provision_tweety.py`). Un échec de téléchargement fait échouer la commande (code de sortie 1).
+*   Le régime mocké des tests (JVM simulée) ne se configure pas ici : c'est le drapeau pytest `--disable-jvm-session`. L'ancienne option `--with-mocks` journalisait une activation qui n'avait pas lieu ; elle est retirée (#2551).
 
 ### 2. Validation Complète du Projet (`validate`)
 

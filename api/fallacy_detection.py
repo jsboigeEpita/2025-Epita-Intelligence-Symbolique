@@ -11,9 +11,9 @@ empty list:
 
 - 503 when the tier has no detector: no LLM key (the detector raises
   ``FALLACY_DETECTION_UNAVAILABLE``), no taxonomy file, a missing dependency;
-- 502 when the detector ran and failed. The guided analysis does not raise
-  then: it returns ``{"error": ..., "fallacies": []}``, so the ``error`` key is
-  what tells a failed call from an empty answer (#2540).
+- 502 when the detector ran and failed: the invoker raises
+  ``FallacyDetectionFailed`` (``FALLACY_DETECTION_FAILED: ...``) when none of
+  its LLM runs answered (#2540), and any other exception is a failure too.
 
 Each detected fallacy carries what the detector says about it (name, family,
 explanation, the passage it quotes) and, from the taxonomy row of its
@@ -156,11 +156,6 @@ async def detect_fallacies(
             f"FALLACY_DETECTION_UNAVAILABLE: tier={tier}, reason={reason}",
             context=context,
         )
-    if result.get("error"):
-        raise UpstreamError(
-            f"fallacy detector failed: {result['error']}", context=context
-        )
-
     found = [_described(item) for item in result.get("fallacies") or []]
     kept = [f for f in found if f.confidence >= min_confidence]
     return FallacyDetectionResponse(
