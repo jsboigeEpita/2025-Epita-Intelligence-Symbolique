@@ -73,83 +73,85 @@ class HierarchicalChannel(Channel):
             message: Le message à envoyer
 
         Returns:
-            True si le message a été envoyé avec succès, False sinon
+            True si le message a été envoyé avec succès, False si le canal
+            le refuse (par exemple un message sans destinataire) ; chaque
+            refus est journalisé.
+
+        Raises:
+            Toute exception de l'envoi : c'est un défaut de notre code, pas
+            un refus. #2344 : elle était convertie en ``False``, parfois
+            après que le message avait déjà été remis.
         """
-        try:
-            # Vérifier que le message a un destinataire
-            if not message.recipient:
-                self.logger.error(f"Message {message.id} has no recipient")
-                return False
+        # Vérifier que le message a un destinataire
+        if not message.recipient:
+            self.logger.error(f"Message {message.id} has no recipient")
+            return False
 
-            # Vérifier que le message a un type valide pour ce canal
-            valid_types = [
-                MessageType.COMMAND,
-                MessageType.INFORMATION,
-                MessageType.REQUEST,
-                MessageType.RESPONSE,
-            ]
-            if message.type not in valid_types:
-                self.logger.warning(
-                    f"Message type {message.type} not ideal for hierarchical channel"
-                )
-
-            # Créer la file d'attente du destinataire si elle n'existe pas
-            with self.lock:
-                if message.recipient not in self.message_queues:
-                    self.message_queues[message.recipient] = queue.PriorityQueue()
-
-            # Déterminer la priorité numérique (plus petit = plus prioritaire)
-            priority_values = {
-                MessagePriority.CRITICAL: 0,
-                MessagePriority.HIGH: 1,
-                MessagePriority.NORMAL: 2,
-                MessagePriority.LOW: 3,
-            }
-            priority_value = priority_values.get(message.priority, 2)
-
-            # Ajouter le message à la file d'attente du destinataire
-            self.message_queues[message.recipient].put(
-                (priority_value, datetime.now(), message)
+        # Vérifier que le message a un type valide pour ce canal
+        valid_types = [
+            MessageType.COMMAND,
+            MessageType.INFORMATION,
+            MessageType.REQUEST,
+            MessageType.RESPONSE,
+        ]
+        if message.type not in valid_types:
+            self.logger.warning(
+                f"Message type {message.type} not ideal for hierarchical channel"
             )
 
-            # Mettre à jour les statistiques
-            with self.lock:
-                self.stats["messages_sent"] += 1
-                self.stats["by_priority"][message.priority.value] += 1
+        # Créer la file d'attente du destinataire si elle n'existe pas
+        with self.lock:
+            if message.recipient not in self.message_queues:
+                self.message_queues[message.recipient] = queue.PriorityQueue()
 
-                # Déterminer la direction de la communication
-                if (
-                    message.sender_level == AgentLevel.STRATEGIC
-                    and message.recipient.startswith("tactical")
-                ):
-                    self.stats["by_direction"]["strategic_to_tactical"] += 1
-                elif (
-                    message.sender_level == AgentLevel.TACTICAL
-                    and message.recipient.startswith("strategic")
-                ):
-                    self.stats["by_direction"]["tactical_to_strategic"] += 1
-                elif (
-                    message.sender_level == AgentLevel.TACTICAL
-                    and message.recipient.startswith("operational")
-                ):
-                    self.stats["by_direction"]["tactical_to_operational"] += 1
-                elif (
-                    message.sender_level == AgentLevel.OPERATIONAL
-                    and message.recipient.startswith("tactical")
-                ):
-                    self.stats["by_direction"]["operational_to_tactical"] += 1
-                else:
-                    self.stats["by_direction"]["same_level"] += 1
+        # Déterminer la priorité numérique (plus petit = plus prioritaire)
+        priority_values = {
+            MessagePriority.CRITICAL: 0,
+            MessagePriority.HIGH: 1,
+            MessagePriority.NORMAL: 2,
+            MessagePriority.LOW: 3,
+        }
+        priority_value = priority_values.get(message.priority, 2)
 
-            # Notifier les abonnés si nécessaire
-            self._notify_subscribers(message)
+        # Ajouter le message à la file d'attente du destinataire
+        self.message_queues[message.recipient].put(
+            (priority_value, datetime.now(), message)
+        )
 
-            self.logger.info(f"Message {message.id} sent to {message.recipient}")
-            return True
+        # Mettre à jour les statistiques
+        with self.lock:
+            self.stats["messages_sent"] += 1
+            self.stats["by_priority"][message.priority.value] += 1
 
-        except Exception as e:
-            self.logger.error(f"Error sending message: {str(e)}")
-            return False
+            # Déterminer la direction de la communication
+            if (
+                message.sender_level == AgentLevel.STRATEGIC
+                and message.recipient.startswith("tactical")
+            ):
+                self.stats["by_direction"]["strategic_to_tactical"] += 1
+            elif (
+                message.sender_level == AgentLevel.TACTICAL
+                and message.recipient.startswith("strategic")
+            ):
+                self.stats["by_direction"]["tactical_to_strategic"] += 1
+            elif (
+                message.sender_level == AgentLevel.TACTICAL
+                and message.recipient.startswith("operational")
+            ):
+                self.stats["by_direction"]["tactical_to_operational"] += 1
+            elif (
+                message.sender_level == AgentLevel.OPERATIONAL
+                and message.recipient.startswith("tactical")
+            ):
+                self.stats["by_direction"]["operational_to_tactical"] += 1
+            else:
+                self.stats["by_direction"]["same_level"] += 1
+
+        # Notifier les abonnés si nécessaire
+        self._notify_subscribers(message)
+
+        self.logger.info(f"Message {message.id} sent to {message.recipient}")
+        return True
 
     def receive_message(
         self, recipient_id: str, timeout: Optional[float] = None

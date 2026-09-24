@@ -192,22 +192,24 @@ class CollaborationChannel(Channel):
             message: Le message à envoyer
 
         Returns:
-            True si le message a été envoyé avec succès, False sinon
+            True si le message a été envoyé avec succès, False si le canal
+            le refuse (par exemple un message sans destinataire) ; chaque
+            refus est journalisé.
+
+        Raises:
+            Toute exception de l'envoi : c'est un défaut de notre code, pas
+            un refus. #2344 : elle était convertie en ``False``, parfois
+            après que le message avait déjà été remis.
         """
-        try:
-            # Vérifier si le message est destiné à un groupe
-            group_id = message.metadata.get("group_id")
+        # Vérifier si le message est destiné à un groupe
+        group_id = message.metadata.get("group_id")
 
-            if group_id:
-                # Message de groupe
-                return self._send_group_message(message, group_id)
-            else:
-                # Message direct
-                return self._send_direct_message(message)
-
-        except Exception as e:
-            self.logger.error(f"Error sending message: {str(e)}")
-            return False
+        if group_id:
+            # Message de groupe
+            return self._send_group_message(message, group_id)
+        else:
+            # Message direct
+            return self._send_direct_message(message)
 
     def _send_group_message(self, message: Message, group_id: str) -> bool:
         """

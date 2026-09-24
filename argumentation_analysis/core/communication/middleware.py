@@ -221,56 +221,71 @@ class MessageMiddleware:
         """
         Envoie un message via le middleware.
 
+        #2344: a send that did not deliver is never counted in
+        ``messages_sent``, and a defect is never turned into ``False``.
+        The middleware used to catch every exception into ``False``, count a
+        message the channel refused as sent (and log it as sent), and raise
+        ``UnboundLocalError`` instead of the routing error when
+        ``determine_channel`` failed.
+
         Args:
             message: Le message à envoyer
 
         Returns:
-            True si le message a été envoyé avec succès, False sinon
-        """
-        try:
-            # Déterminer le canal approprié
-            channel_type = self.determine_channel(message)
+            True si le canal a accepté le message. False si aucun canal n'est
+            enregistré pour son type, ou si le canal l'a refusé (par exemple
+            un message sans destinataire) ; ces deux cas sont journalisés et
+            comptés dans ``stats["errors"]``.
 
-            # Récupérer le canal
+        Raises:
+            Toute exception du routage ou du canal : c'est un défaut de notre
+            code. Elle est comptée dans ``stats["errors"]``, puis propagée.
+        """
+        channel_type = None
+        try:
+            channel_type = self.determine_channel(message)
             channel = self.get_channel(channel_type)
             if not channel:
                 self.logger.error(f"Channel not found: {channel_type.value}")
-                return False
+                delivered = False
+            else:
+                message.channel = channel_type.value
+                delivered = channel.send_message(message)
+                if not delivered:
+                    self.logger.warning(
+                        f"Message refused: {message.id} by channel {channel_type.value}"
+                    )
+        except Exception:
+            self._count_send_failure(channel_type)
+            raise
 
-            # Mettre à jour le canal dans le message
-            message.channel = channel_type.value
-
-            # Envoyer le message via le canal
-            success = channel.send_message(message)
-
-            # Mettre à jour les statistiques
-            with self.lock:
-                self.stats["messages_sent"] += 1
-                self.stats["by_channel"][channel_type.value]["sent"] += 1
-
-                if message.type.value not in self.stats["by_type"]:
-                    self.stats["by_type"][message.type.value] = 0
-                self.stats["by_type"][message.type.value] += 1
-
-                if message.priority.value not in self.stats["by_priority"]:
-                    self.stats["by_priority"][message.priority.value] = 0
-                self.stats["by_priority"][message.priority.value] += 1
-
-            # Journaliser l'envoi
-            self.logger.info(f"Message sent: {message.id} via {channel_type.value}")
-
-            return success
-
-        except Exception as e:
-            # Mettre à jour les statistiques d'erreur
-            with self.lock:
-                self.stats["errors"] += 1
-                if channel_type:
-                    self.stats["by_channel"][channel_type.value]["errors"] += 1
-
-            # Journaliser l'erreur
-            self.logger.error(f"Error sending message: {str(e)}")
+        if not delivered:
+            self._count_send_failure(channel_type)
             return False
+
+        with self.lock:
+            self.stats["messages_sent"] += 1
+            self.stats["by_channel"][channel_type.value]["sent"] += 1
+
+            if message.type.value not in self.stats["by_type"]:
+                self.stats["by_type"][message.type.value] = 0
+            self.stats["by_type"][message.type.value] += 1
+
+            if message.priority.value not in self.stats["by_priority"]:
+                self.stats["by_priority"][message.priority.value] = 0
+            self.stats["by_priority"][message.priority.value] += 1
+
+        self.logger.info(f"Message sent: {message.id} via {channel_type.value}")
+        return True
+
+    def _count_send_failure(self, channel_type: Optional[ChannelType]) -> None:
+        """Count a send that did not deliver, on its channel when it has one."""
+        with self.lock:
+            self.stats["errors"] += 1
+            if channel_type is not None:
+                by_channel = self.stats["by_channel"].get(channel_type.value)
+                if by_channel is not None:
+                    by_channel["errors"] += 1
 
     def receive_message(
         self,
