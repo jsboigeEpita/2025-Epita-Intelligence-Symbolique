@@ -10,6 +10,7 @@ its request and response models.
 Routes:
     POST /api/validate          — ``ValidationService.validate_argument``
     POST /api/logic/belief-set  — ``LogicService.text_to_belief_set``
+    POST /api/fallacies         — the pipeline's detector (``api/fallacy_detection``)
 
 The services are built once, on first use, as the MCP server builds them
 (``argumentation_analysis/services/mcp_server/main.py``, ``AppServices``).
@@ -26,6 +27,12 @@ from argumentation_analysis.services.web_api.models.request_models import (
 from argumentation_analysis.services.web_api.models.response_models import (
     LogicBeliefSetResponse,
     ValidationResponse,
+)
+
+from .fallacy_detection import (
+    FallacyDetectionRequest,
+    FallacyDetectionResponse,
+    detect_fallacies,
 )
 
 logger = logging.getLogger(__name__)
@@ -85,3 +92,16 @@ async def logic_belief_set(
     with the traceback, which is not the caller's input and not for the client.
     """
     return await service.text_to_belief_set(request)
+
+
+@frontend_router.post("/fallacies", response_model=FallacyDetectionResponse)
+async def fallacies(request: FallacyDetectionRequest):
+    """The fallacies of a text, by the detector the pipeline's fallacy phase uses.
+
+    503 when the tier has no detector (for ``llm``: no LLM key), 502 when it ran
+    and failed; an empty list only when it ran and found nothing. The ``llm``
+    tier took 18 s on one sentence and 53 s on two paragraphs (#2526).
+    """
+    return await detect_fallacies(
+        request.text, request.options.tier, request.options.min_confidence
+    )

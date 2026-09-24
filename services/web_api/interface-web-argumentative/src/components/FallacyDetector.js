@@ -14,10 +14,11 @@ const FallacyDetector = () => {
   } = useAppContext();
 
   const [error, setError] = useState(null);
+  // #2526 : `min_confidence` est envoyé au détecteur ; `include_explanations`
+  // ne règle que l'affichage.
   const [options, setOptions] = useState({
-    severity_threshold: 0.3,
-    include_explanations: true,
-    fallacy_types: 'all'
+    min_confidence: 0,
+    include_explanations: true
   });
   
   const textareaRef = useRef(null);
@@ -87,34 +88,18 @@ const FallacyDetector = () => {
     setError(null);
   };
 
-  const getSeverityLabel = (severity) => {
-    if (severity >= 0.8) return 'Critique';
-    if (severity >= 0.6) return 'Élevée';
-    if (severity >= 0.4) return 'Modérée';
-    return 'Faible';
+  // La confiance du détecteur (#2526), sur les classes de couleur `severity-*`
+  // du CSS : le détecteur ne calcule pas de sévérité.
+  const getConfidenceLabel = (confidence) => {
+    if (confidence >= 0.8) return 'élevée';
+    if (confidence >= 0.5) return 'moyenne';
+    return 'faible';
   };
 
-  const getSeverityColor = (severity) => {
-    if (severity >= 0.8) return 'critical';
-    if (severity >= 0.6) return 'high';
-    if (severity >= 0.4) return 'medium';
+  const getConfidenceColor = (confidence) => {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.5) return 'medium';
     return 'low';
-  };
-
-  const getFallacyTypeIcon = (type) => {
-    const icons = {
-      'ad_hominem': '👤',
-      'appeal_to_authority': '👑',
-      'slippery_slope': '⛷️',
-      'false_dilemma': '🔀',
-      'straw_man': '🥪',
-      'circular_reasoning': '🔄',
-      'appeal_to_emotion': '😢',
-      'bandwagon': '🚌',
-      'hasty_generalization': '⚡',
-      'red_herring': '🐟'
-    };
-    return icons[type] || '⚠️';
   };
 
   return (
@@ -123,7 +108,8 @@ const FallacyDetector = () => {
         <h2>⚠️ Détecteur de Sophismes</h2>
         <p>
           Identifiez automatiquement les sophismes et erreurs de raisonnement dans vos textes.
-          Analyse spécialisée avec explications détaillées et niveaux de sévérité.
+          Chaque détection porte la confiance du détecteur, sa famille dans la
+          taxonomie des sophismes et une explication.
         </p>
       </div>
 
@@ -179,24 +165,24 @@ const FallacyDetector = () => {
           
           <div className="option-group">
             <label className="form-label">
-              Seuil de sévérité: {(options.severity_threshold * 100).toFixed(0)}%
+              Confiance minimale : {(options.min_confidence * 100).toFixed(0)}%
             </label>
             <input
               type="range"
               min="0"
               max="1"
               step="0.1"
-              value={options.severity_threshold}
+              value={options.min_confidence}
               onChange={(e) => setOptions({
                 ...options,
-                severity_threshold: parseFloat(e.target.value)
+                min_confidence: parseFloat(e.target.value)
               })}
               className="severity-slider"
             />
             <div className="severity-labels">
               <span>Toutes</span>
-              <span>Modérées+</span>
-              <span>Sévères</span>
+              <span>Moyenne+</span>
+              <span>Élevée</span>
             </div>
           </div>
 
@@ -212,24 +198,6 @@ const FallacyDetector = () => {
               />
               <span>Inclure les explications détaillées</span>
             </label>
-
-            <div className="fallacy-types-selector">
-              <label className="form-label">Types de sophismes à détecter:</label>
-              <select
-                value={options.fallacy_types}
-                onChange={(e) => setOptions({
-                  ...options,
-                  fallacy_types: e.target.value
-                })}
-                className="form-select"
-              >
-                <option value="all">Tous les types</option>
-                <option value="logical">Erreurs logiques</option>
-                <option value="emotional">Appels émotionnels</option>
-                <option value="authority">Appels à l'autorité</option>
-                <option value="relevance">Hors-sujet</option>
-              </select>
-            </div>
           </div>
         </div>
 
@@ -282,30 +250,33 @@ const FallacyDetector = () => {
             <h3>🎯 Résultats de la détection</h3>
             <div className="results-stats">
               <span className="stat-item">
-                <strong>{fallacyResult.fallacies?.length || 0}</strong> sophisme(s) détecté(s)
+                <strong>{fallacyResult.fallacy_count}</strong> sophisme(s) détecté(s)
               </span>
               <span className="stat-item">
-                <strong>{fallacyResult.confidence ? (fallacyResult.confidence * 100).toFixed(1) : 'N/A'}%</strong> confiance
-              </span>
-              <span className="stat-item">
-                <strong>{fallacyResult.processing_time?.toFixed(3) || 'N/A'}s</strong> temps
+                <strong>{fallacyResult.processing_time?.toFixed(1)}s</strong> temps
               </span>
             </div>
           </div>
+
+          {fallacyResult.degraded && (
+            <p className="detection-degraded">
+              Détection partielle : {fallacyResult.degradation_reason}
+            </p>
+          )}
 
           {fallacyResult.fallacies && fallacyResult.fallacies.length > 0 ? (
             <div className="fallacies-detected">
               <div className="fallacies-summary">
                 <h4>📊 Résumé des sophismes</h4>
                 <div className="severity-distribution">
-                  {['critical', 'high', 'medium', 'low'].map(level => {
+                  {['high', 'medium', 'low'].map(level => {
                     const count = fallacyResult.fallacies.filter(f =>
-                      getSeverityColor(f.severity) === level
+                      getConfidenceColor(f.confidence) === level
                     ).length;
                     return count > 0 && (
                       <div key={level} className={`severity-count severity-${level}`}>
                         <span className="count">{count}</span>
-                        <span className="label">{getSeverityLabel(level === 'critical' ? 0.9 : level === 'high' ? 0.7 : level === 'medium' ? 0.5 : 0.2)}</span>
+                        <span className="label">Confiance {getConfidenceLabel(level === 'high' ? 0.9 : level === 'medium' ? 0.6 : 0.2)}</span>
                       </div>
                     );
                   })}
@@ -314,30 +285,28 @@ const FallacyDetector = () => {
 
               <div className="fallacies-list">
                 {fallacyResult.fallacies.map((fallacy, index) => (
-                  <div key={index} className={`fallacy-detection severity-${getSeverityColor(fallacy.severity)}`}>
+                  <div key={index} className={`fallacy-detection severity-${getConfidenceColor(fallacy.confidence)}`}>
                     <div className="fallacy-detection-header">
                       <div className="fallacy-info">
-                        <span className="fallacy-icon">
-                          {getFallacyTypeIcon(fallacy.type)}
-                        </span>
+                        <span className="fallacy-icon">⚠️</span>
                         <div className="fallacy-title">
                           <h5>{fallacy.name}</h5>
-                          <span className="fallacy-type">{fallacy.type}</span>
+                          {fallacy.family && <span className="fallacy-type">{fallacy.family}</span>}
                         </div>
                       </div>
                       <div className="severity-indicator">
-                        <span className={`severity-badge severity-${getSeverityColor(fallacy.severity)}`}>
-                          {getSeverityLabel(fallacy.severity)} ({(fallacy.severity * 100).toFixed(1)}%)
+                        <span className={`severity-badge severity-${getConfidenceColor(fallacy.confidence)}`}>
+                          Confiance {getConfidenceLabel(fallacy.confidence)} ({(fallacy.confidence * 100).toFixed(0)}%)
                         </span>
                       </div>
                     </div>
 
                     <div className="fallacy-content">
-                      <p className="fallacy-description">{fallacy.description}</p>
-                      
-                      {fallacy.location && (
+                      {fallacy.description && <p className="fallacy-description">{fallacy.description}</p>}
+
+                      {fallacy.quote && (
                         <div className="fallacy-location">
-                          <strong>Position:</strong> Caractères {fallacy.location.start}-{fallacy.location.end}
+                          <strong>Passage :</strong> « {fallacy.quote} »
                         </div>
                       )}
 
@@ -348,21 +317,10 @@ const FallacyDetector = () => {
                         </div>
                       )}
 
-                      {fallacy.suggestion && (
-                        <div className="fallacy-suggestion">
-                          <h6>🔧 Suggestion d'amélioration</h6>
-                          <p>{fallacy.suggestion}</p>
-                        </div>
-                      )}
-
-                      {fallacy.examples && fallacy.examples.length > 0 && (
+                      {fallacy.example && (
                         <div className="fallacy-examples-detail">
-                          <h6>📝 Exemples similaires</h6>
-                          <ul>
-                            {fallacy.examples.slice(0, 2).map((example, idx) => (
-                              <li key={idx}>{example}</li>
-                            ))}
-                          </ul>
+                          <h6>📝 Exemple de la taxonomie</h6>
+                          <p>{fallacy.example}</p>
                         </div>
                       )}
                     </div>
@@ -374,19 +332,25 @@ const FallacyDetector = () => {
             <div className="no-fallacies">
               <div className="no-fallacies-icon">✅</div>
               <h4>Aucun sophisme détecté</h4>
-              <p>
-                Le texte analysé ne contient pas de sophismes évidents avec le seuil de sévérité actuel 
-                ({(options.severity_threshold * 100).toFixed(0)}%).
-              </p>
-              <button
-                className="btn btn-secondary"
-                onClick={() => setOptions({
-                  ...options,
-                  severity_threshold: Math.max(0, options.severity_threshold - 0.2)
-                })}
-              >
-                Réduire le seuil pour plus de sensibilité
-              </button>
+              {fallacyResult.below_threshold > 0 ? (
+                <>
+                  <p>
+                    {fallacyResult.below_threshold} détection(s) sous le seuil de confiance
+                    ({(options.min_confidence * 100).toFixed(0)}%).
+                  </p>
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setOptions({
+                      ...options,
+                      min_confidence: Math.max(0, options.min_confidence - 0.2)
+                    })}
+                  >
+                    Réduire le seuil pour plus de sensibilité
+                  </button>
+                </>
+              ) : (
+                <p>Le détecteur n'a trouvé aucun sophisme dans ce texte.</p>
+              )}
             </div>
           )}
 
