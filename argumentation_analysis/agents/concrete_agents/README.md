@@ -10,7 +10,7 @@ Un seul module : `informal_fallacy_agent.py` (143 lignes) — `InformalFallacyAg
 
 ## Points d'entrée valides
 
-1. **Web API** : `api/dependencies.py:217` → `services/web_api/services/analysis_service.py:205-207` — `create_agent(AgentType.INFORMAL_FALLACY, config_name="default_with_plugins")`.
+1. **Web API** : `api/dependencies.py:217` → `services/web_api/services/analysis_service.py:205-207` — `create_agent(AgentType.INFORMAL_FALLACY, config_name="full")` (auparavant `"default_with_plugins"`, qui ne correspondait à aucune config et ne montait aucun plugin — réparé en #2121).
 2. **Hiérarchique** : `orchestration/hierarchical/operational/agent_registry.py:68` → `informal_agent_adapter.py:76-78` → `factory.create_informal_fallacy_agent` (`agents/factory.py:324-345`).
 3. Démos : `examples/02_core_system_demos/.../demo_analyse_argumentation.py:61`, `examples/03_demos_overflow/validation/validation_complete_epita.py:351`.
 
@@ -41,6 +41,8 @@ Parent : [`../README.md`](../README.md). Frère fonctionnel : [`../core/`](../co
 
 ## Limites connues
 
-- **config morte sur le chemin web API** : `analysis_service.py:206` passe `config_name="default_with_plugins"` qui ne matche **aucune** porte (:63/:67/:71 — valeurs valides : `simple`, `explore_only`, `workflow_only`, `full`) → l'agent servi par l'API n'a **aucun plugin** malgré le nom, et le log suivant dit « configured successfully » (anomalie signalée en issue séparée) ;
-- `get_agent_capabilities` :93 annonce `FallacyIdPlugin` alors que le nom enregistré est `FallacyIdentificationPlugin` (:65) ;
-- import dynamique silencieux :85-88 (log + continue) pour le plugin workflow.
+Aucune ouverte. Les trois relevées ici précédemment sont réparées :
+
+- **config morte sur le chemin web API** : une config inconnue lève `ValueError` à la construction, et l'API passe `"full"` (#2121) ;
+- `get_agent_capabilities` rend les plugins réellement montés, sous le nom où le kernel les enregistre (#2121) ;
+- **import dynamique du plugin workflow** : un `ModuleNotFoundError` ou `AttributeError` n'est plus journalisé puis ignoré ; la construction de l'agent lève, puisqu'un agent `workflow_only`/`full` sans `FallacyWorkflowPlugin` n'est pas celui que la config nomme (#2344).
