@@ -627,16 +627,16 @@ class TestValidationService:
         assert validation_service.premise_indicators is not None
 
     def test_is_healthy_when_all_ok(self, validation_service, mock_logic_service):
-        """is_healthy should return True when both self and logic_service are healthy."""
+        """is_healthy returns True when the service is initialized."""
         mock_logic_service.is_healthy.return_value = True
         assert validation_service.is_healthy() is True
 
     def test_is_healthy_logic_service_down(
         self, validation_service, mock_logic_service
     ):
-        """is_healthy returns False when logic_service is unhealthy."""
+        """#2346: validation does not use logic_service, so its health does not follow it."""
         mock_logic_service.is_healthy.return_value = False
-        assert validation_service.is_healthy() is False
+        assert validation_service.is_healthy() is True
 
     def test_is_healthy_not_initialized(self, validation_service, mock_logic_service):
         """is_healthy returns False when not initialized (even if logic_service is ok)."""

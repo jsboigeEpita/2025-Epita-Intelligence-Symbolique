@@ -36,10 +36,13 @@ class TestInit:
     def test_is_healthy(self, service):
         assert service.is_healthy() is True
 
-    def test_is_unhealthy_when_logic_unhealthy(self, mock_logic_service):
+    def test_stays_healthy_when_logic_is_unhealthy(self, mock_logic_service):
+        # #2346: validation scores by heuristics and reads nothing from its
+        # LogicService, so a JVM that is not ready does not make it unhealthy.
         mock_logic_service.is_healthy.return_value = False
         svc = ValidationService(logic_service=mock_logic_service)
-        assert svc.is_healthy() is False
+        assert svc.is_healthy() is True
+        mock_logic_service.is_healthy.assert_not_called()
 
 
 # ── Clarity ──

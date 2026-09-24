@@ -65,8 +65,13 @@ class ValidationService:
         self.logger.info("Service de validation initialisé")
 
     def is_healthy(self) -> bool:
-        """Vérifie l'état de santé du service."""
-        return self.is_initialized and self.logic_service.is_healthy()
+        """Vérifie l'état de santé du service.
+
+        #2346 : la validation note l'argument par heuristiques de mots-clés et ne
+        lit rien d'autre de ``logic_service`` ; sa santé ne dépend donc pas de
+        celle de la JVM, que ``LogicService.is_healthy`` rapporte désormais.
+        """
+        return self.is_initialized
 
     async def validate_argument(self, request: ValidationRequest) -> ValidationResponse:
         """
