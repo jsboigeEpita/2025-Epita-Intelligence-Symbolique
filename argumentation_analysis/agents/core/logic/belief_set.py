@@ -56,7 +56,12 @@ class BeliefSet(ABC):
 
     def is_empty(self) -> bool:
         """
-        Vérifie si l'ensemble de croyances est sémantiquement vide.
+        Vérifie si le contenu textuel est vide : ``None``, blancs, ou
+        seulement des accolades (``"{}"``, ``" { } "``).
+
+        Le contrôle est syntaxique : il ne parse pas le contenu, et ne dit
+        rien d'un ensemble dont les lignes existent mais ne portent aucune
+        formule (#2346).
         """
         if self._content is None:
             return True
@@ -134,7 +139,8 @@ class FirstOrderBeliefSet(BeliefSet):
         """
         Initialise l'ensemble de croyances FOL.
 
-        :param content: Le contenu textuel, typiquement le JSON source.
+        :param content: Le contenu textuel : les déclarations de signature
+            suivies des formules, une par ligne.
         :param java_object: L'objet org.tweetyproject.logics.fol.syntax.FolBeliefSet correspondant.
         """
         super().__init__(content)

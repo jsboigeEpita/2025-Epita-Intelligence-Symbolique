@@ -149,15 +149,6 @@ def _build_report_from_state(state, meta=None):
 
 class TestHelpers:
 
-    def test_infer_stance_pro(self):
-        assert DeepSynthesisAgent._infer_stance("I support this proposal") == "pro"
-
-    def test_infer_stance_con(self):
-        assert DeepSynthesisAgent._infer_stance("We must oppose this") == "con"
-
-    def test_infer_stance_neutral(self):
-        assert DeepSynthesisAgent._infer_stance("The data shows X") == "neutral"
-
     def test_fallacy_family(self):
         assert DeepSynthesisAgent._fallacy_family("ad hominem attack") == "relevance"
         assert DeepSynthesisAgent._fallacy_family("hasty generalization") == "inductive"
@@ -216,9 +207,7 @@ class TestHelpers:
     def test_count_populated_sections_partial(self):
         report = DeepSynthesisReport()
         report.source_overview = SourceOverview(length_chars=100)
-        report.argument_map = [
-            ArgumentMapEntry(arg_id="a1", stance="pro", description="test")
-        ]
+        report.argument_map = [ArgumentMapEntry(arg_id="a1", description="test")]
         assert DeepSynthesisAgent._count_populated_sections(report) == 2
 
     def test_argument_map_entry_has_no_outgoing_attack_field(self):
@@ -232,9 +221,9 @@ class TestHelpers:
         "no argument attacks another". This guard keeps the direction out
         until a real edge source exists.
         """
-        entry = ArgumentMapEntry(arg_id="a1", stance="pro", description="d")
+        entry = ArgumentMapEntry(arg_id="a1", description="d")
         assert not hasattr(entry, "attacks")
-        assert set(vars(entry)) == {"arg_id", "stance", "description", "attacked_by"}
+        assert set(vars(entry)) == {"arg_id", "description", "attacked_by"}
 
     def test_count_state_fields(self):
         state = _make_fixture_state()
@@ -273,7 +262,7 @@ class TestSectionBuilders:
         assert len(amap) == 4
         for entry in amap:
             assert entry.arg_id.startswith("arg_")
-            assert entry.stance in ("pro", "con", "neutral")
+            assert not hasattr(entry, "stance")  # #2346
 
     def test_s3_fallacy_diagnoses(self, state):
         diags = DeepSynthesisAgent._build_fallacy_diagnoses(state)

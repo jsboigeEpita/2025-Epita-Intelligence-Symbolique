@@ -34,10 +34,14 @@ class ArgumentMapEntry:
     nodes (``fallacy_*`` / ``counter_*``), which the incoming direction
     records. An ``attacks`` field promised a direction with no data
     behind it (#2134).
+
+    No stance field either: no producer computes an argument's stance. The
+    former ``stance`` was a keyword vote on the description, which answers
+    with the narration verb ("He claims …" gave ``pro``) and printed
+    ``neutral`` when no keyword matched (#2346).
     """
 
     arg_id: str
-    stance: str  # "pro" | "con" | "neutral"
     description: str
     attacked_by: List[str] = field(default_factory=list)
 

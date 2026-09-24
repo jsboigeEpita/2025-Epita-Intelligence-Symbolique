@@ -439,7 +439,6 @@ class DeepSynthesisAgent(BaseAgent):
             entries.append(
                 ArgumentMapEntry(
                     arg_id=arg_id,
-                    stance=DeepSynthesisAgent._infer_stance(desc),
                     description=desc,
                     attacked_by=attacked_by,
                 )
@@ -764,12 +763,12 @@ class DeepSynthesisAgent(BaseAgent):
         # S2 — Argument map
         sections.append("## 2. Argument Map\n")
         if report.argument_map:
-            sections.append("| ID | Stance | Description | Attacked by |")
-            sections.append("|----|--------|-------------|-------------|")
+            sections.append("| ID | Description | Attacked by |")
+            sections.append("|----|-------------|-------------|")
             for a in report.argument_map:
                 desc = a.description[:100] + ("..." if len(a.description) > 100 else "")
                 attacked = ", ".join(a.attacked_by) if a.attacked_by else "—"
-                sections.append(f"| `{a.arg_id}` | {a.stance} | {desc} | {attacked} |")
+                sections.append(f"| `{a.arg_id}` | {desc} | {attacked} |")
             sections.append("")
         else:
             sections.append("_No arguments identified in this run._\n")
@@ -990,17 +989,6 @@ class DeepSynthesisAgent(BaseAgent):
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
-
-    @staticmethod
-    def _infer_stance(text: str) -> str:
-        lower = text.lower()
-        pro_words = ["support", "affirm", "defend", "argue for", "claim", "propose"]
-        con_words = ["oppose", "reject", "refute", "against", "deny", "attack"]
-        if any(w in lower for w in pro_words):
-            return "pro"
-        if any(w in lower for w in con_words):
-            return "con"
-        return "neutral"
 
     @staticmethod
     def _fallacy_family(fallacy_type: str) -> str:
