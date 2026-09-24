@@ -524,6 +524,12 @@ def _pl_verdict(result: Dict[str, Any]) -> Optional[bool]:
     return sat if isinstance(sat, bool) else None
 
 
+def _fol_verdict(result: Dict[str, Any]) -> Optional[bool]:
+    """Read a FOL verdict (``consistent``) as a strict bool, or None when undecided."""
+    consistent = result.get("consistent")
+    return consistent if isinstance(consistent, bool) else None
+
+
 def _is_guest_formal_entry(result: Dict[str, Any]) -> bool:
     """True when a record in a formal container was written by ANOTHER formalism.
 
@@ -785,24 +791,73 @@ def _collect_absent_dimensions(state: Any) -> List[AbsentDimension]:
     not an absence, and an axis that simply found nothing to report is NOT a
     degradation (anti-pendule: an honest absence correctly labelled is a success
     of the matrix, not a failure of the pipeline).
+
+    #2344: the ledger covers the structured-argumentation axes only. The formal
+    PL/FOL axes that ran without deciding anything join the list through
+    :func:`_collect_undecided_formal_axes`.
     """
     ledger = getattr(state, "structured_arg_status", None) or {}
-    if not isinstance(ledger, dict):
-        return []
     out: List[AbsentDimension] = []
-    for capability, info in ledger.items():
-        if not isinstance(info, dict) or not info.get("degraded"):
+    if isinstance(ledger, dict):
+        for capability, info in ledger.items():
+            if not isinstance(info, dict) or not info.get("degraded"):
+                continue
+            cap = str(capability)
+            out.append(
+                AbsentDimension(
+                    capability=cap,
+                    label=_ABSENT_DIMENSION_LABELS.get(cap, cap.replace("_", " ")),
+                    status=str(info.get("status", "")).strip(),
+                    reason=_truncate(info.get("reason", ""), _ABSENCE_REASON_CAP),
+                )
+            )
+    out.extend(_collect_undecided_formal_axes(state))
+    return sorted(out, key=lambda d: d.label)
+
+
+def _collect_undecided_formal_axes(state: Any) -> List[AbsentDimension]:
+    """The formal axes whose every result came back undecided (#2344).
+
+    ``_pl_verified``/``_fol_verified`` count decided verdicts only, which is
+    right for the band. But they made an axis that ran and broke read exactly
+    like an axis that never ran: results in the state, none decided (the
+    translation produced nothing, the parser rejected everything, the solver
+    raised or is not installed). Measured: same prompt, same conclusion, same
+    ``degraded``. Such an axis was not evaluated, and the absence channel says
+    so, with the producer's own message as the reason.
+
+    An axis with at least one decided result is not lost: the conclusion stands
+    on its decided results, and the appendix counts the undecided ones
+    (``degradees``). An axis with no result at all is not lost either: it did
+    not run, so nothing broke.
+    """
+    out: List[AbsentDimension] = []
+    for axis, container, verdict in (
+        (_AXIS_FORMAL_PL, "propositional_analysis_results", _pl_verdict),
+        (_AXIS_FORMAL_FOL, "fol_analysis_results", _fol_verdict),
+    ):
+        results = getattr(state, container, None)
+        if not isinstance(results, list):
             continue
-        cap = str(capability)
+        host = [
+            r for r in results if isinstance(r, dict) and not _is_guest_formal_entry(r)
+        ]
+        if not host or any(verdict(r) is not None for r in host):
+            continue
+        cause = next((str(r["message"]).strip() for r in host if r.get("message")), "")
+        reason = f"{accord(len(host), 'résultat', 'résultats')} sans verdict décidé"
         out.append(
             AbsentDimension(
-                capability=cap,
-                label=_ABSENT_DIMENSION_LABELS.get(cap, cap.replace("_", " ")),
-                status=str(info.get("status", "")).strip(),
-                reason=_truncate(info.get("reason", ""), _ABSENCE_REASON_CAP),
+                capability=axis,
+                label=_AXIS_LABELS_FR[axis],
+                status="undecided",
+                reason=_truncate(
+                    f"{reason} : {cause}" if cause else f"{reason}.",
+                    _ABSENCE_REASON_CAP,
+                ),
             )
         )
-    return sorted(out, key=lambda d: d.label)
+    return out
 
 
 def _axis_label(capability: str) -> str:
@@ -2199,6 +2254,8 @@ _ABSENCE_KEYWORDS: Dict[str, Tuple[str, ...]] = {
     "setaf_reasoning": ("collectiv", "conjoint", "ensemble"),
     "weighted_argumentation": ("pondér", "poids", "force des attaques"),
     "bipolar_argumentation": ("soutien", "appui mutuel"),
+    _AXIS_FORMAL_PL: ("propositionnel", "satisfiab"),
+    _AXIS_FORMAL_FOL: ("premier ordre", "prédicat"),
 }
 
 # Domain-generic capability tokens that must never count as naming an axis —
