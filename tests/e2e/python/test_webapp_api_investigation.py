@@ -77,43 +77,29 @@ class TestWebAppAPIInvestigation:
         base_url, _ = e2e_servers
         test_text = "Si nous autorisons le mariage gay, bientôt nous autoriserons aussi le mariage avec les animaux."
 
-        payload = {
-            "text": test_text,
-            "options": {
-                "severity_threshold": 0.3,
-                "include_explanations": True,
-                "fallacy_types": "all",
-            },
-        }
+        # #2526 : la route appelle le détecteur du pipeline. Le palier
+        # `taxonomy` tourne sans clé LLM : ce test ne dépense aucun crédit.
+        payload = {"text": test_text, "options": {"tier": "taxonomy"}}
 
         try:
-            # #2526: api.main:app ne sert pas /api/fallacies. Le service archivé
-            # (FallacyService) ne détecte rien sur un texte réel ; la route attend
-            # la décision sur le détecteur qui sert l'interface.
-            pytest.skip(
-                "#2526: /api/fallacies n'est pas servie (FallacyService inerte)."
-            )
             assert (
                 base_url
             ), "L'URL du backend doit être fournie par la fixture e2e_servers"
             response = requests.post(
-                f"{base_url}/api/fallacies", json=payload, timeout=30
+                f"{base_url}/api/fallacies", json=payload, timeout=60
             )
             print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
             print(f"   Status Code: {response.status_code}")
             print(f"   Texte analysé: {test_text}")
 
-            if response.status_code == 200:
-                result = response.json()
-                print(f"   [OK] Détection réussie")
-                fallacies = result.get("fallacies", [])
-                print(f"   Sophismes détectés: {len(fallacies)}")
-                for fallacy in fallacies[:2]:  # Afficher les 2 premiers
-                    print(
-                        f"     - {fallacy.get('type', 'Unknown')}: {fallacy.get('confidence', 0):.2f}"
-                    )
-            else:
-                print(f"   [ERROR] Erreur: {response.text}")
+            assert response.status_code == 200, response.text
+            result = response.json()
+            fallacies = result["fallacies"]
+            assert result["tier"] == "taxonomy"
+            assert result["fallacy_count"] == len(fallacies)
+            print(f"   Sophismes détectés: {len(fallacies)}")
+            for fallacy in fallacies[:2]:  # Afficher les 2 premiers
+                print(f"     - {fallacy['name']}: {fallacy['confidence']:.2f}")
 
         except requests.exceptions.RequestException as e:
             print(f"   [ERROR] Erreur de connexion: {e}")
