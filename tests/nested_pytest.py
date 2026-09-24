@@ -58,6 +58,33 @@ def both(out, err):
     return f"--- stdout\n{out[-3000:]}\n--- stderr\n{err[-3000:]}"
 
 
+def run_bounded(argv, bound=BOUND, failure="the process did not end"):
+    """Run ``argv`` from the repository root, with the root on ``PYTHONPATH``.
+
+    A ``subprocess.CompletedProcess``. After ``bound`` seconds the process
+    tree is killed and the test fails with ``failure`` and the child's output.
+    """
+    env = dict(os.environ)
+    env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
+    process = subprocess.Popen(
+        argv,
+        cwd=ROOT,
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        start_new_session=os.name != "nt",
+    )
+    try:
+        out, err = process.communicate(timeout=bound)
+    except subprocess.TimeoutExpired:
+        out, err = kill_tree(process)
+        pytest.fail(f"{failure} within {bound}s\n" + both(out, err))
+    return subprocess.CompletedProcess(argv, process.returncode, out, err)
+
+
 def run_probe(label, files, *argv, bound=BOUND):
     """Run pytest on ``files`` (``{name: source}``). ``(returncode, stdout, stderr)``.
 
@@ -70,9 +97,7 @@ def run_probe(label, files, *argv, bound=BOUND):
         for name, source in files.items():
             (probe_dir / name).write_text(source, encoding="utf-8")
         target = next(name for name in files if name.startswith("probe"))
-        env = dict(os.environ)
-        env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
-        process = subprocess.Popen(
+        done = run_bounded(
             [
                 sys.executable,
                 "-m",
@@ -83,22 +108,9 @@ def run_probe(label, files, *argv, bound=BOUND):
                 "-q",
                 *argv,
             ],
-            cwd=ROOT,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            start_new_session=os.name != "nt",
+            bound,
+            failure="the probe session did not end",
         )
-        try:
-            out, err = process.communicate(timeout=bound)
-        except subprocess.TimeoutExpired:
-            out, err = kill_tree(process)
-            pytest.fail(
-                f"the probe session did not end within {bound}s\n" + both(out, err)
-            )
     finally:
         shutil.rmtree(probe_dir, ignore_errors=True)
-    return process.returncode, out, err
+    return done.returncode, done.stdout, done.stderr
