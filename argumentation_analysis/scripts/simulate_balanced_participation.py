@@ -45,12 +45,6 @@ from argumentation_analysis.agents.core.informal.informal_agent import (
 )
 from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("SimulationScript")
 
 
@@ -359,6 +353,11 @@ async def run_comparison_simulation():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     # Exécuter la simulation standard
     asyncio.run(run_standard_simulation())
 

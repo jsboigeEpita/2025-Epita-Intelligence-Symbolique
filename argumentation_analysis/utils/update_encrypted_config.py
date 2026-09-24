@@ -7,9 +7,6 @@ import json
 import sys
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-sys.path.append(str(Path(__file__).parent.parent))
-
 # Importer les modules nécessaires
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.io_manager import save_extract_definitions

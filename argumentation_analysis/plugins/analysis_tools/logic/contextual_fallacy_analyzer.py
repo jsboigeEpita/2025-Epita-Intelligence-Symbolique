@@ -70,12 +70,6 @@ def _lazy_imports():
         logging.info("Les bibliothèques transformers et torch sont disponibles.")
 
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("EnhancedContextualFallacyAnalyzer")
 
 
@@ -963,6 +957,11 @@ class EnhancedContextualFallacyAnalyzer:
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
         ContextualFallacyAnalyzer,
     )

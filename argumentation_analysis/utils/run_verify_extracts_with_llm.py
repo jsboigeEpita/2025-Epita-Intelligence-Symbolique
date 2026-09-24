@@ -16,23 +16,7 @@ import logging
 import asyncio
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin d'importation
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("VerifyExtractsLLM")
-
-# Création d'un handler pour écrire les logs dans un fichier
-file_handler = logging.FileHandler("verify_extracts_llm.log")
-file_handler.setFormatter(
-    logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
-)
-logger.addHandler(file_handler)
 
 
 def build_verify_parser() -> argparse.ArgumentParser:
@@ -98,17 +82,13 @@ async def main():
 
     # Importer les modules nécessaires
     try:
-        # Import direct depuis le répertoire courant
+        # Imports absolus depuis le package
         logger.info("Tentative d'import direct...")
-        from extract_repair.verify_extracts_with_llm import (
+        from argumentation_analysis.utils.extract_repair.verify_extracts_with_llm import (
             verify_extracts_with_llm,
             generate_report,
         )
 
-        # Import depuis le répertoire parent
-        sys.path.insert(
-            0, os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-        )
         from argumentation_analysis.ui.config import (
             ENCRYPTION_KEY,
             CONFIG_FILE,
@@ -264,4 +244,14 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    file_handler = logging.FileHandler("verify_extracts_llm.log")
+    file_handler.setFormatter(
+        logging.Formatter("%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+    )
+    logger.addHandler(file_handler)
     asyncio.run(main())

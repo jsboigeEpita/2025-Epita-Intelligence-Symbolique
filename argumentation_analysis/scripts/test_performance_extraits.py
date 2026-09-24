@@ -25,19 +25,11 @@ from typing import Any, Dict, List, Optional, Tuple
 import pytest
 from semantic_kernel.functions import KernelArguments
 
-# Ajouter le répertoire racine au chemin de recherche des modules
+# Répertoire du package : base de RESULTS_BASE_DIR
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 root_dir = parent_dir
-if str(root_dir) not in sys.path:
-    sys.path.append(str(root_dir))
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("TestPerformanceExtraits")
 
 # Créer un répertoire pour les résultats

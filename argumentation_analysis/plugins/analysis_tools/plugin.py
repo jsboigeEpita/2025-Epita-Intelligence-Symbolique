@@ -20,7 +20,6 @@ from .logic.rhetorical_result_analyzer import EnhancedRhetoricalResultAnalyzer
 from .logic.rhetorical_result_visualizer import EnhancedRhetoricalResultVisualizer
 from .logic.nlp_model_manager import nlp_model_manager
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 

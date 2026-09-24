@@ -96,10 +96,6 @@ if TYPE_CHECKING:
     from ..agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
     from ..agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 # #1962 : les stratégies Cyclic/Oracle vivent désormais uniquement dans
@@ -1079,4 +1075,8 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     asyncio.run(main())

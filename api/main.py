@@ -61,6 +61,14 @@ async def startup_event():
     stocké dans l'état de l'application (`app.state`) pour être accessible
     depuis les endpoints.
     """
+    # Le point d'entrée configure le logging du processus : les modules de la
+    # bibliothèque ne le font plus à l'import (#2346). Sans effet si le logger
+    # racine a déjà un handler (``uvicorn --log-config``, pytest).
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     logging.info(
         "Événement de démarrage de FastAPI: initialisation de l'environnement du projet..."
     )

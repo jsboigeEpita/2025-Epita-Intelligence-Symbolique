@@ -13,32 +13,33 @@ import json
 from functools import wraps
 import os
 
-# Configuration du logger pour la performance
-log_dir = "logs"
-if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
-
-log_file = os.path.join(log_dir, "oracle_performance.log")
-
-# Crée un logger spécifique pour la performance
+# Logger de performance : il n'écrit que dans son fichier, jamais vers le root.
 performance_logger = logging.getLogger("performance_monitor")
 performance_logger.setLevel(logging.INFO)
-
-# Empêche la propagation des logs au logger root pour éviter les doublons
 performance_logger.propagate = False
 
-# Handler pour écrire dans le fichier de log de performance
-file_handler = logging.FileHandler(log_file)
-file_handler.setLevel(logging.INFO)
+log_dir = "logs"
+log_file = os.path.join(log_dir, "oracle_performance.log")
 
-# Formatter pour le log structuré en JSON
-formatter = logging.Formatter(
-    '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "function": "%(funcName)s", "message": %(message)s}'
-)
-file_handler.setFormatter(formatter)
 
-# Ajoute le handler uniquement si aucun n'est déjà configuré
-if not performance_logger.handlers:
+def _ensure_file_handler():
+    """Ouvre ``logs/oracle_performance.log`` à la première mesure.
+
+    Le faire à l'import créait ``logs/`` dans le répertoire courant de tout
+    processus qui importait ``argumentation_analysis.utils`` (#2346). Comme
+    avant, un logger qui a déjà un handler est laissé tel quel.
+    """
+    if performance_logger.handlers:
+        return
+    os.makedirs(log_dir, exist_ok=True)
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(logging.INFO)
+    # Formatter pour le log structuré en JSON
+    file_handler.setFormatter(
+        logging.Formatter(
+            '{"timestamp": "%(asctime)s", "level": "%(levelname)s", "module": "%(module)s", "function": "%(funcName)s", "message": %(message)s}'
+        )
+    )
     performance_logger.addHandler(file_handler)
 
 
@@ -71,6 +72,7 @@ def monitor_performance(log_args: bool = False):
             except Exception:
                 log_data["arguments"] = "Could not serialize arguments"
 
+        _ensure_file_handler()
         performance_logger.info(json.dumps(log_data))
 
     def decorator(func):

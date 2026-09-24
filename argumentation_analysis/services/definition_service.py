@@ -18,11 +18,6 @@ import os
 
 # from pathlib import Path # Redondant, déjà importé plus haut
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
 
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions,

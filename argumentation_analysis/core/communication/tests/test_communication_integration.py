@@ -18,12 +18,6 @@ from argumentation_analysis.core.communication.hierarchical_channel import (
 )
 from argumentation_analysis.core.communication.channel_interface import ChannelType
 
-# Configuration du logger
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("CommunicationIntegrationTests")
 
 
@@ -358,4 +352,9 @@ class TestCommunicationIntegration(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     unittest.main()

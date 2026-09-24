@@ -18,41 +18,7 @@ from pathlib import Path  # De la version stashed
 from typing import List, Dict, Any, Tuple, Optional, Union
 import json
 
-# Importer PROJECT_ROOT depuis la configuration centrale (de la version stashed)
-try:
-    from argumentation_analysis.core.bootstrap import project_root as PROJECT_ROOT
-except ImportError:
-    # Fallback si le script est exécuté dans un contexte où l'import direct n'est pas possible
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
-
-# Configuration du logging (de la version stashed)
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("ExtractAgent.Definitions")
-
-# Création d'un handler pour écrire les logs dans un fichier (de la version stashed)
-try:
-    log_dir = PROJECT_ROOT / "_temp" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    log_file_path = log_dir / "extract_agent.log"
-
-    file_handler = logging.FileHandler(log_file_path, mode="a", encoding="utf-8")
-    file_handler.setFormatter(
-        logging.Formatter(
-            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
-        )
-    )
-    logger.addHandler(file_handler)
-except Exception as e:
-    logger.warning(
-        f"Impossible d'initialiser le logging de fichier pour l'agent d'extraction : {e}"
-    )
-    logger.warning(
-        "Cela peut se produire pendant les tests ou si les permissions sont incorrectes."
-    )
 
 
 class ExtractResult:

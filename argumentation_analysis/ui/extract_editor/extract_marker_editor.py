@@ -89,12 +89,6 @@ except ImportError as e:
         CONFIG_FILE_JSON = Path("./data/extract_sources.json")
         CACHE_DIR = Path("./text_cache")
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("ExtractMarkerEditor")
 
 
@@ -854,5 +848,10 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     # Si exécuté directement, lancer l'interface
     main()
