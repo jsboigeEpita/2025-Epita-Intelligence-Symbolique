@@ -20,6 +20,10 @@ from concurrent.futures import (
 )
 from datetime import datetime, timedelta
 
+# #2344: default of ``fallback_result``. A caller that passes no fallback gets
+# the exception, so a failure never comes back looking like a ``None`` result.
+_NO_FALLBACK = object()
+
 
 class AsyncManager:
     """
@@ -67,7 +71,7 @@ class AsyncManager:
         func_or_coro: Union[Callable, Coroutine],
         *args,
         timeout: Optional[float] = None,
-        fallback_result: Any = None,
+        fallback_result: Any = _NO_FALLBACK,
         **kwargs,
     ) -> Any:
         """
@@ -77,11 +81,14 @@ class AsyncManager:
             func_or_coro: Fonction ou coroutine à exécuter
             *args: Arguments positionnels
             timeout: Timeout en secondes (utilise default_timeout si None)
-            fallback_result: Résultat à retourner en cas d'échec
+            fallback_result: Résultat à retourner en cas d'échec. Sans lui,
+                l'exception remonte (#2344) : un échec ne se confond pas avec
+                un ``None`` légitime.
             **kwargs: Arguments nommés
 
         Returns:
-            Résultat de l'exécution ou fallback_result
+            Résultat de l'exécution, ou fallback_result si l'appelant en a
+            passé un et que l'exécution a échoué
         """
         task_id = self._generate_task_id()
         timeout = timeout or self.default_timeout
@@ -111,6 +118,8 @@ class AsyncManager:
             self.logger.error(f"Erreur lors de l'exécution task_{task_id}: {e}")
             self.active_tasks[task_id]["status"] = "error"
             self.active_tasks[task_id]["error"] = str(e)
+            if fallback_result is _NO_FALLBACK:
+                raise
             return fallback_result
 
         finally:
@@ -137,9 +146,15 @@ class AsyncManager:
             loop = self.get_or_create_event_loop()
 
             if loop.is_running():
-                # Si la boucle est déjà en cours, créer une tâche
-                future = asyncio.create_task(coro)
-                return asyncio.wait_for(future, timeout=timeout)
+                # #2344: a synchronous call cannot wait on the loop it runs in.
+                # This branch returned an unawaited ``wait_for`` coroutine as
+                # the "result" while the task ran detached; say so instead.
+                coro.close()
+                raise RuntimeError(
+                    "run_hybrid ne peut pas attendre une coroutine depuis une "
+                    "boucle d'événements déjà en cours : l'appelant doit faire "
+                    "`await` lui-même."
+                )
             else:
                 # Exécuter la coroutine dans la boucle
                 return loop.run_until_complete(asyncio.wait_for(coro, timeout=timeout))
@@ -191,7 +206,9 @@ class AsyncManager:
         Exécute plusieurs tâches en parallèle de manière hybride.
 
         Args:
-            tasks: Liste de dictionnaires avec 'func', 'args', 'kwargs'
+            tasks: Liste de dictionnaires avec 'func', 'args', 'kwargs', et
+                optionnellement 'timeout' et 'fallback_result'. Une tâche sans
+                'fallback_result' qui échoue fait échouer l'appel (#2344).
             max_concurrent: Nombre maximum de tâches concurrentes
             global_timeout: Timeout global en secondes
 
@@ -217,27 +234,17 @@ class AsyncManager:
             remaining_timeout = global_timeout - elapsed
 
             for task_def in batch:
-                try:
-                    func = task_def["func"]
-                    args = task_def.get("args", ())
-                    kwargs = task_def.get("kwargs", {})
-                    task_timeout = task_def.get(
-                        "timeout", min(remaining_timeout / len(batch), 10.0)
-                    )
-                    fallback = task_def.get("fallback_result")
-
-                    result = self.run_hybrid(
-                        func,
-                        *args,
-                        timeout=task_timeout,
-                        fallback_result=fallback,
-                        **kwargs,
-                    )
-                    batch_results.append(result)
-
-                except Exception as e:
-                    self.logger.error(f"Erreur dans une tâche du batch: {e}")
-                    batch_results.append(task_def.get("fallback_result"))
+                task_timeout = task_def.get(
+                    "timeout", min(remaining_timeout / len(batch), 10.0)
+                )
+                result = self.run_hybrid(
+                    task_def["func"],
+                    *task_def.get("args", ()),
+                    timeout=task_timeout,
+                    fallback_result=task_def.get("fallback_result", _NO_FALLBACK),
+                    **task_def.get("kwargs", {}),
+                )
+                batch_results.append(result)
 
             results.extend(batch_results)
 
@@ -408,7 +415,7 @@ def run_hybrid_safe(
     func_or_coro: Union[Callable, Coroutine],
     *args,
     timeout: Optional[float] = None,
-    fallback_result: Any = None,
+    fallback_result: Any = _NO_FALLBACK,
     **kwargs,
 ) -> Any:
     """
@@ -418,7 +425,7 @@ def run_hybrid_safe(
         func_or_coro: Fonction ou coroutine à exécuter
         *args: Arguments positionnels
         timeout: Timeout en secondes
-        fallback_result: Résultat de fallback
+        fallback_result: Résultat de fallback ; sans lui, l'exception remonte
         **kwargs: Arguments nommés
 
     Returns:

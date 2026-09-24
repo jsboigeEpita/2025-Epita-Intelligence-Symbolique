@@ -347,16 +347,15 @@ class LogicService:
         """
         if not self._is_circuit_breaker_open():
             try:
-                # Exécuter l'analyse de manière asynchrone
+                # #2344: no fallback handed to run_hybrid. With one, a failed
+                # analysis came back as a success, reset the breaker, and the
+                # except below (which counts it and names the error) never ran.
                 result = self.async_manager.run_hybrid(
                     self.analyze_text_logic,
                     text,
                     logic_type,
                     context,
                     timeout=timeout,
-                    fallback_result=self._get_fallback_analysis_result(
-                        text, logic_type
-                    ),
                 )
 
                 # Réinitialiser le circuit breaker en cas de succès
