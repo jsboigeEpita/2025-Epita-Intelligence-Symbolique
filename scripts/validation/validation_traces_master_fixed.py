@@ -368,61 +368,6 @@ class MasterTraceValidator:
                 "reason": "LogiqueComplexeOrchestrator removed (#885)",
             }
 
-            # Création des agents spécialisés avec outils
-            sherlock_tools = SherlockTools(kernel)
-            kernel.add_plugin(sherlock_tools, plugin_name="SherlockTools")
-
-            sherlock_agent = SherlockEnqueteAgent(
-                kernel=kernel, agent_name="Sherlock", service_id="openai_chat"
-            )
-
-            watson_agent = WatsonLogicAssistant(
-                kernel=kernel, agent_name="Watson", service_id="openai_chat"
-            )
-
-            # Exécution de l'énigme Einstein
-            print(f"📋 Énigme: {case_description[:150]}...")
-
-            resultats = await orchestrateur.resoudre_enigme_complexe(
-                sherlock_agent, watson_agent
-            )
-
-            # Capture du timestamp de fin
-            end_time = datetime.datetime.now()
-            duration = (end_time - start_time).total_seconds()
-
-            # Construction des résultats complets
-            served_model = self._served_model(kernel)
-            metadata: Dict[str, Any] = {
-                "case_name": case_name,
-                "timestamp": self.timestamp,
-                "start_time": start_time.isoformat(),
-                "end_time": end_time.isoformat(),
-                "duration_seconds": duration,
-            }
-            if served_model:
-                metadata["model_used"] = served_model
-            results = {
-                "metadata": metadata,
-                "input": {"case_description": case_description},
-                "execution_results": resultats,
-                "analysis": {
-                    "enigme_resolue": resultats.get("enigme_resolue", False),
-                    "tours_utilises": resultats.get("tours_utilises", 0),
-                },
-            }
-
-            # Sauvegarde des traces
-            trace_file = (
-                self.einstein_dir / f"trace_einstein_{case_name}_{self.timestamp}.json"
-            )
-            with open(trace_file, "w", encoding="utf-8") as f:
-                json.dump(results, f, indent=2, ensure_ascii=False, default=str)
-
-            print(f"✅ Traces Einstein sauvegardées: {trace_file}")
-
-            return results
-
         except Exception as e:
             print(f"❌ Erreur lors de l'exécution de {case_name}: {e}")
             raise

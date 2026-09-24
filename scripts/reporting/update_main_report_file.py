@@ -7,6 +7,10 @@ Script pour mettre à jour le rapport final des tests avec les informations de c
 import os
 import sys
 from pathlib import Path
+
+from argumentation_analysis.core.utils.markdown_utils import (
+    update_markdown_section,
+)
 import datetime
 
 # Ajouter le répertoire parent au PYTHONPATH

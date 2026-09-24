@@ -2,6 +2,8 @@ import argumentation_analysis.core.environment
 import json
 from pathlib import Path
 
+from argumentation_analysis.utils.config_utils import find_sources_in_config_by_ids
+
 input_config_path = "_temp/config_paths_corrected_v3.json"
 ids_to_inspect = [
     "assemblee_nationale_2024_pg_attal",

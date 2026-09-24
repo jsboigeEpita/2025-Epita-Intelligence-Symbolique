@@ -4,6 +4,34 @@ import os
 import sys
 from pathlib import Path
 
+from argumentation_analysis.core.utils.file_loaders import load_json_file
+from argumentation_analysis.core.utils.file_savers import save_json_file
+
+
+def filter_list_in_json_data(
+    json_data, filter_key, filter_value_to_remove, list_path_key=None
+):
+    """Retire les entrées où item[filter_key] == filter_value_to_remove.
+
+    ``list_path_key`` None : la liste est à la racine ; sinon elle vit sous
+    cette clé du dictionnaire (même structure en sortie). Retourne
+    (données filtrées, nombre d'entrées retirées).
+    """
+    if list_path_key is None:
+        entries = json_data
+        filtered = [
+            item for item in entries if item.get(filter_key) != filter_value_to_remove
+        ]
+        return filtered, len(entries) - len(filtered)
+    entries = json_data[list_path_key]
+    filtered = [
+        item for item in entries if item.get(filter_key) != filter_value_to_remove
+    ]
+    updated = dict(json_data)
+    updated[list_path_key] = filtered
+    return updated, len(entries) - len(filtered)
+
+
 # Définir les chemins des fichiers
 input_config_path = Path("_temp/config_fr_corrected.json")
 output_config_path = Path("_temp/config_source_removed.json")
@@ -23,10 +51,10 @@ if not source_name_to_remove:
 output_config_path.parent.mkdir(parents=True, exist_ok=True)
 
 # Charger les données depuis le fichier d'entrée
-data = load_json_from_file(input_config_path)
+data = load_json_file(input_config_path)
 
 if data is None:
-    # load_json_from_file logue déjà l'erreur
+    # load_json_file logue déjà l'erreur
     exit(1)
 
 # Filtrer les données en utilisant la fonction utilitaire
@@ -39,7 +67,7 @@ elif not isinstance(data, list):  # Si ce n'est ni une liste ni un dict avec "so
         f"Erreur : La structure des données dans '{input_config_path}' n'est pas une liste de sources attendue ou un dictionnaire avec une clé 'sources'."
     )
     # Sauvegarder les données originales si on ne sait pas comment filtrer
-    if save_json_to_file(data, output_config_path):
+    if save_json_file(output_config_path, data):
         print(
             f"Données originales sauvegardées dans '{output_config_path}' car la structure n'a pas pu être filtrée."
         )
@@ -57,7 +85,7 @@ updated_data, items_removed = filter_list_in_json_data(
 )
 
 # Sauvegarder la liste filtrée dans le fichier de sortie
-if save_json_to_file(updated_data, output_config_path):
+if save_json_file(output_config_path, updated_data):
     if items_removed > 0:
         print(
             f"{items_removed} instance(s) de la source '{source_name_to_remove}' ont été supprimées."
@@ -70,5 +98,5 @@ if save_json_to_file(updated_data, output_config_path):
         f"La configuration mise à jour a été sauvegardée dans : '{output_config_path}'"
     )
 else:
-    # save_json_to_file logue déjà l'erreur
+    # save_json_file logue déjà l'erreur
     exit(1)

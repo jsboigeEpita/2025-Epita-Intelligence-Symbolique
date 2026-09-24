@@ -7,6 +7,10 @@ Script pour ajouter une section sur la couverture des tests mockés au rapport d
 import os
 import sys
 from pathlib import Path
+
+from argumentation_analysis.core.utils.markdown_utils import (
+    update_markdown_section,
+)
 import datetime
 
 # Ajouter le répertoire parent au PYTHONPATH
