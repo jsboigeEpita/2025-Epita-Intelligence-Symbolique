@@ -248,49 +248,45 @@ class InformalAnalysisPlugin:
 
             key_columns = ["PK", "FK_Parent", "parent_pk"]
 
+            # #2344: every reader goes through ``df.loc[pk]``. A key the loader
+            # cannot index (null, non-numeric, duplicated) stops the load here,
+            # instead of an error log and a frame that fails in the first lookup.
+            if "PK" not in df.columns:
+                raise ValueError(
+                    "Colonne 'PK' non trouvée : l'index de la taxonomie ne peut être défini."
+                )
             for col in key_columns:
-                if col in df.columns:
-                    try:
-                        df[col] = pd.to_numeric(df[col], errors="coerce")
-
-                        if col == "PK":
-                            if df[col].isnull().any():
-                                self._logger.error(
-                                    "La colonne clé primaire 'PK' contient des valeurs nulles après conversion. Problème de données."
-                                )
-                                df[col] = df[col].astype("Int64")
-                            else:
-                                df[col] = df[col].astype(int)
-                            self._logger.info(
-                                f"Colonne '{col}' traitée, type final: {df[col].dtype}."
-                            )
-                        else:
-                            if not df[col].isnull().any():
-                                df[col] = df[col].astype(int)
-                            self._logger.info(
-                                f"Colonne '{col}' (clé étrangère) traitée, type final: {df[col].dtype}."
-                            )
-
-                    except Exception as e:
-                        self._logger.warning(
-                            f"Impossible de convertir la colonne '{col}': {e}. La colonne sera laissée en l'état."
+                if col not in df.columns:
+                    continue
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+                if col == "PK":
+                    n_null = int(df[col].isnull().sum())
+                    if n_null:
+                        raise ValueError(
+                            f"La colonne clé primaire 'PK' porte {n_null} valeur(s) "
+                            "nulle(s) ou non numérique(s) : la taxonomie ne peut être indexée."
                         )
-
-            if "PK" in df.columns and pd.api.types.is_integer_dtype(df["PK"].dtype):
-                try:
-                    df.set_index("PK", inplace=True)
+                    df[col] = df[col].astype(int)
                     self._logger.info(
-                        f"Index 'PK' défini avec succès. Type de l'index: {df.index.dtype}."
+                        f"Colonne '{col}' traitée, type final: {df[col].dtype}."
                     )
-                except Exception as e:
-                    self._logger.error(
-                        f"Erreur critique lors de la définition de 'PK' comme index: {e}"
+                else:
+                    if not df[col].isnull().any():
+                        df[col] = df[col].astype(int)
+                    self._logger.info(
+                        f"Colonne '{col}' (clé étrangère) traitée, type final: {df[col].dtype}."
                     )
-            else:
-                pk_dtype = df["PK"].dtype if "PK" in df.columns else "N/A"
-                msg = f"Colonne 'PK' non trouvée ou de type incorrect ({pk_dtype}). L'index ne peut être défini."
-                self._logger.error(msg)
-                raise ValueError(msg)
+
+            duplicated = sorted(set(df.loc[df["PK"].duplicated(), "PK"]))
+            if duplicated:
+                raise ValueError(
+                    f"La colonne clé primaire 'PK' porte des doublons : {duplicated[:10]}"
+                    " — ``df.loc[pk]`` rendrait plusieurs lignes."
+                )
+            df.set_index("PK", inplace=True)
+            self._logger.info(
+                f"Index 'PK' défini avec succès. Type de l'index: {df.index.dtype}."
+            )
 
             return df
         except Exception as e:
