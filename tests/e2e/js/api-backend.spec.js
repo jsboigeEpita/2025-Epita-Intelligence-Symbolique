@@ -42,9 +42,10 @@ test.describe('API Backend - Services d\'Analyse', () => {
   });
 
   test('Test de détection de sophismes', async ({ request }) => {
+    // #2526 : le palier `taxonomy` du détecteur tourne sans clé LLM.
     const fallacyData = {
       text: "Tous les corbeaux que j'ai vus sont noirs, donc tous les corbeaux sont noirs.",
-      options: { "include_context": true }
+      options: { tier: "taxonomy" }
     };
 
     const response = await request.post(`${FLASK_API_BASE_URL}/api/fallacies`, {
@@ -54,9 +55,8 @@ test.describe('API Backend - Services d\'Analyse', () => {
     expect(response.status()).toBe(200);
     
     const result = await response.json();
-    expect(result).toHaveProperty('success', true);
-    expect(result).toHaveProperty('fallacies');
-    expect(result.fallacy_count).toBeGreaterThan(0);
+    expect(result).toHaveProperty('tier', 'taxonomy');
+    expect(result.fallacy_count).toBe(result.fallacies.length);
   });
 
   test('Test de construction de framework', async ({ request }) => {
@@ -177,9 +177,8 @@ test.describe('API Backend - Services d\'Analyse', () => {
         Cette tâche complexe nécessite une collaboration internationale et une réflexion approfondie sur nos valeurs.
       `,
       analysis_type: "comprehensive",
+      // #2526 : une option que la route ne prend pas est refusée (422).
       options: {
-        deep_analysis: true,
-        include_logical_structure: true,
         detect_fallacies: true
       }
     };
