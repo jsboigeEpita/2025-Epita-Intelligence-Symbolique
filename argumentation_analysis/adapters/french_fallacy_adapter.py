@@ -467,6 +467,9 @@ class FallacyAnalysisResult:
     arguments: Optional[Dict[str, List[str]]] = None
     tiers_used: List[str] = field(default_factory=list)
     explanation: str = ""
+    # #2539: a tier that ran but is known not to discriminate says so here.
+    # Present in ``to_dict`` only when a tier wrote to it.
+    tier_warnings: Dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dict matching AbstractFallacyDetector.detect() output.
@@ -477,7 +480,7 @@ class FallacyAnalysisResult:
         here at the single output boundary — fail-loud (None) when the family
         has no template, never a fabricated justification (#1019).
         """
-        return {
+        result = {
             "text": self.text,
             "detected_fallacies": {
                 f.fallacy_type: {
@@ -494,6 +497,9 @@ class FallacyAnalysisResult:
             "explanation": self.explanation,
             "total_fallacies": len(self.fallacies),
         }
+        if self.tier_warnings:
+            result["tier_warnings"] = dict(self.tier_warnings)
+        return result
 
 
 # ── Tier 3: Symbolic Detection ──────────────────────────────────────────
@@ -614,6 +620,20 @@ class NLIFallacyDetector:
 
     DEFAULT_MODEL = "MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7"
     CONFIDENCE_THRESHOLD = 0.5
+
+    # #2539, measured with DEFAULT_MODEL on 65 fallacies (the 2.3.2 French test
+    # set, 5 per class) against 20 fallacy-free controls: the flat formulation
+    # below has AUC 0.489, and three other formulations score 0.34-0.54. Every
+    # control scores >= 0.96, so at any usable threshold the tier reports a
+    # fallacy for a weather report. The adapter therefore leaves it off by
+    # default, and a result the tier contributed to carries this warning.
+    UNCALIBRATED = (
+        "uncalibrated (#2539): the flat formulation measured AUC 0.489 on 65 "
+        "fallacies vs 20 fallacy-free controls, every control scored >= 0.96; "
+        "a detection from this tier does not distinguish a fallacy from a "
+        "factual statement (the hierarchical path's stage 1 uses the same "
+        "template and was not measured separately)"
+    )
 
     def __init__(self, model_name: Optional[str] = None, threshold: float = 0.5):
         self._model_name = model_name or self.DEFAULT_MODEL
@@ -1372,7 +1392,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
 
     Tier hierarchy (fastest → most capable):
       Tier 3:   Symbolic (spaCy Matcher, always available)
-      Tier 2:   NLI zero-shot (deprecated, shadowed by self-hosted LLM)
+      Tier 2:   NLI zero-shot (off by default: measured at chance, #2539)
       Tier 1.5: Self-hosted LLM (vLLM/text-generation-webui, #297)
       Tier 1:   Remote LLM (OpenAI via ServiceDiscovery)
       Tier 0.5: CamemBERT fine-tuned (deprecated, model never deployed)
@@ -1390,7 +1410,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
         self,
         enable_symbolic: bool = True,
         enable_camembert: bool = False,  # Deprecated (#297): model never deployed
-        enable_nli: bool = True,
+        enable_nli: bool = False,  # #2539: see NLIFallacyDetector.UNCALIBRATED
         enable_llm: bool = True,
         enable_self_hosted_llm: bool = True,
         camembert_model_path: Optional[str] = None,
@@ -1429,6 +1449,10 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             if enable_nli and not enable_self_hosted_llm
             else None
         )
+        if self._nli is not None:
+            logger.warning(
+                "NLI fallacy tier enabled: %s", NLIFallacyDetector.UNCALIBRATED
+            )
         self._llm = (
             LLMFallacyDetector(
                 service_discovery=service_discovery,
@@ -1511,6 +1535,7 @@ class FrenchFallacyAdapter(AbstractFallacyDetector):
             if nli_results:
                 tier_name = "nli_hierarchical" if self._nli_hierarchical else "nli"
                 result.tiers_used.append(tier_name)
+                result.tier_warnings[tier_name] = NLIFallacyDetector.UNCALIBRATED
 
         # Tier 0: Remote LLM zero-shot
         if self._llm and self._llm.is_available():
