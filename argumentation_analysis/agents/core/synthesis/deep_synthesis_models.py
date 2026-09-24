@@ -140,6 +140,10 @@ class DeepSynthesisReport:
     belief_retractions: List[BeliefRetraction] = field(default_factory=list)
     counter_arguments: List[CounterArgumentEntry] = field(default_factory=list)
     cross_text_parallels: List[CrossTextParallel] = field(default_factory=list)
+    # #2344 — Section 8 status: "computed" (a phase wrote the parallels, maybe
+    # none) or "not_computed" (no phase produced them). Empty reads as
+    # "not_computed", which is true while no phase writes them.
+    cross_text_parallels_status: str = ""
     final_synthesis: str = ""
     # FB-31 #1108 — Section 9 status (fail-loud, mirrors grounded_synthesis_status):
     # "llm" (LLM-conducted synthesis), "unavailable" (no LLM / empty result),
@@ -181,6 +185,7 @@ class DeepSynthesisReport:
             "belief_retractions": [b.__dict__ for b in self.belief_retractions],
             "counter_arguments": [c.__dict__ for c in self.counter_arguments],
             "cross_text_parallels": [p.__dict__ for p in self.cross_text_parallels],
+            "cross_text_parallels_status": self.cross_text_parallels_status,
             "final_synthesis": self.final_synthesis,
             "final_synthesis_status": self.final_synthesis_status,
             "convergent_verdicts": [v.__dict__ for v in self.convergent_verdicts],

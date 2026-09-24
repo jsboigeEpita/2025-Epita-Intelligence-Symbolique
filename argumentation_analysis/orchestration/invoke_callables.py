@@ -10571,6 +10571,9 @@ async def _invoke_deep_synthesis(
                 cross_text_parallels=DeepSynthesisAgent._build_cross_text_parallels(
                     state
                 ),
+                cross_text_parallels_status=(
+                    DeepSynthesisAgent._cross_text_parallels_status(state)
+                ),
             )
             # FB-31 #1108: no LLM in the static-builder path → Section 9 is
             # fail-loud. final_synthesis stays empty and the status says

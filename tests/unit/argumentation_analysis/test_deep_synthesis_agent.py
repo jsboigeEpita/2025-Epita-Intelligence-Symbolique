@@ -311,6 +311,10 @@ class TestSectionBuilders:
     def test_s8_cross_text_parallels_empty(self, state):
         parallels = DeepSynthesisAgent._build_cross_text_parallels(state)
         assert parallels == []
+        # #2344: no phase writes the field, so the real state says "not computed".
+        assert DeepSynthesisAgent._cross_text_parallels_status(state) == (
+            "not_computed"
+        )
 
     def test_s9_final_synthesis_fail_loud_no_llm(self, state):
         """FB-31 #1108: without an LLM, Section 9 is FAIL-LOUD — final_synthesis
