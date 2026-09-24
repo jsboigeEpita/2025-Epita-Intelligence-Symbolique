@@ -103,7 +103,14 @@ class RhetoricalStrategies:
     def get_best_strategy(
         self, argument: Argument, counter_type: CounterArgumentType
     ) -> RhetoricalStrategy:
-        """Determine best strategy for a counter-argument type."""
+        """Rank the strategies that fit ``counter_type`` against ``argument``.
+
+        Each counter type admits a short list of strategies, in a fixed order
+        of preference. The one the argument's own content calls for
+        (``suggest_strategy`` on its type and text) wins when it is on that
+        list; otherwise the list's first entry is the answer. So two arguments
+        answered with the same counter type can get different strategies.
+        """
         strategy_mapping = {
             CounterArgumentType.DIRECT_REFUTATION: [
                 RhetoricalStrategy.STATISTICAL_EVIDENCE,
@@ -128,6 +135,9 @@ class RhetoricalStrategies:
         candidates = strategy_mapping.get(
             counter_type, [RhetoricalStrategy.SOCRATIC_QUESTIONING]
         )
+        suggested = self.suggest_strategy(argument.argument_type, argument.content)
+        if suggested in candidates:
+            return suggested
         return candidates[0]
 
     # --- Strategy implementations ---

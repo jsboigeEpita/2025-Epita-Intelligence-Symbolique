@@ -23,12 +23,25 @@ class CounterArgumentType(Enum):
 
 
 class ArgumentStrength(Enum):
-    """Argument strength levels."""
+    """Argument strength levels.
+
+    ``DECISIVE`` comes from a model's judgment against ``DECISIVE_CRITERION``,
+    which the LLM counter-argument prompt carries. The template path's
+    ``_assess_strength`` reads word counts and evidence words, which cannot tell
+    a decisive counter from a strong one, so it stops at ``STRONG``.
+    """
 
     WEAK = "weak"
     MODERATE = "moderate"
     STRONG = "strong"
     DECISIVE = "decisive"
+
+
+DECISIVE_CRITERION = (
+    'Use "decisive" only when the counter-argument shows the target cannot '
+    "stand as stated: a counter-example to a universal claim, or a "
+    "contradiction between its premises."
+)
 
 
 class RhetoricalStrategy(Enum):
