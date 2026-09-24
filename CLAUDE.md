@@ -15,7 +15,9 @@ Multi-agent argumentation analysis system for EPITA (student project platform). 
 | Machine | Envs available (measured) | Notes |
 |---|---|---|
 | `myia-po-2023` | `projet-is` (only) | invoke the interpreter directly: `/c/Tools/miniconda3/envs/projet-is/python.exe` |
-| `myia-po-2025`, `myia-ai-01` | `projet-is-roo-new` (SK 1.40, Pydantic 2.11, JPype 1.6), `projet-is` (SK 1.35, Pydantic 2.11) | dev env preferred |
+| `myia-po-2025`, `myia-ai-01` | `projet-is-roo-new` (SK 1.40, Pydantic 2.11), `projet-is` (SK 1.35, Pydantic 2.11) | dev env preferred |
+
+JPype is pinned in `environment.yml` to the version CI installs (1.7.1, #2538). A dev env on another version does not measure what the gate runs: check with `python -c "import jpype; print(jpype.__version__)"`, and bring it up with `pip install jpype1==1.7.1`.
 
 ```bash
 # List available environments

@@ -1,7 +1,7 @@
 # Core Dependencies
 Flask[async]~=3.1.1
 Flask-CORS
-jpype1
+jpype1==1.7.1  # #2538: the version environment.yml pins (see the measurement there)
 matplotlib
 networkx
 nltk
