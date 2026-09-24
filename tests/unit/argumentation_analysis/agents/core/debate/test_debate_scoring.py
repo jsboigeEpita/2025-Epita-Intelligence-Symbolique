@@ -108,9 +108,9 @@ class TestEvidenceQuality:
 
 class TestRelevance:
     def test_no_context(self, analyzer):
+        # #2344: nothing to compare with is not computed, not a 0.8.
         arg = _make_arg("Climate change is real.")
-        score = analyzer._assess_relevance(arg, [])
-        assert score == 0.8  # default for no context
+        assert analyzer._assess_relevance(arg, []) is None
 
     def test_high_overlap(self, analyzer):
         arg = _make_arg("Climate change is a serious threat.")
@@ -207,9 +207,9 @@ class TestFactCheck:
 
 class TestNovelty:
     def test_no_context(self, analyzer):
+        # #2344: nothing to compare with is not computed, not a 0.8.
         arg = _make_arg("Novel idea")
-        score = analyzer._assess_novelty(arg, [])
-        assert score == 0.8
+        assert analyzer._assess_novelty(arg, []) is None
 
     def test_unique_argument(self, analyzer):
         arg = _make_arg("Quantum computing changes everything", agent="Alice")
@@ -224,11 +224,11 @@ class TestNovelty:
         assert score < 0.3
 
     def test_same_agent_ignored(self, analyzer):
-        """Same agent's args excluded from comparison => no opponents => novelty=1.0."""
+        """Same agent's args excluded from comparison => no opponents => not computed."""
         arg = _make_arg("Repeated by same person", agent="Alice")
         context = [_make_arg("Repeated by same person", agent="Alice")]
-        score = analyzer._assess_novelty(arg, context)
-        assert score == 1.0  # no opponent args => avg_similarity=0 => 1-0=1
+        # #2344: no opponent argument used to score a perfect 1.0.
+        assert analyzer._assess_novelty(arg, context) is None
 
 
 # ── Full Analysis ──
@@ -245,11 +245,12 @@ class TestAnalyzeArgument:
         metrics = analyzer.analyze_argument(arg, [])
         assert 0 <= metrics.logical_coherence <= 1.0
         assert 0 <= metrics.evidence_quality <= 1.0
-        assert 0 <= metrics.relevance_score <= 1.0
+        # No context: relevance and novelty are not computed (#2344).
+        assert metrics.relevance_score is None
         assert 0 <= metrics.emotional_appeal <= 1.0
         assert 0 <= metrics.readability_score <= 1.0
         assert 0 <= metrics.fact_check_score <= 1.0
-        assert 0 <= metrics.novelty_score <= 1.0
+        assert metrics.novelty_score is None
         assert 0 <= metrics.persuasiveness <= 1.0
 
     def test_persuasiveness_is_weighted_combo(self, analyzer):
@@ -257,13 +258,16 @@ class TestAnalyzeArgument:
             "Because studies show evidence, therefore the conclusion follows."
         )
         metrics = analyzer.analyze_argument(arg, [])
+        # #2344: relevance and novelty are not computed without context, so
+        # their weights drop out and the others are renormalized.
         expected = min(
-            metrics.logical_coherence * 0.25
-            + metrics.evidence_quality * 0.25
-            + metrics.relevance_score * 0.15
-            + metrics.readability_score * 0.15
-            + metrics.fact_check_score * 0.10
-            + metrics.novelty_score * 0.10,
+            (
+                metrics.logical_coherence * 0.25
+                + metrics.evidence_quality * 0.25
+                + metrics.readability_score * 0.15
+                + metrics.fact_check_score * 0.10
+            )
+            / 0.75,
             1.0,
         )
         assert metrics.persuasiveness == pytest.approx(expected, abs=0.01)

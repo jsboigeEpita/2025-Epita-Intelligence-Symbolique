@@ -502,7 +502,9 @@ class TestArgumentAnalyzer:
         )
         m1 = analyzer.analyze_argument(first, [])
         m2 = analyzer.analyze_argument(second, [first])
-        assert m2.novelty_score <= m1.novelty_score
+        # #2344: the first argument has nothing to compare with.
+        assert m1.novelty_score is None
+        assert m2.novelty_score == 0.0
 
     def test_evidence_quality_keywords(self):
         """Evidence quality increases with evidence keywords."""

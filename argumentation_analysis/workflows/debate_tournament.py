@@ -35,11 +35,17 @@ def _debate_score_converged(prev: Any, curr: Any) -> bool:
 
     def _extract_score(output: Dict) -> float:
         if "logical_coherence" in output:
+            # #2344: relevance is None when it could not be computed; a score
+            # that was not computed does not count as a 0.
             scores = [
-                output.get("logical_coherence", 0),
-                output.get("evidence_quality", 0),
-                output.get("relevance_score", 0),
-                output.get("persuasiveness", 0),
+                value
+                for value in (
+                    output.get("logical_coherence"),
+                    output.get("evidence_quality"),
+                    output.get("relevance_score"),
+                    output.get("persuasiveness"),
+                )
+                if isinstance(value, (int, float))
             ]
             return sum(scores) / len(scores) if scores else 0.0
         return output.get("debate_score", output.get("score", 0.0))
