@@ -1,6 +1,7 @@
 import os
 import glob
 import random
+from pathlib import Path
 
 # --- CONFIGURATION AVEC JPYPE ---
 # Ce fichier ne doit PAS démarrer la JVM. Il suppose qu'elle est déjà démarrée
