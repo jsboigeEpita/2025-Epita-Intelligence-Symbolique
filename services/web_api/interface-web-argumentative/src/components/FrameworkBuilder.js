@@ -114,7 +114,7 @@ const FrameworkBuilder = () => {
     setError(null);
 
     try {
-      const response = await buildFramework(args, attacks);
+      const response = await buildFramework(args, attacks, options.semantics);
       setFramework(response);
       setSelectedExtension(0);
     } catch (err) {

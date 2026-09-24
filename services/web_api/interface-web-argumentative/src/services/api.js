@@ -95,79 +95,35 @@ export const detectFallacies = async (text, options = {}) => {
   return handleResponse(response);
 };
 
-// Analyse de framework de Dung via le nouveau backend centralisé
-export const analyzeDungFramework = async (argumentList, attacks = []) => {
-  // Les données sont directement Pydantic-compatibles depuis le frontend
+// Analyse de framework de Dung : POST /api/v1/framework/analyze (#2526).
+// Ce backend renvoie { analysis: { extensions: { grounded, preferred, ... },
+// graph_properties } } ; la vue lit les extensions d'une sémantique en liste de
+// listes, et des statistiques. La sémantique grounded est une extension unique.
+export const analyzeDungFramework = async (argumentList, attacks = [], semantics = 'preferred') => {
   const requestBody = {
     arguments: argumentList.map(arg => arg.id), // Extrait les IDs : ['a', 'b', ...]
-    attacks: attacks // Les attaques sont déjà au format [['source_id', 'target_id']]
+    attacks: attacks, // Les attaques sont déjà au format [['source_id', 'target_id']]
+    options: { semantics, compute_extensions: true }
   };
 
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/framework`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/v1/framework/analyze`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
   });
 
-  return handleResponse(response);
-};
-
-// Requêtes logiques avancées
-export const createBeliefSet = async (beliefs) => {
-  const requestBody = { beliefs };
-
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic/belief-set`, {
-    method: 'POST',
-    headers: defaultHeaders,
-    body: JSON.stringify(requestBody)
-  });
-
-  return handleResponse(response);
-};
-
-export const executeLogicQuery = async (beliefSet, query) => {
-  const requestBody = {
-    belief_set: beliefSet,
-    query
+  const { analysis } = await handleResponse(response);
+  const found = (analysis.extensions || {})[semantics] || [];
+  const properties = analysis.graph_properties || {};
+  return {
+    ...analysis,
+    semantics,
+    extensions: semantics === 'grounded' ? [found] : found,
+    statistics: {
+      arguments_count: properties.num_arguments,
+      attacks_count: properties.num_attacks
+    }
   };
-
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic/query`, {
-    method: 'POST',
-    headers: defaultHeaders,
-    body: JSON.stringify(requestBody)
-  });
-
-  return handleResponse(response);
-};
-
-export const generateLogicQueries = async (beliefSet, count = 5) => {
-  const requestBody = {
-    belief_set: beliefSet,
-    count
-  };
-
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic/generate-queries`, {
-    method: 'POST',
-    headers: defaultHeaders,
-    body: JSON.stringify(requestBody)
-  });
-
-  return handleResponse(response);
-};
-
-export const interpretLogicResults = async (results, context = '') => {
-  const requestBody = {
-    results,
-    context
-  };
-
-  const response = await fetchWithTimeout(`${API_BASE_URL}/api/logic/interpret`, {
-    method: 'POST',
-    headers: defaultHeaders,
-    body: JSON.stringify(requestBody)
-  });
-
-  return handleResponse(response);
 };
 
 // Analyse et visualisation de graphe logique
