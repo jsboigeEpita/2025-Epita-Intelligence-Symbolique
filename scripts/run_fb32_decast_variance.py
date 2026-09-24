@@ -359,6 +359,9 @@ def DeepSynthesisReport_stub(state, source_meta):
         belief_retractions=DeepSynthesisAgent._build_belief_retractions(state),
         counter_arguments=DeepSynthesisAgent._build_counter_arguments(state),
         cross_text_parallels=DeepSynthesisAgent._build_cross_text_parallels(state),
+        cross_text_parallels_status=DeepSynthesisAgent._cross_text_parallels_status(
+            state
+        ),
     )
 
 

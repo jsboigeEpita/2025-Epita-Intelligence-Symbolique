@@ -279,8 +279,9 @@ class DeepSynthesisAgent(BaseAgent):
         # Section 7 — counter-arguments
         report.counter_arguments = self._build_counter_arguments(state)
 
-        # Section 8 — cross-text parallels (if available)
+        # Section 8 — cross-text parallels, and whether anything computed them
         report.cross_text_parallels = self._build_cross_text_parallels(state)
+        report.cross_text_parallels_status = self._cross_text_parallels_status(state)
 
         # Convergence layer (Track DD #637) — cross-method agreement, computed
         # before section 9 so both the LLM and template thesis can ground in it.
@@ -676,12 +677,23 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _build_cross_text_parallels(state: Any) -> List[CrossTextParallel]:
-        # Cross-text parallels require comparison data not yet in state.
-        # Placeholder — will be populated when multi-corpus runs happen.
         parallels = getattr(state, "cross_text_parallels", [])
         if parallels:
             return [CrossTextParallel(**p) for p in parallels]
         return []
+
+    @staticmethod
+    def _cross_text_parallels_status(state: Any) -> str:
+        """Say whether a producer computed Section 8 for this state (#2344).
+
+        The state field is present only once a phase has written it, so its
+        presence is the signal: ``"computed"`` (possibly with nothing found)
+        versus ``"not_computed"``. No phase writes it yet, so an empty list
+        alone cannot tell "none found" from "never looked".
+        """
+        if hasattr(state, "cross_text_parallels"):
+            return "computed"
+        return "not_computed"
 
     @staticmethod
     def _build_convergent_verdicts(state: Any) -> tuple:
@@ -881,9 +893,20 @@ class DeepSynthesisAgent(BaseAgent):
                     sections.append(f"  _{p.commentary}_")
             sections.append("")
         else:
-            sections.append(
-                "_No cross-text parallels in this run (single-corpus analysis)._\n"
-            )
+            # #2344: say why the section is empty, and only what the report knows.
+            status = report.cross_text_parallels_status or "not_computed"
+            if status == "computed":
+                sections.append("_No cross-text parallels found in this run._\n")
+            elif status == "not_computed":
+                sections.append(
+                    "_Cross-text parallels not computed: no phase of this pipeline "
+                    "produces them yet._\n"
+                )
+            else:
+                raise ValueError(
+                    f"cross_text_parallels_status={status!r} is not one of "
+                    "'computed', 'not_computed'"
+                )
 
         # Convergent verdicts (Track DD #637) — cross-method agreement, rendered
         # from the structured field so it appears regardless of synthesis path.

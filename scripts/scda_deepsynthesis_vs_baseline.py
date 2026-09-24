@@ -274,12 +274,18 @@ def detect_cross_text_parallels(text: str) -> bool:
 
     The section heading "Cross-Text Rhetorical Parallels" must not by itself
     count as a parallel: the DeepSynthesis report always emits the heading, even
-    when the body says "No cross-text parallels in this run". Guard against that
-    explicit-negation false-positive, then look for substantive markers only
-    (the heading-matching "cross-text"/"cross text" tokens are excluded).
+    when the body says the section is empty ("No cross-text parallels found in
+    this run", "Cross-text parallels not computed", or the older "No cross-text
+    parallels in this run"). Guard against those explicit negations, then look
+    for substantive markers only (the heading-matching "cross-text"/"cross text"
+    tokens are excluded).
     """
     low = text.lower()
-    if re.search(r"no cross-text parallels|pas de parall|aucun parall", low):
+    if re.search(
+        r"no cross-text parallels|cross-text parallels not computed"
+        r"|pas de parall|aucun parall",
+        low,
+    ):
         return False
     markers = [
         "intertextuel",

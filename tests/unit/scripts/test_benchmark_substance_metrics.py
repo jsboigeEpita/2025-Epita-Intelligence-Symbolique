@@ -104,6 +104,24 @@ class TestCrossTextFalsePositiveFix:
         text = "## 8. Cross-Text Rhetorical Parallels\n\n(section present, no content)"
         assert bench.detect_cross_text_parallels(text) is False
 
+    @pytest.mark.parametrize("status", ["computed", "not_computed"])
+    def test_rendered_empty_section_is_false(self, bench, status):
+        # #2344: feed the benchmark the sentence the renderer really writes.
+        from argumentation_analysis.agents.core.synthesis.deep_synthesis_agent import (
+            DeepSynthesisAgent,
+        )
+        from argumentation_analysis.agents.core.synthesis.deep_synthesis_models import (
+            DeepSynthesisReport,
+        )
+
+        report = DeepSynthesisReport(cross_text_parallels_status=status)
+        text = DeepSynthesisAgent.render_markdown(report)
+        assert "## 8. Cross-Text Rhetorical Parallels" in text
+        # A marker elsewhere in the report must not outvote the section's own
+        # statement that it is empty: the negation is what decides.
+        text += "\nThis appeal is similar to the one in the opening paragraph."
+        assert bench.detect_cross_text_parallels(text) is False
+
     def test_populated_content_is_true(self, bench):
         text = "Ce motif récurrent apparaît aussi ailleurs ; comparaison avec un autre corpus."
         assert bench.detect_cross_text_parallels(text) is True
