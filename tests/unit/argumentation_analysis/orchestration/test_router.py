@@ -462,6 +462,28 @@ class TestCapabilityDiscovery:
         caps = router._get_available_capabilities(registry)
         assert "argument_quality" in caps
 
+    def test_broken_registry_raises_instead_of_dropping_the_capability(self):
+        """#2344: a registry that fails is not a capability without a provider.
+
+        The real registry answers ``[]`` for a capability nobody provides; it
+        raises only when broken. Here its index names a component that was
+        never registered. Swallowing that error removed the capability from
+        the route as if it had no provider.
+        """
+        from argumentation_analysis.core.capability_registry import (
+            CapabilityRegistry,
+        )
+
+        registry = CapabilityRegistry()
+        registry.register_plugin(
+            "quality_plugin", object, capabilities=["argument_quality"]
+        )
+        registry._capability_index["counter_argument_generation"] = {"ghost"}
+        router = _make_router()
+
+        with pytest.raises(KeyError, match="ghost"):
+            router._get_available_capabilities(registry)
+
 
 # ============================================================
 # Integration with run_unified_analysis
@@ -503,6 +525,8 @@ class TestRouterIntegration:
         llm_tier.assert_not_called()
         assert "auto" in result["workflow_name"]
         assert "phases" in result
+        # #2344: the key exists only when auto-routing fell back.
+        assert "auto_routing_error" not in result
 
     @pytest.mark.asyncio
     async def test_auto_falls_back_to_standard_on_failure(self):
@@ -544,8 +568,10 @@ class TestRouterIntegration:
                 create_state=False,
             )
 
-        # Falls back to standard
+        # Falls back to standard, and the result says why (#2344): the
+        # warning log is not the state.
         assert result["workflow_name"] == "standard_analysis"
+        assert result["auto_routing_error"] == "RuntimeError: Router crashed"
 
     @pytest.mark.asyncio
     async def test_existing_workflow_names_unchanged(self):
