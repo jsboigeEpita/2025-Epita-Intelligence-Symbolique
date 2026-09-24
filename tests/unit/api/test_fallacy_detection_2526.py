@@ -199,14 +199,12 @@ def test_a_tier_that_did_not_run_is_a_503(client, detector, result):
 
 
 def test_a_failed_llm_call_is_a_502_not_an_empty_list(client, detector):
-    """The shape measured with an unreachable LLM: no raise, an ``error`` key."""
+    """What the invoker raises when no LLM run answered (#2540)."""
     detector(
-        {
-            "error": "service failed to complete the prompt: Connection error.",
-            "fallacies": [],
-            "analysis_regime": "one_shot",
-            "extraction_method": "widenet+perarg_union",
-        }
+        error=invoke_callables.FallacyDetectionFailed(
+            "FALLACY_DETECTION_FAILED: tier=llm, reason=service failed to "
+            "complete the prompt: Connection error."
+        )
     )
 
     response = client.post("/api/fallacies", json={"text": TU_QUOQUE})
