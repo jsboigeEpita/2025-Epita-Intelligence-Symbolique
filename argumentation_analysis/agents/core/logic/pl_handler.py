@@ -137,33 +137,13 @@ class PLHandler:
             pass  # Sanitizer unavailable, proceed with existing normalization
 
         try:
-            if constants:
-                PlSignature = jpype.JClass(
-                    "org.tweetyproject.logics.pl.syntax.PlSignature"
-                )
-                signature = PlSignature()
-                Proposition = jpype.JClass(
-                    "org.tweetyproject.logics.pl.syntax.Proposition"
-                )
-                for const_name in constants:
-                    proposition = Proposition(
-                        jpype.JClass("java.lang.String")(const_name)
-                    )
-                    if not signature.contains(proposition):
-                        signature.add(proposition)
-                pl_formula = self._pl_parser.parseFormula(
-                    jpype.JString(normalized_formula), signature
-                )
-            else:
-                # Using JString is a good practice to avoid ambiguity.
-                pl_formula = self._pl_parser.parseFormula(
-                    jpype.JString(normalized_formula)
-                )
-
-            logger.info(
-                f"Successfully parsed PL formula: '{formula_str}' as '{normalized_formula}' -> {pl_formula}"
-            )
-            return pl_formula
+            # #2537 : ce Tweety n'expose AUCUNE surcharge
+            # ``parseFormula(String, PlSignature)`` (mesuré : "No matching
+            # overloads") — l'ancien appel à deux arguments levait TypeError
+            # sur CHAQUE parse avec constantes. Le vocabulaire déclaré est
+            # honoré après coup : les atomes de la formule parsée doivent
+            # faire partie des constantes.
+            pl_formula = self._pl_parser.parseFormula(jpype.JString(normalized_formula))
         except jpype.JException as e:
             logger.error(
                 f"JPype JException parsing PL formula '{formula_str}' (normalized to '{normalized_formula}'): {e.getMessage()}",
@@ -178,6 +158,22 @@ class PLHandler:
                 exc_info=True,
             )
             raise
+
+        if constants:
+            declared = set(constants)
+            undeclared = {
+                str(atom.getName()) for atom in pl_formula.getAtoms()
+            } - declared
+            if undeclared:
+                raise ValueError(
+                    f"La formule '{formula_str}' utilise des propositions "
+                    f"non déclarées: {sorted(undeclared)}"
+                )
+
+        logger.info(
+            f"Successfully parsed PL formula: '{formula_str}' as '{normalized_formula}' -> {pl_formula}"
+        )
+        return pl_formula
 
     def check_consistency(self, belief_set: str) -> Tuple[bool, str]:
         """Uniform handler API mirroring ``FOLHandler.check_consistency``.

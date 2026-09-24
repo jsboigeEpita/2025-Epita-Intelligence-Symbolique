@@ -45,11 +45,17 @@ def agent_factory(mock_kernel_with_llm) -> AgentFactory:
 
 @pytest.fixture
 def mock_tweety_bridge() -> MagicMock:
-    """Fixture pour créer un mock de TweetyBridge."""
-    mock_bridge = MagicMock()
-    # Simuler que la JVM est prête pour éviter les erreurs dans le constructeur de PropositionalLogicAgent
-    mock_bridge.is_jvm_ready.return_value = True
-    return mock_bridge
+    """Double contraint au vrai pont (#2537).
+
+    Un ``MagicMock`` nu certifiait verticaux des méthodes fantômes
+    (``validate_formula``, ``perform_pl_query``) que le vrai ``TweetyBridge``
+    n'expose pas. ``create_autospec`` n'autorise que la surface réelle.
+    """
+    from unittest.mock import create_autospec
+
+    from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
+
+    return create_autospec(TweetyBridge, instance=True)
 
 
 @pytest.mark.llm_integration
@@ -201,12 +207,14 @@ def test_watson_tools_validate_formula(mock_tweety_bridge: MagicMock) -> None:
         WatsonTools,
     )
 
-    mock_tweety_bridge.validate_formula.return_value = (True, "Valid")
+    mock_tweety_bridge.pl_handler.parse_pl_formula.return_value = object()
     tools = WatsonTools(tweety_bridge=mock_tweety_bridge, constants=["A", "B"])
 
-    result = tools.validate_formula("A & B")
+    result = tools.validate_formula("A && B")
     assert result is True
-    mock_tweety_bridge.validate_formula.assert_called_once()
+    mock_tweety_bridge.pl_handler.parse_pl_formula.assert_called_once_with(
+        "A && B", constants=["A", "B"]
+    )
 
 
 @pytest.mark.llm_integration
@@ -216,7 +224,9 @@ def test_watson_tools_validate_formula_invalid(mock_tweety_bridge: MagicMock) ->
         WatsonTools,
     )
 
-    mock_tweety_bridge.validate_formula.return_value = (False, "Syntax error")
+    mock_tweety_bridge.pl_handler.parse_pl_formula.side_effect = ValueError(
+        "Syntax error"
+    )
     tools = WatsonTools(tweety_bridge=mock_tweety_bridge, constants=[])
 
     result = tools.validate_formula("A &&& B")
