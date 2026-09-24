@@ -11,14 +11,29 @@ argumentation_analysis/orchestration/structured_logging.py  ← core module
   ├── JsonFormatter    — JSON lines to stderr
   ├── HumanFormatter   — human-readable with [correlation_id] prefix
   ├── PhaseLogger      — logging.LoggerAdapter with correlation_id + phase_name
-  └── get_phase_logger() — factory, respects LOG_FORMAT env var
+  ├── get_phase_logger() — factory; configures nothing
+  └── formatter_from_env() — reads LOG_FORMAT; called by the entry points
 ```
+
+The module configures no handler. The process's logging belongs to the entry
+point, which installs the formatter `formatter_from_env()` returns:
+
+| Entry point | Where |
+|-------------|-------|
+| `python -m argumentation_analysis.run_orchestration` | `setup_logging()`, called by `main()` |
+| `python scripts/compare_orchestration_modes.py` | `_configure_logging()`, called by `main()` |
+
+Both configure with `basicConfig(..., force=True)`. Library modules still call
+`basicConfig` at import (#2346); without `force`, the first one imported wins
+and the entry point's call does nothing. Some library modules also attach
+handlers to their own loggers at import, so their lines can print a second
+time, in their own format (#2346).
 
 ## Environment Variables
 
 | Variable | Values | Default | Description |
 |----------|--------|---------|-------------|
-| `LOG_FORMAT` | `json`, anything else | human-readable | `json` → JSON lines to stderr for production |
+| `LOG_FORMAT` | `json`, anything else | human-readable | `json` → one JSON object per line on stderr, with every field passed in `extra`. Otherwise `%(asctime)s [%(levelname)s] [%(name)s] %(message)s`, prefixed with `[<first 8 chars of correlation_id>] [<phase_name>]` when the record carries them. Read when the entry point configures logging. |
 
 ## Usage
 
@@ -55,24 +70,38 @@ The correlation_id is stored in `ctx` and propagates to all phase executions.
 
 ## Recommended jq Queries
 
+The CLI prints its results on stdout and its logs on stderr, so the queries
+read stderr alone. Other lines reach stderr too (`print` diagnostics, the
+library handlers above): `fromjson?` skips them.
+
 ```bash
+export LOG_FORMAT=json
+RUN="python -m argumentation_analysis.run_orchestration --file texte.txt"
+
 # Filter by correlation ID
-python run_analysis.py 2>&1 | jq 'select(.correlation_id == "abc12345")'
+$RUN 2>&1 >/dev/null | jq -R 'fromjson? | select(.correlation_id == "abc12345")'
 
-# All phase transitions
-python run_analysis.py 2>&1 | jq 'select(.phase_name) | {timestamp, phase_name, message}'
+# Phase starts, in order
+$RUN 2>&1 >/dev/null | jq -R 'fromjson? | select(.message == "Starting phase") | {timestamp, phase_name, capability}'
 
-# Failed phases only
-python run_analysis.py 2>&1 | jq 'select(.level == "ERROR" and .phase_name)'
-
-# Duration summary per phase
-python run_analysis.py 2>&1 | jq 'select(.duration) | {phase_name, duration}'
+# Run summary: completed and degraded phases
+$RUN 2>&1 >/dev/null | jq -R 'fromjson? | select(.phases_completed != null) | {workflow, phases_completed, phases_total, phases_degraded}'
 ```
+
+The executor's structured lines are three: `Executing workflow ...` (`workflow`,
+`phases_total`), `Starting phase` (`phase_name`, `capability`) and
+`Workflow '...' finished: ...` (`workflow`, `phases_completed`, `phases_total`,
+`phases_degraded`, `structured_arg_degraded`). All carry `correlation_id`.
+Phase failures are logged by the `WorkflowDSL` logger, without these fields.
 
 ## Testing
 
 ```bash
-pytest tests/unit/argumentation_analysis/orchestration/test_structured_logging.py
+pytest tests/unit/argumentation_analysis/orchestration/test_structured_logging.py        tests/unit/argumentation_analysis/orchestration/test_log_format_reader_2346.py
 ```
 
-12 tests covering: PhaseLogger injection, JsonFormatter output, HumanFormatter prefix, LOG_FORMAT env control, correlation propagation across phases.
+`test_structured_logging.py` covers PhaseLogger injection, JsonFormatter output,
+HumanFormatter prefix, `formatter_from_env`, and correlation propagation.
+`test_log_format_reader_2346.py` runs each entry point's real `__main__` path in a
+subprocess, then checks the executor's line in both formats, so every
+import-time configuration of the real import graph has happened first.

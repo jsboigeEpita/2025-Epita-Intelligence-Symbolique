@@ -73,16 +73,36 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("orchestration_mode_harness")
 
-# Reduce noisy loggers
-for _name in ("httpx", "openai", "semantic_kernel", "urllib3"):
-    logging.getLogger(_name).setLevel(logging.WARNING)
+
+def _configure_logging() -> None:
+    """Configure the process's logging when the harness runs, not when it is imported.
+
+    ``LOG_FORMAT=json`` is read here (#2346): one JSON object per line.
+    Otherwise the readable format, prefixed with the run id and the phase
+    when the executor attaches them.
+
+    ``force=True``: the harness owns the process's configuration. Library
+    modules still call ``basicConfig`` at import (#2346); importing this
+    module's formatter already runs one, and without ``force`` it would win.
+    """
+    from argumentation_analysis.orchestration.structured_logging import (
+        formatter_from_env,
+    )
+
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        formatter_from_env(
+            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+        )
+    )
+    logging.basicConfig(level=logging.INFO, handlers=[handler], force=True)
+
+    # Reduce noisy loggers
+    for name in ("httpx", "openai", "semantic_kernel", "urllib3"):
+        logging.getLogger(name).setLevel(logging.WARNING)
+
 
 # Default wall-time budget (seconds) for EVERY mode. Pre-R653, the
 # conversational mode was unbounded and ran >600s on 643-octet input;
@@ -2360,6 +2380,7 @@ async def run_all(
 
 
 def main():
+    _configure_logging()
     parser = argparse.ArgumentParser(
         description="Compare orchestration modes on benchmark corpora",
     )
