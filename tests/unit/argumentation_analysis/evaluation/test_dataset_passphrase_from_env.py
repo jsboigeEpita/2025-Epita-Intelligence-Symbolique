@@ -17,6 +17,11 @@ from pathlib import Path
 
 import pytest
 
+# The subject of this file is the real ambient passphrase, so it cannot pass
+# without it. The keyless pass of #2411 deselects this marker; without it,
+# that pass ran this file with the passphrase emptied under CI and failed.
+pytestmark = pytest.mark.requires_dataset_passphrase
+
 REPO_ROOT = Path(__file__).resolve().parents[4]
 
 _SECRET_CONTEXT = re.compile(
