@@ -38,20 +38,25 @@ def _privacy_scrub_objectives(objectives: List[Dict[str, Any]]) -> List[Dict[str
 
 
 def _scrub_dict(d: Dict[str, Any]) -> Dict[str, Any]:
-    """Recursively strip privacy-sensitive keys from a dict."""
-    keys_to_remove = [k for k in d if k in _PRIVACY_STRIP_KEYS]
-    for k in keys_to_remove:
-        del d[k]
-    # Recurse into nested dicts and lists of dicts
-    for key, value in d.items():
-        if isinstance(value, dict):
-            d[key] = _scrub_dict(value)
-        elif isinstance(value, list):
-            d[key] = [
-                _scrub_dict(item) if isinstance(item, dict) else item
-                for item in value
-            ]
-    return d
+    """Return a copy of ``d`` without privacy-sensitive keys, at any depth.
+
+    ``d`` is left untouched: a caller that passes the analysis state's own
+    dict must not have it scrubbed in place (#2346). Dicts are reached
+    inside nested lists too.
+    """
+    return {
+        key: _scrub_value(value)
+        for key, value in d.items()
+        if key not in _PRIVACY_STRIP_KEYS
+    }
+
+
+def _scrub_value(value: Any) -> Any:
+    if isinstance(value, dict):
+        return _scrub_dict(value)
+    if isinstance(value, list):
+        return [_scrub_value(item) for item in value]
+    return value
 
 
 def sync_strategic_to_unified(
