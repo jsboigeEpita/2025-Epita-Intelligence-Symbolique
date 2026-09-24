@@ -12,13 +12,12 @@ header de `test_services.py:7-8` (« emplacement jamais collecté »).
 | Fichier | Contenu |
 |---|---|
 | `conftest.py` | fixture autouse `mock_analysis_imports` qui mocke 5 modules d'analyse (:27-40) ; docstring #1783 (:7-10) — les fixtures Flask (`client`, `mock_*_service`, `sample_*`) sont parties à `docs/archives/flask_tests_249/` avec leur seul consommateur `test_endpoints.py` |
-| `test_services.py` | 8 tests en 2 classes, header #1859 (:5-23) documentant pourquoi ils restent hors gate |
+| `test_services.py` | 6 tests en 1 classe, header #1859/#2536 documentant pourquoi ils restent hors gate |
 
-Les deux classes : `TestValidationServiceFormalBranch` (:34, 2 tests de la
-branche formelle désactivée — `validation_service.py:83-87` cité :16-19) et
-`TestFrameworkService` (:69, 6 tests dont 4 ciblent l'interface morte
-`build_framework` — la surface vivante est `analyze_dung_framework`,
-`framework_service.py:36`, cité :11-13). Les **24 tests porteurs** ont été
+Une seule classe, `TestFrameworkService` (6 tests, dont 2 ciblent
+l'interface morte `build_framework` ; la surface vivante est
+`analyze_dung_framework`). `TestValidationServiceFormalBranch` est partie avec
+la branche qu'elle testait (#2266). Les **24 tests porteurs** ont été
 relocalisés dans le gate : `tests/unit/services/web_api/test_services.py`
 (#1859/#1863).
 
@@ -27,7 +26,7 @@ relocalisés dans le gate : `tests/unit/services/web_api/test_services.py`
 Invocation explicite du chemin uniquement (jamais par collection) :
 
 ```bash
-# cette suite (rouge attendu sur 6/8 — cf. limites)
+# cette suite (rouge attendu sur 2/6 — cf. limites)
 conda run -n projet-is-roo-new --no-capture-output pytest \
   argumentation_analysis/services/web_api/tests/ -v
 
@@ -47,8 +46,7 @@ conda run -n projet-is-roo-new --no-capture-output pytest \
 
 | Famille | Statut | Preuve |
 |---|---|---|
-| `TestFrameworkService` (6 tests) | **résiduel** | 4 tests FAIL sur l'interface morte `build_framework` ; 2 passent (`test_service_initialization`, `test_is_healthy` — contrat #1864 vivant) ; conservé pour une décision d'authoring future (header :11-14 — réécrire contre `analyze_dung_framework` = authoring nouveau, décision séparée) |
-| `TestValidationServiceFormalBranch` (2 tests) | **résiduel** | cible la branche formelle désactivée en production (header :16-19) |
+| `TestFrameworkService` (6 tests) | **résiduel** | 2 tests FAIL sur l'interface morte `build_framework` ; 4 passent et sont tenus dans le gate (`is_healthy` par `test_mcp_server.py`, la validation des modèles par `TestFrameworkRequestModel`) ; conservé pour une décision d'authoring future (réécrire contre `analyze_dung_framework` = authoring nouveau, décision séparée) |
 
 ## Artefacts et lecteurs
 
@@ -57,11 +55,13 @@ Aucun artefact ; résultats pytest à l'écran du développeur uniquement.
 ## Tests représentatifs
 
 Voir « Points d'entrée valides » — ce répertoire **est** la suite. État
-mesuré à l'exécution (rejoué pour ce README) : **2 PASS** (
-`test_service_initialization`, `test_is_healthy`), **4 FAIL**
-(`NameError: name 'Argument' is not defined`, `test_services.py:94,139`),
-**2 ERROR** (fixture `validation_service` utilisée :38 mais absente du
-conftest post-#1783).
+mesuré à l'exécution (rejoué #2536) : **4 PASS**
+(`test_service_initialization`, `test_is_healthy`,
+`test_framework_argument_validation`, `test_framework_options_validation`),
+**2 FAIL** (`AttributeError: 'FrameworkService' object has no attribute
+'build_framework'`). Le `NameError: name 'Argument'` que ce README relevait
+venait de l'import des modèles parti avec les tests relocalisés (#1863) ;
+rétabli #2536.
 
 ## Frères et parent
 
@@ -72,10 +72,6 @@ conftest post-#1783).
 
 ## Limites connues
 
-- 6/8 tests sont rouges à l'exécution directe (cf. état mesuré ci-dessus) —
-  conforme au header #1859, mais le fichier reste exécutable et échoue pour
+- 2/6 tests sont rouges à l'exécution directe (cf. état mesuré ci-dessus) —
+  conforme au header, mais le fichier reste exécutable et échoue pour
   quiconque le cible sans lire le header.
-- La fixture `validation_service` référencée par
-  `TestValidationServiceFormalBranch` n'est plus définie depuis l'archivage
-  des fixtures Flask (#1783) — les 2 tests de la classe sont en ERROR, pas
-  en FAIL.

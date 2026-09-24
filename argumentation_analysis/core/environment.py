@@ -139,20 +139,6 @@ def ensure_env(
         )
         raise RuntimeError(error_message)
 
-        # Ancien code conservé comme référence, mais la vérification principale est au-dessus.
-        # current_env_path = sys.prefix
-        # is_env_correct = f"envs\\{env_name}" in current_env_path or f"envs/{env_name}" in current_env_path
-        # if not is_env_correct and env_name == 'projet-is-roo':
-        #     is_env_correct = "envs\\projet-is" in current_env_path or "envs/projet-is" in current_env_path
-        # if not is_env_correct:
-        # Tenter d'extraire un nom d'environnement plus précis pour le message d'erreur
-        try:
-            current_env_name = Path(current_env_path).name
-        except Exception:
-            current_env_name = "inconnu"
-
-        pass  # La levée d'exception est maintenant gérée par la nouvelle logique ci-dessus.
-
     if not silent:
         # Pour l'affichage, on utilise le nom extrait du chemin
         # Le nom affiché doit être celui qui a été validé (env_name), et non celui

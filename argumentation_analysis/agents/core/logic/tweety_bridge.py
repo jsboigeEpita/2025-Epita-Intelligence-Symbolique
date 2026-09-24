@@ -39,7 +39,7 @@ import os
 import glob
 import threading
 import asyncio
-from typing import Optional, Dict, List, Tuple, Any
+from typing import TYPE_CHECKING, Optional, Dict, List, Tuple, Any
 
 # Handlers are imported LOCALLY at their point of use, not at module load: each
 # handler module does a bare top-level ``import jpype``, so importing them
@@ -50,6 +50,23 @@ from typing import Optional, Dict, List, Tuple, Any
 # handler class right before instantiating it — which only happens after
 # ``is_jvm_ready()``, i.e. only when jpype IS present. (Same pattern the
 # ``qbf_handler`` property already used.)
+
+# #2536: the same names, for the annotations only. Nothing below imports at
+# runtime, so the handlers stay lazily loaded (#1697).
+if TYPE_CHECKING:
+    from .aba_handler import ABAHandler
+    from .adf_handler import ADFHandler
+    from .af_handler import AFHandler as ArgumentationFrameworkHandler
+    from .aspic_handler import ASPICHandler
+    from .belief_revision_handler import BeliefRevisionHandler
+    from .bipolar_handler import BipolarHandler
+    from .dialogue_handler import DialogueHandler
+    from .fol_handler import FOLHandler as FirstOrderLogicHandler
+    from .modal_handler import ModalHandler
+    from .pl_handler import PLHandler as PropositionalLogicHandler
+    from .probabilistic_handler import ProbabilisticHandler
+    from .ranking_handler import RankingHandler
+    from .tweety_initializer import TweetyInitializer
 
 logger = logging.getLogger(__name__)
 
