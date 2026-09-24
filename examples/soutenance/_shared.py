@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 CORPORA = {
@@ -67,14 +69,7 @@ def bootstrap_env() -> None:
     os.chdir(_PROJECT_ROOT)
     sys.path.insert(0, str(_PROJECT_ROOT))
 
-    _env_path = _PROJECT_ROOT / ".env"
-    if _env_path.exists():
-        with open(_env_path, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, _, val = line.partition("=")
-                    os.environ.setdefault(key.strip(), val.strip())
+    load_dotenv(_PROJECT_ROOT / ".env")
 
 
 def load_corpus_text(corpus_id: str) -> str:

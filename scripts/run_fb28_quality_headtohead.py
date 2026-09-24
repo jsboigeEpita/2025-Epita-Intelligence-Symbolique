@@ -35,19 +35,14 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.chdir(Path(__file__).parent.parent)
 
 # Load .env (OPENROUTER_API_KEY / OPENROUTER_BASE_URL / OPENAI_API_KEY)
 _env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    with open(_env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, val = line.partition("=")
-                os.environ.setdefault(key.strip(), val.strip())
+load_dotenv(_env_path)
 
 RESULTS_DIR = Path("argumentation_analysis/evaluation/results/capstone_c1")
 FB25_ARGS_DIR = RESULTS_DIR  # fb25_quality_args_{A,B,C}.json live here

@@ -33,6 +33,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
+from dotenv import load_dotenv
+
 logger = logging.getLogger("evaluation.capability_eval")
 
 # ---------------------------------------------------------------------------
@@ -260,21 +262,7 @@ class CapabilityEvalReport:
 
 
 def _load_dotenv() -> None:
-    env_path = Path(".env")
-    if not env_path.exists():
-        return
-    with open(env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, _, val = line.partition("=")
-            key = key.strip()
-            val = val.strip()
-            if len(val) >= 2 and val[0] in ('"', "'") and val[-1] == val[0]:
-                val = val[1:-1]
-            if key not in os.environ:
-                os.environ[key] = val
+    load_dotenv(Path(".env"))
 
 
 def _build_eval_workflow():

@@ -48,6 +48,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.chdir(Path(__file__).parent.parent)
@@ -65,14 +66,7 @@ os.environ["OPENROUTER_CHAT_MODEL_ID"] = MANDATED_MODEL
 os.environ["OPENAI_CHAT_MODEL_ID"] = MANDATED_MODEL
 
 _env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    with open(_env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, val = line.partition("=")
-                val = val.strip().strip('"').strip("'")
-                os.environ.setdefault(key.strip(), val)
+load_dotenv(_env_path)
 
 from argumentation_analysis.core.llm_service import (
     resolve_active_model_id,

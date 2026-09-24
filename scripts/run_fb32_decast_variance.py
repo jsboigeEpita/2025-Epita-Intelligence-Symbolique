@@ -55,19 +55,14 @@ import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.chdir(Path(__file__).parent.parent)
 
 # Load .env (OPENROUTER_API_KEY / OPENROUTER_BASE_URL / OPENAI_API_KEY / TEXT_CONFIG_PASSPHRASE)
 _env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    with open(_env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, val = line.partition("=")
-                os.environ.setdefault(key.strip(), val.strip())
+load_dotenv(_env_path)
 
 # Guard: variance is the feature. Refuse to run if determinism is forced.
 if os.environ.get("LLM_DETERMINISTIC_MODE"):

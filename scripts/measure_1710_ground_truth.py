@@ -49,19 +49,14 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.chdir(Path(__file__).parent.parent)
 
-# Load .env (mirrors run_real_analysis.py — root .env wins).
+# Load .env: a value already in the environment wins (#2487).
 _env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    with open(_env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                key, _, val = line.partition("=")
-                os.environ.setdefault(key.strip(), val.strip())
+load_dotenv(_env_path)
 
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions

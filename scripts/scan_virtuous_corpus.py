@@ -49,6 +49,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+from dotenv import load_dotenv
+
 # Resolve the repo root from this script's location (scripts/) so the tool runs
 # from anywhere with the conda env active.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -74,9 +76,9 @@ _PASSPHRASE_ENV = "TEXT_CONFIG_PASSPHRASE"
 
 
 def _load_dotenv(path: Path) -> None:
-    """Minimal .env loader (the project's conda env does not auto-load .env).
+    """Load ``path`` with python-dotenv (the project's conda env does not auto-load .env).
 
-    Reads ``KEY=value`` lines, ignoring comments/blanks. The passphrase lives in
+    A value already in the environment wins (#2487). The passphrase lives in
     ``.env`` (gitignored); we load it explicitly rather than requiring the
     caller to export it. Never raises — a missing key surfaces as a clear error
     downstream (``derive_encryption_key`` needs the passphrase).
@@ -84,12 +86,7 @@ def _load_dotenv(path: Path) -> None:
     if not path.exists():
         return
     try:
-        for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            k, _, v = line.partition("=")
-            os.environ.setdefault(k.strip(), v.strip().strip('"').strip("'"))
+        load_dotenv(path)
     except OSError as exc:  # noqa: BLE001 — non-fatal: env may be set another way
         logger.warning("Could not read %s (%s); relying on exported env", path, exc)
 

@@ -23,18 +23,13 @@ import os
 import re
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 os.chdir(Path(__file__).parent.parent)
 
 _env_path = Path(__file__).parent.parent / ".env"
-if _env_path.exists():
-    with open(_env_path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, _, v = line.partition("=")
-                os.environ.setdefault(k.strip(), v.strip())
+load_dotenv(_env_path)
 
 from argumentation_analysis.core.utils.crypto_utils import derive_encryption_key
 from argumentation_analysis.core.io_manager import load_extract_definitions

@@ -11,15 +11,11 @@ import asyncio
 import time
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
-with open(ROOT / ".env", encoding="utf-8") as _envf:
-    for line in _envf:
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            k, _, v = line.partition("=")
-            os.environ.setdefault(k.strip(), v.strip())
+load_dotenv(ROOT / ".env")
 
 logging.disable(logging.WARNING)
 

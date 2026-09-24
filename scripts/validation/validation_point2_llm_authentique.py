@@ -15,19 +15,15 @@ import os
 from pathlib import Path
 from datetime import datetime
 
+from dotenv import load_dotenv
+
 
 def load_env_file():
     """Charge le fichier .env"""
     env_file = Path(".env")
     if env_file.exists():
-        with open(env_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    key, value = line.split("=", 1)
-                    # Nettoyer les guillemets
-                    value = value.strip('"').strip("'")
-                    os.environ[key] = value
+        # #2487: a value already in the environment wins (#2472).
+        load_dotenv(env_file)
         print("[OK] Fichier .env chargé")
     else:
         print("[ATTENTION] Fichier .env non trouvé")
