@@ -1028,7 +1028,7 @@ async def main():
     kernel = Kernel()
 
     # --- DEBUT BLOC DE CORRECTION ---
-    # Ajout de la configuration du service LLM, comme dans cluedo_orchestrator.py
+    # Ajout de la configuration du service LLM
     from argumentation_analysis.config.settings import settings
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 

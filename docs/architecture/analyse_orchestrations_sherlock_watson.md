@@ -8,7 +8,7 @@ Ce document analyse les flux d'orchestration dans les conversations agentiques e
 
 ### Systèmes développés
 
-1. **Système Cluedo** (`cluedo_orchestrator.py`)
+1. **Système Cluedo** (`cluedo_orchestrator.py`, 2 agents ; retiré par #2544, le jeu Cluedo vivant est `cluedo_extended_orchestrator.py`, 3 agents + Oracle)
    - Logique informelle et déductive
    - Mécanisme suggestion/réfutation
    - Pas d'usage de Tweety

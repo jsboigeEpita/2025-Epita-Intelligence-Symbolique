@@ -101,9 +101,6 @@ class OrchestrationValidator:
             )
 
             # Test d'import des orchestrateurs specialises
-            from argumentation_analysis.orchestration.cluedo_orchestrator import (
-                CluedoOrchestrator,
-            )
             from argumentation_analysis.orchestration.unified_pipeline import (
                 run_unified_analysis,
             )
@@ -112,8 +109,8 @@ class OrchestrationValidator:
                 test_name,
                 True,
                 {
-                    "imported_modules": 6,
-                    "core_orchestrators": ["CluedoExtended", "CluedoBasic", "UnifiedPipeline"],
+                    "imported_modules": 5,
+                    "core_orchestrators": ["CluedoExtended", "UnifiedPipeline"],
                     "strategies": ["CyclicSelection", "OracleTermination"],
                 },
             )

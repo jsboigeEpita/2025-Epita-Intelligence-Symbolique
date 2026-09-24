@@ -22,7 +22,6 @@ from semantic_kernel.kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 
 # Imports des orchestrateurs (adaptés v2.1.0)
-# from argumentation_analysis.orchestration.cluedo_orchestrator import run_cluedo_game
 # from argumentation_analysis.orchestration.cluedo_extended_orchestrator import run_cluedo_oracle_game
 
 # Imports des états (adaptés v2.1.0)
