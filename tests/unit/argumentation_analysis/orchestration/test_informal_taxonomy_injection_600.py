@@ -357,7 +357,8 @@ class TestParentHarnessFallback:
 
     @pytest.mark.asyncio
     async def test_harness_handles_generic_error(self):
-        """Harness returns None on generic exception."""
+        """A harness that failed says so in the log (#2540); None means it
+        found nothing."""
         from argumentation_analysis.orchestration.conversational_orchestrator import (
             _run_parent_harness_fallback,
         )
@@ -370,7 +371,12 @@ class TestParentHarnessFallback:
             side_effect=RuntimeError("API key missing"),
         ):
             result = await _run_parent_harness_fallback("text", mock_state)
-            assert result is None
+            assert result == {
+                "phase": "Detection",
+                "type": "parent_harness",
+                "status": "failed",
+                "last_error": "RuntimeError: API key missing",
+            }
 
 
 class TestTaxonomyFamilyCoverage:

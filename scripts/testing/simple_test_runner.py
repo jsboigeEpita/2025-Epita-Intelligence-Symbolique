@@ -45,7 +45,7 @@ def run_single_test():
             }
         ]
 
-        test_passphrase = "Propaganda"
+        test_passphrase = "synthetic-test-passphrase"
 
         # Test de sauvegarde et chargement
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -111,7 +111,7 @@ def run_script_test():
             }
         ]
 
-        test_passphrase = "Propaganda"
+        test_passphrase = "synthetic-test-passphrase"
 
         with tempfile.TemporaryDirectory() as tmp_dir:
             input_file = Path(tmp_dir) / "input.enc"

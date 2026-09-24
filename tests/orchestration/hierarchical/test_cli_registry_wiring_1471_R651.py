@@ -73,6 +73,7 @@ class TestCLIRegistryWiring:
     out keep their safety net (no silent heuristic no-op fallback).
     """
 
+    @pytest.mark.requires_api  # #2411: keyless CLI degrades before this summary (measured)
     def test_cli_delegation_mode_completes_e2e(self) -> None:
         """``--mode hierarchical --hierarchical-mode delegation`` finishes
         E2E. The CLI prints ``Tâches complétées  : 5/5`` (or higher) and

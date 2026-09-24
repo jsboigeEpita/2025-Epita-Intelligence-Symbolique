@@ -233,10 +233,11 @@ async def run_deliberation_workflow(
             delib_id, lambda m: m.broadcast_status(delib_id, "completed")
         )
     except Exception as e:
-        logger.error(f"Deliberation {delib_id} failed: {e}")
-        store.update_deliberation(delib_id, DeliberationStatus.FAILED, error=str(e))
+        error = str(e)
+        logger.error(f"Deliberation {delib_id} failed: {error}")
+        store.update_deliberation(delib_id, DeliberationStatus.FAILED, error=error)
         store.update_status(proposal_id, ProposalStatus.PENDING)
-        await _broadcast_ws(delib_id, lambda m: m.broadcast_error(delib_id, str(e)))
+        await _broadcast_ws(delib_id, lambda m: m.broadcast_error(delib_id, error))
         await _broadcast_ws(delib_id, lambda m: m.broadcast_status(delib_id, "failed"))
 
 

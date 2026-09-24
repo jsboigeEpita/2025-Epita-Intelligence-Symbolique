@@ -26,7 +26,7 @@ import asyncio
 import logging
 import json
 import random
-from typing import List, Optional, Union, Any, Dict
+from typing import TYPE_CHECKING, List, Optional, Union, Any, Dict
 
 # Configuration des chemins
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -46,6 +46,12 @@ from semantic_kernel.connectors.ai.open_ai import (
     AzureChatCompletion,
 )
 from semantic_kernel.functions.kernel_arguments import KernelArguments
+from semantic_kernel.connectors.ai.function_choice_behavior import (
+    FunctionChoiceBehavior,
+)
+
+if TYPE_CHECKING:
+    from semantic_kernel.agents import AgentGroupChat
 
 # Imports système existant
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState

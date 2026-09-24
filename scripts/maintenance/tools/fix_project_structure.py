@@ -20,6 +20,8 @@ import logging
 import argparse
 from pathlib import Path
 
+from argumentation_analysis.core.utils.shell_utils import run_shell_command
+
 # Configuration du logging
 logging.basicConfig(
     level=logging.INFO,

@@ -7,6 +7,9 @@ import importlib
 import sys
 from pathlib import Path
 import logging
+from argumentation_analysis.utils.dev_tools.import_testing_utils import (
+    test_module_import_by_name,
+)
 
 # Configuration du logging
 logging.basicConfig(

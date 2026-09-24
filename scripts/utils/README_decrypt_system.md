@@ -58,7 +58,7 @@ python scripts/utils/decrypt_specific_extract.py --extract-name "Rhétorique de 
 
 **Usage** :
 ```bash
-python scripts/utils/create_test_encrypted_extracts.py --passphrase "Propaganda"
+python scripts/utils/create_test_encrypted_extracts.py --passphrase "$TEXT_CONFIG_PASSPHRASE"
 ```
 
 ### 4. `cleanup_decrypt_traces.py` - Nettoyage Sécurisé
@@ -109,7 +109,7 @@ Le corpus de test généré contient :
 ## Tests de Validation
 
 ### Tests Réalisés et Validés :
-✅ **Déchiffrement fonctionnel** avec passphrase "Propaganda"  
+✅ **Déchiffrement fonctionnel** avec la passphrase de `TEXT_CONFIG_PASSPHRASE`  
 ✅ **Extraction des métadonnées** (3 sources, 6 extraits)  
 ✅ **Listage sécurisé** sans exposition du contenu  
 ✅ **Sélection ciblée** par ID et nom  

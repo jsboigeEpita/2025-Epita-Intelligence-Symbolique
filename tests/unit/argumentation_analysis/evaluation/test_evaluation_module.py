@@ -352,7 +352,11 @@ class TestLLMJudge:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_evaluate_returns_score(self):
+    async def test_evaluate_returns_score(self, monkeypatch):
+        # #2411: the judge's key check (resolve_chat_endpoint) runs before the
+        # mocked client is built — the test must carry its own configuration,
+        # never borrow the ambient key of the machine running the suite.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-2411")
         judge = LLMJudge()
         mock_response_content = '{"completeness": 4, "accuracy": 3, "depth": 3, "coherence": 4, "actionability": 3, "overall": 3, "reasoning": "Decent analysis"}'
 

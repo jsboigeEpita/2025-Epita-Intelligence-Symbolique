@@ -391,8 +391,10 @@ class TestEvaluateMethod:
             assert "Evaluation failed" in result.reasoning
 
     @pytest.mark.asyncio
-    async def test_evaluate_with_model_registry(self):
+    async def test_evaluate_with_model_registry(self, monkeypatch):
         """Test evaluation with model registry for model switching."""
+        # #2411: own configuration, never the ambient key of the suite host.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-2411")
         judge = LLMJudge(model_name="custom_model")
 
         mock_registry = MagicMock()

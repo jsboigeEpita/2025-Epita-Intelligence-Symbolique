@@ -9,12 +9,15 @@ Ce module étend CluedoOracleState avec les fonctionnalités Phase D :
 - Métriques de la trace idéale
 """
 
+import logging
 import random
 import re
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 from dataclasses import dataclass
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class RevealStrategy(Enum):
@@ -534,7 +537,7 @@ class PhaseDExtensions:
         CRITICAL_THRESHOLD = 7.0
         if final_score < CRITICAL_THRESHOLD:
             alert_message = f"CRITICAL: Narrative quality degradation detected! Score: {final_score:.2f}, Threshold: {CRITICAL_THRESHOLD}"
-            logger_main.critical(alert_message)
+            logger.critical(alert_message)
             # Idéalement, ici on pourrait notifier un système externe
 
         return metrics

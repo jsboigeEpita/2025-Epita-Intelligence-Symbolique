@@ -29,7 +29,10 @@ except ImportError:
     SK_AVAILABLE = False
 
 # Import des services JTMS
-from argumentation_analysis.services.jtms_service import JTMSService
+from argumentation_analysis.services.jtms_service import (
+    JTMSClientInputError,
+    JTMSService,
+)
 from argumentation_analysis.services.jtms_session_manager import JTMSSessionManager
 
 
@@ -98,7 +101,7 @@ class JTMSSemanticKernelPlugin:
                 )
                 self.default_session_id = session_id
             else:
-                raise ValueError(
+                raise JTMSClientInputError(
                     "Aucune session spécifiée et création automatique désactivée"
                 )
 
@@ -115,7 +118,7 @@ class JTMSSemanticKernelPlugin:
                 )
                 self.default_instance_id = instance_id
             else:
-                raise ValueError(
+                raise JTMSClientInputError(
                     "Aucune instance spécifiée et création automatique désactivée"
                 )
 
@@ -165,7 +168,7 @@ class JTMSSemanticKernelPlugin:
             elif initial_value.lower() == "unknown":
                 initial_bool_value = None
             else:
-                raise ValueError(
+                raise JTMSClientInputError(
                     f"Valeur initiale invalide: {initial_value}. Utilisez 'true', 'false' ou 'unknown'"
                 )
 
@@ -254,7 +257,7 @@ class JTMSSemanticKernelPlugin:
 
             # Validation
             if not conclusion.strip():
-                raise ValueError("La conclusion ne peut pas être vide")
+                raise JTMSClientInputError("La conclusion ne peut pas être vide")
 
             # Ajouter la justification
             justification_data = await self.jtms_service.add_justification(
@@ -415,7 +418,7 @@ class JTMSSemanticKernelPlugin:
             # Valider le filtre
             valid_filters = ["valid", "invalid", "unknown", "non_monotonic", "all"]
             if filter_status not in valid_filters:
-                raise ValueError(
+                raise JTMSClientInputError(
                     f"Filtre invalide: {filter_status}. Utilisez un de: {valid_filters}"
                 )
 

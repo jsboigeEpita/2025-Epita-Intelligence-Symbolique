@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, AsyncMock, patch, PropertyMock
 from datetime import datetime
 
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
 
 # ============================================================================
 # AgentGroupChat Tests
@@ -515,6 +516,10 @@ class TestCluedoExtendedOrchestratorPerformanceMetrics:
         assert result["balance_score"] == 1.0
 
 
+def _message(name, content):
+    return ChatMessageContent(role=AuthorRole.ASSISTANT, name=name, content=content)
+
+
 class TestCluedoExtendedOrchestratorDetectEmotionalReactions:
     """Tests for _detect_emotional_reactions()."""
 
@@ -525,10 +530,62 @@ class TestCluedoExtendedOrchestratorDetectEmotionalReactions:
 
         return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
 
-    def test_returns_empty_list(self):
+    # #2536: the detection body sat grafted after the return of
+    # _force_moriarty_oracle_revelation, unreachable, while this method was a
+    # stub returning [] -- and the test below used to defend the stub.
+
+    def test_no_history_means_no_trigger(self):
         orch = self._make_orchestrator()
         result = orch._detect_emotional_reactions("Sherlock", "some content", [])
         assert result == []
+
+    def test_a_reply_to_the_system_is_not_a_reaction(self):
+        orch = self._make_orchestrator()
+        history = [
+            _message("System", content="Debut de l'enquete."),
+            _message("Watson", content="Brillant, exactement."),
+        ]
+        assert orch._detect_emotional_reactions("Watson", "Brillant", history) == []
+
+    def test_watson_approving_sherlock_is_recorded_against_him(self):
+        orch = self._make_orchestrator()
+        trigger = "Le chandelier etait dans la bibliotheque."
+        reply = "Brillant ! Exactement ce que je pensais."
+        history = [
+            _message("Sherlock", content=trigger),
+            _message("Watson", content=reply),
+        ]
+
+        reactions = orch._detect_emotional_reactions("Watson", reply, history)
+
+        assert reactions == [
+            {
+                "agent_name": "Watson",
+                "trigger_agent": "Sherlock",
+                "trigger_content": trigger,
+                "reaction_type": "approval",
+                "reaction_content": reply,
+            }
+        ]
+
+    def test_each_reaction_fits_the_state_recorder(self):
+        import inspect
+
+        from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
+
+        orch = self._make_orchestrator()
+        history = [
+            _message("Watson", content="Colonel Moutarde ?"),
+            _message("Moriarty", content="Vous brulez... tres chaud."),
+        ]
+        (reaction,) = orch._detect_emotional_reactions(
+            "Moriarty", "Vous brûlez, très chaud.", history
+        )
+
+        inspect.signature(CluedoOracleState.record_emotional_reaction).bind(
+            None, **reaction
+        )
+        assert reaction["reaction_type"] == "encouragement"
 
 
 class TestCluedoExtendedOrchestratorExecuteWorkflow:
