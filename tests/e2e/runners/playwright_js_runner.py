@@ -245,22 +245,28 @@ class PlaywrightJSRunner:
                     f.write(e.stderr)
 
             # Créer un objet résultat pour l'analyse, marquant l'échec dû au timeout
+            # La variable e est supprimée à la sortie du except : capturer avant
+            # la classe imbriquée, qui sinon référence un nom mort (F821).
+            timeout_stdout = e.stdout if e.stdout else ""
+            timeout_stderr = e.stderr if e.stderr else "TimeoutExpired"
+
             class TimeoutResult:
                 def __init__(self):
                     self.returncode = -1  # Code spécifique pour timeout
-                    self.stdout = e.stdout if e.stdout else ""
-                    self.stderr = e.stderr if e.stderr else "TimeoutExpired"
+                    self.stdout = timeout_stdout
+                    self.stderr = timeout_stderr
 
             return TimeoutResult()
         except Exception as e:
             self.logger.error(f"Erreur exécution tests: {e}", exc_info=True)
+            error_message = str(e)
 
             # Créer un objet résultat pour l'analyse en cas d'autre exception
             class ErrorResult:
                 def __init__(self):
                     self.returncode = -2  # Code spécifique pour autre erreur
                     self.stdout = ""
-                    self.stderr = str(e)
+                    self.stderr = error_message
 
             return ErrorResult()
 

@@ -20,6 +20,10 @@ exclude =
     logs,
     .temp,
     _temp,
+    # #2536: cet arbre EST l'archive (#448), non collecté par pytest
+    # (norecursedirs: _*) ; les F821 y restent inertes et se réparent si un
+    # fichier ressuscite.
+    tests/_archived,
     # Student projects
     1.4.1-JTMS,
     1_2_7_argumentation_dialogique,

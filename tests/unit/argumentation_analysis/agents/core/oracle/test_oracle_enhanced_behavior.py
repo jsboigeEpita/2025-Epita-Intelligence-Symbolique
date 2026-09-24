@@ -60,38 +60,7 @@ def oracle_enhanced_state(enhanced_elements):
     )
 
 
-@pytest.fixture
-async def mock_semantic_kernel():
-    """Mock du Semantic Kernel pour tests GPT-4o-mini."""
-    kernel = await self._create_authentic_gpt4o_mini_instance()
-    kernel.add_plugin = await self._create_authentic_gpt4o_mini_instance()
-    kernel.add_filter = await self._create_authentic_gpt4o_mini_instance()
-
-    # Mock des services
-    mock_service = await self._create_authentic_gpt4o_mini_instance()
-    mock_service.service_id = "openai-gpt4o-mini"
-    mock_service.ai_model_id = "gpt-5-mini"
-    kernel.get_service = Mock(return_value=mock_service)
-
-    return kernel
-
-
 class TestOracleEnhancedBehavior:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests du comportement Oracle Enhanced."""
 
     def test_oracle_enhanced_initialization(self, oracle_enhanced_state):

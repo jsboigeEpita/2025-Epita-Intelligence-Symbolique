@@ -43,15 +43,11 @@ pytestmark = [pytest.mark.real_llm, pytest.mark.integration]
 @pytest.fixture(scope="module")
 def jvm_session():
     """Fixture pour gérer le cycle de vie de la JVM pour le module de test."""
-    jvm_manager = JvmManager()
-    try:
-        jvm_manager.start_jvm()
-        logger.info("JVM démarrée pour la session de test du worker.")
-        yield
-    finally:
-        if jvm_manager.is_jvm_started():
-            logger.info("Arrêt de la JVM pour la session de test du worker.")
-            jvm_manager.shutdown_jvm()
+    from argumentation_analysis.core.jvm_setup import initialize_jvm
+
+    initialize_jvm()
+    logger.info("JVM démarrée pour la session de test du worker.")
+    yield
 
 
 @pytest.fixture(scope="module")

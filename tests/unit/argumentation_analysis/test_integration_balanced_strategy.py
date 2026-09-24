@@ -38,6 +38,7 @@ from argumentation_analysis.agents.core.informal.informal_definitions import (
     setup_informal_kernel,
 )
 from argumentation_analysis.agents.core.pm.pm_definitions import setup_pm_kernel
+from config.unified_config import UnifiedConfig
 
 # from tests.async_test_case import AsyncTestCase # Suppression de l'import
 

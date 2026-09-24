@@ -14,6 +14,9 @@ from argumentation_analysis.core.enquete_states import (
     EnquetePoliciereState,
     EnqueteCluedoState,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 # Fixtures communes si nécessaire

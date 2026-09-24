@@ -17,6 +17,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from config.unified_config import UnifiedConfig
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 async def _create_authentic_gpt4o_mini_instance():

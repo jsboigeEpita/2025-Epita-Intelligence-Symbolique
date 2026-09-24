@@ -20,6 +20,9 @@ from argumentation_analysis.utils.dev_tools.verification_utils import (
     verify_all_extracts,
     generate_verification_report,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class TestVerificationUtils(unittest.TestCase):

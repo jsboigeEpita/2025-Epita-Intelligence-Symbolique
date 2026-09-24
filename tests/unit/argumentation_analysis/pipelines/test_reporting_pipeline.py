@@ -10,6 +10,8 @@ import pandas as actual_pandas_module  # Renommé pour clarté
 
 # Capture des vrais types pandas avant tout mock potentiel par des fixtures ou autres imports
 REAL_PANDAS_DATAFRAME_TYPE = actual_pandas_module.DataFrame
+from unittest.mock import patch
+
 REAL_PANDAS_SERIES_TYPE = actual_pandas_module.Series
 from pathlib import Path
 import sys
