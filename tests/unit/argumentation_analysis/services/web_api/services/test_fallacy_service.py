@@ -37,8 +37,10 @@ def service():
 
 
 class TestInit:
-    def test_initialized(self, service):
-        assert service.is_initialized is True
+    def test_not_initialized_without_a_base_detector(self, service):
+        # #2346: with every analyzer absent only the built-in patterns remain;
+        # the service still answers (see test_is_healthy) but has no analyzer.
+        assert service.is_initialized is False
 
     def test_fallacy_patterns_loaded(self, service):
         assert len(service.fallacy_patterns) > 0

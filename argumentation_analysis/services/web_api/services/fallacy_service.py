@@ -10,32 +10,38 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 
-# Imports du moteur d'analyse
-try:
-    # Les analyseurs ont été déplacés dans le AnalysisToolsPlugin
-    from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
-        EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer,
-    )
-    from argumentation_analysis.plugins.analysis_tools.logic.fallacy_severity_evaluator import (
-        EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator,
-    )
-
-    # --- NOUVELLE LOGIQUE D'IMPORT ---
-    # Importer l'analyseur de base séparément
-    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
-        ContextualFallacyAnalyzer,
-    )
-except ImportError as e:
-    logging.warning(f"Impossible d'importer les analyseurs de sophismes: {e}")
-    ContextualFallacyAnalyzer = None
-    FallacySeverityEvaluator = None
-    EnhancedContextualAnalyzer = None
-
 # Imports des modèles (style relatif)
 from ..models.request_models import FallacyRequest, FallacyOptions
 from ..models.response_models import FallacyResponse, FallacyDetection
 
 logger = logging.getLogger("FallacyService")
+
+# Imports du moteur d'analyse. #2346 : un garde par analyseur — un seul
+# ``try`` mettait les trois à ``None`` dès que l'un manquait. Chaque absence
+# est nommée ; le service démarre avec ceux qui restent.
+try:
+    from argumentation_analysis.agents.tools.analysis.contextual_fallacy_analyzer import (
+        ContextualFallacyAnalyzer,
+    )
+except ImportError as e:
+    logger.warning(f"Analyseur de sophismes de base indisponible : {e}")
+    ContextualFallacyAnalyzer = None
+
+try:
+    from argumentation_analysis.plugins.analysis_tools.logic.fallacy_severity_evaluator import (
+        EnhancedFallacySeverityEvaluator as FallacySeverityEvaluator,
+    )
+except ImportError as e:
+    logger.warning(f"Évaluateur de sévérité indisponible : {e}")
+    FallacySeverityEvaluator = None
+
+try:
+    from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
+        EnhancedContextualFallacyAnalyzer as EnhancedContextualAnalyzer,
+    )
+except ImportError as e:
+    logger.warning(f"Analyseur contextuel amélioré indisponible : {e}")
+    EnhancedContextualAnalyzer = None
 
 
 class FallacyService:
@@ -56,8 +62,8 @@ class FallacyService:
     def _initialize_analyzers(self) -> None:
         """Initialise les différents analyseurs de sophismes (contextuel, sévérité, amélioré).
 
-        Met à jour `self.is_initialized` en fonction du succès.
-        TODO: EnhancedContextualFallacyAnalyzer is currently disabled in some branches. Re-evaluate for consistent integration.
+        `self.is_initialized` dit qu'un détecteur de base existe (#2346) : sans
+        lui, seule la détection par patterns intégrés reste disponible.
 
         :return: None
         :rtype: None
@@ -91,7 +97,7 @@ class FallacyService:
                 self.enhanced_analyzer or self.base_fallacy_detector
             )
 
-            self.is_initialized = True
+            self.is_initialized = self.base_fallacy_detector is not None
             self.logger.info("Analyseurs de sophismes initialisés")
 
         except Exception as e:

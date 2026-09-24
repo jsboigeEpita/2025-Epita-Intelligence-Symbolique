@@ -853,7 +853,8 @@ class TestFallacyService:
 
     def test_init_without_analyzers(self, fallacy_service):
         """Service should still initialize (with patterns only) even without analyzers."""
-        # is_initialized might be True because the try block succeeds even with None analyzers
+        # #2346: no base detector, so is_initialized is False; patterns still load.
+        assert fallacy_service.is_initialized is False
         assert fallacy_service.fallacy_patterns is not None
         assert len(fallacy_service.fallacy_patterns) > 0
 
