@@ -39,6 +39,13 @@ sound, so ``test_the_history_names_a_deleted_module`` must see a deletion first
 The census runs in a fresh interpreter. In the test session, ``sys.modules``
 may hold a mock (``--disable-jvm-session`` puts one at ``jpype``), and
 ``find_spec`` then answers for the mock, not for the environment.
+
+The census runs no package's code for the rule on our other code (#2550).
+``find_spec("a.b")`` imports ``a`` to find ``b``. On the CI runner, torch's DLLs
+fail to load in a fresh interpreter, and ``spacy`` reaches torch through
+``thinc``: the census died on ``OSError`` resolving a ``spacy`` submodule, a
+third-party import this rule does not judge. It now decides whether an import
+is ours before resolving it, and resolves ours from the repository tree.
 """
 
 import json
@@ -74,6 +81,10 @@ def found(module, directory):
     head = module.split(".")[0]
     if (directory / (head + ".py")).exists() or (directory / head).is_dir():
         return True
+    if head in packages:
+        # Ours: the tree answers, and no __init__ runs on the way.
+        target = Path(job["root"], *module.split("."))
+        return target.with_suffix(".py").exists() or target.is_dir()
     try:
         return importlib.util.find_spec(module) is not None
     except (ImportError, ValueError):
@@ -96,12 +107,16 @@ tracked = tails(job["tracked"])
 deleted = tails(job["deleted"])
 
 
-def dead(module, directory):
-    if found(module, directory):
-        return False
-    if job["strict"] or module.split(".")[0] in packages:
+def ours(module):
+    if module.split(".")[0] in packages:
         return True
     return module in deleted and module not in tracked
+
+
+def dead(module, directory):
+    if not job["strict"] and not ours(module):
+        return False
+    return not found(module, directory)
 
 
 result = {}
@@ -156,7 +171,9 @@ def _history():
 
 def census(paths, strict=True):
     """``{path: [[line, module], ...]}``: the imports judged dead."""
-    job = dict(_history(), files=[str(path) for path in paths], strict=strict)
+    job = dict(
+        _history(), files=[str(path) for path in paths], strict=strict, root=str(ROOT)
+    )
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
     done = subprocess.run(
@@ -247,6 +264,28 @@ def test_the_census_judges_only_what_is_ours(tmp_path):
             [5, "scripts.validation.mock_elimination"],
         ]
     }
+
+
+def test_the_census_runs_no_third_party_code(tmp_path, monkeypatch):
+    """Control (#2550): an import that is not ours is not imported to judge it.
+
+    The vendor package stands in for ``spacy`` on the CI runner, whose import
+    reaches torch and raises ``OSError`` there.
+    """
+    site = tmp_path / "site"
+    (site / "vendor_pkg_2550").mkdir(parents=True)
+    (site / "vendor_pkg_2550" / "__init__.py").write_text(
+        'raise OSError("stands in for a DLL that fails to load")\n',
+        encoding="utf-8",
+    )
+    (site / "vendor_pkg_2550" / "sub.py").write_text("", encoding="utf-8")
+    code = tmp_path / "code"
+    code.mkdir()
+    probe = code / "probe.py"
+    probe.write_text("from vendor_pkg_2550.sub import thing\n", encoding="utf-8")
+    monkeypatch.setenv("PYTHONPATH", str(site))
+
+    assert census([probe], strict=False) == {probe: []}
 
 
 @pytest.mark.parametrize("root", OWN_ROOTS)
