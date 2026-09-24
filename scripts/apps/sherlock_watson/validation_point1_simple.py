@@ -38,6 +38,7 @@ except Exception as e:
 # Configuration du logging
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 log_file = f"logs/validation_point1_sherlock_watson_{timestamp}.log"
+Path("logs").mkdir(exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,

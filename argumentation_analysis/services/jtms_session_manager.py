@@ -28,7 +28,9 @@ class JTMSSessionManager:
         self.jtms_service = jtms_service
         self.jtms_service.session_manager = self  # Injection bidirectionnelle
         self.storage_path = Path(storage_path)
-        self.storage_path.mkdir(exist_ok=True)
+        # parents=True : le répertoire parent (``logs/`` par défaut) n'est
+        # créé par aucun import (#2346).
+        self.storage_path.mkdir(parents=True, exist_ok=True)
 
         # Sessions actives et métadonnées
         self.sessions: Dict[str, Dict] = {}
