@@ -257,6 +257,8 @@ async def run_unified_analysis(
             - summary: Dict with completed/failed/skipped counts
             - capabilities_used: List of capabilities that were successfully resolved
             - capabilities_missing: List of capabilities with no provider
+            - auto_routing_error: present only when ``workflow_name="auto"``
+              fell back to the standard workflow; the error that caused it
             - unified_state: UnifiedAnalysisState (if state tracking enabled)
             - state_snapshot: Dict snapshot of the state (if state tracking enabled)
             - restitution_report: RenderedReport (if render_restitution=True) — the
@@ -294,6 +296,7 @@ async def run_unified_analysis(
         except Exception as e:
             logger.warning("Failed to thread deanonymized/source_metadata: %s", e)
 
+    auto_routing_error: Optional[str] = None
     if custom_workflow is not None:
         workflow = custom_workflow
     elif workflow_name == "auto":
@@ -304,6 +307,7 @@ async def run_unified_analysis(
             workflow = await router.analyze_and_route_async(text, registry=registry)
         except Exception as e:
             logger.warning("Auto-routing failed, falling back to standard: %s", e)
+            auto_routing_error = f"{type(e).__name__}: {e}"
             catalog = get_workflow_catalog()
             workflow = catalog["standard"]
     elif workflow_name == "conversational":
@@ -461,6 +465,10 @@ async def run_unified_analysis(
         # being written and forgotten.
         "shield_verdict": _shield_verdict(state) if state is not None else None,
     }
+    # #2344: "auto" fell back to the standard workflow. The key is present only
+    # then, and carries the cause the warning log would otherwise keep alone.
+    if auto_routing_error is not None:
+        result["auto_routing_error"] = auto_routing_error
 
     # Include state in results if available
     if state is not None:
