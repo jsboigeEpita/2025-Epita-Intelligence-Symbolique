@@ -302,7 +302,16 @@ class MessageMiddleware:
             timeout: Délai d'attente maximum en secondes (None pour attente indéfinie)
 
         Returns:
-            Le message reçu ou None si timeout
+            Le message reçu, ou None si aucun message n'est arrivé avant le
+            timeout. None aussi quand aucun canal n'est enregistré pour
+            ``channel_type`` : ce cas est journalisé et compté dans
+            ``stats["errors"]``.
+
+        Raises:
+            Toute exception du canal ou du traitement de la réponse : c'est
+            un défaut de notre code. Elle est comptée dans ``stats["errors"]``,
+            puis propagée. #2344 : elle était convertie en ``None``, la
+            valeur du timeout.
         """
         try:
             # Si le canal est spécifié, écouter uniquement ce canal
@@ -310,6 +319,8 @@ class MessageMiddleware:
                 channel = self.get_channel(channel_type)
                 if not channel:
                     self.logger.error(f"Channel not found: {channel_type.value}")
+                    with self.lock:
+                        self.stats["errors"] += 1
                     return None
 
                 message = channel.receive_message(recipient_id, timeout)
@@ -383,14 +394,10 @@ class MessageMiddleware:
                 # Petite pause pour éviter de surcharger le CPU
                 threading.Event().wait(0.01)
 
-        except Exception as e:
-            # Mettre à jour les statistiques d'erreur
+        except Exception:
             with self.lock:
                 self.stats["errors"] += 1
-
-            # Journaliser l'erreur
-            self.logger.error(f"Error receiving message: {str(e)}")
-            return None
+            raise
 
     async def receive_message_async(
         self,
@@ -474,40 +481,38 @@ class MessageMiddleware:
 
         Returns:
             Liste des messages en attente
+
+        Raises:
+            Toute exception d'un canal. #2344 : elle était convertie en
+            ``[]``, la valeur d'une file vide.
         """
         messages = []
 
-        try:
-            # Si le canal est spécifié, vérifier uniquement ce canal
-            if channel_type:
-                channel = self.get_channel(channel_type)
-                if not channel:
-                    self.logger.error(f"Channel not found: {channel_type.value}")
-                    return []
+        # Si le canal est spécifié, vérifier uniquement ce canal
+        if channel_type:
+            channel = self.get_channel(channel_type)
+            if not channel:
+                self.logger.error(f"Channel not found: {channel_type.value}")
+                return []
 
-                return channel.get_pending_messages(recipient_id, max_count)
+            return channel.get_pending_messages(recipient_id, max_count)
 
-            # Sinon, vérifier tous les canaux
-            remaining = max_count
+        # Sinon, vérifier tous les canaux
+        remaining = max_count
 
-            for channel in self.channels.values():
-                channel_messages = channel.get_pending_messages(
-                    recipient_id, remaining if remaining is not None else None
-                )
+        for channel in self.channels.values():
+            channel_messages = channel.get_pending_messages(
+                recipient_id, remaining if remaining is not None else None
+            )
 
-                messages.extend(channel_messages)
+            messages.extend(channel_messages)
 
-                if remaining is not None:
-                    remaining -= len(channel_messages)
-                    if remaining <= 0:
-                        break
+            if remaining is not None:
+                remaining -= len(channel_messages)
+                if remaining <= 0:
+                    break
 
-            return messages
-
-        except Exception as e:
-            # Journaliser l'erreur
-            self.logger.error(f"Error getting pending messages: {str(e)}")
-            return []
+        return messages
 
     def get_statistics(self) -> Dict[str, Any]:
         """
