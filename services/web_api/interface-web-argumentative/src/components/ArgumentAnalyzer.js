@@ -14,10 +14,11 @@ const ArgumentAnalyzer = () => {
   } = useAppContext();
 
   const [error, setError] = useState(null);
+  // #2526 : la route calcule la structure à chaque appel, et les sophismes sur
+  // demande. Qualité globale, type d'argument, force et cohérence ne sont
+  // calculés par rien : la vue ne les affiche plus.
   const [options, setOptions] = useState({
-    detect_fallacies: true,
-    analyze_structure: true,
-    evaluate_coherence: true
+    detect_fallacies: true
   });
   
   const textareaRef = useRef(null);
@@ -73,17 +74,10 @@ const ArgumentAnalyzer = () => {
     setError(null);
   };
 
-  const getQualityColor = (quality) => {
-    if (quality >= 0.8) return 'excellent';
-    if (quality >= 0.6) return 'good';
-    if (quality >= 0.4) return 'average';
-    return 'poor';
-  };
-
-  const getSeverityColor = (severity) => {
-    if (severity >= 0.8) return 'critical';
-    if (severity >= 0.6) return 'high';
-    if (severity >= 0.4) return 'medium';
+  // La confiance du détecteur, sur les classes de couleur `severity-*` du CSS.
+  const getConfidenceColor = (confidence) => {
+    if (confidence >= 0.8) return 'high';
+    if (confidence >= 0.5) return 'medium';
     return 'low';
   };
 
@@ -92,8 +86,8 @@ const ArgumentAnalyzer = () => {
       <div className="analyzer-header">
         <h2>🔍 Analyseur d'Arguments</h2>
         <p>
-          Entrez votre texte argumentatif pour une analyse complète incluant 
-          la détection de sophismes, l'évaluation de la structure et la cohérence logique.
+          Entrez votre texte argumentatif : l'analyse en extrait la structure
+          (prémisses et conclusion) et, si l'option est cochée, en détecte les sophismes.
         </p>
       </div>
 
@@ -152,28 +146,6 @@ const ArgumentAnalyzer = () => {
               />
               <span>Détecter les sophismes</span>
             </label>
-            <label className="option-item">
-              <input
-                type="checkbox"
-                checked={options.analyze_structure}
-                onChange={(e) => setOptions({
-                  ...options,
-                  analyze_structure: e.target.checked
-                })}
-              />
-              <span>Analyser la structure</span>
-            </label>
-            <label className="option-item">
-              <input
-                type="checkbox"
-                checked={options.evaluate_coherence}
-                onChange={(e) => setOptions({
-                  ...options,
-                  evaluate_coherence: e.target.checked
-                })}
-              />
-              <span>Évaluer la cohérence</span>
-            </label>
           </div>
         </div>
 
@@ -230,22 +202,12 @@ const ArgumentAnalyzer = () => {
 
           {/* Métriques principales */}
           <div className="metrics-grid">
-            <div className={`metric-card quality-${getQualityColor(analysisResult.overall_quality)}`}>
-              <div className="metric-icon">🎯</div>
-              <div className="metric-content">
-                <h4>Qualité globale</h4>
-                <div className="metric-value">
-                  {(analysisResult.overall_quality * 100).toFixed(1)}%
-                </div>
-              </div>
-            </div>
-
             <div className="metric-card">
               <div className="metric-icon">⚠️</div>
               <div className="metric-content">
                 <h4>Sophismes détectés</h4>
                 <div className="metric-value">
-                  {analysisResult.fallacy_count || 0}
+                  {analysisResult.fallacies ? analysisResult.fallacy_count : 'non recherchés'}
                 </div>
               </div>
             </div>
@@ -253,22 +215,9 @@ const ArgumentAnalyzer = () => {
             <div className="metric-card">
               <div className="metric-icon">🏗️</div>
               <div className="metric-content">
-                <h4>Structure</h4>
+                <h4>Prémisses</h4>
                 <div className="metric-value">
-                  {analysisResult.argument_structure?.argument_type || 'N/A'}
-                </div>
-              </div>
-            </div>
-
-            <div className="metric-card">
-              <div className="metric-icon">🔗</div>
-              <div className="metric-content">
-                <h4>Cohérence</h4>
-                <div className="metric-value">
-                  {analysisResult.argument_structure ?
-                    (analysisResult.argument_structure.coherence * 100).toFixed(1) + '%' :
-                    'N/A'
-                  }
+                  {analysisResult.argument_structure?.premises?.length ?? 'N/A'}
                 </div>
               </div>
             </div>
@@ -280,14 +229,15 @@ const ArgumentAnalyzer = () => {
               <h4>⚠️ Sophismes détectés</h4>
               <div className="fallacies-list">
                 {analysisResult.fallacies.map((fallacy, index) => (
-                  <div key={index} className={`fallacy-item severity-${getSeverityColor(fallacy.severity)}`}>
+                  <div key={index} className={`fallacy-item severity-${getConfidenceColor(fallacy.confidence)}`}>
                     <div className="fallacy-header">
                       <h5>{fallacy.name}</h5>
                       <span className="severity-badge">
-                        Sévérité: {(fallacy.severity * 100).toFixed(1)}%
+                        Confiance : {(fallacy.confidence * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <p className="fallacy-description">{fallacy.description}</p>
+                    {fallacy.family && <p className="fallacy-family">{fallacy.family}</p>}
+                    {fallacy.description && <p className="fallacy-description">{fallacy.description}</p>}
                     {fallacy.explanation && (
                       <div className="fallacy-explanation">
                         <strong>Explication:</strong> {fallacy.explanation}
@@ -303,19 +253,7 @@ const ArgumentAnalyzer = () => {
           {analysisResult.argument_structure && (
             <div className="structure-section">
               <h4>🏗️ Structure argumentative</h4>
-              
-              <div className="structure-overview">
-                <div className="structure-metric">
-                  <strong>Type:</strong> {analysisResult.argument_structure.argument_type}
-                </div>
-                <div className="structure-metric">
-                  <strong>Force:</strong> {(analysisResult.argument_structure.strength * 100).toFixed(1)}%
-                </div>
-                <div className="structure-metric">
-                  <strong>Cohérence:</strong> {(analysisResult.argument_structure.coherence * 100).toFixed(1)}%
-                </div>
-              </div>
-              
+
               {analysisResult.argument_structure.premises && analysisResult.argument_structure.premises.length > 0 && (
                 <div className="premises-section">
                   <h5>📝 Prémisses identifiées</h5>

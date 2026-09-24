@@ -268,6 +268,31 @@ class TestDefinitionService:
         assert len(definitions.sources) == 1
         assert definitions.sources[0].source_name == "Test Source"
 
+    def test_load_definitions_wrong_key_names_the_cause(self, tmp_path):
+        """#2344 family (d), review round 2: the error the CALLER receives
+        carries the crypto cause. A definitions file written with key A and
+        loaded through key B must say bad-token, not a generic failure."""
+        from cryptography.fernet import Fernet
+
+        writer = CryptoService(encryption_key=Fernet.generate_key())
+        blob = writer.encrypt_and_compress_json([{"source_name": "doc_A"}])
+        config_file = tmp_path / "extract_definitions.json.gz.enc"
+        config_file.write_bytes(blob)
+
+        reader = CryptoService(encryption_key=Fernet.generate_key())
+        service = DefinitionService(
+            crypto_service=reader,
+            config_file=config_file,
+            fallback_file=None,
+        )
+
+        definitions, error_message = service.load_definitions()
+
+        assert error_message is not None
+        assert (
+            "bad-token" in error_message
+        ), "the decrypt cause must reach the caller, not only the log"
+
     def test_save_definitions(self, definition_service, sample_definitions):
         """Test de sauvegarde de définitions."""
         # Sauvegarder les définitions

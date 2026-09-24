@@ -13,7 +13,7 @@ from pathlib import Path
 import pickle
 import os
 
-from .jtms_service import JTMSService
+from .jtms_service import JTMSClientInputError, JTMSService
 
 
 class JTMSSessionManager:
@@ -102,7 +102,7 @@ class JTMSSessionManager:
             await self._load_session_from_disk(session_id)
 
         if session_id not in self.sessions:
-            raise ValueError(f"Session non trouvée: {session_id}")
+            raise JTMSClientInputError(f"Session non trouvée: {session_id}")
 
         # Mettre à jour l'accès
         self.sessions[session_id]["last_accessed"] = datetime.now().isoformat()
@@ -174,7 +174,7 @@ class JTMSSessionManager:
             str: Identifiant du checkpoint créé
         """
         if session_id not in self.sessions:
-            raise ValueError(f"Session non trouvée: {session_id}")
+            raise JTMSClientInputError(f"Session non trouvée: {session_id}")
 
         checkpoint_id = f"cp_{session_id}_{uuid.uuid4().hex[:8]}"
 
@@ -249,10 +249,12 @@ class JTMSSessionManager:
             bool: True si la restauration a réussi
         """
         if session_id not in self.sessions:
-            raise ValueError(f"Session non trouvée: {session_id}")
+            raise JTMSClientInputError(f"Session non trouvée: {session_id}")
 
         if session_id not in self.checkpoints:
-            raise ValueError(f"Aucun checkpoint trouvé pour la session: {session_id}")
+            raise JTMSClientInputError(
+                f"Aucun checkpoint trouvé pour la session: {session_id}"
+            )
 
         # Trouver le checkpoint
         target_checkpoint = None
@@ -262,7 +264,7 @@ class JTMSSessionManager:
                 break
 
         if not target_checkpoint:
-            raise ValueError(f"Checkpoint non trouvé: {checkpoint_id}")
+            raise JTMSClientInputError(f"Checkpoint non trouvé: {checkpoint_id}")
 
         # Nettoyer les instances actuelles
         current_instances = self.sessions[session_id]["jtms_instances"].copy()
@@ -305,7 +307,7 @@ class JTMSSessionManager:
             bool: True si la suppression a réussi
         """
         if session_id not in self.sessions:
-            raise ValueError(f"Session non trouvée: {session_id}")
+            raise JTMSClientInputError(f"Session non trouvée: {session_id}")
 
         session_data = self.sessions[session_id]
         agent_id = session_data["agent_id"]
@@ -347,7 +349,7 @@ class JTMSSessionManager:
             bool: True si la mise à jour a réussi
         """
         if session_id not in self.sessions:
-            raise ValueError(f"Session non trouvée: {session_id}")
+            raise JTMSClientInputError(f"Session non trouvée: {session_id}")
 
         # Fusionner les métadonnées
         self.sessions[session_id]["metadata"].update(metadata)
@@ -373,10 +375,10 @@ class JTMSSessionManager:
             bool: True si l'association a réussi
         """
         if session_id not in self.sessions:
-            raise ValueError(f"Session non trouvée: {session_id}")
+            raise JTMSClientInputError(f"Session non trouvée: {session_id}")
 
         if instance_id not in self.jtms_service.instances:
-            raise ValueError(f"Instance JTMS non trouvée: {instance_id}")
+            raise JTMSClientInputError(f"Instance JTMS non trouvée: {instance_id}")
 
         if instance_id not in self.sessions[session_id]["jtms_instances"]:
             self.sessions[session_id]["jtms_instances"].append(instance_id)

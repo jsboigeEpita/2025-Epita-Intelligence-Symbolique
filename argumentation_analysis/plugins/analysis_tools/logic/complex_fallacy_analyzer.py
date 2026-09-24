@@ -24,7 +24,7 @@ import sys
 import json
 import logging
 import numpy as np
-from typing import Dict, List, Any, Optional, Tuple, Union, Set
+from typing import TYPE_CHECKING, Dict, List, Any, Optional, Tuple, Union, Set
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
@@ -33,6 +33,11 @@ from collections import defaultdict
 from argumentation_analysis.agents.tools.analysis.complex_fallacy_analyzer import (
     ComplexFallacyAnalyzer as BaseAnalyzer,
 )
+
+if TYPE_CHECKING:
+    from argumentation_analysis.core.interfaces.fallacy_detector import (
+        AbstractFallacyDetector,
+    )
 
 
 # Fonction d'importation paresseuse pour éviter les importations circulaires

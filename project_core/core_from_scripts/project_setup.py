@@ -38,23 +38,20 @@ class ProjectSetup:
         self.validator = ValidationEngine(logger=self.logger)
         self.system_validator = SystemValidationEngine()
 
-    def setup_environment(
-        self, env_name: str, force: bool = False, with_mocks: bool = False
-    ) -> bool:
+    def setup_environment(self, env_name: str, force: bool = False) -> bool:
         """
         Orchestre le setup complet d'un environnement spécifié.
 
         Args:
             env_name (str): Le nom de l'environnement à configurer ('test' ou 'dev').
             force (bool): Si True, force le setup même si des prérequis sont manquants.
-            with_mocks (bool): Spécifique à l'environnement 'test', active les mocks.
 
         Returns:
             bool: True si le setup a réussi, False sinon.
         """
         self.logger.info(f"Démarrage du setup pour l'environnement : '{env_name}'...")
         if env_name == "test":
-            return self._setup_test_environment(with_mocks=with_mocks)
+            return self._setup_test_environment()
         elif env_name == "dev":
             return self._setup_development_environment(force=force)
         else:
@@ -253,14 +250,22 @@ class ProjectSetup:
         """
         Télécharge les dépendances .jar requises pour l'environnement de test.
         (Conforme au Lot 5, Partie C)
-        """
-        self.logger.info("Vérification/Téléchargement des Jars de test...")
-        # Pour l'instant, nous simulons le succès car la logique de téléchargement
-        # n'est pas l'objectif principal de ce lot.
-        self.logger.info("Les Jars de test sont considérés à jour (simulation).")
-        return True
 
-    def _setup_test_environment(self, with_mocks: bool = False) -> bool:
+        #2551 : délègue au téléchargeur unique, ``jvm_setup.download_tweety_jars``
+        -- celui que la CI appelle (``scripts/ci/provision_tweety.py``). Il échoue
+        bruyamment et nomme sa cause ; un classpath partiel compte comme un échec.
+        Jusqu'ici cette méthode journalisait « considérés à jour (simulation) » et
+        rendait ``True`` sans rien télécharger.
+
+        Import paresseux : ``jvm_setup`` tire jpype, que le verbe ``setup --env
+        dev`` ne doit pas exiger.
+        """
+        from argumentation_analysis.core.jvm_setup import download_tweety_jars
+
+        self.logger.info("Vérification/Téléchargement des Jars de test...")
+        return download_tweety_jars()
+
+    def _setup_test_environment(self) -> bool:
         """
         Prépare l'environnement pour l'exécution des tests en orchestrant les tâches nécessaires.
         (Conforme au Lot 11 et 12)
@@ -274,23 +279,21 @@ class ProjectSetup:
             self.logger.error("Échec du téléchargement des Jars de test. Setup annulé.")
             return False
 
-        # Étape 2: Configurer les mocks si nécessaire (Lot 11)
-        if with_mocks:
-            self.logger.info("Activation des mocks pour l'environnement de test...")
-            # La logique de patching/mocking serait appelée ici.
-            # Exemple: self.env_manager.apply_jpype_mocks()
-            self.logger.info("Mocks activés (simulation).")
+        # #2551 : l'étape « mocks » (Lot 11) est retirée. Elle journalisait
+        # « Mocks activés (simulation) » sans rien appliquer. Le régime mocké des
+        # tests est le drapeau pytest ``--disable-jvm-session`` (#2402), pas un
+        # état que le setup pose.
 
         self.logger.success("Environnement de test configuré avec succès.")
         return True
 
 
 def setup_environment(
-    env_name: str, force: bool = False, with_mocks: bool = False, logger: Logger = None
+    env_name: str, force: bool = False, logger: Logger = None
 ) -> bool:
     """Fonction wrapper pour un appel programmatique."""
     setup = ProjectSetup(logger)
-    return setup.setup_environment(env_name, force, with_mocks)
+    return setup.setup_environment(env_name, force)
 
 
 def check_project_status(logger: Logger = None) -> Dict[str, Any]:
@@ -325,11 +328,6 @@ def main():
         "--force",
         action="store_true",
         help="Forcer le setup même si des prérequis sont manquants (utilisé pour 'dev').",
-    )
-    parser_setup.add_argument(
-        "--with-mocks",
-        action="store_true",
-        help="Activer les mocks pour les tests (utilisé pour 'test').",
     )
 
     # Commande `status`
@@ -387,9 +385,7 @@ def main():
     setup = ProjectSetup(logger)
 
     if args.command == "setup":
-        success = setup.setup_environment(
-            env_name=args.env, force=args.force, with_mocks=args.with_mocks
-        )
+        success = setup.setup_environment(env_name=args.env, force=args.force)
         sys.exit(0 if success else 1)
     elif args.command == "status":
         status = setup.check_project_status()

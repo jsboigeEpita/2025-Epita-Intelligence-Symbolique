@@ -13,6 +13,12 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
+import argumentation_analysis.evaluation.state_export_scrub as scrub
+from argumentation_analysis.evaluation.corpus_instance_tokens import (
+    derive_instance_tokens,
+)
 from scripts.analysis.export_scda_state import (
     DEFAULT_OUT_DIR,
     build_parser,
@@ -20,6 +26,31 @@ from scripts.analysis.export_scda_state import (
 )
 
 REPO = Path(__file__).resolve().parents[4]
+
+# Census synthétique : aucune étiquette ne mappe sur un vrai document. Le but
+# est un vocabulaire que le test connaît exactement, pour armer la dérivation
+# sans qu'un seul label réel entre dans ce fichier suivi (#2411, #2187).
+_SYNTHETIC_CENSUS = (
+    {"source_name": "Clovermark Fennwick 03/04/2026"},
+    {"source_name": "Bramblewood - Tinder Lattice 2026"},
+)
+
+
+@pytest.fixture(autouse=True)
+def _synthetic_instance_census(monkeypatch):
+    """Dérive le vocabulaire d'instance du census synthétique, pas du corpus.
+
+    `_instance_pattern` est mémoïsé dans le module : le remettre à None autour
+    de chaque test, sinon le vocabulaire du premier servirait aux suivants.
+    Sans ce fixture, le scrub irait chercher le corpus chiffré réel (ce que
+    fait la production — et ce dont un test unitaire ne doit pas dépendre).
+    """
+    monkeypatch.setattr(
+        scrub,
+        "_load_instance_tokens",
+        lambda: derive_instance_tokens(_SYNTHETIC_CENSUS),
+    )
+    monkeypatch.setattr(scrub, "_INSTANCE_PATTERN", None)
 
 
 def _git_check_ignore(path: str) -> bool:

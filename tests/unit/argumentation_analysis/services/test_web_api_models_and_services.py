@@ -286,6 +286,15 @@ class TestFrameworkRequestModel:
             opts = FrameworkOptions(semantics=sem)
             assert opts.semantics == sem
 
+    def test_framework_options_max_arguments_bounds(self):
+        # #2536: carried over from the uncollected web_api/tests residue, the
+        # only assertion of it the gate did not already hold.
+        assert FrameworkOptions(max_arguments=1).max_arguments == 1
+        assert FrameworkOptions(max_arguments=1000).max_arguments == 1000
+        for bad in (0, 1001):
+            with pytest.raises(ValidationError):
+                FrameworkOptions(max_arguments=bad)
+
     def test_framework_request_valid(self):
         args = [
             Argument(id="a1", content="Arg 1", attacks=["a2"]),

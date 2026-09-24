@@ -64,15 +64,11 @@ def verify_extract_definitions(
 
             source_type = source_info.get("source_type")
             if source_type == "jina":
-                texte_brut_source = fetch_service.fetch_website_content(
-                    reconstructed_url
-                )
+                texte_brut_source = fetch_service.fetch_with_jina(reconstructed_url)
             elif source_type == "direct_download":
                 texte_brut_source = fetch_service.fetch_direct_text(reconstructed_url)
             elif source_type == "tika":
-                texte_brut_source = fetch_service.fetch_document_content(
-                    source_url=reconstructed_url
-                )
+                texte_brut_source = fetch_service.fetch_with_tika(url=reconstructed_url)
             else:
                 raise ValueError(f"Type source inconnu '{source_type}'.")
         except Exception as e:

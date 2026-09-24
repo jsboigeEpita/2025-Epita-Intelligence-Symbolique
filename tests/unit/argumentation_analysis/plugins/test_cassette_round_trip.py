@@ -266,6 +266,10 @@ class TestCommittedCassettesStillReplay:
         replay_db.mkdir()
         _populate_db(replay_db, stems)
 
+        # #2411: the service constructor needs *a* key; this test owns its own
+        # rather than reading the suite host's. No call can leave: replay mode
+        # raises on a miss and the httpx spy catches any outbound request.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-dummy-2411-cassette")
         monkeypatch.setenv("LLM_CACHE_MODE", "replay")
         monkeypatch.setenv("LLM_CACHE_DIR", str(replay_db))
 

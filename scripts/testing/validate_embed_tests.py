@@ -100,7 +100,7 @@ def test_basic_functionality():
     """Test de base : script fonctionne avec données valides."""
     print("\n=== Test 1: Fonctionnalite de base ===")
 
-    test_passphrase = "Propaganda"
+    test_passphrase = "synthetic-test-passphrase"
     test_data = [
         {
             "source_name": "Test Source",
@@ -163,7 +163,7 @@ def test_force_overwrite():
     """Test : option --force fonctionne."""
     print("\n=== Test 2: Force overwrite ===")
 
-    test_passphrase = "Propaganda"
+    test_passphrase = "synthetic-test-passphrase"
     test_data = [
         {
             "source_name": "Test Source",
@@ -221,7 +221,7 @@ def test_no_force_existing_file():
     """Test : sans --force, fichier existant provoque erreur."""
     print("\n=== Test 3: No force existing file ===")
 
-    test_passphrase = "Propaganda"
+    test_passphrase = "synthetic-test-passphrase"
     test_data = [
         {
             "source_name": "Test Source",
@@ -276,7 +276,7 @@ def test_missing_input_file():
     """Test : fichier d'entrée manquant provoque erreur."""
     print("\n=== Test 4: Missing input file ===")
 
-    test_passphrase = "Propaganda"
+    test_passphrase = "synthetic-test-passphrase"
 
     try:
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -312,7 +312,7 @@ def test_missing_passphrase():
     """Test : passphrase manquante provoque erreur."""
     print("\n=== Test 5: Missing passphrase ===")
 
-    test_passphrase = "Propaganda"
+    test_passphrase = "synthetic-test-passphrase"
     test_data = [
         {
             "source_name": "Test Source",
@@ -366,7 +366,7 @@ def test_encryption_compatibility():
     """Test : compatibilité du chiffrement entre mock et script."""
     print("\n=== Test 6: Compatibilite chiffrement ===")
 
-    test_passphrase = "Propaganda"
+    test_passphrase = "synthetic-test-passphrase"
     test_data = [
         {
             "source_name": "Compatibility Test",
