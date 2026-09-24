@@ -1,24 +1,44 @@
 # -*- coding: utf-8 -*-
-"""#2529: every module a web-lane file imports exists.
+"""#2529, #2532: every module our code imports exists.
 
-Four scripts of ``services/web_api/`` imported ``scripts.webapp``, a package
-deleted in ``1873e9d13`` (2025-06-21). Nothing ran them, so the gap lasted
-fifteen months; ``health_check.py`` also hid it behind ``except ImportError``.
+#2529. Four scripts of ``services/web_api/`` imported ``scripts.webapp``, a
+package deleted in ``1873e9d13`` (2025-06-21). Nothing ran them, so the gap
+lasted fifteen months; ``health_check.py`` also hid it behind ``except
+ImportError``.
 
-The census, with its root stated: the tracked ``.py`` files under
-``services/web_api/``, ``api/`` and ``interface_web/``. Every ``import X`` and
-every absolute ``from X import ...`` in them, at any depth, must name a module
-that ``importlib`` finds from the repository root, or a sibling of the file (a
-script run directly has its own directory on ``sys.path``). An import inside
-``try``/``except ImportError`` is not exempt. Measured on ``e6a3b476a``: 28
-files, 4 unresolved sites, all ``scripts.webapp``.
+#2532. The same class sat in the other roots: 15 sites on ``41ebd4aee``, each
+naming a module the history deleted (``scripts.validation.mock_elimination``,
+``SynthesisAgent``'s module, ``scripts/core/auto_env.py``...). Two of them broke
+their module at import; one fabricated a passing score in its ``except
+ImportError``.
+
+Two rules, each with its root stated.
+
+- **Web lane** (``services/web_api/``, ``api/``, ``interface_web/``), strict:
+  every ``import X`` and every absolute ``from X import ...``, at any depth,
+  names a module that ``importlib`` finds from the repository root, or a sibling
+  of the file (a script run directly has its own directory on ``sys.path``).
+  Measured on ``e6a3b476a``: 28 files, 4 unresolved sites.
+- **Our other code** (``scripts/``, ``project_core/``, ``argumentation_analysis/``):
+  the same resolution, but only imports of *ours* are judged. An import is ours
+  when its top-level name is a package at the repository root, or when the git
+  history deleted a module at that dotted path (``a.b`` is ``.../a/b.py`` or
+  ``.../a/b/__init__.py``). A bare or partial name also resolves when a tracked
+  module carries it (the script may put that module's directory on
+  ``sys.path``). Third-party imports are not judged here: which ones must be
+  installed is the environment files' business, and an optional one is
+  legitimately guarded by a ``try``. Measured on ``41ebd4aee``: 970 files,
+  15 dead sites.
+
+In both rules an import inside ``try``/``except ImportError`` is not exempt.
+
+The history rule reads ``git log``: a shallow clone would blind it without a
+sound, so ``test_the_history_names_a_deleted_module`` must see a deletion first
+(the CI test job checks out with ``fetch-depth: 0``).
 
 The census runs in a fresh interpreter. In the test session, ``sys.modules``
 may hold a mock (``--disable-jvm-session`` puts one at ``jpype``), and
 ``find_spec`` then answers for the mock, not for the environment.
-
-The other roots are not covered here: ``scripts/``, ``project_core/`` and
-``argumentation_analysis/`` carry unresolved imports of their own: #2532.
 """
 
 import json
@@ -31,6 +51,7 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 ROOTS = ("services/web_api", "api", "interface_web")
+OWN_ROOTS = ("scripts", "project_core", "argumentation_analysis")
 
 _CENSUS = r"""
 import ast
@@ -49,7 +70,7 @@ def imported(source):
             yield node.lineno, node.module
 
 
-def resolves(module, directory):
+def found(module, directory):
     head = module.split(".")[0]
     if (directory / (head + ".py")).exists() or (directory / head).is_dir():
         return True
@@ -59,50 +80,102 @@ def resolves(module, directory):
         return False
 
 
-found = {}
-for name in sys.argv[1:]:
+def tails(paths):
+    names = set()
+    for name in paths:
+        parts = name[: -len(".py")].split("/")
+        if parts[-1] == "__init__":
+            parts.pop()
+        names.update(".".join(parts[i:]) for i in range(len(parts)))
+    return names
+
+
+job = json.loads(sys.stdin.read())
+packages = set(job["packages"])
+tracked = tails(job["tracked"])
+deleted = tails(job["deleted"])
+
+
+def dead(module, directory):
+    if found(module, directory):
+        return False
+    if job["strict"] or module.split(".")[0] in packages:
+        return True
+    return module in deleted and module not in tracked
+
+
+result = {}
+for name in job["files"]:
     path = Path(name)
     source = path.read_text(encoding="utf-8-sig")
-    found[name] = [
+    result[name] = [
         [line, module]
-        for line, module in imported(source)
-        if not resolves(module, path.parent)
+        for line, module in sorted(imported(source))
+        if dead(module, path.parent)
     ]
-print("CENSUS " + json.dumps(found))
+print("CENSUS " + json.dumps(result))
 """
 
 
-def _tracked_sources():
-    listed = subprocess.run(
-        ["git", "ls-files", "--", *(f"{root}/*.py" for root in ROOTS)],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout.split()
-    return [ROOT / name for name in listed]
+def _git(*args):
+    return subprocess.run(
+        ["git", *args], cwd=ROOT, capture_output=True, text=True, check=True
+    ).stdout.split("\n")
 
 
-def census(paths):
-    """``{path: [[line, module], ...]}``: the imports that do not resolve."""
+def _tracked_sources(roots):
+    listed = _git("ls-files", "--", *(f"{root}/*.py" for root in roots))
+    return [ROOT / name for name in listed if name]
+
+
+def _history():
+    """The modules the history deleted, the tracked ones, the root packages."""
+    deleted = _git(
+        "log",
+        "HEAD",
+        "--no-renames",
+        "--diff-filter=D",
+        "--name-only",
+        "--format=",
+        "--",
+        "*.py",
+    )
+    tracked = _git("ls-files", "--", "*.py")
+    top = {name.split("/")[0] for name in _git("ls-files") if name}
+    packages = {
+        name[: -len(".py")] if name.endswith(".py") else name
+        for name in top
+        if (ROOT / name).is_dir() or name.endswith(".py")
+    }
+    return {
+        "deleted": sorted({name for name in deleted if name}),
+        "tracked": [name for name in tracked if name],
+        "packages": sorted(name for name in packages if name.isidentifier()),
+    }
+
+
+def census(paths, strict=True):
+    """``{path: [[line, module], ...]}``: the imports judged dead."""
+    job = dict(_history(), files=[str(path) for path in paths], strict=strict)
     env = dict(os.environ)
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
     done = subprocess.run(
-        [sys.executable, "-c", _CENSUS, *map(str, paths)],
+        [sys.executable, "-c", _CENSUS],
         cwd=ROOT,
         env=env,
+        input=json.dumps(job),
         capture_output=True,
         text=True,
         encoding="utf-8",
         errors="replace",
-        timeout=600,
+        timeout=900,
     )
     lines = [line for line in done.stdout.splitlines() if line.startswith("CENSUS ")]
     assert done.returncode == 0 and lines, done.stdout[-2000:] + done.stderr[-2000:]
     return {Path(k): v for k, v in json.loads(lines[-1][len("CENSUS ") :]).items()}
 
 
-SOURCES = _tracked_sources()
+SOURCES = _tracked_sources(ROOTS)
 
 
 @pytest.fixture(scope="module")
@@ -138,3 +211,53 @@ def test_the_census_reports_a_missing_module(tmp_path):
 )
 def test_every_import_resolves(path, web_lane_census):
     assert web_lane_census[path] == []
+
+
+def test_the_history_names_a_deleted_module():
+    """Control: without history, the rule for our other code judges nothing."""
+    history = _history()
+
+    assert (
+        "project_core/webapp_from_scripts/simple_web_orchestrator.py"
+        in history["deleted"]
+    ), "git log sees no deletion: a shallow clone? (#2532 needs fetch-depth: 0)"
+    assert set(OWN_ROOTS) <= set(history["packages"])
+
+
+def test_the_census_judges_only_what_is_ours(tmp_path):
+    """Control: what #2532 found is reported, even behind a try; the rest is not.
+
+    ``jvm_setup`` is carried by a tracked module; the last name is nobody's.
+    """
+    probe = tmp_path / "probe.py"
+    probe.write_text(
+        "try:\n"
+        "    from simple_web_orchestrator import SimpleWebOrchestrator\n"
+        "except ImportError:\n"
+        "    SimpleWebOrchestrator = None\n"
+        "from scripts.validation.mock_elimination import MockEliminator\n"
+        "import jvm_setup\n"
+        "import some_optional_vendor_sdk_2532\n",
+        encoding="utf-8",
+    )
+
+    assert census([probe], strict=False) == {
+        probe: [
+            [2, "simple_web_orchestrator"],
+            [5, "scripts.validation.mock_elimination"],
+        ]
+    }
+
+
+@pytest.mark.parametrize("root", OWN_ROOTS)
+def test_no_import_of_ours_is_dead(root):
+    sources = _tracked_sources([root])
+    assert len(sources) >= 40, (root, len(sources))
+
+    dead = {
+        path.relative_to(ROOT).as_posix(): sites
+        for path, sites in census(sources, strict=False).items()
+        if sites
+    }
+
+    assert dead == {}

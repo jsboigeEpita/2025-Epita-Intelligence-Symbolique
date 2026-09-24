@@ -62,7 +62,6 @@ from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import initialize_jvm
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogicAgent
-from argumentation_analysis.agents.core.synthesis.synthesis_agent import SynthesisAgent
 from argumentation_analysis.plugins.analysis_tools.logic.contextual_fallacy_analyzer import (
     EnhancedContextualFallacyAnalyzer,
 )
@@ -390,23 +389,12 @@ class EducationalProjectManager:
                         "initialisation",
                     )
 
-            # Agent de synthèse pour niveaux avancés
-            if "orchestration_avancee" in concepts or "synthesis" in concepts:
-                synthesis_agent = SynthesisAgent(
-                    kernel=kernel,
-                    agent_name="EducationalSynthesis",
-                    enable_advanced_features=(
-                        self.config.student_level in ["M1", "M2"]
-                    ),
-                )
-                synthesis_agent.setup_agent_components(llm_service.service_id)
-                self.agents["synthesis"] = synthesis_agent
-
-                self.conversation_logger.log_agent_message(
-                    "AgentSynthese",
-                    "Bonjour ! Je coordonne l'analyse unifiée en combinant tous les résultats. Je vais synthétiser les découvertes de mes collègues.",
-                    "initialisation",
-                )
+            # #2532 : pas d'agent de synthèse. Celui qu'on créait ici,
+            # `SynthesisAgent`, ne pouvait produire aucune synthèse (#2140 : ses
+            # deux fabriques d'agents levaient toujours, et l'erreur devenait un
+            # champ de résultat) ; il a été retiré, et son import faisait échouer
+            # ce module au chargement. La synthèse du projet, `DeepSynthesisAgent`,
+            # lit un `UnifiedAnalysisState`, que ce showcase ne construit pas.
 
             self.conversation_logger.log_educational_checkpoint(
                 "AgentsInitialises",
@@ -445,11 +433,7 @@ class EducationalProjectManager:
         if "modal" in self.agents:
             await self._run_modal_analysis(text_to_analyze, results)
 
-        # Phase 3: Synthèse si agent disponible
-        if "synthesis" in self.agents:
-            await self._run_synthesis_analysis(text_to_analyze, results)
-
-        # Phase 4: Coordination finale du PM
+        # Phase 3: Coordination finale du PM
         await self._finalize_educational_analysis(results)
 
         return results
@@ -608,54 +592,6 @@ class EducationalProjectManager:
         except Exception as e:
             logger.error(f"Erreur analyse modale: {e}")
             results["agents_results"]["modal"] = {"error": str(e)}
-
-    async def _run_synthesis_analysis(self, text: str, results: Dict[str, Any]):
-        """Exécute la synthèse unifiée avec coordination pédagogique."""
-        start_time = time.time()
-
-        self.conversation_logger.log_agent_message(
-            "AgentSynthese",
-            "Maintenant, je vais combiner toutes ces analyses ! Je vais créer une synthèse cohérente de tous les résultats obtenus par mes collègues.",
-            "synthese",
-        )
-
-        try:
-            agent = self.agents["synthesis"]
-            unified_report = await agent.synthesize_analysis(text)
-
-            duration_ms = (time.time() - start_time) * 1000
-
-            self.conversation_logger.log_tool_interaction(
-                "AgentSynthese",
-                "synthese_unifiee",
-                f"resultats_combines:{len(results['agents_results'])}agents",
-                f"synthese_generee:duree_{unified_report.total_processing_time_ms:.0f}ms",
-                duration_ms,
-            )
-
-            # Génération du rapport textuel
-            text_report = await agent.generate_report(unified_report)
-
-            self.conversation_logger.log_agent_message(
-                "AgentSynthese",
-                f"Synthèse terminée ! J'ai intégré les analyses rhétoriques et logiques. Le rapport final révèle des insights précieux sur la structure argumentative.",
-                "synthese",
-            )
-
-            results["agents_results"]["synthesis"] = {
-                "status": "success",
-                "overall_validity": unified_report.overall_validity,
-                "confidence_level": unified_report.confidence_level,
-                "contradictions": len(unified_report.contradictions_identified),
-                "recommendations": len(unified_report.recommendations),
-                "text_report": text_report,
-            }
-
-            self.metrics.interaction_count += 1
-
-        except Exception as e:
-            logger.error(f"Erreur synthèse: {e}")
-            results["agents_results"]["synthesis"] = {"error": str(e)}
 
     async def _finalize_educational_analysis(self, results: Dict[str, Any]):
         """Finalise l'analyse avec coordination du Project Manager."""
@@ -1058,7 +994,6 @@ class EducationalShowcaseSystem:
                     "informal": "Agent d'Analyse Rhetorique",
                     "propositional": "Agent de Logique Propositionnelle",
                     "modal": "Agent de Logique Modale",
-                    "synthesis": "Agent de Synthese",
                 }.get(agent_name, f"Agent {agent_name.title()}")
 
                 report_lines.extend([f"### {agent_title}", ""])
@@ -1090,19 +1025,6 @@ class EducationalShowcaseSystem:
                             [
                                 f"- **Cohérence logique:** {'OK - Cohérent' if consistency else 'FAIL - Incohérent'}",
                                 f"- **Requêtes générées:** {queries_count}",
-                                "",
-                            ]
-                        )
-
-                    elif agent_name == "synthesis":
-                        validity = agent_result.get("overall_validity", "Inconnue")
-                        confidence = agent_result.get("confidence_level", 0)
-                        report_lines.extend(
-                            [
-                                f"- **Validité globale:** {validity}",
-                                f"- **Niveau de confiance:** {confidence:.0%}",
-                                f"- **Contradictions:** {agent_result.get('contradictions', 0)}",
-                                f"- **Recommandations:** {agent_result.get('recommendations', 0)}",
                                 "",
                             ]
                         )

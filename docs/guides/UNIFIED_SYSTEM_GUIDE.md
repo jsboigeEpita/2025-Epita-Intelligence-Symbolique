@@ -601,8 +601,8 @@ powershell -File .\scripts\env\activate_project_env.ps1
 # Validation installation système récupéré  
 python comprehensive_recovery_analysis.py
 
-# Test intégration complète
-python test_importation_consolidee.py
+# Test intégration complète (rend 1 si un symbole ne s'importe pas)
+python scripts/validation/test_importation_consolidee.py
 ```
 
 #### Variables d'Environnement

@@ -59,9 +59,9 @@ Ce répertoire contient divers scripts pour des tâches spécifiques, la mainten
 *   **`scripts/demonstration_epita.py`**
     *   **Rôle :** Script de démonstration pour l'EPITA, incluant des tests unitaires, l'analyse de texte clair et chiffré, et la génération de rapports. Utilise des mocks pour les services non stables.
     *   **Statut :** Stable (pour la démonstration avec mocks).
-*   **`scripts/download_test_jars.py`**
-    *   **Rôle :** Télécharge les fichiers JAR nécessaires pour les tests.
-    *   **Statut :** Stable.
+*   **`scripts/ci/provision_tweety.py`**
+    *   **Rôle :** Télécharge les fichiers JAR nécessaires pour les tests (via `jvm_setup.download_tweety_jars`). Remplace `scripts/setup/download_test_jars.py`, supprimé par #2532.
+    *   **Statut :** Stable (utilisé par la CI).
 *   **`scripts/embed_all_sources.py`**
     *   **Rôle :** Intègre toutes les sources dans le projet.
     *   **Statut :** Stable.

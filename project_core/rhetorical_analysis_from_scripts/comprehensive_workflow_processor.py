@@ -9,7 +9,7 @@ Processeur de workflows complets pour l'analyse rhétorique avec :
 - Tests intégrés et validation système complète
 - Support batch pour traitement de volumes importants
 - Pipeline parallélisé avec optimisation des performances
-- Validation d'authenticité et monitoring avancé
+- Validation système (tests système et API) et monitoring avancé
 
 Architecture consolidée de 6 scripts sources majeurs :
 - run_full_python_analysis_workflow.py (workflow + déchiffrement)
@@ -130,9 +130,7 @@ class WorkflowConfig:
     performance_iterations: int = 3
 
     # Configuration de la validation
-    authenticity_threshold: float = 0.9
     enable_system_validation: bool = True
-    mock_detection: bool = True
 
     # Configuration des rapports
     output_dir: Path = Path("results/comprehensive_workflow")
@@ -427,7 +425,7 @@ class PipelineEngine:
 
 
 class ValidationSuite:
-    """Suite de validation système et authenticité."""
+    """Suite de validation système : tests système et tests API."""
 
     def __init__(self, config: WorkflowConfig):
         self.config = config
@@ -438,24 +436,18 @@ class ValidationSuite:
         self.logger.info("🔍 Démarrage de la validation système")
         results = {
             "status": "success",
-            "authenticity_check": {},
             "system_tests": {},
             "api_tests": {},
             "errors": [],
         }
 
         try:
-            # 1. Validation d'authenticité
-            if self.config.mock_detection:
-                authenticity_results = await self._run_authenticity_check()
-                results["authenticity_check"] = authenticity_results
-
-            # 2. Tests système
+            # 1. Tests système
             if self.config.enable_system_validation:
                 system_results = await self._run_system_tests()
                 results["system_tests"] = system_results
 
-            # 3. Tests API
+            # 2. Tests API
             if self.config.enable_api_tests:
                 api_results = await self._run_api_tests()
                 results["api_tests"] = api_results
@@ -469,42 +461,6 @@ class ValidationSuite:
             results["errors"].append(error_msg)
 
         return results
-
-    async def _run_authenticity_check(self) -> Dict[str, Any]:
-        """Vérifie l'authenticité du système."""
-        try:
-            # Import dynamique pour éviter les erreurs
-            try:
-                from scripts.validation.mock_elimination import (
-                    MockDetector,
-                    AuthenticityReport,
-                )
-
-                detector = MockDetector(PROJECT_ROOT)
-                report = detector.scan_project()
-
-                return {
-                    "authenticity_score": getattr(report, "authenticity_score", 0.8),
-                    "total_mocks_detected": getattr(report, "total_mocks_detected", 0),
-                    "critical_mocks": getattr(report, "critical_mocks", []),
-                    "passed": getattr(report, "authenticity_score", 0.8)
-                    >= self.config.authenticity_threshold,
-                    "status": "success",
-                }
-
-            except ImportError:
-                # Mock de base si le module n'est pas disponible
-                return {
-                    "authenticity_score": 0.9,
-                    "total_mocks_detected": 2,
-                    "critical_mocks": [],
-                    "passed": True,
-                    "status": "simulated",
-                    "warning": "Module de détection des mocks non disponible",
-                }
-
-        except Exception as e:
-            return {"status": "error", "error": str(e), "passed": False}
 
     async def _run_system_tests(self) -> Dict[str, Any]:
         """Exécute les tests système."""
@@ -916,15 +872,6 @@ class ResultsAggregator:
         if results.validation_results:
             val_res = results.validation_results
 
-            # Authenticité
-            auth_check = val_res.get("authenticity_check", {})
-            if auth_check:
-                score = auth_check.get("authenticity_score", 0)
-                mocks = auth_check.get("total_mocks_detected", 0)
-                md_content += (
-                    f"**Authenticité**: {score:.1%} (🤖 {mocks} mocks détectés)\n\n"
-                )
-
             # Tests système
             sys_tests = val_res.get("system_tests", {})
             if sys_tests:
@@ -1328,19 +1275,6 @@ Environnements: development, testing, production
 
     # Configuration validation
     parser.add_argument(
-        "--authenticity-threshold",
-        type=float,
-        default=0.9,
-        help="Seuil d'authenticité minimum (défaut: 0.9)",
-    )
-
-    parser.add_argument(
-        "--disable-mock-detection",
-        action="store_true",
-        help="Désactiver la détection de mocks",
-    )
-
-    parser.add_argument(
         "--disable-system-validation",
         action="store_true",
         help="Désactiver la validation système",
@@ -1411,9 +1345,7 @@ def parse_arguments(args: Optional[List[str]] = None) -> WorkflowConfig:
         api_base_url=parsed_args.api_url,
         performance_iterations=parsed_args.iterations,
         # Configuration validation
-        authenticity_threshold=parsed_args.authenticity_threshold,
         enable_system_validation=not parsed_args.disable_system_validation,
-        mock_detection=not parsed_args.disable_mock_detection,
         # Configuration rapports
         output_dir=Path(parsed_args.output_dir),
         report_formats=(

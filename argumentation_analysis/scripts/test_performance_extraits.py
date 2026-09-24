@@ -182,7 +182,7 @@ async def setup_informal_agent(llm_service: Any) -> Tuple[Any, StateManagerMock]
     :rtype: Tuple[Any, StateManagerMock]
     """
     from semantic_kernel import Kernel
-    from argumentation_analysis.agents.informal.informal_definitions import (
+    from argumentation_analysis.agents.core.informal.informal_definitions import (
         setup_informal_kernel,
     )
 
