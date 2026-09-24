@@ -28,6 +28,15 @@ class QueryExecutor:
         self._logger = logger
         self._tweety_bridge = TweetyBridge()
 
+    def is_ready(self) -> bool:
+        """Dit si une requête peut s'exécuter : la JVM est démarrée et Tweety chargé.
+
+        C'est la sonde que ``execute_query`` consulte avant chaque requête ; la
+        santé de ``LogicService`` la lit aussi (#2346), pour qu'un pont construit
+        sans JVM prête (jpype absent, ``DISABLE_JAVA_LOGIC=1``) ne se déclare pas sain.
+        """
+        return self._tweety_bridge.initializer.is_jvm_ready()
+
     def execute_query(
         self, belief_set: BeliefSet, query: str
     ) -> Tuple[Optional[bool], str]:
@@ -56,7 +65,7 @@ class QueryExecutor:
         # CONV-B #1333 / #1773: ``is_jvm_ready()`` vit sur TweetyInitializer,
         # pas sur TweetyBridge — l'ancienne forme levait AttributeError sur
         # TOUTE exécution de execute_query.
-        if not self._tweety_bridge.initializer.is_jvm_ready():
+        if not self.is_ready():
             error_msg = "JVM non prête ou composants Tweety non chargés"
             self._logger.error(error_msg)
             return None, f"FUNC_ERROR: {error_msg}"

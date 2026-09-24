@@ -75,8 +75,9 @@ class LogicService:
             if not self.kernel:
                 return False
 
-            # Vérifier que l'exécuteur de requêtes est initialisé
-            if not self.query_executor:
+            # #2346 : l'exécuteur existe dès la construction du service ; c'est la
+            # JVM dont dépendent les agents logiques qui décide de la santé.
+            if not self.query_executor.is_ready():
                 return False
 
             return True
