@@ -99,7 +99,7 @@ dependencies:
     - pytest-dotenv
     - mcp>=2.0  # #1559 : migré vers l'API mcp 2.x (FastMCP renommé MCPServer, host/port déplacés du ctor vers run()). Le pin <2 de #1558 était un sursis le temps de la migration.
     - blis
-    - JPype1>=1.5.0
+    - JPype1==1.7.1  # #2538: pinned to the version the gate exercises. The floor >=1.5.0 let CI resolve 1.7.1 while the dev envs sat on 1.6.0, so the #2519 exit repair was measured on one version and run on the other. 1.7.1 is what the gate ran green (run 35997641767: 16311 passed, 0 failed). Measured on ai-01, main 3b5e828cb, keyless, gate selection: tests/integration/workers/ (270 tests, nested JVM sessions) and tests/unit -m 'jpype or tweety' (166) give the same outcome test by test on 1.6.0 and 1.7.1, in the same time. Bring a dev env to it with pip install jpype1==1.7.1.
     - pytest-benchmark
     - tiktoken
     - hypothesis  # #1303: property tests (tests/property/) — CI collection breaks without it
