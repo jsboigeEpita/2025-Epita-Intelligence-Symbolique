@@ -289,6 +289,24 @@ def _make_analysis_kernel() -> Tuple[Any, str]:
     return kernel, ANALYSIS_SERVICE_ID
 
 
+def _construct_analysis_agent() -> Any:
+    """Construction unique de l'agent d'analyse (kernel du seam #2390).
+
+    Le scénario de performance ``pipeline_initialization`` chronomètre cette
+    construction (#2510) : c'est l'initialisation réelle que chaque analyse
+    exécute. Un seul site de construction dans le module — la garde #2390
+    l'exige.
+    """
+    from argumentation_analysis.agents.core.informal.informal_agent import (
+        InformalAnalysisAgent,
+    )
+
+    kernel, service_id = _make_analysis_kernel()
+    agent = InformalAnalysisAgent(kernel=kernel, agent_name="ProcessorInformalAgent")
+    agent.setup_agent_components(llm_service_id=service_id)
+    return agent
+
+
 class PipelineEngine:
     """Moteur d'analyse avec orchestration avancée."""
 
@@ -370,15 +388,7 @@ class PipelineEngine:
         pas sur l'agent.
         """
         try:
-            from argumentation_analysis.agents.core.informal.informal_agent import (
-                InformalAnalysisAgent,
-            )
-
-            kernel, service_id = _make_analysis_kernel()
-            agent = InformalAnalysisAgent(
-                kernel=kernel, agent_name="ProcessorInformalAgent"
-            )
-            agent.setup_agent_components(llm_service_id=service_id)
+            agent = _construct_analysis_agent()
 
             # Exécution de l'analyse
             analysis_result = await agent.analyze_text(
@@ -621,11 +631,17 @@ class TestOrchestrator:
         }
 
         try:
-            # Tests de performance par composant
+            # Tests de performance par composant. #2510 : chaque scénario
+            # chronomètre une opération réelle du processeur. Le scénario
+            # « validation_suite » est retiré : la validation est une phase à
+            # part entière du workflow (suites de tests en sous-processus +
+            # appels HTTP), la chronométrer ici la rejouerait au lieu de
+            # mesurer le processeur. Le résumé nomme les scénarios : un
+            # retrait se voit, ``total_scenarios`` ne rétrécit pas
+            # silencieusement.
             test_scenarios = [
                 ("text_analysis", self._performance_text_analysis),
                 ("pipeline_initialization", self._performance_pipeline_init),
-                ("validation_suite", self._performance_validation),
             ]
 
             for test_name, test_func in test_scenarios:
@@ -667,6 +683,7 @@ class TestOrchestrator:
             )
 
             results["summary"] = {
+                "scenarios": [name for name, _ in test_scenarios],
                 "total_scenarios": total_tests,
                 "successful_scenarios": successful_tests,
                 "success_rate": (
@@ -706,21 +723,15 @@ class TestOrchestrator:
             )
 
     async def _performance_pipeline_init(self):
-        """Test de performance d'initialisation de pipeline."""
-        try:
-            from config.unified_config import UnifiedConfig
+        """Test de performance d'initialisation de pipeline (#2510).
 
-            config = UnifiedConfig()
-            # Simulation d'initialisation
-            await asyncio.sleep(0.05)
-
-        except ImportError:
-            await asyncio.sleep(0.05)
-
-    async def _performance_validation(self):
-        """Test de performance de validation."""
-        # Simulation de validation rapide
-        await asyncio.sleep(0.02)
+        Chronomètre l'initialisation réelle du pipeline d'analyse : kernel
+        du seam canonique, agent informel, setup. L'ancien corps
+        chronométrait un sommeil (une constante publiée comme mesure) ; sa
+        branche ``except ImportError`` exécutait le même sommeil — un
+        succès fabriqué pour une opération qui n'a pas tourné.
+        """
+        _construct_analysis_agent()
 
 
 # === AGRÉGATEUR DE RÉSULTATS ===
