@@ -153,37 +153,31 @@ class TaskCoordinator:
         """
         Assigne une tâche à l'agent opérationnel le plus compétent.
 
-        Utilise le registre `agent_capabilities` pour trouver le meilleur agent.
-        Envoie ensuite une directive d'assignation via le middleware. Depuis
-        #1735 T3, chaque allocation est aussi enregistrée dans l'état tactique
-        — qui (``task_assignments``) **et pourquoi**
+        Utilise le registre `agent_capabilities` pour trouver le meilleur agent
+        et enregistre l'allocation dans l'état tactique (#1735 T3) — qui
+        (``task_assignments``) **et pourquoi**
         (``task_assignments_motivation``) — pour que le forensic de trace du
         mode conversationnel s'applique au palier tactique hiérarchique.
+        La directive middleware qui accompagnait cette écriture est retirée
+        (#2415) : son récepteur (l'abonnement des agents opérationnels) était
+        un circuit mort — les chemins d'exécution réels passent par le seam
+        ``operational_executor`` (M3) ou la file du ``OperationalManager``.
 
         Args:
             task: La tâche à assigner.
         """
         required_capabilities = task.get("required_capabilities", [])
         recipient_id = self._determine_appropriate_agent(required_capabilities)
-        message_priority = self._map_priority_to_enum(task.get("priority", "medium"))
         motivation = self._motivate_allocation(task, recipient_id)
 
         self.logger.info(
             f"Assignation de la tâche {task.get('id')} à l'agent {recipient_id} "
             f"— {motivation[:80]}"
         )
-        self.adapter.assign_task(
-            task_type="operational_task",
-            parameters=task,
-            recipient_id=recipient_id,
-            priority=message_priority,
-            requires_ack=True,
-        )
         # #1735 T3: la désignation (qui + pourquoi) est écrite dans l'état
-        # tactique. ``assign_task`` réanime le champ existant — le palier
-        # enregistre désormais l'allocation réelle, pas seulement la directive
-        # middleware. La motivation n'est tracée que si la tâche a bien été
-        # assignée (cohérence : pas de motivation orpheline).
+        # tactique — le palier enregistre l'allocation réelle. La motivation
+        # n'est tracée que si la tâche a bien été assignée (cohérence : pas
+        # de motivation orpheline).
         if self.state.assign_task(task["id"], recipient_id):
             self.state.record_allocation_motivation(task["id"], motivation)
 
@@ -403,13 +397,6 @@ class TaskCoordinator:
         self._log_action(
             "Application d'ajustement", f"Ajustements {adjustments.keys()} appliqués."
         )
-
-    def _map_priority_to_enum(self, priority: str) -> MessagePriority:
-        return {
-            "high": MessagePriority.HIGH,
-            "medium": MessagePriority.NORMAL,
-            "low": MessagePriority.LOW,
-        }.get(priority.lower(), MessagePriority.NORMAL)
 
 
 # Alias pour compatibilité

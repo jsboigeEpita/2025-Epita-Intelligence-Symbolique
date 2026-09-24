@@ -5,11 +5,9 @@ Cette interface définit les méthodes que tous les agents opérationnels
 doivent implémenter pour fonctionner dans l'architecture hiérarchique.
 """
 
-from typing import Dict, List, Any, Optional, Union, Callable
+from typing import Dict, List, Any, Optional
 from abc import ABC, abstractmethod
 import logging
-import asyncio
-import uuid
 
 from argumentation_analysis.orchestration.hierarchical.operational.state import (
     OperationalState,
@@ -18,11 +16,6 @@ from argumentation_analysis.core.communication import (
     MessageMiddleware,
     create_default_middleware,
     OperationalAdapter,
-    Message,
-    ChannelType,
-    MessagePriority,
-    MessageType,
-    AgentLevel,
 )
 
 
@@ -60,145 +53,17 @@ class OperationalAgent(ABC):
         # Créer l'adaptateur opérationnel
         self.adapter = OperationalAdapter(agent_id=name, middleware=self.middleware)
 
-        # S'abonner aux tâches opérationnelles
-        self._subscribe_to_tasks()
-
-    def _subscribe_to_tasks(self) -> None:
-        """S'abonne aux tâches opérationnelles."""
-        # Vérifier si le middleware est disponible
-        if not self.middleware:
-            self.logger.warning(
-                f"Agent {self.name}: Middleware non disponible, abonnement aux tâches ignoré"
-            )
-            return
-
-        # Définir le callback pour les tâches
-        def handle_task(message: Message) -> None:
-            # Le chemin callback diffuse à tous les abonnés filtrés sans
-            # routage par destinataire, et le contrat du matcher n'a pas de
-            # clé `recipient` : le ciblage se tient côté consommateur (#2161).
-            if message.recipient != self.name:
-                return
-            command_type = message.content.get("command_type")
-            task_data = message.content.get("parameters", {})
-
-            if command_type == "operational_task" and self.can_process_task(task_data):
-                # Traiter la tâche de manière asynchrone
-                asyncio.create_task(self._process_task_async(task_data, message.sender))
-
-        try:
-            # S'abonner aux tâches opérationnelles directes. Les clés du
-            # filtre sont celles du contrat du matcher, en `.value` — pas
-            # `recipient`/`type` (ignorées) ni un membre d'enum (jamais
-            # égal à la chaîne comparée), qui tenaient l'abonnement mort
-            # (#2161). L'abonnement par `topic` sur le canal collaboration
-            # est retiré : aucun publieur, et `topic` n'est reconnu par
-            # aucun matcher — il ne restait qu'une boucle qui résolvait les
-            # capacités à la construction (le fail-loud #2159 levait donc à
-            # chaque instanciation, avalé par l'except).
-            hierarchical_channel = self.middleware.get_channel(ChannelType.HIERARCHICAL)
-            if not hierarchical_channel:
-                self.logger.warning(
-                    f"Agent {self.name}: canal hiérarchique absent — "
-                    f"abonnement aux tâches impossible"
-                )
-                return
-            hierarchical_channel.subscribe(
-                subscriber_id=self.name,
-                callback=handle_task,
-                filter_criteria={
-                    "message_type": MessageType.COMMAND.value,
-                    "sender_level": AgentLevel.TACTICAL.value,
-                },
-            )
-
-        except Exception as e:
-            # Nommer ce qui a échoué : un échec d'abonnement ne doit pas
-            # pouvoir se confondre avec un succès partiel (#2161).
-            self.logger.error(
-                f"Agent {self.name}: échec de l'abonnement hiérarchique aux "
-                f"tâches: {type(e).__name__}: {e}"
-            )
-            return
-
-        self.logger.info(f"Agent {self.name} abonné aux tâches opérationnelles")
-
-    async def _process_task_async(self, task: Dict[str, Any], sender_id: str) -> None:
-        """
-        Traite une tâche de manière asynchrone et envoie le résultat.
-
-        Args:
-            task: La tâche à traiter
-            sender_id: L'identifiant de l'expéditeur de la tâche
-        """
-        try:
-            # Enregistrer la tâche
-            self.register_task(task)
-
-            # Mettre à jour le statut
-            self.update_task_status(task.get("id"), "in_progress")
-
-            # Envoyer une notification de début de traitement
-            self.adapter.send_status_update(
-                update_type="task_started",
-                status={
-                    "task_id": task.get("id"),
-                    "tactical_task_id": task.get("tactical_task_id"),
-                    "timestamp": asyncio.get_event_loop().time(),
-                },
-                recipient_id=sender_id,
-            )
-
-            # Traiter la tâche
-            result = await self.process_task(task)
-
-            # Mettre à jour le statut
-            self.update_task_status(task.get("id"), "completed")
-
-            # Formater le résultat
-            # Lecture orpheline retirée (#2180) : aucun process_task de
-            # l'arbre ne plaçait ses résultats sous la clé RESULTS_DIR — le
-            # ``.get`` rendait toujours []. Les retours concrets exposent
-            # déjà leurs résultats via ``format_result``.
-            formatted_result = self.format_result(
-                task,
-                [],
-                result.get("metrics", {}),
-                result.get("issues", []),
-            )
-
-            # Envoyer le résultat
-            self.adapter.send_task_result(
-                task_id=task.get("id"),
-                result_type="task_completion",
-                result_data=formatted_result,
-                recipient_id=sender_id,
-                priority=self._map_priority_to_enum(task.get("priority", "medium")),
-            )
-
-            self.logger.info(f"Tâche {task.get('id')} traitée avec succès")
-
-        except Exception as e:
-            self.logger.error(
-                f"Erreur lors du traitement de la tâche {task.get('id')}: {str(e)}"
-            )
-
-            # Mettre à jour le statut
-            self.update_task_status(task.get("id"), "failed", {"error": str(e)})
-
-            # Envoyer une notification d'échec
-            self.adapter.send_task_result(
-                task_id=task.get("id"),
-                result_type="task_failure",
-                result_data={
-                    "task_id": task.get("id"),
-                    "tactical_task_id": task.get("tactical_task_id"),
-                    "error": str(e),
-                    "status": "failed",
-                },
-                recipient_id=sender_id,
-                priority=MessagePriority.HIGH,
-            )
+    # #2415 : l'abonnement hiérarchique aux tâches (_subscribe_to_tasks) et
+    # son traitement (_process_task_async) sont retirés : circuit mort de bout
+    # en bout. L'émetteur réel (TaskCoordinator.assign_task_to_operational)
+    # adressait des noms qu'aucun agent ne portait, sur un middleware qu'aucun
+    # agent ne partageait ; même livré, le traitement appelait des méthodes
+    # fantômes d'OperationalAdapter (send_status_update, send_task_result,
+    # request_tactical_guidance, share_operational_data) ; et le consommateur
+    # du résultat n'a jamais existé (handle_task_result : zéro appelant). Les
+    # chemins d'exécution réels contournent le middleware : M3 par le seam
+    # operational_executor, le ServiceManager par la file + Future de
+    # OperationalManager._worker.
 
     @abstractmethod
     async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:
@@ -321,49 +186,6 @@ class OperationalAgent(ABC):
         """
         self.operational_state.log_action(action, details)
 
-    async def execute_technique(
-        self, technique: Dict[str, Any], text: str, context: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Exécute une technique d'analyse sur un texte.
-
-        Cette méthode peut être surchargée par les agents opérationnels
-        pour fournir une implémentation spécifique.
-
-        Args:
-            technique: La technique à exécuter
-            text: Le texte à analyser
-            context: Le contexte d'exécution
-
-        Returns:
-            Le résultat de l'exécution de la technique
-        """
-        technique_name = technique.get("name", "unknown")
-        self.logger.warning(
-            f"Méthode execute_technique non implémentée pour la technique {technique_name}."
-        )
-
-        # Publier une demande d'aide pour cette technique
-        self.middleware.publish(
-            topic_id=f"technique_help.{technique_name}",
-            sender=self.name,
-            sender_level=AgentLevel.OPERATIONAL,
-            content={
-                "technique": technique,
-                "context": {
-                    "text_sample": text[:100] + "..." if len(text) > 100 else text,
-                    "agent": self.name,
-                },
-            },
-            priority=MessagePriority.HIGH,
-        )
-
-        return {
-            "status": "error",
-            "message": f"Méthode execute_technique non implémentée pour la technique {technique_name}.",
-            "technique": technique_name,
-        }
-
     def format_result(
         self,
         task: Dict[str, Any],
@@ -411,144 +233,3 @@ class OperationalAgent(ABC):
             "metrics": metrics,
             "issues": issues,
         }
-
-    def _map_priority_to_enum(self, priority: str) -> MessagePriority:
-        """
-        Convertit une priorité textuelle en valeur d'énumération MessagePriority.
-
-        Args:
-            priority: La priorité textuelle ("high", "medium", "low")
-
-        Returns:
-            La valeur d'énumération MessagePriority correspondante
-        """
-        priority_map = {
-            "high": MessagePriority.HIGH,
-            "medium": MessagePriority.NORMAL,
-            "low": MessagePriority.LOW,
-        }
-
-        return priority_map.get(priority.lower(), MessagePriority.NORMAL)
-
-    def request_resource(
-        self, resource_type: str, parameters: Dict[str, Any]
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Demande une ressource au niveau tactique.
-
-        Args:
-            resource_type: Le type de ressource demandé
-            parameters: Les paramètres de la demande
-
-        Returns:
-            La ressource demandée ou None si la demande échoue
-        """
-        try:
-            response = self.adapter.request_tactical_guidance(
-                request_type="resource_request",
-                parameters={"resource_type": resource_type, "parameters": parameters},
-                recipient_id="tactical_coordinator",
-                timeout=10.0,
-            )
-
-            if response:
-                self.logger.info(f"Ressource {resource_type} reçue")
-                return response
-            else:
-                self.logger.warning(
-                    f"Délai d'attente dépassé pour la demande de ressource {resource_type}"
-                )
-                return None
-
-        except Exception as e:
-            self.logger.error(
-                f"Erreur lors de la demande de ressource {resource_type}: {str(e)}"
-            )
-            return None
-
-    def share_intermediate_result(
-        self,
-        result_type: str,
-        result_data: Dict[str, Any],
-        recipients: Optional[List[str]] = None,
-    ) -> str:
-        """
-        Partage un résultat intermédiaire avec d'autres agents.
-
-        Args:
-            result_type: Le type de résultat
-            result_data: Les données du résultat
-            recipients: Liste des identifiants des destinataires (None pour tous les agents opérationnels)
-
-        Returns:
-            L'identifiant du résultat partagé
-        """
-        result_id = f"result-{uuid.uuid4().hex[:8]}"
-
-        # Stocker le résultat dans le canal de données
-        data_channel = self.middleware.get_channel(ChannelType.DATA)
-        data_id = f"operational-data-{uuid.uuid4().hex[:8]}"
-        version_id = data_channel.store_data(
-            data_id=data_id,
-            data=result_data,
-            metadata={
-                "result_type": result_type,
-                "sender": self.name,
-                "timestamp": asyncio.get_event_loop().time(),
-            },
-        )
-
-        # Créer le message de données
-        content = {
-            "info_type": "intermediate_result",
-            "result_type": result_type,
-            "data_reference": {"data_id": data_id, "version_id": version_id},
-        }
-
-        if recipients:
-            # Envoyer le résultat à chaque destinataire
-            for recipient_id in recipients:
-                self.adapter.share_operational_data(
-                    data_type=result_type, data=content, recipient_ids=[recipient_id]
-                )
-        else:
-            # Publier le résultat pour tous les agents opérationnels
-            self.middleware.publish(
-                topic_id=f"operational_results.{result_type}",
-                sender=self.name,
-                sender_level=AgentLevel.OPERATIONAL,
-                content=content,
-                priority=MessagePriority.NORMAL,
-            )
-
-        self.logger.info(
-            f"Résultat intermédiaire {result_type} partagé avec {len(recipients) if recipients else 'tous les agents opérationnels'}"
-        )
-        return result_id
-
-    def subscribe_to_results(
-        self, result_types: List[str], callback: Callable[[Message], None]
-    ) -> str:
-        """
-        S'abonne aux résultats d'autres agents.
-
-        Args:
-            result_types: Types de résultats
-            callback: Fonction de rappel à appeler lors de la réception d'un résultat
-
-        Returns:
-            Un identifiant d'abonnement
-        """
-        subscription_id = f"sub-{uuid.uuid4().hex[:8]}"
-
-        for result_type in result_types:
-            self.middleware.get_channel(ChannelType.DATA).subscribe(
-                subscriber_id=f"{self.name}_{result_type}_{subscription_id}",
-                callback=callback,
-                filter_criteria={"topic": f"operational_results.{result_type}"},
-            )
-
-        self.logger.info(
-            f"Abonnement aux résultats de types: {', '.join(result_types)}"
-        )
-        return subscription_id
