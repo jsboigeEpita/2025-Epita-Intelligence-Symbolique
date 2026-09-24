@@ -91,62 +91,15 @@ def verify_extract_definitions(
                 start_marker = extract_info.get("start_marker")
                 end_marker = extract_info.get("end_marker")
 
-                is_target_extract = (
-                    source_name == "Source_1"
-                    and extract_name == "1. DAcbat Complet (Ottawa, 1858)"
-                )
-
-                if is_target_extract:
-                    verification_logger.info(
-                        f"[LOGGING DIAGNOSTIC POUR {source_name} -> {extract_name}]"
-                    )
-                    verification_logger.info(f"  extract_name: {extract_name}")
-                    verification_logger.info(f"  start_marker (reçu): '{start_marker}'")
-                    verification_logger.info(f"  end_marker (reçu): '{end_marker}'")
-
                 current_start_index = -1
                 current_end_index = -1
 
                 if start_marker:  # texte_brut_source est déjà vérifié non None
                     actual_start_marker_log = start_marker
-                    if is_target_extract:
-                        verification_logger.info(f"  AVANT RECHERCHE start_marker:")
-                        verification_logger.info(
-                            f"    actual_start_marker: '{actual_start_marker_log}'"
-                        )
-                        approx_start_pos = texte_brut_source.find(
-                            actual_start_marker_log
-                        )
-                        if approx_start_pos != -1:
-                            context_window = 200
-                            start_slice = max(0, approx_start_pos - context_window)
-                            end_slice = (
-                                approx_start_pos
-                                + len(actual_start_marker_log)
-                                + context_window
-                            )
-                            context_text_start = texte_brut_source[
-                                start_slice:end_slice
-                            ]
-                            verification_logger.info(
-                                f"    contexte source_text (autour de pos {approx_start_pos}, fenetre +/-{context_window}):\n'''{context_text_start}'''"
-                            )
-                        else:
-                            verification_logger.info(
-                                f"    start_marker non trouvé (estimation), contexte source_text (début):\n'''{texte_brut_source[:500]}'''"
-                            )
                     try:
                         found_pos = texte_brut_source.index(actual_start_marker_log)
                         current_start_index = found_pos
-                        if is_target_extract:
-                            verification_logger.info(
-                                f"  start_index TROUVÉ: {current_start_index}"
-                            )
                     except ValueError:
-                        if is_target_extract:
-                            verification_logger.info(
-                                f"  start_index NON TROUVÉ pour '{actual_start_marker_log}'"
-                            )
                         current_start_index = -1
 
                 if end_marker and current_start_index != -1:
@@ -154,36 +107,6 @@ def verify_extract_definitions(
                     search_area_start_for_end_marker = current_start_index + len(
                         start_marker
                     )
-                    if is_target_extract:
-                        verification_logger.info(
-                            f"  AVANT RECHERCHE end_marker (recherche à partir de position {search_area_start_for_end_marker}):"
-                        )
-                        verification_logger.info(
-                            f"    actual_end_marker: '{actual_end_marker_log}'"
-                        )
-                        approx_end_pos_in_search_area = texte_brut_source[
-                            search_area_start_for_end_marker:
-                        ].find(actual_end_marker_log)
-                        if approx_end_pos_in_search_area != -1:
-                            approx_end_pos_global = (
-                                search_area_start_for_end_marker
-                                + approx_end_pos_in_search_area
-                            )
-                            context_window = 200
-                            start_slice = max(0, approx_end_pos_global - context_window)
-                            end_slice = (
-                                approx_end_pos_global
-                                + len(actual_end_marker_log)
-                                + context_window
-                            )
-                            context_text_end = texte_brut_source[start_slice:end_slice]
-                            verification_logger.info(
-                                f"    contexte source_text (autour de pos globale {approx_end_pos_global}, fenetre +/-{context_window}):\n'''{context_text_end}'''"
-                            )
-                        else:
-                            verification_logger.info(
-                                f"    end_marker non trouvé (estimation) dans la zone, contexte source_text (zone de recherche concernée):\n'''{texte_brut_source[search_area_start_for_end_marker : search_area_start_for_end_marker + 500]}'''"
-                            )
                     try:
                         found_pos_end = texte_brut_source.find(
                             actual_end_marker_log, search_area_start_for_end_marker
@@ -192,27 +115,10 @@ def verify_extract_definitions(
                             current_end_index = found_pos_end + len(
                                 actual_end_marker_log
                             )
-                            if is_target_extract:
-                                verification_logger.info(
-                                    f"  end_index TROUVÉ (marqueur trouvé à {found_pos_end}, fin du segment à {current_end_index})"
-                                )
                         else:
-                            if is_target_extract:
-                                verification_logger.info(
-                                    f"  end_index NON TROUVÉ pour '{actual_end_marker_log}' après start_marker."
-                                )
                             current_end_index = -1
-                    except Exception as e_find_end:
-                        if is_target_extract:
-                            verification_logger.error(
-                                f"  Erreur inattendue recherche end_marker: {e_find_end}"
-                            )
+                    except Exception:
                         current_end_index = -1
-
-                if is_target_extract:
-                    verification_logger.info(
-                        f"  Valeurs finales pour {extract_name}: current_start_index = {current_start_index}, current_end_index = {current_end_index}"
-                    )
 
                 total_checks += 1
                 marker_errors = []
