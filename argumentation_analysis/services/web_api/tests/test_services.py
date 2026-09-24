@@ -4,14 +4,17 @@
 """
 Tests non relocalisés de la couche services (web_api) — #1859.
 
-Ces 6 tests RESTENT hors gate (emplacement jamais collecté) parce qu'ils
-ne peuvent pas passer contre le code vivant, pour la raison mesurée :
+Ces 6 tests RESTENT hors gate (emplacement jamais collecté). Mesuré #2536 :
+4 passent, 2 échouent.
 
-- TestFrameworkService (6 tests) : l'interface testée (`is_healthy`,
-  `build_framework`) n'existe plus. La surface vivante est
-  `analyze_dung_framework` (framework_service.py:36), consommée par le
-  serveur MCP. Réécrire ces tests contre la surface vivante est un
-  authoring nouveau, décision séparée.
+- Les 2 tests `build_framework` échouent : cette interface n'existe plus. La
+  surface vivante est `analyze_dung_framework`, consommée par le serveur MCP.
+  Réécrire ces tests contre la surface vivante est un authoring nouveau,
+  décision séparée.
+- Les 4 autres passent et sont tenus dans le gate : `is_healthy` (rétabli
+  par #1864) par tests/unit/argumentation_analysis/services/test_mcp_server.py,
+  la validation des modèles par TestFrameworkRequestModel dans
+  tests/unit/argumentation_analysis/services/test_web_api_models_and_services.py.
 
 (Les 2 tests fossiles de la branche formelle de `validate_argument` ont été
 supprimés avec la branche elle-même — #2097-5 : la condition testait
@@ -21,6 +24,14 @@ le gate : tests/unit/services/web_api/test_services.py.)
 """
 
 import pytest
+
+# #2536: #1863 moved this import to the relocated suite with the tests that
+# left, but the four tests below still build these models.
+from argumentation_analysis.services.web_api.models.request_models import (
+    Argument,
+    FrameworkOptions,
+    FrameworkRequest,
+)
 
 
 class TestFrameworkService:

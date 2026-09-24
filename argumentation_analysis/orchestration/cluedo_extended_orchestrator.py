@@ -10,7 +10,7 @@ import asyncio
 import logging
 import warnings
 from inspect import isawaitable
-from typing import List, Dict, Any, Optional
+from typing import TYPE_CHECKING, List, Dict, Any, Optional
 from datetime import datetime
 
 import semantic_kernel as sk
@@ -91,6 +91,10 @@ from ..orchestration.group_chat import GroupChatOrchestration
 from ..agents.core.oracle.moriarty_interrogator_agent import MoriartyInterrogatorAgent
 from ..agents.core.oracle.cluedo_dataset import CluedoDataset
 from argumentation_analysis.config.settings import AppSettings
+
+if TYPE_CHECKING:
+    from ..agents.core.logic.watson_logic_assistant import WatsonLogicAssistant
+    from ..agents.core.pm.sherlock_enquete_agent import SherlockEnqueteAgent
 
 # Configuration du logging
 logging.basicConfig(
@@ -746,7 +750,83 @@ class CluedoExtendedOrchestrator:
         reactions = []
         content_lower = content.lower()
 
-        # Pour l'instant, retourne une liste vide - à implémenter si nécessaire
+        # Trouver l'agent et le contenu qui ont déclenché la réaction
+        trigger_agent = None
+        trigger_content = ""
+
+        if len(history) > 1:
+            last_message = history[-2]  # Message précédent (avant le message actuel)
+            trigger_agent = last_message.name
+            trigger_content = str(last_message.content)
+
+        if not trigger_agent or trigger_agent == "System":
+            return reactions
+
+        # Patterns de réaction spécifiques par agent
+        if agent_name == "Watson":
+            watson_reactions = [
+                (["brillant", "exactement", "ça colle parfaitement"], "approval"),
+                (["aha", "intéressant retournement", "ça change la donne"], "surprise"),
+                (["précisément", "logique", "cohérent"], "analysis"),
+            ]
+
+            for keywords, reaction_type in watson_reactions:
+                if any(keyword in content_lower for keyword in keywords):
+                    reactions.append(
+                        {
+                            "agent_name": agent_name,
+                            "trigger_agent": trigger_agent,
+                            "trigger_content": trigger_content,
+                            "reaction_type": reaction_type,
+                            "reaction_content": content[:100],
+                        }
+                    )
+                    break
+
+        elif agent_name == "Sherlock":
+            sherlock_reactions = [
+                (["précisément watson", "tu vises juste", "c'est noté"], "approval"),
+                (
+                    ["comme prévu", "merci pour cette clarification", "parfait"],
+                    "satisfaction",
+                ),
+                (["intéressant", "fascinant", "remarquable"], "analysis"),
+            ]
+
+            for keywords, reaction_type in sherlock_reactions:
+                if any(keyword in content_lower for keyword in keywords):
+                    reactions.append(
+                        {
+                            "agent_name": agent_name,
+                            "trigger_agent": trigger_agent,
+                            "trigger_content": trigger_content,
+                            "reaction_type": reaction_type,
+                            "reaction_content": content[:100],
+                        }
+                    )
+                    break
+
+        elif agent_name == "Moriarty":
+            moriarty_reactions = [
+                (["chaud", "très chaud", "vous brûlez"], "encouragement"),
+                (["pas tout à fait", "pas si vite"], "correction"),
+                (["magistral", "vous m'impressionnez", "bien joué"], "excitement"),
+                (["hmm", "attendez"], "suspense"),
+            ]
+
+            for keywords, reaction_type in moriarty_reactions:
+                if any(keyword in content_lower for keyword in keywords):
+                    reactions.append(
+                        {
+                            "agent_name": agent_name,
+                            "trigger_agent": trigger_agent,
+                            "trigger_content": trigger_content,
+                            "reaction_type": reaction_type,
+                            "reaction_content": content[:100],
+                        }
+                    )
+                    break
+
         return reactions
 
     # CORRECTIF ORACLE: Méthodes pour détection et révélation automatique
@@ -903,84 +983,6 @@ class CluedoExtendedOrchestrator:
                 "can_refute": False,
                 "error": str(e),
             }
-        # Trouver l'agent et le contenu qui ont déclenché la réaction
-        trigger_agent = None
-        trigger_content = ""
-
-        if len(history) > 1:
-            last_message = history[-2]  # Message précédent (avant le message actuel)
-            trigger_agent = last_message.name
-            trigger_content = str(last_message.content)
-
-        if not trigger_agent or trigger_agent == "System":
-            return reactions
-
-        # Patterns de réaction spécifiques par agent
-        if agent_name == "Watson":
-            watson_reactions = [
-                (["brillant", "exactement", "ça colle parfaitement"], "approval"),
-                (["aha", "intéressant retournement", "ça change la donne"], "surprise"),
-                (["précisément", "logique", "cohérent"], "analysis"),
-            ]
-
-            for keywords, reaction_type in watson_reactions:
-                if any(keyword in content_lower for keyword in keywords):
-                    reactions.append(
-                        {
-                            "agent_name": agent_name,
-                            "trigger_agent": trigger_agent,
-                            "trigger_content": trigger_content,
-                            "reaction_type": reaction_type,
-                            "reaction_content": content[:100],
-                        }
-                    )
-                    break
-
-        elif agent_name == "Sherlock":
-            sherlock_reactions = [
-                (["précisément watson", "tu vises juste", "c'est noté"], "approval"),
-                (
-                    ["comme prévu", "merci pour cette clarification", "parfait"],
-                    "satisfaction",
-                ),
-                (["intéressant", "fascinant", "remarquable"], "analysis"),
-            ]
-
-            for keywords, reaction_type in sherlock_reactions:
-                if any(keyword in content_lower for keyword in keywords):
-                    reactions.append(
-                        {
-                            "agent_name": agent_name,
-                            "trigger_agent": trigger_agent,
-                            "trigger_content": trigger_content,
-                            "reaction_type": reaction_type,
-                            "reaction_content": content[:100],
-                        }
-                    )
-                    break
-
-        elif agent_name == "Moriarty":
-            moriarty_reactions = [
-                (["chaud", "très chaud", "vous brûlez"], "encouragement"),
-                (["pas tout à fait", "pas si vite"], "correction"),
-                (["magistral", "vous m'impressionnez", "bien joué"], "excitement"),
-                (["hmm", "attendez"], "suspense"),
-            ]
-
-            for keywords, reaction_type in moriarty_reactions:
-                if any(keyword in content_lower for keyword in keywords):
-                    reactions.append(
-                        {
-                            "agent_name": agent_name,
-                            "trigger_agent": trigger_agent,
-                            "trigger_content": trigger_content,
-                            "reaction_type": reaction_type,
-                            "reaction_content": content[:100],
-                        }
-                    )
-                    break
-
-        return reactions
 
 
 async def run_cluedo_oracle_game(
