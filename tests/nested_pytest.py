@@ -11,8 +11,16 @@ then waits for its pipes without a bound, so a grandchild that holds them
 keeps the caller waiting: the first CI run of the #2490 probes lost 895 s that
 way on one case. Here a timeout kills the process tree, drains the pipes for
 at most ``DRAIN`` seconds, and fails with what the child printed.
+
+A probe session also loads this module as a plugin (``-p tests.nested_pytest``).
+When the session is over it arms ``faulthandler``: if the process is still
+alive ``EXIT_WATCHDOG`` seconds later, every thread's stack goes to stderr.
+A session that hangs at exit therefore fails with the place where it waits,
+not only with the fact that it waited (#2538). A process that exits cancels
+the watchdog, so a normal run prints nothing.
 """
 
+import faulthandler
 import os
 import shutil
 import signal
@@ -29,6 +37,10 @@ ROOT = Path(__file__).resolve().parents[1]
 BOUND = 300
 # After a kill, how long the pipes may take to close.
 DRAIN = 30
+# After the session, how long a probe may take to exit before it dumps its
+# threads. Well below BOUND, so the dump is in what the kill drains.
+EXIT_WATCHDOG = 60
+_WATCHDOG_ENV = "NESTED_PYTEST_EXIT_WATCHDOG"
 
 
 def kill_tree(process):
@@ -54,17 +66,29 @@ def kill_tree(process):
 
 
 def both(out, err):
-    """The tail of the child's stdout and stderr, for an assertion message."""
-    return f"--- stdout\n{out[-3000:]}\n--- stderr\n{err[-3000:]}"
+    """The tail of the child's stdout and stderr, for an assertion message.
+
+    More of stderr, where an exit watchdog writes its thread dump.
+    """
+    return f"--- stdout\n{out[-3000:]}\n--- stderr\n{err[-8000:]}"
 
 
-def run_bounded(argv, bound=BOUND, failure="the process did not end"):
+@pytest.hookimpl(trylast=True)
+def pytest_unconfigure(config):
+    """In a probe session: dump every thread if the process outlives the watchdog."""
+    faulthandler.dump_traceback_later(
+        float(os.environ.get(_WATCHDOG_ENV, EXIT_WATCHDOG)), file=sys.__stderr__
+    )
+
+
+def run_bounded(argv, bound=BOUND, failure="the process did not end", env=None):
     """Run ``argv`` from the repository root, with the root on ``PYTHONPATH``.
 
     A ``subprocess.CompletedProcess``. After ``bound`` seconds the process
     tree is killed and the test fails with ``failure`` and the child's output.
+    ``env`` adds to the caller's environment.
     """
-    env = dict(os.environ)
+    env = {**os.environ, **(env or {})}
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
     process = subprocess.Popen(
         argv,
@@ -85,11 +109,12 @@ def run_bounded(argv, bound=BOUND, failure="the process did not end"):
     return subprocess.CompletedProcess(argv, process.returncode, out, err)
 
 
-def run_probe(label, files, *argv, bound=BOUND):
+def run_probe(label, files, *argv, bound=BOUND, watchdog=EXIT_WATCHDOG):
     """Run pytest on ``files`` (``{name: source}``). ``(returncode, stdout, stderr)``.
 
     The first ``.py`` file whose name starts with ``probe`` is the one pytest
-    is given; the others (a ``conftest.py``) sit beside it.
+    is given; the others (a ``conftest.py``) sit beside it. ``watchdog``: the
+    seconds after the session before the probe dumps its threads.
     """
     probe_dir = ROOT / "tests" / f"_probe_{label}_{uuid.uuid4().hex}"
     probe_dir.mkdir()
@@ -105,11 +130,14 @@ def run_probe(label, files, *argv, bound=BOUND):
                 str(probe_dir / target),
                 "-p",
                 "no:cacheprovider",
+                "-p",
+                "tests.nested_pytest",
                 "-q",
                 *argv,
             ],
             bound,
             failure="the probe session did not end",
+            env={_WATCHDOG_ENV: str(watchdog)},
         )
     finally:
         shutil.rmtree(probe_dir, ignore_errors=True)
