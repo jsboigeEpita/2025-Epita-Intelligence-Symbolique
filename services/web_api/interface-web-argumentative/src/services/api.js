@@ -13,7 +13,10 @@ const defaultHeaders = {
 const handleResponse = async (response) => {
   const json = await response.json();
   if (!response.ok) {
-    const errorMessage = json.message || json.error || `Erreur API: ${response.status}`;
+    // The API's error envelope (api/errors.py) carries its reason in `detail`;
+    // a 422 carries a list there, hence the type check.
+    const detail = typeof json.detail === 'string' ? json.detail : null;
+    const errorMessage = json.message || json.error || detail || `Erreur API: ${response.status}`;
     throw new Error(errorMessage);
   }
   // Si la réponse est une enveloppe standard (contient un champ 'data'), on extrait les données.
@@ -23,6 +26,10 @@ const handleResponse = async (response) => {
   }
   return json;
 };
+
+// Les appels au détecteur de sophismes (#2526) : le tier `llm` a mis 18 s sur
+// une phrase et 53 s sur deux paragraphes ; 180 s laisse une marge de 3,4.
+const FALLACY_TIMEOUT_MS = 180000;
 
 // Fonction utilitaire pour les requêtes avec timeout
 const fetchWithTimeout = (url, options, timeout = 30000) => {
@@ -34,26 +41,28 @@ const fetchWithTimeout = (url, options, timeout = 30000) => {
   ]);
 };
 
-// Analyse complète d'un texte argumentatif
+// Analyse d'un texte argumentatif : structure (Tweety) et, sur demande, sophismes.
+// La route renvoie { analysis_id, status, results } ; les vues lisent `results`.
+// `fallacies` n'y figure que si la détection a été demandée (#2526).
 export const analyzeText = async (text, options = {}) => {
-  const defaultOptions = {
-    detect_fallacies: true,
-    analyze_structure: true,
-    evaluate_coherence: true
-  };
-
+  const detectFallacies = Boolean(options.detect_fallacies);
   const requestBody = {
     text,
-    options: { ...defaultOptions, ...options }
+    options: { detect_fallacies: detectFallacies }
   };
 
   const response = await fetchWithTimeout(`${API_BASE_URL}/api/analyze`, {
     method: 'POST',
     headers: defaultHeaders,
     body: JSON.stringify(requestBody)
-  });
+  }, detectFallacies ? FALLACY_TIMEOUT_MS : undefined);
 
-  return handleResponse(response);
+  const json = await handleResponse(response);
+  return {
+    ...json.results,
+    analysis_id: json.analysis_id,
+    processing_time: json.results?.metadata?.duration
+  };
 };
 
 // Validation d'un argument structuré
@@ -73,24 +82,19 @@ export const validateArgument = async (premises, conclusion, argumentType = 'ded
   return handleResponse(response);
 };
 
-// Détection spécialisée de sophismes
+// Détection de sophismes : le détecteur de la phase sophismes du pipeline (#2526).
+// Options acceptées : `tier` (taxonomy | hybrid | llm | full, `llm` par défaut) et
+// `min_confidence` (0-1) ; l'API refuse toute autre clé.
 export const detectFallacies = async (text, options = {}) => {
-  const defaultOptions = {
-    severity_threshold: 0.3,
-    include_explanations: true,
-    fallacy_types: 'all'
-  };
-
-  const requestBody = {
-    text,
-    options: { ...defaultOptions, ...options }
-  };
+  const requestOptions = {};
+  if (options.tier !== undefined) requestOptions.tier = options.tier;
+  if (options.min_confidence !== undefined) requestOptions.min_confidence = options.min_confidence;
 
   const response = await fetchWithTimeout(`${API_BASE_URL}/api/fallacies`, {
     method: 'POST',
     headers: defaultHeaders,
-    body: JSON.stringify(requestBody)
-  });
+    body: JSON.stringify({ text, options: requestOptions })
+  }, FALLACY_TIMEOUT_MS);
 
   return handleResponse(response);
 };
@@ -168,11 +172,7 @@ export const getAPIEndpoints = async () => {
 export const getExampleAnalysis = () => {
   return analyzeText(
     "Tous les chats sont des animaux. Félix est un chat. Donc Félix est un animal.",
-    {
-      detect_fallacies: true,
-      analyze_structure: true,
-      evaluate_coherence: true
-    }
+    { detect_fallacies: true }
   );
 };
 
