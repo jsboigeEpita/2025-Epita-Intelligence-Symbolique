@@ -1067,6 +1067,14 @@ async def _generate_counters_for_targets(
             f"Total = {k} × (number of items). Each CA must target the same "
             f"item but via a different rhetorical move."
         )
+    # #2344: the strength scale is the enum the evaluator weighs, so every mark
+    # it can read is one the model is offered.
+    from argumentation_analysis.agents.core.counter_argument.definitions import (
+        ArgumentStrength,
+        DECISIVE_CRITERION,
+    )
+
+    strength_scale = "|".join(s.value for s in ArgumentStrength)
     # #1633 — TRAP: the ``target_argument`` this prompt asks for is FREE TEXT
     # (the LLM echoes the argument it rebuts). The identically-named field in
     # ``phase_hierarchical_fallacy_output`` is an ``arg_N`` IDENTIFIER. Same
@@ -1078,8 +1086,9 @@ async def _generate_counters_for_targets(
         + prompt_count_clause
         + " Respond with ONLY a JSON array:\n"
         '[{"counter_argument": "text", "strategy_used": "name", '
-        '"target_argument": "which argument", "strength": "weak|moderate|strong", '
-        '"reasoning": "why this works"}, ...]'
+        '"target_argument": "which argument", '
+        f'"strength": "{strength_scale}", '
+        '"reasoning": "why this works"}, ...]\n' + DECISIVE_CRITERION
     )
     for start in range(0, len(targets), batch_size):
         batch = targets[start : start + batch_size]
@@ -1644,12 +1653,7 @@ def _evaluate_counter_arguments(
         return llm_counters
 
     evaluator = CounterArgumentEvaluator()  # type: ignore[no-untyped-call]
-    strength_map = {
-        "weak": ArgumentStrength.WEAK,
-        "moderate": ArgumentStrength.MODERATE,
-        "strong": ArgumentStrength.STRONG,
-        "decisive": ArgumentStrength.DECISIVE,
-    }
+    strength_map = {s.value: s for s in ArgumentStrength}
     strategy_to_type = {
         "reductio ad absurdum": CounterArgumentType.REDUCTIO_AD_ABSURDUM,
         "counter-example": CounterArgumentType.COUNTER_EXAMPLE,
@@ -1676,14 +1680,15 @@ def _evaluate_counter_arguments(
                 if key in strategy_used:
                     ca_type = val
                     break
+            raw_strength = ca_dict.get("strength")
+            strength = strength_map.get(str(raw_strength).lower())
             ca_obj = CADataclass(
                 original_argument=original,
                 counter_type=ca_type,
                 counter_content=str(ca_dict["counter_argument"]),
                 target_component="premise",
-                strength=strength_map.get(
-                    str(ca_dict.get("strength", "moderate")).lower(),
-                    ArgumentStrength.MODERATE,
+                strength=(
+                    strength if strength is not None else ArgumentStrength.MODERATE
                 ),
                 confidence=0.5,
                 rhetorical_strategy=strategy_used,
@@ -1698,6 +1703,13 @@ def _evaluate_counter_arguments(
                 "clarity": round(evaluation.clarity, 3),
                 "recommendations": evaluation.recommendations,
             }
+            if strength is None:
+                # #2344: the model's strength is off the scale or missing. The
+                # evaluator scored it as moderate, and its record says so.
+                ca_dict["evaluation"]["strength_assumed"] = {
+                    "answered": raw_strength,
+                    "scored_as": ArgumentStrength.MODERATE.value,
+                }
             # G6 (#1180): surface the validation verdict from the computed
             # evaluation. Anti-pendule: built from the real overall_score +
             # logical_strength, never fabricated. Fail-loud: if this branch

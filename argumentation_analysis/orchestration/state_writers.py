@@ -496,13 +496,18 @@ def resolve_fallacy_target_arg_id(state: Any, fallacy: Dict[str, Any]) -> Option
     return target_arg_id
 
 
+# Score of a counter-argument that reached the state without an evaluation,
+# keyed by the ``ArgumentStrength`` values the LLM prompt offers (#2344).
+_COUNTER_STRENGTH_SCORE = {"weak": 0.3, "moderate": 0.6, "strong": 0.9, "decisive": 1.0}
+
+
 def _write_counter_argument_to_state(
     output: Any, state: Any, ctx: dict[str, Any]
 ) -> None:
     """Write counter-argument results to UnifiedAnalysisState."""
     if not output or not isinstance(output, dict):
         return
-    strength_map = {"weak": 0.3, "moderate": 0.6, "strong": 0.9}
+    strength_map = _COUNTER_STRENGTH_SCORE
 
     # Write ALL LLM-generated counter-arguments
     llm_cas = output.get("llm_counter_arguments", [])
