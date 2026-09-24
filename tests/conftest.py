@@ -740,6 +740,7 @@ def tweety_bridge_fixture(jvm_session):
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
 pytest_plugins = [
     "tests.fixtures.jvm_subprocess_fixture",
+    "tests.spinning_threads",
     "pytest_playwright",
 ]
 
