@@ -6,11 +6,44 @@ Extracted from enhanced_argumentation_main.py ArgumentAnalyzer class.
 
 import logging
 import re
-from typing import List
+from typing import List, Optional, Set
 
 from .debate_definitions import ArgumentMetrics, EnhancedArgument
 
 logger = logging.getLogger(__name__)
+
+# #2344: function words carried the overlap. Two unrelated French sentences
+# scored 0.27 relevance on "la", "le", "de", "est" alone, and ``str.split``
+# kept punctuation, so "Non." never matched "non". Content words only.
+_FUNCTION_WORDS_TEXT = """
+    a au aux avec c ce ces cet cette d dans de des du elle elles en est et il
+    ils j je l la le les leur leurs lui m mais me même n ne nous on ont ou par
+    pas pour qu que qui s sa se ses son sont sur t ta te tes ton tu un une vos
+    votre vous y à été être
+    an and are as at be been but by can do does for from had has have he her
+    his i if in is it its me my no not of on or our she so than that the their
+    them then there these they this those to was we were what when which who
+    will with would you your
+"""
+_FUNCTION_WORDS = frozenset(_FUNCTION_WORDS_TEXT.split())
+
+# Weights of the persuasiveness combination; a metric left at None drops out.
+_PERSUASIVENESS_WEIGHTS = (
+    ("logical_coherence", 0.25),
+    ("evidence_quality", 0.25),
+    ("relevance_score", 0.15),
+    ("readability_score", 0.15),
+    ("fact_check_score", 0.10),
+    ("novelty_score", 0.10),
+)
+
+
+def _content_words(text: str) -> Set[str]:
+    return {w for w in re.findall(r"\w+", text.lower()) if w not in _FUNCTION_WORDS}
+
+
+def _overlap(words: Set[str], other: Set[str]) -> float:
+    return len(words & other) / max(len(words), len(other))
 
 
 class ArgumentAnalyzer:
@@ -130,18 +163,20 @@ class ArgumentAnalyzer:
 
     def _assess_relevance(
         self, argument: EnhancedArgument, context: List[EnhancedArgument]
-    ) -> float:
-        """Assess relevance via keyword overlap with recent arguments."""
-        if not context:
-            return 0.8
-        recent_args = context[-3:] if len(context) >= 3 else context
-        arg_words = set(argument.content.lower().split())
-        relevance_scores = []
-        for prev_arg in recent_args:
-            prev_words = set(prev_arg.content.lower().split())
-            overlap = len(arg_words.intersection(prev_words))
-            relevance_scores.append(overlap / max(len(arg_words), len(prev_words)))
-        return max(relevance_scores) if relevance_scores else 0.5
+    ) -> Optional[float]:
+        """Assess relevance via content-word overlap with recent arguments.
+
+        #2344: ``None`` when there is nothing to compare with: no context, or no
+        content word on either side. It used to return a constant 0.8 there,
+        and ``DebatePlugin.analyze_argument_quality`` always passes no context.
+        """
+        arg_words = _content_words(argument.content)
+        scores = [
+            _overlap(arg_words, prev_words)
+            for prev_words in (_content_words(a.content) for a in context[-3:])
+            if arg_words and prev_words
+        ]
+        return max(scores) if scores else None
 
     def _assess_emotional_appeal(self, content: str) -> float:
         """Detect emotional language and rhetorical devices."""
@@ -187,31 +222,41 @@ class ArgumentAnalyzer:
 
     def _assess_novelty(
         self, argument: EnhancedArgument, context: List[EnhancedArgument]
-    ) -> float:
-        """Assess originality by comparing with opponent arguments."""
-        if not context:
-            return 0.8
-        arg_phrases = set(argument.content.lower().split())
-        similarity_scores = []
-        for prev_arg in context:
-            if prev_arg.agent_name != argument.agent_name:
-                prev_phrases = set(prev_arg.content.lower().split())
-                overlap = len(arg_phrases.intersection(prev_phrases))
-                similarity = overlap / max(len(arg_phrases), len(prev_phrases))
-                similarity_scores.append(similarity)
-        avg_similarity = (
-            sum(similarity_scores) / len(similarity_scores) if similarity_scores else 0
-        )
-        return max(0, 1 - avg_similarity)
+    ) -> Optional[float]:
+        """Assess originality by comparing with opponent arguments.
+
+        #2344: ``None`` when no opponent argument with content words exists to
+        compare with. It used to return 0.8 without context, and 1.0 when every
+        earlier argument was the agent's own.
+        """
+        arg_words = _content_words(argument.content)
+        similarities = [
+            _overlap(arg_words, prev_words)
+            for prev_words in (
+                _content_words(a.content)
+                for a in context
+                if a.agent_name != argument.agent_name
+            )
+            if arg_words and prev_words
+        ]
+        if not similarities:
+            return None
+        return max(0.0, 1 - sum(similarities) / len(similarities))
 
     def _calculate_persuasiveness(self, metrics: ArgumentMetrics) -> float:
-        """Weighted combination of all metrics."""
-        return min(
-            metrics.logical_coherence * 0.25
-            + metrics.evidence_quality * 0.25
-            + metrics.relevance_score * 0.15
-            + metrics.readability_score * 0.15
-            + metrics.fact_check_score * 0.10
-            + metrics.novelty_score * 0.10,
-            1.0,
-        )
+        """Weighted mean of the metrics that were computed.
+
+        #2344: a metric left at ``None`` (relevance, novelty) drops out and the
+        remaining weights are renormalized, instead of a constant counting in
+        its place.
+        """
+        computed = [
+            (value, weight)
+            for value, weight in (
+                (getattr(metrics, name), weight)
+                for name, weight in _PERSUASIVENESS_WEIGHTS
+            )
+            if value is not None
+        ]
+        total = sum(weight for _, weight in computed)
+        return min(sum(value * weight for value, weight in computed) / total, 1.0)

@@ -34,15 +34,20 @@ class DebatePhase(Enum):
 
 @dataclass
 class ArgumentMetrics:
-    """Multi-dimensional argument quality metrics (all 0.0-1.0)."""
+    """Multi-dimensional argument quality metrics (all 0.0-1.0).
+
+    ``relevance_score`` and ``novelty_score`` compare an argument with the
+    others: the analyzer leaves them at ``None`` when there is nothing to
+    compare with (#2344).
+    """
 
     logical_coherence: float = 0.0
     evidence_quality: float = 0.0
-    relevance_score: float = 0.0
+    relevance_score: Optional[float] = 0.0
     emotional_appeal: float = 0.0
     readability_score: float = 0.0
     fact_check_score: float = 0.0
-    novelty_score: float = 0.0
+    novelty_score: Optional[float] = 0.0
     persuasiveness: float = 0.0
 
 

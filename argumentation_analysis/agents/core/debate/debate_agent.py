@@ -462,9 +462,15 @@ class DebateAgent(BaseAgent):
             / len(arguments),
             "fact_check_score": sum(a.metrics.fact_check_score for a in arguments)
             / len(arguments),
-            "novelty_score": sum(a.metrics.novelty_score for a in arguments)
-            / len(arguments),
         }
+        # #2344: novelty is None where there was no opponent to compare with.
+        novelty = [
+            a.metrics.novelty_score
+            for a in arguments
+            if a.metrics.novelty_score is not None
+        ]
+        if novelty:
+            avg["novelty_score"] = sum(novelty) / len(novelty)
         return min(avg, key=avg.get)
 
     def _build_enhanced_context(self, debate_state: DebateState) -> Dict[str, Any]:
