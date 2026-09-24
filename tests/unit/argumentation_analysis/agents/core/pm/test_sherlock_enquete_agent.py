@@ -170,23 +170,18 @@ class TestSherlockTools:
         assert "suspect" in deduction
         assert "arme" in deduction
         assert "lieu" in deduction
-        assert deduction["method"] == "instant_sherlock_logic"
+        # #2344: the pick is named as a guess, not a deduction.
+        assert deduction["method"] == "positional_guess"
 
     @pytest.mark.asyncio
-    async def test_instant_deduction_string_input_fallback(self):
-        """Verify instant deduction fallback for non-JSON input."""
+    async def test_instant_deduction_string_input_refused(self):
+        """#2344: non-JSON input is refused, not replaced by an invented game."""
         kernel = MagicMock(spec=Kernel)
         tools = SherlockTools(kernel)
 
         result = await tools.instant_deduction("not json")
-        deduction = json.loads(result)
-        assert "suspect" in deduction
-        # Should use default elements
-        assert deduction["suspect"] in [
-            "Colonel Moutarde",
-            "Mme Leblanc",
-            "Mme Pervenche",
-        ]
+        assert result.startswith("Erreur")
+        assert "JSON" in result
 
     @pytest.mark.asyncio
     async def test_instant_deduction_logic(self):
@@ -211,17 +206,13 @@ class TestSherlockTools:
 
     @pytest.mark.asyncio
     async def test_instant_deduction_empty_elements(self):
-        """Verify instant deduction handles empty elements."""
+        """#2344: empty elements are refused, not filled with placeholder names."""
         kernel = MagicMock(spec=Kernel)
         tools = SherlockTools(kernel)
 
         result = await tools.instant_deduction(json.dumps({}))
-        deduction = json.loads(result)
-        # Empty dict means .get() returns defaults: ["Suspect Inconnu"], etc.
-        # Then selection logic picks from those single-element lists.
-        assert deduction["suspect"] == "Suspect Inconnu"
-        assert deduction["arme"] == "Arme Inconnue"
-        assert deduction["lieu"] == "Lieu Inconnu"
+        assert result.startswith("Erreur")
+        assert "suspects, armes, lieux" in result
 
 
 # =====================================================================
