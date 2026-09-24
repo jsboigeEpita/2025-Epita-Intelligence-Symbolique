@@ -4,10 +4,9 @@ from typing import List, Dict, Optional
 
 from .errors import TimeoutError_, UpstreamError
 
+from .fallacy_detection import detect_fallacies
 from .models import (
     AnalysisRequest,
-    AnalysisResponse,
-    Fallacy,
     StatusResponse,
     ExampleResponse,
     Example,
@@ -145,18 +144,19 @@ def _perform_tweety_analysis(text: str, project_context) -> Dict:
         "argument_structure": {"premises": premises, "conclusion": conclusion},
         "summary": f"{len(premises)} prémisses et 1 conclusion extraites.",
         "suggestions": ["Analyser chaque argument individuellement."],
-        "fallacies": [],
         "components_used": ["TweetyArgumentReconstructor_centralized_v2"],
     }
 
 
 def _build_response_payload(analysis_result: Dict) -> Dict:
-    """Construit le payload de la réponse finale."""
-    fallacies = [Fallacy(**f_data) for f_data in analysis_result.get("fallacies", [])]
-    return {
-        "overall_quality": analysis_result.get("overall_quality", 0.0),
-        "fallacy_count": len(fallacies),
-        "fallacies": fallacies,
+    """Construit le payload de la réponse finale.
+
+    #2526: ``fallacies`` and ``fallacy_count`` are present only when the request
+    asked for detection. Absent means "not searched"; an empty list means
+    "searched, none found". Nothing computes an overall quality, so the payload
+    carries none (it used to default to ``0.0``).
+    """
+    payload = {
         "argument_structure": analysis_result.get("argument_structure"),
         "suggestions": analysis_result.get("suggestions", []),
         "summary": analysis_result.get("summary", "L'analyse a été complétée."),
@@ -166,6 +166,14 @@ def _build_response_payload(analysis_result: Dict) -> Dict:
             "components_used": analysis_result.get("components_used", []),
         },
     }
+    detection = analysis_result.get("fallacy_detection")
+    if detection is not None:
+        payload["fallacies"] = [f.model_dump() for f in detection.fallacies]
+        payload["fallacy_count"] = detection.fallacy_count
+        payload["fallacy_detection"] = detection.model_dump(
+            exclude={"fallacies", "fallacy_count"}
+        )
+    return payload
 
 
 @router.post("/analyze")
@@ -176,6 +184,10 @@ async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Requ
     DT-1 #1499: replaces the prior silent `try/except: pass` with a
     legible error surface. Real upstream errors are now raised as
     ``UpstreamError`` (HTTP 502 with machine-parseable envelope).
+
+    #2526: with ``options.detect_fallacies``, the fallacies come from the
+    detector ``POST /api/fallacies`` serves (``api/fallacy_detection``); when
+    it cannot run, the request fails with its reason (503 or 502).
     """
     analysis_id = str(uuid.uuid4())[:8]
     logger.info(
@@ -207,6 +219,13 @@ async def analyze_text_endpoint(analysis_req: AnalysisRequest, fastapi_req: Requ
                 "exception_type": type(exc).__name__,
             },
         ) from exc
+
+    if analysis_req.options.detect_fallacies:
+        tier = analysis_req.options.fallacy_tier
+        service_result["fallacy_detection"] = await detect_fallacies(
+            analysis_req.text, tier
+        )
+        service_result["components_used"].append(f"hierarchical_fallacy:{tier}")
 
     duration = time.time() - start_time
     service_result.setdefault("duration", duration)
