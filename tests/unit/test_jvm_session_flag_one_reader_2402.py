@@ -225,6 +225,7 @@ class TestTheAgreementHoldsUnderXdist:
     ``setdefault`` export. Measured A/B by stashing the repair."""
 
     def test_under_xdist_with_the_flag(self):
+        pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
         returncode, out, err = run_probe(
             "2402",
             {"probe_2402_agreement.py": _AGREEMENT_PROBE},
@@ -235,6 +236,7 @@ class TestTheAgreementHoldsUnderXdist:
         assert returncode == 0 and "1 passed" in out, both(out, err)
 
     def test_under_xdist_when_the_controller_inherited_a_zero(self):
+        pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
         returncode, out, err = run_probe(
             "2402",
             {"probe_2402_agreement.py": _AGREEMENT_PROBE},

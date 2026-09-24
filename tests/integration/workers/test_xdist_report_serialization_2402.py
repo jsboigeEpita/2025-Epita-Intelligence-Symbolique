@@ -10,6 +10,8 @@ ordinary failure next to it was reported as a bare count. The repair wraps
 strings are escaped and the cause is named.
 """
 
+import pytest
+
 from tests._xdist_report_serialization import NOTE, sanitize_report_data
 from tests.nested_pytest import both, run_probe
 
@@ -60,6 +62,7 @@ class TestSanitizeReportData:
 
 class TestTheSessionKeepsItsOtherTracebacks:
     def test_under_xdist_a_surrogate_failure_no_longer_kills_the_worker(self):
+        pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
         returncode, out, err = run_probe(
             "2402x",
             {"probe_2402_serialization.py": _SURROGATE_PROBE},
