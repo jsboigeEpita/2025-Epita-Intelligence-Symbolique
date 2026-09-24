@@ -950,13 +950,14 @@ async def run_pipeline_mode(
     ``asyncio.wait_for`` AROUND ``run_unified_analysis`` — but the analysis
     state is created HERE and passed BY REFERENCE, so a level torn
     mid-``asyncio.gather`` by the cancellation still leaves behind the
-    completed levels' artifacts. State writers run per-phase only AFTER each
-    level's gather completes (workflow_dsl.py:498 → :788), so the partial
-    state is exactly the verdict of the levels that finished — anti-#1019 (a
-    real bounded verdict, not a killed coroutine that lost everything). The
-    recording ``checkpoint_callback`` counts COMPLETED phases at each level; a
-    torn level never reaches its checkpoint, so ``phases_completed`` cannot be
-    inflated by a half-finished level (coord R709 guard a).
+    artifacts of every phase that finished. The executor stores a torn
+    level's finished phases, in phase order, before re-raising (#2346), so the
+    partial state is exactly the verdict of the phases that finished —
+    anti-#1019 (a real bounded verdict, not a killed coroutine that lost
+    everything). The recording ``checkpoint_callback`` counts COMPLETED
+    phases; a torn level reaches it with its finished phases only, so the
+    phase still in flight never counts and ``phases_completed`` cannot be
+    inflated (coord R709 guard a).
 
     ``max_wall_seconds=None`` (default) = unbounded — the original pre-CB
     path. Bounding is opt-in (anti-pendule: bornant ≠ désactiver).
@@ -979,10 +980,11 @@ async def run_pipeline_mode(
 
         def _record_completed(results, _ctx):
             # Recording only — never raises, so the executor's
-            # ``except Exception`` checkpoint swallow (workflow_dsl.py:507)
-            # cannot silence it. Fires after each fully-gathered level, so
-            # ``last_completed[0]`` = COMPLETED phases from FINISHED levels
-            # only — a level torn mid-gather never reaches here (guard a).
+            # ``except Exception`` checkpoint swallow cannot silence it. Fires
+            # after each level, and after a torn level with the phases that
+            # finished before the cancellation (#2346), so
+            # ``last_completed[0]`` = COMPLETED phases only — a phase still in
+            # flight never counts (guard a).
             try:
                 last_completed[0] = sum(
                     1
@@ -1013,7 +1015,7 @@ async def run_pipeline_mode(
             f"pipeline_{workflow_name} on {corpus_id} hit the "
             f"{max_wall_seconds:g}s wall-clock budget after {duration:.2f}s "
             f"— recovering partial state from the state reference "
-            f"(completed levels only; torn level not counted)."
+            f"(finished phases only; phases in flight not counted)."
         )
         # C3 #1500 (coord R710 wart): set the PLANNED phase total at breach so
         # the report's Phases column reads ``completed/planned`` (e.g. 8/15),
