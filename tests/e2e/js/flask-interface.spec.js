@@ -36,18 +36,24 @@ test.describe.only('Interface React - Analyse Argumentative', () => {
         });
       } else if (url.includes('/api/analyze')) {
         console.log('[MOCK] Mocking /api/analyze');
+        // La forme que rend la route (#2526) : { analysis_id, status, results }.
         await route.fulfill({
           status: 200,
           contentType: 'application/json',
           body: JSON.stringify({
-            success: true,
-            analysis: {
-              raw_text: "Texte analysé moqué",
-              argument_structure: "Structure moquée: [P1] & [P2] -> [C]",
-              evaluation: "Évaluation moquée: L'argument semble valide.",
-              detected_fallacies: [],
+            analysis_id: 'mock0001',
+            status: 'success',
+            results: {
+              argument_structure: {
+                premises: ['Si il pleut, alors la route est mouillée.', 'Il pleut.'],
+                conclusion: 'La route est mouillée.',
+              },
+              fallacies: [],
+              fallacy_count: 0,
+              suggestions: [],
+              summary: 'Analyse moquée.',
+              metadata: { duration: 0.1, components_used: ['mock'] },
             },
-            message: 'Analyse terminée avec succès (moquée).',
           }),
         });
       } else {
@@ -108,8 +114,9 @@ test.describe.only('Interface React - Analyse Argumentative', () => {
 
     // Le test précédent a montré que le conteneur parent est trop restrictif.
     // On va juste vérifier que les sous-titres des résultats sont visibles.
-    await expect(page.locator('h4:has-text("Qualité globale")')).toBeVisible();
+    // #2526 : « Qualité globale » n'est plus affichée, rien ne la calculait.
     await expect(page.locator('h4:has-text("Sophismes détectés")')).toBeVisible();
+    await expect(page.locator('h4:has-text("Prémisses")')).toBeVisible();
   });
 
   test('Test du compteur de caractères', async ({ page }) => {
