@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import argumentation_analysis.core.environment
+
 """
 Script pour comparer les performances des différents agents spécialistes d'analyse rhétorique.
 Ce script utilise les utilitaires de argumentation_analysis.utils.reporting_utils.
@@ -83,6 +84,23 @@ def parse_arguments() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def _load_or_exit(path: Path, label: str):
+    """Charge un fichier de résultats, ou arrête le script en nommant la cause."""
+    logger.info(f"Chargement des résultats {label} depuis: {path}")
+    try:
+        results = load_results_from_json(path)
+    except (OSError, ValueError) as e:
+        # json.JSONDecodeError est une ValueError.
+        logger.error(f"Chargement impossible des résultats {label} : {e} Arrêt.")
+        sys.exit(1)
+    if not results:
+        logger.error(
+            f"Le fichier de résultats {label} {path} ne contient aucun résultat. Arrêt."
+        )
+        sys.exit(1)
+    return results
+
+
 def main():
     """Fonction principale du script."""
     args = parse_arguments()
@@ -106,22 +124,10 @@ def main():
     args.output_dir.mkdir(parents=True, exist_ok=True)
     logger.info(f"Répertoire de sortie: {args.output_dir.resolve()}")
 
-    # Charger les résultats
-    logger.info(f"Chargement des résultats de base depuis: {args.base_results}")
-    base_results = load_results_from_json(args.base_results)
-    if not base_results:
-        logger.error(
-            f"Aucun résultat de base n'a pu être chargé depuis {args.base_results}. Arrêt."
-        )
-        sys.exit(1)
-
-    logger.info(f"Chargement des résultats avancés depuis: {args.advanced_results}")
-    advanced_results = load_results_from_json(args.advanced_results)
-    if not advanced_results:
-        logger.error(
-            f"Aucun résultat avancé n'a pu être chargé depuis {args.advanced_results}. Arrêt."
-        )
-        sys.exit(1)
+    # Charger les résultats. #2344 : un chargement en échec et un fichier
+    # sans résultat arrêtent tous deux la comparaison, chacun sous son nom.
+    base_results = _load_or_exit(args.base_results, "de base")
+    advanced_results = _load_or_exit(args.advanced_results, "avancés")
 
     # Générer les métriques de performance
     logger.info("Génération des métriques de performance...")

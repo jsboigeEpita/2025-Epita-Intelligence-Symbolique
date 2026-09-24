@@ -60,16 +60,22 @@ def test_load_results_from_json_not_a_list(temp_json_file: Path):
     with open(temp_json_file, "w", encoding="utf-8") as f:
         json.dump(sample_data, f)
 
-    loaded_data = load_results_from_json(temp_json_file)
-    # La fonction est censée retourner une liste vide si le contenu n'est pas une liste
-    assert loaded_data == []
+    # #2344 : une liste vide est un résultat, un contenu qui n'est pas une
+    # liste est un fichier en échec — l'appelant ne doit pas les confondre.
+    with pytest.raises(ValueError, match="liste JSON"):
+        load_results_from_json(temp_json_file)
 
 
-def test_load_results_from_json_file_not_found():
+def test_load_results_from_json_file_not_found(tmp_path: Path):
     """Teste le cas où le fichier JSON n'existe pas."""
-    non_existent_file = Path("non_existent_test_file.json")
-    loaded_data = load_results_from_json(non_existent_file)
-    assert loaded_data == []
+    with pytest.raises(FileNotFoundError, match="absent.json"):
+        load_results_from_json(tmp_path / "absent.json")
+
+
+def test_load_results_from_json_directory(tmp_path: Path):
+    """Un répertoire n'est pas un fichier de résultats."""
+    with pytest.raises(FileNotFoundError, match="n'est pas un fichier"):
+        load_results_from_json(tmp_path)
 
 
 def test_load_results_from_json_invalid_json(temp_json_file: Path):
@@ -77,5 +83,5 @@ def test_load_results_from_json_invalid_json(temp_json_file: Path):
     with open(temp_json_file, "w", encoding="utf-8") as f:
         f.write("ceci n'est pas du json valide {")
 
-    loaded_data = load_results_from_json(temp_json_file)
-    assert loaded_data == []
+    with pytest.raises(json.JSONDecodeError):
+        load_results_from_json(temp_json_file)
