@@ -316,70 +316,72 @@ class DataChannel(Channel):
             message: Le message à envoyer
 
         Returns:
-            True si le message a été envoyé avec succès, False sinon
+            True si le message a été envoyé avec succès, False si le canal
+            le refuse (par exemple un message sans destinataire) ; chaque
+            refus est journalisé.
+
+        Raises:
+            Toute exception de l'envoi : c'est un défaut de notre code, pas
+            un refus. #2344 : elle était convertie en ``False``, parfois
+            après que le message avait déjà été remis.
         """
-        try:
-            # Vérifier que le message a un destinataire
-            if not message.recipient:
-                self.logger.error(f"Message {message.id} has no recipient")
-                return False
-
-            # Vérifier si le message contient des données volumineuses
-            data = message.content.get("data")
-            if (
-                data
-                and isinstance(data, dict)
-                and len(str(data)) > self.max_inline_data_size
-            ):
-                # Stocker les données séparément
-                data_id = f"data-{uuid.uuid4().hex[:8]}"
-                version_id = self.data_store.store_data(
-                    data_id,
-                    data,
-                    metadata={
-                        "message_id": message.id,
-                        "sender": message.sender,
-                        "recipient": message.recipient,
-                        "timestamp": message.timestamp.isoformat(),
-                    },
-                    compress=True,
-                )
-
-                # Remplacer les données par une référence
-                message.content["data"] = None
-                message.content["data_reference"] = {
-                    "data_id": data_id,
-                    "version_id": version_id,
-                    "size": len(str(data)),
-                }
-
-                # Mettre à jour les statistiques
-                with self.lock:
-                    self.stats["data_items_stored"] += 1
-                    self.stats["total_data_size"] += len(str(data))
-
-                self.logger.info(
-                    f"Large data from message {message.id} stored separately with ID {data_id}"
-                )
-
-            # Ajouter le message à la file d'attente du destinataire
-            with self.lock:
-                self.message_queues[message.recipient].append(
-                    {"message": message, "timestamp": datetime.now(), "read": False}
-                )
-
-                # Mettre à jour les statistiques
-                self.stats["messages_sent"] += 1
-
-            # Notifier les abonnés
-            self._notify_subscribers(message)
-
-            self.logger.info(f"Message {message.id} sent to {message.recipient}")
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error sending message: {str(e)}")
+        # Vérifier que le message a un destinataire
+        if not message.recipient:
+            self.logger.error(f"Message {message.id} has no recipient")
             return False
+
+        # Vérifier si le message contient des données volumineuses
+        data = message.content.get("data")
+        if (
+            data
+            and isinstance(data, dict)
+            and len(str(data)) > self.max_inline_data_size
+        ):
+            # Stocker les données séparément
+            data_id = f"data-{uuid.uuid4().hex[:8]}"
+            version_id = self.data_store.store_data(
+                data_id,
+                data,
+                metadata={
+                    "message_id": message.id,
+                    "sender": message.sender,
+                    "recipient": message.recipient,
+                    "timestamp": message.timestamp.isoformat(),
+                },
+                compress=True,
+            )
+
+            # Remplacer les données par une référence
+            message.content["data"] = None
+            message.content["data_reference"] = {
+                "data_id": data_id,
+                "version_id": version_id,
+                "size": len(str(data)),
+            }
+
+            # Mettre à jour les statistiques
+            with self.lock:
+                self.stats["data_items_stored"] += 1
+                self.stats["total_data_size"] += len(str(data))
+
+            self.logger.info(
+                f"Large data from message {message.id} stored separately with ID {data_id}"
+            )
+
+        # Ajouter le message à la file d'attente du destinataire
+        with self.lock:
+            self.message_queues[message.recipient].append(
+                {"message": message, "timestamp": datetime.now(), "read": False}
+            )
+
+            # Mettre à jour les statistiques
+            self.stats["messages_sent"] += 1
+
+        # Notifier les abonnés
+        self._notify_subscribers(message)
+
+        self.logger.info(f"Message {message.id} sent to {message.recipient}")
+        return True
 
     def receive_message(
         self, recipient_id: str, timeout: Optional[float] = None
