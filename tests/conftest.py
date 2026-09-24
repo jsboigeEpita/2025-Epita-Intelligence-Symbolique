@@ -23,9 +23,11 @@ import project_core.managers.environment_manager  # noqa: F401
 
 from tests._e2e_session_decision import _argv_decides_e2e_session
 from tests._jvm_session_flag import (
+    JVM_SESSION_DISABLED_ENV as _JVM_SESSION_DISABLED_ENV,
     export_flag_from_config as _export_jvm_flag_from_config,
     jvm_session_disabled as _jvm_session_disabled,
     propagate_argv_to_env as _propagate_jvm_flag_argv_to_env,
+    put_back as _put_back_jvm_flag,
 )
 from tests.jvm_skip_storm_signal import COUNTER as _skip_storm_counter
 from tests.jvm_skip_storm_signal import storm_verdict as _storm_verdict
@@ -523,6 +525,32 @@ def pytest_sessionstart(session):
 def pytest_runtest_logreport(report):
     """#2021: feed the local skip-storm signal (see tests/jvm_skip_storm_signal.py)."""
     _skip_storm_counter.add(report)
+
+
+_JVM_FLAG_AT_SETUP = pytest.StashKey[object]()
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_setup(item):
+    """#2530: note the JVM flag before the test's fixtures run."""
+    item.stash[_JVM_FLAG_AT_SETUP] = os.environ.get(_JVM_SESSION_DISABLED_ENV)
+    return (yield)
+
+
+@pytest.hookimpl(wrapper=True)
+def pytest_runtest_teardown(item, nextitem):
+    """#2530: after the fixtures are torn down, the JVM flag must be back to
+    its value at setup. A test that changed it errors here, by name, and the
+    value is put back (``tests/_jvm_session_flag.put_back``)."""
+    if _JVM_FLAG_AT_SETUP not in item.stash:
+        return (yield)
+    try:
+        result = yield
+    finally:
+        moved = _put_back_jvm_flag(item.stash[_JVM_FLAG_AT_SETUP])
+    if moved is not None:
+        pytest.fail(moved, pytrace=False)
+    return result
 
 
 def _skip_storm_signal(session, exitstatus):
