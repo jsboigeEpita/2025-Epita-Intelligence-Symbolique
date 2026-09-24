@@ -18,10 +18,18 @@ collects it. Three shapes:
   pytest runs, xdist or not;
 * a real ``-n 2`` run, where pytest-xdist is installed (``requirements-test``;
   the CI environment does not install it).
+
+The probe conftest replaces the root ``jvm_session`` fixture with a no-op, so
+the probe's tests pass or skip on their own. The first CI run of this file
+showed why: the nested session's JVM failed the root fixture's ``JClass``
+health check, the fixture skipped the 3 green tests, and the guard shouted
+for a storm the probe did not make. The nested session still starts its JVM
+in ``pytest_sessionstart``, like any session the guard watches.
 """
 
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import uuid
@@ -41,8 +49,10 @@ pytestmark = [
 
 ROOT = Path(__file__).resolve().parents[3]
 
-# A probe session takes about 20 s here, with its own JVM start.
+# A probe session takes about 20 s here and 12 s in CI, JVM start included.
 _BOUND = 300
+# After a kill, how long the pipes may take to close.
+_DRAIN = 30
 
 _GREEN = """
 def test_one():
@@ -75,8 +85,18 @@ def test_three():
     pytest.skip(_REASON)
 """
 
-_CONTROLLER_STATE = """
+_PROBE_CONFTEST = """
 import pytest
+
+
+@pytest.fixture(scope="session", autouse=True)
+def jvm_session():
+    # Replaces the root fixture for the probe's own tests: the probe measures
+    # the skip-storm guard, not the JVM of this nested session.
+    yield
+"""
+
+_CONTROLLER_STATE = """
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -99,43 +119,77 @@ def _needs_xdist(shape):
         pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
 
 
+def _kill_tree(process):
+    """Kill ``process`` and its children, then wait at most ``_DRAIN`` s for
+    its pipes. ``(stdout, stderr)``, empty when they did not close.
+
+    ``subprocess.run(timeout=...)`` kills only the child and then waits for
+    the pipes without a bound, so a grandchild that holds them keeps the
+    caller waiting. The first CI run of this file lost 895 s that way on one
+    case. ``eprover_runner._kill_tree`` kills the same way but drains without
+    a bound.
+    """
+    if os.name == "nt":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+            capture_output=True,
+            check=False,
+        )
+    else:
+        os.killpg(process.pid, signal.SIGKILL)
+    process.kill()
+    try:
+        return process.communicate(timeout=_DRAIN)
+    except subprocess.TimeoutExpired:
+        return "", ""
+
+
 def _session(shape, probe, *extra):
-    """Run pytest on ``probe`` in ``shape``. ``(returncode, stdout)``."""
+    """Run pytest on ``probe`` in ``shape``. ``(returncode, stdout, stderr)``."""
     argv, controller_state = _SHAPES[shape]
     probe_dir = ROOT / "tests" / f"_probe_2490_{uuid.uuid4().hex}"
     probe_dir.mkdir()
     try:
         (probe_dir / "probe_2490.py").write_text(probe, encoding="utf-8")
-        if controller_state:
-            (probe_dir / "conftest.py").write_text(_CONTROLLER_STATE, encoding="utf-8")
+        conftest = _PROBE_CONFTEST + (_CONTROLLER_STATE if controller_state else "")
+        (probe_dir / "conftest.py").write_text(conftest, encoding="utf-8")
         env = dict(os.environ)
         env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                str(probe_dir / "probe_2490.py"),
+                "-p",
+                "no:cacheprovider",
+                "-q",
+                *argv,
+                *extra,
+            ],
+            cwd=ROOT,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            start_new_session=os.name != "nt",
+        )
         try:
-            done = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "pytest",
-                    str(probe_dir / "probe_2490.py"),
-                    "-p",
-                    "no:cacheprovider",
-                    "-q",
-                    *argv,
-                    *extra,
-                ],
-                cwd=ROOT,
-                env=env,
-                capture_output=True,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                timeout=_BOUND,
-            )
+            out, err = process.communicate(timeout=_BOUND)
         except subprocess.TimeoutExpired:
-            pytest.fail(f"the probe session did not end within {_BOUND}s")
+            out, err = _kill_tree(process)
+            pytest.fail(
+                f"the probe session did not end within {_BOUND}s\n" + _both(out, err)
+            )
     finally:
         shutil.rmtree(probe_dir, ignore_errors=True)
-    return done.returncode, done.stdout
+    return process.returncode, out, err
+
+
+def _both(out, err):
+    return f"--- stdout\n{out[-3000:]}\n--- stderr\n{err[-3000:]}"
 
 
 @pytest.mark.parametrize("shape", list(_SHAPES))
@@ -144,11 +198,11 @@ def test_a_green_session_exits_0_with_its_summary(shape):
     collected" and exited 1."""
     _needs_xdist(shape)
 
-    returncode, out = _session(shape, _GREEN)
+    returncode, out, err = _session(shape, _GREEN)
 
-    assert "FAIL-LOUD" not in out, out[-3000:]
-    assert "3 passed" in out, out[-3000:]
-    assert returncode == 0, out[-3000:]
+    assert "FAIL-LOUD" not in out, _both(out, err)
+    assert "3 passed" in out, _both(out, err)
+    assert returncode == 0, _both(out, err)
 
 
 @pytest.mark.parametrize("shape", list(_SHAPES))
@@ -158,10 +212,10 @@ def test_a_storm_still_shouts(shape):
     collection."""
     _needs_xdist(shape)
 
-    returncode, out = _session(shape, _STORM)
+    returncode, out, err = _session(shape, _STORM)
 
-    assert "FAIL-LOUD (#2021): 3 of 3 collected tests" in out, out[-3000:]
-    assert returncode == 1, out[-3000:]
+    assert "FAIL-LOUD (#2021): 3 of 3 collected tests" in out, _both(out, err)
+    assert returncode == 1, _both(out, err)
 
 
 @pytest.mark.parametrize("shape", ["serial", "xdist -n 2"])
@@ -170,6 +224,6 @@ def test_an_empty_selection_still_fails(shape):
     own code for it. Nothing ran, and the exit is not 0."""
     _needs_xdist(shape)
 
-    returncode, out = _session(shape, _GREEN, "-k", "no_test_is_named_like_this")
+    returncode, out, err = _session(shape, _GREEN, "-k", "no_test_is_named_like_this")
 
-    assert returncode == pytest.ExitCode.NO_TESTS_COLLECTED, out[-3000:]
+    assert returncode == pytest.ExitCode.NO_TESTS_COLLECTED, _both(out, err)
