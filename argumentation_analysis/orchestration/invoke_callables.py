@@ -2492,15 +2492,15 @@ async def _invoke_governance(
     # Consensus threshold check (parametric selector --consensus-threshold, #899)
     consensus_threshold = context.get("consensus_threshold", 0.7)
     if positions and vote_result:
-        try:
-            metrics_json = plugin.compute_consensus_metrics(json.dumps(vote_result))
-            consensus_metrics = json.loads(metrics_json)
-            consensus_rate = consensus_metrics.get("consensus_rate", 0.0)
-            result["consensus_metrics"] = consensus_metrics
-            result["consensus_met"] = consensus_rate >= consensus_threshold
-            result["consensus_threshold_used"] = consensus_threshold
-        except Exception as e:
-            logger.debug(f"Consensus metrics computation skipped: {e}")
+        # #2344: the plugin names the metrics it cannot compute from this vote
+        # result (``unavailable``). Anything it raises is a bug in our code, so
+        # it fails the phase instead of dropping the metrics at debug level.
+        metrics_json = plugin.compute_consensus_metrics(json.dumps(vote_result))
+        consensus_metrics = json.loads(metrics_json)
+        consensus_rate = consensus_metrics["consensus_rate"]
+        result["consensus_metrics"] = consensus_metrics
+        result["consensus_met"] = consensus_rate >= consensus_threshold
+        result["consensus_threshold_used"] = consensus_threshold
     if llm_governance:
         # GE-4 #1462: LLM assessment is a PRIOR (method recommendation /
         # qualitative framing), explicitly not the governance verdict.

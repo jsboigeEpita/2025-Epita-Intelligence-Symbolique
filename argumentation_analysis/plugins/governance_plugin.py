@@ -79,19 +79,33 @@ class GovernancePlugin:
         ),
     )
     def compute_consensus_metrics(self, results_json: str) -> str:
-        """Compute governance metrics from voting results."""
+        """Compute governance metrics from voting results.
+
+        ``fairness_index`` and ``satisfaction`` are computed from the per-agent
+        ``satisfaction`` scores. When the input carries none, or scores that
+        are not numbers, the metric is left out and ``unavailable`` names why
+        (#2344): a 0.0 would read as "maximally unfair, nobody satisfied", and
+        a ``None`` could not say whether the scores were missing or broken.
+        """
         results = json.loads(results_json)
-        metrics = {
+        metrics: Dict[str, Any] = {
             "consensus_rate": consensus_rate(results),
         }
-        try:
-            metrics["fairness_index"] = fairness_index(results)
-        except Exception:
-            metrics["fairness_index"] = None
-        try:
-            metrics["satisfaction"] = satisfaction(results)
-        except Exception:
-            metrics["satisfaction"] = None
+        unavailable: Dict[str, str] = {}
+        has_scores = isinstance(results, dict) and bool(results.get("satisfaction"))
+        for name, metric in (
+            ("fairness_index", fairness_index),
+            ("satisfaction", satisfaction),
+        ):
+            if not has_scores:
+                unavailable[name] = "the input carries no 'satisfaction' scores"
+                continue
+            try:
+                metrics[name] = metric(results)
+            except (TypeError, ValueError) as exc:
+                unavailable[name] = f"{type(exc).__name__}: {exc}"
+        if unavailable:
+            metrics["unavailable"] = unavailable
         return json.dumps(metrics)
 
     @kernel_function(

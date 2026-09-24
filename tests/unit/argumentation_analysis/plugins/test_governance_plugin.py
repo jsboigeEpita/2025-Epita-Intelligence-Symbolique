@@ -5,6 +5,8 @@ Covers GovernancePlugin: detect_conflicts_fn, resolve_conflict_fn,
 compute_consensus_metrics, list_governance_methods.
 """
 
+import re
+
 import pytest
 import json
 
@@ -140,15 +142,49 @@ class TestComputeConsensusMetrics:
         assert "consensus_rate" in metrics
         assert metrics["consensus_rate"] == 0.5
 
-    def test_has_fairness_key(self, plugin):
-        results = {"votes": ["X", "X"], "winner": "X"}
+    def test_fairness_and_satisfaction_from_scores(self, plugin):
+        results = {"votes": ["X", "X"], "winner": "X", "satisfaction": [0.5, 0.5]}
         metrics = json.loads(plugin.compute_consensus_metrics(json.dumps(results)))
-        assert "fairness_index" in metrics
+        assert metrics["satisfaction"] == pytest.approx(0.5)
+        assert metrics["fairness_index"] == pytest.approx(1.0)
+        assert "unavailable" not in metrics
 
-    def test_has_satisfaction_key(self, plugin):
+    # #2344: without per-agent satisfaction scores there is nothing to compute.
+    # The metrics used to come back as 0.0 (read: "maximally unfair, nobody
+    # satisfied"), and as None when the computation raised. Now the keys are
+    # absent and ``unavailable`` names why.
+    @pytest.mark.parametrize("scores", [None, []])
+    def test_no_scores_leaves_the_metrics_out_and_says_why(self, plugin, scores):
         results = {"votes": ["X", "X"], "winner": "X"}
+        if scores is not None:
+            results["satisfaction"] = scores
         metrics = json.loads(plugin.compute_consensus_metrics(json.dumps(results)))
-        assert "satisfaction" in metrics
+        assert metrics["consensus_rate"] == 1.0
+        assert "fairness_index" not in metrics
+        assert "satisfaction" not in metrics
+        assert set(metrics["unavailable"]) == {"fairness_index", "satisfaction"}
+        assert "satisfaction" in metrics["unavailable"]["fairness_index"]
+
+    def test_malformed_scores_name_the_error(self, plugin):
+        results = {"votes": ["X"], "winner": "X", "satisfaction": ["high", "low"]}
+        metrics = json.loads(plugin.compute_consensus_metrics(json.dumps(results)))
+        assert "fairness_index" not in metrics
+        assert "satisfaction" not in metrics
+        # Each reason names the exception class (numpy raises ValueError for
+        # the Gini cast and UFuncTypeError, a TypeError, for the mean).
+        for name in ("fairness_index", "satisfaction"):
+            assert re.match(r"\w+Error: ", metrics["unavailable"][name]), metrics
+
+    def test_a_bug_in_a_metric_is_not_absorbed(self, plugin, monkeypatch):
+        import argumentation_analysis.plugins.governance_plugin as mod
+
+        def broken(results):
+            raise AttributeError("bug in the metric")
+
+        monkeypatch.setattr(mod, "fairness_index", broken)
+        results = {"votes": ["X"], "winner": "X", "satisfaction": [0.5]}
+        with pytest.raises(AttributeError, match="bug in the metric"):
+            plugin.compute_consensus_metrics(json.dumps(results))
 
 
 # ============================================================
