@@ -979,11 +979,17 @@ def _server_output(process: subprocess.Popen, log_path=None) -> str:
 
 
 def _wait_for_server(
-    url: str, process: subprocess.Popen, timeout: int = 120, log_path=None
+    url: str,
+    process: subprocess.Popen,
+    timeout: int = 120,
+    log_path=None,
+    path: str = "/api/health",
 ):
     """Attend qu'un serveur soit disponible ou que le processus se termine.
 
     ``log_path`` : le fichier où le serveur écrit sa sortie, s'il y en a un.
+    ``path`` : ce que la sonde demande, ``/api/health`` au backend, ``/`` au
+    frontend (#2548).
     """
     start_time = time.time()
     try:
@@ -1005,7 +1011,7 @@ def _wait_for_server(
                 )
 
             try:
-                response = requests.get(f"{url}/api/health", timeout=5)
+                response = requests.get(f"{url}{path}", timeout=5)
                 if response.status_code == 200:
                     logger.info(f"Serveur à l'adresse {url} est prêt !")
                     return True
@@ -1017,6 +1023,11 @@ def _wait_for_server(
         # Si la boucle se termine, c'est un timeout
         raise TimeoutError(
             f"Le serveur à l'adresse {url} n'a pas démarré dans le temps imparti de {timeout}s."
+            + (
+                f"\nSortie du serveur :\n{_server_output(process, log_path)[-3000:]}"
+                if log_path is not None
+                else ""
+            )
         )
     finally:
         # Dans tous les cas (succès, exception), si le processus est toujours en vie mais que
@@ -1073,6 +1084,86 @@ def _e2e_backend_env(port: str, project_root: Path) -> dict:
     env["PORT"] = str(port)
     env["PYTHONPATH"] = str(project_root)
     return env
+
+
+# Where the React app lives; ``npm run build`` writes ``build/`` there, and
+# ``interface_web/app.py`` serves that directory (``STATIC_FILES_DIR``).
+_E2E_FRONTEND_DIR = Path("services") / "web_api" / "interface-web-argumentative"
+
+
+def _e2e_frontend_command(host: str, port: str) -> list:
+    """The e2e frontend: the Starlette app that serves the React build and
+    relays ``/api/*`` to the backend, which is what users get (#2548).
+
+    The fixture used to run ``npm start``, the React dev server. The e2e lane
+    never installed it, and the fixture slept 15 s and yielded a URL that
+    nothing answered: 25 pages refused the connection (run 35969872851).
+    """
+    return [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "interface_web.app:app",
+        "--host",
+        host,
+        "--port",
+        str(port),
+    ]
+
+
+def _e2e_frontend_env(backend_url: str, project_root: Path) -> dict:
+    """The e2e frontend's environment: the backend it relays ``/api/*`` to."""
+    backend = urlparse(backend_url)
+    env = os.environ.copy()
+    env["FASTAPI_HOST"] = backend.hostname or "127.0.0.1"
+    env["FASTAPI_PORT"] = str(backend.port)
+    env["PYTHONPATH"] = str(project_root)
+    return env
+
+
+def _e2e_frontend_build(project_root: Path) -> Path:
+    """The ``index.html`` of the React build. Raises if there is none: the
+    build is not in git, and the app would answer 404 to every page."""
+    index = project_root / _E2E_FRONTEND_DIR / "build" / "index.html"
+    if not index.is_file():
+        raise RuntimeError(
+            f"The e2e frontend has no build: {index} is missing. Run "
+            f"`npm ci` then `npm run build` in {_E2E_FRONTEND_DIR.as_posix()}; "
+            "the e2e lane does (#2548)."
+        )
+    return index
+
+
+def _start_e2e_frontend(frontend_url, backend_url, project_root, logs_dir):
+    """Start the e2e frontend and wait until it serves ``/``.
+    ``(process, log_file)``.
+
+    Raises if there is no build, or with the tail of the frontend's log if it
+    exits or never answers; the process is stopped first (#2548).
+    """
+    _e2e_frontend_build(project_root)
+    parsed = urlparse(frontend_url)
+    command = _e2e_frontend_command(parsed.hostname or "127.0.0.1", str(parsed.port))
+    log_path = Path(logs_dir) / "frontend_server.log"
+    log_file = open(log_path, "w")
+    logger.info(
+        f"Démarrage du serveur frontend avec la commande: {' '.join(command)}"
+        f". Logs dans: {log_path}"
+    )
+    process = subprocess.Popen(
+        command,
+        cwd=project_root,
+        stdout=log_file,
+        stderr=log_file,
+        env=_e2e_frontend_env(backend_url, project_root),
+    )
+    try:
+        _wait_for_server(frontend_url, process, log_path=log_path, path="/")
+    except BaseException:
+        _kill_process(process)
+        log_file.close()
+        raise
+    return process, log_file
 
 
 def _kill_process(proc):
@@ -1139,37 +1230,10 @@ def e2e_servers(request):
         # Attendre que le backend soit prêt
         _wait_for_server(backend_url, backend_process, log_path=backend_log_path)
 
-        # --- Démarrage du serveur Frontend ---
-        frontend_command = ["npm", "start"]
-        frontend_dir = (
-            project_root / "services" / "web_api" / "interface-web-argumentative"
+        # --- Démarrage du serveur Frontend (interface_web.app:app, #2548) ---
+        frontend_process, frontend_log_file = _start_e2e_frontend(
+            frontend_url, backend_url, project_root, e2e_logs_dir
         )
-        # Création d'un environnement pour le frontend avec le port personnalisé
-        frontend_env = os.environ.copy()
-        frontend_env["PORT"] = frontend_url.split(":")[-1]
-
-        logger.info(
-            f"Démarrage du serveur frontend dans '{frontend_dir}' avec la commande: {' '.join(frontend_command)}"
-        )
-        # Création des fichiers de log pour le frontend
-        frontend_log_path = e2e_logs_dir / "frontend_server.log"
-        frontend_log_file = open(frontend_log_path, "w")
-
-        logger.info(
-            f"Démarrage du serveur frontend dans '{frontend_dir}'. Logs dans: {frontend_log_path}"
-        )
-        frontend_process = subprocess.Popen(
-            frontend_command,
-            cwd=frontend_dir,
-            stdout=frontend_log_file,
-            stderr=frontend_log_file,
-            env=frontend_env,
-            shell=True,
-        )
-
-        # Simple attente pour le frontend, car il n'a pas de healthcheck standard
-        logger.info("Attente de 15 secondes pour le démarrage du serveur frontend...")
-        time.sleep(15)
 
         yield backend_url, frontend_url
 

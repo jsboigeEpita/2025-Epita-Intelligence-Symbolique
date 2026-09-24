@@ -96,6 +96,21 @@ jobs:
         shell: pwsh
         run: conda run -n projet-is --no-capture-output python -m playwright install chromium
 
+      # #2548: the e2e pages are served by interface_web/app.py from the
+      # React build, which is not in git. Without it nothing answered on
+      # :8085 and 25 pages refused the connection (run 35969872851). The
+      # build is made once here; a failed install or build fails the lane.
+      - name: Build the frontend
+        if: env.RUN == 'true' && env.API_KEYS_CONFIGURED == 'true' && matrix.lane == 'e2e'
+        timeout-minutes: 15
+        shell: pwsh
+        working-directory: services/web_api/interface-web-argumentative
+        run: |
+          npm ci --no-audit --no-fund
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       # Chaque lane a son propre sélecteur. Le timeout de step est le garde-fou
       # sous la limite GitHub 6h ; --timeout=900 borne chaque test individuel.
       - name: Run lane ${{ matrix.lane }}
@@ -143,7 +158,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: extended-results-${{ matrix.lane }}
+          # #2548: _e2e_logs/ holds what the e2e servers printed; the
+          # cause of a server that did not start is only there.
           path: |
             pytest_report_*.xml
             llm_egress_report.json
+            _e2e_logs/
           if-no-files-found: warn
