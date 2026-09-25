@@ -15,6 +15,10 @@ from argumentation_analysis.core.io_manager import (
     load_extract_definitions,
     save_extract_definitions,
 )
+from argumentation_analysis.core.utils.crypto_utils import (
+    derive_encryption_key,
+    encrypt_data_with_fernet,
+)
 
 # ============================================================
 # Helpers
@@ -84,8 +88,8 @@ class TestLoadExtractDefinitions:
         config_file.write_bytes(b"encrypted_data")
 
         with patch(
-            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet",
-            return_value=compressed,
+            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed",
+            return_value=(compressed, None),
         ):
             result = load_extract_definitions(config_file, "valid_key")
             assert len(result) == 1
@@ -96,8 +100,8 @@ class TestLoadExtractDefinitions:
         config_file.write_bytes(b"encrypted_data")
 
         with patch(
-            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet",
-            return_value=None,
+            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed",
+            return_value=(None, "bad-token"),
         ):
             result = load_extract_definitions(
                 config_file, "bad_key", fallback_definitions=FALLBACK_DEFINITIONS
@@ -109,20 +113,85 @@ class TestLoadExtractDefinitions:
         config_file.write_bytes(b"encrypted_data")
 
         with patch(
-            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet",
-            return_value=None,
+            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed",
+            return_value=(None, "bad-token"),
         ):
             with pytest.raises(InvalidToken):
                 load_extract_definitions(
                     config_file, "bad_key", raise_on_decrypt_error=True
                 )
 
+    def _write_encrypted_with(self, tmp_path, passphrase):
+        """Fixture réelle : le dataset chiffré par une phrase secrète donnée."""
+        key = derive_encryption_key(passphrase)
+        assert key is not None
+        config_file = tmp_path / "config.enc"
+        config_file.write_bytes(
+            encrypt_data_with_fernet(_make_encrypted_payload([VALID_DEFINITION]), key)
+        )
+        return config_file
+
+    def _other_key(self, passphrase):
+        """Une clé valide et bien formée, mais qui n'est pas celle du chiffrement."""
+        key = derive_encryption_key(passphrase)
+        assert key is not None
+        return key.decode("utf-8")
+
+    def test_decrypt_failure_names_bad_token_in_fallback_log(self, tmp_path, caplog):
+        """#2552 : le consommateur nomme la cause au lieu du générique.
+
+        Fixture chiffrée avec la phrase A, lue avec la phrase B : la branche de
+        dégradation doit dire `bad-token`, pas « le token est peut-être invalide ».
+        """
+        import logging
+
+        config_file = self._write_encrypted_with(tmp_path, "witness_pass_a")
+
+        with caplog.at_level(logging.ERROR):
+            result = load_extract_definitions(
+                config_file,
+                self._other_key("witness_pass_b"),
+                fallback_definitions=FALLBACK_DEFINITIONS,
+            )
+
+        assert result[0]["source_name"] == "Fallback"
+        assert "bad-token" in caplog.text
+
+    def test_decrypt_failure_names_bad_token_when_raising(self, tmp_path):
+        """La branche qui lève nomme la même cause, elle ne la perd pas en route."""
+        config_file = self._write_encrypted_with(tmp_path, "witness_pass_c")
+
+        with pytest.raises(InvalidToken, match="bad-token"):
+            load_extract_definitions(
+                config_file,
+                self._other_key("witness_pass_d"),
+                raise_on_decrypt_error=True,
+                fallback_definitions=FALLBACK_DEFINITIONS,
+            )
+
+    def test_malformed_key_is_named_apart_from_bad_token(self, tmp_path, caplog):
+        """Clé mal formée et mauvais jeton ne se ressemblent plus dans le log."""
+        import logging
+
+        config_file = self._write_encrypted_with(tmp_path, "witness_pass_e")
+
+        with caplog.at_level(logging.ERROR):
+            result = load_extract_definitions(
+                config_file,
+                "not-a-fernet-key",
+                fallback_definitions=FALLBACK_DEFINITIONS,
+            )
+
+        assert result[0]["source_name"] == "Fallback"
+        assert "invalid-key" in caplog.text
+        assert "bad-token" not in caplog.text
+
     def test_load_with_key_generic_error(self, tmp_path):
         config_file = tmp_path / "config.dat"
         config_file.write_bytes(b"encrypted_data")
 
         with patch(
-            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet",
+            "argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed",
             side_effect=RuntimeError("Unexpected"),
         ):
             result = load_extract_definitions(

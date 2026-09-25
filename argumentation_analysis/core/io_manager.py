@@ -13,6 +13,7 @@ from cryptography.fernet import InvalidToken
 from argumentation_analysis.core.utils.crypto_utils import (
     encrypt_data_with_fernet,
     decrypt_data_with_fernet,
+    decrypt_data_with_fernet_detailed,
 )
 
 io_logger = logging.getLogger(__name__)
@@ -40,23 +41,28 @@ def load_extract_definitions(
         try:
             with open(config_file, "rb") as f:
                 encrypted_data = f.read()
-            decrypted_compressed_data = decrypt_data_with_fernet(
-                encrypted_data, b64_derived_key
+            decrypted_compressed_data, decrypt_cause = (
+                decrypt_data_with_fernet_detailed(encrypted_data, b64_derived_key)
             )
 
-            if not decrypted_compressed_data:
+            if decrypted_compressed_data is None:
+                # La cause nommée voyage jusqu'au log et jusqu'à la décision de
+                # dégradation (#2552) : clé absente, clé mal formée et mauvais
+                # jeton ne se ressemblent plus.
                 io_logger.error(
-                    f"Échec du déchiffrement pour '{config_file}'. Le token est peut-être invalide."
+                    f"Échec du déchiffrement pour '{config_file}' (cause: {decrypt_cause})."
                 )
-                raise InvalidToken(f"Échec du déchiffrement pour '{config_file}'.")
+                raise InvalidToken(
+                    f"Échec du déchiffrement pour '{config_file}' (cause: {decrypt_cause})."
+                )
 
             decompressed_data = gzip.decompress(decrypted_compressed_data)
             definitions = json.loads(decompressed_data.decode("utf-8"))
             io_logger.info("✅ Définitions chargées et déchiffrées.")
 
-        except InvalidToken:
+        except InvalidToken as e:
             io_logger.error(
-                f"❌ Token invalide (InvalidToken) lors du déchiffrement de '{config_file}'.",
+                f"❌ Déchiffrement refusé pour '{config_file}': {e}",
                 exc_info=True,
             )
             if raise_on_decrypt_error:
