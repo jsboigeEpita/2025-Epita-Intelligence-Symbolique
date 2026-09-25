@@ -5,12 +5,15 @@ Tests cover:
 - Encrypted/unencrypted dataset loading
 - Document text extraction
 - Timeout handling
+- Setup errors propagate, analysis errors are results (#2346)
 - Phase result serialization
 """
 
 import asyncio
 import gzip
 import json
+import os
+import sys
 import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -18,6 +21,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from argumentation_analysis.evaluation.benchmark_runner import (
     BenchmarkRunner,
     BenchmarkResult,
+)
+from argumentation_analysis.evaluation.model_registry import (
+    ModelConfig,
+    ModelRegistry,
 )
 
 
@@ -456,6 +463,76 @@ class TestRunCell:
 
             # Text should be truncated to 100 chars
             assert len(captured_text[0]) == 100
+
+    @staticmethod
+    def _runner_with_real_registry(tmp_path):
+        dataset_path = tmp_path / "dataset.json"
+        dataset_path.write_text(
+            json.dumps({"documents": [{"id": "doc1", "full_text": "Test text."}]}),
+            encoding="utf-8",
+        )
+        registry = ModelRegistry()
+        registry.register(
+            "model_a",
+            ModelConfig(model_id="m-a", base_url="http://127.0.0.1:9", api_key="k-a"),
+        )
+        runner = BenchmarkRunner(registry)
+        runner.load_dataset_unencrypted(str(dataset_path))
+        return runner
+
+    @pytest.mark.asyncio
+    async def test_run_cell_unregistered_model_raises(self, tmp_path, monkeypatch):
+        """A model name that is not registered is a configuration error: it
+        propagates instead of becoming a failed row that the rankings would
+        score (#2346)."""
+        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "before")
+        runner = self._runner_with_real_registry(tmp_path)
+
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis"
+        ) as mock_run:
+            with pytest.raises(KeyError, match="model_typo"):
+                await runner.run_cell("light", "model_typo", 0, timeout=10.0)
+
+        mock_run.assert_not_called()
+        assert os.environ["OPENAI_CHAT_MODEL_ID"] == "before"
+
+    @pytest.mark.asyncio
+    async def test_run_cell_setup_error_restores_the_environment(
+        self, tmp_path, monkeypatch
+    ):
+        """The model is already activated when the pipeline import fails: the
+        error propagates and the environment is restored (#2346)."""
+        monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "before")
+        runner = self._runner_with_real_registry(tmp_path)
+
+        with patch.dict(
+            sys.modules,
+            {"argumentation_analysis.orchestration.unified_pipeline": None},
+        ):
+            with pytest.raises(ImportError):
+                await runner.run_cell("light", "model_a", 0, timeout=10.0)
+
+        assert os.environ["OPENAI_CHAT_MODEL_ID"] == "before"
+
+    @pytest.mark.asyncio
+    async def test_run_cell_analysis_error_is_a_failed_result(self, tmp_path):
+        """An error raised by the analysis stays a result, with the time spent."""
+        runner = self._runner_with_real_registry(tmp_path)
+
+        async def failing_analysis(*args, **kwargs):
+            await asyncio.sleep(0.05)
+            raise RuntimeError("analysis broke")
+
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+            side_effect=failing_analysis,
+        ):
+            result = await runner.run_cell("light", "model_a", 0, timeout=10.0)
+
+        assert result.success is False
+        assert result.error == "analysis broke"
+        assert result.duration_seconds >= 0.025
 
 
 @pytest.mark.unit

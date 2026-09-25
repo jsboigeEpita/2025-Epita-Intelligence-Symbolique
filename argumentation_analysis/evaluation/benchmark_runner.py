@@ -169,6 +169,13 @@ class BenchmarkRunner:
             document_index: Index into the loaded dataset.
             max_text_chars: Truncate input text to this length (controls cost).
             timeout: Max seconds for the entire analysis.
+
+        Returns a failed result when the analysis raises or times out.
+
+        Raises:
+            KeyError: ``model_name`` is not registered. Setup errors are
+                configuration errors and are not returned as a failed
+                result (#2346).
         """
         doc_name = self.get_document_name(document_index)
         text = self.get_document_text(document_index)
@@ -192,7 +199,11 @@ class BenchmarkRunner:
         if len(text) > max_text_chars:
             text = text[:max_text_chars]
 
-        # Switch model
+        # Switch model. A setup error (unregistered model, pipeline that
+        # does not import) is a configuration error, not a benchmark result:
+        # it propagates instead of becoming a failed row that the rankings
+        # would score (#2346). Only the analysis itself is caught below, and
+        # the environment is restored either way.
         saved_env = self.model_registry.save_env()
         try:
             self.model_registry.activate(model_name)
@@ -202,83 +213,86 @@ class BenchmarkRunner:
             )
 
             start = time.monotonic()
-            result = await asyncio.wait_for(
-                run_unified_analysis(text, workflow_name=workflow_name),
-                timeout=timeout,
-            )
-            elapsed = time.monotonic() - start
+            try:
+                result = await asyncio.wait_for(
+                    run_unified_analysis(text, workflow_name=workflow_name),
+                    timeout=timeout,
+                )
+                elapsed = time.monotonic() - start
 
-            phases = result.get("phases", {})
-            summary = result.get("summary", {})
-            state_snap = result.get("unified_state")
-            if hasattr(state_snap, "get_state_snapshot"):
-                # Use summarize=False so judge sees actual data (arguments, scores, etc.)
-                # not just counts (argument_count=0 hides real analysis output)
-                state_snap = state_snap.get_state_snapshot(summarize=False)
+                phases = result.get("phases", {})
+                summary = result.get("summary", {})
+                state_snap = result.get("unified_state")
+                if hasattr(state_snap, "get_state_snapshot"):
+                    # Use summarize=False so judge sees actual data (arguments, scores, etc.)
+                    # not just counts (argument_count=0 hides real analysis output)
+                    state_snap = state_snap.get_state_snapshot(summarize=False)
 
-            # Serialize phase results (strip non-serializable)
-            serializable_phases = {}
-            for pname, presult in phases.items():
-                serializable_phases[pname] = {
-                    "status": (
-                        presult.status.value
-                        if hasattr(presult.status, "value")
-                        else str(presult.status)
-                    ),
-                    "capability": (
-                        presult.capability if hasattr(presult, "capability") else None
-                    ),
-                    "has_output": (
-                        presult.output is not None
-                        if hasattr(presult, "output")
-                        else False
-                    ),
-                }
+                # Serialize phase results (strip non-serializable)
+                serializable_phases = {}
+                for pname, presult in phases.items():
+                    serializable_phases[pname] = {
+                        "status": (
+                            presult.status.value
+                            if hasattr(presult.status, "value")
+                            else str(presult.status)
+                        ),
+                        "capability": (
+                            presult.capability
+                            if hasattr(presult, "capability")
+                            else None
+                        ),
+                        "has_output": (
+                            presult.output is not None
+                            if hasattr(presult, "output")
+                            else False
+                        ),
+                    }
 
-            return BenchmarkResult(
-                workflow_name=workflow_name,
-                model_name=model_name,
-                document_index=document_index,
-                document_name=doc_name,
-                success=True,
-                duration_seconds=elapsed,
-                phases_completed=summary.get("completed", 0),
-                phases_total=summary.get("total", len(phases)),
-                phases_failed=summary.get("failed", 0),
-                phases_skipped=summary.get("skipped", 0),
-                state_snapshot=state_snap if isinstance(state_snap, dict) else None,
-                phase_results=serializable_phases,
-            )
+                return BenchmarkResult(
+                    workflow_name=workflow_name,
+                    model_name=model_name,
+                    document_index=document_index,
+                    document_name=doc_name,
+                    success=True,
+                    duration_seconds=elapsed,
+                    phases_completed=summary.get("completed", 0),
+                    phases_total=summary.get("total", len(phases)),
+                    phases_failed=summary.get("failed", 0),
+                    phases_skipped=summary.get("skipped", 0),
+                    state_snapshot=state_snap if isinstance(state_snap, dict) else None,
+                    phase_results=serializable_phases,
+                )
 
-        except asyncio.TimeoutError:
-            elapsed = time.monotonic() - start
-            return BenchmarkResult(
-                workflow_name=workflow_name,
-                model_name=model_name,
-                document_index=document_index,
-                document_name=doc_name,
-                success=False,
-                duration_seconds=elapsed,
-                phases_completed=0,
-                phases_total=0,
-                phases_failed=0,
-                phases_skipped=0,
-                error=f"Timeout after {timeout}s",
-            )
-        except Exception as e:
-            elapsed = time.monotonic() - start if "start" in dir() else 0.0
-            return BenchmarkResult(
-                workflow_name=workflow_name,
-                model_name=model_name,
-                document_index=document_index,
-                document_name=doc_name,
-                success=False,
-                duration_seconds=elapsed,
-                phases_completed=0,
-                phases_total=0,
-                phases_failed=0,
-                phases_skipped=0,
-                error=str(e),
-            )
+            except asyncio.TimeoutError:
+                elapsed = time.monotonic() - start
+                return BenchmarkResult(
+                    workflow_name=workflow_name,
+                    model_name=model_name,
+                    document_index=document_index,
+                    document_name=doc_name,
+                    success=False,
+                    duration_seconds=elapsed,
+                    phases_completed=0,
+                    phases_total=0,
+                    phases_failed=0,
+                    phases_skipped=0,
+                    error=f"Timeout after {timeout}s",
+                )
+            except Exception as e:
+                elapsed = time.monotonic() - start
+                return BenchmarkResult(
+                    workflow_name=workflow_name,
+                    model_name=model_name,
+                    document_index=document_index,
+                    document_name=doc_name,
+                    success=False,
+                    duration_seconds=elapsed,
+                    phases_completed=0,
+                    phases_total=0,
+                    phases_failed=0,
+                    phases_skipped=0,
+                    error=str(e),
+                )
         finally:
             self.model_registry.restore_env(saved_env)
