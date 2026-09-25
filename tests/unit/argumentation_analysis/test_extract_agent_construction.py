@@ -28,7 +28,8 @@ def _kernel() -> Kernel:
     """Un kernel porteur d'un service LLM — le constructeur l'exige.
 
     Mesuré : ``ExtractAgent(kernel=Kernel())`` lève
-    ``ValueError: No LLM service found in kernel for id 'default'``. La clé est
+    ``ValueError: Agent 'ExtractAgent': no LLM service 'default' in the kernel,
+    which holds [] ...`` (#2627). La clé est
     factice et n'est jamais utilisée : rien dans ce fichier n'appelle le modèle.
     """
     kernel = Kernel()

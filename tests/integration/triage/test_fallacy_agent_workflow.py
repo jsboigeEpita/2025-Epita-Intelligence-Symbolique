@@ -213,7 +213,7 @@ def test_agent_factory_configurations(kernel, config_name, expected_plugin_names
     # --- Arrange ---
     settings = AppSettings()
     settings.service_manager.default_llm_service_id = "test_service"
-    factory = AgentFactory(kernel, settings)
+    factory = AgentFactory(kernel, settings.service_manager.default_llm_service_id)
 
     # --- Act ---
     agent = factory.create_agent(AgentType.INFORMAL_FALLACY, config_name=config_name)

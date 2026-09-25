@@ -100,22 +100,21 @@ class BaseAgent(ChatCompletionAgent, ABC):
             description (Optional[str]): Une description concise du rôle de l'agent.
             **kwargs: Arguments optionnels dont llm_service_id.
         """
-        # Récupération du service LLM depuis le kernel
+        # Récupération du service LLM depuis le kernel. Sans id, ou avec
+        # "default", Semantic Kernel rend son service par défaut. Un id
+        # explicite que le kernel ne porte pas est une erreur de l'appelant :
+        # il lève. Il était remplacé en silence par le premier service du
+        # kernel (#2627), ce qui masquait un mauvais argument et, avec
+        # plusieurs services, faisait parler l'agent avec un modèle que
+        # personne n'avait demandé.
         llm_service_id = kwargs.get("llm_service_id", "default")
         try:
             llm_service = kernel.get_service(llm_service_id)
         except Exception as e:
-            # Fallback: utiliser le premier service disponible
-            services = kernel.services
-            if services:
-                llm_service = list(services.values())[0]
-                logging.getLogger(f"agent.{self.__class__.__name__}").warning(
-                    f"Service '{llm_service_id}' not found, using fallback: {llm_service.service_id}. Error: {e}"
-                )
-            else:
-                raise ValueError(
-                    f"No LLM service found in kernel for id '{llm_service_id}'. Error: {e}"
-                )
+            raise ValueError(
+                f"Agent '{agent_name}': no LLM service {llm_service_id!r} in the "
+                f"kernel, which holds {sorted(kernel.services)}. Error: {e}"
+            ) from e
 
         # Appel du constructeur parent ChatCompletionAgent
         super().__init__(

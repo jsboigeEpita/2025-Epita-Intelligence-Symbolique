@@ -137,6 +137,7 @@ async def test_get_agent_belief_set_content(
         kernel=mock_kernel_with_llm,
         agent_name=TEST_AGENT_NAME,
         tweety_bridge=mock_tweety_bridge,
+        service_id="test_llm_service",
     )
 
     belief_set_id = "test_belief_set_001"

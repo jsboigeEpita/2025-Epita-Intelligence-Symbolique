@@ -40,6 +40,7 @@ from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 
 # Imports des agents
 from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.config.settings import DEFAULT_CHAT_MODEL_ID
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
     MoriartyInterrogatorAgent,
 )
@@ -211,8 +212,10 @@ class TestWorkflowComparison:
         """Test la comparaison des capacités des agents."""
         kernel_instance = mock_kernel
         # Initialisation de la factory
+        # L'id que UnifiedConfig.get_kernel_with_gpt4o_mini() enregistre (#2627)
         factory = AgentFactory(
-            kernel=kernel_instance, llm_service_id="gpt-5-mini-authentic"
+            kernel=kernel_instance,
+            llm_service_id=f"{DEFAULT_CHAT_MODEL_ID}-authentic",
         )
 
         # Agents 2-agents
