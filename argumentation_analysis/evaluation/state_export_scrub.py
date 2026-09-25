@@ -248,6 +248,13 @@ def _scrub_state_for_export(
                 content = bs_val.get("content", "")
                 if isinstance(content, str) and len(content) > 20:
                     bs_val = {**bs_val, "content": "<scrubbed>"}
+                # PL atoms are named after the text (#2643): opaque ids only.
+                propositions = bs_val.get("propositions")
+                if isinstance(propositions, list):
+                    bs_val = {
+                        **bs_val,
+                        "propositions": [f"p{i}" for i in range(len(propositions))],
+                    }
                 scrubbed_bs[bs_id] = bs_val
             else:
                 scrubbed_bs[bs_id] = bs_val

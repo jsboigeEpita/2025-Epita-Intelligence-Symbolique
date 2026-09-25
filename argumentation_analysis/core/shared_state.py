@@ -120,7 +120,9 @@ class RhetoricalAnalysisState:
     identified_fallacies: Dict[
         str, Dict[str, str]
     ]  # {fallacy_id: {type:..., justification:..., target_argument_id?:...}}
-    belief_sets: Dict[str, Dict[str, str]]  # {bs_id: {logic_type:..., content:...}}
+    belief_sets: Dict[
+        str, Dict[str, Any]
+    ]  # {bs_id: {logic_type:..., content:..., propositions?:[...]}}
     query_log: List[
         Dict[str, str]
     ]  # [{log_id:..., belief_set_id:..., query:..., raw_result:...}]
@@ -235,11 +237,24 @@ class RhetoricalAnalysisState:
         )
         return fallacy_id
 
-    def add_belief_set(self, logic_type: str, content: str) -> str:
-        """Ajoute un belief set formel et retourne son ID."""
+    def add_belief_set(
+        self,
+        logic_type: str,
+        content: str,
+        propositions: Optional[List[str]] = None,
+    ) -> str:
+        """Ajoute un belief set formel et retourne son ID.
+
+        ``propositions`` (PL) est conservé quand il est fourni : l'agent
+        propositionnel n'interroge que des propositions déclarées, donc un
+        belief set reconstruit sans elles ne donne aucune requête (#2643).
+        """
         normalized_type = logic_type.strip().lower().replace(" ", "_")
         bs_id = self._generate_id(f"{normalized_type}_bs", self.belief_sets)
-        self.belief_sets[bs_id] = {"logic_type": logic_type, "content": content}
+        entry: Dict[str, Any] = {"logic_type": logic_type, "content": content}
+        if propositions is not None:
+            entry["propositions"] = list(propositions)
+        self.belief_sets[bs_id] = entry
         state_logger.info(f"Belief Set ajouté: {bs_id} - Type: {logic_type}")
         state_logger.debug(f"État belief_sets après ajout {bs_id}: {self.belief_sets}")
         return bs_id

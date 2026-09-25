@@ -5,6 +5,7 @@ import logging
 from semantic_kernel.functions import kernel_function
 
 # Importer la classe d'état depuis le même répertoire
+from .logic_types import LOGIC_TYPE_ALIASES, STATE_LABELS, canonical_logic_type
 from .shared_state import RhetoricalAnalysisState
 
 # Logger spécifique pour le StateManager
@@ -200,27 +201,28 @@ class StateManagerPlugin:
         description="Ajoute un belief set formel (ex: Propositional) à l'état.",
         name="add_belief_set",
     )
-    def add_belief_set(self, logic_type: str, content: str) -> str:
+    def add_belief_set(
+        self,
+        logic_type: str,
+        content: str,
+        propositions: Optional[List[str]] = None,
+    ) -> str:
         """Interface Kernel Function pour ajouter un belief set via l'état. Valide le type logique."""
         self._logger.info(
             f"Appel add_belief_set (state id: {id(self._state)}): Type='{logic_type}'..."
         )
-        valid_logic_types = {
-            "propositional": "Propositional",
-            "pl": "Propositional",
-            "fol": "FOL",
-            "first_order": "FOL",
-        }
-        normalized_logic_type = logic_type.strip().lower()
+        canonical = canonical_logic_type(logic_type)
 
-        if normalized_logic_type not in valid_logic_types:
-            error_msg = f"Type logique '{logic_type}' non supporté. Types valides (insensible casse): {list(valid_logic_types.keys())}"
+        if canonical is None:
+            error_msg = f"Type logique '{logic_type}' non supporté. Types valides (insensible casse): {list(LOGIC_TYPE_ALIASES)}"
             self._logger.error(error_msg)
             return f"FUNC_ERROR: {error_msg}"
 
-        validated_logic_type = valid_logic_types[normalized_logic_type]
+        validated_logic_type = STATE_LABELS[canonical]
         try:
-            bs_id = self._state.add_belief_set(validated_logic_type, content)
+            bs_id = self._state.add_belief_set(
+                validated_logic_type, content, propositions=propositions
+            )
             self._logger.info(
                 f" -> Belief Set '{bs_id}' ajouté avec succès via l'état (Type: {validated_logic_type})."
             )

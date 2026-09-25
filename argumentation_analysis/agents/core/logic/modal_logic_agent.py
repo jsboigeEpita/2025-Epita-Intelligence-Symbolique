@@ -670,11 +670,14 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                     )
                     continue
 
-                # Validation contextuelle avec Tweety via le handler
+                # Validation contextuelle avec Tweety, contre CE belief set : le
+                # parseur partagé ne connaît que les prédicats déjà parsés (#2643).
                 (
                     is_valid,
                     validation_msg,
-                ) = self.tweety_bridge.modal_handler.validate_modal_formula(formula)
+                ) = self.tweety_bridge.modal_handler.validate_query(
+                    belief_set.content, formula
+                )
                 if is_valid:
                     self.logger.info(f"Idée validée et requête assemblée: {formula}")
                     valid_queries.append(formula)

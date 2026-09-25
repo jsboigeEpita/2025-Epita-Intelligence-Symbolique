@@ -6,6 +6,8 @@ Classes pour représenter les ensembles de croyances.
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 
+from argumentation_analysis.core.logic_types import canonical_logic_type
+
 
 class BeliefSet(ABC):
     """
@@ -76,7 +78,9 @@ class BeliefSet(ABC):
         """
         Crée une instance d'une sous-classe concrète de `BeliefSet` à partir d'un dictionnaire.
 
-        La sous-classe est déterminée par la valeur de la clé "logic_type" dans `data`.
+        La sous-classe est déterminée par la valeur de la clé "logic_type" dans `data`,
+        résolue par `canonical_logic_type` : les graphies stockées par l'état
+        (``"FOL"``, ``"Propositional"``, ``"fol"``…) reconstruisent aussi (#2643).
 
         :param data: Dictionnaire contenant les clés "logic_type" et "content".
         :type data: Dict[str, Any]
@@ -87,7 +91,7 @@ class BeliefSet(ABC):
         if data is None:
             return None
 
-        logic_type = data.get("logic_type", "").lower()
+        logic_type = canonical_logic_type(data.get("logic_type", ""))
         content = data.get("content", "")
 
         if logic_type == "propositional":

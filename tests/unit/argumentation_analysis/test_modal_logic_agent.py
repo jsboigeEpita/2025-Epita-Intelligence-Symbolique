@@ -326,8 +326,8 @@ class TestModalLogicAgent:
             "GenerateModalQueryIdeas"
         ].invoke.return_value = mock_response
 
-        # Correction : S'assurer que la validation de formule est aussi mockée
-        mock_tweety_bridge.modal_handler.validate_modal_formula.return_value = (
+        # La requête est validée contre le belief set (#2643)
+        mock_tweety_bridge.modal_handler.validate_query.return_value = (
             True,
             "Valid formula",
         )
@@ -719,8 +719,8 @@ class TestModalLogicAgentIntegration:
             True,
             "Consistent",
         )
-        # Correction : La validation de formule doit aussi être mockée pour chaque requête générée
-        agent._tweety_bridge.modal_handler.validate_modal_formula.return_value = (
+        # Chaque requête générée est validée contre le belief set (#2643)
+        agent._tweety_bridge.modal_handler.validate_query.return_value = (
             True,
             "Valid formula",
         )

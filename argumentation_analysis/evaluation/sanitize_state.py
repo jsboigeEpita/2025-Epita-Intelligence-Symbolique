@@ -84,7 +84,7 @@ _TEXT_STRIP_DICTS = {"identified_arguments", "arguments"}
 # Dict-of-dicts fields: top-level field -> sub-keys whose string values are
 # nominative and must be dropped (the rest of each entry is preserved).
 #   e.g. identified_fallacies = {fid: {type, justification, family, ...}}
-#        belief_sets          = {bs_id: {logic_type, content}}
+#        belief_sets          = {bs_id: {logic_type, content, propositions?}}
 #        argument_quality_scores = {arg_id: {scores, overall, llm_assessment}}
 # #1265 (Track 3 follow-up): ``llm_assessment`` is an LLM-written narrative
 # that cites/paraphrases the real argument text (verify-the-verification,
@@ -107,6 +107,8 @@ _TEXT_STRIP_DICT_OF_DICTS = {
 # claim text into ``arguments``; ``attacks`` are pairs of those same texts.
 _OPAQUE_LIST_SUBKEYS = {
     "dung_frameworks": {"arguments", "attacks"},
+    # PL atoms are named after the text they formalise (#2643).
+    "belief_sets": {"propositions"},
 }
 
 # Dict-of-dicts whose entries carry a NESTED dict sub-key holding nominative
