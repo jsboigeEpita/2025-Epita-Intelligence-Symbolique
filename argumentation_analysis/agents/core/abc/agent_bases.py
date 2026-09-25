@@ -256,6 +256,18 @@ class BaseLogicAgent(BaseAgent, ABC):
     3. Exécution de ces requêtes (`execute_query`).
     4. Interprétation des résultats (`interpret_results`).
 
+    Convention d'appel (#2641) : les cinq étapes du contrat (`text_to_belief_set`,
+    `generate_queries`, `execute_query`, `is_consistent`, `interpret_results`) sont
+    des coroutines, et tout appelant les attend. Chacune peut attendre une ressource
+    externe : le LLM pour traduire, proposer des requêtes et interpréter, un prouveur
+    externe pour la cohérence et les requêtes (`FOLHandler` a déjà des chemins
+    asynchrones vers Prover9, Mace4 et EProver). Un contrat asynchrone admet une
+    implémentation qui n'attend rien ; un contrat synchrone interdirait à une
+    implémentation de cesser de bloquer la boucle sans changer tous ses appelants.
+    `validate_formula` et `_create_belief_set_from_data` restent synchrones : ce sont
+    des constructions locales. Une surcharge garde le genre déclaré ici
+    (`test_logic_agent_calling_convention_2641.py`).
+
     Attributes:
         tweety_bridge (TweetyBridge): Le pont vers la bibliothèque logique Tweety.
         logic_type_name (str): Le nom de la logique formelle utilisée (ex: "PL", "FOL").
@@ -347,7 +359,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             )
 
     @abstractmethod
-    def text_to_belief_set(
+    async def text_to_belief_set(
         self, text: str, context: Optional[Dict[str, Any]] = None
     ) -> Tuple[Optional["BeliefSet"], str]:
         """
@@ -365,7 +377,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def generate_queries(
+    async def generate_queries(
         self,
         text: str,
         belief_set: "BeliefSet",
@@ -386,7 +398,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def execute_query(
+    async def execute_query(
         self, belief_set: "BeliefSet", query: str
     ) -> Tuple[Optional[bool], str]:
         """
@@ -406,7 +418,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def interpret_results(
+    async def interpret_results(
         self,
         text: str,
         belief_set: "BeliefSet",
@@ -430,10 +442,6 @@ class BaseLogicAgent(BaseAgent, ABC):
         """
         pass
 
-    # @abstractmethod # Remplacé par l'utilisation directe du bridge
-    # def _create_belief_set_from_data(self, belief_set_data: Dict[str, Any]) -> 'BeliefSet':
-    #     pass
-
     @abstractmethod
     def validate_formula(self, formula: str) -> bool:
         """
@@ -450,7 +458,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         pass
 
     @abstractmethod
-    def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:
+    async def is_consistent(self, belief_set: "BeliefSet") -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances est logiquement cohérent.
 
@@ -608,7 +616,7 @@ class BaseLogicAgent(BaseAgent, ABC):
         log_ids = []
         raw_results = []
         for query in queries:
-            result, result_str = self.execute_query(belief_set, query)
+            result, result_str = await self.execute_query(belief_set, query)
             raw_results.append((result, result_str))
             formatted_results.append(result_str)
             log_id = state_manager.log_query_result(
@@ -616,7 +624,7 @@ class BaseLogicAgent(BaseAgent, ABC):
             )
             log_ids.append(log_id)
 
-        interpretation = self.interpret_results(
+        interpretation = await self.interpret_results(
             raw_text, belief_set, queries, raw_results
         )
         state_manager.add_answer(
@@ -662,5 +670,8 @@ class BaseLogicAgent(BaseAgent, ABC):
     ) -> "BeliefSet":
         """
         Crée une instance de `BeliefSet` à partir d'un dictionnaire de données.
+
+        Le dictionnaire est celui que `_handle_translation_task` stocke dans l'état :
+        `{"logic_type": ..., "content": ...}`, où `content` est déjà formel.
         """
         pass

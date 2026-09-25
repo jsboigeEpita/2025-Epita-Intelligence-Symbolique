@@ -12,9 +12,10 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 
 - `BaseAgent(ChatCompletionAgent, ABC)` :54 — `__init__` :84 `(kernel, agent_name, system_prompt=None, description=None, **kwargs)` ; propriétés `logger` :141, `agent_name` :147, `system_prompt` :152 ; `invoke()` :238 (transforme `invoke_single` en flux) ; `invoke_stream()` :246. `get_agent_info()` a été retiré (#2137 : 0 lecteur production, le registre porte l'info agent).
 - Contrat abstrait **mesuré** (`__abstractmethods__`) : exactement 3 méthodes — `get_agent_capabilities` :156, `get_response` :209, `invoke_single` :223.
-- `BaseLogicAgent(BaseAgent, ABC)` :262 — `__init__` :290 `(kernel, agent_name, logic_type_name, system_prompt=None, **kwargs)` ; propriétés `logic_type` :314, `tweety_bridge` :324 (lève `RuntimeError` :340 si non initialisé) ; `setup_agent_components()` :345 ; `process_task()` :484 async.
-- Contrat abstrait **mesuré** : 10 méthodes — `text_to_belief_set` :365, `generate_queries` :383, `execute_query` :404, `interpret_results` :424, `validate_formula` :453, `is_consistent` :468, `_create_belief_set_from_data` :661, + les 3 héritées.
-- `setup_agent_components` :345, `_handle_translation_task` :512 et `_handle_query_task` :560 sont **concrets** (non abstraits).
+- `BaseLogicAgent(BaseAgent, ABC)` :246 — `__init__` :286 `(kernel, agent_name, logic_type_name, system_prompt=None, **kwargs)` ; propriétés `logic_type` :311, `tweety_bridge` :321 (lève `RuntimeError` :336 si non initialisé) ; `setup_agent_components()` :341 ; `process_task()` :476 async.
+- Contrat abstrait **mesuré** : 10 méthodes — `text_to_belief_set` :362, `generate_queries` :380, `execute_query` :401, `interpret_results` :421, `validate_formula` :446, `is_consistent` :461, `_create_belief_set_from_data` :654, + les 3 héritées.
+- **Convention d'appel (#2641)** : les cinq étapes (`text_to_belief_set`, `generate_queries`, `execute_query`, `is_consistent`, `interpret_results`) sont des coroutines, attendues par tout appelant ; `validate_formula` et `_create_belief_set_from_data` sont synchrones. La raison est dans la docstring de la classe. `tests/unit/argumentation_analysis/agents/core/abc/test_logic_agent_calling_convention_2641.py` garde le genre de chaque surcharge et l'`await` de chaque appel en production.
+- `setup_agent_components` :341, `_handle_translation_task` :504 et `_handle_query_task` :552 sont **concrets** (non abstraits).
 
 **`__init__.py:16`** — `__all__ = ["agent_bases"]`.
 

@@ -502,7 +502,7 @@ class EducationalProjectManager:
             belief_set, status = await agent.text_to_belief_set(text)
 
             if belief_set:
-                is_consistent, details = agent.is_consistent(belief_set)
+                is_consistent, details = await agent.is_consistent(belief_set)
                 queries = await agent.generate_queries(text, belief_set)
 
                 duration_ms = (time.time() - start_time) * 1000
@@ -555,7 +555,7 @@ class EducationalProjectManager:
             belief_set, status = await agent.text_to_belief_set(text)
 
             if belief_set:
-                is_consistent, details = agent.is_consistent(belief_set)
+                is_consistent, details = await agent.is_consistent(belief_set)
                 queries = await agent.generate_queries(text, belief_set)
 
                 duration_ms = (time.time() - start_time) * 1000
