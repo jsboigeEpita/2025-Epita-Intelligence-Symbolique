@@ -12,6 +12,8 @@ import runpy
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 import jpype
 
 from argumentation_analysis.agents.core.logic import pl_handler
@@ -25,7 +27,15 @@ class _JException(Exception):
 
 def test_pl_formula_with_constants_reaches_the_parser():
     parser = MagicMock()
-    parser.parseFormula.return_value = "parsed"
+    parsed = MagicMock()
+
+    def _atom(name):
+        atom = MagicMock()
+        atom.getName.return_value = name
+        return atom
+
+    parsed.getAtoms.return_value = [_atom("a"), _atom("b")]
+    parser.parseFormula.return_value = parsed
     initializer = MagicMock()
     initializer.get_pl_parser.return_value = parser
     with patch.object(pl_handler, "jpype") as fake_jpype:
@@ -35,10 +45,35 @@ def test_pl_formula_with_constants_reaches_the_parser():
         handler = pl_handler.PLHandler(initializer)
         result = handler.parse_pl_formula("a && b", constants=["a", "b"])
 
-    assert result == "parsed"
+    assert result is parsed
     parser.parseFormula.assert_called_once()
-    formula, _signature = parser.parseFormula.call_args.args
+    # #2537 : ce Tweety n'expose pas de surcharge parseFormula(String,
+    # PlSignature) — l'appel réel est mono-argument, le vocabulaire déclaré est
+    # vérifié après coup sur les atomes de la formule parsée.
+    (formula,) = parser.parseFormula.call_args.args
     assert formula == ("JString", handler._normalize_formula("a && b"))
+
+
+def test_pl_formula_with_constants_rejects_undeclared_atoms():
+    parser = MagicMock()
+    parsed = MagicMock()
+
+    def _atom(name):
+        atom = MagicMock()
+        atom.getName.return_value = name
+        return atom
+
+    parsed.getAtoms.return_value = [_atom("a"), _atom("c")]
+    parser.parseFormula.return_value = parsed
+    initializer = MagicMock()
+    initializer.get_pl_parser.return_value = parser
+    with patch.object(pl_handler, "jpype") as fake_jpype:
+        fake_jpype.JClass.side_effect = lambda name: MagicMock(name=name)
+        fake_jpype.JString.side_effect = lambda text: ("JString", text)
+        fake_jpype.JException = _JException
+        handler = pl_handler.PLHandler(initializer)
+        with pytest.raises(ValueError, match="non déclarées"):
+            handler.parse_pl_formula("a && c", constants=["a", "b"])
 
 
 class _StartJVMReached(Exception):
