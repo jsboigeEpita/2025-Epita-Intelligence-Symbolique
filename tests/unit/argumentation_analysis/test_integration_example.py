@@ -12,6 +12,7 @@ from semantic_kernel import Kernel
 Exemple de test d'intégration pour le projet d'analyse d'argumentation.
 """
 
+import html
 import pytest
 import os
 from unittest.mock import MagicMock
@@ -166,8 +167,9 @@ def test_verify_extracts_integration(mocker, integration_services, tmp_path):
     # Vérifier que le rapport a été généré
     assert report_path.exists()
 
-    # Vérifier le contenu du rapport
-    report_content = report_path.read_text(encoding="utf-8")
+    # Vérifier le contenu du rapport, tel que le navigateur l'affiche : le
+    # rapport échappe ce qu'il imprime (#2346), l'apostrophe y est une entité.
+    report_content = html.unescape(report_path.read_text(encoding="utf-8"))
     assert "Source d'intégration" in report_content
     assert "Extrait d'intégration 1" in report_content
     assert "Extrait d'intégration 2" in report_content
