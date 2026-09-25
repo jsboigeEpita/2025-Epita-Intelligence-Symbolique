@@ -460,6 +460,49 @@ class TestPhaseFailureFailLoud2543:
         assert "ad_hominem" in step.conclusion
         assert not step.conclusion.endswith("().")
 
+    async def test_degraded_extraction_status_is_surfaced(self):
+        """Review #2660: ``_invoke_fact_extraction`` does not RAISE on failure
+        — it returns the heuristic sentence split with
+        ``extraction_status="failed:<reason>"`` (#1290). The phase used to
+        narrate that degraded split as a normal finding; the degradation
+        channel must be surfaced instead."""
+
+        async def degraded(func_name, text):
+            return (
+                {
+                    "claims": [{"text": "c1"}, {"text": "c2"}],
+                    "arguments": [],
+                    "extraction_status": "failed:no-openai-client",
+                },
+                None,
+            )
+
+        orch = self._orch()
+        orch._invoke_phase = degraded
+        await orch._phase_extraction("text")
+        step = orch._trace[-1]
+        assert step.findings.get("extraction_status") == "failed:no-openai-client"
+        assert "failed:no-openai-client" in step.conclusion
+
+    async def test_ok_extraction_keeps_the_conclusion_unchanged(self):
+        """Contre-pendule: a healthy extraction (status "ok" or absent) keeps
+        the exact pre-change conclusion shape — no degradation suffix, no
+        status key in the findings."""
+
+        async def healthy(func_name, text):
+            return {"claims": [{"text": "c1"}], "arguments": [{"text": "a1"}]}, None
+
+        orch = self._orch()
+        orch._invoke_phase = healthy
+        await orch._phase_extraction("text")
+        step = orch._trace[-1]
+        assert step.findings["claims_found"] == 1
+        assert step.findings["arguments_found"] == 1
+        assert "extraction_status" not in step.findings
+        assert step.conclusion == (
+            "Identified 2 element(s) for investigation (1 claims, 1 arguments)."
+        )
+
     async def test_solution_names_the_phases_that_did_not_run(self):
         async def failing(func_name, text):
             return None, "RuntimeError: boom"

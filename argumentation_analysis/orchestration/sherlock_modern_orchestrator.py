@@ -183,12 +183,28 @@ class SherlockModernOrchestrator:
         args = result.get("arguments", [])
         total = len(claims) + len(args)
 
+        # Review #2660: the callable does not raise on extraction failure —
+        # it returns the heuristic split with extraction_status="failed:<…>"
+        # (#1290). Surface that channel instead of narrating a degraded
+        # split as a normal finding.
+        status = str(result.get("extraction_status", "ok"))
+        findings: Dict[str, Any] = {
+            "claims_found": len(claims),
+            "arguments_found": len(args),
+        }
+        conclusion = (
+            f"Identified {total} element(s) for investigation "
+            f"({len(claims)} claims, {len(args)} arguments)."
+        )
+        if status != "ok":
+            findings["extraction_status"] = status
+            conclusion += f" Extraction degraded: {status}."
+
         self._add_step(
             phase="extraction",
             agent="ExtractAgent",
-            findings={"claims_found": len(claims), "arguments_found": len(args)},
-            conclusion=f"Identified {total} element(s) for investigation "
-            f"({len(claims)} claims, {len(args)} arguments).",
+            findings=findings,
+            conclusion=conclusion,
         )
 
     async def _phase_fallacy_detection(self, text: str):
