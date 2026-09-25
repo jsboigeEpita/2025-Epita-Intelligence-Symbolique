@@ -39,6 +39,7 @@ from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
 from argumentation_analysis.agents.core.logic.belief_set import PropositionalBeliefSet
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.agents.core.pl.pl_definitions import PL_AGENT_INSTRUCTIONS
+from argumentation_analysis.config.settings import DEFAULT_CHAT_MODEL_ID
 from argumentation_analysis.core.jvm_setup import is_jvm_started
 
 
@@ -57,35 +58,43 @@ def authentic_pl_agent(tweety_bridge_fixture):
     llm_service_configured = False
     llm_service_id = "test_llm_service"
 
+    # #2651 : une construction de service qui échoue lève ici, avec sa cause,
+    # au lieu de laisser l'agent se construire sur un kernel vide.
     if azure_available and os.getenv("AZURE_AI_INFERENCE_ENDPOINT"):
-        try:
-            azure_service = AzureAIInferenceChatCompletion(
-                endpoint=os.getenv("AZURE_AI_INFERENCE_ENDPOINT"),
-                api_key=os.getenv("AZURE_AI_INFERENCE_API_KEY"),
-                service_id=llm_service_id,
-            )
-            kernel.add_service(azure_service)
-            llm_service_configured = True
-            print(f"[AUTHENTIC] Azure AI Inference configuré: {llm_service_id}")
-        except Exception as e:
-            print(f"[AUTHENTIC] Azure AI Inference non disponible: {e}")
+        azure_service = AzureAIInferenceChatCompletion(
+            endpoint=os.getenv("AZURE_AI_INFERENCE_ENDPOINT"),
+            api_key=os.getenv("AZURE_AI_INFERENCE_API_KEY"),
+            service_id=llm_service_id,
+        )
+        kernel.add_service(azure_service)
+        llm_service_configured = True
+        print(f"[AUTHENTIC] Azure AI Inference configuré: {llm_service_id}")
 
     if not llm_service_configured and openai_available and os.getenv("OPENAI_API_KEY"):
-        try:
-            openai_service = OpenAIChatCompletion(
-                api_key=os.getenv("OPENAI_API_KEY"), service_id=llm_service_id
+        openai_service = OpenAIChatCompletion(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            ai_model_id=os.getenv("OPENAI_CHAT_MODEL_ID", DEFAULT_CHAT_MODEL_ID),
+            service_id=llm_service_id,
+        )
+        kernel.add_service(openai_service)
+        llm_service_configured = True
+        print(f"[AUTHENTIC] OpenAI configuré: {llm_service_id}")
+
+    if not llm_service_configured:
+        # Sans clé : un service nommé mais jamais appelé laisse l'agent se
+        # construire (#2633 exige un service dans le kernel). Les tests LLM se
+        # sautent sur llm_service_configured ; ceux de Tweety tournent.
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id=llm_service_id, ai_model_id="keyless", api_key="keyless"
             )
-            kernel.add_service(openai_service)
-            llm_service_configured = True
-            print(f"[AUTHENTIC] OpenAI configuré: {llm_service_id}")
-        except Exception as e:
-            print(f"[AUTHENTIC] OpenAI non disponible: {e}")
+        )
 
     agent_name = "TestPLAgentAuthentic"
     agent = PropositionalLogicAgent(
         kernel=kernel,
         agent_name=agent_name,
-        service_id=llm_service_id if llm_service_configured else None,
+        service_id=llm_service_id,
     )
     # Injection directe du pont partagé
     agent._tweety_bridge = tweety_bridge_fixture
@@ -215,7 +224,7 @@ async def test_generate_queries_authentic(authentic_pl_agent):
 @pytest.mark.llm_integration
 @pytest.mark.phase5
 @pytest.mark.propositional
-def test_execute_query_authentic(authentic_pl_agent):
+async def test_execute_query_authentic(authentic_pl_agent):
     """Test authentique d'exécution de requêtes propositionnelles."""
     if not authentic_pl_agent["tweety_available"]:
         pytest.skip("TweetyBridge JVM non disponible - test authentique impossible")
@@ -225,13 +234,15 @@ def test_execute_query_authentic(authentic_pl_agent):
     belief_set = PropositionalBeliefSet("(a => b) & a")
     query = "b"
 
-    result, message = agent.execute_query(belief_set, query)
+    result, message = await agent.execute_query(belief_set, query)
 
     print(f"[AUTHENTIC] Résultat requête '{query}': {result}")
     print(f"[AUTHENTIC] Message TweetyBridge: {message}")
 
     query_rejected = "c"
-    result_rejected, message_rejected = agent.execute_query(belief_set, query_rejected)
+    result_rejected, message_rejected = await agent.execute_query(
+        belief_set, query_rejected
+    )
 
     print(f"[AUTHENTIC] Résultat requête rejetée '{query_rejected}': {result_rejected}")
     print(f"[AUTHENTIC] Message rejet: {message_rejected}")
@@ -280,11 +291,10 @@ async def test_full_propositional_reasoning_workflow_authentic(authentic_pl_agen
 
     # Step 3: Execute queries
     results = []
+    # #2651 : execute_query tourne sur Tweety, pas sur le LLM : son échec est
+    # un défaut, pas une indisponibilité, donc il fait échouer le test.
     for query in queries:
-        try:
-            result, message = agent.execute_query(belief_set, query)
-        except Exception as e:
-            pytest.skip(f"Workflow step 3 (execute_query '{query}') failed: {e}")
+        result, message = await agent.execute_query(belief_set, query)
         results.append((result, message))
         print(f"[AUTHENTIC] Requête '{query}' -> {result}")
 
