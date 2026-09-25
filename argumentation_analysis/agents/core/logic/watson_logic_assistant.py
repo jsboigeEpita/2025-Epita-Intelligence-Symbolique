@@ -1,6 +1,5 @@
 # argumentation_analysis/agents/core/logic/watson_logic_assistant.py
 import logging
-import re
 from typing import Optional, List, AsyncGenerator, ClassVar, Union, Any
 import json
 
@@ -112,98 +111,60 @@ class WatsonTools:
                 "TweetyBridge n'est pas prêt. Les outils logiques formels sont désactivés."
             )
 
-    def _normalize_formula(self, formula: str) -> str:
-        """Normalise une formule pour la rendre compatible avec le parser PL de Tweety."""
-        # Remplace les opérateurs logiques textuels ou non standards
-        normalized = formula.replace("&&", "&").replace("||", "|").replace("!", "not ")
-
-        # Remplace `Predicat(Argument)` par `Predicat_Argument`
-        normalized = re.sub(
-            r"(\w+)\(([\w\s]+)\)",
-            lambda m: m.group(1) + "_" + m.group(2).replace(" ", ""),
-            normalized,
-        )
-
-        # Supprime les espaces et les caractères non valides pour les propositions
-        # Garde les lettres, chiffres, underscores, et les opérateurs logiques &, |, not, (, )
-        # Note: les espaces dans "not " sont importants
-        parts = normalized.split()
-        sanitized_parts = []
-        for part in parts:
-            if part.lower() == "not":
-                sanitized_parts.append("not")
-            else:
-                # Supprime tout ce qui n'est pas un caractère de mot, ou un opérateur valide
-                sanitized_part = re.sub(r"[^\w&|()~]", "", part)
-                sanitized_parts.append(sanitized_part)
-
-        normalized = " ".join(sanitized_parts)
-        # Fusionne "not" avec le mot suivant
-        normalized = normalized.replace("not ", "not")
-
-        # Supprime les espaces autour des opérateurs pour être sûr
-        normalized = re.sub(r"\s*([&|()~])\s*", r"\1", normalized)
-
-        self._logger.debug(f"Formule normalisée: de '{formula}' à '{normalized}'")
-        return normalized
-
     @kernel_function(
         name="validate_formula",
         description="Valide la syntaxe d'une formule logique propositionnelle.",
     )
     def validate_formula(self, formula: str) -> bool:
+        """Valide via le parseur PL réel (`PLHandler.parse_pl_formula`).
+
+        #2537 : l'ancien code appelait `TweetyBridge.validate_formula`, méthode
+        retirée du pont en 2025-06 — l'`AttributeError` était masquée en verdict
+        « invalide ». La formule part inchangée : `PLHandler` normalise
+        lui-même (`&&`, `||`, `=>`, `!` préservés), l'ancien normaliseur local
+        détruisait les implications.
+        """
         self._logger.debug(f"Validation de la formule PL: '{formula}'")
-        normalized_formula = self._normalize_formula(formula)
         try:
-            # Utilise les constantes stockées lors de l'initialisation
-            is_valid, message = self._tweety_bridge.validate_formula(
-                formula_string=normalized_formula, constants=self._constants
+            parsed = self._tweety_bridge.pl_handler.parse_pl_formula(
+                formula, constants=self._constants
             )
-            if not is_valid:
-                self._logger.warning(
-                    f"Formule PL invalide: '{normalized_formula}'. Message: {message}"
-                )
-            return is_valid
-        except Exception as e:
-            self._logger.error(
-                f"Erreur lors de la validation de la formule PL '{normalized_formula}': {e}",
-                exc_info=True,
-            )
+        except ValueError:
+            # Le parseur Tweety a rejeté la formule : c'est un verdict
+            # d'invalidité, pas une panne de l'outil.
+            self._logger.warning(f"Formule PL invalide: '{formula}'")
             return False
+        return parsed is not None
 
     @kernel_function(
         name="execute_query",
         description="Exécute une requête logique sur une base de connaissances.",
     )
     def execute_query(self, belief_set_content: str, query: str) -> str:
+        """Interroge le reasoner PL réel (`PLHandler.pl_query`).
+
+        #2537 : `TweetyBridge.perform_pl_query` n'existe plus ; une requête que
+        le parseur rejette est un verdict nommé, tout autre échec de l'outil
+        se propage au lieu d'être maquillé en résultat.
+        """
         self._logger.info(f"Exécution de la requête PL: '{query}' sur le BeliefSet.")
-        normalized_query = self._normalize_formula(query)
-        normalized_belief_set = self._normalize_formula(belief_set_content)
         try:
-            # Utilise les constantes stockées lors de l'initialisation
-            is_valid, validation_message = self._tweety_bridge.validate_formula(
-                formula_string=normalized_query, constants=self._constants
+            parsed_query = self._tweety_bridge.pl_handler.parse_pl_formula(
+                query, constants=self._constants
             )
-            if not is_valid:
-                msg = f"Requête invalide: {normalized_query}. Raison: {validation_message}"
-                self._logger.error(msg)
-                return f"ERREUR: {msg}"
+        except ValueError as e:
+            msg = f"Requête invalide: '{query}'. Raison: {e}"
+            self._logger.error(msg)
+            return f"ERREUR: {msg}"
+        if parsed_query is None:
+            msg = f"Requête non parsable: '{query}'"
+            self._logger.error(msg)
+            return f"ERREUR: {msg}"
 
-            is_entailed, raw_output_str = self._tweety_bridge.perform_pl_query(
-                belief_set_content=normalized_belief_set,
-                query_string=normalized_query,
-                constants=self._constants,
-            )
-
-            if is_entailed is None:
-                # raw_output_str contient déjà le message d'erreur formaté
-                return raw_output_str
-
-            return f"Résultat de l'inférence: {is_entailed}. {raw_output_str}"
-        except Exception as e:
-            error_msg = f"Erreur lors de l'exécution de la requête PL '{normalized_query}': {str(e)}"
-            self._logger.error(error_msg, exc_info=True)
-            return f"ERREUR: {error_msg}"
+        is_entailed = self._tweety_bridge.pl_handler.pl_query(
+            belief_set_content, query, constants=self._constants
+        )
+        return f"Résultat de l'inférence: {is_entailed}."
 
     @kernel_function(
         name="formal_step_by_step_analysis",
