@@ -9,6 +9,10 @@ from argumentation_analysis.core.utils.crypto_utils import (
     load_encryption_key,
     encrypt_data_with_fernet,
     decrypt_data_with_fernet,
+    decrypt_data_with_fernet_detailed,
+    ERR_BAD_TOKEN,
+    ERR_INVALID_KEY,
+    ERR_NO_KEY,
 )
 
 # FIXED_SALT est défini dans crypto_utils, pas besoin de le redéfinir ici.
@@ -180,3 +184,44 @@ def test_decrypt_with_no_key_fernet():
     test_data_encrypted = b"some encrypted data"  # La validité n'importe pas ici
     decrypted = decrypt_data_with_fernet(test_data_encrypted, None)
     assert decrypted is None
+
+
+# Causes nommées (#2552) : le contrat None reste, la cause voyage à côté des
+# données et distingue clé absente, clé mal formée et mauvais jeton.
+def test_decrypt_detailed_success_carries_no_cause():
+    key = derive_encryption_key("detailed_success_passphrase")
+    encrypted = encrypt_data_with_fernet(b"payload", key)
+
+    data, cause = decrypt_data_with_fernet_detailed(encrypted, key)
+
+    assert data == b"payload"
+    assert cause is None
+
+
+def test_decrypt_detailed_wrong_passphrase_names_bad_token():
+    good_key = derive_encryption_key("detailed_first_passphrase")
+    other_key = derive_encryption_key("detailed_second_passphrase")
+    encrypted = encrypt_data_with_fernet(b"payload", good_key)
+
+    data, cause = decrypt_data_with_fernet_detailed(encrypted, other_key)
+
+    assert data is None
+    assert cause == ERR_BAD_TOKEN
+
+
+def test_decrypt_detailed_missing_key_names_no_key():
+    data, cause = decrypt_data_with_fernet_detailed(b"whatever", None)
+
+    assert data is None
+    assert cause == ERR_NO_KEY
+
+
+def test_decrypt_detailed_malformed_key_names_invalid_key():
+    """Une clé mal formée est un défaut de configuration, pas un jeton corrompu."""
+    data, cause = decrypt_data_with_fernet_detailed(b"whatever", "not-a-fernet-key")
+
+    assert data is None
+    assert cause == ERR_INVALID_KEY
+    # Le contrat public de `decrypt_data_with_fernet` reste un `Optional[bytes]`,
+    # jamais le couple (données, cause).
+    assert decrypt_data_with_fernet(b"whatever", "not-a-fernet-key") is None

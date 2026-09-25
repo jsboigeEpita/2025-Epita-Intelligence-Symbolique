@@ -533,8 +533,8 @@ def test_load_extract_definitions_no_key(config_file_path, mock_logger):
 
 
 @patch(
-    "argumentation_analysis.core.io_manager.decrypt_data_with_fernet",
-    side_effect=InvalidToken,
+    "argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed",
+    side_effect=InvalidToken("simulated"),
 )
 def test_load_extract_definitions_decryption_fails(
     mock_decrypt, config_file_path, test_key, mock_logger
@@ -552,7 +552,7 @@ def test_load_extract_definitions_decryption_fails(
 
     assert result == fallback_defs
     mock_logger.error.assert_any_call(
-        f"❌ Token invalide (InvalidToken) lors du déchiffrement de '{config_file_path}'.",
+        f"❌ Déchiffrement refusé pour '{config_file_path}': simulated",
         exc_info=True,
     )
 
@@ -562,8 +562,8 @@ def test_load_extract_definitions_decryption_fails(
     side_effect=gzip.BadGzipFile,
 )
 @patch(
-    "argumentation_analysis.core.io_manager.decrypt_data_with_fernet",
-    return_value=b"decrypted_but_bad_gzip",
+    "argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed",
+    return_value=(b"decrypted_but_bad_gzip", None),
 )
 def test_load_extract_definitions_decompression_fails(
     mock_decrypt, mock_decompress, config_file_path, test_key, mock_logger
@@ -583,12 +583,12 @@ def test_load_extract_definitions_decompression_fails(
     )
 
 
-@patch("argumentation_analysis.core.io_manager.decrypt_data_with_fernet")
+@patch("argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed")
 def test_load_extract_definitions_invalid_json(
     mock_decrypt, config_file_path, test_key, mock_logger
 ):
     """Vérifie le comportement lorsque les données déchiffrées ne sont pas du JSON valide."""
-    mock_decrypt.return_value = gzip.compress(b"this is not json")
+    mock_decrypt.return_value = (gzip.compress(b"this is not json"), None)
     config_file_path.write_bytes(b"dummy_encrypted_data")
     fallback_defs = [{"default": "invalid_json"}]
 
@@ -603,7 +603,7 @@ def test_load_extract_definitions_invalid_json(
     )
 
 
-@patch("argumentation_analysis.core.io_manager.decrypt_data_with_fernet")
+@patch("argumentation_analysis.core.io_manager.decrypt_data_with_fernet_detailed")
 def test_load_extract_definitions_invalid_format(
     mock_decrypt, config_file_path, test_key, mock_logger
 ):
@@ -611,7 +611,7 @@ def test_load_extract_definitions_invalid_format(
     invalid_format_data = {"not_a_list": "data"}
     json_bytes = json.dumps(invalid_format_data).encode("utf-8")
     compressed_data = gzip.compress(json_bytes)
-    mock_decrypt.return_value = compressed_data
+    mock_decrypt.return_value = (compressed_data, None)
     config_file_path.write_bytes(b"dummy_encrypted_data")
 
     fallback_defs = [{"default": "invalid_format"}]
