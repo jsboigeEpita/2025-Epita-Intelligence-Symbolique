@@ -21,12 +21,29 @@ from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
 from argumentation_analysis.agents.core.logic.fol_handler import FOLHandler
 
 
+def test_setup_does_not_take_a_leftover_singleton():
+    """#2664: a bridge that another test left in the singleton is not the one
+    ``setUp`` hands over. Its handlers were built before this class's patches,
+    so the handler mocks would never be called."""
+    leftover = object.__new__(TweetyBridge)
+    TweetyBridge._instance = leftover
+    case = TestTweetyBridge("test_singleton_instance")
+    case.setUp()
+    try:
+        assert case.bridge is not leftover
+    finally:
+        case.tearDown()
+
+
 class TestTweetyBridge(unittest.TestCase):
     """Tests pour la classe TweetyBridge."""
 
     def setUp(self):
         """Initialisation avant chaque test."""
         self.use_real_jpype = os.environ.get("USE_REAL_JPYPE") == "true"
+        # #2664: the singleton may hold a bridge an earlier test left there,
+        # with handlers built before the patches below.
+        TweetyBridge._instance = None
 
         if self.use_real_jpype:
             self.bridge = TweetyBridge.get_instance()

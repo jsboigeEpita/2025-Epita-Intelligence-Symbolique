@@ -755,12 +755,17 @@ def tweety_bridge_fixture(jvm_session):
         jpype.isJVMStarted()
     ), "La fixture jvm_session n'a pas réussi à démarrer la JVM."
 
+    # #2664: TweetyBridge is a process-wide singleton. The fixture puts back
+    # what it found, or the next test's get_instance() returns this real
+    # bridge, with handlers built before that test's patches.
+    previous = TweetyBridge._instance
     bridge = TweetyBridge()
     assert (
         bridge.initializer.is_jvm_ready()
     ), "La JVM devrait être prête grâce à jvm_session"
     logger.info("Instance TweetyBridge créée avec succès.")
     yield bridge
+    TweetyBridge._instance = previous
 
 
 # Charger les fixtures définies dans d'autres fichiers comme des plugins
