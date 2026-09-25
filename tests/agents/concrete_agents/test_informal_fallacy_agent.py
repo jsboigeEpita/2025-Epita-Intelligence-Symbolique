@@ -15,7 +15,6 @@ from argumentation_analysis.agents.concrete_agents.informal_fallacy_agent import
     INFORMAL_AGENT_CONFIGS,
 )
 from argumentation_analysis.agents.factory import AgentFactory, AgentType
-from argumentation_analysis.config.settings import AppSettings
 
 
 @pytest.fixture
@@ -43,7 +42,7 @@ def test_unknown_config_name_raises_instead_of_mounting_no_plugins(kernel):
 
     ``"default_with_plugins"`` is the value the web API actually passed.
     """
-    factory = AgentFactory(kernel, AppSettings())
+    factory = AgentFactory(kernel, "test_service")
 
     with pytest.raises(ValueError, match="default_with_plugins"):
         factory.create_agent(
@@ -59,7 +58,7 @@ def test_every_advertised_config_mounts_at_least_one_plugin(kernel):
     plugin set per config; this asserts the weaker property the web API
     depended on, so it stays meaningful if those sets are revisited.
     """
-    factory = AgentFactory(kernel, AppSettings())
+    factory = AgentFactory(kernel, "test_service")
     for config_name in INFORMAL_AGENT_CONFIGS:
         agent = factory.create_agent(
             AgentType.INFORMAL_FALLACY, config_name=config_name

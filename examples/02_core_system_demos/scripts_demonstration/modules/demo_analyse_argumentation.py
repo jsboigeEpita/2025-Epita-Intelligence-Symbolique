@@ -12,7 +12,7 @@ from argumentation_analysis.agents.factory import AgentFactory
 from argumentation_analysis.core.llm_service import create_llm_service
 from modules.demo_utils import DemoLogger, pause_interactive, confirmer_action
 from argumentation_analysis.config.settings import AppSettings
-from argumentation_analysis.agents import AgentType
+from argumentation_analysis.agents.agents import AgentType
 
 # L'initialisation de l'environnement est maintenant gérée par l'import de `environment`
 # et la configuration des services LLM est centralisée dans `create_llm_service`.
@@ -31,8 +31,8 @@ def _create_kernel_and_factory() -> tuple[sk.Kernel, AgentFactory, str]:
     llm_service = create_llm_service(service_id=llm_service_id, force_authentic=True)
     kernel.add_service(llm_service)
 
-    # La factory d'agents a maintenant besoin du kernel et des settings
-    agent_factory = AgentFactory(kernel, settings)
+    # La factory d'agents prend le kernel et l'id du service qu'il porte (#2627)
+    agent_factory = AgentFactory(kernel, llm_service_id)
 
     return kernel, agent_factory, llm_service_id
 

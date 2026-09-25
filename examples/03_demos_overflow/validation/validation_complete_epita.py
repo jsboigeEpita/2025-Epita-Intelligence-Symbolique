@@ -339,10 +339,7 @@ class ValidationEpitaComplete:
                 )
 
             kernel.add_service(llm_service)
-            from argumentation_analysis.config.settings import AppSettings
-
-            settings = AppSettings()
-            agent_factory = AgentFactory(kernel, settings)
+            agent_factory = AgentFactory(kernel, llm_service.service_id)
             start_time = time.time()
             safe_test_name = re.sub(r"[\s\(\)]+", "_", test_name).lower()
 

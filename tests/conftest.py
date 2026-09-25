@@ -353,6 +353,9 @@ def mock_chat_completion_service():
     from semantic_kernel.connectors.ai.chat_completion_client_base import (
         ChatCompletionClientBase,
     )
+    from semantic_kernel.connectors.ai.prompt_execution_settings import (
+        PromptExecutionSettings,
+    )
     from semantic_kernel.contents import ChatMessageContent
     from unittest.mock import MagicMock, AsyncMock
 
@@ -360,6 +363,12 @@ def mock_chat_completion_service():
     mock_service = MagicMock(spec=ChatCompletionClientBase)
     mock_service.service_id = "test_llm_service"
     mock_service.ai_model_id = "test-model"
+    # Comme le vrai service : des settings réels. Un MagicMock ici est refusé
+    # par add_function, et l'agent qui l'avale se construit sans ses
+    # fonctions sémantiques (#2627).
+    mock_service.instantiate_prompt_execution_settings.side_effect = (
+        lambda **kwargs: PromptExecutionSettings(**kwargs)
+    )
 
     # Mock méthode get_chat_message_contents (async)
     async def mock_get_chat_message_contents(*args, **kwargs):

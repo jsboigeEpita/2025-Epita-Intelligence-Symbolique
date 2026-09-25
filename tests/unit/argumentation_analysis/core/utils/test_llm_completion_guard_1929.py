@@ -130,6 +130,9 @@ def _watson_agent(starved):
     from semantic_kernel.connectors.ai.chat_completion_client_base import (
         ChatCompletionClientBase,
     )
+    from semantic_kernel.connectors.ai.prompt_execution_settings import (
+        PromptExecutionSettings,
+    )
     from unittest.mock import AsyncMock, MagicMock
     from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
         WatsonLogicAssistant,
@@ -142,6 +145,9 @@ def _watson_agent(starved):
     mock_service = MagicMock(spec=ChatCompletionClientBase)
     mock_service.service_id = "test_llm_service"
     mock_service.ai_model_id = "test-model"
+    mock_service.instantiate_prompt_execution_settings.side_effect = (
+        lambda **kwargs: PromptExecutionSettings(**kwargs)
+    )
     kernel.add_service(mock_service)
 
     fake_completion = type(
@@ -167,6 +173,7 @@ def _watson_agent(starved):
             kernel=kernel,
             agent_name="Watson",
             tweety_bridge=MagicMock(),
+            service_id="test_llm_service",
         )
     return agent
 

@@ -440,6 +440,14 @@ class AgentFactory:
     """
 
     def __init__(self, kernel: Kernel, llm_service_id: str):
+        # L'id du service, pas les settings : quatre appelants passaient
+        # l'objet AppSettings ici, et seul le repli silencieux de BaseAgent
+        # les laissait tourner (#2627).
+        if not isinstance(llm_service_id, str):
+            raise TypeError(
+                "AgentFactory expects the LLM service id (str), got "
+                f"{type(llm_service_id).__name__}."
+            )
         self.kernel = kernel
         self.llm_service_id = llm_service_id
 

@@ -276,7 +276,7 @@ class TestFOLTweetyIntegration:
         agent = ConcreteFOLLogicAgent(
             kernel=kernel,
             agent_name="TestFOLAgent",
-            service_id=llm_service,  # CORRECT: service_id au lieu de service
+            service_id=llm_service.service_id,
         )
 
         agent._tweety_bridge = AsyncMock()
