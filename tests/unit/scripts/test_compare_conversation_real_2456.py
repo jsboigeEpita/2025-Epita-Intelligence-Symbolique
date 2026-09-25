@@ -167,10 +167,20 @@ async def test_a_kernel_that_cannot_be_built_is_named():
 
 
 async def test_a_step_whose_agent_was_not_built_is_named(fake_kernel, monkeypatch):
+    """#2649 : la doublure lève comme le fait désormais un vrai constructeur.
+
+    Elle rendait ``None`` — un retour que la fabrique n'a plus : avec la garde
+    disparue, l'orchestrateur enregistrait ``None`` comme agent. La propriété
+    défendue ne change pas : l'étape est nommée avec sa cause, jamais
+    silencieusement sautée.
+    """
+    from argumentation_analysis.agents.core.semantic_setup import SemanticSetupError
+
+    def _cannot_build(*args, **kwargs):
+        raise SemanticSetupError("settings du service LLM introuvables")
+
     monkeypatch.setattr(
-        logic_factory.LogicAgentFactory,
-        "create_agent",
-        staticmethod(lambda *args, **kwargs: None),
+        logic_factory.LogicAgentFactory, "create_agent", staticmethod(_cannot_build)
     )
 
     result = await harness.run_conversation_real_mode(
@@ -180,7 +190,7 @@ async def test_a_step_whose_agent_was_not_built_is_named(fake_kernel, monkeypatc
     assert result.success is False
     assert result.extra_metrics["steps_completed"] == ["informal"]
     assert (result.phases_completed, result.phases_total) == (1, 2)
-    assert result.error.startswith("fol_logic: RuntimeError: ")
+    assert result.error.startswith("fol_logic: SemanticSetupError: ")
     assert result.extra_metrics["consistency"] is None
     assert result.fallacy_count == 1
 
