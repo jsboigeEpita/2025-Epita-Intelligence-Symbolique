@@ -9,6 +9,7 @@ import warnings
 
 # Importer l'objet de configuration central
 from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.utils.crypto_utils import load_encryption_key
 
 # --- Logger ---
 config_logger = logging.getLogger("App.UI.Config")
@@ -38,9 +39,9 @@ JINA_READER_PREFIX = str(settings.jina.reader_prefix)
 TEXT_CONFIG_PASSPHRASE = (
     settings.passphrase.get_secret_value() if settings.passphrase else None
 )
-ENCRYPTION_KEY = (
-    settings.encryption_key.get_secret_value() if settings.encryption_key else None
-)
+# #2639 : la clé dérive de la passphrase (dérivation canonique), pas de la
+# variable d'environnement ENCRYPTION_KEY qu'aucun .env ne définit.
+ENCRYPTION_KEY = load_encryption_key()
 
 # Chemins de répertoires
 # Utilise les valeurs de `settings.ui` et construit des chemins absolus si nécessaire.
