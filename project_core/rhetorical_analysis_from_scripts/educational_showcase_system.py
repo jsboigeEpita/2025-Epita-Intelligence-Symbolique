@@ -366,28 +366,29 @@ class EducationalProjectManager:
 
             # Agents logiques selon le niveau
             if "logique_prop" in concepts or "logique_complete" in concepts:
-                prop_agent = LogicAgentFactory.create_agent(
+                # #2649 : la fabrique lève si l'agent ne peut pas être
+                # construit. Le niveau demandait cet agent : l'échec est donc
+                # nommé par l'`except` de cette méthode, jamais avalé en un
+                # agent manquant.
+                self.agents["propositional"] = LogicAgentFactory.create_agent(
                     "propositional", kernel, llm_service
                 )
-                if prop_agent:
-                    self.agents["propositional"] = prop_agent
-                    self.conversation_logger.log_agent_message(
-                        "AgentLogiquePropositionelle",
-                        "Bonjour ! Je me spécialise dans la logique propositionnelle. Je vais analyser les implications et les connecteurs logiques.",
-                        "initialisation",
-                    )
+                self.conversation_logger.log_agent_message(
+                    "AgentLogiquePropositionelle",
+                    "Bonjour ! Je me spécialise dans la logique propositionnelle. Je vais analyser les implications et les connecteurs logiques.",
+                    "initialisation",
+                )
 
             if "logique_complete" in concepts:
-                modal_agent = LogicAgentFactory.create_agent(
+                # #2649 : même contrat que ci-dessus.
+                self.agents["modal"] = LogicAgentFactory.create_agent(
                     "modal", kernel, llm_service
                 )
-                if modal_agent:
-                    self.agents["modal"] = modal_agent
-                    self.conversation_logger.log_agent_message(
-                        "AgentLogiqueModale",
-                        "Salut ! J'analyse la logique modale - nécessité, possibilité, et modalités complexes. Prêt pour des analyses sophistiquées !",
-                        "initialisation",
-                    )
+                self.conversation_logger.log_agent_message(
+                    "AgentLogiqueModale",
+                    "Salut ! J'analyse la logique modale - nécessité, possibilité, et modalités complexes. Prêt pour des analyses sophistiquées !",
+                    "initialisation",
+                )
 
             # #2532 : pas d'agent de synthèse. Celui qu'on créait ici,
             # `SynthesisAgent`, ne pouvait produire aucune synthèse (#2140 : ses

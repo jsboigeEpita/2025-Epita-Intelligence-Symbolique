@@ -106,11 +106,10 @@ class LogicService:
 
         try:
             # Créer l'agent logique approprié
+            # #2649 : la fabrique lève (type non supporté, échec du
+            # constructeur) au lieu de rendre `None` ; l'`except` plus bas
+            # re-lève en nommant la cause.
             agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
-            if not agent:
-                raise ValueError(
-                    f"Impossible de créer un agent pour le type de logique '{request.logic_type}'"
-                )
 
             # Configurer l'agent
             agent.setup_agent_components(llm_service_id="default_logic_llm")
@@ -193,11 +192,10 @@ class LogicService:
                 )
 
             # Créer l'agent logique approprié
+            # #2649 : la fabrique lève (type non supporté, échec du
+            # constructeur) au lieu de rendre `None` ; l'`except` plus bas
+            # re-lève en nommant la cause.
             agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
-            if not agent:
-                raise ValueError(
-                    f"Impossible de créer un agent pour le type de logique '{request.logic_type}'"
-                )
 
             # Créer l'objet BeliefSet approprié
             belief_set = self._create_belief_set_from_data(belief_set_data)
@@ -272,11 +270,10 @@ class LogicService:
                 )
 
             # Créer l'agent logique approprié
+            # #2649 : la fabrique lève (type non supporté, échec du
+            # constructeur) au lieu de rendre `None` ; l'`except` plus bas
+            # re-lève en nommant la cause.
             agent = LogicAgentFactory.create_agent(request.logic_type, self.kernel)
-            if not agent:
-                raise ValueError(
-                    f"Impossible de créer un agent pour le type de logique '{request.logic_type}'"
-                )
 
             # Créer l'objet BeliefSet approprié
             belief_set = self._create_belief_set_from_data(belief_set_data)

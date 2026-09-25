@@ -22,7 +22,7 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 ## Points d'entrée valides
 
 1. **Héritage direct** — `from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent` (`core/pm/pm_agent.py:13`, `core/debate/debate_agent.py:79`, `core/synthesis/synthesis_agent.py:22`…), puis `MyAgent(kernel=kernel, agent_name="…")`. 15 sites d'import production mesurés (`grep -rn 'abc\.agent_bases' argumentation_analysis/` = 17 lignes, moins 1 ligne commentée `orchestration/cluedo_extended_orchestrator.py:21` et 1 commentaire #2137 — voir Limites).
-2. **Fabrique logique** — `LogicAgentFactory.create_agent(logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> Optional[BaseLogicAgent]` (`core/logic/logic_factory.py:41`, mapping `_agent_classes` :31). C'est le point d'entrée production pour instancier un agent logique sans nommer sa classe.
+2. **Fabrique logique** — `LogicAgentFactory.create_agent(logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> BaseLogicAgent` (`core/logic/logic_factory.py:41`, mapping `_agent_classes` :31). C'est le point d'entrée production pour instancier un agent logique sans nommer sa classe. Elle lève : `ValueError` pour un `logic_type` qu'elle ne sait pas instancier (le message nomme ceux qu'elle sait), `TypeError` pour un `llm_service` qui n'est pas un service (#2441), et l'exception du constructeur telle quelle (#2649 — un constructeur qui échoue nomme ses fonctions sémantiques ou son bridge, voir `core/semantic_setup.py`).
 
 ## Amont / aval
 

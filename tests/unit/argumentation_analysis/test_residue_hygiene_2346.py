@@ -10,6 +10,8 @@
 
 import logging
 
+import pytest
+
 from argumentation_analysis.agents.core.logic.logic_factory import LogicAgentFactory
 from argumentation_analysis.services import llm_cache
 from argumentation_analysis.utils.extract_repair import marker_repair_logic
@@ -104,7 +106,12 @@ def test_cache_close_failure_is_named(caplog, monkeypatch):
 
 def test_logic_factory_logs_no_debug_line_at_info(caplog):
     with caplog.at_level(logging.INFO, logger="Orchestration.LogicAgentFactory"):
-        assert LogicAgentFactory.create_agent("no-such-logic", kernel=None) is None
+        # #2649 : un type inconnu lève au lieu de rendre `None`. La ligne INFO
+        # « Création d'un agent logique… » part avant la levée
+        # (``logic_factory.py``:69), donc le contrôle d'hygiène ci-dessous
+        # garde son mordant : la liste des INFO n'est pas vide pour autant.
+        with pytest.raises(ValueError):
+            LogicAgentFactory.create_agent("no-such-logic", kernel=None)
     info = [
         r.getMessage()
         for r in caplog.records

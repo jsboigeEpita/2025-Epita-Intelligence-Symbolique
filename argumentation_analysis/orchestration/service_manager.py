@@ -239,6 +239,11 @@ class OrchestrationServiceManager:
         self._initialized = False
         self._shutdown = False
 
+        # #2649 : ce qui a été configuré et ne l'est pas, nommé. Une
+        # initialisation qui continue sans un composant le dit ici — un
+        # `logger.error` seul n'est lu par personne (`get_status()` l'est).
+        self.setup_failures: Dict[str, str] = {}
+
         self.logger.info(
             f"ServiceManager créé avec session_id: {self.state.session_id}"
         )
@@ -302,6 +307,12 @@ class OrchestrationServiceManager:
         try:
             self.logger.info("Initialisation du ServiceManager...")
 
+            # #2649 : ces entrées décrivent CETTE tentative. Une
+            # ré-initialisation ne doit pas garder l'échec de la précédente —
+            # un état qui nomme un composant absent alors qu'il est là est
+            # exactement le défaut que cette issue répare.
+            self.setup_failures.clear()
+
             # 1. Initialisation du contexte du projet (bootstrap)
             self.project_context = initialize_project_environment()
             if not self.project_context:
@@ -318,6 +329,7 @@ class OrchestrationServiceManager:
                 else None
             )
             self.llm_service_id = settings.service_manager.default_llm_service_id
+            llm_service_ready = False
 
             if api_key:
                 try:
@@ -329,10 +341,14 @@ class OrchestrationServiceManager:
                     # canonique, et rend vraie la provenance lue plus bas.
                     llm_service = create_llm_service(service_id=self.llm_service_id)
                     self.kernel.add_service(llm_service)
+                    llm_service_ready = True
                     self.logger.info(
                         f"Service LLM résilient '{self.llm_service_id}' ajouté au kernel."
                     )
                 except Exception as e_kernel_service:
+                    self.setup_failures["llm_service"] = (
+                        f"{type(e_kernel_service).__name__}: {e_kernel_service}"
+                    )
                     self.logger.error(
                         f"Échec de l'ajout du service LLM résilient au kernel: {e_kernel_service}",
                         exc_info=True,
@@ -343,32 +359,50 @@ class OrchestrationServiceManager:
                 )
 
             # 2.1. Import et chargement des plugins sémantiques essentiels
-            try:
-                # Remplacer l'instanciation manuelle par l'appel à la fonction setup_informal_kernel
-                # qui gère l'enregistrement complet (plugin natif + fonctions sémantiques)
-                from argumentation_analysis.agents.core.informal.informal_definitions import (
-                    setup_informal_kernel,
+            # #2649 : `setup_informal_kernel` enregistre le plugin natif ET ses
+            # trois fonctions sémantiques, qui lisent les settings du service
+            # LLM (#2632/#2650). Sans service LLM, ce manager n'a pas de plugin
+            # informel : c'est le cas keyless nominal, et il se dit dans
+            # `setup_failures` au lieu de ne laisser qu'une ligne de log.
+            if not llm_service_ready:
+                if not api_key:
+                    missing = "clé API OpenAI absente"
+                else:
+                    missing = (
+                        f"service LLM '{self.llm_service_id}' non ajouté au kernel"
+                    )
+                self.setup_failures["informal_plugin"] = (
+                    f"{missing} : le plugin 'InformalAnalyzer' n'est pas enregistré"
                 )
+                self.logger.warning(self.setup_failures["informal_plugin"])
+            else:
+                try:
+                    # Remplacer l'instanciation manuelle par l'appel à la fonction setup_informal_kernel
+                    # qui gère l'enregistrement complet (plugin natif + fonctions sémantiques)
+                    from argumentation_analysis.agents.core.informal.informal_definitions import (
+                        setup_informal_kernel,
+                    )
 
-                llm_service = self.kernel.get_service(self.llm_service_id)
-                setup_informal_kernel(
-                    kernel=self.kernel,
-                    llm_service=llm_service,
-                    taxonomy_file_path=self.taxonomy_file_path,
-                )
-                self.logger.info(
-                    "Configuration complète du plugin 'InformalAnalyzer' (natif + sémantique) via setup_informal_kernel."
-                )
-            except ImportError as e_import:
-                self.logger.error(
-                    f"Échec critique de l'importation du InformalAnalysisPlugin: {e_import}",
-                    exc_info=True,
-                )
-            except Exception as e_kernel:
-                self.logger.error(
-                    f"Échec du chargement du InformalAnalysisPlugin dans le kernel: {e_kernel}",
-                    exc_info=True,
-                )
+                    llm_service = self.kernel.get_service(self.llm_service_id)
+                    setup_informal_kernel(
+                        kernel=self.kernel,
+                        llm_service=llm_service,
+                        taxonomy_file_path=self.taxonomy_file_path,
+                    )
+                    self.logger.info(
+                        "Configuration complète du plugin 'InformalAnalyzer' (natif + sémantique) via setup_informal_kernel."
+                    )
+                except Exception as e_kernel:
+                    # #2649 : un seul handler. Le type porte la distinction
+                    # (import manquant, settings, enregistrement), et la cause
+                    # va dans l'état en plus du log.
+                    self.setup_failures["informal_plugin"] = (
+                        f"{type(e_kernel).__name__}: {e_kernel}"
+                    )
+                    self.logger.error(
+                        f"Échec du chargement du plugin 'InformalAnalyzer' dans le kernel: {e_kernel}",
+                        exc_info=True,
+                    )
 
             # 3. Initialisation du middleware de communication
             if settings.service_manager.enable_communication_middleware:
@@ -1041,6 +1075,10 @@ Réponds au format JSON avec les clés: entites, relations, patterns, persuasion
                 is not None,
                 "middleware": self.middleware is not None,
             },
+            # #2649 : ce qui a échoué et que l'initialisation a contourné. Un
+            # composant absent y est nommé avec sa cause, au lieu de n'exister
+            # que dans une ligne de log.
+            "setup_failures": dict(self.setup_failures),
             # 'config' est obsolète, les paramètres sont dans `settings`
         }
 
