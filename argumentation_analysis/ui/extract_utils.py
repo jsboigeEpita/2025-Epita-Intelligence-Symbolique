@@ -21,7 +21,6 @@ from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions,
     SourceDefinition,
 )
-from argumentation_analysis.config.settings import settings
 from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.cache_service import CacheService
 
@@ -34,9 +33,6 @@ CACHE_DIR = PROJECT_ROOT / "_temp" / "text_cache"
 CONFIG_DIR = PROJECT_ROOT / "argumentation_analysis" / "data"
 CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json"
 CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc"
-ENCRYPTION_KEY = (
-    settings.encryption_key.get_secret_value() if settings.encryption_key else None
-)
 
 
 # Initialisation des services
@@ -190,7 +186,7 @@ def load_extract_definitions_safely(
     config_file: Union[str, Path],
     encryption_key: Optional[Union[str, bytes]],
     fallback_json_file: Optional[Union[str, Path]] = None,
-) -> Tuple[List[Dict[str, Any]], str]:
+) -> Tuple[List[Dict[str, Any]], Optional[str]]:
     """
     Charge les définitions d'extraits de manière sécurisée, en essayant d'abord
     un fichier chiffré, puis un fichier JSON de secours.
@@ -208,9 +204,10 @@ def load_extract_definitions_safely(
                                de secours.
     :type fallback_json_file: Optional[Union[str, Path]]
     :return: Un tuple contenant la liste des définitions d'extraits (List[Dict[str, Any]])
-             et un message de statut (str). Retourne une liste vide et un message d'erreur
-             si tout échoue.
-    :rtype: Tuple[List[Dict[str, Any]], str]
+             et un message d'erreur (None en cas de succès — #2639 : un succès
+             ne doit rien dire, seul l'échec porte un message). Retourne une
+             liste vide et un message d'erreur si tout échoue.
+    :rtype: Tuple[List[Dict[str, Any]], Optional[str]]
     """
     # NOTE: encryption_key est canoniquement ``bytes`` (cf. CryptoService).
     # Une conversion str→bytes est appliquée au site d'appel pour préserver la
@@ -223,18 +220,17 @@ def load_extract_definitions_safely(
             try:
                 config_path = Path(config_file)
                 if config_path.exists():
-                    # Déchiffrer le fichier
-                    decrypted_data = crypto_service.decrypt_file(
-                        config_path, encryption_key
+                    # Déchiffrer le fichier (#2639 : via la surface réelle de
+                    # CryptoService — decrypt_file n'a jamais existé)
+                    encrypted_bytes = config_path.read_bytes()
+                    decrypted_data = crypto_service.decrypt_data(
+                        encrypted_bytes, encryption_key
                     )
                     if decrypted_data:
                         # Décompresser les données
                         json_data = gzip.decompress(decrypted_data).decode("utf-8")
                         extract_definitions = json.loads(json_data)
-                        return (
-                            extract_definitions,
-                            f"Définitions chargées depuis {config_path}",
-                        )
+                        return extract_definitions, None
             except Exception as e:
                 logger.error(f"Erreur lors du déchiffrement: {e}")
                 # Continuer avec le fallback
@@ -245,7 +241,7 @@ def load_extract_definitions_safely(
             if json_path.exists():
                 with open(json_path, "r", encoding="utf-8") as f:
                     extract_definitions = json.load(f)
-                return extract_definitions, f"Définitions chargées depuis {json_path}"
+                return extract_definitions, None
 
         # Si tout échoue, retourner une liste vide
         return [], "Aucun fichier de définitions trouvé"
@@ -309,10 +305,17 @@ def save_extract_definitions_safely(
                 # Compresser les données
                 compressed_data = gzip.compress(json_data.encode("utf-8"))
 
-                # Chiffrer les données
-                crypto_service.encrypt_file(
-                    compressed_data, config_path, encryption_key
+                # Chiffrer les données (#2639 : via la surface réelle de
+                # CryptoService — encrypt_file n'a jamais existé)
+                encrypted_data = crypto_service.encrypt_data(
+                    compressed_data, encryption_key
                 )
+                if encrypted_data is None:
+                    raise RuntimeError(
+                        f"Échec du chiffrement ({config_path}): "
+                        f"{crypto_service.last_error}"
+                    )
+                config_path.write_bytes(encrypted_data)
                 logger.info(f"Définitions chiffrées sauvegardées dans {config_path}")
 
                 return True, f"Définitions sauvegardées avec succès"

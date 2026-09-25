@@ -60,7 +60,10 @@ def test_load_falls_back_to_json_when_key_is_none(tmp_path: Path) -> None:
     )
 
     assert defs == payload, "fallback JSON must be loaded verbatim"
-    assert "définitions" in msg.lower() or "definitions" in msg.lower()
+    # #2639 : le second élément est un message d'erreur — None en cas de
+    # succès (l'ancien message de statut était lu comme une erreur par
+    # quatre appelants sur cinq).
+    assert msg is None
 
 
 @pytest.mark.parametrize("encryption_key", [None, b"", b"raw-bytes-key"])
@@ -128,6 +131,6 @@ def test_todo_markers_removed() -> None:
     src = Path("argumentation_analysis/ui/extract_utils.py").read_text(encoding="utf-8")
     # The two TODO lines about encryption_key→bytes must be gone.
     matches = re.findall(r"TODO:.*encryption_key.*bytes", src)
-    assert not matches, (
-        f"Unexpected remaining TODO(s) about encryption_key bytes: {matches}"
-    )
+    assert (
+        not matches
+    ), f"Unexpected remaining TODO(s) about encryption_key bytes: {matches}"

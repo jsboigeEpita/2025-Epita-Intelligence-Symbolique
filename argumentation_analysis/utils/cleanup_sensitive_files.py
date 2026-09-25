@@ -27,13 +27,13 @@ logger = logging.getLogger("CleanupSensitiveFiles")
 # here raises its ``ImportError`` instead of ending the importing process
 # (it used to call ``sys.exit(1)``). ``load_extract_definitions_safely``
 # pulls ``crypto_service`` and is imported where it is used.
-from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.utils.crypto_utils import load_encryption_key
 
 # Définir les constantes
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-ENCRYPTION_KEY = (
-    settings.encryption_key.get_secret_value() if settings.encryption_key else None
-)
+# #2639 : la clé dérive de la passphrase (dérivation canonique), pas de la
+# variable d'environnement ENCRYPTION_KEY qu'aucun .env ne définit.
+ENCRYPTION_KEY = load_encryption_key()
 CONFIG_DIR = PROJECT_ROOT / "argumentation_analysis" / "data"
 CONFIG_FILE_JSON = CONFIG_DIR / "extract_sources.json"
 CONFIG_FILE_ENC = CONFIG_DIR / "extract_sources.json.gz.enc"
