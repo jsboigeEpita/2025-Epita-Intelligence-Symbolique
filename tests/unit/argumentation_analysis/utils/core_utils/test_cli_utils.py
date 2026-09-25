@@ -11,6 +11,8 @@ from argumentation_analysis.core.utils.cli_utils import (
     parse_extract_verification_arguments,
     parse_extract_repair_arguments,  # Ajout de l'import
     DEPRECATED_ORATOR_ALIAS,
+    resolve_only_source_indices,
+    SINGLE_ORATOR_SOURCE_INDICES_ENV,
 )
 
 
@@ -336,3 +338,55 @@ def test_parse_extract_repair_arguments_all_provided():
     assert args.verbose is True
     assert args.input == input_f
     assert args.output_json == output_j
+
+
+# --- #2362 B2 : sélection opaque des sources par position ---
+
+
+def test_parse_extract_repair_arguments_only_source_index_repeatable():
+    """--only-source-index se répète et collecte les positions dans l'ordre."""
+    with patch(
+        "sys.argv",
+        ["script_name", "--only-source-index", "3", "--only-source-index", "1"],
+    ):
+        args = parse_extract_repair_arguments()
+    assert args.only_source_indices == [3, 1]
+
+
+def test_parse_extract_verification_arguments_only_source_index():
+    """Le parseur de vérification accepte lui aussi les positions explicites."""
+    with patch("sys.argv", ["script_name", "--only-source-index", "2"]):
+        args = parse_extract_verification_arguments()
+    assert args.only_source_indices == [2]
+
+
+def test_resolve_only_source_indices_explicit_positions_deduplicated():
+    args = argparse.Namespace(only_source_indices=[3, 1, 3], single_orator_only=False)
+    assert resolve_only_source_indices(args) == [1, 3]
+
+
+def test_resolve_only_source_indices_none_when_nothing_selected(monkeypatch):
+    monkeypatch.delenv(SINGLE_ORATOR_SOURCE_INDICES_ENV, raising=False)
+    args = argparse.Namespace(only_source_indices=None, single_orator_only=False)
+    assert resolve_only_source_indices(args) is None
+
+
+def test_resolve_only_source_indices_flag_without_env_fails_loud(monkeypatch):
+    """Le drapeau de classe seul ne sélectionne RIEN sans positions : fail-loud,
+    jamais un no-op silencieux ni un défaut dérivé d'un nom (#2362)."""
+    monkeypatch.delenv(SINGLE_ORATOR_SOURCE_INDICES_ENV, raising=False)
+    args = argparse.Namespace(only_source_indices=None, single_orator_only=True)
+    with pytest.raises(ValueError, match=SINGLE_ORATOR_SOURCE_INDICES_ENV):
+        resolve_only_source_indices(args)
+
+
+def test_resolve_only_source_indices_flag_resolves_env(monkeypatch):
+    monkeypatch.setenv(SINGLE_ORATOR_SOURCE_INDICES_ENV, "2, 5")
+    args = argparse.Namespace(only_source_indices=None, single_orator_only=True)
+    assert resolve_only_source_indices(args) == [2, 5]
+
+
+def test_resolve_only_source_indices_explicit_and_env_merge(monkeypatch):
+    monkeypatch.setenv(SINGLE_ORATOR_SOURCE_INDICES_ENV, "4")
+    args = argparse.Namespace(only_source_indices=[1], single_orator_only=True)
+    assert resolve_only_source_indices(args) == [1, 4]

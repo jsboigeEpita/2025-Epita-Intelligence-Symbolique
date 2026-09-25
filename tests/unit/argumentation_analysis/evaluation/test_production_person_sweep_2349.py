@@ -62,17 +62,10 @@ DECLARED = {
 # ledger as their repairs landed. What remains is class B2.
 # class B2: behaviour keyed on ONE instance (branch / flag / label)
 PENDING_TRIAGE = {
-    "argumentation_analysis/utils/dev_tools/repair_utils.py": "#2362 B2",
-    "argumentation_analysis/utils/dev_tools/verification_utils.py": "#2362 B2",
-    "argumentation_analysis/scripts/run_verify_extracts_llm.py": "#2362 B2",
-    "argumentation_analysis/utils/run_verify_extracts_with_llm.py": "#2362 B2",
-    "argumentation_analysis/utils/data_generation.py": "#2362 B2",
-    "argumentation_analysis/utils/data_processing_utils.py": "#2362 B2",
-    "argumentation_analysis/pipelines/reporting_pipeline.py": "#2362 B2",
-    "scripts/orchestration/run_extract_repair.py": "#2362 B2",
-    "scripts/orchestration/run_verify_extracts.py": "#2362 B2",
-    "scripts/reporting/generate_rhetorical_analysis_summaries.py": "#2362 B2",
-    "scripts/reporting/generate_comprehensive_report.py": "#2362 B2",
+    # #2362 B2 emptied 2026-09-25: the 11 opaque-selector files (filter flag,
+    # label derivation, label branch, simulators, sample generation) repaired;
+    # the sweep and the stale control both green. The set stays empty — a new
+    # bearer reddens, it never rejoins this map.
 }
 
 # The only path #2348 changed, used by the historical control below.

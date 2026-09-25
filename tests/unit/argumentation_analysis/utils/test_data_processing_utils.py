@@ -3,6 +3,10 @@
 
 """
 Tests unitaires pour le module data_processing_utils.py.
+
+#2362 : le libellé de corpus n'est plus canonisé par sous-chaîne de nom —
+chaque source_name passe verbatim, et un résultat sans nom reçoit un
+identifiant positionnel opaque (``corpus_{idx}``).
 """
 
 import pytest
@@ -15,13 +19,13 @@ from argumentation_analysis.utils.data_processing_utils import group_results_by_
 def sample_results_various_sources():
     """Retourne un échantillon de résultats avec diverses sources."""
     return [
-        {"id": 1, "text": "Texte A", "source_name": "Discours d'Hitler - 1933"},
-        {"id": 2, "text": "Texte B", "source_name": "Débat Lincoln-Douglas - 1"},
+        {"id": 1, "text": "Texte A", "source_name": "corpus_A"},
+        {"id": 2, "text": "Texte B", "source_name": "corpus_B - 1"},
         {"id": 3, "text": "Texte C", "source_name": "Article de Blog X"},
-        {"id": 4, "text": "Texte D", "source_name": "Discours d'Hitler - 1939"},
-        {"id": 5, "text": "Texte E", "source_name": "Autre source Lincoln"},
+        {"id": 4, "text": "Texte D", "source_name": "corpus_A"},
+        {"id": 5, "text": "Texte E", "source_name": "Autre source corpus_B"},
         {"id": 6, "text": "Texte F", "source_name": "Document Y"},
-        {"id": 7, "text": "Texte G", "source_name": "Analyse Douglas"},
+        {"id": 7, "text": "Texte G", "source_name": "Analyse corpus_C"},
     ]
 
 
@@ -29,7 +33,7 @@ def sample_results_various_sources():
 def results_with_missing_source_name():
     """Retourne des résultats où 'source_name' est manquant pour certains."""
     return [
-        {"id": 1, "text": "Texte A", "source_name": "Discours d'Hitler - 1933"},
+        {"id": 1, "text": "Texte A", "source_name": "corpus_A"},
         {"id": 2, "text": "Texte B"},  # source_name manquant
         {"id": 3, "text": "Texte C", "source_name": "Article de Blog X"},
     ]
@@ -39,7 +43,7 @@ def results_with_missing_source_name():
 def results_with_non_dict_elements():
     """Retourne une liste contenant des éléments qui ne sont pas des dictionnaires."""
     return [
-        {"id": 1, "text": "Texte A", "source_name": "Discours d'Hitler - 1933"},
+        {"id": 1, "text": "Texte A", "source_name": "corpus_A"},
         "ceci n'est pas un dict",
         {"id": 3, "text": "Texte C", "source_name": "Article de Blog X"},
     ]
@@ -49,27 +53,27 @@ def results_with_non_dict_elements():
 
 
 def test_group_results_nominal_case(sample_results_various_sources):
-    """Teste le regroupement nominal des résultats."""
+    """Chaque source_name distinct forme son propre corpus, verbatim."""
     grouped = group_results_by_corpus(sample_results_various_sources)
 
-    assert "Discours d'Hitler" in grouped
-    assert len(grouped["Discours d'Hitler"]) == 2
-    assert any(r["id"] == 1 for r in grouped["Discours d'Hitler"])
-    assert any(r["id"] == 4 for r in grouped["Discours d'Hitler"])
+    assert len(grouped["corpus_A"]) == 2
+    assert any(r["id"] == 1 for r in grouped["corpus_A"])
+    assert any(r["id"] == 4 for r in grouped["corpus_A"])
 
-    assert "Débats Lincoln-Douglas" in grouped
-    assert len(grouped["Débats Lincoln-Douglas"]) == 3
-    assert any(r["id"] == 2 for r in grouped["Débats Lincoln-Douglas"])
-    assert any(r["id"] == 5 for r in grouped["Débats Lincoln-Douglas"])
-    assert any(r["id"] == 7 for r in grouped["Débats Lincoln-Douglas"])
+    assert len(grouped["corpus_B - 1"]) == 1
+    assert grouped["corpus_B - 1"][0]["id"] == 2
 
-    assert "Article de Blog X" in grouped
+    assert len(grouped["Autre source corpus_B"]) == 1
+    assert grouped["Autre source corpus_B"][0]["id"] == 5
+
     assert len(grouped["Article de Blog X"]) == 1
     assert grouped["Article de Blog X"][0]["id"] == 3
 
-    assert "Document Y" in grouped
     assert len(grouped["Document Y"]) == 1
     assert grouped["Document Y"][0]["id"] == 6
+
+    assert len(grouped["Analyse corpus_C"]) == 1
+    assert grouped["Analyse corpus_C"][0]["id"] == 7
 
 
 def test_group_results_empty_list():
@@ -79,31 +83,45 @@ def test_group_results_empty_list():
 
 
 def test_group_results_missing_source_name(results_with_missing_source_name):
-    """Teste le regroupement quand 'source_name' est manquant."""
+    """Sans 'source_name', le résultat reçoit un identifiant positionnel opaque."""
     grouped = group_results_by_corpus(results_with_missing_source_name)
 
-    assert "Discours d'Hitler" in grouped
-    assert len(grouped["Discours d'Hitler"]) == 1
-    assert grouped["Discours d'Hitler"][0]["id"] == 1
+    assert len(grouped["corpus_A"]) == 1
+    assert grouped["corpus_A"][0]["id"] == 1
 
-    assert "Corpus Inconnu" in grouped
-    assert len(grouped["Corpus Inconnu"]) == 1
-    assert grouped["Corpus Inconnu"][0]["id"] == 2  # Celui sans source_name
+    # L'item à l'index 1 n'a pas de nom : identifiant positionnel corpus_1
+    assert len(grouped["corpus_1"]) == 1
+    assert grouped["corpus_1"][0]["id"] == 2
 
-    assert "Article de Blog X" in grouped  # Celui avec source_name explicite
     assert len(grouped["Article de Blog X"]) == 1
     assert grouped["Article de Blog X"][0]["id"] == 3
+
+
+def test_group_results_missing_names_get_distinct_positional_ids():
+    """Deux résultats sans nom ne fusionnent pas : chacun garde sa position."""
+    grouped = group_results_by_corpus(
+        [{"id": 1, "text": "Texte A"}, {"id": 2, "text": "Texte B"}]
+    )
+    assert set(grouped) == {"corpus_0", "corpus_1"}
+    assert grouped["corpus_0"][0]["id"] == 1
+    assert grouped["corpus_1"][0]["id"] == 2
+
+
+def test_group_results_corpus_name_wins_over_source_name():
+    """Un 'corpus_name' explicite a priorité sur le 'source_name'."""
+    grouped = group_results_by_corpus(
+        [{"id": 1, "corpus_name": "groupe_explicite", "source_name": "corpus_A"}]
+    )
+    assert set(grouped) == {"groupe_explicite"}
 
 
 def test_group_results_with_non_dict_elements(results_with_non_dict_elements):
     """Teste le regroupement avec des éléments non-dictionnaires dans la liste."""
     grouped = group_results_by_corpus(results_with_non_dict_elements)
 
-    assert "Discours d'Hitler" in grouped
-    assert len(grouped["Discours d'Hitler"]) == 1
-    assert grouped["Discours d'Hitler"][0]["id"] == 1
+    assert len(grouped["corpus_A"]) == 1
+    assert grouped["corpus_A"][0]["id"] == 1
 
-    assert "Article de Blog X" in grouped
     assert len(grouped["Article de Blog X"]) == 1
     assert grouped["Article de Blog X"][0]["id"] == 3
 
@@ -123,26 +141,9 @@ def test_group_results_input_not_list():
     assert "L'argument 'results' doit être une liste." in str(excinfo.value)
 
 
-def test_group_results_all_other_corpus():
-    """Teste le cas où tous les résultats vont dans 'Autres corpus'."""
-    results = [
-        {"id": 1, "text": "Texte A", "source_name": "Source Inconnue 1"},
-        {"id": 2, "text": "Texte B", "source_name": "Source Inconnue 2"},
-    ]
-    grouped = group_results_by_corpus(results)
-    assert "Source Inconnue 1" in grouped
-    assert len(grouped["Source Inconnue 1"]) == 1
-    assert grouped["Source Inconnue 1"][0]["id"] == 1
-
-    assert "Source Inconnue 2" in grouped
-    assert len(grouped["Source Inconnue 2"]) == 1
-    assert grouped["Source Inconnue 2"][0]["id"] == 2
-    assert "Discours d'Hitler" not in grouped
-    assert "Débats Lincoln-Douglas" not in grouped
-
-
-def test_group_results_specific_corpus_names():
-    """Teste des noms de source qui pourraient être ambigus mais doivent être correctement classés."""
+def test_group_results_is_name_blind():
+    """Témoin d'aveuglement (#2362) : des sources portant des mots-clés de
+    noms de personnes ne sont PAS canonisées — chacune reste verbatim."""
     results = [
         {
             "id": 1,
@@ -153,8 +154,10 @@ def test_group_results_specific_corpus_names():
         {"id": 3, "text": "Texte D", "source_name": "Commentaire de Douglas"},
     ]
     grouped = group_results_by_corpus(results)
-    assert "Discours d'Hitler" in grouped
-    assert len(grouped["Discours d'Hitler"]) == 1
-    assert "Débats Lincoln-Douglas" in grouped
-    assert len(grouped["Débats Lincoln-Douglas"]) == 2
-    assert "Autres corpus" not in grouped
+    assert set(grouped) == {
+        "Un document sur Hitler et la guerre",
+        "Notes sur Lincoln",
+        "Commentaire de Douglas",
+    }
+    for corpus in grouped.values():
+        assert len(corpus) == 1

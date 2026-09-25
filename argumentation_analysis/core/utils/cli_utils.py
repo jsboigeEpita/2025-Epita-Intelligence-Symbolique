@@ -4,7 +4,9 @@ Utilitaires pour la gestion des arguments de ligne de commande (CLI).
 """
 
 import argparse
+import os
 import warnings
+from typing import List, Optional
 
 # from pathlib import Path # Pas nécessaire pour cette fonction spécifique, mais souvent utile avec argparse
 
@@ -30,6 +32,31 @@ class _DeprecatedAliasStoreTrue(argparse.Action):
             stacklevel=2,
         )
         setattr(namespace, self.dest, True)
+
+
+SINGLE_ORATOR_SOURCE_INDICES_ENV = "SINGLE_ORATOR_SOURCE_INDICES"
+
+
+def resolve_only_source_indices(args: argparse.Namespace) -> Optional[List[int]]:
+    """Résout la sélection opaque de sources par position (#2362).
+
+    ``--only-source-index N`` (répétable) porte des positions explicites. Le
+    drapeau de classe ``--single-orator-only`` seul ne résout rien : sans
+    ``SINGLE_ORATOR_SOURCE_INDICES`` (positions séparées par des virgules) il
+    échoue haut — un no-op silencieux ou un défaut dérivé d'un nom mapperait
+    1:1 sur un document du corpus.
+    """
+    indices: List[int] = list(getattr(args, "only_source_indices", None) or [])
+    if getattr(args, "single_orator_only", False):
+        env_value = os.getenv(SINGLE_ORATOR_SOURCE_INDICES_ENV, "")
+        if not env_value.strip():
+            raise ValueError(
+                "--single-orator-only requires explicit source positions: set "
+                f'{SINGLE_ORATOR_SOURCE_INDICES_ENV} (e.g. "2,5") or pass '
+                "--only-source-index N"
+            )
+        indices.extend(int(part) for part in env_value.split(",") if part.strip())
+    return sorted(set(indices)) or None
 
 
 def parse_advanced_analysis_arguments() -> argparse.Namespace:
@@ -146,6 +173,15 @@ def parse_extract_verification_arguments() -> argparse.Namespace:
         dest="single_orator_only",
         default=False,
         help="(déprécié) alias de --single-orator-only",
+    )
+    parser.add_argument(
+        "--only-source-index",
+        action="append",
+        type=int,
+        dest="only_source_indices",
+        default=None,
+        metavar="N",
+        help="Ne traiter que la source à la position N (0-based, répétable)",
     )
     return parser.parse_args()
 
@@ -275,6 +311,15 @@ def parse_extract_repair_arguments() -> argparse.Namespace:
         dest="single_orator_only",
         default=False,
         help="(déprécié) alias de --single-orator-only",
+    )
+    parser.add_argument(
+        "--only-source-index",
+        action="append",
+        type=int,
+        dest="only_source_indices",
+        default=None,
+        metavar="N",
+        help="Ne traiter que la source à la position N (0-based, répétable)",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Activer le mode verbeux"

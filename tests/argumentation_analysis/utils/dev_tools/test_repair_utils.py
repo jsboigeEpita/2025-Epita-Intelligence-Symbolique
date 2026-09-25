@@ -154,7 +154,7 @@ async def test_run_extract_repair_pipeline_successful_run_no_save(
         project_root_dir=mock_project_root,
         output_report_path_str=output_report_path,
         save_changes=False,
-        hitler_only=False,
+        only_source_indices=None,
         custom_input_path_str=None,
         output_json_path_str=None,
     )
@@ -245,7 +245,7 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
         project_root_dir=mock_project_root,
         output_report_path_str=output_report_path,
         save_changes=True,
-        hitler_only=False,
+        only_source_indices=None,
         custom_input_path_str=None,
         output_json_path_str=output_json_path,
     )
@@ -268,7 +268,7 @@ async def test_run_extract_repair_pipeline_with_save_and_json_export(
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.CryptoService")
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.DefinitionService")
 @patch("argumentation_analysis.utils.dev_tools.repair_utils.create_llm_service")
-async def test_run_extract_repair_pipeline_hitler_only_filter(
+async def test_run_extract_repair_pipeline_position_filter_is_name_blind(
     mock_create_llm_service: MagicMock,
     MockDefinitionService: MagicMock,
     MockCryptoService: MagicMock,
@@ -280,7 +280,12 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     mock_llm_service: MagicMock,
     mock_definition_service: MagicMock,
 ):
-    """Teste le filtrage --hitler-only."""
+    """Le filtre sélectionne par POSITION et reste aveugle aux noms (#2362).
+
+    Témoin d'aveuglement : deux sources portent un nom que l'ancien filtre
+    (`"hitler" in source_name`) aurait retenu — aux positions 0 et 2, non
+    sélectionnées. Seule la position demandée survit, quel que soit son nom.
+    """
     mock_create_llm_service.return_value = mock_llm_service
 
     MockCryptoService.return_value = AsyncMock()
@@ -326,7 +331,7 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
         project_root_dir=mock_project_root,
         output_report_path_str=str(mock_project_root / "report.html"),
         save_changes=False,
-        hitler_only=True,
+        only_source_indices=[1],
         custom_input_path_str=None,
         output_json_path_str=None,
     )
@@ -334,9 +339,9 @@ async def test_run_extract_repair_pipeline_hitler_only_filter(
     mock_repair_extract_markers.assert_called_once()
     called_with_definitions = mock_repair_extract_markers.call_args[0][0]
     assert isinstance(called_with_definitions, ExtractDefinitions)
-    assert len(called_with_definitions.sources) == 2
-    assert called_with_definitions.sources[0].source_name == "Discours d'Hitler 1"
-    assert called_with_definitions.sources[1].source_name == "Texte Hitler sur la fin"
+    assert [source.source_name for source in called_with_definitions.sources] == [
+        "Autre Discours"
+    ]
 
 
 @pytest.mark.asyncio
@@ -351,7 +356,7 @@ async def test_run_extract_repair_pipeline_llm_service_creation_fails(
             project_root_dir=mock_project_root,
             output_report_path_str="report.html",
             save_changes=False,
-            hitler_only=False,
+            only_source_indices=None,
             custom_input_path_str=None,
             output_json_path_str=None,
         )
@@ -396,7 +401,7 @@ async def test_run_extract_repair_pipeline_load_definitions_fails(
             project_root_dir=mock_project_root,
             output_report_path_str="report.html",
             save_changes=False,
-            hitler_only=False,
+            only_source_indices=None,
             custom_input_path_str=None,
             output_json_path_str=None,
         )

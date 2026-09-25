@@ -84,6 +84,22 @@ from argumentation_analysis.core.utils.reporting_utils import (
 from argumentation_analysis.utils.data_processing_utils import group_results_by_corpus
 from argumentation_analysis.analytics.stats_calculator import calculate_average_scores
 
+# Profils de recommandations par POSITION de corpus dans l'ordre d'analyse
+# (#2362) : la guidance est une configuration positionnelle, pas une
+# identité — aucun libellé de corpus ne mappe 1:1 sur un document du corpus.
+_CORPUS_POSITION_GUIDANCE: Dict[int, List[str]] = {
+    0: [
+        "Utiliser l'agent EnhancedComplexFallacyAnalyzer pour détecter les sophismes composites fréquents dans les discours de propagande",
+        "Combiner avec l'agent EnhancedFallacySeverityEvaluator pour évaluer la gravité des sophismes dans ce contexte historique",
+        "Développer un agent spécifique pour l'analyse de la rhétorique totalitaire",
+    ],
+    1: [
+        "Privilégier l'agent EnhancedRhetoricalResultAnalyzer pour une analyse globale de la qualité argumentative",
+        "Utiliser l'agent ArgumentCoherenceEvaluator pour évaluer la cohérence des arguments dans ce contexte de débat formel",
+        "Développer un agent spécifique pour l'analyse des débats politiques historiques",
+    ],
+}
+
 
 def _analyze_agent_effectiveness(
     base_results: List[Dict[str, Any]],
@@ -108,10 +124,13 @@ def _analyze_agent_effectiveness(
     # Initialiser le dictionnaire d'efficacité
     effectiveness = {}
 
-    # Analyser l'efficacité pour chaque corpus
-    all_corpora = set(base_by_corpus.keys()).union(set(advanced_by_corpus.keys()))
+    # Analyser l'efficacité pour chaque corpus, dans l'ordre d'insertion des
+    # groupes : la guidance est un profil POSITIONNEL (#2362), pas une
+    # identité — aucun libellé de corpus ne mappe 1:1 sur un document.
+    all_corpora = list(base_by_corpus)
+    all_corpora += [c for c in advanced_by_corpus if c not in base_by_corpus]
 
-    for corpus in all_corpora:
+    for corpus_position, corpus in enumerate(all_corpora):
         effectiveness[corpus] = {
             "base_agents": {},
             "advanced_agents": {},
@@ -252,24 +271,14 @@ def _analyze_agent_effectiveness(
 
         effectiveness[corpus]["best_agent"] = best_agent
 
-        if corpus == "Discours d'Hitler":
-            effectiveness[corpus]["recommendations"] = [
-                "Utiliser l'agent EnhancedComplexFallacyAnalyzer pour détecter les sophismes composites fréquents dans les discours de propagande",
-                "Combiner avec l'agent EnhancedFallacySeverityEvaluator pour évaluer la gravité des sophismes dans ce contexte historique",
-                "Développer un agent spécifique pour l'analyse de la rhétorique totalitaire",
-            ]
-        elif corpus == "Débats Lincoln-Douglas":
-            effectiveness[corpus]["recommendations"] = [
-                "Privilégier l'agent EnhancedRhetoricalResultAnalyzer pour une analyse globale de la qualité argumentative",
-                "Utiliser l'agent ArgumentCoherenceEvaluator pour évaluer la cohérence des arguments dans ce contexte de débat formel",
-                "Développer un agent spécifique pour l'analyse des débats politiques historiques",
-            ]
-        else:
-            effectiveness[corpus]["recommendations"] = [
+        recommendations = _CORPUS_POSITION_GUIDANCE.get(corpus_position)
+        if recommendations is None:
+            recommendations = [
                 "Adapter le choix des agents en fonction du type de contenu spécifique",
                 "Combiner les agents de base et avancés pour une analyse complète",
                 "Évaluer la pertinence des agents au cas par cas",
             ]
+        effectiveness[corpus]["recommendations"] = recommendations
 
     return effectiveness
 

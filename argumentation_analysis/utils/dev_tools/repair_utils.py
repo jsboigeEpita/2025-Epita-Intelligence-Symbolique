@@ -6,7 +6,14 @@ Utilitaires pour la réparation et la maintenance des données d'extraits.
 import os
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple  # Ajout des types nécessaires
+from typing import (
+    Optional,
+    List,
+    Dict,
+    Any,
+    Tuple,
+    Sequence,
+)  # Ajout des types nécessaires
 
 # Imports pour les fonctions déplacées
 import semantic_kernel as sk
@@ -230,9 +237,9 @@ async def run_extract_repair_pipeline(
     project_root_dir: Path,
     output_report_path_str: str,
     save_changes: bool,
-    hitler_only: bool,
-    custom_input_path_str: Optional[str],
-    output_json_path_str: Optional[str],
+    only_source_indices: Optional[Sequence[int]] = None,
+    custom_input_path_str: Optional[str] = None,
+    output_json_path_str: Optional[str] = None,
 ):
     """
     Exécute le pipeline de réparation des bornes d'extraits.
@@ -314,15 +321,16 @@ async def run_extract_repair_pipeline(
             f"{len(extract_definitions.sources)} sources chargées dans le pipeline."
         )
 
-        if hitler_only:
+        if only_source_indices:
+            wanted_indices = set(only_source_indices)
             original_count = len(extract_definitions.sources)
             extract_definitions.sources = [
                 source
-                for source in extract_definitions.sources
-                if "hitler" in source.source_name.lower()
+                for index, source in enumerate(extract_definitions.sources)
+                if index in wanted_indices
             ]
             logger.info(
-                f"Filtrage des sources (pipeline): {len(extract_definitions.sources)}/{original_count} sources retenues."
+                f"Filtrage des sources (pipeline): {len(extract_definitions.sources)}/{original_count} sources retenues (positions: {sorted(wanted_indices)})."
             )
 
         if not extract_definitions.sources:

@@ -10,9 +10,9 @@ Ce script:
    - Résultats de l'analyse rhétorique de base
    - Résultats de l'analyse rhétorique avancée
    - Résultats de la comparaison des performances
-2. Synthétise les résultats par corpus:
-   - Discours d'Hitler
-   - Débats Lincoln Douglas
+2. Synthétise les résultats par corpus (identifiants positionnels opaques, #2362):
+   - corpus_001
+   - corpus_002
    - Autres corpus disponibles
 3. Analyse la pertinence des agents spécialistes pour chaque type de contenu:
    - Quels agents sont les plus efficaces pour chaque corpus?

@@ -32,6 +32,9 @@ from argumentation_analysis.ui.extract_utils import (
     load_extract_definitions_safely,
 )  # Import direct
 from argumentation_analysis.core.llm_service import create_llm_service  # Import direct
+from argumentation_analysis.core.utils.cli_utils import (
+    resolve_only_source_indices,
+)  # Import direct
 
 # Configuration du logging pour ce script
 logger = logging.getLogger("RunVerifyExtractsLLM")
@@ -66,6 +69,15 @@ def build_verify_parser() -> argparse.ArgumentParser:
         dest="single_orator_only",
         default=False,
         help="(déprécié) alias de --single-orator-only",
+    )
+    parser.add_argument(
+        "--only-source-index",
+        action="append",
+        type=int,
+        dest="only_source_indices",
+        default=None,
+        metavar="N",
+        help="Ne traiter que la source à la position N (0-based, répétable)",
     )
     parser.add_argument(
         "--verbose", "-v", action="store_true", help="Activer le mode verbeux"
@@ -152,16 +164,18 @@ async def main():
         logger.error(f"Traceback: {traceback.format_exc()}")
         return
 
-    # Filtrer les sources si l'option --single-orator-only est activée
-    if args.single_orator_only:
+    # Sélection opaque des sources par position (#2362)
+    only_indices = resolve_only_source_indices(args)
+    if only_indices:
+        wanted_indices = set(only_indices)
         original_count = len(extract_definitions_data)
         extract_definitions_data = [
             source
-            for source in extract_definitions_data
-            if "hitler" in source.get("source_name", "").lower()
+            for index, source in enumerate(extract_definitions_data)
+            if index in wanted_indices
         ]
         logger.info(
-            f"Filtrage des sources: {len(extract_definitions_data)}/{original_count} sources retenues (corpus mono-orateur)."
+            f"Filtrage des sources: {len(extract_definitions_data)}/{original_count} sources retenues (positions: {only_indices})."
         )
 
     # Limiter le nombre d'extraits si l'option --limit est spécifiée

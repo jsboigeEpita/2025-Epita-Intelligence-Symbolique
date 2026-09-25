@@ -35,6 +35,7 @@ from argumentation_analysis.utils.dev_tools.verification_utils import (
 )
 from argumentation_analysis.core.utils.cli_utils import (
     parse_extract_verification_arguments,
+    resolve_only_source_indices,
 )
 
 # Les imports spécifiques (verify_extracts, generate_report, core_services, etc.)
@@ -69,7 +70,7 @@ def main():
     # project_root_dir=project_root,
     # output_report_path_str=args.output,
     # custom_input_path_str=args.input,
-    # hitler_only=args.single_orator_only
+    # only_source_indices=resolve_only_source_indices(args)
     # ))
 
     # En supposant une version synchrone du pipeline pour l'instant pour éviter de changer le if __name__ == "__main__":
@@ -78,7 +79,7 @@ def main():
             project_root_dir=project_root,
             output_report_path_str=args.output,
             custom_input_path_str=args.input,
-            hitler_only=args.single_orator_only,
+            only_source_indices=resolve_only_source_indices(args),
         )
         logger.info("Script de vérification des extraits (via pipeline) terminé.")
     except Exception as e:

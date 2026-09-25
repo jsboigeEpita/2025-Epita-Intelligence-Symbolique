@@ -37,6 +37,7 @@ from argumentation_analysis.utils.dev_tools.repair_utils import (
 )
 from argumentation_analysis.core.utils.cli_utils import (
     parse_extract_repair_arguments,
+    resolve_only_source_indices,
 )
 
 # Les imports spécifiques (repair_extract_markers, core_services, etc.)
@@ -64,7 +65,7 @@ async def main():
         project_root_dir=project_root,
         output_report_path_str=args.output,
         save_changes=args.save,
-        hitler_only=args.single_orator_only,
+        only_source_indices=resolve_only_source_indices(args),
         custom_input_path_str=args.input,
         output_json_path_str=args.output_json,
         # args.verbose est utilisé pour configurer le logger de ce script,
