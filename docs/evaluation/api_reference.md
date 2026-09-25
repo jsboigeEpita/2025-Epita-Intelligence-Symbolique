@@ -594,14 +594,15 @@ from pathlib import Path
 
 ## Error Handling
 
-All async methods handle exceptions gracefully:
+`run_cell` separates two kinds of failure (#2346):
+
+- **Analysis failures** are results. When the pipeline raises or exceeds `timeout`, the cell returns a `BenchmarkResult` with `success=False`, the error message and the time spent.
+- **Setup errors** propagate. A `model_name` that is not registered raises `KeyError`, and a pipeline that does not import raises `ImportError`. A configuration error is not a benchmark result: returned as a failed row, it would be scored in the rankings.
 
 ```python
-try:
-    result = await runner.run_cell(...)
-except Exception as e:
-    # Returns BenchmarkResult with success=False and error message
-    logger.error(f"Benchmark failed: {e}")
+result = await runner.run_cell(...)  # KeyError if the model is not registered
+if not result.success:
+    logger.warning(f"Cell failed: {result.error}")
 ```
 
 ## Environment Variables
