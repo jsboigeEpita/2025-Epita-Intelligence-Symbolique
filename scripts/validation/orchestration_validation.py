@@ -312,16 +312,17 @@ class OrchestrationValidator:
             from argumentation_analysis.core.jvm_setup import initialize_jvm
             from argumentation_analysis.paths import LIBS_DIR
 
-            # Test d'initialisation JVM (peut echouer si version Java incompatible)
-            jvm_status = initialize_jvm(lib_dir_path=LIBS_DIR)
+            # initialize_jvm résout son classpath lui-même : il n'a plus de
+            # paramètre lib_dir_path depuis 2025-06 (#2634). Le test réussit si
+            # la JVM démarre ; il réussissait quel que soit ce résultat.
+            jvm_status = initialize_jvm()
 
             self.log_test_result(
                 test_name,
-                True,
+                bool(jvm_status),
                 {
                     "jvm_initialized": jvm_status,
                     "libs_dir": str(LIBS_DIR),
-                    "note": "Succès même si JVM non fonctionnelle (problème connu de version Java)",
                 },
             )
 

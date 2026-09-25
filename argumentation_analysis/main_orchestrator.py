@@ -121,8 +121,6 @@ async def main():
     llm_service = None
     try:
         logging.info("Création du service LLM...")
-        # L'id est obligatoire depuis fdbb54e20 (2025-07-12) : l'appel sans
-        # argument levait TypeError, et l'analyse n'était jamais lancée (#2630).
         # Pas de model_id : le résolveur de route décide (#2377).
         llm_service = create_llm_service(service_id="default")
         logging.info(
