@@ -4,6 +4,7 @@ Utilitaires pour la vérification des extraits.
 """
 
 import logging
+from html import escape
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Tuple, Sequence  # Ajout de Tuple
 
@@ -283,21 +284,25 @@ def generate_verification_report(
             <tr><th>Source</th><th>Extrait</th><th>Statut</th><th>Détails</th></tr>
     """
     for result in results:
-        source_name = result.get("source_name", "Source inconnue")
-        extract_name = result.get("extract_name", "Extrait inconnu")
-        status = result.get("status", "error")
-        message = result.get("message", "Aucun message")
+        # #2346 : noms, statut et message viennent du corpus ou du vérificateur
+        # (une URL avec ``&``, un marqueur avec ``<``) : échappés, le statut
+        # aussi, qui sert d'attribut ``class``. Même classe que #2594.
+        source_name = escape(str(result.get("source_name", "Source inconnue")))
+        extract_name = escape(str(result.get("extract_name", "Extrait inconnu")))
+        raw_status = result.get("status", "error")
+        status = escape(str(raw_status))
+        message = escape(str(result.get("message", "Aucun message")))
         details_html = ""
-        if status == "valid":
+        if raw_status == "valid":
             details_html = f"<div class='details'><p><strong>Longueur de l'extrait:</strong> {result.get('extracted_length', 'N/A')} caractères</p></div>"
-        elif status == "warning":
+        elif raw_status == "warning":
             details_html = f"""
             <div class="details">
                 <p><strong>Début trouvé:</strong> {result.get('start_found')}</p> <p><strong>Fin trouvée:</strong> {result.get('end_found')}</p>
                 <p><strong>Problème template:</strong> {result.get('template_issue', False)}</p> <p><strong>Problème encodage:</strong> {result.get('encoding_issues', False)}</p>
                 <p><strong>Longueur:</strong> {result.get('extracted_length', 'N/A')}</p>
             </div>"""
-        elif status == "invalid":
+        elif raw_status == "invalid":
             details_html = f"<div class='details'><p><strong>Début trouvé:</strong> {result.get('start_found')}</p><p><strong>Fin trouvée:</strong> {result.get('end_found')}</p></div>"
 
         html_content += f"""
