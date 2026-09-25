@@ -712,7 +712,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             )
             return []
 
-    def execute_query(
+    async def execute_query(
         self, belief_set: BeliefSet, query: str
     ) -> Tuple[Optional[bool], str]:
         """
@@ -837,7 +837,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             )
             return False
 
-    def is_consistent(self, belief_set: BeliefSet) -> tuple[bool, str]:
+    async def is_consistent(self, belief_set: BeliefSet) -> tuple[bool, str]:
         self.logger.debug("Vérification de la cohérence de l'ensemble de croyances PL.")
         try:
             belief_set_content = belief_set.content
@@ -861,16 +861,18 @@ class PropositionalLogicAgent(BaseLogicAgent):
             self.logger.error(error_msg, exc_info=True)
             return False, error_msg
 
-    async def _create_belief_set_from_data(
-        self, data: str, context: Optional[Dict[str, Any]] = None
-    ) -> Optional[BeliefSet]:
+    def _create_belief_set_from_data(
+        self, belief_set_data: Dict[str, Any]
+    ) -> BeliefSet:
         """
-        Implémentation de la méthode abstraite pour créer un BeliefSet
-        à partir de données textuelles brutes.
+        Reconstruit un `PropositionalBeliefSet` à partir du dictionnaire que
+        `_handle_translation_task` stocke. Son contenu est déjà formel : il n'est
+        pas retraduit par le LLM, comme le faisait la version précédente (#2641).
         """
-        self.logger.debug(f"_create_belief_set_from_data appelé pour {self.name}.")
-        belief_set, _ = await self.text_to_belief_set(text=data, context=context)
-        return belief_set
+        return PropositionalBeliefSet(
+            belief_set_data.get("content", ""),
+            propositions=belief_set_data.get("propositions"),
+        )
 
     async def get_response(
         self, messages: list[ChatMessageContent]
@@ -955,7 +957,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             source_text = messages[0].content if len(messages) > 1 else ""
             belief_set, message = await self.text_to_belief_set(source_text)
             if belief_set:
-                is_consistent, details = self.is_consistent(belief_set)
+                is_consistent, details = await self.is_consistent(belief_set)
                 response_content = json.dumps(
                     {
                         "task": "check_consistency",

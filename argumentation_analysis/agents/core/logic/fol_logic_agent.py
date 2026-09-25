@@ -1229,7 +1229,7 @@ RÉPONDS EN FORMAT JSON :
                 f"{type(e).__name__}: {e}"
             )
 
-    def interpret_results(
+    async def interpret_results(
         self,
         text: str,
         belief_set: BeliefSet,
@@ -1419,18 +1419,17 @@ RÉPONDS EN FORMAT JSON :
             "tweety_enabled": self._tweety_bridge is not None,
         }
 
-    def _create_belief_set_from_data(self, data: Any) -> BeliefSet:
+    def _create_belief_set_from_data(
+        self, belief_set_data: Dict[str, Any]
+    ) -> BeliefSet:
         """
-        Implémentation de la méthode abstraite. Crée un BeliefSet à partir de données.
-        Pour FOLLogicAgent, les "données" sont supposées être une liste de formules.
-        Le contenu sera une représentation textuelle de ces formules.
-        """
-        content = ""
-        if isinstance(data, list):
-            content = "\n".join(map(str, data))
+        Reconstruit un `FirstOrderBeliefSet` à partir du dictionnaire que
+        `_handle_translation_task` stocke (`{"logic_type", "content"}`).
 
-        belief_set = FirstOrderBeliefSet(content=content)
-        return belief_set
+        #2641 : cette méthode attendait une liste de formules, que rien ne lui
+        passe ; le dictionnaire stocké donnait un ensemble vide.
+        """
+        return FirstOrderBeliefSet(content=belief_set_data.get("content", ""))
 
 
 # ==================== FACTORY ET UTILITAIRES ====================
