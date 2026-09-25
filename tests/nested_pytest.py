@@ -66,14 +66,55 @@ SETTLE = 2
 # threads. Well below BOUND, so the dump is in stderr when the bound expires.
 EXIT_WATCHDOG = 60
 _WATCHDOG_ENV = "NESTED_PYTEST_EXIT_WATCHDOG"
+# OpenProcess access right, enough for GetProcessTimes.
+_QUERY_LIMITED_INFORMATION = 0x1000
 
 
-def descendants(pid):
+def _created(pid):
+    """When process ``pid`` was created, in the unit of the Windows process
+    table's creation column: a FILETIME (100 ns since 1601), cut to the
+    column's microsecond precision. ``None`` on posix.
+
+    The caller's ``Popen`` holds a handle to ``pid``, so the id names the same
+    process even after it has exited.
+    """
+    if os.name != "nt":
+        return None
+    import ctypes
+    from ctypes import wintypes
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.GetProcessTimes.argtypes = [wintypes.HANDLE] + [
+        ctypes.POINTER(wintypes.FILETIME)
+    ] * 4
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    handle = kernel32.OpenProcess(_QUERY_LIMITED_INFORMATION, False, pid)
+    if not handle:
+        raise ctypes.WinError(ctypes.get_last_error())
+    try:
+        times = [wintypes.FILETIME() for _ in range(4)]
+        if not kernel32.GetProcessTimes(handle, *map(ctypes.byref, times)):
+            raise ctypes.WinError(ctypes.get_last_error())
+    finally:
+        kernel32.CloseHandle(handle)
+    return (times[0].dwHighDateTime << 32 | times[0].dwLowDateTime) // 10 * 10
+
+
+def descendants(pid, created):
     """The processes below ``pid``, as ``[(pid, name)]``, read from the
-    process table.
+    process table. ``created``: when ``pid`` was created (``_created``).
 
     On Windows a process keeps its parent's id after the parent exits, so the
-    walk still finds what a dead child left behind.
+    walk still finds what a dead child left behind. The id stays after it has
+    gone to another process too, so a process counts as below another only if
+    it was created at or after it (the rule of ``psutil``'s
+    ``Process.children``). Without that rule, a CI run gave a probe the id of
+    an exited ``smss.exe``, listed the session's csrss.exe, winlogon.exe,
+    dwm.exe and fontdrvhost.exe as left behind by the probe, and killed them
+    (#2662). On posix an orphan is re-parented, so a parent id always names a
+    live process, and the table has no creation column.
     """
     if os.name == "nt":
         argv = [
@@ -81,32 +122,45 @@ def descendants(pid):
             "-NoProfile",
             "-Command",
             "Get-CimInstance Win32_Process | ForEach-Object "
-            "{ '{0} {1} {2}' -f $_.ProcessId, $_.ParentProcessId, $_.Name }",
+            "{ '{0} {1} {2} {3}' -f $_.ProcessId, $_.ParentProcessId, "
+            "$(if ($_.CreationDate) { $_.CreationDate.ToFileTimeUtc() } else { 0 }), "
+            "$_.Name }",
         ]
+        width = 4
     else:
         argv = ["ps", "-eo", "pid=,ppid=,comm="]
+        width = 3
     listing = subprocess.run(
         argv, capture_output=True, text=True, timeout=60, check=True
     ).stdout
     children = {}
     for line in listing.splitlines():
-        fields = line.split(None, 2)
-        if len(fields) == 3 and fields[0].isdigit() and fields[1].isdigit():
-            children.setdefault(int(fields[1]), []).append((int(fields[0]), fields[2]))
-    found, seen, todo = [], {pid}, [pid]
+        fields = line.split(None, width - 1)
+        if len(fields) == width and all(field.isdigit() for field in fields[:-1]):
+            when = int(fields[2]) if width == 4 else None
+            children.setdefault(int(fields[1]), []).append(
+                (int(fields[0]), when, fields[-1])
+            )
+    found, seen, todo = [], {pid}, [(pid, created)]
     while todo:
-        for child, name in children.get(todo.pop(), []):
-            if child not in seen:
-                seen.add(child)
-                found.append((child, name))
-                todo.append(child)
+        parent, parent_created = todo.pop()
+        for child, child_created, name in children.get(parent, []):
+            if child in seen:
+                continue
+            if None not in (parent_created, child_created) and (
+                child_created < parent_created
+            ):
+                continue
+            seen.add(child)
+            found.append((child, name))
+            todo.append((child, child_created))
     return found
 
 
 def _state_at_bound(process):
     """What was below ``process`` when the bound expired. ``(text, pids)``."""
     try:
-        below = descendants(process.pid)
+        below = descendants(process.pid, _created(process.pid))
     except (OSError, subprocess.SubprocessError) as exc:
         return f"--- at the bound\ndescendants: not listed ({exc!r})\n", []
     listed = ", ".join(f"{pid} {name}" for pid, name in below) or "none"
@@ -199,14 +253,19 @@ def _left_behind(process):
     it that are still there ``SETTLE`` s later. They are killed.
 
     The walk goes by parent id, so on Windows it finds what the dead process
-    started; on posix an orphan is re-parented and escapes it.
+    started; on posix an orphan is re-parented and escapes it. A process
+    created before ``process`` is not counted, whatever parent id it names
+    (#2662).
     """
-    below = descendants(process.pid)
+    created = _created(process.pid)
+    below = descendants(process.pid, created)
     if not below:
         return []
     time.sleep(SETTLE)
     first = {pid for pid, _ in below}
-    left = [(pid, name) for pid, name in descendants(process.pid) if pid in first]
+    left = [
+        (pid, name) for pid, name in descendants(process.pid, created) if pid in first
+    ]
     _kill([pid for pid, _ in left])
     return left
 
