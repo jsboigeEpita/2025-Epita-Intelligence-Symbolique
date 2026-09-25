@@ -20,6 +20,7 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
+from semantic_kernel.const import DEFAULT_SERVICE_NAME
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
 from argumentation_analysis.config.settings import settings, DEFAULT_CHAT_MODEL_ID
 
@@ -341,10 +342,12 @@ def resolve_chat_endpoint(
     return api_key, base_url, model_id
 
 
-# La signature de la fonction est conservée pour la compatibilité, mais on utilise create_llm_service
-# pour la logique principale.
+# service_id a un défaut : l'id par défaut de Semantic Kernel, celui que
+# BaseAgent résout sans id explicite. fdbb54e20 l'avait rendu obligatoire sans
+# motif écrit, et onze appelants (code, docs, notebook) comptaient encore sur
+# un défaut : chacun levait TypeError (#2634).
 def create_llm_service(
-    service_id: str,
+    service_id: str = DEFAULT_SERVICE_NAME,
     model_id: Optional[str] = None,
     service_type: str = "OpenAIChatCompletion",
     force_mock: bool = False,
@@ -360,7 +363,8 @@ def create_llm_service(
 
     Args:
         service_id (str): L'ID de service à utiliser pour l'instance dans
-                          le kernel Semantic Kernel.
+                          le kernel Semantic Kernel. Par défaut "default"
+                          (``semantic_kernel.const.DEFAULT_SERVICE_NAME``).
         model_id (str, optionnel): L'ID du modèle. Si non fourni, il est lu
                                  depuis la variable d'environnement OPENAI_CHAT_MODEL_ID.
         service_type (str): Le type de service à créer (par ex., "OpenAIChatCompletion").

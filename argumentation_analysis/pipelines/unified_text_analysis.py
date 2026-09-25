@@ -59,7 +59,6 @@ import semantic_kernel as sk
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.llm_service import create_llm_service
 from argumentation_analysis.core.jvm_setup import initialize_jvm
-from argumentation_analysis.paths import LIBS_DIR
 
 # Imports des orchestrateurs refactorisés
 from argumentation_analysis.orchestration.unified_pipeline import (
@@ -159,7 +158,10 @@ class UnifiedTextAnalysisPipeline:
         if "formal" in self.config.analysis_modes:
             logger.info("[JVM] Initialisation de la JVM pour analyse formelle...")
             try:
-                self.jvm_ready = initialize_jvm(lib_dir_path=LIBS_DIR)
+                # initialize_jvm résout son classpath lui-même : il n'a plus de
+                # paramètre lib_dir_path depuis 2025-06, et l'appel levait
+                # TypeError dans l'except ci-dessous (#2634).
+                self.jvm_ready = initialize_jvm()
                 if self.jvm_ready:
                     logger.info("[JVM] JVM initialisee avec succes")
                     if self.conversation_logger and hasattr(
