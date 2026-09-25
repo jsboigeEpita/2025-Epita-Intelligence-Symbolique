@@ -14,7 +14,7 @@ callables. Uses the investigation metaphor:
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
@@ -57,8 +57,9 @@ class SherlockModernOrchestrator:
       6. ATMS — hypothesis branching
       7. NarrativeSynthesisPlugin — solution synthesis
 
-    Works without LLM calls — invoke callables use template-based
-    fallbacks when services are unavailable.
+    A phase whose callable is unavailable or raises is recorded as a failed
+    step (exception in the trace and the state) — never narrated as an
+    empty finding (#2543).
     """
 
     MIN_AGENTS = 5
@@ -116,6 +117,19 @@ class SherlockModernOrchestrator:
                 exc_info=True,
             )
 
+    def _record_phase_failure(self, phase: str, agent: str, error: str) -> None:
+        """Record a phase that did not run (#2543): a failed step in the
+        trace and an error in the state — never an empty finding narrated
+        as a result."""
+        self._add_step(
+            phase=phase,
+            agent=agent,
+            findings={"failed": True, "error": error},
+            conclusion=f"Phase '{phase}' did not run: {error}",
+        )
+        if self.state is not None:
+            self.state.log_error(agent, f"Sherlock phase '{phase}' failed: {error}")
+
     def _add_step(self, phase: str, agent: str, findings: Dict, conclusion: str):
         self._trace.append(
             InvestigationStep(
@@ -153,11 +167,15 @@ class SherlockModernOrchestrator:
 
     async def _phase_extraction(self, text: str):
         """Phase 1: Identify claims in the discourse."""
-        result = await self._invoke_safe(
-            "_invoke_extract",
-            text,
-            fallback={"extracts": [], "arguments": [], "claims": []},
-        )
+        # The callable the registry wires for the ``fact_extraction``
+        # capability (registry_setup.py) — the historical ``_invoke_extract``
+        # name never existed in invoke_callables, so this phase never ran.
+        result, error = await self._invoke_phase("_invoke_fact_extraction", text)
+        if result is None:
+            self._record_phase_failure(
+                "extraction", "ExtractAgent", error or "callable returned no result"
+            )
+            return
         self._ctx["phase_extract_output"] = result
         self._persist_to_state("phase_extract_output", result)
 
@@ -175,26 +193,34 @@ class SherlockModernOrchestrator:
 
     async def _phase_fallacy_detection(self, text: str):
         """Phase 2: Detect argumentative inconsistencies."""
-        result = await self._invoke_safe(
-            "_invoke_hierarchical_fallacy",
-            text,
-            fallback={"fallacies": {}, "total": 0},
-        )
+        result, error = await self._invoke_phase("_invoke_hierarchical_fallacy", text)
+        if result is None:
+            self._record_phase_failure(
+                "fallacy_detection",
+                "InformalAnalysisAgent",
+                error or "callable returned no result",
+            )
+            return
         self._ctx["phase_hierarchical_fallacy_output"] = result
         self._persist_to_state("phase_hierarchical_fallacy_output", result)
 
         fallacies = result.get("fallacies", [])
         if isinstance(fallacies, dict):
             count = len(fallacies)
+            # #2543: the detector's items carry ``fallacy_type``
+            # (fallacy_workflow_plugin.py emits that key) — reading ``type``
+            # rendered "Detected N ... ()" on real runs.
             types = list(
                 set(
-                    v.get("type", "") for v in fallacies.values() if isinstance(v, dict)
+                    v.get("fallacy_type", "")
+                    for v in fallacies.values()
+                    if isinstance(v, dict)
                 )
             )
         elif isinstance(fallacies, list):
             count = len(fallacies)
             types = list(
-                set(f.get("type", "") for f in fallacies if isinstance(f, dict))
+                set(f.get("fallacy_type", "") for f in fallacies if isinstance(f, dict))
             )
         else:
             count = result.get("total", 0)
@@ -213,11 +239,14 @@ class SherlockModernOrchestrator:
 
     async def _phase_quality(self, text: str):
         """Phase 3: Evaluate argument reliability."""
-        result = await self._invoke_safe(
-            "_invoke_quality_evaluator",
-            text,
-            fallback={"per_argument_scores": {}, "note_finale": 0.0},
-        )
+        result, error = await self._invoke_phase("_invoke_quality_evaluator", text)
+        if result is None:
+            self._record_phase_failure(
+                "quality_evaluation",
+                "ArgumentQualityEvaluator",
+                error or "callable returned no result",
+            )
+            return
         self._ctx["phase_quality_output"] = result
         self._persist_to_state("phase_quality_output", result)
 
@@ -239,11 +268,14 @@ class SherlockModernOrchestrator:
 
     async def _phase_cross_examination(self, text: str):
         """Phase 4: Cross-examine via counter-arguments."""
-        result = await self._invoke_safe(
-            "_invoke_counter_argument",
-            text,
-            fallback={"counter_arguments": [], "suggested_strategy": {}},
-        )
+        result, error = await self._invoke_phase("_invoke_counter_argument", text)
+        if result is None:
+            self._record_phase_failure(
+                "cross_examination",
+                "CounterArgumentAgent",
+                error or "callable returned no result",
+            )
+            return
         self._ctx["phase_counter_output"] = result
         self._persist_to_state("phase_counter_output", result)
 
@@ -270,11 +302,12 @@ class SherlockModernOrchestrator:
 
     async def _phase_belief_tracking(self, text: str):
         """Phase 5: Track belief propagation via JTMS."""
-        result = await self._invoke_safe(
-            "_invoke_jtms",
-            text,
-            fallback={"beliefs": {}, "retraction_chain": []},
-        )
+        result, error = await self._invoke_phase("_invoke_jtms", text)
+        if result is None:
+            self._record_phase_failure(
+                "belief_tracking", "JTMS", error or "callable returned no result"
+            )
+            return
         self._ctx["phase_jtms_output"] = result
         self._persist_to_state("phase_jtms_output", result)
 
@@ -310,11 +343,12 @@ class SherlockModernOrchestrator:
 
     async def _phase_hypothesis_branching(self, text: str):
         """Phase 6: Branch hypotheses via ATMS."""
-        result = await self._invoke_safe(
-            "_invoke_atms",
-            text,
-            fallback={"atms_contexts": [], "has_contradictions": False},
-        )
+        result, error = await self._invoke_phase("_invoke_atms", text)
+        if result is None:
+            self._record_phase_failure(
+                "hypothesis_branching", "ATMS", error or "callable returned no result"
+            )
+            return
         self._ctx["phase_atms_output"] = result
         self._persist_to_state("phase_atms_output", result)
 
@@ -369,11 +403,17 @@ class SherlockModernOrchestrator:
 
     async def _phase_solution_synthesis(self):
         """Phase 7: Synthesize investigation solution."""
-        result = await self._invoke_safe(
-            "_invoke_narrative_synthesis",
-            "",
-            fallback={"narrative": "", "paragraph_count": 0},
-        )
+        result, error = await self._invoke_phase("_invoke_narrative_synthesis", "")
+        if result is None:
+            self._record_phase_failure(
+                "solution_synthesis",
+                "NarrativeSynthesisPlugin",
+                error or "callable returned no result",
+            )
+            # The trace summary (which now lists the failed phases) is the
+            # honest solution when the synthesis callable did not run.
+            self._solution = self._build_template_solution()
+            return
         self._ctx["phase_narrative_synthesis_output"] = result
 
         narrative = result.get("narrative", "")
@@ -391,26 +431,41 @@ class SherlockModernOrchestrator:
 
     # ── Helpers ──────────────────────────────────────────────────────────
 
-    async def _invoke_safe(self, func_name: str, text: str, fallback: Dict) -> Dict:
-        """Try to invoke a callable, return fallback on failure."""
+    async def _invoke_phase(
+        self, func_name: str, text: str
+    ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+        """Run a phase callable. Returns ``(result, None)`` or ``(None, reason)``.
+
+        #2543: a phase whose callable is missing or raised is a FAILURE,
+        never an empty result. The previous contract returned the phase's
+        fallback dict on any exception, which the phase then narrated as a
+        finding ("Detected 0", "0.0/10") and fed to downstream phases
+        through ``self._ctx``.
+        """
         try:
             from argumentation_analysis.orchestration import invoke_callables as ic
 
             func = getattr(ic, func_name, None)
-            if func is not None:
-                return await func(text, self._ctx)
+            if func is None:
+                return None, f"callable '{func_name}' not found in invoke_callables"
+            return await func(text, self._ctx), None
         except Exception as e:
-            # WARNING (not DEBUG) so operators see when real callables fail
-            # silently — fallbacks otherwise mask import/signature errors
-            # (review #382/#383).
-            logger.warning("invoke_safe(%s) fallback: %s", func_name, e)
-        return dict(fallback)
+            logger.warning("invoke_phase(%s) failed: %s", func_name, e)
+            return None, f"{type(e).__name__}: {e}"
 
     def _build_template_solution(self) -> str:
         """Build a template investigation solution from trace data."""
         lines = ["Investigation Summary\n"]
         for step in self._trace:
             lines.append(f"Step {step.step} [{step.phase}]: {step.conclusion}")
+        # #2543: the conclusion must say which phases did not run.
+        failed = [s for s in self._trace if s.findings.get("failed")]
+        if failed:
+            lines.append("\nPhases that did not run:")
+            for s in failed:
+                lines.append(
+                    f"  - {s.phase}: {s.findings.get('error', 'unknown error')}"
+                )
         if self._hypotheses:
             lines.append("\nHypotheses:")
             for h in self._hypotheses:
