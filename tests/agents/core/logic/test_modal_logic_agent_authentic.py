@@ -46,6 +46,7 @@ from argumentation_analysis.agents.core.logic.belief_set import (
 )
 from argumentation_analysis.agents.core.logic.tweety_bridge import TweetyBridge
 from argumentation_analysis.core.jvm_setup import is_jvm_started
+from argumentation_analysis.config.settings import DEFAULT_CHAT_MODEL_ID
 
 
 # Création d'une classe concrète pour les tests
@@ -66,39 +67,43 @@ def authentic_agent(tweety_bridge_fixture):
     llm_service_id = "authentic_modal_llm_service"
     llm_available = False
 
-    try:
-        azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-        azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+    # #2651 : une construction de service qui échoue lève ici, avec sa cause,
+    # au lieu d'être imprimée puis ignorée.
+    azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    azure_api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    azure_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", "gpt-4o")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    model_id = os.getenv("OPENAI_CHAT_MODEL_ID", DEFAULT_CHAT_MODEL_ID)
 
-        if azure_endpoint and azure_api_key and AzureOpenAIChatCompletion:
-            chat_service = AzureOpenAIChatCompletion(
-                service_id=llm_service_id,
-                deployment_name=azure_deployment,
-                endpoint=azure_endpoint,
-                api_key=azure_api_key,
+    if azure_endpoint and azure_api_key and AzureOpenAIChatCompletion:
+        chat_service = AzureOpenAIChatCompletion(
+            service_id=llm_service_id,
+            deployment_name=azure_deployment,
+            endpoint=azure_endpoint,
+            api_key=azure_api_key,
+        )
+        kernel.add_service(chat_service)
+        llm_available = True
+        print(f"✅ Service LLM Azure configuré pour Modal: {azure_deployment}")
+    elif openai_api_key and OpenAIChatCompletion:
+        chat_service = OpenAIChatCompletion(
+            service_id=llm_service_id,
+            ai_model_id=model_id,
+            api_key=openai_api_key,
+        )
+        kernel.add_service(chat_service)
+        llm_available = True
+        print(f"✅ Service LLM OpenAI configuré pour Modal: {model_id}")
+    else:
+        # Sans clé : un service nommé mais jamais appelé laisse l'agent se
+        # construire (#2633 exige un service dans le kernel). Les tests LLM se
+        # sautent sur llm_available ; ceux de Tweety tournent.
+        kernel.add_service(
+            OpenAIChatCompletion(
+                service_id=llm_service_id, ai_model_id="keyless", api_key="keyless"
             )
-            kernel.add_service(chat_service)
-            llm_available = True
-            print(f"✅ Service LLM Azure configuré pour Modal: {azure_deployment}")
-        else:
-            openai_api_key = os.getenv("OPENAI_API_KEY")
-            if openai_api_key and OpenAIChatCompletion:
-                chat_service = OpenAIChatCompletion(
-                    service_id=llm_service_id,
-                    ai_model_id="gpt-5-mini",
-                    api_key=openai_api_key,
-                )
-                kernel.add_service(chat_service)
-                llm_available = True
-                print("✅ Service LLM OpenAI configuré pour Modal: gpt-5-mini")
-            else:
-                print(
-                    "⚠️ Connecteurs LLM non disponibles ou clés API manquantes pour Modal"
-                )
-    except Exception as e:
-        llm_available = False
-        print(f"⚠️ Erreur configuration LLM Modal: {e}")
+        )
+        print("⚠️ Clés API manquantes pour Modal : tests LLM sautés")
 
     agent_name = "ModalLogicAgent"
     agent = ConcreteModalLogicAgent(
@@ -107,11 +112,8 @@ def authentic_agent(tweety_bridge_fixture):
     agent._tweety_bridge = tweety_bridge_fixture  # Injection directe
 
     if llm_available:
-        try:
-            agent.setup_agent_components(llm_service_id)
-            print("✅ Agent Modal authentique configuré")
-        except Exception as e:
-            print(f"⚠️ Erreur configuration agent Modal: {e}")
+        agent.setup_agent_components(llm_service_id)
+        print("✅ Agent Modal authentique configuré")
 
     return {
         "agent": agent,
@@ -180,9 +182,12 @@ async def test_text_to_belief_set_authentic_modal(authentic_agent):
     assert len(belief_set.content) > 0
     print(f"✅ Belief set Modal authentique créé: {belief_set.content[:100]}...")
 
-    is_valid, validation_msg = tweety_bridge.validate_modal_belief_set(
+    # #2651 : TweetyBridge n'a pas de validate_modal_belief_set ; la
+    # vérification réelle est celle que l'agent appelle (is_consistent).
+    is_valid, validation_msg = tweety_bridge.modal_handler.is_modal_kb_consistent(
         belief_set.content
     )
+    assert isinstance(validation_msg, str)
     print(
         f"✅ Validation TweetyBridge Modal authentique: {is_valid} - {validation_msg}"
     )
@@ -217,7 +222,7 @@ async def test_generate_queries_authentic_modal(authentic_agent):
             print(f"  Validation Modal: {is_valid} - {msg}")
 
 
-def test_execute_query_authentic_modal(authentic_agent):
+async def test_execute_query_authentic_modal(authentic_agent):
     """Test authentique d'exécution de requête modale avec TweetyBridge."""
     agent = authentic_agent["agent"]
     if not authentic_agent["tweety_available"]:
@@ -227,10 +232,9 @@ def test_execute_query_authentic_modal(authentic_agent):
     belief_set = ModalBeliefSet(belief_set_content)
     query = "p"
 
-    try:
-        result, message = agent.execute_query(belief_set, query)
-    except Exception as e:
-        pytest.skip(f"Tweety execute_query failed: {e}")
+    # #2651 : execute_query tourne sur Tweety, pas sur le LLM : son échec est
+    # un défaut, pas une indisponibilité, donc il fait échouer le test.
+    result, message = await agent.execute_query(belief_set, query)
 
     print(f"✅ Exécution authentique requête Modal: {result} - {message}")
     # execute_query returns Tuple[Optional[bool], str] — result may be None
@@ -290,10 +294,7 @@ async def test_full_workflow_modal_authentic(authentic_agent):
     # Step 3: Execute queries
     for i, query in enumerate(queries[:2]):
         if query:
-            try:
-                result, exec_message = agent.execute_query(belief_set, query)
-            except Exception as e:
-                pytest.skip(f"Workflow step 3 (execute_query '{query}') failed: {e}")
+            result, exec_message = await agent.execute_query(belief_set, query)
             print(f"✅ Étape 3.{i+1} Modal authentique - Requête '{query}': {result}")
             assert isinstance(result, bool)
 
@@ -308,16 +309,13 @@ def test_modal_specific_features_authentic(authentic_agent):
 
     modal_formulas = ["[]p", "<>q", "[]p => <>p"]
 
+    # #2651 : les assertions étaient dans un `except Exception` qui les
+    # imprimait ; une validation qui échoue fait désormais échouer le test.
     for formula in modal_formulas:
-        try:
-            is_valid, message = tweety_bridge.modal_handler.validate_modal_formula(
-                formula
-            )
-            print(f"✅ Formule modale '{formula}': {is_valid} - {message}")
-            assert isinstance(is_valid, bool)
-            assert isinstance(message, str)
-        except Exception as e:
-            print(f"⚠️ Erreur validation formule modale '{formula}': {e}")
+        is_valid, message = tweety_bridge.modal_handler.validate_modal_formula(formula)
+        print(f"✅ Formule modale '{formula}': {is_valid} - {message}")
+        assert isinstance(is_valid, bool)
+        assert isinstance(message, str)
 
 
 @pytest.mark.performance
