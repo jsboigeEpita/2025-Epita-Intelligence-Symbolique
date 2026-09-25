@@ -6,9 +6,12 @@ Script de test pour l'utilitaire de lazy loading de la taxonomie des sophismes.
 Ce script vérifie que le fichier de taxonomie peut être correctement téléchargé et validé.
 """
 
+import csv
 import os
 import logging
 from pathlib import Path
+
+import pytest
 
 # Configuration du logging
 logging.basicConfig(
@@ -18,7 +21,9 @@ logger = logging.getLogger("TestTaxonomyLoader")
 
 # Import de l'utilitaire de lazy loading
 from argumentation_analysis.utils.taxonomy_loader import (
+    TAXONOMY_FILE,
     TAXONOMY_REGIME_ENV,
+    TaxonomyLoader,
     get_taxonomy_path,
     get_taxonomy_regime,
     get_taxonomy_source_for_regime,
@@ -105,6 +110,31 @@ def test_funnel_regime_hands_the_funnel_the_resolved_path(monkeypatch):
     )
     # A str, because the call sites declare their taxonomy parameter as str.
     assert get_taxonomy_source_for_regime("funnel") == str(sentinel)
+
+
+# --- #2346: no simulated mode, and a read failure is not replaced by invented entries ---
+
+
+def test_load_taxonomy_reads_every_row_of_the_vendored_file():
+    with open(TAXONOMY_FILE, encoding="utf-8") as handle:
+        rows = [row for row in csv.DictReader(handle) if any(row.values())]
+
+    entries = TaxonomyLoader().load_taxonomy()
+
+    assert len(entries) == len(rows)
+    assert [e["PK"] for e in entries] == [r["PK"].strip() for r in rows]
+
+
+def test_load_taxonomy_raises_when_the_file_cannot_be_read(monkeypatch, tmp_path):
+    """The loader used to return five invented fallacies here, logged as a warning."""
+    missing = tmp_path / "absent.csv"
+    monkeypatch.setattr(
+        "argumentation_analysis.utils.taxonomy_loader.get_taxonomy_path",
+        lambda: missing,
+    )
+
+    with pytest.raises(FileNotFoundError):
+        TaxonomyLoader().load_taxonomy()
 
 
 if __name__ == "__main__":
