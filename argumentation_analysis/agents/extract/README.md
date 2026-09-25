@@ -10,7 +10,7 @@ Tout ce que `agents.core.extract` exporte (transitif par star-import) + `Extract
 
 ## Points d'entrée valides
 
-**Aucun n'aboutit ici.** Tout le code production importe la cible `agents.core.extract` directement (`orchestration/analysis_runner_v2.py:72`, `operational/direct_executor.py:4`, `hierarchical/.../extract_agent_adapter.py:23`, `enhanced_pm_analysis_runner.py:67`, `ui/extract_editor/extract_marker_editor.py:50`). Le shim n'est exercé que par l'outillage de maintenance qui **vérifie la redirection** : `scripts/maintenance/test_imports.py:80,90`, `scripts/maintenance/tools/check_imports.py:40` (aucun workflow CI ne les lance, grep `.github/workflows/` vide).
+**Aucun n'aboutit ici.** Tout le code production importe la cible `agents.core.extract` directement (`operational/direct_executor.py:4`, `hierarchical/.../extract_agent_adapter.py:23`, `enhanced_pm_analysis_runner.py:67`, `ui/extract_editor/extract_marker_editor.py:50`). Le shim n'est exercé que par l'outillage de maintenance qui **vérifie la redirection** : `scripts/maintenance/test_imports.py:80,90`, `scripts/maintenance/tools/check_imports.py:40` (aucun workflow CI ne les lance, grep `.github/workflows/` vide).
 
 ## Amont / aval
 

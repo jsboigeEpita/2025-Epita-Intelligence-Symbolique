@@ -1,95 +1,114 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 # -*- coding: utf-8 -*-
 """
-Tests unitaires pour le `AnalysisRunner`.
+Tests of ``AnalysisRunnerV2`` on a real kernel and a real OpenAI service whose
+chat call is mocked (#2630): no network, no key.
 
-Ce module contient les tests unitaires pour la classe `AnalysisRunner`,
-qui orchestre l'analyse argumentative d'un texte.
+The test that stood here patched ``AgentFactory`` and ``AgentGroupChat``, and
+asserted that ``invoke`` was awaited once per phase. Awaiting ``invoke`` is
+the defect itself: it is an async generator, so every phase raised. The test
+stayed green while the runner could not get past its setup.
 """
 
-import unittest
-from unittest.mock import patch, MagicMock, AsyncMock
-import asyncio
-from unittest.mock import patch, MagicMock, AsyncMock
+import ast
+import inspect
+from unittest.mock import AsyncMock
+
+import pytest
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+
+import argumentation_analysis.core.state_manager_plugin as state_plugin_module
+import argumentation_analysis.orchestration.analysis_runner_v2 as runner_module
 from argumentation_analysis.orchestration.analysis_runner_v2 import AnalysisRunnerV2
-from argumentation_analysis.config.settings import AppSettings
+
+TEXT = "Il pleut, donc la route est mouillée."
+
+# Who speaks in each phase, written out here rather than read from the runner.
+CASTING = [
+    ["ProjectManager", "ExtractAgent", "InformalAgent"],
+    ["ProjectManager", "FormalAgent", "QualityAgent"],
+    ["ProjectManager", "DebateAgent", "CounterAgent", "GovernanceAgent"],
+]
+TURNS_PER_PHASE = 5
 
 
-class TestAnalysisRunnerV2(unittest.IsolatedAsyncioTestCase):
-    """Suite de tests pour la classe `AnalysisRunnerV2`."""
-
-    def setUp(self):
-        """Initialisation avant chaque test."""
-        self.mock_llm_service = MagicMock()
-        self.runner = AnalysisRunnerV2(llm_service=self.mock_llm_service)
-        self.test_text = "Ceci est un texte de test pour l'analyse."
-
-    @patch(
-        "argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat",
-        new_callable=MagicMock,
+def _service(chat=None):
+    svc = OpenAIChatCompletion(
+        service_id="caller_svc", ai_model_id="gpt-test", api_key="sk-test"
     )
-    @patch("argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory")
-    @patch(
-        "argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState"
-    )
-    @patch(
-        "argumentation_analysis.orchestration.analysis_runner_v2.start_enhanced_pm_capture"
-    )
-    @patch(
-        "argumentation_analysis.orchestration.analysis_runner_v2.stop_enhanced_pm_capture"
-    )
-    @patch(
-        "argumentation_analysis.orchestration.analysis_runner_v2.save_enhanced_pm_report"
-    )
-    async def test_run_analysis_v2_flow(
-        self,
-        mock_save_report,
-        mock_stop_capture,
-        mock_start_capture,
-        mock_state,
-        mock_factory,
-        mock_chat_class,
-    ):
-        """
-        Teste le flux principal de `run_analysis` dans `AnalysisRunnerV2`.
-        """
-        # --- Arrange ---
-        mock_state_instance = mock_state.return_value
-        mock_state_instance.to_json.return_value = "{}"  # Retourne un JSON valide
-
-        mock_chat_instance = mock_chat_class.return_value
-        mock_chat_instance.invoke = AsyncMock(
-            return_value=self.mock_async_iterator([])
-        )  # invoke est une méthode async
-
-        # --- Act ---
-        result = await self.runner.run_analysis(self.test_text)
-
-        # --- Assert ---
-        mock_start_capture.assert_called_once()
-        self.assertTrue(mock_state.called)
-        self.assertTrue(mock_factory.called)
-        # 3 phases, donc 3 appels à AgentGroupChat
-        self.assertEqual(mock_chat_class.call_count, 3)
-        self.assertEqual(mock_chat_instance.invoke.await_count, 3)
-        mock_stop_capture.assert_called_once()
-        mock_save_report.assert_called_once()
-
-        self.assertEqual(result["status"], "success")
-
-    def mock_async_iterator(self, items):
-        """Crée un itérateur asynchrone à partir d'une liste d'éléments."""
-
-        async def _iterator():
-            for item in items:
-                yield item
-
-        return _iterator()
+    if chat is None:
+        # A fresh message per call: the agent stamps its name on what it gets.
+        chat = AsyncMock(
+            side_effect=lambda *a, **k: [
+                ChatMessageContent(role=AuthorRole.ASSISTANT, content="Tour traité.")
+            ]
+        )
+    object.__setattr__(svc, "get_chat_message_contents", chat)
+    return svc, chat
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.fixture(autouse=True)
+def _no_trace_file(monkeypatch):
+    # A run saves its trace report under <repo>/logs; the tests do not.
+    monkeypatch.setattr(runner_module, "save_enhanced_pm_report", lambda path: True)
+
+
+async def test_setup_builds_every_agent_on_the_callers_service():
+    svc, _ = _service()
+    runner = AnalysisRunnerV2(llm_service=svc)
+
+    await runner._setup_orchestration(TEXT, svc)
+
+    assert {name for phase in CASTING for name in phase} <= set(runner.agents)
+    assert all(agent.service is svc for agent in runner.agent_list)
+
+
+def _state_methods_the_plugin_calls():
+    tree = ast.parse(inspect.getsource(state_plugin_module))
+    return {
+        node.func.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and isinstance(node.func.value, ast.Attribute)
+        and node.func.value.attr == "_state"
+    }
+
+
+async def test_the_state_carries_every_method_the_agents_plugin_calls():
+    # The agents write through StateManagerPlugin; a method it calls that the
+    # state lacks turns into a FUNC_ERROR the LLM reads, and the run goes on.
+    svc, _ = _service()
+    runner = AnalysisRunnerV2(llm_service=svc)
+    await runner._setup_orchestration(TEXT, svc)
+
+    called = _state_methods_the_plugin_calls()
+    assert len(called) > 10  # the scan found the plugin's calls
+    assert sorted(n for n in called if not hasattr(runner.shared_state, n)) == []
+
+
+async def test_run_analysis_runs_the_three_phases_with_their_casting():
+    svc, chat = _service()
+    runner = AnalysisRunnerV2(llm_service=svc)
+
+    result = await runner.run_analysis(text_content=TEXT)
+
+    assert result["status"] == "success"
+    assert runner.phase_counter == 3
+    speakers = [
+        m["author_name"] for m in result["history"] if m["author_role"] == "assistant"
+    ]
+    expected = [
+        phase[turn % len(phase)] for phase in CASTING for turn in range(TURNS_PER_PHASE)
+    ]
+    assert speakers == expected
+    assert chat.await_count == 3 * TURNS_PER_PHASE
+
+
+async def test_a_failing_run_raises_instead_of_returning_an_error_result():
+    svc, _ = _service(AsyncMock(side_effect=RuntimeError("chat call failed")))
+    runner = AnalysisRunnerV2(llm_service=svc)
+
+    with pytest.raises(Exception, match="chat call failed"):
+        await runner.run_analysis(text_content=TEXT)

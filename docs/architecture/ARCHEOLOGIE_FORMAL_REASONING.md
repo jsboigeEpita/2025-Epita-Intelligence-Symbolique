@@ -86,7 +86,7 @@ FormalAgent (ChatCompletionAgent)
 2. **add_belief_set rejected FOL** — only accepted "propositional"/"pl", not "fol"/"first_order". **Fixed in `085b513b`**.
 
 ### Intentionally Changed
-1. **analysis_runner_v2.py deprecated** — the original conversational runner was replaced by ConversationalOrchestrator (cleaner, purpose-built).
+1. **analysis_runner_v2.py deprecated** — the original conversational runner was replaced by ConversationalOrchestrator (cleaner, purpose-built). It is still the runner behind `main_orchestrator`; #2630 repaired it on the conversational mode's agents (`create_conversational_agents`).
 2. **GroupChatTurnStrategy not used** — ConversationalOrchestrator uses direct round-robin instead of SK's native GroupChat selection. This was a deliberate simplification for reliability.
 3. **HierarchicalTurnStrategy dormant** — designed but never needed; the PM agent handles orchestration via instructions.
 
