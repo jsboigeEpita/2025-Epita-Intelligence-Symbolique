@@ -108,8 +108,9 @@ def _analyze_agent_effectiveness(
     # Initialiser le dictionnaire d'efficacité
     effectiveness = {}
 
-    # Analyser l'efficacité pour chaque corpus
-    all_corpora = set(base_by_corpus.keys()).union(set(advanced_by_corpus.keys()))
+    # Ordre d'insertion des groupes : déterministe, sans porter de sens.
+    all_corpora = list(base_by_corpus)
+    all_corpora += [c for c in advanced_by_corpus if c not in base_by_corpus]
 
     for corpus in all_corpora:
         effectiveness[corpus] = {
@@ -252,24 +253,15 @@ def _analyze_agent_effectiveness(
 
         effectiveness[corpus]["best_agent"] = best_agent
 
-        if corpus == "Discours d'Hitler":
-            effectiveness[corpus]["recommendations"] = [
-                "Utiliser l'agent EnhancedComplexFallacyAnalyzer pour détecter les sophismes composites fréquents dans les discours de propagande",
-                "Combiner avec l'agent EnhancedFallacySeverityEvaluator pour évaluer la gravité des sophismes dans ce contexte historique",
-                "Développer un agent spécifique pour l'analyse de la rhétorique totalitaire",
-            ]
-        elif corpus == "Débats Lincoln-Douglas":
-            effectiveness[corpus]["recommendations"] = [
-                "Privilégier l'agent EnhancedRhetoricalResultAnalyzer pour une analyse globale de la qualité argumentative",
-                "Utiliser l'agent ArgumentCoherenceEvaluator pour évaluer la cohérence des arguments dans ce contexte de débat formel",
-                "Développer un agent spécifique pour l'analyse des débats politiques historiques",
-            ]
-        else:
-            effectiveness[corpus]["recommendations"] = [
-                "Adapter le choix des agents en fonction du type de contenu spécifique",
-                "Combiner les agents de base et avancés pour une analyse complète",
-                "Évaluer la pertinence des agents au cas par cas",
-            ]
+        # Guidance générique : la classe d'un corpus (genre, registre) n'est
+        # déclarée par aucune entrée, et une position ne peut pas la porter
+        # (#2362) — une revendication de classe indexée sur le rang
+        # qualifierait n'importe quel corpus dans le rapport rendu.
+        effectiveness[corpus]["recommendations"] = [
+            "Adapter le choix des agents en fonction du type de contenu spécifique",
+            "Combiner les agents de base et avancés pour une analyse complète",
+            "Évaluer la pertinence des agents au cas par cas",
+        ]
 
     return effectiveness
 

@@ -49,19 +49,13 @@ def group_results_by_corpus(
 
         if not corpus_name:
             source_name = result_item.get("source_name")
-            if source_name and isinstance(
-                source_name, str
-            ):  # S'assurer que source_name est une chaîne pour .lower()
-                if "hitler" in source_name.lower():
-                    corpus_name = "Discours d'Hitler"
-                elif (
-                    "lincoln" in source_name.lower() or "douglas" in source_name.lower()
-                ):
-                    corpus_name = "Débats Lincoln-Douglas"
-                else:
-                    corpus_name = source_name
+            if source_name and isinstance(source_name, str):
+                # Le libellé passe verbatim : aucune canonisation par
+                # sous-chaîne de nom (#2362) — un mapping nom→libellé
+                # fabriquerait un identifiant de document dans le code.
+                corpus_name = source_name
             else:
-                corpus_name = "Corpus Inconnu"
+                corpus_name = f"corpus_{idx}"
                 logger.debug(
                     f"Aucun 'corpus_name' ou 'source_name' valide trouvé pour un résultat. Assignation à '{corpus_name}'. Item: {str(result_item)[:100]}"
                 )

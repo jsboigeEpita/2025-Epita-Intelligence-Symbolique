@@ -6,7 +6,7 @@ import argumentation_analysis.core.environment
 Script pour générer des synthèses des analyses rhétoriques avec des extraits concrets.
 
 Ce script:
-1. Simule le chargement des extraits déchiffrés (discours d'Hitler, débats Lincoln Douglas)
+1. Simule le chargement des extraits déchiffrés (identifiants opaques, #2362)
 2. Génère des analyses rhétoriques synthétiques mais réalistes pour ces extraits
 3. Produit des synthèses au format Markdown avec:
    - Un résumé de l'analyse pour chaque extrait
@@ -57,38 +57,27 @@ logging.basicConfig(
 )
 logger = logging.getLogger("RhetoricalAnalysisSummaries")
 
-# Définition des sources et extraits simulés
+# Définition des sources et extraits simulés — identifiants opaques (#2362) :
+# une simulation n'a pas besoin de nommer un corpus réel.
 SIMULATED_SOURCES = [
     {
-        "source_name": "Discours d'Hitler",
+        "source_name": "corpus_001",
         "extracts": [
-            {
-                "extract_name": "Discours du Reichstag (1939)",
-                "type": "discours_politique",
-            },
-            {
-                "extract_name": "Discours de Nuremberg (1934)",
-                "type": "discours_politique",
-            },
-            {"extract_name": "Discours à Munich (1923)", "type": "discours_politique"},
-            {
-                "extract_name": "Discours sur l'annexion de l'Autriche (1938)",
-                "type": "discours_politique",
-            },
-            {
-                "extract_name": "Discours sur le pacte germano-soviétique (1939)",
-                "type": "discours_politique",
-            },
+            {"extract_name": "extract_0101", "type": "discours_politique"},
+            {"extract_name": "extract_0102", "type": "discours_politique"},
+            {"extract_name": "extract_0103", "type": "discours_politique"},
+            {"extract_name": "extract_0104", "type": "discours_politique"},
+            {"extract_name": "extract_0105", "type": "discours_politique"},
         ],
     },
     {
-        "source_name": "Débats Lincoln-Douglas",
+        "source_name": "corpus_002",
         "extracts": [
-            {"extract_name": "Débat d'Ottawa (1858)", "type": "debat_politique"},
-            {"extract_name": "Débat de Freeport (1858)", "type": "debat_politique"},
-            {"extract_name": "Débat de Jonesboro (1858)", "type": "debat_politique"},
-            {"extract_name": "Débat de Charleston (1858)", "type": "debat_politique"},
-            {"extract_name": "Débat d'Alton (1858)", "type": "debat_politique"},
+            {"extract_name": "extract_0201", "type": "debat_politique"},
+            {"extract_name": "extract_0202", "type": "debat_politique"},
+            {"extract_name": "extract_0203", "type": "debat_politique"},
+            {"extract_name": "extract_0204", "type": "debat_politique"},
+            {"extract_name": "extract_0205", "type": "debat_politique"},
         ],
     },
 ]

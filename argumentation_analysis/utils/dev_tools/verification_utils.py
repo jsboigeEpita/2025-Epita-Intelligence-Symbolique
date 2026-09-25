@@ -5,7 +5,7 @@ Utilitaires pour la vérification des extraits.
 
 import logging
 from pathlib import Path
-from typing import Optional, List, Dict, Any, Tuple  # Ajout de Tuple
+from typing import Optional, List, Dict, Any, Tuple, Sequence  # Ajout de Tuple
 
 # Imports nécessaires pour la logique du pipeline et des fonctions déplacées
 # from project_core.service_setup.core_services import initialize_core_services # Remplacé par initialisation manuelle
@@ -319,7 +319,7 @@ def run_extract_verification_pipeline(
     project_root_dir: Path,
     output_report_path_str: str,
     custom_input_path_str: Optional[str],
-    hitler_only: bool,
+    only_source_indices: Optional[Sequence[int]] = None,
 ):
     """
     Exécute le pipeline de vérification des extraits.
@@ -412,15 +412,16 @@ def run_extract_verification_pipeline(
                     # Créer un dict manuellement si nécessaire, ou ignorer.
                     # Pour l'instant, on l'ignore pour éviter une erreur si la structure est inattendue.
 
-        if hitler_only:
+        if only_source_indices:
+            wanted_indices = set(only_source_indices)
             original_count = len(definitions_as_list_of_dicts)
             definitions_as_list_of_dicts = [
                 source_dict
-                for source_dict in definitions_as_list_of_dicts
-                if "hitler" in source_dict.get("source_name", "").lower()
+                for index, source_dict in enumerate(definitions_as_list_of_dicts)
+                if index in wanted_indices
             ]
             logger.info(
-                f"Filtrage des sources (pipeline): {len(definitions_as_list_of_dicts)}/{original_count} sources retenues."
+                f"Filtrage des sources (pipeline): {len(definitions_as_list_of_dicts)}/{original_count} sources retenues (positions: {sorted(wanted_indices)})."
             )
 
         if not definitions_as_list_of_dicts:
