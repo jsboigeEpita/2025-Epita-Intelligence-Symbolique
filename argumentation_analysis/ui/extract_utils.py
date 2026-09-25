@@ -213,27 +213,47 @@ def load_extract_definitions_safely(
     # Une conversion str→bytes est appliquée au site d'appel pour préserver la
     # compat avec les callers legacy qui passent ``str``.
     try:
+        config_path = Path(config_file)
+        # Cause nommée d'un déchiffrement manqué (#2655) : renseignée quand le
+        # fichier chiffré est là mais n'a pas pu être déchiffré. Elle n'est
+        # jamais lue depuis le singleton quand la clé manque : ``decrypt_data``
+        # n'est alors pas appelée, et ``last_error`` y serait périmée.
+        decryption_failure: Optional[str] = None
+
         # Essayer d'abord de charger depuis le fichier chiffré
         if encryption_key:
             if isinstance(encryption_key, str):
                 encryption_key = encryption_key.encode("utf-8")
             try:
-                config_path = Path(config_file)
                 if config_path.exists():
                     # Déchiffrer le fichier (#2639 : via la surface réelle de
                     # CryptoService — decrypt_file n'a jamais existé)
-                    encrypted_bytes = config_path.read_bytes()
                     decrypted_data = crypto_service.decrypt_data(
-                        encrypted_bytes, encryption_key
+                        config_path.read_bytes(), encryption_key
                     )
                     if decrypted_data:
                         # Décompresser les données
                         json_data = gzip.decompress(decrypted_data).decode("utf-8")
                         extract_definitions = json.loads(json_data)
                         return extract_definitions, None
+                    # La cause est lisible juste après l'appel (#2344).
+                    decryption_failure = (
+                        f"Échec du déchiffrement de {config_path} "
+                        f"(cause: {crypto_service.last_error})"
+                    )
             except Exception as e:
-                logger.error(f"Erreur lors du déchiffrement: {e}")
-                # Continuer avec le fallback
+                decryption_failure = f"Échec du déchiffrement de {config_path} ({e})"
+        elif config_path.exists():
+            # Le fichier chiffré est là, mais aucune clé n'est fournie.
+            decryption_failure = (
+                f"Clé de chiffrement absente pour {config_path} "
+                "(définir TEXT_CONFIG_PASSPHRASE pour la dériver)"
+            )
+
+        if decryption_failure:
+            # Jamais silencieux : un repli qui réussit ne doit pas masquer une
+            # clé fausse (#2655).
+            logger.warning(decryption_failure)
 
         # Si le déchiffrement échoue ou si pas de clé, essayer le fichier JSON
         if fallback_json_file:
@@ -242,6 +262,9 @@ def load_extract_definitions_safely(
                 with open(json_path, "r", encoding="utf-8") as f:
                     extract_definitions = json.load(f)
                 return extract_definitions, None
+
+        if decryption_failure:
+            return [], decryption_failure
 
         # Si tout échoue, retourner une liste vide
         return [], "Aucun fichier de définitions trouvé"
