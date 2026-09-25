@@ -16,6 +16,7 @@ from typing import List, Dict, Optional
 
 from semantic_kernel.functions import kernel_function
 
+from .logic_types import STATE_LABELS, canonical_logic_type
 from .shared_state import RhetoricalAnalysisState
 
 sm_logger = logging.getLogger("Orchestration.PhaseState")
@@ -185,13 +186,19 @@ class FormalPhaseState(_SharedStateBase):
         description="Ajoute un belief set formel à l'état.",
         name="add_belief_set",
     )
-    def add_belief_set(self, logic_type: str, content: str) -> str:
-        valid_logic_types = {"propositional": "Propositional", "pl": "Propositional", "fol": "FOL", "first_order": "FOL"}
-        normalized = logic_type.strip().lower()
-        if normalized not in valid_logic_types:
+    def add_belief_set(
+        self,
+        logic_type: str,
+        content: str,
+        propositions: Optional[List[str]] = None,
+    ) -> str:
+        canonical = canonical_logic_type(logic_type)
+        if canonical is None:
             return f"FUNC_ERROR: Type logique '{logic_type}' non supporté."
         try:
-            bs_id = self._state.add_belief_set(valid_logic_types[normalized], content)
+            bs_id = self._state.add_belief_set(
+                STATE_LABELS[canonical], content, propositions=propositions
+            )
             return bs_id
         except Exception as e:
             return f"FUNC_ERROR: {e}"

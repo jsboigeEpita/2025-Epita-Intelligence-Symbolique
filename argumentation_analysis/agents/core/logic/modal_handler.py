@@ -187,6 +187,55 @@ class ModalHandler:
             )
             return False, "An unexpected error occurred during validation."
 
+    def _parse_kb_and_query(self, belief_set_content: str, query_string: str):
+        """Parse a belief set, then a query against it, with the shared MlParser.
+
+        MlParser checks a formula's predicates against the signature of the
+        last belief base it parsed, so a query only parses right after its own
+        belief set. One shared normalizer maps belief-set and query atoms
+        consistently, so query names match the KB signature (#1326); the legal
+        atoms of both texts are reserved first, so a renamed KB atom never
+        takes the name of a legal query atom (#2471). Returns the parsed belief
+        set, the parsed query and the normalized query text; raises
+        ``jpype.JException`` on a parse failure.
+        """
+        StringReader = jpype.JClass("java.io.StringReader")
+        normalizer = ModalIdentifierNormalizer()
+        normalizer.reserve_legal_atoms(belief_set_content, query_string)
+        belief_set_content, _bs_rev = normalizer.normalize_belief_set(
+            belief_set_content
+        )
+        query_string, _q_rev = normalizer.normalize_belief_set(query_string)
+        if _bs_rev:
+            logger.debug("Modal query KB identifiers normalized (#1326): %s", _bs_rev)
+        belief_set = self._modal_parser.parseBeliefBase(
+            StringReader(belief_set_content)
+        )
+        query_formula = self._modal_parser.parseFormula(
+            jpype.JClass("java.lang.String")(query_string)
+        )
+        return belief_set, query_formula, query_string
+
+    def validate_query(
+        self, belief_set_content: str, query_string: str
+    ) -> Tuple[bool, str]:
+        """Validate a query against the belief set it will run on (#2643).
+
+        ``validate_modal_formula`` parses the formula alone, so its verdict
+        depended on which belief set the process had parsed before. This parses
+        exactly as ``execute_modal_query`` does: a query validates iff it would
+        parse when executed on this belief set.
+        """
+        try:
+            self._parse_kb_and_query(belief_set_content, query_string)
+            return True, "Query parses against this belief set."
+        except jpype.JException as e:
+            error_message = (
+                f"Invalid modal query for this belief set: {e.getMessage()}"
+            )
+            logger.warning(error_message)
+            return False, error_message
+
     def parse_belief_set(self, belief_set_content: str) -> "object":
         """Parse a modal belief-set string with the shared MlParser (parse only).
 
@@ -217,32 +266,10 @@ class ModalHandler:
         )
         logger.debug(f"Executing modal query '{query_string}' with {reasoner_name}")
         try:
-            StringReader = jpype.JClass("java.io.StringReader")
-
-            # #1326: normalize identifiers amont de parseBeliefBase so
-            # underscored atoms (joke_teleprompter) become MlParser-legal
-            # (JokeTeleprompter). One shared normalizer maps belief-set and
-            # query atoms consistently so query names match the KB signature.
-            # #2471: the legal atoms of both texts are reserved first, so a
-            # renamed KB atom never takes the name of a legal query atom.
-            normalizer = ModalIdentifierNormalizer()
-            normalizer.reserve_legal_atoms(belief_set_content, query_string)
-            belief_set_content, _bs_rev = normalizer.normalize_belief_set(
-                belief_set_content
-            )
-            query_string, _q_rev = normalizer.normalize_belief_set(query_string)
-            if _bs_rev:
-                logger.debug(
-                    "Modal query KB identifiers normalized (#1326): %s", _bs_rev
-                )
-
-            # Parse belief set
-            belief_set_reader = StringReader(belief_set_content)
-            belief_set = self._modal_parser.parseBeliefBase(belief_set_reader)
-
-            # Parse query
-            query_formula = self._modal_parser.parseFormula(
-                jpype.JClass("java.lang.String")(query_string)
+            # #1326: underscored atoms (joke_teleprompter) become MlParser-legal
+            # (JokeTeleprompter), amont de parseBeliefBase.
+            belief_set, query_formula, query_string = self._parse_kb_and_query(
+                belief_set_content, query_string
             )
 
             # Execute query

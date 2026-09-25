@@ -527,9 +527,23 @@ class BaseLogicAgent(BaseAgent, ABC):
             )
             return {"status": "error", "message": error_msg}
 
+        # PL: the agent only queries declared propositions, so they are stored
+        # with the content (#2643).
+        propositions = getattr(belief_set, "propositions", None)
+        extra = {} if propositions is None else {"propositions": propositions}
         bs_id = state_manager.add_belief_set(
-            logic_type=belief_set.logic_type, content=belief_set.content
+            logic_type=belief_set.logic_type, content=belief_set.content, **extra
         )
+        if not isinstance(bs_id, str) or bs_id.startswith("FUNC_ERROR"):
+            error_msg = f"L'ensemble de croyances n'a pas été enregistré : {bs_id}"
+            self.logger.error(error_msg)
+            state_manager.add_answer(
+                task_id=task_id,
+                author_agent=self.name,
+                answer_text=error_msg,
+                source_ids=[],
+            )
+            return {"status": "error", "message": error_msg}
         answer_text = (
             f"Ensemble de croyances créé avec succès (ID: {bs_id}).\n\n{status_msg}"
         )

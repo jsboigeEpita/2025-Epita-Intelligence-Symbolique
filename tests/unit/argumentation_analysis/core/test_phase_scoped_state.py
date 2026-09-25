@@ -170,12 +170,15 @@ class TestFormalPhaseState:
     def test_delegation_add_belief_set(self, mock_state):
         plugin = FormalPhaseState(state=mock_state)
         result = plugin.add_belief_set("propositional", "p => q")
-        mock_state.add_belief_set.assert_called_once_with("Propositional", "p => q")
+        mock_state.add_belief_set.assert_called_once_with(
+            "Propositional", "p => q", propositions=None
+        )
         assert result == "bs_1"
 
     def test_invalid_logic_type(self, mock_state):
         plugin = FormalPhaseState(state=mock_state)
-        result = plugin.add_belief_set("modal", "[]p")
+        # "modal" used to be refused here (#2643); an unknown type still is.
+        result = plugin.add_belief_set("tarot", "[]p")
         assert "FUNC_ERROR" in result
         mock_state.add_belief_set.assert_not_called()
 

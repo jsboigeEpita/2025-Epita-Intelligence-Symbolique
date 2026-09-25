@@ -128,6 +128,8 @@ class LogicService:
                 "id": belief_set_id,
                 "logic_type": request.logic_type,
                 "content": belief_set.content,
+                # PL: the agent only queries declared propositions (#2643).
+                "propositions": getattr(belief_set, "propositions", None),
                 "source_text": request.text,
                 "creation_timestamp": datetime.now(),
             }
@@ -336,6 +338,7 @@ class LogicService:
             {
                 "logic_type": belief_set_data["logic_type"],
                 "content": belief_set_data["content"],
+                "propositions": belief_set_data.get("propositions"),
             }
         )
 
