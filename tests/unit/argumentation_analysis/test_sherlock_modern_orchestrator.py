@@ -150,22 +150,23 @@ class TestSherlockModernOrchestrator:
         result = _run(orch.investigate(SAMPLE_DISCOURSE))
         assert isinstance(result.hypotheses, list)
 
-    def test_no_llm_calls_template_fallback(self):
-        """Verify the orchestrator works with all invoke_callables patched out."""
+    def test_all_callables_failing_still_produces_a_trace(self):
+        """#2543: with every phase callable failing, the investigation still
+        completes — but as FAILED steps, never as empty findings. The former
+        contract returned each phase's fallback dict, which the phases narrated
+        as results ("Detected 0", "0.0/10"); reverting to that swallow makes
+        this test red (see TestPhaseFailureFailLoud2543)."""
         orch = SherlockModernOrchestrator()
-        with patch(
-            "argumentation_analysis.orchestration.sherlock_modern_orchestrator"
-            ".SherlockModernOrchestrator._invoke_safe",
-            new_callable=AsyncMock,
-        ) as mock_invoke:
 
-            async def fake_invoke(func_name, text, fallback):
-                return dict(fallback)
+        async def failing_phase(func_name, text):
+            return None, "RuntimeError: no service"
 
-            mock_invoke.side_effect = fake_invoke
-            result = _run(orch.investigate(SAMPLE_DISCOURSE))
-            assert result.agent_count >= 5
-            assert len(result.trace) >= 7
+        orch._invoke_phase = failing_phase
+        result = _run(orch.investigate(SAMPLE_DISCOURSE))
+        assert result.agent_count >= 5
+        assert len(result.trace) == 7
+        assert all(s["findings"].get("failed") for s in result.trace)
+        assert len(orch.state.errors) == 7
 
 
 class TestInvestigationResult:
@@ -247,16 +248,19 @@ class TestCoherentThreeStateRewriter:
 
     @pytest.mark.asyncio
     async def test_absent_coherent_key_is_preserved_not_stamped_false(self):
-        async def fake_invoke_safe(func_name, text, fallback=None):
-            return {
-                "atms_contexts": [
-                    {"hypothesis_id": "h_nokey", "assumptions": ["a"]}
-                ],
-                "has_contradictions": False,
-            }
+        async def fake_invoke_phase(func_name, text):
+            return (
+                {
+                    "atms_contexts": [
+                        {"hypothesis_id": "h_nokey", "assumptions": ["a"]}
+                    ],
+                    "has_contradictions": False,
+                },
+                None,
+            )
 
         orch = SherlockModernOrchestrator()
-        orch._invoke_safe = fake_invoke_safe
+        orch._invoke_phase = fake_invoke_phase
         await orch._phase_hypothesis_branching("text")
         assert len(orch._hypotheses) == 1
         # The absent key is preserved — NOT stamped to False. (Reverting the
@@ -265,18 +269,247 @@ class TestCoherentThreeStateRewriter:
 
     @pytest.mark.asyncio
     async def test_present_coherent_key_is_carried_through(self):
-        async def fake_invoke_safe(func_name, text, fallback=None):
-            return {
-                "atms_contexts": [
-                    {"hypothesis_id": "h_t", "coherent": True, "assumptions": []},
-                    {"hypothesis_id": "h_f", "coherent": False, "assumptions": []},
-                ],
-                "has_contradictions": True,
-            }
+        async def fake_invoke_phase(func_name, text):
+            return (
+                {
+                    "atms_contexts": [
+                        {"hypothesis_id": "h_t", "coherent": True, "assumptions": []},
+                        {"hypothesis_id": "h_f", "coherent": False, "assumptions": []},
+                    ],
+                    "has_contradictions": True,
+                },
+                None,
+            )
 
         orch = SherlockModernOrchestrator()
-        orch._invoke_safe = fake_invoke_safe
+        orch._invoke_phase = fake_invoke_phase
         await orch._phase_hypothesis_branching("text")
         by_id = {h["id"]: h for h in orch._hypotheses}
         assert by_id["h_t"]["coherent"] is True
         assert by_id["h_f"]["coherent"] is False
+
+
+class TestPhaseFailureFailLoud2543:
+    """#2543 — a phase whose callable raised (or does not exist) is a FAILED
+    phase: exception in the trace and the state, no fallback persisted, no
+    empty finding narrated. The former ``_invoke_safe`` returned the phase's
+    fallback dict on any exception, which the phase then treated as its
+    result. Every test here is born-red on main; restoring the fallback
+    swallow (or the ``type`` reader key) turns it red again."""
+
+    PHASES = [
+        # (phase method, phase label, agent, ctx key written on success)
+        ("_phase_extraction", "extraction", "ExtractAgent", "phase_extract_output"),
+        (
+            "_phase_fallacy_detection",
+            "fallacy_detection",
+            "InformalAnalysisAgent",
+            "phase_hierarchical_fallacy_output",
+        ),
+        (
+            "_phase_quality",
+            "quality_evaluation",
+            "ArgumentQualityEvaluator",
+            "phase_quality_output",
+        ),
+        (
+            "_phase_cross_examination",
+            "cross_examination",
+            "CounterArgumentAgent",
+            "phase_counter_output",
+        ),
+        ("_phase_belief_tracking", "belief_tracking", "JTMS", "phase_jtms_output"),
+        (
+            "_phase_hypothesis_branching",
+            "hypothesis_branching",
+            "ATMS",
+            "phase_atms_output",
+        ),
+        (
+            "_phase_solution_synthesis",
+            "solution_synthesis",
+            "NarrativeSynthesisPlugin",
+            "phase_narrative_synthesis_output",
+        ),
+    ]
+
+    @staticmethod
+    def _orch():
+        return SherlockModernOrchestrator(state=UnifiedAnalysisState("text"))
+
+    @pytest.mark.parametrize("method,phase,agent,ctx_key", PHASES)
+    async def test_raising_callable_gives_failed_phase(
+        self, method, phase, agent, ctx_key
+    ):
+        """Born-red per shape: the phase records a failed step carrying the
+        exception, writes no ctx key, and logs the error in the state."""
+
+        async def failing(func_name, text):
+            return None, "RuntimeError: boom"
+
+        orch = self._orch()
+        orch._invoke_phase = failing
+        args = () if method == "_phase_solution_synthesis" else ("text",)
+        await getattr(orch, method)(*args)
+        step = orch._trace[-1]
+        assert step.findings.get("failed") is True
+        assert "RuntimeError" in step.findings.get("error", "")
+        assert step.conclusion.startswith(f"Phase '{phase}' did not run")
+        assert ctx_key not in orch._ctx, "a failed phase must not publish a result"
+        assert orch.state.errors, "failure must be recorded in the state"
+        assert orch.state.errors[-1]["agent_name"] == agent
+
+    async def test_quality_failure_writes_no_score_and_no_zero_note(self):
+        """The quality fallback (``note_finale: 0.0``) was a score nothing
+        computed — on failure nothing reaches the state's quality surface."""
+
+        async def failing(func_name, text):
+            return None, "RuntimeError: boom"
+
+        orch = self._orch()
+        orch._invoke_phase = failing
+        await orch._phase_quality("text")
+        assert orch.state.argument_quality_scores == {}
+        step = orch._trace[-1]
+        assert "0.0/10" not in step.conclusion
+
+    async def test_fallacy_failure_does_not_narrate_detected_zero(self):
+        async def failing(func_name, text):
+            return None, "RuntimeError: boom"
+
+        orch = self._orch()
+        orch._invoke_phase = failing
+        await orch._phase_fallacy_detection("text")
+        step = orch._trace[-1]
+        assert "Detected 0" not in step.conclusion
+        assert step.findings.get("fallacy_count") is None
+
+    async def test_real_invoke_phase_catches_a_raising_callable(self):
+        """Mutation control on the seam itself: with the REAL ``_invoke_phase``
+        (no instance override), a callable that raises is caught and named —
+        reintroducing the fallback swallow here turns this red."""
+        orch = self._orch()
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables._invoke_jtms",
+            new=AsyncMock(side_effect=RuntimeError("boom")),
+        ):
+            await orch._phase_belief_tracking("text")
+        step = orch._trace[-1]
+        assert step.findings.get("failed") is True
+        assert (
+            "RuntimeError" in step.findings["error"]
+            and "boom" in step.findings["error"]
+        )
+        assert "phase_jtms_output" not in orch._ctx
+        assert orch.state.errors
+
+    async def test_missing_callable_is_a_failure_not_a_silent_fallback(self):
+        """``_invoke_extract`` never existed in invoke_callables — the old
+        contract silently returned the fallback (without even a log) and the
+        extraction phase never ran."""
+        orch = self._orch()
+        result, error = await orch._invoke_phase("_invoke_extract", "text")
+        assert result is None
+        assert "_invoke_extract" in (error or "")
+        assert "not found" in (error or "")
+
+    async def test_extraction_phase_calls_the_real_fact_extraction_callable(self):
+        """The extraction phase must request the callable the registry wires
+        for ``fact_extraction`` (registry_setup.py: ``_invoke_fact_extraction``)
+        — not the phantom ``_invoke_extract`` name."""
+        with patch(
+            "argumentation_analysis.orchestration.invoke_callables"
+            "._invoke_fact_extraction",
+            new=AsyncMock(
+                return_value={
+                    "claims": [{"text": "claim one"}],
+                    "arguments": [{"text": "arg one"}],
+                }
+            ),
+        ) as mock_extract:
+            orch = self._orch()
+            await orch._phase_extraction("text")
+        mock_extract.assert_awaited_once()
+        assert orch._ctx["phase_extract_output"]["claims"][0]["text"] == "claim one"
+        assert "Identified 2 element(s)" in orch._trace[-1].conclusion
+
+    async def test_fallacy_step_reads_the_key_the_detector_writes(self):
+        """The detector's items carry ``fallacy_type``
+        (fallacy_workflow_plugin.py emits that key); the step used to read
+        ``type`` and rendered ``Detected 3 ... ()`` on real runs."""
+
+        async def detector_shaped(func_name, text):
+            return (
+                {
+                    "fallacies": [
+                        {"fallacy_type": "ad_hominem"},
+                        {"fallacy_type": "straw_man"},
+                        {"fallacy_type": "ad_hominem"},
+                    ],
+                    "total": 3,
+                },
+                None,
+            )
+
+        orch = self._orch()
+        orch._invoke_phase = detector_shaped
+        await orch._phase_fallacy_detection("text")
+        step = orch._trace[-1]
+        assert step.findings["fallacy_count"] == 3
+        assert sorted(step.findings["types"]) == ["ad_hominem", "straw_man"]
+        assert "ad_hominem" in step.conclusion
+        assert not step.conclusion.endswith("().")
+
+    async def test_degraded_extraction_status_is_surfaced(self):
+        """Review #2660: ``_invoke_fact_extraction`` does not RAISE on failure
+        — it returns the heuristic sentence split with
+        ``extraction_status="failed:<reason>"`` (#1290). The phase used to
+        narrate that degraded split as a normal finding; the degradation
+        channel must be surfaced instead."""
+
+        async def degraded(func_name, text):
+            return (
+                {
+                    "claims": [{"text": "c1"}, {"text": "c2"}],
+                    "arguments": [],
+                    "extraction_status": "failed:no-openai-client",
+                },
+                None,
+            )
+
+        orch = self._orch()
+        orch._invoke_phase = degraded
+        await orch._phase_extraction("text")
+        step = orch._trace[-1]
+        assert step.findings.get("extraction_status") == "failed:no-openai-client"
+        assert "failed:no-openai-client" in step.conclusion
+
+    async def test_ok_extraction_keeps_the_conclusion_unchanged(self):
+        """Contre-pendule: a healthy extraction (status "ok" or absent) keeps
+        the exact pre-change conclusion shape — no degradation suffix, no
+        status key in the findings."""
+
+        async def healthy(func_name, text):
+            return {"claims": [{"text": "c1"}], "arguments": [{"text": "a1"}]}, None
+
+        orch = self._orch()
+        orch._invoke_phase = healthy
+        await orch._phase_extraction("text")
+        step = orch._trace[-1]
+        assert step.findings["claims_found"] == 1
+        assert step.findings["arguments_found"] == 1
+        assert "extraction_status" not in step.findings
+        assert step.conclusion == (
+            "Identified 2 element(s) for investigation (1 claims, 1 arguments)."
+        )
+
+    async def test_solution_names_the_phases_that_did_not_run(self):
+        async def failing(func_name, text):
+            return None, "RuntimeError: boom"
+
+        orch = self._orch()
+        orch._invoke_phase = failing
+        result = await orch.investigate("text")
+        assert "Phases that did not run" in result.solution
+        for _, phase, _, _ in self.PHASES:
+            assert phase in result.solution
