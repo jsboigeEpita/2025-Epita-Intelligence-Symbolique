@@ -101,7 +101,8 @@ async def main():
                 analysis_result.get("status") == "success"
                 and "analysis" in analysis_result
             ):
-                result_to_save = json.loads(analysis_result["analysis"])
+                # Déjà un dict : le runner a décodé l'état (#2630).
+                result_to_save = analysis_result["analysis"]
                 logger.info("Analyse locale réussie.")
                 logger.info(f"Résultat (extrait): {str(result_to_save)[:500]}...")
             else:

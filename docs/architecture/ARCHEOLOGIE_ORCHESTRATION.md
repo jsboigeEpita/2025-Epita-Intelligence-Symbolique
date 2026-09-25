@@ -12,7 +12,7 @@ L'analyse de 80+ commits sur `argumentation_analysis/orchestration/` revele que 
 
 | Architecture | Periode | Status actuel | Fichier cle |
 |-------------|---------|---------------|-------------|
-| **Conversationnelle** (AgentGroupChat) | Juin 2025 - Mars 2026 | DORMANTE | `analysis_runner_v2.py`, `GroupChatTurnStrategy` |
+| **Conversationnelle** (AgentGroupChat) | Juin 2025 - Mars 2026 | DORMANTE, puis réparée (#2630, sur les agents de `create_conversational_agents`) | `analysis_runner_v2.py`, `GroupChatTurnStrategy` |
 | **Hierarchique** (Strategic→Tactical→Operational) | Mars 2026 | DORMANTE | `hierarchy_bridge.py`, `HierarchicalTurnStrategy` |
 | **Pipeline sequentiel** (WorkflowDSL) | Mars 2026 - present | ACTIVE | `unified_pipeline.py`, `WorkflowTurnStrategy` |
 

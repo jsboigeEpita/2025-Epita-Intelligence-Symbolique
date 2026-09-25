@@ -10,7 +10,7 @@ Un seul module : `volatile_agent_channel.py` (57 lignes) — `VolatileAgentChann
 
 ## Points d'entrée valides
 
-Aucun direct. Unique consommateur : `ExtractAgent.create_channel()` (`agents/core/extract/extract_agent.py:265-267`), activé par la machinerie `AgentGroupChat` de SK en mode conversationnel. Chaînes d'entrée qui atteignent ce code : `main_orchestrator.py` → `orchestration/analysis_runner_v2.py:72,227` ; `scripts/orchestration/pipelines/run_rhetorical_analysis_pipeline.py:20` ; mode hiérarchique `orchestration/hierarchical/operational/agent_registry.py:67` → `adapters/extract_agent_adapter.py:23,88`.
+Aucun direct. Unique consommateur : `ExtractAgent.create_channel()` (`agents/core/extract/extract_agent.py:265-267`), activé par la machinerie `AgentGroupChat` de SK en mode conversationnel. Chaîne d'entrée qui atteint ce code : mode hiérarchique `orchestration/hierarchical/operational/agent_registry.py:67` → `adapters/extract_agent_adapter.py:23,88`.
 
 ## Amont / aval
 
@@ -19,7 +19,7 @@ Aucun direct. Unique consommateur : `ExtractAgent.create_channel()` (`agents/cor
 
 ## Statut d'intégration
 
-**actif-spécialisé** — exactement un importeur production (`extract_agent.py:45-46`), lui-même importé par 4 runners production ([`analysis_runner_v2.py:72`](../core/README.md) ; cf. chaînes ci-dessus). Mono-consommateur par conception : le protocole channel n'a pas d'autre utilisateur dans le dépôt.
+**actif-spécialisé** — exactement un importeur production (`extract_agent.py:45-46`), lui-même importé par 3 runners production (cf. chaîne ci-dessus). `analysis_runner_v2.py` ne l'est plus depuis #2630 : ses agents sont ceux du mode conversationnel. Mono-consommateur par conception : le protocole channel n'a pas d'autre utilisateur dans le dépôt.
 
 ## Artefacts et lecteurs
 

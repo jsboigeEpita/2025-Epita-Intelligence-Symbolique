@@ -7,9 +7,10 @@ avancées de enhanced_pm_analysis_runner.py pour créer un orchestrateur d'analy
 d'argumentation puissant et moderne.
 
 Caractéristiques principales :
-- Utilisation de AgentFactory pour la création d'agents standardisée.
+- Agents construits par le constructeur du mode conversationnel actif
+  (`create_conversational_agents`), sur le service LLM fourni par l'appelant.
 - Intégration d'un système de trace avancé pour la capture de métadonnées et d'état.
-- Gestion d'état enrichie via RhetoricalAnalysisState.
+- Gestion d'état enrichie via UnifiedAnalysisState.
 - Structure de conversation unique et robuste, inspirée de analysis_runner.py.
 """
 
@@ -56,25 +57,11 @@ from semantic_kernel.connectors.ai.function_choice_behavior import (
 # ===== IMPORTS DU PROJET D'ANALYSE D'ARGUMENTATION =====
 
 # --- Core ---
-from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
-from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
-from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 # --- Agents ---
-from argumentation_analysis.agents.factory import AgentFactory
-from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
-from argumentation_analysis.agents.core.informal.informal_agent import (
-    InformalAnalysisAgent,
-)
-from argumentation_analysis.agents.core.logic.propositional_logic_agent import (
-    PropositionalLogicAgent,
-)
-from argumentation_analysis.agents.core.extract.extract_agent import ExtractAgent
-from argumentation_analysis.agents.core.pm.sherlock_enquete_agent import (
-    SherlockEnqueteAgent,
-)
-from argumentation_analysis.agents.core.logic.watson_logic_assistant import (
-    WatsonLogicAssistant,
+from argumentation_analysis.orchestration.conversational_orchestrator import (
+    create_conversational_agents,
 )
 
 # --- Reporting et Trace (Fonctionnalités avancées) ---
@@ -108,6 +95,15 @@ class AnalysisRunnerV2:
     Orchestre une analyse d'argumentation complète en fusionnant les meilleures
     pratiques de analysis_runner.py et enhanced_pm_analysis_runner.py.
     """
+
+    # Agents de chaque phase, dans l'ordre où ils prennent la parole : les
+    # trois macro-phases du mode conversationnel (extraction et détection,
+    # analyse formelle et qualité, synthèse et débat).
+    PHASE_CASTING = {
+        "phase_1": ["ProjectManager", "ExtractAgent", "InformalAgent"],
+        "phase_2": ["ProjectManager", "FormalAgent", "QualityAgent"],
+        "phase_3": ["ProjectManager", "DebateAgent", "CounterAgent", "GovernanceAgent"],
+    }
 
     def __init__(
         self,
@@ -169,11 +165,15 @@ class AnalysisRunnerV2:
             return result
 
         except Exception as e:
+            # L'échec remonte à l'appelant (#2630). Il était rendu comme un
+            # dict {"status": "error"} que main_orchestrator et text_analyzer
+            # ne lisaient pas : un setup cassé s'y affichait comme une analyse
+            # terminée.
             self.logger.error(
                 f"Une erreur critique est survenue durant l'analyse : {e}",
                 exc_info=True,
             )
-            return {"status": "error", "message": str(e), "analysis": {}}
+            raise
 
         finally:
             # Arrêt de la capture et génération du rapport de trace
@@ -210,42 +210,28 @@ class AnalysisRunnerV2:
     ):
         """Configure l'orchestration, l'état, le kernel et les agents."""
         self.logger.info("Configuration de l'orchestration...")
-        self.shared_state = RhetoricalAnalysisState(initial_text=texte_a_analyser)
-        self.state_manager_plugin = StateManagerPlugin(self.shared_state)
+        # L'état que les plugins des agents conversationnels écrivent : leur
+        # StateManagerPlugin appelle 12 méthodes que RhetoricalAnalysisState
+        # n'a pas (add_nl_to_logic_translation, add_quality_score, ...).
+        self.shared_state = UnifiedAnalysisState(initial_text=texte_a_analyser)
 
         self.kernel = sk.Kernel()
         self.kernel.add_service(llm_service)
-        self.kernel.add_plugin(self.state_manager_plugin, plugin_name="StateManager")
 
-        self.logger.info("Création des agents via la AgentFactory...")
-        factory = AgentFactory(kernel=self.kernel, settings=settings)
-
-        agent_classes_to_create = {
-            "ProjectManager": ProjectManagerAgent,
-            "InformalAnalysis": InformalAnalysisAgent,
-            "PropositionalLogic": PropositionalLogicAgent,
-            "Extract": ExtractAgent,
-            "Sherlock": SherlockEnqueteAgent,
-            "Watson": WatsonLogicAssistant,
-        }
-
-        for name, agent_class in agent_classes_to_create.items():
-            try:
-                agent = factory.create_agent(agent_class=agent_class)
-                self.agents[name] = agent
-                self.logger.info(
-                    f"Agent '{agent.name}' (type: {agent_class.__name__}) créé."
-                )
-            except Exception as e:
-                self.logger.error(
-                    f"Impossible de créer l'agent '{agent_class.__name__}': {e}",
-                    exc_info=True,
-                )
-
-        if not self.agents:
-            raise AnalysisV2Exception("Aucun agent n'a pu être initialisé. Annulation.")
-
-        self.agent_list = list(self.agents.values())
+        # Les agents viennent du constructeur du mode conversationnel actif
+        # (#2630), sur le service que l'appelant a fourni. Chacun porte son
+        # StateManagerPlugin et ses plugins de spécialité. Les classes BaseAgent
+        # que ce runner instanciait ne peuvent pas parler dans un AgentGroupChat :
+        # leurs `invoke_single` ont chacune une signature propre, et le canal SK
+        # les appelle avec `messages=`/`thread=` (6 agents sur 6 échouaient au
+        # premier tour, mesure dans #2630).
+        self.logger.info("Création des agents du mode conversationnel...")
+        self.agent_list = create_conversational_agents(
+            kernel=self.kernel,
+            state=self.shared_state,
+            llm_service_id=llm_service.service_id,
+        )
+        self.agents = {agent.name: agent for agent in self.agent_list}
         self.logger.info("Configuration de l'orchestration terminée.")
 
     async def _run_phase_1_informal_analysis(self):
@@ -257,16 +243,15 @@ class AnalysisRunnerV2:
         start_pm_orchestration_phase(
             phase_id=phase_id,
             phase_name="Analyse Informelle Coordonnée",
-            assigned_agents=[
-                self.agents["ProjectManager"].name,
-                self.agents["InformalAnalysis"].name,
-            ],
+            assigned_agents=self.PHASE_CASTING["phase_1"],
         )
 
         initial_prompt = f"Phase 1: Analyse informelle. PM, veuillez initier l'analyse du texte suivant:\n\n---\n{self.shared_state.raw_text}\n---"
         self.chat_history.add_user_message(initial_prompt)
 
-        await self._execute_conversation_phase(phase_id, max_turns=5)
+        await self._execute_conversation_phase(
+            phase_id, self.PHASE_CASTING["phase_1"], max_turns=5
+        )
         self.logger.info("Phase 1 terminée.")
 
     async def _run_phase_2_formal_analysis(self):
@@ -278,17 +263,15 @@ class AnalysisRunnerV2:
         start_pm_orchestration_phase(
             phase_id=phase_id,
             phase_name="Analyse Formelle (Logique)",
-            assigned_agents=[
-                self.agents["ProjectManager"].name,
-                self.agents["PropositionalLogic"].name,
-                self.agents["Watson"].name,
-            ],
+            assigned_agents=self.PHASE_CASTING["phase_2"],
         )
 
         transition_prompt = "Phase 2: Analyse formelle. PM, veuillez coordonner avec les experts en logique pour formaliser les arguments identifiés."
         self.chat_history.add_user_message(transition_prompt)
 
-        await self._execute_conversation_phase(phase_id, max_turns=5)
+        await self._execute_conversation_phase(
+            phase_id, self.PHASE_CASTING["phase_2"], max_turns=5
+        )
         self.logger.info("Phase 2 terminée.")
 
     async def _run_phase_3_synthesis_coordination(self):
@@ -300,27 +283,36 @@ class AnalysisRunnerV2:
         start_pm_orchestration_phase(
             phase_id=phase_id,
             phase_name="Synthèse Finale",
-            assigned_agents=[a.name for a in self.agent_list],
+            assigned_agents=self.PHASE_CASTING["phase_3"],
         )
 
         synthesis_prompt = "Phase 3: Synthèse finale. PM, veuillez consolider tous les résultats et produire un rapport final."
         self.chat_history.add_user_message(synthesis_prompt)
 
-        await self._execute_conversation_phase(phase_id, max_turns=5)
+        await self._execute_conversation_phase(
+            phase_id, self.PHASE_CASTING["phase_3"], max_turns=5
+        )
         self.logger.info("Phase 3 terminée.")
 
-    async def _execute_conversation_phase(self, phase_id: str, max_turns: int):
+    async def _execute_conversation_phase(
+        self, phase_id: str, agent_names: List[str], max_turns: int
+    ):
         """Exécute une phase de conversation en utilisant AgentGroupChat."""
         self.logger.info(f"Exécution de la phase de conversation '{phase_id}'...")
 
-        # On utilise une sélection simple pour l'instant
+        # La salle est la distribution de la phase, celle que la trace déclare
+        # (#2630). Avec tous les agents dans chaque phase et 5 tours, la
+        # sélection séquentielle rejouait les 5 mêmes premiers agents à chaque
+        # phase : DebateAgent, CounterAgent et GovernanceAgent ne parlaient
+        # jamais.
         group_chat = AgentGroupChat(
-            agents=self.agent_list, chat_history=self.chat_history
+            agents=[self.agents[name] for name in agent_names],
+            chat_history=self.chat_history,
         )
 
         # Invoquer le chat pour un nombre limité de tours
         turn_count = 0
-        async for message in await group_chat.invoke():
+        async for message in group_chat.invoke():
             self.tour_counter += 1
             capture_shared_state(
                 phase_id=phase_id,

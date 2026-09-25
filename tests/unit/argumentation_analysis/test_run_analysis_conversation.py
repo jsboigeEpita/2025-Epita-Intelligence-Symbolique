@@ -14,21 +14,10 @@ def mock_llm_service():
 
 
 @pytest.mark.asyncio
-@patch(
-    "argumentation_analysis.orchestration.analysis_runner_v2.RhetoricalAnalysisState"
-)
-@patch("argumentation_analysis.orchestration.analysis_runner_v2.StateManagerPlugin")
-@patch("argumentation_analysis.orchestration.analysis_runner_v2.AgentFactory")
-@patch("argumentation_analysis.orchestration.analysis_runner_v2.AgentGroupChat")
-async def test_run_analysis_v2_success_simplified(
-    mock_group_chat,
-    mock_agent_factory,
-    mock_state_manager_plugin,
-    mock_rhetorical_analysis_state,
-    mock_llm_service,
-):
+async def test_run_analysis_v2_success_simplified(mock_llm_service):
     """
-    Tests a simplified successful execution of the analysis orchestration v2.
+    Tests the result shape of ``run_analysis`` around mocked phases. The phases
+    themselves run in ``test_analysis_runner.py`` (#2630).
     """
     test_text = "This is a test text."
 

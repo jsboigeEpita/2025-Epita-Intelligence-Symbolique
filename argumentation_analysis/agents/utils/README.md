@@ -15,7 +15,7 @@ Trois fichiers suivis + un fossile disque. Ce ne sont **pas** les utils généra
 ## Points d'entrée valides
 
 - `TaxonomyNavigator` : `plugins/fallacy_workflow_plugin.py:40` et `plugins/exploration_plugin.py:16` (plugins du tronc commun), `evaluation/plugin_benchmark.py:538` (lazy), `scripts/analyze_taxonomy.py:27` (lazy). Chaîne workflow : `fallacy_workflow_plugin` ← `orchestration/registry_setup.py:249,274` ← `invoke_callables.py:2853,5309,5751`.
-- `TracedAgent` : `agents/factory.py:19`, instancié :336, :383, :465 quand `trace_log_path` est fourni — usine utilisée par `analysis_runner_v2.py:221,234`, `cluedo_extended_orchestrator.py:253`, `informal_agent_adapter.py:76-77`.
+- `TracedAgent` : `agents/factory.py:19`, instancié :336, :383, :465 quand `trace_log_path` est fourni — usine utilisée par `cluedo_extended_orchestrator.py:253`, `informal_agent_adapter.py:76-77`.
 
 ## Amont / aval
 
