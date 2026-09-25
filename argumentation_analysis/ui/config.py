@@ -44,13 +44,11 @@ ENCRYPTION_KEY = (
 
 # Chemins de répertoires
 # Utilise les valeurs de `settings.ui` et construit des chemins absolus si nécessaire.
-# Correction pour robustesse aux tests : si `settings` est un mock, `settings.ui.temp_download_dir`
-# ne sera pas une chaîne et l'opérateur de chemin plantera. On vérifie le type
-# et on fournit une valeur par défaut si ce n'est pas une chaîne.
-temp_dir_value = settings.ui.temp_download_dir
-if not isinstance(temp_dir_value, str):
-    temp_dir_value = "_temp/downloads_mock"  # Valeur par défaut sûre pour les tests
-TEMP_DOWNLOAD_DIR = PROJECT_ROOT / temp_dir_value
+# `settings.ui.temp_download_dir` est un `Path` (`UISettings`). Un test de type
+# `str`, qu'un `Path` ne passe jamais, remplaçait la valeur par
+# `_temp/downloads_mock` à chaque exécution, et `UI_TEMP_DOWNLOAD_DIR` était
+# ignoré (#2346). Un chemin absolu reste tel quel : la jointure le garde.
+TEMP_DOWNLOAD_DIR = PROJECT_ROOT / settings.ui.temp_download_dir
 
 # Les répertoires suivants sont conservés pour compatibilité s'ils sont importés ailleurs.
 CACHE_DIR = PROJECT_ROOT / "_temp" / "text_cache"
