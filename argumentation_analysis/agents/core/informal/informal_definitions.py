@@ -55,6 +55,7 @@ from .prompts import (
     prompt_analyze_fallacies_v3_tool_use,
     prompt_justify_fallacy_attribution_v1,
 )
+from ..semantic_setup import prompt_settings, register_prompt_function
 
 # --- Modèles Pydantic pour une sortie structurée ---
 
@@ -734,55 +735,44 @@ def setup_informal_kernel(
         f"Instance du plugin '{plugin_name}' ajoutée/mise à jour dans le kernel."
     )
 
-    default_settings = None
-    if llm_service and hasattr(llm_service, "service_id"):
-        try:
-            default_settings = kernel.get_prompt_execution_settings_from_service_id(
-                llm_service.service_id
-            )
-            logger.debug(f"Settings LLM récupérés pour {plugin_name}.")
-        except Exception as e:
-            logger.warning(
-                f"Impossible de récupérer les settings LLM pour {plugin_name}: {e}"
-            )
-    elif llm_service:
-        logger.warning(
-            f"llm_service fourni pour {plugin_name} mais n'a pas d'attribut 'service_id'."
-        )
+    # #2632 : le service est requis, ses settings aussi ; settings et
+    # enregistrement lèvent au lieu d'un kernel sans ses trois fonctions.
+    default_settings = prompt_settings(kernel, llm_service.service_id, plugin_name)
 
-    try:
-        kernel.add_function(
-            prompt=prompt_identify_args_v8,
-            plugin_name=plugin_name,
-            function_name="semantic_IdentifyArguments",
-            description="Identifie les arguments clés dans un texte.",
-            prompt_execution_settings=default_settings,
-        )
-        logger.debug(f"Fonction {plugin_name}.semantic_IdentifyArguments ajoutée.")
+    register_prompt_function(
+        kernel,
+        plugin_name,
+        plugin_name,
+        "semantic_IdentifyArguments",
+        prompt_identify_args_v8,
+        "Identifie les arguments clés dans un texte.",
+        default_settings,
+    )
+    logger.debug(f"Fonction {plugin_name}.semantic_IdentifyArguments ajoutée.")
 
-        kernel.add_function(
-            prompt=prompt_analyze_fallacies_v3_tool_use,
-            plugin_name=plugin_name,
-            function_name="semantic_AnalyzeFallacies",
-            description="Analyse les sophismes dans un argument en guidant le LLM à utiliser les outils disponibles.",
-            prompt_execution_settings=default_settings,
-        )
-        logger.debug(
-            f"Fonction {plugin_name}.semantic_AnalyzeFallacies (Tool Use) ajoutée."
-        )
+    register_prompt_function(
+        kernel,
+        plugin_name,
+        plugin_name,
+        "semantic_AnalyzeFallacies",
+        prompt_analyze_fallacies_v3_tool_use,
+        "Analyse les sophismes dans un argument en guidant le LLM à utiliser les outils disponibles.",
+        default_settings,
+    )
+    logger.debug(
+        f"Fonction {plugin_name}.semantic_AnalyzeFallacies (Tool Use) ajoutée."
+    )
 
-        kernel.add_function(
-            prompt=prompt_justify_fallacy_attribution_v1,
-            plugin_name=plugin_name,
-            function_name="semantic_JustifyFallacyAttribution",
-            description="Justifie l'attribution d'un sophisme à un argument.",
-            prompt_execution_settings=default_settings,
-        )
-        logger.debug(
-            f"Fonction {plugin_name}.semantic_JustifyFallacyAttribution ajoutée."
-        )
-    except Exception as e:
-        logger.error(f"Erreur lors de la configuration des fonctions sémantiques: {e}")
+    register_prompt_function(
+        kernel,
+        plugin_name,
+        plugin_name,
+        "semantic_JustifyFallacyAttribution",
+        prompt_justify_fallacy_attribution_v1,
+        "Justifie l'attribution d'un sophisme à un argument.",
+        default_settings,
+    )
+    logger.debug(f"Fonction {plugin_name}.semantic_JustifyFallacyAttribution ajoutée.")
 
     logger.info(f"Kernel {plugin_name} configuré (V15 - Tool Use).")
 

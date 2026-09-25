@@ -69,6 +69,8 @@ except ImportError as e:
 
 from semantic_kernel.functions import KernelArguments
 
+from argumentation_analysis.agents.core.semantic_setup import prompt_settings
+
 # Imports depuis les modules du projet
 import sys
 
@@ -106,17 +108,12 @@ async def setup_evaluation_agent(llm_service):
     kernel = sk.Kernel()
     kernel.add_service(llm_service)
 
-    try:
-        prompt_exec_settings = kernel.get_prompt_execution_settings_from_service_id(
-            llm_service.service_id
-        )
-        logger.info("Paramètres d'exécution de prompt obtenus")
-    except Exception as e:
-        logger.warning(
-            f"Erreur lors de l'obtention des paramètres d'exécution de prompt: {e}"
-        )
-        logger.info("Utilisation de paramètres d'exécution de prompt vides")
-        prompt_exec_settings = {}
+    # #2632 : un échec de résolution lève, au lieu d'un agent évaluateur
+    # construit sur des settings vides.
+    prompt_exec_settings = prompt_settings(
+        kernel, llm_service.service_id, "EvaluationAgent"
+    )
+    logger.info("Paramètres d'exécution de prompt obtenus")
 
     try:
         evaluation_agent = ChatCompletionAgent(

@@ -30,6 +30,10 @@ from semantic_kernel.contents import ChatMessageContent
 from semantic_kernel.contents.chat_history import ChatHistory
 from pydantic import Field, PrivateAttr
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
+from argumentation_analysis.agents.core.semantic_setup import (
+    prompt_settings,
+    register_prompt_function,
+)
 from .belief_set import BeliefSet, PropositionalBeliefSet
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer
@@ -324,19 +328,13 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 f"JVM not ready for agent {self.name} after initialization attempt."
             )
 
+        # #2632 : settings et enregistrement lèvent ; un agent n'existe pas
+        # sans les fonctions que son constructeur enregistre.
         prompt_execution_settings = None
         if self._llm_service_id:
-            try:
-                prompt_execution_settings = (
-                    self.kernel.get_prompt_execution_settings_from_service_id(
-                        self._llm_service_id
-                    )
-                )
-                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
-            except Exception as e:
-                self.logger.warning(
-                    f"Impossible de récupérer les settings LLM pour {self.name}: {e}"
-                )
+            prompt_execution_settings = prompt_settings(
+                self.kernel, self._llm_service_id, self.name
+            )
 
         semantic_functions = [
             (
@@ -362,22 +360,16 @@ class PropositionalLogicAgent(BaseLogicAgent):
         ]
 
         for func_name, prompt, description in semantic_functions:
-            try:
-                self.kernel.add_function(
-                    prompt=prompt,
-                    plugin_name=self.name,
-                    function_name=func_name,
-                    description=description,
-                    prompt_execution_settings=prompt_execution_settings,
-                )
-                self.logger.info(
-                    f"Fonction sémantique {self.name}.{func_name} ajoutée."
-                )
-            except Exception as e:
-                self.logger.error(
-                    f"Erreur lors de l'ajout de la fonction sémantique {self.name}.{func_name}: {e}",
-                    exc_info=True,
-                )
+            register_prompt_function(
+                self.kernel,
+                self.name,
+                self.name,
+                func_name,
+                prompt,
+                description,
+                prompt_execution_settings,
+            )
+            self.logger.info(f"Fonction sémantique {self.name}.{func_name} ajoutée.")
 
         self.logger.info(f"Composants pour {self.name} configurés.")
 

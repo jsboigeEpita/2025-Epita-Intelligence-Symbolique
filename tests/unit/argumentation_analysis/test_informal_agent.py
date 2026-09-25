@@ -196,9 +196,10 @@ class TestSetupInformalKernel:
     def configured_kernel_and_service(self):
         """Fixture pour initialiser un kernel et un service LLM authentique."""
         config = UnifiedConfig()
-        kernel_with_service = config.get_kernel_with_gpt4o_mini()
-        llm_service = kernel_with_service.get_service()
-        kernel = sk.Kernel()
+        kernel = config.get_kernel_with_gpt4o_mini()
+        llm_service = kernel.get_service()
+        # #2632 : les settings du service se lisent dans le kernel qui le
+        # porte ; un kernel neuf, sans lui, fait lever setup_informal_kernel.
         return kernel, llm_service
 
     @patch("semantic_kernel.Kernel.add_function", autospec=True)

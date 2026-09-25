@@ -12,6 +12,7 @@ from .prompts import (
     prompt_gen_pl_queries_v8,
     prompt_interpret_pl_v8,
 )
+from ..semantic_setup import prompt_settings, register_prompt_function
 
 # Loggers
 logger = logging.getLogger("Orchestration.AgentPL.Defs")
@@ -294,17 +295,11 @@ def setup_pl_kernel(kernel: sk.Kernel, llm_service):
     logger.debug(f"Instance du plugin '{plugin_name}' ajoutée/mise à jour.")
 
     # Configuration des settings LLM
+    # #2632 : settings et enregistrement lèvent, au lieu d'un kernel PL sans
+    # ses fonctions ou sur les settings par défaut.
     default_settings = None
     if llm_service:
-        try:
-            default_settings = kernel.get_prompt_execution_settings_from_service_id(
-                llm_service.service_id
-            )
-            logger.debug(f"Settings LLM récupérés pour {plugin_name}.")
-        except Exception as e:
-            logger.warning(
-                f"Impossible de récupérer settings LLM pour {plugin_name}: {e}"
-            )
+        default_settings = prompt_settings(kernel, llm_service.service_id, plugin_name)
 
     # Ajout des fonctions sémantiques au kernel avec vérification améliorée
     semantic_functions = [
@@ -326,47 +321,18 @@ def setup_pl_kernel(kernel: sk.Kernel, llm_service):
     ]
 
     for func_name, prompt, description in semantic_functions:
-        try:
-            # Vérifier si le prompt est valide
-            if not prompt or not isinstance(prompt, str):
-                logger.error(f"ERREUR: Prompt invalide pour {plugin_name}.{func_name}")
-                continue
-
-            # Ajouter la fonction avec des logs détaillés
-            logger.info(
-                f"Ajout fonction {plugin_name}.{func_name} avec prompt de {len(prompt)} caractères"
-            )
-            kernel.add_function(
-                prompt=prompt,
-                plugin_name=plugin_name,
-                function_name=func_name,
-                description=description,
-                prompt_execution_settings=default_settings,
-            )
-            logger.debug(
-                f"Fonction sémantique {plugin_name}.{func_name} ajoutée/mise à jour."
-            )
-
-            # Vérifier que la fonction a été correctement ajoutée
-            if (
-                plugin_name in kernel.plugins
-                and func_name in kernel.plugins[plugin_name]
-            ):
-                logger.info(
-                    f"[OK] Fonction {plugin_name}.{func_name} correctement enregistrée."
-                )
-            else:
-                logger.error(
-                    f"❌ ERREUR CRITIQUE: Fonction {plugin_name}.{func_name} non trouvée après ajout!"
-                )
-        except ValueError as ve:
-            logger.warning(f"Problème ajout/MàJ {plugin_name}.{func_name}: {ve}")
-            logger.error(f"Détails de l'erreur: {str(ve)}")
-        except Exception as e:
-            logger.error(
-                f"Exception inattendue lors de l'ajout de {plugin_name}.{func_name}: {e}",
-                exc_info=True,
-            )
+        register_prompt_function(
+            kernel,
+            plugin_name,
+            plugin_name,
+            func_name,
+            prompt,
+            description,
+            default_settings,
+        )
+        logger.debug(
+            f"Fonction sémantique {plugin_name}.{func_name} ajoutée/mise à jour."
+        )
 
     # Vérification de la fonction native (façade)
     native_facade = "execute_pl_query"
