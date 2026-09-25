@@ -405,16 +405,12 @@ class UnifiedTextAnalysisPipeline:
             kernel = sk.Kernel()
             kernel.add_service(self.llm_service)
 
+            # #2649 : la fabrique lève quand l'agent ne peut pas être construit
+            # (type non supporté, échec du constructeur). L'`except` plus bas
+            # porte le message de l'exception dans `formal_results["reason"]`.
             logic_agent = LogicAgentFactory.create_agent(
                 self.config.logic_type, kernel, self.llm_service
             )
-
-            if not logic_agent:
-                formal_results["status"] = "Failed"
-                formal_results["reason"] = (
-                    f"Impossible de créer l'agent logique '{self.config.logic_type}'"
-                )
-                return formal_results
 
             # Conversion en ensemble de croyances
             belief_set, status = await logic_agent.text_to_belief_set(text)

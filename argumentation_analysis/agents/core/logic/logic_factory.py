@@ -38,7 +38,7 @@ class LogicAgentFactory:
     @classmethod
     def create_agent(
         cls, logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None
-    ) -> Optional[BaseLogicAgent]:
+    ) -> BaseLogicAgent:
         """
         Crée une instance d'un agent logique basé sur le type de logique spécifié.
 
@@ -54,9 +54,17 @@ class LogicAgentFactory:
         :param llm_service: Le service LLM optionnel à utiliser pour configurer
                             les composants de l'agent.
         :type llm_service: Optional[Any]
-        :return: Une instance de la sous-classe `BaseLogicAgent` correspondante,
-                 ou None si le `logic_type` n'est pas supporté ou si une erreur survient.
-        :rtype: Optional[BaseLogicAgent]
+        :return: Une instance de la sous-classe `BaseLogicAgent` correspondante.
+        :rtype: BaseLogicAgent
+        :raises ValueError: si `logic_type` n'est pas un type que cette fabrique
+                            sait instancier — le message nomme ceux qu'elle sait.
+        :raises TypeError: si `llm_service` n'est pas un objet service (#2441).
+        :raises Exception: l'exception du constructeur, telle quelle. Depuis
+                           #2649 elle sort d'ici avec son type et son message :
+                           les constructeurs lèvent (`SemanticSetupError` depuis
+                           #2632/#2650, une erreur de bridge pour FOL), et
+                           l'avaler en `None` privait les appelants de la cause,
+                           qui ne survivait que dans une ligne de log.
         """
         logger.info(f"Création d'un agent logique de type '{logic_type}'")
 
@@ -64,16 +72,21 @@ class LogicAgentFactory:
         logic_type = logic_type.lower().strip()
         logger.debug(f"Normalized logic type: {logic_type}")
 
-        # Vérifier si le type de logique est supporté
+        # #2649 : un type non supporté lève au lieu de rendre `None`. Le
+        # message nomme ce que cette fabrique sait réellement instancier —
+        # les clés de `_agent_classes`, pas `_handler_types` (ces derniers
+        # n'ont pas d'agent : `create_agent` les refuserait aussi).
         if logic_type not in cls._agent_classes:
-            logger.error(f"Type de logique non supporté: {logic_type}")
-            logger.info(f"Types supportés: {', '.join(cls._agent_classes.keys())}")
-            return None
+            raise ValueError(
+                f"LogicAgentFactory.create_agent: unsupported logic_type "
+                f"{logic_type!r}. This factory instantiates: "
+                f"{', '.join(sorted(cls._agent_classes))}."
+            )
 
         # #2441 — the third parameter is the LLM service, read for its
         # ``service_id``. A service id passed as a ``str`` used to be dropped
         # without a trace (the agent silently got its default id). Refused
-        # here, outside the ``try`` below, so the caller sees why.
+        # here, outside the instantiation, so the caller sees why.
         if llm_service is not None and not hasattr(llm_service, "service_id"):
             raise TypeError(
                 f"LogicAgentFactory.create_agent: llm_service must be a service "
@@ -82,33 +95,24 @@ class LogicAgentFactory:
                 + ". Pass the service, not its id."
             )
 
-        try:
-            # Créer l'instance de l'agent
-            agent_class = cls._agent_classes[logic_type]
+        # Créer l'instance de l'agent
+        agent_class = cls._agent_classes[logic_type]
 
-            # Préparer les arguments pour le constructeur de l'agent
-            agent_args = {
-                "kernel": kernel,
-                "agent_name": f"{logic_type.capitalize()}Agent",
-            }
-            if llm_service is not None:
-                agent_args["service_id"] = llm_service.service_id
+        # Préparer les arguments pour le constructeur de l'agent
+        agent_args = {
+            "kernel": kernel,
+            "agent_name": f"{logic_type.capitalize()}Agent",
+        }
+        if llm_service is not None:
+            agent_args["service_id"] = llm_service.service_id
 
-            # Créer l'agent avec les arguments
-            agent = agent_class(**agent_args)
+        # #2649 : pas de `try`/`except` ici. Le constructeur enregistre ses
+        # fonctions sémantiques et résout les settings de son service (#2632) :
+        # un échec est un défaut du code appelant, l'exception sort nommée.
+        agent = agent_class(**agent_args)
 
-            logger.info(f"Agent logique de type '{logic_type}' créé avec succès")
-            return agent
-
-        except Exception as e:
-            logger.error(
-                f"Erreur lors de la création de l'agent logique de type '{logic_type}': {str(e)}",
-                exc_info=True,
-            )
-            import traceback
-
-            logger.error(traceback.format_exc())
-            return None
+        logger.info(f"Agent logique de type '{logic_type}' créé avec succès")
+        return agent
 
     @classmethod
     def register_agent_class(

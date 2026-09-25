@@ -624,14 +624,13 @@ class ConversationOrchestrator:
             )
 
             chat_service = self.kernel.get_service(type=ChatCompletionClientBase)
+            # #2649 : la fabrique ne rend plus `None`. Un constructeur qui
+            # échoue lève (ses fonctions sémantiques, ses settings, son
+            # bridge), et l'`except` ci-dessous enregistre le type et le
+            # message dans `real_agent_setup_failures`.
             fol = LogicAgentFactory.create_agent(
                 "first_order", self.kernel, chat_service
             )
-            if fol is None:
-                # The factory logs the exception and returns None.
-                raise RuntimeError(
-                    "LogicAgentFactory.create_agent('first_order') returned None"
-                )
             self._real_agents["fol_logic"] = fol
             self.logger.info("Real FOLLogicAgent created")
         except Exception as e:

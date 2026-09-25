@@ -148,33 +148,42 @@ class TestLogicAgentFactory:
 
     @pytest.mark.asyncio
     async def test_create_agent_unsupported_type(self):
-        """Test de la création d'un agent avec un type non supporté."""
+        """Un type non supporté lève, et le message nomme les types connus.
+
+        #2649 : la fabrique rendait ``None``, donc l'appelant ne pouvait nommer
+        que le type qu'il avait passé, jamais ceux qui sont disponibles.
+        """
         await self.async_setUp()
         with self.agent_classes_patch:
-            agent = LogicAgentFactory.create_agent("unsupported", self.kernel)
+            with pytest.raises(ValueError) as excinfo:
+                LogicAgentFactory.create_agent("unsupported", self.kernel)
 
             self.mock_propositional_agent_class.assert_not_called()
             self.mock_first_order_agent_class.assert_not_called()
             self.mock_modal_agent_class.assert_not_called()
 
-            assert agent is None
+            assert "unsupported" in str(excinfo.value)
+            assert "propositional" in str(excinfo.value)
 
     @pytest.mark.asyncio
     async def test_create_agent_exception(self):
-        """Test de la création d'un agent avec une exception."""
+        """L'exception du constructeur sort de la fabrique.
+
+        #2649 : elle était journalisée puis convertie en ``None`` ; ni son type
+        ni son message n'atteignaient l'appelant.
+        """
         await self.async_setUp()
         with self.agent_classes_patch:
             self.mock_propositional_agent_class.side_effect = Exception(
                 "Test exception"
             )
 
-            agent = LogicAgentFactory.create_agent("propositional", self.kernel)
+            with pytest.raises(Exception, match="Test exception"):
+                LogicAgentFactory.create_agent("propositional", self.kernel)
 
             self.mock_propositional_agent_class.assert_called_once_with(
                 kernel=self.kernel, agent_name="PropositionalAgent"
             )
-
-            assert agent is None
 
     @pytest.mark.asyncio
     async def test_register_agent_class(self):
