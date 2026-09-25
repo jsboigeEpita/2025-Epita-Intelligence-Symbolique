@@ -5436,6 +5436,23 @@ async def _invoke_qbf(input_text: str, context: Dict[str, Any]) -> Dict[str, Any
             }
 
 
+class ClingoJvmEmptyModels(RuntimeError):
+    """Tweety's ClingoSolver returned no answer set, and clingo did not print
+    ``UNSATISFIABLE`` (#2626).
+
+    ``getModels`` also returns an empty list when the binary fails, or when its
+    output does not parse (clingo >= 5.5 prints ``Answer: 1 (Time: ...)``). An
+    empty list is therefore a verdict only when clingo's own output says so.
+    """
+
+
+def _clingo_reported_unsatisfiable(output: Optional[str]) -> bool:
+    """Whether clingo's raw output has its ``UNSATISFIABLE`` verdict line."""
+    return any(
+        line.strip() == "UNSATISFIABLE" for line in str(output or "").splitlines()
+    )
+
+
 async def _invoke_asp_reasoning(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -5446,6 +5463,9 @@ async def _invoke_asp_reasoning(
     """
     program = context.get("program", input_text)
     max_models = context.get("max_models", 0)  # 0 = all models
+    # Why the JVM result was refused, carried into the fallback's result so
+    # the switch of solver is visible in state, not only in the log (#2626).
+    jvm_refusal: Optional[str] = None
 
     # Try JVM + Tweety ClingoSolver first
     try:
@@ -5527,13 +5547,25 @@ async def _invoke_asp_reasoning(
                     f"vocabulary (banner mis-parse): {models!r} vs {sorted(prog_vocab)!r}"
                 )
 
+            # #2626: the guard above cannot see an EMPTY list, and getModels
+            # also returns one when the binary fails or its output does not
+            # parse. An empty list is a verdict only when clingo printed
+            # UNSATISFIABLE; otherwise the genuine Python binding decides.
+            if not models and not _clingo_reported_unsatisfiable(solver.getOutput()):
+                raise ClingoJvmEmptyModels(
+                    "Tweety ClingoSolver returned no answer set and clingo did "
+                    "not report UNSATISFIABLE"
+                )
+
             return {
                 "answer_sets": models,
                 "num_models": len(models),
+                "satisfiable": bool(models),
                 "solver": "clingo_jvm",
                 "program": str(program)[:500],
             }
     except Exception as e:
+        jvm_refusal = f"{type(e).__name__}: {e}"
         logger.info(f"Clingo JVM solver unavailable ({e}), trying Python fallback")
 
     # Try Python clingo package
@@ -5550,13 +5582,17 @@ async def _invoke_asp_reasoning(
         def on_model(model: Any) -> None:
             py_models.append([str(s) for s in model.symbols(shown=True)])
 
-        ctl.solve(on_model=on_model)
-        return {
+        solve_result = ctl.solve(on_model=on_model)
+        py_result: Dict[str, Any] = {
             "answer_sets": py_models,
             "num_models": len(py_models),
+            "satisfiable": solve_result.satisfiable,
             "solver": "clingo_python",
             "program": str(program)[:500],
         }
+        if jvm_refusal:
+            py_result["jvm_refused"] = jvm_refusal
+        return py_result
     except ImportError:
         logger.debug("Python clingo package not available")
     except Exception as e:
@@ -5574,7 +5610,7 @@ async def _invoke_asp_reasoning(
         "Returning a degraded result — install the 'clingo' package or a "
         "Tweety-compatible clingo binary to decide answer sets."
     )
-    return {
+    degraded: Dict[str, Any] = {
         "answer_sets": [],
         "num_models": 0,
         "solver": "unavailable",
@@ -5582,6 +5618,9 @@ async def _invoke_asp_reasoning(
         "error": "no genuine ASP solver available (clingo JVM + python both absent)",
         "program": str(program)[:500],
     }
+    if jvm_refusal:
+        degraded["jvm_refused"] = jvm_refusal
+    return degraded
 
 
 # --- Hierarchical taxonomy-guided fallacy detection (#84) ---
