@@ -26,10 +26,11 @@ DoD coverage (#1107):
 import inspect
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
 
+from semantic_kernel import Kernel
 from semantic_kernel.contents import FunctionCallContent
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import (
@@ -55,8 +56,10 @@ def _slave_kernel_stub():
         def __getitem__(self, name):
             return MagicMock()
 
-    kernel = MagicMock()
-    kernel.plugins.get.return_value = _FakePlugin()
+    kernel = create_autospec(Kernel, instance=True)
+    # SK 1.34: ``plugins`` is assigned dynamically in Kernel.__init__, so a
+    # class-level autospec cannot see it — set the real-dict shape here.
+    kernel.plugins = {"Exploration": _FakePlugin()}
     return kernel
 
 
@@ -119,7 +122,7 @@ def _deep_chain_taxonomy(max_depth: int = 10):
 def _make_plugin(taxonomy_data=None):
     data = taxonomy_data or _deep_chain_taxonomy()
     return FallacyWorkflowPlugin(
-        master_kernel=MagicMock(),
+        master_kernel=create_autospec(Kernel, instance=True),
         llm_service=MagicMock(),
         taxonomy_data=data,
     )

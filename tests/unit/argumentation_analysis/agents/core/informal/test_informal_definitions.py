@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import json
 import logging
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, create_autospec, patch
 import sys
 import semantic_kernel as sk
 from semantic_kernel.kernel import Kernel
@@ -242,7 +242,11 @@ def test_setup_informal_kernel_with_init_error():
     invalid_path = "non_existent_file.csv"
 
     # Mock le kernel et le service LLM
-    mock_kernel = MagicMock()
+    mock_kernel = create_autospec(Kernel, instance=True)
+    # SK 1.34: ``plugins`` est posé dynamiquement dans Kernel.__init__, invisible
+    # à l'autospec de classe — le dictionnaire réel garde le test
+    # ``plugin_name in kernel.plugins`` (informal_definitions.py:736) significatif.
+    mock_kernel.plugins = {}
     mock_llm = MagicMock()
 
     # L'appel à setup_informal_kernel ne devrait PAS lever d'erreur

@@ -8,7 +8,9 @@ real agents, result adaptation, factory with kernel parameter.
 
 import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, create_autospec
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.orchestration.conversation_orchestrator import (
     ConversationOrchestrator,
@@ -30,7 +32,7 @@ class TestRealModeSetup:
 
     def test_real_mode_with_empty_kernel_services_falls_back(self):
         """Kernel with empty services => fallback to demo."""
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.services = {}
         orch = ConversationOrchestrator(mode="real", kernel=kernel)
         assert orch.mode == "demo"
@@ -40,13 +42,13 @@ class TestRealModeSetup:
         orch = ConversationOrchestrator(mode="demo")
         assert orch._kernel_has_llm() is False
 
-        orch.kernel = MagicMock()
+        orch.kernel = create_autospec(Kernel, instance=True)
         orch.kernel.services = {"default": MagicMock()}
         assert orch._kernel_has_llm() is True
 
     def test_demo_mode_unchanged_with_kernel(self):
         """Demo mode works exactly as before even when kernel is provided."""
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.services = {"default": MagicMock()}
         orch = ConversationOrchestrator(mode="demo", kernel=kernel)
         assert orch.mode == "demo"
@@ -61,7 +63,7 @@ class TestRealModeSetup:
 
     def test_kernel_stored_on_instance(self):
         """Kernel is stored as instance attribute."""
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         orch = ConversationOrchestrator(mode="demo", kernel=kernel)
         assert orch.kernel is kernel
 
@@ -240,7 +242,7 @@ class TestRealModeExecution:
 
 class TestFactoryWithKernel:
     def test_create_with_kernel(self):
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         orch = create_conversation_orchestrator("demo", kernel=kernel)
         assert orch.kernel is kernel
         assert orch.mode == "demo"

@@ -12,7 +12,8 @@ Validates that narrate_convergence:
 import json
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from semantic_kernel import Kernel
+from unittest.mock import AsyncMock, create_autospec
 
 from argumentation_analysis.plugins.narrative_synthesis_plugin import (
     NarrativeSynthesisPlugin,
@@ -29,7 +30,7 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 @pytest.fixture
 def fake_kernel():
     """Minimal mock kernel exposing async invoke_prompt."""
-    kernel = MagicMock()
+    kernel = create_autospec(Kernel, instance=True)
     kernel.invoke_prompt = AsyncMock(return_value="Mocked LLM prose output.")
     return kernel
 

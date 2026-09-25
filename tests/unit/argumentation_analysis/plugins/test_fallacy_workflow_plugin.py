@@ -16,9 +16,11 @@ Tests cover:
 import asyncio
 import json
 import logging
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, create_autospec
 
 import pytest
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import (
     FallacyWorkflowPlugin,
@@ -129,11 +131,9 @@ SAMPLE_TAXONOMY = [
 
 @pytest.fixture
 def mock_kernel():
-    kernel = MagicMock()
-    kernel.add_service = MagicMock()
-    kernel.add_plugin = MagicMock()
-    kernel.plugins = MagicMock()
-    return kernel
+    # Specced double (#2393): add_service/add_plugin/plugins come from the
+    # real Kernel API instead of bare MagicMock re-assignments.
+    return create_autospec(Kernel, instance=True)
 
 
 @pytest.fixture

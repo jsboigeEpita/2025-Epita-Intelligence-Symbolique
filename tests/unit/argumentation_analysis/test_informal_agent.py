@@ -201,8 +201,8 @@ class TestSetupInformalKernel:
         kernel = sk.Kernel()
         return kernel, llm_service
 
-    @patch("semantic_kernel.Kernel.add_function")
-    @patch("semantic_kernel.Kernel.add_plugin")
+    @patch("semantic_kernel.Kernel.add_function", autospec=True)
+    @patch("semantic_kernel.Kernel.add_plugin", autospec=True)
     @pytest.mark.asyncio
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible"
@@ -218,8 +218,17 @@ class TestSetupInformalKernel:
 
         # Vérifier que le plugin natif a été ajouté une fois
         mock_add_plugin.assert_called_once()
-        # Vérifier le type de l'instance du plugin
-        plugin_instance = mock_add_plugin.call_args[0][0]
+        # Vérifier le type de l'instance du plugin. Avec autospec sur une
+        # méthode non liée, l'appel enregistre l'instance réelle en premier
+        # argument : le plugin se lit par type, pas par index.
+        plugin_instance = next(
+            (
+                a
+                for a in mock_add_plugin.call_args.args
+                if isinstance(a, InformalAnalysisPlugin)
+            ),
+            None,
+        )
         assert isinstance(plugin_instance, InformalAnalysisPlugin)
 
         # Vérifier que les fonctions sémantiques ont été ajoutées

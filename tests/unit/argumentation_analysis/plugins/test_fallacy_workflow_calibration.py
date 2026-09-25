@@ -27,7 +27,7 @@ import sys
 import asyncio
 import json
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch, create_autospec
 
 # Import is deferred inside the workflow_plugin fixture to avoid the
 # ``tests/conftest.py`` semantic_kernel auto-marker picking this file up as a
@@ -203,7 +203,11 @@ class TestFallacyWorkflowCalibration:
 @pytest.fixture
 def mock_kernel():
     """Mock du kernel Semantic Kernel."""
-    kernel = MagicMock()
+    # Deferred import (see module docstring): module-level semantic_kernel
+    # imports are kept out of this file.
+    from semantic_kernel import Kernel
+
+    kernel = create_autospec(Kernel, instance=True)
     return kernel
 
 

@@ -53,7 +53,8 @@ def logic_service_with_mocks():
     with patch(
         "argumentation_analysis.services.web_api.services.logic_service.LogicAgentFactory"
     ) as mock_logic_factory, patch(
-        "argumentation_analysis.services.web_api.services.logic_service.Kernel"
+        "argumentation_analysis.services.web_api.services.logic_service.Kernel",
+        autospec=True,
     ) as mock_kernel_class:
         # Créer un mock plus réaliste pour le Kernel
         mock_kernel = MagicMock(spec=Kernel)

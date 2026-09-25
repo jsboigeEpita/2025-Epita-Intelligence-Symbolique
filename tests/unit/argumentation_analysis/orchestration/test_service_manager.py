@@ -29,9 +29,11 @@ import asyncio
 import uuid
 import time
 import json
-from unittest.mock import patch, MagicMock, AsyncMock, PropertyMock
+from unittest.mock import patch, MagicMock, AsyncMock, PropertyMock, create_autospec
 from datetime import datetime, timedelta
 from pathlib import Path
+
+from semantic_kernel import Kernel
 
 # ========================================================================
 # Module-level patch path prefix
@@ -377,7 +379,7 @@ class TestInitialize:
         mock_settings.service_manager.enable_specialized_orchestrators = False
 
         mock_context = MagicMock()
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_kernel.get_service.return_value = MagicMock()
         mock_llm_service = MagicMock()
 
@@ -404,7 +406,7 @@ class TestInitialize:
         mock_settings.service_manager.enable_specialized_orchestrators = False
 
         mock_context = MagicMock()
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_kernel.get_service.side_effect = Exception("no service")
 
         with patch(
@@ -576,7 +578,7 @@ class TestInitializeHierarchicalManagers:
 
     async def test_success_with_all_managers(self, manager):
         manager.middleware = MagicMock()
-        manager.kernel = MagicMock()
+        manager.kernel = create_autospec(Kernel, instance=True)
         manager.llm_service_id = "test-service"
         manager.project_context = MagicMock()
 
@@ -630,7 +632,7 @@ class TestInitializeSpecializedOrchestrators:
         )
 
         mgr = OrchestrationServiceManager(enable_logging=False)
-        mgr.kernel = MagicMock()
+        mgr.kernel = create_autospec(Kernel, instance=True)
         return mgr
 
     async def test_success_cluedo_and_conversation(self, manager):

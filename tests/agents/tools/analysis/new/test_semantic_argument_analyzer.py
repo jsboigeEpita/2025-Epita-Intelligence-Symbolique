@@ -1,8 +1,9 @@
 import pytest
 import json
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, MagicMock, AsyncMock, create_autospec
 
 import semantic_kernel as sk
+from semantic_kernel import Kernel
 from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import (
     SemanticArgumentAnalyzer,
 )
@@ -16,9 +17,9 @@ from argumentation_analysis.core.models.toulmin_model import (
 @pytest.fixture
 def analyzer():
     # On mock le Kernel pour ne pas dépendre du service externe
-    with patch("semantic_kernel.Kernel") as mock_kernel_class:
+    with patch("semantic_kernel.Kernel", autospec=True) as mock_kernel_class:
         # On simule le comportement de la chaîne d'appel de semantic kernel
-        mock_kernel_instance = MagicMock()
+        mock_kernel_instance = create_autospec(Kernel, instance=True)
         mock_kernel_class.return_value = mock_kernel_instance
 
         # Le kernel est instancié dans le __init__, donc on doit patcher *avant* de créer l'analyseur

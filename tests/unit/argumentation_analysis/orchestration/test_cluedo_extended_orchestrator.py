@@ -3,9 +3,10 @@
 
 import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch, PropertyMock
+from unittest.mock import MagicMock, AsyncMock, patch, PropertyMock, create_autospec
 from datetime import datetime
 
+from semantic_kernel import Kernel
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 
@@ -157,7 +158,7 @@ class TestCluedoExtendedOrchestratorInit:
             CluedoExtendedOrchestrator,
         )
 
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         settings = MagicMock()
         orch = CluedoExtendedOrchestrator(kernel=kernel, settings=settings)
         assert orch.kernel is kernel
@@ -176,7 +177,7 @@ class TestCluedoExtendedOrchestratorInit:
             CluedoExtendedOrchestrator,
         )
 
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         settings = MagicMock()
         orch = CluedoExtendedOrchestrator(
             kernel=kernel,
@@ -196,7 +197,7 @@ class TestCluedoExtendedOrchestratorInit:
             CluedoExtendedOrchestrator,
         )
 
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         settings = MagicMock()
         orch = CluedoExtendedOrchestrator(kernel=kernel, settings=settings)
         assert orch.execution_metrics == {}
@@ -212,7 +213,9 @@ class TestCluedoExtendedOrchestratorConsolidate:
             CluedoExtendedOrchestrator,
         )
 
-        return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        return CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
 
     def test_consolidate_string_response(self):
         orch = self._make_orchestrator()
@@ -263,7 +266,9 @@ class TestCluedoExtendedOrchestratorDetectMessageType:
             CluedoExtendedOrchestrator,
         )
 
-        return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        return CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
 
     def test_detect_revelation(self):
         orch = self._make_orchestrator()
@@ -335,7 +340,9 @@ class TestCluedoExtendedOrchestratorExtractSuggestion:
             CluedoExtendedOrchestrator,
         )
 
-        return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        return CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
 
     def test_no_suggestion_keywords(self):
         orch = self._make_orchestrator()
@@ -414,7 +421,9 @@ class TestCluedoExtendedOrchestratorEvaluateSolution:
             CluedoExtendedOrchestrator,
         )
 
-        orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        orch = CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
         orch.oracle_state = MagicMock()
         orch.oracle_state.is_solution_proposed = is_proposed
         orch.oracle_state.final_solution = proposed
@@ -468,7 +477,9 @@ class TestCluedoExtendedOrchestratorPerformanceMetrics:
             CluedoExtendedOrchestrator,
         )
 
-        return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        return CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
 
     def test_performance_metrics_basic(self):
         orch = self._make_orchestrator()
@@ -528,7 +539,9 @@ class TestCluedoExtendedOrchestratorDetectEmotionalReactions:
             CluedoExtendedOrchestrator,
         )
 
-        return CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        return CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
 
     # #2536: the detection body sat grafted after the return of
     # _force_moriarty_oracle_revelation, unreachable, while this method was a
@@ -596,7 +609,9 @@ class TestCluedoExtendedOrchestratorExecuteWorkflow:
             CluedoExtendedOrchestrator,
         )
 
-        orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        orch = CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
         with pytest.raises(ValueError, match="Workflow non configuré"):
             await orch.execute_workflow()
 
@@ -605,7 +620,9 @@ class TestCluedoExtendedOrchestratorExecuteWorkflow:
             CluedoExtendedOrchestrator,
         )
 
-        orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        orch = CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
         orch.orchestration = MagicMock()
         orch.oracle_state = MagicMock()
         orch.oracle_state.is_solution_proposed = False
@@ -640,7 +657,9 @@ class TestAnalyzeContextualElements:
             CluedoExtendedOrchestrator,
         )
 
-        orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+        orch = CluedoExtendedOrchestrator(
+            kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+        )
         orch.oracle_state = MagicMock()
         return orch
 
