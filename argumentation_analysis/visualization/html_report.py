@@ -14,10 +14,14 @@ import pathlib
 from typing import Any, Dict, Optional, Union
 
 from jinja2 import Environment, BaseLoader
+from jinja2.utils import htmlsafe_json_dumps
+from markupsafe import Markup, escape
 
 logger = logging.getLogger(__name__)
 
-JINJA_ENV = Environment(loader=BaseLoader(), autoescape=False)
+# State values (argument text, justifications, LLM output) are printed as
+# text. The helpers below build their own markup and return Markup.
+JINJA_ENV = Environment(loader=BaseLoader(), autoescape=True)
 
 TEMPLATE = """\
 <!DOCTYPE html>
@@ -403,10 +407,10 @@ function toggleCollapse(el) {
   if (!container || !window.cytoscape) return;
 
   var elements = [];
-  var nodeLabels = {{ dung_node_labels|safe }};
-  var attacks = {{ dung_attacks|safe }};
-  var grounded = {{ dung_grounded|safe }};
-  var statusMap = {{ dung_status_json|safe }};
+  var nodeLabels = {{ dung_node_labels }};
+  var attacks = {{ dung_attacks }};
+  var grounded = {{ dung_grounded }};
+  var statusMap = {{ dung_status_json }};
 
   nodeLabels.forEach(function(n) { elements.push({data: {id: n, label: n}}); });
   attacks.forEach(function(a, i) { elements.push({data: {id: 'e'+i, source: a[0], target: a[1]}}); });
@@ -436,7 +440,7 @@ function toggleCollapse(el) {
   var container = document.getElementById('atms-tree');
   if (!container || !window.d3) return;
 
-  var data = {{ atms_tree_data|safe }};
+  var data = {{ atms_tree_data }};
 
   var width = container.clientWidth;
   var height = 350;
@@ -484,6 +488,13 @@ def _heat_color(value: float) -> str:
     r = int(248 * value)
     g = int(180 * (1 - value))
     return f"rgba({r}, {g}, 40, 0.7)"
+
+
+def _script_json(value: Any) -> Markup:
+    """JSON for a ``<script>`` block: ``<``, ``>``, ``&`` and ``'`` are
+    written as JSON unicode escapes, so a label holding ``</script>`` stays a
+    string. Key order is kept."""
+    return htmlsafe_json_dumps(value, dumps=json.dumps)
 
 
 def render_html_report(
@@ -620,20 +631,24 @@ def render_html_report(
         duration_s=duration_s,
         pattern_data=pattern_ctx,
         # JSON-encoded data for JS
-        dung_node_labels=json.dumps(dung_nodes),
-        dung_attacks=json.dumps(dung_attacks),
-        dung_grounded=json.dumps(dung_extensions.get("grounded", [])),
-        dung_status_json=json.dumps(dung_status),
+        dung_node_labels=_script_json(dung_nodes),
+        dung_attacks=_script_json(dung_attacks),
+        dung_grounded=_script_json(dung_extensions.get("grounded", [])),
+        dung_status_json=_script_json(dung_status),
         dung_status=dung_status,
-        atms_tree_data=json.dumps(atms_root),
-        # Helper functions
+        atms_tree_data=_script_json(atms_root),
+        # Helper functions: numbers become markup, anything else is text
         _score_badge=lambda v: (
-            f'<span class="badge {"badge-green" if float(v) >= 0.8 else "badge-orange" if float(v) >= 0.6 else "badge-red"}">{v:.0%}</span>'
+            Markup(
+                f'<span class="badge {"badge-green" if float(v) >= 0.8 else "badge-orange" if float(v) >= 0.6 else "badge-red"}">{v:.0%}</span>'
+            )
             if isinstance(v, (int, float))
             else v
         ),
         _score_cell=lambda v: (
-            f'<span style="color:{_score_color(float(v))};font-weight:600;">{v:.2f}</span>'
+            Markup(
+                f'<span style="color:{_score_color(float(v))};font-weight:600;">{v:.2f}</span>'
+            )
             if isinstance(v, (int, float))
             else str(v)
         ),
@@ -641,7 +656,9 @@ def render_html_report(
         _pattern_heat_bg=lambda v: (
             f"rgba(88,166,255,{min(v * 0.8, 0.6):.2f})" if v > 0 else "transparent"
         ),
-        _status_badge=lambda s: f'<span class="badge {"badge-green" if "accepted" in s else "badge-red" if s == "rejected" else "badge-blue"}">{s.replace("_", " ")}</span>',
+        _status_badge=lambda s: Markup(
+            f'<span class="badge {"badge-green" if "accepted" in s else "badge-red" if s == "rejected" else "badge-blue"}">{escape(s.replace("_", " "))}</span>'
+        ),
     )
 
     if output_path:
