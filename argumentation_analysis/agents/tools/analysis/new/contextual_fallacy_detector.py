@@ -26,12 +26,6 @@ from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("ContextualFallacyDetector")
 
 
@@ -565,6 +559,11 @@ class ContextualFallacyDetector:
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     # Exemple d'arguments
     arguments = [
         "Les experts affirment que ce produit est sûr.",

@@ -40,11 +40,6 @@ import asyncio
 import argparse
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
-
 # Note: ensure_env() n'est plus nécessaire ici — le bootstrap/settings charge .env
 
 

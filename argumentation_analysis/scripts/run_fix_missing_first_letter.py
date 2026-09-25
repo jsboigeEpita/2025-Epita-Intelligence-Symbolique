@@ -24,11 +24,6 @@ from argumentation_analysis.utils.extract_repair.fix_missing_first_letter import
 
 # Configuration du logging pour ce script (peut être différent du module importé)
 logger = logging.getLogger("RunFixMissingFirstLetter")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 
 
 def main():
@@ -107,4 +102,9 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     main()

@@ -37,11 +37,11 @@ class TestInit:
         assert mgr.jtms_service is service
 
     def test_storage_path_created(self, service, tmp_path):
+        # The default ``./logs/sessions`` has a parent no import creates (#2346).
         path = tmp_path / "deep" / "nested"
-        # mkdir with exist_ok won't create parents; but the constructor only does mkdir(exist_ok=True)
-        # so we need an existing parent
-        mgr = JTMSSessionManager(service, storage_path=str(tmp_path / "sessions"))
-        assert mgr.storage_path.exists()
+        mgr = JTMSSessionManager(service, storage_path=str(path))
+        assert mgr.storage_path == path
+        assert path.is_dir()
 
     def test_default_config(self, service, tmp_path):
         mgr = JTMSSessionManager(service, storage_path=str(tmp_path))

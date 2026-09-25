@@ -45,12 +45,6 @@ from collections import defaultdict
 from io import BytesIO
 import base64
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("ArgumentStructureVisualizer")
 
 

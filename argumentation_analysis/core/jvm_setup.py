@@ -70,13 +70,6 @@ class TweetyClasspathVersionError(RuntimeError):
 # Default timeout for JVM startup (can be overridden via settings)
 DEFAULT_JVM_STARTUP_TIMEOUT_SECONDS = 60
 
-# --- Configuration initiale du Logger ---
-# Il est crucial de configurer le logger au tout début.
-# Si le logger parent est déjà configuré, ces lignes n'auront pas d'effet
-# mais garantissent que le logging est actif si ce module est importé en premier.
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger("Orchestration.JPype.Setup")
 try:
     from argumentation_analysis.config.settings import settings
@@ -1270,7 +1263,10 @@ def is_jvm_owned_by_session_fixture() -> bool:
 
 
 if __name__ == "__main__":
-    # La configuration du logger est déjà faite en haut du fichier
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     print("Ce script n'est pas conçu pour être exécuté directement.")
     print("Il sert à l'initialisation de la JVM pour le projet.")
     # Test d'initialisation pour le débogage

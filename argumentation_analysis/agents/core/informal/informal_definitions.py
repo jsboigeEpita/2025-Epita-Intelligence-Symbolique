@@ -47,12 +47,6 @@ from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
 from argumentation_analysis.utils.taxonomy_local_overrides import purge_dataframe
 from argumentation_analysis.paths import DATA_DIR
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("InformalDefinitions")
 
 # Import des prompts (V3 - Tool Use)

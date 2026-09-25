@@ -10,11 +10,8 @@ import sys
 import hashlib
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
 
 # Ajouter le répertoire grand-parent au chemin de recherche des modules
 sys.path.append(str(parent_dir.parent))

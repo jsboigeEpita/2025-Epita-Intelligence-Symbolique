@@ -19,16 +19,8 @@ import logging
 import shutil
 from pathlib import Path
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("CleanupSensitiveFiles")
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-sys.path.append(str(Path(__file__).parent.parent))
 
 # #2459: ``argumentation_analysis/utils/__init__.py`` imports this module, so
 # any ``import argumentation_analysis.utils.<x>`` runs this line. A failure
@@ -188,4 +180,9 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     main()

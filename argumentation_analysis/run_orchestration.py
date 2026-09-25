@@ -40,8 +40,6 @@ from pathlib import Path
 # root cause the test_run_orchestration subprocess tests assert against.
 current_dir = Path(__file__).parent
 project_root = current_dir.parent
-if str(current_dir) not in sys.path:
-    sys.path.append(str(current_dir))
 if str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
@@ -71,9 +69,9 @@ def setup_logging(verbose: bool = False) -> None:
     quand l'exécuteur les attache.
 
     ``force=True`` : le point d'entrée possède la configuration du processus.
-    Des modules de la bibliothèque appellent encore ``basicConfig`` à l'import
-    (#2346) ; sans ``force``, le premier importé l'emporte et cet appel ne fait
-    rien.
+    Aucun module de la bibliothèque n'appelle plus ``basicConfig`` à l'import
+    (#2346, gardé par ``test_import_side_effects_2346.py``) ; ``force`` remplace
+    ce qu'un autre import aurait pu poser avant cet appel.
     """
     from argumentation_analysis.orchestration.structured_logging import (
         formatter_from_env,

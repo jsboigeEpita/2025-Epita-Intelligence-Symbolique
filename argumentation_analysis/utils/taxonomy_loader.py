@@ -22,10 +22,6 @@ from pathlib import Path
 from typing import Optional
 from argumentation_analysis.paths import DATA_DIR
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 logger = logging.getLogger(__name__)
 
 # URL de la taxonomie des sophismes (pour référence uniquement)
@@ -232,6 +228,10 @@ def validate_taxonomy_file():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    )
     # Test du module
     try:
         taxonomy_path = get_taxonomy_path()

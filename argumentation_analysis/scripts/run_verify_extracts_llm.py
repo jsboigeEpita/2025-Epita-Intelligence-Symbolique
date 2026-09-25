@@ -35,19 +35,6 @@ from argumentation_analysis.core.llm_service import create_llm_service  # Import
 
 # Configuration du logging pour ce script
 logger = logging.getLogger("RunVerifyExtractsLLM")
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
-# Création d'un handler pour écrire les logs dans un fichier spécifique au script d'exécution
-run_file_handler = logging.FileHandler("run_verify_extracts_llm.log")
-run_file_handler.setFormatter(
-    logging.Formatter(
-        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
-    )
-)
-logger.addHandler(run_file_handler)
 
 
 def build_verify_parser() -> argparse.ArgumentParser:
@@ -313,4 +300,16 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
+    run_file_handler = logging.FileHandler("run_verify_extracts_llm.log")
+    run_file_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
+        )
+    )
+    logger.addHandler(run_file_handler)
     asyncio.run(main())

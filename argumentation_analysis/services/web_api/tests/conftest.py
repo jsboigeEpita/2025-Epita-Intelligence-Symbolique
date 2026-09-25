@@ -17,10 +17,6 @@ from unittest.mock import Mock, patch
 import pytest
 
 # Ajouter le répertoire racine au chemin Python
-current_dir = Path(__file__).parent
-root_dir = current_dir.parent.parent.parent
-if str(root_dir) not in sys.path:
-    sys.path.append(str(root_dir))
 
 
 # Configuration des mocks globaux pour éviter les erreurs d'import

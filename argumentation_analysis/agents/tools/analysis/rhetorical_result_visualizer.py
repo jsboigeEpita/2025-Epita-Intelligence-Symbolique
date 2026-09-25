@@ -23,18 +23,6 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 from pathlib import Path
 
-# Ajouter le répertoire parent au chemin de recherche des modules
-current_dir = Path(__file__).parent
-parent_dir = current_dir.parent.parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.append(str(parent_dir))
-
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("RhetoricalResultVisualizer")
 
 
@@ -320,6 +308,11 @@ class RhetoricalResultVisualizer:
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     visualizer = RhetoricalResultVisualizer()
 
     # Exemple d'état partagé

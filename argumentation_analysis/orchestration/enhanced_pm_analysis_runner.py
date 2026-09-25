@@ -277,6 +277,7 @@ class EnhancedProjectManagerOrchestrator:
             # Sauvegarde
             timestamp = time.strftime("%Y%m%d_%H%M%S")
             report_path = f"./logs/enhanced_pm_orchestration_demo_{timestamp}.md"
+            os.makedirs(os.path.dirname(report_path), exist_ok=True)
             save_success = save_enhanced_pm_report(report_path)
 
             total_duration = time.time() - run_start_time

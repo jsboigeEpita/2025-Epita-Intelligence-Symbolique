@@ -31,12 +31,6 @@ from argumentation_analysis.agents.tools.analysis.rhetorical_result_visualizer i
     RhetoricalResultVisualizer,
 )
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("EnhancedRhetoricalResultVisualizer")
 
 
@@ -531,6 +525,11 @@ class EnhancedRhetoricalResultVisualizer(RhetoricalResultVisualizer):
 
 # Test de la classe si exécutée directement
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+        datefmt="%H:%M:%S",
+    )
     visualizer = EnhancedRhetoricalResultVisualizer()
 
     # Exemple d'état partagé

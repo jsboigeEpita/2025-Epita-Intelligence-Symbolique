@@ -20,22 +20,8 @@ from html import escape
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
-    datefmt="%H:%M:%S",
-)
 logger = logging.getLogger("VerifyExtractsLLM")
 
-# Création d'un handler pour écrire les logs dans un fichier
-file_handler = logging.FileHandler("verify_extracts_llm.log")
-file_handler.setFormatter(
-    logging.Formatter(
-        "%(asctime)s [%(levelname)s] [%(name)s] %(message)s", datefmt="%H:%M:%S"
-    )
-)
-logger.addHandler(file_handler)
 
 import semantic_kernel as sk
 from semantic_kernel.contents import ChatMessageContent
@@ -86,8 +72,6 @@ from semantic_kernel.functions import KernelArguments
 # Imports depuis les modules du projet
 import sys
 
-# Ajouter le répertoire parent au chemin d'importation
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 # Instructions pour l'agent d'évaluation des extraits
 EVALUATION_AGENT_INSTRUCTIONS = """
 Vous êtes un agent spécialisé dans l'évaluation de la qualité des extraits de texte.
