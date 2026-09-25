@@ -66,10 +66,12 @@ class TestCluedoOrchestrationRealIntegration:
             # Correction : Instancier directement le service avec le bon service_id
             api_key = os.getenv("OPENAI_API_KEY")
             if not api_key:
-                logger.warning(
-                    "OPENAI_API_KEY not found, skipping LLM service creation."
-                )
-                return kernel
+                # #2411: construction-only. The agent-creation and
+                # methods-availability tests never invoke the service (the
+                # ones that do are requires_api and skip keyless), so a dummy
+                # key builds the real classes keyless — a bare kernel used to
+                # fail mid-test on the missing service instead.
+                api_key = "sk-construction-only-2411"
 
             llm_service = OpenAIChatCompletion(
                 service_id="chat_completion",  # ID attendu par SherlockEnqueteAgent
