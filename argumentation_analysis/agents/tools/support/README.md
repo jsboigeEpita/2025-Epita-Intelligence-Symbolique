@@ -2,11 +2,11 @@
 
 ## Rôle et frontière
 
-Un module : `shared_services.py` (39 lignes), sans `__init__.py` (seul enfant de `tools/` dans ce cas — `tools/__init__.py` et `tools/analysis/__init__.py` existent). Trois utilitaires transverses pour l'arbre [`tools/analysis/`](../analysis/README.md) :
+Un module : `shared_services.py` (64 lignes), sans `__init__.py` (seul enfant de `tools/` dans ce cas — `tools/__init__.py` et `tools/analysis/__init__.py` existent). Trois utilitaires transverses pour l'arbre [`tools/analysis/`](../analysis/README.md) :
 
-- `get_configured_logger(name)` :5 — logger au format maison ;
-- `ServiceRegistry` :15 — cache singleton par classe (dict de niveau classe :16) ;
-- `ConfigManager` :26 — cache de configuration avec callback de chargement (:27).
+- `get_configured_logger(name)` :5 — rend le logger nommé ; il ne configure plus le logger racine (#2346) ;
+- `ServiceRegistry` :15 — cache singleton par classe (dict de niveau classe :18, `reset()` :28) ;
+- `ConfigManager` :33 — cache de configuration avec callback de chargement (:36, `reset()` :62). Un chargeur qui rend `None` n'est pas mis en cache : l'appel suivant réessaie (#2346).
 
 ## Composants publics
 
@@ -35,7 +35,7 @@ Aucun.
 conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/argumentation_analysis/agents/tools/test_fallacy_analyzers.py tests/unit/argumentation_analysis/agents/tools/support/test_shared_services.py -v
 ```
 
-83 `def test_` dans le fichier analyzeurs (section dédiée shared_services dès :778) + fichier dédié `test_shared_services.py`.
+84 `def test_` dans le fichier analyzeurs (section dédiée shared_services dès :776) + fichier dédié `test_shared_services.py`.
 
 ## Frères et parent
 
@@ -43,5 +43,5 @@ Parent : [`../README.md`](../README.md) (outils). Frère : [`../analysis/`](../a
 
 ## Limites connues
 
-- état global mutable de niveau classe (`ServiceRegistry._services` :16, `ConfigManager._configs` :27) sans API de reset — les tests réimportent pour contourner (`test_fallacy_analyzers.py:781+`) ;
+- état global mutable de niveau classe, pour tout le processus. Les tests ne le partagent plus : la fixture `reset_shared_services` de `tests/conftest.py` appelle les deux `reset()` après chaque test (#2346) ;
 - sans `__init__.py` — namespace implicite, découvert par le packaging (mesuré sur un cas analogue : [`../../../integrations/README.md`](../../../integrations/README.md)).
