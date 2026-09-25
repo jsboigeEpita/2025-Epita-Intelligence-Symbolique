@@ -237,8 +237,19 @@ def run_bounded(argv, bound=BOUND, failure="the process did not end", env=None):
     process at the bound, how the caller kept time, and the child's output.
     A process that exits but leaves others running fails the test too.
     ``env`` adds to the caller's environment.
+
+    The child is a session of its own, never a worker of the caller's
+    xdist run: the caller's ``PYTEST_XDIST_*`` variables are not passed
+    on, or ``tests/_jvm_session_flag.py`` would read the child as a worker
+    and keep a decision its own argv should make (#2619). A value given
+    in ``env`` still reaches the child.
     """
-    env = {**os.environ, **(env or {})}
+    inherited = {
+        name: value
+        for name, value in os.environ.items()
+        if not name.startswith("PYTEST_XDIST_")
+    }
+    env = {**inherited, **(env or {})}
     env["PYTHONPATH"] = os.pathsep.join([str(ROOT), env.get("PYTHONPATH", "")])
     # A process that outlives the child may still hold the files: their
     # directory is then left for the OS to clean.
