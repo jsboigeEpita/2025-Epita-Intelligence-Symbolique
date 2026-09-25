@@ -8,10 +8,14 @@ first and returned that empty list as ``solver="clingo_jvm"``, zero models,
 for a satisfiable program. Its guard rejected only atoms outside the program's
 vocabulary, which an empty list never has.
 
-The outputs below are measured, not written by hand: clingo 5.4.0 (the
-``settings.jvm.clingo_version`` binary) through Tweety's ``getOutput()``,
-pyclingo 5.8.0 on the command line, and the usage error of a binary that is
-not clingo. Only the temporary file path is replaced.
+The outputs below are measured, not written by hand: the clingo 5.4.0
+(``settings.jvm.clingo_version``, ``ext_tools``) and 5.8.0 (conda-forge,
+``Library/bin``) binaries through Tweety's ``getOutput()``, and the usage error
+of a binary that is not clingo. Only the temporary file path is replaced.
+
+Which binary the JVM path runs depends on the machine: ``jvm_setup`` registers
+the first ``clingo`` on ``PATH`` (the conda env's ``Library/bin`` under
+``conda run``, as in CI), then ``ext_tools/clingo``.
 """
 
 import asyncio
@@ -41,10 +45,16 @@ CLINGO_540_UNSAT = (
     "CPU Time     : 0.000s\n"
 )
 CLINGO_580_SAT = (
-    "pyclingo version 5.8.0\nReading from stdin\nSolving...\n"
-    "Answer: 1 (Time: 0.003s)\na b\nSATISFIABLE\n\nModels       : 1+\n"
+    "clingo version 5.8.0\nReading from prog.lp\nSolving...\n"
+    "Answer: 1 (Time: 0.002s)\na b\nSATISFIABLE\n\nModels       : 1\n"
     "Calls        : 1\n"
-    "Time         : 0.003s (Solving: 0.00s 1st Model: 0.00s Unsat: 0.00s)\n"
+    "Time         : 0.002s (Solving: 0.00s 1st Model: 0.00s Unsat: 0.00s)\n"
+    "CPU Time     : 0.000s\n"
+)
+CLINGO_580_UNSAT = (
+    "clingo version 5.8.0\nReading from prog.lp\nSolving...\nUNSATISFIABLE\n\n"
+    "Models       : 0\nCalls        : 1\n"
+    "Time         : 0.007s (Solving: 0.00s 1st Model: 0.00s Unsat: 0.00s)\n"
     "CPU Time     : 0.000s\n"
 )
 NOT_CLINGO_USAGE = (
@@ -77,12 +87,21 @@ def _python_clingo_available():
     [
         (CLINGO_540_UNSAT, True),
         (CLINGO_540_SAT, False),
+        (CLINGO_580_UNSAT, True),
         (CLINGO_580_SAT, False),
         (NOT_CLINGO_USAGE, False),
         ("", False),
         (None, False),
     ],
-    ids=["540-unsat", "540-sat", "580-sat", "not-clingo", "empty", "none"],
+    ids=[
+        "540-unsat",
+        "540-sat",
+        "580-unsat",
+        "580-sat",
+        "not-clingo",
+        "empty",
+        "none",
+    ],
 )
 def test_only_clingos_unsatisfiable_line_is_a_verdict(output, unsatisfiable):
     """``SATISFIABLE`` is a substring of ``UNSATISFIABLE``: the check is on the
@@ -155,24 +174,37 @@ def _real_clingo_registered():
     return bool(path) and jvm_setup.is_jvm_started()
 
 
-@pytest.mark.parametrize(
-    "program, answer_sets, satisfiable",
-    [
-        (SATISFIABLE_PROGRAM, [{"a", "b"}], True),
-        (UNSATISFIABLE_PROGRAM, [], False),
-    ],
-    ids=["sat", "unsat"],
-)
-def test_real_clingo_binary_decides_on_the_jvm_path(program, answer_sets, satisfiable):
-    """Control: with a working clingo registered, the JVM path keeps deciding,
-    and an unsatisfiable program stays a ``clingo_jvm`` verdict. Runs only
-    where ``ext_tools/clingo`` is provisioned (gitignored, absent in CI)."""
+def test_real_clingo_binary_keeps_an_unsatisfiable_verdict_on_the_jvm_path():
+    """Control: the refusal does not reach a genuine empty list. With the real
+    binary registered (5.4.0 and 5.8.0 measured), clingo prints UNSATISFIABLE
+    and the ``clingo_jvm`` verdict stands."""
     if not _real_clingo_registered():
         pytest.skip("no clingo binary registered in EXTERNAL_TOOL_PATHS")
 
-    res = _run(program)
+    res = _run(UNSATISFIABLE_PROGRAM)
 
-    assert res["solver"] == "clingo_jvm", res
-    assert [set(m) for m in res["answer_sets"]] == answer_sets, res
-    assert res["satisfiable"] is satisfiable, res
+    assert (res["solver"], res["answer_sets"], res["satisfiable"]) == (
+        "clingo_jvm",
+        [],
+        False,
+    ), res
     assert "jvm_refused" not in res, res
+
+
+def test_real_clingo_binary_decides_a_satisfiable_program():
+    """With the real binary registered, a satisfiable program gets its model.
+    Tweety parses clingo 5.4.0's output, and the JVM path decides. It mis-parses
+    5.8.0's banner into ``[['version', 'clingo']]``; the vocabulary guard
+    refuses that, and the refusal is now in the result."""
+    if not _real_clingo_registered():
+        pytest.skip("no clingo binary registered in EXTERNAL_TOOL_PATHS")
+
+    res = _run(SATISFIABLE_PROGRAM)
+
+    assert [set(m) for m in res["answer_sets"]] == [{"a", "b"}], res
+    assert res["satisfiable"] is True, res
+    if res["solver"] == "clingo_jvm":
+        assert "jvm_refused" not in res, res
+    else:
+        assert res["solver"] == "clingo_python", res
+        assert res["jvm_refused"].startswith("ValueError"), res
