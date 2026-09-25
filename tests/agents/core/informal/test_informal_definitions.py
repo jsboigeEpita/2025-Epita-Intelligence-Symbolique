@@ -7,6 +7,7 @@ Tests unitaires pour le module agents.core.informal.informal_definitions.
 
 # import unittest # Supprimé
 from unittest.mock import MagicMock, patch
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 import json
 import pytest  # Déjà présent, gardé
 
@@ -99,7 +100,12 @@ class TestInformalDefinitions:  # Suppression de l'héritage unittest.TestCase
         kernel = (
             authentic_semantic_kernel.get_kernel()
         )  # Correction: utiliser get_kernel()
-        llm_service = MagicMock()
+        # #2632 : les settings du service sont résolus dans le kernel ; le
+        # service passé doit donc y être enregistré (un MagicMock n'y est pas).
+        llm_service = OpenAIChatCompletion(
+            service_id="informal_setup_test", ai_model_id="m", api_key="dummy"
+        )
+        kernel.add_service(llm_service)
         test_taxonomy_path = str(
             setup_authentic_taxonomy_csv
         )  # Utiliser le chemin de la fixture
