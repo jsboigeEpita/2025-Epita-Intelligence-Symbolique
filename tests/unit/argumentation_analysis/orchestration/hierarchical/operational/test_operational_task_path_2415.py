@@ -223,12 +223,13 @@ def test_completion_report_still_flows_live_path(monkeypatch):
 
     assert report["completion_status"] == "completed"
     assert captured, (
-        "le rapport de complétion (chemin live, consommé par "
-        "OperationalManager._handle_result_message) ne part plus"
+        "le rapport de complétion (chemin live, consommé côté tactique par "
+        "TacticalAdapter.get_pending_task_results) ne part plus"
     )
     # Contrat du writer réel (OperationalAdapter.send_result) : le marqueur
     # de rapport vit sous ``result_type``, ``info_type`` porte ``task_result``.
-    # NB #2415 : manager.py:264 lit ``info_type == "task_completion_report"``
-    # — une clé que ce writer n'écrit jamais. Défaut séparé, déposé en issue.
+    # #2520 : le lecteur opérationnel qui épinglait ``info_type == "
+    # task_completion_report"`` est retiré — sa clé ne matchait jamais ce
+    # writer et sa Future était résolue avant publication (voir l'issue).
     assert captured[0].content["info_type"] == "task_result"
     assert captured[0].content["result_type"] == "task_completion_report"

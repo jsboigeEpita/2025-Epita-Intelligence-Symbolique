@@ -14,7 +14,7 @@ The 3-tier decomposition / translation logic in
 commented out:
 
 * ``TaskCoordinator._subscribe_to_strategic_directives`` (coordinator.py:257)
-* ``OperationalManager._subscribe_to_messages`` (operational/manager.py:310)
+* ``OperationalManager._subscribe_to_messages`` (operational/manager.py:272)
 
 Rather than re-enable async pub/sub (and its message-bus race conditions),
 M3 drives the tiers by **explicit sequential calls** — deterministic, unit
