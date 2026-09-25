@@ -1141,7 +1141,13 @@ RÉPONDS EN FORMAT JSON :
     async def generate_queries(
         self, text: str, belief_set: BeliefSet, context: Optional[Dict[str, Any]] = None
     ) -> List[str]:
-        """Génère requêtes FOL pertinentes."""
+        """Génère requêtes FOL pertinentes.
+
+        #2637: only labels ``execute_query`` computes are emitted.
+        ``universal_instances`` and ``existential_witnesses`` were emitted on
+        "tous" / "il existe", but no branch computed them: each reached the
+        Tweety parser as a formula and came back as a parse error.
+        """
         queries = []
 
         # Requêtes de cohérence
@@ -1150,12 +1156,6 @@ RÉPONDS EN FORMAT JSON :
         # Requêtes d'inférence basiques
         if "donc" in text.lower() or "alors" in text.lower():
             queries.append("derive_conclusions")
-
-        if "tous" in text.lower() or "∀" in text or "forall" in text.lower():
-            queries.append("universal_instances")
-
-        if "il existe" in text.lower() or "∃" in text or "exists" in text.lower():
-            queries.append("existential_witnesses")
 
         return queries
 
