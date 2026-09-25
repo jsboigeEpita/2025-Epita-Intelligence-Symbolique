@@ -9,9 +9,10 @@ Section builders are tested via static method calls on the class.
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
+from semantic_kernel import Kernel
 
 from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 from argumentation_analysis.agents.core.synthesis.deep_synthesis_agent import (
@@ -704,7 +705,7 @@ class TestConvergenceProse:
         return asyncio.get_event_loop().run_until_complete(coro)
 
     def test_prose_returned_when_kernel_present(self):
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.get_prompt_execution_settings_from_service_id = MagicMock(
             return_value=MagicMock()
         )
@@ -719,7 +720,9 @@ class TestConvergenceProse:
         kernel.invoke_prompt.assert_awaited_once()
 
     def test_empty_when_no_llm_service(self):
-        stub = SimpleNamespace(_llm_service_id=None, kernel=MagicMock())
+        stub = SimpleNamespace(
+            _llm_service_id=None, kernel=create_autospec(Kernel, instance=True)
+        )
         prose = self._run(
             DeepSynthesisAgent._llm_convergence_prose(stub, _convergent_state())
         )
@@ -730,7 +733,7 @@ class TestConvergenceProse:
         state = UnifiedAnalysisState("solid discourse")
         state.add_argument("robust argument")
         state.add_quality_score("arg_1", {"clarity": 0.95}, 0.95)
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.invoke_prompt = AsyncMock()
         stub = SimpleNamespace(_llm_service_id="default", kernel=kernel)
         prose = self._run(DeepSynthesisAgent._llm_convergence_prose(stub, state))
@@ -738,7 +741,7 @@ class TestConvergenceProse:
         kernel.invoke_prompt.assert_not_awaited()
 
     def test_empty_on_llm_exception(self):
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.get_prompt_execution_settings_from_service_id = MagicMock(
             return_value=MagicMock()
         )
@@ -938,7 +941,7 @@ class TestLLMSynthesisPromptSixSections:
         """Verify the LLM prompt includes all 6 section data blocks."""
         from unittest.mock import AsyncMock, MagicMock
 
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.get_prompt_execution_settings_from_service_id = MagicMock(
             return_value=MagicMock()
         )
@@ -962,7 +965,7 @@ class TestLLMSynthesisPromptSixSections:
     def test_prompt_includes_stakes_for_section_2(self):
         from unittest.mock import AsyncMock, MagicMock
 
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.get_prompt_execution_settings_from_service_id = MagicMock(
             return_value=MagicMock()
         )
@@ -993,7 +996,7 @@ class TestArgumentativeSequenceRendering2295:
 
     @staticmethod
     def _prompt_for(report):
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         kernel.get_prompt_execution_settings_from_service_id = MagicMock(
             return_value=MagicMock()
         )

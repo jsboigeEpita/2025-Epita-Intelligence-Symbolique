@@ -27,10 +27,11 @@ test_intermediate_d6_confirm_is_accepted.
 import inspect
 import json
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
 
+from semantic_kernel import Kernel
 from semantic_kernel.contents import FunctionCallContent
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import (
@@ -137,7 +138,7 @@ def _d6_d7_taxonomy():
 def _make_plugin(taxonomy_data=None):
     """Plugin with synthetic taxonomy + mocked LLM dependency (no real API)."""
     data = taxonomy_data or _d6_d7_taxonomy()
-    mock_kernel = MagicMock()
+    mock_kernel = create_autospec(Kernel, instance=True)
     mock_service = MagicMock()
     plugin = FallacyWorkflowPlugin(
         master_kernel=mock_kernel,
@@ -168,8 +169,10 @@ def _slave_kernel_stub():
         def __getitem__(self, name):
             return MagicMock()
 
-    kernel = MagicMock()
-    kernel.plugins.get.return_value = _FakePlugin()
+    kernel = create_autospec(Kernel, instance=True)
+    # SK 1.34: ``plugins`` is assigned dynamically in Kernel.__init__, so a
+    # class-level autospec cannot see it — set the real-dict shape here.
+    kernel.plugins = {"Exploration": _FakePlugin()}
     return kernel
 
 

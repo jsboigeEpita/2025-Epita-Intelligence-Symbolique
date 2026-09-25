@@ -18,7 +18,9 @@ to the same ``os`` module object (CPython caches it in ``sys.modules``).
 
 import json
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import MagicMock, patch, AsyncMock, create_autospec
+
+from semantic_kernel import Kernel
 
 
 def _patch_invokecallables_env_get(overrides):
@@ -101,13 +103,13 @@ class TestInvokeCamemBERTFallacy:
         # #2486: the function imports FallacyWorkflowPlugin from its module;
         # the sys.modules entry below is the mock it runs against.
         with _patch_invokecallables_env_get(env), patch("openai.AsyncOpenAI"), patch(
-            "semantic_kernel.kernel.Kernel"
+            "semantic_kernel.kernel.Kernel", autospec=True
         ), patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
             with patch.dict(
                 "sys.modules",
                 {
                     "openai": MagicMock(AsyncOpenAI=MagicMock()),
-                    "semantic_kernel.kernel": MagicMock(Kernel=MagicMock()),
+                    "semantic_kernel.kernel": MagicMock(Kernel=create_autospec(Kernel)),
                     "semantic_kernel.connectors.ai.open_ai": MagicMock(
                         OpenAIChatCompletion=MagicMock()
                     ),
@@ -198,13 +200,13 @@ class TestInvokeCamemBERTFallacy:
         # #2486: as above, the sys.modules entry is the plugin the function
         # imports.
         with _patch_invokecallables_env_get(env), patch("openai.AsyncOpenAI"), patch(
-            "semantic_kernel.kernel.Kernel"
+            "semantic_kernel.kernel.Kernel", autospec=True
         ), patch("semantic_kernel.connectors.ai.open_ai.OpenAIChatCompletion"):
             with patch.dict(
                 "sys.modules",
                 {
                     "openai": MagicMock(AsyncOpenAI=MagicMock()),
-                    "semantic_kernel.kernel": MagicMock(Kernel=MagicMock()),
+                    "semantic_kernel.kernel": MagicMock(Kernel=create_autospec(Kernel)),
                     "semantic_kernel.connectors.ai.open_ai": MagicMock(
                         OpenAIChatCompletion=MagicMock()
                     ),

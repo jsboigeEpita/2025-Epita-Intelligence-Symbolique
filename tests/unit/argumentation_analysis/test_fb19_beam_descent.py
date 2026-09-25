@@ -16,9 +16,11 @@ What remains load-bearing here:
 
 import asyncio
 import json
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.plugins.fallacy_workflow_plugin import FallacyWorkflowPlugin
 
@@ -130,7 +132,7 @@ def _make_taxonomy_data():
 def _make_plugin(taxonomy_data=None):
     """Create a FallacyWorkflowPlugin with synthetic taxonomy, no real LLM."""
     data = taxonomy_data or _make_taxonomy_data()
-    mock_kernel = MagicMock()
+    mock_kernel = create_autospec(Kernel, instance=True)
     mock_service = MagicMock()
     return FallacyWorkflowPlugin(
         master_kernel=mock_kernel,

@@ -7,9 +7,10 @@ built, and ``setup_enhanced_orchestration``'s ``except`` turned it into
 """
 
 import warnings
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, create_autospec
 
 import pytest
+from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.function_choice_behavior import (
     FunctionChoiceBehavior,
     FunctionChoiceType,
@@ -34,7 +35,7 @@ def orchestrator(monkeypatch):
         orchestrator = enhanced_pm_analysis_runner.EnhancedProjectManagerOrchestrator(
             llm_service=MagicMock(service_id="svc_2536")
         )
-    orchestrator.kernel = MagicMock()
+    orchestrator.kernel = create_autospec(Kernel, instance=True)
     return orchestrator
 
 

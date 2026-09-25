@@ -238,7 +238,7 @@ class TestRepairScriptFunctions:
 class TestSetupAgents:
     """Tests pour la configuration des agents."""
 
-    @patch("semantic_kernel.Kernel")
+    @patch("semantic_kernel.Kernel", autospec=True)
     @patch("argumentation_analysis.utils.dev_tools.repair_utils.logger")
     def test_setup_agents(self, mock_logger, mock_kernel_class):
         """

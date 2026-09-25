@@ -8,8 +8,10 @@ Tests cover:
 """
 
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import MagicMock, AsyncMock, patch, create_autospec
 import os
+
+from semantic_kernel import Kernel
 
 
 class TestInformalAgentInstructions:
@@ -100,7 +102,7 @@ class TestGermanKeywordCoverage:
                 FallacyWorkflowPlugin,
             )
 
-            mock_kernel = MagicMock()
+            mock_kernel = create_autospec(Kernel, instance=True)
             mock_llm = MagicMock()
             return FallacyWorkflowPlugin(
                 master_kernel=mock_kernel,

@@ -12,7 +12,9 @@ Tests the full conversational pipeline with mock LLM, verifying:
 import asyncio
 import pytest
 from contextlib import contextmanager
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec, patch, PropertyMock
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.orchestration.conversational_orchestrator import (
     AGENT_CONFIG,
@@ -34,8 +36,12 @@ def _make_mock_pipeline():
     """Build mock infrastructure for running the pipeline without LLM."""
     mock_service = MagicMock()
     mock_service.service_id = "conversational_llm"
-    mock_kernel = MagicMock()
+    mock_kernel = create_autospec(Kernel, instance=True)
     mock_kernel.get_service.return_value = mock_service
+    # SK 1.34: ``plugins`` est posé dynamiquement dans Kernel.__init__, invisible
+    # à l'autospec de classe. La clé sondée par production (agents/factory.py:200)
+    # rend la liste vide, comme le faisait le double non spécé.
+    mock_kernel.plugins = {"_collision_probe": MagicMock()}
 
     def make_fake_agent(**kwargs):
         agent = MagicMock()

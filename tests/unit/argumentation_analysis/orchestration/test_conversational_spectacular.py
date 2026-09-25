@@ -5,9 +5,11 @@ spectacular=True and produces result format matching the unified pipeline.
 """
 
 import inspect
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch, create_autospec
 
 import pytest
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.core.shared_state import (
     RhetoricalAnalysisState,
@@ -37,7 +39,7 @@ def mock_conversational_deps():
         "openai.AsyncOpenAI",
         side_effect=RuntimeError("no-network-1583"),
     ):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_sk.Kernel.return_value = mock_kernel
 
         mock_trace = MagicMock()

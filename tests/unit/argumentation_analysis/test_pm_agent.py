@@ -51,7 +51,7 @@ class TestPMAgent:
 class TestPMAgentIntegration:
     """Tests d'intégration pour l'agent Project Manager."""
 
-    @patch("semantic_kernel.Kernel")
+    @patch("semantic_kernel.Kernel", autospec=True)
     def test_pm_agent_workflow(self, mock_kernel):
         """Teste le workflow complet de l'agent PM."""
         # Ce test simule un workflow complet de l'agent PM:

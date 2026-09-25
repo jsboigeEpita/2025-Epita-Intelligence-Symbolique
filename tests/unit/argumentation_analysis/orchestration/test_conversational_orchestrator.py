@@ -11,7 +11,9 @@ Tests the conversational orchestration pipeline with mocked LLM:
 
 import asyncio
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock
+from unittest.mock import AsyncMock, MagicMock, patch, PropertyMock, create_autospec
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.orchestration.conversational_orchestrator import (
     AGENT_CONFIG,
@@ -44,7 +46,7 @@ def state():
 @pytest.fixture
 def mock_kernel():
     """Create a mock SK kernel with a fake LLM service."""
-    kernel = MagicMock()
+    kernel = create_autospec(Kernel, instance=True)
     mock_service = MagicMock()
     mock_service.service_id = "test_llm"
     kernel.get_service.return_value = mock_service
@@ -519,7 +521,7 @@ class TestRunConversationalAnalysis:
         mock_service = MagicMock()
         mock_service.service_id = "conversational_llm"
 
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_kernel.get_service.return_value = mock_service
 
         # Mock ChatCompletionAgent to return agents with fake invoke
@@ -601,7 +603,7 @@ class TestRunConversationalAnalysis:
         """Pipeline should run exactly 3 macro-phases."""
         mock_service = MagicMock()
         mock_service.service_id = "conversational_llm"
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_kernel.get_service.return_value = mock_service
 
         phase_names_seen = []
@@ -669,7 +671,7 @@ class TestRunConversationalAnalysis:
         """Conversation log should contain entries from all phases."""
         mock_service = MagicMock()
         mock_service.service_id = "conversational_llm"
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_kernel.get_service.return_value = mock_service
 
         def make_fake_agent(**kwargs):

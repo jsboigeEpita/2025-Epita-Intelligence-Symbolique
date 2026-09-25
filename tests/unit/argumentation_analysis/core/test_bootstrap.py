@@ -12,8 +12,10 @@ Tests cover:
 import sys
 import threading
 import pytest
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch, PropertyMock, create_autospec
 from pathlib import Path
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.core.bootstrap import (
     ProjectContext,
@@ -327,7 +329,7 @@ class TestInitializeProjectEnvironment:
     def test_kernel_created_when_sk_available(self):
         """When semantic_kernel and create_llm_service are available, kernel is created."""
         mock_sk = MagicMock()
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_sk.Kernel.return_value = mock_kernel
         mock_llm_service = MagicMock()
         mock_create_llm = MagicMock(return_value=mock_llm_service)

@@ -10,9 +10,11 @@ failure propagates. The module is gone, so both apply to the orchestrator that
 carries the Cluedo game.
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, create_autospec
 
 import pytest
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
     CluedoExtendedOrchestrator,
@@ -21,7 +23,9 @@ from argumentation_analysis.orchestration.cluedo_extended_orchestrator import (
 
 def _one_turn_orchestrator(agent):
     """An orchestrator set up for exactly one turn, taken by ``agent``."""
-    orch = CluedoExtendedOrchestrator(kernel=MagicMock(), settings=MagicMock())
+    orch = CluedoExtendedOrchestrator(
+        kernel=create_autospec(Kernel, instance=True), settings=MagicMock()
+    )
     orch.orchestration = MagicMock()
     orch.orchestration.active_agents = {agent.name: agent}
     orch.sherlock_agent = agent

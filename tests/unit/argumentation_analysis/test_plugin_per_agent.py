@@ -12,7 +12,9 @@ Validates:
 """
 
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, create_autospec
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.agents.factory import (
     AGENT_SPECIALITY_MAP,
@@ -125,7 +127,7 @@ class TestPluginRegistry:
 
 class TestLoadPluginsForAgent:
     def test_loads_state_manager_when_state_provided(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_state = MagicMock()
         loaded = load_plugins_for_agent(
             mock_kernel, "project_manager", state=mock_state
@@ -136,12 +138,12 @@ class TestLoadPluginsForAgent:
         assert mock_kernel.add_plugin.call_count == 2
 
     def test_no_state_manager_without_state(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         loaded = load_plugins_for_agent(mock_kernel, "project_manager", state=None)
         assert "state_manager" not in loaded
 
     def test_informal_loads_french_fallacy(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module") as mock_import:
             mock_module = MagicMock()
             mock_import.return_value = mock_module
@@ -149,7 +151,7 @@ class TestLoadPluginsForAgent:
         assert "french_fallacy" in loaded
 
     def test_quality_loads_quality_scoring(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module") as mock_import:
             mock_module = MagicMock()
             mock_import.return_value = mock_module
@@ -157,25 +159,25 @@ class TestLoadPluginsForAgent:
         assert "quality_scoring" in loaded
 
     def test_unknown_speciality_loads_nothing(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         loaded = load_plugins_for_agent(mock_kernel, "nonexistent")
         assert loaded == []
 
     def test_unknown_speciality_with_state_loads_state_manager_only(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         mock_state = MagicMock()
         loaded = load_plugins_for_agent(mock_kernel, "nonexistent", state=mock_state)
         assert loaded == ["state_manager"]
 
     def test_plugin_import_failure_handled_gracefully(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module", side_effect=ImportError("not found")):
             loaded = load_plugins_for_agent(mock_kernel, "informal_fallacy")
         # Should not raise, just skip the failed plugin
         assert "french_fallacy" not in loaded
 
     def test_formal_loads_tweety(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module") as mock_import:
             mock_module = MagicMock()
             mock_import.return_value = mock_module
@@ -183,7 +185,7 @@ class TestLoadPluginsForAgent:
         assert "tweety_logic" in loaded
 
     def test_governance_loads_governance_plugin(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module") as mock_import:
             mock_module = MagicMock()
             mock_import.return_value = mock_module
@@ -191,7 +193,7 @@ class TestLoadPluginsForAgent:
         assert "governance" in loaded
 
     def test_watson_loads_tweety(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module") as mock_import:
             mock_module = MagicMock()
             mock_import.return_value = mock_module
@@ -199,7 +201,7 @@ class TestLoadPluginsForAgent:
         assert "tweety_logic" in loaded
 
     def test_debate_loads_debate_plugin(self):
-        mock_kernel = MagicMock()
+        mock_kernel = create_autospec(Kernel, instance=True)
         with patch("importlib.import_module") as mock_import:
             mock_module = MagicMock()
             mock_import.return_value = mock_module

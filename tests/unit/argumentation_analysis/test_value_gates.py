@@ -1337,7 +1337,9 @@ class TestInformalTaxonomyValueGate:
     @pytest.fixture(autouse=True)
     def _init_detector(self):
         """Create a TaxonomySophismDetector with a mock kernel."""
-        from unittest.mock import MagicMock
+        from unittest.mock import create_autospec
+
+        from semantic_kernel import Kernel
 
         from argumentation_analysis.agents.core.informal.taxonomy_sophism_detector import (
             TaxonomySophismDetector,
@@ -1346,7 +1348,7 @@ class TestInformalTaxonomyValueGate:
             InformalAnalysisPlugin,
         )
 
-        kernel = MagicMock()
+        kernel = create_autospec(Kernel, instance=True)
         plugin = InformalAnalysisPlugin(kernel=kernel)
         self.detector = TaxonomySophismDetector.__new__(TaxonomySophismDetector)
         self.detector.plugin = plugin

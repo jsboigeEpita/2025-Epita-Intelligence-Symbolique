@@ -14,9 +14,11 @@ prompt's ``{capability_map}`` placeholder is rendered at build time from
   the steering couple while its knowledge source changes.
 """
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, create_autospec
 
 import pytest
+
+from semantic_kernel import Kernel
 
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
@@ -63,7 +65,7 @@ def state():
 
 @pytest.fixture
 def mock_kernel():
-    kernel = MagicMock()
+    kernel = create_autospec(Kernel, instance=True)
     kernel.get_service.return_value = MagicMock()
     return kernel
 
