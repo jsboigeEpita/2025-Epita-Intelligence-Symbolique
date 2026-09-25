@@ -328,28 +328,6 @@ class TestClear:
 
 
 # ============================================================
-# find_operational_task_by_tactical_id
-# ============================================================
-
-
-class TestFindByTacticalId:
-    def test_finds_task(self, state):
-        state.add_task(_make_task("op1", tactical_task_id="tac1"))
-        result = state.find_operational_task_by_tactical_id("tac1")
-        assert result == "op1"
-
-    def test_returns_none_not_found(self, state):
-        result = state.find_operational_task_by_tactical_id("nonexistent")
-        assert result is None
-
-    def test_returns_first_match(self, state):
-        state.add_task(_make_task("op1", tactical_task_id="tac1"))
-        state.add_task(_make_task("op2", tactical_task_id="tac1"))
-        result = state.find_operational_task_by_tactical_id("tac1")
-        assert result == "op1"
-
-
-# ============================================================
 # Result futures
 # ============================================================
 

@@ -35,7 +35,6 @@ from argumentation_analysis.core.communication.operational_adapter import (
 )
 from argumentation_analysis.core.communication.message import (
     Message,
-    MessageType,
     MessagePriority,
     AgentLevel,
 )
@@ -253,53 +252,14 @@ class OperationalManager:
             result_future.set_result(error_result)
         self.result_queue.put_nowait(error_result)
 
-    def _handle_result_message(self, message: Message) -> None:
-        """
-        Gestionnaire pour les messages de résultat entrants.
-
-        Ce callback est appelé par le middleware lorsqu'un message de résultat
-        est reçu. Il trouve la Future correspondante et la résout.
-        """
-        if (
-            message.type == MessageType.INFORMATION
-            and message.content.get("info_type") == "task_completion_report"
-        ):
-            result_data = message.content.get("data", {})
-            tactical_task_id = result_data.get("tactical_task_id")
-
-            # Note: Le `operational_task_id` est nécessaire pour trouver la future,
-            # mais le résultat de l'agent ne le contient pas toujours.
-            # On va le reconstituer ou le chercher dans l'état.
-            # Pour l'instant, on se base sur le `tactical_task_id` pour le retrouver.
-            op_task_id = self.operational_state.find_operational_task_by_tactical_id(
-                tactical_task_id
-            )
-
-            if op_task_id:
-                self.logger.info(
-                    f"Résultat reçu pour la tâche tactique {tactical_task_id} (op: {op_task_id})"
-                )
-                future = self.operational_state.get_result_future(op_task_id)
-                if future and not future.done():
-                    future.set_result(result_data)
-                else:
-                    self.logger.warning(
-                        f"Future pour la tâche {op_task_id} non trouvée ou déjà résolue."
-                    )
-            else:
-                self.logger.warning(
-                    f"Impossible de trouver la tâche opérationnelle pour la tâche tactique {tactical_task_id}"
-                )
-
     def _subscribe_to_messages(self) -> None:
         """Met en place les abonnements aux messages entrants."""
-        # Enregistrement du gestionnaire pour les résultats de tâches
-        # Note : ceci est une simplification. Dans un système réel, on aurait
-        # besoin de démultiplexer les messages d'information.
-        self.middleware.register_message_handler(
-            MessageType.INFORMATION, self._handle_result_message
-        )
-        self.logger.info("Abonné aux messages de résultat opérationnel.")
+        # #2520 : aucun abonnement INFORMATION aux résultats de tâches. Le
+        # lecteur historique ne matchait jamais la clé du writer
+        # (``info_type == "task_result"``, marqueur sous ``result_type``) et,
+        # même aligné, n'aurait rien résolu : le worker résout la Future avant
+        # que ``send_result`` ne publie le rapport. Le consommateur vivant du
+        # rapport est ``TacticalAdapter.get_pending_task_results``.
 
         async def handle_task_message(message: Message) -> None:
             """Gestionnaire pour les commandes de tâches entrantes."""
