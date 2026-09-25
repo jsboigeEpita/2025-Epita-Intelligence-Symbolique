@@ -26,6 +26,7 @@ import gzip
 import logging
 import argparse
 import tempfile
+from html import escape
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Any, Optional, Tuple, Union
@@ -948,14 +949,18 @@ class UnifiedUtilityFormatter:
 
     @staticmethod
     def _format_corpus_info_html(info: CorpusInfo) -> str:
-        """Formate les informations du corpus en HTML."""
+        """Formate les informations du corpus en HTML.
+
+        Les noms et types de sources viennent du corpus : échappés (#2346).
+        """
+        last_modified = escape(str(info.last_modified))
         html = f"""
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Informations Corpus - {info.last_modified}</title>
+    <title>Informations Corpus - {last_modified}</title>
     <style>
         body {{ font-family: Arial, sans-serif; margin: 20px; }}
         .header {{ background: #f0f0f0; padding: 20px; border-radius: 5px; }}
@@ -970,7 +975,7 @@ class UnifiedUtilityFormatter:
 <body>
     <div class="header">
         <h1>Informations sur le Corpus Chiffré</h1>
-        <p>Dernière modification: {info.last_modified}</p>
+        <p>Dernière modification: {last_modified}</p>
     </div>
     
     <div class="stats">
@@ -1002,8 +1007,8 @@ class UnifiedUtilityFormatter:
             html += f"""
             <tr>
                 <td>{source['index']}</td>
-                <td>{source['name']}</td>
-                <td>{source['type']}</td>
+                <td>{escape(str(source['name']))}</td>
+                <td>{escape(str(source['type']))}</td>
                 <td>{source['extract_count']}</td>
                 <td>{source['content_length']:,} caractères</td>
             </tr>
