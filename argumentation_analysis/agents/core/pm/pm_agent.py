@@ -11,6 +11,7 @@ from semantic_kernel.contents.utils.author_role import AuthorRole
 from semantic_kernel.agents import Agent
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent
+from argumentation_analysis.agents.core.semantic_setup import register_prompt_function
 from .pm_definitions import (
     PM_INSTRUCTIONS,
 )  # Ou PM_INSTRUCTIONS_V9 selon la version souhaitée
@@ -71,37 +72,31 @@ class ProjectManagerAgent(BaseAgent):
         # Note: Les settings de prompt (default_settings) sont récupérés par le kernel
         # lors de l'ajout de la fonction si llm_service_id est valide.
 
-        try:
-            self.kernel.add_function(
-                prompt=prompt_define_tasks_v15,  # Utiliser la dernière version du prompt
-                plugin_name=plugin_name,
-                function_name="DefineTasksAndDelegate",  # Nom plus SK-conventionnel
-                description="Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
-                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
-            )
-            self.logger.debug(
-                f"Fonction sémantique '{plugin_name}.DefineTasksAndDelegate' ajoutée."
-            )
-        except Exception as e:
-            self.logger.error(
-                f"Erreur lors de l'ajout de la fonction '{plugin_name}.DefineTasksAndDelegate': {e}"
-            )
+        # #2632 : un échec d'enregistrement lève ; l'agent n'existe pas sans
+        # ses deux fonctions.
+        register_prompt_function(
+            self.kernel,
+            self.name,
+            plugin_name,
+            "DefineTasksAndDelegate",  # Nom plus SK-conventionnel
+            prompt_define_tasks_v15,  # Utiliser la dernière version du prompt
+            "Defines the NEXT single task, registers it, and designates 1 agent (Exact Name Required).",
+        )
+        self.logger.debug(
+            f"Fonction sémantique '{plugin_name}.DefineTasksAndDelegate' ajoutée."
+        )
 
-        try:
-            self.kernel.add_function(
-                prompt=prompt_write_conclusion_v7,  # Utiliser la dernière version du prompt
-                plugin_name=plugin_name,
-                function_name="WriteAndSetConclusion",  # Nom plus SK-conventionnel
-                description="Writes and registers the final conclusion (with pre-check of state).",
-                # prompt_execution_settings=self.kernel.get_prompt_execution_settings_from_service_id(llm_service_id) # Géré par le kernel
-            )
-            self.logger.debug(
-                f"Fonction sémantique '{plugin_name}.WriteAndSetConclusion' ajoutée."
-            )
-        except Exception as e:
-            self.logger.error(
-                f"Erreur lors de l'ajout de la fonction '{plugin_name}.WriteAndSetConclusion': {e}"
-            )
+        register_prompt_function(
+            self.kernel,
+            self.name,
+            plugin_name,
+            "WriteAndSetConclusion",  # Nom plus SK-conventionnel
+            prompt_write_conclusion_v7,  # Utiliser la dernière version du prompt
+            "Writes and registers the final conclusion (with pre-check of state).",
+        )
+        self.logger.debug(
+            f"Fonction sémantique '{plugin_name}.WriteAndSetConclusion' ajoutée."
+        )
 
         # Gestion du StateManagerPlugin
         # Si le PM doit interagir avec le StateManager via des appels SK DANS ses fonctions sémantiques,

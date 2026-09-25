@@ -29,6 +29,7 @@ from semantic_kernel.connectors.ai.prompt_execution_settings import (
 from pydantic import Field, PrivateAttr
 
 from ..abc.agent_bases import BaseLogicAgent
+from ..semantic_setup import prompt_settings, register_prompt_function
 from .belief_set import BeliefSet, ModalBeliefSet
 from .tweety_bridge import TweetyBridge
 from .tweety_initializer import TweetyInitializer
@@ -189,19 +190,13 @@ class ModalLogicAgent(BaseLogicAgent):
         #     self.logger.error("Tentative de setup Modal Kernel alors que la JVM n'est PAS démarrée.")
         #     return
 
+        # #2632 : settings et enregistrement lèvent ; un agent n'existe pas
+        # sans les fonctions que son constructeur enregistre.
         default_settings = None
         if self._llm_service_id:
-            try:
-                default_settings = (
-                    self.kernel.get_prompt_execution_settings_from_service_id(
-                        self._llm_service_id
-                    )
-                )
-                self.logger.debug(f"Settings LLM récupérés pour {self.name}.")
-            except Exception as e:
-                self.logger.warning(
-                    f"Impossible de récupérer settings LLM pour {self.name}: {e}"
-                )
+            default_settings = prompt_settings(
+                self.kernel, self._llm_service_id, self.name
+            )
 
         retry_settings = self._create_retry_execution_settings(default_settings)
 
@@ -224,48 +219,16 @@ class ModalLogicAgent(BaseLogicAgent):
         ]
 
         for func_name, prompt, description in semantic_functions:
-            try:
-                if not prompt or not isinstance(prompt, str):
-                    self.logger.error(
-                        f"ERREUR: Prompt invalide pour {self.name}.{func_name}"
-                    )
-                    continue
-
-                self.logger.info(
-                    f"Ajout fonction {self.name}.{func_name} avec retry automatique activé"
-                )
-
-                self.kernel.add_function(
-                    prompt=prompt,
-                    plugin_name=self.name,
-                    function_name=func_name,
-                    description=description,
-                    prompt_execution_settings=retry_settings,
-                )
-
-                self.logger.debug(
-                    f"Fonction sémantique {self.name}.{func_name} ajoutée."
-                )
-
-                if (
-                    self.name in self.kernel.plugins
-                    and func_name in self.kernel.plugins[self.name]
-                ):
-                    self.logger.info(
-                        f"(OK) Fonction {self.name}.{func_name} correctement enregistrée."
-                    )
-                else:
-                    self.logger.error(
-                        f"(CRITICAL ERROR) Fonction {self.name}.{func_name} non trouvée après ajout!"
-                    )
-
-            except ValueError as ve:
-                self.logger.warning(f"Problème ajout/MàJ {self.name}.{func_name}: {ve}")
-            except Exception as e:
-                self.logger.error(
-                    f"Exception inattendue lors de l'ajout de {self.name}.{func_name}: {e}",
-                    exc_info=True,
-                )
+            register_prompt_function(
+                self.kernel,
+                self.name,
+                self.name,
+                func_name,
+                prompt,
+                description,
+                retry_settings,
+            )
+            self.logger.debug(f"Fonction sémantique {self.name}.{func_name} ajoutée.")
 
         self.logger.info(
             f"Composants de {self.name} configurés avec retry automatique."

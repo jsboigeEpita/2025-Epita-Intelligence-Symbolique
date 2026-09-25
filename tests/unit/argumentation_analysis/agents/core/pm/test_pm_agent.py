@@ -18,6 +18,7 @@ from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.utils.author_role import AuthorRole
 
 from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
+from argumentation_analysis.agents.core.semantic_setup import SemanticSetupError
 
 
 def _create_mock_kernel():
@@ -97,13 +98,16 @@ class TestProjectManagerAgentSetup:
         assert kernel.add_function.called
         assert kernel.add_function.call_count >= 2
 
-    def test_setup_agent_components_handles_exceptions(self):
-        """Verify setup handles exceptions gracefully."""
+    def test_setup_agent_components_raises_on_a_failed_registration(self):
+        """#2632: a failed registration raises, naming the function; the agent
+        does not go on without it."""
         kernel = _create_mock_kernel()
         kernel.add_function = MagicMock(side_effect=RuntimeError("Test error"))
         agent = ProjectManagerAgent(kernel)
-        # Should not raise exception
-        agent.setup_agent_components("test_service_id")
+        with pytest.raises(
+            SemanticSetupError, match=r"DefineTasksAndDelegate.*Test error"
+        ):
+            agent.setup_agent_components("test_service_id")
 
 
 # =====================================================================
