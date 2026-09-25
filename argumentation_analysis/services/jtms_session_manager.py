@@ -37,6 +37,11 @@ class JTMSSessionManager:
         self.checkpoints: Dict[str, List[Dict]] = {}  # session_id -> [checkpoints]
         self.agent_sessions: Dict[str, List[str]] = {}  # agent_id -> [session_ids]
 
+        # #2549 : datetime.now() peut rendre deux horodatages identiques dans
+        # le même tick d'horloge ; ce compteur garantit un ordre de création
+        # strictement croissant pour le tri de list_sessions.
+        self._creation_counter = 0
+
         # Configuration
         self.max_checkpoints_per_session = 10
         self.session_timeout_hours = 24
@@ -58,12 +63,17 @@ class JTMSSessionManager:
         """
         session_id = f"session_{agent_id}_{uuid.uuid4().hex[:8]}"
 
+        # #2549 : tiebreaker monotone — deux sessions du même tick d'horloge
+        # doivent rester ordonnées par ordre de création réel.
+        self._creation_counter += 1
+
         session_data = {
             "session_id": session_id,
             "agent_id": agent_id,
             "session_name": session_name
             or f"Session_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
             "created_at": datetime.now().isoformat(),
+            "creation_seq": self._creation_counter,
             "last_accessed": datetime.now().isoformat(),
             "status": "active",
             "metadata": metadata or {},
@@ -156,8 +166,12 @@ class JTMSSessionManager:
 
             sessions_list.append(session_info)
 
-        # Trier par date de création (plus récent en premier)
-        sessions_list.sort(key=lambda x: x["created_at"], reverse=True)
+        # Trier par date de création (plus récent en premier) ; les sessions
+        # du même tick d'horloge sont départagées par la séquence de création
+        # (#2549 — les sessions anciennes sans le champ valent 0).
+        sessions_list.sort(
+            key=lambda x: (x["created_at"], x.get("creation_seq", 0)), reverse=True
+        )
 
         return sessions_list
 

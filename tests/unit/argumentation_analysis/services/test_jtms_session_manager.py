@@ -186,6 +186,32 @@ class TestListSessions:
         assert sessions[0]["session_id"] == s2  # most recent first
 
     @pytest.mark.asyncio
+    async def test_same_tick_sessions_still_ordered_by_creation(
+        self, manager, monkeypatch
+    ):
+        """#2549 : deux sessions créées dans le même tick d'horloge gardent
+        l'ordre « la plus récente d'abord » — la séquence de création
+        départage les created_at identiques."""
+        import argumentation_analysis.services.jtms_session_manager as jsm
+        from datetime import datetime as real_datetime
+
+        frozen = real_datetime(2026, 1, 1, 12, 0, 0)
+
+        class _FrozenDatetime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return frozen
+
+        monkeypatch.setattr(jsm, "datetime", _FrozenDatetime)
+
+        s1 = await manager.create_session("watson")
+        s2 = await manager.create_session("watson")
+        sessions = await manager.list_sessions()
+
+        assert sessions[0]["created_at"] == sessions[1]["created_at"]  # même tick
+        assert sessions[0]["session_id"] == s2  # départagé par l'ordre réel
+
+    @pytest.mark.asyncio
     async def test_empty_when_no_sessions(self, manager):
         sessions = await manager.list_sessions()
         assert sessions == []
