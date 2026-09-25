@@ -6,7 +6,9 @@ Script de test pour l'utilitaire de lazy loading de la taxonomie des sophismes.
 Ce script vérifie que le fichier de taxonomie peut être correctement téléchargé et validé.
 """
 
+import codecs
 import csv
+import json
 import os
 import logging
 from pathlib import Path
@@ -18,6 +20,8 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("TestTaxonomyLoader")
+
+from argumentation_analysis.paths import DATA_DIR
 
 # Import de l'utilitaire de lazy loading
 from argumentation_analysis.utils.taxonomy_loader import (
@@ -135,6 +139,61 @@ def test_load_taxonomy_raises_when_the_file_cannot_be_read(monkeypatch, tmp_path
 
     with pytest.raises(FileNotFoundError):
         TaxonomyLoader().load_taxonomy()
+
+
+# --- #2346: a missing copy is downloaded at the pinned commit, and checked ---
+
+
+def _serve(monkeypatch, body, calls):
+    """``requests.get`` answers ``body`` and records each call, with no network."""
+    import requests
+
+    class _Response:
+        content = body
+
+        def raise_for_status(self):
+            pass
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs))
+        return _Response()
+
+    monkeypatch.setattr(requests, "get", fake_get)
+
+
+def test_a_missing_copy_is_downloaded_at_the_pinned_commit(monkeypatch, tmp_path):
+    """The download used to fetch ``master``, with no timeout, and write whatever
+    came back. Upstream ``master`` has moved past the pinned commit."""
+    vendored = TAXONOMY_FILE.read_bytes()
+    target = tmp_path / TAXONOMY_FILE.name
+    monkeypatch.setattr(
+        "argumentation_analysis.utils.taxonomy_loader.TAXONOMY_FILE", target
+    )
+    calls = []
+    _serve(monkeypatch, codecs.BOM_UTF8 + vendored, calls)
+
+    assert get_taxonomy_path() == target
+
+    provenance = DATA_DIR / "argumentum_taxonomy_provenance.json"
+    pin = json.loads(provenance.read_text(encoding="utf-8"))["fallacies"]
+    [(url, kwargs)] = calls
+    assert f"/{pin['upstream_commit']}/" in url
+    assert "/master/" not in url
+    assert kwargs.get("timeout")
+    assert target.read_bytes() == vendored
+
+
+def test_a_download_with_another_fingerprint_is_not_written(monkeypatch, tmp_path):
+    target = tmp_path / TAXONOMY_FILE.name
+    monkeypatch.setattr(
+        "argumentation_analysis.utils.taxonomy_loader.TAXONOMY_FILE", target
+    )
+    _serve(monkeypatch, b"PK,path\n1,1\n", [])
+
+    with pytest.raises(ValueError, match="empreinte"):
+        get_taxonomy_path()
+
+    assert list(tmp_path.iterdir()) == []
 
 
 if __name__ == "__main__":
