@@ -29,6 +29,22 @@ from argumentation_analysis.agents.core.logic.modal_logic_agent import (
 )
 from argumentation_analysis.agents.core.logic.belief_set import ModalBeliefSet
 from semantic_kernel import Kernel
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.functions.function_result import FunctionResult
+from semantic_kernel.functions.kernel_function_metadata import KernelFunctionMetadata
+
+
+def _llm_result(text):
+    """What invoking a prompt function returns: its value is the list of chat
+    messages, and ``str()`` of it is the text (#2645). A double whose ``.value``
+    is the text hid that the agent returned the list."""
+    return FunctionResult(
+        function=KernelFunctionMetadata(
+            name="prompt", plugin_name="test", is_prompt=True, parameters=[]
+        ),
+        value=[ChatMessageContent(role=AuthorRole.ASSISTANT, content=text)],
+    )
 
 
 @pytest.fixture
@@ -237,8 +253,7 @@ class TestModalLogicAgent:
         # Le mock 'invoke' est déjà un AsyncMock grâce à la fixture.
         # On configure directement sa valeur de retour.
         # La valeur de retour d'une coroutine mockée est la valeur que `await` produira.
-        mock_response = MagicMock()
-        mock_response.value = mock_json_response
+        mock_response = _llm_result(mock_json_response)
         modal_agent.kernel.plugins[modal_agent.name][
             "TextToModalBeliefSet"
         ].invoke.return_value = mock_response
@@ -267,8 +282,7 @@ class TestModalLogicAgent:
         # Mock retournant une réponse sans JSON du tout (non réparable)
         mock_invalid_json = "Réponse complètement invalide sans aucun JSON"
 
-        mock_response = MagicMock()
-        mock_response.value = mock_invalid_json
+        mock_response = _llm_result(mock_invalid_json)
         modal_agent.kernel.plugins[modal_agent.name][
             "TextToModalBeliefSet"
         ].invoke.return_value = mock_response
@@ -320,8 +334,7 @@ class TestModalLogicAgent:
             '{"query_ideas": [{"formula": "[](urgent)"}, {"formula": "<>(urgent)"}]}'
         )
 
-        mock_response = MagicMock()
-        mock_response.value = mock_json_response
+        mock_response = _llm_result(mock_json_response)
         modal_agent.kernel.plugins[modal_agent.name][
             "GenerateModalQueryIdeas"
         ].invoke.return_value = mock_response
@@ -351,8 +364,7 @@ class TestModalLogicAgent:
         # Mock retournant une réponse vide
         mock_json_response = '{"query_ideas": []}'
 
-        mock_response = MagicMock()
-        mock_response.value = mock_json_response
+        mock_response = _llm_result(mock_json_response)
         modal_agent.kernel.plugins[modal_agent.name][
             "GenerateModalQueryIdeas"
         ].invoke.return_value = mock_response
@@ -414,8 +426,7 @@ class TestModalLogicAgent:
         # Mock de la fonction d'interprétation
         mock_response = "Interprétation: La requête [](urgent) est acceptée, indiquant une nécessité."
 
-        mock_response_object = MagicMock()
-        mock_response_object.value = mock_response
+        mock_response_object = _llm_result(mock_response)
         modal_agent.kernel.plugins[modal_agent.name][
             "InterpretModalResult"
         ].invoke.return_value = mock_response_object
@@ -562,8 +573,7 @@ class TestModalLogicAgent:
         """Test que get_response (via invoke_single) retourne un statut."""
         modal_agent._tweety_bridge = mock_tweety_bridge
 
-        mock_response = MagicMock()
-        mock_response.value = (
+        mock_response = _llm_result(
             '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
         )
         modal_agent.kernel.plugins[modal_agent.name][
@@ -584,8 +594,7 @@ class TestModalLogicAgent:
         """Test que invoke retourne un générateur qui produit le statut de invoke_single."""
         modal_agent._tweety_bridge = mock_tweety_bridge
 
-        mock_response = MagicMock()
-        mock_response.value = (
+        mock_response = _llm_result(
             '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
         )
         modal_agent.kernel.plugins[modal_agent.name][
@@ -607,8 +616,7 @@ class TestModalLogicAgent:
         """Test que invoke_stream retourne un générateur qui produit le statut de invoke_single."""
         modal_agent._tweety_bridge = mock_tweety_bridge
 
-        mock_response = MagicMock()
-        mock_response.value = (
+        mock_response = _llm_result(
             '{"propositions": ["test"], "modal_formulas": ["[](test)"]}'
         )
         modal_agent.kernel.plugins[modal_agent.name][
@@ -686,19 +694,19 @@ class TestModalLogicAgentIntegration:
         agent._tweety_bridge = mock_tweety_bridge
 
         # 1. Définir les réponses attendues pour chaque fonction sémantique
-        #    On mock l'attribut '.value' car le code de l'agent l'utilise
-        #    pour extraire la réponse du noyau.
+        #    Ce que rend réellement l'invocation d'une fonction de prompt (#2645).
 
-        mock_belief_set_result = MagicMock()
-        mock_belief_set_result.value = '{"propositions": ["urgent", "action"], "modal_formulas": ["[](urgent)", "<>(action)"]}'
+        mock_belief_set_result = _llm_result(
+            '{"propositions": ["urgent", "action"], "modal_formulas": ["[](urgent)", "<>(action)"]}'
+        )
 
-        mock_query_ideas_result = MagicMock()
-        mock_query_ideas_result.value = (
+        mock_query_ideas_result = _llm_result(
             '{"query_ideas": [{"formula": "[](urgent)"}, {"formula": "<>(action)"}]}'
         )
 
-        mock_interpretation_result = MagicMock()
-        mock_interpretation_result.value = "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
+        mock_interpretation_result = _llm_result(
+            "L'analyse modale montre que l'urgence est nécessaire et l'action est possible."
+        )
 
         # 2. Patcher le dictionnaire de plugins sur le noyau pour que les appels
         #    à `invoke` retournent nos valeurs mockées.

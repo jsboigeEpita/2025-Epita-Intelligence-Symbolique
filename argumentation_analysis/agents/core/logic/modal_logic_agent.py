@@ -408,9 +408,6 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
         return True, "Validation du JSON modale réussie."
 
     def _extract_json_block(self, text: str) -> str:
-        # Normalize text to string if it's a list (fix for AttributeError: 'list' object has no attribute 'find')
-        if isinstance(text, list):
-            text = " ".join(str(item) for item in text)
         """Extrait le premier bloc JSON valide de la réponse du LLM avec gestion des troncatures."""
         start_index = text.find("{")
         if start_index == -1:
@@ -510,8 +507,9 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                 "TextToModalBeliefSet"
             ].invoke(self.kernel, input=text)
 
-            # Extraire et parser le JSON
-            response_content = result.value if hasattr(result, "value") else str(result)
+            # Extraire et parser le JSON. ``str(result)`` est le texte de la
+            # réponse ; ``result.value`` est la liste des messages (#2645).
+            response_content = str(result)
             json_str = self._extract_json_block(response_content)
             kb_json = json.loads(json_str)
 
@@ -627,7 +625,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             result = await self.kernel.plugins[self.name][
                 "GenerateModalQueryIdeas"
             ].invoke(self.kernel, **args)
-            response_text = result.value if hasattr(result, "value") else str(result)
+            response_text = str(result)
 
             # Extraire le bloc JSON de la réponse
             json_block = self._extract_json_block(response_text)
@@ -777,7 +775,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
                 tweety_result=results_str,
             )
 
-            interpretation = result.value if hasattr(result, "value") else str(result)
+            interpretation = str(result)
             self.logger.info("Interprétation terminée")
             return interpretation
 
