@@ -4,18 +4,22 @@ Script pour extraire des versions de code jugées "prometteuses" à partir de
 fichiers de log de conversation au format Markdown.
 
 Une version est considérée comme prometteuse si les tests exécutés après une
-modification du code montrent un succès partiel (entre 5 et 7 tests réussis).
+modification du code montrent un succès partiel (par défaut entre 5 et 7 tests
+réussis, réglable par ``--min-passed`` / ``--max-passed``).
 
-Le script analyse les logs, identifie ces moments, et extrait le code
-source correspondant pour recréer une arborescence de projet pour chaque
-version prometteuse trouvée.
+Pour chaque résultat prometteur, le script reconstruit l'état de **chaque
+fichier** touché avant ce résultat, et pas seulement le dernier bloc de code :
+le dernier contenu complet connu (``<write_to_file>``, ou le résultat d'un
+``<read_file>``), plus les ``<apply_diff>`` venus après lui, sauvegardés à côté
+(``<fichier>.diff``, application manuelle requise). Le contexte de conversation
+qui précède le résultat est sauvegardé dans ``_CONVERSATION_CONTEXT.md``.
 """
 
 import argparse
 import logging
 import re
-from pathlib import Path
-from typing import List, Optional, Tuple
+from pathlib import Path, PurePath
+from typing import Dict, List, Optional
 
 # Configuration du logging
 logging.basicConfig(
@@ -25,15 +29,36 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+CODE_EVENT_REGEX = re.compile(
+    r"<(read_file|write_to_file|apply_diff)>(.*?)</\1>", re.DOTALL
+)
+PYTEST_SUMMARY_REGEX = re.compile(
+    r"={5,}\s*short test summary info\s*={5,}[\s\S]*?(\d+)\s+passed"
+)
+READ_RESULT_REGEX = re.compile(
+    r"Result:[\s\S]*?<file>[\s\S]*?<content[^>]*>\n([\s\S]*?)</content>"
+)
+# Préfixe de numéro de ligne ajouté par read_file ("  12 | code").
+LINE_NUMBER_PREFIX = re.compile(r"^\s*\d+\s*\| ?")
+CONTEXT_CHARS = 4000
+
 
 class PromisingVersionExtractor:
     """
-    Extrait les versions de code prometteuses des logs de conversation.
+    Extrait les versions de code prometteuses des logs de conversation,
+    en reconstruisant l'état des fichiers et en sauvegardant le contexte.
     """
 
-    def __init__(self, output_base_dir: str = ".temp/recovered"):
+    def __init__(
+        self,
+        output_base_dir: str = ".temp/recovered",
+        min_passed: int = 5,
+        max_passed: int = 7,
+    ):
         self.output_base_dir = Path(output_base_dir)
         self.output_base_dir.mkdir(parents=True, exist_ok=True)
+        self.min_passed = min_passed
+        self.max_passed = max_passed
         logger.info(
             f"Les extractions seront sauvegardées dans : {self.output_base_dir.resolve()}"
         )
@@ -74,6 +99,26 @@ class PromisingVersionExtractor:
                 "Aucun snapshot prometteur n'a été trouvé dans les fichiers de log fournis."
             )
 
+    @staticmethod
+    def _get_line_number(content: str, position: int) -> int:
+        """Trouve le numéro de ligne à partir de la position d'un caractère."""
+        return content.count("\n", 0, position) + 1
+
+    @staticmethod
+    def _snapshot_relative_path(file_path_str: str) -> Optional[PurePath]:
+        """
+        Chemin relatif sous le dossier du snapshot, ou None si le chemin est
+        inutilisable : générique (``...``, un motif de regex recopié), ou qui
+        remonterait hors du snapshot (``..``). Un chemin absolu perd sa racine.
+        """
+        if "..." in file_path_str or "(.*?)" in file_path_str:
+            return None
+        path = PurePath(file_path_str)
+        parts = [p for p in path.parts if p not in (path.anchor, "")]
+        if not parts or ".." in parts:
+            return None
+        return PurePath(*parts)
+
     def _process_single_log(self, log_file: Path, log_identifier: str) -> int:
         """
         Analyse un seul fichier de log pour en extraire les snapshots prometteurs.
@@ -85,100 +130,126 @@ class PromisingVersionExtractor:
             logger.error(f"Impossible de lire le fichier {log_file}: {e}")
             return 0
 
-        code_block_regex = r"<(write_to_file|apply_diff)>(.*?)</\1>"
-        pytest_summary_regex = (
-            r"={5,}\s*short test summary info\s*={5,}[\s\S]*?(\d+)\s+passed"
-        )
-
-        # On recherche tous les blocs de code et les résultats de tests avec leur position de fin
-        code_blocks = [
-            (m.group(1), m.group(2), m.end(0))
-            for m in re.finditer(code_block_regex, content, re.DOTALL)
-        ]
-        test_results = [
-            (int(m.group(1)), m.start(0))
-            for m in re.finditer(pytest_summary_regex, content)
+        code_events = [
+            (m.start(0), m.end(0), m.group(1), m.group(2))
+            for m in CODE_EVENT_REGEX.finditer(content)
         ]
 
         snapshots_created = 0
-        for i, (passed_count, result_pos) in enumerate(test_results):
-            if 5 <= passed_count <= 7:
-                logger.info(
-                    f"Résultat prometteur trouvé dans {log_file.name} (pos {result_pos}): {passed_count} tests passés."
+        for m in PYTEST_SUMMARY_REGEX.finditer(content):
+            passed_count, result_pos = int(m.group(1)), m.start(0)
+            if not self.min_passed <= passed_count <= self.max_passed:
+                continue
+            line_num = self._get_line_number(content, result_pos)
+            logger.info(
+                f"Résultat prometteur trouvé dans {log_file.name} (ligne ~{line_num}): {passed_count} tests passés."
+            )
+
+            before = [e for e in code_events if e[1] <= result_pos]
+            files, diffs = self._file_states(content, before, result_pos)
+            if not files and not diffs:
+                logger.warning(
+                    f"Aucun bloc de code (<write_to_file>, <read_file> ou <apply_diff>) trouvé avant le test prometteur à la ligne ~{line_num}."
                 )
+                continue
 
-                last_code_block_before_test: Optional[Tuple[str, str]] = None
-                for tool, code_content, code_pos in code_blocks:
-                    if code_pos < result_pos:
-                        last_code_block_before_test = (tool, code_content.strip())
-                    else:
-                        # On a dépassé la position du test, le dernier bloc trouvé est le bon.
-                        break
-
-                if last_code_block_before_test:
-                    snapshots_created += 1
-                    snapshot_name = f"{log_identifier}_snapshot{snapshots_created}"
-                    self._create_snapshot(
-                        snapshot_name,
-                        last_code_block_before_test[0],
-                        last_code_block_before_test[1],
-                    )
-                else:
-                    logger.warning(
-                        f"Aucun bloc de code (<write_to_file> ou <apply_diff>) trouvé avant le test prometteur à la position {result_pos}."
-                    )
+            snapshots_created += 1
+            snapshot_name = f"{log_identifier}_snapshot{snapshots_created}_L{line_num}_passed{passed_count}"
+            context = (
+                content[max(0, result_pos - CONTEXT_CHARS) : result_pos]
+                + "\n\n"
+                + m.group(0)
+            )
+            self._create_snapshot(snapshot_name, files, diffs, context)
 
         return snapshots_created
 
-    def _create_snapshot(self, snapshot_name: str, tool: str, content_xml: str):
+    def _file_states(self, content: str, events: list, limit: int):
         """
-        Crée l'arborescence et les fichiers pour un snapshot donné à partir du XML de l'outil.
+        Remonte les événements de code, du plus récent au plus ancien, et rend
+        pour chaque fichier son dernier contenu complet connu et les diffs
+        appliqués après lui (dans l'ordre chronologique).
+        """
+        files: Dict[PurePath, str] = {}
+        diffs: Dict[PurePath, List[str]] = {}
+        closed = set()
+        for index in range(len(events) - 1, -1, -1):
+            start, end, tool, xml = events[index]
+            path_match = re.search(r"<path>(.*?)</path>", xml, re.DOTALL)
+            if not path_match:
+                continue
+            rel = self._snapshot_relative_path(path_match.group(1).strip())
+            if rel is None or rel in closed:
+                continue
+
+            if tool == "apply_diff":
+                diff_match = re.search(r"<diff>(.*?)</diff>", xml, re.DOTALL)
+                if diff_match:
+                    diffs.setdefault(rel, []).insert(0, diff_match.group(1).strip())
+                continue
+
+            full_content = None
+            if tool == "write_to_file":
+                content_match = re.search(r"<content>(.*?)</content>", xml, re.DOTALL)
+                if content_match:
+                    full_content = content_match.group(1).strip()
+            elif tool == "read_file":
+                # Le résultat suit l'appel, avant l'événement de code suivant.
+                window_end = events[index + 1][0] if index + 1 < len(events) else limit
+                result_match = READ_RESULT_REGEX.search(content[end:window_end])
+                if result_match:
+                    full_content = "\n".join(
+                        LINE_NUMBER_PREFIX.sub("", line)
+                        for line in result_match.group(1).splitlines()
+                    )
+            if full_content is not None:
+                files[rel] = full_content
+                closed.add(rel)
+        return files, diffs
+
+    def _create_snapshot(
+        self,
+        snapshot_name: str,
+        files: Dict[PurePath, str],
+        diffs: Dict[PurePath, List[str]],
+        context: str,
+    ):
+        """
+        Écrit le snapshot : les fichiers reconstruits, un ``.diff`` par fichier
+        qui a des diffs postérieurs à son dernier contenu complet, et le contexte.
         """
         snapshot_dir = self.output_base_dir / snapshot_name
         try:
             snapshot_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Création du snapshot : {snapshot_name}")
 
-            path_match = re.search(r"<path>(.*?)</path>", content_xml, re.DOTALL)
-            if not path_match:
-                logger.error(
-                    f"  ! Chemin de fichier non trouvé dans le bloc {tool} pour {snapshot_name}."
+            for rel, file_content in files.items():
+                target_path = snapshot_dir / rel
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                with open(target_path, "w", encoding="utf-8") as f:
+                    f.write(file_content)
+                logger.info(f"  -> Fichier restauré : {target_path}")
+
+            for rel, blocks in diffs.items():
+                target_path = snapshot_dir / f"{rel}.diff"
+                target_path.parent.mkdir(parents=True, exist_ok=True)
+                base = (
+                    "le contenu restauré"
+                    if rel in files
+                    else "aucun contenu complet trouvé"
                 )
-                return
-
-            file_path_str = Path(path_match.group(1).strip())
-
-            if tool == "write_to_file":
-                content_match = re.search(
-                    r"<content>(.*?)</content>", content_xml, re.DOTALL
+                with open(target_path, "w", encoding="utf-8") as f:
+                    f.write(f"Original file path: {rel}\nBase: {base}\n")
+                    for n, block in enumerate(blocks, 1):
+                        f.write(f"\n--- apply_diff {n}/{len(blocks)} ---\n{block}\n")
+                logger.info(
+                    f"  -> Diff sauvegardé : {target_path} (application manuelle requise)"
                 )
-                if content_match:
-                    file_content = content_match.group(1).strip()
-                    target_path = snapshot_dir / file_path_str
-                    target_path.parent.mkdir(parents=True, exist_ok=True)
-                    with open(target_path, "w", encoding="utf-8") as f:
-                        f.write(file_content)
-                    logger.info(f"  -> Fichier créé : {target_path}")
-                else:
-                    logger.error(
-                        f"  ! Contenu non trouvé pour write_to_file dans {snapshot_name}."
-                    )
 
-            elif tool == "apply_diff":
-                diff_match = re.search(r"<diff>(.*?)</diff>", content_xml, re.DOTALL)
-                if diff_match:
-                    diff_content = diff_match.group(1).strip()
-                    # On sauvegarde le diff dans un fichier pour analyse manuelle.
-                    target_path = snapshot_dir / f"{file_path_str.name}.diff"
-                    with open(target_path, "w", encoding="utf-8") as f:
-                        f.write(f"Original file path: {file_path_str}\n\n")
-                        f.write(diff_content)
-                    logger.info(
-                        f"  -> Diff sauvegardé : {target_path} (application manuelle requise)"
-                    )
-                else:
-                    logger.error(
-                        f"  ! Contenu de diff non trouvé pour apply_diff dans {snapshot_name}."
-                    )
+            context_path = snapshot_dir / "_CONVERSATION_CONTEXT.md"
+            with open(context_path, "w", encoding="utf-8") as f:
+                f.write(context)
+            logger.info(f"  -> Contexte sauvegardé : {context_path}")
 
         except Exception as e:
             logger.error(
@@ -203,10 +274,26 @@ def main():
         default=".temp/recovered",
         help="Répertoire de base pour sauvegarder les snapshots de code extraits.",
     )
+    parser.add_argument(
+        "--min-passed",
+        type=int,
+        default=5,
+        help="Nombre minimal de tests réussis pour qu'un résultat soit prometteur.",
+    )
+    parser.add_argument(
+        "--max-passed",
+        type=int,
+        default=7,
+        help="Nombre maximal de tests réussis pour qu'un résultat soit prometteur.",
+    )
 
     args = parser.parse_args()
 
-    extractor = PromisingVersionExtractor(output_base_dir=args.output_dir)
+    extractor = PromisingVersionExtractor(
+        output_base_dir=args.output_dir,
+        min_passed=args.min_passed,
+        max_passed=args.max_passed,
+    )
     extractor.extract_from_logs(args.log_files)
 
 
