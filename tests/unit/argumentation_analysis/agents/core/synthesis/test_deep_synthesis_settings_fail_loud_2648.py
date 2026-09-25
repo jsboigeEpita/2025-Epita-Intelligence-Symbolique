@@ -7,10 +7,11 @@ that covers the chat call. A service id the kernel does not hold (a
 calling-code defect) was therefore recorded as "LLM unavailable", at ``DEBUG``
 for the convergence prose. The lookup now sits before that ``try``.
 
-Real ``Kernel`` holding one service, ``"default"``; the agent is given
-``service_id="absent"``. ``BaseAgent`` resolves ``"default"`` and the agent
-builds (the id is not forwarded — #2627's open item). Only the synthesis
-methods read the absent id.
+Real ``Kernel``. Since #2627 the id reaches ``BaseAgent``, so an agent given
+an id its kernel does not hold is not built at all. The call-time lookups are
+still reached when the kernel loses the service after the agent was built: a
+kernel is shared and mutable. The witnesses below build the agent on a kernel
+holding ``"absent"``, then remove it.
 """
 
 import pytest
@@ -26,10 +27,14 @@ from argumentation_analysis.core.shared_state import UnifiedAnalysisState
 
 def _agent(service_id):
     kernel = Kernel()
-    kernel.add_service(
-        OpenAIChatCompletion(service_id="default", ai_model_id="m", api_key="dummy")
-    )
-    return DeepSynthesisAgent(kernel, service_id=service_id)
+    for held in {"default", service_id}:
+        kernel.add_service(
+            OpenAIChatCompletion(service_id=held, ai_model_id="m", api_key="dummy")
+        )
+    agent = DeepSynthesisAgent(kernel, service_id=service_id)
+    if service_id == "absent":
+        kernel.remove_service("absent")
+    return agent
 
 
 def _state():
@@ -38,6 +43,16 @@ def _state():
     state.add_argument("second claim")
     state.add_fallacy("false_dilemma", "either/or framing", "arg_2")
     return state
+
+
+def test_an_id_the_kernel_does_not_hold_refuses_construction():
+    # #2627: the id reaches BaseAgent, which names it and the held ids.
+    kernel = Kernel()
+    kernel.add_service(
+        OpenAIChatCompletion(service_id="default", ai_model_id="m", api_key="dummy")
+    )
+    with pytest.raises(ValueError, match=r"'absent'.*\['default'\]"):
+        DeepSynthesisAgent(kernel, service_id="absent")
 
 
 class TestAMisnamedServiceRaises:

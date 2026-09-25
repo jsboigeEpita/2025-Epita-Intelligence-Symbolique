@@ -174,6 +174,7 @@ class ModalLogicAgent(BaseLogicAgent):
             agent_name=agent_name,
             logic_type_name="Modal",
             system_prompt=SYSTEM_PROMPT_MODAL,
+            llm_service_id=service_id,  # #2627 : le service de l'agent est celui-ci
             **kwargs,
         )
         self._llm_service_id = service_id
