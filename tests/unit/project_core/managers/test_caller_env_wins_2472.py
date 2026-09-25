@@ -185,8 +185,8 @@ def test_a_pytest_session_keeps_what_the_caller_set(tmp_path):
 def test_an_xdist_worker_keeps_what_the_caller_set(tmp_path):
     """An xdist worker is started with the controller's environment, after the
     controller's ``pytest_configure``: it must see the caller's values too."""
-    # The CI env (``projet-is``) carries no pytest-xdist: ``-n`` is an
-    # unrecognized argument there (rc=4). Local seats run with ``-n 4``.
+    # CI provisions pytest-xdist since #2402 (environment.yml); this skip only
+    # guards seats whose env predates it. Local seats run with ``-n 4``.
     pytest.importorskip("xdist", reason="pytest-xdist is not installed here")
     seen = _run_child_pytest(tmp_path, _root(tmp_path), "-n", "1")
     assert set(seen) == {"controller", "gw0"}
