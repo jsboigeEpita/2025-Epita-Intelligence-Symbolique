@@ -85,6 +85,30 @@ def test_multi_corpus_averages_scores_per_corpus():
     assert corpus_b["argument_coherence_evaluator"]["coherence_score"] == 0.9
 
 
+def test_recommendations_are_order_invariant_2362():
+    """The guidance attached to a corpus must not depend on its rank (#2362).
+
+    A class-specific advice keyed on the position of the corpus in the run
+    qualifies whichever corpus lands at that position — the name is gone but
+    the claim about the corpus stays, and the rendered report carries it.
+    Same two corpora, both orders: each one keeps its own recommendations.
+    """
+    corpus_a = _base_result("corpus_A", coherence=0.5, semantic=0.25)
+    corpus_b = _base_result("corpus_B", coherence=0.9, semantic=0.9)
+
+    forward = _analyze_agent_effectiveness([corpus_a, corpus_b], [], pd.DataFrame())
+    backward = _analyze_agent_effectiveness([corpus_b, corpus_a], [], pd.DataFrame())
+
+    assert (
+        forward["corpus_A"]["recommendations"]
+        == backward["corpus_A"]["recommendations"]
+    )
+    assert (
+        forward["corpus_B"]["recommendations"]
+        == backward["corpus_B"]["recommendations"]
+    )
+
+
 def test_advanced_only_corpus_exercises_advanced_branch():
     advanced = [
         {
