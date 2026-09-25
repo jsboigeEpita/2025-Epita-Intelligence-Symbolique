@@ -40,29 +40,11 @@ REPO = Path(__file__).resolve().parents[5]
 
 CALLEES = {"add_function", "get_prompt_execution_settings_from_service_id"}
 
-# Invocation-time sites, not setup: each lookup sits in the ``try`` that covers
-# the chat call it prepares, and the handler returns the section's
-# "LLM unavailable" value. A settings failure there is still a calling-code
-# defect read as an unavailable model; its repair is tracked in #2648. The
-# keys are (file, enclosing function, callee), so an entry goes stale — and
-# reddens — when its site is repaired or moved.
-DEGRADE_AT_INVOCATION = {
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "grounded_transversal_synthesis",
-        "get_prompt_execution_settings_from_service_id",
-    ): "#2648",
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "_llm_convergence_prose",
-        "get_prompt_execution_settings_from_service_id",
-    ): "#2648",
-    (
-        "argumentation_analysis/agents/core/synthesis/deep_synthesis_agent.py",
-        "_llm_synthesis",
-        "get_prompt_execution_settings_from_service_id",
-    ): "#2648",
-}
+# Sites allowed behind a handler that does not raise, as
+# (file, enclosing function, callee) -> the issue that owns them. Empty since
+# #2648 moved the deep-synthesis lookups out of their chat-call handlers. An
+# entry that no longer matches reddens, so the map cannot outlive its sites.
+DEGRADE_AT_INVOCATION = {}
 
 
 def _kernel(service_id="svc"):

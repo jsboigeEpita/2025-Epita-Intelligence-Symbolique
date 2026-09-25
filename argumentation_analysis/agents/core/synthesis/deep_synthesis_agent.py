@@ -22,6 +22,7 @@ from semantic_kernel import Kernel
 from pydantic import PrivateAttr
 
 from ..abc.agent_bases import BaseAgent
+from ..semantic_setup import prompt_settings
 from .deep_synthesis_models import (
     ArgumentMapEntry,
     BeliefRetraction,
@@ -1358,6 +1359,11 @@ class DeepSynthesisAgent(BaseAgent):
         # Header line only → nothing citable, refuse to synthesize.
         if briefing.count("\n") < 1:
             return ""
+        # #2648 : le service est nommé par le code appelant ; un id que le
+        # kernel ne porte pas lève, au lieu d'être lu comme un LLM indisponible.
+        settings = prompt_settings(
+            self.kernel, self._llm_service_id, "DeepSynthesisAgent"
+        )
         try:
             # Epic #1258 / Track 1 #1259 — prepend the opaque-ID directive only
             # when the agent runs in opaque mode (deanonymized=False).
@@ -1367,9 +1373,6 @@ class DeepSynthesisAgent(BaseAgent):
             prompt = (
                 f"{_opaque_guard}{self.GROUNDED_SYNTHESIS_PROMPT}\n\n{briefing}\n\n"
                 "Write the 4-section grounded transversal synthesis now."
-            )
-            settings = self.kernel.get_prompt_execution_settings_from_service_id(
-                self._llm_service_id
             )
             result = await self.kernel.invoke_prompt(
                 function_name="deep_synthesis_grounded_transversal",
@@ -1462,6 +1465,10 @@ class DeepSynthesisAgent(BaseAgent):
         """
         if not self._llm_service_id:
             return ""
+        # #2648 : hors du handler, qui ne couvre que l'appel au modèle.
+        settings = prompt_settings(
+            self.kernel, self._llm_service_id, "DeepSynthesisAgent"
+        )
         try:
             from argumentation_analysis.plugins.narrative_synthesis_plugin import (
                 build_convergent_synthesis,
@@ -1473,9 +1480,6 @@ class DeepSynthesisAgent(BaseAgent):
                 return ""
 
             prompt = _build_prose_prompt(synthesis)
-            settings = self.kernel.get_prompt_execution_settings_from_service_id(
-                self._llm_service_id
-            )
             result = await self.kernel.invoke_prompt(
                 function_name="deep_synthesis_convergence_prose",
                 plugin_name="deep_synthesis",
@@ -1492,6 +1496,10 @@ class DeepSynthesisAgent(BaseAgent):
         """Produce a 6-section political-rhetorical briefing via LLM."""
         if not self._llm_service_id:
             return None
+        # #2648 : hors du handler, qui ne couvre que l'appel au modèle.
+        settings = prompt_settings(
+            self.kernel, self._llm_service_id, "DeepSynthesisAgent"
+        )
         try:
             so = report.source_overview
 
@@ -1680,9 +1688,6 @@ class DeepSynthesisAgent(BaseAgent):
                 f"{convergence_section}"
             )
             # Use SK chat completion
-            settings = self.kernel.get_prompt_execution_settings_from_service_id(
-                self._llm_service_id
-            )
             result = await self.kernel.invoke_prompt(
                 function_name="deep_synthesis_thesis",
                 plugin_name="deep_synthesis",
