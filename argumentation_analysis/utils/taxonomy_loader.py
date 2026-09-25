@@ -4,7 +4,7 @@ Chargement de la taxonomie des sophismes Argumentum.
 La taxonomie est vendorée dans ``argumentation_analysis/data/`` et sa provenance
 est épinglée dans ``argumentum_taxonomy_provenance.json``.
 ``get_taxonomy_path()`` rend ce fichier. S'il manque, il le télécharge depuis le
-dépôt Argumentum. ``validate_taxonomy_file()`` en vérifie l'en-tête, et
+dépôt Argumentum, au commit épinglé. ``validate_taxonomy_file()`` en vérifie l'en-tête, et
 ``TaxonomyLoader`` le lit en une liste de dictionnaires.
 
 Le module n'a pas de mode simulé (#2346). Il en avait un, commandé par un global
@@ -14,32 +14,56 @@ lecture du vrai fichier échouait. Un test qui veut une autre taxonomie remplace
 ``get_taxonomy_path``.
 """
 
+import codecs
+import hashlib
+import json
 import os
 import logging
 from pathlib import Path
+from urllib.parse import quote
 from typing import Optional
 from argumentation_analysis.paths import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
-# URL de la taxonomie des sophismes, pour le téléchargement si le fichier manque
-TAXONOMY_URL = "https://raw.githubusercontent.com/ArgumentumGames/Argumentum/master/Cards/Fallacies/Argumentum%20Fallacies%20-%20Taxonomy.csv"
 # La copie vendorée
 TAXONOMY_FILE = DATA_DIR / "argumentum_fallacies_taxonomy.csv"
+# Le commit amont, le chemin et l'empreinte de la copie vendorée
+PROVENANCE_FILE = DATA_DIR / "argumentum_taxonomy_provenance.json"
+# Borne du téléchargement, en secondes
+DOWNLOAD_TIMEOUT = 60
+
+
+def pinned_taxonomy_source():
+    """L'URL du fichier au commit amont épinglé, et l'empreinte attendue.
+
+    ``(url, sha1)``. ``sha1`` est celle du contenu sans BOM, la forme sous
+    laquelle la copie vendorée est stockée (``upstream_content_sha1_no_bom``).
+    """
+    pin = json.loads(PROVENANCE_FILE.read_text(encoding="utf-8"))["fallacies"]
+    url = "https://raw.githubusercontent.com/{}/{}/{}".format(
+        pin["upstream_repo"], pin["upstream_commit"], quote(pin["upstream_path"])
+    )
+    return url, pin["upstream_content_sha1_no_bom"]
 
 
 def get_taxonomy_path() -> Path:
     """
     Le chemin du fichier de taxonomie des sophismes.
 
-    Rend la copie vendorée si elle existe. Sinon, la télécharge depuis
-    ``TAXONOMY_URL`` (bibliothèque ``requests``) et la rend.
+    Rend la copie vendorée si elle existe. Sinon, la télécharge au commit
+    amont épinglé dans ``PROVENANCE_FILE`` (bibliothèque ``requests``),
+    retire le BOM, vérifie que le contenu a l'empreinte de la provenance,
+    puis l'écrit et la rend. Un contenu d'une autre empreinte n'est pas
+    écrit (#2346) : ``master`` amont évolue, et la copie écrite doit être
+    celle que garde ``tests/unit/scripts/test_argumentum_taxonomy_integrity.py``.
 
     Returns:
         Path: Chemin vers le fichier de taxonomie
 
     Raises:
         ImportError: ``requests`` n'est pas installé et le fichier manque
+        ValueError: Le contenu téléchargé n'a pas l'empreinte épinglée
         Exception: Le téléchargement a échoué
     """
     if TAXONOMY_FILE.exists():
@@ -48,19 +72,32 @@ def get_taxonomy_path() -> Path:
         )
         return TAXONOMY_FILE
 
-    # Créer le dossier data s'il n'existe pas
-    DATA_DIR.mkdir(exist_ok=True)
-
-    # Téléchargement réel de la taxonomie
-    logger.info(f"Téléchargement de la taxonomie depuis {TAXONOMY_URL}")
+    url, expected_sha1 = pinned_taxonomy_source()
+    logger.info(f"Téléchargement de la taxonomie depuis {url}")
     try:
         import requests
 
-        response = requests.get(TAXONOMY_URL)
+        response = requests.get(url, timeout=DOWNLOAD_TIMEOUT)
         response.raise_for_status()
 
-        with open(TAXONOMY_FILE, "wb") as f:
-            f.write(response.content)
+        content = response.content
+        if content.startswith(codecs.BOM_UTF8):
+            content = content[len(codecs.BOM_UTF8) :]
+        sha1 = hashlib.sha1(content).hexdigest()
+        if sha1 != expected_sha1:
+            raise ValueError(
+                f"Taxonomie téléchargée depuis {url} : empreinte {sha1}, "
+                f"la provenance épingle {expected_sha1}. Fichier non écrit."
+            )
+
+        # Écrit à côté puis remplace : une écriture interrompue ne laisse pas
+        # un fichier tronqué que le prochain appel prendrait pour la copie.
+        partial = TAXONOMY_FILE.with_name(TAXONOMY_FILE.name + ".part")
+        try:
+            partial.write_bytes(content)
+            os.replace(partial, TAXONOMY_FILE)
+        finally:
+            partial.unlink(missing_ok=True)
 
         logger.info(f"Taxonomie téléchargée avec succès: {TAXONOMY_FILE}")
         return TAXONOMY_FILE
