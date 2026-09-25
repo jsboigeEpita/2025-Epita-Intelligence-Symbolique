@@ -362,7 +362,7 @@ class TestModalLogicAgent:
 
         assert queries == []
 
-    def test_execute_query_success(self, modal_agent, mock_tweety_bridge):
+    async def test_execute_query_success(self, modal_agent, mock_tweety_bridge):
         """Test l'exécution réussie d'une requête."""
         modal_agent._tweety_bridge = mock_tweety_bridge
         mock_tweety_bridge.modal_handler.execute_modal_query.return_value = (
@@ -372,12 +372,12 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         query = "[](urgent)"
 
-        result, message = modal_agent.execute_query(belief_set, query)
+        result, message = await modal_agent.execute_query(belief_set, query)
 
         assert result == True
         assert "ACCEPTED" in message
 
-    def test_execute_query_rejected(self, modal_agent, mock_tweety_bridge):
+    async def test_execute_query_rejected(self, modal_agent, mock_tweety_bridge):
         """Test l'exécution d'une requête rejetée."""
         modal_agent._tweety_bridge = mock_tweety_bridge
         mock_tweety_bridge.modal_handler.execute_modal_query.return_value = (
@@ -387,12 +387,12 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         query = "invalid_query"
 
-        result, message = modal_agent.execute_query(belief_set, query)
+        result, message = await modal_agent.execute_query(belief_set, query)
 
         assert result == False
         assert "REJECTED" in message
 
-    def test_execute_query_error(self, modal_agent, mock_tweety_bridge):
+    async def test_execute_query_error(self, modal_agent, mock_tweety_bridge):
         """Test la gestion d'erreur lors de l'exécution de requête."""
         modal_agent._tweety_bridge = mock_tweety_bridge
         mock_tweety_bridge.modal_handler.execute_modal_query.side_effect = Exception(
@@ -402,7 +402,7 @@ class TestModalLogicAgent:
         belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
         query = "[](urgent)"
 
-        result, message = modal_agent.execute_query(belief_set, query)
+        result, message = await modal_agent.execute_query(belief_set, query)
 
         assert result is None
         assert "FUNC_ERROR" in message
@@ -494,7 +494,7 @@ class TestModalLogicAgent:
         # Devrait utiliser la validation basique
         assert is_valid is True
 
-    def test_is_consistent_success(self, modal_agent, mock_tweety_bridge):
+    async def test_is_consistent_success(self, modal_agent, mock_tweety_bridge):
         """Test la vérification de cohérence réussie."""
         modal_agent._tweety_bridge = mock_tweety_bridge
         mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (
@@ -503,13 +503,13 @@ class TestModalLogicAgent:
         )
 
         belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
-        is_consistent, message = modal_agent.is_consistent(belief_set)
+        is_consistent, message = await modal_agent.is_consistent(belief_set)
 
         assert is_consistent == True
         assert "Consistent" in message
 
     @pytest.mark.real_jpype
-    def test_is_consistent_inconsistent(self, modal_agent, mock_tweety_bridge):
+    async def test_is_consistent_inconsistent(self, modal_agent, mock_tweety_bridge):
         """Test la détection d'incohérence."""
         modal_agent._tweety_bridge = mock_tweety_bridge
         mock_tweety_bridge.modal_handler.is_modal_kb_consistent.return_value = (
@@ -518,12 +518,12 @@ class TestModalLogicAgent:
         )
 
         belief_set = ModalBeliefSet("type(p)\n\n[](p)\n!<>(p)")  # Contradictoire
-        is_consistent, message = modal_agent.is_consistent(belief_set)
+        is_consistent, message = await modal_agent.is_consistent(belief_set)
 
         assert is_consistent == False
         assert "Inconsistent" in message
 
-    def test_is_consistent_fallback(self, modal_agent, mock_tweety_bridge):
+    async def test_is_consistent_fallback(self, modal_agent, mock_tweety_bridge):
         """Test la vérification de cohérence avec fallback."""
         modal_agent._tweety_bridge = mock_tweety_bridge
         mock_tweety_bridge.invoke.return_value = {
@@ -534,7 +534,7 @@ class TestModalLogicAgent:
         delattr(mock_tweety_bridge.modal_handler, "is_modal_kb_consistent")
 
         belief_set = ModalBeliefSet("type(urgent)\n\n[](urgent)")
-        is_consistent, message = modal_agent.is_consistent(belief_set)
+        is_consistent, message = await modal_agent.is_consistent(belief_set)
 
         # Devrait retourner True par défaut avec un message explicatif
         assert is_consistent is True
@@ -743,7 +743,7 @@ class TestModalLogicAgentIntegration:
         # Étape 3: Exécution des requêtes
         results = []
         for query in queries:
-            result_tuple = agent.execute_query(belief_set, query)
+            result_tuple = await agent.execute_query(belief_set, query)
             results.append(result_tuple)
 
         assert agent._tweety_bridge.modal_handler.execute_modal_query.call_count == len(

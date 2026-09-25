@@ -156,12 +156,12 @@ class TestDegradationIsNamedAndNeverFabricates:
         assert results == {"entailed": True, "refused": False, "not_computed": None}
 
 
-def test_interpretation_does_not_read_an_uncomputed_derivation_as_a_negative(
+async def test_interpretation_does_not_read_an_uncomputed_derivation_as_a_negative(
     mock_kernel_with_llm,
 ):
     agent = FOLLogicAgent(kernel=mock_kernel_with_llm)
 
-    text = agent.interpret_results(
+    text = await agent.interpret_results(
         "Donc il faut agir.",
         _BELIEF_SET,
         ["derive_conclusions"],

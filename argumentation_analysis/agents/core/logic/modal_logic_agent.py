@@ -703,7 +703,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             )
             return []
 
-    def execute_query(
+    async def execute_query(
         self, belief_set: BeliefSet, query: str
     ) -> Tuple[Optional[bool], str]:
         """
@@ -814,7 +814,7 @@ Utilisez cette BNF pour corriger la syntaxe et réessayer automatiquement.
             )
         return is_valid
 
-    def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
+    async def is_consistent(self, belief_set: BeliefSet) -> Tuple[bool, str]:
         """
         Vérifie si un ensemble de croyances modales est cohérent.
         Tente d'abord d'utiliser la méthode directe. En cas d'échec (AttributeError),

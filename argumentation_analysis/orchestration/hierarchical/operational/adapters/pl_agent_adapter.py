@@ -194,12 +194,16 @@ class PLAgentAdapter(OperationalAgent):
                     }
                 )
 
-                # Generate queries from belief set
-                queries = await self.agent.generate_queries(belief_set)
+                # Generate queries from belief set. The contract takes the
+                # source text first (#2641: the text was missing, so the call
+                # raised TypeError before any query ran).
+                queries = await self.agent.generate_queries(text_to_analyze, belief_set)
                 if queries:
                     # Pass 2: Execute queries and interpret results
+                    query_results = []
                     for query in queries:
-                        query_result = self.agent.execute_query(belief_set, query)
+                        query_result = await self.agent.execute_query(belief_set, query)
+                        query_results.append(query_result)
                         results.append(
                             {
                                 "type": "query_result",
@@ -210,7 +214,7 @@ class PLAgentAdapter(OperationalAgent):
 
                     # Interpretation
                     interpretation = await self.agent.interpret_results(
-                        belief_set, queries
+                        text_to_analyze, belief_set, queries, query_results
                     )
                     if interpretation:
                         results.append(
@@ -218,7 +222,7 @@ class PLAgentAdapter(OperationalAgent):
                         )
 
                 # Consistency check
-                is_consistent, reason = self.agent.is_consistent(belief_set)
+                is_consistent, reason = await self.agent.is_consistent(belief_set)
                 results.append(
                     {
                         "type": "consistency_analysis",

@@ -66,7 +66,7 @@ class MockLogicAgent(BaseLogicAgent):
         """Implémentation de la méthode abstraite."""
         return ["query1", "query2"]
 
-    def execute_query(self, belief_set, query):
+    async def execute_query(self, belief_set, query):
         """Implémentation de la méthode abstraite."""
         return True, "Requête exécutée avec succès"
 
@@ -90,7 +90,7 @@ class MockLogicAgent(BaseLogicAgent):
         """Implémentation de la méthode abstraite."""
         pass
 
-    def is_consistent(self, belief_set):
+    async def is_consistent(self, belief_set):
         """Implémentation de la méthode abstraite."""
         return True, "Consistent"
 
@@ -218,6 +218,9 @@ class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
             self.state_manager,
         )
         assert result["status"] == "success"
+        # #2641: the handler did not await interpret_results, and a coroutine
+        # passed as the message. Read the message, not only the status.
+        assert result["message"] == "Interprétation des résultats"
 
     async def test_extract_source_text_from_state(self):
         """Test de l'extraction du texte source depuis l'état."""
