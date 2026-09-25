@@ -215,7 +215,12 @@ class DeepSynthesisAgent(BaseAgent):
             if deanonymized
             else self.OPAQUE_ID_DIRECTIVE + self.SYSTEM_PROMPT
         )
-        super().__init__(kernel, agent_name, system_prompt, **kwargs)
+        # #2627 : l'id atteint BaseAgent, qui le résout ou lève. None y rend
+        # le service par défaut du kernel, et ``_llm_service_id`` reste None :
+        # c'est ce qui éteint les chemins LLM (FB-32 #1112).
+        super().__init__(
+            kernel, agent_name, system_prompt, llm_service_id=service_id, **kwargs
+        )
         self._llm_service_id = service_id
         self._deanonymized = bool(deanonymized)
 

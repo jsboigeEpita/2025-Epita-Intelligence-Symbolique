@@ -127,7 +127,10 @@ class TestModalAgent:
             ModalLogicAgent,
         )
 
-        with pytest.raises(SemanticSetupError, match="'absent'"):
+        # Since #2627 the id reaches BaseAgent, which refuses it before the
+        # settings lookup: either way the agent is never built on the
+        # kernel's default settings.
+        with pytest.raises(ValueError, match="'absent'"):
             ModalLogicAgent(
                 _kernel("default"), service_id="absent", tweety_bridge=_ready_bridge()
             )

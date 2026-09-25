@@ -258,8 +258,16 @@ class SherlockEnqueteAgent(BaseAgent):
             system_prompt: Prompt système optionnel. Si non fourni, utilise le prompt par défaut.
             service_id: L'ID du service LLM à utiliser.
         """
+        # #2627 : l'id atteint BaseAgent, qui le résout ou lève. Il restait ici
+        # pour la fonction ``chat`` pendant que BaseAgent résolvait "default" :
+        # un agent, deux services. ``**kwargs`` suit aussi, pour qu'un
+        # ``llm_service_id`` passé en plus lève au lieu d'être ignoré.
         super().__init__(
-            kernel=kernel, agent_name=agent_name, system_prompt=system_prompt
+            kernel=kernel,
+            agent_name=agent_name,
+            system_prompt=system_prompt,
+            llm_service_id=service_id,
+            **kwargs,
         )
         self.kernel = kernel
         self.instructions = system_prompt or SHERLOCK_ENQUETE_AGENT_SYSTEM_PROMPT

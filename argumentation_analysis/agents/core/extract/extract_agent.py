@@ -121,7 +121,12 @@ class ExtractAgent(BaseAgent):
         if plugins is None:
             plugins = [ExtractAgentPlugin()]
 
-        super().__init__(kernel=kernel, agent_name=agent_name)
+        # #2627 : l'id atteint BaseAgent, qui le résout ou lève ; sans lui,
+        # BaseAgent résolvait "default" pendant que l'agent enregistrait ses
+        # fonctions sur ``llm_service_id``.
+        super().__init__(
+            kernel=kernel, agent_name=agent_name, llm_service_id=llm_service_id
+        )
         # Use BaseAgent's logger property (self.logger) instead of setting a new one
         object.__setattr__(self, "_llm_service_id", llm_service_id)
         object.__setattr__(self, "llm_service", None)
