@@ -36,6 +36,7 @@ L'exécution de ces tests nécessite la configuration d'un environnement spécif
 
 *   **JVM :** Une Machine Virtuelle Java (JDK 17) est requise. Les tests sont configurés pour utiliser une version portable située dans le répertoire `libs/portable_jdk` afin de garantir la cohérence de l'environnement.
 *   **Bibliothèques Tweety :** Les fichiers `.jar` de Tweety et de ses dépendances doivent être accessibles et sont inclus dans le `classpath` de la JVM lors de son démarrage par les fixtures de test.
+    Les workers lancés en sous-processus (`workers/`) démarrent la JVM comme la production, via `jvm_setup.initialize_jvm` (`workers/_production_jvm.py`, #2610). Le classpath est construit à partir des jars présents dans `libs/tweety/`. Il n'y a pas de second constructeur de classpath sous `tests/`. L'ancien JAR `tweety-full-*-with-dependencies.jar` n'est plus provisionné (#1874).
 *   **Solveurs Externes :** Certains tests de raisonnement avancé dépendent de solveurs externes qui doivent être installés et accessibles :
     *   **Clingo :** Nécessaire pour les tests de programmation logique (ASP). Le chemin vers l'exécutable peut être codé en dur dans les tests ou doit se trouver dans le `PATH` du système.
     *   **Octave :** Nécessaire pour certains tests de logique probabiliste. Une installation portable est gérée par le script `tests/support/portable_octave_installer.py`.
