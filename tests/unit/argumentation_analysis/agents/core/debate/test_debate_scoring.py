@@ -33,14 +33,15 @@ def _make_arg(content, agent="Alice", position="for"):
 class TestAnalyzerInit:
     def test_indicators_loaded(self, analyzer):
         assert len(analyzer.logical_indicators) > 0
-        assert len(analyzer.evidence_indicators) > 0
-        assert len(analyzer.emotional_indicators) > 0
+        # #2588: word lists are per-language dicts.
+        assert all(len(words) > 0 for words in analyzer.evidence_indicators.values())
+        assert all(len(words) > 0 for words in analyzer.emotional_indicators.values())
 
     def test_logical_indicators_contain_therefore(self, analyzer):
         assert "therefore" in analyzer.logical_indicators
 
     def test_evidence_indicators_contain_studies(self, analyzer):
-        assert "studies show" in analyzer.evidence_indicators
+        assert "studies show" in analyzer.evidence_indicators["en"]
 
 
 # ── Logical Coherence ──
@@ -168,7 +169,9 @@ class TestEmotionalAppeal:
 class TestReadability:
     def test_short_sentences(self, analyzer):
         text = "Short sentence. Another one. Easy to read."
-        score = analyzer._assess_readability(text)
+        # #2588 review: Flesch needs a language; a 6-word text cannot decide
+        # one — the witness passes it explicitly.
+        score = analyzer._assess_readability(text, lang="en")
         assert score > 0.3
 
     def test_long_sentences(self, analyzer):
@@ -178,7 +181,7 @@ class TestReadability:
 
     def test_within_range(self, analyzer):
         text = "Normal text. With moderate length sentences. Not too complex."
-        score = analyzer._assess_readability(text)
+        score = analyzer._assess_readability(text, lang="en")
         assert 0 <= score <= 1.0
 
 
@@ -237,12 +240,12 @@ class TestNovelty:
 class TestAnalyzeArgument:
     def test_returns_metrics(self, analyzer):
         arg = _make_arg("Because of the evidence, therefore the conclusion follows.")
-        metrics = analyzer.analyze_argument(arg, [])
+        metrics = analyzer.analyze_argument(arg, [], lang="en")
         assert isinstance(metrics, ArgumentMetrics)
 
     def test_all_scores_in_range(self, analyzer):
         arg = _make_arg("A comprehensive argument with many facets.")
-        metrics = analyzer.analyze_argument(arg, [])
+        metrics = analyzer.analyze_argument(arg, [], lang="en")
         assert 0 <= metrics.logical_coherence <= 1.0
         assert 0 <= metrics.evidence_quality <= 1.0
         # No context: relevance and novelty are not computed (#2344).
@@ -257,7 +260,7 @@ class TestAnalyzeArgument:
         arg = _make_arg(
             "Because studies show evidence, therefore the conclusion follows."
         )
-        metrics = analyzer.analyze_argument(arg, [])
+        metrics = analyzer.analyze_argument(arg, [], lang="en")
         # #2344: relevance and novelty are not computed without context, so
         # their weights drop out and the others are renormalized.
         expected = min(

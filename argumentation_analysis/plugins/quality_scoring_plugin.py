@@ -39,6 +39,11 @@ class QualityScoringPlugin:
     )
     def evaluate_argument_quality(self, text: str) -> str:
         """Evaluate argument text and return quality scores as JSON."""
+        # #2588 review-2: the plugin does NOT decide the language — it detects
+        # on the very text it scores, which is exactly what ``detect_clarte``
+        # does internally, and it then named that decision "langue du
+        # document". The document-level decision belongs to the caller that
+        # holds a longer text (``_invoke_quality_evaluator``).
         result = self.evaluator.evaluate(text)
         return json.dumps(result, ensure_ascii=False)
 

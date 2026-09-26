@@ -58,6 +58,7 @@ class _WiringSpyEvaluator:
         text: str,
         agentic_llm: Any = _UNSET,
         context_level: Any = None,
+        lang: Any = None,
     ) -> Dict[str, Any]:
         effective = self._wired if agentic_llm is _UNSET else agentic_llm
         if effective is not None:
@@ -189,6 +190,7 @@ async def test_agentic_unit_failure_degrades_that_unit_in_state(monkeypatch):
             text: str,
             agentic_llm: Any = _UNSET,
             context_level: Any = None,
+            lang: Any = None,
         ) -> Dict[str, Any]:
             effective = self._wired if agentic_llm is _UNSET else agentic_llm
             if effective is not None:
@@ -279,6 +281,7 @@ async def test_whole_text_fallback_degrades_by_name_2444(monkeypatch, context):
             text: str,
             agentic_llm: Any = _UNSET,
             context_level: Any = None,
+            lang: Any = None,
         ) -> Dict[str, Any]:
             effective = self._wired if agentic_llm is _UNSET else agentic_llm
             if effective is not None:
@@ -325,6 +328,7 @@ async def test_concurrency_is_explicitly_bounded_and_enforced(monkeypatch):
             text: str,
             agentic_llm: Any = _UNSET,
             context_level: Any = None,
+            lang: Any = None,
         ) -> Dict[str, Any]:
             with _TrackingEvaluator.lock:
                 _TrackingEvaluator.in_flight += 1

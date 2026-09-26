@@ -45,7 +45,7 @@ class ArgumentMetrics:
     evidence_quality: float = 0.0
     relevance_score: Optional[float] = 0.0
     emotional_appeal: float = 0.0
-    readability_score: float = 0.0
+    readability_score: Optional[float] = None
     fact_check_score: float = 0.0
     novelty_score: Optional[float] = 0.0
     persuasiveness: float = 0.0

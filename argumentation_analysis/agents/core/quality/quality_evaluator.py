@@ -25,6 +25,7 @@ import os
 import re
 import sys
 import threading
+from functools import partial
 from pathlib import Path
 from enum import Enum, IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -34,7 +35,6 @@ logger = logging.getLogger("ArgumentQualityEvaluator")
 # --- Graceful dependency loading ---
 
 _nlp = None
-_flesch_reading_ease = None
 _DEPS_AVAILABLE = False
 _DEPS_ATTEMPTED = False
 # #2320: the FIRST load failure raises with its cause; every later call hits a
@@ -121,7 +121,7 @@ def _load_deps_locked():
     so the problem is visible and the root cause (dll_guard not
     imported at entry point) must be fixed instead.
     """
-    global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED, _LAST_LOAD_ERROR
+    global _nlp, _DEPS_AVAILABLE, _DEPS_ATTEMPTED, _LAST_LOAD_ERROR
     if _DEPS_ATTEMPTED:
         if not _DEPS_AVAILABLE:
             raise RuntimeError(
@@ -136,24 +136,16 @@ def _load_deps_locked():
         # thinc's optional torch import is skipped instead of poisoning spaCy.
         _neutralize_faulty_torch()
         import spacy
-        from textstat import flesch_reading_ease
+        from textstat import flesch_reading_ease  # noqa: F401 — presence check
 
-        _flesch_reading_ease = flesch_reading_ease
         # textstat reaches NLTK's cmudict through a LazyCorpusLoader, which is
         # not thread-safe on first use: concurrent units raced it and recorded
         # 'clarte' UNAVAILABLE ("'CMUDictCorpusReader' object has no attribute
-        # '_LazyCorpusLoader__reader_cls'", #2353 render). One call here, under
-        # the lock, performs that first use before any unit can. A failure is
-        # left to the per-unit path, which records it with its cause, as before.
-        try:
-            flesch_reading_ease("Une phrase de mise en route. Puis une autre.")
-        except Exception as warm_exc:
-            logger.warning(
-                "textstat first use failed (%s: %s) — the clarte detector will "
-                "record it per unit.",
-                type(warm_exc).__name__,
-                warm_exc,
-            )
+        # '_LazyCorpusLoader__reader_cls'", #2353 render). #2588 review: that
+        # first use now happens under text_scoring's own lock, per language
+        # (a French first call does not load CMUdict), so no warm-up runs
+        # here — warming all three languages added ~1.2 s to the first
+        # quality call without preventing the race.
         try:
             _nlp = spacy.load("fr_core_news_sm")
         except OSError:
@@ -435,19 +427,46 @@ def infer_context_level(text: str) -> ContextLevel:
 # --- Individual virtue detectors ---
 
 
-def detect_clarte(text: str) -> Tuple[float, str]:
-    """Evaluate clarity via Flesch readability."""
+# Flesch bands per language (#2588). First calibration, n = 8 repo samples
+# (5 fr, 2 de, 1 en anchor), measured 2026-09-26: under fr rules the same
+# text scores ~+20 vs en rules (mid-range sentence 21.4→43.6, simple
+# 98.3→112.0) — bands shift up; under de rules ~-12 (67.3→55.3) with no
+# band crossing on the graded set — bands kept. Translation anchor: the en
+# control (59.2, "medium") and its French counterparts (43.6–69.1) land in
+# the same band. A thin calibration — re-derive before trusting the edges.
+_CLARTE_BANDS = {
+    "en": (60.0, 30.0),
+    "fr": (80.0, 40.0),
+    "de": (60.0, 30.0),
+}
+
+
+def detect_clarte(text: str, lang: Optional[str] = None) -> Tuple[float, str]:
+    """Evaluate clarity via Flesch readability, in the text's language (#2588).
+
+    ``lang`` is a decision taken on a LONGER text than ``text`` — the document
+    the caller holds (a pipeline phase's ``input_text``, a debate topic). That
+    is the only case where the comment's "langue du document" is true. Passing
+    a language detected on ``text`` itself is not merely redundant (``None``
+    runs the same detection): the comment would name a document that decided
+    nothing. Callers holding no longer text leave it ``None``, and the comment
+    then names the detected language (#2588 review-2).
+    """
     _load_deps()
-    if _flesch_reading_ease is not None:
-        score = _flesch_reading_ease(text)
-        comment = f"Lisibilité (Flesch) : {score:.2f}. "
-        if score >= 60:
+    from argumentation_analysis.agents.core import text_scoring
+
+    score, used_lang = text_scoring.flesch_reading_ease_for(text, lang)
+    if score is not None:
+        clear_threshold, medium_threshold = _CLARTE_BANDS[used_lang]
+        origin = "langue détectée" if lang is None else "langue du document"
+        comment = f"Lisibilité (Flesch {used_lang}, {origin}) : {score:.2f}. "
+        if score >= clear_threshold:
             return 1.0, comment + "Texte clair."
-        elif score >= 30:
+        elif score >= medium_threshold:
             return 0.5, comment + "Texte moyennement clair."
         else:
             return 0.2, comment + "Texte difficile à comprendre."
-    # Fallback: word length heuristic
+    # No Flesch constants for the detected language: named fallback heuristic.
     words = text.split()
     avg_len = sum(len(w) for w in words) / max(len(words), 1)
     if avg_len < 6:
@@ -613,6 +632,7 @@ class ArgumentQualityEvaluator:
         text: str,
         agentic_llm: Any = _UNSET,
         context_level: Optional[ContextLevel] = None,
+        lang: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Evaluate argument quality and return structured report.
 
@@ -672,6 +692,13 @@ class ArgumentQualityEvaluator:
             context_level = infer_context_level(text)
         context_level = ContextLevel(context_level)
 
+        # #2588 review: ``lang`` is the language decided on the document the
+        # caller holds; bound into the clarte detector so a short argument
+        # inherits the document's Flesch scale instead of losing it.
+        detectors = self.detectors
+        if lang is not None and "clarte" in detectors:
+            detectors = {**detectors, "clarte": partial(detect_clarte, lang=lang)}
+
         scores: Dict[str, float] = {}
         details: Dict[str, str] = {}
         statuses: Dict[str, VirtueStatus] = {}
@@ -697,7 +724,7 @@ class ArgumentQualityEvaluator:
                     exc,
                 )
 
-        for vertu, detector in self.detectors.items():
+        for vertu, detector in detectors.items():
             # #1907 — applicability is decided by the input unit, never by the
             # score that came out. A virtue whose required context exceeds what
             # we were handed is honestly absent: no value, no denominator slot.

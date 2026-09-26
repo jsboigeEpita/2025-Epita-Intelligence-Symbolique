@@ -122,8 +122,9 @@ class TestQualityFallacyCrossReference:
         """Mock ArgumentQualityEvaluator that returns a known score (fresh copy each call)."""
         mock = MagicMock()
         # #2403 — la phase déclare le niveau de contexte (None = CLAIM,
-        # inféré par l'évaluateur) : le mock porte la même signature.
-        mock.evaluate.side_effect = lambda text, context_level=None: {
+        # inféré par l'évaluateur) ; #2588 review-2 ajoute la langue du
+        # document : le mock porte la même signature que la production.
+        mock.evaluate.side_effect = lambda text, context_level=None, lang=None: {
             "note_finale": 8.0,
             "scores_par_vertu": {"clarity": 8, "coherence": 8},
         }

@@ -174,6 +174,11 @@ non-zero virtues: 3/9
 VERDICT: NATIVE quality WORKS (torch-free) ✅
 ```
 
+> #2588: the `clarte` comment format above predates the language-bound
+> instruments. It now names the scale and its origin —
+> `Lisibilité (Flesch fr, langue détectée) : 46.34.` (or `langue du
+> document` when the caller passed the document's language).
+
 Values are **identical to WSL** (`note_finale 2.0`, Flesch `46.34`) — the radar is
 deterministic and produces the same result on both paths. So the `fr_core_news_sm` model is
 rule-based (non-neural) and does not actually need torch; torch is only a *transitive

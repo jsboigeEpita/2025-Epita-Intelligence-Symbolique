@@ -77,6 +77,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
 from ..abc.agent_bases import BaseAgent
+from ..text_scoring import SUPPORTED_LANGUAGES, detect_language
 from .debate_definitions import (
     AGENT_PERSONALITIES,
     ArgumentMetrics,
@@ -114,6 +115,11 @@ class DebatePlugin:
             timestamp=datetime.now().isoformat(),
             phase=DebatePhase.MAIN_ARGUMENTS,
         )
+        # #2588 review-2: no detection here. The analyzer detects on the very
+        # content it scores, so deciding on ``text`` would run the same
+        # detection and then report it as a document-level decision it is not.
+        # The document-level decision belongs to the caller holding a longer
+        # text (``generate_argument`` uses the debate topic).
         metrics = self.analyzer.analyze_argument(arg, [])
         return json.dumps(
             {
@@ -364,8 +370,16 @@ class DebateAgent(BaseAgent):
                 references=self._extract_references(context),
                 logical_structure=self._analyze_logical_structure(response),
             )
+            # #2588 review-2: the debate TOPIC is the longer, stable text this
+            # agent holds — a generated turn can be too short for the detector,
+            # and its readability would then be dropped. The topic decides
+            # once, and both the turn's wording metrics and its readability
+            # inherit that decision.
+            topic_lang = detect_language(debate_state.topic)
             argument.metrics = self.analyzer.analyze_argument(
-                argument, debate_state.arguments
+                argument,
+                debate_state.arguments,
+                lang=topic_lang if topic_lang in SUPPORTED_LANGUAGES else None,
             )
             self._memory.append(argument)
             self._update_performance_metrics(argument)
@@ -460,8 +474,6 @@ class DebateAgent(BaseAgent):
             / len(arguments),
             "evidence_quality": sum(a.metrics.evidence_quality for a in arguments)
             / len(arguments),
-            "fact_check_score": sum(a.metrics.fact_check_score for a in arguments)
-            / len(arguments),
         }
         # #2344: novelty is None where there was no opponent to compare with.
         novelty = [
@@ -471,6 +483,14 @@ class DebateAgent(BaseAgent):
         ]
         if novelty:
             avg["novelty_score"] = sum(novelty) / len(novelty)
+        # #2588: fact-check is None where the language has no instrument.
+        fact_checks = [
+            a.metrics.fact_check_score
+            for a in arguments
+            if a.metrics.fact_check_score is not None
+        ]
+        if fact_checks:
+            avg["fact_check_score"] = sum(fact_checks) / len(fact_checks)
         return min(avg, key=avg.get)
 
     def _build_enhanced_context(self, debate_state: DebateState) -> Dict[str, Any]:

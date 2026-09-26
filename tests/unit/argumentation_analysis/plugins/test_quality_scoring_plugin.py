@@ -96,6 +96,27 @@ class TestGetQualityScore:
 # ============================================================
 
 
+class TestClarteProvenance:
+    """#2588 review-2 — le plugin ne décide pas la langue du document.
+
+    Il la détectait sur le texte qu'il évalue ensuite : la détection interne de
+    ``detect_clarte`` fait exactement le même travail, et le commentaire
+    annonçait « langue du document » pour un texte qui avait décidé sa propre
+    échelle. La provenance doit nommer qui a décidé.
+    """
+
+    def test_the_plugin_does_not_claim_document_provenance(self, plugin):
+        document = (
+            "La vaccination est un outil essentiel de santé publique, car les "
+            "études montrent qu'elle réduit la propagation des maladies et "
+            "protège les plus fragiles, même si certains doutes persistent."
+        )
+        result = json.loads(plugin.evaluate_argument_quality(document))
+        comment = result["rapport_detaille"]["clarte"]
+        assert "langue détectée" in comment, comment
+        assert "langue du document" not in comment, comment
+
+
 class TestListVirtues:
     def test_returns_list(self, plugin):
         result = json.loads(plugin.list_virtues())
