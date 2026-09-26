@@ -12,38 +12,38 @@ Frontière : le module ne fait **aucune analyse primaire** — il agrège un ét
 
 ## Composants publics
 
-- `deep_synthesis_agent.py` — `DeepSynthesisAgent` :41 ; `synthesize` :252, `invoke_single` :234, `get_response` :244, `render_markdown` :732 (statique), `validate_value_gates` :1387, `count_populated_artifact_fields` :1113, `build_artifact_briefing` :1205, `grounded_transversal_synthesis` :1339 ; 10 constructeurs statiques `_build_*` :369-1151 ;
-- `deep_synthesis_models.py` — 11 dataclasses ; agrégat `DeepSynthesisReport` :126.
+- `deep_synthesis_agent.py` — `DeepSynthesisAgent` ; `synthesize`, `invoke_single`, `get_response`, `render_markdown` (statique), `validate_value_gates`, `count_populated_artifact_fields`, `build_artifact_briefing`, `grounded_transversal_synthesis` ; 10 constructeurs statiques `_build_*` ;
+- `deep_synthesis_models.py` — 11 dataclasses ; agrégat `DeepSynthesisReport`.
 
 `__init__.py` exporte 2 noms (`DeepSynthesisAgent`, `DeepSynthesisReport`), tous réels — zéro fantôme. Une garde dédiée verrouille l'absence de la surface retirée : `tests/unit/argumentation_analysis/agents/core/synthesis/test_no_inert_synthesis_surface.py`.
 
 ## Points d'entrée valides
 
-1. **Phase workflow (le chemin vivant)** : `capability="deep_synthesis"` — `orchestration/workflows.py:1012-1013`, `optional=False`, `depends_on=["belief_revision", "stakes"]` (:1014-1017), `timeout_seconds=180` → résolu par `registry_setup.py:699-711` (`name="deep_synthesis_service"`, `capabilities=["deep_synthesis"]`, `invoke=_invoke_deep_synthesis`) → `orchestration/invoke_callables.py:10094` ;
-2. **Post-phase conversationnelle** : `orchestration/conversational_orchestrator.py:1612` (`_invoke_deep_synthesis` importé puis appelé :1628, sous garde `if spectacular and _budget_allows("deep_synthesis")` :1609) ;
+1. **Phase workflow (le chemin vivant)** : `capability="deep_synthesis"` — `orchestration/workflows.py`, `optional=False`, `depends_on=["belief_revision", "stakes"]`, `timeout_seconds=180` → résolu par `registry_setup.py` (`name="deep_synthesis_service"`, `capabilities=["deep_synthesis"]`, `invoke=_invoke_deep_synthesis`) → `orchestration/invoke_callables.py` ;
+2. **Post-phase conversationnelle** : `orchestration/conversational_orchestrator.py` (`_invoke_deep_synthesis` importé puis appelé, sous garde `if spectacular and _budget_allows("deep_synthesis")`) ;
 3. **API agent directe** — signatures réelles (lues, non inventées) :
-   `DeepSynthesisAgent(kernel, agent_name="DeepSynthesisAgent", service_id=None, deanonymized=True)` :201 → `await agent.synthesize(state, transcript=None, source_metadata=None) -> DeepSynthesisReport` :252 → `DeepSynthesisAgent.render_markdown(report) -> str` :732.
+   `DeepSynthesisAgent(kernel, agent_name="DeepSynthesisAgent", service_id=None, deanonymized=True)` → `await agent.synthesize(state, transcript=None, source_metadata=None) -> DeepSynthesisReport` → `DeepSynthesisAgent.render_markdown(report) -> str`.
 
 Aucun de ces appels n'est reconstruit : chacun est lu à la ligne citée.
 
 ## Amont / aval
 
-- **Amont** (deep) : `core/shared_state.py` `UnifiedAnalysisState` — lu via `getattr(state, …)` (`identified_arguments`, `identified_fallacies`, `dung_frameworks`, `jtms_retraction_chain`, `stakes_and_stakeholders`, `analysis_trace`) ; phases `belief_revision` et `stakes` (déclarées `depends_on`, `workflows.py:1014-1017`) ;
-- **Aval** (deep) : `state.narrative_synthesis` (écrit par `_write_deep_synthesis_to_state`, `state_writers.py:1911`, enregistré dans `CAPABILITY_STATE_WRITERS["deep_synthesis"]` :2323) — lu ensuite par **Acte II** (`workflows.py:1036-1044`, `depends_on=["deep_synthesis"]`) et **Acte III**, plus le rendu markdown sur disque.
+- **Amont** (deep) : `core/shared_state.py` `UnifiedAnalysisState` — lu via `getattr(state, …)` (`identified_arguments`, `identified_fallacies`, `dung_frameworks`, `jtms_retraction_chain`, `stakes_and_stakeholders`, `analysis_trace`) ; phases `belief_revision` et `stakes` (déclarées `depends_on`, `workflows.py`) ;
+- **Aval** (deep) : `state.narrative_synthesis` (écrit par `_write_deep_synthesis_to_state`, `state_writers.py`, enregistré dans `CAPABILITY_STATE_WRITERS["deep_synthesis"]`) — lu ensuite par **Acte II** (`workflows.py`, `depends_on=["deep_synthesis"]`) et **Acte III**, plus le rendu markdown sur disque.
 
 ## Statut d'intégration
 
-**`DeepSynthesisAgent` + `deep_synthesis_models` — `actif-critique`.** Preuve : 1 entrée registry (`registry_setup.py:704`), 1 littéral de phase production non-optionnel (`workflows.py:1013`), 1 invoker (`invoke_callables.py:10094`), 1 writer (`state_writers.py:1911`/`:2323`), 2 appelants (workflow + post-phase conversationnelle). C'est la phase terminale du workflow spectacular et la source de `narrative_synthesis`, dont dépendent Actes II et III.
+**`DeepSynthesisAgent` + `deep_synthesis_models` — `actif-critique`.** Preuve : 1 entrée registry (`registry_setup.py`), 1 littéral de phase production non-optionnel (`workflows.py`), 1 invoker (`invoke_callables.py`), 1 writer (`state_writers.py`), 2 appelants (workflow + post-phase conversationnelle). C'est la phase terminale du workflow spectacular et la source de `narrative_synthesis`, dont dépendent Actes II et III.
 
 **`SynthesisAgent` + `data_models` — retirés (#2140).** Aucune classe éponyme inerte n'est plus exportée du paquet ; les portes d'instanciation (`pipelines/unified_text_analysis.py`, `orchestration/conversation_orchestrator.py`, `orchestration/operational/direct_executor.py` — ce dernier supprimé, zéro importeur de production) ont été nettoyées dans le même lot.
 
 ## Artefacts et lecteurs
 
-- Rapport markdown 9 sections, écrit sur disque si `context["deep_synthesis_output_path"]` est posé (`invoke_callables.py:10202-10207`) ;
-- Dictionnaire de retour (`invoke_callables.py:10210-10226`) : `report`, `markdown`, `sections_populated`, `total_state_fields`, `grounded_synthesis`, `grounded_synthesis_status`, `value_gates`, `populated_artifact_fields` ;
-- Persistance d'état : `state.narrative_synthesis` (le `grounded_synthesis`), et `state.workflow_results["deep_synthesis_value_gates"]` (l'état n'a pas d'attribut dédié, `state_writers.py:1950-1955`).
+- Rapport markdown 9 sections, écrit sur disque si `context["deep_synthesis_output_path"]` est posé (`invoke_callables.py`) ;
+- Dictionnaire de retour (`invoke_callables.py`) : `report`, `markdown`, `sections_populated`, `total_state_fields`, `grounded_synthesis`, `grounded_synthesis_status`, `value_gates`, `populated_artifact_fields` ;
+- Persistance d'état : `state.narrative_synthesis` (le `grounded_synthesis`), et `state.workflow_results["deep_synthesis_value_gates"]` (l'état n'a pas d'attribut dédié, `state_writers.py`).
 
-Lecteurs aval : Actes II/III (restitution), les tests de wiring, `scripts/run_real_analysis.py:303` (voir *Limites connues*).
+Lecteurs aval : Actes II/III (restitution), les tests de wiring, `scripts/run_real_analysis.py` (voir *Limites connues*).
 
 ## Tests représentatifs
 
@@ -62,6 +62,6 @@ Parent : [`../README.md`](../README.md) (agents/core, sans README de lot). Frèr
 ## Limites connues
 
 1. **`ArgumentMapEntry` ne porte que ce que l'état contient.** `attacks` a été retiré (#2134) : toute clé d'`attack_map` est un nœud synthétique, jamais un argument, et `render_markdown` ne lit que `a.attacked_by`. `stance` a été retiré (#2346) : aucun producteur ne calcule la position d'un argument ; l'ancien vote par mots-clés sur la description rendait le verbe de narration (« He claims … » → `pro`) et `neutral` quand aucun mot ne tombait (87 % de 601 arguments réels). La colonne *Stance* de la section 2 est partie avec lui.
-2. **Attributs dynamiques non déclarés sur `DeepSynthesisReport`.** `report._raw_stakes` et `report._raw_analysis_trace` (`deep_synthesis_agent.py:308`/`:310`/`:314`) sont posés sur une dataclass **qui n'a pas de `__slots__`**. Fonctionne à l'exécution (relus par `getattr(…, {})` :1514, `getattr(…, [])` :1592) — **pas un défaut d'exécution**, mais un **défaut de typage statique** (attribut absent du modèle) et une asymétrie : le chemin de repli de `_invoke_deep_synthesis` (`invoke_callables.py:10169-10193`) construit le rapport sans passer par `synthesize`, donc sans jamais poser ces attributs.
-3. **Lecteur d'une phase retirée.** `scripts/run_real_analysis.py:303` liste encore `("analysis_synthesis", "7b. Synthèse d'analyse (phase \`synthesis\`)")`. La phase `analysis_synthesis` a été retirée en #1625/R759 (`workflows.py:1007` le consigne ; les tests verrouillent son absence : `test_synthesis_spectacular.py:17`, `:115`, `:117`). La clé étant un `snap.get(...)`, le script dégrade en section vide — mais le libellé désigne une phase qui n'existe plus.
-4. **La ligne #1842 est bien fermée ici.** Aucune seconde surface : `deep_synthesis_agent.py:1661-1664` porte le commentaire de retrait, et `grep register_with_capability_registry` ne trouve **aucun** définisseur dans ce paquet. Le seul survivant légitime est `counter_argument/__init__.py:43`, importé et appelé par `registry_setup.py:100`. Aucune trace de la capacité retirée `analysis_synthesis`.
+2. **Attributs dynamiques non déclarés sur `DeepSynthesisReport`.** `report._raw_stakes` et `report._raw_analysis_trace` (`deep_synthesis_agent.py`) sont posés sur une dataclass **qui n'a pas de `__slots__`**. Fonctionne à l'exécution (relus par `getattr(…, {})`, `getattr(…, [])`) — **pas un défaut d'exécution**, mais un **défaut de typage statique** (attribut absent du modèle) et une asymétrie : le chemin de repli de `_invoke_deep_synthesis` (`invoke_callables.py`) construit le rapport sans passer par `synthesize`, donc sans jamais poser ces attributs.
+3. **Lecteur d'une phase retirée.** `scripts/run_real_analysis.py` liste encore `("analysis_synthesis", "7b. Synthèse d'analyse (phase \`synthesis\`)")`. La phase `analysis_synthesis` a été retirée en #1625/R759 (`workflows.py` le consigne ; les tests verrouillent son absence : `test_synthesis_spectacular.py`). La clé étant un `snap.get(...)`, le script dégrade en section vide — mais le libellé désigne une phase qui n'existe plus.
+4. **La ligne #1842 est bien fermée ici.** Aucune seconde surface : `deep_synthesis_agent.py` porte le commentaire de retrait, et `grep register_with_capability_registry` ne trouve **aucun** définisseur dans ce paquet. Le seul survivant légitime est `counter_argument/__init__.py`, importé et appelé par `registry_setup.py`. Aucune trace de la capacité retirée `analysis_synthesis`.

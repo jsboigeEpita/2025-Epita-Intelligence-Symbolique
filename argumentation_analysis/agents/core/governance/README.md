@@ -12,63 +12,63 @@ Le registre des catégories a été corrigé en #1981 : `byzantine` et `raft` so
 
 **Algorithms de gouvernance** — `governance_methods.py` (137 l.)
 
-- 5 règles de vote (scrutins) : `majority_voting` :32, `plurality_voting` :40, `borda_count` :45, `condorcet_method` :57, `quadratic_voting` :79 ;
-- 2 protocoles de consensus distribué : `byzantine_consensus` :101, `raft_consensus` :113 ;
-- `GOVERNANCE_METHODS` :129 — dictionnaire de **7 entrées** (les 5 scrutins + les 2 protocoles, telles quelles).
+- 5 règles de vote (scrutins) : `majority_voting`, `plurality_voting`, `borda_count`, `condorcet_method`, `quadratic_voting` ;
+- 2 protocoles de consensus distribué : `byzantine_consensus`, `raft_consensus` ;
+- `GOVERNANCE_METHODS` — dictionnaire de **7 entrées** (les 5 scrutins + les 2 protocoles, telles quelles).
 
 **Fonctions de choix social** — `social_choice.py` (344 l.), sur profils de bulletins (`ballots: List[List[str]]`)
 
-`approval_voting` :20, `stv` :44, `copeland` :109, `kemeny_young` :149, `kemeny_young_safe` :204, `schulze` :233, `condorcet_winner` :294, `pairwise_matrix` :322 — **8 `def` de module**. `SOCIAL_CHOICE_METHODS` :338 n'en **énumère que 5** : le dict est le dispatcher du plugin, pas le recensement.
+`approval_voting`, `stv`, `copeland`, `kemeny_young`, `kemeny_young_safe`, `schulze`, `condorcet_winner`, `pairwise_matrix` — **8 `def` de module**. `SOCIAL_CHOICE_METHODS` n'en **énumère que 5** : le dict est le dispatcher du plugin, pas le recensement.
 
 **Archétypes d'agents** — `governance_agent.py` (270 l.)
 
-`Agent` :20 (personnalité, préférences, réseau de confiance, mémoire, coalitions, Q-learning :57/:67), `BDIAgent` :194, `ReactiveAgent` :220, `AgentFactory` :237 (`create_agents` :241, `PERSONALITIES` :17). Ce sont des **objets Python simples** (pas de `BaseAgent`, pas de kernel).
+`Agent` (personnalité, préférences, réseau de confiance, mémoire, coalitions, Q-learning), `BDIAgent`, `ReactiveAgent`, `AgentFactory` (`create_agents`, `PERSONALITIES`). Ce sont des **objets Python simples** (pas de `BaseAgent`, pas de kernel).
 
 **Simulation** — `simulation.py` **retiré (#2137)** : 257 lignes (coalitions/Shapley, gossip, `simulate_governance`, `manipulability_analysis`), zéro appelant de production — seuls `__init__` (ré-export) et ses tests l'exerçaient. Parti avec `test_governance_simulation.py`.
 
-**Conflits** — `conflict_resolution.py` (61 l.) : `detect_conflicts` :8, `resolve_conflict` :25, `collaborative_mediation` :37, `competitive_mediation` :46, `compromise_mediation` :55.
+**Conflits** — `conflict_resolution.py` (61 l.) : `detect_conflicts`, `resolve_conflict`, `collaborative_mediation`, `competitive_mediation`, `compromise_mediation`.
 
-**Métriques** — `metrics.py` (116 l.) : `consensus_rate` :12 (tolérant aux 3 formes de `votes`, #1273), `gini` :48, `fairness_index` :62, `efficiency` :69, `satisfaction` :80, `stability` :87, `summarize_results` :102. `per_agent_satisfaction` et `validate_scenario` ont été retirés (#2137) : zéro appelant — leurs seuls consommateurs étaient `simulation.py` (retiré) et leurs tests. `gini`/`efficiency`/`stability` **restent** : contrairement au relevé 12-09, ils ne sont pas orphelins — `fairness_index` appelle `gini` (:66) et `summarize_results` appelle `efficiency` (:108/:116) et `stability` (:110).
+**Métriques** — `metrics.py` (116 l.) : `consensus_rate` (tolérant aux 3 formes de `votes`, #1273), `gini`, `fairness_index`, `efficiency`, `satisfaction`, `stability`, `summarize_results`. `per_agent_satisfaction` et `validate_scenario` ont été retirés (#2137) : zéro appelant — leurs seuls consommateurs étaient `simulation.py` (retiré) et leurs tests. `gini`/`efficiency`/`stability` **restent** : contrairement au relevé 12-09, ils ne sont pas orphelins — `fairness_index` appelle `gini` et `summarize_results` appelle `efficiency` et `stability`.
 
 `__init__.py` (42 l.) exporte **8 noms** (`__all__`) : `Agent`, `GOVERNANCE_METHODS`, `detect_conflicts`, `resolve_conflict`, `consensus_rate`, `fairness_index`, `satisfaction`, `summarize_results`. Les ré-exports de `BDIAgent`/`ReactiveAgent`/`AgentFactory` ont été retirés (#2137) — les classes restent importables depuis `governance_agent`.
 
 ## Points d'entrée valides
 
-1. **Registre Lego** : `orchestration/registry_setup.py:158-168` — `register_agent(name="governance_agent", agent_class=Agent, capabilities=["governance_simulation"], invoke=_invoke_governance)`. **Une seule surface** de capacité (voir plus bas) ;
-2. **Phases workflow** : 11 littéraux `add_phase(capability="governance_simulation")` en production — 6 dans `orchestration/workflows.py` (:230, :305, :489, :583, :594, :956) et 1 chacun dans `workflows/formal_debate.py:88`, `workflows/democratech.py:120`, `workflows/debate_tournament.py:96`, `workflows/comprehensive_analysis.py:105`, `workflows/belief_dynamics.py:74` ;
-3. **Invocation** : `orchestration/invoke_callables.py:1924 _invoke_governance` → `GovernancePlugin` :1928-1931 (`list_governance_methods`), :1977 (`detect_conflicts_fn`), :1981 (`resolve_conflict_fn`) ; agrégation formelle `_aggregate_governance_votes` :1820 → `GOVERNANCE_METHODS.items()` :1852 + 5 appels de choix social :1864/:1868/:1873/:1877/:1881 ; profil d'électeurs dérivé honnêtement (les 9 vertus) `_derive_governance_profile` :1735, instanciation `Agent(...)` :1800 ;
-4. **HTTP** : `api/agent_routes.py:291` — `POST /governance` → `_run_pipeline_phase(..., "governance_simulation", ...)` :306 ;
-5. **MCP** : `services/mcp_server/tools/specialized_tools.py:104` — outil `run_governance_analysis` via `_invoke_by_capability("governance_simulation", ...)` ;
-6. **Router** : `orchestration/router.py:38` (capability connue), :57 (description), :347-348 (sélection) ;
-7. **Conversationnel** : `orchestration/conversational_orchestrator.py:1770` — `capabilities_used.add("governance_simulation")` ;
-8. **Écrivain d'état** : `orchestration/state_writers.py:2291` mappe `"governance_simulation"` → `_write_governance_to_state` :690 → `UnifiedAnalysisState.add_governance_decision` (`core/shared_state.py:971`).
+1. **Registre Lego** : `orchestration/registry_setup.py` — `register_agent(name="governance_agent", agent_class=Agent, capabilities=["governance_simulation"], invoke=_invoke_governance)`. **Une seule surface** de capacité (voir plus bas) ;
+2. **Phases workflow** : 11 littéraux `add_phase(capability="governance_simulation")` en production — 6 dans `orchestration/workflows.py` et 1 chacun dans `workflows/formal_debate.py`, `workflows/democratech.py`, `workflows/debate_tournament.py`, `workflows/comprehensive_analysis.py`, `workflows/belief_dynamics.py` ;
+3. **Invocation** : `orchestration/invoke_callables.py` `_invoke_governance` → `GovernancePlugin` (`list_governance_methods`, `detect_conflicts_fn`, `resolve_conflict_fn`) ; agrégation formelle `_aggregate_governance_votes` → `GOVERNANCE_METHODS.items()` + 5 appels de choix social ; profil d'électeurs dérivé honnêtement (les 9 vertus) `_derive_governance_profile`, instanciation `Agent(...)` ;
+4. **HTTP** : `api/agent_routes.py` — `POST /governance` → `_run_pipeline_phase(..., "governance_simulation", ...)` ;
+5. **MCP** : `services/mcp_server/tools/specialized_tools.py` — outil `run_governance_analysis` via `_invoke_by_capability("governance_simulation", ...)` ;
+6. **Router** : `orchestration/router.py` (capability connue), (description), (sélection) ;
+7. **Conversationnel** : `orchestration/conversational_orchestrator.py` — `capabilities_used.add("governance_simulation")` ;
+8. **Écrivain d'état** : `orchestration/state_writers.py` mappe `"governance_simulation"` → `_write_governance_to_state` → `UnifiedAnalysisState.add_governance_decision` (`core/shared_state.py`).
 
-Le plugin est aussi déclaré dans la carte de chargement paresseux `agents/factory.py:92` (`"governance"` → `GovernancePlugin`).
+Le plugin est aussi déclaré dans la carte de chargement paresseux `agents/factory.py` (`"governance"` → `GovernancePlugin`).
 
 ## Amont / aval
 
-- **Amont** : sortie de la phase qualité (`per_argument_scores` / `scores_par_vertu`), arguments extraits, `llm_governance_assessment` ; `_resolve_phase_output` :1903 absorbe les variantes de nommage de phase (#1472).
-- **Aval** : `UnifiedAnalysisState.governance_decisions` (`shared_state.py:511`) → `governance_decisions` dans le snapshot, consommé par `api/agent_routes.py:310` et la restitution.
+- **Amont** : sortie de la phase qualité (`per_argument_scores` / `scores_par_vertu`), arguments extraits, `llm_governance_assessment` ; `_resolve_phase_output` absorbe les variantes de nommage de phase (#1472).
+- **Aval** : `UnifiedAnalysisState.governance_decisions` (`shared_state.py`) → `governance_decisions` dans le snapshot, consommé par `api/agent_routes.py` et la restitution.
 
 ## Statut d'intégration
 
 | Module | Statut | Preuve mesurée |
 |---|---|---|
-| `governance_methods.py` | **actif** | `invoke_callables.py:1852` itère `GOVERNANCE_METHODS` en production |
-| `social_choice.py` | **actif** | `invoke_callables.py:1864-1881` (5 appels) + `governance_plugin.py:143-174` |
-| `governance_agent.py` | **actif** | `invoke_callables.py:1754/:1800` (`Agent` comme électeur) ; `registry_setup.py:154-160` |
-| `conflict_resolution.py` | **actif** | `governance_plugin.py:52/:66` appelés par `invoke_callables.py:1977/:1981` |
-| `metrics.py` | **actif** | `governance_plugin.py:92-98` (`consensus_rate`, `fairness_index`, `satisfaction` ; les deux dernières absentes et nommées sous `unavailable` quand l'entrée ne porte pas de scores `satisfaction`, #2344) |
-| `plugins/governance_plugin.py` | **actif** | `invoke_callables.py:1928-1931` |
+| `governance_methods.py` | **actif** | `invoke_callables.py` itère `GOVERNANCE_METHODS` en production |
+| `social_choice.py` | **actif** | `invoke_callables.py` (5 appels) + `governance_plugin.py` |
+| `governance_agent.py` | **actif** | `invoke_callables.py` (`Agent` comme électeur) ; `registry_setup.py` |
+| `conflict_resolution.py` | **actif** | `governance_plugin.py` appelés par `invoke_callables.py` |
+| `metrics.py` | **actif** | `governance_plugin.py` (`consensus_rate`, `fairness_index`, `satisfaction` ; les deux dernières absentes et nommées sous `unavailable` quand l'entrée ne porte pas de scores `satisfaction`, #2344) |
+| `plugins/governance_plugin.py` | **actif** | `invoke_callables.py` |
 | ~~`simulation.py`~~ | **retiré (#2137)** | 0 appelant de production : seuls `__init__` (ré-export) et `tests/.../test_governance_simulation.py` l'exerçaient |
 
 Statut global du paquet : **actif** — 8 familles de points d'entrée production mesurées, 200 `def test_` sur 9 fichiers.
 
-Le paquet est **`actif` mais pas `actif-critique`** : dans 5 des 11 phases il est `optional=True`, et `_invoke_governance` a une branche *honnêtement dégradée* (:1997-2003) quand le profil n'est pas dérivable.
+Le paquet est **`actif` mais pas `actif-critique`** : dans 5 des 11 phases il est `optional=True`, et `_invoke_governance` a une branche *honnêtement dégradée* quand le profil n'est pas dérivable.
 
 ## Artefacts et lecteurs
 
-Verdict formel `winners_per_method` + `distinct_winners` + `inter_method_disagreement` (:1892-1900) — **jamais réconcilié en un nombre unique** (discipline anti-réconciliation, cf. multi-prover FOL). Cet artefact alimente `governance_decisions` dans l'état, lu par la route HTTP et la restitution.
+Verdict formel `winners_per_method` + `distinct_winners` + `inter_method_disagreement` — **jamais réconcilié en un nombre unique** (discipline anti-réconciliation, cf. multi-prover FOL). Cet artefact alimente `governance_decisions` dans l'état, lu par la route HTTP et la restitution.
 
 ## Tests représentatifs
 
@@ -86,10 +86,10 @@ Parent : `agents/core/` ([`../README.md`](../README.md)). Plugin hôte : [`../..
 ## Limites connues
 
 - **`simulation.py` retiré (#2137)** : 257 lignes, 5 fonctions, zéro appelant de production — ni `invoke_callables`, ni le plugin, ni une route. Seuls les tests l'exerçaient. Parti avec son fichier de tests et les ré-exports `__init__` (`simulate_governance`, `manipulability_analysis`).
-- **Ce n'est pas un `BaseAgent`** : `governance_agent.py` ne contient que des objets Python (`Agent`/`BDIAgent`/`ReactiveAgent` + une factory). L'intégration SK passe entièrement par le plugin. Le registre enregistre néanmoins `agent_class=Agent` dans un slot `ComponentType.AGENT` (`registry_setup.py:158-160`) — le slot reçoit ici une classe non-SK, ce qui n'est vérifié par aucun contrat explicite.
+- **Ce n'est pas un `BaseAgent`** : `governance_agent.py` ne contient que des objets Python (`Agent`/`BDIAgent`/`ReactiveAgent` + une factory). L'intégration SK passe entièrement par le plugin. Le registre enregistre néanmoins `agent_class=Agent` dans un slot `ComponentType.AGENT` (`registry_setup.py`) — le slot reçoit ici une classe non-SK, ce qui n'est vérifié par aucun contrat explicite.
 - **Ré-exports retirés (#2137)** : `BDIAgent`, `ReactiveAgent`, `AgentFactory` ne sont plus exportés par `__init__` (seul `Agent` est consommé en production). Les classes restent dans `governance_agent.py` — hors périmètre du triage #2137, qui ne retirait que les re-exports morts du paquet.
-- **Métriques** : `per_agent_satisfaction` et `validate_scenario` retirés (#2137, zéro appelant). Le relevé 12-09 qualifiait aussi `gini`/`efficiency`/`stability` d'orphelines — **périmé** : `fairness_index` appelle `gini` (:66), `summarize_results` appelle `efficiency` (:108/:116) et `stability` (:110) ; les trois restent, consommées intra-module. Le plugin n'importe que `consensus_rate`/`fairness_index`/`satisfaction`.
-- **`plurality_voting` est un alias littéral** : `governance_methods.py:40-42` retourne `majority_voting(...)`. Les « 5 règles de vote » comptent 5 **noms** mais 4 comportements distincts — et `condorcet_method` :76 retombe sur `borda_count` en l'absence de gagnant de Condorcet, donc deux clés du dict peuvent rendre le même résultat.
-- **Choix social partiellement câblé** : l'agrégation production (`invoke_callables.py:1864-1881`) appelle 5 fonctions (approval, stv, copeland, schulze, condorcet_winner). `kemeny_young_safe` et `pairwise_matrix` ne sont atteignables que via les `@kernel_function` du plugin (`social_choice_vote` :122, `find_condorcet_winner` :171), elles-mêmes jamais appelées directement par production — seulement par un LLM les invoquant sur un kernel.
-- **Champ déclaré non rempli** : `conflict_resolution.py:40/:50/:58` — `success_probability` vaut toujours `None`, commenté « Not measured — placeholder (#971) ». Le champ a une forme de mesure et n'en porte aucune.
-- **Deux définitions de « gouvernance »** : le paquet ci-dessus, et un agent conversationnel LLM nommé `GovernanceAgent` dans `orchestration/conversational_orchestrator.py:437/.1769` — qui ne partage aucun code avec ce paquet. Ne pas confondre les deux surfaces.
+- **Métriques** : `per_agent_satisfaction` et `validate_scenario` retirés (#2137, zéro appelant). Le relevé 12-09 qualifiait aussi `gini`/`efficiency`/`stability` d'orphelines — **périmé** : `fairness_index` appelle `gini`, `summarize_results` appelle `efficiency` et `stability` ; les trois restent, consommées intra-module. Le plugin n'importe que `consensus_rate`/`fairness_index`/`satisfaction`.
+- **`plurality_voting` est un alias littéral** : `governance_methods.py` retourne `majority_voting(...)`. Les « 5 règles de vote » comptent 5 **noms** mais 4 comportements distincts — et `condorcet_method` retombe sur `borda_count` en l'absence de gagnant de Condorcet, donc deux clés du dict peuvent rendre le même résultat.
+- **Choix social partiellement câblé** : l'agrégation production (`invoke_callables.py`) appelle 5 fonctions (approval, stv, copeland, schulze, condorcet_winner). `kemeny_young_safe` et `pairwise_matrix` ne sont atteignables que via les `@kernel_function` du plugin (`social_choice_vote`, `find_condorcet_winner`), elles-mêmes jamais appelées directement par production — seulement par un LLM les invoquant sur un kernel.
+- **Champ déclaré non rempli** : `conflict_resolution.py` — `success_probability` vaut toujours `None`, commenté « Not measured — placeholder (#971) ». Le champ a une forme de mesure et n'en porte aucune.
+- **Deux définitions de « gouvernance »** : le paquet ci-dessus, et un agent conversationnel LLM nommé `GovernanceAgent` dans `orchestration/conversational_orchestrator.py` — qui ne partage aucun code avec ce paquet. Ne pas confondre les deux surfaces.
