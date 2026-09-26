@@ -43,6 +43,19 @@ _FIXED_PHRASE_FOLLOWERS = {
     "ainsi": ("que",),
 }
 
+# #2684: "comme" is causal ("since") only when it opens its clause. In the
+# middle of one it compares ("Il court comme un lapin."), and no list of
+# following words separates the two: "Comme le temps presse" is causal and
+# is followed by a determiner.
+_CLAUSE_OPENING_MARKERS = {"comme"}
+
+
+def _opens_its_clause(text: str, start: int) -> bool:
+    """Whether ``start`` opens a clause: nothing before it, a sentence or
+    clause punctuation mark (``.!?,;:``), or a line break in between."""
+    before = text[:start].rstrip()
+    return not before or before[-1] in ".!?,;:" or "\n" in text[len(before) : start]
+
 
 def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
     """Earliest standalone-word occurrence of any marker (case-insensitive).
@@ -53,6 +66,8 @@ def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
 
     #2682: an occurrence opening a fixed phrase (``_FIXED_PHRASE_FOLLOWERS``)
     is skipped, and a later occurrence of the same marker still counts.
+    #2684: so is an occurrence of a ``_CLAUSE_OPENING_MARKERS`` marker in
+    the middle of its clause.
     """
     best: Optional[Tuple[int, int]] = None
     for marker in markers:
@@ -65,6 +80,10 @@ def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
             rf"(?<!\w){re.escape(marker)}(?!\w)", text, re.IGNORECASE
         ):
             if followers and fixed.match(text, match.end()):
+                continue
+            if marker in _CLAUSE_OPENING_MARKERS and not _opens_its_clause(
+                text, match.start()
+            ):
                 continue
             if best is None or match.start() < best[0]:
                 best = (match.start(), match.end())

@@ -157,6 +157,15 @@ class TestResidualProseShapes:
         assert body["context"]["reason"] == "premise_marker_alone", body
         assert "ne s'antépose pas" in body["detail"], body
 
+    def test_route_refuses_a_comparison_as_having_no_marker(self, client):
+        # #2684 : un « comme » comparatif n'est pas un marqueur de prémisse.
+        response = client.post(
+            "/api/analyze", json={"text": "Il court comme un lapin."}
+        )
+
+        assert response.status_code == 422, response.text
+        assert response.json()["context"]["reason"] == "no_marker", response.text
+
     def test_route_cuts_the_conclusion_at_its_marker(self, client):
         response = client.post(
             "/api/analyze",
