@@ -104,7 +104,8 @@ class LogicAgentPlugin:
             )
 
             bridge = TweetyBridge.get_instance()
-            accepted, message = bridge.execute_pl_query(belief_set, query)
+            accepted = bridge.pl_query(belief_set, query)
+            message = f"Résultat de l'inférence: {accepted}."
             return json.dumps(
                 {
                     "result": message,

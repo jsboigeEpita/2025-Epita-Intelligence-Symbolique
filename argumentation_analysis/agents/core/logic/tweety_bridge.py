@@ -335,10 +335,6 @@ class TweetyBridge:
     # the original API that agents depend on
     # ============================================================================
 
-    def execute_pl_query(self, belief_set: str, query: str) -> Tuple[bool, str]:
-        """Backward compatibility wrapper for execute_pl_query."""
-        return self.pl_handler.execute_pl_query(belief_set, query)
-
     def execute_fol_query(
         self, belief_set: str, query: str
     ) -> Tuple[Optional[bool], str]:
