@@ -485,6 +485,60 @@ class TestResidualProseShapes:
         assert argument.conclusion == "il faut partir", argument.conclusion
 
 
+class TestComparativeComme:
+    """#2684 — un « comme » au milieu de sa proposition compare ; il était
+    lu comme marqueur de prémisse (« Il court comme un lapin. » : prémisse
+    « un lapin », conclusion « Il court »)."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Il court comme un lapin.",
+            "Il est fort comme un boeuf.",
+            "Elle parle comme sa mère.",
+            "Il faut agir comme le font nos voisins.",
+        ],
+    )
+    def test_a_comparison_is_not_a_marker(self, parser, text):
+        assert parser.parse_prose(text) is None, text
+        assert parser.unparseable_reason(text) == NO_MARKER, text
+
+    def test_a_mid_clause_comme_is_skipped_by_the_marker_search(self):
+        assert _find_marker("Il court comme un lapin.", ["comme"]) is None
+
+    def test_a_clause_opening_comme_after_a_comparison_still_counts(self, parser):
+        text = "Il court comme un lapin, comme il est pressé."
+
+        assert _find_marker(text, ["comme"]) == (25, 30)
+        argument = parser.parse_prose(text)
+        assert argument.premises == ["il est pressé"], argument.premises
+        assert argument.conclusion == "Il court comme un lapin", argument.conclusion
+
+    def test_control_a_sentence_opening_comme_before_a_determiner(self, parser):
+        # La lecture causale ne dépend pas du mot qui suit.
+        argument = parser.parse_prose("Comme le temps presse, partons.")
+
+        assert argument.premises == ["Comme le temps presse"], argument.premises
+        assert argument.conclusion == "partons", argument.conclusion
+
+    def test_control_a_comme_after_a_comma(self, parser):
+        argument = parser.parse_prose("Il faut partir, comme il pleut.")
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+    def test_control_a_comme_after_a_line_break_opens_its_clause(self):
+        assert _find_marker("Il faut partir\nComme il pleut", ["comme"]) == (15, 20)
+
+    def test_control_a_comparison_inside_a_premise(self, parser):
+        argument = parser.parse_prose(
+            "Des pays comme la Suède ont réussi, donc il faut essayer."
+        )
+
+        assert argument.premises == ["Des pays comme la Suède ont réussi"]
+        assert argument.conclusion == "donc il faut essayer", argument.conclusion
+
+
 # ============================================================
 # ArgumentParser — _extract_premises
 # ============================================================
