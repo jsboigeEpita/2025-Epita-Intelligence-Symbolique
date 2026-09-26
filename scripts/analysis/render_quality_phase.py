@@ -26,7 +26,8 @@ cap; this script does not re-slice.
 
 Every render opens with a provenance header (resolved route, effective model,
 corpus label, HEAD sha + dirty flag, exact command, LLM requests per step,
-SDK versions): two renders from two seats are comparable only through it.
+SDK versions, and the spaCy stack the lexical detectors run on): two renders
+from two seats are comparable only through it.
 LLM requests are counted by the repository's egress instrument
 (``tests/llm_egress_counter.py``), not by a counter of this script's own.
 
@@ -55,6 +56,7 @@ import os
 import subprocess
 import sys
 import time
+from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
@@ -138,6 +140,15 @@ def collect_provenance(label: str, source_index: int, command: str) -> Dict[str,
             versions[mod] = __import__(mod).__version__
         except Exception as exc:  # the header names the absence
             versions[mod] = f"unavailable ({type(exc).__name__})"
+    # #2675: the lexical scores depend on spaCy and its French model; a seat
+    # that lacks either scores differently, so the header names both. Read
+    # from the installed metadata, not by import: importing spaCy pulls
+    # thinc's optional torch, whose DLL faults on some Windows envs (#1093).
+    for dist in ("spacy", "fr_core_news_sm"):
+        try:
+            versions[dist] = metadata.version(dist)
+        except metadata.PackageNotFoundError as exc:
+            versions[dist] = f"unavailable ({type(exc).__name__})"
     return {
         "producer": PRODUCER,
         "command": command,
