@@ -13,6 +13,11 @@ Routes:
 the detector ``POST /api/fallacies`` serves; ``/analyze`` reads the state the
 ``light`` workflow writes. A run that did not happen fails with its reason
 (the ``api/errors`` envelope) instead of answering 200 with an empty list.
+
+#2688: the same holds for ``/validate`` and ``/chat``. An analyzer or a chat
+model that did not answer is a non-2xx answer, never a verdict (``valid:
+false``) or a canned sentence; and ``/analyze`` no longer presents a validity
+or a structure that nothing decides.
 """
 
 import logging
@@ -45,8 +50,11 @@ class ArgumentResult(BaseModel):
     text: str
     premises: List[str] = []
     conclusion: str = ""
-    structure: str = "other"
-    validity: bool = False
+    # #2688: ``None`` = undecided. The ``light`` workflow decides neither the
+    # structure nor the validity of an argument; a default here would be
+    # presented as a verdict.
+    structure: Optional[str] = None
+    validity: Optional[bool] = None
     fallacies: List[str] = []
 
 
@@ -201,84 +209,122 @@ async def mobile_fallacies(request: TextRequest):
     )
 
 
+def _endpoint_unreachable(exc: BaseException) -> bool:
+    """Whether ``exc`` comes from a model endpoint that refused the connection.
+
+    #2688: the Toulmin analyzer's model is self-hosted; when nothing serves it
+    the OpenAI client raises ``APIConnectionError``, which Semantic Kernel wraps
+    twice (measured: ``KernelInvokeException`` > ``FunctionExecutionException``
+    > ``ServiceResponseException`` > ``openai.APIConnectionError``).
+    """
+    from openai import APIConnectionError
+
+    seen = set()
+    while exc is not None and id(exc) not in seen:
+        if isinstance(exc, APIConnectionError):
+            return True
+        seen.add(id(exc))
+        exc = exc.__cause__ or exc.__context__
+    return False
+
+
 @mobile_router.post("/validate", response_model=ValidateResponse)
 async def mobile_validate(request: TextRequest):
-    """Validate the logical structure of an argument."""
+    """Validate the logical structure of an argument.
+
+    ``valid`` is true when the Toulmin analyzer found a claim and the data
+    supporting it.
+
+    #2688: a failure of the analyzer is not a verdict on the argument: 503 when
+    its model is not served (the connection is refused), 502 when it answered
+    and the analysis failed.
+    """
     import time
 
+    from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import (
+        SemanticArgumentAnalyzer,
+    )
+
     start = time.time()
+    context: Dict[str, Any] = {"analyzer": "SemanticArgumentAnalyzer"}
     try:
-        from argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer import (
-            SemanticArgumentAnalyzer,
-        )
+        toulmin = await SemanticArgumentAnalyzer().run(request.text)
+    except Exception as exc:
+        error = ServiceUnavailableError if _endpoint_unreachable(exc) else UpstreamError
+        raise error(
+            f"Toulmin analyzer: {type(exc).__name__}: {exc}", context=context
+        ) from exc
 
-        analyzer = SemanticArgumentAnalyzer()
-        toulmin = await analyzer.run(request.text)
-
-        return ValidateResponse(
-            valid=bool(toulmin.claim and toulmin.data),
-            formalization=ValidationFormalization(
-                type="toulmin",
-                premises=[
-                    d.text if hasattr(d, "text") else str(d)
-                    for d in (toulmin.data or [])
-                ],
-                conclusion=toulmin.claim.text if toulmin.claim and hasattr(toulmin.claim, "text") else (str(toulmin.claim) if toulmin.claim else ""),
-                rule=toulmin.warrant.text if toulmin.warrant and hasattr(toulmin.warrant, "text") else (str(toulmin.warrant) if toulmin.warrant else ""),
+    return ValidateResponse(
+        valid=bool(toulmin.claim and toulmin.data),
+        formalization=ValidationFormalization(
+            type="toulmin",
+            premises=[
+                d.text if hasattr(d, "text") else str(d) for d in (toulmin.data or [])
+            ],
+            conclusion=(
+                toulmin.claim.text
+                if toulmin.claim and hasattr(toulmin.claim, "text")
+                else (str(toulmin.claim) if toulmin.claim else "")
             ),
-            explanation=toulmin.qualifier.text if toulmin.qualifier and hasattr(toulmin.qualifier, "text") else (str(toulmin.qualifier) if toulmin.qualifier else "Analysis complete"),
-            execution_time=time.time() - start,
-        )
-    except Exception as e:
-        logger.error(f"Mobile validation failed: {e}")
-        return ValidateResponse(
-            valid=False,
-            explanation=f"Validation unavailable: {e}",
-            execution_time=time.time() - start,
-        )
+            rule=(
+                toulmin.warrant.text
+                if toulmin.warrant and hasattr(toulmin.warrant, "text")
+                else (str(toulmin.warrant) if toulmin.warrant else "")
+            ),
+        ),
+        explanation=(
+            toulmin.qualifier.text
+            if toulmin.qualifier and hasattr(toulmin.qualifier, "text")
+            else (str(toulmin.qualifier) if toulmin.qualifier else "Analysis complete")
+        ),
+        execution_time=time.time() - start,
+    )
+
+
+CHAT_SYSTEM_PROMPT = (
+    "You are an AI assistant specialized in analyzing arguments. "
+    "Provide clear, structured, and insightful responses."
+)
 
 
 @mobile_router.post("/chat", response_model=ChatResponse)
 async def mobile_chat(request: ChatRequest):
-    """Chat with AI assistant specialized in argument analysis."""
+    """Chat with AI assistant specialized in argument analysis.
+
+    #2688: the answer is the chat model's reply, asked through the Semantic
+    Kernel service ``create_llm_service`` builds. 503 when no chat model can be
+    configured (no API key), 502 when the call fails or the reply is empty.
+    There is no pipeline fallback: the analysis pipeline produces no reply to a
+    message.
+    """
     from datetime import datetime
 
-    try:
-        from argumentation_analysis.core.llm_service import create_llm_service
+    from semantic_kernel.connectors.ai.prompt_execution_settings import (
+        PromptExecutionSettings,
+    )
+    from semantic_kernel.contents import ChatHistory
 
+    from argumentation_analysis.core.llm_service import create_llm_service
+
+    context: Dict[str, Any] = {"service_id": "mobile_chat"}
+    try:
         llm = create_llm_service(service_id="mobile_chat")
-        if llm and hasattr(llm, "generate"):
-            response = await llm.generate(
-                f"You are an AI assistant specialized in analyzing arguments. "
-                f"Provide clear, structured, and insightful responses.\n\n"
-                f"User: {request.message}"
-            )
-            return ChatResponse(
-                message=response,
-                timestamp=datetime.utcnow().isoformat(),
-            )
-    except Exception as e:
-        logger.warning(f"LLM chat failed, using fallback: {e}")
+    except (ValueError, RuntimeError) as exc:
+        raise ServiceUnavailableError(f"chat model: {exc}", context=context) from exc
 
-    # Fallback: use unified pipeline for analysis-style questions
+    history = ChatHistory(system_message=CHAT_SYSTEM_PROMPT)
+    history.add_user_message(request.message)
     try:
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            run_unified_analysis,
+        reply = await llm.get_chat_message_content(
+            chat_history=history, settings=PromptExecutionSettings()
         )
+    except Exception as exc:
+        raise UpstreamError(
+            f"chat model: {type(exc).__name__}: {exc}", context=context
+        ) from exc
 
-        result = await run_unified_analysis(request.message, workflow_name="light")
-        result_dict = result if isinstance(result, dict) else {"raw": str(result)}
-        summary = result_dict.get(
-            "summary", result_dict.get("raw", "Analysis complete.")
-        )
-
-        return ChatResponse(
-            message=summary,
-            timestamp=datetime.utcnow().isoformat(),
-        )
-    except Exception as e:
-        logger.error(f"Mobile chat failed completely: {e}")
-        return ChatResponse(
-            message="I'm unable to process your request at the moment. Please try again later.",
-            timestamp=datetime.utcnow().isoformat(),
-        )
+    message = str(reply).strip() if reply is not None else ""
+    if not message:
+        raise UpstreamError("chat model returned an empty reply", context=context)
+    return ChatResponse(message=message, timestamp=datetime.utcnow().isoformat())
