@@ -77,6 +77,24 @@ class TestRealGPT4oMiniIntegration:
         assert "summary" in result
 
 
+def _tweety_class_resolves() -> bool:
+    """True when the running JVM loads a Tweety class (#2610).
+
+    These probes looked for ``tweety-full-*-with-dependencies.jar``, a fat JAR
+    that is no longer provisioned (#1874): on every machine they answered
+    "absent" and skipped the tests below. The classpath is built from the jars
+    present (``jvm_setup._build_tweety_classpath``), so only the content can
+    say whether Tweety is there.
+    """
+    import jpype
+
+    try:
+        jpype.JClass("org.tweetyproject.logics.pl.syntax.PlBeliefSet")
+    except (TypeError, ImportError, jpype.JException):
+        return False
+    return True
+
+
 class TestRealTweetyIntegration:
     """Tests d'intégration avec Tweety authentique."""
 
@@ -92,24 +110,8 @@ class TestRealTweetyIntegration:
         except ImportError:
             pytest.skip("jpype not available")
 
-        # Vérifier l'existence du JAR Tweety
-        tweety_jar_globs = list(
-            Path(".").glob(
-                "libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar"
-            )
-        )
-        tweety_jar_paths = [str(p) for p in tweety_jar_globs] + [
-            "libs/tweety.jar",
-            "services/tweety/tweety.jar",
-            os.getenv("TWEETY_JAR_PATH", ""),
-        ]
-
-        jar_found = any(Path(p).exists() for p in tweety_jar_paths if p)
-
-        if not jar_found:
-            pytest.skip("Tweety JAR file not found")
-
-        assert jar_found
+        # #2610: a running JVM without Tweety classes is a defect, not a skip.
+        assert _tweety_class_resolves(), "The JVM runs, but no Tweety class resolves"
 
     @pytest.mark.integration
     @pytest.mark.requires_tweety_jar
@@ -174,7 +176,7 @@ class TestRealTweetyIntegration:
             pytest.skip("Components not available")
 
     def _is_real_tweety_available(self) -> bool:
-        """Vérifie si Tweety réel est disponible (JVM started + JAR present)."""
+        """Vérifie si Tweety réel est disponible (JVM started + Tweety class)."""
         try:
             import jpype
 
@@ -182,17 +184,7 @@ class TestRealTweetyIntegration:
                 return False
         except ImportError:
             return False
-        jar_globs = list(
-            Path(".").glob(
-                "libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar"
-            )
-        )
-        jar_paths = [str(p) for p in jar_globs] + [
-            "libs/tweety.jar",
-            "services/tweety/tweety.jar",
-        ]
-        jar_exists = any(Path(p).exists() for p in jar_paths)
-        return jar_exists
+        return _tweety_class_resolves()
 
 
 class TestCompleteTaxonomyIntegration:

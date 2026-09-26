@@ -7,64 +7,15 @@ except ImportError:
 
 import jpype
 import jpype.imports
-import os
-from pathlib import Path
 import sys
 import logging
+
+from _production_jvm import start_jvm
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-def get_project_root_from_env() -> Path:
-    """
-    Récupère la racine du projet depuis la variable d'environnement PROJECT_ROOT,
-    qui est définie de manière fiable par le script d'activation.
-    """
-    project_root_str = os.getenv("PROJECT_ROOT")
-    if not project_root_str:
-        raise RuntimeError(
-            "La variable d'environnement PROJECT_ROOT n'est pas définie. "
-            "Assurez-vous d'exécuter ce script via activate_project_env.ps1"
-        )
-    return Path(project_root_str)
-
-
-def setup_jvm():
-    """Démarre la JVM avec le classpath nécessaire, si elle n'est pas déjà démarrée."""
-    if jpype.isJVMStarted():
-        logger.info(
-            "--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---"
-        )
-        return
-
-    project_root = get_project_root_from_env()
-    libs_dir = project_root / "libs" / "tweety"
-    full_jar_path = next(
-        libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None
-    )
-    if not full_jar_path or not full_jar_path.exists():
-        raise FileNotFoundError(
-            f"Le JAR complet 'tweety-full' n'a pas été trouvé dans {libs_dir}"
-        )
-
-    classpath = str(full_jar_path.resolve())
-    logger.info(f"Démarrage de la JVM avec le classpath: {classpath}")
-    try:
-        logger.info(
-            "--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---"
-        )
-        jpype.startJVM(
-            jpype.getDefaultJVMPath(), "-ea", classpath=classpath, convertStrings=False
-        )
-        logger.info("--- JVM démarrée avec succès par le worker ---")
-    except Exception as e:
-        logger.error(
-            f"ERREUR: Échec du démarrage de la JVM par le worker : {e}", exc_info=True
-        )
-        raise
 
 
 def _test_preferred_reasoner_complex(dung_classes):
@@ -186,7 +137,7 @@ def test_asp_reasoner_consistency_logic():
     d'argumentation de Dung (preferred, complete, grounded, stable).
     """
     print("--- Début du worker pour test_asp_reasoner_consistency_logic ---")
-    setup_jvm()
+    start_jvm()
 
     try:
         dung_classes = {

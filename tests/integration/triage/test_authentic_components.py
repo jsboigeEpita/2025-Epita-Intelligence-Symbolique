@@ -136,26 +136,28 @@ class TestAuthenticTweetyIntegration:
 
     @pytest.mark.jpype
     def test_real_tweety_jar_availability(self):
-        """Test de disponibilité du JAR Tweety authentique."""
-        # Chemins possibles pour le JAR Tweety
-        possible_jar_paths = list(
-            PROJECT_ROOT.glob(
-                "libs/tweety/org.tweetyproject.tweety-full-*-with-dependencies.jar"
-            )
-        ) + [
-            PROJECT_ROOT / "libs/tweety-full.jar",
-            PROJECT_ROOT / "libs/tweety.jar",
+        """Test de disponibilité du JAR Tweety authentique.
+
+        #2610: the probe looked for ``tweety-full-*-with-dependencies.jar``, a
+        fat JAR no longer provisioned (#1874), and skipped on every machine.
+        The question is now the one production asks: does the classpath
+        ``jvm_setup`` builds carry Tweety classes? Skip only when
+        ``libs/tweety`` holds no jar at all (an unprovisioned checkout).
+        """
+        from argumentation_analysis.core import jvm_setup, tweety_assembly
+
+        if not list(jvm_setup.LIBS_DIR.glob("*.jar")):
+            pytest.skip(f"{jvm_setup.LIBS_DIR} holds no jar: Tweety not provisioned")
+        classpath = [
+            Path(p) for p in jvm_setup._build_tweety_classpath(jvm_setup.LIBS_DIR)
         ]
-
-        jar_found = False
-        for jar_path in possible_jar_paths:
-            if jar_path.exists():
-                jar_found = True
-                assert jar_path.stat().st_size > 1000000  # JAR > 1MB
-                break
-
-        if not jar_found:
-            pytest.skip("JAR Tweety authentique non trouvé")
+        carrying = [
+            jar for jar in classpath if tweety_assembly.carries_tweety_classes(jar)
+        ]
+        assert carrying, (
+            f"None of the {len(classpath)} jars on the production classpath "
+            "carries a Tweety class"
+        )
 
     @pytest.mark.jpype
     def test_real_fol_logic_agent_initialization(self):

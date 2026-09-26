@@ -1,24 +1,15 @@
 # -*- coding: utf-8 -*-
 import jpype
 import jpype.imports
-import os
-from pathlib import Path
 import sys
 import logging
+
+from _production_jvm import start_jvm
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-def get_project_root_from_env() -> Path:
-    project_root_str = os.getenv("PROJECT_ROOT")
-    if not project_root_str:
-        raise RuntimeError(
-            "La variable d'environnement PROJECT_ROOT n'est pas définie."
-        )
-    return Path(project_root_str)
 
 
 def test_minimal_startup_logic():
@@ -34,42 +25,8 @@ def test_minimal_startup_logic():
         )
         # Ce n'est pas une erreur fatale, mais c'est bon à savoir.
 
-    # Construction du classpath (même si vide, la logique est là)
-    project_root = get_project_root_from_env()
-    libs_dir = project_root / "libs" / "tweety"
-
-    # Pour un test de démarrage minimal, le classpath peut être vide ou pointer
-    # vers un JAR connu et non corrompu si on veut tester le chargement.
-    # Pour rester minimal, on utilise que le JAR 'tweety-full'.
-    full_jar_path = next(
-        libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None
-    )
-    if not full_jar_path or not full_jar_path.exists():
-        # On ne peut pas continuer sans le jar.
-        print(
-            f"ERREUR: Le JAR Tweety est introuvable à {full_jar_path}", file=sys.stderr
-        )
-        raise FileNotFoundError(f"Le JAR Tweety est introuvable à {full_jar_path}")
-
-    classpath = str(full_jar_path)
-
-    # Démarrage de la JVM
-    if not jpype.isJVMStarted():
-        try:
-            jpype.startJVM(
-                jpype.getDefaultJVMPath(),
-                "-ea",
-                classpath=classpath,
-                convertStrings=False,
-            )
-            print("--- JVM démarrée avec succès dans le worker ---")
-        except Exception as e:
-            print(f"ERREUR: Échec du démarrage de la JVM : {e}", file=sys.stderr)
-            raise
-    else:
-        print(
-            "--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---"
-        )
+    # #2610: the JVM starts the way production starts it.
+    start_jvm()
 
     try:
         assert jpype.isJVMStarted(), "La JVM devrait être active après startJVM."

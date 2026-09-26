@@ -1,28 +1,16 @@
 # -*- coding: utf-8 -*-
 import jpype
 import jpype.imports
-import os
-from pathlib import Path
 import sys
 import logging
+
+from _production_jvm import start_jvm
 
 # Configuration du logger pour le worker
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-def get_project_root_from_env() -> Path:
-    """
-    Récupère la racine du projet depuis la variable d'environnement PROJECT_ROOT.
-    """
-    project_root_str = os.getenv("PROJECT_ROOT")
-    if not project_root_str:
-        raise RuntimeError(
-            "La variable d'environnement PROJECT_ROOT n'est pas définie."
-        )
-    return Path(project_root_str)
 
 
 def test_jvm_stability_logic():
@@ -32,49 +20,8 @@ def test_jvm_stability_logic():
     """
     print("--- Début du worker pour test_jvm_stability_logic ---")
 
-    # Construction du classpath
-    project_root = get_project_root_from_env()
-    libs_dir = project_root / "libs" / "tweety"
-
-    if not libs_dir.exists():
-        raise FileNotFoundError(
-            f"Le répertoire des bibliothèques Tweety n'existe pas : {libs_dir}"
-        )
-
-    full_jar_path = next(
-        libs_dir.glob("org.tweetyproject.tweety-full-*-with-dependencies.jar"), None
-    )
-    if not full_jar_path or not full_jar_path.exists():
-        raise FileNotFoundError(
-            f"Le JAR complet 'tweety-full' n'a pas été trouvé dans {libs_dir}"
-        )
-
-    classpath = str(full_jar_path.resolve())
-    print(f"Classpath construit : {classpath}")
-
-    # Démarrage de la JVM
-    if not jpype.isJVMStarted():
-        try:
-            print(
-                "--- La JVM n'est pas démarrée. Tentative de démarrage par le worker... ---"
-            )
-            jpype.startJVM(
-                jpype.getDefaultJVMPath(),
-                "-ea",
-                classpath=classpath,
-                convertStrings=False,
-            )
-            print("--- JVM démarrée avec succès par le worker ---")
-        except Exception as e:
-            print(
-                f"ERREUR: Échec du démarrage de la JVM par le worker : {e}",
-                file=sys.stderr,
-            )
-            raise
-    else:
-        print(
-            "--- La JVM est déjà démarrée (probablement par pytest). Le worker l'utilise. ---"
-        )
+    # #2610: the JVM starts the way production starts it.
+    start_jvm()
 
     # Logique de test issue de TestJvmStability
     try:
