@@ -15,6 +15,11 @@ from .definitions import Argument, Vulnerability, CounterArgumentType
 
 logger = logging.getLogger(__name__)
 
+# #2671: "car" coordinates, it never opens a preposed clause the way
+# "puisque"/"comme"/"parce que" do ("Puisque X, Y"). A sentence opening on
+# "Car X, Y" states one premise, not a premise and its conclusion.
+_COORDINATING_PREMISE_MARKERS = {"car"}
+
 
 def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
     """Earliest standalone-word occurrence of any marker (case-insensitive).
@@ -123,32 +128,58 @@ class ArgumentParser:
     def _split_at_premise_marker(
         self, text: str, sentences: List[str]
     ) -> Optional[Tuple[str, str]]:
-        """Split the sentence holding the earliest premise marker.
+        """Split around the earliest premise marker: ``(conclusion, premise)``.
 
         #2600: "X car Y" states its premise AFTER the marker and its
         conclusion BEFORE it. Returning the whole sentence for both made the
-        argument read as circular. ``(before, after)`` come back with the
-        marker and the punctuation around it left out; a side can be empty
-        when the sentence OPENS on its marker — the callers then keep their
-        former behaviour, which reconstructs "Puisque X, Y" correctly
-        (#2600 review: the cut is applied only when both sides exist).
+        argument read as circular. Both parts come back with the marker and
+        the punctuation around it left out.
+
+        #2671: a sentence OPENING on its marker has nothing before it inside
+        the sentence. When a clause follows ("Puisque X, Y") the sentence
+        carries its own reading: the marker's clause is the premise, marker
+        included, and the next clause the conclusion (the #2600 review's
+        pinned form; never for "car", which cannot open such a clause).
+        Otherwise the claim the premise supports is another
+        sentence: the one before it, or the one after when it opens the text.
+        The conclusion side stays empty only for a marker sentence standing
+        alone; the callers then keep their former behaviour.
         """
         marker = _find_marker(text, self.premise_markers)
         if marker is None:
             return None
         marker_start, marker_end = marker
 
+        spans: List[Tuple[int, int]] = []
         cursor = 0
         for sentence in sentences:
             sentence_start = text.find(sentence, cursor)
             if sentence_start < 0:
                 continue
-            sentence_end = sentence_start + len(sentence)
-            if sentence_start <= marker_start < sentence_end:
-                before = text[sentence_start:marker_start].strip(" \t,;:")
-                after = text[marker_end:sentence_end].strip(" \t,;:")
+            spans.append((sentence_start, sentence_start + len(sentence)))
+            cursor = sentence_start + len(sentence)
+
+        for index, (sentence_start, sentence_end) in enumerate(spans):
+            if not sentence_start <= marker_start < sentence_end:
+                continue
+            before = text[sentence_start:marker_start].strip(" \t,;:")
+            after = text[marker_end:sentence_end].strip(" \t,;:")
+            if before or not after:
                 return before, after
-            cursor = sentence_end
+            sentence = text[sentence_start:sentence_end]
+            preposes = (
+                text[marker_start:marker_end].lower()
+                not in _COORDINATING_PREMISE_MARKERS
+            )
+            for separator in (",", ";"):
+                if preposes and separator in sentence:
+                    premise, claim = sentence.split(separator, 1)
+                    return claim.strip(" \t,;:"), premise.strip()
+            neighbour = index - 1 if index > 0 else index + 1
+            if neighbour < len(spans):
+                start, end = spans[neighbour]
+                return text[start:end].strip(), after
+            return before, after
         return None
 
     def _extract_premises(self, text: str) -> List[str]:
@@ -171,10 +202,12 @@ class ArgumentParser:
         if premise_marker is not None:
             # #2600: the marker introduces the premise — what follows it is
             # the premise, not the sentence that also carries the conclusion.
-            # #2600 review: the cut needs BOTH sides — a sentence OPENING on
-            # its marker has nothing before it, so the premise would swallow
-            # the conclusion. Such shapes fall back to the former path on
-            # both sides (the identical-premise/conclusion repair splits them).
+            # The cut needs BOTH sides: a marker sentence standing alone
+            # ("Car il pleut.") has no claim to support, and falls back to the
+            # former path on both sides. #2671 kept that output rather than
+            # return None: the route's None message says no marker appears in
+            # the text, which would be false for it — the two change together
+            # in #2678.
             split = self._split_at_premise_marker(text, sentences)
             if split is not None and split[0] and split[1]:
                 return [split[1]]
@@ -198,8 +231,8 @@ class ArgumentParser:
 
         premise_marker = _find_marker(text, self.premise_markers)
         if premise_marker is not None:
-            # #2600: symmetric to the premise side — what precedes the marker
-            # is the conclusion, and only when both sides exist (#2600 review).
+            # #2600: symmetric to the premise side — the claim the marker
+            # supports is the conclusion, and only when both sides exist.
             split = self._split_at_premise_marker(text, sentences)
             if split is not None and split[0] and split[1]:
                 return split[0]
