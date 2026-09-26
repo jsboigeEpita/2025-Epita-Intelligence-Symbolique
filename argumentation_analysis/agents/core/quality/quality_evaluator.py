@@ -114,7 +114,8 @@ def _deps_failed() -> bool:
 def _load_deps_locked():
     """Load required dependencies (spacy, textstat). Caller holds ``_DEPS_LOCK``.
 
-    Raises RuntimeError if spacy or textstat cannot be imported.
+    Raises RuntimeError if spacy or textstat cannot be imported, or if the
+    ``fr_core_news_sm`` model cannot be loaded (#2675).
     This is the root-cause fix for #1019 subsystem 1: the previous
     code silently fell back to regex heuristics when torch/spacy
     failed due to DLL load order (WinError 182).  Now we fail loud
@@ -146,14 +147,11 @@ def _load_deps_locked():
         # (a French first call does not load CMUdict), so no warm-up runs
         # here — warming all three languages added ~1.2 s to the first
         # quality call without preventing the race.
-        try:
-            _nlp = spacy.load("fr_core_news_sm")
-        except OSError:
-            logger.warning(
-                "spacy model 'fr_core_news_sm' not found — "
-                "some detectors will use simplified tokenisation."
-            )
-            _nlp = None
+        # #2675: a missing model is a load failure like any other. It used to
+        # be caught here and degraded to "simplified tokenisation" with a
+        # warning — the scores changed without the result saying so (the
+        # #2320 replay-key drift, and a #2353 render that differed by seat).
+        _nlp = spacy.load("fr_core_news_sm")
         _DEPS_AVAILABLE = True
         return True
     except Exception as exc:

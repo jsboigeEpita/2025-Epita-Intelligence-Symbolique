@@ -26,7 +26,8 @@ cap; this script does not re-slice.
 
 Every render opens with a provenance header (resolved route, effective model,
 corpus label, HEAD sha + dirty flag, exact command, LLM requests per step,
-SDK versions): two renders from two seats are comparable only through it.
+SDK versions, and the spaCy stack the lexical detectors run on): two renders
+from two seats are comparable only through it.
 LLM requests are counted by the repository's egress instrument
 (``tests/llm_egress_counter.py``), not by a counter of this script's own.
 
@@ -133,7 +134,9 @@ def collect_provenance(label: str, source_index: int, command: str) -> Dict[str,
 
     api_key, base_url, model_id = resolve_chat_endpoint()
     versions: Dict[str, str] = {}
-    for mod in ("openai", "semantic_kernel", "httpx"):
+    # #2675: the lexical scores depend on spaCy and its French model; a seat
+    # that lacks either scores differently, so the header names both.
+    for mod in ("openai", "semantic_kernel", "httpx", "spacy", "fr_core_news_sm"):
         try:
             versions[mod] = __import__(mod).__version__
         except Exception as exc:  # the header names the absence

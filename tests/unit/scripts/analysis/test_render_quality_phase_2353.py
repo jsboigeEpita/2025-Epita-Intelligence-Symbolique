@@ -14,9 +14,12 @@ what is pinned is everything a second seat relies on to compare two renders:
    registry, as the phase's own named degraded path — and the factory is
    restored afterwards;
 5. the producer refuses an output path git would track (positive control: the
-   default results directory is accepted).
+   default results directory is accepted);
+6. the header names the spaCy stack the lexical detectors run on, and names
+   its absence rather than dropping the key (#2675).
 """
 
+import sys
 from pathlib import Path
 from typing import Any, Dict
 
@@ -238,3 +241,20 @@ def test_unit_shape_records_word_counts_never_the_text():
         "arg_3": {"text_words": 3, "source_quote_words": 0},
     }
     assert "trois" not in repr(shape)
+
+
+def test_the_header_names_the_spacy_stack_the_lexical_arm_runs_on():
+    """#2675: two seats with different spaCy stacks score the lexical arm
+    differently; the header is what lets a reader of two renders see it."""
+    import fr_core_news_sm
+    import spacy
+
+    versions = rqp.collect_provenance("doc_B", 0, "cmd")["sdk_versions"]
+    assert versions["spacy"] == spacy.__version__
+    assert versions["fr_core_news_sm"] == fr_core_news_sm.__version__
+
+
+def test_an_absent_model_is_named_in_the_header_not_dropped(monkeypatch):
+    monkeypatch.setitem(sys.modules, "fr_core_news_sm", None)
+    versions = rqp.collect_provenance("doc_B", 0, "cmd")["sdk_versions"]
+    assert versions["fr_core_news_sm"].startswith("unavailable ("), versions
