@@ -120,6 +120,36 @@ class ArgumentParser:
             cursor = start + len(sentence)
         return None
 
+    def _split_at_premise_marker(
+        self, text: str, sentences: List[str]
+    ) -> Optional[Tuple[str, str]]:
+        """Split the sentence holding the earliest premise marker.
+
+        #2600: "X car Y" states its premise AFTER the marker and its
+        conclusion BEFORE it. Returning the whole sentence for both made the
+        argument read as circular. ``(before, after)`` come back with the
+        marker and the punctuation around it left out; either side can be
+        empty — a text opening on its marker has no conclusion to split out,
+        and the caller keeps its former behaviour then.
+        """
+        marker = _find_marker(text, self.premise_markers)
+        if marker is None:
+            return None
+        marker_start, marker_end = marker
+
+        cursor = 0
+        for sentence in sentences:
+            sentence_start = text.find(sentence, cursor)
+            if sentence_start < 0:
+                continue
+            sentence_end = sentence_start + len(sentence)
+            if sentence_start <= marker_start < sentence_end:
+                before = text[sentence_start:marker_start].strip(" \t,;:")
+                after = text[marker_end:sentence_end].strip(" \t,;:")
+                return before, after
+            cursor = sentence_end
+        return None
+
     def _extract_premises(self, text: str) -> List[str]:
         """Extract premises from argumentative text.
 
@@ -138,6 +168,11 @@ class ArgumentParser:
 
         premise_marker = _find_marker(text, self.premise_markers)
         if premise_marker is not None:
+            # #2600: the marker introduces the premise — what follows it is
+            # the premise, not the sentence that also carries the conclusion.
+            split = self._split_at_premise_marker(text, sentences)
+            if split is not None and split[1]:
+                return [split[1]]
             sentence = self._sentence_at(text, sentences, premise_marker[0])
             if sentence is not None:
                 return [sentence]
@@ -158,6 +193,11 @@ class ArgumentParser:
 
         premise_marker = _find_marker(text, self.premise_markers)
         if premise_marker is not None:
+            # #2600: symmetric to the premise side — what precedes the marker
+            # is the conclusion.
+            split = self._split_at_premise_marker(text, sentences)
+            if split is not None and split[0]:
+                return split[0]
             sentence = self._sentence_at(text, sentences, premise_marker[0])
             if sentence is not None:
                 return sentence
