@@ -23,7 +23,8 @@ from datetime import datetime
 # Ajouter le répertoire parent au chemin de recherche des modules
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent.parent.parent.parent
-if str(parent_dir) not in sys.path:
+# Seulement quand le fichier est lancé directement (#2346).
+if __name__ == "__main__" and str(parent_dir) not in sys.path:
     sys.path.append(str(parent_dir))
 
 # Importer la classe de base

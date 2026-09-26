@@ -13,8 +13,10 @@ from pathlib import Path
 current_dir = Path(__file__).parent
 parent_dir = current_dir.parent
 
-# Ajouter le répertoire grand-parent au chemin de recherche des modules
-sys.path.append(str(parent_dir.parent))
+# Lancé comme fichier, le package n'est pas encore importable : ajouter la
+# racine du dépôt. Importé comme module, sys.path reste intact (#2346).
+if __name__ == "__main__":
+    sys.path.append(str(parent_dir.parent))
 
 
 # Importer les modules nécessaires

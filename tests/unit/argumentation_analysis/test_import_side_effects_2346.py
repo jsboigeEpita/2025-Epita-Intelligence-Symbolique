@@ -19,16 +19,21 @@ Three checks hold the repair:
 - an AST scan: no module of the package calls ``logging.basicConfig`` at import
   (scripts do it under ``if __name__ == "__main__":``);
 - an AST scan: the modules that still change ``sys.path`` at import are exactly
-  the named debt below. Each inserts the repository root, which a script run as
-  ``python path/to/file.py`` needs (#883, #1336); a new site reddens, and so does
-  an entry whose site is gone;
+  the named debt below; a new site reddens, and so does an entry whose site is
+  gone. A script run as ``python path/to/file.py`` needs the repository root
+  (#883, #1336): that bootstrap lives under ``if __name__ == "__main__":``,
+  above the first package import;
 - a fresh interpreter per module, started in an empty directory: importing it
   adds no directory inside the package to ``sys.path``, no handler to the root
   logger, no ``FileHandler`` anywhere, and writes nothing into that directory.
   The analysis runner is included because its unused environment-manager import
   previously configured the root logger transitively.
+- a fresh interpreter where only the package is findable, as an installed
+  package is: importing a module whose bootstrap is guarded leaves the
+  repository root off ``sys.path`` (before the guard, each put it there, some at
+  position 0);
 - direct-file ``--help`` still works without ``PYTHONPATH`` for the launchers
-  whose repository-root bootstrap remains necessary.
+  whose ``--help`` has no side effect.
 
 The performance log of ``utils/performance_monitoring.py`` now opens on the
 first measurement; a last check runs one measurement and reads the line back.
@@ -48,22 +53,40 @@ from tests.support.isolated_script import run_without_editable_install
 REPO = Path(__file__).resolve().parents[3]
 PACKAGE = "argumentation_analysis"
 
-# Modules that still change sys.path at import. Each inserts the repository
-# root: dead when the module is imported as part of the package (the root is
-# already importable), load-bearing when the file is run as a script.
-# Repairing them means deciding how those scripts are launched (#2346).
+# Modules that still change sys.path at import. The one left inserts the
+# repository root because, imported as a package module, it needs a root-level
+# package (``project_core``) that the distribution does not ship (pyproject
+# ``packages.find`` includes ``argumentation_analysis*`` only): from an
+# installed package run outside the checkout, the insertion is what makes that
+# import resolve. Guarding it would degrade the module to its no-port-manager
+# fallback in silence; repairing it is a packaging decision (#2346).
 SYS_PATH_DEBT = {
-    "argumentation_analysis/agents/initialize_cache.py": "#2346",
-    "argumentation_analysis/orchestration/analysis_runner_v2.py": "#2346",
-    "argumentation_analysis/orchestration/service_manager.py": "#2346",
-    "argumentation_analysis/pipelines/reporting_pipeline.py": "#2346",
-    "argumentation_analysis/plugins/analysis_tools/logic/rhetorical_result_visualizer.py": "#2346",
-    "argumentation_analysis/run_orchestration.py": "#2346",
-    "argumentation_analysis/scripts/run_fix_missing_first_letter.py": "#2346",
-    "argumentation_analysis/scripts/run_verify_extracts_llm.py": "#2346",
-    "argumentation_analysis/scripts/simulate_balanced_participation.py": "#2346",
     "argumentation_analysis/webapp/orchestrator.py": "#2346",
 }
+
+# Files launched directly whose repository-root bootstrap runs only under
+# ``if __name__ == "__main__":`` (#2346). Imported as a package module they
+# leave sys.path alone; launched as a file they still resolve the package.
+MAIN_GUARDED_BOOTSTRAPS = [
+    "argumentation_analysis/agents/initialize_cache.py",
+    "argumentation_analysis/orchestration/analysis_runner_v2.py",
+    "argumentation_analysis/orchestration/service_manager.py",
+    "argumentation_analysis/pipelines/reporting_pipeline.py",
+    "argumentation_analysis/plugins/analysis_tools/logic/rhetorical_result_visualizer.py",
+    "argumentation_analysis/run_orchestration.py",
+    "argumentation_analysis/scripts/run_fix_missing_first_letter.py",
+    "argumentation_analysis/scripts/run_verify_extracts_llm.py",
+    "argumentation_analysis/scripts/simulate_balanced_participation.py",
+]
+
+# initialize_cache is left out: it imports ``ui.app``, which needs ``ipywidgets``,
+# a notebook dependency declared nowhere (#2076), so the module does not import
+# in the provisioned environments. The AST checks still hold its bootstrap.
+PACKAGE_IMPORTABLE = [
+    path[: -len(".py")].replace("/", ".")
+    for path in MAIN_GUARDED_BOOTSTRAPS
+    if not path.endswith("initialize_cache.py")
+]
 
 IMPORTED = [
     "argumentation_analysis.orchestration.analysis_runner_v2",
@@ -200,6 +223,47 @@ def test_sys_path_changes_at_import_are_exactly_the_named_debt():
     assert not stale, f"debt entry whose site is gone, remove it: {stale}"
 
 
+def _import_time_statements(stmts):
+    for stmt in stmts:
+        if isinstance(
+            stmt, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+        ) or _is_main_guard(stmt):
+            continue
+        yield stmt
+        for field in ("body", "orelse", "finalbody"):
+            yield from _import_time_statements(getattr(stmt, field, []) or [])
+        for handler in getattr(stmt, "handlers", []) or []:
+            yield from _import_time_statements(handler.body)
+
+
+def _imports_the_package(stmt):
+    if isinstance(stmt, ast.Import):
+        names = [alias.name for alias in stmt.names]
+    elif isinstance(stmt, ast.ImportFrom) and not stmt.level:
+        names = [stmt.module or ""]
+    else:
+        return False
+    return any(name == PACKAGE or name.startswith(PACKAGE + ".") for name in names)
+
+
+@pytest.mark.parametrize("path", MAIN_GUARDED_BOOTSTRAPS)
+def test_the_guarded_bootstrap_precedes_the_first_package_import(path):
+    tree = ast.parse((REPO / path).read_text(encoding="utf-8-sig"), path)
+    bootstraps = [
+        stmt.lineno
+        for stmt in tree.body
+        if _is_main_guard(stmt)
+        and any(callee in SYS_PATH_CALLEES for _, callee in _calls(stmt))
+    ]
+    first_import = min(
+        stmt.lineno
+        for stmt in _import_time_statements(tree.body)
+        if _imports_the_package(stmt)
+    )
+    assert len(bootstraps) == 1, bootstraps
+    assert bootstraps[0] < first_import, (bootstraps, first_import)
+
+
 _WITNESS = r"""
 import json, logging, os, sys
 package = os.path.normcase(os.path.join(sys.argv[2], "argumentation_analysis"))
@@ -263,11 +327,82 @@ assert measured() == 42
 """
 
 
+_PACKAGE_ONLY = r"""
+import importlib, importlib.machinery, json, os, sys
+module, root = sys.argv[1], sys.argv[2]
+norm = lambda p: os.path.normcase(os.path.abspath(p or os.curdir))
+sys.path[:] = [p for p in sys.path if norm(p) != norm(root)]
+sys.meta_path[:] = [
+    finder
+    for finder in sys.meta_path
+    if "editable" not in getattr(finder, "__module__", "").lower()
+    and "editable" not in type(finder).__name__.lower()
+    and "editable" not in getattr(type(finder), "__module__", "").lower()
+]
+
+
+class OnlyThePackage:
+    # What an installed package gives: the package, and nothing else of the root.
+    @classmethod
+    def find_spec(cls, name, path=None, target=None):
+        if name == "argumentation_analysis":
+            return importlib.machinery.PathFinder.find_spec(name, [root])
+        return None
+
+
+sys.meta_path.insert(0, OnlyThePackage)
+imported = importlib.import_module(module)
+print(json.dumps({
+    "file": norm(imported.__file__),
+    "root_on_path": norm(root) in [norm(p) for p in sys.path],
+}))
+"""
+
+
+def _import_package_only(module, root, cwd):
+    env = dict(os.environ)
+    env.pop("PYTHONPATH", None)
+    done = subprocess.run(
+        [sys.executable, "-c", _PACKAGE_ONLY, module, str(root)],
+        cwd=cwd,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+    assert done.returncode == 0, done.stderr[-3000:]
+    return json.loads(done.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.parametrize("module", PACKAGE_IMPORTABLE)
+def test_importing_from_an_installed_package_leaves_the_root_off_sys_path(
+    module, tmp_path
+):
+    seen = _import_package_only(module, REPO, tmp_path)
+    assert seen["file"].startswith(os.path.normcase(str(REPO))), seen["file"]
+    assert seen["root_on_path"] is False, seen
+
+
+def test_package_only_harness_sees_a_root_insertion(tmp_path):
+    package = tmp_path / PACKAGE
+    package.mkdir()
+    (package / "__init__.py").write_text("", encoding="utf-8")
+    (package / "inserts_root.py").write_text(
+        f"import sys\nsys.path.insert(0, {str(tmp_path)!r})\n", encoding="utf-8"
+    )
+    cwd = tmp_path / "elsewhere"
+    cwd.mkdir()
+    seen = _import_package_only(f"{PACKAGE}.inserts_root", tmp_path, cwd)
+    assert seen["root_on_path"] is True, seen
+
+
 @pytest.mark.parametrize(
     "script",
     [
         "argumentation_analysis/orchestration/analysis_runner_v2.py",
         "argumentation_analysis/pipelines/reporting_pipeline.py",
+        "argumentation_analysis/run_orchestration.py",
+        "argumentation_analysis/scripts/run_fix_missing_first_letter.py",
     ],
 )
 def test_direct_file_launchers_still_resolve_project_imports(script):

@@ -16,7 +16,10 @@ import os
 import sys
 
 # Ajouter le répertoire parent au chemin d'importation
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+if __name__ == "__main__":
+    sys.path.insert(
+        0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+    )
 
 from argumentation_analysis.utils.extract_repair.verify_extracts_with_llm import (
     verify_extracts_with_llm,

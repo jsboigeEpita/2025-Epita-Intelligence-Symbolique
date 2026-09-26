@@ -29,7 +29,9 @@ from typing import List, Optional, Union, Any, Dict
 # Configuration des chemins pour assurer la résolution des modules du projet
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
-if project_root not in sys.path:
+# Seulement quand le fichier est lancé directement : importé comme module
+# du package, la racine est déjà importable et sys.path reste intact (#2346).
+if __name__ == "__main__" and project_root not in sys.path:
     sys.path.insert(0, project_root)
 
 # ===== IMPORTS SEMANTIC KERNEL =====
