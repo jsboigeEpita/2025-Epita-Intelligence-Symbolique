@@ -247,12 +247,12 @@ def test_analyze_without_detection_does_not_claim_a_fallacy_count(client, detect
     ):
         assert absent not in results, absent
     # #2562 : la structure vient du parseur de marqueurs (le prose ne passe
-    # plus par le AspicParser) — prémisse = ce qui précède « donc ».
+    # plus par le AspicParser) — prémisse = ce qui précède « donc ». #2682 :
+    # la conclusion part du marqueur ; elle rendait la phrase entière,
+    # prémisse comprise, et la prémisse gardait sa virgule.
     assert results["argument_structure"] == {
-        "premises": ["Tu dis que fumer est dangereux, mais tu fumes toi-même,"],
-        "conclusion": (
-            "Tu dis que fumer est dangereux, mais tu fumes toi-même, donc tu as tort"
-        ),
+        "premises": ["Tu dis que fumer est dangereux, mais tu fumes toi-même"],
+        "conclusion": "donc tu as tort",
     }
 
 
