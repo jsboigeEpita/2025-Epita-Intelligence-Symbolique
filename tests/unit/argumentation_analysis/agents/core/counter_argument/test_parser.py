@@ -98,6 +98,107 @@ class TestParseArgument:
 
 
 # ============================================================
+# ArgumentParser — a premise marker alone (#2600)
+# ============================================================
+
+
+class TestPremiseMarkerOnlyText:
+    """#2600 — « X car Y » : le marqueur sépare, il n'est pas le texte.
+
+    Sans marqueur de conclusion, la phrase entière servait à la fois de
+    prémisse et de conclusion : la forme d'un argument circulaire, pour un
+    texte qui n'en contient aucun. Le marqueur introduit la prémisse — ce qui
+    suit est la prémisse, ce qui précède est la conclusion — et le marqueur
+    lui-même n'apparaît ni dans l'une ni dans l'autre.
+    """
+
+    def test_car_split(self, parser):
+        result = parser.parse_argument("Il faut partir car il pleut.")
+
+        assert result.conclusion == "Il faut partir", result.conclusion
+        assert result.premises == ["il pleut"], result.premises
+
+    def test_parce_que_split(self, parser):
+        result = parser.parse_argument("Le sol est mouillé parce que la pluie tombe.")
+
+        assert result.conclusion == "Le sol est mouillé", result.conclusion
+        assert result.premises == ["la pluie tombe"], result.premises
+
+    def test_puisque_split(self, parser):
+        result = parser.parse_argument("Il rentre puisque la nuit tombe.")
+
+        assert result.conclusion == "Il rentre", result.conclusion
+        assert result.premises == ["la nuit tombe"], result.premises
+
+    def test_the_marker_is_in_neither_part(self, parser):
+        result = parser.parse_argument("Il faut partir car il pleut.")
+
+        assert "car" not in result.conclusion.lower(), result.conclusion
+        assert all("car" not in p.lower() for p in result.premises), result.premises
+
+    def test_premise_is_not_the_conclusion(self, parser):
+        result = parser.parse_argument("Il faut partir car il pleut.")
+
+        assert result.conclusion not in result.premises, result
+
+    def test_parse_prose_splits_too(self, parser):
+        argument = parser.parse_prose("Il faut partir car il pleut.")
+
+        assert argument is not None
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+
+# ============================================================
+# ArgumentParser — a premise marker OPENING its sentence (#2600 review)
+# ============================================================
+
+
+class TestPremiseMarkerOpeningTheSentence:
+    """#2600 review — « Puisque X, Y » : main reconstruisait juste.
+
+    Un marqueur de prémisse en TÊTE de phrase est la construction causale la
+    plus courante en français. La coupe au marqueur ne peut pas s'y appliquer :
+    il n'y a rien avant lui, et prendre tout ce qui suit met la conclusion
+    DANS la prémisse — la forme circulaire que #2600 retire. Ces formes
+    retombent sur le comportement de main (partage par la virgule : la clause
+    portant le marqueur est la prémisse, la clause suivante la conclusion).
+    """
+
+    def test_puisque_keeps_the_clause_split(self, parser):
+        argument = parser.parse_prose("Puisque il pleut, il faut partir.")
+
+        assert argument.premises == ["Puisque il pleut"], argument.premises
+        assert argument.conclusion == "il faut partir", argument.conclusion
+
+    def test_comme_keeps_the_clause_split(self, parser):
+        argument = parser.parse_prose("Comme il pleut, il faut partir.")
+
+        assert argument.premises == ["Comme il pleut"], argument.premises
+        assert argument.conclusion == "il faut partir", argument.conclusion
+
+    def test_etant_donne_que_keeps_the_clause_split(self, parser):
+        argument = parser.parse_prose("Étant donné que les prix montent, il faut agir.")
+
+        assert argument.premises == [
+            "Étant donné que les prix montent"
+        ], argument.premises
+        assert argument.conclusion == "il faut agir", argument.conclusion
+
+    def test_premise_is_not_the_conclusion(self, parser):
+        argument = parser.parse_prose("Puisque il pleut, il faut partir.")
+
+        assert argument.conclusion not in argument.premises, argument
+
+    def test_mid_sentence_split_still_applies(self, parser):
+        # The control: the issue's own case keeps its repair.
+        argument = parser.parse_prose("Il faut partir car il pleut.")
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+
+# ============================================================
 # ArgumentParser — _extract_premises
 # ============================================================
 
