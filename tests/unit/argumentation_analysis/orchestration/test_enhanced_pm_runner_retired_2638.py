@@ -6,8 +6,10 @@ obsolete analysis runners" — DRIFT_REGISTER ORC-4: superseded by
 ``f4e39b02`` (2025-10-30, a WIP manual-conflict-resolution commit that
 re-added 638 lines a branch still carried). For its whole second life it had
 zero production callers, a ``DeprecationWarning`` in its constructor, and a
-setup path broken at ``ExtractAgent.setup_agent_components`` — a method that
-never existed, hidden by #2536's ``MagicMock`` doubles (#2638).
+setup path broken at ``ExtractAgent.setup_agent_components`` — a method its
+class had lost on 2025-07-01 (``9a9a620fd``, SK-API migration, removed it from
+``ExtractAgent``), so the resurrected runner called an API unanswered for four
+months, hidden by #2536's ``MagicMock`` doubles (#2638).
 
 This tombstone reddens if a merge or conflict resolution brings the module
 back: a deletion lost to a concurrent branch must surface as a review
