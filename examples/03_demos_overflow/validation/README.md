@@ -17,23 +17,35 @@ Ce répertoire contient les démonstrations de validation exhaustive et de tests
 
 ### Validation Complète EPITA
 
-Script principal de validation exhaustive du système :
+Le script fait analyser des scénarios par l'agent sophismes informels
+(`InformalFallacyAgent`, construit par `AgentFactory` et enveloppé dans un
+`TracedAgent`), compare chaque réponse au sophisme attendu et imprime une ligne
+`SCORE FINAL: réussis/notés (xx.xx%)`. À lancer depuis la racine du dépôt, dans
+l'environnement conda du projet (`conda run -n <env> --no-capture-output ...`) :
+le script vérifie `CONDA_DEFAULT_ENV` au démarrage.
 
 ```bash
-# Exécution standard
-python demos/validation/validation_complete_epita.py
+# LLM simulé, sans crédit : quatre scénarios, agent explore_only imposé
+python examples/03_demos_overflow/validation/validation_complete_epita.py --integration-test
 
-# Depuis le répertoire demos/validation/
-cd demos/validation
-python validation_complete_epita.py
+# Modèle configuré (OPENAI_CHAT_MODEL_ID) : scénario authentique, agent au choix
+python examples/03_demos_overflow/validation/validation_complete_epita.py --agent-type full
+
+# Un dialogue fourni : sa réponse est rapportée, sans score (pas de sophisme attendu)
+python examples/03_demos_overflow/validation/validation_complete_epita.py --dialogue-text "..."
 ```
 
-**Ce que ce script valide** :
-- ✅ Configuration de l'environnement projet
-- ✅ Chargement des modules core
-- ✅ Initialisation des agents
-- ✅ Fonctionnement des services d'analyse
-- ✅ Intégrité des dépendances
+- `--agent-type` : une des configurations de l'agent (`simple`, `explore_only`,
+  `workflow_only`, `full`).
+- `--trace-dir` : dossier des traces, un fichier par scénario (défaut :
+  `_temp/validation_traces/` à la racine, ignoré par git).
+- `--file-path` : comme `--dialogue-text`, le dialogue lu dans un fichier.
+- Code de sortie 0 seulement si au moins un scénario a tourné et qu'aucun n'a
+  échoué.
+
+`scripts/run_experiments.py` lance ce script pour chaque couple (agent,
+taxonomie), lit la ligne `SCORE FINAL` et imprime un tableau Markdown ;
+`--integration-test` fait tourner la chaîne sans crédit.
 
 ### Validation Deep Taxonomy
 

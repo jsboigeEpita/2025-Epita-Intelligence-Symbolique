@@ -28,10 +28,10 @@ demos/
 
 ```bash
 # Démo one-liner : usage simplifié du système
-python demos/showcases/demo_one_liner_usage.py
+python examples/03_demos_overflow/showcases/demo_one_liner_usage.py
 
-# Validation complète EPITA : test exhaustif
-python demos/validation/validation_complete_epita.py
+# Validation EPITA de l'agent sophismes, sur le LLM simulé (sans crédit)
+python examples/03_demos_overflow/validation/validation_complete_epita.py --integration-test
 ```
 
 ## 📚 Catégories de Démonstrations

@@ -5,47 +5,54 @@ import codecs
 from pathlib import Path
 
 # --- DÉBUT DU COUPE-CIRCUIT D'ENVIRONNEMENT ---
-# Ce bloc garantit que le script s'exécute dans le bon contexte, même s'il est appelé directement.
-try:
-    # Détecter la racine du projet de manière robuste
-    current_file_path = Path(__file__).resolve()
-    project_root = current_file_path.parent.parent
+# Ce bloc garantit que le script s'exécute dans le bon contexte quand il est
+# lancé comme fichier. Importé comme module, il ne touche ni sys.path ni
+# l'environnement (#2346).
+if __name__ == "__main__":
+    try:
+        # Détecter la racine du projet de manière robuste
+        current_file_path = Path(__file__).resolve()
+        project_root = current_file_path.parent.parent
 
-    # Vérifier si la détection est correcte en cherchant un marqueur de projet
-    if (
-        not (project_root / "argumentation_analysis").exists()
-        or not (project_root / "pyproject.toml").exists()
-    ):
-        # Si le script est déplacé, remonter jusqu'à trouver la racine
-        project_root = next(
-            (p for p in current_file_path.parents if (p / "pyproject.toml").exists()),
-            None,
-        )
-        if project_root is None:
-            raise FileNotFoundError(
-                "Impossible de localiser la racine du projet. Assurez-vous que 'pyproject.toml' est présent."
+        # Vérifier si la détection est correcte en cherchant un marqueur de projet
+        if (
+            not (project_root / "argumentation_analysis").exists()
+            or not (project_root / "pyproject.toml").exists()
+        ):
+            # Si le script est déplacé, remonter jusqu'à trouver la racine
+            project_root = next(
+                (
+                    p
+                    for p in current_file_path.parents
+                    if (p / "pyproject.toml").exists()
+                ),
+                None,
             )
+            if project_root is None:
+                raise FileNotFoundError(
+                    "Impossible de localiser la racine du projet. Assurez-vous que 'pyproject.toml' est présent."
+                )
 
-    # Ajouter la racine au sys.path si elle n'y est pas déjà
-    if str(project_root) not in sys.path:
-        sys.path.insert(0, str(project_root))
+        # Ajouter la racine au sys.path si elle n'y est pas déjà
+        if str(project_root) not in sys.path:
+            sys.path.insert(0, str(project_root))
 
-    # Maintenant, l'appel explicite du vérificateur d'environnement est effectué
-    from argumentation_analysis.core.environment import ensure_env
+        # Maintenant, l'appel explicite du vérificateur d'environnement est effectué
+        from argumentation_analysis.core.environment import ensure_env
 
-    ensure_env()
+        ensure_env()
 
-except (NameError, FileNotFoundError, RuntimeError) as e:
-    print(
-        f"ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.",
-        file=sys.stderr,
-    )
-    print(f"Détails: {e}", file=sys.stderr)
-    print(
-        f"Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    except (NameError, FileNotFoundError, RuntimeError) as e:
+        print(
+            f"ERREUR CRITIQUE DE BOOTSTRAP : Impossible de configurer l'environnement du projet.",
+            file=sys.stderr,
+        )
+        print(f"Détails: {e}", file=sys.stderr)
+        print(
+            f"Veuillez exécuter ce script via le wrapper 'activate_project_env.ps1'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 # --- FIN DU COUPE-CIRCUIT D'ENVIRONNEMENT ---
 
 import asyncio
@@ -66,6 +73,9 @@ from enum import Enum
 
 import semantic_kernel as sk
 from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.agents.concrete_agents.informal_fallacy_agent import (
+    INFORMAL_AGENT_CONFIGS,
+)
 from config.unified_config import AgentType
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
 from argumentation_analysis.core.llm_service import create_llm_service
@@ -73,14 +83,13 @@ from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.function_call_content import FunctionCallContent
 from semantic_kernel.contents.function_result_content import FunctionResultContent
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-if not (PROJECT_ROOT / "examples" / "scripts_demonstration").exists():
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    if not (PROJECT_ROOT / "examples").exists():
-        PROJECT_ROOT = Path(__file__).resolve().parent
-SCRIPTS_DEMO_DIR = PROJECT_ROOT / "examples" / "scripts_demonstration"
-DEMOS_DIR = PROJECT_ROOT / "demos"
-ARGUMENTATION_DIR = PROJECT_ROOT / "argumentation_analysis"
+# La racine du dépôt : le premier parent qui porte pyproject.toml. L'ancien
+# calcul rendait le dossier de ce fichier, et les traces s'écrivaient dans
+# examples/ (#2346).
+PROJECT_ROOT = next(
+    p for p in Path(__file__).resolve().parents if (p / "pyproject.toml").exists()
+)
+DEFAULT_TRACE_DIR = PROJECT_ROOT / "_temp" / "validation_traces"
 
 
 class ValidationMode(Enum):
@@ -125,7 +134,7 @@ class ValidationEpitaComplete:
         agent_type: str = "full",
         enable_synthetic: bool = False,
         taxonomy_file_path: Optional[str] = None,
-        trace_log_path: Optional[str] = None,
+        trace_dir: Optional[str] = None,
         dialogue_text: Optional[str] = None,
         file_path: Optional[str] = None,
         integration_test: bool = False,
@@ -136,7 +145,7 @@ class ValidationEpitaComplete:
         self.agent_type = agent_type
         self.enable_synthetic = enable_synthetic
         self.taxonomy_file_path = taxonomy_file_path
-        self.trace_log_path = trace_log_path
+        self.trace_dir = Path(trace_dir) if trace_dir else DEFAULT_TRACE_DIR
         self.dialogue_text = dialogue_text
         self.file_path = file_path
         self.integration_test = integration_test
@@ -149,7 +158,7 @@ class ValidationEpitaComplete:
                 "agent_type": agent_type,
                 "synthetic_enabled": enable_synthetic,
                 "taxonomy_file": taxonomy_file_path,
-                "trace_log_path": trace_log_path,
+                "trace_dir": str(self.trace_dir),
                 "integration_test_mode": integration_test,
                 "version": "3.0_factory_and_validation_fix",
             },
@@ -160,7 +169,6 @@ class ValidationEpitaComplete:
             "performance_metrics": {},
             "authenticity_scores": {},
         }
-        self._setup_environment()
         if "argumentation_analysis.core.environment" in sys.modules:
             print(
                 f"{Colors.GREEN}[OK] [SETUP] Module auto_env est bien chargé.{Colors.ENDC}"
@@ -196,29 +204,6 @@ class ValidationEpitaComplete:
             "expected_fallacy_name": "Homme de paille",
         },
     ]
-
-    def _setup_environment(self):
-        print(f"{Colors.CYAN}[SETUP] Configuration de l'environnement...{Colors.ENDC}")
-        paths_to_add = [
-            str(p)
-            for p in [
-                PROJECT_ROOT,
-                PROJECT_ROOT / "argumentation_analysis",
-                PROJECT_ROOT / "examples",
-                PROJECT_ROOT / "scripts",
-                PROJECT_ROOT / "tests",
-                PROJECT_ROOT / "demos",
-            ]
-        ]
-        for path in paths_to_add:
-            if path not in sys.path:
-                sys.path.insert(0, path)
-        os.environ["PYTHONPATH"] = os.pathsep.join(
-            paths_to_add + [os.environ.get("PYTHONPATH", "")]
-        )
-        print(
-            f"{Colors.GREEN}[OK] Environnement configuré avec {len(paths_to_add)} chemins{Colors.ENDC}"
-        )
 
     def log_test(
         self,
@@ -287,7 +272,7 @@ class ValidationEpitaComplete:
         print(
             f"\n{Colors.BOLD}VALIDATION DE L'ANALYSE INFORMELLE (AGENT: {self.agent_type.upper()}){Colors.ENDC}"
         )
-        trace_dir = PROJECT_ROOT / "_temp" / "validation_traces"
+        trace_dir = self.trace_dir
         trace_dir.mkdir(exist_ok=True, parents=True)
 
         if self.integration_test:
@@ -305,6 +290,16 @@ class ValidationEpitaComplete:
                     "Le mode intégration nécessite 'explore_only'. Forçage du type."
                 )
                 self.agent_type = "explore_only"
+        elif self.dialogue_text or self.file_path:
+            # Un dialogue fourni n'a pas de sophisme attendu : sa réponse est
+            # rapportée, elle n'entre pas dans le score.
+            if self.dialogue_text:
+                dialogue = self.dialogue_text
+            else:
+                dialogue = Path(self.file_path).read_text(encoding="utf-8")
+            scenarios = {
+                "Dialogue personnalisé": {"text": dialogue, "expected_sophisms": []}
+            }
         else:
             scenarios = {
                 "Ad Hominem": {
@@ -334,8 +329,9 @@ class ValidationEpitaComplete:
                     service_id="default", model_id="mock", force_mock=True
                 )
             else:
+                # Le modèle configuré (OPENAI_CHAT_MODEL_ID), pas un nom en dur.
                 llm_service = create_llm_service(
-                    service_id="default", model_id="gpt-5-mini", force_authentic=True
+                    service_id="default", force_authentic=True
                 )
 
             kernel.add_service(llm_service)
@@ -389,6 +385,16 @@ class ValidationEpitaComplete:
                     # La réponse n'est pas du JSON, on continue avec la chaîne brute
                     pass
 
+                if not config["expected_sophisms"]:
+                    self.log_test(
+                        "Analyse Informelle",
+                        test_name,
+                        "PARTIAL",
+                        f"Sans sophisme attendu. Obtenu: '{final_answer.strip()}'",
+                        time.time() - start_time,
+                        0.0,
+                    )
+                    continue
                 expected_sophism = config["expected_sophisms"][0].lower()
                 success = expected_sophism in final_answer.lower()
                 details = (
@@ -420,19 +426,53 @@ class ValidationEpitaComplete:
         return overall_success
 
     async def run_complete_validation(self) -> Dict[str, Any]:
-        if self.integration_test or self.dialogue_text:
-            await self.validate_informal_analysis_scenarios()
-        else:
-            logging.error(
-                "Mode de validation non spécifié ou non supporté pour exécution directe."
-            )
+        # Sans option, les scénarios authentiques tournent : c'est ce que lance
+        # scripts/run_experiments.py. L'ancienne garde n'acceptait que
+        # --integration-test ou --dialogue-text : une exécution sans option ne
+        # faisait rien, puis sortait avec succès (#2346).
+        await self.validate_informal_analysis_scenarios()
+        passed, total = scored_scenarios(self.results)
+        self.results["score"] = passed
+        self.results["max_score"] = total
         return self.results
 
     async def shutdown(self):
         logging.info("Arrêt des services.")
 
 
-def main():
+def _informal_tests(results: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return results.get("components", {}).get("Analyse Informelle", {}).get("tests", [])
+
+
+def scored_scenarios(results: Dict[str, Any]) -> Tuple[int, int]:
+    """(réussis, notés) parmi les scénarios qui ont un sophisme attendu."""
+    scored = [t for t in _informal_tests(results) if t.get("status") != "PARTIAL"]
+    return sum(1 for t in scored if t.get("status") == "SUCCESS"), len(scored)
+
+
+def final_score_line(results: Dict[str, Any]) -> str:
+    """La ligne que ``scripts/run_experiments.py`` lit dans la sortie.
+
+    Sans scénario noté, la ligne ne porte pas de pourcentage : un 0 % se lirait
+    comme un score mesuré.
+    """
+    passed, total = scored_scenarios(results)
+    if not total:
+        return "SCORE FINAL: aucun scénario noté"
+    return f"SCORE FINAL: {passed}/{total} ({100 * passed / total:.2f}%)"
+
+
+def validation_succeeded(results: Dict[str, Any]) -> bool:
+    """Au moins un scénario a tourné, et aucun n'a échoué.
+
+    L'ancien test, ``all(...)`` sur une liste vide, rendait vrai quand aucun
+    scénario n'avait tourné (#2346).
+    """
+    tests = _informal_tests(results)
+    return bool(tests) and all(t.get("status") != "FAILED" for t in tests)
+
+
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Validation Complète EPITA")
     parser.add_argument(
         "--mode",
@@ -456,7 +496,7 @@ def main():
         "--agent-type",
         type=str,
         default="workflow_only",
-        choices=["simple", "explore_only", "workflow_only"],
+        choices=list(INFORMAL_AGENT_CONFIGS),
     )
     parser.add_argument(
         "--taxonomy",
@@ -466,8 +506,20 @@ def main():
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--integration-test", action="store_true")
     parser.add_argument("--dialogue-text", type=str, default=None)
+    parser.add_argument("--file-path", type=str, default=None)
+    parser.add_argument(
+        "--trace-dir",
+        type=str,
+        default=None,
+        help="Dossier des traces, un fichier par scénario "
+        "(défaut : _temp/validation_traces à la racine du dépôt).",
+    )
     parser.add_argument("--activate-env", action="store_true")
-    args = parser.parse_args()
+    return parser
+
+
+def main():
+    args = build_parser().parse_args()
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -508,17 +560,16 @@ def main():
             level=AnalysisLevel(args.level),
             agent_type=args.agent_type,
             taxonomy_file_path=args.taxonomy,
+            trace_dir=args.trace_dir,
             dialogue_text=args.dialogue_text,
+            file_path=args.file_path,
             integration_test=args.integration_test,
         )
         print(f"{Colors.GREEN}[OK] Validateur initialisé.{Colors.ENDC}")
         results = asyncio.run(validator.run_complete_validation())
 
-        # Simple check for now
-        comp = results.get("components", {}).get("Analyse Informelle", {})
-        tests = comp.get("tests", [])
-        if all(t.get("status") == "SUCCESS" for t in tests if tests):
-            success = True
+        print(final_score_line(results))
+        success = validation_succeeded(results)
 
     except Exception as e:
         logging.critical("ERREUR CRITIQUE PENDANT LA VALIDATION", exc_info=True)

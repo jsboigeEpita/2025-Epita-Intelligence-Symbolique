@@ -2,13 +2,13 @@
 
 ## 1. Objectif
 
-Ce document cartographie l'architecture et les composants de la démonstration EPITA, validée par le script `demos/validation_complete_epita.py`. L'objectif de cette démo est de présenter les capacités d'analyse de l'argumentation du projet, en combinant des agents logiques et des outils d'analyse de la rhétorique.
+Ce document cartographie l'architecture et les composants de la démonstration EPITA, validée par le script `examples/03_demos_overflow/validation/validation_complete_epita.py`. L'objectif de cette démo est de présenter les capacités d'analyse de l'argumentation du projet, en combinant des agents logiques et des outils d'analyse de la rhétorique.
 
 ## 2. Composants Principaux
 
 ### 2.1. Orchestrateur de Validation
 
-- **Script**: [`demos/validation_complete_epita.py`](../../examples/03_demos_overflow/validation/validation_complete_epita.py:0)
+- **Script**: [`examples/03_demos_overflow/validation/validation_complete_epita.py`](../../examples/03_demos_overflow/validation/validation_complete_epita.py:0)
 - **Rôle**: Ce script est le point d'entrée pour lancer une validation complète et rigoureuse de la démonstration. Il exécute une série de tests, collecte des métriques et génère des rapports de certification.
 
 ### 2.2. Script de Démonstration
@@ -34,7 +34,7 @@ Ce document cartographie l'architecture et les composants de la démonstration E
 
 ## 4. Flux d'Exécution
 
-1.  L'utilisateur lance [`demos/validation_complete_epita.py`](../../examples/03_demos_overflow/validation/validation_complete_epita.py:0) avec des paramètres optionnels (mode, complexité).
+1.  L'utilisateur lance [`examples/03_demos_overflow/validation/validation_complete_epita.py`](../../examples/03_demos_overflow/validation/validation_complete_epita.py:0) avec des paramètres optionnels (mode, complexité).
 2.  Le script configure l'environnement et les chemins nécessaires.
 3.  Il exécute le script [`examples/scripts_demonstration/demonstration_epita.py`](../../examples/02_core_system_demos/scripts_demonstration/demonstration_epita.py:0) avec différents arguments pour tester sa robustesse.
 4.  Il valide l'importation et la syntaxe des modules dans [`examples/scripts_demonstration/modules/`](../../examples/02_core_system_demos/scripts_demonstration/modules/).

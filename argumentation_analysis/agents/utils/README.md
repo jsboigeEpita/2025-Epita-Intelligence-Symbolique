@@ -6,7 +6,7 @@ Trois fichiers suivis + un fossile disque. Ce ne sont **pas** les utils généra
 
 - `__init__.py` (3 l.) — docstring seule, aucun export ;
 - `taxonomy_navigator.py` (193 l.) — `TaxonomyNavigator` (:8) : navigation d'une taxonomie **déjà chargée** (rows PK/path/depth) — `get_node` :40, `get_node_by_path` :46, `get_root_nodes` :52, `get_children` :65, `get_parent` :96, `is_leaf` :114, `get_branch_as_str` :120, `get_taxonomy_preview` :144, `get_taxonomy_as_json` :187 ;
-- `tracer.py` (138 l.) — `TracedAgent` (:21) : proxy async qui journalise la ChatHistory avant/après `invoke` (:103).
+- `tracer.py` — `TracedAgent` : proxy async qui journalise deux points d'entrée, `invoke` (la ChatHistory avant/après le flux) et `invoke_single` (arguments, réponse, historique final ; une exception est journalisée puis relevée). Pas de `__getattr__` : un appel non tracé, `get_response` par exemple, lève `AttributeError` (#2346).
 
 ## Composants publics
 
@@ -15,7 +15,7 @@ Trois fichiers suivis + un fossile disque. Ce ne sont **pas** les utils généra
 ## Points d'entrée valides
 
 - `TaxonomyNavigator` : `plugins/fallacy_workflow_plugin.py:40` et `plugins/exploration_plugin.py:16` (plugins du tronc commun), `evaluation/plugin_benchmark.py:538` (lazy), `scripts/analyze_taxonomy.py:27` (lazy). Chaîne workflow : `fallacy_workflow_plugin` ← `orchestration/registry_setup.py:249,274` ← `invoke_callables.py:2853,5309,5751`.
-- `TracedAgent` : `agents/factory.py:19`, instancié :336, :383, :465 quand `trace_log_path` est fourni — usine utilisée par `cluedo_extended_orchestrator.py:253`, `informal_agent_adapter.py:76-77`.
+- `TracedAgent` : construit par `AgentFactory` quand un `trace_log_path` lui est passé. Le seul appelant qui en passe un est la démo `examples/03_demos_overflow/validation/validation_complete_epita.py` (une trace par scénario), lancée seule ou par `scripts/run_experiments.py`. Les appelants de production de l'usine (mode hiérarchique `informal_agent_adapter.py`, Cluedo) n'en passent pas (mesuré 26/09, #2346).
 
 ## Amont / aval
 
@@ -24,7 +24,7 @@ Trois fichiers suivis + un fossile disque. Ce ne sont **pas** les utils généra
 
 ## Statut d'intégration
 
-**actif** — `TaxonomyNavigator` : 4 importeurs production mesurés ; `TracedAgent` : 3 sites d'instanciation dans l'usine production.
+**actif** — `TaxonomyNavigator` : 4 importeurs production mesurés ; `TracedAgent` : aucun chemin de production ne le construit, seule la chaîne de validation démo (`run_experiments.py` → `validation_complete_epita.py`) l'utilise.
 
 ## Artefacts et lecteurs
 

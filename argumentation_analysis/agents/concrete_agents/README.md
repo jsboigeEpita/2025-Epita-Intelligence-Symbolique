@@ -12,7 +12,7 @@ Un seul module : `informal_fallacy_agent.py` (143 lignes) — `InformalFallacyAg
 
 1. **Web API** : `api/dependencies.py:217` → `services/web_api/services/analysis_service.py:205-207` — `create_agent(AgentType.INFORMAL_FALLACY, config_name="full")` (auparavant `"default_with_plugins"`, qui ne correspondait à aucune config et ne montait aucun plugin — réparé en #2121).
 2. **Hiérarchique** : `orchestration/hierarchical/operational/agent_registry.py:68` → `informal_agent_adapter.py:76-78` → `factory.create_informal_fallacy_agent` (`agents/factory.py:324-345`).
-3. Démos : `examples/02_core_system_demos/.../demo_analyse_argumentation.py:61`, `examples/03_demos_overflow/validation/validation_complete_epita.py:351`.
+3. Démos : `examples/02_core_system_demos/.../demo_analyse_argumentation.py:61`, `examples/03_demos_overflow/validation/validation_complete_epita.py` (`validate_informal_analysis_scenarios`, à travers `TracedAgent.invoke_single`).
 
 ## Amont / aval
 

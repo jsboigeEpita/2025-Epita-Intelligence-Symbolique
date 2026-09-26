@@ -25,7 +25,7 @@ DEMO_SCRIPT_PATH = (
 
 @pytest.mark.integration
 @pytest.mark.no_jvm_session
-def test_validation_script_runs_successfully():
+def test_validation_script_runs_successfully(tmp_path):
     """
     Teste l'exécution du script de validation 'validation_complete_epita.py'
     en mode intégration.
@@ -43,6 +43,8 @@ def test_validation_script_runs_successfully():
         "--agent-type",
         "explore_only",  # Requis par le mode intégration
         "--verbose",
+        "--trace-dir",
+        str(tmp_path),
     ]
 
     result = subprocess.run(
@@ -71,3 +73,15 @@ def test_validation_script_runs_successfully():
     assert (
         "Pente Savonneuse" in result.stdout
     ), "Le test 'Pente Savonneuse' ne semble pas avoir été exécuté."
+
+    # Les noms de scénario s'impriment aussi quand l'agent lève : sur ``main``
+    # ``5e4cd3788`` les quatre scénarios mouraient sur ``invoke_single`` et
+    # ce test passait (#2346). L'agent doit avoir répondu, et la trace le dire.
+    assert "Exception:" not in result.stdout, result.stdout
+    assert "SCORE FINAL:" in result.stdout
+    traces = sorted(tmp_path.glob("*.log"))
+    assert len(traces) == 4, traces
+    for trace in traces:
+        content = trace.read_text(encoding="utf-8")
+        assert "--- START INVOKE_SINGLE on" in content, trace.name
+        assert "--- RESULT for" in content, trace.name
