@@ -98,6 +98,12 @@ def _recursive_walks(root):
                     and kw.value.value
                     for kw in node.keywords
                 )
+                or bool(
+                    node.args
+                    and isinstance(node.args[0], ast.Constant)
+                    and isinstance(node.args[0].value, str)
+                    and "**" in node.args[0].value
+                )
             ):
                 calls.append(node.lineno)
         if calls:
