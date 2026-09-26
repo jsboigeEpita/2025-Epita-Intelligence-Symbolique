@@ -219,16 +219,23 @@ def _render_dung(console, state: Dict[str, Any]):
         return
 
     console.print(f"\n[bold]5. Dung[/bold] ({_section_ref(5)})")
-    for fname, fdata in list(frameworks.items())[:5]:
-        if isinstance(fdata, dict):
-            exts = fdata.get("extensions", {})
-            if exts:
-                grounded = exts.get("grounded", [])
-                console.print(
-                    f"  {fname}: grounded={{{', '.join(str(a) for a in grounded)}}}"
-                )
-            else:
-                console.print(f"  {fname}")
+    # #2672: the first entries are formalism sidecars (DeLP's comes first on
+    # pipeline runs); the shared decoder finds the native framework.
+    from argumentation_analysis.reporting.restitution.native_dung import (
+        dung_reading,
+    )
+
+    fdata, by_semantics = dung_reading(frameworks)
+    if fdata is None:
+        console.print("  [dim]no Dung framework (formalism sidecars only)[/dim]")
+        return
+    fname = fdata.get("name") or "dung"
+    grounded = by_semantics.get("grounded")
+    if grounded is None:
+        console.print(f"  {fname}: grounded extension not computed")
+    else:
+        members = grounded[0] if grounded else []
+        console.print(f"  {fname}: grounded={{{', '.join(str(a) for a in members)}}}")
 
 
 def _render_counter_arguments(console, state: Dict[str, Any]):

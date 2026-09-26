@@ -591,20 +591,27 @@ class DeepSynthesisAgent(BaseAgent):
 
     @staticmethod
     def _build_dung_structure(state: Any) -> DungStructure:
-        dung = getattr(state, "dung_frameworks", {})
-        if not dung:
+        # #2672: ``dung_frameworks`` holds every formalism, and its first entry
+        # is DeLP's sidecar (no arguments) on pipeline runs; the pipeline files
+        # its extensions as ``{"extensions": [[...]], ...}`` per
+        # ``verification_{sem}`` entry. The shared decoder reads both.
+        from argumentation_analysis.reporting.restitution.native_dung import (
+            dung_reading,
+        )
+
+        df, by_semantics = dung_reading(getattr(state, "dung_frameworks", {}))
+        if df is None:
             return DungStructure()
-        # Use the first framework (most runs have one)
-        first_id = next(iter(dung))
-        df = dung[first_id]
+        grounded = by_semantics.get("grounded") or [[]]
         return DungStructure(
-            framework_name=df.get("name", first_id),
+            framework_name=df.get("name", ""),
             arguments=df.get("arguments", []),
             attacks=df.get("attacks", []),
-            grounded_extension=df.get("extensions", {}).get("grounded", []),
-            preferred_extensions=df.get("extensions", {}).get("preferred", []),
-            stable_extensions=df.get("extensions", {}).get("stable", []),
-            interpretation=DeepSynthesisAgent._interpret_dung(df),
+            grounded_extension=grounded[0],
+            preferred_extensions=by_semantics.get("preferred", []),
+            stable_extensions=by_semantics.get("stable", []),
+            computed_semantics=sorted(by_semantics),
+            interpretation=DeepSynthesisAgent._interpret_dung(df, by_semantics),
         )
 
     @staticmethod
@@ -1095,16 +1102,22 @@ class DeepSynthesisAgent(BaseAgent):
         return "other"
 
     @staticmethod
-    def _interpret_dung(df: Dict[str, Any]) -> str:
+    def _interpret_dung(
+        df: Dict[str, Any], by_semantics: Dict[str, List[List[str]]]
+    ) -> str:
         args = df.get("arguments", [])
         attacks = df.get("attacks", [])
-        extensions = df.get("extensions", {})
-        grounded = extensions.get("grounded", [])
+        grounded = (by_semantics.get("grounded") or [[]])[0]
         if not args:
             return ""
         lines = [
             f"The framework contains {len(args)} arguments and {len(attacks)} attacks."
         ]
+        if not by_semantics:
+            lines.append(
+                "No extension was computed for it in this run, so no argument "
+                "is reported as accepted or rejected."
+            )
         if grounded:
             lines.append(
                 f"The grounded extension contains {len(grounded)} argument(s): "
@@ -1289,16 +1302,22 @@ class DeepSynthesisAgent(BaseAgent):
                 f"formulas={len(formulas)} verdict={verdict or 'absent'}",
             )
 
+        from argumentation_analysis.reporting.restitution.native_dung import (
+            extension_lists,
+        )
+
         dung = getattr(state, "dung_frameworks", {}) or {}
         for df_id, df in list(dung.items())[:max_items_per_field]:
-            grounded = df.get("extensions", {}).get("grounded", [])
+            # #2672: only the extensions this entry computed; a formalism
+            # sidecar's own keys are not Dung extensions.
+            lists = extension_lists(df) or {}
             _add(
                 "dung_frameworks",
                 df_id,
                 f"name={df.get('name', df_id)} "
                 f"args={len(df.get('arguments', []))} "
-                f"attacks={len(df.get('attacks', []))} "
-                f"grounded_extension={grounded}",
+                f"attacks={len(df.get('attacks', []))}"
+                + "".join(f" {sem}_extensions={exts}" for sem, exts in lists.items()),
             )
 
         for ca in (getattr(state, "counter_arguments", []) or [])[:max_items_per_field]:
@@ -1567,6 +1586,12 @@ class DeepSynthesisAgent(BaseAgent):
                 parties_section += "  No stakeholder data available.\n"
 
             # -- Section 4 data: Ressorts rhétoriques --
+            # #2672: an extension never computed is not an empty one.
+            _ds = report.dung_structure
+            if "grounded" in _ds.computed_semantics:
+                grounded_line = ", ".join(_ds.grounded_extension) or "none"
+            else:
+                grounded_line = "not computed"
             rhetoric_section = "\n[SECTION 4 DATA — Ressorts rhétoriques]\n"
             rhetoric_section += (
                 f"  Arguments: {len(report.argument_map)}. "
@@ -1575,8 +1600,7 @@ class DeepSynthesisAgent(BaseAgent):
                 f"Counter-arguments: {len(report.counter_arguments)}.\n"
                 f"  Key fallacy families: "
                 f"{', '.join(set(f.family for f in report.fallacy_diagnoses)) or 'none'}. "
-                f"Dung grounded extension: "
-                f"{', '.join(report.dung_structure.grounded_extension) or 'none'}.\n"
+                f"Dung grounded extension: {grounded_line}.\n"
             )
             if report.fallacy_diagnoses:
                 top_3 = sorted(
