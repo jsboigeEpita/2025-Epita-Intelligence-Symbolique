@@ -18,6 +18,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support.tree_walk import iter_files
+
 ROOT = Path(__file__).resolve().parents[2]
 FIXTURES = ROOT / "tests" / "fixtures"
 DOC_IMPORT = re.compile(
@@ -36,7 +38,7 @@ def _fixture_files():
 def _doc_files():
     docs = (
         list((ROOT / "docs").rglob("*.md"))
-        + list((ROOT / "tests").rglob("*.md"))
+        + list(iter_files(ROOT / "tests", "*.md"))
         + list(ROOT.glob("*.md"))
     )
     return sorted(

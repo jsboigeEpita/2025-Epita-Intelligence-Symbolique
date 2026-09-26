@@ -30,6 +30,8 @@ and its operational conclusion is sound. It is not a sibling of the false claim.
 import ast
 from pathlib import Path
 
+from tests.support.tree_walk import iter_files
+
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
 PROD_ROOT = PROJECT_ROOT / "argumentation_analysis"
 TESTS_ROOT = PROJECT_ROOT / "tests"
@@ -68,7 +70,7 @@ def _iter_python(root: Path):
     takes (#2373). A file that must sit outside the census is excluded by
     path — an exclusion is named, never deduced from a SyntaxError.
     """
-    for py in sorted(root.rglob("*.py")):
+    for py in sorted(iter_files(root)):
         yield py, ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
 
 

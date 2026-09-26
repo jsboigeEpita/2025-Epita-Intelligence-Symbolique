@@ -28,6 +28,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support.tree_walk import iter_files
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TESTS_ROOT = REPO_ROOT / "tests"
 
@@ -36,7 +38,7 @@ TESTS_ROOT = REPO_ROOT / "tests"
 
 
 def _iter_test_files():
-    for path in sorted(TESTS_ROOT.rglob("test_*.py")):
+    for path in sorted(iter_files(TESTS_ROOT, "test_*.py")):
         if "_archived" in path.parts:
             continue
         yield path

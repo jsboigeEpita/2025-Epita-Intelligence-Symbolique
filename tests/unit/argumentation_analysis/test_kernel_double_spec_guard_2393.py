@@ -25,6 +25,8 @@ pass for a clean one.
 import ast
 from pathlib import Path
 
+from tests.support.tree_walk import iter_files
+
 TESTS_ROOT = Path(__file__).resolve().parents[2]
 EXCLUDED_DIRS = {"__pycache__", "_archived"}
 
@@ -109,7 +111,7 @@ def _census():
     walked = 0
     skipped = []
     per_file: dict[str, int] = {}
-    for path in sorted(TESTS_ROOT.rglob("*.py")):
+    for path in sorted(iter_files(TESTS_ROOT)):
         if any(part in EXCLUDED_DIRS for part in path.parts):
             continue
         rel = path.relative_to(TESTS_ROOT).as_posix()

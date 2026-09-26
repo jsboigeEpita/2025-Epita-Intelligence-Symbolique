@@ -14,6 +14,8 @@ L'objectif de ce répertoire est de centraliser le code de support qui facilite 
 
 - **[`withdrawn_modules.py`](withdrawn_modules.py)** (#2436): `still_importable(name)`, the question a withdrawal guard asks instead of `find_spec(name) is None`. A directory left holding only its untracked `__pycache__/` resolves as an empty namespace package on any checkout that ran the code before the withdrawal; nothing can be imported from it, so it counts as gone.
 
+- **[`tree_walk.py`](tree_walk.py)** (#2607): `iter_files(root, pattern)` est la marche que partagent les gardes qui parcourent `tests/`. `tests/nested_pytest.py` crée `tests/_probe_<label>_<uuid>/`, y lance une session, puis l'efface : un `Path.rglob` qui a déjà listé ce dossier lève `FileNotFoundError` en essayant d'y entrer (mesuré : 18 levées sur 60 marches). La marche partagée n'entre pas dans les sondes et traite un dossier disparu comme un événement ordinaire. Elle saute le **préfixe de dossier** `_probe_` seulement — un `_archived/` stable reste dans la population qu'un sweep doit voir — et rend exactement les mêmes fichiers que `rglob`.
+
 - **[`data_generators.py`](data_generators.py)**: Prévu pour héberger des fonctions qui génèrent des données de test complexes ou volumineuses, aidant à créer des scénarios de test réalistes et variés.
 
 ## Utilisation
