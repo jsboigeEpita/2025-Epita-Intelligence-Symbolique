@@ -23,6 +23,8 @@ import re
 from pathlib import Path
 from unittest.mock import patch
 
+from tests.support.tree_walk import iter_files
+
 _TESTS_ROOT = Path(__file__).resolve().parents[1]
 
 # patch("<module>.os.environ", ...), patch("os.environ", ...) and
@@ -38,7 +40,7 @@ _SWAP_MOTIF = re.compile(
 def _gate_test_files():
     files = []
     for sub in ("unit", "scripts"):
-        files.extend((Path(_TESTS_ROOT) / sub).rglob("*.py"))
+        files.extend(iter_files(Path(_TESTS_ROOT) / sub))
     return sorted(files)
 
 

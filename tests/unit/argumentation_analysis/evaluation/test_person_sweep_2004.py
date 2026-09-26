@@ -32,6 +32,8 @@ from argumentation_analysis.evaluation.leak_patterns import (
     letter_boundary,
 )
 
+from tests.support.tree_walk import iter_files
+
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent.parent
 
 # Canaries whose job is to carry a real name (privacy tests / cassettes).
@@ -51,7 +53,7 @@ NAME_KEYED_CANARIES = {
 def test_person_sweep_tests_tree():
     regexes = [re.compile(letter_boundary(p), re.IGNORECASE) for p in PERSON_PATTERNS]
     leaks = {}
-    for path in sorted(REPO_ROOT.joinpath("tests").rglob("*.py")):
+    for path in sorted(iter_files(REPO_ROOT / "tests")):
         rel = path.relative_to(REPO_ROOT).as_posix()
         if rel.endswith(PRIVACY_CANARY_SUFFIXES):
             continue

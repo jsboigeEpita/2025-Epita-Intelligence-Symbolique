@@ -19,6 +19,8 @@ import ast
 import re
 from pathlib import Path
 
+from tests.support.tree_walk import iter_files
+
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -28,7 +30,7 @@ WORKER_REF = re.compile(r'"(worker_[A-Za-z0-9_]+\.py)"')
 def _spawned_workers():
     """Every script a launcher hands to `run_in_jvm_subprocess`."""
     found = set()
-    for path in (ROOT / "tests").rglob("*.py"):
+    for path in iter_files(ROOT / "tests"):
         try:
             text = path.read_text(encoding="utf-8-sig")
         except (OSError, UnicodeDecodeError):
@@ -36,7 +38,7 @@ def _spawned_workers():
         if "run_in_jvm_subprocess(" not in text:
             continue
         for match in WORKER_REF.finditer(text):
-            found.update((ROOT / "tests").rglob(match.group(1)))
+            found.update(iter_files(ROOT / "tests", match.group(1)))
     return sorted(found)
 
 

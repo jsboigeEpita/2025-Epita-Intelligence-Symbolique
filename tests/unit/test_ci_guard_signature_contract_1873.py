@@ -25,6 +25,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support.tree_walk import iter_files
+
 ROOT = Path(__file__).resolve().parents[2]
 CI_YML = ROOT / ".github" / "workflows" / "ci.yml"
 CONFTEST = ROOT / "tests" / "conftest.py"
@@ -150,7 +152,7 @@ def test_every_jvm_skip_message_in_the_suite_is_counted():
     pattern = _guard_pattern()
     harvested, unmatched = 0, []
     unparseable = []
-    for path in (ROOT / "tests").rglob("*.py"):
+    for path in iter_files(ROOT / "tests"):
         try:
             messages = _skip_literals(path)
         except SyntaxError as exc:  # named, never swallowed: see below

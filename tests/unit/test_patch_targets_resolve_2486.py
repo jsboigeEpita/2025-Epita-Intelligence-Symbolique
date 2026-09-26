@@ -34,6 +34,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional, Tuple
 
+from tests.support.tree_walk import iter_files
+
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -151,7 +153,7 @@ def verdict(root: Path, target: str, create: bool) -> str:
 def _collected_test_files(root: Path) -> List[Path]:
     # pytest.ini's norecursedirs skips every directory named ``_*`` or ``.*``.
     files = []
-    for path in sorted((root / "tests").rglob("*.py")):
+    for path in sorted(iter_files(root / "tests")):
         parts = path.relative_to(root / "tests").parts[:-1]
         if any(part.startswith(("_", ".")) for part in parts):
             continue
