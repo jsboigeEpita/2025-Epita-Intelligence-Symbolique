@@ -61,7 +61,7 @@ Cette phase centralise la gestion du cycle de vie de la JVM dans une fixture `py
 1.  **Créer une fixture de contrôle de la JVM** :
     *   **Fichier à modifier** : `tests/conftest.py`
     *   **Action** : Implémenter une nouvelle fixture `session`-scoped qui gère le démarrage et l'arrêt de la JVM.
-    *   **Note (#2696)** : `JvmManager` n'a jamais existé dans `argumentation_analysis/core/jvm_setup.py` (`git log --all -S "class JvmManager"` ne rend rien). Le bloc ci-dessous est le plan d'origine, pas du code à copier. L'API réelle est `initialize_jvm()`, `shutdown_jvm()` et `is_jvm_started()`. Dans `tests/conftest.py`, `pytest_sessionstart` démarre la JVM par `initialize_jvm(session_fixture_owns_jvm=True)` et les tests JVM demandent la fixture `jvm_session`. Trois workers de `tests/` importaient ce même nom et n'avaient jamais tourné : ils ont été retirés (#2696).
+    *   **Note (#2696)** : `JvmManager` n'a jamais existé dans `argumentation_analysis/core/jvm_setup.py` (`git log --all -G "^\s*class JvmManager"` ne rend rien ; `-S` rendrait le commit de cette note, qui cite le nom). Le bloc ci-dessous est le plan d'origine, pas du code à copier. L'API réelle est `initialize_jvm()`, `shutdown_jvm()` et `is_jvm_started()`. Dans `tests/conftest.py`, `pytest_sessionstart` démarre la JVM par `initialize_jvm(session_fixture_owns_jvm=True)` et les tests JVM demandent la fixture `jvm_session`. Trois workers de `tests/` importaient ce même nom et n'avaient jamais tourné : ils ont été retirés (#2696).
         ```python
         import pytest
         from argumentation_analysis.core.jvm_setup import JvmManager

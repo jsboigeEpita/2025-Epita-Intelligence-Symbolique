@@ -29,9 +29,10 @@ logger = logging.getLogger(__name__)
 # pointaient sur tests/, ou le package tests/argumentation_analysis/ SHADOW
 # le vrai argumentation_analysis : l'enfant importait alors un package sans
 # .core/.webapp et mourait ("No module named 'argumentation_analysis.webapp'",
-# plugin tests.fixtures.integration_fixtures l.667). Meme idiome que les trois
-# workers voisins (worker_einstein_tweety, worker_logic_puzzles_hardening,
-# worker_minimal_jvm_startup), repares par #1928.
+# plugin tests.fixtures.integration_fixtures l.667). Meme idiome que le
+# worker voisin worker_einstein_tweety, repare par #1928 (les deux autres
+# qu'il reparait, worker_logic_puzzles_hardening et worker_minimal_jvm_startup,
+# n'avaient aucun lanceur et ont ete retires par #2700).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
