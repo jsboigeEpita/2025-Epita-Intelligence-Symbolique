@@ -176,36 +176,25 @@ class SemanticIndexService:
         logger.info(f"Uploaded document: {doc_id}")
         return doc_id
 
-    def wait_for_indexing(
-        self,
-        doc_id: str,
-        timeout: float = 60.0,
-        poll_interval: float = 2.0,
-    ) -> str:
-        """Poll upload status until indexing is complete.
+    def indexing_status(self, doc_id: str) -> Dict[str, Any]:
+        """One-shot probe of a document's indexing status.
 
-        Returns:
-            Index name where the document was stored.
+        #2618: replaces ``wait_for_indexing`` — the fixed-interval
+        ``time.sleep`` polling (#2346) ran nowhere (zero callers) and would
+        block the event loop if the async phase called it. The bounded wait
+        now lives in the caller (``_invoke_semantic_index``), which sleeps
+        with ``asyncio.sleep``; the service only exposes this stateless
+        single-request probe.
         """
-        import time
-
         requests = self._get_requests()
-        deadline = time.time() + timeout
-
-        while time.time() < deadline:
-            r = requests.get(
-                f"{self._km_url}/upload-status",
-                params={"documentId": doc_id},
-                headers=self._headers(),
-                timeout=self._timeout,
-            )
-            r.raise_for_status()
-            info = r.json()
-            if info.get("completed", False):
-                return info.get("index", self._default_index)
-            time.sleep(poll_interval)
-
-        raise RuntimeError(f"Timeout waiting for indexing of {doc_id}")
+        r = requests.get(
+            f"{self._km_url}/upload-status",
+            params={"documentId": doc_id},
+            headers=self._headers(),
+            timeout=self._timeout,
+        )
+        r.raise_for_status()
+        return r.json()
 
     def search(
         self,

@@ -84,6 +84,8 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     ("ai_shield_service", "adversarial_protection"): "#2137",
     ("hierarchical_fallacy_per_argument", "per_argument_fallacy_detection"): "#2137",
     ("local_llm_service", "chat_completion"): "#2137",
+    # #2618: search_arguments now runs inside the semantic_indexing phase —
+    # a production call path, not a capability demander. #2623 settles it.
     ("semantic_index_service", "argument_search"): "#2137",
     ("speech_transcription_service", "speech_to_text"): "#2137",
 }
