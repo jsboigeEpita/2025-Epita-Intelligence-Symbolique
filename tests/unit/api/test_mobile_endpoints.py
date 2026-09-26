@@ -21,17 +21,35 @@ runs ``detect_fallacies`` with a stand-in for ``_invoke_hierarchical_fallacy``
 returning the shapes ``test_fallacy_detection_2526`` measured. A run that did
 not happen is a non-2xx answer carrying the ``api/errors`` envelope.
 
+#2688: ``/validate`` and ``/chat`` run real Semantic Kernel objects whose
+OpenAI client answers through an ``httpx.MockTransport``: the Toulmin analyzer
+itself, and an ``OpenAIChatCompletion`` for the chat. The former chat double
+had a ``generate`` method the real service does not have, so the path it
+certified never ran. The no-key 503 runs the real ``create_llm_service``.
+
 Note: These tests construct a standalone FastAPI app with just the mobile
 router (avoids torch DLL crash from api.main import chain on Windows).
 """
 
+import json
+
+import httpx
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from openai import AsyncOpenAI
+from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 
 from api.errors import install_error_handlers
-from api.mobile_endpoints import EXTRACTION_UNAVAILABLE, mobile_router
+from api.mobile_endpoints import (
+    CHAT_SYSTEM_PROMPT,
+    EXTRACTION_UNAVAILABLE,
+    mobile_router,
+)
+from argumentation_analysis.agents.tools.analysis.new import (
+    semantic_argument_analyzer,
+)
 from argumentation_analysis.core.capability_registry import CapabilityRegistry
 from argumentation_analysis.orchestration import invoke_callables, unified_pipeline
 
@@ -182,6 +200,16 @@ class TestMobileAnalyze:
 
         assert resp.status_code == 200, resp.text
         assert resp.json()["overall_quality"] is None
+
+    def test_nothing_decides_an_arguments_validity_or_structure(self, client, pipeline):
+        # #2688: the ``light`` workflow decides neither; ``None`` = undecided.
+        pipeline(_extraction([FIRST]), QUALITY)
+
+        data = client.post("/api/mobile/analyze", json={"text": TEXT}).json()
+
+        argument = data["arguments"][0]
+        assert argument["validity"] is None
+        assert argument["structure"] is None
 
     def test_an_extraction_that_found_no_argument_is_the_non_argumentative_stop(
         self, client, pipeline
@@ -372,6 +400,79 @@ class TestMobileFallacies:
 # ──── Validate Endpoint ────
 
 
+def _completion(content):
+    """An OpenAI chat completion body carrying ``content``."""
+    return {
+        "id": "chatcmpl-2688",
+        "object": "chat.completion",
+        "created": 0,
+        "model": "double-2688",
+        "choices": [
+            {
+                "index": 0,
+                "message": {"role": "assistant", "content": content},
+                "finish_reason": "stop",
+            }
+        ],
+        "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+    }
+
+
+def _answering(content=None, status=200, refuse=False, seen=None):
+    """A transport standing in for a model endpoint (``.invalid`` host)."""
+
+    def handle(request):
+        if seen is not None:
+            seen.append(json.loads(request.content))
+        if refuse:
+            raise httpx.ConnectError("connection refused", request=request)
+        if status != 200:
+            return httpx.Response(status, json={"error": {"message": "boom"}})
+        return httpx.Response(200, json=_completion(content))
+
+    return httpx.MockTransport(handle)
+
+
+def _client(transport, api_key="test-2688"):
+    return AsyncOpenAI(
+        api_key=api_key,
+        base_url="http://llm-double-2688.invalid/v1",
+        max_retries=0,
+        http_client=httpx.AsyncClient(transport=transport),
+    )
+
+
+@pytest.fixture
+def toulmin_model(monkeypatch):
+    """The real ``SemanticArgumentAnalyzer``, its model served by a transport."""
+
+    def install(**answer):
+        transport = _answering(**answer)
+        monkeypatch.setattr(
+            semantic_argument_analyzer,
+            "build_async_openai_client",
+            lambda base_url, api_key: _client(transport, api_key),
+        )
+
+    return install
+
+
+TOULMIN = {
+    "claim": {
+        "text": "The road is wet",
+        "confidence_score": 0.9,
+        "source_sentences": [2],
+    },
+    "data": [{"text": "It rains", "confidence_score": 0.8, "source_sentences": [1]}],
+    "warrant": {
+        "text": "Rain wets roads",
+        "confidence_score": 0.8,
+        "source_sentences": [0],
+    },
+}
+ARGUMENT = "If it rains then the road is wet. It rains. Therefore the road is wet."
+
+
 class TestMobileValidate:
     def test_validate_short_text_rejected(self, client):
         resp = client.post("/api/mobile/validate", json={"text": "hi"})
@@ -418,22 +519,67 @@ class TestMobileValidate:
             assert isinstance(p, str), f"premise should be str, got {type(p)}: {p}"
         assert form["premises"] == ["It rains", "Rain causes wetness"]
 
-    @patch(
-        "argumentation_analysis.agents.tools.analysis.new.semantic_argument_analyzer.SemanticArgumentAnalyzer.run",
-        side_effect=RuntimeError("Analyzer error"),
-    )
-    def test_validate_handles_failure(self, mock_run, client):
-        resp = client.post(
-            "/api/mobile/validate",
-            json={"text": "Test validation failure handling."},
-        )
-        assert resp.status_code == 200
+    def test_the_verdict_is_the_analyzers(self, client, toulmin_model):
+        toulmin_model(content=json.dumps(TOULMIN))
+
+        resp = client.post("/api/mobile/validate", json={"text": ARGUMENT})
+
+        assert resp.status_code == 200, resp.text
         data = resp.json()
-        # Specific: valid should be False on failure
-        assert data["valid"] is False
+        assert data["valid"] is True
+        assert data["formalization"]["conclusion"] == "The road is wet"
+        assert data["formalization"]["premises"] == ["It rains"]
+
+    def test_a_model_that_is_not_served_is_a_503(self, client, toulmin_model):
+        toulmin_model(refuse=True)
+
+        resp = client.post("/api/mobile/validate", json={"text": ARGUMENT})
+
+        assert resp.status_code == 503, resp.text
+        assert resp.json()["error_code"] == "service_unavailable"
+
+    def test_a_model_that_failed_is_a_502(self, client, toulmin_model):
+        toulmin_model(status=500)
+
+        resp = client.post("/api/mobile/validate", json={"text": ARGUMENT})
+
+        assert resp.status_code == 502, resp.text
+        assert resp.json()["error_code"] == "upstream_error"
+
+    def test_an_answer_that_is_not_an_analysis_is_a_502(self, client, toulmin_model):
+        toulmin_model(content="I cannot analyze this.")
+
+        resp = client.post("/api/mobile/validate", json={"text": ARGUMENT})
+
+        assert resp.status_code == 502, resp.text
+        assert "Toulmin analyzer" in resp.json()["detail"]
 
 
 # ──── Chat Endpoint ────
+
+
+@pytest.fixture
+def chat_model():
+    """An ``OpenAIChatCompletion`` whose endpoint is a transport."""
+    patches = []
+
+    def install(**answer):
+        seen = []
+        service = OpenAIChatCompletion(
+            ai_model_id="double-2688",
+            async_client=_client(_answering(seen=seen, **answer)),
+            service_id="mobile_chat",
+        )
+        factory = patch(
+            "argumentation_analysis.core.llm_service.create_llm_service",
+            return_value=service,
+        )
+        patches.append(factory)
+        return factory.start(), seen
+
+    yield install
+    for factory in patches:
+        factory.stop()
 
 
 class TestMobileChat:
@@ -445,39 +591,58 @@ class TestMobileChat:
         resp = client.post("/api/mobile/chat", json={})
         assert resp.status_code == 422
 
-    @patch("argumentation_analysis.core.llm_service.create_llm_service")
-    def test_chat_calls_create_llm_service_with_service_id(self, mock_create, client):
-        """create_llm_service must be called with service_id parameter (#846)."""
-        mock_llm = AsyncMock()
-        mock_llm.generate = AsyncMock(return_value="A fallacy is a flaw in reasoning.")
-        mock_create.return_value = mock_llm
+    def test_the_reply_is_the_chat_models(self, client, chat_model):
+        factory, seen = chat_model(content="A fallacy is a flaw in reasoning.")
 
         resp = client.post(
-            "/api/mobile/chat",
-            json={"message": "What is a logical fallacy?"},
+            "/api/mobile/chat", json={"message": "What is a logical fallacy?"}
         )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "message" in data
-        assert "timestamp" in data
-        # #846: verify create_llm_service was called with service_id
-        mock_create.assert_called_once_with(service_id="mobile_chat")
 
-    @patch("argumentation_analysis.core.llm_service.create_llm_service", return_value=None)
-    @patch("argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis")
-    def test_chat_fallback_when_llm_unavailable(self, mock_pipeline, mock_create, client):
-        """When LLM service is None, falls back to pipeline."""
-        mock_pipeline.return_value = {
-            "summary": "Analysis result from pipeline fallback",
-        }
-        resp = client.post(
-            "/api/mobile/chat",
-            json={"message": "Tell me about fallacies"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert "message" in data
-        assert len(data["message"]) > 0
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["message"] == "A fallacy is a flaw in reasoning."
+        assert "timestamp" in resp.json()
+        # #846: the service is created with its service_id.
+        factory.assert_called_once_with(service_id="mobile_chat")
+        [request] = seen
+        assert request["messages"] == [
+            {"role": "system", "content": CHAT_SYSTEM_PROMPT},
+            {"role": "user", "content": "What is a logical fallacy?"},
+        ]
+
+    def test_no_api_key_is_a_503(self, client, monkeypatch):
+        # The real ``create_llm_service``: it returns a mock under pytest, so
+        # the test marker is removed for this call, along with every key.
+        for name in (
+            "PYTEST_CURRENT_TEST",
+            "OPENAI_API_KEY",
+            "OPENROUTER_API_KEY",
+            "OPENROUTER_BASE_URL",
+        ):
+            monkeypatch.delenv(name, raising=False)
+
+        resp = client.post("/api/mobile/chat", json={"message": MESSAGE})
+
+        assert resp.status_code == 503, resp.text
+        assert resp.json()["error_code"] == "service_unavailable"
+
+    def test_a_failed_call_is_a_502(self, client, chat_model):
+        chat_model(status=500)
+
+        resp = client.post("/api/mobile/chat", json={"message": MESSAGE})
+
+        assert resp.status_code == 502, resp.text
+        assert resp.json()["error_code"] == "upstream_error"
+
+    def test_an_empty_reply_is_a_502(self, client, chat_model):
+        chat_model(content="")
+
+        resp = client.post("/api/mobile/chat", json={"message": MESSAGE})
+
+        assert resp.status_code == 502, resp.text
+        assert "empty reply" in resp.json()["detail"]
+
+
+MESSAGE = "Tell me about fallacies"
 
 
 # ──── Response Contract ────
