@@ -121,21 +121,45 @@ class TestRegistryPerformance:
 
 
 class TestQualityScoringPerformance:
-    """Benchmark argument quality evaluation."""
+    """Benchmark argument quality evaluation.
 
-    @pytest.fixture
+    #2680: the first evaluation in a process pays one-time costs (the spaCy
+    model load, textstat's first use per language), seconds on a cold disk
+    against ~10 ms for an evaluation. Whichever timed test ran first absorbed
+    them, so each one was red when run alone. The evaluation tests time a
+    warmed plugin; the load is timed by its own test.
+    """
+
+    @pytest.fixture(scope="class")
     def plugin(self):
         from argumentation_analysis.plugins.quality_scoring_plugin import (
             QualityScoringPlugin,
         )
 
-        return QualityScoringPlugin()
+        plugin = QualityScoringPlugin()
+        plugin.evaluate_argument_quality(SAMPLE_ARGUMENT_FR)  # one-time costs
+        return plugin
+
+    def test_model_load_time(self, monkeypatch):
+        """The dependency load (spaCy + French model), from a cold loader, under 15s."""
+        from argumentation_analysis.agents.core.quality import quality_evaluator as qe
+
+        # A loader already warmed by an earlier test would return at once:
+        # reset it, so this times a real load whatever ran before.
+        monkeypatch.setattr(qe, "_DEPS_ATTEMPTED", False)
+        monkeypatch.setattr(qe, "_DEPS_AVAILABLE", False)
+        monkeypatch.setattr(qe, "_LAST_LOAD_ERROR", None)
+        monkeypatch.setattr(qe, "_nlp", None)
+        _, elapsed = timed(qe._load_deps)
+        print(f"\n  model load: {elapsed * 1000:.1f}ms")
+        assert qe._nlp is not None, "the load returned without a French model"
+        assert elapsed < 15.0, f"Load took {elapsed:.1f}s (limit: 15s)"
 
     def test_evaluate_argument_quality_time(self, plugin):
-        """Single evaluation should complete in under 2s (includes spacy model load on first call)."""
+        """Single evaluation on a warmed plugin should complete in under 500ms."""
         _, elapsed = timed(plugin.evaluate_argument_quality, SAMPLE_ARGUMENT_FR)
         print(f"\n  evaluate_argument_quality: {elapsed * 1000:.1f}ms")
-        assert elapsed < 2.0, f"Evaluation took {elapsed * 1000:.1f}ms (limit: 2000ms)"
+        assert elapsed < 0.5, f"Evaluation took {elapsed * 1000:.1f}ms (limit: 500ms)"
 
     def test_get_quality_score_time(self, plugin):
         """Quality score computation should complete in under 200ms."""
