@@ -34,7 +34,6 @@ logger = logging.getLogger("ArgumentQualityEvaluator")
 # --- Graceful dependency loading ---
 
 _nlp = None
-_flesch_reading_ease = None
 _DEPS_AVAILABLE = False
 _DEPS_ATTEMPTED = False
 # #2320: the FIRST load failure raises with its cause; every later call hits a
@@ -121,7 +120,7 @@ def _load_deps_locked():
     so the problem is visible and the root cause (dll_guard not
     imported at entry point) must be fixed instead.
     """
-    global _nlp, _flesch_reading_ease, _DEPS_AVAILABLE, _DEPS_ATTEMPTED, _LAST_LOAD_ERROR
+    global _nlp, _DEPS_AVAILABLE, _DEPS_ATTEMPTED, _LAST_LOAD_ERROR
     if _DEPS_ATTEMPTED:
         if not _DEPS_AVAILABLE:
             raise RuntimeError(
@@ -136,17 +135,20 @@ def _load_deps_locked():
         # thinc's optional torch import is skipped instead of poisoning spaCy.
         _neutralize_faulty_torch()
         import spacy
-        from textstat import flesch_reading_ease
+        from textstat import flesch_reading_ease  # noqa: F401 — presence check
 
-        _flesch_reading_ease = flesch_reading_ease
         # textstat reaches NLTK's cmudict through a LazyCorpusLoader, which is
         # not thread-safe on first use: concurrent units raced it and recorded
         # 'clarte' UNAVAILABLE ("'CMUDictCorpusReader' object has no attribute
-        # '_LazyCorpusLoader__reader_cls'", #2353 render). One call here, under
-        # the lock, performs that first use before any unit can. A failure is
-        # left to the per-unit path, which records it with its cause, as before.
+        # '_LazyCorpusLoader__reader_cls'", #2353 render). One call per language,
+        # under the lock, performs that first use before any unit can. A failure
+        # is left to the per-unit path, which records it with its cause, as
+        # before. #2588: the warm covers the per-language instances the clarte
+        # detector now scores with.
         try:
-            flesch_reading_ease("Une phrase de mise en route. Puis une autre.")
+            from argumentation_analysis.agents.core import text_scoring
+
+            text_scoring.warm_up()
         except Exception as warm_exc:
             logger.warning(
                 "textstat first use failed (%s: %s) — the clarte detector will "
@@ -435,19 +437,35 @@ def infer_context_level(text: str) -> ContextLevel:
 # --- Individual virtue detectors ---
 
 
+# Flesch bands per language (#2588). Measured on the repo samples,
+# 2026-09-26: under fr rules the same text scores ~+20 vs en rules
+# (mid-range sentence 21.4→43.6, simple 98.3→112.0) — bands shift up;
+# under de rules ~-12 (67.3→55.3) with no band crossing on the graded
+# set — bands kept. Translation anchor: the en control (59.2, "medium")
+# and its French counterparts (43.6–69.1) land in the same band.
+_CLARTE_BANDS = {
+    "en": (60.0, 30.0),
+    "fr": (80.0, 40.0),
+    "de": (60.0, 30.0),
+}
+
+
 def detect_clarte(text: str) -> Tuple[float, str]:
-    """Evaluate clarity via Flesch readability."""
+    """Evaluate clarity via Flesch readability, in the text's language (#2588)."""
     _load_deps()
-    if _flesch_reading_ease is not None:
-        score = _flesch_reading_ease(text)
-        comment = f"Lisibilité (Flesch) : {score:.2f}. "
-        if score >= 60:
+    from argumentation_analysis.agents.core import text_scoring
+
+    score, lang = text_scoring.flesch_reading_ease_for(text)
+    if score is not None:
+        clear_threshold, medium_threshold = _CLARTE_BANDS[lang]
+        comment = f"Lisibilité (Flesch {lang}, langue détectée) : {score:.2f}. "
+        if score >= clear_threshold:
             return 1.0, comment + "Texte clair."
-        elif score >= 30:
+        elif score >= medium_threshold:
             return 0.5, comment + "Texte moyennement clair."
         else:
             return 0.2, comment + "Texte difficile à comprendre."
-    # Fallback: word length heuristic
+    # No Flesch constants for the detected language: named fallback heuristic.
     words = text.split()
     avg_len = sum(len(w) for w in words) / max(len(words), 1)
     if avg_len < 6:

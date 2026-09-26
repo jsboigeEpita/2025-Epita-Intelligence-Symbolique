@@ -460,8 +460,6 @@ class DebateAgent(BaseAgent):
             / len(arguments),
             "evidence_quality": sum(a.metrics.evidence_quality for a in arguments)
             / len(arguments),
-            "fact_check_score": sum(a.metrics.fact_check_score for a in arguments)
-            / len(arguments),
         }
         # #2344: novelty is None where there was no opponent to compare with.
         novelty = [
@@ -471,6 +469,14 @@ class DebateAgent(BaseAgent):
         ]
         if novelty:
             avg["novelty_score"] = sum(novelty) / len(novelty)
+        # #2588: fact-check is None where the language has no instrument.
+        fact_checks = [
+            a.metrics.fact_check_score
+            for a in arguments
+            if a.metrics.fact_check_score is not None
+        ]
+        if fact_checks:
+            avg["fact_check_score"] = sum(fact_checks) / len(fact_checks)
         return min(avg, key=avg.get)
 
     def _build_enhanced_context(self, debate_state: DebateState) -> Dict[str, Any]:

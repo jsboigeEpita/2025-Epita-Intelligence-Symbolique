@@ -33,14 +33,15 @@ def _make_arg(content, agent="Alice", position="for"):
 class TestAnalyzerInit:
     def test_indicators_loaded(self, analyzer):
         assert len(analyzer.logical_indicators) > 0
-        assert len(analyzer.evidence_indicators) > 0
-        assert len(analyzer.emotional_indicators) > 0
+        # #2588: word lists are per-language dicts.
+        assert all(len(words) > 0 for words in analyzer.evidence_indicators.values())
+        assert all(len(words) > 0 for words in analyzer.emotional_indicators.values())
 
     def test_logical_indicators_contain_therefore(self, analyzer):
         assert "therefore" in analyzer.logical_indicators
 
     def test_evidence_indicators_contain_studies(self, analyzer):
-        assert "studies show" in analyzer.evidence_indicators
+        assert "studies show" in analyzer.evidence_indicators["en"]
 
 
 # ── Logical Coherence ──
@@ -93,7 +94,7 @@ class TestEvidenceQuality:
         assert score > 0.3
 
     def test_with_academic_refs(self, analyzer):
-        text = "A study published by the university confirms this."
+        text = "A study published by the university confirms this for the public, and it is reliable."
         score = analyzer._assess_evidence_quality(text)
         assert score >= 0.4
 
@@ -167,7 +168,7 @@ class TestEmotionalAppeal:
 
 class TestReadability:
     def test_short_sentences(self, analyzer):
-        text = "Short sentence. Another one. Easy to read."
+        text = "The cat sat on the mat. It is warm and soft. We like this place."
         score = analyzer._assess_readability(text)
         assert score > 0.3
 
@@ -177,7 +178,7 @@ class TestReadability:
         assert score < 0.8
 
     def test_within_range(self, analyzer):
-        text = "Normal text. With moderate length sentences. Not too complex."
+        text = "Normal text with moderate length sentences, not too complex for the readers of this site."
         score = analyzer._assess_readability(text)
         assert 0 <= score <= 1.0
 
@@ -187,17 +188,17 @@ class TestReadability:
 
 class TestFactCheck:
     def test_hedging_language(self, analyzer):
-        text = "This might possibly be true. It could likely happen."
+        text = "This might possibly be true for the team, and it could likely happen in that city."
         score = analyzer._basic_fact_check(text)
         assert score == 0.7
 
     def test_absolute_language(self, analyzer):
-        text = "This is always true. All people definitely agree. Never wrong."
+        text = "This is always true for the people, and all of them definitely agree that it is never wrong."
         score = analyzer._basic_fact_check(text)
         assert score == 0.4
 
     def test_balanced(self, analyzer):
-        text = "Normal statement without hedging or absolutism."
+        text = "The team presented a normal statement for the record, and it is without hedging or absolutism."
         score = analyzer._basic_fact_check(text)
         assert score == 0.6
 
@@ -241,7 +242,9 @@ class TestAnalyzeArgument:
         assert isinstance(metrics, ArgumentMetrics)
 
     def test_all_scores_in_range(self, analyzer):
-        arg = _make_arg("A comprehensive argument with many facets.")
+        arg = _make_arg(
+            "A comprehensive argument with many facets for the debate, and it is presented well."
+        )
         metrics = analyzer.analyze_argument(arg, [])
         assert 0 <= metrics.logical_coherence <= 1.0
         assert 0 <= metrics.evidence_quality <= 1.0
@@ -255,7 +258,7 @@ class TestAnalyzeArgument:
 
     def test_persuasiveness_is_weighted_combo(self, analyzer):
         arg = _make_arg(
-            "Because studies show evidence, therefore the conclusion follows."
+            "Because the studies show evidence for this, the conclusion therefore follows that it is sound."
         )
         metrics = analyzer.analyze_argument(arg, [])
         # #2344: relevance and novelty are not computed without context, so

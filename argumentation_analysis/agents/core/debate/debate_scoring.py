@@ -6,8 +6,14 @@ Extracted from enhanced_argumentation_main.py ArgumentAnalyzer class.
 
 import logging
 import re
-from typing import List, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set
 
+from ..text_scoring import (
+    SUPPORTED_LANGUAGES,
+    detect_language,
+    flesch_reading_ease_for,
+    warm_up,
+)
 from .debate_definitions import ArgumentMetrics, EnhancedArgument
 
 logger = logging.getLogger(__name__)
@@ -46,6 +52,28 @@ def _overlap(words: Set[str], other: Set[str]) -> float:
     return len(words & other) / max(len(words), len(other))
 
 
+_PATTERN_CACHE: Dict[str, re.Pattern[str]] = {}
+
+
+def _indicator_pattern(indicator: str) -> re.Pattern[str]:
+    pattern = _PATTERN_CACHE.get(indicator)
+    if pattern is None:
+        pattern = re.compile(rf"\b{re.escape(indicator)}\b", re.IGNORECASE)
+        _PATTERN_CACHE[indicator] = pattern
+    return pattern
+
+
+def _count_indicators(content: str, indicators: Iterable[str]) -> int:
+    """Count indicators present at word boundaries (#2588).
+
+    Substring matching counted "none" inside "nonetheless", and would
+    count "tous" inside "toujours" once French absolutes were listed.
+    """
+    return sum(
+        1 for indicator in indicators if _indicator_pattern(indicator).search(content)
+    )
+
+
 class ArgumentAnalyzer:
     """Multi-dimensional argument quality analyzer.
 
@@ -79,30 +107,207 @@ class ArgumentAnalyzer:
             "cependant",
             "néanmoins",
         ]
-        self.evidence_indicators = [
-            "studies show",
-            "research indicates",
-            "data suggests",
-            "according to",
-            "evidence",
-            "statistics",
-            "findings",
-            "survey",
-            "analysis",
-            "report",
-        ]
-        self.emotional_indicators = [
-            "feel",
-            "believe",
-            "think",
-            "important",
-            "crucial",
-            "vital",
-            "devastating",
-            "wonderful",
-            "terrible",
-            "amazing",
-        ]
+        # #2588: word lists are language-bound. Unaccented variants are
+        # listed alongside accented ones — corpus texts are often typed
+        # without diacritics.
+        self.hedging_indicators = {
+            "en": (
+                "might",
+                "could",
+                "possibly",
+                "perhaps",
+                "likely",
+                "probably",
+            ),
+            "fr": (
+                "peut-être",
+                "peut etre",
+                "pourrait",
+                "pourraient",
+                "probablement",
+                "possiblement",
+                "sans doute",
+                "éventuellement",
+                "eventuellement",
+                "il est possible",
+                "il se peut",
+            ),
+            "de": (
+                "vielleicht",
+                "könnte",
+                "koennte",
+                "könnten",
+                "koennten",
+                "möglicherweise",
+                "moeglicherweise",
+                "wahrscheinlich",
+                "eventuell",
+                "scheint",
+            ),
+        }
+        self.absolute_indicators = {
+            "en": (
+                "always",
+                "never",
+                "all",
+                "none",
+                "definitely",
+                "certainly",
+            ),
+            "fr": (
+                "toujours",
+                "jamais",
+                "tous",
+                "toutes",
+                "aucun",
+                "aucune",
+                "absolument",
+                "certainement",
+                "nécessairement",
+                "necessairement",
+                "indéniablement",
+                "indeniablement",
+                "totalement",
+            ),
+            "de": (
+                "immer",
+                "nie",
+                "niemals",
+                "alle",
+                "kein",
+                "keine",
+                "bestimmt",
+                "sicherlich",
+                "absolut",
+                "gewiss",
+                "unbestreitbar",
+            ),
+        }
+        self.evidence_indicators = {
+            "en": (
+                "studies show",
+                "research indicates",
+                "data suggests",
+                "according to",
+                "evidence",
+                "statistics",
+                "findings",
+                "survey",
+                "analysis",
+                "report",
+            ),
+            "fr": (
+                "études montrent",
+                "etudes montrent",
+                "recherche indique",
+                "données suggèrent",
+                "donnees suggerent",
+                "données montrent",
+                "donnees montrent",
+                "données",
+                "donnees",
+                "selon",
+                "preuves",
+                "statistiques",
+                "constats",
+                "enquête",
+                "enquete",
+                "sondage",
+                "analyse",
+                "rapport",
+                "résultats",
+                "resultats",
+            ),
+            "de": (
+                "studien zeigen",
+                "untersuchungen zeigen",
+                "daten legen nahe",
+                "daten zeigen",
+                "laut",
+                "belege",
+                "belegt",
+                "beweise",
+                "statistiken",
+                "ergebnisse",
+                "umfrage",
+                "analyse",
+                "bericht",
+            ),
+        }
+        self.study_words = {
+            "en": ("study", "university", "journal", "published"),
+            "fr": (
+                "étude",
+                "etude",
+                "université",
+                "universite",
+                "revue",
+                "publié",
+                "publie",
+            ),
+            "de": (
+                "studie",
+                "universität",
+                "universitaet",
+                "zeitschrift",
+                "veröffentlicht",
+                "veroeffentlicht",
+            ),
+        }
+        self.emotional_indicators = {
+            "en": (
+                "feel",
+                "feels",
+                "feeling",
+                "believe",
+                "believes",
+                "think",
+                "thinks",
+                "important",
+                "crucial",
+                "vital",
+                "devastating",
+                "wonderful",
+                "terrible",
+                "amazing",
+            ),
+            "fr": (
+                "ressens",
+                "ressentir",
+                "croire",
+                "crois",
+                "pense que",
+                "penser que",
+                "important",
+                "crucial",
+                "vital",
+                "dévastateur",
+                "devastateur",
+                "merveilleux",
+                "terrible",
+                "extraordinaire",
+                "catastrophe",
+                "gravissime",
+                "peur",
+                "espoir",
+            ),
+            "de": (
+                "fühle",
+                "fuehle",
+                "fühlen",
+                "glaube",
+                "denke",
+                "wichtig",
+                "entscheidend",
+                "verheerend",
+                "wunderbar",
+                "schrecklich",
+                "katastrophe",
+            ),
+        }
+        # #2588: textstat's first-use cost (CMUdict/pyphen load) is paid
+        # here, once per process, so no timed measurement absorbs it later.
+        warm_up()
 
     def analyze_argument(
         self, argument: EnhancedArgument, context: List[EnhancedArgument]
@@ -135,29 +340,33 @@ class ArgumentAnalyzer:
         if any(
             word in content.lower()
             for word in [
-                "premise", "conclusion", "assumption",
-                "prémisse", "conclusion", "hypothèse",  # FR structural (#967)
+                "premise",
+                "conclusion",
+                "assumption",
+                "prémisse",
+                "conclusion",
+                "hypothèse",  # FR structural (#967)
             ]
         ):
             score += 0.1
         return min(score, 1.0)
 
     def _assess_evidence_quality(self, content: str) -> float:
-        """Assess presence of evidence (citations, numbers, references)."""
+        """Assess presence of evidence (citations, numbers, references).
+
+        #2588: indicators and study words match in the text's language;
+        numbers are language-independent and always count.
+        """
+        lang = detect_language(content)
         score = 0.3
-        evidence_count = sum(
-            1
-            for indicator in self.evidence_indicators
-            if indicator.lower() in content.lower()
+        evidence_count = _count_indicators(
+            content, self.evidence_indicators.get(lang, ())
         )
         score += min(evidence_count * 0.15, 0.4)
         numbers = re.findall(r"\d+(?:\.\d+)?%?", content)
         if numbers:
             score += min(len(numbers) * 0.05, 0.2)
-        if any(
-            word in content.lower()
-            for word in ["study", "university", "journal", "published"]
-        ):
+        if _count_indicators(content, self.study_words.get(lang, ())):
             score += 0.1
         return min(score, 1.0)
 
@@ -179,11 +388,14 @@ class ArgumentAnalyzer:
         return max(scores) if scores else None
 
     def _assess_emotional_appeal(self, content: str) -> float:
-        """Detect emotional language and rhetorical devices."""
-        emotional_count = sum(
-            1
-            for indicator in self.emotional_indicators
-            if indicator.lower() in content.lower()
+        """Detect emotional language and rhetorical devices.
+
+        #2588: indicators match in the text's language; exclamation marks
+        and all-caps words are language-independent and always count.
+        """
+        lang = detect_language(content)
+        emotional_count = _count_indicators(
+            content, self.emotional_indicators.get(lang, ())
         )
         exclamations = content.count("!")
         caps_words = sum(
@@ -193,26 +405,31 @@ class ArgumentAnalyzer:
             (emotional_count * 0.1) + (exclamations * 0.05) + (caps_words * 0.05), 1.0
         )
 
-    def _assess_readability(self, content: str) -> float:
-        """Assess readability using textstat or fallback heuristic."""
-        try:
-            from textstat import flesch_reading_ease
+    def _assess_readability(self, content: str) -> Optional[float]:
+        """Assess readability via Flesch, with the text language's formula.
 
-            flesch_score = flesch_reading_ease(content)
-            return max(0, min(1, flesch_score / 100))
-        except (ImportError, Exception):
-            sentences = content.split(".")
-            if not sentences:
-                return 0.5
-            avg_length = sum(len(s.split()) for s in sentences) / len(sentences)
-            return max(0, min(1, 1 - (avg_length - 15) / 20))
+        #2588: ``None`` when the language has no Flesch support here — an
+        English-scale number on a non-English text is not a measurement
+        (a mid-range French sentence scored like a difficult one). textstat
+        is a required dependency: an import failure propagates.
+        """
+        score, _lang = flesch_reading_ease_for(content)
+        if score is None:
+            return None
+        return max(0.0, min(1.0, score / 100.0))
 
-    def _basic_fact_check(self, content: str) -> float:
-        """Heuristic fact-check: hedging vs absolute language."""
-        hedging = ["might", "could", "possibly", "perhaps", "likely", "probably"]
-        absolute = ["always", "never", "all", "none", "definitely", "certainly"]
-        hedging_count = sum(1 for w in hedging if w in content.lower())
-        absolute_count = sum(1 for w in absolute if w in content.lower())
+    def _basic_fact_check(self, content: str) -> Optional[float]:
+        """Heuristic fact-check: hedging vs absolute language.
+
+        #2588: the word lists are language-bound; ``None`` when the
+        language is not supported — the English lists on a French text
+        returned the neutral 0.6 constant on every input.
+        """
+        lang = detect_language(content)
+        if lang not in SUPPORTED_LANGUAGES:
+            return None
+        hedging_count = _count_indicators(content, self.hedging_indicators[lang])
+        absolute_count = _count_indicators(content, self.absolute_indicators[lang])
         if hedging_count > absolute_count:
             return 0.7
         elif absolute_count > hedging_count:
