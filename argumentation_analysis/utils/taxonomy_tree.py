@@ -11,7 +11,10 @@ with ``depth == parent_depth + 1`` lost the one row whose ``depth`` cell
 disagrees with its path.
 """
 
-from typing import Iterable, Optional, Tuple
+from typing import TYPE_CHECKING, Iterable, Optional, Tuple
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 
 def taxonomy_root_path(rows: Iterable[Tuple[object, object]]) -> Optional[str]:
@@ -42,7 +45,7 @@ def taxonomy_parent_path(path: object, root_path: Optional[str]) -> Optional[str
     return root_path
 
 
-def taxonomy_parent_paths(df):
+def taxonomy_parent_paths(df: "pd.DataFrame") -> "pd.Series":
     """Each row's parent path in a taxonomy DataFrame (``path``/``depth``)."""
     root = (
         taxonomy_root_path(zip(df["path"], df["depth"]))

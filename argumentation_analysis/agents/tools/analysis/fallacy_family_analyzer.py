@@ -217,7 +217,7 @@ class FallacyFamilyAnalyzer:
 
             # 5. Analyse stratégique globale
             overall_assessment = self._compute_overall_assessment(
-                family_results, fact_check_results
+                family_results, fact_check_results, classified_fallacies
             )
             strategic_insights = self._extract_strategic_insights(
                 family_results, classified_fallacies
@@ -575,14 +575,33 @@ class FallacyFamilyAnalyzer:
         self,
         family_results: Dict[FallacyFamily, FamilyAnalysisResult],
         fact_check_results: List[Dict[str, Any]],
+        classified_fallacies: List[Dict[str, Any]],
     ) -> Dict[str, Any]:
-        """Calcule l'évaluation globale de l'analyse."""
+        """Calcule l'évaluation globale de l'analyse.
+
+        #2602 : les détections dont le nœud n'a pas de famille sont portées
+        dans ``unclassified_detections`` (nombre + clés) au lieu de
+        disparaître de l'évaluation — elles n'entrent dans aucune famille.
+        """
+        known_families = {family.value for family in FallacyFamily}
+        unclassified = [
+            fallacy
+            for fallacy in classified_fallacies
+            if not fallacy.get("family") or fallacy.get("family") not in known_families
+        ]
 
         assessment = {
             "total_families_detected": len(family_results),
             "total_fallacies": sum(
                 len(result.fallacies_detected) for result in family_results.values()
             ),
+            "unclassified_detections": {
+                "count": len(unclassified),
+                "names": [str(fallacy.get("name", "")) for fallacy in unclassified],
+                "taxonomy_keys": [
+                    fallacy.get("taxonomy_key") for fallacy in unclassified
+                ],
+            },
             "average_family_score": 0.0,
             "dominant_families": [],
             "overall_severity": "Négligeable",

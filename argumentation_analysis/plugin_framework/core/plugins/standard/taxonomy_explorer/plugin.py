@@ -8,12 +8,35 @@ y compris la gestion des familles de sophismes et la recherche d'informations d�
 
 import logging
 import os
-from typing import Dict, List, Any, Optional
+import re
+from typing import Dict, List, Set, Any, Optional
 
 import yaml
 from pydantic import BaseModel
 
 from argumentation_analysis.plugin_framework.core.plugins.interfaces import BasePlugin
+from argumentation_analysis.utils.taxonomy_tree import taxonomy_parent_paths
+
+# Lettres minuscules (accentuées comprises) pour la frontière de mot des
+# patterns (#2602) — le texte est lower() avant le test.
+_WORD_LETTERS = "a-zà-öø-ÿœæ"
+
+
+def _contains_at_word_boundary(pattern_lower: str, text_lower: str) -> bool:
+    """True si ``pattern_lower`` apparaît en mot entier dans ``text_lower``.
+
+    #2602 : la frontière est une non-lettre (ou un bord) de chaque côté —
+    « oral » ne matche plus à l'intérieur de « morale ». Un pattern qui n'est
+    pas sous-chaîne ne peut pas être mot entier : le test rapide ``in`` filtre
+    avant que la regex ne courre.
+    """
+    if not pattern_lower or not text_lower or pattern_lower not in text_lower:
+        return False
+    regex = re.compile(
+        rf"(?<![{_WORD_LETTERS}]){re.escape(pattern_lower)}(?![{_WORD_LETTERS}])"
+    )
+    return regex.search(text_lower) is not None
+
 
 # L'ancien détecteur est une dépendance clé. Son chemin doit être stable.
 from argumentation_analysis.agents.core.informal.taxonomy_sophism_detector import (
@@ -99,12 +122,26 @@ class TaxonomyExplorerPlugin(BasePlugin):
         self.logger.info(f"{len(self.families)} familles de sophismes chargées.")
 
     def _initialize_family_mappings(self):
-        """Construit un cache qui mappe chaque sophisme de la taxonomie principale à une famille."""
+        """Construit le cache familles : patterns à frontière de mot, puis héritage.
+
+        #2602 : les patterns ne matchent plus à l'intérieur d'un autre mot
+        (« oral » dans « morale »). L'héritage ne propage ensuite qu'un
+        mapping dont la preuve est au niveau du **nom** (``Name`` /
+        ``nom_vulgarisé``) : 51 des 52 mappings pattern ne tiennent que par un
+        mot de description au seuil exact (poids 0.3) — en propager un à des
+        centaines de descendants (le nœud 356 et ses 232 descendants
+        `audio_oral_context` par le seul mot « manipulation ») remplace une
+        absence honnête par un mauvais label. Ces nœuds restent portés comme
+        non classifiés (#2602 item 3).
+        """
         df = self.detector._get_taxonomy_df()
 
+        pattern_mapped = 0
+        name_evidence: Set[int] = set()
         for pk, row in df.iterrows():
             best_family_id = None
             best_score = 0.0
+            best_has_name_hit = False
 
             name = str(row.get("Name", "")).lower()
             nom_vulgarise = str(row.get("nom_vulgarisé", "")).lower()
@@ -112,25 +149,72 @@ class TaxonomyExplorerPlugin(BasePlugin):
 
             for family_id, family_info in self.families.items():
                 score = 0
+                has_name_hit = False
                 for pattern in family_info.patterns:
                     pattern_lower = pattern.lower()
-                    if pattern_lower in name:
+                    if _contains_at_word_boundary(pattern_lower, name):
                         score += 0.8
-                    if pattern_lower in nom_vulgarise:
+                        has_name_hit = True
+                    if _contains_at_word_boundary(pattern_lower, nom_vulgarise):
                         score += 0.9
-                    if pattern_lower in description:
+                        has_name_hit = True
+                    if _contains_at_word_boundary(pattern_lower, description):
                         score += 0.3
 
                 if score > best_score:
                     best_score = score
                     best_family_id = family_id
+                    best_has_name_hit = has_name_hit
 
             if best_score >= 0.3:
                 self._family_mapping_cache[int(pk)] = best_family_id
+                pattern_mapped += 1
+                if best_has_name_hit:
+                    name_evidence.add(int(pk))
 
+        inherited = self._inherit_from_name_evidence_ancestors(df, name_evidence)
         self.logger.info(
-            f"Mappings famille initialisés : {len(self._family_mapping_cache)} sophismes classifiés."
+            f"Mappings famille initialisés : {pattern_mapped} par pattern + "
+            f"{inherited} hérités d'un ancêtre à preuve nom = "
+            f"{len(self._family_mapping_cache)} sophismes classifiés."
         )
+
+    def _inherit_from_name_evidence_ancestors(
+        self, df: Any, name_evidence: Set[int]
+    ) -> int:
+        """Hérite seulement d'un ancêtre dont la famille vient d'une preuve nom.
+
+        La remonte traverse les ancêtres mappés sans preuve nom (leur mapping
+        n'est pas une source d'héritage) jusqu'au premier ancêtre de
+        ``name_evidence``. Un nœud sans ancêtre à preuve nom reste hors du
+        cache : pas de famille inventée.
+        """
+        parent_paths = taxonomy_parent_paths(df)
+        path_to_pk = {str(path): int(pk) for pk, path in df["path"].items()}
+
+        def parent_of(pk: int) -> Optional[int]:
+            parent_path = parent_paths.loc[pk]
+            if parent_path is None or parent_path != parent_path:  # None or NaN
+                return None
+            return path_to_pk.get(str(parent_path))
+
+        added = 0
+        for pk in df.index:
+            pk = int(pk)
+            if pk in self._family_mapping_cache:
+                continue
+            seen = {pk}
+            ancestor = parent_of(pk)
+            while ancestor is not None and ancestor not in seen:
+                if ancestor in name_evidence:
+                    self._family_mapping_cache[pk] = self._family_mapping_cache[
+                        ancestor
+                    ]
+                    added += 1
+                    break
+                seen.add(ancestor)
+                ancestor = parent_of(ancestor)
+        return added
 
     # --- Implémentation des Capacités ---
 
@@ -241,7 +325,11 @@ class TaxonomyExplorerPlugin(BasePlugin):
     async def get_family_statistics(
         self, classified_fallacies: List[Dict]
     ) -> Dict[str, Any]:
-        """Génère des statistiques par famille à partir d'une liste de sophismes classifiés."""
+        """Génère des statistiques par famille à partir d'une liste de sophismes classifiés.
+
+        #2602 : une détection sans famille est comptée dans l'entrée
+        ``unclassified`` (nombre + clés), pas silencieusement droppée.
+        """
         family_stats = {}
         total_fallacies = len(classified_fallacies)
         if total_fallacies == 0:
@@ -249,12 +337,19 @@ class TaxonomyExplorerPlugin(BasePlugin):
 
         family_counts = {fam.family: 0 for fam in self.families.values()}
         family_confidences = {fam.family: [] for fam in self.families.values()}
+        unclassified_names: List[str] = []
+        unclassified_keys: List[Any] = []
+        unclassified_confidences: List[float] = []
 
         for fallacy in classified_fallacies:
             family_id = fallacy.get("family")
             if family_id in family_counts:
                 family_counts[family_id] += 1
                 family_confidences[family_id].append(fallacy["confidence"])
+            else:
+                unclassified_names.append(str(fallacy.get("name", "")))
+                unclassified_keys.append(fallacy.get("taxonomy_key"))
+                unclassified_confidences.append(float(fallacy.get("confidence", 0.0)))
 
         for family_id, family_info in self.families.items():
             count = family_counts[family_id]
@@ -268,6 +363,21 @@ class TaxonomyExplorerPlugin(BasePlugin):
                 "average_confidence": round(avg_confidence, 3),
                 "severity_weight": family_info.severity_weight,
                 "present": count > 0,
+            }
+
+        n_unclassified = len(unclassified_names)
+        if n_unclassified:
+            family_stats["unclassified"] = {
+                "name_fr": "Non classifiée (nœud sans famille)",
+                "count": n_unclassified,
+                "percentage": round((n_unclassified / total_fallacies) * 100, 2),
+                "average_confidence": round(
+                    sum(unclassified_confidences) / n_unclassified, 3
+                ),
+                "severity_weight": 0.0,
+                "present": True,
+                "names": unclassified_names,
+                "taxonomy_keys": unclassified_keys,
             }
         return family_stats
 
