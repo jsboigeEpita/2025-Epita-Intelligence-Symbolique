@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 from typing import Dict, Optional, Union
 
-from dotenv import dotenv_values, load_dotenv
+from dotenv import dotenv_values
 
 logger = logging.getLogger(__name__)
 
@@ -90,8 +90,10 @@ class EnvironmentManager:
        key that differs from the root .env's is reported with a WARNING.
     2. Secondary .env files (argumentation_analysis/.env, config/.env) are NOT loaded;
        they are only parsed to detect divergence and emit a WARNING.
-    3. Fallback: find_dotenv() legacy behaviour when no root .env is found; it
-       only fills the variables that are not set.
+    3. No root .env: nothing is loaded (#2707). The old find_dotenv() fallback
+       walked up from this module, past the checkout, and loaded the first .env
+       it met, above the checkout too (a worktree under D: loaded another
+       project's .env). A checkout without its .env is a keyless run.
     """
 
     def __init__(self) -> None:
@@ -99,7 +101,9 @@ class EnvironmentManager:
         self.dotenv_loaded: bool = False
 
         repo_root = _find_repo_root()
-        root_env: Optional[Path] = (repo_root / ".env") if repo_root is not None else None
+        root_env: Optional[Path] = (
+            (repo_root / ".env") if repo_root is not None else None
+        )
 
         if root_env is not None and root_env.exists():
             self.dotenv_path = str(root_env)
@@ -107,14 +111,6 @@ class EnvironmentManager:
             self.dotenv_loaded = load_env_file(root_env)
             if repo_root is not None:
                 self._check_secondary_divergence(repo_root)
-        else:
-            # No root .env found — fall back to legacy find_dotenv behaviour.
-            from dotenv import find_dotenv  # local import to avoid unconditional dep
-
-            self.dotenv_path = find_dotenv()
-            self.dotenv_loaded = load_dotenv(
-                dotenv_path=self.dotenv_path or None, override=False
-            )
 
     def _check_caller_divergence(self, root_env: Path) -> None:
         """Warn when a key the caller set shadows a different root .env key.
@@ -143,9 +139,7 @@ class EnvironmentManager:
 
     def _check_secondary_divergence(self, repo_root: Path) -> None:
         """Parse secondary .env files and warn on OPENAI_API_KEY divergence."""
-        canonical: dict[str, str] = {
-            var: os.getenv(var, "") for var in _SENSITIVE_VARS
-        }
+        canonical: dict[str, str] = {var: os.getenv(var, "") for var in _SENSITIVE_VARS}
         for rel in _SECONDARY_ENV_RELPATHS:
             secondary = repo_root / rel
             if not secondary.exists():
@@ -155,7 +149,11 @@ class EnvironmentManager:
                 with open(secondary, encoding="utf-8", errors="replace") as fh:
                     for line in fh:
                         stripped = line.strip()
-                        if not stripped or stripped.startswith("#") or "=" not in stripped:
+                        if (
+                            not stripped
+                            or stripped.startswith("#")
+                            or "=" not in stripped
+                        ):
                             continue
                         k, _, v = stripped.partition("=")
                         k = k.strip()
