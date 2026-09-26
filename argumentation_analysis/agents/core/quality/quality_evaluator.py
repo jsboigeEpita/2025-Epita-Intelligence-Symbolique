@@ -444,9 +444,13 @@ _CLARTE_BANDS = {
 def detect_clarte(text: str, lang: Optional[str] = None) -> Tuple[float, str]:
     """Evaluate clarity via Flesch readability, in the text's language (#2588).
 
-    #2588 review: ``lang`` is the language decided where there is enough
-    text to decide one — the document the caller holds; ``None`` detects
-    on the text itself.
+    ``lang`` is a decision taken on a LONGER text than ``text`` — the document
+    the caller holds (a pipeline phase's ``input_text``, a debate topic). That
+    is the only case where the comment's "langue du document" is true. Passing
+    a language detected on ``text`` itself is not merely redundant (``None``
+    runs the same detection): the comment would name a document that decided
+    nothing. Callers holding no longer text leave it ``None``, and the comment
+    then names the detected language (#2588 review-2).
     """
     _load_deps()
     from argumentation_analysis.agents.core import text_scoring

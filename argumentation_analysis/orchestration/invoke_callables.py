@@ -535,6 +535,21 @@ async def _invoke_quality_evaluator(
     agentic_llm, agentic_route, agentic_model = _make_agentic_llm_callable()
     evaluator = ArgumentQualityEvaluator(agentic_llm=agentic_llm)
 
+    # #2588 review-2: the language of the phase is decided HERE, on the
+    # document the phase holds. The units scored below are extracted claims,
+    # often too short for the detector (~10 % of the real corpus): without
+    # this, a short argument's clarity fell back to the word-length heuristic
+    # while an English document was in hand. The units inherit the document's
+    # Flesch scale; an undecidable document passes nothing, and each unit then
+    # decides on itself — the union/heuristic paths, never a guessed language.
+    from argumentation_analysis.agents.core.text_scoring import (
+        SUPPORTED_LANGUAGES,
+        detect_language,
+    )
+
+    _document_lang = detect_language(input_text)
+    lang = _document_lang if _document_lang in SUPPORTED_LANGUAGES else None
+
     # Get individual arguments from upstream
     extract_output = context.get("phase_extract_output", {})
     raw_args = (
@@ -614,11 +629,17 @@ async def _invoke_quality_evaluator(
         DÉCLARÉ (#2403) : ``None`` laisse l'évaluateur l'inférer de la
         longueur — le même argument est passé au re-jeu dégradé, sinon la
         reprise lexical jugerait un autre objet que l'appel initial.
+        ``lang`` est la langue DÉCIDÉE SUR LE DOCUMENT (#2588 review-2),
+        portée par les DEUX appels : une reprise qui changerait d'échelle de
+        lisibilité jugerait un autre objet que l'appel initial.
         """
         try:
             return (
                 await asyncio.to_thread(
-                    evaluator.evaluate, text, context_level=context_level
+                    evaluator.evaluate,
+                    text,
+                    lang=lang,
+                    context_level=context_level,
                 ),
                 None,
             )
@@ -635,6 +656,7 @@ async def _invoke_quality_evaluator(
                     evaluator.evaluate,
                     text,
                     agentic_llm=None,
+                    lang=lang,
                     context_level=context_level,
                 )
                 return result, reason

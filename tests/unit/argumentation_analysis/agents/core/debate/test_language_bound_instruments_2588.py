@@ -10,6 +10,8 @@ This file imports only surfaces that exist before #2588 so it can run
 against ``main`` and show the defect.
 """
 
+import json
+
 import pytest
 
 from argumentation_analysis.agents.core.debate.debate_definitions import (
@@ -188,3 +190,24 @@ class TestPersuasivenessRenormalisation:
         assert metrics.fact_check_score == 0.6
         assert metrics.persuasiveness is not None
         assert 0.0 <= metrics.persuasiveness <= 1.0
+
+
+class TestPluginDoesNotRedecideTheLanguage:
+    """#2588 review-2 — la surface plugin ne re-détecte pas la langue.
+
+    Elle détectait sur le texte qu'elle évalue ensuite : la même décision que
+    la détection interne de l'analyseur, donc aucune mesure ne changeait.
+    Ce témoin verrouille la SUPPRESSION (contre-pendule d'un retrait) : le
+    verdict de fact-check de la surface plugin reste celui de la langue
+    détectée, et la lisibilité reste mesurée.
+    """
+
+    def test_plugin_surface_still_measures_the_detected_language(self):
+        from argumentation_analysis.agents.core.debate.debate_agent import (
+            DebatePlugin,
+        )
+
+        payload = json.loads(DebatePlugin().analyze_argument_quality(FR_HEDGED))
+        assert payload["fact_check_score"] == 0.7
+        assert payload["readability_score"] is not None
+

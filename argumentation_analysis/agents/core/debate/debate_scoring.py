@@ -472,6 +472,11 @@ class ArgumentAnalyzer:
         no decidable language and no ``lang``, the union of the three
         languages' lists runs instead of guessing one (review): the lists
         are disjoint, so the counts stay meaningful.
+
+        A language outside en/fr/de is NOT covered by that union: it finds no
+        marker there either, so the 0.6 returned for such a text means "not
+        covered", not "balanced" — both counts are zero by absence of
+        instrument (#2588 review-2, non-blocking note).
         """
         lang = lang or detect_language(content)
         hedging_words = self.hedging_indicators.get(lang, self._hedging_union)
