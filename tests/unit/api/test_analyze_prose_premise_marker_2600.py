@@ -106,3 +106,28 @@ class TestPremiseMarkerOpeningAnotherSentence:
         assert structure["premises"] == ["il pleut"], structure
         assert structure["conclusion"] == "Il faut partir", structure
         assert structure["conclusion"] not in structure["premises"], structure
+
+
+class TestPremiseMarkerStandingAlone:
+    """#2678 — « Car il pleut. » : la route rendait 200 avec un argument
+    circulaire ; elle refuse désormais, et son message est vrai du texte
+    (un marqueur y apparaît : le message « aucun marqueur » serait faux)."""
+
+    def test_route_refuses_a_lone_premise_marker_and_names_why(self, client):
+        response = client.post("/api/analyze", json={"text": "Car il pleut."})
+
+        assert response.status_code == 422, response.text
+        body = response.json()
+        assert body["error_code"] == "unanalyzable_input", body
+        assert body["context"]["reason"] == "premise_marker_alone", body
+        assert "n'apparaît dans le texte" not in body["detail"], body
+
+    def test_route_keeps_the_no_marker_message_for_the_no_marker_case(self, client):
+        response = client.post(
+            "/api/analyze", json={"text": "Il fait beau aujourd'hui."}
+        )
+
+        assert response.status_code == 422, response.text
+        body = response.json()
+        assert body["context"]["reason"] == "no_marker", body
+        assert "n'apparaît dans le texte" in body["detail"], body
