@@ -199,6 +199,97 @@ class TestPremiseMarkerOpeningTheSentence:
 
 
 # ============================================================
+# ArgumentParser — a premise marker opening ANOTHER sentence (#2671)
+# ============================================================
+
+
+class TestPremiseMarkerOpeningAnotherSentence:
+    """#2671 — « Il faut partir. Car il pleut. » : l'argument sortait inversé.
+
+    Le marqueur ouvre SA phrase et d'autres phrases existent. La coupe dans la
+    phrase n'avait rien avant le marqueur ; le texte retombait sur les replis
+    par phrase, et la réparation « prémisse identique » échangeait les rôles :
+    la phrase du marqueur devenait la conclusion. Ce qui suit le marqueur est
+    la prémisse ; l'affirmation qu'elle soutient est la phrase qui précède (ou
+    qui suit, quand le marqueur ouvre le texte) ; le marqueur n'est dans
+    aucune des deux.
+    """
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Il faut partir. Car il pleut.",
+            "Il faut partir. Parce que il pleut.",
+            "Il faut partir. Puisque il pleut.",
+            "Il faut partir! Car il pleut.",
+        ],
+    )
+    def test_the_marker_sentence_is_the_premise(self, parser, text):
+        argument = parser.parse_prose(text)
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+    def test_the_marker_is_in_neither_part(self, parser):
+        argument = parser.parse_prose("Il faut partir. Car il pleut.")
+
+        assert "car" not in argument.conclusion.lower(), argument.conclusion
+        assert all("car" not in p.lower() for p in argument.premises), argument
+
+    def test_the_claim_is_the_nearest_sentence_before(self, parser):
+        argument = parser.parse_prose(
+            "Il faut partir. Nous devons nous dépêcher. Car il pleut."
+        )
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Nous devons nous dépêcher", argument
+
+    def test_the_sentence_before_wins_over_the_sentence_after(self, parser):
+        argument = parser.parse_prose(
+            "Il faut partir. Car il pleut. La route est glissante."
+        )
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+    def test_a_marker_opening_the_text_supports_the_next_sentence(self, parser):
+        argument = parser.parse_prose("Car il pleut. Il faut partir.")
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+    def test_a_preposed_clause_keeps_its_own_reading(self, parser):
+        # « Puisque X, Y » dans une phrase qui n'est pas seule : la lecture
+        # locale (la forme épinglée par la review de #2600) l'emporte.
+        argument = parser.parse_prose(
+            "Il faut partir. Puisque il pleut, la route est glissante."
+        )
+
+        assert argument.premises == ["Puisque il pleut"], argument.premises
+        assert argument.conclusion == "la route est glissante", argument
+
+    def test_a_preposed_clause_opening_the_text_keeps_its_reading(self, parser):
+        argument = parser.parse_prose(
+            "Comme il pleut, il faut partir. Nous prendrons le bus."
+        )
+
+        assert argument.premises == ["Comme il pleut"], argument.premises
+        assert argument.conclusion == "il faut partir", argument.conclusion
+
+    def test_car_does_not_open_a_preposed_clause(self, parser):
+        # « car » coordonne : « Car X, et Y » est UNE prémisse, pas une
+        # prémisse suivie de sa conclusion.
+        argument = parser.parse_prose(
+            "Il faut partir. Car il pleut, et la route est glissante."
+        )
+
+        assert argument.premises == [
+            "il pleut, et la route est glissante"
+        ], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+
+# ============================================================
 # ArgumentParser — _extract_premises
 # ============================================================
 

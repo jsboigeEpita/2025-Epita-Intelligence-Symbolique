@@ -90,3 +90,19 @@ class TestPremiseMarkerOpeningTheSentence:
         structure = response.json()["results"]["argument_structure"]
         assert structure["premises"] == ["Puisque il pleut"], structure
         assert structure["conclusion"] == "il faut partir", structure
+
+
+class TestPremiseMarkerOpeningAnotherSentence:
+    """#2671 — « Il faut partir. Car il pleut. » : la route rendait
+    l'argument inversé, la phrase du marqueur en conclusion."""
+
+    def test_route_puts_the_marker_sentence_in_the_premise(self, client):
+        response = client.post(
+            "/api/analyze", json={"text": "Il faut partir. Car il pleut."}
+        )
+
+        assert response.status_code == 200, response.text
+        structure = response.json()["results"]["argument_structure"]
+        assert structure["premises"] == ["il pleut"], structure
+        assert structure["conclusion"] == "Il faut partir", structure
+        assert structure["conclusion"] not in structure["premises"], structure
