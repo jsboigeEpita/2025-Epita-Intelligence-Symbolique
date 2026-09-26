@@ -179,6 +179,7 @@ def _perform_tweety_analysis(text: str, project_context) -> Dict:
 def _analyze_prose_with_markers(text: str) -> Dict[str, Any]:
     """Le prose par le composant de marqueurs — prémisses réelles, casse d'origine."""
     from argumentation_analysis.agents.core.counter_argument.parser import (
+        CONCLUSION_MARKER_ALONE,
         NO_MARKER,
         PREMISE_MARKER_ALONE,
         ArgumentParser,
@@ -193,10 +194,19 @@ def _analyze_prose_with_markers(text: str) -> Dict[str, Any]:
             "(parce que, car, puisque…) n'apparaît dans le texte."
         ),
         PREMISE_MARKER_ALONE: (
-            "Aucune structure argumentative identifiable : le texte est une "
-            "seule phrase dont le marqueur de prémisse (parce que, car, "
-            "puisque…) laisse un côté vide — une prémisse sans l'affirmation "
-            "qu'elle soutiendrait, ou une affirmation sans la prémisse annoncée."
+            "Aucune structure argumentative identifiable : le marqueur de "
+            "prémisse (parce que, car, puisque…) laisse un côté vide, et "
+            "aucune phrase voisine ne le remplit — une prémisse sans "
+            "l'affirmation qu'elle soutiendrait, ou une affirmation sans la "
+            "prémisse annoncée. « Car » ne s'antépose pas : une phrase qui "
+            "s'ouvre sur « car » est une prémisse, même après une virgule."
+        ),
+        CONCLUSION_MARKER_ALONE: (
+            "Aucune structure argumentative identifiable : le marqueur de "
+            "conclusion (donc, par conséquent, ainsi…) laisse un côté vide, "
+            "et aucune phrase voisine ne le remplit — une conclusion sans "
+            "prémisse qui la soutienne, ou une prémisse sans la conclusion "
+            "annoncée."
         ),
     }
     parser = ArgumentParser()

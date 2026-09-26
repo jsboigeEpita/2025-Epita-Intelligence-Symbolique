@@ -24,6 +24,24 @@ _COORDINATING_PREMISE_MARKERS = {"car"}
 # refusal from the reason, so each message stays true of the text it refuses.
 NO_MARKER = "no_marker"
 PREMISE_MARKER_ALONE = "premise_marker_alone"
+CONCLUSION_MARKER_ALONE = "conclusion_marker_alone"
+
+# #2682: a marker word opening a fixed phrase is not a marker. "Comme prévu"
+# says "as expected", not "because"; "ainsi que" says "as well as", not
+# "therefore". Each entry lists the words that make the phrase fixed.
+_FIXED_PHRASE_FOLLOWERS = {
+    "comme": (
+        "prévu",
+        "convenu",
+        "annoncé",
+        "attendu",
+        "indiqué",
+        "mentionné",
+        "si",
+        "toujours",
+    ),
+    "ainsi": ("que",),
+}
 
 
 def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
@@ -32,12 +50,25 @@ def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
     #2562: a plain substring test misfires — ``car`` matches ``carte``,
     ``comme`` matches ``commencer``. A marker only counts when flanked by
     non-word characters (``\\w`` already covers accented French letters).
+
+    #2682: an occurrence opening a fixed phrase (``_FIXED_PHRASE_FOLLOWERS``)
+    is skipped, and a later occurrence of the same marker still counts.
     """
     best: Optional[Tuple[int, int]] = None
     for marker in markers:
-        match = re.search(rf"(?<!\w){re.escape(marker)}(?!\w)", text, re.IGNORECASE)
-        if match and (best is None or match.start() < best[0]):
-            best = (match.start(), match.end())
+        followers = _FIXED_PHRASE_FOLLOWERS.get(marker, ())
+        fixed = re.compile(
+            r"\s+(?:" + "|".join(re.escape(f) for f in followers) + r")(?!\w)",
+            re.IGNORECASE,
+        )
+        for match in re.finditer(
+            rf"(?<!\w){re.escape(marker)}(?!\w)", text, re.IGNORECASE
+        ):
+            if followers and fixed.match(text, match.end()):
+                continue
+            if best is None or match.start() < best[0]:
+                best = (match.start(), match.end())
+            break
     return best
 
 
@@ -117,42 +148,99 @@ class ArgumentParser:
     def unparseable_reason(self, text: str) -> Optional[str]:
         """Why ``parse_prose`` returns None for ``text``; None when it parses.
 
+        A text parses when its markers give a reading with both sides
+        (``_marker_reading``). A text whose two sides say the same thing is
+        read, not refused: "Il pleut car il pleut." is circular, and says so.
+
         ``NO_MARKER`` (#2562): no conclusion marker and no premise marker.
 
-        ``PREMISE_MARKER_ALONE`` (#2678): the text is one sentence, its only
-        marker is a premise marker, and the marker leaves a side of it empty.
-        "Car il pleut." states a premise and no claim, "Il faut partir car."
-        a claim and no premise; ``parse_argument`` returns the sentence on
-        both sides, which reads as a circular argument the text does not make.
-        A clause after a sentence-opening marker ("Car il pleut, il faut
-        partir.") is read, not refused, and so is a text whose two sides say
-        the same thing ("Il pleut car il pleut." is circular, and says so).
+        ``CONCLUSION_MARKER_ALONE`` (#2682): a conclusion marker leaves a side
+        empty and no neighbouring sentence fills it. "Donc il faut partir."
+        states a conclusion and no premise, "Il pleut donc." a premise and no
+        conclusion.
+
+        ``PREMISE_MARKER_ALONE`` (#2678): the same for a premise marker. "Car
+        il pleut." states a premise and no claim, "Il faut partir car." a
+        claim and no premise. "Car" never opens a preposed clause (#2671), so
+        "Car il pleut, il faut partir." is one premise with no claim (#2682).
         """
+        if self._marker_reading(text) is not None:
+            return None
         if _find_marker(text, self.conclusion_markers) is not None:
-            return None
-        if _find_marker(text, self.premise_markers) is None:
-            return NO_MARKER
-        sentences = self._split_into_sentences(text)
-        split = self._split_at_premise_marker(text, sentences)
-        if split is None or len(sentences) != 1:
-            return None
-        claim, premise = split
-        if not premise or (not claim and not any(s in premise for s in ",;")):
+            return CONCLUSION_MARKER_ALONE
+        if _find_marker(text, self.premise_markers) is not None:
             return PREMISE_MARKER_ALONE
+        return NO_MARKER
+
+    def _marker_reading(self, text: str) -> Optional[Tuple[List[str], str]]:
+        """The reading the markers give, ``(premises, conclusion)``, or None.
+
+        #2682: the conclusion marker's reading when both of its sides are
+        filled, otherwise the premise marker's when both of its sides are:
+        "Donc il faut partir car il pleut." has nothing before "donc", and
+        "car" supplies the premise. None when no marker fills both sides.
+        """
+        sentences = self._split_into_sentences(text)
+        by_conclusion = self._split_at_conclusion_marker(text, sentences)
+        if by_conclusion is not None and by_conclusion[0] and by_conclusion[1]:
+            return by_conclusion
+        by_premise = self._split_at_premise_marker(text, sentences)
+        if by_premise is not None and by_premise[0] and by_premise[1]:
+            return [by_premise[1]], by_premise[0]
         return None
 
-    def _sentence_at(
-        self, text: str, sentences: List[str], offset: int
-    ) -> Optional[str]:
-        """The sentence (original case) containing ``offset``."""
+    def _sentence_spans(self, text: str, sentences: List[str]) -> List[Tuple[int, int]]:
+        """Where each of ``sentences`` sits in ``text``, in order."""
+        spans: List[Tuple[int, int]] = []
         cursor = 0
         for sentence in sentences:
             start = text.find(sentence, cursor)
             if start < 0:
                 continue
-            if start <= offset < start + len(sentence):
-                return sentence
+            spans.append((start, start + len(sentence)))
             cursor = start + len(sentence)
+        return spans
+
+    def _sentence_at(
+        self, text: str, sentences: List[str], offset: int
+    ) -> Optional[str]:
+        """The sentence (original case) containing ``offset``."""
+        for start, end in self._sentence_spans(text, sentences):
+            if start <= offset < end:
+                return text[start:end]
+        return None
+
+    def _split_at_conclusion_marker(
+        self, text: str, sentences: List[str]
+    ) -> Optional[Tuple[List[str], str]]:
+        """Split around the earliest conclusion marker: ``(premises, conclusion)``.
+
+        #2682: the premises are the sentences before the marker's sentence,
+        plus the part of that sentence before the marker; the conclusion runs
+        from the marker to the end of its sentence. "Il pleut, donc il faut
+        partir." used to come back with the whole sentence as its conclusion,
+        premise included. A marker ending its sentence ("Il pleut donc. Il
+        faut partir.") concludes on the next sentence, as a premise marker
+        does. A side the text does not fill comes back empty.
+        """
+        marker = _find_marker(text, self.conclusion_markers)
+        if marker is None:
+            return None
+        marker_start, marker_end = marker
+        spans = self._sentence_spans(text, sentences)
+        for index, (sentence_start, sentence_end) in enumerate(spans):
+            if not sentence_start <= marker_start < sentence_end:
+                continue
+            premises = [text[start:end].strip() for start, end in spans[:index]]
+            before = text[sentence_start:marker_start].strip(" \t,;:")
+            if before:
+                premises.append(before)
+            if text[marker_end:sentence_end].strip(" \t,;:"):
+                return premises, text[marker_start:sentence_end].strip()
+            if index + 1 < len(spans):
+                start, end = spans[index + 1]
+                return premises, text[start:end].strip()
+            return premises, ""
         return None
 
     def _split_at_premise_marker(
@@ -172,28 +260,25 @@ class ArgumentParser:
         pinned form; never for "car", which cannot open such a clause).
         Otherwise the claim the premise supports is another
         sentence: the one before it, or the one after when it opens the text.
-        The conclusion side stays empty only for a marker sentence standing
-        alone; the callers then keep their former behaviour.
+
+        #2682: a sentence ENDING on its marker ("Il faut partir car. Il
+        pleut.") announces its premise, and the premise is the next sentence.
+        A side the text does not fill comes back empty.
         """
         marker = _find_marker(text, self.premise_markers)
         if marker is None:
             return None
         marker_start, marker_end = marker
-
-        spans: List[Tuple[int, int]] = []
-        cursor = 0
-        for sentence in sentences:
-            sentence_start = text.find(sentence, cursor)
-            if sentence_start < 0:
-                continue
-            spans.append((sentence_start, sentence_start + len(sentence)))
-            cursor = sentence_start + len(sentence)
+        spans = self._sentence_spans(text, sentences)
 
         for index, (sentence_start, sentence_end) in enumerate(spans):
             if not sentence_start <= marker_start < sentence_end:
                 continue
             before = text[sentence_start:marker_start].strip(" \t,;:")
             after = text[marker_end:sentence_end].strip(" \t,;:")
+            if before and not after and index + 1 < len(spans):
+                start, end = spans[index + 1]
+                return before, text[start:end].strip()
             if before or not after:
                 return before, after
             sentence = text[sentence_start:sentence_end]
@@ -220,6 +305,14 @@ class ArgumentParser:
         returned everything before a conclusion marker as ONE merged,
         re-capitalized string).
         """
+        # #2600/#2682: the premises of the reading the markers give. A text
+        # whose markers leave a side empty ("Car il pleut.") has none;
+        # ``parse_prose`` refuses it (``unparseable_reason``), and
+        # ``parse_argument``, which always returns, falls back below.
+        reading = self._marker_reading(text)
+        if reading is not None:
+            return reading[0]
+
         sentences = self._split_into_sentences(text)
 
         conclusion_marker = _find_marker(text, self.conclusion_markers)
@@ -230,15 +323,6 @@ class ArgumentParser:
 
         premise_marker = _find_marker(text, self.premise_markers)
         if premise_marker is not None:
-            # #2600: the marker introduces the premise — what follows it is
-            # the premise, not the sentence that also carries the conclusion.
-            # The cut needs BOTH sides: a marker sentence standing alone
-            # ("Car il pleut.") has no claim to support. ``parse_prose``
-            # refuses it (#2678, ``unparseable_reason``); ``parse_argument``,
-            # which always returns, falls back to the former path on both sides.
-            split = self._split_at_premise_marker(text, sentences)
-            if split is not None and split[0] and split[1]:
-                return [split[1]]
             sentence = self._sentence_at(text, sentences, premise_marker[0])
             if sentence is not None:
                 return [sentence]
@@ -249,6 +333,11 @@ class ArgumentParser:
 
     def _extract_conclusion(self, text: str) -> str:
         """Extract conclusion from argumentative text."""
+        # #2600/#2682: symmetric to the premise side.
+        reading = self._marker_reading(text)
+        if reading is not None:
+            return reading[1]
+
         sentences = self._split_into_sentences(text)
 
         conclusion_marker = _find_marker(text, self.conclusion_markers)
@@ -259,11 +348,6 @@ class ArgumentParser:
 
         premise_marker = _find_marker(text, self.premise_markers)
         if premise_marker is not None:
-            # #2600: symmetric to the premise side — the claim the marker
-            # supports is the conclusion, and only when both sides exist.
-            split = self._split_at_premise_marker(text, sentences)
-            if split is not None and split[0] and split[1]:
-                return split[0]
             sentence = self._sentence_at(text, sentences, premise_marker[0])
             if sentence is not None:
                 return sentence

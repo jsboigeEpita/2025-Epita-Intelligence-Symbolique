@@ -131,3 +131,39 @@ class TestPremiseMarkerStandingAlone:
         body = response.json()
         assert body["context"]["reason"] == "no_marker", body
         assert "n'apparaît dans le texte" in body["detail"], body
+
+
+class TestResidualProseShapes:
+    """#2682 — la route rendait 200 pour des formes que le texte ne porte pas :
+    un marqueur de conclusion seul, « Car X, Y » lu prémisse + conclusion,
+    une conclusion qui contenait sa prémisse."""
+
+    @pytest.mark.parametrize("text", ["Donc il faut partir.", "Il pleut donc."])
+    def test_route_refuses_a_lone_conclusion_marker_and_names_why(self, client, text):
+        response = client.post("/api/analyze", json={"text": text})
+
+        assert response.status_code == 422, response.text
+        body = response.json()
+        assert body["context"]["reason"] == "conclusion_marker_alone", body
+        assert "marqueur de conclusion" in body["detail"], body
+
+    def test_route_refuses_car_then_a_comma(self, client):
+        response = client.post(
+            "/api/analyze", json={"text": "Car il pleut, il faut partir."}
+        )
+
+        assert response.status_code == 422, response.text
+        body = response.json()
+        assert body["context"]["reason"] == "premise_marker_alone", body
+        assert "ne s'antépose pas" in body["detail"], body
+
+    def test_route_cuts_the_conclusion_at_its_marker(self, client):
+        response = client.post(
+            "/api/analyze",
+            json={"text": "Il faut partir car il pleut, donc restons prudents."},
+        )
+
+        assert response.status_code == 200, response.text
+        structure = response.json()["results"]["argument_structure"]
+        assert structure["premises"] == ["Il faut partir car il pleut"], structure
+        assert structure["conclusion"] == "donc restons prudents", structure

@@ -8,10 +8,12 @@ withdrawn #2137 — zero callers).
 import pytest
 
 from argumentation_analysis.agents.core.counter_argument.parser import (
+    CONCLUSION_MARKER_ALONE,
     NO_MARKER,
     PREMISE_MARKER_ALONE,
     ArgumentParser,
     VulnerabilityAnalyzer,
+    _find_marker,
 )
 from argumentation_analysis.agents.core.counter_argument.definitions import (
     Argument,
@@ -329,15 +331,28 @@ class TestPremiseMarkerStandingAlone:
         assert argument.premises == ["il pleut"], argument.premises
         assert argument.conclusion == "Il pleut", argument.conclusion
 
-    def test_control_a_clause_after_the_marker_is_read(self, parser):
-        argument = parser.parse_prose("Car il pleut, il faut partir.")
+    def test_car_then_a_comma_is_one_premise_with_no_claim(self, parser):
+        # #2682 C : « car » ne s'antépose pas (#2671). La phrase entière est
+        # une prémisse ; lue jusqu'ici prémisse « Car il pleut » + conclusion
+        # « il faut partir » par le repli à la virgule.
+        for text in (
+            "Car il pleut, il faut partir.",
+            "Car il pleut, et la route est glissante.",
+            "Car il pleut; la route est glissante.",
+        ):
+            assert parser.parse_prose(text) is None, text
+            assert parser.unparseable_reason(text) == PREMISE_MARKER_ALONE, text
+
+    def test_control_a_preposed_clause_after_its_marker_is_read(self, parser):
+        argument = parser.parse_prose("Puisque il pleut, il faut partir.")
 
         assert argument is not None
+        assert argument.premises == ["Puisque il pleut"], argument.premises
         assert argument.conclusion == "il faut partir", argument.conclusion
 
-    def test_control_another_sentence_is_not_a_lone_marker(self, parser):
-        # Le refus dit « une seule phrase » : un texte de deux phrases n'y
-        # entre pas, quelle que soit sa lecture (#2671 et au-delà).
+    def test_control_a_neighbour_sentence_fills_the_empty_side(self, parser):
+        # Une phrase voisine remplit le côté que le marqueur laisse vide
+        # (#2671, et #2682 B pour un marqueur en fin de phrase).
         for text in ("Il faut partir. Car il pleut.", "Il faut partir car. Il pleut."):
             assert parser.unparseable_reason(text) is None, text
 
@@ -347,6 +362,127 @@ class TestPremiseMarkerStandingAlone:
         argument = parser.parse_argument("Car il pleut.")
 
         assert argument.premises == ["Prémisse implicite: Car il pleut"]
+
+
+class TestResidualProseShapes:
+    """#2682 — six formes que le parseur de prose rendait fausses en 200
+    après #2671/#2678. Chaque test nomme sa ligne de l'issue."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Donc il faut partir.",  # A1
+            "Conclusion : il faut partir.",
+            "Il pleut donc.",  # A2
+            "Il pleut, donc.",
+            "Il pleut. Donc.",
+        ],
+    )
+    def test_a_conclusion_marker_leaving_a_side_empty_is_refused(self, parser, text):
+        assert parser.parse_prose(text) is None, text
+        assert parser.unparseable_reason(text) == CONCLUSION_MARKER_ALONE, text
+
+    def test_a_premise_marker_ending_its_sentence_takes_the_next_one(self, parser):
+        # B : lu à l'envers jusqu'ici (prémisse « Il faut partir car »).
+        argument = parser.parse_prose("Il faut partir car. Il pleut.")
+
+        assert argument.premises == ["Il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+    def test_a_conclusion_marker_ending_its_sentence_takes_the_next_one(self, parser):
+        argument = parser.parse_prose("Il pleut donc. Il faut partir.")
+
+        assert argument.premises == ["Il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+    def test_a_marker_ending_the_last_sentence_is_refused(self, parser):
+        # Aucune phrase suivante ne porte la prémisse annoncée.
+        text = "Il pleut. Il faut partir car."
+
+        assert parser.parse_prose(text) is None
+        assert parser.unparseable_reason(text) == PREMISE_MARKER_ALONE
+
+    @pytest.mark.parametrize(
+        "text, premises, conclusion",
+        [
+            ("Il pleut, donc il faut partir.", ["Il pleut"], "donc il faut partir"),
+            ("Il pleut donc il faut partir.", ["Il pleut"], "donc il faut partir"),
+            (
+                "Puisque les données le montrent, donc la conclusion est valide.",
+                ["Puisque les données le montrent"],
+                "donc la conclusion est valide",
+            ),
+            # D : le « car » intérieur n'est PAS coupé. « il pleut » soutient
+            # « il faut partir », qui soutient la conclusion : couper en
+            # ferait deux prémisses de « restons prudents ».
+            (
+                "Il faut partir car il pleut, donc restons prudents.",
+                ["Il faut partir car il pleut"],
+                "donc restons prudents",
+            ),
+        ],
+    )
+    def test_a_conclusion_marker_inside_its_sentence_cuts_it(
+        self, parser, text, premises, conclusion
+    ):
+        # La conclusion rendait la phrase entière, prémisse comprise.
+        argument = parser.parse_prose(text)
+
+        assert argument.premises == premises, argument.premises
+        assert argument.conclusion == conclusion, argument.conclusion
+
+    def test_a_premise_marker_supplies_what_the_conclusion_marker_lacks(self, parser):
+        argument = parser.parse_prose("Donc il faut partir car il pleut.")
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Donc il faut partir", argument.conclusion
+
+    def test_control_a_sentence_opening_on_its_marker_keeps_it(self, parser):
+        # La forme épinglée par #2562 (« Donc Socrate est mortel ») reste.
+        argument = parser.parse_prose(
+            "Tous les hommes sont mortels. Socrate est un homme. "
+            "Donc Socrate est mortel."
+        )
+
+        assert argument.premises == [
+            "Tous les hommes sont mortels",
+            "Socrate est un homme",
+        ], argument.premises
+        assert argument.conclusion == "Donc Socrate est mortel", argument.conclusion
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Il faut partir. Comme prévu, le train arrive.",  # E
+            "Il faut partir. Comme convenu, nous prendrons le bus.",
+            "Les pommes ainsi que les poires sont des fruits.",
+        ],
+    )
+    def test_a_fixed_phrase_is_not_a_marker(self, parser, text):
+        assert parser.parse_prose(text) is None, text
+        assert parser.unparseable_reason(text) == NO_MARKER, text
+
+    @pytest.mark.parametrize(
+        "phrase",
+        ["prévu", "convenu", "annoncé", "attendu", "indiqué", "mentionné", "si"]
+        + ["toujours"],
+    )
+    def test_each_fixed_comme_phrase_is_skipped(self, phrase):
+        assert _find_marker(f"Comme {phrase}, il pleut.", ["comme"]) is None
+
+    def test_a_later_marker_after_a_fixed_phrase_still_counts(self, parser):
+        text = "Comme prévu, il pleut. Comme il pleut, partons."
+
+        assert _find_marker(text, ["comme"]) == (23, 28)
+        argument = parser.parse_prose(text)
+        assert argument.premises == ["Comme il pleut"], argument.premises
+        assert argument.conclusion == "partons", argument.conclusion
+
+    def test_control_a_causal_comme_is_a_marker(self, parser):
+        argument = parser.parse_prose("Comme il pleut, il faut partir.")
+
+        assert argument.premises == ["Comme il pleut"], argument.premises
+        assert argument.conclusion == "il faut partir", argument.conclusion
 
 
 # ============================================================
