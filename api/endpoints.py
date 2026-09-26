@@ -179,16 +179,33 @@ def _perform_tweety_analysis(text: str, project_context) -> Dict:
 def _analyze_prose_with_markers(text: str) -> Dict[str, Any]:
     """Le prose par le composant de marqueurs — prémisses réelles, casse d'origine."""
     from argumentation_analysis.agents.core.counter_argument.parser import (
+        NO_MARKER,
+        PREMISE_MARKER_ALONE,
         ArgumentParser,
     )
 
-    argument = ArgumentParser().parse_prose(text)
-    if argument is None:
-        raise UnanalyzableInputError(
+    # #2678: one message per reason the parser gives, each true of the text
+    # it refuses (a lone "Car il pleut." does carry a marker).
+    refusals = {
+        NO_MARKER: (
             "Aucune structure argumentative identifiable : aucun marqueur de "
             "conclusion (donc, par conséquent, ainsi…) ni de prémisse "
-            "(parce que, car, puisque…) n'apparaît dans le texte.",
-            context={"extraction_path": "prose_markers"},
+            "(parce que, car, puisque…) n'apparaît dans le texte."
+        ),
+        PREMISE_MARKER_ALONE: (
+            "Aucune structure argumentative identifiable : le texte est une "
+            "seule phrase dont le marqueur de prémisse (parce que, car, "
+            "puisque…) laisse un côté vide — une prémisse sans l'affirmation "
+            "qu'elle soutiendrait, ou une affirmation sans la prémisse annoncée."
+        ),
+    }
+    parser = ArgumentParser()
+    argument = parser.parse_prose(text)
+    if argument is None:
+        reason = parser.unparseable_reason(text)
+        raise UnanalyzableInputError(
+            refusals[reason],
+            context={"extraction_path": "prose_markers", "reason": reason},
         )
 
     return {

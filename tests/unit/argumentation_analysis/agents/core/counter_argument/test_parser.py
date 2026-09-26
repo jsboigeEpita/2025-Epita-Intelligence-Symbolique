@@ -8,6 +8,8 @@ withdrawn #2137 — zero callers).
 import pytest
 
 from argumentation_analysis.agents.core.counter_argument.parser import (
+    NO_MARKER,
+    PREMISE_MARKER_ALONE,
     ArgumentParser,
     VulnerabilityAnalyzer,
 )
@@ -287,6 +289,64 @@ class TestPremiseMarkerOpeningAnotherSentence:
             "il pleut, et la route est glissante"
         ], argument.premises
         assert argument.conclusion == "Il faut partir", argument.conclusion
+
+
+class TestPremiseMarkerStandingAlone:
+    """#2678 — une phrase seule dont le marqueur de prémisse laisse un côté
+    vide revenait comme un argument circulaire présenté en succès
+    (« Car il pleut. » : prémisse « Prémisse implicite: Car il pleut »,
+    conclusion « Car il pleut »). ``parse_prose`` la refuse et dit pourquoi."""
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "Car il pleut.",
+            "Puisque il pleut.",
+            "Parce que il pleut.",
+            "Il faut partir car.",
+            "Car.",
+        ],
+    )
+    def test_a_marker_leaving_a_side_empty_is_refused(self, parser, text):
+        assert parser.parse_prose(text) is None
+        assert parser.unparseable_reason(text) == PREMISE_MARKER_ALONE
+
+    def test_no_marker_keeps_its_own_reason(self, parser):
+        text = "Il fait beau aujourd'hui."
+
+        assert parser.parse_prose(text) is None
+        assert parser.unparseable_reason(text) == NO_MARKER
+
+    def test_a_parsed_text_has_no_reason(self, parser):
+        assert parser.unparseable_reason("Il faut partir car il pleut.") is None
+
+    def test_control_a_circular_text_is_read_not_refused(self, parser):
+        # Les deux côtés existent et disent la même chose : c'est le texte
+        # qui est circulaire, et l'analyse doit le voir.
+        argument = parser.parse_prose("Il pleut car il pleut.")
+
+        assert argument is not None
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il pleut", argument.conclusion
+
+    def test_control_a_clause_after_the_marker_is_read(self, parser):
+        argument = parser.parse_prose("Car il pleut, il faut partir.")
+
+        assert argument is not None
+        assert argument.conclusion == "il faut partir", argument.conclusion
+
+    def test_control_another_sentence_is_not_a_lone_marker(self, parser):
+        # Le refus dit « une seule phrase » : un texte de deux phrases n'y
+        # entre pas, quelle que soit sa lecture (#2671 et au-delà).
+        for text in ("Il faut partir. Car il pleut.", "Il faut partir car. Il pleut."):
+            assert parser.unparseable_reason(text) is None, text
+
+    def test_parse_argument_still_returns_for_the_agent(self, parser):
+        # Le contrat « rend toujours » de parse_argument (appels de l'agent)
+        # reste : la prémisse fabriquée y est étiquetée « implicite ».
+        argument = parser.parse_argument("Car il pleut.")
+
+        assert argument.premises == ["Prémisse implicite: Car il pleut"]
 
 
 # ============================================================

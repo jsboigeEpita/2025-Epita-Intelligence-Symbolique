@@ -20,6 +20,11 @@ logger = logging.getLogger(__name__)
 # "Car X, Y" states one premise, not a premise and its conclusion.
 _COORDINATING_PREMISE_MARKERS = {"car"}
 
+# #2678: why ``parse_prose`` finds nothing to reconstruct. The route words its
+# refusal from the reason, so each message stays true of the text it refuses.
+NO_MARKER = "no_marker"
+PREMISE_MARKER_ALONE = "premise_marker_alone"
+
 
 def _find_marker(text: str, markers: List[str]) -> Optional[Tuple[int, int]]:
     """Earliest standalone-word occurrence of any marker (case-insensitive).
@@ -103,13 +108,38 @@ class ArgumentParser:
         it — the caller must say so instead of presenting an empty or
         fabricated structure as a success. ``parse_argument`` keeps its
         always-returns-something contract for the agent's own calls.
+        ``unparseable_reason`` decides, and says why (#2678).
         """
-        if (
-            _find_marker(text, self.conclusion_markers) is None
-            and _find_marker(text, self.premise_markers) is None
-        ):
+        if self.unparseable_reason(text) is not None:
             return None
         return self.parse_argument(text)
+
+    def unparseable_reason(self, text: str) -> Optional[str]:
+        """Why ``parse_prose`` returns None for ``text``; None when it parses.
+
+        ``NO_MARKER`` (#2562): no conclusion marker and no premise marker.
+
+        ``PREMISE_MARKER_ALONE`` (#2678): the text is one sentence, its only
+        marker is a premise marker, and the marker leaves a side of it empty.
+        "Car il pleut." states a premise and no claim, "Il faut partir car."
+        a claim and no premise; ``parse_argument`` returns the sentence on
+        both sides, which reads as a circular argument the text does not make.
+        A clause after a sentence-opening marker ("Car il pleut, il faut
+        partir.") is read, not refused, and so is a text whose two sides say
+        the same thing ("Il pleut car il pleut." is circular, and says so).
+        """
+        if _find_marker(text, self.conclusion_markers) is not None:
+            return None
+        if _find_marker(text, self.premise_markers) is None:
+            return NO_MARKER
+        sentences = self._split_into_sentences(text)
+        split = self._split_at_premise_marker(text, sentences)
+        if split is None or len(sentences) != 1:
+            return None
+        claim, premise = split
+        if not premise or (not claim and not any(s in premise for s in ",;")):
+            return PREMISE_MARKER_ALONE
+        return None
 
     def _sentence_at(
         self, text: str, sentences: List[str], offset: int
@@ -203,11 +233,9 @@ class ArgumentParser:
             # #2600: the marker introduces the premise — what follows it is
             # the premise, not the sentence that also carries the conclusion.
             # The cut needs BOTH sides: a marker sentence standing alone
-            # ("Car il pleut.") has no claim to support, and falls back to the
-            # former path on both sides. #2671 kept that output rather than
-            # return None: the route's None message says no marker appears in
-            # the text, which would be false for it — the two change together
-            # in #2678.
+            # ("Car il pleut.") has no claim to support. ``parse_prose``
+            # refuses it (#2678, ``unparseable_reason``); ``parse_argument``,
+            # which always returns, falls back to the former path on both sides.
             split = self._split_at_premise_marker(text, sentences)
             if split is not None and split[0] and split[1]:
                 return [split[1]]
