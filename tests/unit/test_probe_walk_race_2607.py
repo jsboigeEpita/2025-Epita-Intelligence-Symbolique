@@ -99,16 +99,25 @@ def test_a_walk_of_the_suite_survives_a_probe_churning():
     assert not raised, f"{len(raised)} of {WALKS} walks raised: {raised[:3]}"
 
 
-def test_the_shared_walk_sees_the_same_files_as_rglob():
-    """``iter_files`` is an equivalent walk: no file is lost.
+def test_the_shared_walk_sees_the_same_files_as_rglob(tmp_path):
+    """A stable tree makes coverage comparable without racing live probes."""
+    for relative in (
+        "pkg/__init__.py",
+        "pkg/a/b/t.py",
+        "_archived/x.py",
+        "_probe_x/p.py",
+    ):
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x = 1", encoding="utf-8")
 
-    The loss would be silent — a guard that covers less does not redden. The
-    excluded directories are the probes alone, so a stable ``_archived/``
-    stays in the population a sweep may need.
-    """
-    mine = sorted(str(p) for p in iter_files(TESTS_ROOT))
-    theirs = sorted(str(p) for p in TESTS_ROOT.rglob("*.py"))
-    assert mine == theirs, f"difference: {sorted(set(theirs) ^ set(mine))[:10]}"
+    expected = {p for p in tmp_path.rglob("*.py") if "_probe_x" not in p.parts}
+    assert set(iter_files(tmp_path)) == expected
+    assert {p.relative_to(tmp_path).as_posix() for p in expected} == {
+        "pkg/__init__.py",
+        "pkg/a/b/t.py",
+        "_archived/x.py",
+    }
 
 
 def test_a_file_whose_name_starts_like_a_probe_is_still_walked():
