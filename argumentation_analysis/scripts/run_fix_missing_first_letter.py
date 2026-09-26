@@ -15,7 +15,10 @@ import sys
 import os
 
 # Ajouter le répertoire parent au chemin d'importation pour trouver le package argumentation_analysis
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+if __name__ == "__main__":
+    sys.path.insert(
+        0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+    )
 
 from argumentation_analysis.utils.extract_repair.fix_missing_first_letter import (
     fix_missing_first_letter,

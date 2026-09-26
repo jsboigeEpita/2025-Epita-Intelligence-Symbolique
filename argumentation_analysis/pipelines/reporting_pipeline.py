@@ -48,27 +48,30 @@ logger = logging.getLogger(__name__)  # Utilise le nom du module pour le logger
 # Ajout du répertoire racine du projet au chemin pour permettre l'import des modules
 # Cela suppose que ce module est exécuté dans un contexte où le project_root est accessible
 # ou que les chemins sont gérés correctement par l'appelant.
-try:
-    project_root_path_pipeline = Path(__file__).resolve().parent.parent.parent
-    if str(project_root_path_pipeline) not in sys.path:
-        sys.path.insert(0, str(project_root_path_pipeline))
-except (
-    NameError
-):  # __file__ n'est pas défini (par exemple, dans un notebook interactif sans fichier)
-    # Tenter une alternative si possible, ou laisser l'utilisateur gérer PYTHONPATH
-    current_working_dir = Path.cwd()
-    if (current_working_dir / "project_core").exists() and (
-        current_working_dir / "argumentation_analysis"
-    ).exists():
-        project_root_path_pipeline = current_working_dir
+# Seulement quand le fichier est lancé directement : importé comme module
+# du package, la racine est déjà importable et sys.path reste intact (#2346).
+if __name__ == "__main__":
+    try:
+        project_root_path_pipeline = Path(__file__).resolve().parent.parent.parent
         if str(project_root_path_pipeline) not in sys.path:
             sys.path.insert(0, str(project_root_path_pipeline))
-    else:  # Fallback si la structure n'est pas reconnue
-        logger.warning(
-            "Impossible de déterminer automatiquement le chemin racine du projet. "
-            "Assurez-vous que PYTHONPATH est configuré correctement si des imports échouent."
-        )
-        project_root_path_pipeline = Path(".")  # Chemin relatif par défaut
+    except (
+        NameError
+    ):  # __file__ n'est pas défini (par exemple, dans un notebook interactif sans fichier)
+        # Tenter une alternative si possible, ou laisser l'utilisateur gérer PYTHONPATH
+        current_working_dir = Path.cwd()
+        if (current_working_dir / "project_core").exists() and (
+            current_working_dir / "argumentation_analysis"
+        ).exists():
+            project_root_path_pipeline = current_working_dir
+            if str(project_root_path_pipeline) not in sys.path:
+                sys.path.insert(0, str(project_root_path_pipeline))
+        else:  # Fallback si la structure n'est pas reconnue
+            logger.warning(
+                "Impossible de déterminer automatiquement le chemin racine du projet. "
+                "Assurez-vous que PYTHONPATH est configuré correctement si des imports échouent."
+            )
+            project_root_path_pipeline = Path(".")  # Chemin relatif par défaut
 
 
 from argumentation_analysis.core.utils.file_utils import (

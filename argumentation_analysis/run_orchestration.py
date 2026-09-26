@@ -40,7 +40,9 @@ from pathlib import Path
 # root cause the test_run_orchestration subprocess tests assert against.
 current_dir = Path(__file__).parent
 project_root = current_dir.parent
-if str(project_root) not in sys.path:
+# Imported as a package module, the root is already importable: sys.path is
+# left alone (#2346).
+if __name__ == "__main__" and str(project_root) not in sys.path:
     sys.path.append(str(project_root))
 
 import argumentation_analysis.core.dll_guard  # noqa: F401 — must load before jpype (#1019)

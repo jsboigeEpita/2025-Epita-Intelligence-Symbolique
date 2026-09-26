@@ -18,21 +18,17 @@ Date: 09/06/2025
 """
 
 # ===== AUTO-ACTIVATION ENVIRONNEMENT =====
-try:
-    import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
-except ImportError:
-    # Fallback si l'import direct ne fonctionne pas
+if __name__ == "__main__":
+    # Lancé comme fichier, le package n'est pas encore importable : ajouter la
+    # racine du dépôt. Importé comme module, sys.path reste intact (#2346).
     import sys
     from pathlib import Path
 
     project_root = Path(__file__).resolve().parent.parent.parent
     if str(project_root) not in sys.path:
         sys.path.insert(0, str(project_root))
-    try:
-        import argumentation_analysis.core.environment
-    except ImportError:
-        # Si ça ne marche toujours pas, ignorer l'auto-env pour les tests
-        pass
+import argumentation_analysis.core.environment  # Auto-activation environnement intelligent
+
 # =========================================
 import logging
 import asyncio
