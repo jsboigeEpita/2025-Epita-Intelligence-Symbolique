@@ -22,10 +22,7 @@ def _make_bridge(**kwargs):
     """Create a mock TweetyBridge instance with default returns."""
     bridge = MagicMock()
     bridge.validate_pl_formula.return_value = kwargs.get("validate_pl", True)
-    bridge.execute_pl_query.return_value = (
-        kwargs.get("pl_accepted", True),
-        kwargs.get("pl_message", "Query accepted"),
-    )
+    bridge.pl_query.return_value = kwargs.get("pl_accepted", True)
     bridge.execute_fol_query.return_value = (
         kwargs.get("fol_accepted", True),
         kwargs.get("fol_message", "FOL query accepted"),
@@ -221,7 +218,8 @@ class TestPLMethods:
 
         assert result["accepted"] is True
         assert result["query"] == "b"
-        bridge.execute_pl_query.assert_called_once()
+        assert result["result"] == "Résultat de l'inférence: True."
+        bridge.pl_query.assert_called_once_with("a => b\nb", "b")
 
     def test_check_pl_consistency(self, plugin_and_bridge):
         plugin, bridge = plugin_and_bridge
