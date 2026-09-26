@@ -43,6 +43,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support.isolated_script import run_without_editable_install
+
 REPO = Path(__file__).resolve().parents[3]
 PACKAGE = "argumentation_analysis"
 
@@ -269,18 +271,25 @@ assert measured() == 42
     ],
 )
 def test_direct_file_launchers_still_resolve_project_imports(script):
-    env = dict(os.environ)
-    env.pop("PYTHONPATH", None)
-    done = subprocess.run(
-        [sys.executable, str(REPO / script), "--help"],
-        cwd=REPO,
-        env=env,
-        capture_output=True,
-        text=True,
-        timeout=120,
+    done = run_without_editable_install(
+        REPO / script, REPO, run_name="__main__", args=("--help",), timeout=120
     )
     assert done.returncode == 0, done.stderr[-3000:]
     assert "--help" in done.stdout
+
+
+def test_direct_launcher_harness_can_fail(tmp_path):
+    naked = tmp_path / "argumentation_analysis" / "pipelines" / "naked.py"
+    naked.parent.mkdir(parents=True)
+    naked.write_text(
+        "from argumentation_analysis.config.settings import settings\n",
+        encoding="utf-8",
+    )
+    done = run_without_editable_install(
+        naked, tmp_path, run_name="__main__", args=("--help",)
+    )
+    assert done.returncode != 0, done.stdout + done.stderr
+    assert "ModuleNotFoundError" in done.stderr, done.stderr
 
 
 def test_the_performance_log_opens_on_the_first_measurement(tmp_path):

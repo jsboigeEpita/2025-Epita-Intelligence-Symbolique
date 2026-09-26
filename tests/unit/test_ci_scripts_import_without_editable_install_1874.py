@@ -20,44 +20,19 @@ not.
 """
 
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
 
+from tests.support.isolated_script import run_without_editable_install
+
 ROOT = Path(__file__).resolve().parents[2]
 CI_SCRIPTS = ROOT / "scripts" / "ci"
 
-# Reproduces the CI import condition: no editable finder, no repo root on the
-# path, cwd-independent. What survives is what the script does for itself.
-RUNNER = r"""
-import os
-import runpy
-import sys
 
-script = sys.argv[1]
-sys.meta_path = [
-    f
-    for f in sys.meta_path
-    if "editable" not in getattr(f, "__module__", "").lower()
-    and "editable" not in type(f).__name__.lower()
-    and "editable" not in getattr(type(f), "__module__", "").lower()
-]
-root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(script))))
-sys.path[:] = [p for p in sys.path if os.path.abspath(p or ".") != root]
-sys.path.insert(0, os.path.dirname(os.path.abspath(script)))
-runpy.run_path(script, run_name="__not_main__")
-"""
-
-
-def _run_as_ci(script: Path) -> subprocess.CompletedProcess:
+def _run_as_ci(script: Path) -> subprocess.CompletedProcess[str]:
     """Execute `script` with the repo root unreachable except by its own doing."""
-    return subprocess.run(
-        [sys.executable, "-c", RUNNER, str(script)],
-        capture_output=True,
-        text=True,
-        cwd=str(ROOT.parent),  # never the repo root: cwd must not rescue it
-    )
+    return run_without_editable_install(script, ROOT)
 
 
 def _ci_scripts() -> list[Path]:
