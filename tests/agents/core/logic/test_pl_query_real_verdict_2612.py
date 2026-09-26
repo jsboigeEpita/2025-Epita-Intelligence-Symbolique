@@ -79,6 +79,18 @@ def test_plugin_query_returns_real_verdict(tweety_bridge_fixture):
     assert result.get("accepted") is True
     assert "error" not in result
 
+    # Une requête non entraînée doit rendre False — un plugin répondant
+    # True quoi qu'il arrive passerait le témoin ci-dessus (review #2686).
+    rejected_payload = json.dumps({"belief_set": "(a => b) & a", "query": "c"})
+    with patch(
+        "argumentation_analysis.plugins.logic_agent_plugin._jvm_available",
+        return_value=True,
+    ):
+        rejected = json.loads(plugin.execute_pl_query(rejected_payload))
+
+    assert rejected.get("accepted") is False
+    assert "error" not in rejected
+
 
 def test_bridge_wrapper_is_deleted():
     """Le wrapper déléguant à une méthode inexistante ne revient pas."""

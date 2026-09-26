@@ -21,6 +21,7 @@ from argumentation_analysis.orchestration.conversational_orchestrator import (
     create_conversational_agents,
     run_conversational_analysis,
 )
+from argumentation_analysis.agents import factory as agents_factory
 from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 
 SAMPLE_TEXT = (
@@ -77,9 +78,8 @@ def _pipeline_patches(mock_kernel, make_fake_agent):
     ), patch(
         "argumentation_analysis.orchestration.conversational_orchestrator.ChatCompletionAgent",
         side_effect=make_fake_agent,
-    ), patch(
-        "argumentation_analysis.agents.factory.get_plugin_instances",
-        return_value=[MagicMock()],
+    ), patch.object(
+        agents_factory, "get_plugin_instances", return_value=[MagicMock()]
     ), patch(
         "argumentation_analysis.orchestration.invoke_callables._invoke_stakes_extractor",
         new=AsyncMock(return_value={"error": "disabled in integration test"}),
@@ -554,3 +554,28 @@ class TestCleanupTeardown:
         # Create new state - should be independent
         state2 = UnifiedAnalysisState("Second text")
         assert state1.raw_text != state2.raw_text
+
+
+class TestFactoryKernelBindingSurvivesPipelinePatches2615:
+    """#2615: entering `_pipeline_patches` must not leave a retired mock
+    bound as `factory.Kernel`.
+
+    The helper's `sk.Kernel` patch rebinds `semantic_kernel.Kernel`
+    globally for its window. If the factory is imported inside that window,
+    its module-level `from semantic_kernel import Kernel` binds the patch's
+    mock — permanently, since patch restore touches
+    `semantic_kernel.Kernel`, not the already-bound alias. The two tests
+    are ordered: the first enters the helper, the second asserts the
+    factory still sees the real class.
+    """
+
+    def test_pipeline_patches_entered_and_exited(self):
+        mock_kernel, _mock_service, make_fake_agent = _make_mock_pipeline()
+        with _pipeline_patches(mock_kernel, make_fake_agent):
+            pass
+
+    def test_factory_kernel_is_the_real_class(self):
+        import argumentation_analysis.agents.factory as factory
+        import semantic_kernel
+
+        assert factory.Kernel is semantic_kernel.Kernel
