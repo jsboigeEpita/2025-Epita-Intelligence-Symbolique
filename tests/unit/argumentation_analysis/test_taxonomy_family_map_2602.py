@@ -36,12 +36,14 @@ MORALE_PKS = [117, 315, 339, 769, 922, 1163, 1182, 1321]
 # « intimidation » mot entier dans text_fr : un vrai hit audio_oral_context,
 # qui doit SURVIVRE à la frontière de mot (contrôle positif).
 WHOLE_WORD_AUDIO_PK = 190
-# nom_vulgarisé = « Diversion » : mappé diversion_attack sur main, doit le rester.
+# nom_vulgarisé = « Diversion » : le seul mapping à preuve nom — lui et ses
+# descendants sont la source d'héritage légitime.
 DIVERSION_PK = 1314
-# Descendants sans hit de pattern dont le plus proche ancêtre mappé donne la
-# famille (mesuré : 315 → emotional_appeals, 1321 → diversion_attack).
-INHERITS_EMOTIONAL_PK = 315
+# Descendant de 1314 : hérite diversion_attack (preuve nom à la racine).
 INHERITS_DIVERSION_PK = 1321
+# Descendant de 356 (« manipulation » dans text_fr seulement — preuve
+# description au seuil) : son ancêtre n'est PAS une source d'héritage.
+DESCRIPTION_ONLY_DESCENDANT_PK = 357
 
 
 @pytest.fixture(scope="module")
@@ -77,26 +79,37 @@ class TestWordBoundary:
 
 
 class TestAncestorInheritance:
-    """Un nœud sans hit de pattern hérite de son plus proche ancêtre mappé."""
+    """L'héritage ne propage qu'une preuve au niveau du nom (#2602 review).
+
+    51 des 52 mappings pattern ne tiennent que par un mot de description au
+    seuil exact — en propager un remplacerait une absence honnête par un
+    mauvais label (le nœud 356, « manipulation » dans text_fr, et ses 232
+    descendants audio_oral_context).
+    """
 
     def test_unmapped_descendant_inherits(self, plugin):
         cache = plugin._family_mapping_cache
-        assert cache.get(INHERITS_EMOTIONAL_PK) == "emotional_appeals", cache.get(
-            INHERITS_EMOTIONAL_PK
-        )
         assert cache.get(INHERITS_DIVERSION_PK) == "diversion_attack", cache.get(
             INHERITS_DIVERSION_PK
         )
 
+    def test_description_only_source_does_not_propagate(self, plugin):
+        # 357 descend de 356, dont l'unique preuve est « manipulation » dans
+        # text_fr : pas d'héritage — la détection y sera portée non classifiée.
+        cache = plugin._family_mapping_cache
+        assert DESCRIPTION_ONLY_DESCENDANT_PK not in cache, cache.get(
+            DESCRIPTION_ONLY_DESCENDANT_PK
+        )
+
     def test_no_mapped_ancestor_stays_out(self, plugin):
-        # 117 : ni hit de pattern, ni ancêtre mappé — pas de famille inventée.
+        # 117 : ni hit de pattern, ni ancêtre à preuve nom — pas de famille inventée.
         assert 117 not in plugin._family_mapping_cache
 
-    def test_coverage_is_measured_and_raised(self, plugin):
-        # 52 nœuds par pattern + héritage ancêtre = 560/1408 mesuré. Le seuil
-        # témoin (>= 500) est très en dessous pour absorber les variations
-        # mineures du CSV versionné, mais 7x au-dessus du 68 de main.
-        assert len(plugin._family_mapping_cache) >= 500, len(
+    def test_coverage_is_measured_and_published(self, plugin):
+        # Mesuré : 52 patterns + 12 hérités de 1314 = 64/1408 (méthode publiée
+        # dans la PR). L'égalité attrape les deux régressions : l'héritage
+        # retiré (52) et l'héritage sans restriction de preuve (560).
+        assert len(plugin._family_mapping_cache) == 64, len(
             plugin._family_mapping_cache
         )
 

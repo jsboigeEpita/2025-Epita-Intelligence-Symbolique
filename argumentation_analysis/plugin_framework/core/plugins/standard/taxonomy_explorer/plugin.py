@@ -9,7 +9,7 @@ y compris la gestion des familles de sophismes et la recherche d'informations d�
 import logging
 import os
 import re
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Set, Any, Optional
 
 import yaml
 from pydantic import BaseModel
@@ -125,16 +125,23 @@ class TaxonomyExplorerPlugin(BasePlugin):
         """Construit le cache familles : patterns à frontière de mot, puis héritage.
 
         #2602 : les patterns ne matchent plus à l'intérieur d'un autre mot
-        (« oral » dans « morale ») ; un nœud sans hit de pattern hérite
-        ensuite de son plus proche ancêtre mappé (la relation parent
-        ``path``/``depth`` de la taxonomie, lue par ``taxonomy_parent_paths``).
+        (« oral » dans « morale »). L'héritage ne propage ensuite qu'un
+        mapping dont la preuve est au niveau du **nom** (``Name`` /
+        ``nom_vulgarisé``) : 51 des 52 mappings pattern ne tiennent que par un
+        mot de description au seuil exact (poids 0.3) — en propager un à des
+        centaines de descendants (le nœud 356 et ses 232 descendants
+        `audio_oral_context` par le seul mot « manipulation ») remplace une
+        absence honnête par un mauvais label. Ces nœuds restent portés comme
+        non classifiés (#2602 item 3).
         """
         df = self.detector._get_taxonomy_df()
 
         pattern_mapped = 0
+        name_evidence: Set[int] = set()
         for pk, row in df.iterrows():
             best_family_id = None
             best_score = 0.0
+            best_has_name_hit = False
 
             name = str(row.get("Name", "")).lower()
             nom_vulgarise = str(row.get("nom_vulgarisé", "")).lower()
@@ -142,35 +149,45 @@ class TaxonomyExplorerPlugin(BasePlugin):
 
             for family_id, family_info in self.families.items():
                 score = 0
+                has_name_hit = False
                 for pattern in family_info.patterns:
                     pattern_lower = pattern.lower()
                     if _contains_at_word_boundary(pattern_lower, name):
                         score += 0.8
+                        has_name_hit = True
                     if _contains_at_word_boundary(pattern_lower, nom_vulgarise):
                         score += 0.9
+                        has_name_hit = True
                     if _contains_at_word_boundary(pattern_lower, description):
                         score += 0.3
 
                 if score > best_score:
                     best_score = score
                     best_family_id = family_id
+                    best_has_name_hit = has_name_hit
 
             if best_score >= 0.3:
                 self._family_mapping_cache[int(pk)] = best_family_id
                 pattern_mapped += 1
+                if best_has_name_hit:
+                    name_evidence.add(int(pk))
 
-        inherited = self._inherit_from_mapped_ancestors(df)
+        inherited = self._inherit_from_name_evidence_ancestors(df, name_evidence)
         self.logger.info(
             f"Mappings famille initialisés : {pattern_mapped} par pattern + "
-            f"{inherited} hérités d'un ancêtre mappé = "
+            f"{inherited} hérités d'un ancêtre à preuve nom = "
             f"{len(self._family_mapping_cache)} sophismes classifiés."
         )
 
-    def _inherit_from_mapped_ancestors(self, df: Any) -> int:
-        """Chaque nœud non mappé prend la famille de son plus proche ancêtre mappé.
+    def _inherit_from_name_evidence_ancestors(
+        self, df: Any, name_evidence: Set[int]
+    ) -> int:
+        """Hérite seulement d'un ancêtre dont la famille vient d'une preuve nom.
 
-        Retourne le nombre de nœuds ainsi hérités. Un nœud sans ancêtre mappé
-        reste hors du cache : pas de famille inventée.
+        La remonte traverse les ancêtres mappés sans preuve nom (leur mapping
+        n'est pas une source d'héritage) jusqu'au premier ancêtre de
+        ``name_evidence``. Un nœud sans ancêtre à preuve nom reste hors du
+        cache : pas de famille inventée.
         """
         parent_paths = taxonomy_parent_paths(df)
         path_to_pk = {str(path): int(pk) for pk, path in df["path"].items()}
@@ -189,7 +206,7 @@ class TaxonomyExplorerPlugin(BasePlugin):
             seen = {pk}
             ancestor = parent_of(pk)
             while ancestor is not None and ancestor not in seen:
-                if ancestor in self._family_mapping_cache:
+                if ancestor in name_evidence:
                     self._family_mapping_cache[pk] = self._family_mapping_cache[
                         ancestor
                     ]
