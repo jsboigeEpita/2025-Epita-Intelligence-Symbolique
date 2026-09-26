@@ -1,7 +1,7 @@
 # Fichier : argumentation_analysis/agents/utils/tracer.py
 
 import logging
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING, Any, AsyncIterator
 from semantic_kernel.agents import ChatCompletionAgent
 from semantic_kernel.contents import (
     ChatMessageContent,
@@ -18,6 +18,12 @@ class TracedAgent:
     Un simple wrapper (proxy) qui encapsule un agent sémantique pour journaliser
     les interactions (avant/après l'invocation) sans interférer avec son fonctionnement interne.
     Il ne doit PAS hériter de ChatCompletionAgent pour éviter les conflits d'état.
+
+    Le proxy trace deux points d'entrée : ``invoke``, le flux de
+    ``ChatCompletionAgent``, et ``invoke_single``, que déclare ``BaseAgent`` et
+    qu'appelle la démo de validation. Il n'a pas de ``__getattr__`` : un appel
+    qu'il ne trace pas (``get_response`` par exemple) lève ``AttributeError``
+    au lieu de passer sans laisser de trace (#2346).
     """
 
     def __init__(self, agent_to_wrap: ChatCompletionAgent, trace_log_path: str):
@@ -140,3 +146,42 @@ class TracedAgent:
             self._logger.error(
                 f"Erreur lors de la sérialisation de l'historique final: {e}"
             )
+
+    def _describe(self, value: Any) -> str:
+        """Une valeur d'appel pour la trace : l'historique en JSON, le reste en texte."""
+        if hasattr(value, "model_dump_json"):
+            try:
+                return value.model_dump_json(indent=2)
+            except Exception as e:
+                return f"<non sérialisable: {e}>"
+        return str(value)
+
+    async def invoke_single(self, *args: Any, **kwargs: Any) -> Any:
+        """
+        Invoque ``invoke_single`` de l'agent encapsulé et journalise l'appel,
+        la réponse, puis l'historique final s'il a été passé.
+
+        Une exception de l'agent est journalisée puis relevée telle quelle.
+        """
+        described = [self._describe(a) for a in args] + [
+            f"{k}={self._describe(v)}" for k, v in kwargs.items()
+        ]
+        self._logger.info(
+            f"--- START INVOKE_SINGLE on {self.name} ---\nARGS:\n"
+            + "\n".join(described)
+            + "\n"
+        )
+        try:
+            result = await self.agent.invoke_single(*args, **kwargs)
+        except Exception as e:
+            self._logger.error(
+                f"--- INVOKE_SINGLE FAILED on {self.name} ---\n{type(e).__name__}: {e}\n"
+            )
+            raise
+        self._logger.info(f"--- RESULT for {self.name} ---\n{result}\n")
+        history = kwargs.get("history")
+        if history is not None:
+            self._logger.info(
+                f"--- FINAL HISTORY for {self.name} ---\nHISTORY:\n{self._describe(history)}\n"
+            )
+        return result
