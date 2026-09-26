@@ -150,6 +150,55 @@ class TestPremiseMarkerOnlyText:
 
 
 # ============================================================
+# ArgumentParser — a premise marker OPENING its sentence (#2600 review)
+# ============================================================
+
+
+class TestPremiseMarkerOpeningTheSentence:
+    """#2600 review — « Puisque X, Y » : main reconstruisait juste.
+
+    Un marqueur de prémisse en TÊTE de phrase est la construction causale la
+    plus courante en français. La coupe au marqueur ne peut pas s'y appliquer :
+    il n'y a rien avant lui, et prendre tout ce qui suit met la conclusion
+    DANS la prémisse — la forme circulaire que #2600 retire. Ces formes
+    retombent sur le comportement de main (partage par la virgule : la clause
+    portant le marqueur est la prémisse, la clause suivante la conclusion).
+    """
+
+    def test_puisque_keeps_the_clause_split(self, parser):
+        argument = parser.parse_prose("Puisque il pleut, il faut partir.")
+
+        assert argument.premises == ["Puisque il pleut"], argument.premises
+        assert argument.conclusion == "il faut partir", argument.conclusion
+
+    def test_comme_keeps_the_clause_split(self, parser):
+        argument = parser.parse_prose("Comme il pleut, il faut partir.")
+
+        assert argument.premises == ["Comme il pleut"], argument.premises
+        assert argument.conclusion == "il faut partir", argument.conclusion
+
+    def test_etant_donne_que_keeps_the_clause_split(self, parser):
+        argument = parser.parse_prose("Étant donné que les prix montent, il faut agir.")
+
+        assert argument.premises == [
+            "Étant donné que les prix montent"
+        ], argument.premises
+        assert argument.conclusion == "il faut agir", argument.conclusion
+
+    def test_premise_is_not_the_conclusion(self, parser):
+        argument = parser.parse_prose("Puisque il pleut, il faut partir.")
+
+        assert argument.conclusion not in argument.premises, argument
+
+    def test_mid_sentence_split_still_applies(self, parser):
+        # The control: the issue's own case keeps its repair.
+        argument = parser.parse_prose("Il faut partir car il pleut.")
+
+        assert argument.premises == ["il pleut"], argument.premises
+        assert argument.conclusion == "Il faut partir", argument.conclusion
+
+
+# ============================================================
 # ArgumentParser — _extract_premises
 # ============================================================
 

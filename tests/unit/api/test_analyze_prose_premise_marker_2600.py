@@ -72,3 +72,21 @@ class TestPremiseMarkerOnlyProse:
         structure = response.json()["results"]["argument_structure"]
         assert structure["premises"] == ["la pluie tombe"], structure
         assert structure["conclusion"] == "Le sol est mouillé", structure
+
+
+class TestPremiseMarkerOpeningTheSentence:
+    """#2600 review — « Puisque X, Y » : la route rend le partage de main.
+
+    Le marqueur ouvre la phrase : la coupe ne peut pas s'y appliquer (rien ne
+    le précède), et la prémisse ne doit pas contenir la conclusion.
+    """
+
+    def test_puisque_route_keeps_the_clause_split(self, client):
+        response = client.post(
+            "/api/analyze", json={"text": "Puisque il pleut, il faut partir."}
+        )
+
+        assert response.status_code == 200, response.text
+        structure = response.json()["results"]["argument_structure"]
+        assert structure["premises"] == ["Puisque il pleut"], structure
+        assert structure["conclusion"] == "il faut partir", structure
