@@ -10,10 +10,10 @@ Le `ProjectManagerAgent` opère en plusieurs étapes clés, généralement sous 
 
 1.  **Analyse de la Demande et de l'État :**
     *   Prend en entrée l'état actuel de l'analyse (fourni par l'orchestrateur, souvent un instantané du `StateManager`) et le texte brut à analyser.
-    *   Son instruction système (`PM_INSTRUCTIONS` dans [`pm_definitions.py`](./pm_definitions.py:0)) le guide sur la manière d'interpréter ces informations.
+    *   Son instruction système (`PM_INSTRUCTIONS` dans [`pm_definitions.py`](./pm_definitions.py)) le guide sur la manière d'interpréter ces informations.
 
 2.  **Planification et Définition des Tâches :**
-    *   Utilise sa fonction sémantique `DefineTasksAndDelegate` (basée sur [`prompt_define_tasks_v11`](./prompts.py:0)) pour déterminer la prochaine tâche d'analyse pertinente.
+    *   Utilise sa fonction sémantique `DefineTasksAndDelegate` (basée sur [`prompt_define_tasks_v11`](./prompts.py)) pour déterminer la prochaine tâche d'analyse pertinente.
     *   Cette fonction génère une description de la tâche et identifie l'agent spécialiste (par son nom exact) le plus apte à l'exécuter.
     *   Le résultat de cette fonction est une *instruction* ou un *plan* que l'orchestrateur doit ensuite interpréter pour :
         *   Enregistrer la nouvelle tâche (par exemple, via `StateManager.add_analysis_task`).
@@ -21,7 +21,7 @@ Le `ProjectManagerAgent` opère en plusieurs étapes clés, généralement sous 
 
 3.  **Rédaction de la Conclusion :**
     *   Lorsque l'orchestrateur juge que toutes les étapes d'analyse nécessaires sont complétées (basé sur l'état et potentiellement guidé par les instructions du PM), il peut demander au `ProjectManagerAgent` de rédiger la conclusion.
-    *   L'agent utilise alors sa fonction sémantique `WriteAndSetConclusion` (basée sur [`prompt_write_conclusion_v7`](./prompts.py:0)).
+    *   L'agent utilise alors sa fonction sémantique `WriteAndSetConclusion` (basée sur [`prompt_write_conclusion_v7`](./prompts.py)).
     *   Cette fonction génère le texte de la conclusion finale.
     *   De même, le résultat est une *instruction* que l'orchestrateur interprète pour enregistrer cette conclusion (par exemple, via `StateManager.set_final_conclusion`).
 
@@ -49,14 +49,14 @@ Les capacités principales de l'agent sont exposées via ses méthodes et foncti
 
 ## Composants Clés 🧩
 
-*   **[`pm_agent.py`](./pm_agent.py:0)**: Contient la classe `ProjectManagerAgent` qui hérite de `BaseAgent`.
+*   **[`pm_agent.py`](./pm_agent.py)**: Contient la classe `ProjectManagerAgent` qui hérite de `BaseAgent`.
     *   `__init__(...)`: Initialise l'agent avec un kernel Semantic Kernel et un nom.
     *   `setup_agent_components(llm_service_id: str)`: Ajoute les fonctions sémantiques (`DefineTasksAndDelegate`, `WriteAndSetConclusion`) au kernel de l'agent.
 
-*   **[`pm_definitions.py`](./pm_definitions.py:0)**:
+*   **[`pm_definitions.py`](./pm_definitions.py)**:
     *   `PM_INSTRUCTIONS` (ou une version spécifique comme `PM_INSTRUCTIONS_V9`): Les instructions système qui définissent le comportement général, le processus décisionnel, et les règles de délégation de l'agent PM. C'est un élément crucial pour guider le LLM.
 
-*   **[`prompts.py`](./prompts.py:0)**:
+*   **[`prompts.py`](./prompts.py)**:
     *   `prompt_define_tasks_v*`: Le template de prompt utilisé par la fonction sémantique `DefineTasksAndDelegate`. Il guide le LLM pour analyser l'état, le texte, et déterminer la prochaine tâche et l'agent.
     *   `prompt_write_conclusion_v*`: Le template de prompt utilisé par la fonction sémantique `WriteAndSetConclusion`. Il guide le LLM pour synthétiser les informations de l'état et rédiger une conclusion.
 
@@ -100,8 +100,8 @@ Les capacités principales de l'agent sont exposées via ses méthodes et foncti
 
 ### Extension
 
-*   **Modifier les Prompts :** Adapter les fichiers dans [`prompts.py`](./prompts.py:0) (ou créer de nouvelles versions) pour changer la logique de définition des tâches ou de rédaction de la conclusion. Mettre à jour les références dans `pm_agent.py` si de nouvelles versions de prompts sont utilisées.
-*   **Affiner les Instructions Système :** Modifier `PM_INSTRUCTIONS` dans [`pm_definitions.py`](./pm_definitions.py:0) pour altérer le comportement global de l'agent.
+*   **Modifier les Prompts :** Adapter les fichiers dans [`prompts.py`](./prompts.py) (ou créer de nouvelles versions) pour changer la logique de définition des tâches ou de rédaction de la conclusion. Mettre à jour les références dans `pm_agent.py` si de nouvelles versions de prompts sont utilisées.
+*   **Affiner les Instructions Système :** Modifier `PM_INSTRUCTIONS` dans [`pm_definitions.py`](./pm_definitions.py) pour altérer le comportement global de l'agent.
 *   **Ajouter des Fonctions Sémantiques :** Pour des capacités de planification ou de synthèse plus complexes, de nouvelles fonctions sémantiques peuvent être ajoutées en suivant le modèle existant (créer un prompt, l'ajouter dans `setup_agent_components`, et créer une méthode d'invocation dans `ProjectManagerAgent`).
 *   **Spécialisation par Héritage :** La classe `ProjectManagerAgent` peut servir de base pour des agents de gestion de projet plus spécialisés (par exemple, un `SherlockProjectManagerAgent`). Ces sous-classes pourraient surcharger les prompts, les instructions, ou ajouter des logiques spécifiques tout en bénéficiant de la structure existante.
     ```python
