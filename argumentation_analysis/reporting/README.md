@@ -61,7 +61,7 @@ paquet / fichiers de test) :
 | `reporting.py` | 25 | **résiduel** — 0 consommateur, 0 test | `reporting.py:5` |
 | `graph_generator.py` | 37 | **coquille vide** — 100 % commentaires | `graph_generator.py:1-37` |
 | `trace_analyzer.py` | 1191 | **résiduel** — 0 prod, 3 tests ; **collision de nom** | `trace_analyzer.py:273` |
-| `enhanced_real_time_trace_analyzer.py` | 738 | **vivant** — 2 sites prod | `analysis_runner_v2.py:68`, `enhanced_pm_analysis_runner.py:70` |
+| `enhanced_real_time_trace_analyzer.py` | 738 | **vivant** — 1 site prod | `analysis_runner_v2.py:68` |
 | `real_time_trace_analyzer.py` | 465 | **vivant** — 2 sites prod | `orchestrate_with_existing_tools.py:19`, `educational_showcase_system.py:94` |
 | `multi_format_exporter.py` | 394 | **vivant** — 2 sites prod | `export_scda_state.py:47`, `generate_spectacular_bundle.py:371` |
 | `conversation_balance.py` | 182 | **vivant** — 1 site prod (bundle) | `generate_spectacular_bundle.py:407` |
@@ -118,9 +118,9 @@ est `outputs/scda_audit/` (JSON), **gitignoré** (`.gitignore:171` `outputs/`).
 
 **Aval.** Deux familles :
 - *Scripts* (ci-dessus) → artefacts sur disque.
-- *Orchestration* : `analysis_runner_v2.py:68` et `enhanced_pm_analysis_runner.py:70`
-  pour l'analyseur de trace enrichi (ce dernier l'appelle réellement :
-  `:283-284`, `:622`) ; `conversational_orchestrator.py:962` pour `RepromptTraceExtractor` ;
+- *Orchestration* : `analysis_runner_v2.py:68` pour l'analyseur de trace enrichi
+  (le second site prod historique, `enhanced_pm_analysis_runner.py`, a été retiré — #2638) ;
+  `conversational_orchestrator.py:962` pour `RepromptTraceExtractor` ;
   `project_core/rhetorical_analysis_from_scripts/educational_showcase_system.py:94` pour
   l'analyseur de trace simple.
 

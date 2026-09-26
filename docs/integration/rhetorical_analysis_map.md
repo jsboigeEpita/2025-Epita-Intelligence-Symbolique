@@ -43,7 +43,7 @@ Collection d'outils utilisés par les agents ou l'orchestrateur pour des tâches
 
 Ce package est responsable de la coordination des agents pour réaliser une analyse complète.
 
-- **`analysis_runner.py`** et **`enhanced_pm_analysis_runner.py`**: Classes principales qui exécutent les pipelines d'analyse. Elles configurent l'environnement, instancient les agents et gèrent le flux de données.
+- **`unified_pipeline.py`** et **`run_orchestration.py`** : entrées actuelles qui exécutent les pipelines d'analyse (l'orchestration `UnifiedPipeline` via CLI multi-modes). Les anciens runners (`analysis_runner.py`, `enhanced_pm_analysis_runner.py`) ont été retirés (DRIFT_REGISTER ORC-4, #2638).
 - **`hierarchical/`**: Implémente une architecture d'orchestration hiérarchique (stratégique, tactique, opérationnel).
 
 ### 5. `argumentation_analysis/demos`
