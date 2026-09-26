@@ -52,10 +52,11 @@ class TestArgumentMetrics:
         assert m.evidence_quality == 0.0
         assert m.relevance_score == 0.0
         assert m.emotional_appeal == 0.0
-        # #2588: readability and fact-check are None until measured — no
-        # language's instrument ran, so no number exists yet.
+        # #2588: readability is None until a language is picked (formula);
+        # fact-check always measures — the lexicon union covers
+        # undetectable text.
         assert m.readability_score is None
-        assert m.fact_check_score is None
+        assert m.fact_check_score == 0.0
         assert m.novelty_score == 0.0
         assert m.persuasiveness == 0.0
 

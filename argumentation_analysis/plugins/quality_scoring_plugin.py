@@ -9,13 +9,17 @@ Integrated from student project 2.3.5 (Argument Quality Evaluation).
 """
 
 import json
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from semantic_kernel.functions import kernel_function
 
 from argumentation_analysis.agents.core.quality.quality_evaluator import (
     ArgumentQualityEvaluator,
     VERTUES,
+)
+from argumentation_analysis.agents.core.text_scoring import (
+    SUPPORTED_LANGUAGES,
+    detect_language,
 )
 
 
@@ -29,6 +33,11 @@ class QualityScoringPlugin:
     def __init__(self):
         self.evaluator = ArgumentQualityEvaluator()
 
+    def _doc_lang(self, text: str) -> Optional[str]:
+        """#2588 review: the language decided on the input, when it decides."""
+        lang = detect_language(text)
+        return lang if lang in SUPPORTED_LANGUAGES else None
+
     @kernel_function(
         name="evaluate_argument_quality",
         description=(
@@ -39,7 +48,10 @@ class QualityScoringPlugin:
     )
     def evaluate_argument_quality(self, text: str) -> str:
         """Evaluate argument text and return quality scores as JSON."""
-        result = self.evaluator.evaluate(text)
+        # #2588 review: decide the language where there is enough text —
+        # the input — and pass it down so a short argument keeps the
+        # document's Flesch scale.
+        result = self.evaluator.evaluate(text, lang=self._doc_lang(text))
         return json.dumps(result, ensure_ascii=False)
 
     @kernel_function(
@@ -48,7 +60,7 @@ class QualityScoringPlugin:
     )
     def get_quality_score(self, text: str) -> str:
         """Return just the overall quality score as JSON."""
-        result = self.evaluator.evaluate(text)
+        result = self.evaluator.evaluate(text, lang=self._doc_lang(text))
         return json.dumps(
             {
                 "note_finale": result["note_finale"],
@@ -76,7 +88,7 @@ class QualityScoringPlugin:
         The calling agent (QualityAgent) applies its LLM reasoning to
         produce the final adjusted scores.
         """
-        base_result = self.evaluator.evaluate(text)
+        base_result = self.evaluator.evaluate(text, lang=self._doc_lang(text))
 
         try:
             context = json.loads(cross_kb_context)

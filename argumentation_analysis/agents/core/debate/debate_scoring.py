@@ -6,7 +6,7 @@ Extracted from enhanced_argumentation_main.py ArgumentAnalyzer class.
 
 import logging
 import re
-from typing import Dict, Iterable, List, Optional, Set
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from ..text_scoring import (
     SUPPORTED_LANGUAGES,
@@ -72,6 +72,15 @@ def _count_indicators(content: str, indicators: Iterable[str]) -> int:
     return sum(
         1 for indicator in indicators if _indicator_pattern(indicator).search(content)
     )
+
+
+def _union(per_language: Dict[str, Tuple[str, ...]]) -> Tuple[str, ...]:
+    """Deduplicated union of the per-language word lists (#2588 review).
+
+    The evidence/emotion lists share five words across languages with the
+    same meaning; the dedup keeps each counted once.
+    """
+    return tuple(dict.fromkeys(w for words in per_language.values() for w in words))
 
 
 class ArgumentAnalyzer:
@@ -307,19 +316,44 @@ class ArgumentAnalyzer:
         }
         # #2588: textstat's first-use cost (CMUdict/pyphen load) is paid
         # here, once per process, so no timed measurement absorbs it later.
+        # Measured construction cost: ~1.55 s and ~590 modules on the first
+        # construction in a process (coordinator review of PR #2666).
         warm_up()
+        # #2588 review: when no context decides the language and the detector
+        # cannot either (below 3 function-word hits), the word instruments
+        # run on the union of the three languages — the hedging/absolute
+        # lists are disjoint, the evidence/emotion lists share five words
+        # with the same meaning in both, so a deduplicated union counts
+        # each once. "might" is hedging whichever list recognises it, and
+        # no language is ever guessed.
+        self._hedging_union = _union(self.hedging_indicators)
+        self._absolute_union = _union(self.absolute_indicators)
+        self._evidence_union = _union(self.evidence_indicators)
+        self._study_union = _union(self.study_words)
+        self._emotional_union = _union(self.emotional_indicators)
 
     def analyze_argument(
-        self, argument: EnhancedArgument, context: List[EnhancedArgument]
+        self,
+        argument: EnhancedArgument,
+        context: List[EnhancedArgument],
+        lang: Optional[str] = None,
     ) -> ArgumentMetrics:
-        """Comprehensive argument analysis across all 8 metrics."""
+        """Comprehensive argument analysis across all 8 metrics.
+
+        #2588 review: ``lang`` is the language decided where there is
+        enough text to decide one — the document or debate context the
+        caller holds. ``None`` detects on the argument's own content and,
+        failing that, falls back to the lexicon union for the word lists
+        (readability stays ``None``: no formula is picked by guessing).
+        """
+        content = argument.content
         metrics = ArgumentMetrics()
-        metrics.logical_coherence = self._assess_logical_coherence(argument.content)
-        metrics.evidence_quality = self._assess_evidence_quality(argument.content)
+        metrics.logical_coherence = self._assess_logical_coherence(content)
+        metrics.evidence_quality = self._assess_evidence_quality(content, lang)
         metrics.relevance_score = self._assess_relevance(argument, context)
-        metrics.emotional_appeal = self._assess_emotional_appeal(argument.content)
-        metrics.readability_score = self._assess_readability(argument.content)
-        metrics.fact_check_score = self._basic_fact_check(argument.content)
+        metrics.emotional_appeal = self._assess_emotional_appeal(content, lang)
+        metrics.readability_score = self._assess_readability(content, lang)
+        metrics.fact_check_score = self._basic_fact_check(content, lang)
         metrics.novelty_score = self._assess_novelty(argument, context)
         metrics.persuasiveness = self._calculate_persuasiveness(metrics)
         return metrics
@@ -351,22 +385,26 @@ class ArgumentAnalyzer:
             score += 0.1
         return min(score, 1.0)
 
-    def _assess_evidence_quality(self, content: str) -> float:
+    def _assess_evidence_quality(
+        self, content: str, lang: Optional[str] = None
+    ) -> float:
         """Assess presence of evidence (citations, numbers, references).
 
         #2588: indicators and study words match in the text's language;
-        numbers are language-independent and always count.
+        numbers are language-independent and always count. With no
+        decidable language and no ``lang``, the union of the three
+        lexicons runs (#2588 review).
         """
-        lang = detect_language(content)
+        lang = lang or detect_language(content)
         score = 0.3
         evidence_count = _count_indicators(
-            content, self.evidence_indicators.get(lang, ())
+            content, self.evidence_indicators.get(lang, self._evidence_union)
         )
         score += min(evidence_count * 0.15, 0.4)
         numbers = re.findall(r"\d+(?:\.\d+)?%?", content)
         if numbers:
             score += min(len(numbers) * 0.05, 0.2)
-        if _count_indicators(content, self.study_words.get(lang, ())):
+        if _count_indicators(content, self.study_words.get(lang, self._study_union)):
             score += 0.1
         return min(score, 1.0)
 
@@ -387,16 +425,19 @@ class ArgumentAnalyzer:
         ]
         return max(scores) if scores else None
 
-    def _assess_emotional_appeal(self, content: str) -> float:
+    def _assess_emotional_appeal(
+        self, content: str, lang: Optional[str] = None
+    ) -> float:
         """Detect emotional language and rhetorical devices.
 
         #2588: indicators match in the text's language; exclamation marks
-        and all-caps words are language-independent and always count.
+        and all-caps words are language-independent and always count. With
+        no decidable language and no ``lang``, the union of the three
+        lexicons runs (#2588 review).
         """
-        lang = detect_language(content)
-        emotional_count = _count_indicators(
-            content, self.emotional_indicators.get(lang, ())
-        )
+        lang = lang or detect_language(content)
+        words = self.emotional_indicators.get(lang, self._emotional_union)
+        emotional_count = _count_indicators(content, words)
         exclamations = content.count("!")
         caps_words = sum(
             1 for word in content.split() if word.isupper() and len(word) > 2
@@ -405,31 +446,38 @@ class ArgumentAnalyzer:
             (emotional_count * 0.1) + (exclamations * 0.05) + (caps_words * 0.05), 1.0
         )
 
-    def _assess_readability(self, content: str) -> Optional[float]:
+    def _assess_readability(
+        self, content: str, lang: Optional[str] = None
+    ) -> Optional[float]:
         """Assess readability via Flesch, with the text language's formula.
 
-        #2588: ``None`` when the language has no Flesch support here — an
-        English-scale number on a non-English text is not a measurement
-        (a mid-range French sentence scored like a difficult one). textstat
-        is a required dependency: an import failure propagates.
+        #2588: ``None`` when no language can be picked — an English-scale
+        number on a non-English text is not a measurement. The detector
+        rarely decides below ~20 words, so callers holding a longer text
+        (the document, the debate context) should pass ``lang`` (#2588
+        review); Flesch on a handful of words is not a measure in any
+        language. textstat is a required dependency: an import failure
+        propagates.
         """
-        score, _lang = flesch_reading_ease_for(content)
+        score, _lang = flesch_reading_ease_for(content, lang)
         if score is None:
             return None
         return max(0.0, min(1.0, score / 100.0))
 
-    def _basic_fact_check(self, content: str) -> Optional[float]:
+    def _basic_fact_check(self, content: str, lang: Optional[str] = None) -> float:
         """Heuristic fact-check: hedging vs absolute language.
 
-        #2588: the word lists are language-bound; ``None`` when the
-        language is not supported — the English lists on a French text
-        returned the neutral 0.6 constant on every input.
+        #2588: the word lists are language-bound — the English lists on a
+        French text returned the neutral 0.6 constant on every input. With
+        no decidable language and no ``lang``, the union of the three
+        languages' lists runs instead of guessing one (review): the lists
+        are disjoint, so the counts stay meaningful.
         """
-        lang = detect_language(content)
-        if lang not in SUPPORTED_LANGUAGES:
-            return None
-        hedging_count = _count_indicators(content, self.hedging_indicators[lang])
-        absolute_count = _count_indicators(content, self.absolute_indicators[lang])
+        lang = lang or detect_language(content)
+        hedging_words = self.hedging_indicators.get(lang, self._hedging_union)
+        absolute_words = self.absolute_indicators.get(lang, self._absolute_union)
+        hedging_count = _count_indicators(content, hedging_words)
+        absolute_count = _count_indicators(content, absolute_words)
         if hedging_count > absolute_count:
             return 0.7
         elif absolute_count > hedging_count:

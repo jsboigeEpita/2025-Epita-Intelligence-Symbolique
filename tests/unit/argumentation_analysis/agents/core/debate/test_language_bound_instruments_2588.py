@@ -85,8 +85,28 @@ class TestFactCheckLanguageBound:
         assert analyzer._basic_fact_check(EN_HEDGED) == 0.7
         assert analyzer._basic_fact_check(EN_ABSOLUTE) == 0.4
 
-    def test_unknown_language_reports_none_not_a_constant(self, analyzer):
-        assert analyzer._basic_fact_check("zzqq xxvv kkww jjff.") is None
+    def test_undetectable_text_runs_the_lexicon_union(self, analyzer):
+        # #2588 review: below 3 function words the detector cannot decide, and
+        # mapping unknown->en would bring the defect back for short French.
+        # The union of the three languages still measures: the lists are
+        # disjoint, and "might" is hedging whichever list recognises it.
+        short_fr_hedged = "Il faut peut-être baisser les impôts."
+        assert analyzer._basic_fact_check(short_fr_hedged) == 0.7
+        short_en_absolute = "Taxes must never rise for all firms."
+        assert analyzer._basic_fact_check(short_en_absolute) == 0.4
+        # No marker in any language: the neutral verdict is measured (zero
+        # hedging, zero absolutes), not a constant masking blind lists.
+        assert analyzer._basic_fact_check("zzqq xxvv kkww jjff.") == 0.6
+
+    def test_explicit_language_overrides_detection(self, analyzer):
+        # lang= is authoritative: a German-list pass on that French sentence
+        # finds no marker of either category, so the neutral 0.6 applies.
+        assert (
+            analyzer._basic_fact_check(
+                "Il faut peut-être baisser les impôts.", lang="de"
+            )
+            == 0.6
+        )
 
     def test_word_boundary_none_is_not_nonetheless(self, analyzer):
         # Substring matching counted "none" inside "nonetheless", tying the
@@ -160,10 +180,11 @@ class TestClarteLanguageBound:
 class TestPersuasivenessRenormalisation:
     def test_persuasiveness_stands_when_instruments_absent(self, analyzer):
         # Anti-pendule witness: an unknown-language argument keeps a computed
-        # persuasiveness — the None metrics drop out and weights renormalize
-        # (#2344 machinery), no placeholder value counts in.
+        # persuasiveness — readability (no formula to pick) drops out and its
+        # weight renormalizes (#2344 machinery); fact-check measures via the
+        # lexicon union (#2588 review) instead of returning a constant.
         metrics = analyzer.analyze_argument(_make_arg("zzqq xxvv kkww jjff."), [])
         assert metrics.readability_score is None
-        assert metrics.fact_check_score is None
+        assert metrics.fact_check_score == 0.6
         assert metrics.persuasiveness is not None
         assert 0.0 <= metrics.persuasiveness <= 1.0

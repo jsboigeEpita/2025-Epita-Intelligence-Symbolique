@@ -25,6 +25,7 @@ import os
 import re
 import sys
 import threading
+from functools import partial
 from pathlib import Path
 from enum import Enum, IntEnum
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -140,22 +141,11 @@ def _load_deps_locked():
         # textstat reaches NLTK's cmudict through a LazyCorpusLoader, which is
         # not thread-safe on first use: concurrent units raced it and recorded
         # 'clarte' UNAVAILABLE ("'CMUDictCorpusReader' object has no attribute
-        # '_LazyCorpusLoader__reader_cls'", #2353 render). One call per language,
-        # under the lock, performs that first use before any unit can. A failure
-        # is left to the per-unit path, which records it with its cause, as
-        # before. #2588: the warm covers the per-language instances the clarte
-        # detector now scores with.
-        try:
-            from argumentation_analysis.agents.core import text_scoring
-
-            text_scoring.warm_up()
-        except Exception as warm_exc:
-            logger.warning(
-                "textstat first use failed (%s: %s) — the clarte detector will "
-                "record it per unit.",
-                type(warm_exc).__name__,
-                warm_exc,
-            )
+        # '_LazyCorpusLoader__reader_cls'", #2353 render). #2588 review: that
+        # first use now happens under text_scoring's own lock, per language
+        # (a French first call does not load CMUdict), so no warm-up runs
+        # here — warming all three languages added ~1.2 s to the first
+        # quality call without preventing the race.
         try:
             _nlp = spacy.load("fr_core_news_sm")
         except OSError:
@@ -437,12 +427,13 @@ def infer_context_level(text: str) -> ContextLevel:
 # --- Individual virtue detectors ---
 
 
-# Flesch bands per language (#2588). Measured on the repo samples,
-# 2026-09-26: under fr rules the same text scores ~+20 vs en rules
-# (mid-range sentence 21.4→43.6, simple 98.3→112.0) — bands shift up;
-# under de rules ~-12 (67.3→55.3) with no band crossing on the graded
-# set — bands kept. Translation anchor: the en control (59.2, "medium")
-# and its French counterparts (43.6–69.1) land in the same band.
+# Flesch bands per language (#2588). First calibration, n = 8 repo samples
+# (5 fr, 2 de, 1 en anchor), measured 2026-09-26: under fr rules the same
+# text scores ~+20 vs en rules (mid-range sentence 21.4→43.6, simple
+# 98.3→112.0) — bands shift up; under de rules ~-12 (67.3→55.3) with no
+# band crossing on the graded set — bands kept. Translation anchor: the en
+# control (59.2, "medium") and its French counterparts (43.6–69.1) land in
+# the same band. A thin calibration — re-derive before trusting the edges.
 _CLARTE_BANDS = {
     "en": (60.0, 30.0),
     "fr": (80.0, 40.0),
@@ -450,15 +441,21 @@ _CLARTE_BANDS = {
 }
 
 
-def detect_clarte(text: str) -> Tuple[float, str]:
-    """Evaluate clarity via Flesch readability, in the text's language (#2588)."""
+def detect_clarte(text: str, lang: Optional[str] = None) -> Tuple[float, str]:
+    """Evaluate clarity via Flesch readability, in the text's language (#2588).
+
+    #2588 review: ``lang`` is the language decided where there is enough
+    text to decide one — the document the caller holds; ``None`` detects
+    on the text itself.
+    """
     _load_deps()
     from argumentation_analysis.agents.core import text_scoring
 
-    score, lang = text_scoring.flesch_reading_ease_for(text)
+    score, used_lang = text_scoring.flesch_reading_ease_for(text, lang)
     if score is not None:
-        clear_threshold, medium_threshold = _CLARTE_BANDS[lang]
-        comment = f"Lisibilité (Flesch {lang}, langue détectée) : {score:.2f}. "
+        clear_threshold, medium_threshold = _CLARTE_BANDS[used_lang]
+        origin = "langue détectée" if lang is None else "langue du document"
+        comment = f"Lisibilité (Flesch {used_lang}, {origin}) : {score:.2f}. "
         if score >= clear_threshold:
             return 1.0, comment + "Texte clair."
         elif score >= medium_threshold:
@@ -631,6 +628,7 @@ class ArgumentQualityEvaluator:
         text: str,
         agentic_llm: Any = _UNSET,
         context_level: Optional[ContextLevel] = None,
+        lang: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Evaluate argument quality and return structured report.
 
@@ -690,6 +688,13 @@ class ArgumentQualityEvaluator:
             context_level = infer_context_level(text)
         context_level = ContextLevel(context_level)
 
+        # #2588 review: ``lang`` is the language decided on the document the
+        # caller holds; bound into the clarte detector so a short argument
+        # inherits the document's Flesch scale instead of losing it.
+        detectors = self.detectors
+        if lang is not None and "clarte" in detectors:
+            detectors = {**detectors, "clarte": partial(detect_clarte, lang=lang)}
+
         scores: Dict[str, float] = {}
         details: Dict[str, str] = {}
         statuses: Dict[str, VirtueStatus] = {}
@@ -715,7 +720,7 @@ class ArgumentQualityEvaluator:
                     exc,
                 )
 
-        for vertu, detector in self.detectors.items():
+        for vertu, detector in detectors.items():
             # #1907 — applicability is decided by the input unit, never by the
             # score that came out. A virtue whose required context exceeds what
             # we were handed is honestly absent: no value, no denominator slot.

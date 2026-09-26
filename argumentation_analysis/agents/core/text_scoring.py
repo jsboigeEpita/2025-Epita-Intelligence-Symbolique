@@ -81,10 +81,17 @@ def flesch_reading_ease_for(
     Returns ``(score, lang)``. When ``lang`` is None the language is
     detected from the text. A language without Flesch support here yields
     ``(None, lang)`` — no English-scale number for a non-English text.
+
+    #2588 review: the first Flesch call per language performs textstat's
+    lazy dictionary load (CMUdict for 'en', pyphen for 'fr'/'de'), which
+    is not thread-safe on first use (#2353). It therefore runs under the
+    lock: whichever caller arrives first pays it once, and only for the
+    language it scores — a French first call does not load CMUdict.
     """
     if lang is None:
         lang = detect_language(text)
     if lang not in SUPPORTED_LANGUAGES:
         return None, lang
-    score = _flesch_instance(lang).flesch_reading_ease(text)
+    with _LOCK:
+        score = _flesch_instance(lang).flesch_reading_ease(text)
     return float(score), lang

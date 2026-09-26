@@ -77,6 +77,7 @@ from semantic_kernel.contents import ChatHistory
 from semantic_kernel.functions import kernel_function
 
 from ..abc.agent_bases import BaseAgent
+from ..text_scoring import SUPPORTED_LANGUAGES, detect_language
 from .debate_definitions import (
     AGENT_PERSONALITIES,
     ArgumentMetrics,
@@ -114,7 +115,13 @@ class DebatePlugin:
             timestamp=datetime.now().isoformat(),
             phase=DebatePhase.MAIN_ARGUMENTS,
         )
-        metrics = self.analyzer.analyze_argument(arg, [])
+        # #2588 review: the input text is the document — decide the language
+        # where there is enough text to decide one, and pass it down so the
+        # wording instruments do not lose a short argument's measurement.
+        lang = detect_language(text)
+        metrics = self.analyzer.analyze_argument(
+            arg, [], lang=lang if lang in SUPPORTED_LANGUAGES else None
+        )
         return json.dumps(
             {
                 "logical_coherence": metrics.logical_coherence,
