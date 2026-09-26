@@ -19,7 +19,7 @@ what is pinned is everything a second seat relies on to compare two renders:
    its absence rather than dropping the key (#2675).
 """
 
-import sys
+from importlib import metadata
 from pathlib import Path
 from typing import Any, Dict
 
@@ -246,15 +246,19 @@ def test_unit_shape_records_word_counts_never_the_text():
 def test_the_header_names_the_spacy_stack_the_lexical_arm_runs_on():
     """#2675: two seats with different spaCy stacks score the lexical arm
     differently; the header is what lets a reader of two renders see it."""
-    import fr_core_news_sm
-    import spacy
-
     versions = rqp.collect_provenance("doc_B", 0, "cmd")["sdk_versions"]
-    assert versions["spacy"] == spacy.__version__
-    assert versions["fr_core_news_sm"] == fr_core_news_sm.__version__
+    assert versions["spacy"] == metadata.version("spacy")
+    assert versions["fr_core_news_sm"] == metadata.version("fr_core_news_sm")
 
 
 def test_an_absent_model_is_named_in_the_header_not_dropped(monkeypatch):
-    monkeypatch.setitem(sys.modules, "fr_core_news_sm", None)
+    installed = metadata.version
+
+    def _version(dist):
+        if dist == "fr_core_news_sm":
+            raise metadata.PackageNotFoundError(dist)
+        return installed(dist)
+
+    monkeypatch.setattr(metadata, "version", _version)
     versions = rqp.collect_provenance("doc_B", 0, "cmd")["sdk_versions"]
     assert versions["fr_core_news_sm"].startswith("unavailable ("), versions

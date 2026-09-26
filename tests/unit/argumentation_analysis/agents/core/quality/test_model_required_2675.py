@@ -22,7 +22,6 @@ model is not installed ([E050]):
    detectors a real pipeline, so what reddens 1-2 is the missing model alone.
 """
 
-import spacy
 import pytest
 
 from argumentation_analysis.agents.core.quality import quality_evaluator as qe
@@ -66,6 +65,12 @@ def cold_deps(monkeypatch):
 
 @pytest.fixture
 def model_missing(monkeypatch):
+    # The loader's own order (#1093): a faulty torch DLL is neutralised before
+    # spaCy is imported, or ``import spacy`` dies on WinError 182 — at
+    # collection, when the import sat at module level (the CI runner).
+    qe._neutralize_faulty_torch()
+    import spacy
+
     def _load(name, *args, **kwargs):
         raise OSError(_E050)
 
