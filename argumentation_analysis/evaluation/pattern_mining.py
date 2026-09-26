@@ -86,24 +86,25 @@ class DungTopologyDetector:
                 "max_extension_size": 0.0,
             }
 
-        # Use first framework
-        fw = next(iter(dung.values())) if isinstance(dung, dict) else dung
+        # #2672: the first entry is a formalism sidecar on pipeline runs (DeLP's,
+        # with no arguments); the shared decoder finds the native framework.
+        from argumentation_analysis.reporting.restitution.native_dung import (
+            KEYED_SEMANTICS,
+            dung_reading,
+        )
+
+        fw, by_semantics = dung_reading(dung)
+        if fw is None:
+            fw = {}
         args = fw.get("arguments", [])
         attacks = fw.get("attacks", [])
-        extensions = fw.get("extensions", {})
         n = len(args)
         n_atk = len(attacks)
         max_ext = n * (n - 1) if n > 1 else 1
         # Directed-edge density (n*(n-1)), not undirected (n*(n-1)/2)
         density = n_atk / max_ext if max_ext > 0 else 0.0
 
-        all_exts = []
-        for ext_list in extensions.values():
-            if isinstance(ext_list, list):
-                if ext_list and isinstance(ext_list[0], list):
-                    all_exts.extend(ext_list)
-                else:
-                    all_exts.append(ext_list)
+        all_exts = [ext for sem in KEYED_SEMANTICS for ext in by_semantics.get(sem, [])]
 
         return {
             "n_args": float(n),

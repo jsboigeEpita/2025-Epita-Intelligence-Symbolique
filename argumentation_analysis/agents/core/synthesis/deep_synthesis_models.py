@@ -80,6 +80,9 @@ class DungStructure:
     grounded_extension: List[str] = field(default_factory=list)
     preferred_extensions: List[List[str]] = field(default_factory=list)
     stable_extensions: List[List[str]] = field(default_factory=list)
+    # #2672: the semantics whose extensions were computed. An extension absent
+    # from it was never computed, which is not the same as an empty one.
+    computed_semantics: List[str] = field(default_factory=list)
     interpretation: str = ""
 
 
