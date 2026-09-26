@@ -8,6 +8,11 @@ Routes:
     POST /api/mobile/fallacies   — Fallacy detection
     POST /api/mobile/validate    — Logical validation (Toulmin model)
     POST /api/mobile/chat        — Chat with AI assistant
+
+#2541: ``/analyze`` and ``/fallacies`` answer only what ran. ``/fallacies`` is
+the detector ``POST /api/fallacies`` serves; ``/analyze`` reads the state the
+``light`` workflow writes. A run that did not happen fails with its reason
+(the ``api/errors`` envelope) instead of answering 200 with an empty list.
 """
 
 import logging
@@ -15,6 +20,9 @@ from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
+from .errors import ServiceUnavailableError, UnanalyzableInputError, UpstreamError
+from .fallacy_detection import detect_fallacies
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +53,8 @@ class ArgumentResult(BaseModel):
 class AnalyzeResponse(BaseModel):
     text: str
     arguments: List[ArgumentResult] = []
-    overall_quality: float = 0.0
+    # #2541: ``None`` when the quality phase measured none of the arguments.
+    overall_quality: Optional[float] = None
 
 
 class FallacyInstance(BaseModel):
@@ -83,98 +92,113 @@ class ChatResponse(BaseModel):
 # ──── Endpoints ────
 
 
+# #2541: the ``extraction_status`` the fact extraction reports when it has no
+# LLM client (``_invoke_fact_extraction``): the analysis did not run.
+EXTRACTION_UNAVAILABLE = "failed:no-openai-client"
+
+
 @mobile_router.post("/analyze", response_model=AnalyzeResponse)
 async def mobile_analyze(request: TextRequest):
-    """Analyze argumentative text — returns structured arguments."""
-    import time
+    """Analyze argumentative text — returns structured arguments.
 
-    start = time.time()
+    #2541: the arguments are the ones the ``light`` workflow writes to its
+    state (``identified_arguments``), each as the extraction describes it: the
+    pipeline does not split them into premises and a conclusion.
+    ``overall_quality`` is the mean ``quality_fraction`` of the arguments the
+    quality phase measured, ``None`` when it measured none.
+
+    A run that did not happen fails with its reason: 503 when the extraction
+    has no LLM client, 502 when the pipeline or the extraction failed, 422 when
+    the pipeline classified the text as non-argumentative (an extraction that
+    found no argument is one, #1909).
+    """
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
+    )
+    from argumentation_analysis.plugins.narrative_synthesis_plugin import (
+        quality_fraction,
+    )
+
+    context: Dict[str, Any] = {"workflow": "light"}
     try:
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            run_unified_analysis,
-        )
-
         result = await run_unified_analysis(request.text, workflow_name="light")
-        result_dict = result if isinstance(result, dict) else {"raw": str(result)}
+    except Exception as exc:
+        raise UpstreamError(
+            f"analysis pipeline: {type(exc).__name__}: {exc}", context=context
+        ) from exc
 
-        arguments = []
-        for i, arg in enumerate(result_dict.get("identified_arguments", {}).items()):
-            arg_id, desc = arg
-            arguments.append(
-                ArgumentResult(
-                    id=arg_id,
-                    text=desc,
-                    conclusion=desc,
-                )
-            )
-
-        fallacies_raw = result_dict.get("identified_fallacies", {})
-        if not arguments and result_dict.get("summary"):
-            arguments.append(
-                ArgumentResult(
-                    id="summary",
-                    text=result_dict["summary"],
-                    conclusion=result_dict.get("summary", ""),
-                )
-            )
-
-        return AnalyzeResponse(
-            text=request.text,
-            arguments=arguments,
-            overall_quality=result_dict.get("overall_quality", 0.5),
+    outcome = result.get("analysis_outcome") or {}
+    context.update(outcome)
+    if outcome.get("status") == "failed":
+        reason = outcome.get("reason", "unknown")
+        error = (
+            ServiceUnavailableError
+            if reason == EXTRACTION_UNAVAILABLE
+            else UpstreamError
         )
-    except Exception as e:
-        logger.error(f"Mobile analyze failed: {e}")
-        return AnalyzeResponse(
-            text=request.text,
-            arguments=[
-                ArgumentResult(
-                    id="error",
-                    text=f"Analysis unavailable: {e}",
-                    conclusion=str(e),
-                )
-            ],
-            overall_quality=0.0,
+        raise error(f"argument extraction: {reason}", context=context)
+    if outcome.get("status") == "non_argumentative":
+        raise UnanalyzableInputError(
+            "The pipeline classified the text as non-argumentative: there is "
+            "no argument to extract.",
+            context=context,
         )
+    state = result.get("unified_state")
+    if state is None:
+        raise UpstreamError(
+            "analysis pipeline returned no state to read the arguments from",
+            context=context,
+        )
+
+    arguments = [
+        ArgumentResult(id=arg_id, text=description)
+        for arg_id, description in state.identified_arguments.items()
+    ]
+    fractions = [
+        quality_fraction(state.argument_quality_scores.get(arg_id))
+        for arg_id in state.identified_arguments
+    ]
+    measured = [fraction for fraction in fractions if fraction is not None]
+    return AnalyzeResponse(
+        text=request.text,
+        arguments=arguments,
+        overall_quality=sum(measured) / len(measured) if measured else None,
+    )
 
 
 @mobile_router.post("/fallacies", response_model=FallacyResponse)
 async def mobile_fallacies(request: TextRequest):
-    """Detect logical fallacies in text."""
+    """Detect logical fallacies in text.
+
+    #2541: served by ``detect_fallacies``, the detector ``POST /api/fallacies``
+    serves (the pipeline's own ``_invoke_hierarchical_fallacy``, ``llm`` tier),
+    with the confidence it gives each detection. When it cannot run, the
+    request fails with its reason (503 or 502); an empty list means it ran and
+    found nothing. ``span`` locates the detector's quote in the text, and is
+    ``[0, 0]`` when the quote cannot be located: the client highlights nothing.
+    """
     import time
 
+    from argumentation_analysis.agents.core.quality.passage import locate_quote
+
     start = time.time()
-    try:
-        from argumentation_analysis.orchestration.unified_pipeline import (
-            run_unified_analysis,
+    detection = await detect_fallacies(request.text)
+    fallacies = []
+    for fallacy in detection.fallacies:
+        span = locate_quote(request.text, fallacy.quote or "")
+        fallacies.append(
+            FallacyInstance(
+                type=fallacy.name,
+                confidence=fallacy.confidence,
+                span=list(span) if span else [0, 0],
+                explanation=fallacy.explanation or "",
+            )
         )
-
-        result = await run_unified_analysis(request.text, workflow_name="standard")
-        result_dict = result if isinstance(result, dict) else {}
-
-        fallacies = []
-        for fid, fdata in result_dict.get("identified_fallacies", {}).items():
-            if isinstance(fdata, dict):
-                fallacies.append(
-                    FallacyInstance(
-                        type=fdata.get("type", fid),
-                        confidence=0.8,
-                        explanation=fdata.get("justification", ""),
-                    )
-                )
-
-        return FallacyResponse(
-            text=request.text,
-            fallacies=fallacies,
-            execution_time=time.time() - start,
-        )
-    except Exception as e:
-        logger.error(f"Mobile fallacy detection failed: {e}")
-        return FallacyResponse(
-            text=request.text,
-            fallacies=[],
-            execution_time=time.time() - start,
-        )
+    return FallacyResponse(
+        text=request.text,
+        fallacies=fallacies,
+        execution_time=time.time() - start,
+    )
 
 
 @mobile_router.post("/validate", response_model=ValidateResponse)
