@@ -462,20 +462,22 @@ class SemanticIndexService:
             "limit": limit,
         }
 
-        # Build filters
-        filters = []
+        # Build filters: ONE object. Kernel Memory ORs across filter objects
+        # and ANDs inside one (TagsMatchFilters), so one criterion per object
+        # would let {chunk_type: argument} OR {source_name: run} return every
+        # argument of every run — the #2698 re-review leak. Every criterion
+        # shares the single AND-object below.
+        criteria: Dict[str, List[str]] = {"chunk_type": ["argument"]}
         if fallacy_type:
-            filters.append({"fallacy_type": [fallacy_type]})
+            criteria["fallacy_type"] = [fallacy_type]
         if quality_level:
-            filters.append({"quality_level": [quality_level]})
+            criteria["quality_level"] = [quality_level]
         if has_fallacy is not None:
-            filters.append({"has_fallacy": ["true" if has_fallacy else "false"]})
+            criteria["has_fallacy"] = ["true" if has_fallacy else "false"]
         if source_name:
-            filters.append({"source_name": [source_name]})
-        filters.append({"chunk_type": ["argument"]})
+            criteria["source_name"] = [source_name]
 
-        if filters:
-            payload["filters"] = filters
+        payload["filters"] = [criteria]
 
         resp = requests.post(
             f"{self._km_url}/search",

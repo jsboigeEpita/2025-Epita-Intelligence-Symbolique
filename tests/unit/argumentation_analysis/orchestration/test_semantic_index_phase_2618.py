@@ -95,18 +95,36 @@ class _FakeKMTransport:
         raise AssertionError(f"unexpected POST {url}")
 
     def _filter_docs(self, payload):
-        wanted = {}
-        for f in payload.get("filters", []):
-            for key, values in f.items():
-                wanted.setdefault(key, set()).update(values)
+        filters = payload.get("filters", [])
         matched = []
         for doc_id, meta in self.docs.items():
-            if all(
-                any(f"{key}:{v}" in meta["tags"] for v in values)
-                for key, values in wanted.items()
-            ):
+            if self._tags_match_filters(meta["tags"], filters):
                 matched.append((doc_id, meta))
         return matched[: payload.get("limit", 5)]
+
+    @staticmethod
+    def _tags_match_filters(tags, filters):
+        """Port of Kernel Memory ``TagsMatchFilters`` (SimpleVectorDb /
+        SimpleTextDb): OR across filter objects, AND across conditions
+        inside one object, AND across the listed values of one key — the
+        real server's semantics, not a simplification of them (#2698
+        re-review: the previous AND-everything merge certified a request
+        shape a real KM answers differently)."""
+        if not filters:
+            return True
+        tag_set = set(tags)
+        for f in filters:
+            match = True
+            for key, values in f.items():
+                for v in values:
+                    if f"{key}:{v}" not in tag_set:
+                        match = False
+                        break
+                if not match:
+                    break
+            if match:
+                return True
+        return False
 
 
 _ARGS = [
@@ -214,6 +232,35 @@ async def test_two_runs_do_not_cross_contaminate():
         "les documents du run A ont disparu du transport: l'absence vient du "
         "scope, pas de l'absence de donnees"
     )
+
+
+def test_fallacy_type_filter_excludes_untagged_arguments():
+    """#2698 re-review: on a real Kernel Memory, one criterion per filter
+    object is ORed with the others, so ``fallacy_type=X`` alone let every
+    ``chunk_type:argument`` through. This witness uploads two argument
+    chunks, only one carrying the fallacy tag, and requires the tagged
+    one alone to come back."""
+    from argumentation_analysis.services.semantic_index_service import (
+        SemanticIndexService,
+    )
+
+    transport = _FakeKMTransport()
+    transport.docs["doc_tagged"] = {
+        "text": "argument taggue ad hominem",
+        "tags": ["chunk_type:argument", "fallacy_type:ad_hominem"],
+    }
+    transport.docs["doc_clean"] = {
+        "text": "argument sans sophisme",
+        "tags": ["chunk_type:argument"],
+    }
+    service = SemanticIndexService(km_url="http://test:9001")
+    with patch.object(service, "_get_requests", return_value=transport):
+        results = service.search_arguments(query="argument", fallacy_type="ad_hominem")
+
+    returned = {r.document_id for r in results}
+    assert returned == {
+        "doc_tagged"
+    }, f"le filtre fallacy_type laisse passer des arguments non taggues: {returned}"
 
 
 async def test_phase_without_arguments_still_searches():
