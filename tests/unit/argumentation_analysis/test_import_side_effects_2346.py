@@ -25,6 +25,10 @@ Three checks hold the repair:
 - a fresh interpreter per module, started in an empty directory: importing it
   adds no directory inside the package to ``sys.path``, no handler to the root
   logger, no ``FileHandler`` anywhere, and writes nothing into that directory.
+  The analysis runner is included because its unused environment-manager import
+  previously configured the root logger transitively.
+- direct-file ``--help`` still works without ``PYTHONPATH`` for the launchers
+  whose repository-root bootstrap remains necessary.
 
 The performance log of ``utils/performance_monitoring.py`` now opens on the
 first measurement; a last check runs one measurement and reads the line back.
@@ -39,6 +43,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.support.isolated_script import run_without_editable_install
+
 REPO = Path(__file__).resolve().parents[3]
 PACKAGE = "argumentation_analysis"
 
@@ -49,7 +55,6 @@ PACKAGE = "argumentation_analysis"
 SYS_PATH_DEBT = {
     "argumentation_analysis/agents/initialize_cache.py": "#2346",
     "argumentation_analysis/orchestration/analysis_runner_v2.py": "#2346",
-    "argumentation_analysis/orchestration/enhanced_pm_analysis_runner.py": "#2346",
     "argumentation_analysis/orchestration/service_manager.py": "#2346",
     "argumentation_analysis/pipelines/reporting_pipeline.py": "#2346",
     "argumentation_analysis/plugins/analysis_tools/logic/rhetorical_result_visualizer.py": "#2346",
@@ -61,6 +66,9 @@ SYS_PATH_DEBT = {
 }
 
 IMPORTED = [
+    "argumentation_analysis.orchestration.analysis_runner_v2",
+    "argumentation_analysis.orchestration.enhanced_pm_analysis_runner",
+    "argumentation_analysis.pipelines.reporting_pipeline",
     "argumentation_analysis.utils",
     "argumentation_analysis.agents.core.extract.extract_definitions",
     "argumentation_analysis.services.definition_service",
@@ -253,6 +261,35 @@ def measured():
 
 assert measured() == 42
 """
+
+
+@pytest.mark.parametrize(
+    "script",
+    [
+        "argumentation_analysis/orchestration/analysis_runner_v2.py",
+        "argumentation_analysis/pipelines/reporting_pipeline.py",
+    ],
+)
+def test_direct_file_launchers_still_resolve_project_imports(script):
+    done = run_without_editable_install(
+        REPO / script, REPO, run_name="__main__", args=("--help",), timeout=120
+    )
+    assert done.returncode == 0, done.stderr[-3000:]
+    assert "--help" in done.stdout
+
+
+def test_direct_launcher_harness_can_fail(tmp_path):
+    naked = tmp_path / "argumentation_analysis" / "pipelines" / "naked.py"
+    naked.parent.mkdir(parents=True)
+    naked.write_text(
+        "from argumentation_analysis.config.settings import settings\n",
+        encoding="utf-8",
+    )
+    done = run_without_editable_install(
+        naked, tmp_path, run_name="__main__", args=("--help",)
+    )
+    assert done.returncode != 0, done.stdout + done.stderr
+    assert "ModuleNotFoundError" in done.stderr, done.stderr
 
 
 def test_the_performance_log_opens_on_the_first_measurement(tmp_path):

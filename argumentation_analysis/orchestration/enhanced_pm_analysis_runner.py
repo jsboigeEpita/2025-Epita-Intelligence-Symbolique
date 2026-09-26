@@ -18,7 +18,6 @@ import argumentation_analysis.core.environment  # Auto-activation environnement 
 import warnings
 
 # =========================================
-import sys
 import os
 import time
 import traceback
@@ -27,12 +26,6 @@ import logging
 import json
 import random
 from typing import TYPE_CHECKING, List, Optional, Union, Any, Dict
-
-# Configuration des chemins
-current_script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
 
 # Imports Semantic Kernel
 import semantic_kernel as sk

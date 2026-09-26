@@ -32,9 +32,6 @@ project_root = os.path.abspath(os.path.join(current_script_dir, "..", ".."))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-# Auto-activation de l'environnement virtuel si nécessaire
-import project_core.core_from_scripts.environment_manager as environment_manager
-
 # ===== IMPORTS SEMANTIC KERNEL =====
 import semantic_kernel as sk
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
