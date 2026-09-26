@@ -26,6 +26,8 @@ import ast
 import functools
 from pathlib import Path
 
+from tests.support.tree_walk import iter_files
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TESTS = REPO_ROOT / "tests"
 
@@ -42,13 +44,13 @@ def _archived(path: Path) -> bool:
 
 
 def _workers() -> list[Path]:
-    return sorted(p for p in TESTS.rglob("worker_*.py") if not _archived(p))
+    return sorted(p for p in iter_files(TESTS, "worker_*.py") if not _archived(p))
 
 
 def _launch_files() -> list[Path]:
     return sorted(
         p
-        for p in TESTS.rglob("*.py")
+        for p in iter_files(TESTS)
         if (p.name.startswith("test_") or p.name == "conftest.py") and not _archived(p)
     )
 
