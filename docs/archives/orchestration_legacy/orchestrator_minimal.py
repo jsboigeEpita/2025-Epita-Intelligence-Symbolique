@@ -4,3 +4,5 @@
 # Superseded by: conversation_orchestrator.py (1043 LOC, 23 imports) and
 #   conversational_orchestrator.py (490 LOC, SK native GroupChat mode)
 # Only 2 imports: tests/utils/scenario_runner.py, tests/integration/workers/worker_logic_puzzles_hardening.py
+# Both were retired (the worker by #2700, the runner by #2703), and #2703
+# withdrew the shim left at orchestration/orchestrator.py: no importer remained.
