@@ -435,6 +435,7 @@ class SemanticIndexService:
         fallacy_type: Optional[str] = None,
         quality_level: Optional[str] = None,
         has_fallacy: Optional[bool] = None,
+        source_name: Optional[str] = None,
         limit: int = 5,
     ) -> List[SearchResult]:
         """Search indexed arguments with metadata filtering.
@@ -445,6 +446,10 @@ class SemanticIndexService:
             fallacy_type: Filter by specific fallacy type.
             quality_level: Filter by quality level ("high", "medium", "low").
             has_fallacy: Filter for arguments with/without fallacies.
+            source_name: Restrict the search to one indexing source — the
+                run-scoped namespace ``index_arguments`` uploads under
+                (#2618 review: without it, a run's search can return
+                another run's arguments).
             limit: Max results.
 
         Returns:
@@ -465,6 +470,8 @@ class SemanticIndexService:
             filters.append({"quality_level": [quality_level]})
         if has_fallacy is not None:
             filters.append({"has_fallacy": ["true" if has_fallacy else "false"]})
+        if source_name:
+            filters.append({"source_name": [source_name]})
         filters.append({"chunk_type": ["argument"]})
 
         if filters:

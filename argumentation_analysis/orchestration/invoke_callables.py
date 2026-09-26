@@ -3402,19 +3402,22 @@ async def _wait_km_indexing_bounded(
     ``asyncio.sleep`` between polls — never ``time.sleep``, which would
     block the event loop (#2618, absorbing the #2346 polling debt).
     Returns what is known when the deadline hits: a partial wait is
-    reported, not raised.
+    reported, not raised. A probe that raises is not a timeout:
+    ``probe_errors`` counts them so the two causes stay distinguishable.
     """
     import time as _time
 
     deadline = _time.monotonic() + timeout
     pending = list(doc_ids)
     completed = []
+    probe_errors = 0
     while pending and _time.monotonic() < deadline:
         still = []
         for doc_id in pending:
             try:
                 info = await asyncio.to_thread(service.indexing_status, doc_id)
             except Exception:
+                probe_errors += 1
                 still.append(doc_id)
                 continue
             if info.get("completed", False):
@@ -3429,13 +3432,28 @@ async def _wait_km_indexing_bounded(
         "total": len(doc_ids),
         "timed_out": bool(pending),
         "timeout_seconds": timeout,
+        "probe_errors": probe_errors,
     }
+
+
+def _run_source_name(input_text: str) -> str:
+    """Opaque, document-unique source name for one run's indexed arguments.
+
+    #2618 review: with the service default, every run indexed under
+    ``pipeline``, so document ids collided across runs and one run's search
+    could return another run's arguments. A digest of the analyzed text
+    gives each document its own namespace; re-running the same text
+    overwrites its own ids (idempotent) and never mixes documents.
+    """
+    import hashlib
+
+    return "run_" + hashlib.sha256(input_text.encode("utf-8")).hexdigest()[:12]
 
 
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Index the run's arguments, then search them.
+    """Index the run's arguments, then search them — scoped to this run.
 
     KK #700: consults ``is_available()`` first — ``skipped:
     endpoint_unavailable`` names the absent endpoint (no silent optional
@@ -3445,6 +3463,12 @@ async def _invoke_semantic_index(
     through ``index_arguments``. It then waits a bounded time for the
     index and runs an argument search. What was indexed and what was
     found are recorded in the phase result, not only in the log.
+
+    Scope: the run indexes under an opaque, document-unique source name
+    (a digest of the analyzed text) and the search filters on that name,
+    so a run never returns another run's arguments — answering with
+    another run's content is the pattern #2541/#2688 removed from the
+    API. Re-running the same text overwrites its own ids (idempotent).
     """
     from argumentation_analysis.services.semantic_index_service import (
         SemanticIndexService,
@@ -3472,9 +3496,11 @@ async def _invoke_semantic_index(
         fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
     )
 
+    run_name = _run_source_name(input_text)
     doc_ids = await asyncio.to_thread(
         service.index_arguments,
         arguments,
+        source_name=run_name,
         quality_scores=per_argument_scores,
         fallacies=fallacies,
     )
@@ -3485,11 +3511,15 @@ async def _invoke_semantic_index(
         _KM_INDEXING_POLL_INTERVAL,
     )
 
-    results = await asyncio.to_thread(service.search_arguments, input_text)
+    results = await asyncio.to_thread(
+        service.search_arguments, input_text, source_name=run_name
+    )
     return {
         "status": "ran",
+        "source_name": run_name,
         "indexed_document_ids": doc_ids,
         "indexed_count": len(doc_ids),
+        "arguments_seen": len(arguments),
         "indexing": indexing,
         "results": [
             {
