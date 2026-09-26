@@ -238,6 +238,8 @@ async def test_execute_query_authentic(authentic_pl_agent):
 
     print(f"[AUTHENTIC] Résultat requête '{query}': {result}")
     print(f"[AUTHENTIC] Message TweetyBridge: {message}")
+    assert result is True
+    assert "FUNC_ERROR" not in message
 
     query_rejected = "c"
     result_rejected, message_rejected = await agent.execute_query(
@@ -246,6 +248,8 @@ async def test_execute_query_authentic(authentic_pl_agent):
 
     print(f"[AUTHENTIC] Résultat requête rejetée '{query_rejected}': {result_rejected}")
     print(f"[AUTHENTIC] Message rejet: {message_rejected}")
+    assert result_rejected is False
+    assert "FUNC_ERROR" not in message_rejected
 
     execution_time = time.time() - start_time
     print(f"[AUTHENTIC] Test d'exécution terminé en {execution_time:.2f}s")

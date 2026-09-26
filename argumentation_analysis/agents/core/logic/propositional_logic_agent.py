@@ -722,7 +722,7 @@ class PropositionalLogicAgent(BaseLogicAgent):
             Tuple[Optional[bool], str]: Un tuple contenant :
             - Le résultat booléen (`True` si la requête est prouvée, `False` sinon,
               `None` en cas d'erreur).
-            - Le message de sortie brut de Tweety, utile pour le débogage.
+            - Le message décrivant le verdict d'entraînement rendu.
         """
         self.logger.info(f"Exécution de la requête PL: '{query}'...")
 
@@ -735,20 +735,12 @@ class PropositionalLogicAgent(BaseLogicAgent):
                 self.logger.error(msg)
                 return None, f"FUNC_ERROR: {msg}"
 
-            is_entailed, raw_output_str = self._tweety_bridge.execute_pl_query(
-                belief_set_content=bs_str, query_string=query
-            )
-
-            if "FUNC_ERROR:" in raw_output_str:
-                self.logger.error(
-                    f"Erreur de TweetyBridge pour la requête '{query}': {raw_output_str}"
-                )
-                return None, raw_output_str
+            is_entailed = self._tweety_bridge.pl_query(bs_str, query)
 
             self.logger.info(
-                f"Résultat de l'exécution pour '{query}': {is_entailed}, Output brut: '{raw_output_str}'"
+                f"Résultat de l'exécution pour '{query}': {is_entailed}"
             )
-            return is_entailed, raw_output_str
+            return is_entailed, f"Résultat de l'inférence: {is_entailed}."
 
         except Exception as e:
             error_msg = (
