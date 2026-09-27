@@ -13,7 +13,7 @@ Un module : `jtms_plugin.py` (631 lignes) — `JTMSSemanticKernelPlugin` (:36), 
 
 ## Points d'entrée valides
 
-**Routes API dédiées** (montage mesuré) : `api/main.py:104-105` monte `jtms_router` sous `/api/v1` (sous garde `_JTMS_AVAILABLE`, import :31-33) → `argumentation_analysis/api/jtms_endpoints.py` expose les 5 endpoints de commodité `@jtms_router.post("/sk/...")` :787, :812, :839, :862, :885, tous `Depends(get_sk_plugin)` → `create_jtms_plugin` (:93 via :55). Snapshot OpenAPI : `api/openapi.snapshot.json:1281`.
+**Routes API dédiées** (montage mesuré) : `api/main.py:115-116` monte `jtms_router` sous `/api/v1` (sous garde `_JTMS_AVAILABLE`, import :31-37) → `argumentation_analysis/api/jtms_endpoints.py` expose les 5 endpoints de commodité `@jtms_router.post("/sk/...")` :795, :826, :859, :888, :917, tous `Depends(get_sk_plugin)` → `create_jtms_plugin` (:100 via :60). Snapshot OpenAPI : `api/openapi.snapshot.json:1604-1927` (les 5 chemins `/api/v1/jtms/sk/...`, depuis #2723).
 
 Consommateur secondaire : `evaluation/plugin_benchmark.py:461`.
 

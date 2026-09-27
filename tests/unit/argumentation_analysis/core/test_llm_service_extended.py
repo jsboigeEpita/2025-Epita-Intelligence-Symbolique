@@ -141,7 +141,7 @@ class TestCreateLlmServiceAzure:
         """Azure path without AZURE_OPENAI_ENDPOINT raises ValueError."""
         from argumentation_analysis.core.llm_service import create_llm_service
 
-        env = {"OPENAI_API_KEY": "sk-test"}
+        env = {"AZURE_OPENAI_API_KEY": "azure-test"}
         with patch.dict(os.environ, env, clear=False):
             os.environ.pop("PYTEST_CURRENT_TEST", None)
             os.environ.pop("AZURE_OPENAI_ENDPOINT", None)
@@ -154,13 +154,17 @@ class TestCreateLlmServiceAzure:
                 )
 
     def test_azure_success(self):
-        """Azure path with endpoint creates AzureChatCompletion."""
+        """Azure path builds AzureChatCompletion from Azure's own key (#2711 B).
+
+        The OpenAI key is set too: it used to be the one sent to Azure.
+        """
         from argumentation_analysis.core.llm_service import create_llm_service
 
         with patch.dict(
             os.environ,
             {
                 "OPENAI_API_KEY": "sk-test",
+                "AZURE_OPENAI_API_KEY": "azure-test",
                 "AZURE_OPENAI_ENDPOINT": "https://my-resource.openai.azure.com",
             },
         ):
@@ -177,6 +181,10 @@ class TestCreateLlmServiceAzure:
                 )
             assert service is not None
             mock_azure.assert_called_once()
+            kwargs = mock_azure.call_args.kwargs
+            assert kwargs["api_key"] == "azure-test"
+            assert kwargs["deployment_name"] == "gpt-4"
+            assert kwargs["endpoint"].startswith("https://my-resource.openai.azure.com")
 
 
 class TestCreateLlmServiceErrors:

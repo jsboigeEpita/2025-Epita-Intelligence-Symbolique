@@ -11,8 +11,10 @@ defects, both silent:
 - ``kernel/kernel_builder.py`` read ``settings.azure_openai`` while the block
   sat under ``JVMSettings`` — the azure branch therefore raised
   ``AttributeError`` before its own "key not configured" check, and could
-  never run. (#2198 moved the block onto ``AppSettings``, so the chain that
-  reader wanted is now the chain that exists; the pin below records that.)
+  never run. (#2198 moved the block onto ``AppSettings``; #2711 B then retired
+  that reader and the block with it, since ``create_llm_service`` builds Azure
+  from ``AzureOpenAISettings`` directly. A new ``settings.azure_openai``
+  reader would be a phantom again, and this census would name it.)
 
 The census below is deliberately NOT an allow-list: it walks every module in
 ``argumentation_analysis/`` that imports the ``settings`` singleton and
@@ -170,11 +172,12 @@ def test_the_guard_detects_a_phantom():
 def test_the_historical_phantom_stays_detected():
     """#2115's case 1 is still a phantom, and the guard still rejects it.
 
-    #2115's case 2 (``settings.azure_openai``) is deliberately no longer a
-    phantom: #2198 moved the block onto ``AppSettings``, so that chain resolves
-    by design. It left this pin rather than being kept alive under a shim —
-    which is what the pin's own message prescribed for a chain that resolves
-    again. Case 1 is untouched: ``default_model_id`` still belongs at
+    #2115's case 2 (``settings.azure_openai``) left this pin when #2198 moved
+    the block onto ``AppSettings``, rather than being kept alive under a shim.
+    #2711 B then retired its only reader, ``KernelBuilder``, and the block went
+    with it: that chain is a phantom again, and ``test_no_phantom_settings_attribute``
+    names any production reader that brings it back. Case 1 is untouched:
+    ``default_model_id`` still belongs at
     ``settings.service_manager.default_model_id``.
     """
     resolved, _verifiable = _resolve(("settings", "default_model_id"))
