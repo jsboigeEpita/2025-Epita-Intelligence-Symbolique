@@ -20,7 +20,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from dotenv import load_dotenv
+from project_core.managers.environment_manager import EnvironmentManager
 
 # Configuration des chemins et des commandes
 ROOT_DIR = Path(__file__).parent.parent
@@ -425,15 +425,14 @@ def main():
     # d'environnement nécessaires (comme la clé API), nous chargeons explicitement le fichier .env.
     # Cela rend le script de test autonome et résilient aux problèmes de propagation d'environnement
     # depuis les scripts de lancement (PowerShell, Conda, etc.).
-    env_path = ROOT_DIR / ".env"
-    if env_path.exists():
-        _log(f"Chargement des variables d'environnement depuis {env_path}")
-        # `override=True` garantit que les variables du .env priment sur celles
-        # qui pourraient déjà exister dans l'environnement système.
-        load_dotenv(dotenv_path=env_path, override=True)
+    env_manager = EnvironmentManager()
+    if env_manager.dotenv_loaded:
+        _log(
+            f"Chargement des variables d'environnement depuis {env_manager.dotenv_path}"
+        )
     else:
         _log(
-            f"[WARNING] Fichier .env non trouvé à {env_path}. Les tests risquent d'échouer si les variables requises ne sont pas déjà définies dans l'environnement."
+            f"[WARNING] Fichier .env non trouvé à {ROOT_DIR / '.env'}. Les tests risquent d'échouer si les variables requises ne sont pas déjà définies dans l'environnement."
         )
 
     parser = argparse.ArgumentParser(description="Orchestrateur de tests du projet.")

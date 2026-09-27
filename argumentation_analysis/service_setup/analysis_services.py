@@ -18,7 +18,7 @@ La fonction retourne un dictionnaire indiquant le statut des services initialisÃ
 import logging
 from pathlib import Path
 from typing import Dict, Any
-from dotenv import find_dotenv, load_dotenv
+from project_core.managers.environment_manager import EnvironmentManager
 
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.jvm_setup import initialize_jvm
@@ -29,7 +29,7 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
     """
     Initialise et configure les services en se basant sur la configuration centrale et une config optionnelle.
     """
-    load_dotenv(find_dotenv())
+    EnvironmentManager()
     services = {}
     if config is None:
         config = {}

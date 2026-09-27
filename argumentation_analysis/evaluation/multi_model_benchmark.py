@@ -483,13 +483,10 @@ def main():
         format="%(asctime)s [%(name)s] %(message)s",
     )
 
-    # #1794: env loading belongs to the CLI entry point — run_multi_model_benchmark
-    # is a library function and must not mutate the process environment (it leaked
-    # the nested .env key into the test suite). load_dotenv() here covers the
-    # list-models branch and the benchmark run below.
-    from dotenv import load_dotenv
+    # Keep loading at the CLI boundary, including the list-models branch (#1794).
+    from project_core.managers.environment_manager import EnvironmentManager
 
-    load_dotenv()
+    EnvironmentManager()
 
     if args.list_workflows:
         print("Available workflows:")

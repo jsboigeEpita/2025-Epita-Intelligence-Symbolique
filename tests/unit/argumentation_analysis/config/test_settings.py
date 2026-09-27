@@ -364,25 +364,23 @@ class TestAppSettings:
         assert s.encryption_key is None or isinstance(s.encryption_key, SecretStr)
 
 
-def test_jvm_settings_read_the_pins_from_dotenv(tmp_path):
-    """`.env` is the channel this project documents; JVMSettings ignored it.
-
-    Measured on the #1883 review: `JVM_TWEETY_PINNED_MODULES` placed in `.env`
-    resolved to the empty string, `parse_pin_spec("")` returned {} without
-    complaint, and the assembly proceeded unpinned -- losing the pin one layer
-    below where `parse_pin_spec` promises never to drop one. A real OS env var
-    always worked, which is why the gap was invisible.
-
-    Drop `env_file` from JVMSettings.model_config and this reddens.
-    """
-    from argumentation_analysis.config.settings import JVMSettings
+def test_jvm_settings_read_the_pins_from_root_dotenv(tmp_path, monkeypatch):
+    """The one loader populates os.environ before JVMSettings reads the pins."""
+    import project_core.managers.environment_manager as env_module
 
     env = tmp_path / ".env"
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\nname='test'\n", encoding="utf-8"
+    )
     env.write_text(
         "JVM_TWEETY_PINNED_MODULES=org.tweetyproject.arg:bipolar:1.30\n"
         "JVM_TWEETY_EXCLUDED_MODULES=org.tweetyproject:web\n",
         encoding="utf-8",
     )
-    s = JVMSettings(_env_file=str(env))
+    monkeypatch.setattr(env_module, "_find_repo_root", lambda: tmp_path)
+    for name in ("JVM_TWEETY_PINNED_MODULES", "JVM_TWEETY_EXCLUDED_MODULES"):
+        monkeypatch.delenv(name, raising=False)
+    env_module.EnvironmentManager()
+    s = JVMSettings(_env_file=None)
     assert s.tweety_pinned_modules == "org.tweetyproject.arg:bipolar:1.30"
     assert s.tweety_excluded_modules == "org.tweetyproject:web"

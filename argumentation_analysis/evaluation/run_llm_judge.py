@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
+from project_core.managers.environment_manager import EnvironmentManager
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.evaluation.judge import LLMJudge, JudgeScore
@@ -97,8 +97,8 @@ def load_benchmark_results(path: Path) -> List[Dict[str, Any]]:
 
 
 def _load_dotenv() -> None:
-    """Load .env file if present."""
-    load_dotenv(Path(".env"))
+    """Load the checkout's root .env if present."""
+    EnvironmentManager()
 
 
 async def run_judge_on_results(

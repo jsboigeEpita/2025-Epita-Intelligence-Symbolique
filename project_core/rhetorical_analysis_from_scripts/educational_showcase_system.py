@@ -1258,26 +1258,13 @@ def setup_demo_environment():
     for key, value in env_vars.items():
         os.environ[key] = value
 
-    # Charger les variables d'environnement depuis .env si disponible
-    try:
-        from dotenv import load_dotenv, find_dotenv
+    from project_core.managers.environment_manager import EnvironmentManager
 
-        env_path = find_dotenv(
-            filename=".env", usecwd=True, raise_error_if_not_found=False
-        )
-        if env_path:
-            load_dotenv(env_path, override=True)
-            # Utiliser un caractère simple pour éviter les problèmes d'encodage
-            # Utiliser un caractère simple pour éviter les problèmes d'encodage
-            print(f"[OK] Configuration .env chargee depuis: {env_path}")
-        else:
-            print(
-                "[WARN] Fichier .env non trouve - utilisation configuration par defaut"
-            )
-    except ImportError:
-        print(
-            "[WARN] python-dotenv non disponible - utilisation variables d'environnement"
-        )
+    manager = EnvironmentManager()
+    if manager.dotenv_loaded:
+        print(f"[OK] Configuration .env chargee depuis: {manager.dotenv_path}")
+    else:
+        print("[WARN] Fichier .env non trouve - utilisation configuration par defaut")
 
 
 def main():

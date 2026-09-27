@@ -209,23 +209,7 @@ def test_a_script_loads_quoted_values_unquoted_and_the_caller_wins(
 
 
 _FUNCTION_LOADERS = {
-    # the .env path is relative to the working directory
-    "capability_eval": (
-        "from argumentation_analysis.evaluation import capability_eval as m\n"
-        "m._load_dotenv()\n"
-    ),
-    "run_agentic_eval": (
-        "from argumentation_analysis.evaluation import run_agentic_eval as m\n"
-        "m._load_dotenv()\n"
-    ),
-    "run_iteration": (
-        "from argumentation_analysis.evaluation import run_iteration as m\n"
-        "m._load_dotenv()\n"
-    ),
-    "run_llm_judge": (
-        "from argumentation_analysis.evaluation import run_llm_judge as m\n"
-        "m._load_dotenv()\n"
-    ),
+    # Evaluation package loaders now use the one checkout-root loader (#2708).
     "validation_point2_llm_authentique": (
         "import runpy\n"
         "runpy.run_path(r'{root}/scripts/validation/"

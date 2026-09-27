@@ -115,11 +115,8 @@ def test_initialize_analysis_services_defaults(mock_ui_config, temp_project_root
         "argumentation_analysis.service_setup.analysis_services.create_llm_service",
         return_value=mock_llm_service,
     ) as mock_create_llm, patch(
-        "argumentation_analysis.service_setup.analysis_services.load_dotenv"
-    ), patch(
-        "argumentation_analysis.service_setup.analysis_services.find_dotenv",
-        return_value=".env",
-    ), patch(
+        "argumentation_analysis.service_setup.analysis_services.EnvironmentManager"
+    ) as mock_env_manager, patch(
         "argumentation_analysis.service_setup.analysis_services.settings"
     ) as mock_settings:
         # Configure settings mock
@@ -136,6 +133,7 @@ def test_initialize_analysis_services_defaults(mock_ui_config, temp_project_root
         assert "llm_service" in services
         assert services["llm_service"] is mock_llm_service
 
+        mock_env_manager.assert_called_once_with()
         mock_init_jvm.assert_called_once()
         mock_create_llm.assert_called_once()
 

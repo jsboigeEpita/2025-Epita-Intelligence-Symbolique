@@ -5,15 +5,8 @@ import logging
 import os
 from pathlib import Path
 
-# #1794: this entry point used to inherit its .env from the module-level
-# load_dotenv() in orchestration.invoke_callables — env loading belongs to
-# process entry points, not to library imports (collection-time pollution).
-try:
-    from dotenv import load_dotenv
-
-    load_dotenv()
-except ImportError:
-    pass
+# Entry points load the checkout's root .env through the one loader (#2708).
+import argumentation_analysis.core.environment  # noqa: F401
 
 from .factory import create_app
 from .endpoints import router as api_router, framework_router, informal_router
