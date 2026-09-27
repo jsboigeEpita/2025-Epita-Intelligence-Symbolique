@@ -289,6 +289,52 @@ class TestFormalExtensionFilter:
         assert caps.isdisjoint(_ALL_EXTENSION_CAPS)
 
 
+@pytest.mark.parametrize(
+    "filters", [("core", "all"), ("none", "all"), ("core", "none", "all")]
+)
+async def test_dispatch_filter_does_not_change_catalog_for_later_runs(
+    monkeypatch, filters
+):
+    """Each run starts with the same catalog graph, even after a narrower run."""
+    from argumentation_analysis.orchestration import unified_pipeline
+    from argumentation_analysis.agents.core.logic import tweety_initializer
+
+    catalog_workflow = build_spectacular_workflow()
+    original_names = [phase.name for phase in catalog_workflow.phases]
+    original_dependencies = [
+        list(phase.depends_on) for phase in catalog_workflow.phases
+    ]
+    seen = []
+
+    async def capture_execute(self, workflow, **kwargs):
+        seen.append([phase.name for phase in workflow.phases])
+        return {}
+
+    monkeypatch.setattr(
+        unified_pipeline,
+        "get_workflow_catalog",
+        lambda: {"spectacular": catalog_workflow},
+    )
+    monkeypatch.setattr(unified_pipeline.WorkflowExecutor, "execute", capture_execute)
+    monkeypatch.setattr(tweety_initializer, "ready_initializer", lambda: None)
+
+    for formal_filter in filters:
+        await unified_pipeline.run_unified_analysis(
+            "synthetic argument",
+            workflow_name="spectacular",
+            registry=object(),
+            create_state=False,
+            context={"formal_extension_filter": formal_filter},
+        )
+        assert [phase.name for phase in catalog_workflow.phases] == original_names
+        assert [
+            phase.depends_on for phase in catalog_workflow.phases
+        ] == original_dependencies
+
+    assert seen[-1] == original_names
+    assert len(seen[0]) < len(original_names)
+
+
 # ---------------------------------------------------------------------------
 # Signature test
 # ---------------------------------------------------------------------------
