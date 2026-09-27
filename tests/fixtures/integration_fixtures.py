@@ -1,5 +1,3 @@
-from semantic_kernel.contents.chat_history import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
 import pytest
