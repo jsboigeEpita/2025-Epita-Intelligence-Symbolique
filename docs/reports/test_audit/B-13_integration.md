@@ -216,6 +216,8 @@ Le cluster Cluedo (6 fichiers, ~49 tests) cristallise l'evolution la plus turbul
 | 41 | `logical_agents/test_logic_puzzles_hardening.py` | Puzzles hardening | `propositional_reasoning` | Hardening scenarios | 2 |
 | 42 | `test_unified_investigation.py` | (vide) | — | Pas de tests | 0 |
 
+> **Note (2026-09-27, #2703)** : la ligne 32 (`test_logic_puzzles_hardening.py`, déplacé depuis dans `tests/integration/triage/` par #1867) ne testait rien à la date de l'audit. Il appelait `tests/utils/scenario_runner.py`, qui passait par `orchestration/orchestrator.py`, une coquille dont `run_analysis_async` lève `NotImplementedError` depuis #215 (2026-03-24), et il n'assertait pas le résultat. Son xfail donnait une autre raison, antérieure à la coquille. Retiré par #2703 avec le runner et la coquille. Ses deux scénarios restent couverts par les lignes 40 et 41 (`logical_agents/`).
+
 ---
 
 ## Capabilities muettes (signal de zone fragile)

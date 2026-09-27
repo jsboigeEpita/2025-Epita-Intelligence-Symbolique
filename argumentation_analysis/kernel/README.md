@@ -16,20 +16,16 @@ N'est **pas** le chemin de construction du kernel en production : le kernel rée
 
 ## Points d'entrée valides
 
-**Aucun importeur production.** Un seul consommateur, de l'outillage de tests :
-
-- [`tests/utils/scenario_runner.py:8,42`](../../tests/utils/scenario_runner.py) — `KernelBuilder.create_kernel(settings)`. Le noyau qu'il construit est passé à `orchestration/orchestrator.py`, une coquille dont `run_analysis_async` lève `NotImplementedError` (#2703).
-
-Le second consommateur, `tests/integration/workers/worker_logic_puzzles_hardening.py`, n'avait aucun lanceur et appelait la même coquille ; #2700 l'a retiré.
+**Aucun consommateur.** Ni importeur production, ni outillage de tests. Les deux derniers consommateurs, `tests/utils/scenario_runner.py` et `tests/integration/workers/worker_logic_puzzles_hardening.py`, passaient le noyau construit à `orchestration/orchestrator.py`, une coquille dont `run_analysis_async` levait `NotImplementedError`. #2700 a retiré le worker, #2703 le runner et la coquille. Le module n'est plus appelé que par ses propres tests.
 
 ## Amont / aval
 
 - Amont : `semantic_kernel`, `config.settings.AppSettings`.
-- Aval : scenarios de tests d'intégration (scenario_runner).
+- Aval : aucun depuis #2703 (le dernier, `scenario_runner`, est retiré).
 
 ## Statut d'intégration
 
-**spécialisé (outillage de tests)** — résiduel côté production, vivant côté outillage : le scenario_runner sert les tests d'intégration workers.
+**résiduel** — aucun consommateur depuis #2703 ; seuls ses propres tests l'appellent. Le chemin production qui construit un noyau est [`core/bootstrap.py`](../core/README.md).
 
 ## Artefacts et lecteurs
 
@@ -37,7 +33,7 @@ Aucun — kernel en mémoire.
 
 ## Tests représentatifs
 
-`tests/kernel/test_kernel_builder.py` — **fichier vide (0 octet)** : le test dédié n'a jamais été écrit. Le module n'a **aucun test propre** ; il n'est exécuté qu'indirectement par les scenarios consommateurs (`tests/utils/scenario_runner.py`).
+`tests/kernel/test_kernel_builder.py` — les 3 tests posés par #2115 (voir « Limites connues ») ; ce sont les seuls appels du module.
 
 ## Frères et parent
 
