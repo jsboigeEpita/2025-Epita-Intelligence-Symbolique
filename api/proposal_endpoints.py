@@ -143,55 +143,41 @@ async def get_deliberation_status(delib_id: str):
 @proposal_router.get("/capabilities", response_model=CapabilitiesResponse)
 async def list_capabilities():
     """List available capabilities from the registry."""
-    try:
-        from argumentation_analysis.core.capability_registry import CapabilityRegistry
+    # #2743: list the registry the served pipeline runs on. run_unified_analysis
+    # builds it through unified_pipeline.setup_registry when given none; an
+    # empty CapabilityRegistry() advertised nothing, and a failure to build it
+    # must surface as an error, not as an empty success.
+    from argumentation_analysis.core.capability_registry import ComponentType
+    from argumentation_analysis.orchestration import unified_pipeline
 
-        registry = CapabilityRegistry()
+    registry = unified_pipeline.setup_registry()
 
-        agents = []
-        plugins = []
-        services = []
-
-        for name, reg in registry._registrations.items():
-            info = CapabilityInfo(
-                name=name,
-                type=(
-                    reg.component_type.value
-                    if hasattr(reg.component_type, "value")
-                    else str(reg.component_type)
-                ),
-                capabilities=(
-                    list(reg.capabilities) if hasattr(reg, "capabilities") else []
-                ),
+    def _listed(component_type: ComponentType) -> List[CapabilityInfo]:
+        return [
+            CapabilityInfo(
+                name=reg.name,
+                type=component_type.value,
+                capabilities=list(reg.capabilities),
             )
-            if "agent" in info.type.lower():
-                agents.append(info)
-            elif "plugin" in info.type.lower():
-                plugins.append(info)
-            else:
-                services.append(info)
-
-        workflows = [
-            "light",
-            "standard",
-            "full",
-            "auto",
-            "democratech",
-            "debate_tournament",
-            "fact_check",
+            for reg in registry.get_all_registrations(component_type)
         ]
 
-        return CapabilitiesResponse(
-            agents=agents, plugins=plugins, services=services, workflows=workflows
-        )
-    except Exception as e:
-        logger.warning(f"Could not load registry: {e}")
-        return CapabilitiesResponse(
-            agents=[],
-            plugins=[],
-            services=[],
-            workflows=["light", "standard", "full", "auto"],
-        )
+    workflows = [
+        "light",
+        "standard",
+        "full",
+        "auto",
+        "democratech",
+        "debate_tournament",
+        "fact_check",
+    ]
+
+    return CapabilitiesResponse(
+        agents=_listed(ComponentType.AGENT),
+        plugins=_listed(ComponentType.PLUGIN),
+        services=_listed(ComponentType.SERVICE),
+        workflows=workflows,
+    )
 
 
 # ──── Custom Workflow ────
