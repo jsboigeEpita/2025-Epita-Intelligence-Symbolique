@@ -239,6 +239,11 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > `KNOWN_CAPABILITIES`. No literal grep sees that demand; the #1842 census counts it since
 > #2424 (`_capability_tables`), and `test_table_carried_demand_resolves` holds every name a
 > table carries to a provider of `setup_registry()` — `TABLE_DEMAND_GAPS` names the exceptions.
+> Since #2788 the census also reads **row tables** that a loop unpacks into
+> `add_phase(capability=<var>)` (the evaluation workflows, the router's optional phases), and the
+> literal form on all three phase callees (`add_phase`, `add_conditional_phase`, `add_loop`). A
+> phase capability it cannot read fails the census, unless `DYNAMIC_PHASE_CAPABILITIES` names
+> the site and where its demand is measured.
 
 ### Lego Architecture (`argumentation_analysis/core/capability_registry.py`)
 

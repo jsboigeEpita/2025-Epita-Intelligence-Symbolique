@@ -40,7 +40,7 @@ ROOTS_BY_WALK = {
     "unit/argumentation_analysis/orchestration/test_one_capability_surface_1842.py": [
         "root (PROD_ROOT or synthetic)"
     ]
-    * 3,
+    * 4,
     "unit/argumentation_analysis/test_cross_text_parallels_status_2344.py": [
         "REPO_ROOT/root (argumentation_analysis, scripts)"
     ],
