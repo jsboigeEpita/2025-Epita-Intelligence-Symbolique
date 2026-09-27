@@ -214,6 +214,17 @@ class OperationalManager:
         while self.running:
             try:
                 task = await self.task_queue.get()
+            except asyncio.CancelledError:
+                self.logger.info("Worker opérationnel annulé.")
+                break
+
+            # #2786 : une tâche prise est rendue à la file sur TOUS les chemins.
+            # Le chemin d'erreur sautait ``task_done()``, et un
+            # ``task_queue.join()`` aurait attendu sans fin après la première
+            # erreur. L'erreur ne se rapporte qu'à la tâche prise ici :
+            # l'ancien ``if "task" in locals()`` restait vrai d'un tour à
+            # l'autre et pouvait accuser la tâche du tour précédent.
+            try:
                 self.logger.info(f"Worker a pris la tâche {task.get('id')}")
 
                 result = await self.agent_registry.process_task(task)
@@ -223,7 +234,6 @@ class OperationalManager:
                     result_future.set_result((task, result))
 
                 await self.result_queue.put(result)
-                self.task_queue.task_done()
 
             except asyncio.CancelledError:
                 self.logger.info("Worker opérationnel annulé.")
@@ -233,8 +243,10 @@ class OperationalManager:
                 self.logger.error(
                     f"Erreur dans le worker opérationnel: {e}", exc_info=True
                 )
-                if "task" in locals():
-                    self._handle_worker_error(e, task)
+                self._handle_worker_error(e, task)
+
+            finally:
+                self.task_queue.task_done()
 
         self.logger.info("Worker opérationnel arrêté.")
 

@@ -60,10 +60,11 @@ class OperationalAgent(ABC):
     # agent ne partageait ; même livré, le traitement appelait des méthodes
     # fantômes d'OperationalAdapter (send_status_update, send_task_result,
     # request_tactical_guidance, share_operational_data) ; et le consommateur
-    # du résultat n'a jamais existé (handle_task_result : zéro appelant). Les
-    # chemins d'exécution réels contournent le middleware : M3 par le seam
-    # operational_executor, le ServiceManager par la file + Future de
-    # OperationalManager._worker.
+    # du résultat n'a jamais existé (handle_task_result : zéro appelant). Le
+    # chemin d'exécution réel contourne le middleware : M3 par le seam
+    # operational_executor. La file + Future de OperationalManager._worker n'a
+    # pas d'appelant de production : le ServiceManager construit le manager
+    # sans jamais le démarrer (#2786).
 
     @abstractmethod
     async def process_task(self, task: Dict[str, Any]) -> Dict[str, Any]:

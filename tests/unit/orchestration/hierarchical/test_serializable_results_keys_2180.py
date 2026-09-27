@@ -10,76 +10,19 @@ mais toute frontière JSON lève ``TypeError: keys must be str... not
 WindowsPath``. Ces gardes fixent le contrat : la charge de résultats vit sous
 la clé chaîne ``"results"`` (clé nommée : elle siège À CÔTÉ de clés nommées
 dans le payload, pas au niveau où ``#2177`` a posé ``"data"``).
+
+#2786 : l'écrivain côté coordinateur, le rapport ``objective_completion``, est
+retiré (aucun lecteur, ``status`` à ``completed`` en dur même sur un échec).
+Sa garde de sérialisation part avec lui ; restent les écrivains des gabarits.
 """
 
 import json
-from unittest.mock import MagicMock
-
-import pytest
-
-from argumentation_analysis.orchestration.hierarchical.tactical.coordinator import (
-    TaskCoordinator,
-)
 from argumentation_analysis.orchestration.hierarchical.templates.analysis_tool_template import (
     BaseAnalysisTool,
 )
 from argumentation_analysis.orchestration.hierarchical.templates.analysis_type_template import (
     BaseAnalysisType,
 )
-
-
-def make_mock_middleware():
-    m = MagicMock()
-    m.send_message.return_value = True
-    m.publish.return_value = []
-    m.global_handlers = []
-    return m
-
-
-def sent_messages(mock_mw):
-    return [c.args[0] for c in mock_mw.send_message.call_args_list if c.args]
-
-
-def make_coordinator_with_objective_done(mock_mw, objective_results):
-    state = MagicMock()
-    state.get_objective_for_task.return_value = "obj-1"
-    state.are_all_tasks_for_objective_done.return_value = True
-    state.get_objective_results.return_value = objective_results
-    return TaskCoordinator(tactical_state=state, middleware=mock_mw)
-
-
-class TestCoordinatorReportWriter:
-    def test_objective_completion_report_serializes(self):
-        """Le rapport objective_completion doit franchir la frontière JSON.
-
-        Le coordinateur écrit les résultats de l'objectif sous une clé du
-        contenu du message (``send_report``) : cette clé doit être une chaîne,
-        sinon ``json.dumps(Message.to_dict())`` lève (#2180).
-        """
-        mock_mw = make_mock_middleware()
-        objective_results = {"findings": ["f1"], "score": 0.8}
-        coordinator = make_coordinator_with_objective_done(mock_mw, objective_results)
-
-        coordinator.handle_task_result(
-            {
-                "tactical_task_id": "task-1",
-                "completion_status": "completed",
-            }
-        )
-
-        reports = [
-            m
-            for m in sent_messages(mock_mw)
-            if m.content.get("report_type") == "objective_completion"
-        ]
-        assert (
-            reports
-        ), "handle_task_result doit émettre le rapport objective_completion"
-        round_tripped = json.loads(
-            json.dumps(reports[0].to_dict())
-        )  # TypeError si clé Path (#2180)
-        payload = round_tripped["content"]["data"]
-        assert payload["results"] == objective_results
 
 
 class TestTemplateWriters:

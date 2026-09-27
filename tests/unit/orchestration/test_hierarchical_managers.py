@@ -277,10 +277,14 @@ class TestTaskCoordinator:
         assert "tasks_created" in result
         assert result["tasks_created"] == 4
 
-    def test_handle_failed_task_and_report(self, task_coordinator):
+    def test_handle_failed_task_sends_no_report(self, task_coordinator):
         """
-        Teste que le traitement d'un résultat de tâche en échec déclenche
-        un rapport vers la couche stratégique.
+        Un résultat en échec qui termine un objectif met l'état à jour et
+        n'envoie aucun rapport au stratégique (#2786).
+
+        Ce test épinglait l'ancien rapport ``objective_completion``, y compris
+        son ``status`` à ``completed`` en dur sur un échec. Aucun code ne le
+        lisait ; il est retiré.
         """
         failed_result = {
             "tactical_task_id": "task_1",
@@ -292,9 +296,6 @@ class TestTaskCoordinator:
         task_coordinator.state.get_objective_for_task = MagicMock(return_value="obj_1")
         task_coordinator.state.are_all_tasks_for_objective_done = MagicMock(
             return_value=True
-        )
-        task_coordinator.state.get_objective_results = MagicMock(
-            return_value={"some": "results"}
         )
 
         # Espionner l'envoi de rapport
@@ -308,12 +309,7 @@ class TestTaskCoordinator:
         task_coordinator.state.update_task_status.assert_called_once_with(
             "task_1", "failed"
         )
-        spy_send_report.assert_called_once()
-        report_kwargs = spy_send_report.call_args.kwargs
-        assert report_kwargs.get("report_type") == "objective_completion"
-        assert (
-            report_kwargs.get("content", {}).get("status") == "completed"
-        )  # La logique actuelle envoie 'completed' même en cas d'échec
+        spy_send_report.assert_not_called()
 
 
 class TestOperationalManager:
@@ -528,32 +524,36 @@ class TestHierarchicalIntegration:
         directive = strategic.adapter.issue_directive.call_args.kwargs
         assert directive["directive_type"] == "strategic_adjustment"
 
-    def test_error_escalation_hierarchy(self, integrated_hierarchy):
+    def test_failed_objective_ends_in_the_tactical_state(self, integrated_hierarchy):
         """
-        Teste que la réception d'un rapport d'objectif échoué par le stratégique
-        déclenche bien des ajustements.
+        Le coordinateur réel, sur un objectif dont toutes les tâches échouent
+        (#2786, ex-``test_error_escalation_hierarchy``).
+
+        L'ancien test fabriquait à la main un rapport ``objective_completion``
+        à ``status: failed``, que le coordinateur ne pouvait pas émettre (il
+        écrivait ``completed`` en dur), l'envoyait à travers un ``MagicMock``,
+        puis appelait ``process_tactical_feedback`` directement : aucun code
+        ne transporte ce rapport jusqu'au stratégique. Le rapport est retiré.
+        L'issue de l'objectif reste dans l'état tactique réel ; le stratégique
+        la reçoit par l'agrégation de ``DelegationOrchestrator``.
         """
         tactical = integrated_hierarchy["tactical"]
-        strategic = integrated_hierarchy["strategic"]
-
         tactical.adapter.send_report = MagicMock()
-        strategic.adapter.issue_directive = MagicMock()
+        task_ids = ["obj-F-t1", "obj-F-t2"]
+        for task_id in task_ids:
+            tactical.state.add_task(
+                {"id": task_id, "objective_id": "obj-F", "description": "Synthetic"},
+                "in_progress",
+            )
 
-        # 1. Le coordinateur tactique envoie un rapport d'échec d'objectif
-        failure_report = {
-            "report_type": "objective_completion",
-            "content": {"objective_id": "obj-F", "status": "failed"},
-        }
-        # Simuler ce que le coordinateur enverrait
-        tactical.adapter.send_report(**failure_report)
-        tactical.adapter.send_report.assert_called_once()
+        for task_id in task_ids:
+            tactical.handle_task_result(
+                {"tactical_task_id": task_id, "completion_status": "failed"}
+            )
 
-        # 2. Le manager stratégique reçoit le rapport (via un mock de handler) et réagit
-        # On simule le feedback en créant une structure similaire à ce qui serait reçu
-        strategic.process_tactical_feedback({"issues": [failure_report["content"]]})
-        strategic.adapter.issue_directive.assert_called_once()
-        directive = strategic.adapter.issue_directive.call_args.kwargs
-        assert directive["directive_type"] == "strategic_adjustment"
+        assert [t["id"] for t in tactical.state.tasks["failed"]] == task_ids
+        assert tactical.state.are_all_tasks_for_objective_done("obj-F")
+        tactical.adapter.send_report.assert_not_called()
 
 
 if __name__ == "__main__":
