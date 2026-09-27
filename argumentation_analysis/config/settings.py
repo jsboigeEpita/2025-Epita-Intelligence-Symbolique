@@ -114,9 +114,9 @@ class JVMSettings(BaseSettings):
     # the library asks for 15, and pinning the floor to what we happen to ship
     # would make the next JDK bump look like a requirement change.
     #
-    # This is a latent trap, not the CI blocker: jvm_setup ignores JAVA_HOME and
-    # provisions its own portable JDK 17, so the Java 11 from setup-java never
-    # reaches the JVM. It bites whoever drops a JDK 11 into portable_jdk/.
+    # jvm_setup ignores JAVA_HOME and uses the JDK in portable_jdk/ (17.0.12 below,
+    # also what CI runs). A JDK under this floor found there is rejected and a
+    # portable one is downloaded instead.
     min_java_version: int = 15
     min_heap_size: str = "256m"
     max_heap_size: str = "2048m"

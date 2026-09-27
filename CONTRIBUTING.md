@@ -24,7 +24,7 @@ Ce guide vous aidera à configurer votre environnement de développement et à c
 ### Prérequis
 
 - **Python 3.10+** via Miniconda/Anaconda
-- **Java 11+** (pour Tweety/JPype)
+- **Java 15+** (pour Tweety/JPype) : `jvm_setup.py` ignore `JAVA_HOME` et télécharge un JDK 17 portable dans `portable_jdk/` s'il n'y en trouve pas
 - **Git**
 
 ### Installation

@@ -38,7 +38,7 @@ uvicorn api.main:app --reload --port 8000
 | Requirement | Version | Source | Notes |
 |---|---|---|---|
 | Python | 3.10 | Conda | Pinned — `environment.yml:8` |
-| Java | 11+ (portable JDK 17 auto-downloaded) | Temurin | CI uses Java 11. `jvm_setup.py` auto-downloads JDK 17 to `portable_jdk/` |
+| Java | 15+ (portable JDK 17 auto-downloaded) | Temurin | `jvm_setup.py` ignores `JAVA_HOME` and auto-downloads JDK 17 to `portable_jdk/`; CI runs on that same portable JDK 17 (cached) |
 | Conda | Latest | Miniconda | |
 | OpenAI API key | — | platform.openai.com | Required for LLM features. Tests skip without it. |
 

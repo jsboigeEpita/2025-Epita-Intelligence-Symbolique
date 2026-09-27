@@ -116,6 +116,6 @@ All analyses use opaque IDs; qualitative data remains local (`.analysis_kb/`, gi
 ## Environment
 
 - **Python**: 3.10+ (Conda env `projet-is-roo-new`)
-- **Java**: JDK 11+ (for Tweety/JPype formal reasoning)
+- **Java**: JDK 15+ (the floor Tweety's classes need). You don't install it: `argumentation_analysis/core/jvm_setup.py` ignores `JAVA_HOME`, uses the JDK in `portable_jdk/`, and downloads a portable JDK 17 there when none is found
 - **Linting**: Black + Flake8 (CI enforced)
 - **CI**: GitHub Actions (lint + test on every PR)

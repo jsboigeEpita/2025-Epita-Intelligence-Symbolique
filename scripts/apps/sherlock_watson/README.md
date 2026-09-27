@@ -52,7 +52,7 @@ graph TD
 
 ### a. Prérequis
 - **Python** : 3.9+ (recommandé via Conda)
-- **Java** : JDK 8 ou supérieur ( requis pour le solveur logique Tweety).
+- **Java** : JDK 15 ou supérieur (requis pour le solveur logique Tweety). `jvm_setup.py` le télécharge dans `portable_jdk/` (JDK 17) s'il n'y en trouve pas.
 - **Clés API** : Une clé pour un service LLM (OpenRouter ou OpenAI).
 
 ### b. Installation
@@ -132,15 +132,10 @@ Les enquêtes génèrent une trace JSON détaillée dans le dossier `results/she
 ## 5. Dépannage
 
 ### Erreur : `JPypeException: Unable to start JVM`
--   **Cause :** Java n'est pas installé ou la variable d'environnement `JAVA_HOME` n'est pas correctement configurée.
+-   **Cause :** `portable_jdk/` ne contient pas de JDK 15+ utilisable, et son téléchargement a échoué. `JAVA_HOME` n'est pas lu par `jvm_setup.py`.
 -   **Solution :**
-    1.  Installez un JDK 8 ou supérieur.
-    2.  Assurez-vous que `JAVA_HOME` pointe vers le bon dossier d'installation.
-    ```bash
-    # Exemple pour Linux
-    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
-    export PATH=$JAVA_HOME/bin:$PATH
-    ```
+    1.  Vérifiez le JDK portable : `portable_jdk/*/bin/java -version` doit afficher 15 ou plus.
+    2.  Si le dossier est incomplet, supprimez-le et relancez : un JDK 17 portable y sera téléchargé.
 
 ### Erreur : `openai.AuthenticationError: Invalid API key`
 -   **Cause :** Votre clé API est manquante, incorrecte ou n'a plus de crédits.

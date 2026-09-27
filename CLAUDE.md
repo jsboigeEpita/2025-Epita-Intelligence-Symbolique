@@ -280,7 +280,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - `interface_web/app.py` — **Starlette web app** (formerly Flask). Serves React frontend + analysis API. Uses ServiceManager (not UnifiedPipeline). **Note**: React build at `services/web_api/interface-web-argumentative/build/` is required (not in git — run `npm run build` in that dir first). Launch: `uvicorn interface_web.app:app --port 5003`
 
 **CLI (multi-mode orchestration):**
-- `argumentation_analysis/run_orchestration.py` — CLI runner with `--mode pipeline|conversational|legacy` and `--workflow light|standard|full|collaborative`
+- `argumentation_analysis/run_orchestration.py` — CLI runner with `--mode pipeline|conversational|hierarchical|cluedo|sherlock_modern` and `--workflow light|standard|full|collaborative`
 - `argumentation_analysis/main_orchestrator.py` — Interactive orchestrator with Tkinter UI
 
 **Pedagogical:**
@@ -303,7 +303,7 @@ The system supports 4 orchestration modes. See `docs/architecture/ORCHESTRATION_
 
 GitHub Actions (`.github/workflows/ci.yml`):
 1. **lint-and-format**: Black + Flake8 on Windows/Conda
-2. **automated-tests**: Pytest on Windows with Java 11 (Temurin) + Conda. Tests skip gracefully without API keys.
+2. **automated-tests**: Pytest on Windows + Conda. The JVM runs on the portable JDK 17 that `jvm_setup.py` provisions into `portable_jdk/` (cached, #1874); there is no setup-java step (#1959), and the floor is Java 15 (`settings.jvm.min_java_version`). Tests skip gracefully without API keys.
 
 ## Key Conventions
 
