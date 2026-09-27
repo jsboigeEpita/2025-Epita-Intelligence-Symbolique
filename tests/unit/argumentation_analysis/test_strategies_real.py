@@ -186,30 +186,6 @@ class TestRealDelegatingSelectionStrategy:
         print("[OK] Test sélection avec désignation explicite réussi")
 
 
-@pytest.fixture
-def balanced_participation_fixture():
-    """Fixture pour initialiser SUT pour TestRealBalancedParticipationStrategy."""
-    state = RhetoricalAnalysisState("Test équilibrage participation")
-    agents = [
-        RealAgent("ProjectManagerAgent", "manager"),
-        RealAgent("AnalystAgent", "analyst"),
-        RealAgent("CriticAgent", "critic"),
-    ]
-    target_participation = {
-        "ProjectManagerAgent": 0.5,
-        "AnalystAgent": 0.3,
-        "CriticAgent": 0.2,
-    }
-    strategy = BalancedParticipationStrategy(
-        agents,
-        state,
-        default_agent_name="ProjectManagerAgent",
-        target_participation=target_participation,
-    )
-    history = []
-    return {"state": state, "strategy": strategy, "agents": agents, "history": history}
-
-
 class TestCD1534AgentGroupChatConstruction:
     """CD #1534 — AgentGroupChat must ACCEPT our strategy instances.
 
