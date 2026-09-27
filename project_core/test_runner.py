@@ -20,7 +20,11 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from project_core.managers.environment_manager import EnvironmentManager
+
+if __package__:
+    from .managers.environment_manager import EnvironmentManager
+else:
+    from managers.environment_manager import EnvironmentManager
 
 # Configuration des chemins et des commandes
 ROOT_DIR = Path(__file__).parent.parent

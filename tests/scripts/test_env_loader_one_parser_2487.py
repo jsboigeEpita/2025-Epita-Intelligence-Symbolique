@@ -211,9 +211,12 @@ def test_a_script_loads_quoted_values_unquoted_and_the_caller_wins(
 _FUNCTION_LOADERS = {
     # Evaluation package loaders now use the one checkout-root loader (#2708).
     "validation_point2_llm_authentique": (
-        "import runpy\n"
-        "runpy.run_path(r'{root}/scripts/validation/"
-        "validation_point2_llm_authentique.py')\n"
+        "import runpy, shutil\n"
+        "from pathlib import Path\n"
+        "copy = Path('scripts/validation/validation_point2_llm_authentique.py')\n"
+        "copy.parent.mkdir(parents=True, exist_ok=True)\n"
+        "shutil.copy(r'{root}/scripts/validation/validation_point2_llm_authentique.py', copy)\n"
+        "runpy.run_path(str(copy))\n"
     ),
     # the .env path is an argument
     "scan_virtuous_corpus": (
