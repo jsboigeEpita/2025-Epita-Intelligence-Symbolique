@@ -49,6 +49,16 @@ names that no provider has ever declared. ``_capability_tables`` now brings
 table-carried demand into the census, and
 ``test_table_carried_demand_resolves`` checks the other direction
 (demanded ⇒ served) against the production registry.
+
+#2788 repair — two more demand forms sat outside the census. A table of
+ROWS that a loop unpacks into ``add_phase(capability=<loop variable>)``
+(the evaluation workflows, the router's optional phases) is neither a
+literal at the call nor a string table a resolver reads. And the literal
+form was read on ``add_phase`` only, while ``add_conditional_phase`` and
+``add_loop`` add phases too (five production calls). ``_phase_row_tables``
+reads the rows from the source; a phase whose capability the census cannot
+read fails it, unless ``DYNAMIC_PHASE_CAPABILITIES`` names the site and
+says where its demand is measured — the #1604 rule, applied to demand.
 """
 
 import ast
@@ -142,6 +152,9 @@ def _wired_register_modules() -> set[str]:
 # registry`` (a module function) and the ServiceDiscovery ``register_*_provider``
 # family declare none.
 _REGISTER_METHODS = {"register_agent", "register_plugin", "register_service"}
+# The WorkflowBuilder methods that add a phase; each takes ``capability``
+# second (#2788: the census read ``add_phase`` only).
+_PHASE_CALLEES = {"add_phase", "add_conditional_phase", "add_loop"}
 
 DECLARATION_SOURCES = [
     REGISTRY_SETUP,
@@ -284,16 +297,157 @@ def _production_demanded_capabilities(root: Path = PROD_ROOT) -> set[str]:
             if not isinstance(node, ast.Call):
                 continue
             callee = getattr(node.func, "attr", "") or getattr(node.func, "id", "")
-            if callee == "add_phase":
-                for kw in node.keywords:
-                    if kw.arg == "capability" and isinstance(kw.value, ast.Constant):
-                        demanded.add(kw.value.value)
+            if callee in _PHASE_CALLEES:
+                capability = _phase_capability(node)
+                if isinstance(capability, ast.Constant):
+                    demanded.add(capability.value)
             elif "for_capability" in callee:
                 if node.args and isinstance(node.args[0], ast.Constant):
                     demanded.add(node.args[0].value)
     for capabilities in _capability_tables(root).values():
         demanded |= capabilities
+    for capabilities in _phase_row_tables(root).values():
+        demanded |= capabilities
     return demanded
+
+
+def _phase_capability(call: ast.Call) -> ast.expr | None:
+    """The ``capability`` a phase-adding call passes, keyword or positional."""
+    for kw in call.keywords:
+        if kw.arg == "capability":
+            return kw.value
+    return call.args[1] if len(call.args) > 1 else None
+
+
+# Phases whose capability is neither a literal nor a loop variable over rows
+# the census can read (#2788). Each is keyed (module, function, capability
+# expression) and says where its demand is measured instead. A stale entry
+# reddens (``test_dynamic_phase_capabilities_are_real``).
+DYNAMIC_PHASE_CAPABILITIES = {
+    (
+        "argumentation_analysis.orchestration.hierarchical.hierarchy_bridge",
+        "objectives_to_workflow",
+        "capability",
+    ): "matched through _OBJECTIVE_CAPABILITY_MAP, which _capability_tables "
+    "reads (#2424)",
+    (
+        "argumentation_analysis.orchestration.hierarchical.hierarchy_bridge",
+        "objectives_to_workflow",
+        "f'objective_{obj_id}'",
+    ): "optional placeholder for an objective that matched no capability; no "
+    "provider can serve it by construction, so the phase always skips",
+}
+
+
+def _phase_calls(fn: ast.AST) -> list[tuple[ast.Call, list[ast.For]]]:
+    """Each phase-adding call of ``fn`` itself, with the loops around it."""
+    found = []
+
+    def visit(node: ast.AST, loops: list[ast.For]) -> None:
+        for child in ast.iter_child_nodes(node):
+            if isinstance(
+                child,
+                (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda, ast.ClassDef),
+            ):
+                continue  # a nested scope is censused as its own function
+            callee = getattr(child, "func", None)
+            if (
+                isinstance(child, ast.Call)
+                and (getattr(callee, "attr", "") or getattr(callee, "id", ""))
+                in _PHASE_CALLEES
+            ):
+                found.append((child, loops))
+            visit(child, loops + [child] if isinstance(child, ast.For) else loops)
+
+    visit(fn, [])
+    return found
+
+
+def _loop_variable_values(
+    tree: ast.Module, loops: list[ast.For], variable: ast.expr
+) -> list[str] | None:
+    """The strings a loop variable takes over its rows, or ``None``."""
+    if not isinstance(variable, ast.Name):
+        return None
+    for loop in reversed(loops):  # the innermost binding wins
+        target = loop.target
+        names = (
+            [getattr(t, "id", None) for t in target.elts]
+            if isinstance(target, ast.Tuple)
+            else [getattr(target, "id", None)]
+        )
+        if variable.id not in names:
+            continue
+        index = names.index(variable.id) if isinstance(target, ast.Tuple) else None
+        try:
+            rows = _loop_rows(tree, loop)
+        except AssertionError:
+            return None
+        values = []
+        for row in rows:
+            cell = row
+            if index is not None:
+                cell = (
+                    row.elts[index]
+                    if isinstance(row, ast.Tuple) and len(row.elts) > index
+                    else None
+                )
+            if not (isinstance(cell, ast.Constant) and isinstance(cell.value, str)):
+                return None
+            values.append(cell.value)
+        return values
+    return None
+
+
+def _phase_row_census(
+    root: Path = PROD_ROOT,
+) -> tuple[dict[str, set[str]], set[tuple[str, str, str]], list[str]]:
+    """Row-carried phase demand, the named dynamic sites met, the unreadable."""
+    feeding: dict[str, set[str]] = {}
+    dynamic_seen: set[tuple[str, str, str]] = set()
+    unreadable: list[str] = []
+    for py in sorted(root.rglob("*.py")):
+        if "test" in py.parts:
+            continue
+        tree = ast.parse(py.read_text(encoding="utf-8-sig"), filename=str(py))
+        module = _module_path(py)
+        for fn in ast.walk(tree):
+            if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if fn.name in _PHASE_CALLEES:
+                continue  # WorkflowBuilder forwarding its own parameter
+            for call, loops in _phase_calls(fn):
+                capability = _phase_capability(call)
+                if capability is None or isinstance(capability, ast.Constant):
+                    continue  # a literal: the literal census reads it
+                site = (module, fn.name, ast.unparse(capability))
+                if site in DYNAMIC_PHASE_CAPABILITIES:
+                    dynamic_seen.add(site)
+                    continue
+                values = _loop_variable_values(tree, loops, capability)
+                if values is None:
+                    unreadable.append(f"{module}:{fn.name}:{call.lineno} {site[2]}")
+                    continue
+                feeding.setdefault(f"{module}:{fn.name}", set()).update(values)
+    return feeding, dynamic_seen, unreadable
+
+
+def _phase_row_tables(root: Path = PROD_ROOT) -> dict[str, set[str]]:
+    """Capabilities that row tables feed to a phase, keyed ``module:function``.
+
+    ``for name, capability, deps in PHASES: builder.add_phase(name,
+    capability=capability)`` carries its demand in the rows (#2788). A phase
+    whose capability the census cannot read, and that
+    ``DYNAMIC_PHASE_CAPABILITIES`` does not name, fails the census: skipped,
+    it would be demand no guard sees.
+    """
+    feeding, _, unreadable = _phase_row_census(root)
+    assert not unreadable, (
+        f"phases whose capability the demand census cannot read: {unreadable}. "
+        "Feed them from a literal list of rows, or name the site in "
+        "DYNAMIC_PHASE_CAPABILITIES with where its demand is measured (#2788)."
+    )
+    return feeding
 
 
 # Callees that resolve a capability name against the registry (production
@@ -518,8 +672,9 @@ def test_capability_table_census_follows_an_import(tmp_path):
 
 
 def test_table_carried_demand_resolves():
-    """demanded ⇒ served: every capability a table feeds to a resolver has a
-    provider in the production registry (#2424).
+    """demanded ⇒ served: every capability a table feeds to a resolver, or a
+    row table feeds to a phase (#2788), has a provider in the production
+    registry (#2424).
 
     On ``main`` before #2424 this listed eight names of the bridge map
     (``formal_logic``, ``fol_analysis``, ``debate_management``,
@@ -530,9 +685,10 @@ def test_table_carried_demand_resolves():
     from argumentation_analysis.orchestration.registry_setup import setup_registry
 
     registry = setup_registry()  # the call the hierarchical orchestrator makes
+    tables = {**_capability_tables(), **_phase_row_tables()}
     dead = {
         f"{table}:{cap}"
-        for table, caps in _capability_tables().items()
+        for table, caps in tables.items()
         for cap in caps
         if not registry.find_for_capability(cap)
     }
@@ -540,6 +696,77 @@ def test_table_carried_demand_resolves():
         f"Capabilities demanded through a table with no provider: "
         f"{sorted(dead)}. Rename to the capability the registry serves, "
         f"or name the gap in TABLE_DEMAND_GAPS."
+    )
+
+
+def test_phase_row_census_reads_every_form(tmp_path):
+    """#2788 non-vacuity: demand carried by rows, and by the two other phase
+    callees, is in the census. Before #2788 none of these names was.
+    """
+    (tmp_path / "phase_rows.py").write_text(
+        "MODULE_ROWS = [('a', 'module_row_cap', [])]\n"
+        "\n"
+        "\n"
+        "def build(builder, selected):\n"
+        "    for name, cap, deps in MODULE_ROWS:\n"
+        "        builder.add_phase(name=name, capability=cap)\n"
+        "    local_rows = [('b', 'local_row_cap'), ('c', 'filtered_row_cap')]\n"
+        "    for name, cap in local_rows:\n"
+        "        if cap in selected:\n"
+        "            builder.add_phase(name, capability=cap)\n"
+        "    for cap in ['bare_name_cap']:\n"
+        "        builder.add_phase('d', cap)\n"
+        "\n"
+        "    def nested(b):\n"
+        "        for n, c in [('e', 'nested_row_cap')]:\n"
+        "            b.add_phase(n, capability=c)\n"
+        "\n"
+        "    builder.add_conditional_phase('f', capability='conditional_cap')\n"
+        "    builder.add_loop('g', 'loop_positional_cap')\n",
+        encoding="utf-8",
+    )
+    demanded = _production_demanded_capabilities(tmp_path)
+    assert {
+        "module_row_cap",
+        "local_row_cap",
+        "filtered_row_cap",
+        "bare_name_cap",
+        "nested_row_cap",
+        "conditional_cap",
+        "loop_positional_cap",
+    } <= demanded, sorted(demanded)
+
+
+def test_phase_row_census_fails_on_an_unreadable_phase(tmp_path):
+    """#2788: a phase whose capability the census cannot read stops the
+    census, as an unreadable declaration does (#1604)."""
+    (tmp_path / "opaque_phase.py").write_text(
+        "def build(builder, caps):\n"
+        "    for i, cap in enumerate(caps):\n"
+        "        builder.add_phase(f'p{i}', capability=cap)\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(AssertionError, match="cannot read"):
+        _production_demanded_capabilities(tmp_path)
+
+
+def test_phase_row_census_sees_the_production_tables():
+    """Non-vacuity: the row tables production builds phases from are found."""
+    assert {
+        "argumentation_analysis.evaluation.capability_eval:_build_eval_workflow",
+        "argumentation_analysis.evaluation.run_agentic_eval:_build_full_workflow",
+        "argumentation_analysis.evaluation.run_iteration:_build_iteration_workflow",
+        "argumentation_analysis.orchestration.router:_build_workflow",
+    } <= set(_phase_row_tables()), sorted(_phase_row_tables())
+
+
+def test_dynamic_phase_capabilities_are_real():
+    """No stale entry: every named dynamic site is still in production."""
+    _, dynamic_seen, _ = _phase_row_census()
+    stale = sorted(set(DYNAMIC_PHASE_CAPABILITIES) - dynamic_seen)
+    assert not stale, (
+        f"DYNAMIC_PHASE_CAPABILITIES entries production no longer has: {stale}. "
+        "Remove them so the map shrinks instead of rotting."
     )
 
 
