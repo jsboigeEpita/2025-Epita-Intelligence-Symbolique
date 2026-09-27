@@ -69,7 +69,7 @@ def create_backend_config() -> ServiceConfig:
             "--port",
             "8095",
         ],
-        working_dir=str(Path(__file__).parent),
+        working_dir=str(project_root),
         port=8095,
         health_check_url="http://localhost:8095/api/status",
         startup_timeout=45,
