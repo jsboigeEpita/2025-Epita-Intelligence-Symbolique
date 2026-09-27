@@ -22,7 +22,11 @@ service chat moqué) — un MagicMock fabriquerait `get_agent_capabilities`.
 import logging
 
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+from semantic_kernel.contents import ChatMessageContent
+from semantic_kernel.contents.utils.author_role import AuthorRole
+from semantic_kernel.functions.function_result import FunctionResult
+from semantic_kernel.functions.kernel_function_metadata import KernelFunctionMetadata
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
@@ -150,6 +154,74 @@ class TestDerivedFromMountedPlugins:
         assert capabilities == ["fallacy_detection"]
         assert "MysteryPlugin" in caplog.text
         assert "PLUGIN_TO_CAPABILITY" in caplog.text
+
+
+class TestProcessTaskStream:
+    @pytest.fixture
+    def adapter(self, kernel):
+        adapter = InformalAgentAdapter(config_name="simple")
+        adapter.agent = _real_agent(kernel, "simple")
+        adapter.initialized = True
+        return adapter
+
+    async def test_real_agent_stream_returns_last_content(self, adapter):
+        response = FunctionResult(
+            function=KernelFunctionMetadata(
+                name="prompt", plugin_name="test", is_prompt=True, parameters=[]
+            ),
+            value=[
+                ChatMessageContent(role=AuthorRole.ASSISTANT, content="Earlier draft"),
+                ChatMessageContent(
+                    role=AuthorRole.ASSISTANT, content="Synthetic fallacy analysis"
+                ),
+            ],
+        )
+        task = {
+            "id": "synthetic-2740",
+            "text_extracts": [{"content": "A synthetic claim"}],
+        }
+
+        with patch.object(Kernel, "invoke_prompt", new_callable=AsyncMock) as invoke:
+            invoke.return_value = response
+            result = await adapter.process_task(task)
+            invoke.assert_awaited_once()
+
+        assert result["task_id"] == task["id"]
+        assert result["status"] == "completed"
+        assert result["issues"] == []
+        assert result["outputs"]["agent_raw_output"] == [
+            {"content": "Synthetic fallacy analysis"}
+        ]
+
+    async def test_empty_result_is_not_reported_as_success(self, adapter):
+        task = {
+            "id": "synthetic-empty-2740",
+            "text_extracts": [{"content": "A synthetic claim"}],
+        }
+        with patch.object(Kernel, "invoke_prompt", new_callable=AsyncMock) as invoke:
+            invoke.return_value = None
+            result = await adapter.process_task(task)
+            invoke.assert_awaited_once()
+
+        assert result["outputs"] == {}
+        assert result["issues"] == [{"type": "empty_agent_response"}]
+        assert result["status"] == "completed_with_issues"
+
+    async def test_real_agent_stream_failure_is_not_empty_response(self, adapter):
+        task = {
+            "id": "synthetic-error-2740",
+            "text_extracts": [{"content": "A synthetic claim"}],
+        }
+
+        with patch.object(Kernel, "invoke_prompt", new_callable=AsyncMock) as invoke:
+            invoke.side_effect = RuntimeError("Synthetic service failure")
+            result = await adapter.process_task(task)
+            invoke.assert_awaited_once()
+
+        assert result["outputs"] == {}
+        assert result["issues"] == [
+            {"type": "execution_error", "description": "Synthetic service failure"}
+        ]
 
 
 class TestCanProcessTask:
