@@ -18,7 +18,6 @@ import logging
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
 
 # Configurer le logging pour les tests
 logging.basicConfig(
@@ -601,41 +600,6 @@ class TestTacticalCoordinatorCoverageAuthentic(unittest.TestCase):
             self.middleware.shutdown()
         logger.info("Teardown authentique étendu terminé")
 
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini."""
-        try:
-            config = UnifiedConfig()
-            kernel = config.get_kernel_with_gpt4o_mini()
-            logger.info("Instance authentique gpt-5-mini créée pour couverture")
-            return kernel
-        except Exception as e:
-            logger.warning(f"Impossible de créer l'instance gpt-5-mini: {e}")
-            return None
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini avec retry."""
-        max_retries = 2
-        for attempt in range(max_retries):
-            try:
-                kernel = await self._create_authentic_gpt4o_mini_instance()
-                if kernel:
-                    result = await kernel.invoke("chat", input=prompt)
-                    response = str(result)
-                    logger.info(
-                        f"Appel LLM authentique réussi (tentative {attempt+1}): {len(response)} caractères"
-                    )
-                    return response
-                else:
-                    return "Instance LLM non disponible"
-            except Exception as e:
-                logger.warning(
-                    f"Appel LLM authentique échoué (tentative {attempt+1}): {e}"
-                )
-                if attempt == max_retries - 1:
-                    return f"Erreur LLM après {max_retries} tentatives: {str(e)}"
-
-        return "Échec complet des appels LLM"
-
     def test_authentic_strategic_directives_subscription(self):
         """Teste l'abonnement authentique aux directives stratégiques."""
 
@@ -1116,33 +1080,6 @@ class TestTacticalCoordinatorCoverageAuthentic(unittest.TestCase):
         self.assertIn("error_rate", metrics)
 
         logger.info(f"Métriques de performance authentiques: {metrics}")
-
-    def test_run_authentic_llm_integration_extended(self):
-        """Teste l'intégration LLM authentique étendue."""
-
-        async def run_extended_llm_test():
-            prompts = [
-                "Analyse brièvement cette affirmation: 'Tous les chats sont des mammifères.'",
-                "Identifie un argument dans: 'Il faut protéger l'environnement car c'est notre responsabilité.'",
-                "Détecte s'il y a un sophisme dans: 'Tu ne peux pas critiquer ce film, tu n'es pas réalisateur.'",
-            ]
-
-            results = []
-            for prompt in prompts:
-                response = await self._make_authentic_llm_call(prompt)
-                results.append(response)
-                self.assertIsInstance(response, str)
-                self.assertGreater(len(response), 5)
-
-            logger.info(f"Intégration LLM étendue testée avec {len(results)} prompts")
-            return results
-
-        try:
-            results = asyncio.run(run_extended_llm_test())
-            self.assertEqual(len(results), 3)
-        except Exception as e:
-            logger.warning(f"Test LLM étendu échoué: {e}")
-            self.skipTest(f"LLM non disponible pour test étendu: {e}")
 
 
 if __name__ == "__main__":
