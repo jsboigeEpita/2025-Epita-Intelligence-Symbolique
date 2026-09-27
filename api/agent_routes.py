@@ -20,6 +20,8 @@ from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from .errors import UnanalyzableInputError, UpstreamError
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -93,6 +95,10 @@ class FullAnalysisResponse(BaseModel):
     governance: Optional[GovernanceResponse] = None
     fields_populated: int = 0
     duration_seconds: float = 0.0
+    # #2767: True when a phase did not complete; failed_phases names each one
+    # with its status and error.
+    degraded: bool = False
+    failed_phases: Dict[str, str] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -150,6 +156,56 @@ async def _run_pipeline_phase(
     }
 
 
+def _phase_line(result: Any) -> str:
+    """``status``, or ``status: error``, for one phase result."""
+    status = result.status.value
+    return f"{status}: {result.error}" if result.error else status
+
+
+def _phase_context(phase_results: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "phases": {name: r.status.value for name, r in phase_results.items()},
+        "phase_errors": {name: r.error for name, r in phase_results.items() if r.error},
+    }
+
+
+def _require_capability_ran(phase_results: Dict[str, Any], capability: str) -> None:
+    """Answer only for a capability phase that completed (#2767).
+
+    The executor records a phase failure instead of raising it, so a failed or
+    skipped capability used to come back as HTTP 200 carrying the empty
+    defaults of a state nothing wrote to. A completed phase keeps its answer,
+    empty or not.
+    """
+    from argumentation_analysis.orchestration.workflow_dsl import PhaseStatus
+
+    result = phase_results.get(capability)
+    if result is not None and result.status == PhaseStatus.COMPLETED:
+        return
+    context = _phase_context(phase_results)
+    extract = phase_results.get("extract")
+    if (
+        extract is not None
+        and extract.status == PhaseStatus.COMPLETED
+        and extract.terminal
+        and isinstance(extract.output, dict)
+        and extract.output.get("extraction_status") == "non_argumentative"
+    ):
+        raise UnanalyzableInputError(
+            "The pipeline classified the text as non-argumentative: "
+            f"{capability} had no argument to work on.",
+            context=context,
+        )
+    if extract is not None and extract.status != PhaseStatus.COMPLETED:
+        raise UpstreamError(
+            f"fact_extraction {_phase_line(extract)}; {capability} did not run",
+            context=context,
+        )
+    if result is None:
+        raise UpstreamError(f"{capability}: the run has no such phase", context=context)
+    raise UpstreamError(f"{capability} {_phase_line(result)}", context=context)
+
+
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
@@ -172,6 +228,7 @@ async def evaluate_quality(request: TextRequest):
         logger.error(f"Quality evaluation failed: {e}")
         raise HTTPException(status_code=500, detail=f"Quality evaluation failed: {e}")
 
+    _require_capability_ran(result["phase_results"], "argument_quality")
     snapshot = result["snapshot"]
     quality_scores = snapshot.get("quality_scores", {})
 
@@ -220,6 +277,7 @@ async def generate_counter_arguments(request: TextRequest):
             status_code=500, detail=f"Counter-argument generation failed: {e}"
         )
 
+    _require_capability_ran(result["phase_results"], "counter_argument_generation")
     snapshot = result["snapshot"]
 
     # Extract LLM counter-arguments from state
@@ -264,6 +322,7 @@ async def run_debate(request: TextRequest):
         logger.error(f"Debate failed: {e}")
         raise HTTPException(status_code=500, detail=f"Debate failed: {e}")
 
+    _require_capability_ran(result["phase_results"], "adversarial_debate")
     snapshot = result["snapshot"]
     # The state stores debate_transcripts as a LIST of {id, topic, exchanges,
     # winner} (shared_state.add_debate_transcript); the writer stores each
@@ -319,6 +378,7 @@ async def run_governance(request: TextRequest):
             status_code=500, detail=f"Governance simulation failed: {e}"
         )
 
+    _require_capability_ran(result["phase_results"], "governance_simulation")
     snapshot = result["snapshot"]
     gov = snapshot.get("governance_decisions", {})
 
@@ -367,7 +427,10 @@ async def run_full_analysis(request: TextRequest):
             CAPABILITY_STATE_WRITERS,
             setup_registry,
         )
-        from argumentation_analysis.orchestration.workflow_dsl import WorkflowExecutor
+        from argumentation_analysis.orchestration.workflow_dsl import (
+            PhaseStatus,
+            WorkflowExecutor,
+        )
 
         # Use the standard workflow (all capabilities)
         from argumentation_analysis.evaluation.run_iteration import (
@@ -383,7 +446,7 @@ async def run_full_analysis(request: TextRequest):
         text = request.text[: request.max_text]
         state = UnifiedAnalysisState(initial_text=text)
 
-        await executor.execute(
+        phase_results = await executor.execute(
             workflow, text, state=state, state_writers=CAPABILITY_STATE_WRITERS
         )
 
@@ -391,6 +454,21 @@ async def run_full_analysis(request: TextRequest):
     except Exception as e:
         logger.error(f"Full analysis failed: {e}")
         raise HTTPException(status_code=500, detail=f"Full analysis failed: {e}")
+
+    # #2767: the executor records failures instead of raising them. Name every
+    # phase that did not complete; a run where none did has nothing to report.
+    failed_phases = {
+        name: _phase_line(r)
+        for name, r in phase_results.items()
+        if r.status != PhaseStatus.COMPLETED
+    }
+    if len(failed_phases) == len(phase_results):
+        raise UpstreamError(
+            "full analysis: no phase completed ("
+            + "; ".join(f"{name} {line}" for name, line in failed_phases.items())
+            + ")",
+            context=_phase_context(phase_results),
+        )
 
     duration = round(time.time() - start, 1)
 
@@ -402,4 +480,6 @@ async def run_full_analysis(request: TextRequest):
     return FullAnalysisResponse(
         fields_populated=fields_populated,
         duration_seconds=duration,
+        degraded=bool(failed_phases),
+        failed_phases=failed_phases,
     )

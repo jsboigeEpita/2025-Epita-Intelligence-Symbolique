@@ -15,6 +15,7 @@ from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi.testclient import TestClient
 
 from api.main import app
+from argumentation_analysis.orchestration.workflow_dsl import PhaseResult, PhaseStatus
 
 
 @pytest.fixture
@@ -95,11 +96,24 @@ GOVERNANCE_SNAPSHOT = {
 }
 
 
-def _mock_pipeline_result(snapshot):
-    """Create an async mock that returns the given snapshot."""
+def _completed(name, capability):
+    return PhaseResult(
+        phase_name=name, status=PhaseStatus.COMPLETED, capability=capability
+    )
+
+
+def _mock_pipeline_result(capability, snapshot):
+    """An async mock of a run where extraction and *capability* completed.
+
+    #2767: the endpoints read the phase status, so the double carries the
+    phase results the real ``_run_pipeline_phase`` returns.
+    """
     mock = AsyncMock()
     mock.return_value = {
-        "phase_results": {},
+        "phase_results": {
+            "extract": _completed("extract", "fact_extraction"),
+            capability: _completed(capability, capability),
+        },
         "snapshot": snapshot,
     }
     return mock
@@ -112,7 +126,7 @@ class TestQualityEndpoint:
     def test_quality_success(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result(QUALITY_SNAPSHOT),
+            _mock_pipeline_result("argument_quality", QUALITY_SNAPSHOT),
         ):
             resp = client.post(
                 "/api/v1/agents/quality",
@@ -132,7 +146,7 @@ class TestQualityEndpoint:
     def test_quality_empty_scores(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result({"quality_scores": {}}),
+            _mock_pipeline_result("argument_quality", {"quality_scores": {}}),
         ):
             resp = client.post(
                 "/api/v1/agents/quality",
@@ -170,7 +184,7 @@ class TestCounterArgumentEndpoint:
     def test_counter_args_success(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result(COUNTER_ARG_SNAPSHOT),
+            _mock_pipeline_result("counter_argument_generation", COUNTER_ARG_SNAPSHOT),
         ):
             resp = client.post(
                 "/api/v1/agents/counter-arguments",
@@ -190,7 +204,8 @@ class TestCounterArgumentEndpoint:
         with patch(
             "api.agent_routes._run_pipeline_phase",
             _mock_pipeline_result(
-                {"llm_counter_arguments": ["Simple counter 1", "Simple counter 2"]}
+                "counter_argument_generation",
+                {"llm_counter_arguments": ["Simple counter 1", "Simple counter 2"]},
             ),
         ):
             resp = client.post(
@@ -209,7 +224,8 @@ class TestCounterArgumentEndpoint:
         with patch(
             "api.agent_routes._run_pipeline_phase",
             _mock_pipeline_result(
-                {"llm_counter_arguments": "A single counter-argument in legacy format"}
+                "counter_argument_generation",
+                {"llm_counter_arguments": "A single counter-argument in legacy format"},
             ),
         ):
             resp = client.post(
@@ -230,7 +246,7 @@ class TestDebateEndpoint:
     def test_debate_success(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result(DEBATE_SNAPSHOT),
+            _mock_pipeline_result("adversarial_debate", DEBATE_SNAPSHOT),
         ):
             resp = client.post(
                 "/api/v1/agents/debate",
@@ -261,7 +277,7 @@ class TestDebateEndpoint:
         }
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result(several),
+            _mock_pipeline_result("adversarial_debate", several),
         ):
             resp = client.post(
                 "/api/v1/agents/debate",
@@ -285,7 +301,7 @@ class TestDebateEndpoint:
         }
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result(none_winner),
+            _mock_pipeline_result("adversarial_debate", none_winner),
         ):
             resp = client.post(
                 "/api/v1/agents/debate",
@@ -297,7 +313,7 @@ class TestDebateEndpoint:
     def test_debate_empty(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result({"debate_transcripts": []}),
+            _mock_pipeline_result("adversarial_debate", {"debate_transcripts": []}),
         ):
             resp = client.post(
                 "/api/v1/agents/debate",
@@ -318,7 +334,7 @@ class TestGovernanceEndpoint:
     def test_governance_success(self, client):
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result(GOVERNANCE_SNAPSHOT),
+            _mock_pipeline_result("governance_simulation", GOVERNANCE_SNAPSHOT),
         ):
             resp = client.post(
                 "/api/v1/agents/governance",
@@ -353,7 +369,9 @@ class TestGovernanceEndpoint:
 class TestFullAnalysisEndpoint:
     def test_full_analysis_success(self, client):
         mock_executor = MagicMock()
-        mock_executor.execute = AsyncMock(return_value={})
+        mock_executor.execute = AsyncMock(
+            return_value={"extract": _completed("extract", "fact_extraction")}
+        )
 
         with patch(
             "argumentation_analysis.orchestration.unified_pipeline.setup_registry",
@@ -378,6 +396,8 @@ class TestFullAnalysisEndpoint:
         data = resp.json()
         assert "fields_populated" in data
         assert "duration_seconds" in data
+        assert data["degraded"] is False
+        assert data["failed_phases"] == {}
 
 
 # ──── Input Validation ────
@@ -388,10 +408,199 @@ class TestInputValidation:
         """Test that max_text parameter is accepted."""
         with patch(
             "api.agent_routes._run_pipeline_phase",
-            _mock_pipeline_result({"quality_scores": {}}),
+            _mock_pipeline_result("argument_quality", {"quality_scores": {}}),
         ):
             resp = client.post(
                 "/api/v1/agents/quality",
                 json={"text": "A" * 200, "max_text": 100},
             )
         assert resp.status_code == 200
+
+
+# ──── #2767: a failed phase is not an answer ────
+
+ENDPOINTS = [
+    ("/api/v1/agents/quality", "argument_quality"),
+    ("/api/v1/agents/counter-arguments", "counter_argument_generation"),
+    ("/api/v1/agents/debate", "adversarial_debate"),
+    ("/api/v1/agents/governance", "governance_simulation"),
+]
+TEXT = {"text": "A synthetic argument long enough for the endpoint."}
+
+
+def _phase(name, capability, status, error=None, output=None, terminal=False):
+    result = PhaseResult(
+        phase_name=name,
+        status=status,
+        capability=capability,
+        error=error,
+        output=output,
+    )
+    result.terminal = terminal
+    return result
+
+
+def _fake_run(phases):
+    """Patch the executor the real ``_run_pipeline_phase`` builds.
+
+    It returns *phases* and writes nothing to the state, so the snapshot the
+    endpoint reads stays empty.
+    """
+    executor = MagicMock()
+    executor.execute = AsyncMock(return_value=phases)
+    return [
+        patch(
+            "argumentation_analysis.orchestration.unified_pipeline.setup_registry",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "argumentation_analysis.orchestration.workflow_dsl.WorkflowExecutor",
+            return_value=executor,
+        ),
+    ]
+
+
+def _post(client, path, phases):
+    patches = _fake_run(phases)
+    for p in patches:
+        p.start()
+    try:
+        return client.post(path, json=TEXT)
+    finally:
+        for p in reversed(patches):
+            p.stop()
+
+
+class TestFailedPhaseIsNotSuccess2767:
+    @pytest.mark.parametrize("path,capability", ENDPOINTS)
+    def test_failed_capability_is_a_named_upstream_error(
+        self, client, path, capability
+    ):
+        resp = _post(
+            client,
+            path,
+            {
+                "extract": _phase("extract", "fact_extraction", PhaseStatus.COMPLETED),
+                capability: _phase(
+                    capability,
+                    capability,
+                    PhaseStatus.FAILED,
+                    error="synthetic provider failure",
+                ),
+            },
+        )
+        assert resp.status_code == 502
+        body = resp.json()
+        assert body["error_code"] == "upstream_error"
+        assert capability in body["detail"]
+        assert "synthetic provider failure" in body["detail"]
+        assert body["context"]["phases"][capability] == "failed"
+
+    @pytest.mark.parametrize("path,capability", ENDPOINTS)
+    def test_failed_extraction_names_the_phase_that_failed(
+        self, client, path, capability
+    ):
+        resp = _post(
+            client,
+            path,
+            {
+                "extract": _phase(
+                    "extract",
+                    "fact_extraction",
+                    PhaseStatus.FAILED,
+                    error="synthetic extraction failure",
+                ),
+                capability: _phase(capability, capability, PhaseStatus.SKIPPED),
+            },
+        )
+        assert resp.status_code == 502
+        detail = resp.json()["detail"]
+        assert "fact_extraction" in detail
+        assert "synthetic extraction failure" in detail
+
+    @pytest.mark.parametrize("path,capability", ENDPOINTS)
+    def test_non_argumentative_text_is_unanalyzable(self, client, path, capability):
+        resp = _post(
+            client,
+            path,
+            {
+                "extract": _phase(
+                    "extract",
+                    "fact_extraction",
+                    PhaseStatus.COMPLETED,
+                    output={"extraction_status": "non_argumentative"},
+                    terminal=True,
+                ),
+                capability: _phase(capability, capability, PhaseStatus.SKIPPED),
+            },
+        )
+        assert resp.status_code == 422
+        assert resp.json()["error_code"] == "unanalyzable_input"
+
+    @pytest.mark.parametrize("path,capability", ENDPOINTS)
+    def test_completed_capability_keeps_its_valid_empty_answer(
+        self, client, path, capability
+    ):
+        resp = _post(
+            client,
+            path,
+            {
+                "extract": _phase("extract", "fact_extraction", PhaseStatus.COMPLETED),
+                capability: _phase(capability, capability, PhaseStatus.COMPLETED),
+            },
+        )
+        assert resp.status_code == 200
+
+    def test_full_analysis_names_its_failed_phases(self, client):
+        with patch(
+            "argumentation_analysis.evaluation.run_iteration._build_iteration_workflow",
+            return_value=MagicMock(),
+        ):
+            resp = _post(
+                client,
+                "/api/v1/agents/full-analysis",
+                {
+                    "extract": _phase(
+                        "extract", "fact_extraction", PhaseStatus.COMPLETED
+                    ),
+                    "quality": _phase(
+                        "quality",
+                        "argument_quality",
+                        PhaseStatus.FAILED,
+                        error="synthetic quality failure",
+                    ),
+                    "debate": _phase(
+                        "debate", "adversarial_debate", PhaseStatus.SKIPPED
+                    ),
+                },
+            )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["degraded"] is True
+        assert data["failed_phases"] == {
+            "quality": "failed: synthetic quality failure",
+            "debate": "skipped",
+        }
+
+    def test_full_analysis_with_nothing_completed_is_an_upstream_error(self, client):
+        with patch(
+            "argumentation_analysis.evaluation.run_iteration._build_iteration_workflow",
+            return_value=MagicMock(),
+        ):
+            resp = _post(
+                client,
+                "/api/v1/agents/full-analysis",
+                {
+                    "extract": _phase(
+                        "extract",
+                        "fact_extraction",
+                        PhaseStatus.FAILED,
+                        error="synthetic extraction failure",
+                    ),
+                    "quality": _phase(
+                        "quality", "argument_quality", PhaseStatus.SKIPPED
+                    ),
+                },
+            )
+        assert resp.status_code == 502
+        assert "synthetic extraction failure" in resp.json()["detail"]
