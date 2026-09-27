@@ -262,6 +262,89 @@ class TestCapabilities:
         assert "light" in data["workflows"]
 
 
+class TestCapabilitiesServedRegistry2743:
+    """#2743: the endpoint advertises the registry the served pipeline runs on.
+
+    It used to build an empty ``CapabilityRegistry()`` and list nothing, and
+    its ``except Exception`` turned a registry failure into an empty success.
+    """
+
+    def test_endpoint_lists_the_production_registrations(self, client):
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        expected = {
+            reg.name: (reg.component_type.value, sorted(reg.capabilities))
+            for reg in setup_registry().get_all_registrations()
+        }
+        assert expected, "setup_registry() registered nothing"
+
+        resp = client.get("/api/capabilities")
+        assert resp.status_code == 200
+        data = resp.json()
+        listed = {
+            info["name"]: (info["type"], sorted(info["capabilities"]))
+            for group in ("agents", "plugins", "services")
+            for info in data[group]
+        }
+        assert listed == expected
+        for group, kind in (
+            ("agents", "agent"),
+            ("plugins", "plugin"),
+            ("services", "service"),
+        ):
+            assert {info["type"] for info in data[group]} <= {kind}
+
+    async def test_advertised_synthetic_capability_resolves_in_the_served_pipeline(
+        self, client, monkeypatch
+    ):
+        import argumentation_analysis.orchestration.unified_pipeline as up
+        from argumentation_analysis.orchestration.workflow_dsl import WorkflowBuilder
+
+        served = up.setup_registry()
+        calls = []
+
+        async def _invoke(input_text, context):
+            calls.append(input_text)
+            return {"synthetic": True}
+
+        served.register_service(
+            "synthetic_component_2743",
+            capabilities=["synthetic_capability_2743"],
+            invoke=_invoke,
+        )
+        monkeypatch.setattr(up, "setup_registry", lambda *a, **k: served)
+
+        data = client.get("/api/capabilities").json()
+        advertised = {info["name"]: info["capabilities"] for info in data["services"]}
+        assert advertised["synthetic_component_2743"] == ["synthetic_capability_2743"]
+
+        # The consumer: the served pipeline, given no registry, builds its own
+        # through the same function and resolves what the endpoint advertised.
+        workflow = (
+            WorkflowBuilder("synthetic_2743")
+            .add_phase(name="probe", capability="synthetic_capability_2743")
+            .build()
+        )
+        result = await up.run_unified_analysis(
+            "synthetic input", custom_workflow=workflow, create_state=False
+        )
+        assert calls == ["synthetic input"]
+        assert "synthetic_capability_2743" in result["capabilities_used"]
+        assert result["phases"]["probe"].component_used == "synthetic_component_2743"
+
+    def test_registry_build_failure_is_not_an_empty_success(self, client, monkeypatch):
+        import argumentation_analysis.orchestration.unified_pipeline as up
+
+        def _broken(*args, **kwargs):
+            raise RuntimeError("registry build failed")
+
+        monkeypatch.setattr(up, "setup_registry", _broken)
+        resp = client.get("/api/capabilities")
+        assert resp.status_code == 500
+
+
 # ──── Custom Workflow ────
 
 
