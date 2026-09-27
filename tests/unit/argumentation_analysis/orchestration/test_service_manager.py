@@ -348,10 +348,10 @@ class TestInitialize:
             result = await manager.initialize()
             assert result is False
 
-    async def test_initialize_success_no_api_key(self, manager):
+    async def test_initialize_success_no_api_key(self, manager, llm_route_seat):
         """Initialize succeeds without API key but logs warning."""
+        llm_route_seat()
         mock_settings = MagicMock()
-        mock_settings.openai.api_key = None
         mock_settings.service_manager.default_llm_service_id = "openai"
         mock_settings.service_manager.enable_communication_middleware = False
         mock_settings.service_manager.enable_hierarchical = False
@@ -369,10 +369,10 @@ class TestInitialize:
             assert result is True
             assert manager._initialized is True
 
-    async def test_initialize_success_with_api_key(self, manager):
+    async def test_initialize_success_with_api_key(self, manager, llm_route_seat):
         """Full initialize success path with API key and LLM service."""
+        llm_route_seat(openai_key="sk-test-key")
         mock_settings = MagicMock()
-        mock_settings.openai.api_key.get_secret_value.return_value = "sk-test-key"
         mock_settings.service_manager.default_llm_service_id = "openai"
         mock_settings.service_manager.enable_communication_middleware = False
         mock_settings.service_manager.enable_hierarchical = False
@@ -396,10 +396,12 @@ class TestInitialize:
             assert manager._initialized is True
             mock_kernel.add_service.assert_called_once_with(mock_llm_service)
 
-    async def test_initialize_llm_service_failure_continues(self, manager):
+    async def test_initialize_llm_service_failure_continues(
+        self, manager, llm_route_seat
+    ):
         """If create_llm_service raises, initialize still succeeds."""
+        llm_route_seat(openai_key="sk-test-key")
         mock_settings = MagicMock()
-        mock_settings.openai.api_key.get_secret_value.return_value = "sk-test-key"
         mock_settings.service_manager.default_llm_service_id = "openai"
         mock_settings.service_manager.enable_communication_middleware = False
         mock_settings.service_manager.enable_hierarchical = False
@@ -421,10 +423,12 @@ class TestInitialize:
             # Still succeeds (error is logged but not fatal)
             assert result is True
 
-    async def test_initialize_calls_middleware_when_enabled(self, manager):
+    async def test_initialize_calls_middleware_when_enabled(
+        self, manager, llm_route_seat
+    ):
         """When middleware is enabled, initialize_middleware is called."""
+        llm_route_seat()
         mock_settings = MagicMock()
-        mock_settings.openai.api_key = None
         mock_settings.service_manager.default_llm_service_id = "openai"
         mock_settings.service_manager.enable_communication_middleware = True
         mock_settings.service_manager.enable_hierarchical = False
@@ -444,10 +448,12 @@ class TestInitialize:
             assert result is True
             mock_mw.assert_awaited_once()
 
-    async def test_initialize_calls_hierarchical_when_enabled(self, manager):
+    async def test_initialize_calls_hierarchical_when_enabled(
+        self, manager, llm_route_seat
+    ):
         """When hierarchical is enabled, _initialize_hierarchical_managers is called."""
+        llm_route_seat()
         mock_settings = MagicMock()
-        mock_settings.openai.api_key = None
         mock_settings.service_manager.default_llm_service_id = "openai"
         mock_settings.service_manager.enable_communication_middleware = False
         mock_settings.service_manager.enable_hierarchical = True

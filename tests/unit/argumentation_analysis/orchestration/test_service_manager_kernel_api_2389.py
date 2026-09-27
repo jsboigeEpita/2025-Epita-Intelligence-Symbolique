@@ -27,7 +27,6 @@ jamais un ``ImportError``) :
 5. ``prompt_used`` est le prompt rendu, jamais le template.
 """
 
-import types
 from typing import Any, List
 
 import pytest
@@ -75,22 +74,11 @@ def _kernel(*services: PromptCapturingChatCompletion) -> sk.Kernel:
     return kernel
 
 
-def _manager(monkeypatch, kernel: sk.Kernel, service_id: str):
-    """Un manager sur un kernel réel ; seule la clé lue par les méthodes est posée."""
-    from pydantic import SecretStr
-
+def _manager(kernel: sk.Kernel, service_id: str):
+    """Un manager sur un kernel réel, qui tient le service que les méthodes épinglent (#2711 A2)."""
     import argumentation_analysis.orchestration.service_manager as sm
 
     mgr = sm.OrchestrationServiceManager(enable_logging=False)
-    # Les méthodes refusent de s'exécuter sans clé OpenAI dans les settings :
-    # sans cette doublure, le test mesurerait le .env de la machine.
-    monkeypatch.setattr(
-        sm,
-        "settings",
-        types.SimpleNamespace(
-            openai=types.SimpleNamespace(api_key=SecretStr("sk-test-not-a-real-key"))
-        ),
-    )
     mgr.kernel = kernel
     mgr.llm_service_id = service_id
     mgr.tactical_manager = object()
@@ -112,7 +100,7 @@ def test_the_premise_the_dead_api_is_absent_from_the_real_kernel():
 @pytest.mark.parametrize("method_name", _METHODS)
 async def test_the_analysis_text_reaches_the_served_prompt(monkeypatch, method_name):
     service = _service("openai", "modele-capture-2389")
-    mgr = _manager(monkeypatch, _kernel(service), "openai")
+    mgr = _manager(_kernel(service), "openai")
 
     result = await getattr(mgr, method_name)(f"Un texte portant {_MARKER}.", None)
 
@@ -135,7 +123,7 @@ async def test_a_template_expression_in_the_text_stays_literal(
     vide.
     """
     service = _service("openai", "modele-capture-2389")
-    mgr = _manager(monkeypatch, _kernel(service), "openai")
+    mgr = _manager(_kernel(service), "openai")
     text = _MARKER + " cite {{$input}} et {{$inconnue}} tels quels."
 
     result = await getattr(mgr, method_name)(text, None)
@@ -150,7 +138,7 @@ async def test_the_prompt_is_served_by_the_service_the_provenance_names(
 ):
     first = _service("premier", "modele-premier")
     pinned = _service("openai", "modele-epingle")
-    mgr = _manager(monkeypatch, _kernel(first, pinned), "openai")
+    mgr = _manager(_kernel(first, pinned), "openai")
 
     result = await getattr(mgr, method_name)(f"Texte {_MARKER}.", None)
 
@@ -186,14 +174,16 @@ async def test_an_unknown_service_id_fails_instead_of_switching(
     monkeypatch, method_name
 ):
     other = _service("autre", "modele-autre")
-    mgr = _manager(monkeypatch, _kernel(other), "openai")
+    mgr = _manager(_kernel(other), "openai")
 
     result = await getattr(mgr, method_name)(f"Texte {_MARKER}.", None)
 
     assert result["status"] == "error", f"bascule silencieuse: {result}"
-    # L'échec est celui de l'invocation par le kernel (le service épinglé est
-    # introuvable), pas une erreur survenue avant d'atteindre le kernel.
-    assert "service_manager_analysis" in result["error"], result["error"]
+    # L'échec nomme le service épinglé introuvable. Depuis #2711 A2, la méthode
+    # le constate avant d'appeler le kernel (qui aurait levé « No service
+    # found ») ; ce n'est plus un refus sans rapport, comme la clé relue dans
+    # `settings` que cette assertion écartait.
+    assert "aucun service LLM 'openai'" in result.get("message", ""), result
     assert other.rendered_prompts == [], "un autre service a servi le prompt"
     assert "model" not in result
 
@@ -201,7 +191,7 @@ async def test_an_unknown_service_id_fails_instead_of_switching(
 @pytest.mark.parametrize("method_name", _METHODS)
 async def test_prompt_used_is_the_rendered_prompt(monkeypatch, method_name):
     service = _service("openai", "modele-capture-2389")
-    mgr = _manager(monkeypatch, _kernel(service), "openai")
+    mgr = _manager(_kernel(service), "openai")
 
     result = await getattr(mgr, method_name)(f"Texte {_MARKER}.", None)
 

@@ -481,11 +481,6 @@ _FROZEN_SETTINGS_OPENAI_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
         "#2711 B: KernelBuilder has no production caller; its Azure reads move "
         "into the factory, then it is retired",
     ),
-    "argumentation_analysis/orchestration/service_manager.py": (
-        ("api_key",),
-        "#2711 A2: a presence gate before create_llm_service and before the two "
-        "kernel analyses; it refuses an OpenRouter-only seat the factory accepts",
-    ),
 }
 
 

@@ -19,7 +19,6 @@ Fixtures synthétiques : clés factices, service de chat doublure, aucun egress.
 
 import types
 
-from pydantic import SecretStr
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
@@ -40,9 +39,10 @@ class _FakeChat(ChatCompletionClientBase):
         ]
 
 
-def _settings(api_key):
+# #2711 A2 : le siège (clé LLM ou non) vient de la fixture ``llm_route_seat`` ;
+# ``settings`` ne porte plus que la configuration du manager.
+def _settings():
     return types.SimpleNamespace(
-        openai=types.SimpleNamespace(api_key=api_key),
         service_manager=types.SimpleNamespace(
             default_llm_service_id="fake-2649",
             enable_communication_middleware=False,
@@ -58,7 +58,9 @@ def _manager():
     return sm.OrchestrationServiceManager(enable_logging=False)
 
 
-async def test_a_keyless_manager_names_the_plugin_it_does_not_have(monkeypatch):
+async def test_a_keyless_manager_names_the_plugin_it_does_not_have(
+    monkeypatch, llm_route_seat
+):
     """Sans clé : pas de service LLM, donc pas de plugin informel — nommé.
 
     Né-rouge sur ``main`` : rien dans l'état, seulement une ligne de log.
@@ -66,7 +68,8 @@ async def test_a_keyless_manager_names_the_plugin_it_does_not_have(monkeypatch):
     """
     import argumentation_analysis.orchestration.service_manager as sm
 
-    monkeypatch.setattr(sm, "settings", _settings(None))
+    llm_route_seat()
+    monkeypatch.setattr(sm, "settings", _settings())
     monkeypatch.setattr(sm, "initialize_project_environment", lambda: object())
 
     manager = _manager()
@@ -81,7 +84,9 @@ async def test_a_keyless_manager_names_the_plugin_it_does_not_have(monkeypatch):
     assert status["setup_failures"]["informal_plugin"] == reason
 
 
-async def test_a_failed_setup_reaches_the_state_and_the_status(monkeypatch):
+async def test_a_failed_setup_reaches_the_state_and_the_status(
+    monkeypatch, llm_route_seat
+):
     """Un setup qui lève nomme sa cause dans l'état, pas seulement dans le log.
 
     Né-rouge sur ``main`` : ``logger.error`` puis continuation, kernel sans
@@ -94,9 +99,8 @@ async def test_a_failed_setup_reaches_the_state_and_the_status(monkeypatch):
 
     service = _FakeChat(ai_model_id="fake-2649", service_id="fake-2649")
 
-    monkeypatch.setattr(
-        sm, "settings", _settings(SecretStr("sk-test-not-a-real-key-2649"))
-    )
+    llm_route_seat(openai_key="sk-test-not-a-real-key-2649")
+    monkeypatch.setattr(sm, "settings", _settings())
     monkeypatch.setattr(sm, "initialize_project_environment", lambda: object())
     monkeypatch.setattr(sm, "create_llm_service", lambda **kwargs: service)
 
@@ -119,7 +123,9 @@ async def test_a_failed_setup_reaches_the_state_and_the_status(monkeypatch):
     assert status["setup_failures"]["informal_plugin"] == reason
 
 
-async def test_a_re_initialisation_does_not_keep_the_previous_failure(monkeypatch):
+async def test_a_re_initialisation_does_not_keep_the_previous_failure(
+    monkeypatch, llm_route_seat
+):
     """Une reprise réussie efface l'échec de la tentative précédente.
 
     Un état qui nomme un composant absent alors qu'il est là est le défaut même
@@ -139,7 +145,8 @@ async def test_a_re_initialisation_does_not_keep_the_previous_failure(monkeypatc
     monkeypatch.setattr(sm, "initialize_project_environment", lambda: object())
 
     # Première tentative : keyless, elle échoue APRÈS le bloc informel.
-    first = _settings(None)
+    llm_route_seat()
+    first = _settings()
     first.service_manager.enable_communication_middleware = True
     monkeypatch.setattr(sm, "settings", first)
 
@@ -149,9 +156,8 @@ async def test_a_re_initialisation_does_not_keep_the_previous_failure(monkeypatc
     assert "informal_plugin" in manager.setup_failures
 
     # Reprise : le service est là, et l'échec précédent ne doit pas survivre.
-    monkeypatch.setattr(
-        sm, "settings", _settings(SecretStr("sk-test-not-a-real-key-2649"))
-    )
+    llm_route_seat(openai_key="sk-test-not-a-real-key-2649")
+    monkeypatch.setattr(sm, "settings", _settings())
     monkeypatch.setattr(
         sm,
         "create_llm_service",
