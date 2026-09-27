@@ -54,6 +54,8 @@ async def test_demo_builds_requested_agent_and_analyzes(
 def test_quick_demo_uses_vendored_taxonomy_and_real_agent(demo, monkeypatch, capsys):
     from semantic_kernel import Kernel
     from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    from argumentation_analysis.agents.factory import AgentFactory
+    from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
 
     service = OpenAIChatCompletion(
         service_id="openai", ai_model_id="demo-model", api_key="unused-demo-key"
@@ -62,7 +64,20 @@ def test_quick_demo_uses_vendored_taxonomy_and_real_agent(demo, monkeypatch, cap
     prompt = AsyncMock(return_value="demo-analysis-result")
     monkeypatch.setattr(Kernel, "invoke_prompt", prompt)
 
+    create_agent = AgentFactory.create_informal_fallacy_agent
+    taxonomy_files = []
+
+    def record_taxonomy(self, *args, **kwargs):
+        taxonomy_files.append(kwargs["taxonomy_file_path"])
+        return create_agent(self, *args, **kwargs)
+
+    monkeypatch.setattr(AgentFactory, "create_informal_fallacy_agent", record_taxonomy)
     assert demo.run_demo_rapide("full", None) is True
+
+    assert len(taxonomy_files) == 1
+    taxonomy_file = taxonomy_files[0]
+    assert taxonomy_file == str(get_taxonomy_path())
+    assert Path(taxonomy_file).is_file()
     assert "demo-analysis-result" in capsys.readouterr().out
     prompt.assert_awaited_once()
 
