@@ -5,9 +5,10 @@
 defects, both silent:
 
 - ``service_setup/analysis_services.py`` read ``settings.default_model_id``
-  (the field lives at ``settings.service_manager.default_model_id``) — the
+  (the field then lived at ``settings.service_manager.default_model_id``) — the
   ``AttributeError`` was swallowed by the surrounding ``except Exception``,
-  so EVERY run (mock included) built ``llm_service = None``;
+  so EVERY run (mock included) built ``llm_service = None`` (#2728 has since
+  removed that nested field along with its last reader);
 - ``kernel/kernel_builder.py`` read ``settings.azure_openai`` while the block
   sat under ``JVMSettings`` — the azure branch therefore raised
   ``AttributeError`` before its own "key not configured" check, and could
@@ -176,13 +177,20 @@ def test_the_historical_phantom_stays_detected():
     the block onto ``AppSettings``, rather than being kept alive under a shim.
     #2711 B then retired its only reader, ``KernelBuilder``, and the block went
     with it: that chain is a phantom again, and ``test_no_phantom_settings_attribute``
-    names any production reader that brings it back. Case 1 is untouched:
-    ``default_model_id`` still belongs at
-    ``settings.service_manager.default_model_id``.
+    names any production reader that brings it back. Case 1 evolved with #2728:
+    the nested field ``service_manager.default_model_id`` itself is gone — its
+    last reader went with the subtraction at the service_setup site — so BOTH
+    paths are phantoms now, and a resurrected field would be a second source
+    of model choice that no resolver can see.
     """
     resolved, _verifiable = _resolve(("settings", "default_model_id"))
     assert not resolved, (
-        "settings.default_model_id resolves again — the field belongs at "
-        "settings.service_manager.default_model_id, so either a top-level "
-        "shim was introduced to silence the guard, or the schema drifted back"
+        "settings.default_model_id resolves again — either a top-level shim "
+        "was introduced to silence the guard, or the schema drifted back"
+    )
+    nested, _verifiable = _resolve(("settings", "service_manager", "default_model_id"))
+    assert not nested, (
+        "settings.service_manager.default_model_id resolves again — the "
+        "field was removed with its last reader (#2728); a resurrected field "
+        "would be a model choice that no resolver can see"
     )

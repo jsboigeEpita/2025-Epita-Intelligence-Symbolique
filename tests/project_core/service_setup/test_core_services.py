@@ -121,7 +121,6 @@ def test_initialize_analysis_services_defaults(mock_ui_config, temp_project_root
         mock_settings.libs_dir = temp_project_root / "libs"
         (temp_project_root / "libs").mkdir(exist_ok=True)
         mock_settings.use_mock_llm = True
-        mock_settings.default_model_id = "test-model"
 
         services = initialize_analysis_services(config={})
 

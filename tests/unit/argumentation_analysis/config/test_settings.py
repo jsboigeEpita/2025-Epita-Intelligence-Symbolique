@@ -241,12 +241,12 @@ class TestServiceManagerSettings:
         s = ServiceManagerSettings()
         assert s.default_llm_service_id == "openai"
 
-    def test_default_model_id(self):
-        s = ServiceManagerSettings()
-        # #2377: the literal still names the value, but it is no longer declared
-        # here — it is the single constant `settings.DEFAULT_CHAT_MODEL_ID`,
-        # whose identity `test_service_manager_provenance_2377.py` pins (`is`).
-        assert s.default_model_id == "gpt-5.6-luna"  # default (#1930)
+    def test_no_default_model_id_field(self):
+        # #2728: the field is gone — its last reader went with the subtraction
+        # at the service_setup site, and a resurrected field would be a second
+        # source of model choice that no resolver can see.
+        s = ServiceManagerSettings(_env_file=None)
+        assert not hasattr(s, "default_model_id")
 
 
 # ============================================================

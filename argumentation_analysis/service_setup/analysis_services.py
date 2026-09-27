@@ -62,12 +62,11 @@ def initialize_analysis_services(config: Dict[str, Any] = None) -> Dict[str, Any
     # 2. Création du Service LLM (contrôlé par la config)
     logging.info("Création du service LLM...")
     try:
-        # ``default_model_id`` lives on the nested service-manager settings, not
-        # on AppSettings: reading it at the top level raised AttributeError,
-        # swallowed below as "llm_service is None" on EVERY run (#2115).
+        # No ``model_id`` here (#2728): the factory resolves it from the same
+        # source as ``resolve_chat_endpoint`` — a seat that picks its model
+        # through OPENAI_CHAT_MODEL_ID gets it on this path too.
         llm_service = create_llm_service(
             service_id="default_llm_service",
-            model_id=settings.service_manager.default_model_id,
             force_mock=settings.use_mock_llm,
         )
         services["llm_service"] = llm_service
