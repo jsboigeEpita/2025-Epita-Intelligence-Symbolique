@@ -29,6 +29,7 @@ Date: 2026-06-02
 
 import logging
 import os
+import sys
 import argparse
 from pathlib import Path
 
@@ -296,11 +297,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    if args.fastapi_port:
-        FASTAPI_PORT = args.fastapi_port
+    os.environ["FASTAPI_PORT"] = str(args.fastapi_port)
+    # A directly executed file has interface_web/, not its parent, on sys.path.
+    # Uvicorn's reloader must be able to resolve the module in its child too.
+    sys.path.insert(0, str(PROJECT_ROOT))
+    os.chdir(PROJECT_ROOT)
 
     logger.info(f"Demarrage du frontend proxy sur http://{args.host}:{args.port}")
-    logger.info(f"  -> Backend FastAPI: {FASTAPI_BASE_URL}")
+    logger.info(f"  -> Backend FastAPI: http://{FASTAPI_HOST}:{args.fastapi_port}")
 
     uvicorn.run(
         "interface_web.app:app",

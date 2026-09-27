@@ -123,8 +123,11 @@ cd services/web_api/interface-web-argumentative
 npm install && npm run build
 cd ../../..
 
-# Launch proxy
-uvicorn interface_web.app:app --port 5003 --fastapi-port 8095
+# Launch proxy (the direct CLI passes the backend port to the reload child)
+python interface_web/app.py --port 5003 --fastapi-port 8095
+
+# Alternatively, configure the backend port for Uvicorn via the environment
+FASTAPI_PORT=8095 uvicorn interface_web.app:app --port 5003
 ```
 
 - Proxies `/api/*` → FastAPI backend
