@@ -6,12 +6,12 @@ The OpenAPI contract test (`tests/integration/api/test_openapi_contract.py`) pro
 
 ## Snapshot File
 
-`api/openapi.snapshot.json` — committed, deterministic OpenAPI spec generated from the FastAPI app with sorted paths and schemas.
+`api/openapi.snapshot.json` — committed, deterministic OpenAPI spec generated from `api.main:app` with sorted paths and schemas. The old snapshot's unprefixed `/jtms/...` paths belonged only to a test-side replica; the served paths are `/api/v1/jtms/...`.
 
 ## How It Works
 
-1. Test boots the FastAPI app via `TestClient` (JPype mocked, no JVM needed)
-2. Fetches `/openapi.json` from the live app
+1. Test imports the served `api.main:app` and uses `TestClient` without starting the JVM
+2. Fetches `/openapi.json` from that app (no duplicate router list)
 3. Diffs against `api/openapi.snapshot.json`
 4. **Fails on**: removed paths, removed HTTP methods, removed/changed required parameters, removed required request body fields
 5. **Allows**: new endpoints, new methods, new optional params, new schemas

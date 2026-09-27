@@ -1,55 +1,16 @@
 """OpenAPI contract test — detect breaking API changes via snapshot diff.
 
-Boots the FastAPI app (with JPype mocked), fetches /openapi.json, and diffs
-against the committed snapshot. Fails on removed paths or changed required
-params. Additions are allowed (non-breaking).
+Fetches /openapi.json from the served app and compares it with the committed
+snapshot. Fails on removed paths or changed required params.
 """
 
 import json
 import os
-import sys
-import unittest.mock as m
 
 import pytest
-
-# #1816: these stubs exist only so the app boots without a live JVM during
-# the imports below. They were bare `sys.modules.setdefault` calls at module
-# level with no restore, so the mere collection of this file leaked MagicMock
-# "spacy"/"jpype" entries into sys.modules for the whole session — any later
-# `from spacy.matcher import ...` then failed, reddening three tests in
-# tests/unit (see #1816). Two fixes:
-#   - spacy needs no stub at all: it is a real dependency (environment.yml)
-#     and nothing under api/ references it directly — the real module
-#     imports fine;
-#   - the JVM stubs stay (the app must boot JVM-less) but live in an
-#     install/import/restore window: sys.modules is snapshotted before the
-#     imports and restored after, the same pattern as
-#     test_argumentation_analyzer.py and test_flask_service_integration.py.
-_jpype_mock = m.MagicMock()
-_jpype_mock.isJVMStarted = m.MagicMock(return_value=False)
-_JVM_STUBS = {
-    "jpype": _jpype_mock,
-    "jpype._core": m.MagicMock(),
-    "jpype.imports": m.MagicMock(),
-    "jpype.types": m.MagicMock(),
-    "argumentation_analysis.core.bootstrap": m.MagicMock(),
-}
-
-_stubs_saved = {name: sys.modules.get(name) for name in _JVM_STUBS}
-for name, stub in _JVM_STUBS.items():
-    sys.modules.setdefault(name, stub)
-
 from fastapi.testclient import TestClient
 
-from api.factory import create_app
-from api.endpoints import router as api_router, framework_router, informal_router
-
-# Restore sys.modules — nothing this module injected leaks past its imports.
-for name, saved in _stubs_saved.items():
-    if saved is None:
-        sys.modules.pop(name, None)
-    else:
-        sys.modules[name] = saved
+from api.main import _JTMS_AVAILABLE, app
 
 _PROJECT_ROOT = os.path.normpath(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "..")
@@ -57,39 +18,14 @@ _PROJECT_ROOT = os.path.normpath(
 SNAPSHOT_PATH = os.path.join(_PROJECT_ROOT, "api", "openapi.snapshot.json")
 
 
-def _build_test_client():
-    app = create_app(
-        title="Argumentation Analysis API",
-        description="API d'analyse argumentative multi-agents.",
-        version="2.0.0",
-    )
-    app.include_router(api_router, prefix="/api")
-    app.include_router(framework_router)
-    app.include_router(informal_router)
-
-    for _module, _router, _kwargs in [
-        ("api.proposal_endpoints", "proposal_router", {"prefix": "/api"}),
-        ("api.mobile_endpoints", "mobile_router", {"prefix": "/api"}),
-        ("api.agent_routes", "agent_router", {}),
-        ("api.websocket_routes", "ws_router", {}),
-        ("argumentation_analysis.api.jtms_endpoints", "jtms_router", {}),
-    ]:
-        try:
-            mod = __import__(_module, fromlist=[_router])
-            app.include_router(getattr(mod, _router), **_kwargs)
-        except Exception:
-            pass
-
+@pytest.fixture(scope="module")
+def client():
     return TestClient(app)
 
 
 @pytest.fixture(scope="module")
-def client():
-    return _build_test_client()
-
-
-@pytest.fixture(scope="module")
 def live_spec(client):
+    assert _JTMS_AVAILABLE, "JTMS router unavailable; cannot verify full API contract"
     response = client.get("/openapi.json")
     assert response.status_code == 200
     return response.json()
