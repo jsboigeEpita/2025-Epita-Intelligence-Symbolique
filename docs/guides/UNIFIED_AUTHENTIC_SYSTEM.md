@@ -213,8 +213,7 @@ Score = 1.0 - (Mocks_Critiques × 10 + Mocks_Haute × 5 + Mocks_Moyenne × 2) / 
 ```
 project/
 ├── config/
-│   ├── unified_config.py          # Configuration dynamique
-│   └── orchestration_config.yaml  # Configuration legacy
+│   └── unified_config.py          # Configuration dynamique
 ├── argumentation_analysis/
 │   └── agents/core/logic/
 │       └── fol_logic_agent.py     # Agent FOL/PL

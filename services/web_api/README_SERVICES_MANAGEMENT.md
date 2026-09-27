@@ -190,8 +190,6 @@ python services/web_api/health_check.py --continuous --interval 15
 ### Scripts unifiés compatibility
 Ces scripts sont **100% compatibles** avec l'écosystème Python existant :
 - ✅ `scripts/run_webapp_integration.py`
-- ✅ `scripts/migrate_to_unified.py`
-- ✅ Configuration centralisée YAML
 - ✅ Gestionnaire de ports centralisé
 
 ### Commandes de migration depuis PowerShell
