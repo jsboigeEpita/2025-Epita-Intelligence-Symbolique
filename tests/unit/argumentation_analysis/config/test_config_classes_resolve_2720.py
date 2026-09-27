@@ -9,56 +9,61 @@ issue asks for: every ``class:``/``class_name:`` value in every tracked
 YAML config must be a class defined somewhere in the tracked Python
 sources. No class list lives here — both sides are derived from the tree.
 
+The tree is walked through ``tests.support.tree_walk.iter_files`` — the
+#2607 common walk. It never follows directory symlinks, so the recursive
+``node_modules`` link npm workspaces leave (present in CI, absent locally —
+``WinError 1921``, run 36298081443) cannot kill collection, and the
+vendored prefixes below keep the walk out of ``node_modules`` and the other
+non-source trees.
+
 A config that returns naming a dead class reddens this witness, whatever
 the file.
 """
 
-import os
 import re
 from pathlib import Path
 
 import pytest
+
+from tests.support.tree_walk import iter_files
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
 _CLASS_KEY = re.compile(
     r"^\s*(?:class|class_name):\s*[\"']?([A-Za-z_]\w+)[\"']?\s*$", re.MULTILINE
 )
 _DEFINED_CLASS = re.compile(r"^\s*class\s+([A-Za-z_]\w+)", re.MULTILINE)
-_EXCLUDED_DIRS = {
+_SKIPPED_PREFIXES = (
+    "_probe_",
     "node_modules",
     "build",
     "dist",
-    ".git",
     "__pycache__",
     "portable_jdk",
     "libs",
-}
+)
 
 
-def _walk(pattern: str) -> list:
-    """YAML/py files under the repo, PRUNING excluded directories.
-
-    ``Path.rglob`` cannot prune: it descends into ``node_modules`` (present
-    in CI, where the React build runs) and dies on the recursive symlink
-    npm workspaces leave there (WinError 1921, measured on CI run
-    36298081443). ``os.walk`` prunes in place and skips unreadable dirs.
-    """
-    found = []
-    for dirpath, dirnames, filenames in os.walk(_REPO_ROOT, topdown=True):
-        dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS]
-        for name in filenames:
-            if name.endswith(pattern):
-                found.append(Path(dirpath) / name)
-    return found
+def _not_vcs_internal(path: Path) -> bool:
+    # ``.git`` cannot be a skip_prefix: startswith(".git") also matches
+    # ``.github``, which silently dropped six workflow YAMLs from this
+    # witness's coverage (measured 18 vs 24 files).
+    return ".git" not in path.parts
 
 
 def _yaml_configs() -> list:
-    return [p for p in _walk(".yaml")] + [p for p in _walk(".yml")]
+    return [
+        p
+        for p in list(iter_files(_REPO_ROOT, "*.yaml", skip_prefixes=_SKIPPED_PREFIXES))
+        + list(iter_files(_REPO_ROOT, "*.yml", skip_prefixes=_SKIPPED_PREFIXES))
+        if _not_vcs_internal(p)
+    ]
 
 
 def _defined_classes() -> set:
     names = set()
-    for p in _walk(".py"):
+    for p in iter_files(_REPO_ROOT, "*.py", skip_prefixes=_SKIPPED_PREFIXES):
+        if not _not_vcs_internal(p):
+            continue
         try:
             names.update(
                 _DEFINED_CLASS.findall(p.read_text(encoding="utf-8", errors="replace"))
