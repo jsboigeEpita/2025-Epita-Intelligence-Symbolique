@@ -109,6 +109,10 @@ class TestLLMService:
 
         assert "OPENAI_API_KEY" in str(excinfo.value)
 
+    # Sans ``force_authentic=True``, ``create_llm_service`` rend sous pytest un
+    # ``MockChatCompletion`` : ce test de connectivité répondait au mock (#2604).
+    # Forcé, il appelle le LLM réel ; ``requires_api`` le sort donc du gate.
+    @pytest.mark.requires_api
     @pytest.mark.skipif(
         not os.getenv("OPENAI_API_KEY"), reason="OPENAI_API_KEY non disponible"
     )
@@ -119,7 +123,9 @@ class TestLLMService:
             try:
                 kernel = sk.Kernel()
                 llm_service = create_llm_service(
-                    service_id="test_service", model_id=self.model_id
+                    service_id="test_service",
+                    model_id=self.model_id,
+                    force_authentic=True,
                 )
                 kernel.add_service(llm_service)
 

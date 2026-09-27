@@ -48,8 +48,12 @@ from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent impor
 logger = logging.getLogger(__name__)
 
 
-async def _create_authentic_gpt4o_mini_instance():
-    """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
+async def _create_unified_config_kernel():
+    """Kernel de ``UnifiedConfig().get_kernel_with_gpt4o_mini()`` (#2604).
+
+    Sous pytest, son service est un ``MockChatCompletion`` : sans
+    ``force_authentic=True``, aucun LLM réel n'est appelé.
+    """
     config = UnifiedConfig()
     return config.get_kernel_with_gpt4o_mini()
 
@@ -57,7 +61,7 @@ async def _create_authentic_gpt4o_mini_instance():
 @pytest.fixture
 async def mock_kernel():
     """Kernel mocké pour tests comparatifs."""
-    return await _create_authentic_gpt4o_mini_instance()
+    return await _create_unified_config_kernel()
 
 
 @pytest.fixture
@@ -101,16 +105,6 @@ class TestNewOrchestrator:
 
 
 class TestWorkflowComparison:
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await _create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke(prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests de comparaison entre workflows 2-agents et 3-agents."""
 
     @pytest.fixture

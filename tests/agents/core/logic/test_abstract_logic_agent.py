@@ -39,9 +39,6 @@ import unittest
 
 
 from semantic_kernel import Kernel
-from semantic_kernel.functions import (
-    KernelArguments,
-)  # Assurer que KernelArguments est importé
 
 from argumentation_analysis.agents.core.abc.agent_bases import BaseLogicAgent
 from argumentation_analysis.agents.core.logic.belief_set import BeliefSet
@@ -151,29 +148,6 @@ class TestAbstractLogicAgent:  # Supprime l'héritage de unittest
         self.state_manager.add_answer = MagicMock()
         self.state_manager.add_belief_set = MagicMock(return_value="bs_mock_id")
         self.state_manager.log_query_result = MagicMock(return_value="log_mock_id")
-
-    async def _create_authentic_kernel_instance(self) -> Kernel:  # Renommé et corrigé
-        """Crée une instance authentique du Kernel Semantic Kernel."""
-        config = UnifiedConfig()
-        config.mock_level = MockLevel.NONE
-        config.use_authentic_llm = True
-        config.use_mock_llm = False
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(
-        self, kernel: Kernel, prompt: str
-    ) -> str:  # Prend kernel en argument
-        """Fait un appel authentique à gpt-5-mini via le kernel fourni."""
-        # This test now uses the class-level state manager.
-        # This method might need to be adapted if it depends on per-test setup.
-        try:
-            result = await kernel.invoke_prompt_async(
-                prompt, arguments=KernelArguments()
-            )
-            return str(result)
-        except Exception as e:
-            logger.error(f"Appel LLM authentique échoué: {e}", exc_info=True)
-            return "Authentic LLM call failed"
 
     async def test_initialization(self):
         """Test de l'initialisation de l'agent."""

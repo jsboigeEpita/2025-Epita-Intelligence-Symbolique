@@ -85,23 +85,6 @@ handler.setFormatter(formatter)
 jpype_logger.addHandler(handler)
 
 
-async def _create_authentic_gpt4o_mini_instance():
-    """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-    config = UnifiedConfig()
-    return config.get_kernel_with_gpt4o_mini()
-
-
-async def _make_authentic_llm_call(prompt: str) -> str:
-    """Fait un appel authentique à gpt-5-mini."""
-    try:
-        kernel = await _create_authentic_gpt4o_mini_instance()
-        result = await kernel.invoke("chat", input=prompt)
-        return str(result)
-    except Exception as e:
-        logger.warning(f"Appel LLM authentique échoué: {e}")
-        return "Authentic LLM call failed"
-
-
 class TestFOLTweetyCompatibility:
     """Tests de compatibilité syntaxe FOL avec Tweety."""
 

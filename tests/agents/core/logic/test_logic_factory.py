@@ -25,22 +25,16 @@ from argumentation_analysis.agents.core.logic.modal_logic_agent import ModalLogi
 
 
 class TestLogicAgentFactory:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
+    """Tests pour la classe LogicAgentFactory."""
+
+    async def _create_unified_config_kernel(self):
+        """Kernel de ``UnifiedConfig().get_kernel_with_gpt4o_mini()`` (#2604).
+
+        Sous pytest, son service est un ``MockChatCompletion`` : sans
+        ``force_authentic=True``, aucun LLM réel n'est appelé.
+        """
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            print(f"Authentic LLM call failed: {e}")
-            return "Authentic LLM call failed"
-
-    """Tests pour la classe LogicAgentFactory."""
 
     async def async_setUp(self):
         """Initialisation asynchrone avant chaque test."""
@@ -131,7 +125,7 @@ class TestLogicAgentFactory:
             # built WITHOUT a service_id: it certified the silent drop. The
             # factory now refuses such an argument; the test passes the
             # kernel's service and checks that its id reaches the agent.
-            authentic_kernel = await self._create_authentic_gpt4o_mini_instance()
+            authentic_kernel = await self._create_unified_config_kernel()
             llm_service = next(iter(authentic_kernel.services.values()))
 
             agent = LogicAgentFactory.create_agent(

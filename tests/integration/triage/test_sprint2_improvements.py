@@ -12,7 +12,6 @@ Tests d'intégration spécifiques pour valider les améliorations du Sprint 2.
 import unittest
 from unittest.mock import MagicMock
 
-import asyncio
 import logging
 from datetime import datetime
 
@@ -48,26 +47,16 @@ def _kernel_with_mock_llm():
 
 
 class TestSprint2Improvements(unittest.TestCase):
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
+    """Tests pour valider les améliorations du Sprint 2."""
+
+    def _create_unified_config_kernel(self):
+        """Kernel de ``UnifiedConfig().get_kernel_with_gpt4o_mini()`` (#2604).
+
+        Sous pytest, son service est un ``MockChatCompletion`` : sans
+        ``force_authentic=True``, aucun LLM réel n'est appelé.
+        """
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _async_call():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                logger.warning(f"Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        return asyncio.run(_async_call())
-
-    """Tests pour valider les améliorations du Sprint 2."""
 
     def setUp(self):
         """Initialisation avant chaque test."""
@@ -155,8 +144,8 @@ class TestSprint2Improvements(unittest.TestCase):
         orchestration = GroupChatOrchestration()
 
         # Test initialisation session
-        agent1 = self._create_authentic_gpt4o_mini_instance()
-        agent2 = self._create_authentic_gpt4o_mini_instance()
+        agent1 = self._create_unified_config_kernel()
+        agent2 = self._create_unified_config_kernel()
         success = orchestration.initialize_session(
             "test_session", {"agent1": agent1, "agent2": agent2}
         )
@@ -362,7 +351,7 @@ class TestSprint2Improvements(unittest.TestCase):
         agents = {}
         for i in range(3):
             # We need to call the method to get the kernel instance
-            agent_instance = self._create_authentic_gpt4o_mini_instance()
+            agent_instance = self._create_unified_config_kernel()
             agents[f"agent_{i}"] = agent_instance
 
         orchestration.initialize_session("concurrent_test", agents)

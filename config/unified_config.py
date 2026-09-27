@@ -314,9 +314,7 @@ class UnifiedConfig:
         import logging
 
         logger = logging.getLogger("UnifiedConfig.Authentic")
-        logger.info(
-            f"✅ Kernel authentique créé - Service: {type(llm_service).__name__}"
-        )
+        logger.info(f"✅ Kernel créé - Service: {type(llm_service).__name__}")
         logger.info(
             f"✅ Model: {self.default_model}, Provider: {self.default_provider}"
         )

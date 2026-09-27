@@ -38,9 +38,6 @@ from argumentation_analysis.core.cluedo_oracle_state import CluedoOracleState
 from argumentation_analysis.agents.core.oracle.moriarty_interrogator_agent import (
     MoriartyInterrogatorAgent,
 )
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Configuration pour tests de performance
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
@@ -183,22 +180,16 @@ def performance_test_elements():
 
 @pytest.mark.performance
 class TestOracleResponseTimePerformance:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
+    """Tests de performance des temps de réponse Oracle."""
+
+    async def _create_unified_config_kernel(self):
+        """Kernel de ``UnifiedConfig().get_kernel_with_gpt4o_mini()`` (#2604).
+
+        Sous pytest, son service est un ``MockChatCompletion`` : sans
+        ``force_authentic=True``, aucun LLM réel n'est appelé.
+        """
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
-    """Tests de performance des temps de réponse Oracle."""
 
     @pytest.mark.asyncio
     async def test_single_api_call_performance(
@@ -400,7 +391,7 @@ class TestOracleLoadPerformance:
         try:
             # Création d'agents concurrents (avec mocks pour éviter coûts)
             for i in range(num_concurrent_agents):
-                mock_kernel = await self._create_authentic_gpt4o_mini_instance()
+                mock_kernel = await self._create_unified_config_kernel()
                 oracle_state = CluedoOracleState(
                     nom_enquete_cluedo=f"Concurrent Test {i}",
                     elements_jeu_cluedo=performance_test_elements,

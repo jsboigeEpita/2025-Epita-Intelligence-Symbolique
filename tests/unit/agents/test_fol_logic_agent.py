@@ -7,9 +7,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 import pytest_asyncio
 import asyncio
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Ajouter le répertoire racine au PYTHONPATH
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
@@ -52,21 +49,6 @@ class ConcreteFOLLogicAgent(FOLLogicAgent):
 
 class TestFOLLogicAgentInitialization:
     """Tests d'initialisation et de configuration de l'agent FOL."""
-
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
 
     @pytest.mark.real_jpype
     def test_agent_initialization_with_fol_config(self):
@@ -237,20 +219,6 @@ class TestFOLSyntaxGeneration:
 
 class TestFOLTweetyIntegration:
     """Tests d'intégration avec TweetyProject."""
-
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        config.mock_level = MockLevel.NONE
-        config.use_authentic_llm = True
-        config.use_mock_llm = False
-        try:
-            return config.get_kernel_with_gpt4o_mini()
-        except Exception as e:
-            print(
-                f"Avertissement: Erreur lors de l'appel à config.get_kernel_with_gpt4o_mini(): {e}"
-            )
-            return Kernel()
 
     @pytest_asyncio.fixture
     async def fol_agent_with_tweety(self):

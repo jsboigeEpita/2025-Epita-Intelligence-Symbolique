@@ -2,9 +2,6 @@ import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
-import logging
-
-logger = logging.getLogger(__name__)
 
 #!/usr/bin/env python3
 """
@@ -19,7 +16,6 @@ Suite de tests pour valider l'authenticité 100% du système :
 """
 
 import pytest
-import asyncio
 import os
 import sys
 from pathlib import Path
@@ -49,29 +45,6 @@ except ImportError as e:
 
 
 class TestMockEliminationAdvanced:
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-
-        async def _run():
-            config = UnifiedConfig()
-            return await config.get_kernel_with_gpt4o_mini()
-
-        return asyncio.run(_run())
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _run():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                logger.warning(f"Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        return asyncio.run(_run())
-
     """Tests avancés d'élimination des mocks."""
 
     def setup_method(self):
