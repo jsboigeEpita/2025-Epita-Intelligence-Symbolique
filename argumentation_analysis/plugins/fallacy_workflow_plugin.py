@@ -38,6 +38,10 @@ from semantic_kernel.contents import (
 )
 
 from argumentation_analysis.agents.utils.taxonomy_navigator import TaxonomyNavigator
+from argumentation_analysis.core.plaintext_destination import (
+    PlaintextDestinationError,
+    check_plaintext_destination,
+)
 from argumentation_analysis.plugins.exploration_plugin import ExplorationPlugin
 from argumentation_analysis.utils.taxonomy_local_overrides import purge_rows
 from argumentation_analysis.plugins.identification_models import (
@@ -1514,12 +1518,15 @@ class FallacyWorkflowPlugin:
                     if "fallacies" in parsed:
                         parsed["trace_note"] = "one_shot_fallback"
                         parsed["argument_excerpt"] = argument_text[:200]
+                        check_plaintext_destination(trace_log_path)
                         trace_path = Path(trace_log_path)
                         trace_path.parent.mkdir(parents=True, exist_ok=True)
                         trace_path.write_text(
                             json.dumps(parsed, indent=2, ensure_ascii=False),
                             encoding="utf-8",
                         )
+                except PlaintextDestinationError as refused:
+                    self.logger.warning("One-shot trace not written: %s", refused)
                 except (json.JSONDecodeError, TypeError):
                     pass
             return self._mark_regime(one_shot_result, "one_shot")
@@ -1549,6 +1556,7 @@ class FallacyWorkflowPlugin:
         if not trace_log_path or str(trace_log_path).strip() in ("", "None", "null"):
             return None
         try:
+            check_plaintext_destination(str(trace_log_path))
             Path(str(trace_log_path)).parent.mkdir(parents=True, exist_ok=True)
             handler = logging.FileHandler(trace_log_path, mode="w", encoding="utf-8")
             handler.setFormatter(
@@ -1601,6 +1609,7 @@ class FallacyWorkflowPlugin:
                 "traversal_paths": trace_entries,
             }
 
+            check_plaintext_destination(trace_log_path)
             trace_path = Path(trace_log_path)
             trace_path.parent.mkdir(parents=True, exist_ok=True)
             trace_path.write_text(

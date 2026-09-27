@@ -9,6 +9,10 @@ from semantic_kernel.contents import (
     FunctionResultContent,
 )
 
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
+
 if TYPE_CHECKING:
     from semantic_kernel.contents import ChatHistory
 
@@ -33,6 +37,8 @@ class TracedAgent:
         :param agent_to_wrap: L'instance de l'agent à tracer.
         :param trace_log_path: Le chemin vers le fichier de log.
         """
+        # The trace records the conversation, corpus text included (#2738).
+        check_plaintext_destination(trace_log_path)
         self.agent = agent_to_wrap
         self.name = (
             agent_to_wrap.name if hasattr(agent_to_wrap, "name") else "UnnamedAgent"

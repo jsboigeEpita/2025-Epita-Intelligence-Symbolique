@@ -624,6 +624,55 @@ class TestTraceLogging:
         assert len(plugin.logger.handlers) == handler_count_before
 
 
+class TestTracePlaintextDestination2738:
+    """The three trace writers refuse a path git could stage (#2738).
+
+    A trace carries an excerpt of the analysed text. The analysis itself must
+    survive the refusal: only the file is dropped.
+    """
+
+    @pytest.fixture
+    def work_tree(self, tmp_path):
+        import subprocess
+
+        root = tmp_path / "repo"
+        root.mkdir()
+        subprocess.run(["git", "init", "-q", str(root)], check=True)
+        return root
+
+    async def test_fallback_trace_is_refused_and_the_result_survives(
+        self, plugin, mock_llm_service, work_tree
+    ):
+        msg = MagicMock()
+        msg.items = []  # no tool call: the descent falls back to one-shot
+        mock_llm_service.get_chat_message_contents.return_value = [msg]
+        mock_response = MagicMock()
+        mock_response.__str__ = (
+            lambda self: '{"fallacy_name": "Fallback", "taxonomy_pk": "", "explanation": "e", "confidence": 0.3}'
+        )
+        mock_llm_service.get_chat_message_content.return_value = mock_response
+        target = work_tree / "trace.json"
+
+        result = await plugin.run_guided_analysis(
+            argument_text="synthetic text", trace_log_path=str(target)
+        )
+
+        parsed = json.loads(result)
+        assert "error" not in parsed
+        assert parsed["exploration_method"] == "one_shot"
+        assert not target.exists()
+
+    def test_descent_log_handler_is_refused(self, plugin, work_tree):
+        target = work_tree / "descent.log"
+        assert plugin._attach_trace_handler(str(target)) is None
+        assert not target.exists()
+
+    def test_structured_trace_is_not_written(self, plugin, work_tree):
+        target = work_tree / "trace.json"
+        plugin._persist_trace(str(target), FallacyAnalysisResult(), "synthetic text")
+        assert not target.exists()
+
+
 # ---------------------------------------------------------------------------
 # 10. Error handling
 # ---------------------------------------------------------------------------
