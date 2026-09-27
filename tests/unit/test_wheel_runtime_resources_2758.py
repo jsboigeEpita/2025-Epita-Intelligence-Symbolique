@@ -41,8 +41,7 @@ def test_installed_wheel_runtime_resources(tmp_path: Path) -> None:
         packaged = {
             name.removeprefix("argumentation_analysis/")
             for name in names
-            if name.startswith("argumentation_analysis/")
-            and name.endswith((".yaml", ".yml", ".json", ".csv", ".enc"))
+            if name.startswith("argumentation_analysis/") and not name.endswith(".py")
         }
         assert packaged == RESOURCE_PATHS
         assert not any(
