@@ -240,7 +240,7 @@ class WorkflowBuilder:
         workflow = WorkflowBuilder("my_analysis") \\
             .add_phase("extract", capability="fact_extraction") \\
             .add_phase("fallacy", capability="fallacy_detection") \\
-            .add_phase("counter", capability="counter_argument",
+            .add_phase("counter", capability="counter_argument_generation",
                        depends_on=["fallacy"]) \\
             .add_phase("synthesis", capability="synthesis") \\
             .build()
