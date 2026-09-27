@@ -67,10 +67,10 @@ dependencies:
   - clingo
 
   # Testing
-  - pytest
+  - pytest==9.1.1  # #2566: CI gate run 36264473973 uses 9.1.1; 8.4.2 silently narrows collection for DIR plus DIR/file.py.
   - pytest-cov
   - pytest-mock
-  - pytest-asyncio
+  - pytest-asyncio==1.4.0  # #2566: CI gate run 36264473973 reports asyncio-1.4.0.
   - coverage
   - unidecode
   - conda-lock
@@ -92,7 +92,7 @@ dependencies:
     - openai==3.3.0  # Pinned. semantic-kernel declares only a floor (openai>=2.0.0), so every fresh env resolved whatever PyPI served that day. Measured 2026-08-19: CI resolved openai 3.3.0 while dev envs built months earlier sat on 2.26.0 — and openai>=3.x moved its transport from httpx to httpx2. That gap is precisely why a CI-only failure like #1794 cannot be reproduced on a dev box: the two sides do not run the same client. 3.3.0 is the version the gate actually exercises (run 32195821578, green). Same drift class as python-sat below: a floor is not a version.
     - flask_socketio>=5.3.6
     - playwright
-    - pytest-playwright
+    - pytest-playwright==0.9.0  # #2566: CI gate run 36264473973; 0.7.1 requires pytest<9, 0.9.0 supports pytest<10.
     - psutil
     - tenacity
     - pybreaker
@@ -103,8 +103,8 @@ dependencies:
     - pytest-benchmark
     - tiktoken
     - hypothesis  # #1303: property tests (tests/property/) — CI collection breaks without it
-    - pytest-timeout  # CI hang guard: --timeout=900 in ci.yml converts a hung test into a stack-dumped failure
-    - pytest-xdist  # #2402: the xdist witness tests (test_jvm_session_flag_one_reader_2402.py, test_xdist_report_serialization_2402.py) spawn child pytest runs at `-n 1`; without the plugin the child aborts at "unrecognized arguments: -n 1" (CI run 36042911689: exactly the 3 witnesses failed). Inert for the gate's own run — it never passes -n. Same drift class as pyfakefs below: a guard that needs a plugin the env does not provision.
+    - pytest-timeout==2.4.0  # #2566: CI gate run 36264473973; --timeout=900 turns a hang into a failure.
+    - pytest-xdist==3.8.0  # #2566: CI gate run 36264473973. #2402: the xdist witness tests (test_jvm_session_flag_one_reader_2402.py, test_xdist_report_serialization_2402.py) spawn child pytest runs at `-n 1`; without the plugin the child aborts at "unrecognized arguments: -n 1" (CI run 36042911689: exactly the 3 witnesses failed). Inert for the gate's own run — it never passes -n. Same drift class as pyfakefs below: a guard that needs a plugin the env does not provision.
     - pyfakefs>=5.0.0  # #1336: provides the `fs` fixture for test_plugin_loader.py — CI errors "fixture 'fs' not found" without it
     - diskcache  # #1336: LLM response cache (llm_cache.py CachedChatCompletion). In requirements.txt but not environment.yml — CI provisions via environment.yml, so diskcache was absent on runners → CachedChatCompletion fell back to OFF mode, failing 5 test_llm_cache tests. Same drift class as pyfakefs (#1353) and hypothesis (#1303).
     # sentence-transformers deliberately NOT provisioned (#2116 A1): importing it reaches torch, whose DLLs the runner image cannot load (#1651 — probe VERDICT 4/8: torch_cpu/fbgemm/shm/torch_python, winerror 182, deterministic on 3/3 runs 2026-09-15: 35011121202, 35012607442, 35013012989). Provisioning it aborted COLLECTION of two test files (any module-level `from sentence_transformers import ...` → `import torch` → OSError; PR #2267 run 2) — green runs are green only because nothing imports torch at collection and torch-dependent tests skip. The capacity guard (test_embedding_capacity_guard_2116.py) therefore skips in CI with this reason and measures on machines where the stack loads.
