@@ -26,7 +26,6 @@ from argumentation_analysis.orchestration.invoke_callables import (
     _invoke_semantic_index,
     _invoke_speech_transcription,
     _invoke_hierarchical_fallacy,
-    _invoke_hierarchical_fallacy_per_argument,
     _invoke_fact_extraction,
     _invoke_propositional_logic,
     _invoke_fol_reasoning,
@@ -218,7 +217,10 @@ def setup_registry(
         registry.register_service(
             name="local_llm_service",
             service_class=LocalLLMService,
-            capabilities=["local_llm", "chat_completion"],
+            # #2623 triage: "chat_completion" had zero production demanders —
+            # the phase asks "local_llm" (and "chat_completion" is also an SK
+            # service_id elsewhere, a different vocabulary). The service stays.
+            capabilities=["local_llm"],
             metadata={"description": "OpenAI-compatible local LLM adapter"},
             invoke=_invoke_local_llm,
         )
@@ -271,52 +273,13 @@ def setup_registry(
         except ImportError as e:
             skipped.append(("hierarchical_fallacy_detector", str(e)))
 
-        # Per-argument parallel fallacy detection (#578 tier 3)
-        try:
-            from argumentation_analysis.plugins.fallacy_workflow_plugin import (
-                FallacyWorkflowPlugin,
-            )
-
-            # #1553: this service is an ENRICHMENT sub-step, NOT a terminal
-            # detection provider. Its own contract (invoke_callables.py:4893-4922)
-            # states it runs AFTER the wide-net descent and that "the wide-net
-            # result is retained by the caller" — the complete path calls it
-            # directly at invoke_callables.py:4506 and merges via
-            # ``_merge_fallacy_results``. Declaring ``hierarchical_fallacy_detection``
-            # (or ``fallacy_detection``) here let it be RESOLVED as a terminal
-            # provider: with no caller, the wide-net result it assumes already
-            # ran is absent, and it returns ``fallacies: []`` + ``degraded`` —
-            # a silent loss. Because ``_capability_index`` is a ``Dict[str,
-            # Set[str]]`` and consumers take ``providers[0]`` believing it is
-            # "first registered" (hierarchy_bridge.py:67-73), the winner between
-            # this sub-step and ``hierarchical_fallacy_detector`` depended on
-            # ``hash()``, salted per-process — intermittent between runs (3/5),
-            # stable inside one. The fix is subtractive: the sub-step keeps its
-            # REAL capability (``per_argument_fallacy_detection``) and ceases to
-            # shadow the complete path. Not deleted — still invoked directly by
-            # the complete path; just no longer selectable as a terminal
-            # detection provider. Anti-pendule: tri the index was rejected (it
-            # would stabilize the winner on an arbitrary — alphabetic — order,
-            # i.e. work for a wrong reason).
-            registry.register_service(
-                name="hierarchical_fallacy_per_argument",
-                service_class=FallacyWorkflowPlugin,
-                capabilities=[
-                    "per_argument_fallacy_detection",
-                ],
-                metadata={
-                    "description": (
-                        "Parallel per-argument hierarchical fallacy detection. "
-                        "Runs FallacyWorkflowPlugin on each argument via asyncio.gather (#578 tier 3). "
-                        "Enrichment sub-step of _invoke_hierarchical_fallacy (invoked directly, "
-                        "NOT a terminal detection provider — #1553)."
-                    )
-                },
-                invoke=_invoke_hierarchical_fallacy_per_argument,
-            )
-            registered.append("hierarchical_fallacy_per_argument")
-        except ImportError as e:
-            skipped.append(("hierarchical_fallacy_per_argument", str(e)))
+        # Per-argument enrichment sub-step (#578 tier 3, #1553): NOT registered
+        # here — its only capability ("per_argument_fallacy_detection") never
+        # had a production demander (#2623 triage; #2137 closed without it).
+        # The callable lives on, called directly by the complete path
+        # (invoke_callables._invoke_hierarchical_fallacy) and the
+        # conversational orchestrator; witness in
+        # test_shared_capability_provider_selection_1553.py.
 
         # Semantic index service (Arg_Semantic_Index)
         try:
@@ -327,7 +290,10 @@ def setup_registry(
             registry.register_service(
                 name="semantic_index_service",
                 service_class=SemanticIndexService,
-                capabilities=["semantic_indexing", "argument_search"],
+                # #2623 triage: "argument_search" had zero production demanders
+                # — the semantic_indexing phase (#2618) asks "semantic_indexing"
+                # and calls search_arguments inside that one capability.
+                capabilities=["semantic_indexing"],
                 metadata={"description": "Semantic argument indexing service"},
                 invoke=_invoke_semantic_index,
             )
@@ -344,7 +310,9 @@ def setup_registry(
             registry.register_service(
                 name="speech_transcription_service",
                 service_class=SpeechTranscriptionService,
-                capabilities=["speech_transcription", "speech_to_text"],
+                # #2623 triage: "speech_to_text" had zero production demanders
+                # — the speech_transcription phase asks "speech_transcription".
+                capabilities=["speech_transcription"],
                 metadata={"description": "Whisper-based speech transcription service"},
                 invoke=_invoke_speech_transcription,
             )
@@ -742,11 +710,11 @@ def setup_registry(
         registry.register_service(
             name="ai_shield_service",
             service_class=type("AIShieldService", (), {}),
-            capabilities=[
-                "input_validation",
-                "output_filtering",
-                "adversarial_protection",
-            ],
+            # #2623 triage: "output_filtering" and "adversarial_protection"
+            # had zero production demanders — one shield, one askable name
+            # ("input_validation"); the REST endpoint imports the service
+            # directly and never resolved either alias.
+            capabilities=["input_validation"],
             metadata={
                 "description": "AI Shield — adversarial protection for LLM pipeline (injection, jailbreak, bias, leak detection)",
                 "presets": ["basic", "advanced", "output_only", "strict"],

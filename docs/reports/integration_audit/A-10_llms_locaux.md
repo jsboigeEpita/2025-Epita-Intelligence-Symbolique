@@ -22,7 +22,7 @@ Key claims in the student deliverable:
 
 ### Registration
 
-- **`registry_setup.py:207-222`** — `local_llm_service` registered in `CapabilityRegistry` with capabilities `["local_llm", "chat_completion"]`.
+- **`registry_setup.py:211-228`** — `local_llm_service` registered in `CapabilityRegistry` with capabilities `["local_llm"]` (#2623: the `chat_completion` alias had zero production demanders and was retired).
 
 ### Tests
 
@@ -51,7 +51,7 @@ The student project claimed support for vLLM, Ollama, LM Studio, etc. In practic
 
 The student project included a fallacy-detection-specific endpoint or prompt chain. This has not been surfaced as a registered capability in the `CapabilityRegistry`. Consumers cannot discover or invoke "local fallacy detection" as a distinct service.
 
-**Impact**: Medium. The service is registered as generic `chat_completion` but its argumentation-specific value proposition is invisible to the Lego Architecture.
+**Impact**: Medium. The service is registered under `local_llm` only (the generic `chat_completion` alias was retired in #2623 — nothing demanded it), and its argumentation-specific value proposition is invisible to the Lego Architecture.
 
 ### Gap 3: ServiceDiscovery auto-registration not wired by default
 

@@ -28,7 +28,7 @@ Point d'honnêteté sur le qualificatif du titre : `CLAUDE.md` (racine) déclare
 ## Points d'entrée valides
 
 1. **CLI (chemin principal)** — `argumentation_analysis/run_orchestration.py --mode cluedo` : le littéral est déclaré `run_orchestration.py` (`choices` du `--mode`, aide « investigation Sherlock-Watson-Oracle, #914 ») et une branche dédiée le traite. Elle importe `run_cluedo_oracle_game` et l'appelle avec `kernel=` et `initial_question=`. Signature réelle : `orchestration/cluedo_extended_orchestrator.py` (`kernel, initial_question, max_turns=15, max_cycles=5, oracle_strategy="balanced", settings=None`).
-2. **Runner autonome** — `orchestration/cluedo_runner.py` (`run_cluedo_oracle_game(kernel, settings, …)`, `__main__`) : construit `CluedoExtendedOrchestrator`, `setup_workflow()`, `execute_workflow()`. L'appel omet `settings` — **ce n'est pas un défaut** : `settings=None` est le défaut (`cluedo_extended_orchestrator.py`) et la fonction retombe alors sur les settings globaux, il n'y a rien à corriger ici.
+2. **Entrée autonome** — `python -m argumentation_analysis.orchestration.cluedo_extended_orchestrator` : son `main()` obtient le service LLM de `create_llm_service` (route OpenAI ou OpenRouter, #2711), puis joue une partie et imprime le résultat. `orchestration/cluedo_runner.py` ne porte plus que `run_cluedo_oracle_game(kernel, settings, …)`, **homonyme distinct** de celle de `cluedo_extended_orchestrator.py` : ici `settings` est **requis**. Son ancien `main()` l'appelait sans `settings` (`TypeError`) sur un kernel vide ; il doublait celui de l'orchestrateur et a été retiré (#2711).
 3. **Script dédié revendiqué par `CLAUDE.md`** — `scripts/sherlock_watson/run_cluedo_oracle_enhanced.py` (importe `cluedo_runner.run_cluedo_oracle_game`), argparse local. **Hors CI**.
 4. **Consommateur indirect** — `scripts/sherlock_watson/run_einstein_oracle_demo.py` importe `core.cluedo_oracle_state.CluedoOracleState` pour fabriquer un état « factice » ; il **ne** charge **pas** `MoriartyInterrogatorAgent`.
 
@@ -60,7 +60,7 @@ Le **chemin vivant est unique** : `--mode cluedo` → `CluedoExtendedOrchestrato
 
 ## Artefacts et lecteurs
 
-Traces de partie (`conversation_trace`, `tool_usage_trace`, `metrics` — `core/cluedo_oracle_state.py`), `oracle_statistics` et solution finale, imprimés par la CLI (`run_orchestration.py`) et affichés par `cluedo_runner.py`. Lecteurs : l'utilisateur (démo/soutenance), les scripts `scripts/sherlock_watson/`, les workers d'intégration. **Pas** de lecteur dans la chaîne de restitution (`reporting/`).
+Traces de partie (`conversation_trace`, `tool_usage_trace`, `metrics` — `core/cluedo_oracle_state.py`), `oracle_statistics` et solution finale, imprimés par la CLI (`run_orchestration.py`) et par l'entrée autonome (`cluedo_extended_orchestrator.main`). Lecteurs : l'utilisateur (démo/soutenance), les scripts `scripts/sherlock_watson/`, les workers d'intégration. **Pas** de lecteur dans la chaîne de restitution (`reporting/`).
 
 ## Tests représentatifs
 

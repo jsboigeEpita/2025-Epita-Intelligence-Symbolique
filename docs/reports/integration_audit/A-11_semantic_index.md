@@ -25,13 +25,13 @@ Le projet étudiant a été digéré en **un service infrastructure** enrichi :
 | `orchestration/invoke_callables.py` | Nouveau | ~15 | `_invoke_semantic_index` (avec guard `is_available()`) |
 | `orchestration/state_writers.py` | Nouveau | ~20 | `_write_semantic_index_to_state` |
 | `orchestration/workflows.py` | Nouveau | ~5 | Phase "index" dans `build_full_workflow()` |
-| `orchestration/registry_setup.py` | Nouveau | ~16 | SERVICE `semantic_index_service` (2 capabilities) |
+| `orchestration/registry_setup.py` | Nouveau | ~16 | SERVICE `semantic_index_service` (1 capability après #2623) |
 | `core/shared_state.py` | Nouveau | ~25 | `semantic_index_refs` + `add_semantic_index_ref()` |
 | `orchestration/router.py` | Nouveau | ~10 | Auto-routing textes >500 mots |
 
 **Dataclasses ajoutées** : `SearchResult(text, relevance, document_id, source_name, tags)`, `AskResult(answer, sources, raw_response)` — absentes du code étudiant (qui retournait des dicts bruts).
 
-**CapabilityRegistry** : 1 service `semantic_index_service` avec 2 capabilities : `semantic_indexing`, `argument_search`.
+**CapabilityRegistry** : 1 service `semantic_index_service` avec 1 capability : `semantic_indexing` (l'alias `argument_search`, sans demandeur, a été retiré en #2623 — la phase #2618 appelle `search_arguments` à l'intérieur de la capability `semantic_indexing`).
 
 ### 1.2 Préservation fonctionnelle
 
@@ -169,7 +169,7 @@ Le wiring pipeline est complet : SERVICE registration (2 capabilities), invoke c
 - `argumentation_analysis/orchestration/invoke_callables.py` — _invoke_semantic_index (with guard)
 - `argumentation_analysis/orchestration/state_writers.py` — _write_semantic_index_to_state
 - `argumentation_analysis/orchestration/workflows.py` — phase "index" (full workflow, optional)
-- `argumentation_analysis/orchestration/registry_setup.py` — SERVICE registration (2 capabilities)
+- `argumentation_analysis/orchestration/registry_setup.py` — SERVICE registration (1 capability post-#2623)
 - `argumentation_analysis/orchestration/router.py` — auto-routing >500 mots
 - `argumentation_analysis/core/shared_state.py` — semantic_index_refs + add_semantic_index_ref
 - `tests/unit/argumentation_analysis/services/test_semantic_index_service.py` — service tests (291 LOC)

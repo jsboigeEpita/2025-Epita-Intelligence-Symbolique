@@ -32,7 +32,7 @@
 
 **Statut** : Intégré fidèlement et enrichi (SUIVI, `2.4.1_Index_Semantique_Arguments/`)
 **Epic A** : A-11 #768 — 🟢 INTÉGRÉ fidèlement (PR #836, 0 fix-intent)
-**Pipeline wiring** : `SemanticIndexService` (Kernel Memory), capability `semantic_indexing` + `argument_search`, **enrichissement majeur** : chunking argument-niveau (258 LOC, #174 fermée), chaque argument indexé avec `quality_score`, `fallacy_type`, `quality_level`.
+**Pipeline wiring** : `SemanticIndexService` (Kernel Memory), capability `semantic_indexing` (l'alias `argument_search` a été retiré en #2623), **enrichissement majeur** : chunking argument-niveau (258 LOC, #174 fermée), chaque argument indexé avec `quality_score`, `fallacy_type`, `quality_level`.
 
 ---
 

@@ -460,6 +460,157 @@ def test_the_census_sweep_can_render_non_zero(tmp_path: Path) -> None:
     }, found
 
 
+# #2711: the kernel-path twin of the census above. `create_llm_service` owns the
+# route of a kernel service (the OpenRouter toggle, the #1930 substitution, and
+# the refusal of a seat with no key). A site that reads `settings.openai`
+# decides the route itself, and the field lies on a keyless seat: `api_key`
+# defaults to a dummy string, so a presence test on it always passes. Same three
+# failures as above: unexpected (a new reader), stale (a repaired reader still
+# listed), drifted (a reader that gained or lost a field).
+_SETTINGS_ROUTE_FIELDS = ("api_key", "base_url", "chat_model_id")
+
+_FROZEN_SETTINGS_OPENAI_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
+    "argumentation_analysis/core/bootstrap.py": (
+        ("api_key", "chat_model_id"),
+        "chat_model_id is handed to create_llm_service, which still applies the "
+        "toggle and the substitution; api_key only feeds context.config and a "
+        "startup warning, and no service is built from it",
+    ),
+    "argumentation_analysis/kernel/kernel_builder.py": (
+        ("api_key", "chat_model_id"),
+        "#2711 B: KernelBuilder has no production caller; its Azure reads move "
+        "into the factory, then it is retired",
+    ),
+    "argumentation_analysis/orchestration/service_manager.py": (
+        ("api_key",),
+        "#2711 A2: a presence gate before create_llm_service and before the two "
+        "kernel analyses; it refuses an OpenRouter-only seat the factory accepts",
+    ),
+}
+
+
+def _settings_openai_read_sites(
+    files: Iterable[Path], root: Path
+) -> Dict[str, Tuple[str, ...]]:
+    """relpath -> the ``<x>.openai.<field>`` route fields that file loads.
+
+    An ``Attribute`` load of a route field whose value is itself an ``.openai``
+    attribute: ``settings.openai.api_key``, ``self.settings.openai.base_url``.
+    The ``openai`` module's own ``openai.api_key`` hangs off a ``Name`` and is
+    not a settings read. An alias (``o = settings.openai``, then ``o.api_key``)
+    escapes this grammar; on ``04b2d42de`` every ``.openai`` access under the
+    census roots is followed by its field or only tested for truth.
+    """
+    found: Dict[str, Tuple[str, ...]] = {}
+    for path in files:
+        tree = ast.parse(path.read_text(encoding="utf-8-sig"))
+        fields = {
+            node.attr
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Attribute)
+            and isinstance(node.ctx, ast.Load)
+            and node.attr in _SETTINGS_ROUTE_FIELDS
+            and isinstance(node.value, ast.Attribute)
+            and node.value.attr == "openai"
+        }
+        if fields:
+            found[str(path.relative_to(root)).replace("\\", "/")] = tuple(
+                sorted(fields)
+            )
+    return found
+
+
+def test_the_settings_route_census_is_complete_and_frozen() -> None:
+    """Every production file that reads ``settings.openai`` is named, with why.
+
+    The analysis pipeline and the Cluedo entry point built their own
+    ``OpenAIChatCompletion`` from these fields until #2711; a new copy of that
+    reddens here instead of shipping.
+    """
+    files = _tracked_python_files(REPO_ROOT, _CENSUS_ROOTS)
+    assert files, "git ls-files walked no file — this census measured nothing"
+
+    found = _settings_openai_read_sites(files, REPO_ROOT)
+
+    unexpected = {
+        p: v for p, v in found.items() if p not in _FROZEN_SETTINGS_OPENAI_READS
+    }
+    stale = {p: v for p, v in _FROZEN_SETTINGS_OPENAI_READS.items() if p not in found}
+    drifted = {
+        p: (_FROZEN_SETTINGS_OPENAI_READS[p][0], v)
+        for p, v in found.items()
+        if p in _FROZEN_SETTINGS_OPENAI_READS
+        and v != _FROZEN_SETTINGS_OPENAI_READS[p][0]
+    }
+
+    assert not unexpected, (
+        f"new settings.openai reader(s) outside the census: {unexpected} — "
+        "build the kernel service with create_llm_service instead (#2711)."
+    )
+    assert not stale, (
+        f"the census lists file(s) that no longer read settings.openai: {stale} "
+        "— drop the entries so the census keeps meaning something."
+    )
+    assert not drifted, (
+        f"file(s) whose settings.openai reads changed: {drifted} (expected, "
+        "found) — update the census deliberately, or go through the factory."
+    )
+
+
+def test_the_settings_census_sweep_can_render_non_zero(tmp_path: Path) -> None:
+    """Non-vacuity, on synthetic carriers built at run time.
+
+    Pins what the grammar counts (a load of a route field under ``.openai``,
+    at any depth) and what it does not: the ``openai`` module's own attribute,
+    a store, a field outside the route, and a file that goes through the
+    factory.
+    """
+    reader = tmp_path / "reader.py"
+    reader.write_text(
+        "from argumentation_analysis.config.settings import settings\n"
+        "\n"
+        "KEY = settings.openai.api_key\n"
+        "MODEL = settings.openai.chat_model_id\n",
+        encoding="utf-8",
+    )
+    nested = tmp_path / "nested.py"
+    nested.write_text(
+        "class Site:\n"
+        "    def url(self):\n"
+        "        return self.app_settings.openai.base_url\n",
+        encoding="utf-8",
+    )
+    module_global = tmp_path / "module_global.py"
+    module_global.write_text(
+        "import openai\n\nKEY = openai.api_key\n", encoding="utf-8"
+    )
+    store = tmp_path / "store.py"
+    store.write_text(
+        "def pin(settings):\n    settings.openai.api_key = None\n", encoding="utf-8"
+    )
+    other_field = tmp_path / "other_field.py"
+    other_field.write_text(
+        "def prefix(settings):\n    return settings.openai.model_config\n",
+        encoding="utf-8",
+    )
+    factory = tmp_path / "factory.py"
+    factory.write_text(
+        "from argumentation_analysis.core.llm_service import create_llm_service\n"
+        "\n"
+        'SERVICE = create_llm_service(service_id="site", force_authentic=True)\n',
+        encoding="utf-8",
+    )
+
+    found = _settings_openai_read_sites(
+        [reader, nested, module_global, store, other_field, factory], tmp_path
+    )
+
+    assert found == {
+        "reader.py": ("api_key", "chat_model_id"),
+        "nested.py": ("base_url",),
+    }, found
+
+
 _SEAT_DRIVER = r'''
 """Measure the model each measurement script would send, in a throwaway process.
 

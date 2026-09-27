@@ -29,7 +29,12 @@ declaration surface. The census now reads EVERY ``register_*`` call in
 ``registry_setup.py``; (component, capability) pairs still awaiting triage
 live in ``PENDING_TRIAGE`` as named debt, each tagged with the issue that
 owns its census — the formal/Tweety specialists are #1604's scope (as
-before), the services remainder is #2137's own broader triage. A NEW
+before). #2623 settled the services remainder #2137 left behind on closing
+(five registry aliases with zero demanders left the declaration, the
+mono-capability enrichment sub-step left the registry), and made owner
+liveness a measurement: ``scripts/maintenance/
+check_pending_triage_owners.py`` lists every owner this map names with its
+GitHub state and fails on a closed owner still owning entries. A NEW
 component declaring an orphan reddens immediately: wire it, remove the
 capability, or add a ``PENDING_TRIAGE`` entry with an owning issue — never
 silently.
@@ -66,6 +71,11 @@ IN_SCOPE_COMPONENTS = {
 # (component, capability) -> owning issue. Debt declared, not hidden: these
 # pairs ARE orphans today and their triage belongs to the named issue. The
 # map must shrink as those issues land — never grow to absorb new silence.
+# #2623 triaged the six services entries owned by the closed #2137: five
+# registry aliases with zero production demanders left the declaration
+# (each service stays behind its demanded name), and the mono-capability
+# enrichment sub-step left the registry entirely (it lives by direct call,
+# see test_shared_capability_provider_selection_1553.py).
 PENDING_TRIAGE: dict[tuple[str, str], str] = {
     # #1604 — formal/Tweety specialists' census (out of scope since #1842)
     ("atms_service", "environment_tracking"): "#1604",
@@ -79,15 +89,6 @@ PENDING_TRIAGE: dict[tuple[str, str], str] = {
     ("text_to_kb_plugin", "kb_construction"): "#1604",
     ("tweety_logic_plugin", "tweety_logic"): "#1604",
     ("tweety_result_interpretation_plugin", "dung_interpretation"): "#1604",
-    # #2137 — services remainder of the declared-without-consumer triage
-    ("ai_shield_service", "output_filtering"): "#2137",
-    ("ai_shield_service", "adversarial_protection"): "#2137",
-    ("hierarchical_fallacy_per_argument", "per_argument_fallacy_detection"): "#2137",
-    ("local_llm_service", "chat_completion"): "#2137",
-    # #2618: search_arguments now runs inside the semantic_indexing phase —
-    # a production call path, not a capability demander. #2623 settles it.
-    ("semantic_index_service", "argument_search"): "#2137",
-    ("speech_transcription_service", "speech_to_text"): "#2137",
 }
 
 
