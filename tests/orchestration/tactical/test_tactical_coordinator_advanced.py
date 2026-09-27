@@ -15,9 +15,6 @@ import json
 import logging
 
 # Authentic imports - NO MOCKS
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 
 # Configurer le logging pour les tests
 logging.basicConfig(

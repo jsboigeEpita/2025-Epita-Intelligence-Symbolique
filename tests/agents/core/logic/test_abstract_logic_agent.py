@@ -1,10 +1,3 @@
-import openai  # Gardé pour l'instant, pourrait être utilisé par le kernel SK sous-jacent
-from semantic_kernel.contents import (
-    ChatHistory,
-)  # Utile si on fait des appels de type chat
-from semantic_kernel.core_plugins import (
-    ConversationSummaryPlugin,
-)  # Potentiellement utile
 from config.unified_config import UnifiedConfig, MockLevel
 
 # AuthenticSemanticKernel n'existe pas, on utilise le Kernel SK standard
