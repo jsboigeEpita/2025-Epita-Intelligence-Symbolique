@@ -185,9 +185,13 @@ class AnalysisService:
 
     def get_status_details(self) -> dict:
         """Retourne les détails du statut du service"""
+        # #2716 : mesuré, pas annoncé. Le kernel porte-t-il un service ?
+        # Et ce que l'initialisation n'a pas pu configurer, nommé (#2649).
+        kernel = getattr(self.manager, "kernel", None)
         return {
             "service_type": "OrchestrationServiceManager",
-            "llm_enabled": True,
+            "llm_enabled": bool(getattr(kernel, "services", None)),
+            "setup_failures": dict(getattr(self.manager, "setup_failures", {})),
             "mock_disabled": True,
             "manager_initialized": self.is_available(),
             "uptime_seconds": (
@@ -209,12 +213,18 @@ async def get_analysis_service():
     if _global_service_manager is None:
         try:
             logging.info("[API] Initialisation du ServiceManager authentique...")
-            _global_service_manager = OrchestrationServiceManager()
-            await _global_service_manager.initialize()
-            if not _global_service_manager.is_ready():
+            manager = OrchestrationServiceManager()
+            # #2716 : la réponse est celle du manager, le retour
+            # d'initialize(). L'ancien is_ready() n'a jamais existé : chaque
+            # premier appel levait, et le manager refusé, déjà en cache, était
+            # servi ensuite.
+            if not await manager.initialize():
+                await manager.shutdown()
                 raise RuntimeError(
-                    "Le ServiceManager n'est pas prêt après initialisation."
+                    "initialize() n'a pas rendu un manager disponible "
+                    f"(setup_failures : {manager.setup_failures})"
                 )
+            _global_service_manager = manager
             logging.info("[API] ServiceManager initialisé avec succès")
         except Exception as e:
             logging.critical(

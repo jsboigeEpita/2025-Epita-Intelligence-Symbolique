@@ -342,7 +342,11 @@ async def status_endpoint(
         status_details = (
             analysis_service.get_status_details()
         )  # Correction: removed await
-        return StatusResponse(status="operational", service_status=status_details)
+        # #2716: a manager that initialized without some component (no LLM
+        # key, a plugin that failed to register) is up, not operational. The
+        # failures are in the details either way.
+        status = "degraded" if status_details.get("setup_failures") else "operational"
+        return StatusResponse(status=status, service_status=status_details)
     else:
         return StatusResponse(
             status="degraded",
