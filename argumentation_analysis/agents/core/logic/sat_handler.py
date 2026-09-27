@@ -222,13 +222,21 @@ class SATHandler:
             if token == "(":
                 pos[0] += 1
                 result = parse_equiv()
-                if pos[0] < len(tokens) and tokens[pos[0]] == ")":
-                    pos[0] += 1
+                if pos[0] >= len(tokens) or tokens[pos[0]] != ")":
+                    raise ValueError("Missing closing parenthesis")
+                pos[0] += 1
                 return result
+            if token in {")", "&", "|", "!", "=>", "<=>"}:
+                raise ValueError(f"Expected operand, got {token!r}")
             pos[0] += 1
             return self._get_var(token)
 
-        root = parse_equiv()
+        try:
+            root = parse_equiv()
+            if pos[0] != len(tokens):
+                raise ValueError(f"Unexpected token {tokens[pos[0]]!r}")
+        except ValueError as e:
+            raise ValueError(f"Invalid formula {formula!r}: {e}") from e
         return root, clauses
 
     # ── SAT solving ──────────────────────────────────────────────────

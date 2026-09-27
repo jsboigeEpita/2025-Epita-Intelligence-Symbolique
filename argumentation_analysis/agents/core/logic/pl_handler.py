@@ -480,9 +480,14 @@ class PLHandler:
             return True, {}, "Empty knowledge base is consistent."
         normalized = [self._normalize_formula(f) for f in formula_strings]
         handler = self._get_sat_handler()
-        is_sat, named_model, stats = handler.solve_formulas(
-            normalized, settings.pysat_solver
-        )
+        try:
+            is_sat, named_model, stats = handler.solve_formulas(
+                normalized, settings.pysat_solver
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid knowledge base {knowledge_base_str!r}: {e}"
+            ) from e
         is_consistent = bool(is_sat)
         msg = (
             f"Consistent (SAT). Model: {named_model}"
@@ -504,7 +509,13 @@ class PLHandler:
             query_formula_str.rstrip("%").strip()
         )
         handler = self._get_sat_handler()
-        return handler.query(normalized_kb, normalized_query, settings.pysat_solver)
+        try:
+            return handler.query(normalized_kb, normalized_query, settings.pysat_solver)
+        except ValueError as e:
+            raise ValueError(
+                f"Invalid PL query (KB={knowledge_base_str!r}, "
+                f"query={query_formula_str!r}): {e}"
+            ) from e
 
     # ── Multi-backend comparison (FP-20 #1244, mandate R468) ──────────
 
