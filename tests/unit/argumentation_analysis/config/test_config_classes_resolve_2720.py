@@ -13,6 +13,7 @@ A config that returns naming a dead class reddens this witness, whatever
 the file.
 """
 
+import os
 import re
 from pathlib import Path
 
@@ -34,19 +35,30 @@ _EXCLUDED_DIRS = {
 }
 
 
+def _walk(pattern: str) -> list:
+    """YAML/py files under the repo, PRUNING excluded directories.
+
+    ``Path.rglob`` cannot prune: it descends into ``node_modules`` (present
+    in CI, where the React build runs) and dies on the recursive symlink
+    npm workspaces leave there (WinError 1921, measured on CI run
+    36298081443). ``os.walk`` prunes in place and skips unreadable dirs.
+    """
+    found = []
+    for dirpath, dirnames, filenames in os.walk(_REPO_ROOT, topdown=True):
+        dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS]
+        for name in filenames:
+            if name.endswith(pattern):
+                found.append(Path(dirpath) / name)
+    return found
+
+
 def _yaml_configs() -> list:
-    return [
-        p
-        for p in _REPO_ROOT.rglob("*.y*ml")
-        if not any(part in _EXCLUDED_DIRS for part in p.parts)
-    ]
+    return [p for p in _walk(".yaml")] + [p for p in _walk(".yml")]
 
 
 def _defined_classes() -> set:
     names = set()
-    for p in _REPO_ROOT.rglob("*.py"):
-        if any(part in _EXCLUDED_DIRS for part in p.parts):
-            continue
+    for p in _walk(".py"):
         try:
             names.update(
                 _DEFINED_CLASS.findall(p.read_text(encoding="utf-8", errors="replace"))
