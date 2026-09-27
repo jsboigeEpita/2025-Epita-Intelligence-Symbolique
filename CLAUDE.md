@@ -14,10 +14,13 @@ Multi-agent argumentation analysis system for EPITA (student project platform). 
 
 | Machine | Envs available (measured) | Notes |
 |---|---|---|
-| `myia-po-2023` | `projet-is` (only) | invoke the interpreter directly: `/c/Tools/miniconda3/envs/projet-is/python.exe` |
-| `myia-po-2025`, `myia-ai-01` | `projet-is-roo-new` (SK 1.40, Pydantic 2.11), `projet-is` (SK 1.35, Pydantic 2.11) | dev env preferred |
+| `myia-po-2023` | `projet-is` (only) | invoke `/c/Tools/miniconda3/envs/projet-is/python.exe`; target pytest stack: 9.1.1 / asyncio 1.4.0 / timeout 2.4.0 / xdist 3.8.0 / playwright 0.9.0 (installation not verified here) |
+| `myia-po-2025` | `projet-is-roo-new`, `projet-is` | dev env preferred; `projet-is-roo-new` aligned to the target pytest stack on 2026-09-27 |
+| `myia-ai-01` | `projet-is-roo-new`, `projet-is` | dev env preferred; target pytest stack: 9.1.1 / asyncio 1.4.0 / timeout 2.4.0 / xdist 3.8.0 / playwright 0.9.0 (installation not verified here) |
 
 JPype is pinned in `environment.yml` to the version CI installs (1.7.1, #2538). A dev env on another version does not measure what the gate runs: check with `python -c "import jpype; print(jpype.__version__)"`, and bring it up with `pip install jpype1==1.7.1`.
+
+The CI gate runs pytest 9.1.1 with pytest-asyncio 1.4.0, pytest-timeout 2.4.0, pytest-xdist 3.8.0, and pytest-playwright 0.9.0 (#2566, run 36264473973). Dev envs on all three machines must resolve these versions before their results are compared with the gate; verify with `python -m pytest --version` and `python -m pip show pytest-asyncio pytest-timeout pytest-xdist pytest-playwright`. pytest-playwright 0.7.1 rejects pytest 9. On myia-po-2025 the pre-alignment versions measured 2026-09-27 were pytest 9.0.2, asyncio 1.3.0, timeout 2.4.0, xdist 3.8.0, playwright 0.7.2; do not treat the other two machines as measured locally.
 
 ```bash
 # List available environments
