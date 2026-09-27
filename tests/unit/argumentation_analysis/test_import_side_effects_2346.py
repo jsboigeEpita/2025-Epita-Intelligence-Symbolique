@@ -90,7 +90,6 @@ PACKAGE_IMPORTABLE = [
 
 IMPORTED = [
     "argumentation_analysis.orchestration.analysis_runner_v2",
-    "argumentation_analysis.orchestration.enhanced_pm_analysis_runner",
     "argumentation_analysis.pipelines.reporting_pipeline",
     "argumentation_analysis.utils",
     "argumentation_analysis.agents.core.extract.extract_definitions",

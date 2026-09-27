@@ -324,7 +324,6 @@ curl -X POST http://localhost:8000/api/v1/agents/debate \
 ### Confirmed Active (NOT archived)
 | File | Why Active |
 |------|-----------|
-| `enhanced_pm_analysis_runner.py` | Used by `analysis_runner_v2.py`, `trace_analyzer.py`, integration tests |
 | `hierarchy_bridge.py` | Used by `conversational_executor.py`, `run_agentic_eval.py` |
 | `turn_protocol.py` | Used by `conversational_executor.py`, evaluation module, 7 files total |
 | `direct_executor.py` | Used by `MainOrchestrator` (hierarchical mode), 3 test files |

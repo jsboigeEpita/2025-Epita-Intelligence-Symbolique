@@ -416,9 +416,10 @@ class TestInvokeSingleDefinedOnce2339:
     async def test_invoke_stream_accepts_the_production_call_shape(self):
         """Born-red: the removed override rejected ``arguments=``.
 
-        Mirrors ``orchestration/enhanced_pm_analysis_runner.py``, which calls
-        ``pm_agent.invoke_stream(self.kernel, arguments=arguments)`` and then
-        iterates each streamed item as a list of messages.
+        This pins the call shape the retired runner used (#2638):
+        ``invoke_stream(kernel, arguments=...)``, yielding items that are each
+        a list of messages. ``ProjectManagerAgent`` has no production
+        consumer left (#2699).
         """
         kernel = _create_mock_kernel()
         agent = ProjectManagerAgent(kernel)

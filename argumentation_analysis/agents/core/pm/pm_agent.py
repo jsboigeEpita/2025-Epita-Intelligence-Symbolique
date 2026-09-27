@@ -215,10 +215,7 @@ class ProjectManagerAgent(BaseAgent):
 
         C'est l'unique définition de `invoke_single` pour cet agent (cf. #2339) :
         elle honore la signature `(kernel, arguments)` attendue par `get_response`
-        ci-dessus et par le consommateur de production
-        (`orchestration/enhanced_pm_analysis_runner.py`, qui construit lui-même
-        ses `KernelArguments` puis itère chaque élément produit comme une liste).
-        Elle délègue à `invoke_custom` — jamais à elle-même.
+        ci-dessus. Elle délègue à `invoke_custom` — jamais à elle-même.
         """
         self.logger.debug(
             f"invoke_single appelé, délégation à invoke_custom pour {self.name}."
@@ -343,8 +340,9 @@ class ProjectManagerAgent(BaseAgent):
     #    une liste de messages, `channels/volatile_agent_channel.py:56`, n'est câblé
     #    que par `ExtractAgent.create_channel`; `SherlockEnqueteAgent` est une classe
     #    sœur portant sa propre `invoke_single`). Sa seule logique propre — envelopper
-    #    des messages dans `KernelArguments(chat_history=...)` — est déjà faite par le
-    #    consommateur de production lui-même, `enhanced_pm_analysis_runner.py:576`.
+    #    des messages dans `KernelArguments(chat_history=...)` — était déjà faite par
+    #    le consommateur de production d'alors, `enhanced_pm_analysis_runner.py:576`
+    #    (runner retiré depuis, #2638).
     #
     # 2. Un `async def invoke_stream(self, messages)` qui faisait
     #    `await self.invoke(messages)` alors que `BaseAgent.invoke` est un
