@@ -216,6 +216,43 @@ class TestTseitinConversion:
         assert tokens == ["A", "&", "(", "B", "|", "!", "C", ")"]
 
 
+@pytest.mark.skipif(not PYSAT_AVAILABLE, reason="PySAT not installed")
+class TestMalformedSATFormula:
+    @pytest.mark.parametrize(
+        "formula",
+        ["( A & B", "A B", "A )", "A & )", "( )", "A &", "A ( B )"],
+    )
+    def test_consistency_rejects_malformed_formula(self, formula):
+        from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+
+        handler = PLHandler.__new__(PLHandler)
+        handler._sat_handler = SATHandler()
+        with pytest.raises(
+            ValueError, match="formula|token|parenthes|operand"
+        ) as failure:
+            handler.pl_check_consistency_detailed(formula)
+        assert formula in str(failure.value)
+
+    @pytest.mark.parametrize("formula", ["( A & B", "A B", "A )"])
+    def test_query_rejects_malformed_kb_and_query(self, formula):
+        from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+
+        handler = PLHandler.__new__(PLHandler)
+        handler._sat_handler = SATHandler()
+        for kb, query in ((formula, "A"), ("A", formula)):
+            with pytest.raises(ValueError) as failure:
+                handler.pl_query_sat(kb, query)
+            assert formula in str(failure.value)
+
+    def test_valid_nested_formulas_still_decide(self):
+        from argumentation_analysis.agents.core.logic.pl_handler import PLHandler
+
+        handler = PLHandler.__new__(PLHandler)
+        handler._sat_handler = SATHandler()
+        assert handler.pl_check_consistency_detailed("( A & ( B | ! C ) )")[0]
+        assert handler.pl_query_sat("( A & ( A => B ) )", "( B | C )")
+
+
 # ──── SAT Solving Tests ────
 
 
