@@ -542,6 +542,16 @@ Exemples:
             "Utilisez --list-workflows pour voir les workflows disponibles."
         )
 
+    # --ui attend des clics de widgets : sans noyau Jupyter, il mourait après
+    # l'initialisation complète, sur une AttributeError opaque (#2787).
+    if args.ui:
+        from argumentation_analysis.ui.kernel_guard import require_jupyter_kernel
+
+        try:
+            require_jupyter_kernel("--ui")
+        except RuntimeError as exc:
+            parser.error(str(exc))
+
     # Initialisation de l'environnement
     llm_service = await setup_environment()
 

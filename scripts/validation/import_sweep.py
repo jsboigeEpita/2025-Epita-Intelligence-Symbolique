@@ -9,6 +9,14 @@ import logging
 logging.disable(logging.CRITICAL)
 
 ROOT = "argumentation_analysis"
+# #2787 : le parcours ci-dessous lit ROOT sous le répertoire courant, les imports
+# doivent donc s'y résoudre aussi. Lancé depuis un worktree, sys.path[0] est le
+# répertoire du script et une installation éditable répond ROOT depuis un autre
+# checkout : la sonde importait un arbre en listant l'autre.
+sys.path.insert(0, os.getcwd())
+_resolved = os.path.dirname(os.path.abspath(importlib.import_module(ROOT).__file__))
+if _resolved != os.path.abspath(ROOT):
+    sys.exit(f"{ROOT} se résout vers {_resolved}, pas vers {os.path.abspath(ROOT)}")
 mods = []
 for dirpath, dirnames, filenames in os.walk(ROOT):
     dirnames[:] = [d for d in dirnames if d not in ("__pycache__", "data", "libs")]
