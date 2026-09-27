@@ -359,7 +359,6 @@ class TestRegistryIntegration:
         reg = registry._registrations.get("tweety_result_interpretation_plugin")
         assert reg is not None
         assert "formal_result_interpretation" in reg.capabilities
-        assert "dung_interpretation" in reg.capabilities
 
 
 class TestFactoryIntegration:

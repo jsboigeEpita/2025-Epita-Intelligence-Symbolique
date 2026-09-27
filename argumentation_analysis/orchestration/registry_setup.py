@@ -180,7 +180,7 @@ def setup_registry(
         registry.register_service(
             name="jtms_service",
             service_class=JTMS,
-            capabilities=["belief_maintenance", "truth_maintenance", "jtms_reasoning"],
+            capabilities=["belief_maintenance"],
             metadata={"description": "Justification-based Truth Maintenance System"},
             invoke=_invoke_jtms,
         )
@@ -195,10 +195,7 @@ def setup_registry(
         registry.register_service(
             name="atms_service",
             service_class=ATMSCore,
-            capabilities=[
-                "atms_reasoning",
-                "environment_tracking",
-            ],
+            capabilities=["atms_reasoning"],
             metadata={
                 "description": "Assumption-based Truth Maintenance System (ATMS)"
             },
@@ -377,7 +374,7 @@ def setup_registry(
         registry.register_plugin(
             name="tweety_result_interpretation_plugin",
             plugin_class=TweetyResultInterpretationPlugin,
-            capabilities=["formal_result_interpretation", "dung_interpretation"],
+            capabilities=["formal_result_interpretation"],
             metadata={
                 "description": (
                     "SK plugin for interpreting formal Tweety results into "
@@ -396,7 +393,7 @@ def setup_registry(
         registry.register_plugin(
             name="text_to_kb_plugin",
             plugin_class=TextToKBPlugin,
-            capabilities=["nl_extraction", "argument_extraction", "kb_construction"],
+            capabilities=["nl_extraction", "argument_extraction"],
             metadata={
                 "description": (
                     "SK plugin for NL→KB extraction with iterative descent (#474)"
@@ -414,7 +411,7 @@ def setup_registry(
         registry.register_plugin(
             name="kb_to_tweety_plugin",
             plugin_class=KBToTweetyPlugin,
-            capabilities=["kb_to_tweety", "formula_translation", "tweety_validation"],
+            capabilities=["kb_to_tweety"],
             metadata={
                 "description": (
                     "SK plugin for KB→Tweety formula translation with "
@@ -508,19 +505,19 @@ def setup_registry(
     kb_invoke_services = [
         (
             "text_to_kb_service",
-            ["nl_extraction", "argument_extraction", "kb_construction"],
+            ["nl_extraction", "argument_extraction"],
             "NL→KB extraction with iterative descent (#474)",
             _invoke_text_to_kb,
         ),
         (
             "kb_to_tweety_service",
-            ["kb_to_tweety", "formula_translation", "tweety_validation"],
+            ["kb_to_tweety"],
             "KB→Tweety formula translation with retry (#475)",
             _invoke_kb_to_tweety,
         ),
         (
             "tweety_interpretation_service",
-            ["formal_result_interpretation", "dung_interpretation"],
+            ["formal_result_interpretation"],
             "Tweety formal results → NL interpretation (#476)",
             _invoke_tweety_interpretation,
         ),

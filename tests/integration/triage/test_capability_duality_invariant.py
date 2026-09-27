@@ -49,12 +49,8 @@ ACCEPTED_DUALITIES: dict[str, str] = {
     # flagged them.
     "nl_extraction": "text_to_kb_service _invoke_text_to_kb instantiates TextToKBPlugin (#474)",
     "argument_extraction": "text_to_kb_service _invoke_text_to_kb instantiates TextToKBPlugin (#474)",
-    "kb_construction": "text_to_kb_service _invoke_text_to_kb instantiates TextToKBPlugin (#474)",
     "kb_to_tweety": "kb_to_tweety_service _invoke_kb_to_tweety instantiates KBToTweetyPlugin (#475)",
-    "formula_translation": "kb_to_tweety_service _invoke_kb_to_tweety instantiates KBToTweetyPlugin (#475)",
-    "tweety_validation": "kb_to_tweety_service _invoke_kb_to_tweety instantiates KBToTweetyPlugin (#475)",
     "formal_result_interpretation": "tweety_interpretation_service _invoke_tweety_interpretation instantiates TweetyResultInterpretationPlugin (#476)",
-    "dung_interpretation": "tweety_interpretation_service _invoke_tweety_interpretation instantiates TweetyResultInterpretationPlugin (#476)",
 }
 
 

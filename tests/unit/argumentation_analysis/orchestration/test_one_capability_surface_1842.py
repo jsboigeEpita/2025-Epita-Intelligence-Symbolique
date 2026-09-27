@@ -76,19 +76,27 @@ IN_SCOPE_COMPONENTS = {
 # (each service stays behind its demanded name), and the mono-capability
 # enrichment sub-step left the registry entirely (it lives by direct call,
 # see test_shared_capability_provider_selection_1553.py).
+# #1604 triaged its seven registry aliases the same way: each component
+# (and its #506 service twin) stays behind its demanded name. What remains
+# below is not an alias — none of these components declares a demanded name,
+# so retiring the names retires the component: that is a wire-or-retire
+# decision, not a vocabulary trim.
 PENDING_TRIAGE: dict[tuple[str, str], str] = {
-    # #1604 — formal/Tweety specialists' census (out of scope since #1842)
-    ("atms_service", "environment_tracking"): "#1604",
-    ("jtms_service", "truth_maintenance"): "#1604",
-    ("jtms_service", "jtms_reasoning"): "#1604",
-    ("kb_to_tweety_plugin", "formula_translation"): "#1604",
-    ("kb_to_tweety_plugin", "tweety_validation"): "#1604",
+    # #1604 — plugin-only providers: AgentFactory mounts them by speciality,
+    # no phase resolves them by capability.
     ("logic_agent_plugin", "propositional_reasoning"): "#1604",
     ("logic_agent_plugin", "first_order_reasoning"): "#1604",
     ("logic_agent_plugin", "modal_reasoning"): "#1604",
-    ("text_to_kb_plugin", "kb_construction"): "#1604",
     ("tweety_logic_plugin", "tweety_logic"): "#1604",
-    ("tweety_result_interpretation_plugin", "dung_interpretation"): "#1604",
+    # #1604 — live invoke callables that no phase requests. They were
+    # declared inside `for name, caps, ... in <rows>:` loops, which the census
+    # could not read before #1604: silence the tree already carried, made
+    # visible here rather than created.
+    ("dung_arbitration_service", "dung_arbitration"): "#1604",
+    ("multi_axis_compare_service", "multi_axis_compare"): "#1604",
+    ("sat_handler", "sat_solving"): "#1604",
+    ("asp_reasoning_handler", "asp_reasoning"): "#1604",
+    ("asp_reasoning_handler", "answer_set_programming"): "#1604",
 }
 
 
@@ -130,41 +138,136 @@ def _wired_register_modules() -> set[str]:
     return wired
 
 
-def _declared_capabilities() -> dict[str, list[str]]:
+# The registry methods that declare capabilities. ``register_with_capability_
+# registry`` (a module function) and the ServiceDiscovery ``register_*_provider``
+# family declare none.
+_REGISTER_METHODS = {"register_agent", "register_plugin", "register_service"}
+
+DECLARATION_SOURCES = [
+    REGISTRY_SETUP,
+    PROD_ROOT / "agents" / "core" / "counter_argument" / "__init__.py",
+]
+
+
+def _register_call_parts(call: ast.Call) -> tuple[ast.expr | None, ast.expr | None]:
+    """The ``name`` and ``capabilities`` expressions of a register call."""
+    name = call.args[0] if call.args else None
+    caps = None
+    for kw in call.keywords:
+        if kw.arg == "name":
+            name = kw.value
+        elif kw.arg == "capabilities":
+            caps = kw.value
+    return name, caps
+
+
+def _literal_list(node: ast.expr | None) -> list[str] | None:
+    if isinstance(node, ast.List) and all(
+        isinstance(e, ast.Constant) and isinstance(e.value, str) for e in node.elts
+    ):
+        return [e.value for e in node.elts]
+    return None
+
+
+def _loop_rows(tree: ast.Module, loop: ast.For) -> list[ast.expr]:
+    """The rows a ``for ... in <rows>:`` loop iterates, read from the source."""
+    if isinstance(loop.iter, (ast.List, ast.Tuple)):
+        return list(loop.iter.elts)
+    if isinstance(loop.iter, ast.Name):
+        bound = [
+            node.value
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(t, ast.Name) and t.id == loop.iter.id for t in node.targets
+            )
+        ]
+        if len(bound) == 1 and isinstance(bound[0], (ast.List, ast.Tuple)):
+            return list(bound[0].elts)
+    raise AssertionError(
+        f"line {loop.lineno}: a registering loop iterates {ast.unparse(loop.iter)}, "
+        "which the census cannot read as one literal list of rows."
+    )
+
+
+def _declared_capabilities(sources=None) -> dict[str, list[str]]:
     """Component -> capabilities, from every declaration on the wired surface.
 
     No allow-list: the census measures what ``registry_setup.py`` (and the
     counter_argument module function it calls) actually declares — that is
     the production surface. The #2137 blind spot was exactly a hard-coded
     component filter here.
+
+    #1604: a register call inside ``for name, caps, ... in <rows>:`` takes its
+    name and capabilities from the loop targets. The census used to read only
+    literal arguments and skipped the rest without a trace, which hid 32 of
+    the 56 components ``setup_registry`` registers (measured on ``434ba60e0``).
+    Loop rows are now read from the source, and a register call whose name
+    or capabilities the census cannot read fails the census instead of
+    leaving it.
     """
-    sources = [
-        REGISTRY_SETUP,
-        PROD_ROOT / "agents" / "core" / "counter_argument" / "__init__.py",
-    ]
     declared: dict[str, list[str]] = {}
-    for src in sources:
+    unreadable = []
+    for src in sources or DECLARATION_SOURCES:
         tree = ast.parse(src.read_text(encoding="utf-8-sig"))
-        for node in ast.walk(tree):
-            if not isinstance(node, ast.Call):
+        in_loop = set()
+        for loop in ast.walk(tree):
+            if not isinstance(loop, ast.For) or not isinstance(loop.target, ast.Tuple):
                 continue
-            fname = getattr(node.func, "attr", "") or getattr(node.func, "id", "")
-            if not fname.startswith("register_"):
+            targets = [
+                t.id if isinstance(t, ast.Name) else None for t in loop.target.elts
+            ]
+            for call in ast.walk(loop):
+                if not (
+                    isinstance(call, ast.Call)
+                    and getattr(call.func, "attr", "") in _REGISTER_METHODS
+                ):
+                    continue
+                name, caps = _register_call_parts(call)
+                if not (
+                    isinstance(name, ast.Name)
+                    and isinstance(caps, ast.Name)
+                    and name.id in targets
+                    and caps.id in targets
+                ):
+                    continue
+                in_loop.add(id(call))
+                for row in _loop_rows(tree, loop):
+                    comp = (
+                        row.elts[targets.index(name.id)]
+                        if isinstance(row, ast.Tuple)
+                        else None
+                    )
+                    row_caps = (
+                        row.elts[targets.index(caps.id)]
+                        if isinstance(row, ast.Tuple)
+                        else None
+                    )
+                    listed = _literal_list(row_caps)
+                    if not isinstance(comp, ast.Constant) or listed is None:
+                        unreadable.append(f"{src.name}:{row.lineno}")
+                        continue
+                    declared.setdefault(comp.value, []).extend(listed)
+        for call in ast.walk(tree):
+            if (
+                not (
+                    isinstance(call, ast.Call)
+                    and getattr(call.func, "attr", "") in _REGISTER_METHODS
+                )
+                or id(call) in in_loop
+            ):
                 continue
-            comp = None
-            if node.args and isinstance(node.args[0], ast.Constant):
-                comp = node.args[0].value
-            for kw in node.keywords:
-                if kw.arg == "name" and isinstance(kw.value, ast.Constant):
-                    comp = kw.value.value
-            if comp is None:
+            name, caps = _register_call_parts(call)
+            listed = _literal_list(caps)
+            if not isinstance(name, ast.Constant) or listed is None:
+                unreadable.append(f"{src.name}:{call.lineno}")
                 continue
-            for kw in node.keywords:
-                if kw.arg == "capabilities" and isinstance(kw.value, ast.List):
-                    caps = [
-                        e.value for e in kw.value.elts if isinstance(e, ast.Constant)
-                    ]
-                    declared.setdefault(comp, []).extend(caps)
+            declared.setdefault(name.value, []).extend(listed)
+    assert not unreadable, (
+        f"register calls the declaration census cannot read: {unreadable}. "
+        "Give them literal names and capabilities, or teach the census the "
+        "form — a skipped declaration is an orphan no guard sees (#1604)."
+    )
     return declared
 
 
@@ -331,6 +434,46 @@ def test_censuses_see_a_bom_carrier(tmp_path):
         "demanded census — otherwise a BOM'd demander can orphan a real "
         "capability and the guard stays green (#2373)."
     )
+
+
+def test_declaration_census_reads_loop_rows(tmp_path):
+    """#1604 non-vacuity: a declaration made inside a registering loop is in
+    the census, whether the loop iterates an inline list or a name bound to
+    one. Before #1604 both forms were skipped without a trace — 32 of the 56
+    components ``setup_registry`` registers sat outside the census.
+    """
+    src = (
+        "def setup(registry, invoke):\n"
+        "    registry.register_service(\n"
+        "        name='direct_service', capabilities=['direct_cap'], invoke=invoke\n"
+        "    )\n"
+        "    rows = [('named_row_service', ['named_row_cap'], 'desc', invoke)]\n"
+        "    for name, caps, desc, fn in rows:\n"
+        "        registry.register_service(name=name, capabilities=caps, invoke=fn)\n"
+        "    for name, caps in [('inline_row_plugin', ['inline_row_cap'])]:\n"
+        "        registry.register_plugin(name=name, capabilities=caps)\n"
+    )
+    source = tmp_path / "loop_registrations.py"
+    source.write_text(src, encoding="utf-8")
+    assert _declared_capabilities(sources=[source]) == {
+        "direct_service": ["direct_cap"],
+        "named_row_service": ["named_row_cap"],
+        "inline_row_plugin": ["inline_row_cap"],
+    }
+
+
+def test_declaration_census_fails_on_an_unreadable_call(tmp_path):
+    """#1604: a register call the census cannot read stops the census — the
+    old census skipped it, and the declaration became an orphan no guard saw.
+    """
+    src = (
+        "def setup(registry, computed_caps):\n"
+        "    registry.register_service(name='opaque', capabilities=computed_caps)\n"
+    )
+    source = tmp_path / "opaque_registration.py"
+    source.write_text(src, encoding="utf-8")
+    with pytest.raises(AssertionError, match="cannot read"):
+        _declared_capabilities(sources=[source])
 
 
 # Table-carried demand that no provider serves, named so the set cannot grow
