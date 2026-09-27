@@ -249,7 +249,10 @@ class OperationalManager:
         }
         result_future = self.operational_state.get_result_future(task["id"])
         if result_future and not result_future.done():
-            result_future.set_result(error_result)
+            # Même contrat que le chemin nominal de ``_worker`` : le lecteur,
+            # ``process_tactical_task``, déballe ``(task, result)``. Un dict nu
+            # levait au déballage et la cause du worker se perdait (#2777).
+            result_future.set_result((task, error_result))
         self.result_queue.put_nowait(error_result)
 
     def _subscribe_to_messages(self) -> None:

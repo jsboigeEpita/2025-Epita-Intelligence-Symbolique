@@ -46,6 +46,16 @@ TACTICAL_AGENT_CAPABILITIES: Dict[str, List[str]] = {
     "visualizer": ["argument_visualization", "summary_generation"],
 }
 
+# Liste de l'état tactique où range chaque statut qu'un rapport opérationnel
+# peut porter (#2777). Les statuts viennent de ``OperationalAgent.format_result``
+# (``completed``, ``completed_with_issues``) et des chemins d'échec
+# (``format_failure``, ``_handle_worker_error``, le registre sans agent).
+_COMPLETION_BUCKETS: Dict[str, str] = {
+    "completed": "completed",
+    "completed_with_issues": "completed",
+    "failed": "failed",
+}
+
 
 class TaskCoordinator:
     """
@@ -226,9 +236,18 @@ class TaskCoordinator:
 
         self.logger.info(f"Traitement du résultat pour la tâche {tactical_task_id}.")
 
-        # Mettre à jour l'état
+        # Mettre à jour l'état. ``completed_with_issues`` est une tâche
+        # terminée : l'état tactique n'a pas de liste à ce nom, et la mise à
+        # jour échouait sans bruit, la tâche restant ``in_progress`` (#2777).
+        # Ses problèmes restent dans le résultat intermédiaire.
         status = result.get("completion_status", "failed")
-        self.state.update_task_status(tactical_task_id, status)
+        bucket = _COMPLETION_BUCKETS.get(status)
+        if bucket is None:
+            raise ValueError(
+                f"Statut de complétion {status!r} de la tâche {tactical_task_id} "
+                f"inconnu de l'état tactique (attendus : {sorted(_COMPLETION_BUCKETS)})."
+            )
+        self.state.update_task_status(tactical_task_id, bucket)
         self.state.add_intermediate_result(tactical_task_id, result)
 
         # Vérifier si l'objectif parent est terminé

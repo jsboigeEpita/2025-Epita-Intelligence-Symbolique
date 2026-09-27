@@ -142,9 +142,7 @@ class ExtractAgentAdapter(OperationalAgent):
             self.logger.error(
                 f"Tentative de traitement de la tâche {task_id} sans initialisation."
             )
-            return self.format_result(
-                task, [], {}, [{"type": "initialization_error"}], task_id
-            )
+            return self.format_failure(task, {"type": "initialization_error"}, task_id)
 
         try:
             results = []
@@ -191,13 +189,8 @@ class ExtractAgentAdapter(OperationalAgent):
             self.logger.error(
                 f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True
             )
-            self.update_task_status(task_id, "failed")
-            return self.format_result(
-                task,
-                [],
-                {},
-                [{"type": "execution_error", "description": str(e)}],
-                task_id,
+            return self.format_failure(
+                task, {"type": "execution_error", "description": str(e)}, task_id
             )
 
     async def _process_extract(

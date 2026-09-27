@@ -233,3 +233,31 @@ class OperationalAgent(ABC):
             "metrics": metrics,
             "issues": issues,
         }
+
+    def format_failure(
+        self,
+        task: Dict[str, Any],
+        issue: Dict[str, Any],
+        task_id_to_report: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Rapporte une tâche que l'adaptateur n'a pas pu mener à terme.
+
+        L'état opérationnel et le résultat rendu reçoivent ici le même statut,
+        ``failed`` (#2777). ``format_result`` range tout problème sous
+        ``completed_with_issues`` : une exception attrapée, que l'état
+        enregistrait comme un échec, remontait donc comme une tâche terminée.
+
+        Args:
+            task: La tâche qui a échoué
+            issue: La cause de l'échec, sous sa clé ``type``
+            task_id_to_report: Identifiant rapporté à la place de ``task["id"]``
+
+        Returns:
+            Le résultat formaté, de statut ``failed``
+        """
+        final_task_id = task_id_to_report or task.get("id")
+        self.update_task_status(final_task_id, "failed")
+        result = self.format_result(task, [], {}, [issue], final_task_id)
+        result["status"] = "failed"
+        return result

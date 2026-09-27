@@ -110,16 +110,12 @@ class RhetoricalToolsAdapter(OperationalAgent):
         start_time = time.time()
 
         if not self.analysis_plugin:
-            return self.format_result(
+            return self.format_failure(
                 task,
-                [],
-                {},
-                [
-                    {
-                        "type": "initialization_error",
-                        "description": "AnalysisToolsPlugin non initialisé.",
-                    }
-                ],
+                {
+                    "type": "initialization_error",
+                    "description": "AnalysisToolsPlugin non initialisé.",
+                },
                 task_id,
             )
 
@@ -152,13 +148,8 @@ class RhetoricalToolsAdapter(OperationalAgent):
             self.logger.error(
                 f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True
             )
-            self.update_task_status(task_id, "failed")
-            return self.format_result(
-                task,
-                [],
-                {},
-                [{"type": "execution_error", "description": str(e)}],
-                task_id,
+            return self.format_failure(
+                task, {"type": "execution_error", "description": str(e)}, task_id
             )
 
     def _extract_arguments(self, text: str) -> List[str]:
