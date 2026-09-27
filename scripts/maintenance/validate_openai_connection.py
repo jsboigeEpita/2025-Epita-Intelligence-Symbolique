@@ -1,5 +1,6 @@
 import os
 import openai
+from pathlib import Path
 from dotenv import load_dotenv
 
 def validate_openai_connection():
@@ -8,8 +9,9 @@ def validate_openai_connection():
     and making a simple API call.
     """
     try:
-        # Load environment variables from .env file
-        load_dotenv()
+        # Load environment variables from the repository-root .env file, via a
+        # path anchored to this file (#2708) — no upward walk.
+        load_dotenv(Path(__file__).resolve().parents[2] / ".env")
         print("Attempting to load environment variables from .env file...")
 
         api_key = os.getenv("OPENAI_API_KEY")

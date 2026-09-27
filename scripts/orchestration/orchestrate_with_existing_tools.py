@@ -156,7 +156,8 @@ async def load_test_text():
 async def orchestrate_with_existing_tools():
     """Orchestre une analyse complexe en utilisant les outils existants."""
 
-    load_dotenv()
+    # .env à la racine du dépôt, ancré à ce fichier (#2708) : pas de marche.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
     tracker = SimpleTracker()
 
     logger.info(f"DEBUT orchestration - Session {tracker.session_id}")

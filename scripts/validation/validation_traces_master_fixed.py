@@ -465,8 +465,10 @@ async def main():
     # Configuration du logging
     setup_logging()
 
-    # Chargement de l'environnement
-    load_dotenv()
+    # Chargement de l'environnement — .env de la racine, chemin ancré à ce
+    # fichier (#2708) : le ``project_root`` module vaut ``scripts/``, pas la
+    # racine, on ne le réutilise pas pour charger le .env.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
     try:
         # Création et lancement du validateur maître

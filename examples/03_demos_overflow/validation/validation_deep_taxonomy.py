@@ -22,8 +22,9 @@ async def validate_deep_taxonomy_fallacy():
     print("--- Validation d'un sophisme (approche simplifiée) ---")
 
     # --- Préparation ---
-    # 1. Charger les variables d'environnement (pour la clé API)
-    load_dotenv()
+    # 1. Charger les variables d'environnement (pour la clé API) : le .env de
+    # la racine du dépôt, par chemin ancré à ce fichier (#2708) — pas de marche.
+    load_dotenv(Path(__file__).resolve().parents[3] / ".env")
     api_key = os.environ.get("OPENAI_API_KEY")
     model_id = os.environ.get("OPENAI_CHAT_MODEL_ID")
 

@@ -1,8 +1,10 @@
 import openai
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+# .env à la racine du dépôt, ancré à ce fichier (#2708) : pas de marche.
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 # Fix: Set the API key explicitly if not set in the environment
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:

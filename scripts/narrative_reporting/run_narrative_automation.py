@@ -141,7 +141,8 @@ async def main():
     4. Pour chaque rapport, génère 10 chapitres de `chapter_batch_size` (ex: 20 commits).
     5. Invoque l'agent avec un contexte enrichi pour chaque chapitre.
     """
-    load_dotenv()
+    # .env à la racine du dépôt, ancré à ce fichier (#2708) : pas de marche.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
     logging.info("Démarrage de la refonte du script de narration stratégique.")
 
     try:

@@ -1,11 +1,13 @@
 import os
+from pathlib import Path
 from openai import OpenAI
 from dotenv import load_dotenv
 
 
 def validate_key():
-    # Charger les variables d'environnement depuis .env
-    load_dotenv()
+    # Charger les variables d'environnement depuis le .env à la racine du
+    # dépôt, par chemin ancré à ce fichier (#2708) : pas de marche.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:

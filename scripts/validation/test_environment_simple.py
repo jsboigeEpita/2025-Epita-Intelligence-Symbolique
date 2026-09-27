@@ -9,6 +9,7 @@ import argumentation_analysis.core.environment  # Activation automatique de l'en
 
 import os
 import asyncio
+from pathlib import Path
 from dotenv import load_dotenv
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
@@ -20,8 +21,8 @@ async def test_environment():
     print("🧪 TEST ENVIRONNEMENT")
     print("=" * 50)
 
-    # Chargement .env
-    load_dotenv()
+    # Chargement .env — à la racine du dépôt, ancré à ce fichier (#2708).
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
     # Vérification clé API
     api_key = os.getenv("OPENAI_API_KEY")

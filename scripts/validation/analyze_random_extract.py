@@ -16,7 +16,8 @@ from pathlib import Path
 # Charger les variables d'environnement depuis .env
 from dotenv import load_dotenv
 
-load_dotenv()
+# .env à la racine du dépôt, ancré à ce fichier (#2708) : pas de marche.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 
 # Configuration du logging
 logging.basicConfig(

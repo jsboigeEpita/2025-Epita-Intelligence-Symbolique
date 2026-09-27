@@ -59,7 +59,8 @@ def _ensure_api_key() -> Optional[str]:
     """Return the active API key or print a clear skip reason."""
     from dotenv import load_dotenv
 
-    load_dotenv()
+    # Root .env via a path anchored to DEMO_DIR (#2708) — no upward walk.
+    load_dotenv(DEMO_DIR.parent.parent / ".env")
     if os.environ.get("OPENROUTER_API_KEY") and os.environ.get("OPENROUTER_BASE_URL"):
         return "openrouter"
     if os.environ.get("OPENAI_API_KEY"):

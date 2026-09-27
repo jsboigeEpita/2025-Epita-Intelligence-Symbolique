@@ -303,7 +303,8 @@ async def load_random_extract():
 async def orchestrate_complex_analysis():
     """Orchestre une analyse complexe multi-agents avec tracking détaillé."""
 
-    load_dotenv()
+    # .env à la racine du dépôt, ancré à ce fichier (#2708) : pas de marche.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
     tracker = ConversationTracker()
 
     logger.info(f"🚀 Début de l'orchestration complexe - Session {tracker.session_id}")
