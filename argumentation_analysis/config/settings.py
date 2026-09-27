@@ -35,9 +35,9 @@ class AzureOpenAISettings(BaseSettings):
     # Azure ce champ porte un **nom de déploiement**, propre au tenant — le
     # défautter à un id de modèle OpenAI était une valeur sans signification
     # sur ce provider, que seul un lecteur de ce champ aurait pu prendre pour
-    # la route d'Azure. Aucun code ne le lit aujourd'hui (le branch Azure de
-    # `kernel_builder` construit sur `deployment_name`) : `None` dit l'absence
-    # au lieu de nommer un modèle que rien ne sert.
+    # la route d'Azure. Aucun code ne le lit aujourd'hui (la branche Azure de
+    # `create_llm_service` construit sur `deployment_name`, #2711 B) : `None`
+    # dit l'absence au lieu de nommer un modèle que rien ne sert.
     chat_model_id: Optional[str] = None
     model_config = SettingsConfigDict(
         env_prefix="AZURE_OPENAI_",
@@ -185,14 +185,11 @@ class AppSettings(BaseSettings):
     ui: UISettings = UISettings()
     service_manager: ServiceManagerSettings = ServiceManagerSettings()
     jvm: JVMSettings = JVMSettings()
-    # The Azure block is not a JVM concern and never was: #2115's reader wrote
-    # ``settings.azure_openai`` (where a provider block belongs) while the field
-    # had been declared under ``JVMSettings`` — the branch was dead from birth.
-    # #2198 moved the field to match the intent, rather than teaching every
-    # future reader the misplacement. Its own ``env_prefix``/aliases
-    # (``AZURE_OPENAI_*``) govern resolution, so nesting never selected which
-    # variables populate it.
-    azure_openai: AzureOpenAISettings = AzureOpenAISettings()
+    # No Azure block here (#2711 B). Its only reader was ``KernelBuilder``,
+    # retired with no caller; ``create_llm_service`` now instantiates
+    # ``AzureOpenAISettings`` when it builds an Azure service, the same way it
+    # reads the OpenAI environment at call time. A copy frozen on this singleton
+    # at import time would be a second surface for the same configuration.
 
     # App-level settings
     debug_mode: bool = Field(False, alias="DEBUG")

@@ -105,7 +105,7 @@ class TestAzureOpenAISettings:
         # #2377: this field is a **deployment name** on Azure, tenant-specific.
         # It used to default to an OpenAI model id ("gpt-5.6-luna"), a value
         # meaningless for this provider and read by nobody (the Azure branch of
-        # `kernel_builder` builds on `deployment_name`). The old assertion
+        # `create_llm_service` builds on `deployment_name`, #2711 B). The old assertion
         # (`isinstance(..., str)`) pinned the presence of a default; the field
         # now says "unset" instead of naming a model nothing serves.
         monkeypatch.delenv("AZURE_OPENAI_CHAT_MODEL_ID", raising=False)
@@ -285,14 +285,6 @@ class TestJVMSettings:
 
 
 class TestAppSettings:
-    def test_azure_block_lives_on_app_settings(self):
-        # #2198: the block was declared under JVMSettings while #2115's reader
-        # looked for it here. That misplacement is what made the azure branch
-        # dead from birth; this pin is re-derived against the corrected
-        # location. It follows the block — it does not defend the old home.
-        s = AppSettings()
-        assert isinstance(s.azure_openai, AzureOpenAISettings)
-
     def test_debug_mode_default(self):
         s = AppSettings()
         assert s.debug_mode is False

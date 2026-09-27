@@ -1,46 +1,27 @@
-# `kernel/` — constructeur de kernel Semantic Kernel (outillage de tests)
+# `kernel/` — ancien emplacement de `KernelBuilder` (retiré, #2711 B)
 
 ## Rôle et frontière
 
-Un seul module utile : `kernel_builder.py` (49 lignes) — `KernelBuilder.create_kernel(settings)` construit un `sk.Kernel` avec exactement **un** service chat (OpenAI ou Azure). `__init__.py` vide (0 octet).
+Ce répertoire ne contient plus de code. Il portait `kernel_builder.py`, dont la classe `KernelBuilder` (WO-02, 2025-06-29) devait être l'unique fabrique de kernel Semantic Kernel. Elle n'a jamais eu d'appelant en production. Son dernier consommateur, `tests/utils/scenario_runner.py`, a été retiré par #2703. #2711 B l'a retirée à son tour, avec ses 3 tests (`tests/kernel/test_kernel_builder.py`).
 
-N'est **pas** le chemin de construction du kernel en production : le kernel réel est assemblé par `core/bootstrap.py` (qui, au chemin direct :618, lit `settings.openai.chat_model_id` — l'attribut correct) ; ce builder n'est consommé **que par l'outillage de tests**.
+## Fabrique canonique
 
-## Composants publics
+**`argumentation_analysis/core/llm_service.py:create_llm_service`**. Un kernel se compose en deux lignes, `Kernel()` puis `kernel.add_service(create_llm_service(service_id=…))`, et chaque appelant garde son `service_id`. La fabrique porte tout ce que `KernelBuilder` faisait, et ce qu'il ne faisait pas :
 
-`KernelBuilder.create_kernel(settings: AppSettings) -> sk.Kernel` (`kernel_builder.py:18`, staticmethod) — dispatch sur `settings.service_manager.default_llm_service_id` (:22) :
+- OpenAI, et la bascule OpenRouter (`OPENROUTER_BASE_URL` + `OPENROUTER_API_KEY`) ;
+- la substitution des modèles retirés (#1930) ;
+- Azure, avec sa propre configuration : `AZURE_OPENAI_API_KEY`, `AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_CHAT_DEPLOYMENT_NAME`, lus par `AzureOpenAISettings` au moment de la construction.
 
-- `"openai"` : `OpenAIChatCompletion(service_id="openai", ai_model_id=settings.openai.chat_model_id, api_key=…)` (:26-30) ; `ValueError` si clé absente (:32) ;
-- `"azure"` : `AzureChatCompletion(deployment_name/endpoint/api_key depuis settings.azure_openai)` (:40-47) ; `ValueError` (:48-51) ;
-- sinon : `ValueError` (:46).
+Pour les appels SDK bruts (hors kernel), le résolveur de route est `resolve_chat_endpoint` (#2352).
 
-## Points d'entrée valides
+## Ce que le retrait a recyclé
 
-**Aucun consommateur.** Ni importeur production, ni outillage de tests. Les deux derniers consommateurs, `tests/utils/scenario_runner.py` et `tests/integration/workers/worker_logic_puzzles_hardening.py`, passaient le noyau construit à `orchestration/orchestrator.py`, une coquille dont `run_analysis_async` levait `NotImplementedError`. #2700 a retiré le worker, #2703 le runner et la coquille. Le module n'est plus appelé que par ses propres tests.
+La seule configuration Azure juste de l'arbre était celle de `KernelBuilder`. La branche Azure de `create_llm_service` résolvait d'abord la clé OpenAI ou OpenRouter et l'envoyait à l'endpoint Azure. Elle prenait aussi l'id de modèle OpenAI comme nom de déploiement, et refusait un poste configuré pour Azure seul. #2711 B a déplacé les lectures de `KernelBuilder` dans la fabrique (`_create_azure_chat_completion`) avant de le retirer. Témoin : `tests/unit/argumentation_analysis/core/test_llm_service_azure_2711.py`, qui construit le vrai `AzureChatCompletion`.
 
-## Amont / aval
+`AppSettings.azure_openai` n'avait pas d'autre lecteur que `KernelBuilder`. Le champ est parti avec lui : la fabrique instancie `AzureOpenAISettings` au moment de construire le service, comme elle lit l'environnement OpenAI au moment de l'appel.
 
-- Amont : `semantic_kernel`, `config.settings.AppSettings`.
-- Aval : aucun depuis #2703 (le dernier, `scenario_runner`, est retiré).
+## Historique
 
-## Statut d'intégration
-
-**résiduel** — aucun consommateur depuis #2703 ; seuls ses propres tests l'appellent. Le chemin production qui construit un noyau est [`core/bootstrap.py`](../core/README.md).
-
-## Artefacts et lecteurs
-
-Aucun — kernel en mémoire.
-
-## Tests représentatifs
-
-`tests/kernel/test_kernel_builder.py` — les 3 tests posés par #2115 (voir « Limites connues ») ; ce sont les seuls appels du module.
-
-## Frères et parent
-
-Parent : [`../README.md`](../README.md) — ne mentionne pas `kernel/`. Frère fonctionnel : [`core/bootstrap.py`](../core/README.md) (chemin production), [`integrations/`](../integrations/README.md) (doublon résiduel).
-
-## Limites connues
-
-- **Branche azure — réparée, puis remise d'aplomb** : #2115 a corrigé le *lecteur* (il lisait `settings.azure_openai`, nom qu'`AppSettings` ne portait pas : `AttributeError` avalée en « clé absente », branche morte depuis sa naissance) ; #2198 a corrigé le *placement* — le bloc remonte de `JVMSettings` vers `AppSettings`, qui est la racine du défaut. Une seule orthographe subsiste (:40).
-- `tests/kernel/test_kernel_builder.py` n'est plus un placeholder vide : #2115 y a posé 3 tests (branche azure atteint `AzureChatCompletion`, contrôle openai, provider inconnu nommé).
-- `__init__.py` vide : le package n'exporte rien, l'import doit cibler `kernel_builder` explicitement.
+- #2115 : la branche Azure lisait `settings.azure_openai`, un nom qu'`AppSettings` ne portait pas. L'`AttributeError` était avalée en « clé absente ».
+- #2198 : le bloc Azure est remonté de `JVMSettings` vers `AppSettings`, où son lecteur le cherchait.
+- #2711 B : la configuration passe dans la fabrique, et `KernelBuilder` est retiré.

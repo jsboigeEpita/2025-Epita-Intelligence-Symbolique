@@ -22,7 +22,11 @@ from semantic_kernel.connectors.ai.chat_completion_client_base import (
 )
 from semantic_kernel.const import DEFAULT_SERVICE_NAME
 from argumentation_analysis.core.utils.network_utils import get_resilient_async_client
-from argumentation_analysis.config.settings import settings, DEFAULT_CHAT_MODEL_ID
+from argumentation_analysis.config.settings import (
+    AzureOpenAISettings,
+    DEFAULT_CHAT_MODEL_ID,
+    settings,
+)
 
 # Logger pour ce module
 logger = logging.getLogger("Orchestration.LLM")
@@ -342,6 +346,58 @@ def resolve_chat_endpoint(
     return api_key, base_url, model_id
 
 
+def _create_azure_chat_completion(
+    service_id: str, deployment_name: Optional[str]
+) -> AzureChatCompletion:
+    """Build the Azure service from Azure's own configuration (#2711 B).
+
+    The key, the endpoint and the deployment come from ``AzureOpenAISettings``
+    (``AZURE_OPENAI_API_KEY``, ``AZURE_OPENAI_ENDPOINT``,
+    ``AZURE_OPENAI_CHAT_DEPLOYMENT_NAME``), read when the service is built. A
+    ``deployment_name`` passed by the caller wins over the setting.
+
+    The OpenAI and OpenRouter keys are never read here: this branch used to
+    take them, so it sent the OpenAI key to the Azure endpoint and refused a
+    seat that had only Azure configured. A deployment name belongs to the
+    tenant and is not an OpenAI model id, so the #1930 substitution does not
+    apply. This configuration was ``kernel/kernel_builder.py``'s, which had no
+    caller; it lives here now, and the builder is retired.
+    """
+    azure = AzureOpenAISettings()
+    deployment = deployment_name or azure.deployment_name
+    missing = [
+        name
+        for name, value in (
+            ("AZURE_OPENAI_API_KEY", azure.api_key),
+            ("AZURE_OPENAI_ENDPOINT", azure.endpoint),
+            ("AZURE_OPENAI_CHAT_DEPLOYMENT_NAME", deployment),
+        )
+        if not value
+    ]
+    if missing:
+        raise ValueError(
+            "Azure OpenAI n'est pas configuré : "
+            + ", ".join(missing)
+            + " requis. La clé OpenAI n'est jamais envoyée à Azure."
+        )
+
+    logger.info("Configuration Service: AzureChatCompletion...")
+    try:
+        service = AzureChatCompletion(
+            service_id=service_id,
+            deployment_name=deployment,
+            endpoint=str(azure.endpoint),
+            api_key=azure.api_key.get_secret_value(),
+        )
+    except Exception as e:
+        logger.critical(
+            f"Erreur critique lors de la création du service LLM: {e}", exc_info=True
+        )
+        raise RuntimeError(f"Impossible de configurer le service LLM: {e}") from e
+    logger.info(f"Service LLM Azure ({deployment}) créé.")
+    return service
+
+
 # service_id a un défaut : l'id par défaut de Semantic Kernel, celui que
 # BaseAgent résout sans id explicite. fdbb54e20 l'avait rendu obligatoire sans
 # motif écrit, et onze appelants (code, docs, notebook) comptaient encore sur
@@ -400,6 +456,11 @@ def create_llm_service(
         return MockChatCompletion(service_id=service_id, ai_model_id="mock_model")
 
     logger.info("Tentative de création d'un service LLM AUTHENTIQUE...")
+
+    # Azure has its own key, endpoint and deployment (#2711 B): it is built
+    # before the OpenAI/OpenRouter resolution below, which it must never reach.
+    if service_type == "AzureChatCompletion":
+        return _wrap_with_llm_cache(_create_azure_chat_completion(service_id, model_id))
 
     # Si on n'est pas en mode mock, on cherche le model_id s'il n'est pas fourni
     if not model_id:
@@ -484,22 +545,6 @@ def create_llm_service(
             )
             logger.info(f"Service LLM OpenAI ({model_id}) créé avec succès.")
 
-        # NOTE: La logique pour Azure est conservée mais non utilisée si service_type est OpenAIChatCompletion
-        elif service_type == "AzureChatCompletion":
-            endpoint = os.environ.get("AZURE_OPENAI_ENDPOINT")
-            if not endpoint:
-                raise ValueError(
-                    "La variable d'environnement AZURE_OPENAI_ENDPOINT est requise pour Azure."
-                )
-
-            logger.info("Configuration Service: AzureChatCompletion...")
-            llm_instance = AzureChatCompletion(
-                service_id=service_id,
-                deployment_name=model_id,
-                endpoint=endpoint,
-                api_key=api_key,
-            )
-            logger.info(f"Service LLM Azure ({model_id}) créé.")
         else:
             raise ValueError(f"Type de service LLM non supporté: {service_type}")
 
@@ -515,6 +560,12 @@ def create_llm_service(
     if not llm_instance:
         raise RuntimeError("La configuration du service LLM a échoué silencieusement.")
 
+    return _wrap_with_llm_cache(llm_instance)
+
+
+def _wrap_with_llm_cache(
+    llm_instance: ChatCompletionClientBase,
+) -> ChatCompletionClientBase:
     # Cache-aware SK-service wrapping (BO-3 #1473, PR2 — SK-native path):
     # wrap the freshly built service with CachedChatCompletion so SK-native agent
     # calls (ChatCompletionAgent.invoke / AgentGroupChat.invoke — the

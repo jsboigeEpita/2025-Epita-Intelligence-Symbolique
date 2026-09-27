@@ -861,6 +861,8 @@ Une bibliothèque comme `pydantic-settings` peut lire et valider ces fichiers po
 
 ### 4.2.2. Le `KernelBuilder` : Usine de Construction du `Kernel`
 
+> **État actuel (#2711 B, 2026-09-27).** L'intention de cette section, une seule usine, est tenue par `argumentation_analysis/core/llm_service.py:create_llm_service`, et non par `KernelBuilder`. Implémenté en `argumentation_analysis/kernel/kernel_builder.py`, celui-ci n'a jamais eu d'appelant en production ; il a été retiré après que sa configuration Azure, la seule juste de l'arbre, est passée dans la fabrique. Un kernel se compose avec `Kernel()` puis `add_service(create_llm_service(service_id=…))`. Voir [`argumentation_analysis/kernel/README.md`](../../argumentation_analysis/kernel/README.md).
+
 **Problématique :** La création et la configuration du `Kernel` (ajout des services LLM, des plugins, etc.) peuvent devenir complexes. Cette logique ne doit pas être dupliquée.
 
 **Solution :** Créer une classe `KernelBuilder` qui lit la configuration centralisée et assemble une instance de `Kernel` prête à l'emploi.

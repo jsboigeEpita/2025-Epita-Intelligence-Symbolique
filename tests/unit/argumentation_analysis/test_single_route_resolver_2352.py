@@ -476,11 +476,6 @@ _FROZEN_SETTINGS_OPENAI_READS: Dict[str, Tuple[Tuple[str, ...], str]] = {
         "toggle and the substitution; api_key only feeds context.config and a "
         "startup warning, and no service is built from it",
     ),
-    "argumentation_analysis/kernel/kernel_builder.py": (
-        ("api_key", "chat_model_id"),
-        "#2711 B: KernelBuilder has no production caller; its Azure reads move "
-        "into the factory, then it is retired",
-    ),
 }
 
 
