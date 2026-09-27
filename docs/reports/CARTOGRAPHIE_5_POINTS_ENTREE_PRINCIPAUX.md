@@ -243,15 +243,15 @@ conda run -n projet-is-roo-new --no-capture-output python argumentation_analysis
 # Texte inline
 conda run -n projet-is-roo-new --no-capture-output python argumentation_analysis/run_orchestration.py --text "Votre argument ici"
 
-# Mode UI interactif
-conda run -n projet-is-roo-new --no-capture-output python argumentation_analysis/run_orchestration.py --ui
+# Mode UI interactif : --ui exige un noyau Jupyter (widgets ipywidgets). Hors
+# notebook, la CLI le refuse avant toute initialisation (#2787).
 ```
 
 ### Arguments
 ```
 --file, -f   : Chemin vers un fichier texte
 --text, -t   : Texte a analyser (inline)
---ui, -u     : Interface utilisateur Tkinter
+--ui, -u     : Interface ipywidgets (exige un noyau Jupyter, #2787)
 --verbose, -v : Logs detailles (DEBUG)
 ```
 

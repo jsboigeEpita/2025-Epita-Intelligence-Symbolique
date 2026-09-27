@@ -45,6 +45,8 @@ from .config import (
 # Event loop pour Jupyter
 from jupyter_ui_poll import ui_events
 
+from .kernel_guard import require_jupyter_kernel
+
 app_logger = logging.getLogger("App.UI.App")
 # Assurer un handler de base si non configuré globalement
 if not app_logger.handlers and not app_logger.propagate:
@@ -77,7 +79,9 @@ def configure_analysis_task() -> Optional[str]:
     """
     Définit et gère l'interface utilisateur pour configurer la tâche d'analyse.
     Appelée depuis un environnement Jupyter, elle retourne le texte préparé.
+    Hors d'un noyau Jupyter, elle refuse avant tout travail (#2787).
     """
+    require_jupyter_kernel("configure_analysis_task")
     app_logger.info("Lancement de configure_analysis_task...")
     texte_analyse_prepare_local = ""
     analyse_ready_to_run_local = False
