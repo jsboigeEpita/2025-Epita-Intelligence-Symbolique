@@ -6,13 +6,19 @@ d'analyse en fonction des paramètres fournis.
 """
 
 import asyncio
+from typing import cast
+
 import semantic_kernel as sk
-from semantic_kernel.connectors.ai.open_ai import OpenAITextCompletion
 from argumentation_analysis.agents.factory import AgentFactory
+from argumentation_analysis.agents.concrete_agents.informal_fallacy_agent import (
+    InformalFallacyAgent,
+)
 from argumentation_analysis.core.llm_service import create_llm_service
-from modules.demo_utils import DemoLogger, pause_interactive, confirmer_action
+from argumentation_analysis.utils.taxonomy_loader import get_taxonomy_path
+from modules.demo_utils import DemoLogger, confirmer_action
 from argumentation_analysis.config.settings import AppSettings
-from argumentation_analysis.agents.agents import AgentType
+
+AGENT_CONFIGS = {"informal": "simple", "full": "full"}
 
 # L'initialisation de l'environnement est maintenant gérée par l'import de `environment`
 # et la configuration des services LLM est centralisée dans `create_llm_service`.
@@ -40,35 +46,31 @@ def _create_kernel_and_factory() -> tuple[sk.Kernel, AgentFactory, str]:
 async def _run_analysis(
     logger: DemoLogger, agent_type: str, taxonomy_path: str, text_to_analyze: str
 ):
-    """
-    Logique centrale pour exécuter l'analyse d'argumentation.
-    Initialise le kernel, la factory, crée l'agent et lance l'analyse.
-    """
+    """Crée l'agent informel demandé et exécute son analyse."""
+    if agent_type not in AGENT_CONFIGS:
+        raise ValueError(f"unknown demo agent type: {agent_type!r}")
+
     try:
-        logger.info(f"Initialisation du Kernel et de la Factory...")
-        kernel, agent_factory, _ = _create_kernel_and_factory()
+        logger.info("Initialisation du Kernel et de la Factory...")
+        _, agent_factory, _ = _create_kernel_and_factory()
 
-        logger.info(f"Création de l'agent via la factory avec le type : '{agent_type}'")
-        # Correction: Convertir la chaîne en AgentType Enum
-        try:
-            agent_type_enum = AgentType[agent_type.upper()]
-        except KeyError:
-            logger.error(
-                f"Type d'agent invalide : '{agent_type}'. Utilisation de INFORMAL_FALLACY par défaut."
-            )
-            agent_type_enum = AgentType.INFORMAL_FALLACY
-
-        agent = agent_factory.create_agent(agent_type_enum)
-
-        logger.info(f"Configuration de l'agent avec la taxonomie : '{taxonomy_path}'")
-        await agent.configure(taxonomy_path=taxonomy_path)
+        taxonomy_file = taxonomy_path or str(get_taxonomy_path())
+        logger.info(
+            f"Création de l'agent '{agent_type}' avec la taxonomie : '{taxonomy_file}'"
+        )
+        agent = cast(
+            InformalFallacyAgent,
+            agent_factory.create_informal_fallacy_agent(
+                config_name=AGENT_CONFIGS[agent_type], taxonomy_file_path=taxonomy_file
+            ),
+        )
 
         logger.info("Lancement de l'analyse du texte...")
         logger.separator()
         print(f"Texte à analyser :\n---\n{text_to_analyze}\n---")
         logger.separator()
 
-        result = await agent.analyze(text_to_analyze)
+        result = await agent.analyze_text(text_to_analyze)
 
         logger.header("Résultat de l'analyse")
         print(result)

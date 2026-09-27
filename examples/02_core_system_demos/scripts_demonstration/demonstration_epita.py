@@ -1018,22 +1018,14 @@ Modes disponibles :
         "--agent-type",
         type=str,
         default="informal",
-        choices=[
-            "informal",
-            "deductive",
-            "causal",
-            "example",
-            "synthesis",
-            "comparison",
-            "full",
-        ],
+        choices=["informal", "full"],
         help="""Type d'agent à utiliser pour l'analyse.""",
     )
     parser.add_argument(
         "--taxonomy-path",
         type=str,
-        default="taxonomies/informal_fallacies.json",
-        help="Chemin vers le fichier JSON de la taxonomie des sophismes.",
+        default=None,
+        help="Chemin vers le fichier CSV de la taxonomie des sophismes (défaut : copie vendorée).",
     )
 
     return parser.parse_args()
