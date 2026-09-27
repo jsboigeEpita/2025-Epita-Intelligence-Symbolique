@@ -136,6 +136,25 @@ class TestDelegatingSelectionStrategy:
         assert "PropositionalLogicAgent" in strategy._agents_map
         assert "InformalAnalysisAgent" in strategy._agents_map
 
+    def test_class_default_names_the_pm_even_when_not_first(self):
+        """#2699: the conversational path builds the strategy WITHOUT
+        default_agent_name, so the class default IS the production fallback.
+        It must name the live inline PM ("ProjectManager"), not the retired
+        class. The PM sits second here on purpose: with the PM first, the
+        first-agent fallback returns the PM too and a wrong default stays
+        green (measured red on main before the default change)."""
+        state = RhetoricalAnalysisState("Texte de test pour l'analyse rhétorique.")
+        pm_agent = MagicMock()
+        pm_agent.name = "ProjectManager"
+        analyst_agent = MagicMock()
+        analyst_agent.name = "InformalAnalysisAgent"
+        agents = [analyst_agent, pm_agent]
+        strategy = DelegatingSelectionStrategy(agents, state)
+
+        selected = asyncio.run(strategy.next(agents, []))
+
+        assert selected is pm_agent
+
     def test_next_with_empty_history(self, delegating_strategy_components):
         """Teste la sélection avec un historique vide."""
         (
