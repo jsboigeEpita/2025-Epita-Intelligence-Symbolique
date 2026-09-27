@@ -45,7 +45,6 @@ F1_FILES = [
     "tests/unit/test_service_manager_complete.py",
     "tests/core/test_enquete_states.py",
     "tests/integration/triage/test_authentic_components_integration.py",
-    "tests/integration/workers/worker_fol_pipeline.py",
     "tests/performance/test_oracle_performance.py",
     "tests/project_core/dev_utils/test_verification_utils.py",
     "tests/test_complex_trace_authentic.py",

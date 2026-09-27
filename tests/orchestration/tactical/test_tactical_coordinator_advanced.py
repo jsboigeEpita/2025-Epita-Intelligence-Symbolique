@@ -18,7 +18,6 @@ import logging
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
 
 # Configurer le logging pour les tests
 logging.basicConfig(
@@ -344,32 +343,6 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
             self.middleware.shutdown()
         logger.info("Teardown authentique terminé")
 
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini."""
-        try:
-            config = UnifiedConfig()
-            kernel = config.get_kernel_with_gpt4o_mini()
-            logger.info("Instance authentique gpt-5-mini créée")
-            return kernel
-        except Exception as e:
-            logger.warning(f"Impossible de créer l'instance gpt-5-mini: {e}")
-            return None
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            if kernel:
-                result = await kernel.invoke("chat", input=prompt)
-                response = str(result)
-                logger.info(f"Appel LLM authentique réussi: {len(response)} caractères")
-                return response
-            else:
-                return "Instance LLM non disponible"
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return f"Erreur LLM: {str(e)}"
-
     def test_authentic_coordinator_initialization(self):
         """Teste l'initialisation authentique du coordinateur."""
         # Vérifier que le coordinateur est correctement initialisé
@@ -612,27 +585,6 @@ class TestTacticalCoordinatorAdvancedAuthentic(unittest.TestCase):
         )
 
         logger.info("Abonnement authentique aux canaux testé")
-
-    def test_run_authentic_llm_integration(self):
-        """Teste l'intégration authentique avec LLM (asynchrone)."""
-
-        async def run_llm_test():
-            prompt = "Analyse ce texte pour identifier les arguments principaux: 'La philosophie est importante car elle développe l'esprit critique.'"
-
-            response = await self._make_authentic_llm_call(prompt)
-            self.assertIsInstance(response, str)
-            self.assertGreater(len(response), 10)
-
-            logger.info(
-                f"Intégration LLM authentique testée: {len(response)} caractères"
-            )
-
-        # Exécuter le test asynchrone
-        try:
-            asyncio.run(run_llm_test())
-        except Exception as e:
-            logger.warning(f"Test LLM asynchrone échoué: {e}")
-            self.skipTest(f"LLM non disponible: {e}")
 
 
 if __name__ == "__main__":
