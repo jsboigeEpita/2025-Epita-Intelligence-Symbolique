@@ -11,7 +11,7 @@ N'est **pas** le montage de services réel de l'orchestration moderne (`orchestr
 `initialize_analysis_services(config: Dict | None = None) -> Dict[str, Any]` (`analysis_services.py:28`) — `load_dotenv(find_dotenv())` (:32), puis :
 
 1. JVM (`settings.enable_jvm`, priorité config passée, :44+) — `services["jvm_ready"]` ;
-2. service LLM : `create_llm_service(service_id="default_llm_service", model_id=settings.service_manager.default_model_id, force_mock=settings.use_mock_llm)` (:68-72) ; `services["llm_service"]` (:73).
+2. service LLM : `create_llm_service(service_id="default_llm_service", force_mock=settings.use_mock_llm)` — pas de `model_id`, la fabrique résout (#2728) ; `services["llm_service"]`.
 
 ## Points d'entrée valides
 
@@ -44,6 +44,6 @@ Parent : [`../README.md`](../README.md) — ne mentionne pas `service_setup/`. F
 
 ## Limites connues
 
-- **Réparé par #2115** (`d24cb83a3`) : ce module lisait `settings.default_model_id`, un attribut qu'`AppSettings` ne porte pas. L'`AttributeError`, avalée par le handler (`logging.critical` puis `services["llm_service"] = None`), privait **chaque** run réel de son service LLM. Il lit maintenant `settings.service_manager.default_model_id` (:70).
-- Le `model_id` passé à la fabrique vient de `settings.service_manager.default_model_id`, pas de `OPENAI_CHAT_MODEL_ID` que lit le résolveur (#2352) : sans la bascule OpenRouter, un poste qui fixe `OPENAI_CHAT_MODEL_ID` à un autre modèle ne le voit pas appliqué ici.
+- **Réparé par #2115** (`d24cb83a3`) : ce module lisait `settings.default_model_id`, un attribut qu'`AppSettings` ne porte pas. L'`AttributeError`, avalée par le handler (`logging.critical` puis `services["llm_service"] = None`), privait **chaque** run réel de son service LLM.
+- **Réparé par #2728** : le site passait ensuite `model_id=settings.service_manager.default_model_id` — un champ qu'aucun résolveur ne lit — si bien qu'un poste qui fixe `OPENAI_CHAT_MODEL_ID` à un autre modèle ne le voyait pas appliqué ici. Le site ne passe plus de `model_id` : la fabrique résout depuis la même source que le résolveur (#2352), et le champ `ServiceManagerSettings.default_model_id` est retiré avec son dernier lecteur.
 - Le handler de :84-88 transforme toujours tout échec de la fabrique en `services["llm_service"] = None`.

@@ -13,6 +13,10 @@ EnvironmentManager()
 # classes de settings ci-dessous, `service_manager.default_model_id`, et le
 # repli de `create_llm_service`. Deux défauts qui divergent est exactement
 # comment une flotte se coupe en deux modèles — ici ils ne peuvent plus.
+# #2728 a retiré `service_manager.default_model_id` (dernier lecteur parti
+# avec la soustraction du site service_setup) : il reste le défaut de
+# `OpenAISettings.chat_model_id` et le repli de la fabrique, qui pointent
+# ici tous les deux.
 # Vit dans ce module (et non dans `core/llm_service.py`) parce que celui-ci
 # importe `settings` : la dépendance va dans un seul sens.
 DEFAULT_CHAT_MODEL_ID = "gpt-5.6-luna"
@@ -98,7 +102,6 @@ class ServiceManagerSettings(BaseSettings):
     results_dir: Path = Path("_temp/service_manager_results")
     data_dir: Path = Path("data")
     default_llm_service_id: str = "openai"
-    default_model_id: str = DEFAULT_CHAT_MODEL_ID
     hierarchical_channel_id: str = "hierarchical_main"
     model_config = SettingsConfigDict(env_prefix="SERVICE_MANAGER_")
 

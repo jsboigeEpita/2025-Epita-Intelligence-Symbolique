@@ -316,7 +316,6 @@ def test_the_default_model_surfaces_agree(monkeypatch):
 
     from argumentation_analysis.config.settings import (
         OpenAISettings,
-        ServiceManagerSettings,
     )
     from argumentation_analysis.core.llm_service import resolve_chat_endpoint
 
@@ -325,11 +324,11 @@ def test_the_default_model_surfaces_agree(monkeypatch):
 
     # Les défauts *de code* : l'env est neutralisé et ``.env`` ignoré, sinon on
     # mesurerait la configuration de la machine au lieu de la déclaration.
+    # #2728 a retiré ``ServiceManagerSettings.default_model_id`` (dernier
+    # lecteur parti avec la soustraction du site service_setup) : cette
+    # surface n'est plus déclarée, donc plus mesurée.
     declared = {
         "OpenAISettings.chat_model_id": OpenAISettings(_env_file=None).chat_model_id,
-        "ServiceManagerSettings.default_model_id": ServiceManagerSettings(
-            _env_file=None
-        ).default_model_id,
         "resolve_chat_endpoint(default_model=)": (
             inspect.signature(resolve_chat_endpoint).parameters["default_model"].default
         ),
@@ -395,7 +394,6 @@ def test_the_single_default_is_a_named_constant(monkeypatch):
     from argumentation_analysis.config.settings import (
         DEFAULT_CHAT_MODEL_ID,
         OpenAISettings,
-        ServiceManagerSettings,
     )
 
     # L'environnement prime sur le défaut de classe : sans ce vidage on
@@ -406,9 +404,6 @@ def test_the_single_default_is_a_named_constant(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
     assert OpenAISettings(_env_file=None).chat_model_id is DEFAULT_CHAT_MODEL_ID
-    assert (
-        ServiceManagerSettings(_env_file=None).default_model_id is DEFAULT_CHAT_MODEL_ID
-    )
 
 
 # ===========================================================================

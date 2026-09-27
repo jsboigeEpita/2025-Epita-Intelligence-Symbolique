@@ -90,11 +90,11 @@ def test_initialize_services_nominal_case(
 
     # #2115: the assertion used to compare against ``mock_settings.default_model_id``
     # — an auto-created MagicMock attribute. Any name passed, so the assertion
-    # certified the phantom the production code was reading. Pinned to the real
-    # nested path now.
+    # certified the phantom the production code was reading. #2728 then removed
+    # the model choice from this call entirely: no ``model_id`` is passed, the
+    # factory resolves it.
     mock_create_llm.assert_called_once_with(
         service_id="default_llm_service",
-        model_id=mock_settings.service_manager.default_model_id,
         force_mock=True,
     )
     # L'objet retourné doit être celui de la fixture mock_create_llm
@@ -176,7 +176,6 @@ def test_initialize_services_llm_fails_raises_exception(
 
     mock_create_llm.assert_called_once_with(
         service_id="default_llm_service",
-        model_id=mock_settings.service_manager.default_model_id,
         force_mock=True,
     )
     assert services.get("llm_service") is None
@@ -245,16 +244,36 @@ def test_llm_service_is_built_with_real_settings(mock_env_manager, mock_init_jvm
     )
 
 
-def test_llm_service_receives_the_nested_model_id(
-    mock_env_manager, mock_init_jvm, mocker
+def test_built_service_carries_the_resolver_model_id(
+    mock_env_manager, mock_init_jvm, mocker, monkeypatch
 ):
-    """The model_id passed is the one the real settings actually carry."""
+    """#2728: the service this function builds carries the resolver's model id.
+
+    The site used to pass ``settings.service_manager.default_model_id`` — a
+    settings field no resolver reads — so a seat that picks its model through
+    ``OPENAI_CHAT_MODEL_ID`` got it everywhere except on this path. The
+    subtraction (#1875's class) leaves the choice to the factory, whose
+    fallback reads the same env var as ``resolve_chat_endpoint``.
+    """
     from argumentation_analysis.config.settings import settings as real_settings
 
-    spy = mocker.patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock())
+    # The factory auto-mocks under pytest; the witness needs the authentic
+    # branch, which only builds a client — no request is sent.
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    monkeypatch.setenv("OPENAI_API_KEY", "witness-key-2728")
+    monkeypatch.setenv("OPENAI_CHAT_MODEL_ID", "witness-model-2728")
+    monkeypatch.delenv("OPENROUTER_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    # Inert cache wrap: the built service exposes ai_model_id directly.
+    monkeypatch.delenv("LLM_CACHE_MODE", raising=False)
+    mocker.patch.object(real_settings, "enable_jvm", False)
+    mocker.patch.object(real_settings, "use_mock_llm", False)
 
-    initialize_analysis_services()
+    services = initialize_analysis_services()
 
-    assert spy.call_args.kwargs["model_id"] == (
-        real_settings.service_manager.default_model_id
+    service = services.get("llm_service")
+    assert service is not None
+    assert service.ai_model_id == "witness-model-2728", (
+        "the built service does not carry OPENAI_CHAT_MODEL_ID: the site is "
+        "choosing the model from somewhere the resolver cannot see"
     )
