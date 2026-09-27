@@ -60,9 +60,8 @@ def _shield_verdict(state: Any) -> Optional[Dict[str, Any]]:
     nobody in production — the verdict the shield reached never reached the
     caller, so a `blocked` input was visible only in the log line. This is the
     reader, and it is READ-ONLY: it never appends, so a shield phase invoked
-    twice in one workflow (e.g. `input_validation` plus `output_filtering`)
-    leaves exactly the entries the invoker wrote. Copying the writer would have
-    doubled them on every run.
+    twice in one workflow leaves exactly the entries the invoker wrote.
+    Copying the writer would have doubled them on every run.
 
     Returns the LATEST entry — entries are appended in run order, so the last
     one is the verdict the pipeline acted on. None when the shield never ran

@@ -91,9 +91,9 @@ class SpeechTranscriptionService:
 
     Register with CapabilityRegistry:
         registry.register_service(
-            "speech_transcription",
+            "speech_transcription_service",
             SpeechTranscriptionService,
-            capabilities=["speech_transcription", "audio_processing"],
+            capabilities=["speech_transcription"],
         )
     """
 
@@ -123,7 +123,14 @@ class SpeechTranscriptionService:
         return self._available
 
     def _check_whisper_api(self) -> bool:
-        """Check if the Whisper API endpoint is reachable."""
+        """Check if the Whisper API endpoint is reachable.
+
+        Both probes failing is degradation, not silence: the WARNING names
+        the backend tried (URL) and the last cause, so an operator outside
+        dev sees WHY transcription is unavailable instead of a bare False
+        (#2346 item, triaged in #2623).
+        """
+        last_error: Optional[Exception] = None
         try:
             import requests
 
@@ -132,7 +139,8 @@ class SpeechTranscriptionService:
                 timeout=5,
             )
             return r.status_code == 200
-        except Exception:
+        except Exception as e:
+            last_error = e
             # Try /v1/models as alternative health check (OpenAI-compatible)
             try:
                 import requests
@@ -142,8 +150,15 @@ class SpeechTranscriptionService:
                     timeout=5,
                 )
                 return r.status_code == 200
-            except Exception:
-                return False
+            except Exception as e2:
+                last_error = e2
+        logger.warning(
+            "Whisper backend unreachable at %s (probes /health and /v1/models "
+            "both failed; last cause: %s) — transcription will be unavailable",
+            self._whisper_url,
+            last_error,
+        )
+        return False
 
     def transcribe_file(
         self,

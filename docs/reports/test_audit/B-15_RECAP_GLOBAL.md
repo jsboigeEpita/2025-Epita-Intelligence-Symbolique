@@ -64,7 +64,7 @@ L'audit complet de **~10 802 tests** sur **~371 fichiers** (12 packets unitaires
 
 **Tests** : B-01 informal/ (tests agents), B-04 plugins/ (FrenchFallacyPlugin), B-06 NLP/models, B-13 pattern_report + enrichment
 **Arc** : La detection de sophismes a evolue en 4 generations : (1) detection basique, (2) taxonomie 1408 sophismes, (3) 3-tier hybrid (regex + CamemBERT + LLM), (4) hierarchical deepening + pattern mining. Les tests documentent chaque couche.
-**Etat final** : **WIRED** — 3 capabilities registrees (neural_fallacy_detection, hierarchical_fallacy_detection, per_argument_fallacy_detection). Les plugins SK (B-04, 502 tests) et les tests NLP (B-06) couvrent la chaine complete.
+**Etat final** : **WIRED** — 2 capabilities registrees (neural_fallacy_detection, hierarchical_fallacy_detection) ; per_argument_fallacy_detection a quitte le registry en #2623 (sous-étape à appel direct). Les plugins SK (B-04, 502 tests) et les tests NLP (B-06) couvrent la chaine complete.
 
 ### Episode 5 : Logiques formelles (2026-01 a 2026-05)
 

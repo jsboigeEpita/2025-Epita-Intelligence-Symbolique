@@ -28,7 +28,7 @@ Le projet étudiant `2.3.2-detection-sophismes/` (auteur "arthur.hamard", ~2280 
 | **Family Analyzer** | `agents/tools/analysis/fallacy_family_analyzer.py` | ~200 | 8-family analysis + fact-checking integration | Nouveau |
 | **Orchestration** | `orchestration/invoke_callables.py` (3 invokeurs) + `state_writers.py` + `workflows.py` | ~400 | 3 registered services, 4+ workflows, DAG complet | Nouveau |
 
-**CapabilityRegistry**: 3 services enregistrés : `self_hosted_fallacy_detector` (neural_fallacy_detection), `hierarchical_fallacy_detector` (hierarchical_fallacy_detection), `hierarchical_fallacy_per_argument` (per_argument_fallacy_detection).
+**CapabilityRegistry**: 2 services enregistrés : `self_hosted_fallacy_detector` (neural_fallacy_detection), `hierarchical_fallacy_detector` (hierarchical_fallacy_detection). Le troisième (`hierarchical_fallacy_per_argument`, per_argument_fallacy_detection) a quitté le registry en #2623 : sa seule capability n'a jamais eu de demandeur production — la sous-étape vit par appel direct (`_invoke_hierarchical_fallacy`).
 
 ### 1.2 Préservation fonctionnelle
 
@@ -162,5 +162,5 @@ Le projet 2.3.2 est **excellemment intégré** — le consolidé est strictement
 - `argumentation_analysis/orchestration/invoke_callables.py` — 3 invokeurs (camembert, hierarchical, per-argument)
 - `argumentation_analysis/orchestration/state_writers.py` — neural + hierarchical state writers
 - `argumentation_analysis/orchestration/workflows.py` — 4+ workflows with fallacy nodes
-- `argumentation_analysis/orchestration/registry_setup.py` — 3 services registered
+- `argumentation_analysis/orchestration/registry_setup.py` — 2 services registered (#2623: the per-argument sub-step left the registry, direct-call only)
 - `argumentation_analysis/core/shared_state.py` — identified_fallacies + neural_fallacy_scores dimensions

@@ -211,7 +211,7 @@ This table maps each report section to the pipeline capability (snake_case) that
 | **E — Ranking** | `ranking_semantics` | `ranking_results` | `ranking` | `ranking_handler` |
 | **E — Bipolar** | `bipolar_argumentation` | `bipolar_results` | `bipolar` | `bipolar_handler` |
 | **Header — Source** | — | `source_metadata` | — (pre-phase) | — |
-| **Header — Shield** | `adversarial_protection` | `ai_shield_results` | — (pre-phase) | `ai_shield_service` |
+| **Header — Shield** | `input_validation` | `ai_shield_results` | — (pre-phase) | `ai_shield_service` |
 
 ### Verification Rule
 
