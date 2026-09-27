@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from dotenv import load_dotenv
+from argumentation_analysis.config.env_loader import EnvironmentManager
 
 logger = logging.getLogger("evaluation.capability_eval")
 
@@ -262,7 +262,7 @@ class CapabilityEvalReport:
 
 
 def _load_dotenv() -> None:
-    load_dotenv(Path(".env"))
+    EnvironmentManager()
 
 
 def _build_eval_workflow():

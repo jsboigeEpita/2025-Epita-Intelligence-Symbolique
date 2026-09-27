@@ -21,7 +21,7 @@ def _write_env(path: Path, key: str, value: str) -> None:
 # ---------------------------------------------------------------------------
 # Module alias for patching
 # ---------------------------------------------------------------------------
-import project_core.managers.environment_manager as _em_mod
+import argumentation_analysis.config.env_loader as _em_mod
 from project_core.managers.environment_manager import EnvironmentManager
 
 
@@ -81,7 +81,7 @@ class TestDotenvDivergenceWarning:
             _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
         ):
             with caplog.at_level(
-                logging.WARNING, logger="project_core.managers.environment_manager"
+                logging.WARNING, logger="argumentation_analysis.config.env_loader"
             ):
                 EnvironmentManager()
 
@@ -106,7 +106,7 @@ class TestDotenvDivergenceWarning:
             _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
         ):
             with caplog.at_level(
-                logging.WARNING, logger="project_core.managers.environment_manager"
+                logging.WARNING, logger="argumentation_analysis.config.env_loader"
             ):
                 EnvironmentManager()
 
@@ -131,7 +131,7 @@ class TestDotenvDivergenceWarning:
             _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
         ):
             with caplog.at_level(
-                logging.WARNING, logger="project_core.managers.environment_manager"
+                logging.WARNING, logger="argumentation_analysis.config.env_loader"
             ):
                 EnvironmentManager()
 
@@ -156,7 +156,7 @@ class TestDotenvDivergenceWarning:
             _em_mod, "_SECONDARY_ENV_RELPATHS", ["argumentation_analysis/.env"]
         ):
             with caplog.at_level(
-                logging.WARNING, logger="project_core.managers.environment_manager"
+                logging.WARNING, logger="argumentation_analysis.config.env_loader"
             ):
                 EnvironmentManager()
 

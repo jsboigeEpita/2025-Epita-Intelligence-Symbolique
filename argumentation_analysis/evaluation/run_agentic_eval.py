@@ -22,14 +22,14 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
+from argumentation_analysis.config.env_loader import EnvironmentManager
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("evaluation.agentic_eval")
 
 
 def _load_dotenv() -> None:
-    load_dotenv(Path(".env"))
+    EnvironmentManager()
 
 
 def _build_full_workflow():

@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 def load_env_file():
     """Charge le fichier .env"""
-    env_file = Path(".env")
+    env_file = Path(__file__).resolve().parents[2] / ".env"
     if env_file.exists():
         # #2487: a value already in the environment wins (#2472).
         load_dotenv(env_file)

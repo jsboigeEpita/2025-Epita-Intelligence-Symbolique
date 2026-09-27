@@ -189,9 +189,8 @@ class TestCoherentThreeStateRunOrchestration:
         )
         # Avoid JVM / heavy env setup.
         monkeypatch.setattr(ro, "setup_environment", AsyncMock(return_value=None))
-        # #1794: main() loads the CLI .env — in-test that call would seed the
-        # real (nested) provider key into the process env.
-        monkeypatch.setattr(ro, "load_dotenv", lambda *a, **k: True)
+        # Keep the CLI loader from reading the real checkout .env in this test.
+        monkeypatch.setattr(ro, "EnvironmentManager", lambda: None)
         # #2346: main() configures the process's logging with force=True,
         # which would remove pytest's capture handlers.
         monkeypatch.setattr(ro, "setup_logging", lambda *a, **k: None)

@@ -4,6 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 from pathlib import Path
 
+from argumentation_analysis.config.env_loader import EnvironmentManager
+
+EnvironmentManager()
+
 # Le défaut de modèle de chat, en UN seul endroit (#2377, DoD item 4).
 # « gpt-5.6-luna » était recopié sur 4 surfaces hors résolveur : les deux
 # classes de settings ci-dessous, `service_manager.default_model_id`, et le
@@ -22,9 +26,7 @@ class OpenAISettings(BaseSettings):
     api_key: Optional[SecretStr] = None
     chat_model_id: str = DEFAULT_CHAT_MODEL_ID
     base_url: Optional[HttpUrl] = None
-    model_config = SettingsConfigDict(
-        env_prefix="OPENAI_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_prefix="OPENAI_", extra="ignore")
 
 
 class AzureOpenAISettings(BaseSettings):
@@ -43,8 +45,6 @@ class AzureOpenAISettings(BaseSettings):
     chat_model_id: Optional[str] = None
     model_config = SettingsConfigDict(
         env_prefix="AZURE_OPENAI_",
-        env_file=".env",
-        env_file_encoding="utf-8",
         extra="ignore",
     )
 
@@ -164,20 +164,13 @@ class JVMSettings(BaseSettings):
     ext_tools_dir: Path = Path("ext_tools")
     clingo_version: str = "5.4.0"
 
-    # env_file is not inherited: without it JVM_TWEETY_PINNED_MODULES set in
-    # .env -- the channel this project documents -- silently resolves to the
-    # empty string, parse_pin_spec('') returns {} without complaint, and the
-    # assembly proceeds unpinned. The pin is then lost one layer below where
-    # parse_pin_spec promises never to drop one. Measured on #1883 review.
-    model_config = SettingsConfigDict(
-        env_prefix="JVM_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    # EnvironmentManager loads the root .env before defaults are constructed,
+    # so JVM_TWEETY_PINNED_MODULES reaches this settings object via os.environ.
+    model_config = SettingsConfigDict(env_prefix="JVM_", extra="ignore")
 
 
 class AppSettings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(extra="ignore")
 
     # Child settings
     openai: OpenAISettings = OpenAISettings()

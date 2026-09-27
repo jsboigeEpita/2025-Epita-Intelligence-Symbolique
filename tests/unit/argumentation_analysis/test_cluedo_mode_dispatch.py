@@ -76,9 +76,8 @@ class TestCluedoModeDispatch:
             new_callable=AsyncMock,
             return_value=MagicMock(service_id="test"),
         ), patch(
-            # #1794: main() loads the CLI .env — in-test that call would seed
-            # the real (nested) provider key into the process env.
-            "argumentation_analysis.run_orchestration.load_dotenv",
+            # #1794: keep CLI environment loading out of this unit test.
+            "argumentation_analysis.run_orchestration.EnvironmentManager",
         ), patch(
             # #2346: main() configures the process's logging with force=True,
             # which would remove pytest's capture handlers.
@@ -120,8 +119,8 @@ class TestCluedoModeDispatch:
             new_callable=AsyncMock,
             return_value=MagicMock(service_id="test"),
         ), patch(
-            # #1794: same as above — main()'s CLI .env load stays out of tests.
-            "argumentation_analysis.run_orchestration.load_dotenv",
+            # #1794: keep CLI environment loading out of this unit test.
+            "argumentation_analysis.run_orchestration.EnvironmentManager",
         ), patch(
             # #2346: same as above — main()'s logging configuration too.
             "argumentation_analysis.run_orchestration.setup_logging",

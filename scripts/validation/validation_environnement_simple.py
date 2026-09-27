@@ -26,7 +26,7 @@ from project_core.utils.shell import run_in_activated_env, ShellCommandError
 from argumentation_analysis.core.environment import ensure_env
 
 # Ajouter le répertoire racine au path
-project_root = Path(__file__).parent.parent.absolute()
+project_root = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(project_root))
 
 

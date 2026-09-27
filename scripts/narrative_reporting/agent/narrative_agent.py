@@ -33,8 +33,10 @@ class NarrativeAgent:
         """
         self.kernel = sk.Kernel()
 
-        # Charger les variables d'environnement depuis le fichier .env à la racine
-        dotenv_path = Path(__file__).parent.parent.parent / '.env'
+        # Charger les variables d'environnement depuis le fichier .env à la
+        # racine du dépôt. #2708 : le chemin précédent s'arrêtait à `scripts/`
+        # (un niveau trop bas) — le `.env` y est introuvable.
+        dotenv_path = Path(__file__).parent.parent.parent.parent / ".env"
         load_dotenv(dotenv_path=dotenv_path)
 
         # Configuration du service OpenAI

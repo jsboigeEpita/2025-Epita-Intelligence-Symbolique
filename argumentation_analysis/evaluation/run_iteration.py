@@ -22,7 +22,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import load_dotenv
+from argumentation_analysis.config.env_loader import EnvironmentManager
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("evaluation.run_iteration")
@@ -139,7 +139,7 @@ ITERATION_CAPABILITIES = {
 
 
 def _load_dotenv() -> None:
-    load_dotenv(Path(".env"))
+    EnvironmentManager()
 
 
 def _build_iteration_workflow(iter_num: int, capabilities: List[str]):

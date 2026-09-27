@@ -195,7 +195,8 @@ async def repair_commit_file(kernel, prompt, file_path, narrative_context, semap
 
 async def main():
     """Fonction principale pour orchestrer l'identification et la réparation."""
-    load_dotenv()
+    # .env à la racine du dépôt via le chemin déjà ancré à ce fichier (#2708).
+    load_dotenv(project_root / ".env")
     
     # --- Initialisation du Kernel ---
     kernel = sk.Kernel()

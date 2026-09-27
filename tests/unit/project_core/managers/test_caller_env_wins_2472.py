@@ -27,7 +27,7 @@ from unittest.mock import patch
 
 import pytest
 
-import project_core.managers.environment_manager as em
+import argumentation_analysis.config.env_loader as em
 
 REPO = Path(__file__).resolve().parents[4]
 
@@ -69,7 +69,7 @@ from pathlib import Path
 sys.path.insert(0, sys.argv[1])
 names = sys.argv[3].split(",")
 before = {k: os.environ.get(k) for k in names}
-import project_core.managers.environment_manager as em
+import argumentation_analysis.config.env_loader as em
 em._find_repo_root = lambda: Path(sys.argv[2])
 os.environ[sys.argv[4]] = "from-sub-env"  # a sub-.env loaded before the root one
 em.EnvironmentManager()
@@ -110,7 +110,7 @@ _PLUGIN = r"""
 import json, os
 from pathlib import Path
 
-import project_core.managers.environment_manager as em
+import argumentation_analysis.config.env_loader as em
 
 em._find_repo_root = lambda: Path(os.environ["ISSUE_2472_ROOT"])
 

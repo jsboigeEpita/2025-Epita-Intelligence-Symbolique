@@ -17,35 +17,20 @@ from pathlib import Path
 
 def find_dotenv_file(start_path: str = None) -> str:
     """
-    Trouve le fichier .env en remontant dans l'arborescence
+    Trouve uniquement le fichier .env à la racine du dépôt.
 
     Args:
-        start_path: Chemin de départ (défaut: répertoire du script)
+        start_path: Ancien argument conservé pour compatibilité ; ignoré afin
+            de ne jamais sélectionner un .env imbriqué ou extérieur au dépôt.
 
     Returns:
         Chemin vers le fichier .env ou None
     """
-    if start_path is None:
-        if "__file__" in globals():
-            start_path = Path(__file__).parent.parent.parent.absolute()
-        else:
-            start_path = Path.cwd()
-    else:
-        start_path = Path(start_path)
-
-    # Recherche du .env en remontant
-    current = start_path
-    for _ in range(10):  # Limite la recherche
-        dotenv_path = current / ".env"
-        if dotenv_path.exists():
-            return str(dotenv_path)
-
-        parent = current.parent
-        if parent == current:  # Racine atteinte
-            break
-        current = parent
-
-    return None
+    # This legacy public helper must not search beyond the checkout or select
+    # a nested .env. Its start_path argument is retained for compatibility.
+    repo_root = Path(__file__).resolve().parents[2]
+    dotenv_path = repo_root / ".env"
+    return str(dotenv_path) if dotenv_path.is_file() else None
 
 
 def load_dotenv_simple(dotenv_path: str) -> bool:
@@ -139,10 +124,11 @@ def ensure_dotenv_loaded(start_path: str = None, silent: bool = True) -> bool:
     return success
 
 
-# Auto-exécution à l'import
+# Auto-exécution à l'import via le chargeur canonique.
 if __name__ != "__main__":
-    # Le module est importé, chargement automatique
-    ensure_dotenv_loaded()
+    from project_core.managers.environment_manager import EnvironmentManager
+
+    EnvironmentManager()
 
 
 if __name__ == "__main__":

@@ -16,8 +16,9 @@ from unittest.mock import patch, MagicMock
 
 # Chemins pour le patching
 SETTINGS_PATH = "argumentation_analysis.service_setup.analysis_services.settings"
-LOAD_DOTENV_PATH = "argumentation_analysis.service_setup.analysis_services.load_dotenv"
-FIND_DOTENV_PATH = "argumentation_analysis.service_setup.analysis_services.find_dotenv"
+ENV_MANAGER_PATH = (
+    "argumentation_analysis.service_setup.analysis_services.EnvironmentManager"
+)
 INITIALIZE_JVM_PATH = (
     "argumentation_analysis.service_setup.analysis_services.initialize_jvm"
 )
@@ -45,15 +46,9 @@ def mock_settings(mocker):
 
 
 @pytest.fixture
-def mock_load_dotenv(mocker):
-    """Mock la fonction load_dotenv."""
-    return mocker.patch(LOAD_DOTENV_PATH, return_value=True)
-
-
-@pytest.fixture
-def mock_find_dotenv(mocker):
-    """Mock la fonction find_dotenv."""
-    return mocker.patch(FIND_DOTENV_PATH, return_value=".env.test")
+def mock_env_manager(mocker):
+    """Keep this suite independent of the local root .env."""
+    return mocker.patch(ENV_MANAGER_PATH)
 
 
 @pytest.fixture
@@ -72,8 +67,7 @@ def mock_create_llm(mocker):
 
 def test_initialize_services_nominal_case(
     mock_settings,
-    mock_load_dotenv,
-    mock_find_dotenv,
+    mock_env_manager,
     mock_init_jvm,
     mock_create_llm,
     caplog,
@@ -92,8 +86,7 @@ def test_initialize_services_nominal_case(
 
     services = initialize_analysis_services()
 
-    mock_find_dotenv.assert_called_once()
-    mock_load_dotenv.assert_called_once()
+    mock_env_manager.assert_called_once_with()
 
     mock_init_jvm.assert_called_once_with()
     assert services.get("jvm_ready") is True
@@ -119,22 +112,22 @@ def test_initialize_services_nominal_case(
     assert "[OK] Service LLM créé (Type: MagicMock, ID: mock-llm)." in caplog.text
 
 
-def test_initialize_services_dotenv_fails(
-    mock_settings, mock_load_dotenv, mock_find_dotenv, caplog
-):
-    """Teste le cas où le chargement de .env échoue, mais sans impacter le reste."""
-    caplog.set_level(logging.INFO)
-    mock_settings.enable_jvm = False  # disable jvm to isolate
-    mock_find_dotenv.return_value = "/fake/.env"
-    mock_load_dotenv.return_value = False
+def test_initialize_services_without_root_dotenv(mock_settings, mock_env_manager):
+    """The canonical loader can report a missing root .env without stopping setup."""
+    mock_settings.enable_jvm = False
+    mock_env_manager.return_value.dotenv_loaded = False
 
-    with patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock()):
-        initialize_analysis_services()
-        mock_load_dotenv.assert_called_once_with("/fake/.env")
+    with patch(CREATE_LLM_SERVICE_PATH, return_value=MagicMock()) as create_llm:
+        services = initialize_analysis_services()
+
+    mock_env_manager.assert_called_once_with()
+    create_llm.assert_called_once()
+    assert services["jvm_ready"] is False
+    assert services["llm_service"] is create_llm.return_value
 
 
 def test_initialize_services_jvm_fails(
-    mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog, mocker
+    mock_settings, mock_init_jvm, mock_env_manager, caplog, mocker
 ):
     """Teste le cas où l'initialisation de la JVM échoue."""
     caplog.set_level(logging.WARNING)
@@ -155,8 +148,7 @@ def test_initialize_services_llm_fails_returns_none(
     mock_settings,
     mock_create_llm,
     mock_init_jvm,
-    mock_load_dotenv,
-    mock_find_dotenv,
+    mock_env_manager,
     caplog,
 ):
     """Teste le cas où la création du LLM retourne None."""
@@ -174,8 +166,7 @@ def test_initialize_services_llm_fails_raises_exception(
     mock_settings,
     mock_create_llm,
     mock_init_jvm,
-    mock_load_dotenv,
-    mock_find_dotenv,
+    mock_env_manager,
     caplog,
 ):
     """Teste le cas où la création du LLM lève une exception."""
@@ -199,7 +190,7 @@ def test_initialize_services_llm_fails_raises_exception(
 
 
 def test_initialize_services_jvm_disabled(
-    mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog
+    mock_settings, mock_init_jvm, mock_env_manager, caplog
 ):
     """Teste que la JVM n'est pas initialisée si elle est désactivée dans la config."""
     caplog.set_level(logging.INFO)
@@ -214,13 +205,8 @@ def test_initialize_services_jvm_disabled(
 
 
 def test_initialize_services_libs_dir_is_none(
-    mock_settings, mock_init_jvm, mock_load_dotenv, mock_find_dotenv, caplog
+    mock_settings, mock_init_jvm, mock_env_manager, caplog
 ):
-    # #1794: without these mocks, initialize_analysis_services() runs a real
-    # load_dotenv(find_dotenv()) which resolves the NESTED .env (from
-    # argumentation_analysis/service_setup/ it walks up to argumentation_analysis/.env)
-    # and seeds the real provider key into the process env mid-suite — the writer
-    # behind the surviving pl_2pass POSTs (named by per-directory bisection).
     """Teste le cas où LIBS_DIR est None dans la config."""
     caplog.set_level(logging.ERROR)
     mock_settings.enable_jvm = True
@@ -242,9 +228,7 @@ def test_initialize_services_libs_dir_is_none(
 # --- #2115 : la lecture du model_id, sur l'objet settings RÉEL ----------------
 
 
-def test_llm_service_is_built_with_real_settings(
-    mock_load_dotenv, mock_find_dotenv, mock_init_jvm
-):
+def test_llm_service_is_built_with_real_settings(mock_env_manager, mock_init_jvm):
     """The service is built when ``settings`` is the real object (#2115).
 
     Every other test in this module patches ``settings`` with a MagicMock —
@@ -265,7 +249,7 @@ def test_llm_service_is_built_with_real_settings(
 
 
 def test_llm_service_receives_the_nested_model_id(
-    mock_load_dotenv, mock_find_dotenv, mock_init_jvm, mocker
+    mock_env_manager, mock_init_jvm, mocker
 ):
     """The model_id passed is the one the real settings actually carry."""
     from argumentation_analysis.config.settings import settings as real_settings

@@ -30,6 +30,7 @@ import asyncio
 import json
 import os
 import sys
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -37,7 +38,8 @@ def _ensure_api_key() -> Optional[str]:
     """Return the active API key or print a clear skip reason."""
     from dotenv import load_dotenv
 
-    load_dotenv()
+    # Root .env via a path anchored to this file (#2708) — no upward walk.
+    load_dotenv(Path(__file__).resolve().parents[2] / ".env")
     if os.environ.get("OPENROUTER_API_KEY") and os.environ.get("OPENROUTER_BASE_URL"):
         return "openrouter"
     if os.environ.get("OPENAI_API_KEY"):

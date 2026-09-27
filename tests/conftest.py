@@ -243,7 +243,7 @@ def pytest_configure(config):
     # The root .env is loaded above by ensure_env(). --allow-dotenv layers
     # .env.test over it; a value the caller set wins over both (#2472).
     if config.getoption("--allow-dotenv"):
-        from project_core.managers import environment_manager as _env_manager
+        from argumentation_analysis.config import env_loader as _env_manager
 
         repo_root = _env_manager._find_repo_root()
         dotenv_test_path = repo_root / ".env.test" if repo_root else None

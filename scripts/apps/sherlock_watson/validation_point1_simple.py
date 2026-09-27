@@ -20,8 +20,10 @@ from typing import Dict, Any, List
 sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
-# Configuration des chemins
-PROJECT_ROOT = Path(__file__).parent.parent.parent.absolute()
+# Configuration des chemins — racine du dépôt. #2708 : l'expression précédente
+# s'arrêtait à `scripts/` (un niveau trop bas) et cherchait `scripts/.env`,
+# inexistant : le chargement silencieux ne chargeait jamais rien.
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.absolute()
 sys.path.insert(0, str(PROJECT_ROOT))
 
 # Chargement des variables d'environnement
