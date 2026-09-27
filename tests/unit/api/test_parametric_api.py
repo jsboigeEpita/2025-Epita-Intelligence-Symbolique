@@ -11,7 +11,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ──── Model validation tests ────
 
 
@@ -132,81 +131,74 @@ class TestCustomWorkflowRequestModel:
 
 
 class TestContextPropagation:
-    """Test that selectors build correct context dict."""
+    """The route builds the selector context the pipeline receives (#2754).
+
+    These tests used to rebuild the route's branches inline and assert their
+    own copy, so deleting the production builder left them green. They now
+    drive ``POST /api/workflow/custom`` and read the context the pipeline
+    was actually called with.
+    """
+
+    @staticmethod
+    def _forwarded_context(payload):
+        from fastapi.testclient import TestClient
+
+        from api.main import app
+
+        pipeline = AsyncMock(
+            return_value={
+                "workflow_name": payload["workflow"],
+                "summary": {"completed": 0, "failed": 0, "skipped": 0, "total": 0},
+            }
+        )
+        with patch(
+            "argumentation_analysis.orchestration.unified_pipeline.run_unified_analysis",
+            new=pipeline,
+        ):
+            client = TestClient(app, raise_server_exceptions=False)
+            response = client.post("/api/workflow/custom", json=payload)
+        assert response.status_code == 200
+        assert response.json()["status"] == "completed"
+        pipeline.assert_awaited_once()
+        return pipeline.call_args.kwargs["context"]
 
     def test_default_context_no_overrides(self):
-        """Defaults produce minimal context (only fallacy_tier)."""
-        from api.proposal_models import CustomWorkflowRequest
-
-        req = CustomWorkflowRequest(text="test", workflow="light")
-        context = {}
-        context["fallacy_tier"] = req.fallacy_tier
-        if req.shield_preset != "off":
-            context["shield_config"] = {"preset": req.shield_preset}
-        if req.vote_method != "copeland":
-            context["vote_method"] = req.vote_method
-        if req.consensus_threshold != 0.7:
-            context["consensus_threshold"] = req.consensus_threshold
-
+        """Defaults forward only the fallacy tier."""
+        context = self._forwarded_context({"text": "test", "workflow": "light"})
         assert context == {"fallacy_tier": "llm"}
 
     def test_vote_method_propagated(self):
-        """Non-default vote_method appears in context."""
-        from api.proposal_models import CustomWorkflowRequest
-
-        req = CustomWorkflowRequest(
-            text="test", workflow="light", vote_method="schulze"
+        """A non-default vote method reaches the pipeline, alone."""
+        context = self._forwarded_context(
+            {"text": "test", "workflow": "light", "vote_method": "schulze"}
         )
-        context = {}
-        context["fallacy_tier"] = req.fallacy_tier
-        if req.vote_method != "copeland":
-            context["vote_method"] = req.vote_method
-        if req.consensus_threshold != 0.7:
-            context["consensus_threshold"] = req.consensus_threshold
-
-        assert context["vote_method"] == "schulze"
+        assert context == {"fallacy_tier": "llm", "vote_method": "schulze"}
 
     def test_consensus_threshold_propagated(self):
-        """Non-default consensus_threshold appears in context."""
-        from api.proposal_models import CustomWorkflowRequest
-
-        req = CustomWorkflowRequest(
-            text="test", workflow="light", consensus_threshold=0.5
+        """A non-default consensus threshold reaches the pipeline, alone."""
+        context = self._forwarded_context(
+            {"text": "test", "workflow": "light", "consensus_threshold": 0.5}
         )
-        context = {}
-        context["fallacy_tier"] = req.fallacy_tier
-        if req.vote_method != "copeland":
-            context["vote_method"] = req.vote_method
-        if req.consensus_threshold != 0.7:
-            context["consensus_threshold"] = req.consensus_threshold
-
-        assert context["consensus_threshold"] == 0.5
+        assert context == {"fallacy_tier": "llm", "consensus_threshold": 0.5}
 
     def test_all_selectors_propagated(self):
-        """All selectors propagated together."""
-        from api.proposal_models import CustomWorkflowRequest
-
-        req = CustomWorkflowRequest(
-            text="test",
-            workflow="full",
-            fallacy_tier="full",
-            shield_preset="strict",
-            vote_method="kemeny_young",
-            consensus_threshold=0.3,
+        """All selectors reach the pipeline together."""
+        context = self._forwarded_context(
+            {
+                "text": "test",
+                "workflow": "full",
+                "fallacy_tier": "full",
+                "shield_preset": "strict",
+                "vote_method": "kemeny_young",
+                "consensus_threshold": 0.3,
+            }
         )
-        context = {}
-        context["fallacy_tier"] = req.fallacy_tier
-        if req.shield_preset != "off":
-            context["shield_config"] = {"preset": req.shield_preset}
-        if req.vote_method != "copeland":
-            context["vote_method"] = req.vote_method
-        if req.consensus_threshold != 0.7:
-            context["consensus_threshold"] = req.consensus_threshold
-
-        assert context["fallacy_tier"] == "full"
-        assert context["shield_config"] == {"preset": "strict"}
-        assert context["vote_method"] == "kemeny_young"
-        assert context["consensus_threshold"] == 0.3
+        assert context == {
+            "fallacy_tier": "full",
+            "shield_config": {"preset": "strict"},
+            "vote_method": "kemeny_young",
+            "consensus_threshold": 0.3,
+        }
 
 
 # ──── API endpoint tests (mocked pipeline) ────
@@ -241,12 +233,9 @@ class TestWorkflowEndpoint:
             assert data["status"] == "completed"
 
             # Verify context was passed with defaults
-            call_kwargs = mock_pipeline.call_args
-            context = call_kwargs.kwargs.get("context") or (
-                call_kwargs[1].get("context") if len(call_kwargs.args) > 1 else None
-            )
-            if context is not None:
-                assert context.get("fallacy_tier") == "llm"
+            context = mock_pipeline.call_args.kwargs.get("context")
+            assert context is not None, "Pipeline context must be passed"
+            assert context.get("fallacy_tier") == "llm"
 
     @pytest.mark.asyncio
     async def test_endpoint_with_fallacy_shield_selectors(self):
@@ -279,9 +268,9 @@ class TestWorkflowEndpoint:
             # Verify context propagation
             call_kwargs = mock_pipeline.call_args
             context = call_kwargs.kwargs.get("context")
-            if context is not None:
-                assert context.get("fallacy_tier") == "taxonomy"
-                assert context.get("shield_config") == {"preset": "basic"}
+            assert context is not None, "Pipeline context must be passed"
+            assert context.get("fallacy_tier") == "taxonomy"
+            assert context.get("shield_config") == {"preset": "basic"}
 
     @pytest.mark.asyncio
     async def test_endpoint_vote_method_consumer(self):
@@ -781,11 +770,15 @@ class TestConversationalContextMerge:
                 # Verify the per-arg consumer received the merged context
                 mock_per_arg.assert_called_once()
                 call_kwargs = mock_per_arg.call_args
-                context = call_kwargs.args[1] if len(call_kwargs.args) > 1 else call_kwargs.kwargs.get("context")
-                assert context is not None
-                assert context.get("fallacy_tier") == "taxonomy", (
-                    "selector_context must be merged into the harness context dict"
+                context = (
+                    call_kwargs.args[1]
+                    if len(call_kwargs.args) > 1
+                    else call_kwargs.kwargs.get("context")
                 )
+                assert context is not None
+                assert (
+                    context.get("fallacy_tier") == "taxonomy"
+                ), "selector_context must be merged into the harness context dict"
 
     @pytest.mark.asyncio
     async def test_no_selector_context_preserves_base_context(self):
