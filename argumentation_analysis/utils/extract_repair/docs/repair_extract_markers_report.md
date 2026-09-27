@@ -100,7 +100,7 @@ python repair_extract_markers.py [options]
 ```
 
 Options disponibles :
-- `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut : `repair_report.html`)
+- `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut : `repair_report_unencrypted.html` ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
 - `--save`, `-s` : Sauvegarder les modifications (défaut : non)
 - `--hitler-only` : Traiter uniquement le corpus de discours d'Hitler (défaut : non)
 

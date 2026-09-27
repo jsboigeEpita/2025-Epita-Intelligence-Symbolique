@@ -145,7 +145,7 @@ def test_parse_extract_verification_arguments_defaults():
     """Teste les valeurs par défaut pour la vérification des extraits."""
     with patch("sys.argv", ["script_name"]):
         args = parse_extract_verification_arguments()
-    assert args.output == "verify_report.html"  # Valeur par défaut
+    assert args.output == "verify_report_unencrypted.html"  # Valeur par défaut
     assert args.verbose is False
     assert args.input is None  # Valeur par défaut
     assert args.single_orator_only is False  # Valeur par défaut
@@ -236,7 +236,7 @@ def test_parse_extract_repair_arguments_defaults():
     """Teste les valeurs par défaut pour la réparation des extraits."""
     with patch("sys.argv", ["script_name"]):
         args = parse_extract_repair_arguments()
-    assert args.output == "repair_report.html"
+    assert args.output == "repair_report_unencrypted.html"
     assert args.save is False
     assert args.single_orator_only is False
     assert args.verbose is False

@@ -80,7 +80,7 @@ def test_main_reaches_the_llm_service_after_encrypted_load(
             "--input",
             str(enc_file),
             "--output",
-            "unused.html",
+            str(tmp_path / "unused.html"),
         ],
     )
 

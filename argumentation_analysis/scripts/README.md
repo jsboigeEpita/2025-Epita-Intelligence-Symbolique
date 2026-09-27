@@ -30,14 +30,14 @@ Le script peut être exécuté directement ou via le point d'entrée `run_extrac
 
 ```bash
 # Exécution directe
-python -m argumentation_analysis.scripts.repair_extract_markers --output repair_report.html --save
+python -m argumentation_analysis.scripts.repair_extract_markers --output repair_report_unencrypted.html --save
 
 # Via le point d'entrée
-python run_extract_repair.py --output repair_report.html --save
+python run_extract_repair.py --output repair_report_unencrypted.html --save
 ```
 
 #### Options
-- `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: repair_report.html)
+- `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: repair_report_unencrypted.html ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
 - `--save`, `-s`: Sauvegarder les modifications
 - `--single-orator-only`: Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 - `--verbose`, `-v`: Activer le mode verbeux
@@ -59,14 +59,14 @@ Le script peut être exécuté directement ou via le point d'entrée `run_verify
 
 ```bash
 # Exécution directe
-python -m argumentation_analysis.scripts.verify_extracts --output verify_report.html
+python -m argumentation_analysis.scripts.verify_extracts --output verify_report_unencrypted.html
 
 # Via le point d'entrée
-python run_verify_extracts.py --output verify_report.html
+python run_verify_extracts.py --output verify_report_unencrypted.html
 ```
 
 #### Options
-- `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: verify_report.html)
+- `--output`, `-o`: Fichier de sortie pour le rapport HTML (défaut: verify_report_unencrypted.html ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
 - `--verbose`, `-v`: Activer le mode verbeux
 - `--input`, `-i`: Fichier d'entrée personnalisé
 - `--single-orator-only`: Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)

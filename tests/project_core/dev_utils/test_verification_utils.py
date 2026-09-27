@@ -234,7 +234,7 @@ class TestVerificationUtils(unittest.TestCase):
                 "message": "Chargement source impossible",
             },
         ]
-        output_file_path = "test_report.html"
+        output_file_path = "test_report_unencrypted.html"
 
         generate_verification_report(results_data, output_file_path)
 

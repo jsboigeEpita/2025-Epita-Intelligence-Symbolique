@@ -14,9 +14,9 @@
       "import_testing_utils.py": 130,
       "project_structure_utils.py": 93,
       "refactoring_utils.py": 518,
-      "repair_utils.py": 387,
+      "repair_utils.py": 392,
       "reporting_utils.py": 158,
-      "verification_utils.py": 454
+      "verification_utils.py": 462
     },
     "init_lines": 29,
     "core_eight": [

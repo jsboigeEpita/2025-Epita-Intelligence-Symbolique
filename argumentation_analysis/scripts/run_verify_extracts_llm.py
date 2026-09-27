@@ -35,6 +35,9 @@ from argumentation_analysis.ui.extract_utils import (
     load_extract_definitions_safely,
 )  # Import direct
 from argumentation_analysis.core.llm_service import create_llm_service  # Import direct
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
 from argumentation_analysis.core.utils.cli_utils import (
     resolve_only_source_indices,
 )  # Import direct
@@ -56,7 +59,7 @@ def build_verify_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         "-o",
-        default="verify_extracts_llm_report.html",
+        default="verify_extracts_llm_report_unencrypted.html",
         help="Fichier de sortie pour le rapport HTML",
     )
     parser.add_argument(
@@ -104,6 +107,9 @@ def build_verify_parser() -> argparse.ArgumentParser:
 async def main():
     """Fonction principale."""
     args = build_verify_parser().parse_args()
+    # The report goes next to this script; refuse that destination before
+    # loading or calling anything (#2773).
+    check_plaintext_destination(Path(__file__).parent / args.output)
 
     if args.verbose:
         logger.setLevel(logging.DEBUG)

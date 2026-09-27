@@ -29,6 +29,9 @@ from argumentation_analysis.services.definition_service import DefinitionService
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -203,6 +206,9 @@ def generate_verification_report(
     Génère un rapport HTML des résultats de la vérification.
     (Anciennement generate_report, renommée pour clarté)
     """
+    # The report quotes extract names and markers: refuse a destination git
+    # could stage before building it (#2773).
+    check_plaintext_destination(output_file_str)
     logger.info(f"Génération du rapport de vérification dans '{output_file_str}'...")
 
     status_counts = {"valid": 0, "warning": 0, "invalid": 0, "error": 0}
@@ -329,6 +335,8 @@ def run_extract_verification_pipeline(
     """
     Exécute le pipeline de vérification des extraits.
     """
+    # Refuse the destination before loading anything (#2773).
+    check_plaintext_destination(output_report_path_str)
     logger.info("Démarrage du pipeline de vérification des extraits...")
     logger.info(f"Racine du projet utilisée pour le pipeline: {project_root_dir}")
 
