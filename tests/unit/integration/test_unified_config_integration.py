@@ -262,7 +262,6 @@ class TestUnifiedConfigIntegration:
         assert hasattr(config, "get_tweety_config")
         assert hasattr(config, "get_llm_config")
         assert hasattr(config, "get_taxonomy_config")
-        assert hasattr(config, "get_agent_classes")
 
         # Test des configurations de service
         tweety_config = config.get_tweety_config()

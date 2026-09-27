@@ -79,7 +79,6 @@ class AgentType(enum.Enum):
     FOL_LOGIC = "fol_logic"
     SYNTHESIS = "synthesis"
     EXTRACT = "extract"
-    PM = "pm"
 
 
 # ==================== CONFIGURATION PRINCIPALE ====================
@@ -231,19 +230,6 @@ class UnifiedConfig:
             self.use_authentic_services = True
             self.default_model = DEFAULT_CHAT_MODEL_ID
             self.default_provider = "openai"
-
-    def get_agent_classes(self) -> Dict[str, str]:
-        """Retourne le mapping des types d'agents vers leurs classes."""
-        mapping = {
-            AgentType.INFORMAL: "InformalAnalysisAgent",
-            AgentType.LOGIC: "ModalLogicAgent",  # Legacy
-            AgentType.FOL_LOGIC: "FOLLogicAgent",
-            AgentType.SYNTHESIS: "SynthesisAgent",
-            AgentType.EXTRACT: "ExtractAgent",
-            AgentType.PM: "ProjectManagerAgent",
-        }
-
-        return {agent.value: mapping[agent] for agent in self.agents}
 
     def get_tweety_config(self) -> Dict[str, Any]:
         """Configuration spécifique pour TweetyProject."""

@@ -76,7 +76,6 @@ MAIN_GUARDED_BOOTSTRAPS = [
     "argumentation_analysis/run_orchestration.py",
     "argumentation_analysis/scripts/run_fix_missing_first_letter.py",
     "argumentation_analysis/scripts/run_verify_extracts_llm.py",
-    "argumentation_analysis/scripts/simulate_balanced_participation.py",
 ]
 
 # initialize_cache is left out: it imports ``ui.app``, which needs ``ipywidgets``,

@@ -322,7 +322,7 @@ RÉPONDS EN FORMAT JSON :
         # kernel Semantic Kernel de ce dépôt (AttributeError avalée par le
         # try/except de la def vivante : les fonctions ne s'enregistraient
         # JAMAIS, même sur le chemin awaited). ``add_function`` est la forme
-        # qui fonctionne (pm_agent, sherlock_enquete_agent).
+        # qui fonctionne (sherlock_enquete_agent).
         self.kernel.add_function(
             function_name="convert_to_fol",
             plugin_name="fol_logic",

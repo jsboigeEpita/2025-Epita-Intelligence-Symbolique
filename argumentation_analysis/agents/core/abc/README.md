@@ -21,13 +21,13 @@ Frontière : ce paquet ne connaît ni les fallacies, ni la qualité, ni Tweety a
 
 ## Points d'entrée valides
 
-1. **Héritage direct** — `from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent` (`core/pm/pm_agent.py`, `core/debate/debate_agent.py`, `core/synthesis/deep_synthesis_agent.py`…), puis `MyAgent(kernel=kernel, agent_name="…")`. 15 sites d'import production mesurés (`grep -rn 'abc\.agent_bases' argumentation_analysis/` = 17 lignes, moins 1 ligne commentée `orchestration/cluedo_extended_orchestrator.py` et 1 commentaire #2137 — voir Limites).
+1. **Héritage direct** — `from argumentation_analysis.agents.core.abc.agent_bases import BaseAgent` (`core/debate/debate_agent.py`, `core/synthesis/deep_synthesis_agent.py`…), puis `MyAgent(kernel=kernel, agent_name="…")`. 14 sites d'import production mesurés (`grep -rn 'abc\.agent_bases' argumentation_analysis/` = 15 lignes, moins 1 ligne commentée `orchestration/cluedo_extended_orchestrator.py` et 1 commentaire #2137 — voir Limites ; `core/pm/pm_agent.py` a quitté la liste en #2699).
 2. **Fabrique logique** — `LogicAgentFactory.create_agent(logic_type: str, kernel: Kernel, llm_service: Optional[Any] = None) -> BaseLogicAgent` (`core/logic/logic_factory.py`, mapping `_agent_classes`). C'est le point d'entrée production pour instancier un agent logique sans nommer sa classe. Elle lève : `ValueError` pour un `logic_type` qu'elle ne sait pas instancier (le message nomme ceux qu'elle sait), `TypeError` pour un `llm_service` qui n'est pas un service (#2441), et l'exception du constructeur telle quelle (#2649 — un constructeur qui échoue nomme ses fonctions sémantiques ou son bridge, voir `core/semantic_setup.py`).
 
 ## Amont / aval
 
 - **Amont** : `semantic_kernel` (`Kernel`, `ChatCompletionAgent`), `pydantic` (`PrivateAttr`), et par typage seulement (`TYPE_CHECKING`) `logic/belief_set.BeliefSet` et `logic/tweety_bridge.TweetyBridge`.
-- **Aval** : 13 modules d'agents — `informal_fallacy_agent`, `counter_argument/counter_agent`, `debate/debate_agent`, `extract/extract_agent`, `informal/informal_agent`, `logic/{fol, modal, propositional}_logic_agent`, `oracle/oracle_base_agent`, `pm/{pm_agent, sherlock_enquete_agent}`, `synthesis/{synthesis_agent, deep_synthesis_agent}`.
+- **Aval** : 12 modules d'agents — `informal_fallacy_agent`, `counter_argument/counter_agent`, `debate/debate_agent`, `extract/extract_agent`, `informal/informal_agent`, `logic/{fol, modal, propositional}_logic_agent`, `oracle/oracle_base_agent`, `pm/sherlock_enquete_agent`, `synthesis/deep_synthesis_agent`.
 - **Jamais aval** : `agents/factory.py` (AgentFactory) ne référence pas ce paquet (grep vide) ; `registry_setup.py` n'y touche pas non plus.
 
 ## Statut d'intégration

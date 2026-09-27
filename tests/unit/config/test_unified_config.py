@@ -322,23 +322,6 @@ class TestUnifiedConfig:
         assert taxonomy_config["require_full_load"] is True
         assert taxonomy_config["node_count"] == 1000
 
-    def test_get_agent_classes(self):
-        """Test le mapping des agents vers leurs classes."""
-        config = UnifiedConfig(
-            agents=[
-                AgentType.INFORMAL,
-                AgentType.FOL_LOGIC,
-                AgentType.SYNTHESIS,
-                AgentType.PM,
-            ]
-        )
-
-        agent_classes = config.get_agent_classes()
-        assert agent_classes["informal"] == "InformalAnalysisAgent"
-        assert agent_classes["fol_logic"] == "FOLLogicAgent"
-        assert agent_classes["synthesis"] == "SynthesisAgent"
-        assert agent_classes["pm"] == "ProjectManagerAgent"
-
 
 class TestPresetConfigs:
     """Tests pour les configurations prédéfinies."""

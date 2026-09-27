@@ -60,7 +60,6 @@ def test_authenticity_constraints()        # Contraintes authenticité
 #### Tests des services spécialisés
 ```python
 def test_service_configurations()          # Tweety/LLM/Taxonomie
-def test_get_agent_classes()              # Mapping agents → classes
 ```
 
 ### Combinaisons testées

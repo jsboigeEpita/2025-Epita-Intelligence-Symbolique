@@ -4,7 +4,6 @@ import sys
 # List of files identified with syntax errors, likely due to BOM
 FILES_TO_FIX = [
     "argumentation_analysis/agents/core/logic/fol_logic_agent.py",
-    "argumentation_analysis/agents/core/pm/pm_agent.py",
     "argumentation_analysis/core/llm_service.py",
     "argumentation_analysis/core/strategies.py",
     "argumentation_analysis/orchestration/cluedo_extended_orchestrator.py",
@@ -13,7 +12,6 @@ FILES_TO_FIX = [
     "argumentation_analysis/orchestration/hierarchical/operational/adapters/pl_agent_adapter.py",
     "argumentation_analysis/orchestration/real_llm_orchestrator.py",
     "argumentation_analysis/pipelines/unified_text_analysis.py",
-    "argumentation_analysis/scripts/simulate_balanced_participation.py",
     "argumentation_analysis/utils/dev_tools/repair_utils.py",
     "argumentation_analysis/utils/extract_repair/verify_extracts_with_llm.py",
     "argumentation_analysis/utils/tweety_error_analyzer.py",

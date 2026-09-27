@@ -197,8 +197,9 @@ def _detect_language(text: str) -> str:
 # is the CANONICAL PM for the conversational path. It uses StateManagerPlugin's
 # designate_next_agent() kernel function, which writes to state._next_agent_designated.
 # DelegatingSelectionStrategy (wired in _run_phase) reads that field to honour PM
-# designation. The separate ProjectManagerAgent in agents/core/pm/pm_agent.py has
-# no current production entry point (its runner was retired, #2638) and is NOT used here.
+# designation. The separate scripted ProjectManagerAgent that used to live in
+# agents/core/pm/pm_agent.py was retired in #2699 (no consumer left once its
+# runner went, #2638/#2704); this inline PM is the whole PM story here.
 AGENT_CONFIG = {
     "ProjectManager": {
         "speciality": "project_manager",

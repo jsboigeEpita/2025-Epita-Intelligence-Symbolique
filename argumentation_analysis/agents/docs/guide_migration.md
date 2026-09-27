@@ -42,7 +42,6 @@ from agents.run_scripts import run_complete_test
 ```python
 # Imports des agents
 from agents.core.informal.informal_agent import InformalAgent
-from agents.core.pm.pm_agent import PMAgent
 from agents.core.pl.pl_agent import PLAgent
 from agents.core.extract.extract_agent import ExtractAgent
 
@@ -117,18 +116,15 @@ from agents.pm import setup_pm_agent
 
 # Initialisation des agents
 kernel_informal, informal_agent = await setup_informal_agent(llm_service)
-kernel_pm, pm_agent = await setup_pm_agent(llm_service)
 ```
 
 ### Nouvelle Initialisation
 
 ```python
 from agents.core.informal.informal_definitions import setup_informal_agent
-from agents.core.pm.pm_definitions import setup_pm_agent
 
 # Initialisation des agents
 kernel_informal, informal_agent = await setup_informal_agent(llm_service)
-kernel_pm, pm_agent = await setup_pm_agent(llm_service)
 ```
 
 ## Mise à Jour des Références aux Outils
@@ -196,8 +192,7 @@ def verify_imports():
     try:
         # Vérification des imports des agents
         from agents.core.informal.informal_agent import InformalAgent
-        from agents.core.pm.pm_agent import PMAgent
-        from agents.core.pl.pl_agent import PLAgent
+                from agents.core.pl.pl_agent import PLAgent
         from agents.core.extract.extract_agent import ExtractAgent
         
         # Vérification des imports des outils

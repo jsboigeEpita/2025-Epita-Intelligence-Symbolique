@@ -99,10 +99,6 @@ class TestFOLLogicAgentInitialization:
             mock_level=MockLevel.NONE,
         )
 
-        agent_classes = config.get_agent_classes()
-        assert "fol_logic" in agent_classes
-        assert agent_classes["fol_logic"] == "FOLLogicAgent"
-
         tweety_config = config.get_tweety_config()
         assert tweety_config["logic_type"] == "fol"
         assert tweety_config["require_real_jar"] is True

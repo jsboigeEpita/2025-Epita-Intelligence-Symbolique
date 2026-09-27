@@ -87,9 +87,11 @@ def record_unresolved_designation(
 ) -> None:
     """Guarded entry point for :meth:`UnifiedAnalysisState.record_designation_unresolved`.
 
-    #1751. The three selectors that can absorb a designation
-    (``DelegatingSelectionStrategy``, ``BalancedParticipationStrategy``,
-    ``conversational_orchestrator._select_next_agent``) only ever type-check the
+    #1751. The selectors that can absorb a designation
+    (``DelegatingSelectionStrategy``,
+    ``conversational_orchestrator._select_next_agent``; the third,
+    ``BalancedParticipationStrategy``, was retired with its class in #2699)
+    only ever type-check the
     ``RhetoricalAnalysisState`` **base**, which carries no deliberation trace.
     Recording is therefore best-effort: on a state without the trace this is a
     no-op and selection proceeds exactly as before. Making it mandatory would

@@ -8,7 +8,6 @@ from argumentation_analysis.core.shared_state import RhetoricalAnalysisState
 from argumentation_analysis.core.state_manager_plugin import StateManagerPlugin
 from argumentation_analysis.core.strategies import (
     SimpleTerminationStrategy,
-    BalancedParticipationStrategy,
 )
 
 
@@ -94,31 +93,3 @@ async def test_simple_termination_strategy(rhetorical_state):
     assert await strategy.should_terminate(None, []) is False  # Tour 1
     assert await strategy.should_terminate(None, []) is False  # Tour 2
     assert await strategy.should_terminate(None, []) is True  # Tour 3
-
-
-@pytest.mark.asyncio
-@pytest.mark.no_jvm_session
-async def test_balanced_participation_strategy(rhetorical_state):
-    """Teste la stratégie BalancedParticipationStrategy."""
-    # CORRECTION: La stratégie attend des objets Agent (avec un .name), pas des strings.
-    mock_agents = [
-        SimpleNamespace(name="Agent_A"),
-        SimpleNamespace(name="Agent_B"),
-        SimpleNamespace(name="Agent_C"),
-    ]
-    strategy = BalancedParticipationStrategy(mock_agents, rhetorical_state, "Agent_A")
-
-    # CORRECTION: La méthode `next` est `async`.
-    # La stratégie maintient l'état de participation en interne.
-    # On vérifie que les agents sont sélectionnés à tour de rôle (approximation).
-    # Premier appel, pas d'historique, devrait retourner l'agent par défaut.
-    next_agent_1 = await strategy.next(mock_agents, [])
-    assert next_agent_1.name == "Agent_A"
-
-    # Deuxième appel
-    next_agent_2 = await strategy.next(mock_agents, [])
-    assert next_agent_2.name != "Agent_A"  # Devrait être B ou C
-
-    # Troisième appel
-    next_agent_3 = await strategy.next(mock_agents, [])
-    assert next_agent_3.name not in ["Agent_A", next_agent_2.name]
