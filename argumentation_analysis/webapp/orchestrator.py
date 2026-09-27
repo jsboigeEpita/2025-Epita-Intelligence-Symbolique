@@ -38,11 +38,10 @@ from playwright.async_api import async_playwright, Playwright, Browser
 import aiohttp
 import psutil
 
-# Définir le chemin racine du projet pour les imports
-# On suppose que ce script est dans un sous-répertoire de la racine.
-# C'est une correction clé pour résoudre les ModuleNotFoundError.
-project_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(project_root))
+# Seul le lancement direct comme fichier exige la racine pour les imports.
+# Un import ou un lancement avec -m utilise le chemin fourni par l'appelant.
+if __name__ == "__main__" and not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 # Imports internes (sans activation d'environnement au niveau du module)
 # Le bootstrap se fera dans la fonction main()

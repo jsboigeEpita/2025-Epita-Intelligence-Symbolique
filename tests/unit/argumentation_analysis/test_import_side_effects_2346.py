@@ -53,16 +53,8 @@ from tests.support.isolated_script import run_without_editable_install
 REPO = Path(__file__).resolve().parents[3]
 PACKAGE = "argumentation_analysis"
 
-# Modules that still change sys.path at import. The one left inserts the
-# repository root because, imported as a package module, it needs a root-level
-# package (``project_core``) that the distribution does not ship (pyproject
-# ``packages.find`` includes ``argumentation_analysis*`` only): from an
-# installed package run outside the checkout, the insertion is what makes that
-# import resolve. Guarding it would degrade the module to its no-port-manager
-# fallback in silence; repairing it is a packaging decision (#2346).
-SYS_PATH_DEBT = {
-    "argumentation_analysis/webapp/orchestrator.py": "#2346",
-}
+# Keep an explicit empty census: any import-time sys.path insertion is new debt.
+SYS_PATH_DEBT = {}
 
 # Files launched directly whose repository-root bootstrap runs only under
 # ``if __name__ == "__main__":`` (#2346). Imported as a package module they
@@ -353,6 +345,7 @@ imported = importlib.import_module(module)
 print(json.dumps({
     "file": norm(imported.__file__),
     "root_on_path": norm(root) in [norm(p) for p in sys.path],
+    "central_port_manager_available": getattr(imported, "CENTRAL_PORT_MANAGER_AVAILABLE", None),
 }))
 """
 
@@ -379,6 +372,43 @@ def test_importing_from_an_installed_package_leaves_the_root_off_sys_path(
     seen = _import_package_only(module, REPO, tmp_path)
     assert seen["file"].startswith(os.path.normcase(str(REPO))), seen["file"]
     assert seen["root_on_path"] is False, seen
+
+
+def test_webapp_import_does_not_insert_checkout_root(tmp_path):
+    seen = _import_package_only(
+        "argumentation_analysis.webapp.orchestrator", REPO, tmp_path
+    )
+    assert seen["root_on_path"] is False, seen
+    assert seen["central_port_manager_available"] is False, seen
+
+
+def test_webapp_direct_file_launcher_still_resolves_project_imports():
+    done = run_without_editable_install(
+        REPO / "argumentation_analysis/webapp/orchestrator.py",
+        REPO,
+        run_name="__main__",
+        args=("--help",),
+        timeout=120,
+    )
+    assert done.returncode == 0, done.stderr[-3000:]
+    assert "--help" in done.stdout
+    assert "Gestionnaire centralisé des ports non disponible" not in done.stdout
+
+
+def test_webapp_module_launcher_still_resolves_project_imports(tmp_path):
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(REPO)
+    done = subprocess.run(
+        [sys.executable, "-m", "argumentation_analysis.webapp.orchestrator", "--help"],
+        cwd=tmp_path,
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    assert done.returncode == 0, done.stderr[-3000:]
+    assert "--help" in done.stdout
+    assert "Gestionnaire centralisé des ports non disponible" not in done.stdout
 
 
 def test_package_only_harness_sees_a_root_insertion(tmp_path):
