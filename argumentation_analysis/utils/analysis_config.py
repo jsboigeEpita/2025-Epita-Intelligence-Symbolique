@@ -23,7 +23,6 @@ from typing import Dict, List, Any, Optional, Union
 from dataclasses import dataclass, field
 from enum import Enum
 
-from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.reading_window import selected_text
 
 
@@ -292,34 +291,29 @@ class UnifiedAnalysisPipeline:
                 orchestration_type="unified",
             )
 
-            # Création du kernel avec service OpenAI configuré
+            from argumentation_analysis.core.llm_service import create_llm_service
+
             kernel = sk.Kernel()
 
-            # Configuration du service OpenAI
-            api_key = (
-                settings.openai.api_key.get_secret_value()
-                if settings.openai.api_key
-                else None
-            )
-            if not api_key:
-                raise AuthenticAnalysisUnavailable(
-                    "OPENAI_API_KEY absente de la configuration : l'analyse "
-                    "authentique ne peut pas s'exécuter"
-                )
-
-            # Ajout du service OpenAI au kernel
-            from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
-
-            kernel.add_service(
-                OpenAIChatCompletion(
+            # #2711: the route (OpenAI, or OpenRouter when its toggle is set,
+            # with the #1930 model substitution) is the factory's decision,
+            # not a read of settings.openai here.
+            try:
+                llm_service = create_llm_service(
                     service_id="openai",
-                    ai_model_id=self.config.llm_model,
-                    api_key=api_key,
+                    model_id=self.config.llm_model,
+                    force_authentic=True,
                 )
-            )
+            except ValueError as e:
+                raise AuthenticAnalysisUnavailable(
+                    "aucune clé LLM configurée (OPENAI_API_KEY, ou "
+                    "OPENROUTER_API_KEY + OPENROUTER_BASE_URL) : l'analyse "
+                    f"authentique ne peut pas s'exécuter — {e}"
+                ) from e
+            kernel.add_service(llm_service)
 
             self.logger.info(
-                f"[OPENAI] Service OpenAI configuré avec modèle: {self.config.llm_model}"
+                f"[LLM] Service configuré avec modèle: {llm_service.ai_model_id}"
             )
 
             # Création et exécution de l'agent avec les bons paramètres
@@ -347,7 +341,7 @@ class UnifiedAnalysisPipeline:
                 "mode": mode.value,
                 "result": analysis_result,
                 "authentic": True,
-                "model_used": self.config.llm_model,
+                "model_used": llm_service.ai_model_id,
                 "timestamp": datetime.now().isoformat(),
             }
 

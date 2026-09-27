@@ -1023,20 +1023,16 @@ async def main():
     """Point d'entrée pour exécuter le workflow 3-agents de manière autonome."""
     kernel = Kernel()
 
-    # --- DEBUT BLOC DE CORRECTION ---
-    # Ajout de la configuration du service LLM
     from argumentation_analysis.config.settings import settings
-    from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
+    from argumentation_analysis.core.llm_service import create_llm_service
 
-    if not settings.use_mock_llm and settings.openai.api_key:
+    # #2711: the route (OpenAI, or OpenRouter when its toggle is set) is the
+    # factory's decision. Without any key it raises, instead of letting the
+    # game start on a kernel that has no service.
+    if not settings.use_mock_llm:
         kernel.add_service(
-            OpenAIChatCompletion(
-                service_id=settings.openai.chat_model_id,
-                ai_model_id=settings.openai.chat_model_id,
-                api_key=settings.openai.api_key.get_secret_value(),
-            )
+            create_llm_service(service_id="cluedo_oracle", force_authentic=True)
         )
-    # --- FIN BLOC DE CORRECTION ---
 
     try:
         result = await run_cluedo_oracle_game(
