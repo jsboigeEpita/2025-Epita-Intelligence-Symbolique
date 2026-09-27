@@ -3996,6 +3996,19 @@
             "type": "number",
             "title": "Duration Seconds",
             "default": 0.0
+          },
+          "degraded": {
+            "type": "boolean",
+            "title": "Degraded",
+            "default": false
+          },
+          "failed_phases": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Failed Phases",
+            "default": {}
           }
         },
         "type": "object",
