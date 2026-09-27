@@ -3351,22 +3351,18 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     try:
         response = await service.chat_completion(messages)
     except Exception as exc:
-        logger.warning(f"Local LLM call failed: {exc}")
-        result = {
-            "status": "error",
-            "error": str(exc),
-        }
-        _state = context.get("_state_object")
-        if _state is not None and hasattr(_state, "local_llm_results"):
-            _state.local_llm_results.append(result)
-        return result
+        logger.warning("Local LLM call failed: %s", exc)
+        response = {"error": str(exc)}
 
-    result = {
-        "status": "completed",
-        "response": response if isinstance(response, str) else str(response),
-        "model": getattr(service, "model", "local"),
-        "input_length": len(input_text),
-    }
+    if isinstance(response, dict) and "error" in response:
+        result = {"status": "error", "error": str(response["error"])}
+    else:
+        result = {
+            "status": "completed",
+            "response": response if isinstance(response, str) else str(response),
+            "model": getattr(service, "model", "local"),
+            "input_length": len(input_text),
+        }
 
     # Write to shared state
     _state = context.get("_state_object")
@@ -3377,7 +3373,11 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
             phase="local_llm",
             agent="LocalLLM",
             reacts_to=["extract"],
-            summary=f"Local LLM: {result['status']} ({result.get('input_length', 0)} chars input)",
+            summary=(
+                f"Local LLM: error ({result['error']})"
+                if result["status"] == "error"
+                else f"Local LLM: completed ({result['input_length']} chars input)"
+            ),
         )
 
     logger.info(
