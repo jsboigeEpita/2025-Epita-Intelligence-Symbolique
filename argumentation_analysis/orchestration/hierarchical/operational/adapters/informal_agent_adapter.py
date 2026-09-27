@@ -15,6 +15,7 @@ import semantic_kernel as sk
 from semantic_kernel.agents.chat_completion.chat_completion_agent import (
     ChatCompletionAgent,
 )
+from semantic_kernel.functions.function_result import FunctionResult
 
 from argumentation_analysis.orchestration.hierarchical.operational.agent_interface import (
     OperationalAgent,
@@ -177,18 +178,30 @@ class InformalAgentAdapter(OperationalAgent):
             # un input structuré que le prompt de l'agent saurait interpréter.
             prompt = f"Analyze the following text for fallacies: '{text_to_analyze}'"
 
-            # Invoquer l'agent
-            agent_response = await self.agent.invoke(prompt)
+            # BaseAgent.invoke yields the result of invoke_single as an async stream.
+            final_response = None
+            async for response in self.agent.invoke(prompt):  # type: ignore[no-untyped-call]
+                final_response = response
 
-            # Le résultat de `invoke` est souvent une liste de messages.
-            # Nous supposons ici que le contenu pertinent est dans le dernier message.
-            if isinstance(agent_response, list) and agent_response:
-                final_content = agent_response[-1].content
-                # Ici, on devrait parser `final_content` pour extraire les résultats structurés.
-                # Pour l'instant, on le retourne directement.
-                results.append({"type": "agent_raw_output", "content": final_content})
-            else:
+            if final_response is None:
                 issues.append({"type": "empty_agent_response"})
+            else:
+                # Kernel.invoke_prompt returns a FunctionResult; its value is
+                # normally a list of chat messages, not a message itself.
+                content = (
+                    final_response.value
+                    if isinstance(final_response, FunctionResult)
+                    else final_response
+                )
+                if isinstance(content, list):
+                    content = content[-1] if content else None
+                final_content = getattr(content, "content", content)
+                if final_content is None:
+                    issues.append({"type": "empty_agent_response"})
+                else:
+                    results.append(
+                        {"type": "agent_raw_output", "content": final_content}
+                    )
 
             metrics = {"execution_time": time.time() - start_time}
             status = "completed_with_issues" if issues else "completed"
