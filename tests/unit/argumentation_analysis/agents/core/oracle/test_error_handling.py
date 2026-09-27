@@ -1,6 +1,3 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 
 """
 Tests pour le module error_handling.py du système Oracle Enhanced v2.1.0

@@ -1,6 +1,3 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
 # tests/integration/test_cluedo_extended_workflow.py

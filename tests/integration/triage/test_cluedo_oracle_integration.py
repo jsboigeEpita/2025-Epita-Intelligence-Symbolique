@@ -30,7 +30,6 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # Imports authentiques uniquement - NO MOCKS
-import openai
 from semantic_kernel import Kernel
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion
 from config.unified_config import UnifiedConfig

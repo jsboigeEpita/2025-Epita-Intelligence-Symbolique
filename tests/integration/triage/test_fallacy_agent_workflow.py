@@ -12,7 +12,6 @@ from argumentation_analysis.config.settings import AppSettings
 
 from semantic_kernel.kernel import Kernel
 from semantic_kernel.functions.kernel_arguments import KernelArguments
-from semantic_kernel.contents.chat_history import ChatHistory
 from semantic_kernel.contents.chat_message_content import ChatMessageContent
 from semantic_kernel.contents.function_call_content import FunctionCallContent
 from semantic_kernel.contents.function_result_content import FunctionResultContent
