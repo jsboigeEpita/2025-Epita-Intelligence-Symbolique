@@ -15,7 +15,7 @@ def test_api_entrypoint_loads_root_not_cwd_or_nested(tmp_path):
     (tmp_path / ".env").write_text("DOTENV_2708_FOREIGN=foreign\n", encoding="utf-8")
     code = (
         "import os\n"
-        "import project_core.managers.environment_manager as manager\n"
+        "import argumentation_analysis.config.env_loader as manager\n"
         f"manager._find_repo_root = lambda: __import__('pathlib').Path({str(checkout)!r})\n"
         "import api.main\n"
         "print('DOTENV_2708_RESULT=' + repr((os.getenv('DOTENV_2708_SOURCE'), "

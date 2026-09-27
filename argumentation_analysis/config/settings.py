@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional, List
 from pathlib import Path
 
-from project_core.managers.environment_manager import EnvironmentManager
+from argumentation_analysis.config.env_loader import EnvironmentManager
 
 EnvironmentManager()
 

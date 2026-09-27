@@ -18,7 +18,7 @@ La fonction retourne un dictionnaire indiquant le statut des services initialis√
 import logging
 from pathlib import Path
 from typing import Dict, Any
-from project_core.managers.environment_manager import EnvironmentManager
+from argumentation_analysis.config.env_loader import EnvironmentManager
 
 from argumentation_analysis.config.settings import settings
 from argumentation_analysis.core.jvm_setup import initialize_jvm

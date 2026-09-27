@@ -366,7 +366,7 @@ class TestAppSettings:
 
 def test_jvm_settings_read_the_pins_from_root_dotenv(tmp_path, monkeypatch):
     """The one loader populates os.environ before JVMSettings reads the pins."""
-    import project_core.managers.environment_manager as env_module
+    import argumentation_analysis.config.env_loader as env_module
 
     env = tmp_path / ".env"
     (tmp_path / "pyproject.toml").write_text(

@@ -15,7 +15,7 @@ def test_legacy_loader_import_uses_one_loader(tmp_path):
     (tmp_path / ".env").write_text("DOTENV_2708_FOREIGN=foreign\n", encoding="utf-8")
     code = (
         "import os\n"
-        "import project_core.managers.environment_manager as m\n"
+        "import argumentation_analysis.config.env_loader as m\n"
         f"m._find_repo_root = lambda: __import__('pathlib').Path({str(checkout)!r})\n"
         "import project_core.core_from_scripts.load_dotenv\n"
         "print('DOTENV_2708_RESULT=' + repr((os.getenv('DOTENV_2708_LEGACY'), "

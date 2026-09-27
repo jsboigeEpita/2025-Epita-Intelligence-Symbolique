@@ -24,6 +24,8 @@ from pathlib import Path
 if __package__:
     from .managers.environment_manager import EnvironmentManager
 else:
+    # Direct-file launches start with project_core/ on sys.path, not the checkout.
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from managers.environment_manager import EnvironmentManager
 
 # Configuration des chemins et des commandes

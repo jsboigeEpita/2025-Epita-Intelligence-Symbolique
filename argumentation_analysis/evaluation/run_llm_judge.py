@@ -23,7 +23,7 @@ from dataclasses import dataclass, field, asdict
 from datetime import datetime
 from pathlib import Path
 
-from project_core.managers.environment_manager import EnvironmentManager
+from argumentation_analysis.config.env_loader import EnvironmentManager
 from typing import Any, Dict, List, Optional
 
 from argumentation_analysis.evaluation.judge import LLMJudge, JudgeScore

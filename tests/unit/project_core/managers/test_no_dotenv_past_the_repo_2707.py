@@ -21,7 +21,7 @@ from unittest.mock import patch
 
 import dotenv
 
-import project_core.managers.environment_manager as _em_mod
+import argumentation_analysis.config.env_loader as _em_mod
 from project_core.managers.environment_manager import EnvironmentManager
 
 _FOREIGN_KEY = "DOTENV_2707_FOREIGN_KEY"

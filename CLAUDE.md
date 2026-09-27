@@ -251,7 +251,7 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 - **`llm_service.py`** — LLM integration layer
 - **`jvm_setup.py`** — JVM initialization for JPype/Tweety
 - **`bootstrap.py`** — System initialization
-- **`config.py`** / **`environment.py`** — Configuration management
+- **`config.py`** / **`environment.py`** — Configuration management. The canonical checkout-root `.env` loader is `argumentation_analysis/config/env_loader.py`; `project_core/managers/environment_manager.py` only re-exports it. Keep imports from the installable `argumentation_analysis` package independent of checkout-only `project_core` (#2708, #2346).
 - **`capability_registry.py`** — CapabilityRegistry + ServiceDiscovery (Lego architecture)
 - **`shared_state.py`** — `UnifiedAnalysisState` extending `RhetoricalAnalysisState` with 10 new dimensions
 

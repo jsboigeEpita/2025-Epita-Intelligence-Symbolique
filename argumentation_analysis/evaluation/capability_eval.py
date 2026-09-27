@@ -33,7 +33,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
-from project_core.managers.environment_manager import EnvironmentManager
+from argumentation_analysis.config.env_loader import EnvironmentManager
 
 logger = logging.getLogger("evaluation.capability_eval")
 

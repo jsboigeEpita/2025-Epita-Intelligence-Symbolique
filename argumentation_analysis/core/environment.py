@@ -33,8 +33,8 @@ from pathlib import Path
 # surtout si elles ne sont pas utilisées ailleurs dans le module.
 # Cependant, pour EnvironmentManager et Logger, ils sont fondamentaux pour la nouvelle `ensure_env`.
 
-# Note: L'import de Logger et EnvironmentManager sera fait à l'intérieur de ensure_env
-# pour éviter les problèmes d'imports circulaires potentiels si auto_env est importé tôt.
+# EnvironmentManager est importé dans ensure_env pour éviter un cycle d'import
+# quand ce module est chargé tôt.
 
 
 def ensure_env(
@@ -63,7 +63,7 @@ def ensure_env(
     if load_dotenv:
         try:
             # Import local pour éviter les dépendances circulaires
-            from project_core.managers.environment_manager import EnvironmentManager
+            from argumentation_analysis.config.env_loader import EnvironmentManager
 
             env_manager = EnvironmentManager()
             if env_manager.dotenv_loaded:
@@ -173,7 +173,7 @@ if __name__ != "__main__":
     # l'appelant l'emporte, même vide — `OPENAI_API_KEY= pytest ...` tourne sans
     # clé (#2472).
     try:
-        from project_core.managers.environment_manager import EnvironmentManager
+        from argumentation_analysis.config.env_loader import EnvironmentManager
 
         _em = EnvironmentManager()
         if not _em.dotenv_loaded:

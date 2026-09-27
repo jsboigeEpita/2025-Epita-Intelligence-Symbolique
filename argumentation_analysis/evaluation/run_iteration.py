@@ -22,7 +22,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from project_core.managers.environment_manager import EnvironmentManager
+from argumentation_analysis.config.env_loader import EnvironmentManager
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("evaluation.run_iteration")

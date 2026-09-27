@@ -158,7 +158,7 @@ class TestEnsureEnv:
     def test_load_dotenv_handles_import_error(self):
         """When EnvironmentManager can't be imported, ensure_env continues gracefully."""
         with patch.dict(
-            sys.modules, {"project_core.managers.environment_manager": None}
+            sys.modules, {"argumentation_analysis.config.env_loader": None}
         ):
             result = self._call_ensure_env(
                 {"CONDA_DEFAULT_ENV": "projet-is"},

@@ -484,7 +484,7 @@ def main():
     )
 
     # Keep loading at the CLI boundary, including the list-models branch (#1794).
-    from project_core.managers.environment_manager import EnvironmentManager
+    from argumentation_analysis.config.env_loader import EnvironmentManager
 
     EnvironmentManager()
 

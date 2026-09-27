@@ -54,7 +54,7 @@ import logging
 from typing import Any, Dict, Optional
 
 # Load only when the CLI runs, not when a test imports this module (#1794).
-from project_core.managers.environment_manager import EnvironmentManager  # noqa: E402
+from argumentation_analysis.config.env_loader import EnvironmentManager  # noqa: E402
 
 
 def setup_logging(verbose: bool = False) -> None:
