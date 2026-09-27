@@ -477,7 +477,7 @@ AGENT_CONFIG = {
 # Domain keywords per speciality: a registry capability belongs to a
 # specialist's line when its name CONTAINS one of these substrings.
 _SPECIALIST_DOMAIN_KEYWORDS: Dict[str, Tuple[str, ...]] = {
-    "extract": ("extract", "kb_construction"),
+    "extract": ("extract",),
     "informal_fallacy": ("fallacy", "sophism", "rhetoric"),
     "formal_logic": (
         "logic",
@@ -508,7 +508,6 @@ _SPECIALIST_DOMAIN_KEYWORDS: Dict[str, Tuple[str, ...]] = {
 # surfaced as their own line so the PM knows they are not a room member.
 _TRANSVERSE_KEYWORDS: Tuple[str, ...] = (
     "belief_maintenance",
-    "truth_maintenance",
     "jtms",
 )
 

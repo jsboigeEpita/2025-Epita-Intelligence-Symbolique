@@ -328,7 +328,6 @@ class TestRegistryIntegration:
         assert reg is not None
         assert "nl_extraction" in reg.capabilities
         assert "argument_extraction" in reg.capabilities
-        assert "kb_construction" in reg.capabilities
 
 
 class TestFactoryIntegration:

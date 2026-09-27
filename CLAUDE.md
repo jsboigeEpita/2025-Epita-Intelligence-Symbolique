@@ -204,11 +204,14 @@ Operational → Base agents (Sherlock, Watson, JTMS, FOL, Modal logic)
 > guards the surface: any new unwired definer reddens, and so does any **new**
 > declared capability with zero production demanders. The orphans the tree
 > already carries are named debt, not silence: each sits in the guard's
-> `PENDING_TRIAGE` map with the issue owning its triage (#1604 — formal/Tweety
-> specialists; #2137 — services remainder; 17 pairs / 12 components, measured
-> 2026-09-23 on #2424's branch — the figure moves with every triage that lands,
-> re-measure before quoting). The map shrinks as those issues land and never
-> grows to absorb new silence; a stale entry reddens on its own, whether its
+> `PENDING_TRIAGE` map with the issue owning its triage (#1604 — components with
+> no demanded name, a wire-or-retire decision; 9 pairs / 6 components, measured
+> 2026-09-27 on #1604's branch — the figure moves with every triage that lands,
+> re-measure before quoting). The census reads registrations made inside
+> `for name, caps, ... in <rows>:` loops and fails on a register call it cannot
+> read: before #1604 it skipped them, which hid 32 of 56 components. The map
+> shrinks as triage lands and never grows to absorb new silence; a stale
+> entry reddens on its own, whether its
 > component stopped declaring it or production started demanding it. When adding a
 > capability, add it to the surface `setup_registry` populates, **and give it
 > a consumer** — a phase asking for it, or a capability table a resolver reads.

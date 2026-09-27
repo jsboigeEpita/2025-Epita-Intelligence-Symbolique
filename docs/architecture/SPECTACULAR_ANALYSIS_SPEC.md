@@ -198,7 +198,7 @@ This table maps each report section to the pipeline capability (snake_case) that
 | **C — Formal synthesis** | `formal_synthesis` | `formal_synthesis_reports` | `formal_synthesis` | `formal_synthesis_service` |
 | **D — Counter-args** | `counter_argument_generation` | `counter_arguments` | `counter` | `counter_argument_service` |
 | **D — Debate** | `adversarial_debate` | `debate_transcripts` | `debate` | `debate_agent` |
-| **D — JTMS beliefs** | `belief_maintenance` / `jtms_reasoning` | `jtms_beliefs`, `jtms_retraction_chain` | `jtms` | `jtms_service` |
+| **D — JTMS beliefs** | `belief_maintenance` | `jtms_beliefs`, `jtms_retraction_chain` | `jtms` | `jtms_service` |
 | **D — ATMS contexts** | `atms_reasoning` | `atms_contexts` | `atms` | `atms_handler` |
 | **D — Belief revision** | `belief_revision` | `belief_revision_results` | `belief_revision` | `belief_revision_handler` |
 | **D — Governance** | `governance_simulation` | `governance_decisions` | `governance` | `governance_agent` |

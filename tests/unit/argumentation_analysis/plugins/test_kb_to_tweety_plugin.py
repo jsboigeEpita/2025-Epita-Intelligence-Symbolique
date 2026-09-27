@@ -319,8 +319,6 @@ class TestRegistryIntegration:
         reg = registry._registrations.get("kb_to_tweety_plugin")
         assert reg is not None
         assert "kb_to_tweety" in reg.capabilities
-        assert "formula_translation" in reg.capabilities
-        assert "tweety_validation" in reg.capabilities
 
 
 class TestFactoryIntegration:
