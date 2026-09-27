@@ -678,6 +678,7 @@ Ce script est un "fossile" d'un effort de refactoring antérieur et n'a aucune l
 
 1.  **Sort du fichier :**
     - `scripts/maintenance/migration/migrate_to_unified.py`: **À supprimer**.
+    - Retiré en #2720, avec `config/orchestration_config.yaml` (la configuration du même système « Enhanced PM Orchestration v2.0 », dont le script était le seul lecteur ; elle nommait des classes inexistantes — témoin `test_config_classes_resolve_2720.py`).
 
 ### Lot 16 : Récupération - Le Fichier Dupliqué
 
