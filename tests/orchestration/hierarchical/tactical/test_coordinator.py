@@ -147,6 +147,7 @@ def test_handle_task_result_objective_completion(task_coordinator, mock_tactical
         tactical_task_id, result_data
     )
 
-    # Verify report was sent since all tasks for objective are done
-    task_coordinator.adapter.send_report.assert_called_once()
+    # The objective is done, and no report leaves for the strategic layer:
+    # the objective_completion report had no reader and was retired (#2786).
+    task_coordinator.adapter.send_report.assert_not_called()
     assert response["status"] == "success"

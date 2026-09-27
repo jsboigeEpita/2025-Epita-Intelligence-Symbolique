@@ -219,9 +219,9 @@ class TaskCoordinator:
         Traite le résultat d'une tâche terminé par un agent opérationnel.
 
         Met à jour l'état de la tâche correspondante, stocke le résultat, et
-        vérifie si la complétion de cette tâche permet de faire avancer ou de
-        terminer un objectif plus large. Si un objectif est terminé, un rapport
-        est envoyé à la couche stratégique.
+        vérifie si la complétion de cette tâche termine un objectif plus large.
+        Aucun rapport n'est envoyé à la couche stratégique (#2786) : elle lit
+        l'issue des objectifs par l'agrégation de la délégation.
 
         Args:
             result: Le dictionnaire de résultat envoyé par un agent.
@@ -250,22 +250,18 @@ class TaskCoordinator:
         self.state.update_task_status(tactical_task_id, bucket)
         self.state.add_intermediate_result(tactical_task_id, result)
 
-        # Vérifier si l'objectif parent est terminé
+        # Vérifier si l'objectif parent est terminé. Le rapport
+        # ``objective_completion`` qui partait d'ici est retiré (#2786) : aucun
+        # code ne le lisait, il disait ``completed`` même quand toutes les
+        # tâches avaient échoué, et ses champs n'étaient pas ceux que lit
+        # ``StrategicManager.process_tactical_feedback``. Sur le chemin réel,
+        # le stratégique reçoit l'issue des objectifs de
+        # ``DelegationOrchestrator`` : ``_aggregate_results_by_objective``
+        # calcule le taux de chaque objectif à partir des résultats
+        # opérationnels, et ``evaluate_final_results`` le lit.
         objective_id = self.state.get_objective_for_task(tactical_task_id)
         if objective_id and self.state.are_all_tasks_for_objective_done(objective_id):
-            self.logger.info(
-                f"Objectif {objective_id} terminé. Envoi du rapport au stratégique."
-            )
-            self.adapter.send_report(
-                report_type="objective_completion",
-                content={
-                    "objective_id": objective_id,
-                    "status": "completed",
-                    "results": self.state.get_objective_results(objective_id),
-                },
-                recipient_id="strategic_manager",
-                priority=MessagePriority.HIGH,
-            )
+            self.logger.info(f"Objectif {objective_id} terminé.")
 
         self._log_action(
             "Réception de résultat",

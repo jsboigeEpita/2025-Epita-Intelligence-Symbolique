@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 """#2777 — un échec d'adaptateur remonte comme un échec, jusqu'à l'état tactique.
 
-La chaîne vivante est adaptateur → ``OperationalManager._worker`` → Future →
+La chaîne est adaptateur → ``OperationalManager._worker`` → Future →
 ``process_operational_result`` → ``TaskCoordinator.handle_task_result`` →
-``TacticalState``. Elle cassait à trois endroits :
+``TacticalState``. Aucun code de production ne la parcourt de bout en bout
+(#2786) : ``process_tactical_task`` et ``handle_task_result`` n'ont que des
+appelants de test, et le worker n'est démarré par aucun appelant de
+production. Elle cassait à trois endroits :
 
 1. les chemins fatals des adaptateurs (``execution_error``,
    ``initialization_error``, ``agent_not_found``) rendaient
