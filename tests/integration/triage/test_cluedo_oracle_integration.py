@@ -209,9 +209,10 @@ class AuthenticGameEngineFallback:
                 logger.warning("Clé API OpenAI authentique requise")
                 return False
 
-            # Configuration kernel authentique
+            # Configuration kernel authentique : sans force_authentic, pytest
+            # rendrait un MockChatCompletion (#2604).
             config = UnifiedConfig()
-            self.kernel = config.get_kernel_with_gpt4o_mini()
+            self.kernel = config.get_kernel_with_gpt4o_mini(force_authentic=True)
 
             # Configuration Oracle authentique
             solution = case_data["solution_secrete"]

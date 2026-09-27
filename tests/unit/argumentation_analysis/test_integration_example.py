@@ -2,8 +2,6 @@ import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
-from argumentation_analysis.core.llm_service import create_llm_service
-from semantic_kernel import Kernel
 
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
@@ -78,18 +76,6 @@ def integration_services(monkeypatch):
     )
 
     return mock_fetch_service, mock_extract_service, integration_sample_definitions
-
-
-class AuthHelper:
-    async def _create_authentic_gpt4o_mini_instance(self, service_id_for_test: str):
-        """Crée un Kernel avec un service mocké pour les tests."""
-        kernel = Kernel()
-        # On force un mock, et on lui passe le service_id souhaité par le test
-        mock_service = create_llm_service(
-            service_id=service_id_for_test, model_id="test_model", force_mock=True
-        )
-        kernel.add_service(mock_service)
-        return kernel
 
 
 def test_verify_extracts_integration(mocker, integration_services, tmp_path):
@@ -222,7 +208,6 @@ async def test_repair_extract_markers_integration(mocker, integration_services):
         repair_extract_markers,
     )
 
-    helper = AuthHelper()
     (
         mock_fetch_service,
         mock_extract_service,

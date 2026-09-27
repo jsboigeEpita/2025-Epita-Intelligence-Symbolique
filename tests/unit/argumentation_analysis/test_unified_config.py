@@ -13,11 +13,10 @@ Tests pour UnifiedConfig et validation des paramètres CLI étendus.
 """
 
 import pytest
-import asyncio
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, AsyncMock  # Added AsyncMock
+from unittest.mock import patch
 
 import sys
 
@@ -93,24 +92,6 @@ except ImportError:
 
 
 class TestUnifiedConfig:
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Helper to create a mock kernel object if needed by some tests, not UnifiedConfig itself."""
-        return AsyncMock()
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _run():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                print(f"WARN: Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        return asyncio.run(_run())
-
     """Tests pour la classe UnifiedConfig."""
 
     def setup_method(self):
@@ -245,9 +226,6 @@ custom_field: test_value
 
 class TestConfigurationCLI:
     """Tests pour l'interface CLI étendue."""
-
-    def _create_authentic_gpt4o_mini_instance(self):
-        return AsyncMock()
 
     def test_cli_arguments_parsing(self):
         """Test de parsing des nouveaux arguments CLI."""

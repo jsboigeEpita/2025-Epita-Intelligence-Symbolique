@@ -17,26 +17,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from config.unified_config import UnifiedConfig
-import logging
-
-logger = logging.getLogger(__name__)
 
 
-async def _create_authentic_gpt4o_mini_instance():
-    """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
+async def _create_unified_config_kernel():
+    """Kernel de ``UnifiedConfig().get_kernel_with_gpt4o_mini()`` (#2604).
+
+    Sous pytest, son service est un ``MockChatCompletion`` : sans
+    ``force_authentic=True``, aucun LLM réel n'est appelé.
+    """
     config = UnifiedConfig()
     return config.get_kernel_with_gpt4o_mini()
-
-
-async def _make_authentic_llm_call(prompt: str) -> str:
-    """Fait un appel authentique à gpt-5-mini."""
-    try:
-        kernel = await _create_authentic_gpt4o_mini_instance()
-        result = await kernel.invoke("chat", input=prompt)
-        return str(result)
-    except Exception as e:
-        logger.warning(f"Appel LLM authentique échoué: {e}")
-        return "Authentic LLM call failed"
 
 
 class TestRealGPT4oMiniIntegration:
@@ -126,7 +116,7 @@ class TestRealTweetyIntegration:
             )
 
             # Créer agent modal avec Tweety réel
-            mock_kernel = await _create_authentic_gpt4o_mini_instance()
+            mock_kernel = await _create_unified_config_kernel()
             modal_agent = ModalLogicAgent(kernel=mock_kernel)
 
             # ModalLogicAgent uses SK plugin functions (text_to_belief_set, execute_query, etc.)
@@ -154,7 +144,7 @@ class TestRealTweetyIntegration:
             )
 
             modal_agent = ModalLogicAgent(
-                kernel=await _create_authentic_gpt4o_mini_instance(),
+                kernel=await _create_unified_config_kernel(),
                 use_real_tweety=True,
             )
             error_analyzer = TweetyErrorAnalyzer()
@@ -248,7 +238,7 @@ class TestCompleteTaxonomyIntegration:
 
             # Créer agent avec taxonomie complète
             agent = InformalAnalysisAgent(
-                kernel=await _create_authentic_gpt4o_mini_instance(),
+                kernel=await _create_unified_config_kernel(),
                 taxonomy=complete_taxonomy,
             )
 

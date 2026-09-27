@@ -34,7 +34,6 @@ try:
         run_unified_analysis,
     )
     from argumentation_analysis.utils.tweety_error_analyzer import TweetyErrorAnalyzer
-    from config.unified_config import UnifiedConfig as RealUnifiedConfig
     from argumentation_analysis.agents.core.logic.fol_logic_agent import FOLLogicAgent
 
     REAL_COMPONENTS_AVAILABLE = True
@@ -114,26 +113,6 @@ except ImportError as e:
 
 class TestUnifiedSystemIntegration:
     """Suite de tests pour l'intégration du système unifié."""
-
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = RealUnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _async_call():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                # logger is not defined here, using print for visibility
-                print(f"Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        return asyncio.run(_async_call())
 
     def setup_method(self):
         """Configuration initiale pour chaque test."""

@@ -1,7 +1,6 @@
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
 
 import pytest
 import uuid
@@ -14,9 +13,6 @@ from argumentation_analysis.core.enquete_states import (
     EnquetePoliciereState,
     EnqueteCluedoState,
 )
-import logging
-
-logger = logging.getLogger(__name__)
 
 
 # Fixtures communes si nécessaire
@@ -31,21 +27,6 @@ def workflow_id_data():
 
 
 class TestBaseWorkflowState:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     def test_initialization(self, initial_context_data, workflow_id_data):
         # Test avec workflow_id fourni
         state = BaseWorkflowState(

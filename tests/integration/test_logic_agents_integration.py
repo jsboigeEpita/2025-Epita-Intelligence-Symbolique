@@ -1,7 +1,6 @@
 import openai
 from semantic_kernel.contents import ChatHistory
 from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
 
 # -*- coding: utf-8 -*-
 # tests/integration/test_logic_agents_integration.py
@@ -10,7 +9,6 @@ Tests d'intégration pour les agents logiques.
 """
 
 import unittest
-import asyncio
 import logging
 
 
@@ -27,29 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 class TestLogicAgentsIntegration(unittest.TestCase):
-    def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-
-        async def _async_call():
-            try:
-                kernel = self._create_authentic_gpt4o_mini_instance()
-                result = await kernel.invoke("chat", input=prompt)
-                return str(result)
-            except Exception as e:
-                logger.warning(f"Appel LLM authentique échoué: {e}")
-                return "Authentic LLM call failed"
-
-        try:
-            return asyncio.run(_async_call())
-        except Exception as e:
-            logger.error(f"Erreur dans asyncio.run: {e}")
-            return "Async runner failed"
-
     """Tests d'intégration pour les agents logiques."""
 
     def setUp(self):

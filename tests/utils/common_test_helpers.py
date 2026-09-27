@@ -436,18 +436,15 @@ def run_with_mocked_dependencies(func, *args, **kwargs):
         return func(*args, **kwargs)
 
 
-import asyncio
-
-
 def create_authentic_gpt4o_mini_instance():
-    """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-    config = UnifiedConfig()
+    """Kernel adossé à un LLM réel : ``force_authentic=True`` (#2604).
 
-    # Exécuter l'opération asynchrone dans un event loop
-    async def _get_kernel():
-        return await config.get_kernel_with_gpt4o_mini()
-
-    return asyncio.run(_get_kernel())
+    Sans ce drapeau, ``get_kernel_with_gpt4o_mini()`` rend sous pytest un
+    ``MockChatCompletion`` ; le nom ``authentic`` n'est tenu que forcé. Sans clé
+    API, la création du service lève. La méthode est synchrone : l'ancien corps
+    l'attendait (``await``) et levait donc ``TypeError`` sur tout kernel rendu.
+    """
+    return UnifiedConfig().get_kernel_with_gpt4o_mini(force_authentic=True)
 
 
 if __name__ == "__main__":

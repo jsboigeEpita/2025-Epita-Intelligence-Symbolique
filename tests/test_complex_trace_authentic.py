@@ -23,9 +23,6 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 from unittest.mock import Mock
-import logging
-
-logger = logging.getLogger(__name__)
 
 # Ajout du chemin pour les imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -117,7 +114,7 @@ class ComplexTraceAuthenticityTester:
 
         try:
             # Création de l'agent FOL avec kernel mocké minimal
-            mock_kernel = await self._create_authentic_gpt4o_mini_instance()
+            mock_kernel = await self._create_unified_config_kernel()
             fol_agent = FOLLogicAgent(kernel=mock_kernel, agent_name="ComplexTestFOL")
 
             # Extraction des contraintes modales complexes
@@ -215,7 +212,7 @@ class ComplexTraceAuthenticityTester:
                 fallacy_analyzer = EnhancedComplexFallacyAnalyzer()
             else:
                 # Fallback avec interface minimale
-                fallacy_analyzer = await self._create_authentic_gpt4o_mini_instance()
+                fallacy_analyzer = await self._create_unified_config_kernel()
                 fallacy_analyzer.analyze_complex_fallacies = Mock(
                     return_value={"mock": True}
                 )
@@ -576,22 +573,16 @@ class ComplexTraceAuthenticityTester:
 
 
 class TestComplexTraceAuthentic:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
+    """Tests utilisant la trace complexe pour validation d'authenticité."""
+
+    async def _create_unified_config_kernel(self):
+        """Kernel de ``UnifiedConfig().get_kernel_with_gpt4o_mini()`` (#2604).
+
+        Sous pytest, son service est un ``MockChatCompletion`` : sans
+        ``force_authentic=True``, aucun LLM réel n'est appelé.
+        """
         config = UnifiedConfig()
         return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
-    """Tests utilisant la trace complexe pour validation d'authenticité."""
 
     # async def test_complex_multi_component_authentic_trace(self):
     #     """
