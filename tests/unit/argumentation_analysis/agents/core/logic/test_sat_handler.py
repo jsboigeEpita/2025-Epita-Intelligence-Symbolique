@@ -513,6 +513,37 @@ class TestPLHandlerSATDispatch:
         assert result is False
 
 
+@pytest.mark.skipif(not PYSAT_AVAILABLE, reason="PySAT not installed")
+class TestSolverFailureIsNotUnsat:
+    """A backend failure cannot decide consistency or entailment (#2736)."""
+
+    def test_real_handler_raises_with_solver_cause(self):
+        handler = SATHandler()
+        with pytest.raises(RuntimeError, match="invalid_solver_2736") as failure:
+            handler.solve_formulas(["A"], solver_name="invalid_solver_2736")
+        assert failure.value.__cause__ is not None
+        with pytest.raises(RuntimeError, match="invalid_solver_2736"):
+            handler.check_consistency(["A"], solver_name="invalid_solver_2736")
+        with pytest.raises(RuntimeError, match="invalid_solver_2736"):
+            handler.query(["A"], "B", solver_name="invalid_solver_2736")
+
+    def test_pl_dispatch_raises_instead_of_reporting_unsat_or_entailment(self):
+        from argumentation_analysis.agents.core.logic.pl_handler import (
+            PLHandler,
+            settings,
+        )
+
+        handler = PLHandler.__new__(PLHandler)
+        handler._sat_handler = SATHandler()
+        with patch.object(settings, "pysat_solver", "invalid_solver_2736"):
+            with pytest.raises(RuntimeError, match="invalid_solver_2736"):
+                handler.pl_check_consistency_detailed("A")
+            with pytest.raises(RuntimeError, match="invalid_solver_2736"):
+                handler.pl_query_sat("A", "B")
+        with pytest.raises(RuntimeError, match="invalid_solver_2736"):
+            handler._pl_backend_pysat(["A"], "invalid_solver_2736")
+
+
 # ──── FP-3 #1192 DoD tests ────
 
 
