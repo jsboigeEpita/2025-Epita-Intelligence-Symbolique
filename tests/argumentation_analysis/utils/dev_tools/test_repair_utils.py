@@ -354,7 +354,7 @@ async def test_run_extract_repair_pipeline_llm_service_creation_fails(
     with caplog.at_level(logging.ERROR):
         await run_extract_repair_pipeline(
             project_root_dir=mock_project_root,
-            output_report_path_str="report.html",
+            output_report_path_str=str(mock_project_root / "report.html"),
             save_changes=False,
             only_source_indices=None,
             custom_input_path_str=None,
@@ -399,7 +399,7 @@ async def test_run_extract_repair_pipeline_load_definitions_fails(
     with caplog.at_level(logging.ERROR):
         await run_extract_repair_pipeline(
             project_root_dir=mock_project_root,
-            output_report_path_str="report.html",
+            output_report_path_str=str(mock_project_root / "report.html"),
             save_changes=False,
             only_source_indices=None,
             custom_input_path_str=None,

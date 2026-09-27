@@ -11,6 +11,9 @@ ainsi que la fonction de génération de rapport.
 import logging
 from html import escape
 from typing import List, Dict, Any, Optional
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
 from argumentation_analysis.models.extract_definition import (
     ExtractDefinitions,
 )  # Ajuster si ExtractDefinitions est utilisé directement
@@ -196,7 +199,8 @@ def _escaped(result: Dict[str, Any], key: str, default: str = "") -> str:
 
 
 def generate_report(
-    results: List[Dict[str, Any]], output_file: str = "repair_report.html"
+    results: List[Dict[str, Any]],
+    output_file: str = "repair_report_unencrypted.html",
 ):
     """
     Génère un rapport HTML des modifications effectuées.
@@ -205,6 +209,9 @@ def generate_report(
         results: Résultats des réparations (liste de dictionnaires comme défini dans le script original)
         output_file: Fichier de sortie pour le rapport HTML
     """
+    # The report quotes extract names and markers: refuse a destination git
+    # could stage before building it (#2773).
+    check_plaintext_destination(output_file)
     logger.info(f"Génération du rapport dans '{output_file}'...")
 
     status_counts = {

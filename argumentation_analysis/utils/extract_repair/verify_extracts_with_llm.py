@@ -20,6 +20,10 @@ from html import escape
 from pathlib import Path
 from typing import List, Dict, Any, Tuple, Optional, Union
 
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
+
 logger = logging.getLogger("VerifyExtractsLLM")
 
 
@@ -325,9 +329,13 @@ async def verify_extracts_with_llm(
 
 
 def generate_report(
-    results: List[Dict[str, Any]], output_file: str = "verify_extracts_llm_report.html"
+    results: List[Dict[str, Any]],
+    output_file: str = "verify_extracts_llm_report_unencrypted.html",
 ) -> None:
     """Génère un rapport HTML des résultats de la vérification."""
+    # The report quotes extract names and model comments on them: refuse a
+    # destination git could stage before building it (#2773).
+    check_plaintext_destination(output_file)
     logger.info(f"Génération du rapport dans '{output_file}'...")
 
     # Compter les différents statuts

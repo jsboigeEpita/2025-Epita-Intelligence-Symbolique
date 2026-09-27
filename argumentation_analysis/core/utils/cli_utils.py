@@ -151,7 +151,7 @@ def parse_extract_verification_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         "-o",
-        default="verify_report.html",
+        default="verify_report_unencrypted.html",
         help="Fichier de sortie pour le rapport HTML",
     )
     parser.add_argument(
@@ -292,7 +292,7 @@ def parse_extract_repair_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--output",
         "-o",
-        default="repair_report.html",
+        default="repair_report_unencrypted.html",
         help="Fichier de sortie pour le rapport HTML",
     )
     parser.add_argument(

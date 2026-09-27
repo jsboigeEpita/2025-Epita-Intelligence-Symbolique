@@ -32,7 +32,7 @@ def build_verify_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--output",
         "-o",
-        default="verify_extracts_llm_report.html",
+        default="verify_extracts_llm_report_unencrypted.html",
         help="Fichier de sortie pour le rapport HTML",
     )
     parser.add_argument(
@@ -77,6 +77,12 @@ def build_verify_parser() -> argparse.ArgumentParser:
 async def main():
     """Fonction principale."""
     args = build_verify_parser().parse_args()
+    # Refuse the report destination before loading or calling anything (#2773).
+    from argumentation_analysis.core.plaintext_destination import (
+        check_plaintext_destination,
+    )
+
+    check_plaintext_destination(args.output)
 
     # Configurer le niveau de journalisation
     if args.verbose:

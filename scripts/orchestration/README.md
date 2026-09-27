@@ -63,7 +63,7 @@ Script d'exécution pour la réparation des bornes défectueuses dans les extrai
 - Sauvegarde des modifications si demandé
 
 **Options disponibles :**
-- `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut: "repair_report.html")
+- `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut: "repair_report_unencrypted.html" ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
 - `--save`, `-s` : Sauvegarder les modifications
 - `--single-orator-only` : Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)
 - `--verbose`, `-v` : Activer le mode verbeux
@@ -90,7 +90,7 @@ Script d'exécution pour la vérification des extraits. Ce script est un point d
 - Génération d'un rapport
 
 **Options disponibles :**
-- `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut: "verify_report.html")
+- `--output`, `-o` : Fichier de sortie pour le rapport HTML (défaut: "verify_report_unencrypted.html" ; un chemin du dépôt que git n'ignore pas est refusé, #2773)
 - `--verbose`, `-v` : Activer le mode verbeux
 - `--input`, `-i` : Fichier d'entrée personnalisé
 - `--single-orator-only` : Traiter uniquement le corpus mono-orateur (l'ancienne orthographe reste parsée comme alias déprécié)

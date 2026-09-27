@@ -229,8 +229,10 @@ class TestRepairScriptFunctions:
     def test_generate_report(self, mock_json_dump, mock_open):
         """Test de génération de rapport (vérifie l'écriture)."""
         results = [{"status": "repaired"}]
-        generate_report(results, "test_report.html")
-        mock_open.assert_called_with("test_report.html", "w", encoding="utf-8")
+        generate_report(results, "test_report_unencrypted.html")
+        mock_open.assert_called_with(
+            "test_report_unencrypted.html", "w", encoding="utf-8"
+        )
         # Le contenu HTML est complexe, on se contente de vérifier que l'écriture a lieu.
         assert mock_open.return_value.__enter__.return_value.write.call_count > 0
 

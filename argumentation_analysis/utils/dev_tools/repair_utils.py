@@ -42,6 +42,9 @@ from argumentation_analysis.services.definition_service import DefinitionService
 from argumentation_analysis.services.extract_service import ExtractService
 from argumentation_analysis.services.fetch_service import FetchService
 from argumentation_analysis.config.settings import settings
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
 
 # Services passés en argument à repair_extract_markers, pas besoin d'importer FetchService/ExtractService ici
 # from argumentation_analysis.services.fetch_service import FetchService
@@ -244,6 +247,8 @@ async def run_extract_repair_pipeline(
     """
     Exécute le pipeline de réparation des bornes d'extraits.
     """
+    # Refuse the destination before any LLM work (#2773).
+    check_plaintext_destination(output_report_path_str)
     logger.info("Démarrage du pipeline de réparation des bornes défectueuses...")
     logger.info(f"Racine du projet utilisée pour le pipeline: {project_root_dir}")
 

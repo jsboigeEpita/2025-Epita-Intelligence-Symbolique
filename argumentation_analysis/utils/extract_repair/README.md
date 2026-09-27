@@ -204,9 +204,9 @@ async def test_repair():
     
     # Générer un rapport
     print("Génération du rapport...")
-    generate_report(results, "test_repair_report.html")
+    generate_report(results, "test_repair_report_unencrypted.html")
     
-    print("Test terminé. Rapport généré dans 'test_repair_report.html'")
+    print("Test terminé. Rapport généré dans 'test_repair_report_unencrypted.html'")
 
 if __name__ == "__main__":
     asyncio.run(test_repair())
