@@ -59,17 +59,36 @@ class TestOpenAISettings:
             isinstance(s.chat_model_id, str) and s.chat_model_id
         ), f"default chat_model_id must be a non-empty string, got {s.chat_model_id!r}"
 
-    def test_api_key_type(self):
-        s = OpenAISettings()
-        # api_key is always present (either from .env or default dummy)
-        assert s.api_key is not None
+    # #2713: these two tests used to pass on a keyless seat only because the
+    # field defaulted to "sk-dummy-key-for-testing" (f67a6f72c). They now
+    # supply their own key, and the keyless seat has its own test.
+    def test_api_key_type(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-2713")
+        s = OpenAISettings(_env_file=None)
         assert isinstance(s.api_key, SecretStr)
 
-    def test_api_key_get_secret_value(self):
-        s = OpenAISettings()
-        val = s.api_key.get_secret_value()
-        assert isinstance(val, str)
-        assert len(val) > 0
+    def test_api_key_get_secret_value(self, monkeypatch):
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-2713")
+        s = OpenAISettings(_env_file=None)
+        assert s.api_key.get_secret_value() == "sk-test-2713"
+
+    def test_api_key_is_none_on_a_keyless_seat(self, monkeypatch):
+        """#2713: absent is None, so a presence test on the field can be false."""
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        s = OpenAISettings(_env_file=None)
+        assert s.api_key is None, (
+            f"a keyless seat must read no key, got a default value "
+            f"{s.api_key.get_secret_value()!r}"
+        )
+
+    def test_api_key_is_read_from_the_env_file(self, tmp_path, monkeypatch):
+        """#2713 dropped the field's alias: env_prefix alone still maps
+        OPENAI_API_KEY, from the .env file as from the environment."""
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        env_file = tmp_path / ".env"
+        env_file.write_text("OPENAI_API_KEY=sk-from-file-2713\n", encoding="utf-8")
+        s = OpenAISettings(_env_file=env_file)
+        assert s.api_key.get_secret_value() == "sk-from-file-2713"
 
     def test_base_url_optional(self):
         s = OpenAISettings()

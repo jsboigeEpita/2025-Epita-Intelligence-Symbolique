@@ -15,9 +15,11 @@ DEFAULT_CHAT_MODEL_ID = "gpt-5.6-luna"
 
 
 class OpenAISettings(BaseSettings):
-    api_key: Optional[SecretStr] = Field(
-        default="sk-dummy-key-for-testing", alias="OPENAI_API_KEY"
-    )
+    # #2713: absent is None. The former default, "sk-dummy-key-for-testing"
+    # (f67a6f72c), made every `if settings.openai.api_key:` true on a seat
+    # with no key. The alias is gone too: env_prefix "OPENAI_" already
+    # derives OPENAI_API_KEY from the field name.
+    api_key: Optional[SecretStr] = None
     chat_model_id: str = DEFAULT_CHAT_MODEL_ID
     base_url: Optional[HttpUrl] = None
     model_config = SettingsConfigDict(
