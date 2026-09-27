@@ -1,4 +1,3 @@
-import openai
 import json
 import sys
 import os
@@ -12,8 +11,6 @@ import asyncio
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
 from semantic_kernel import Kernel
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from semantic_kernel.functions.function_result import FunctionResult
 from semantic_kernel.functions import KernelFunctionMetadata
 from semantic_kernel.connectors.ai.open_ai import OpenAIChatCompletion

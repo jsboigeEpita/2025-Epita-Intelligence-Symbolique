@@ -1,8 +1,5 @@
 from unittest.mock import patch, MagicMock
 
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 
 # -*- coding: utf-8 -*-
 """

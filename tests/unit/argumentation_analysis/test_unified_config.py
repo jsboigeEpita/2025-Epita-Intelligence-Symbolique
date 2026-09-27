@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 
 # from config.unified_config import UnifiedConfig # This is the class being tested/mocked
 

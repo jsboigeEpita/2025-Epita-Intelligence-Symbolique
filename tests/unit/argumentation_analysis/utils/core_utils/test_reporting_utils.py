@@ -1,6 +1,3 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 from config.unified_config import UnifiedConfig
 
 from argumentation_analysis.core.utils.reporting_utils import (

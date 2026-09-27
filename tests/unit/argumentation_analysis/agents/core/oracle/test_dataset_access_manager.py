@@ -1,6 +1,3 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
 
 # tests/unit/argumentation_analysis/agents/core/oracle/test_dataset_access_manager_fixed.py
 """
