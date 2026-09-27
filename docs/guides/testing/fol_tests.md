@@ -17,7 +17,7 @@ L'agent FOL est `FOLLogicAgent` (`argumentation_analysis/agents/core/logic/fol_l
 | `tests/unit/argumentation_analysis/test_fol_2pass_pipeline.py`, `test_fol_solver_selector.py`, `test_formalagent_fol_default.py` | pipeline FOL en deux passes (#544), sélecteur `--fol-solver` (#900), traduction de l'agent formel où PL, FOL et modale sont à égalité (#1396) | non | oui |
 | `tests/unit/argumentation_analysis/orchestration/test_fol_isolation_net_1630.py`, `test_fp6_fol_faillloud.py`, `test_track_b_fol_fail_loud_1278.py` | l'appel FOL de l'orchestration : verdict à trois états propagé (#1197), isolation par formule (#1630), contrat « vivant ou fail-loud » (#1278) | non | oui |
 | **`tests/integration/workers/test_worker_fol_tweety.py`** | **l'agent contre le vrai Tweety** : formules acceptées par le parseur, incohérence `P(a)` / `!P(a)` détectée, inférence par implication universelle, gestion d'erreurs, stabilité | **oui** | oui (`tests/integration/workers/`) |
-| `tests/integration/test_fol_pipeline_integration.py` (lance `workers/worker_fol_pipeline.py` dans un sous-processus) | pipeline FOL de bout en bout, JVM isolée | oui | **non** |
+| `tests/integration/test_fol_pipeline_integration.py` (lance `workers/worker_fol_pipeline.py` dans un sous-processus) | conversion par chat scripté (formules connues), puis cohérence et inférence décidées par le vrai Tweety ; JVM isolée (#2604) | oui | **non** |
 | `tests/integration/argumentation_analysis/agents/core/logic/test_fol_handler_config.py` | choix du solveur par `FOLHandler` pour la requête et la cohérence | non (doublures) | **non** |
 | `tests/agents/core/logic/test_first_order_logic_agent_authentic.py` | initialisation de l'agent avec un bridge injecté | oui (`@pytest.mark.jpype`) | **non** (`tests/agents/` est hors argv, voir #1867) |
 
@@ -31,6 +31,9 @@ conda run -n projet-is-roo-new --no-capture-output pytest tests/unit/agents/test
 
 # Tests contre le vrai Tweety (JVM démarrée par la fixture de session)
 conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/workers/test_worker_fol_tweety.py -q -rs
+
+# Pipeline FOL isolé : chat scripté, vrais solveur et requête d'inférence
+conda run -n projet-is-roo-new --no-capture-output pytest tests/integration/test_fol_pipeline_integration.py -q --timeout=180
 ```
 
 - La JVM est démarrée une fois par session par la fixture `jvm_session` (`tests/conftest.py`). Aucune variable d'environnement n'est à positionner.

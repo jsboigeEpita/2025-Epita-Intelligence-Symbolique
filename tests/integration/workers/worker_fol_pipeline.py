@@ -1,8 +1,3 @@
-import openai
-from semantic_kernel.contents import ChatHistory
-from semantic_kernel.core_plugins import ConversationSummaryPlugin
-from config.unified_config import UnifiedConfig
-
 #!/usr/bin/env python3
 """
 Tests d'intégration pour le pipeline FOL complet
@@ -84,35 +79,35 @@ except ImportError:
 
 @pytest.fixture(scope="module")
 async def fol_agent_with_kernel():
-    """Fixture pour créer un FOLLogicAgent avec un kernel authentique."""
-    config = UnifiedConfig()
-    kernel = config.get_kernel_with_gpt4o_mini()
-    # Utilisation de la factory pour créer une instance concrète
+    """FOL agent with scripted conversion and a real Tweety bridge."""
+    import json
+
+    import semantic_kernel as sk
+    from semantic_kernel.connectors.ai.chat_completion_client_base import (
+        ChatCompletionClientBase,
+    )
+    from semantic_kernel.contents.chat_message_content import ChatMessageContent
+
+    answer = json.dumps(
+        {"formulas": ["forall X: (Homme(X) => Mortel(X))", "Homme(socrate)"]}
+    )
+
+    class ScriptedChat(ChatCompletionClientBase):
+        async def _inner_get_chat_message_contents(self, chat_history, settings):
+            return [
+                ChatMessageContent(
+                    role="assistant", content=answer, ai_model_id=self.ai_model_id
+                )
+            ]
+
+    kernel = sk.Kernel()
+    kernel.add_service(ScriptedChat(ai_model_id="scripted-fol", service_id="scripted"))
     agent = LogicAgentFactory.create_agent(logic_type="first_order", kernel=kernel)
-    # L'ID 'default' correspond au service par défaut ajouté dans get_kernel_with_gpt4o_mini
-    # #2360: le cycle de vie est sync (contrat de BaseLogicAgent) — l'ancien
-    # await (#1867) décrivait la def async unique à FOL, supprimée avec la
-    # double définition.
-    agent.setup_agent_components(llm_service_id="default")
+    agent.setup_agent_components(llm_service_id="scripted")
     return agent
 
 
 class TestFOLPipelineIntegration:
-    async def _create_authentic_gpt4o_mini_instance(self):
-        """Crée une instance authentique de gpt-5-mini au lieu d'un mock."""
-        config = UnifiedConfig()
-        return config.get_kernel_with_gpt4o_mini()
-
-    async def _make_authentic_llm_call(self, prompt: str) -> str:
-        """Fait un appel authentique à gpt-5-mini."""
-        try:
-            kernel = await self._create_authentic_gpt4o_mini_instance()
-            result = await kernel.invoke("chat", input=prompt)
-            return str(result)
-        except Exception as e:
-            logger.warning(f"Appel LLM authentique échoué: {e}")
-            return "Authentic LLM call failed"
-
     """Tests d'intégration pour le pipeline FOL complet."""
 
     def setup_method(self):
@@ -138,14 +133,17 @@ class TestFOLPipelineIntegration:
         belief_set, message = await fol_agent.text_to_belief_set(self.test_text)
 
         assert belief_set is not None, f"La création du BeliefSet a échoué: {message}"
-        assert "success" in message.lower() or belief_set is not None
+        assert "forall X: (Homme(X) => Mortel(X))" in belief_set.content
+        assert "Homme(socrate)" in belief_set.content
+        assert "2 FOL formulas (llm)" in message
 
         # 3. Analyser avec Tweety FOL
         is_consistent, consistency_message = await fol_agent.is_consistent(belief_set)
-
-        assert (
-            is_consistent is True
-        ), f"L'ensemble de croyances devrait être cohérent: {consistency_message}"
+        assert is_consistent is True, consistency_message
+        entailed, entailment_message = await fol_agent.execute_query(
+            belief_set, "Mortel(socrate)"
+        )
+        assert entailed is True, entailment_message
 
     @pytest.mark.asyncio
     @pytest.mark.skip(reason="requires live LLM funded window — see #695")
