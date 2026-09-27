@@ -14,12 +14,12 @@ fake chat service: no LLM, no network. The analysed text is fabricated.
 """
 
 import json
+import os
 from typing import Any, List
 from unittest.mock import patch
 
 import pytest
 import semantic_kernel as sk
-from pydantic import SecretStr
 from semantic_kernel.connectors.ai.chat_completion_client_base import (
     ChatCompletionClientBase,
 )
@@ -222,7 +222,6 @@ class _FailingAgent:
 async def test_the_pipeline_never_publishes_a_failure_as_authentic(fallback):
     """``main`` returned ``authentic: True`` with the failure as its result,
     and the pipeline said ``completed``."""
-    from argumentation_analysis.utils import analysis_config
     from argumentation_analysis.utils.analysis_config import (
         AnalysisConfig,
         AnalysisMode,
@@ -236,8 +235,8 @@ async def test_the_pipeline_never_publishes_a_failure_as_authentic(fallback):
         require_real_llm=True,
     )
     pipeline = UnifiedAnalysisPipeline(config)
-    with patch.object(module, "InformalAnalysisAgent", _FailingAgent), patch.object(
-        analysis_config.settings.openai, "api_key", SecretStr("fake-key-2485")
+    with patch.object(module, "InformalAnalysisAgent", _FailingAgent), patch.dict(
+        os.environ, {"OPENAI_API_KEY": "fake-key-2485"}
     ):
         result = await pipeline.analyze_text(FABRICATED_TEXT)
 

@@ -16,12 +16,12 @@ Now ``enable_fallback`` governs every fallback, each fallback carries its cause
 
 from __future__ import annotations
 
+import os
 import sys
 from unittest.mock import patch
 
 import pytest
 
-import argumentation_analysis.utils.analysis_config as analysis_config
 from argumentation_analysis.utils.analysis_config import (
     AnalysisConfig,
     AnalysisMode,
@@ -43,8 +43,13 @@ def _pipeline(**overrides) -> UnifiedAnalysisPipeline:
     return UnifiedAnalysisPipeline(AnalysisConfig(**fields))
 
 
+_LLM_KEYS = ("OPENAI_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_BASE_URL")
+
+
 def _no_key():
-    return patch.object(analysis_config.settings.openai, "api_key", None)
+    # #2711: ``create_llm_service`` reads the keys from the environment.
+    env = {k: v for k, v in os.environ.items() if k not in _LLM_KEYS}
+    return patch.dict(os.environ, env, clear=True)
 
 
 def _no_module():
