@@ -12,11 +12,15 @@ own name, where no designation resolves at all.
 
 The witness parses every designation target the constants teach (inline
 ``designate_next_agent(agent_name="...")`` calls and the "noms d'agents
-valides" lists) and requires each to be a name some live casting can
-produce: the AGENT_CONFIG roster — the only group chat whose selection
-strategy reads designations — or the constructor default of one of the
-carrier classes. No name list lives here; both sides are derived from code.
-Reintroducing a dead name into any block reddens the matching case.
+valides" lists). Per serving path (review 04:49Z): the only live chat that
+reads designations is the AGENT_CONFIG chat, and it serves each entry's own
+instructions — a constant served by it (its text embedded in an entry's
+instructions) may teach targets from the roster plus the carrier classes'
+constructor defaults. A constant NOT served by it runs solo on every
+measured path, where no designation target resolves at all — its taught set
+must be empty. No name list lives here; both sides are derived from code.
+Reintroducing a designation teaching into any block reddens the matching
+case.
 """
 
 import inspect
@@ -74,6 +78,20 @@ def _taught_targets(text: str) -> set:
     return targets
 
 
+def _served_by_the_designation_reader(block: str) -> bool:
+    """Whether the conversational chat serves this very block.
+
+    The only live chat that reads designations builds one
+    ``ChatCompletionAgent`` per ``AGENT_CONFIG`` key and serves that entry's
+    own instructions. A constant is served by it only if the entry's
+    instructions embed the constant's text.
+    """
+    return any(
+        block[:80] in (config.get("instructions") or "")
+        for config in AGENT_CONFIG.values()
+    )
+
+
 def _producible_names() -> set:
     """Names a live casting can actually seat, derived from code."""
     names = set(AGENT_CONFIG.keys())
@@ -86,10 +104,19 @@ def _producible_names() -> set:
 @pytest.mark.parametrize("where", list(TAUGHT_BLOCKS))
 def test_taught_designation_targets_resolve_in_a_live_casting(where: str) -> None:
     block = TAUGHT_BLOCKS[where]
-    unresolvable = _taught_targets(block) - _producible_names()
+    if _served_by_the_designation_reader(block):
+        unresolvable = _taught_targets(block) - _producible_names()
+    else:
+        # Per serving path (review 04:49Z): every measured path that serves
+        # these constants runs the agent SOLO — no other agent sits beside
+        # the reader, so NO designation target can resolve. A name that
+        # merely exists as some class's constructor default somewhere else
+        # is not designatable from here.
+        unresolvable = _taught_targets(block)
     assert not unresolvable, (
-        f"{where} teaches the LLM to designate {sorted(unresolvable)}, but no "
-        "live casting produces that name (AGENT_CONFIG roster + carrier "
-        "constructor defaults). The designation falls through to the "
-        "selection fallback and leaves an unresolved-designation trace (#1751)."
+        f"{where} teaches the LLM to designate {sorted(unresolvable)}, but the "
+        "paths serving this block run the agent solo — the only chat that "
+        "reads designations (AGENT_CONFIG) serves its own instructions, so no "
+        "taught target can resolve. A name that exists as a constructor "
+        "default elsewhere is not designatable from here (review 04:49Z)."
     )

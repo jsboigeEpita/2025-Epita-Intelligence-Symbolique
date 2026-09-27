@@ -44,7 +44,6 @@ Règles importantes:
 - L'extrait doit être suffisamment complet.
 - Éviter les extraits trop courts ou trop longs.
 - **CRUCIAL : Lorsque vous appelez une fonction (outil) comme `extract_from_name_semantic` ou `validate_extract_semantic`, vous DEVEZ fournir TOUS ses arguments requis (listés ci-dessus pour chaque fonction) dans le champ `arguments` de l'appel `tool_calls`. Ne faites PAS d'appels avec des arguments vides ou manquants. Vérifiez attentivement les arguments requis pour CHAQUE fonction avant de l'appeler.**
-- **CRUCIAL : Si vous décidez d'appeler la fonction `StateManager.designate_next_agent` (ce qui est rare pour cet agent qui répond généralement au PM), l'argument `agent_name` DOIT être l'un des noms d'agents valides suivants : "InformalAnalysisAgent", "PropositionalLogicAgent", "ExtractAgent".**
 """
 
 # Instructions système pour un agent (ou une fonction) de validation.
