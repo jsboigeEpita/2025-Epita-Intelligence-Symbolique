@@ -21,9 +21,12 @@ the business logic.
 
 The fix is SUBTRACTIVE (anti-pendule): the sub-step ceases to declare
 ``hierarchical_fallacy_detection`` (and ``fallacy_detection``, same structural
-defect — it is no kind of terminal detection provider). It keeps its REAL
-capability ``per_argument_fallacy_detection``. It is not deleted: the complete
-path still calls it directly at invoke_callables.py:4506. Tri the index was
+defect — it is no kind of terminal detection provider). It is not deleted:
+the complete path still calls it directly. #2623 later removed its registry
+registration entirely — its only capability (``per_argument_fallacy_detection``)
+never had a production demander, so nothing ever resolved it there — and
+"not deleted" is now measured as a direct-call fact (see
+``test_sub_step_keeps_its_direct_production_callers``). Tri the index was
 rejected: it would stabilize the winner on an arbitrary (alphabetic) order —
 the complete path would win by luck, not by design, and the sub-step would
 still shadow other consumers of ``fallacy_detection``.
@@ -32,8 +35,8 @@ These tests are sync and LLM-free. They prove the selection is now
 deterministic BY CONSTRUCTION (exactly one provider for
 ``hierarchical_fallacy_detection`` → the ``providers[0]`` coin flip has only
 one face). The mutation guards assert what the pre-fix registration shape
-would have failed (two providers) and what must survive (the real capability
-is preserved).
+would have failed (two providers) and what must survive (the sub-step keeps
+its direct production callers).
 
 They live in a dedicated module WITHOUT ``pytestmark = pytest.mark.asyncio``
 so the sync functions do not inherit an asyncio mark they cannot satisfy
@@ -115,19 +118,49 @@ def test_sub_step_no_longer_declares_terminal_detection_capabilities():
         )
 
 
-def test_sub_step_keeps_its_real_capability():
-    """Anti-pendule guard: the sub-step is NOT deleted — it keeps its REAL
-    capability ``per_argument_fallacy_detection``. The complete path still
-    invokes it directly (invoke_callables.py:4506) for the recall lift. The
-    defect was the SHARING of the terminal capability, not the sub-step's
-    existence.
+def test_sub_step_keeps_its_direct_production_callers():
+    """Anti-pendule guard: the sub-step is NOT deleted — production still
+    calls it directly. #2623 removed its registry registration (the only
+    capability it declared had no production demander), so "the sub-step
+    survives" is measured as a direct-call fact, not a registry fact: the
+    complete wide-net path awaits it, and so does the conversational
+    orchestrator.
     """
-    registry = setup_registry(include_optional=True)
-    providers = registry.find_for_capability("per_argument_fallacy_detection")
-    names = [p.name for p in providers]
-    assert "hierarchical_fallacy_per_argument" in names, (
-        "sub-step lost per_argument_fallacy_detection — the fix deleted the "
-        "sub-step instead of subtracting the shared capability (anti-pendule)"
+    import ast
+    from pathlib import Path
+
+    from argumentation_analysis.orchestration import conversational_orchestrator as co
+    from argumentation_analysis.orchestration import invoke_callables as ic
+
+    target = "_invoke_hierarchical_fallacy_per_argument"
+
+    def calls(fn, name):
+        return any(
+            isinstance(n, ast.Call) and getattr(n.func, "id", "") == name
+            for n in ast.walk(fn)
+        )
+
+    ic_tree = ast.parse(Path(ic.__file__).read_text(encoding="utf-8-sig"))
+    complete = next(
+        fn
+        for fn in ic_tree.body
+        if isinstance(fn, ast.AsyncFunctionDef)
+        and fn.name == "_invoke_hierarchical_fallacy"
+    )
+    assert calls(complete, target), (
+        "the complete path no longer calls the per-argument enrichment "
+        "sub-step — deleting the sub-step is the anti-pendulum failure "
+        "#1553 guards against; #2623 only removed its unused registry "
+        "registration"
+    )
+
+    co_tree = ast.parse(Path(co.__file__).read_text(encoding="utf-8-sig"))
+    assert any(
+        isinstance(n, ast.Call) and getattr(n.func, "id", "") == target
+        for n in ast.walk(co_tree)
+    ), (
+        "the conversational orchestrator no longer calls the per-argument "
+        "enrichment sub-step — its second direct production caller is gone"
     )
 
 

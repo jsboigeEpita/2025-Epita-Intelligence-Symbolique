@@ -169,6 +169,33 @@ class TestAvailability:
         svc = SpeechTranscriptionService(whisper_url="http://nonexistent:9999")
         assert svc.is_available() is False
 
+    def test_unreachable_endpoint_names_the_backend_it_tried(self, caplog):
+        """#2623 (item moved from #2346): silent degradation is a defect.
+
+        When both probes fail, the service must say WHICH backend (URL) it
+        tried — a bare ``False`` outside dev hides that the default points at
+        ``localhost:8787`` and nothing else. Born-red on main: the probes
+        swallow every exception and log nothing.
+        """
+        import logging
+
+        from argumentation_analysis.services.speech_transcription_service import (
+            SpeechTranscriptionService,
+        )
+
+        svc = SpeechTranscriptionService(whisper_url="http://127.0.0.1:1")
+        with caplog.at_level(
+            logging.WARNING,
+            logger="argumentation_analysis.services.speech_transcription_service",
+        ):
+            available = svc.is_available()
+
+        assert available is False
+        assert "http://127.0.0.1:1" in caplog.text, (
+            "degradation stays silent: the service must name the backend "
+            "(URL) it tried when no probe answers (#2346 item, triaged #2623)"
+        )
+
     def test_available_with_health_endpoint(self):
         from argumentation_analysis.services.speech_transcription_service import (
             SpeechTranscriptionService,

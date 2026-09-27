@@ -69,7 +69,7 @@ Le cluster Cluedo (6 fichiers, ~49 tests) cristallise l'evolution la plus turbul
 - V3 : hierarchical fallacy detection + enrichment workflow
 - V4 : pattern mining + rapport SVG + privacy guard
 
-**Arc temporel** : `test_tweety_fallbacks.py` (59 tests, 573 LOC) est le **plus grand fichier de test de fallback** du projet — il verifie que le pipeline fonctionne **sans JVM** (fallbacks Python purs). `test_pattern_report.py` (18 tests) valide le pipeline de mining post-analysis avec heatmaps SVG et privacy guard. `test_enrichment_workflow.py` (15 tests) verifie l'infrastructure CLI d'enrichment. **Etat actuel : WIRED** — fallacy_detection, hierarchical_fallacy_detection, per_argument_fallacy_detection sont toutes registrees.
+**Arc temporel** : `test_tweety_fallbacks.py` (59 tests, 573 LOC) est le **plus grand fichier de test de fallback** du projet — il verifie que le pipeline fonctionne **sans JVM** (fallbacks Python purs). `test_pattern_report.py` (18 tests) valide le pipeline de mining post-analysis avec heatmaps SVG et privacy guard. `test_enrichment_workflow.py` (15 tests) verifie l'infrastructure CLI d'enrichment. **Etat actuel : WIRED** — fallacy_detection et hierarchical_fallacy_detection sont registrees ; per_argument_fallacy_detection a quitte le registry (#2623 : sous-étape d'enrichissement, appelee directement par le chemin complet, jamais resolue via le registry).
 
 ### Episode 5 : Logic agents before factory (2026-01 a 2026-03)
 
