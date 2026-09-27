@@ -36,6 +36,9 @@ from argumentation_analysis.evaluation.capability_eval import (
     run_single_cell,
     _build_eval_workflow,
     EVAL_WORKFLOW_PHASES,
+    UnresolvedCapabilityError,
+    check_requested_capabilities,
+    main_async,
 )
 
 # ---------------------------------------------------------------------------
@@ -706,3 +709,103 @@ class TestEnumerateRegression:
         assert (
             "enumerate(documents)" in source
         ), "Main loop must use enumerate(documents)"
+
+
+class TestRequestedCapabilitiesRun2760:
+    """A requested capability must run, or the evaluation must refuse (#2760).
+
+    The counter configs asked for ``counter_argument`` while production
+    registers ``counter_argument_generation``: the optional counter phase was
+    SKIPPED in every cell, and its marginal score measured nothing.
+    """
+
+    def test_every_preset_resolves_in_the_production_registry(self):
+        from argumentation_analysis.orchestration.unified_pipeline import (
+            setup_registry,
+        )
+
+        check_requested_capabilities(list(PRESET_CONFIGS.values()), setup_registry())
+
+    @staticmethod
+    def _registry(capabilities, calls):
+        from argumentation_analysis.core.capability_registry import (
+            CapabilityRegistry,
+        )
+
+        registry = CapabilityRegistry()
+        for capability in capabilities:
+
+            async def invoke(input_text, context, _capability=capability):
+                calls.append(_capability)
+                return {}
+
+            registry.register_service(
+                f"double_{capability}", capabilities=[capability], invoke=invoke
+            )
+        return registry
+
+    async def test_counter_phase_runs_on_a_doubled_provider(self):
+        from argumentation_analysis.orchestration.workflow_dsl import (
+            WorkflowExecutor,
+        )
+
+        calls = []
+        registry = self._registry(
+            ["fact_extraction", "counter_argument_generation"], calls
+        )
+
+        cell = await run_single_cell(
+            config=PRESET_CONFIGS["counter"],
+            document_text="synthetic text",
+            document_name="doc_A",
+            document_index=0,
+            full_registry=registry,
+            judge=None,
+            workflow=_build_eval_workflow(),
+            executor=WorkflowExecutor(registry),
+        )
+
+        assert "counter_argument_generation" in calls
+        assert cell.phases_run == 2
+        assert cell.phases_failed == 0
+
+    def test_a_capability_without_provider_is_refused(self):
+        registry = self._registry(["fact_extraction"], [])
+        with pytest.raises(UnresolvedCapabilityError, match="counter: counter_arg"):
+            check_requested_capabilities([PRESET_CONFIGS["counter"]], registry)
+
+    def test_a_capability_without_eval_phase_is_refused(self):
+        registry = self._registry(["fact_extraction", "no_such_phase"], [])
+        config = CapabilityConfig("orphan", ["fact_extraction", "no_such_phase"])
+        with pytest.raises(UnresolvedCapabilityError, match="no eval phase"):
+            check_requested_capabilities([config], registry)
+
+    async def test_main_publishes_nothing_when_a_provider_is_absent(
+        self, tmp_path, monkeypatch
+    ):
+        import argparse
+
+        from argumentation_analysis.orchestration import unified_pipeline
+
+        corpus = tmp_path / "corpus.json"
+        corpus.write_text(
+            json.dumps({"documents": [{"id": "doc_A", "text": "synthetic text"}]}),
+            encoding="utf-8",
+        )
+        output = tmp_path / "out"
+        monkeypatch.setattr(
+            unified_pipeline,
+            "setup_registry",
+            lambda: self._registry(["fact_extraction"], []),
+        )
+        args = argparse.Namespace(
+            corpus=str(corpus),
+            output=str(output),
+            configs="baseline,counter",
+            max_docs=0,
+            judge_model="default",
+            skip_judge=True,
+        )
+
+        assert await main_async(args) != 0
+        assert not output.exists()

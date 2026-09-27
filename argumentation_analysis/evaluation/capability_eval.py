@@ -74,7 +74,7 @@ PRESET_CONFIGS: Dict[str, CapabilityConfig] = {
     ),
     "counter": CapabilityConfig(
         name="counter",
-        capabilities=["fact_extraction", "counter_argument"],
+        capabilities=["fact_extraction", "counter_argument_generation"],
         description="Extract + counter-argument generation",
     ),
     "debate": CapabilityConfig(
@@ -108,7 +108,7 @@ PRESET_CONFIGS: Dict[str, CapabilityConfig] = {
             "fact_extraction",
             "argument_quality",
             "fallacy_detection",
-            "counter_argument",
+            "counter_argument_generation",
             "adversarial_debate",
             "governance_simulation",
             "aspic_plus_reasoning",
@@ -128,7 +128,7 @@ EVAL_WORKFLOW_PHASES = [
     ("extract", "fact_extraction", []),
     ("quality", "argument_quality", []),
     ("fallacy", "fallacy_detection", []),
-    ("counter", "counter_argument", []),
+    ("counter", "counter_argument_generation", []),
     ("debate", "adversarial_debate", []),
     ("governance", "governance_simulation", []),
     ("formalization", "aspic_plus_reasoning", []),
@@ -263,6 +263,35 @@ class CapabilityEvalReport:
 
 def _load_dotenv() -> None:
     EnvironmentManager()
+
+
+class UnresolvedCapabilityError(RuntimeError):
+    """A configuration requests a capability the evaluation cannot run."""
+
+
+def check_requested_capabilities(
+    configs: List[CapabilityConfig], registry: Any
+) -> None:
+    """Refuse a run in which a requested capability cannot execute (#2760).
+
+    Every eval phase is optional, so a capability with no provider, or with
+    no phase requesting it, is silently SKIPPED. The configs requesting it
+    then score like the configs without it, and the marginal scores present
+    an absent capability as a measured effect.
+    """
+    phase_capabilities = {capability for _, capability, _ in EVAL_WORKFLOW_PHASES}
+    problems = []
+    for config in configs:
+        for capability in config.capabilities:
+            if capability not in phase_capabilities:
+                problems.append(f"{config.name}: {capability} (no eval phase)")
+            elif not registry.find_for_capability(capability):
+                problems.append(f"{config.name}: {capability} (no provider)")
+    if problems:
+        raise UnresolvedCapabilityError(
+            "Requested capabilities cannot run, so their marginal scores would "
+            "measure nothing: " + "; ".join(problems)
+        )
 
 
 def _build_eval_workflow():
@@ -667,6 +696,11 @@ async def main_async(args: argparse.Namespace) -> int:
 
     logger.info("Setting up capability registry...")
     full_registry = setup_registry()
+    try:
+        check_requested_capabilities(configs, full_registry)
+    except UnresolvedCapabilityError as unresolved:
+        logger.error(str(unresolved))
+        return 2
     executor = WorkflowExecutor(full_registry)
     workflow = _build_eval_workflow()
 
