@@ -268,9 +268,7 @@ class SATHandler:
                         stats["unsat_core"] = s.get_core()
                     return False, None, stats
         except Exception as e:
-            stats["solve_time"] = time.time() - start
-            stats["error"] = str(e)
-            return False, None, stats
+            raise RuntimeError(f"PySAT solver {solver_name} failed: {e}") from e
 
     def solve_formulas(
         self,
