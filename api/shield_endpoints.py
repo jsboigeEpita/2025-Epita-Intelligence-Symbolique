@@ -12,8 +12,8 @@ Security:
     SHIELD_ALLOW_ANONYMOUS is explicitly set truthy — an opt-in, so a
     deployment that forgets the token is closed rather than open (#2144).
     The token is read per request and rotates without a restart.
-    This prevents unauthorized credit-drain on the OPENAI_API_KEY used by the
-    shield's LLM-backed layers. See Hermes review concern on PR #874.
+    This prevents unauthorized credit-drain on the configured LLM provider
+    used by the shield's LLM-backed layers. See Hermes review concern on PR #874.
 """
 
 import logging
@@ -139,8 +139,6 @@ async def shield_validate(
             reason=f"Shield unavailable: {exc}",
         )
 
-    api_key = os.environ.get("OPENAI_API_KEY")  # Per-request: key may rotate at runtime
-
     # Politique effective (#2144) : l'explicite prime, sinon la déclaration du
     # preset — même table que `load_preset`, source unique. Un `None` n'est plus
     # converti en `True` implicite : c'est ce qui faisait de `strict` une
@@ -152,9 +150,7 @@ async def shield_validate(
     )
 
     try:
-        shield = load_preset(
-            request.preset, api_key=api_key, fail_open=request.fail_open
-        )
+        shield = load_preset(request.preset, fail_open=request.fail_open)
     except Exception as exc:
         logger.error(f"Shield preset load failed: {exc}")
         if effective_fail_open:
