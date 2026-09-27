@@ -3386,14 +3386,89 @@ async def _invoke_local_llm(input_text: str, context: Dict[str, Any]) -> Dict[st
     return result
 
 
+_KM_INDEXING_WAIT_TIMEOUT = 30.0
+_KM_INDEXING_POLL_INTERVAL = 1.0
+
+
+async def _wait_km_indexing_bounded(
+    service: Any,
+    doc_ids: List[str],
+    timeout: float,
+    interval: float,
+) -> Dict[str, Any]:
+    """Bounded, non-blocking wait for Kernel Memory to finish indexing.
+
+    Polls ``indexing_status`` (one HTTP request per poll) with
+    ``asyncio.sleep`` between polls — never ``time.sleep``, which would
+    block the event loop (#2618, absorbing the #2346 polling debt).
+    Returns what is known when the deadline hits: a partial wait is
+    reported, not raised. A probe that raises is not a timeout:
+    ``probe_errors`` counts them so the two causes stay distinguishable.
+    """
+    import time as _time
+
+    deadline = _time.monotonic() + timeout
+    pending = list(doc_ids)
+    completed = []
+    probe_errors = 0
+    while pending and _time.monotonic() < deadline:
+        still = []
+        for doc_id in pending:
+            try:
+                info = await asyncio.to_thread(service.indexing_status, doc_id)
+            except Exception:
+                probe_errors += 1
+                still.append(doc_id)
+                continue
+            if info.get("completed", False):
+                completed.append(doc_id)
+            else:
+                still.append(doc_id)
+        pending = still
+        if pending:
+            await asyncio.sleep(interval)
+    return {
+        "completed": len(completed),
+        "total": len(doc_ids),
+        "timed_out": bool(pending),
+        "timeout_seconds": timeout,
+        "probe_errors": probe_errors,
+    }
+
+
+def _run_source_name(input_text: str) -> str:
+    """Opaque, document-unique source name for one run's indexed arguments.
+
+    #2618 review: with the service default, every run indexed under
+    ``pipeline``, so document ids collided across runs and one run's search
+    could return another run's arguments. A digest of the analyzed text
+    gives each document its own namespace; re-running the same text
+    overwrites its own ids (idempotent) and never mixes documents.
+    """
+    import hashlib
+
+    return "run_" + hashlib.sha256(input_text.encode("utf-8")).hexdigest()[:12]
+
+
 async def _invoke_semantic_index(
     input_text: str, context: Dict[str, Any]
 ) -> Dict[str, Any]:
-    """Invoke semantic index service for argument search.
+    """Index the run's arguments, then search them — scoped to this run.
 
-    KK #700: consults ``is_available()`` before attempting indexing.
-    Returns explicit status: ``ran`` (endpoint up, indexed) or
-    ``skipped: endpoint_unavailable`` (no silent optional skip).
+    KK #700: consults ``is_available()`` first — ``skipped:
+    endpoint_unavailable`` names the absent endpoint (no silent optional
+    skip). When the endpoint is up, the phase first indexes what the run
+    produced: the extracted arguments, each with its quality scores and
+    detected fallacies as metadata tags (#174 argument-level indexing),
+    through ``index_arguments``. It then waits a bounded time for the
+    index and runs an argument search. What was indexed and what was
+    found are recorded in the phase result, not only in the log.
+
+    Scope: the run indexes under an opaque, document-unique source name
+    (a digest of the analyzed text) and the search filters on that name,
+    so a run never returns another run's arguments — answering with
+    another run's content is the pattern #2541/#2688 removed from the
+    API. Re-running the same text overwrites its own ids (idempotent).
     """
     from argumentation_analysis.services.semantic_index_service import (
         SemanticIndexService,
@@ -3406,8 +3481,57 @@ async def _invoke_semantic_index(
             "reason": "SemanticIndexService at 127.0.0.1:9001 is not reachable",
         }
 
-    results = await asyncio.to_thread(service.search, input_text)
-    return {"status": "ran", "results": results}
+    extract_output = context.get("phase_extract_output", {})
+    arguments = (
+        extract_output.get("arguments", []) if isinstance(extract_output, dict) else []
+    )
+    quality_output = context.get("phase_quality_output", {})
+    per_argument_scores = (
+        quality_output.get("per_argument_scores", {})
+        if isinstance(quality_output, dict)
+        else {}
+    )
+    fallacy_output = context.get("phase_hierarchical_fallacy_output", {})
+    fallacies = (
+        fallacy_output.get("fallacies", []) if isinstance(fallacy_output, dict) else []
+    )
+
+    run_name = _run_source_name(input_text)
+    doc_ids = await asyncio.to_thread(
+        service.index_arguments,
+        arguments,
+        source_name=run_name,
+        quality_scores=per_argument_scores,
+        fallacies=fallacies,
+    )
+    indexing = await _wait_km_indexing_bounded(
+        service,
+        doc_ids,
+        _KM_INDEXING_WAIT_TIMEOUT,
+        _KM_INDEXING_POLL_INTERVAL,
+    )
+
+    results = await asyncio.to_thread(
+        service.search_arguments, input_text, source_name=run_name
+    )
+    return {
+        "status": "ran",
+        "source_name": run_name,
+        "indexed_document_ids": doc_ids,
+        "indexed_count": len(doc_ids),
+        "arguments_seen": len(arguments),
+        "indexing": indexing,
+        "results": [
+            {
+                "id": r.document_id,
+                "score": r.relevance,
+                "snippet": r.text,
+                "source_name": r.source_name,
+                "tags": dict(r.tags),
+            }
+            for r in results
+        ],
+    }
 
 
 async def _invoke_speech_transcription(

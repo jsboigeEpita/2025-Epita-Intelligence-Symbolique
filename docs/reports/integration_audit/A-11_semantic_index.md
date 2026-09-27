@@ -67,7 +67,7 @@ Le projet étudiant a été digéré en **un service infrastructure** enrichi :
 
 #### Dilution 2: Argument-level chunking est un enrichissement pur, pas une migration
 
-**Localisation**: `semantic_index_service.py` lignes 324-581 — `index_arguments()`, `search_arguments()`, `chunk_by_arguments()`
+**Localisation**: `semantic_index_service.py` lignes 315-570 — `index_arguments()`, `search_arguments()`, `chunk_by_arguments()`
 **Impact**: POSITIVE — cette feature (258 LOC) n'existait PAS dans le projet étudiant. Elle a été ajoutée post-intégration pour résoudre l'issue #174. Le chunking par argument (avec métadonnées quality_score, fallacy_type, quality_level) est un enrichissement significatif qui connecte l'indexation sémantique au pipeline d'analyse.
 **Assessment**: Enrichissement remarquable — l'index ne stocke plus juste des chunks texte mais des arguments enrichis avec scores qualité et types de sophismes.
 
@@ -83,7 +83,7 @@ L'intégration est **fidèle et enrichie** : les 3 fonctions KM fondamentales (u
 - **Commentaire de provenance** : `registry_setup.py` mentionne "Semantic index service"
 - **Fichiers non-migrés** : `UI_streamlit.py` (frontend), `kernel_memory/load_sources.py` (ingestion), `kernel_memory/example.py` (démo), `kernel_memory/appsettings.Development.json` (config KM Docker)
 - **SUIVI** : 80% — "Integre"
-- **Issue #174** : **FERMÉE** — argument-level chunking implémenté dans `semantic_index_service.py:324-581`
+- **Issue #174** : **FERMÉE** — argument-level chunking implémenté dans `semantic_index_service.py:315-570`
 
 ---
 

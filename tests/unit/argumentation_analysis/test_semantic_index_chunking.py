@@ -199,7 +199,12 @@ class TestSearchArguments:
     """Test argument search with metadata filtering."""
 
     def test_search_builds_filters(self):
-        """Search includes metadata filters in API call."""
+        """Search sends ONE filter object carrying every criterion.
+
+        Kernel Memory ORs across filter objects and ANDs inside one
+        (TagsMatchFilters): one criterion per object would OR the criteria
+        instead of ANDing them — the #2698 re-review defect (run scoping
+        and metadata filtering let everything through on a real KM)."""
         service = SemanticIndexService(km_url="http://test:9001")
 
         mock_resp = MagicMock()
@@ -218,12 +223,17 @@ class TestSearchArguments:
             has_fallacy=True,
         )
 
-        # Verify the API call included filters
         call_args = mock_requests.post.call_args
         payload = call_args[1]["json"] if "json" in call_args[1] else call_args[0][1]
         assert "filters" in payload
-        filter_keys = [list(f.keys())[0] for f in payload["filters"]]
-        assert "fallacy_type" in filter_keys
-        assert "quality_level" in filter_keys
-        assert "has_fallacy" in filter_keys
-        assert "chunk_type" in filter_keys  # Always filter by argument type
+        assert (
+            len(payload["filters"]) == 1
+        ), "plusieurs objets filtres = OU entre criteres sur un vrai Kernel Memory"
+        criteria = payload["filters"][0]
+        assert set(criteria) == {
+            "fallacy_type",
+            "quality_level",
+            "has_fallacy",
+            "chunk_type",
+        }  # every criterion ANDed inside the single object
+        assert criteria["chunk_type"] == ["argument"]  # always filter by argument type
