@@ -50,15 +50,15 @@ uvicorn api.main:app --reload --port 8000
 
 | Variable | Type | Default | Source |
 |---|---|---|---|
-| `OPENAI_API_KEY` | str | `sk-dummy-key-for-testing` | `settings.py:9-11` |
-| `TEXT_CONFIG_PASSPHRASE` | str | None | `settings.py:129` — decrypts `extract_sources.json.gz.enc` |
+| `OPENAI_API_KEY` | str | None (#2713) | `settings.py:22` |
+| `TEXT_CONFIG_PASSPHRASE` | str | None | `settings.py:202` — decrypts `extract_sources.json.gz.enc` |
 
 ### LLM configuration
 
 | Variable | Type | Default | Source |
 |---|---|---|---|
-| `OPENAI_CHAT_MODEL_ID` | str | `gpt-5.6-luna` | `settings.py:12` |
-| `OPENAI_BASE_URL` | str | None | `settings.py:13` |
+| `OPENAI_CHAT_MODEL_ID` | str | `gpt-5.6-luna` | `settings.py:14`, `:23` |
+| `OPENAI_BASE_URL` | str | None | `settings.py:24` |
 | `GLOBAL_LLM_SERVICE` | str | `OpenAI` | `.env.example:6` |
 | `OPENROUTER_API_KEY` | str | None | `.env.example:36` — alternative provider |
 | `OPENROUTER_BASE_URL` | str | None | `.env.example:37` |
