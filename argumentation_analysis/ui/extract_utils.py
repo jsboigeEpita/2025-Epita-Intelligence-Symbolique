@@ -23,6 +23,9 @@ from argumentation_analysis.models.extract_definition import (
 )
 from argumentation_analysis.services.crypto_service import CryptoService
 from argumentation_analysis.services.cache_service import CacheService
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
 
 # Configuration du logging
 logger = logging.getLogger("UI.ExtractUtils")
@@ -311,6 +314,7 @@ def save_extract_definitions_safely(
 
         # Sauvegarder dans le fichier JSON de secours si spécifié
         if fallback_json_file:
+            check_plaintext_destination(fallback_json_file)
             json_path = Path(fallback_json_file)
             json_path.parent.mkdir(parents=True, exist_ok=True)
             with open(json_path, "w", encoding="utf-8") as f:
@@ -381,6 +385,7 @@ def export_definitions_to_json(
         json_data = json.dumps(extract_definitions, ensure_ascii=False, indent=2)
 
         # Sauvegarder dans le fichier
+        check_plaintext_destination(output_path)
         output_path = Path(output_path)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:

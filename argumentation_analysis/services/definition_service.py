@@ -25,6 +25,9 @@ from argumentation_analysis.models.extract_definition import (
     Extract,
 )
 from argumentation_analysis.services.crypto_service import CryptoService
+from argumentation_analysis.core.plaintext_destination import (
+    check_plaintext_destination,
+)
 
 # Configuration du logging
 logger = logging.getLogger("Services.DefinitionService")
@@ -245,6 +248,7 @@ class DefinitionService:
                     self.logger.error(error_message)
             else:
                 # Fichier JSON non chiffré
+                check_plaintext_destination(config_file_path)
                 with open(config_file_path, "w", encoding="utf-8") as f:
                     json.dump(definitions_list, f, indent=2, ensure_ascii=False)
 
@@ -262,6 +266,7 @@ class DefinitionService:
         fallback_file_path = Path(self.fallback_file) if self.fallback_file else None
         if not success and fallback_file_path:
             try:
+                check_plaintext_destination(fallback_file_path)
                 fallback_file_path.parent.mkdir(parents=True, exist_ok=True)
                 with open(fallback_file_path, "w", encoding="utf-8") as f:
                     json.dump(definitions_list, f, indent=2, ensure_ascii=False)
@@ -303,6 +308,7 @@ class DefinitionService:
         """
         output_file_path = Path(output_path)
         try:
+            check_plaintext_destination(output_file_path)
             # Convertir en liste de dictionnaires
             definitions_list = definitions.to_dict_list()
 

@@ -45,6 +45,7 @@ try:
         import_definitions_from_json,
     )
     from ...core.llm_service import create_llm_service
+    from ...core.plaintext_destination import DEFAULT_PLAINTEXT_EXPORT_PATH
 
     # Import de l'agent d'extraction
     from ...agents.core.extract.extract_agent import ExtractAgent  # Modifié
@@ -72,6 +73,9 @@ except ImportError as e:
             import_definitions_from_json,
         )
         from argumentation_analysis.core.llm_service import create_llm_service
+        from argumentation_analysis.core.plaintext_destination import (
+            DEFAULT_PLAINTEXT_EXPORT_PATH,
+        )
 
         # Import de l'agent d'extraction
         from argumentation_analysis.agents.core.extract.extract_agent import (
@@ -189,7 +193,7 @@ def create_marker_editor_ui():
 
     # Widget pour le chemin d'export/import
     file_path_input = widgets.Text(
-        value="./export_definitions.json",
+        value=DEFAULT_PLAINTEXT_EXPORT_PATH,
         description="Chemin fichier:",
         style={"description_width": "initial"},
         layout={"width": "70%"},
