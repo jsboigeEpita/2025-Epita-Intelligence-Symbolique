@@ -342,7 +342,9 @@ async def run_unified_analysis(
             filter_formal_extensions,
         )
 
-        workflow = filter_formal_extensions(workflow, formal_filter)
+        workflow = filter_formal_extensions(
+            replace(workflow, phases=list(workflow.phases)), formal_filter
+        )
 
     # JPype warmup: eagerly initialise JVM + Tweety classes before DAG
     # execution to eliminate the race condition where multiple parallel
