@@ -47,7 +47,10 @@ from semantic_kernel.connectors.ai.prompt_execution_settings import (
 from semantic_kernel.functions import KernelArguments
 
 from argumentation_analysis.config.settings import settings
-from argumentation_analysis.core.llm_service import create_llm_service
+from argumentation_analysis.core.llm_service import (
+    create_llm_service,
+    resolve_chat_endpoint,
+)
 
 # Imports du système de base
 from argumentation_analysis.core.bootstrap import (
@@ -319,11 +322,12 @@ class OrchestrationServiceManager:
 
             # 2. Initialisation du Kernel Semantic Kernel et du service LLM
             self.kernel = sk.Kernel()
-            api_key = (
-                settings.openai.api_key.get_secret_value()
-                if settings.openai.api_key
-                else None
-            )
+            # #2711 A2 : la question « une route LLM existe-t-elle ? » est
+            # celle du résolveur unique (#2352), celui dont `create_llm_service`
+            # applique la bascule. Lire `settings.openai.api_key` refusait un
+            # siège routé par OpenRouter seul, et répondait sur un autre `.env`
+            # que celui que lit la fabrique.
+            api_key, _, _ = resolve_chat_endpoint()
             self.llm_service_id = settings.service_manager.default_llm_service_id
             llm_service_ready = False
 
@@ -351,7 +355,8 @@ class OrchestrationServiceManager:
                     )
             else:
                 self.logger.warning(
-                    "API Key OpenAI non trouvée dans la configuration. Le service LLM ne sera pas configuré."
+                    "Aucune clé LLM (OPENAI_API_KEY, ou OPENROUTER_API_KEY + "
+                    "OPENROUTER_BASE_URL). Le service LLM ne sera pas configuré."
                 )
 
             # 2.1. Import et chargement des plugins sémantiques essentiels
@@ -362,7 +367,10 @@ class OrchestrationServiceManager:
             # `setup_failures` au lieu de ne laisser qu'une ligne de log.
             if not llm_service_ready:
                 if not api_key:
-                    missing = "clé API OpenAI absente"
+                    missing = (
+                        "clé API LLM absente (OPENAI_API_KEY, ou "
+                        "OPENROUTER_API_KEY + OPENROUTER_BASE_URL)"
+                    )
                 else:
                     missing = (
                         f"service LLM '{self.llm_service_id}' non ajouté au kernel"
@@ -811,6 +819,29 @@ class OrchestrationServiceManager:
                 return None
         return None
 
+    def _missing_llm_service(self) -> Optional[str]:
+        """Nomme ce qui manque pour qu'une analyse par le kernel serve (#2711 A2).
+
+        La précondition des analyses tactique et opérationnelle est le service
+        que ``_invoke_analysis_prompt`` épingle, pas une clé relue dans
+        ``settings`` : un siège routé par OpenRouter seul a son service et
+        n'a pas de clé OpenAI, et une clé présente ne dit pas que
+        ``initialize()`` a pu ajouter le service. Rend ``None`` quand le kernel
+        tient ce service (ou, sans id épinglé, au moins un service).
+        """
+        services = getattr(self.kernel, "services", None) or {}
+        if self.llm_service_id:
+            if self.llm_service_id in services:
+                return None
+            return (
+                f"aucun service LLM '{self.llm_service_id}' dans le kernel "
+                "(clé LLM absente, ou échec de l'initialisation : voir "
+                "setup_failures)"
+            )
+        if services:
+            return None
+        return "aucun service LLM dans le kernel"
+
     async def _invoke_analysis_prompt(
         self, template: str, function_name: str, text: str
     ) -> Any:
@@ -865,17 +896,13 @@ class OrchestrationServiceManager:
             # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
             import time
 
-            api_key = (
-                settings.openai.api_key.get_secret_value()
-                if settings.openai.api_key
-                else None
-            )
-            if not api_key:
-                self.logger.error("OPENAI_API_KEY non configuré dans les settings")
+            missing = self._missing_llm_service()
+            if missing:
+                self.logger.error(missing)
                 return {
                     "level": "tactical",
                     "status": "error",
-                    "message": "API key non configuré",
+                    "message": missing,
                     "manager": "TacticalManager",
                 }
 
@@ -960,17 +987,13 @@ Réponds au format JSON avec les clés: arguments, sophismes, structure_rhetoriq
             # Utiliser l'API OpenAI async pour les vrais appels LLM non-bloquants
             import time
 
-            api_key = (
-                settings.openai.api_key.get_secret_value()
-                if settings.openai.api_key
-                else None
-            )
-            if not api_key:
-                self.logger.error("OPENAI_API_KEY non configuré dans les settings")
+            missing = self._missing_llm_service()
+            if missing:
+                self.logger.error(missing)
                 return {
                     "level": "operational",
                     "status": "error",
-                    "message": "API key non configuré",
+                    "message": missing,
                     "manager": "OperationalManager",
                 }
 

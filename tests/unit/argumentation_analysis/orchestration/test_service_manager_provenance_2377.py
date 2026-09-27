@@ -133,30 +133,15 @@ def _kernel(services: Dict[str, Any]) -> sk.Kernel:
     return kernel
 
 
-def _bare_settings():
-    """Un ``settings`` minimal : les méthodes ne lisent que la clé OpenAI.
+def _manager(kernel, service_id: Optional[str] = "openai"):
+    """Un manager dont le kernel et le champ d'id sont imposés par le test.
 
-    Sans cette doublure, le test dépendrait du ``.env`` de la machine — et en
-    CI (keyless) les deux méthodes rendraient un dict d'erreur, donc le test
-    mesurerait un chemin qui n'a rien à voir.
+    Le kernel tient les services : c'est la précondition des deux méthodes
+    depuis #2711 A2, et aucune clé n'est lue dans ``settings``.
     """
-    return types.SimpleNamespace(
-        openai=types.SimpleNamespace(api_key=_secret("sk-test-not-a-real-key"))
-    )
-
-
-def _secret(value: str):
-    from pydantic import SecretStr
-
-    return SecretStr(value)
-
-
-def _manager(monkeypatch, kernel, service_id: Optional[str] = "openai"):
-    """Un manager dont le kernel et le champ d'id sont imposés par le test."""
     import argumentation_analysis.orchestration.service_manager as sm
 
     mgr = sm.OrchestrationServiceManager(enable_logging=False)
-    monkeypatch.setattr(sm, "settings", _bare_settings())
     mgr.kernel = kernel
     mgr.llm_service_id = service_id
     # Les deux méthodes refusent de s'exécuter sans leur manager — c'est un
@@ -198,7 +183,7 @@ async def test_the_result_names_the_model_the_kernel_served(
     """
     assert served != "gpt-5.6-luna", "un cas qui coïncide ne mesure rien"
 
-    mgr = _manager(monkeypatch, _kernel({"openai": served}))
+    mgr = _manager(_kernel({"openai": served}))
 
     result = await getattr(mgr, method_name)("texte synthétique", None)
 
@@ -223,7 +208,7 @@ async def test_the_field_follows_the_real_factory_product(monkeypatch, method_na
     service = create_llm_service(service_id="openai", force_mock=True)
     assert service.ai_model_id != "gpt-5.6-luna", "le produit mesuré coïncide"
 
-    mgr = _manager(monkeypatch, _kernel({"openai": service}))
+    mgr = _manager(_kernel({"openai": service}))
 
     result = await getattr(mgr, method_name)("texte synthétique", None)
 
@@ -248,9 +233,7 @@ async def test_the_field_is_absent_when_no_service_id_is_held(monkeypatch, metho
     service est épinglé, un id inconnu échoue au lieu de servir par un autre
     service (``test_service_manager_kernel_api_2389.py``).
     """
-    mgr = _manager(
-        monkeypatch, _kernel({"openai": "openai/gpt-5.6-pro"}), service_id=None
-    )
+    mgr = _manager(_kernel({"openai": "openai/gpt-5.6-pro"}), service_id=None)
 
     result = await getattr(mgr, method_name)("texte synthétique", None)
 
