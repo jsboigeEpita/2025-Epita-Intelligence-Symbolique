@@ -98,10 +98,25 @@ exclude_lines = [
 ]
 show_missing = true
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["argumentation_analysis*"]
 exclude = ["tests*"]
+
+# Explicit runtime resources only: never package the encrypted dataset or results.
+[tool.setuptools.package-data]
+"argumentation_analysis" = [
+    "agents/core/quality/ressources_argumentatives.json",
+    "data/argumentum_taxonomy_provenance.json",
+    "data/argumentum_fallacies_taxonomy.csv",
+    "plugin_framework/core/plugins/standard/taxonomy_explorer/data/fallacy_families.yaml",
+]
+
+[tool.setuptools.exclude-package-data]
+"argumentation_analysis" = ["data/argumentum_virtues_taxonomy.csv"]
 
 # --- mypy configuration (Issue #401) ---
 [tool.mypy]
