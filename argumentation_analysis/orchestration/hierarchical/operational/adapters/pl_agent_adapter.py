@@ -149,13 +149,9 @@ class PLAgentAdapter(OperationalAgent):
             self.logger.error(
                 f"Tentative de traitement de la tâche {task_id} sans initialisation."
             )
-            return self.format_result(
-                task, [], {}, [{"type": "initialization_error"}], task_id
-            )
+            return self.format_failure(task, {"type": "initialization_error"}, task_id)
         if not self.agent:
-            return self.format_result(
-                task, [], {}, [{"type": "agent_not_found"}], task_id
-            )
+            return self.format_failure(task, {"type": "agent_not_found"}, task_id)
 
         try:
             results = []
@@ -240,13 +236,8 @@ class PLAgentAdapter(OperationalAgent):
             self.logger.error(
                 f"Erreur lors du traitement de la tâche {task_id}: {e}", exc_info=True
             )
-            self.update_task_status(task_id, "failed")
-            return self.format_result(
-                task,
-                [],
-                {},
-                [{"type": "execution_error", "description": str(e)}],
-                task_id,
+            return self.format_failure(
+                task, {"type": "execution_error", "description": str(e)}, task_id
             )
 
     async def shutdown(self) -> bool:
