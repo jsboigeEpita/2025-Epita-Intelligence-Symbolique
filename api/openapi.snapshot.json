@@ -2,14 +2,30 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Argumentation Analysis API",
-    "description": "API d'analyse argumentative multi-agents.",
+    "description": "API principale d'analyse argumentative avec intégration Java/Tweety.",
     "version": "2.0.0"
   },
   "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/analyze": {
       "post": {
         "summary": "Analyze Text Endpoint",
-        "description": "Analyse un texte donné pour en extraire la structure argumentative.",
+        "description": "Analyse un texte donné pour en extraire la structure argumentative.\n\nDT-1 #1499: replaces the prior silent `try/except: pass` with a\nlegible error surface. Real upstream errors are now raised as\n``UpstreamError`` (HTTP 502 with machine-parseable envelope).\n\n#2526: with ``options.detect_fallacies``, the fallacies come from the\ndetector ``POST /api/fallacies`` serves (``api/fallacy_detection``); when\nit cannot run, the request fails with its reason (503 or 502).",
         "operationId": "analyze_text_endpoint_api_analyze_post",
         "requestBody": {
           "content": {
@@ -188,6 +204,48 @@
         }
       }
     },
+    "/api/fallacies": {
+      "post": {
+        "tags": [
+          "Frontend"
+        ],
+        "summary": "Fallacies",
+        "description": "The fallacies of a text, by the detector the pipeline's fallacy phase uses.\n\n503 when the tier has no detector (for ``llm``: no LLM key), 502 when it ran\nand failed; an empty list only when it ran and found nothing. The ``llm``\ntier took 18 s on one sentence and 53 s on two paragraphs (#2526).",
+        "operationId": "fallacies_api_fallacies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FallacyDetectionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FallacyDetectionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/health": {
       "get": {
         "summary": "Health Check Endpoint",
@@ -207,13 +265,55 @@
         }
       }
     },
+    "/api/logic/belief-set": {
+      "post": {
+        "tags": [
+          "Frontend"
+        ],
+        "summary": "Logic Belief Set",
+        "description": "A text converted into a belief set of ``logic_type``, by the logic agent.\n\nA malformed request is a 422 before the service runs. A failed conversion is\na 500: the service wraps every error, its own included, in ``ValueError``\nwith the traceback, which is not the caller's input and not for the client.",
+        "operationId": "logic_belief_set_api_logic_belief_set_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogicBeliefSetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogicBeliefSetResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/mobile/analyze": {
       "post": {
         "tags": [
           "Mobile API"
         ],
         "summary": "Mobile Analyze",
-        "description": "Analyze argumentative text — returns structured arguments.",
+        "description": "Analyze argumentative text — returns structured arguments.\n\n#2541: the arguments are the ones the ``light`` workflow writes to its\nstate (``identified_arguments``), each as the extraction describes it: the\npipeline does not split them into premises and a conclusion.\n``overall_quality`` is the mean ``quality_fraction`` of the arguments the\nquality phase measured, ``None`` when it measured none.\n\nA run that did not happen fails with its reason: 503 when the extraction\nhas no LLM client, 502 when the pipeline or the extraction failed, 422 when\nthe pipeline classified the text as non-argumentative (an extraction that\nfound no argument is one, #1909).",
         "operationId": "mobile_analyze_api_mobile_analyze_post",
         "requestBody": {
           "content": {
@@ -255,7 +355,7 @@
           "Mobile API"
         ],
         "summary": "Mobile Chat",
-        "description": "Chat with AI assistant specialized in argument analysis.",
+        "description": "Chat with AI assistant specialized in argument analysis.\n\n#2688: the answer is the chat model's reply, asked through the Semantic\nKernel service ``create_llm_service`` builds. 503 when no chat model can be\nconfigured (no API key), 502 when the call fails or the reply is empty.\nThere is no pipeline fallback: the analysis pipeline produces no reply to a\nmessage.",
         "operationId": "mobile_chat_api_mobile_chat_post",
         "requestBody": {
           "content": {
@@ -297,7 +397,7 @@
           "Mobile API"
         ],
         "summary": "Mobile Fallacies",
-        "description": "Detect logical fallacies in text.",
+        "description": "Detect logical fallacies in text.\n\n#2541: served by ``detect_fallacies``, the detector ``POST /api/fallacies``\nserves (the pipeline's own ``_invoke_hierarchical_fallacy``, ``llm`` tier),\nwith the confidence it gives each detection. When it cannot run, the\nrequest fails with its reason (503 or 502); an empty list means it ran and\nfound nothing. ``span`` locates the detector's quote in the text, and is\n``[0, 0]`` when the quote cannot be located: the client highlights nothing.",
         "operationId": "mobile_fallacies_api_mobile_fallacies_post",
         "requestBody": {
           "content": {
@@ -339,7 +439,7 @@
           "Mobile API"
         ],
         "summary": "Mobile Validate",
-        "description": "Validate the logical structure of an argument.",
+        "description": "Validate the logical structure of an argument.\n\n``valid`` is true when the Toulmin analyzer found a claim and the data\nsupporting it.\n\n#2688: a failure of the analyzer is not a verdict on the argument: 503 when\nits model is not served (the connection is refused), 502 when it answered\nand the analysis failed.",
         "operationId": "mobile_validate_api_mobile_validate_post",
         "requestBody": {
           "content": {
@@ -592,6 +692,66 @@
         }
       }
     },
+    "/api/shield/validate": {
+      "post": {
+        "tags": [
+          "AI Shield"
+        ],
+        "summary": "Shield Validate",
+        "description": "Validate text against adversarial patterns using AI Shield.\n\nRequires X-Shield-Token header when SHIELD_ENDPOINT_TOKEN env var is set.",
+        "operationId": "shield_validate_api_shield_validate_post",
+        "parameters": [
+          {
+            "name": "X-Shield-Token",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X-Shield-Token"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShieldValidateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShieldValidateResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/status": {
       "get": {
         "summary": "Status Endpoint",
@@ -743,7 +903,7 @@
           "Pipeline Agents"
         ],
         "summary": "Run Governance",
-        "description": "Run governance simulation on the text.\n\nApplies 7 voting methods (majority, Borda, Condorcet, approval, etc.)\nto evaluate competing arguments and reach a decision.",
+        "description": "Run governance simulation on the text.\n\nApplies 5 voting rules (majority, plurality, Borda, Condorcet, quadratic)\n+ 2 distributed-consensus protocols (Byzantine, Raft — *protocols*, not\nscrutins) + 8 social-choice functions (approval, STV, Copeland,\nKemeny-Young + safe, Schulze, Condorcet winner, pairwise matrix) to\nevaluate competing arguments and reach a decision. Byzantine and Raft\nare fault-tolerance protocols, not voting rules; approval is a\nsocial-choice function, not a governance voting rule (#1981).",
         "operationId": "run_governance_api_v1_agents_governance_post",
         "requestBody": {
           "content": {
@@ -905,56 +1065,14 @@
         }
       }
     },
-    "/api/workflow/custom": {
-      "post": {
-        "tags": [
-          "Proposals & Deliberation"
-        ],
-        "summary": "Run Custom Workflow",
-        "description": "Run a custom analysis workflow on arbitrary text.",
-        "operationId": "run_custom_workflow_api_workflow_custom_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CustomWorkflowRequest"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/WorkflowResult"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/jtms/beliefs": {
+    "/api/v1/jtms/beliefs": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Créer une nouvelle croyance",
         "description": "Crée une nouvelle croyance (noeud) dans une instance JTMS.\n\n- Si `session_id` ou `instance_id` ne sont pas fournis, ils sont créés automatiquement.\n- `initial_value` peut être \"true\", \"false\", ou \"unknown\".",
-        "operationId": "create_belief_jtms_beliefs_post",
+        "operationId": "create_belief_api_v1_jtms_beliefs_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -999,14 +1117,14 @@
         }
       }
     },
-    "/jtms/beliefs/explain": {
+    "/api/v1/jtms/beliefs/explain": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Explain Belief",
         "description": "Génère une explication détaillée pour une croyance donnée.\n\nRetourne le statut actuel de la croyance et la liste des justifications\nqui la supportent ou l'invalident.",
-        "operationId": "explain_belief_jtms_beliefs_explain_post",
+        "operationId": "explain_belief_api_v1_jtms_beliefs_explain_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1041,14 +1159,14 @@
         }
       }
     },
-    "/jtms/beliefs/query": {
+    "/api/v1/jtms/beliefs/query": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Query Beliefs",
         "description": "Interroge et filtre les croyances au sein d'une instance JTMS selon leur statut.\nLes filtres valides sont \"valid\", \"invalid\", \"unknown\", \"non_monotonic\", \"all\".",
-        "operationId": "query_beliefs_jtms_beliefs_query_post",
+        "operationId": "query_beliefs_api_v1_jtms_beliefs_query_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1083,14 +1201,14 @@
         }
       }
     },
-    "/jtms/beliefs/validity": {
+    "/api/v1/jtms/beliefs/validity": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Modifier la validité d'une croyance",
         "description": "Force la validité d'une croyance et propage les conséquences à travers le réseau de justifications.",
-        "operationId": "set_belief_validity_jtms_beliefs_validity_post",
+        "operationId": "set_belief_validity_api_v1_jtms_beliefs_validity_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1135,14 +1253,14 @@
         }
       }
     },
-    "/jtms/export": {
+    "/api/v1/jtms/export": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Export Jtms State",
         "description": "Exporte l'état d'une instance JTMS.",
-        "operationId": "export_jtms_state_jtms_export_post",
+        "operationId": "export_jtms_state_api_v1_jtms_export_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1177,14 +1295,14 @@
         }
       }
     },
-    "/jtms/import": {
+    "/api/v1/jtms/import": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Import Jtms State",
         "description": "Importe un état JTMS dans une session.",
-        "operationId": "import_jtms_state_jtms_import_post",
+        "operationId": "import_jtms_state_api_v1_jtms_import_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1219,14 +1337,14 @@
         }
       }
     },
-    "/jtms/justifications": {
+    "/api/v1/jtms/justifications": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Ajouter une justification",
         "description": "Ajoute une règle de déduction (justification) qui lie des croyances entre elles.\n\n- Une justification est de la forme: `in_beliefs & NOT out_beliefs -> conclusion`.\n- Crée la session/instance si nécessaire.",
-        "operationId": "add_justification_jtms_justifications_post",
+        "operationId": "add_justification_api_v1_jtms_justifications_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1271,14 +1389,14 @@
         }
       }
     },
-    "/jtms/plugin/status": {
+    "/api/v1/jtms/plugin/status": {
       "get": {
         "tags": [
           "JTMS"
         ],
         "summary": "Get Plugin Status",
         "description": "Vérifie et retourne le statut du plugin JTMSSemanticKernelPlugin.\n\nIndique si le kernel, le service JTMS et le gestionnaire de session sont actifs,\net liste les fonctions disponibles.",
-        "operationId": "get_plugin_status_jtms_plugin_status_get",
+        "operationId": "get_plugin_status_api_v1_jtms_plugin_status_get",
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -1293,14 +1411,14 @@
         }
       }
     },
-    "/jtms/sessions": {
+    "/api/v1/jtms/sessions": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Create Session",
         "description": "Crée une nouvelle session de travail pour un agent, qui peut contenir\nplusieurs instances JTMS.",
-        "operationId": "create_session_jtms_sessions_post",
+        "operationId": "create_session_api_v1_jtms_sessions_post",
         "requestBody": {
           "required": true,
           "content": {
@@ -1340,7 +1458,7 @@
         ],
         "summary": "List Sessions",
         "description": "Liste toutes les sessions existantes, avec la possibilité de filtrer par\nagent_id et par statut.",
-        "operationId": "list_sessions_jtms_sessions_get",
+        "operationId": "list_sessions_api_v1_jtms_sessions_get",
         "parameters": [
           {
             "name": "agent_id",
@@ -1399,14 +1517,14 @@
         }
       }
     },
-    "/jtms/sessions/checkpoints": {
+    "/api/v1/jtms/sessions/checkpoints": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Create Checkpoint",
         "description": "Crée un checkpoint pour une session.",
-        "operationId": "create_checkpoint_jtms_sessions_checkpoints_post",
+        "operationId": "create_checkpoint_api_v1_jtms_sessions_checkpoints_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1441,14 +1559,14 @@
         }
       }
     },
-    "/jtms/sessions/restore": {
+    "/api/v1/jtms/sessions/restore": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Restore Checkpoint",
         "description": "Restaure une session à partir d'un checkpoint.",
-        "operationId": "restore_checkpoint_jtms_sessions_restore_post",
+        "operationId": "restore_checkpoint_api_v1_jtms_sessions_restore_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1483,14 +1601,14 @@
         }
       }
     },
-    "/jtms/sk/add_justification": {
+    "/api/v1/jtms/sk/add_justification": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Sk Add Justification",
         "description": "Endpoint de convenance pour la fonction SK add_justification.",
-        "operationId": "sk_add_justification_jtms_sk_add_justification_post",
+        "operationId": "sk_add_justification_api_v1_jtms_sk_add_justification_post",
         "parameters": [
           {
             "name": "in_beliefs",
@@ -1572,14 +1690,14 @@
         }
       }
     },
-    "/jtms/sk/create_belief": {
+    "/api/v1/jtms/sk/create_belief": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Sk Create Belief",
         "description": "Endpoint de convenance pour la fonction SK create_belief.",
-        "operationId": "sk_create_belief_jtms_sk_create_belief_post",
+        "operationId": "sk_create_belief_api_v1_jtms_sk_create_belief_post",
         "parameters": [
           {
             "name": "belief_name",
@@ -1653,14 +1771,14 @@
         }
       }
     },
-    "/jtms/sk/explain_belief": {
+    "/api/v1/jtms/sk/explain_belief": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Sk Explain Belief",
         "description": "Endpoint de convenance pour la fonction SK explain_belief.",
-        "operationId": "sk_explain_belief_jtms_sk_explain_belief_post",
+        "operationId": "sk_explain_belief_api_v1_jtms_sk_explain_belief_post",
         "parameters": [
           {
             "name": "belief_name",
@@ -1724,14 +1842,14 @@
         }
       }
     },
-    "/jtms/sk/get_jtms_state": {
+    "/api/v1/jtms/sk/get_jtms_state": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Sk Get Jtms State",
         "description": "Endpoint de convenance pour la fonction SK get_jtms_state.",
-        "operationId": "sk_get_jtms_state_jtms_sk_get_jtms_state_post",
+        "operationId": "sk_get_jtms_state_api_v1_jtms_sk_get_jtms_state_post",
         "parameters": [
           {
             "name": "include_graph",
@@ -1806,14 +1924,14 @@
         }
       }
     },
-    "/jtms/sk/query_beliefs": {
+    "/api/v1/jtms/sk/query_beliefs": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Sk Query Beliefs",
         "description": "Endpoint de convenance pour la fonction SK query_beliefs.",
-        "operationId": "sk_query_beliefs_jtms_sk_query_beliefs_post",
+        "operationId": "sk_query_beliefs_api_v1_jtms_sk_query_beliefs_post",
         "parameters": [
           {
             "name": "filter_status",
@@ -1878,14 +1996,14 @@
         }
       }
     },
-    "/jtms/state": {
+    "/api/v1/jtms/state": {
       "post": {
         "tags": [
           "JTMS"
         ],
         "summary": "Get Jtms State",
         "description": "Récupère l'état complet d'une instance JTMS, avec la possibilité d'inclure\nle graphe de justifications et des statistiques détaillées.",
-        "operationId": "get_jtms_state_jtms_state_post",
+        "operationId": "get_jtms_state_api_v1_jtms_state_post",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1914,6 +2032,130 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/validate": {
+      "post": {
+        "tags": [
+          "Frontend"
+        ],
+        "summary": "Validate Argument",
+        "description": "Validity and soundness scores of an argument, from its premises and conclusion.\n\nThe scores are heuristic: ``result.logical_structure.method`` says so.",
+        "operationId": "validate_argument_api_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/custom": {
+      "post": {
+        "tags": [
+          "Proposals & Deliberation"
+        ],
+        "summary": "Run Custom Workflow",
+        "description": "Run a custom analysis workflow on arbitrary text.\n\nDispatches to the correct orchestrator based on orchestration_mode:\n- pipeline (default): run_unified_analysis (sequential DAG)\n- conversational: run_conversational_analysis (multi-agent dialogue)\n- hierarchical: run_hierarchical_analysis (strategic planning → Lego)\n- sherlock_modern: SherlockModernOrchestrator (investigation)\n\nSelector context forwarding per mode (#920):\n- pipeline: all selectors consumed (fallacy_tier, shield_preset,\n  vote_method, consensus_threshold)\n- hierarchical: all selectors consumed via WorkflowExecutor\n- conversational: only fallacy_tier consumed (via parent harness\n  on texts >5000 chars); shield/vote/consensus forwarded but N/A\n- sherlock_modern: all selectors N/A (investigation ≠ rhetoric)",
+        "operationId": "run_custom_workflow_api_workflow_custom_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomWorkflowRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dashboard": {
+      "get": {
+        "tags": [
+          "Frontend"
+        ],
+        "summary": "Unified Dashboard",
+        "description": "Redirect to the Starlette frontend dashboard.\n\nThe dashboard is served by the Starlette frontend proxy (:5003),\nwhich owns the HTML template. This eliminates cross-module coupling\nbetween api/ and interface_web/templates/ (issue #845).",
+        "operationId": "unified_dashboard_dashboard_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "Monitoring"
+        ],
+        "summary": "Health Check",
+        "description": "Vérifie l'état de santé de l'API.\n\nRetourne le statut de l'API et de la JVM.",
+        "operationId": "health_check_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -2060,11 +2302,39 @@
         "title": "AddJustificationResponse",
         "description": "Réponse d'ajout de justification."
       },
+      "AnalysisOptions": {
+        "properties": {
+          "detect_fallacies": {
+            "type": "boolean",
+            "title": "Detect Fallacies",
+            "description": "Run the pipeline's fallacy detector (an LLM call for the ``llm`` tier: a key, and tens of seconds).",
+            "default": false
+          },
+          "fallacy_tier": {
+            "type": "string",
+            "enum": [
+              "taxonomy",
+              "hybrid",
+              "llm",
+              "full"
+            ],
+            "title": "Fallacy Tier",
+            "default": "llm"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AnalysisOptions",
+        "description": "What ``POST /api/analyze`` computes besides the structure (#2526)."
+      },
       "AnalysisRequest": {
         "properties": {
           "text": {
             "type": "string",
             "title": "Text"
+          },
+          "options": {
+            "$ref": "#/components/schemas/AnalysisOptions"
           }
         },
         "type": "object",
@@ -2088,9 +2358,15 @@
             "default": []
           },
           "overall_quality": {
-            "type": "number",
-            "title": "Overall Quality",
-            "default": 0.0
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Quality"
           }
         },
         "type": "object",
@@ -2123,14 +2399,26 @@
             "default": ""
           },
           "structure": {
-            "type": "string",
-            "title": "Structure",
-            "default": "other"
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Structure"
           },
           "validity": {
-            "type": "boolean",
-            "title": "Validity",
-            "default": false
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Validity"
           },
           "fallacies": {
             "items": {
@@ -2655,6 +2943,64 @@
             "additionalProperties": true,
             "type": "object",
             "title": "Options"
+          },
+          "fallacy_tier": {
+            "type": "string",
+            "enum": [
+              "taxonomy",
+              "hybrid",
+              "llm",
+              "full"
+            ],
+            "title": "Fallacy Tier",
+            "description": "Fallacy detection tier: taxonomy (lexical), hybrid (neural+symbolic), llm (default, LLM-based), full (all merged)",
+            "default": "llm"
+          },
+          "shield_preset": {
+            "type": "string",
+            "enum": [
+              "off",
+              "basic",
+              "advanced",
+              "output_only",
+              "strict"
+            ],
+            "title": "Shield Preset",
+            "description": "AI Shield preset: off (default), basic, advanced, output_only, strict",
+            "default": "off"
+          },
+          "vote_method": {
+            "type": "string",
+            "enum": [
+              "copeland",
+              "approval",
+              "stv",
+              "schulze",
+              "kemeny_young"
+            ],
+            "title": "Vote Method",
+            "description": "Social choice voting method for governance analysis",
+            "default": "copeland"
+          },
+          "consensus_threshold": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Consensus Threshold",
+            "description": "Consensus threshold (0.0–1.0) for governance metrics",
+            "default": 0.7
+          },
+          "orchestration_mode": {
+            "type": "string",
+            "enum": [
+              "pipeline",
+              "conversational",
+              "hierarchical",
+              "sherlock_modern"
+            ],
+            "title": "Orchestration Mode",
+            "description": "Orchestration mode: pipeline (sequential DAG, default), conversational (multi-agent dialogue), hierarchical (strategic planning), sherlock_modern (investigation multi-agent)",
+            "default": "pipeline"
           }
         },
         "type": "object",
@@ -2825,6 +3171,90 @@
           "started_at"
         ],
         "title": "DeliberationStatusResponse"
+      },
+      "DetectedFallacy": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "confidence": {
+            "type": "number",
+            "title": "Confidence"
+          },
+          "taxonomy_pk": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomy Pk"
+          },
+          "family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "example": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Example"
+          },
+          "explanation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explanation"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quote"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "confidence"
+        ],
+        "title": "DetectedFallacy"
       },
       "EndpointDetail": {
         "properties": {
@@ -3239,6 +3669,117 @@
         ],
         "title": "Extensions",
         "description": "Conteneur pour toutes les extensions sémantiques."
+      },
+      "FallacyDetectionOptions": {
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "taxonomy",
+              "hybrid",
+              "llm",
+              "full"
+            ],
+            "title": "Tier",
+            "description": "Detection depth, as the pipeline's ``fallacy_tier``.",
+            "default": "llm"
+          },
+          "min_confidence": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Min Confidence",
+            "description": "Detections below this confidence are counted, not listed.",
+            "default": 0.0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "FallacyDetectionOptions",
+        "description": "What the detector takes. Any other key is refused, not ignored."
+      },
+      "FallacyDetectionRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text"
+          },
+          "options": {
+            "$ref": "#/components/schemas/FallacyDetectionOptions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "FallacyDetectionRequest"
+      },
+      "FallacyDetectionResponse": {
+        "properties": {
+          "tier": {
+            "type": "string",
+            "title": "Tier"
+          },
+          "fallacies": {
+            "items": {
+              "$ref": "#/components/schemas/DetectedFallacy"
+            },
+            "type": "array",
+            "title": "Fallacies"
+          },
+          "fallacy_count": {
+            "type": "integer",
+            "title": "Fallacy Count"
+          },
+          "below_threshold": {
+            "type": "integer",
+            "title": "Below Threshold",
+            "description": "Detections dropped by ``min_confidence``; 0 when none were."
+          },
+          "method": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Method",
+            "description": "The detector's ``extraction_method``."
+          },
+          "degraded": {
+            "type": "boolean",
+            "title": "Degraded",
+            "default": false
+          },
+          "degradation_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Degradation Reason",
+            "description": "The detector's ``last_error`` when degraded."
+          },
+          "processing_time": {
+            "type": "number",
+            "title": "Processing Time"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier",
+          "fallacies",
+          "fallacy_count",
+          "below_threshold",
+          "processing_time"
+        ],
+        "title": "FallacyDetectionResponse"
       },
       "FallacyInstance": {
         "properties": {
@@ -4005,6 +4546,158 @@
         "title": "JustificationInfo",
         "description": "Informations sur une justification."
       },
+      "LayerResultResponse": {
+        "properties": {
+          "layer": {
+            "type": "string",
+            "title": "Layer"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "error_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "layer",
+          "score",
+          "passed"
+        ],
+        "title": "LayerResultResponse"
+      },
+      "LogicBeliefSet": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id",
+            "description": "Identifiant unique de l'ensemble de croyances"
+          },
+          "logic_type": {
+            "type": "string",
+            "title": "Logic Type",
+            "description": "Type de logique (propositional, first_order, modal)"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content",
+            "description": "Contenu de l'ensemble de croyances"
+          },
+          "source_text": {
+            "type": "string",
+            "title": "Source Text",
+            "description": "Texte source"
+          },
+          "creation_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Creation Timestamp",
+            "description": "Timestamp de création"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "logic_type",
+          "content",
+          "source_text"
+        ],
+        "title": "LogicBeliefSet",
+        "description": "Ensemble de croyances logiques."
+      },
+      "LogicBeliefSetRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Texte à convertir"
+          },
+          "logic_type": {
+            "type": "string",
+            "title": "Logic Type",
+            "description": "Type de logique (propositional, first_order, modal)"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options",
+            "description": "Options de conversion flexibles"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "logic_type"
+        ],
+        "title": "LogicBeliefSetRequest",
+        "description": "Requête pour la conversion d'un texte en ensemble de croyances logiques."
+      },
+      "LogicBeliefSetResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "description": "Succès de la conversion"
+          },
+          "conversion_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Conversion Timestamp",
+            "description": "Timestamp de la conversion"
+          },
+          "belief_set": {
+            "$ref": "#/components/schemas/LogicBeliefSet",
+            "description": "Ensemble de croyances créé"
+          },
+          "processing_time": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Processing Time",
+            "description": "Temps de traitement",
+            "default": 0.0
+          },
+          "conversion_options": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Conversion Options",
+            "description": "Options utilisées"
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "belief_set"
+        ],
+        "title": "LogicBeliefSetResponse",
+        "description": "Réponse pour la conversion d'un texte en ensemble de croyances logiques."
+      },
       "PluginStatusResponse": {
         "properties": {
           "plugin_name": {
@@ -4688,6 +5381,86 @@
         "title": "SetBeliefValidityResponse",
         "description": "Réponse de modification de validité."
       },
+      "ShieldValidateRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Text",
+            "description": "Text to validate"
+          },
+          "preset": {
+            "type": "string",
+            "title": "Preset",
+            "description": "Shield preset: basic, advanced, output_only, strict",
+            "default": "basic"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction",
+            "description": "Validation direction: input or output",
+            "default": "input"
+          },
+          "fail_open": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fail Open",
+            "description": "Pass if the shield fails to load. None (default) = the preset's declared policy — `strict` fails closed, the others fail open (#2144)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "ShieldValidateRequest"
+      },
+      "ShieldValidateResponse": {
+        "properties": {
+          "blocked": {
+            "type": "boolean",
+            "title": "Blocked"
+          },
+          "overall_score": {
+            "type": "number",
+            "title": "Overall Score",
+            "default": 0.0
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed",
+            "default": true
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason",
+            "default": ""
+          },
+          "layer_results": {
+            "items": {
+              "$ref": "#/components/schemas/LayerResultResponse"
+            },
+            "type": "array",
+            "title": "Layer Results",
+            "default": []
+          },
+          "shield_available": {
+            "type": "boolean",
+            "title": "Shield Available",
+            "default": true
+          }
+        },
+        "type": "object",
+        "required": [
+          "blocked"
+        ],
+        "title": "ShieldValidateResponse"
+      },
       "StatusResponse": {
         "properties": {
           "status": {
@@ -4905,6 +5678,167 @@
         },
         "type": "object",
         "title": "ValidationFormalization"
+      },
+      "ValidationRequest": {
+        "properties": {
+          "premises": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Premises",
+            "description": "Liste des prémisses"
+          },
+          "conclusion": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Conclusion",
+            "description": "Conclusion de l'argument"
+          },
+          "argument_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Argument Type",
+            "description": "Type d'argument (deductive, inductive, abductive)",
+            "default": "deductive"
+          }
+        },
+        "type": "object",
+        "required": [
+          "premises",
+          "conclusion"
+        ],
+        "title": "ValidationRequest",
+        "description": "Requête pour la validation d'un argument."
+      },
+      "ValidationResponse": {
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "title": "Success",
+            "description": "Succès de la validation"
+          },
+          "validation_timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Validation Timestamp",
+            "description": "Timestamp de la validation"
+          },
+          "premises": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Premises",
+            "description": "Prémisses validées"
+          },
+          "conclusion": {
+            "type": "string",
+            "title": "Conclusion",
+            "description": "Conclusion validée"
+          },
+          "argument_type": {
+            "type": "string",
+            "title": "Argument Type",
+            "description": "Type d'argument"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ValidationResult",
+            "description": "Résultat de la validation"
+          },
+          "processing_time": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Processing Time",
+            "description": "Temps de traitement",
+            "default": 0.0
+          }
+        },
+        "type": "object",
+        "required": [
+          "success",
+          "premises",
+          "conclusion",
+          "argument_type",
+          "result"
+        ],
+        "title": "ValidationResponse",
+        "description": "Réponse pour la validation d'un argument."
+      },
+      "ValidationResult": {
+        "properties": {
+          "is_valid": {
+            "type": "boolean",
+            "title": "Is Valid",
+            "description": "L'argument est-il valide"
+          },
+          "validity_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Validity Score",
+            "description": "Score de validité"
+          },
+          "soundness_score": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Soundness Score",
+            "description": "Score de solidité"
+          },
+          "premise_analysis": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Premise Analysis",
+            "description": "Analyse des prémisses"
+          },
+          "conclusion_analysis": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Conclusion Analysis",
+            "description": "Analyse de la conclusion"
+          },
+          "logical_structure": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Logical Structure",
+            "description": "Structure logique"
+          },
+          "issues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Issues",
+            "description": "Problèmes identifiés"
+          },
+          "suggestions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggestions",
+            "description": "Suggestions d'amélioration"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_valid",
+          "validity_score",
+          "soundness_score"
+        ],
+        "title": "ValidationResult",
+        "description": "Résultat de validation d'un argument."
       },
       "VoteCreate": {
         "properties": {

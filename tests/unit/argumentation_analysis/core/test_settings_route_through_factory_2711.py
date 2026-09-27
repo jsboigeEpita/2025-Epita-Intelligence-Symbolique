@@ -13,10 +13,11 @@ service whose client points at that base URL, whether or not an OpenAI key is
 also configured. No request leaves the process: the agent and the game are
 replaced by captures.
 
-On a seat with no key at all, ``settings.openai.api_key`` is not ``None``: the
-field defaults to ``"sk-dummy-key-for-testing"``, so a presence test on it
-passes and the site builds a service that sends the dummy key. The factory
-refuses that seat instead.
+On a seat with no key at all, the factory refuses to build a service, whatever
+``settings.openai.api_key`` holds. The keyless tests run with both values the
+settings key has had: ``None`` (the default since #2713) and the former dummy
+default ``"sk-dummy-key-for-testing"``, which made every presence test on it
+pass. Neither may reach an agent or a game.
 """
 
 from unittest.mock import patch
@@ -52,6 +53,20 @@ def _keyless_settings_key():
     from argumentation_analysis.config.settings import OpenAISettings
 
     return OpenAISettings(_env_file=None).api_key
+
+
+# What the settings key may hold on a keyless seat: today's default, and the
+# dummy default it had until #2713. The sites must not read it either way.
+KEYLESS_SETTINGS_VALUES = pytest.mark.parametrize(
+    "settings_value",
+    ["keyless-default", "former-dummy-default"],
+)
+
+
+def _settings_key_on_a_keyless_seat(settings_value):
+    if settings_value == "keyless-default":
+        return _keyless_settings_key()
+    return SecretStr("sk-dummy-key-for-testing")
 
 
 def _base_url(service) -> str:
@@ -126,7 +141,10 @@ async def test_the_cluedo_entry_point_takes_the_openrouter_route(
     assert _base_url(services[0]).startswith(OPENROUTER_URL), _base_url(services[0])
 
 
-async def test_a_keyless_seat_is_refused_by_the_analysis_pipeline(keyless_seat):
+@KEYLESS_SETTINGS_VALUES
+async def test_a_keyless_seat_is_refused_by_the_analysis_pipeline(
+    keyless_seat, settings_value
+):
     from argumentation_analysis.agents.core.informal import informal_agent
     from argumentation_analysis.config.settings import settings
     from argumentation_analysis.utils.analysis_config import (
@@ -140,8 +158,7 @@ async def test_a_keyless_seat_is_refused_by_the_analysis_pipeline(keyless_seat):
         def __init__(self, *args, **kwargs):
             raise AssertionError("an agent was built on a seat with no key")
 
-    key = _keyless_settings_key()
-    assert key is not None  # the premise: the dummy default, not None
+    key = _settings_key_on_a_keyless_seat(settings_value)
     pipeline = UnifiedAnalysisPipeline(AnalysisConfig(require_real_llm=True))
     with patch.object(
         informal_agent, "InformalAnalysisAgent", _NeverBuilt
@@ -152,7 +169,10 @@ async def test_a_keyless_seat_is_refused_by_the_analysis_pipeline(keyless_seat):
             )
 
 
-async def test_a_keyless_seat_is_refused_by_the_cluedo_entry_point(keyless_seat):
+@KEYLESS_SETTINGS_VALUES
+async def test_a_keyless_seat_is_refused_by_the_cluedo_entry_point(
+    keyless_seat, settings_value
+):
     from argumentation_analysis.config.settings import settings
     from argumentation_analysis.orchestration import (
         cluedo_extended_orchestrator as entry,
@@ -163,7 +183,9 @@ async def test_a_keyless_seat_is_refused_by_the_cluedo_entry_point(keyless_seat)
 
     with patch.object(entry, "run_cluedo_oracle_game", _never_played), patch.object(
         settings, "use_mock_llm", False
-    ), patch.object(settings.openai, "api_key", _keyless_settings_key()):
+    ), patch.object(
+        settings.openai, "api_key", _settings_key_on_a_keyless_seat(settings_value)
+    ):
         with pytest.raises(ValueError, match="OPENAI_API_KEY"):
             await entry.main()
 
