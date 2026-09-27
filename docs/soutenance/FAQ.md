@@ -153,7 +153,7 @@ Each source gets `sha256(source_name)[:8]` as an opaque identifier. Extracts get
 
 ### Q28: How do you test formal reasoning without a real JVM?
 
-You can't — JPype/Tweety requires a real JVM. Tests marked `@pytest.mark.jpype` or `@pytest.mark.tweety` expect a running JVM. The `conftest.py` handles JVM initialization and the critical DLL load ordering (torch/transformers before jpype on Windows to avoid `WinError 182`). CI provides Java 11 via Temurin. For pure logic tests, we use mock formulas and test the translation layer (NL → logic syntax) independently.
+You can't — JPype/Tweety requires a real JVM. Tests marked `@pytest.mark.jpype` or `@pytest.mark.tweety` expect a running JVM. The `conftest.py` handles JVM initialization and the critical DLL load ordering (torch/transformers before jpype on Windows to avoid `WinError 182`). CI runs the portable JDK 17 that `jvm_setup.py` provisions into `portable_jdk/`; the floor is Java 15. For pure logic tests, we use mock formulas and test the translation layer (NL → logic syntax) independently.
 
 ### Q29: What's the mypy situation?
 

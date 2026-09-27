@@ -335,9 +335,8 @@ pip install -r requirements.txt
 
 **Problème** : Erreur JPype avec TweetyProject
 ```bash
-# Solution : Vérifier JAVA_HOME
-export JAVA_HOME="/path/to/java"
-java -version  # doit afficher Java 8+
+# Solution : JAVA_HOME n'est pas lu ; jvm_setup.py utilise portable_jdk/
+portable_jdk/*/bin/java -version  # doit afficher Java 15+ (JDK 17 téléchargé par défaut)
 ```
 
 **Problème** : API OpenRouter non configurée

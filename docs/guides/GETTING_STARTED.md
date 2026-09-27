@@ -385,9 +385,9 @@ Pour contribuer au projet, consultez les ressources suivantes :
 **Symptôme** : Message d'erreur indiquant que JPype ne peut pas trouver la JVM.
 
 **Solution** :
-1. Vérifiez que `JAVA_HOME` est correctement configuré
-2. Redémarrez votre terminal/IDE après avoir défini `JAVA_HOME`
-3. Vérifiez que vous avez installé JDK 11+ (et non JRE)
+1. `JAVA_HOME` n'est pas lu : `argumentation_analysis/core/jvm_setup.py` cherche un JDK 15+ dans `portable_jdk/` et, s'il n'en trouve pas, y télécharge un JDK 17 portable
+2. Vérifiez que `portable_jdk/` contient un JDK complet (avec `bin/java`), et non un JRE ou un JDK de version inférieure à 15
+3. Si le téléchargement a échoué (réseau, proxy), supprimez le dossier incomplet et relancez
 
 #### Problème : Erreur de clé API LLM
 

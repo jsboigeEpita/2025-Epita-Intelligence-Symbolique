@@ -169,13 +169,9 @@ pip install -r requirements.txt
 
 ### ☕ **Environnement Java pour TweetyProject**
 ```bash
-# Java 8+ requis pour JPype
-java -version  # Vérification version
-echo $JAVA_HOME  # Vérification variable environnement
-
-# Si non configuré:
-export JAVA_HOME=/path/to/java
-export PATH=$JAVA_HOME/bin:$PATH
+# Java 15+ requis ; JAVA_HOME n'est pas lu.
+# jvm_setup.py utilise le JDK de portable_jdk/ et y télécharge un JDK 17 s'il n'y en a pas.
+portable_jdk/*/bin/java -version  # Vérification version
 ```
 
 ### 🔑 **Configuration API OpenRouter (Essentielle)**
