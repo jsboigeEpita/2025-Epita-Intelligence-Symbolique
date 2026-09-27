@@ -3,11 +3,16 @@ Test du service d'analyse Dung (Abstract Argumentation Framework).
 
 Split into two modes:
 - JVM-backed tests (marked @pytest.mark.jpype) that exercise the real Tweety reasoner
-- Pure-Python mock tests that validate Dung semantics using networkx only
+- Tests of the real ``DungAnalysisService`` with only its Java/Tweety boundary
+  doubled (#2755): the extensions come from a scripted agent, and what the
+  service computes itself (status, sorting, graph properties, options, the
+  JVM refusal) runs for real without a JVM
 """
 
+import sys
+import types
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 def _is_jvm_available():
@@ -91,207 +96,254 @@ class TestDungServiceDirect:
 
 
 # ============================================================
-# Pure-Python mock tests (no JVM required)
+# Real service, Java/Tweety boundary doubled (no JVM required)
 # ============================================================
 
 
-def _make_mock_dung_service():
-    """Create a pure-Python mock DungAnalysisService.
+class _Argument:
+    """Stand-in for org.tweetyproject.arg.dung.syntax.Argument."""
 
-    Uses networkx to compute Dung framework semantics without JVM/Tweety.
-    Covers: grounded, preferred, stable, complete, admissible extensions.
+    def __init__(self, name):
+        self._name = name
+
+    def getName(self):
+        return self._name
+
+    def __str__(self):
+        return self._name
+
+    # JPype compares Java objects with equals(): same name, same argument.
+    def __eq__(self, other):
+        return isinstance(other, _Argument) and other._name == self._name
+
+    def __hash__(self):
+        return hash(self._name)
+
+
+class _Attack:
+    def __init__(self, attacker, attacked):
+        self._attacker = attacker
+        self._attacked = attacked
+
+    def getAttacker(self):
+        return self._attacker
+
+    def getAttacked(self):
+        return self._attacked
+
+
+class _Theory:
+    def __init__(self):
+        self.nodes = []
+        self.attacks = []
+
+    def getNodes(self):
+        return list(self.nodes)
+
+    def getAttacks(self):
+        return list(self.attacks)
+
+
+def _scripted_agent(extensions):
+    """An ``EnhancedDungAgent`` whose extensions are scripted.
+
+    Computing extensions is Tweety's job and is covered by
+    ``TestDungServiceDirect``; here the reasoner's answer is fixed so the
+    service's own logic is what the assertions measure.
     """
 
-    import networkx as nx
+    def _args(names):
+        return [_Argument(name) for name in names]
 
-    class MockDungService:
-        def analyze_framework(
-            self, arguments: list, attacks: list, options: dict = None
-        ) -> dict:
-            if options is None:
-                options = {}
+    class ScriptedDungAgent:
+        def __init__(self):
+            self.af = _Theory()
 
-            G = nx.DiGraph()
-            G.add_nodes_from(arguments)
-            G.add_edges_from(attacks)
+        def add_argument(self, name):
+            self.af.nodes.append(_Argument(name))
 
-            results = {
-                "argument_status": {},
-                "graph_properties": self._get_properties(arguments, attacks, G),
-            }
+        def add_attack(self, source, target):
+            self.af.attacks.append(_Attack(_Argument(source), _Argument(target)))
 
-            if options.get("compute_extensions", False):
-                grounded = self._grounded_extension(arguments, attacks, G)
-                preferred = self._preferred_extensions(arguments, attacks, G)
-                stable = self._stable_extensions(arguments, attacks, G)
+        def get_grounded_extension(self):
+            return _args(extensions["grounded"])
 
-                results["argument_status"] = self._argument_status(
-                    arguments, preferred, grounded, stable
-                )
-                results["extensions"] = {
-                    "grounded": sorted(grounded),
-                    "preferred": sorted([sorted(e) for e in preferred]),
-                    "stable": sorted([sorted(e) for e in stable]),
-                    "complete": sorted([sorted(e) for e in preferred]),
-                    "admissible": sorted([sorted(e) for e in preferred]),
-                    "ideal": [],
-                    "semi_stable": [],
-                }
+        def get_preferred_extensions(self):
+            return [_args(ext) for ext in extensions["preferred"]]
 
-            return results
+        def get_stable_extensions(self):
+            return [_args(ext) for ext in extensions["stable"]]
 
-        def _get_properties(self, arguments, attacks, G):
-            cycles = [c for c in nx.simple_cycles(G)] if G.nodes else []
-            self_attacking = list(set(s for s, t in attacks if s == t))
-            return {
-                "num_arguments": len(arguments),
-                "num_attacks": len(attacks),
-                "has_cycles": len(cycles) > 0,
-                "cycles": cycles,
-                "self_attacking_nodes": self_attacking,
-            }
+        def get_complete_extensions(self):
+            return [_args(ext) for ext in extensions["complete"]]
 
-        def _is_defended(self, arg, ext, attacks):
-            """Check if ext defends arg: every attacker of arg is attacked by ext."""
-            attackers_of_arg = {a for a, t in attacks if t == arg}
-            for attacker in attackers_of_arg:
-                defended_by = any(d in ext for d, t2 in attacks if t2 == attacker)
-                if not defended_by:
-                    return False
-            return True
+        def get_admissible_sets(self):
+            return [_args(ext) for ext in extensions["admissible"]]
 
-        def _is_conflict_free(self, ext, attacks):
-            """Check if ext is conflict-free (no internal attacks)."""
-            ext_set = set(ext)
-            return not any(s in ext_set and t in ext_set for s, t in attacks)
+    return ScriptedDungAgent
 
-        def _grounded_extension(self, arguments, attacks, G):
-            """Compute grounded extension: least fixed point of the characteristic function."""
-            grounded = set()
-            changed = True
-            while changed:
-                changed = False
-                for arg in arguments:
-                    if arg in grounded:
-                        continue
-                    if self._is_defended(arg, grounded, attacks):
-                        grounded.add(arg)
-                        changed = True
-            return sorted(grounded)
 
-        def _preferred_extensions(self, arguments, attacks, G):
-            """Compute preferred extensions (maximal admissible sets)."""
-            from itertools import combinations
-
-            admissible_sets = []
-            for r in range(len(arguments), -1, -1):
-                for combo in combinations(arguments, r):
-                    ext = set(combo)
-                    if not self._is_conflict_free(ext, attacks):
-                        continue
-                    if not all(self._is_defended(a, ext, attacks) for a in ext):
-                        continue
-                    admissible_sets.append(ext)
-
-            if not admissible_sets:
-                return []
-
-            max_size = max(len(s) for s in admissible_sets)
-            preferred = [s for s in admissible_sets if len(s) == max_size]
-            # Match Tweety behavior: empty preferred extensions for empty framework
-            if preferred == [set()]:
-                return []
-            return preferred
-
-        def _stable_extensions(self, arguments, attacks, G):
-            """Compute stable extensions (conflict-free sets that attack all outsiders)."""
-            from itertools import combinations
-
-            stable = []
-            for r in range(len(arguments), -1, -1):
-                for combo in combinations(arguments, r):
-                    ext = set(combo)
-                    if not self._is_conflict_free(ext, attacks):
-                        continue
-                    outsiders = set(arguments) - ext
-                    attacked_by_ext = {t for s, t in attacks if s in ext}
-                    if outsiders.issubset(attacked_by_ext):
-                        stable.append(ext)
-
-            if not stable:
-                return []
-            return stable
-
-        def _argument_status(self, arguments, preferred, grounded, stable):
-            status = {}
-            for name in arguments:
-                status[name] = {
-                    "credulously_accepted": any(name in ext for ext in preferred),
-                    "skeptically_accepted": (
-                        all(name in ext for ext in preferred) if preferred else False
-                    ),
-                    "grounded_accepted": name in grounded,
-                    "stable_accepted": (
-                        all(name in ext for ext in stable) if stable else False
-                    ),
-                }
-            return status
-
-    return MockDungService()
+_NO_EXTENSIONS = {
+    "grounded": [],
+    "preferred": [],
+    "stable": [],
+    "complete": [],
+    "admissible": [],
+}
 
 
 @pytest.fixture
-def mock_dung_service():
-    """Pure-Python DungAnalysisService mock (no JVM)."""
-    return _make_mock_dung_service()
+def java_boundary(monkeypatch):
+    """Double jpype and the Tweety-backed agent; keep ``api.services`` real."""
+    import jpype
+
+    fake_agent_module = types.ModuleType("abs_arg_dung.enhanced_agent")
+    fake_agent_module.EnhancedDungAgent = _scripted_agent(_NO_EXTENSIONS)
+    monkeypatch.setitem(sys.modules, "abs_arg_dung.enhanced_agent", fake_agent_module)
+    monkeypatch.setattr(jpype, "isJVMStarted", lambda: True)
+    monkeypatch.setattr(jpype, "JClass", lambda name: name)
+    return monkeypatch
 
 
-class TestDungServiceMocked:
-    """Tests of Dung framework semantics using pure-Python mock.
+def _service(extensions):
+    from api.services import DungAnalysisService
 
-    These tests validate the same scenarios as TestDungServiceDirect
-    but without requiring JVM/Tweety.
-    """
+    service = DungAnalysisService()
+    service.agent_class = _scripted_agent(extensions)
+    return service
 
-    def test_simple_framework(self, mock_dung_service):
-        """Scenario 1: Simple framework a->b->c."""
-        result = mock_dung_service.analyze_framework(
+
+class TestDungServiceBoundaryDoubled:
+    """The four scenarios of TestDungServiceDirect, on the real service."""
+
+    def test_refuses_without_a_jvm(self, java_boundary):
+        import jpype
+
+        from api.services import DungAnalysisService
+
+        java_boundary.setattr(jpype, "isJVMStarted", lambda: False)
+        with pytest.raises(RuntimeError, match="JVM"):
+            DungAnalysisService()
+
+    def test_simple_framework(self, java_boundary):
+        """Scenario 1: a->b->c. The reasoner's answer comes unsorted."""
+        service = _service(
+            {
+                "grounded": ["c", "a"],
+                "preferred": [["a", "c"]],
+                "stable": [["a", "c"]],
+                "complete": [["a", "c"]],
+                "admissible": [["a", "c"], [], ["a"]],
+            }
+        )
+        result = service.analyze_framework(
             ["a", "b", "c"],
             [("a", "b"), ("b", "c")],
             options={"compute_extensions": True},
         )
-        assert "extensions" in result
+
         assert result["extensions"]["grounded"] == ["a", "c"]
         assert result["extensions"]["preferred"] == [["a", "c"]]
+        assert result["extensions"]["admissible"] == [[], ["a"], ["a", "c"]]
+        assert result["argument_status"]["a"] == {
+            "credulously_accepted": True,
+            "skeptically_accepted": True,
+            "grounded_accepted": True,
+            "stable_accepted": True,
+        }
+        assert result["argument_status"]["b"] == {
+            "credulously_accepted": False,
+            "skeptically_accepted": False,
+            "grounded_accepted": False,
+            "stable_accepted": False,
+        }
+        assert result["graph_properties"] == {
+            "num_arguments": 3,
+            "num_attacks": 2,
+            "has_cycles": False,
+            "cycles": [],
+            "self_attacking_nodes": [],
+        }
 
-    def test_cyclic_framework(self, mock_dung_service):
-        """Scenario 2: Cyclic framework a<->b."""
-        result = mock_dung_service.analyze_framework(
+    def test_cyclic_framework(self, java_boundary):
+        """Scenario 2: a<->b. Credulous, not skeptical."""
+        service = _service(
+            {
+                "grounded": [],
+                "preferred": [["b"], ["a"]],
+                "stable": [["b"], ["a"]],
+                "complete": [[], ["a"], ["b"]],
+                "admissible": [[], ["a"], ["b"]],
+            }
+        )
+        result = service.analyze_framework(
             ["a", "b"],
             [("a", "b"), ("b", "a")],
             options={"compute_extensions": True},
         )
-        assert result["extensions"]["grounded"] == []
-        assert sorted([sorted(e) for e in result["extensions"]["preferred"]]) == [
-            ["a"],
-            ["b"],
-        ]
 
-    def test_empty_framework(self, mock_dung_service):
-        """Scenario 3: Empty framework (no args, no attacks)."""
-        result = mock_dung_service.analyze_framework(
-            [], [], options={"compute_extensions": True}
-        )
+        assert result["extensions"]["grounded"] == []
+        assert result["extensions"]["preferred"] == [["a"], ["b"]]
+        for name in ("a", "b"):
+            assert result["argument_status"][name] == {
+                "credulously_accepted": True,
+                "skeptically_accepted": False,
+                "grounded_accepted": False,
+                "stable_accepted": False,
+            }
+        properties = result["graph_properties"]
+        assert properties["has_cycles"] is True
+        assert [sorted(cycle) for cycle in properties["cycles"]] == [["a", "b"]]
+
+    def test_empty_framework(self, java_boundary):
+        """Scenario 3: no arguments, no attacks."""
+        service = _service(_NO_EXTENSIONS)
+        result = service.analyze_framework([], [], options={"compute_extensions": True})
+
         assert result["extensions"]["grounded"] == []
         assert result["extensions"]["preferred"] == []
+        assert result["argument_status"] == {}
+        assert result["graph_properties"]["num_arguments"] == 0
 
-    def test_self_attacking_argument(self, mock_dung_service):
-        """Scenario 4: Self-attacking argument a->a, a->b."""
-        result = mock_dung_service.analyze_framework(
+    def test_self_attacking_argument(self, java_boundary):
+        """Scenario 4: a->a, a->b. No stable extension to accept from."""
+        service = _service(
+            {
+                "grounded": [],
+                "preferred": [[]],
+                "stable": [],
+                "complete": [[]],
+                "admissible": [[]],
+            }
+        )
+        result = service.analyze_framework(
             ["a", "b"],
             [("a", "a"), ("a", "b")],
             options={"compute_extensions": True},
         )
-        assert result["extensions"]["grounded"] == []
-        assert result["argument_status"]["a"]["credulously_accepted"] is False
-        assert "a" in result["graph_properties"]["self_attacking_nodes"]
+
+        assert result["argument_status"]["a"] == {
+            "credulously_accepted": False,
+            "skeptically_accepted": False,
+            "grounded_accepted": False,
+            "stable_accepted": False,
+        }
+        assert result["graph_properties"]["self_attacking_nodes"] == ["a"]
+        assert result["graph_properties"]["has_cycles"] is True
+
+    def test_extensions_only_on_request(self, java_boundary):
+        """Without ``compute_extensions`` the reasoner is not asked."""
+        service = _service(
+            {
+                "grounded": ["a"],
+                "preferred": [["a"]],
+                "stable": [["a"]],
+                "complete": [["a"]],
+                "admissible": [["a"]],
+            }
+        )
+        result = service.analyze_framework(["a"], [])
+
+        assert "extensions" not in result
+        assert result["argument_status"] == {}
+        assert result["graph_properties"]["num_arguments"] == 1
