@@ -15,14 +15,42 @@ import time
 from pathlib import Path
 
 
+def _backend_url(e2e_servers):
+    """The backend URL, or an explicit skip when the servers fixture is off.
+
+    Availability is decided here and only here (#2756): the fixture starts
+    the servers and fails loud when they do not come up. A request that
+    fails afterwards is a failure of the test, never a skip or a pass.
+    """
+    base_url, _ = e2e_servers
+    if not base_url:
+        pytest.skip("e2e servers fixture disabled (--disable-e2e-servers-fixture)")
+    return base_url
+
+
+def _assert_analysis_succeeded(response):
+    """``POST /api/analyze`` answered 200 with its success envelope."""
+    assert (
+        response.status_code == 200
+    ), f"/api/analyze answered {response.status_code}: {response.text[:500]}"
+    body = response.json()
+    assert body["status"] == "success", body
+    assert isinstance(body["analysis_id"], str) and body["analysis_id"]
+    results = body["results"]
+    # A 200 carries a structure: a text without one is a 422 (#2562).
+    assert results["argument_structure"], results
+    # Absent means "not searched" (#2526); detection was not asked for.
+    assert "fallacies" not in results, results
+    return body
+
+
 class TestWebAppAPIInvestigation:
     """Tests d'investigation de l'API d'analyse argumentative"""
 
     @pytest.mark.e2e
     def test_api_health(self, e2e_servers):
         """Test de santé de l'API"""
-        base_url, _ = e2e_servers
-        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
+        base_url = _backend_url(e2e_servers)
         response = requests.get(f"{base_url}/api/health", timeout=10)
         assert response.status_code == 200
 
@@ -42,72 +70,53 @@ class TestWebAppAPIInvestigation:
     @pytest.mark.e2e
     def test_api_analyze_endpoint(self, e2e_servers):
         """Test de l'endpoint d'analyse argumentative"""
-        base_url, _ = e2e_servers
+        base_url = _backend_url(e2e_servers)
         test_text = "Dieu existe parce que la Bible le dit, et la Bible est vraie parce qu'elle est la parole de Dieu."
 
-        payload = {"text": test_text, "analysis_type": "comprehensive", "options": {}}
+        payload = {"text": test_text, "options": {}}
 
-        try:
-            assert (
-                base_url
-            ), "L'URL du backend doit être fournie par la fixture e2e_servers"
-            response = requests.post(
-                f"{base_url}/api/analyze", json=payload, timeout=30
-            )
-            print(f"\n[ANALYZE] Test de l'endpoint /api/analyze:")
-            print(f"   Status Code: {response.status_code}")
-            print(f"   Texte analysé: {test_text[:50]}...")
+        # #2756: a non-200 fails and a transport error propagates; the
+        # skip policy lives in _backend_url, not around the request.
+        response = requests.post(f"{base_url}/api/analyze", json=payload, timeout=30)
+        print(f"\n[ANALYZE] Test de l'endpoint /api/analyze:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Texte analysé: {test_text[:50]}...")
 
-            if response.status_code == 200:
-                result = response.json()
-                print(f"   [OK] Analyse réussie")
-                print(
-                    f"   Résultat complet: {json.dumps(result, indent=2, ensure_ascii=False)}"
-                )
-            else:
-                print(f"   [ERROR] Erreur: {response.text}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"   [ERROR] Erreur de connexion: {e}")
-            pytest.skip(f"API non accessible: {e}")
+        result = _assert_analysis_succeeded(response)
+        print(f"   [OK] Analyse réussie")
+        print(
+            f"   Résultat complet: {json.dumps(result, indent=2, ensure_ascii=False)}"
+        )
 
     @pytest.mark.e2e
     def test_api_fallacies_endpoint(self, e2e_servers):
         """Test de l'endpoint de détection de sophismes"""
-        base_url, _ = e2e_servers
+        base_url = _backend_url(e2e_servers)
         test_text = "Si nous autorisons le mariage gay, bientôt nous autoriserons aussi le mariage avec les animaux."
 
         # #2526 : la route appelle le détecteur du pipeline. Le palier
         # `taxonomy` tourne sans clé LLM : ce test ne dépense aucun crédit.
         payload = {"text": test_text, "options": {"tier": "taxonomy"}}
 
-        try:
-            assert (
-                base_url
-            ), "L'URL du backend doit être fournie par la fixture e2e_servers"
-            response = requests.post(
-                f"{base_url}/api/fallacies", json=payload, timeout=60
-            )
-            print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
-            print(f"   Status Code: {response.status_code}")
-            print(f"   Texte analysé: {test_text}")
+        # #2756: a transport error used to be printed and the test PASSED.
+        response = requests.post(f"{base_url}/api/fallacies", json=payload, timeout=60)
+        print(f"\n[WARNING]  Test de l'endpoint /api/fallacies:")
+        print(f"   Status Code: {response.status_code}")
+        print(f"   Texte analysé: {test_text}")
 
-            assert response.status_code == 200, response.text
-            result = response.json()
-            fallacies = result["fallacies"]
-            assert result["tier"] == "taxonomy"
-            assert result["fallacy_count"] == len(fallacies)
-            print(f"   Sophismes détectés: {len(fallacies)}")
-            for fallacy in fallacies[:2]:  # Afficher les 2 premiers
-                print(f"     - {fallacy['name']}: {fallacy['confidence']:.2f}")
-
-        except requests.exceptions.RequestException as e:
-            print(f"   [ERROR] Erreur de connexion: {e}")
+        assert response.status_code == 200, response.text
+        result = response.json()
+        fallacies = result["fallacies"]
+        assert result["tier"] == "taxonomy"
+        assert result["fallacy_count"] == len(fallacies)
+        print(f"   Sophismes détectés: {len(fallacies)}")
+        for fallacy in fallacies[:2]:  # Afficher les 2 premiers
+            print(f"     - {fallacy['name']}: {fallacy['confidence']:.2f}")
 
     @pytest.mark.e2e
     def test_api_validate_endpoint(self, e2e_servers):
         """Test de l'endpoint de validation d'arguments"""
-        base_url, _ = e2e_servers
+        base_url = _backend_url(e2e_servers)
         payload = {
             "premises": ["Tous les hommes sont mortels", "Socrate est un homme"],
             "conclusion": "Socrate est mortel",
@@ -115,7 +124,6 @@ class TestWebAppAPIInvestigation:
         }
 
         # #2526: /api/validate est servie par api.main:app (api/frontend_endpoints.py).
-        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
         response = requests.post(f"{base_url}/api/validate", json=payload, timeout=30)
 
         assert response.status_code == 200, response.text
@@ -127,7 +135,7 @@ class TestWebAppAPIInvestigation:
     @pytest.mark.e2e
     def test_api_framework_endpoint(self, e2e_servers):
         """Test de l'endpoint de framework de Dung"""
-        base_url, _ = e2e_servers
+        base_url = _backend_url(e2e_servers)
         # #2526: the body api.js analyzeDungFramework sends to the route the
         # framework view now calls. A3 attacks A2, which attacks A1.
         payload = {
@@ -136,7 +144,6 @@ class TestWebAppAPIInvestigation:
             "options": {"semantics": "preferred", "compute_extensions": True},
         }
 
-        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
         response = requests.post(
             f"{base_url}/api/v1/framework/analyze", json=payload, timeout=60
         )
@@ -149,12 +156,11 @@ class TestWebAppAPIInvestigation:
     @pytest.mark.e2e
     def test_generate_api_investigation_report(self, e2e_servers):
         """Génère un rapport d'investigation de l'API"""
-        base_url, _ = e2e_servers
+        base_url = _backend_url(e2e_servers)
         report_path = Path("tests/functional/logs/api_investigation_report.md")
         report_path.parent.mkdir(parents=True, exist_ok=True)
 
         endpoints = ["/api/health", "/api/analyze", "/api/v1/framework/analyze"]
-        assert base_url, "L'URL du backend doit être fournie par la fixture e2e_servers"
         report_content = """# [REPORT] Rapport d'Investigation - API Web d'Analyse Argumentative
 
 **Date:** {timestamp}
