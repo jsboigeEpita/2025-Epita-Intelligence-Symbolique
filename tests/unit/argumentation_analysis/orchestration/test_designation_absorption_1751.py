@@ -16,13 +16,14 @@ Measured on ``sweep_1735_R808_A`` / corpus_A: 13 designations, **2 absorbed**
 ## Three sites, not the one the issue named
 
 The issue named ``core/strategies.py:195-204``. Grepping the *shape* rather
-than the line turns up three:
+than the line turns up three (the second, ``BalancedParticipationStrategy``,
+was since retired with its class in #2699 — zero constructors left after
+#2704; its witness went with it):
 
 ===========================================  =========================  =======
 site                                         falls back to              log
 ===========================================  =========================  =======
 ``DelegatingSelectionStrategy.next``         default agent (= the PM)   ERROR
-``BalancedParticipationStrategy.next``       participation balancing    ERROR
 ``conversational_orchestrator._select_...``  round-robin                DEBUG
 ===========================================  =========================  =======
 
@@ -123,23 +124,6 @@ class TestOffCastingDesignationLeavesAnObservableEffect:
         # The roster actually present is what a re-prompt would have to hand
         # back to the PM, and what tells a reader "wrong room", not "typo".
         assert sorted(marker["present_agents"]) == sorted(PHASE_2_CASTING)
-
-    def test_balanced_strategy_absorbs_the_same_way(self):
-        """Sibling site — same shape, same silence, different fallback."""
-        from argumentation_analysis.core.strategies import (
-            BalancedParticipationStrategy,
-        )
-
-        state = _state()
-        agents = [_agent(n) for n in PHASE_2_CASTING]
-        strategy = BalancedParticipationStrategy(
-            agents, state, default_agent_name="ProjectManager"
-        )
-
-        state.designate_next_agent("InformalAgent")
-        asyncio.run(strategy.next(agents, []))
-
-        assert len(_unresolved(state)) == 1
 
     def test_round_robin_path_absorbs_the_same_way(self):
         """Third site: the non-AgentGroupChat path, at DEBUG level."""

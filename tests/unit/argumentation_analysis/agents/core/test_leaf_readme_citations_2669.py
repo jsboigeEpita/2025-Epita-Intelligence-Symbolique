@@ -97,7 +97,12 @@ ABSENT_BY_DESIGN = {
     "LogicAnalysisResult": "retired by #2140 with data_models",
     "InformalAnalysisResult": "retired by #2140 with data_models",
     "agent_logger": "stated absent: the logger is the private _agent_logger",
-    "SherlockProjectManagerAgent": "a hypothetical subclass in an extension example",
+    # retired by #2699 with the scripted PM stack (its runner went in #2638/#2704).
+    # "ProjectManagerAgent" needs no entry: the name still occurs in the live
+    # designation vocabulary of other agents' prompts; "prompts.py" neither: it
+    # is a tracked suffix elsewhere. Only these are wholly gone:
+    "core/pm/pm_agent.py": "retired by #2699",
+    "pm_definitions.py": "retired by #2699",
 }
 
 

@@ -37,40 +37,6 @@ if __name__ == "__main__":
     asyncio.run(analyze_text_with_informal_agent(text))
 ```
 
-### Agent Project Manager
-
-```python
-import asyncio
-from agents.core.pm.pm_definitions import setup_pm_agent
-from core.llm_service import create_llm_service
-from core.shared_state import SharedState
-
-async def orchestrate_analysis(text):
-    """Orchestre l'analyse d'un texte avec l'agent PM."""
-    # Créer le service LLM
-    llm_service = create_llm_service()
-    
-    # Initialiser l'état partagé
-    shared_state = SharedState()
-    shared_state.set("source_text", text)
-    
-    # Initialiser l'agent PM
-    kernel, agent = await setup_pm_agent(llm_service, shared_state)
-    
-    # Lancer l'orchestration
-    result = await agent.orchestrate_analysis()
-    
-    return result
-
-# Exemple d'utilisation
-if __name__ == "__main__":
-    text = """
-    Tous les chats sont des mammifères. Félix est un chat, donc Félix est un mammifère.
-    Les mammifères ont besoin d'oxygène pour vivre. Donc Félix a besoin d'oxygène pour vivre.
-    """
-    asyncio.run(orchestrate_analysis(text))
-```
-
 ### Agent de Logique Propositionnelle
 
 ```python

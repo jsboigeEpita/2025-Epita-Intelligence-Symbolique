@@ -15,7 +15,9 @@ Two layers of test:
 
 * one witness per module, each red on ``main``: a real ``Kernel`` and a real
   registration failure make construction or setup raise ``SemanticSetupError``,
-  naming what was configured and what failed;
+  naming what was configured and what failed. The two PM witnesses (the agent,
+  ``setup_pm_kernel``) left with the scripted PM stack in #2699; the census
+  below still covers every tracked file;
 * a father guard: an AST census over every tracked production ``.py`` file.
   No call to either method may sit in the body of a ``try`` whose handlers
   swallow (no ``raise``). The census prints its population and fails on any
@@ -149,36 +151,6 @@ class TestModalAgent:
                 service_id="default",
                 tweety_bridge=_ready_bridge(),
             )
-
-
-class TestProjectManagerAgent:
-    def test_a_name_the_kernel_rejects_as_plugin_raises(self):
-        from argumentation_analysis.agents.core.pm.pm_agent import ProjectManagerAgent
-
-        agent = ProjectManagerAgent(_kernel("default"), agent_name="PM-Agent")
-        with pytest.raises(
-            SemanticSetupError, match=r"PM-Agent\.DefineTasksAndDelegate"
-        ):
-            agent.setup_agent_components("default")
-
-
-class TestSetupPmKernel:
-    def test_a_service_id_the_kernel_lacks_raises(self):
-        from argumentation_analysis.agents.core.pm.pm_definitions import (
-            setup_pm_kernel,
-        )
-
-        with pytest.raises(SemanticSetupError, match="'absent'"):
-            setup_pm_kernel(Kernel(), types.SimpleNamespace(service_id="absent"))
-
-    def test_a_prompt_the_kernel_rejects_raises(self, monkeypatch):
-        from argumentation_analysis.agents.core.pm import pm_definitions
-
-        monkeypatch.setattr(pm_definitions, "prompt_define_tasks_v12", "")
-        with pytest.raises(
-            SemanticSetupError, match=r"PM\.semantic_DefineTasksAndDelegate"
-        ):
-            pm_definitions.setup_pm_kernel(Kernel(), None)
 
 
 class _PLPluginStandIn:

@@ -10,18 +10,18 @@ Le système utilise deux approches principales pour l'orchestration et la collab
 
 ### 1.1 Orchestration Simple via `AgentGroupChat`
 
-Ce mécanisme, principalement implémenté dans `argumentation_analysis/orchestration/analysis_runner.py`, s'appuie sur la fonctionnalité `AgentGroupChat` de la bibliothèque Semantic Kernel.
+Ce mécanisme, porté aujourd'hui par `argumentation_analysis/orchestration/conversation_orchestrator.py` (l'ancien `analysis_runner.py` a été retiré), s'appuie sur la fonctionnalité `AgentGroupChat` de la bibliothèque Semantic Kernel.
 
 *   **Principes Clés** :
     *   **État Partagé Centralisé** : Une instance de `RhetoricalAnalysisState` (définie dans [`argumentation_analysis/core/shared_state.py`](../../argumentation_analysis/core/shared_state.py)) stocke toutes les informations pertinentes à l'analyse (texte initial, tâches, arguments identifiés, sophismes, `next_agent_to_act`, conclusion finale, etc.).
     *   **`StateManagerPlugin`** : Les agents interagissent avec `RhetoricalAnalysisState` via ce plugin (défini dans [`argumentation_analysis/core/state_manager_plugin.py`](../../argumentation_analysis/core/state_manager_plugin.py)), qui expose des fonctions natives appelables depuis les fonctions sémantiques des agents.
-    *   **Agents Spécialistes** : Les agents principaux ([`ProjectManagerAgent`](../../argumentation_analysis/agents/core/pm/pm_agent.py), [`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py), [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py), [`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)) sont encapsulés en tant que `ChatCompletionAgent` de Semantic Kernel pour participer au `AgentGroupChat`.
-    *   **Stratégie de Sélection (`BalancedParticipationStrategy`)** : Gère la sélection du prochain agent. Elle donne la priorité à la désignation explicite (via `state.consume_next_agent_designation()`). Si aucune désignation n'est faite, elle sélectionne un agent pour équilibrer la participation en se basant sur des scores de priorité (voir [`argumentation_analysis/core/strategies.py`](../../argumentation_analysis/core/strategies.py)).
+    *   **Agents Spécialistes** : Les agents principaux ([`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py), [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py), [`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)) sont encapsulés en tant que `ChatCompletionAgent` de Semantic Kernel pour participer au `AgentGroupChat` (le PM du chemin conversationnel est un agent inline, RA-6 #1051 — le `ProjectManagerAgent` scripté a été retiré en #2699).
+    *   **Stratégie de Sélection (`DelegatingSelectionStrategy`)** : Honore la désignation explicite du PM (via `state.consume_next_agent_designation()`) et retombe sur l'agent par défaut (voir [`argumentation_analysis/core/strategies.py`](../../argumentation_analysis/core/strategies.py)). L'ancienne `BalancedParticipationStrategy` à scores de participation a été retirée en #2699 avec son unique script de simulation.
     *   **Stratégie de Terminaison (`SimpleTerminationStrategy`)** : Met fin à la conversation si `state.final_conclusion` est définie ou si un nombre maximum de tours est atteint (voir [`argumentation_analysis/core/strategies.py`](../../argumentation_analysis/core/strategies.py)).
 
 *   **Flux Typique** :
     1.  Initialisation du kernel, de l'état, du `StateManagerPlugin`, des agents et du `AgentGroupChat`.
-    2.  Le `ProjectManagerAgent` initie généralement l'analyse en définissant des tâches et en désignant le prochain agent via le `StateManagerPlugin`.
+    2.  Le PM conversationnel inline initie l'analyse en définissant des tâches et en désignant le prochain agent via le `StateManagerPlugin`.
     3.  Les agents exécutent leurs tâches, mettent à jour l'état partagé, et peuvent désigner le prochain agent.
     4.  Le cycle continue jusqu'à ce que la stratégie de terminaison arrête la conversation.
 
@@ -56,7 +56,7 @@ Une approche d'orchestration plus structurée et évoluée est implémentée dan
 
 ### 1.3 Agents Spécialistes et leurs Interactions
 
-Les agents spécialistes ([`ProjectManagerAgent`](../../argumentation_analysis/agents/core/pm/pm_agent.py), [`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py), [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py), [`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)) sont les exécutants principaux des tâches d'analyse.
+Les agents spécialistes ([`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py), [`PropositionalLogicAgent`](../../argumentation_analysis/agents/core/logic/propositional_logic_agent.py), [`ExtractAgent`](../../argumentation_analysis/agents/core/extract/extract_agent.py)) sont les exécutants principaux des tâches d'analyse.
 
 *   **Structure Commune** : Chaque agent hérite de `BaseAgent` ([`argumentation_analysis/agents/core/abc/agent_bases.py`](../../argumentation_analysis/agents/core/abc/agent_bases.py)), possède ses propres instructions système, des prompts sémantiques, et peut inclure des plugins natifs pour des fonctionnalités spécifiques (ex: `InformalAnalysisPlugin` pour la taxonomie des sophismes, `ExtractAgentPlugin` pour la manipulation de texte).
 *   **Interaction dans l'Orchestration Simple** : Les agents appellent des fonctions du `StateManagerPlugin` via leurs fonctions sémantiques pour lire/écrire dans `RhetoricalAnalysisState` et désigner le prochain agent.
@@ -70,10 +70,10 @@ Les agents spécialistes ([`ProjectManagerAgent`](../../argumentation_analysis/a
     *   Relativement simple à mettre en place pour des scénarios linéaires.
     *   Bonne intégration avec Semantic Kernel.
     *   L'état partagé `RhetoricalAnalysisState` est un point central clair pour les données.
-    *   La `BalancedParticipationStrategy` offre une certaine flexibilité dans la sélection des agents.
+    *   La `DelegatingSelectionStrategy` honore la désignation explicite du PM avec un repli simple.
 *   **Faiblesses/Limitations** :
     *   Peut devenir difficile à gérer pour des flux de travail complexes ou non linéaires.
-    *   Dépendance potentielle au `ProjectManagerAgent` pour diriger le flux.
+    *   Dépendance potentielle au PM conversationnel inline pour diriger le flux.
     *   Communication inter-agents principalement indirecte via l'état partagé.
     *   Moins adapté pour la résolution de conflits sophistiquée ou la planification dynamique avancée.
 

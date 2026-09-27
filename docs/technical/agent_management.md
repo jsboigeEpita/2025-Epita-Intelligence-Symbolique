@@ -18,7 +18,7 @@ Ce document décrit les mécanismes de gestion des agents au sein du système d'
     *   Interface `OperationalAgent` ([`../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py`](../../argumentation_analysis/orchestration/hierarchical/operational/agent_interface.py:1)) pour l'architecture hiérarchique.
 *   **Mécanismes de création :**
     *   (À compléter après analyse du code si des factories/builders existent, par exemple dans `argumentation_analysis/agents/` ou via les adaptateurs dans [`../../argumentation_analysis/orchestration/hierarchical/operational/adapters/`](../../argumentation_analysis/orchestration/hierarchical/operational/adapters/:1)).
-    *   Instanciation directe des classes d'agents (ex: [`ProjectManagerAgent`](../../argumentation_analysis/agents/core/pm/pm_agent.py:1), [`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py:1), etc.).
+    *   Instanciation directe des classes d'agents (ex: [`InformalAnalysisAgent`](../../argumentation_analysis/agents/core/informal/informal_agent.py:1), etc.).
 
 ## 4. Configuration des Agents
 

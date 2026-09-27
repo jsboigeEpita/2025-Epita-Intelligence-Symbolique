@@ -58,7 +58,6 @@ class ProjectArchitectureAnalyzer:
             "extract": ["extract_agent", "extract_definitions", "extract"],
             "informal": ["informal_agent", "informal_definitions", "informal"],
             "logic": ["logic_agent", "propositional", "modal", "first_order", "tweety"],
-            "pm": ["pm_agent", "pm_definitions"],
             "rhetorical": ["fallacy", "rhetorical", "sophisme", "argument"],
         }
         self.orchestration_levels = ["strategic", "tactical", "operational"]

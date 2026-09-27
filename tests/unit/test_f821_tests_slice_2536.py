@@ -134,13 +134,8 @@ def test_f4_mock_imports_bound():
 
 
 def test_f5_real_names_have_providers():
-    """Pré-fix : UnifiedConfig / run_cluedo_oracle_game non importés."""
-    balanced = _load(
-        REPO_ROOT
-        / "tests/unit/argumentation_analysis/test_integration_balanced_strategy.py",
-        "f821_probe_balanced",
-    )
-    assert hasattr(balanced, "UnifiedConfig")
+    """Pré-fix : run_cluedo_oracle_game non importé (la moitié balanced est
+    partie avec test_integration_balanced_strategy.py, retiré en #2699)."""
     cluedo = _load(
         REPO_ROOT / "tests/integration/workers/worker_sherlock_watson_moriarty.py",
         "f821_probe_cluedo",
