@@ -16,10 +16,11 @@ N'est **pas** le chemin de construction du kernel en production : le kernel rée
 
 ## Points d'entrée valides
 
-**Aucun importeur production.** Deux consommateurs, tous deux outillage de tests :
+**Aucun importeur production.** Un seul consommateur, de l'outillage de tests :
 
-- [`tests/utils/scenario_runner.py:8,42`](../../tests/utils/scenario_runner.py) — `KernelBuilder.create_kernel(settings)` ;
-- [`tests/integration/workers/worker_logic_puzzles_hardening.py:19,56`](../../tests/integration/workers/worker_logic_puzzles_hardening.py) — idem.
+- [`tests/utils/scenario_runner.py:8,42`](../../tests/utils/scenario_runner.py) — `KernelBuilder.create_kernel(settings)`. Le noyau qu'il construit est passé à `orchestration/orchestrator.py`, une coquille dont `run_analysis_async` lève `NotImplementedError` (#2703).
+
+Le second consommateur, `tests/integration/workers/worker_logic_puzzles_hardening.py`, n'avait aucun lanceur et appelait la même coquille ; #2700 l'a retiré.
 
 ## Amont / aval
 

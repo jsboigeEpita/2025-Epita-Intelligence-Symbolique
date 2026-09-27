@@ -150,14 +150,11 @@ def test_f5_real_names_have_providers():
 
 def test_class3_removals_and_captures_present_in_source():
     """Témoins source : pré-fix, chaque assertion échoue (nom mort présent,
-    capture absente)."""
-    hardening = (
-        REPO_ROOT
-        / "tests/integration/argumentation_analysis/workers/worker_hardening_cases.py"
-    ).read_text(encoding="utf-8")
-    assert "JvmManager" not in hardening
-    assert "initialize_jvm" in hardening
+    capture absente).
 
+    ``worker_hardening_cases.py`` n'est plus lu ici : aucun lanceur ne l'avait
+    jamais exécuté, et #2700 l'a retiré (son module Flask était archivé depuis
+    #242, copie dans ``docs/archives/flask_tests_249/``)."""
     taac = (
         REPO_ROOT / "tests/integration/triage/test_argument_analyzer_client.py"
     ).read_text(encoding="utf-8")

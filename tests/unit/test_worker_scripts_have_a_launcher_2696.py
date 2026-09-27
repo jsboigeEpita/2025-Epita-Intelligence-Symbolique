@@ -8,18 +8,20 @@ looks like coverage and has no path to run. #2696 found three that imported
 a ``JvmManager`` the repository never defined; none had ever executed.
 
 The census resolves launcher paths instead of matching file names. Two
-workers share the name ``worker_minimal_jvm_startup.py``, and the launcher
-in ``tests/integration/jpype_tweety/`` runs its own sibling, not the one in
-``tests/integration/workers/`` (#2700). A path is read in the two forms the
+workers once shared the name ``worker_minimal_jvm_startup.py``: the launcher
+in ``tests/integration/jpype_tweety/`` ran its own sibling, not the one in
+``tests/integration/workers/``, which no launcher named and #2700 retired.
+The tree no longer holds such a pair, so a synthetic tree keeps the case
+under test. A path is read in the two forms the
 launchers use: a ``Path(__file__)[.resolve()][.parent]* / "..."`` chain,
 relative to the launcher, and ``os.path.join("tests", ...)`` with string
 arguments only, relative to the repository root. A worker's file name that
 appears in a launcher in any other form reddens the census rather than
 counting as a launch or being skipped.
 
-``PENDING_TRIAGE`` names the orphans the tree already carries, each with
-the issue that owns its triage. It only shrinks: an entry reddens once its
-worker gains a launcher or leaves the tree.
+The orphans the census found when it landed were triaged under #2700 and
+all four retired; there is no exemption list. A new orphan is launched, or
+retired under the Cleanup Gate.
 """
 
 import ast
@@ -31,27 +33,21 @@ from tests.support.tree_walk import iter_files
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TESTS = REPO_ROOT / "tests"
 
-PENDING_TRIAGE: dict[str, str] = {
-    "tests/integration/argumentation_analysis/workers/worker_hardening_cases.py": "#2700",
-    "tests/integration/workers/worker_logic_puzzles_hardening.py": "#2700",
-    "tests/integration/workers/worker_minimal_jvm_startup.py": "#2700",
-    "tests/unit/api/workers/worker_dung_service.py": "#2700",
-}
+
+def _archived(path: Path, root: Path) -> bool:
+    return "_archived" in path.relative_to(root).parts
 
 
-def _archived(path: Path) -> bool:
-    return "_archived" in path.relative_to(TESTS).parts
+def _workers(root: Path) -> list[Path]:
+    return sorted(p for p in iter_files(root, "worker_*.py") if not _archived(p, root))
 
 
-def _workers() -> list[Path]:
-    return sorted(p for p in iter_files(TESTS, "worker_*.py") if not _archived(p))
-
-
-def _launch_files() -> list[Path]:
+def _launch_files(root: Path) -> list[Path]:
     return sorted(
         p
-        for p in iter_files(TESTS)
-        if (p.name.startswith("test_") or p.name == "conftest.py") and not _archived(p)
+        for p in iter_files(root)
+        if (p.name.startswith("test_") or p.name == "conftest.py")
+        and not _archived(p, root)
     )
 
 
@@ -102,13 +98,15 @@ def _resolve(node: ast.AST, launcher: Path) -> Path | None:
 
 
 @functools.lru_cache(maxsize=None)
-def _census() -> tuple[list[Path], frozenset[Path], tuple[str, ...]]:
+def _census(
+    root: Path = TESTS,
+) -> tuple[list[Path], frozenset[Path], tuple[str, ...]]:
     """Workers, the worker paths some launcher resolves, unread mentions."""
-    workers = _workers()
+    workers = _workers(root)
     names = {w.name for w in workers}
     launched: set[Path] = set()
     unread: list[str] = []
-    for launcher in _launch_files():
+    for launcher in _launch_files(root):
         tree = ast.parse(launcher.read_text(encoding="utf-8-sig"), str(launcher))
         read: set[int] = set()
         for node in ast.walk(tree):
@@ -147,25 +145,35 @@ def test_the_census_reads_every_launcher_mention():
 def test_every_worker_script_has_a_launcher():
     workers, launched, _ = _census()
     assert len(workers) >= 15, f"population collapsed: {len(workers)} workers"
-    orphans = {_rel(w) for w in workers if w.resolve() not in launched}
-    new = sorted(orphans - set(PENDING_TRIAGE))
-    assert not new, (
+    orphans = sorted(_rel(w) for w in workers if w.resolve() not in launched)
+    assert not orphans, (
         "worker scripts that no test_*.py or conftest.py launches by path "
         "(#2696): give each a launcher and run it, or retire it under the "
-        f"Cleanup Gate naming the live test that covers it: {new}"
+        f"Cleanup Gate naming the live test that covers it: {orphans}"
     )
 
 
-def test_pending_entries_are_still_orphans():
-    """Shrink-only: an entry goes once its worker is launched or retired."""
-    workers, launched, _ = _census()
-    present = {_rel(w): w for w in workers}
-    stale = sorted(
-        f"{path} ({owner})"
-        for path, owner in PENDING_TRIAGE.items()
-        if path not in present or present[path].resolve() in launched
+def test_a_launcher_launches_its_own_path_not_every_worker_of_that_name(tmp_path):
+    """Two workers share a name, one launcher names one of them by path.
+
+    The tree held this case until #2700 retired the unlaunched twin of
+    ``worker_minimal_jvm_startup.py``; a census matching names would have
+    counted both as launched.
+    """
+    launched_twin = tmp_path / "a" / "workers" / "worker_twin.py"
+    orphan_twin = tmp_path / "b" / "workers" / "worker_twin.py"
+    for worker in (launched_twin, orphan_twin):
+        worker.parent.mkdir(parents=True)
+        worker.write_text("print('ok')\n", encoding="utf-8")
+    (tmp_path / "a" / "test_twin.py").write_text(
+        "from pathlib import Path\n"
+        "WORKER = Path(__file__).parent / 'workers' / 'worker_twin.py'\n",
+        encoding="utf-8",
     )
-    assert not stale, f"remove these PENDING_TRIAGE entries: {stale}"
+    workers, launched, unread = _census(tmp_path)
+    assert len(workers) == 2 and not unread
+    assert launched_twin.resolve() in launched
+    assert orphan_twin.resolve() not in launched
 
 
 def test_the_census_resolves_both_launcher_forms():

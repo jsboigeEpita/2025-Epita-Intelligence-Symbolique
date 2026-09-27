@@ -59,6 +59,8 @@
 | `workers/worker_api_endpoints.py` | 3 | `api/endpoints.py` (Dung API) | ✅ Wired | Subprocess worker — JVM isolation pattern |
 | `workers/worker_dung_service.py` | 4 | `api/services.py` (Dung) | ✅ Wired | Subprocess worker — real Tweety, 4 scenarios |
 
+> **Note (2026-09-27, #2700)** : la ligne `worker_dung_service.py` ci-dessus était fausse à la date de l'audit. Aucun test ne lançait plus ce worker : `8e52de1e8` (#30, 2026-02-21) avait réécrit `test_dung_service.py` en tests directs et retiré son lancement, et plus rien ne l'a exécuté depuis (#2696). Lancé une fois contre le vrai service, il échoue au scénario 4 : `a` s'attaque lui-même et attaque `b`, il attend une extension fondée `["b"]`, alors que la bonne réponse, celle que rend le service, est `[]`. Il est retiré par #2700. Ses 4 scénarios restent couverts par `TestDungServiceDirect` (`test_dung_service.py`, vraie JVM), qui attend `[]`.
+
 ---
 
 ## 2. Sources sans test dédié
