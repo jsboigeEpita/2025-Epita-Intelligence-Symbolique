@@ -419,6 +419,10 @@ class OrchestrationServiceManager:
             return True
 
         except Exception as e:
+            # #2716 : l'échec est nommé dans l'état (#2649), pas seulement
+            # loggé — l'appelant qui refuse le manager doit pouvoir dire
+            # pourquoi.
+            self.setup_failures["initialize"] = f"{type(e).__name__}: {e}"
             self.logger.error(f"Erreur lors de l'initialisation: {e}")
             return False
 
@@ -491,9 +495,12 @@ class OrchestrationServiceManager:
         """Initialise les orchestrateurs spécialisés."""
         try:
             if CluedoOrchestrator:
+                # #2716 : le constructeur exige ses settings ; sans eux,
+                # initialize() renvoyait False sur tout siège où les
+                # orchestrateurs spécialisés sont actifs (leur défaut).
                 self.cluedo_orchestrator = CluedoOrchestrator(
-                    kernel=self.kernel
-                )  # Passer le kernel
+                    kernel=self.kernel, settings=settings
+                )
                 self.logger.info("CluedoOrchestrator initialisé")
 
             if ConversationOrchestrator:
@@ -505,11 +512,12 @@ class OrchestrationServiceManager:
             # RealLLMOrchestrator removed (#885) — superseded by UnifiedPipeline
 
             if FactCheckingOrchestrator:
-                # FactCheckingOrchestrator peut utiliser une configuration API
-                api_config = self.config.get("fact_checking_api_config", {})
-                self.fact_checking_orchestrator = FactCheckingOrchestrator(
-                    api_config=api_config
-                )
+                # #2716 : ``self.config`` vaut None depuis que la configuration
+                # vit dans ``settings`` (aucune clé d'API de fact-checking n'y
+                # figure) ; son ``.get`` levait AttributeError. Une
+                # configuration d'API passe par la requête
+                # (``options["api_config"]``, ``_run_specialized_analysis``).
+                self.fact_checking_orchestrator = FactCheckingOrchestrator()
                 self.logger.info("FactCheckingOrchestrator initialisé")
 
         except Exception as e:
