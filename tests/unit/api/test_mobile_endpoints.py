@@ -262,6 +262,29 @@ class TestMobileAnalyze:
         assert resp.status_code == 422, resp.text
         assert resp.json()["error_code"] == "unanalyzable_input"
 
+    @pytest.mark.parametrize("status", ["blocked", "skipped"])
+    def test_an_extraction_that_did_not_run_is_not_an_empty_success(
+        self, client, monkeypatch, status
+    ):
+        monkeypatch.setattr(
+            unified_pipeline,
+            "run_unified_analysis",
+            AsyncMock(
+                return_value={
+                    "analysis_outcome": {
+                        "status": status,
+                        "phase": "extract",
+                        "reason": "upstream stop",
+                    }
+                }
+            ),
+        )
+
+        resp = client.post("/api/mobile/analyze", json={"text": TEXT})
+
+        assert resp.status_code == 502, resp.text
+        assert resp.json()["context"]["status"] == status
+
     def test_a_pipeline_that_raises_is_a_502(self, client, monkeypatch):
         monkeypatch.setattr(
             unified_pipeline,

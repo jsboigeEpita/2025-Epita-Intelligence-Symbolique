@@ -236,7 +236,87 @@ def test_analysis_outcome_terminal_completed_is_not_failure():
     }
 
 
-# --- sense 3: a substantive input still gets the complete DAG -----------------
+# --- sense 3: a blocked shield skips extraction and summary -------------------
+
+
+@pytest.mark.asyncio
+async def test_shield_blocked_extraction_does_not_report_ok():
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        run_unified_analysis,
+    )
+
+    invoked = []
+
+    async def shield_invoke(text, context):
+        invoked.append("shield")
+        return {"blocked": True, "reason": "synthetic refusal"}
+
+    async def extract_invoke(text, context):
+        invoked.append("extract")
+        return dict(SUBSTANTIVE_EXTRACTION)
+
+    async def summary_invoke(text, context):
+        invoked.append("summary")
+        return {"summary": "should not run"}
+
+    registry = CapabilityRegistry()
+    for name, capability, invoke in (
+        ("synthetic_shield", "input_validation", shield_invoke),
+        ("synthetic_extractor", "fact_extraction", extract_invoke),
+        ("synthetic_summary", "deep_synthesis", summary_invoke),
+    ):
+        registry.register_agent(
+            name=name,
+            agent_class=type(name, (), {}),
+            capabilities=[capability],
+            invoke=invoke,
+        )
+    workflow = (
+        WorkflowBuilder("shield_outcome_2761")
+        .add_phase("extract", capability="fact_extraction")
+        .add_phase("summary", capability="deep_synthesis", depends_on=["extract"])
+        .build()
+    )
+    result = await run_unified_analysis(
+        ADMIN_HEADER_TEXT,
+        registry=registry,
+        custom_workflow=workflow,
+        context={"shield_config": {"preset": "basic"}},
+    )
+
+    assert invoked == ["shield"]
+    assert result["phases"]["shield"].status == PhaseStatus.COMPLETED
+    assert result["phases"]["extract"].status == PhaseStatus.SKIPPED
+    assert result["phases"]["extract"].terminal is True
+    assert result["phases"]["summary"].status == PhaseStatus.SKIPPED
+    assert result["analysis_outcome"] == {
+        "status": "blocked",
+        "phase": "extract",
+        "reason": result["phases"]["extract"].error,
+    }
+    assert "shield verdict" in result["analysis_outcome"]["reason"]
+
+
+def test_skipped_extraction_is_not_a_completed_classification():
+    from argumentation_analysis.orchestration.unified_pipeline import (
+        _analysis_outcome,
+    )
+
+    skipped = PhaseResult(
+        phase_name="extract",
+        status=PhaseStatus.SKIPPED,
+        capability="fact_extraction",
+        error="Skipped by upstream dependency",
+        terminal=True,
+    )
+    assert _analysis_outcome({"extract": skipped}) == {
+        "status": "skipped",
+        "phase": "extract",
+        "reason": "Skipped by upstream dependency",
+    }
+
+
+# --- sense 4: a substantive input still gets the complete DAG -----------------
 
 
 @pytest.mark.asyncio
