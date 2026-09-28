@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from playwright.sync_api import Page, expect
 
+from api.factory import allowed_frontend_origins
+
 # Configuration
 
 
@@ -22,11 +24,33 @@ def test_api_analyze_interactions(page: Page, e2e_servers, e2e_api_token):
     # et le résultat asserté doit être l'analyse, pas un corps 401 affiché.
     token_js = json.dumps(e2e_api_token)
 
-    # Charger l'interface de test locale
+    # #2820 (review #2835): la page NE DOIT PAS être ouverte en file:// —
+    # origine null, et le preflight CORS d'un POST JSON + X-Shield-Token
+    # échoue (null n'est pas dans allowed_frontend_origins, et ne le sera
+    # jamais : avec allow_credentials=True cela ouvrirait l'API à toute
+    # iframe sandboxée). On sert donc la page démo sous une origine que le
+    # backend autorise : page.route répond DANS le navigateur, aucun
+    # serveur réel n'est requis sur ce port. L'origine est prise en `localhost`
+    # (dans la liste autorisée) : les Chromium récents (Local Network Access)
+    # bloquent les fetch vers loopback depuis une origine en IP littérale
+    # même autorisée par CORS — mesuré : 127.0.0.1:3001 → ERR_FAILED,
+    # localhost:3000 → 200. La permission local-network-access couvre les
+    # Chromium où elle existe ; sur les plus anciens elle est inconnue et le
+    # fetch n'en a pas besoin, d'où le except nommé.
     demo_html_path = Path(__file__).parent / "test_interface_demo.html"
-    demo_url = f"file://{demo_html_path.absolute()}"
+    demo_origin = next(
+        origin
+        for origin in allowed_frontend_origins()
+        if origin.startswith("http://localhost")
+    )
+    demo_url = f"{demo_origin}/__demo__.html"
+    try:
+        page.context.grant_permissions(["local-network-access"], origin=demo_origin)
+    except Exception as grant_error:  # pragma: no cover - Chromium sans LNA
+        print(f"local-network-access permission indisponible: {grant_error}")
+    page.route(demo_url, lambda route: route.fulfill(path=str(demo_html_path)))
 
-    page.goto(demo_url)
+    page.goto(demo_url, wait_until="domcontentloaded")
 
     # Vérifier que la page est chargée
     expect(page).to_have_title("Interface d'Analyse Argumentative - Test")
